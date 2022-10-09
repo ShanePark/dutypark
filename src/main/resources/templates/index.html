@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<head th:replace="layout/header::head"></head>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Duty Park</title>
+</head>
+<body>
+<h2>Main</h2>
+<ul th:each="member: ${members}">
+  <ui>
+    <a th:href="@{/duty/{name}(name=${member.name})}" th:text="${ '(' + member.department + ') ' + member.name}"></a>
+  </ui>
+</ul>
+</body>
+</html>
