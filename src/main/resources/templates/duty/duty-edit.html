@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<head th:replace="layout/header::head"></head>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Duty Park</title>
+</head>
+<body>
+<div class="calendar edit">
+  <header class="row">
+    <div class="col-2"></div>
+    <div class="col-8">
+      <h1>
+        <a th:href="@{/duty/{member}(member=${member.name},year=${year}, month=${month})}"
+           class="current" th:text="|${year}년 ${month}월 수정중|"></a>
+      </h1>
+    </div>
+    <div class="col-2">
+      <span class="profile" th:text="|${member.department} ${member.name}|"></span>
+    </div>
+  </header>
+
+  <ul class="weekdays">
+    <li>
+      <abbr title="S">Sunday</abbr>
+    </li>
+    <li>
+      <abbr title="M">Monday</abbr>
+    </li>
+    <li>
+      <abbr title="T">Tuesday</abbr>
+    </li>
+    <li>
+      <abbr title="W">Wednesday</abbr>
+    </li>
+    <li>
+      <abbr title="T">Thursday</abbr>
+    </li>
+    <li>
+      <abbr title="F">Friday</abbr>
+    </li>
+    <li>
+      <abbr title="S">Saturday</abbr>
+    </li>
+  </ul>
+
+  <ol class="day-grid">
+    <th:block th:each="i : ${#numbers.sequence(0, offset % 7 -1, 1)}">
+      <li class="month-prev"></li>
+    </th:block>
+    <th:block th:each="i : ${#numbers.sequence(1, lastDay)}">
+      <li th:data-day="${i}">
+        <div th:with="duty=${duties.get(i)}" class="date container">
+          <div class="day row" th:text='|${i}&nbsp;&nbsp;${duty?.memo?:""}|'></div>
+          <div class="duty">
+            <div class="duty-type-list" th:each="type:${dutyTypes}">
+              <div class="duty-type" th:data-type_id="${type.id}">
+                <btn th:if="${type.name == duty?.dutyType}" class="selected btn btn-sm btn-outline-dark"
+                     th:classappend="${type.color}" th:text="${type.name}"></btn>
+                <btn th:if="${type.name != duty?.dutyType}" th:classappend="${type.color}"
+                     class="btn btn-sm btn-outline-dark" th:text="${type.name}"></btn>
+              </div>
+            </div>
+            <div class="duty-type">
+              <btn th:classappend='${duty==null ? "selected":""}' class="btn btn-sm btn-outline-dark"
+                   th:text="OFF"></btn>
+            </div>
+          </div>
+        </div>
+      </li>
+    </th:block>
+    <th:block th:each="i : ${#numbers.sequence(1, 7 - ((offset + lastDay) % 7) )}">
+      <li class="month-next"></li>
+    </th:block>
+  </ol>
+</div>
+</body>
+</html>
+
+<script>
+    let password;
+
+    const year = parseInt("[[${year}]]");
+    const month = parseInt("[[${month}]]");
+    const memberId = parseInt("[[${member.id}]]");
+    const memberName = "[[${member.name}]]";
+
+    function login() {
+        Swal.fire({
+            title: memberName + '님의 암호를 입력 해 주세요.',
+            input: 'password',
+            inputAttributes: {
+                autocapitalize: 'off'
+            },
+            showCancelButton: true,
+            confirmButtonText: '확인',
+            cancelButtonText: '취소',
+            showLoaderOnConfirm: true,
+            preConfirm: (pass) => {
+                return fetch('/member/authenticate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        id: memberId,
+                        password: pass
+                    })
+                }).then(response => {
+                    if (!response.ok) {
+                        throw new Error(response.statusText)
+                    }
+                    password = pass;
+                    Swal.fire({
+                        title: '로그인 되었습니다.',
+                        icon: 'success',
+                        confirmButtonText: '확인'
+                    })
+                    return true;
+                })
+                    .catch(error => {
+                        Swal.showValidationMessage(
+                            `암호가 올바르지 않습니다 : ${error}`
+                        )
+                    })
+            },
+            allowOutsideClick: () => !Swal.isLoading()
+        });
+    }
+
+    $(function () {
+        $('.btn-outline-dark').click(function () {
+            if (!password) {
+                if (!login())
+                    return;
+            }
+            const date = $(this).parents('li');
+            const day = date.data('day');
+            const type = $(this).parent('.duty-type');
+            const type_id = type.data('type_id');
+
+            let button = $(this);
+
+            $.ajax({
+                url: '/api/duty/update',
+                type: 'PUT',
+                data: JSON.stringify({
+                    year: year,
+                    month: month,
+                    day: day,
+                    dutyTypeId: type_id,
+                    memberId: memberId,
+                    password: password
+                }),
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                success: function (data) {
+                    if (data) {
+                        date.find('.duty-type').find('.selected').removeClass('selected');
+                        button.addClass('selected');
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: '저장에 실패했습니다.',
+                            showConfirmButton: false,
+                            timer: 1500
+                        });
+                    }
+                },
+                error: function (e) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: '저장에 실패했습니다.',
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                }
+            });
+
+        });
+    })
+</script>

@@ -1,6 +1,6 @@
-package com.tistory.shanepark.dutypark.member.dto
+package com.tistory.shanepark.dutypark.duty.domain.dto
 
-import com.tistory.shanepark.dutypark.duty.domain.DutyType
+import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 
 data class DutyTypeDto(
     var id: Long,

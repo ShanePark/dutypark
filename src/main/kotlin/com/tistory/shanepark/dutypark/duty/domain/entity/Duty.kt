@@ -1,6 +1,6 @@
-package com.tistory.shanepark.dutypark.duty.domain
+package com.tistory.shanepark.dutypark.duty.domain.entity
 
-import com.tistory.shanepark.dutypark.member.domain.Member
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import javax.persistence.*
 
 @Entity
@@ -10,7 +10,7 @@ class Duty(
     val dutyDay: Int,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "duty_type_id")
-    val dutyType: DutyType,
+    var dutyType: DutyType,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
     val member: Member,

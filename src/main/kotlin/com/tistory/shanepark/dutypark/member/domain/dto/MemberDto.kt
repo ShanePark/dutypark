@@ -1,6 +1,6 @@
-package com.tistory.shanepark.dutypark.member.dto
+package com.tistory.shanepark.dutypark.member.domain.dto
 
-import com.tistory.shanepark.dutypark.member.domain.Member
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
 
 data class MemberDto(
     val id: Long,

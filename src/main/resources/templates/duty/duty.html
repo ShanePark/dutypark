@@ -6,16 +6,21 @@
   <title>Duty Park</title>
 </head>
 <body>
-<h2 class="text-right" th:text="|${member.department} ${member.name}|"></h2>
 <div class="calendar">
-  <header>
-    <h1>
-      <a class="previous round"
-         th:href="@{/duty/{member}(member=${member.name},year=${prevMonth.year}, month=${prevMonth.monthValue})}">&#8249;</a>
-      <span th:text="|${year}년 ${month}월|"></span>
-      <a class="next round"
-         th:href="@{/duty/{member}(member=${member.name},year=${nextMonth.year}, month=${nextMonth.monthValue})}">&#8250;</a>
-    </h1>
+  <header class="row">
+    <div class="col-2"></div>
+    <div class="col-8">
+      <h1>
+        <a class="move"
+           th:href="@{/duty/{member}(member=${member.name},year=${prevMonth.year}, month=${prevMonth.monthValue})}">&#8249;</a>
+        <a class="current" th:href="@{/duty/edit/{member}(member=${member.name},year=${year}, month=${month})}" th:text="|${year}년 ${month}월|"></a>
+        <a class="move"
+           th:href="@{/duty/{member}(member=${member.name},year=${nextMonth.year}, month=${nextMonth.monthValue})}">&#8250;</a>
+      </h1>
+    </div>
+    <div class="col-2">
+      <span class="profile" th:text="|${member.department} ${member.name}|"></span>
+    </div>
   </header>
 
   <ul class="weekdays">
@@ -43,7 +48,7 @@
   </ul>
 
   <ol class="day-grid">
-    <th:block th:each="i : ${#numbers.sequence(1, offset)}">
+    <th:block th:each="i : ${#numbers.sequence(0, offset % 7 -1, 1)}">
       <li class="month-prev"></li>
     </th:block>
     <th:block th:each="i : ${#numbers.sequence(1, lastDay)}">
@@ -56,7 +61,10 @@
             <small th:if="${duty.memo != null && duty.memo.length > 0}" th:text="|(${duty.memo})|"></small>
           </div>
         </div>
-        <div th:unless="${duties.get(i) != null}">OFF</div>
+        <div class="date container" th:unless="${duties.get(i) != null}">
+          <div class="day row" th:text="${i}"></div>
+          <div th:text="OFF"></div>
+        </div>
       </li>
     </th:block>
     <th:block th:each="i : ${#numbers.sequence(1, 7 - ((offset + lastDay) % 7) )}">
