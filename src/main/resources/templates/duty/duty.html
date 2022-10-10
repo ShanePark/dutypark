@@ -6,10 +6,63 @@
   <title>Duty Park</title>
 </head>
 <body>
-<h2>Duty</h2>
-<p th:text="${member}"></p>
-<p th:text="${year}"></p>
-<p th:text="${month}"></p>
-<p th:text="${duties}"></p>
+<h2 class="text-right" th:text="|${member.department} ${member.name}|"></h2>
+<div class="calendar">
+  <header>
+    <h1>
+      <a class="previous round"
+         th:href="@{/duty/{member}(member=${member.name},year=${prevMonth.year}, month=${prevMonth.monthValue})}">&#8249;</a>
+      <span th:text="|${year}년 ${month}월|"></span>
+      <a class="next round"
+         th:href="@{/duty/{member}(member=${member.name},year=${nextMonth.year}, month=${nextMonth.monthValue})}">&#8250;</a>
+    </h1>
+  </header>
+
+  <ul class="weekdays">
+    <li>
+      <abbr title="S">Sunday</abbr>
+    </li>
+    <li>
+      <abbr title="M">Monday</abbr>
+    </li>
+    <li>
+      <abbr title="T">Tuesday</abbr>
+    </li>
+    <li>
+      <abbr title="W">Wednesday</abbr>
+    </li>
+    <li>
+      <abbr title="T">Thursday</abbr>
+    </li>
+    <li>
+      <abbr title="F">Friday</abbr>
+    </li>
+    <li>
+      <abbr title="S">Saturday</abbr>
+    </li>
+  </ul>
+
+  <ol class="day-grid">
+    <th:block th:each="i : ${#numbers.sequence(1, offset)}">
+      <li class="month-prev"></li>
+    </th:block>
+    <th:block th:each="i : ${#numbers.sequence(1, lastDay)}">
+      <li th:classappend='${ duties.get(i)?.dutyColor ?: "off"}'>
+        <div th:if="${duties.get(i) != null}" th:with="duty=${duties.get(i)}" class="date container">
+          <div class="day row" th:text="${i}"></div>
+          <div class="duty">
+            <span th:text='|${duty.dutyType}|'>
+            </span>
+            <small th:if="${duty.memo != null && duty.memo.length > 0}" th:text="|(${duty.memo})|"></small>
+          </div>
+        </div>
+        <div th:unless="${duties.get(i) != null}">OFF</div>
+      </li>
+    </th:block>
+    <th:block th:each="i : ${#numbers.sequence(1, 7 - ((offset + lastDay) % 7) )}">
+      <li class="month-next"></li>
+    </th:block>
+  </ol>
+</div>
 </body>
 </html>

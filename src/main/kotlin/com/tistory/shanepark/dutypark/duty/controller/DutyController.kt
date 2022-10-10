@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestParam
 import java.time.LocalDateTime
+import java.time.YearMonth
 
 @Controller
 class DutyController(
@@ -38,6 +39,15 @@ class DutyController(
         model.addAttribute("member", MemberDto(member))
         model.addAttribute("year", year)
         model.addAttribute("month", month)
+
+        val yearMonth = YearMonth.of(year, month)
+        yearMonth.let {
+            model.addAttribute("prevMonth", it.minusMonths(1))
+            model.addAttribute("nextMonth", it.plusMonths(1))
+            model.addAttribute("offset", it.atDay(1).dayOfWeek.value)
+            model.addAttribute("lastDay", it.lengthOfMonth())
+        }
+
 
         return "duty/duty"
     }
