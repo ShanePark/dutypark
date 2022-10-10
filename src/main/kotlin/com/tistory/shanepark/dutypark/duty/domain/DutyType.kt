@@ -8,7 +8,7 @@ import javax.persistence.*
 @Table(name = "duty_type")
 class DutyType(
     val name: String,
-    val index: Int,
+    val position: Int,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")
     val department: Department,

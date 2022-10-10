@@ -18,6 +18,6 @@ class DutyService(
     }
 
     fun findAllDutyTypes(department: Department): Any {
-        return dutyTypeRepository.findAllByDepartmentOrderByIndexAsc(department)
+        return dutyTypeRepository.findAllByDepartmentOrderByPositionAsc(department)
     }
 }

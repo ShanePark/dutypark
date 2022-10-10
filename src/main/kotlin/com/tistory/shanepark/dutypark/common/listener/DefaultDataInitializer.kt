@@ -38,9 +38,9 @@ class DefaultDataInitializer(
         val jenny = Member(name = "이동현", department = department, password = passwordEncoder.encode("1234"))
         memberRepository.save(jenny);
 
-        val open = dutyTypeRepository.save(DutyType(name = "새벽", index = 0, department = department, PURPLE))
-        val mid = dutyTypeRepository.save(DutyType(name = "정출", index = 1, department = department, BLUE))
-        val close = dutyTypeRepository.save(DutyType(name = "마감", index = 2, department = department, RED))
+        val open = dutyTypeRepository.save(DutyType(name = "새벽", position = 0, department = department, PURPLE))
+        val mid = dutyTypeRepository.save(DutyType(name = "정출", position = 1, department = department, BLUE))
+        val close = dutyTypeRepository.save(DutyType(name = "마감", position = 2, department = department, RED))
 
         dutyRepository.save(
             Duty(
@@ -68,8 +68,8 @@ class DefaultDataInitializer(
         val paul = Member(name = "박재현", department = department2, password = passwordEncoder.encode("1234"))
         memberRepository.save(paul)
 
-        dutyTypeRepository.save(DutyType(name = "데이", index = 0, department = department2, BLUE))
-        dutyTypeRepository.save(DutyType(name = "이브", index = 1, department = department2, PURPLE))
-        dutyTypeRepository.save(DutyType(name = "나이트", index = 2, department = department2, RED))
+        dutyTypeRepository.save(DutyType(name = "데이", position = 0, department = department2, BLUE))
+        dutyTypeRepository.save(DutyType(name = "이브", position = 1, department = department2, PURPLE))
+        dutyTypeRepository.save(DutyType(name = "나이트", position = 2, department = department2, RED))
     }
 }

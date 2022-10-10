@@ -7,5 +7,5 @@ import org.springframework.stereotype.Repository
 
 @Repository
 interface DutyTypeRepository : JpaRepository<DutyType, Long> {
-    fun findAllByDepartmentOrderByIndexAsc(department: Department): List<DutyType>
+    fun findAllByDepartmentOrderByPositionAsc(department: Department): List<DutyType>
 }
