@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.duty.controller
 
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
+import com.tistory.shanepark.dutypark.duty.domain.dto.MemoDto
 import com.tistory.shanepark.dutypark.duty.service.DutyService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PutMapping
@@ -17,6 +18,12 @@ class DutyApiController(
     @PutMapping("update")
     fun updateDuty(@RequestBody dutyUpdateDto: DutyUpdateDto): ResponseEntity<Boolean> {
         dutyService.update(dutyUpdateDto)
+        return ResponseEntity.ok(true)
+    }
+
+    @PutMapping("memo")
+    fun updateMemo(@RequestBody memoDto: MemoDto): ResponseEntity<Boolean> {
+        dutyService.updateMemo(memoDto)
         return ResponseEntity.ok(true)
     }
 

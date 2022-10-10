@@ -19,7 +19,7 @@ header {
     align-items: center;
     font-size: calc(16px + (26 - 16) * ((100vw - 300px) / (1600 - 300)));
     justify-content: center;
-    margin-bottom: 2em;
+    margin-bottom: 1em;
     background: #000;
     color: #fff;
     min-height: 10vh;
@@ -59,6 +59,8 @@ ol.day-grid li {
     height: 100%;
     padding: 5px;
     display: inline-table;
+    border-radius: 0.625rem;
+    box-shadow: 6px 11px 41px -28px #a99de7;
 }
 
 .RED {
@@ -140,4 +142,22 @@ header .current {
 
 .calendar .date {
     text-align: center;
+}
+
+.duty p {
+    font-size: 0.7em;
+    margin-bottom: 0px;
+}
+
+.text-align-left {
+    text-align: left !important;
+}
+
+.edit-memo:hover {
+    cursor: pointer;
+}
+
+.day .memo {
+    text-align: left;
+    font-size: 0.9em;
 }

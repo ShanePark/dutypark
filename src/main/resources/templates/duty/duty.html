@@ -58,7 +58,7 @@
           <div class="duty">
             <span th:text='|${duty.dutyType}|'>
             </span>
-            <small th:if="${duty.memo != null && duty.memo.length > 0}" th:text="|(${duty.memo})|"></small>
+            <p th:if="${duty.memo != null && duty.memo.length > 0}" th:text="|(${duty.memo})|"></p>
           </div>
         </div>
         <div class="date container" th:unless="${duties.get(i) != null}">

@@ -10,11 +10,11 @@ class Duty(
     val dutyDay: Int,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "duty_type_id")
-    var dutyType: DutyType,
+    var dutyType: DutyType?,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
     val member: Member,
-    val memo: String? = null
+    var memo: String? = null
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

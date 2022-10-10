@@ -51,7 +51,10 @@
     <th:block th:each="i : ${#numbers.sequence(1, lastDay)}">
       <li th:data-day="${i}">
         <div th:with="duty=${duties.get(i)}" class="date container">
-          <div class="day row" th:text='|${i}&nbsp;&nbsp;${duty?.memo?:""}|'></div>
+          <div class="day row">
+            <span class="edit-memo col-md-3" th:text="${i}"></span>
+            <span class="memo col-md-9" th:text='${duty?.memo?:""}'></span>
+          </div>
           <div class="duty">
             <div class="duty-type-list" th:each="type:${dutyTypes}">
               <div class="duty-type" th:data-type_id="${type.id}">
@@ -62,7 +65,8 @@
               </div>
             </div>
             <div class="duty-type">
-              <btn th:classappend='${duty==null ? "selected":""}' class="btn btn-sm btn-outline-dark"
+              <btn th:classappend='${duty==null or duty.dutyType==null ? "selected":""}'
+                   class="btn btn-sm btn-outline-dark"
                    th:text="OFF"></btn>
             </div>
           </div>
@@ -87,10 +91,12 @@
 
     function login() {
         Swal.fire({
-            title: memberName + '님의 암호를 입력 해 주세요.',
+            title: roChecker(memberName) + ' 로그인',
             input: 'password',
             inputAttributes: {
-                autocapitalize: 'off'
+                autocapitalize: 'off',
+                maxlength: 12,
+                placeholder: '비밀번호를 입력하세요'
             },
             showCancelButton: true,
             confirmButtonText: '확인',
@@ -129,6 +135,66 @@
     }
 
     $(function () {
+
+        $('.edit-memo').on('click', function () {
+            if (!password) {
+                if (!login())
+                    return;
+            }
+            const date = $(this).parents('li');
+            const day = date.data('day');
+            const memoSpan = $(this).parents('.day').find('.memo');
+            Swal.fire({
+                title: '메모를 입력 해 주세요.',
+                input: 'textarea',
+                inputValue: '',
+                inputAttributes: {
+                    autocapitalize: 'off'
+                },
+                showCancelButton: true,
+                confirmButtonText: '확인',
+                cancelButtonText: '취소',
+                showLoaderOnConfirm: true,
+                preConfirm: (memo) => {
+                    return fetch('/api/duty/memo', {
+                        method: 'put',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            year: year,
+                            month: month,
+                            day: day,
+                            memo: memo,
+                            memberId: memberId,
+                            password: password
+                        })
+                    }).then(response => {
+                        if (!response.ok) {
+                            throw new Error(response.statusText)
+                        }
+                        memoSpan.text(memo);
+                        Swal.fire({
+                            title: '메모가 저장 되었습니다.',
+                            icon: 'success',
+                            confirmButtonText: '확인'
+                        })
+                        return true;
+                    })
+                        .catch(error => {
+                            Swal.showValidationMessage(
+                                `메모 저장에 실패 하였습니다 : ${error}`
+                            )
+                        })
+                },
+                allowOutsideClick: () => !Swal.isLoading()
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // TODO: 메모 저장
+                }
+            });
+        });
+
         $('.btn-outline-dark').click(function () {
             if (!password) {
                 if (!login())
@@ -179,4 +245,19 @@
 
         });
     })
+
+    const isSingleCharacter = function (text) {
+        var strGa = 44032; // 가
+        var strHih = 55203; // 힣
+
+        var lastStrCode = text.charCodeAt(text.length - 1);
+
+        if (lastStrCode < strGa || lastStrCode > strHih) {
+            return false; //한글이 아닐 경우 false 반환
+        }
+        return ((lastStrCode - strGa) % 28 == 0)
+    }
+    const roChecker = function (text) {
+        return text + (isSingleCharacter(text) ? '로' : '으로');
+    }
 </script>
