@@ -63,6 +63,12 @@ ol.day-grid li {
     box-shadow: 6px 11px 41px -28px #a99de7;
 }
 
+ol.day-grid li.today {
+    border-style: inset;
+    border-width: medium;
+    border-color: orangered;
+}
+
 .RED {
     background-color: lightpink !important;
 }
