@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.duty.service
 
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
+import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.MemoDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
@@ -26,8 +27,12 @@ class DutyService(
             .associate { it.dutyDay to DutyDto(it) }
     }
 
-    fun findAllDutyTypes(department: Department): Any {
-        return dutyTypeRepository.findAllByDepartmentOrderByPositionAsc(department)
+    fun findAllDutyTypes(department: Department): MutableList<DutyTypeDto> {
+        val dutyTypes = dutyTypeRepository.findAllByDepartmentOrderByPositionAsc(department)
+            .map { DutyTypeDto(it) }
+            .toMutableList()
+        dutyTypes.add(0, DutyTypeDto(name = "OFF", position = -1, color = department.offColor.toString()))
+        return dutyTypes
     }
 
     fun update(dutyUpdateDto: DutyUpdateDto) {

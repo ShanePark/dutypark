@@ -1,11 +1,14 @@
 package com.tistory.shanepark.dutypark.member.domain.entity
 
+import com.tistory.shanepark.dutypark.duty.enums.Color
 import javax.persistence.*
 
 @Entity
 class Department(
     @Column(unique = true)
-    val name: String
+    val name: String,
+    @Enumerated(EnumType.STRING)
+    var offColor: Color = Color.GREY,
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

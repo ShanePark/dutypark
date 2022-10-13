@@ -73,6 +73,7 @@ class DutyController(
         model.addAttribute("member", MemberDto(member))
         model.addAttribute("year", year)
         model.addAttribute("month", month)
+        model.addAttribute("offColor", member.department.offColor.name)
 
         val yearMonth = YearMonth.of(year, month)
         yearMonth.let {

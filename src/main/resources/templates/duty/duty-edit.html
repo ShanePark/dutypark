@@ -58,16 +58,11 @@
           <div class="duty">
             <div class="duty-type-list" th:each="type:${dutyTypes}">
               <div class="duty-type" th:data-type_id="${type.id}">
-                <btn th:if="${type.name == duty?.dutyType}" class="selected btn btn-sm btn-outline-dark"
+                <btn th:if="${type.name == duty?.dutyType or (type.id == null and duty?.dutyType==null) }" class="selected btn btn-sm btn-outline-dark"
                      th:classappend="${type.color}" th:text="${type.name}"></btn>
-                <btn th:if="${type.name != duty?.dutyType}" th:classappend="${type.color}"
+                <btn th:unless="${type.name == duty?.dutyType or (type.id == null and duty?.dutyType==null) }" th:classappend="${type.color}"
                      class="btn btn-sm btn-outline-dark" th:text="${type.name}"></btn>
               </div>
-            </div>
-            <div class="duty-type">
-              <btn th:classappend='${duty==null or duty.dutyType==null ? "selected":""}'
-                   class="btn btn-sm btn-outline-dark"
-                   th:text="OFF"></btn>
             </div>
           </div>
         </div>

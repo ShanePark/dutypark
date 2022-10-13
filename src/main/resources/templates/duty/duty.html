@@ -52,7 +52,7 @@
       <li class="month-prev"></li>
     </th:block>
     <th:block th:each="i : ${#numbers.sequence(1, lastDay)}">
-      <li th:classappend='|${ duties.get(i)?.dutyColor ?: "off"}${today.getYear()+1900==year and today.getMonth()+1 == month and today.getDate() == i ? " today": "" }|'>
+      <li th:classappend='|${ duties.get(i)?.dutyColor ?: offColor}${today.getYear()+1900==year and today.getMonth()+1 == month and today.getDate() == i ? " today": "" }|'>
         <div th:if="${duties.get(i) != null}" th:with="duty=${duties.get(i)}" class="date container">
           <div class="day row" th:text="|${i}|"></div>
           <div class="duty">
