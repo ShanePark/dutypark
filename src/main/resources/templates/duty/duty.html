@@ -56,12 +56,10 @@
       <li th:classappend='|${ duties.get(i)?.dutyColor ?: offColor}${today.getYear()+1900==year and today.getMonth()+1 == month and today.getDate() == i ? " today": "" }|'>
         <div th:with="duty=${duties.get(i)}" class="date container">
           <div class="day row">
-            <span class="date_number" th:text="|${i}|"></span>
+            <span class="date_number" th:text='|${i}.&nbsp; ${(duty == null or duty.dutyType == null) ? "OFF" : duty.dutyType} |'></span>
           </div>
           <div class="duty">
-            <span th:text='|${duty == null or duty.dutyType == null ? "OFF" : duty.dutyType}|'>
-            </span>
-            <p th:if="${duty!=null and duty.memo != null && duty.memo.length > 0}" th:text="|(${duty.memo})|"></p>
+            <p class="memo" th:if="${duty!=null and duty.memo != null && duty.memo.length > 0}" th:text="|${duty.memo}|"></p>
           </div>
         </div>
       </li>
