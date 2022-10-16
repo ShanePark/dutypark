@@ -89,6 +89,9 @@ ol.day-grid li.today {
 .GREEN {
     background-color: honeydew !important;
 }
+.YELLOW {
+    background-color: wheat !important;
+}
 
 
 ul.weekdays abbr[title] {
@@ -168,7 +171,10 @@ header .current {
     cursor: pointer;
 }
 
-.day .memo {
+.calendar .memo {
+    white-space: pre-line;
+}
+.calendar.edit .day .memo {
     text-align: left;
     font-size: 0.9em;
 }
