@@ -89,6 +89,7 @@ ol.day-grid li.today {
 .GREEN {
     background-color: honeydew !important;
 }
+
 .YELLOW {
     background-color: wheat !important;
 }
@@ -174,6 +175,7 @@ header .current {
 .calendar .memo {
     white-space: pre-line;
 }
+
 .calendar.edit .day .memo {
     text-align: left;
     font-size: 0.9em;
@@ -183,3 +185,15 @@ header .current {
     text-align: left;
 }
 
+.homeButton {
+    font-size: 1.5em;
+}
+
+.calendar header .left-area {
+    text-align: left;
+    padding-left: 40px;
+}
+
+.h_pointer:hover {
+    cursor: pointer !important;
+}
