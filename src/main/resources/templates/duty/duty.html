@@ -13,7 +13,8 @@
       <h1>
         <a class="move"
            th:href="@{/duty/{member}(member=${member.name},year=${prevMonth.year}, month=${prevMonth.monthValue})}">&#8249;</a>
-        <a class="current" th:href="@{/duty/edit/{member}(member=${member.name},year=${year}, month=${month})}" th:text="|${year}년 ${month}월|"></a>
+        <a class="current" th:href="@{/duty/edit/{member}(member=${member.name},year=${year}, month=${month})}"
+           th:text="|${year}년 ${month}월|"></a>
         <a class="move"
            th:href="@{/duty/{member}(member=${member.name},year=${nextMonth.year}, month=${nextMonth.monthValue})}">&#8250;</a>
       </h1>
@@ -53,17 +54,15 @@
     </th:block>
     <th:block th:each="i : ${#numbers.sequence(1, lastDay)}">
       <li th:classappend='|${ duties.get(i)?.dutyColor ?: offColor}${today.getYear()+1900==year and today.getMonth()+1 == month and today.getDate() == i ? " today": "" }|'>
-        <div th:if="${duties.get(i) != null}" th:with="duty=${duties.get(i)}" class="date container">
-          <div class="day row" th:text="|${i}|"></div>
-          <div class="duty">
-            <span th:text='|${duty.dutyType}|'>
-            </span>
-            <p th:if="${duty.memo != null && duty.memo.length > 0}" th:text="|(${duty.memo})|"></p>
+        <div th:with="duty=${duties.get(i)}" class="date container">
+          <div class="day row">
+            <span class="date_number" th:text="|${i}|"></span>
           </div>
-        </div>
-        <div class="date container" th:unless="${duties.get(i) != null}">
-          <div class="day row" th:text="|${i}|"></div>
-          <div th:text="OFF"></div>
+          <div class="duty">
+            <span th:text='|${duty == null or duty.dutyType == null ? "OFF" : duty.dutyType}|'>
+            </span>
+            <p th:if="${duty!=null and duty.memo != null && duty.memo.length > 0}" th:text="|(${duty.memo})|"></p>
+          </div>
         </div>
       </li>
     </th:block>

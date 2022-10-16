@@ -64,9 +64,14 @@ ol.day-grid li {
 }
 
 ol.day-grid li.today {
-    border-style: inset;
-    border-width: medium;
+    border-style: dashed;
+    border-width: thick;
     border-color: orangered;
+}
+
+.today .date_number {
+    color: red;
+    font-weight: bold;
 }
 
 .RED {
@@ -167,3 +172,8 @@ header .current {
     text-align: left;
     font-size: 0.9em;
 }
+
+.day .date_number {
+    text-align: left;
+}
+
