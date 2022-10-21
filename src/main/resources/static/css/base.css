@@ -168,6 +168,11 @@ header .current {
     text-align: left !important;
 }
 
+.edit-memo {
+    font-size: 1.2em;
+    float: right;
+}
+
 .edit-memo:hover {
     cursor: pointer;
 }
@@ -196,4 +201,13 @@ header .current {
 
 .h_pointer:hover {
     cursor: pointer !important;
+}
+
+.duty-type btn {
+    width: 100%;
+    margin-bottom: 0.5em;
+}
+
+.bi-calendar-plus {
+    color: lightslategrey;
 }
