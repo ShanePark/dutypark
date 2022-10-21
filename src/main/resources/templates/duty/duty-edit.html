@@ -51,17 +51,19 @@
     <th:block th:each="i : ${#numbers.sequence(1, lastDay)}">
       <li th:data-day="${i}">
         <div th:with="duty=${duties.get(i)}" class="date container">
-          <div class="day row">
-            <span class="edit-memo col-md-3" th:text="${i}"></span>
-            <span class="memo col-md-9" th:text='${duty?.memo?:""}'></span>
+          <div class="day">
+            <span th:text="${i}"></span>
+            <i class="bi edit-memo"
+               th:classappend="${#strings.isEmpty(duty?.memo) ? 'bi-calendar-plus text-green' : 'bi-calendar-check'}"
+               th:attr='data-memo=${duty?.memo?:""}'></i>
+            <!--            <input type="text" class="form-control edit-memo memo col-md-9" th:value=''/>-->
           </div>
           <div class="duty">
             <div class="duty-type-list" th:each="type:${dutyTypes}">
               <div class="duty-type" th:data-type_id="${type.id}">
-                <btn th:if="${type.name == duty?.dutyType or (type.id == null and duty?.dutyType==null) }" class="selected btn btn-sm btn-outline-dark"
-                     th:classappend="${type.color}" th:text="${type.name}"></btn>
-                <btn th:unless="${type.name == duty?.dutyType or (type.id == null and duty?.dutyType==null) }" th:classappend="${type.color}"
-                     class="btn btn-sm btn-outline-dark" th:text="${type.name}"></btn>
+                <btn class="btn btn-sm btn-outline-dark"
+                     th:classappend='|${type.color} ${(type.name == duty?.dutyType or (type.id == null and duty?.dutyType==null) ) ? "selected" : ""}|'
+                     th:text="${type.name}"></btn>
               </div>
             </div>
           </div>
@@ -132,7 +134,7 @@
     $(function () {
 
         $('.edit-memo').on('click', function () {
-            const originalMemo = $(this).parents('.date').find('.memo').text();
+            const originalMemo = $(this).data('memo');
             if (!password) {
                 if (!login())
                     return;
