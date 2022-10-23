@@ -125,13 +125,13 @@ ol.day-grid li.month-prev, ol.day-grid li.month-next {
     }
 }
 
-.calendar h1 a {
+h1 a {
     color: white;
     text-decoration: none;
     font-weight: bold;
 }
 
-.calendar h1 a.move:hover {
+h1 a.move:hover {
     color: lightgrey;
 }
 
@@ -154,7 +154,7 @@ header .current {
     outline: 2px solid orangered;
 }
 
-.calendar .date {
+.date {
     text-align: center;
 }
 
@@ -176,11 +176,11 @@ header .current {
     cursor: pointer;
 }
 
-.calendar .memo {
+.memo {
     white-space: pre-line;
 }
 
-.calendar.edit .day .memo {
+.edit .day .memo {
     text-align: left;
     font-size: 0.9em;
 }
@@ -193,7 +193,7 @@ header .current {
     font-size: 1.7em;
 }
 
-.calendar header .left-area {
+header .left-area {
     text-align: left;
     padding-left: 40px;
 }
@@ -211,7 +211,7 @@ header .current {
     color: lightslategrey;
 }
 
-.calendar .dutyTypes {
+.dutyTypes {
     font-size: 1.3em;
     text-align: right;
     margin-right: 50px;
@@ -220,6 +220,10 @@ header .current {
 
 /* mobile */
 @media ( max-width: 1024px ) {
+
+    .calendar {
+        margin-right: 20px;
+    }
 
     header {
         font-size: 2.5em;
@@ -237,9 +241,9 @@ header .current {
         font-size: 2em;
     }
 
-    .calendar .dutyTypes {
+    .dutyTypes {
         font-size: 2em;
-        margin-right: 0;
+        margin-right: 10px;
     }
 
     .duty .memo {
