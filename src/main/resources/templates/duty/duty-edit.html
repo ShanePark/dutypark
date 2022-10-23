@@ -54,7 +54,7 @@
           <div class="day">
             <span th:text="${i}"></span>
             <i class="bi edit-memo"
-               th:classappend="${#strings.isEmpty(duty?.memo) ? 'bi-calendar-plus text-green' : 'bi-calendar-check'}"
+               th:classappend="${#strings.isEmpty(duty?.memo) ? 'bi-calendar-plus' : 'bi-calendar-check'}"
                th:attr='data-memo=${duty?.memo?:""}'></i>
             <!--            <input type="text" class="form-control edit-memo memo col-md-9" th:value=''/>-->
           </div>
@@ -134,14 +134,14 @@
     $(function () {
 
         $('.edit-memo').on('click', function () {
-            const originalMemo = $(this).data('memo');
+            let btn = $(this);
+            const originalMemo = btn.data('memo');
             if (!password) {
                 if (!login())
                     return;
             }
-            const date = $(this).parents('li');
+            const date = btn.parents('li');
             const day = date.data('day');
-            const memoSpan = $(this).parents('.day').find('.memo');
             Swal.fire({
                 title: '메모를 입력 해 주세요.',
                 input: 'textarea',
@@ -171,12 +171,17 @@
                         if (!response.ok) {
                             throw new Error(response.statusText)
                         }
-                        memoSpan.text(memo);
                         Swal.fire({
                             title: '메모가 저장 되었습니다.',
                             icon: 'success',
                             confirmButtonText: '확인'
                         })
+                        btn.data('memo', memo);
+                        if (memo.length > 0) {
+                            date.find('.bi-calendar-plus').removeClass('bi-calendar-plus').addClass('bi-calendar-check');
+                        } else {
+                            date.find('.bi-calendar-check').removeClass('bi-calendar-check').addClass('bi-calendar-plus');
+                        }
                         return true;
                     })
                         .catch(error => {
