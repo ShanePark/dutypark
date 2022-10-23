@@ -11,14 +11,18 @@
     <div class="left-area col-2">
       <i class="homeButton h_pointer bi bi-house-door"></i>
     </div>
-    <div class="col-8">
+    <div class="month-control col-8">
       <h1>
         <a class="move"
-           th:href="@{/duty/{member}(member=${member.name},year=${prevMonth.year}, month=${prevMonth.monthValue})}">&#8249;</a>
+           th:href="@{/duty/{member}(member=${member.name},year=${prevMonth.year}, month=${prevMonth.monthValue})}">
+          <i class="bi bi-arrow-left-circle"></i>
+        </a>
         <a class="current" th:href="@{/duty/edit/{member}(member=${member.name},year=${year}, month=${month})}"
            th:text="|${year}년 ${month}월|"></a>
         <a class="move"
-           th:href="@{/duty/{member}(member=${member.name},year=${nextMonth.year}, month=${nextMonth.monthValue})}">&#8250;</a>
+           th:href="@{/duty/{member}(member=${member.name},year=${nextMonth.year}, month=${nextMonth.monthValue})}">
+          <i class="bi bi-arrow-right-circle"></i>
+        </a>
       </h1>
     </div>
     <div class="col-2">
@@ -26,52 +30,61 @@
     </div>
   </header>
 
-  <ul class="weekdays">
-    <li>
-      <abbr title="S">Sunday</abbr>
-    </li>
-    <li>
-      <abbr title="M">Monday</abbr>
-    </li>
-    <li>
-      <abbr title="T">Tuesday</abbr>
-    </li>
-    <li>
-      <abbr title="W">Wednesday</abbr>
-    </li>
-    <li>
-      <abbr title="T">Thursday</abbr>
-    </li>
-    <li>
-      <abbr title="F">Friday</abbr>
-    </li>
-    <li>
-      <abbr title="S">Saturday</abbr>
-    </li>
-  </ul>
+  <div class="dutyTypes">
+    <span th:each="type : ${dutyTypes}">
+      <span th:class="${type.color}">&nbsp;&nbsp;&nbsp;</span>
+      <span th:text="${type.name}"></span>
+    </span>
+  </div>
 
-  <ol class="day-grid" th:with="today=${#dates.createNow()}">
-    <th:block th:each="i : ${#numbers.sequence(0, offset % 7 -1, 1)}">
-      <li class="month-prev"></li>
-    </th:block>
-    <th:block th:each="i : ${#numbers.sequence(1, lastDay)}">
-      <li th:classappend='|${ duties.get(i)?.dutyColor ?: offColor}${today.getYear()+1900==year and today.getMonth()+1 == month and today.getDate() == i ? " today": "" }|'>
-        <div th:with="duty=${duties.get(i)}" class="date container">
-          <div class="day row">
-            <span class="date_number"
-                  th:text='|${i}.&nbsp; ${(duty == null or duty.dutyType == null) ? "OFF" : duty.dutyType} |'></span>
-          </div>
-          <div class="duty">
-            <p class="memo" th:if="${duty!=null and duty.memo != null && duty.memo.length > 0}"
-               th:text="|${duty.memo}|"></p>
-          </div>
-        </div>
+  <div>
+    <ul class="weekdays">
+      <li>
+        <abbr title="S">SUN</abbr>
       </li>
-    </th:block>
-    <th:block th:each="i : ${#numbers.sequence(1, 7 - ((offset + lastDay) % 7) )}">
-      <li class="month-next"></li>
-    </th:block>
-  </ol>
+      <li>
+        <abbr title="M">MON</abbr>
+      </li>
+      <li>
+        <abbr title="T">TUE</abbr>
+      </li>
+      <li>
+        <abbr title="W">WED</abbr>
+      </li>
+      <li>
+        <abbr title="T">THU</abbr>
+      </li>
+      <li>
+        <abbr title="F">FRI</abbr>
+      </li>
+      <li>
+        <abbr title="S">SAT</abbr>
+      </li>
+    </ul>
+
+    <ol class="day-grid" th:with="today=${#dates.createNow()}">
+      <th:block th:each="i : ${#numbers.sequence(0, offset % 7 -1, 1)}">
+        <li class="month-prev"></li>
+      </th:block>
+      <th:block th:each="i : ${#numbers.sequence(1, lastDay)}">
+        <li th:classappend='|${ duties.get(i)?.dutyColor ?: offColor}${today.getYear()+1900==year and today.getMonth()+1 == month and today.getDate() == i ? " today": "" }|'>
+          <div th:with="duty=${duties.get(i)}" class="date container">
+            <div class="day row">
+            <span class="date_number"
+                  th:text='|${i}|'></span>
+            </div>
+            <div class="duty">
+              <p class="memo" th:if="${duty!=null and duty.memo != null && duty.memo.length > 0}"
+                 th:text="|${duty.memo}|"></p>
+            </div>
+          </div>
+        </li>
+      </th:block>
+      <th:block th:each="i : ${#numbers.sequence(1, 7 - ((offset + lastDay) % 7) )}">
+        <li class="month-next"></li>
+      </th:block>
+    </ol>
+  </div>
 </div>
 </body>
 </html>
