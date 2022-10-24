@@ -55,7 +55,7 @@ ul.weekdays li {
 ol.day-grid li {
     background-color: #EEE;
     border: 1px solid #eaeaea;
-    min-height: 8vw;
+    min-height: 6vw;
     height: 100%;
     padding: 5px;
     display: inline-table;
@@ -138,7 +138,7 @@ h1 a.move:hover {
 .date {
     height: 100%;
     width: 100%;
-    padding: 5px;
+    padding: 5px 0px;
 }
 
 .text-right {
@@ -216,6 +216,10 @@ header .left-area {
     text-align: right;
     margin-right: 50px;
     margin-bottom: 20px;
+}
+
+.dutyTypes .indicator {
+    border: 2px solid #eaeaea;
 }
 
 /* mobile */

@@ -31,7 +31,7 @@
 
 <div class="dutyTypes">
     <span th:each="type : ${dutyTypes}">
-      <span th:class="${type.color}">&nbsp;&nbsp;&nbsp;</span>
+      <span th:class="|indicator ${type.color}|">&nbsp;&nbsp;&nbsp;</span>
       <span th:text="${type.name}"></span>
     </span>
 </div>
