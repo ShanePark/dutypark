@@ -34,8 +34,9 @@ dependencies {
     runtimeOnly("mysql:mysql-connector-java")
     implementation("com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.8.1")
 
-    // Encryption
+    // Utilities
     implementation("com.password4j:password4j:1.6.1")
+    implementation("net.gpedro.integrations.slack:slack-webhook:1.4.0")
 
 }
 

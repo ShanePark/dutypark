@@ -8,5 +8,7 @@ data class DutyUpdateDto(
     val memberId: Long,
     val password: String,
 ) {
-
+    override fun toString(): String {
+        return "DutyUpdateDto(year=$year, month=$month, day=$day, dutyTypeId=$dutyTypeId, memberId=$memberId)"
+    }
 }

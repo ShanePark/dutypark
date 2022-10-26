@@ -10,3 +10,7 @@ spring:
       ddl-auto: create-drop
     database-platform: org.hibernate.dialect.H2Dialect
 
+dutypark:
+  slack:
+    token: ""
+    channel: "error-log"

@@ -8,5 +8,7 @@ data class MemoDto(
     val memberId: Long,
     val password: String,
 ) {
-
+    override fun toString(): String {
+        return "MemoDto(year=$year, month=$month, day=$day, memo='$memo', memberId=$memberId)"
+    }
 }
