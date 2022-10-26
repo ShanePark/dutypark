@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.duty.controller
 
+import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.MemoDto
 import com.tistory.shanepark.dutypark.duty.service.DutyService
@@ -16,12 +17,14 @@ class DutyApiController(
 ) {
 
     @PutMapping("update")
+    @SlackNotification
     fun updateDuty(@RequestBody dutyUpdateDto: DutyUpdateDto): ResponseEntity<Boolean> {
         dutyService.update(dutyUpdateDto)
         return ResponseEntity.ok(true)
     }
 
     @PutMapping("memo")
+    @SlackNotification
     fun updateMemo(@RequestBody memoDto: MemoDto): ResponseEntity<Boolean> {
         dutyService.updateMemo(memoDto)
         return ResponseEntity.ok(true)
