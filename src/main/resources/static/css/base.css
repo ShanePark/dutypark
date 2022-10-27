@@ -14,16 +14,17 @@ body {
     font-family: NexonMaplestory;
 }
 
-header {
+header.row {
     display: flex;
     align-items: center;
     font-size: calc(16px + (26 - 16) * ((100vw - 300px) / (1600 - 300)));
     justify-content: center;
-    margin-bottom: 1em;
     background: #000;
     color: #fff;
     min-height: 8vh;
     text-align: center;
+    width: 100%;
+    margin: 0px 0px 1em;
 }
 
 ul, ol {
