@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.duty.service.DutyService
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.service.MemberService
+import org.slf4j.Logger
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
@@ -19,7 +20,7 @@ class DutyController(
     val dutyService: DutyService,
 ) {
 
-    val log = org.slf4j.LoggerFactory.getLogger(this.javaClass)
+    val log: Logger = org.slf4j.LoggerFactory.getLogger(this.javaClass)
 
     @GetMapping("/duty/edit/{name}")
     fun editDuty(
