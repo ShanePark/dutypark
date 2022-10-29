@@ -4,8 +4,12 @@ import net.gpedro.integrations.slack.SlackApi
 import net.gpedro.integrations.slack.SlackAttachment
 import net.gpedro.integrations.slack.SlackField
 import net.gpedro.integrations.slack.SlackMessage
+import org.slf4j.Logger
+import org.springframework.http.ResponseEntity
+import org.springframework.web.HttpRequestMethodNotSupportedException
 import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
+import org.springframework.web.bind.annotation.ResponseBody
 import java.util.*
 import javax.servlet.http.HttpServletRequest
 
@@ -13,6 +17,18 @@ import javax.servlet.http.HttpServletRequest
 class ErrorDetectAdvisor(
     private val slackApi: SlackApi,
 ) {
+    val log: Logger = org.slf4j.LoggerFactory.getLogger(this.javaClass)
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException::class)
+    @ResponseBody
+    fun handleMethodNotSupported(
+        req: HttpServletRequest,
+        e: HttpRequestMethodNotSupportedException
+    ): ResponseEntity<Any> {
+        log.warn("handleMethodNotSupported, IP: {}", req.remoteAddr)
+        return ResponseEntity.status(405)
+            .body(e.message)
+    }
 
     @ExceptionHandler(Exception::class)
     fun handleException(req: HttpServletRequest, e: Exception) {
