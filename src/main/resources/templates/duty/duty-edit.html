@@ -56,20 +56,20 @@
     <li class="month-prev"></li>
   </th:block>
   <th:block th:each="i : ${#numbers.sequence(1, lastDay)}">
-    <li th:data-day="${i}">
-      <div th:with="duty=${duties.get(i)}" class="date container">
+    <li th:with="duty=${duties.get(i)}" th:data-day="${i}"
+        th:classappend="|BACKGROUND-${duty==null ? offColor : duty.dutyColor}|">
+      <div class="date container">
         <div class="day">
           <span th:text="${i}"></span>
           <i class="bi edit-memo"
              th:classappend="${#strings.isEmpty(duty?.memo) ? 'bi-calendar-plus' : 'bi-calendar-check'}"
              th:attr='data-memo=${duty?.memo?:""}'></i>
-          <!--            <input type="text" class="form-control edit-memo memo col-md-9" th:value=''/>-->
         </div>
         <div class="duty">
           <div class="duty-type-list" th:each="type:${dutyTypes}">
             <div class="duty-type" th:data-type_id="${type.id}">
               <btn class="btn btn-sm btn-outline-dark"
-                   th:classappend='|${type.color} ${(type.name == duty?.dutyType or (type.id == null and duty?.dutyType==null) ) ? "selected" : ""}|'
+                   th:classappend='|BACKGROUND-${type.color} ${(type.name == duty?.dutyType or (type.id == null and duty?.dutyType==null) ) ? "selected" : ""}|'
                    th:text="${type.name}"></btn>
             </div>
           </div>
@@ -213,6 +213,7 @@
             const day = date.data('day');
             const type = $(this).parent('.duty-type');
             const type_id = type.data('type_id');
+            const backgroundColor = $(this).attr('class').match(/BACKGROUND-([A-Z]+)/)[0];
 
             let button = $(this);
 
@@ -235,6 +236,8 @@
                 success: function (data) {
                     if (data) {
                         date.find('.duty-type').find('.selected').removeClass('selected');
+                        date.get(0).className = date.get(0).className.replace(/BACKGROUND-[A-Z]+/g, '');
+                        date.addClass(backgroundColor);
                         button.addClass('selected');
                     } else {
                         Swal.fire({

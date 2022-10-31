@@ -54,7 +54,6 @@ ul.weekdays li {
 }
 
 ol.day-grid li {
-    background-color: #EEE;
     border: 1px solid #eaeaea;
     min-height: 6vw;
     height: 100%;
@@ -75,27 +74,27 @@ ol.day-grid li.today {
     font-weight: bold;
 }
 
-.RED {
+.BACKGROUND-RED {
     background-color: lightpink !important;
 }
 
-.BLUE {
+.BACKGROUND-BLUE {
     background-color: aliceblue !important;
 }
 
-.PURPLE {
+.BACKGROUND-PURPLE {
     background-color: mediumpurple !important;
 }
 
-.GREEN {
-    background-color: honeydew !important;
+.BACKGROUND-GREEN {
+    background-color: palegreen !important;
 }
 
-.YELLOW {
+.BACKGROUND-YELLOW {
     background-color: wheat !important;
 }
 
-.GREY {
+.BACKGROUND-GREY {
     background-color: lightgrey !important;
 }
 
@@ -152,7 +151,7 @@ header .current {
 }
 
 .btn-outline-dark.selected {
-    outline: 2px solid orangered;
+    display: none;
 }
 
 .date {
@@ -209,7 +208,7 @@ header .left-area {
 }
 
 .bi-calendar-plus {
-    color: lightslategrey;
+    opacity: 0.5;
 }
 
 .dutyTypes {

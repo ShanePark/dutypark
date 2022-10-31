@@ -31,7 +31,7 @@
 
 <div class="dutyTypes">
     <span th:each="type : ${dutyTypes}">
-      <span th:class="|indicator ${type.color}|">&nbsp;&nbsp;&nbsp;</span>
+      <span th:class="|indicator BACKGROUND-${type.color}|">&nbsp;&nbsp;&nbsp;</span>
       <span th:text="${type.name}"></span>
     </span>
 </div>
@@ -66,7 +66,7 @@
       <li class="month-prev"></li>
     </th:block>
     <th:block th:each="i : ${#numbers.sequence(1, lastDay)}">
-      <li th:classappend='|${ duties.get(i)?.dutyColor ?: offColor}${today.getYear()+1900==year and today.getMonth()+1 == month and today.getDate() == i ? " today": "" }|'>
+      <li th:classappend='|BACKGROUND-${ duties.get(i)?.dutyColor ?: offColor}${today.getYear()+1900==year and today.getMonth()+1 == month and today.getDate() == i ? " today": "" }|'>
         <div th:with="duty=${duties.get(i)}" class="date container">
           <div class="day row">
             <span class="date_number"
