@@ -30,8 +30,6 @@ class DutyController(
         month: Int,
     ): String {
         val member = memberService.findMemberByName(name)
-
-        model.addAttribute("member", MemberDto(member))
         addDutyData(member, year, month, model)
         addYearMonthData(year, month, model)
 
@@ -56,10 +54,6 @@ class DutyController(
 
         addDutyData(member, year, month, model)
         addYearMonthData(year, month, model)
-
-        model.addAttribute("member", MemberDto(member))
-        model.addAttribute("offColor", member.department.offColor.name)
-
         return "duty/duty"
     }
 
@@ -69,6 +63,9 @@ class DutyController(
         month: Int,
         model: Model
     ) {
+        model.addAttribute("member", MemberDto(member))
+        model.addAttribute("offColor", member.department.offColor.name)
+
         dutyService.findDutyByMemberAndYearAndMonth(member, year, month).let {
             model.addAttribute("duties", it)
         }
