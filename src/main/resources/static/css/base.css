@@ -12,6 +12,7 @@
 
 body {
     font-family: NexonMaplestory;
+    --bs-body-font-family: NexonMaplestory;
 }
 
 header.row {
@@ -64,14 +65,13 @@ ol.day-grid li {
 }
 
 ol.day-grid li.today {
-    border-style: dashed;
-    border-width: thick;
-    border-color: orangered;
+    box-shadow: 2px 4px 7px 3px lightcoral;
+    border: 0px;
 }
 
 .today .date_number {
-    color: red;
     font-weight: bold;
+    text-decoration: underline;
 }
 
 .BACKGROUND-RED {
