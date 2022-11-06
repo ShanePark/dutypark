@@ -7,17 +7,18 @@ import net.gpedro.integrations.slack.SlackMessage
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.Around
 import org.aspectj.lang.annotation.Aspect
+import org.springframework.core.task.TaskExecutor
 import org.springframework.stereotype.Component
 
 @Aspect
 @Component
 class SlackNotificationAspect(
-    private val slackApi: SlackApi
+    private val slackApi: SlackApi,
+    private val taskExecutor: TaskExecutor,
 ) {
 
     @Around("@annotation(com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification)")
     fun slackNotification(proceedingJoinPoint: ProceedingJoinPoint): Any? {
-        val result = proceedingJoinPoint.proceed()
 
         // it keeps sending Slack message. After enough test done, remove this aop.
         val slackAttachment = SlackAttachment()
@@ -36,9 +37,12 @@ class SlackNotificationAspect(
         slackMessage.setIcon(":floppy_disk:")
         slackMessage.setText("Post Request")
         slackMessage.setUsername("DutyPark")
-        slackApi.call(slackMessage)
 
-        return result
+        taskExecutor.execute {
+            slackApi.call(slackMessage)
+        }
+
+        return proceedingJoinPoint.proceed()
     }
 
 }
