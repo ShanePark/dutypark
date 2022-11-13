@@ -25,9 +25,11 @@ class ErrorDetectAdvisor(
         req: HttpServletRequest,
         e: HttpRequestMethodNotSupportedException
     ): ResponseEntity<Any> {
-        log.warn("handleMethodNotSupported, IP: {}", req.remoteAddr)
-        return ResponseEntity.status(405)
-            .body(e.message)
+        val requestURI = req.requestURI
+        if (!requestURI.equals("/")) {
+            log.info("${e.message}, requestURI: $requestURI")
+        }
+        return ResponseEntity.status(404).build()
     }
 
     @ExceptionHandler(Exception::class)

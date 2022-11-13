@@ -9,6 +9,8 @@ spring:
     hibernate:
       ddl-auto: create-drop
     database-platform: org.hibernate.dialect.H2Dialect
+  mvc:
+    log-resolved-exception: false
 
 dutypark:
   slack:
