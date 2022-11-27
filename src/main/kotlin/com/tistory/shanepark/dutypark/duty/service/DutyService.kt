@@ -1,7 +1,6 @@
 package com.tistory.shanepark.dutypark.duty.service
 
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
-import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.MemoDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
@@ -9,7 +8,6 @@ import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.domain.dto.LoginDto
-import com.tistory.shanepark.dutypark.member.domain.entity.Department
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import org.springframework.stereotype.Service
@@ -25,14 +23,6 @@ class DutyService(
     fun findDutyByMemberAndYearAndMonth(member: Member, year: Int, month: Int): Map<Int, DutyDto?> {
         return dutyRepository.findAllByMemberAndDutyYearAndDutyMonth(member, year, month)
             .associate { it.dutyDay to DutyDto(it) }
-    }
-
-    fun findAllDutyTypes(department: Department): MutableList<DutyTypeDto> {
-        val dutyTypes = dutyTypeRepository.findAllByDepartmentOrderByPositionAsc(department)
-            .map { DutyTypeDto(it) }
-            .toMutableList()
-        dutyTypes.add(0, DutyTypeDto(name = "OFF", position = -1, color = department.offColor.toString()))
-        return dutyTypes
     }
 
     fun update(dutyUpdateDto: DutyUpdateDto) {
