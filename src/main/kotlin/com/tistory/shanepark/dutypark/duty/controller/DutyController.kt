@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.duty.controller
 
+import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeDto
 import com.tistory.shanepark.dutypark.duty.service.DutyService
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -63,15 +64,20 @@ class DutyController(
         month: Int,
         model: Model
     ) {
+        val department = member.department
         model.addAttribute("member", MemberDto(member))
-        model.addAttribute("offColor", member.department.offColor.name)
+        model.addAttribute("offColor", department.offColor.name)
 
         dutyService.findDutyByMemberAndYearAndMonth(member, year, month).let {
             model.addAttribute("duties", it)
         }
-        dutyService.findAllDutyTypes(member.department).let {
-            model.addAttribute("dutyTypes", it)
-        }
+
+        val dutyTypes = department.dutyTypes
+            .map { DutyTypeDto(it) }
+            .sortedBy { it.position }
+            .toMutableList()
+        dutyTypes.add(0, DutyTypeDto(name = "OFF", position = -1, color = department.offColor.toString()))
+        model.addAttribute("dutyTypes", dutyTypes)
     }
 
     private fun addYearMonthData(year: Int, month: Int, model: Model) {
