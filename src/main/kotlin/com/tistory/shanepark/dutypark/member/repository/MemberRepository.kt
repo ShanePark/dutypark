@@ -8,4 +8,8 @@ interface MemberRepository : JpaRepository<Member, Long> {
 
     @EntityGraph(attributePaths = ["department", "department.dutyTypes"])
     fun findMemberByName(name: String): Member?
+
+    @EntityGraph(attributePaths = ["department"])
+    override fun findAll(): MutableList<Member>
+
 }

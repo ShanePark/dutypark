@@ -7,11 +7,13 @@ import net.gpedro.integrations.slack.SlackMessage
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.Around
 import org.aspectj.lang.annotation.Aspect
+import org.springframework.context.annotation.Profile
 import org.springframework.core.task.TaskExecutor
 import org.springframework.stereotype.Component
 
 @Aspect
 @Component
+@Profile("!dev")
 class SlackNotificationAspect(
     private val slackApi: SlackApi,
     private val taskExecutor: TaskExecutor,
