@@ -14,7 +14,7 @@ Simple Duty Manager <br>
 </div>
 
 ## What's DutyPark?
-> [Demo Page](http://dutypark.o-r.kr)
+> [Demo Page](https://dutypark.o-r.kr)
 - I planned and developed it in one day when my wife just forgot her duty and late for work
 - It is a simple duty manager that can be used by anyone
 - Easy to put in your own duty and share it with your family or friends
