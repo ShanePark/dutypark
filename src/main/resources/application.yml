@@ -16,3 +16,10 @@ dutypark:
   slack:
     token: ""
     channel: "error-log"
+
+server:
+  ssl:
+    key-store: classpath:keystore.p12
+    key-store-password: "key_password_here"
+    key-store-type: PKCS12
+    enabled: true
