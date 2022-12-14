@@ -2,14 +2,24 @@ package com.tistory.shanepark.dutypark.common
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.slf4j.Logger
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.security.crypto.password.PasswordEncoder
 
+@SpringBootTest
 internal class PasswordEncoderTest {
 
-    private val passwordEncoder = PasswordEncoder()
+    @Autowired
+    lateinit var passwordEncoder: PasswordEncoder
+
+    val log: Logger = org.slf4j.LoggerFactory.getLogger(this.javaClass)
 
     @Test
     fun encode() {
         val encoded1 = passwordEncoder.encode("1234")
+        log.info(passwordEncoder.encode("1234"))
+
         val encoded2 = passwordEncoder.encode("1234")
 
         assertThat(passwordEncoder.matches("1234", encoded1)).isTrue
