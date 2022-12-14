@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.duty.service
 
-import com.tistory.shanepark.dutypark.common.PasswordEncoder
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
@@ -15,6 +14,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.transaction.annotation.Transactional
 
 @SpringBootTest
@@ -37,7 +37,8 @@ internal class DutyServiceTest {
     @Autowired
     lateinit var dutyTypeRepository: DutyTypeRepository
 
-    val passwordEncoder = PasswordEncoder()
+    val passwordEncoder = BCryptPasswordEncoder()
+
     val department = Department("개발팀")
     val password = "test"
     val member = Member(department, "test", passwordEncoder.encode(password))

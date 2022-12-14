@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.common.listener
 
-import com.tistory.shanepark.dutypark.common.PasswordEncoder
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.enums.Color.*
@@ -12,6 +11,7 @@ import com.tistory.shanepark.dutypark.member.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import org.springframework.context.ApplicationListener
 import org.springframework.context.event.ContextRefreshedEvent
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Component
 
 @Component
