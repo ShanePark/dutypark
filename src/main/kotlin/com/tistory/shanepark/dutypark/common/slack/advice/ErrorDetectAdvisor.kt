@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.common.slack.advice
 
+import jakarta.servlet.http.HttpServletRequest
 import net.gpedro.integrations.slack.SlackApi
 import net.gpedro.integrations.slack.SlackAttachment
 import net.gpedro.integrations.slack.SlackField
@@ -11,7 +12,6 @@ import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.ResponseBody
 import java.util.*
-import javax.servlet.http.HttpServletRequest
 
 @ControllerAdvice
 class ErrorDetectAdvisor(
