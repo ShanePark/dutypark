@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.duty.domain.entity
 
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
-import javax.persistence.*
+import jakarta.persistence.*
 
 @Entity
 class Duty(

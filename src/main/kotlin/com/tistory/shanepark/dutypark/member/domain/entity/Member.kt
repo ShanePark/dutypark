@@ -1,6 +1,6 @@
 package com.tistory.shanepark.dutypark.member.domain.entity
 
-import javax.persistence.*
+import jakarta.persistence.*
 
 @Entity
 class Member(

@@ -38,7 +38,7 @@ class DutyService(
 
         val dutyType: DutyType? = dutyUpdateDto.dutyTypeId?.let {
             dutyTypeRepository.findById(it).orElseThrow()
-        } ?: null
+        }
 
         if (duty != null && dutyType == null) {
             dutyRepository.delete(duty)

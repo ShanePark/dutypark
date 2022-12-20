@@ -2,7 +2,7 @@ package com.tistory.shanepark.dutypark.duty.domain.entity
 
 import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.member.domain.entity.Department
-import javax.persistence.*
+import jakarta.persistence.*
 
 @Entity
 @Table(name = "duty_type")
