@@ -12,12 +12,18 @@ spring:
   mvc:
     log-resolved-exception: false
 
+decorator:
+  datasource:
+    p6spy:
+      enable-logging: false
+
 dutypark:
   slack:
     token: ""
     channel: "error-log"
 
 server:
+  port: 443
   ssl:
     key-store: classpath:keystore.p12
     key-store-password: "key_password_here"
