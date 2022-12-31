@@ -35,7 +35,12 @@ class DefaultDataInitializer(
     private fun jennyInit() {
         val department = Department("케익부")
         departmentRepository.save(department)
-        val jenny = Member(name = "이동현", department = department, password = passwordEncoder.encode("1234"))
+        val jenny = Member(
+            name = "이동현",
+            department = department,
+            email = "jen@duty.park",
+            password = passwordEncoder.encode("1234")
+        )
         memberRepository.save(jenny);
 
         val open = dutyTypeRepository.save(DutyType(name = "새벽", position = 0, department = department, PURPLE))
@@ -65,7 +70,12 @@ class DefaultDataInitializer(
     private fun paulInit() {
         val department2 = Department("PACU")
         departmentRepository.save(department2)
-        val paul = Member(name = "박재현", department = department2, password = passwordEncoder.encode("1234"))
+        val paul = Member(
+            name = "박재현",
+            department = department2,
+            email = "jh@duty.park",
+            password = passwordEncoder.encode("1234")
+        )
         memberRepository.save(paul)
 
         dutyTypeRepository.save(DutyType(name = "데이", position = 0, department = department2, BLUE))

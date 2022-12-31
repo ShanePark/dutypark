@@ -41,7 +41,7 @@ internal class DutyServiceTest {
 
     val department = Department("개발팀")
     val password = "test"
-    val member = Member(department, "test", passwordEncoder.encode(password))
+    val member = Member(department, "test", "", passwordEncoder.encode(password))
     val dutyTypes = listOf(
         DutyType("오전", 0, department, Color.BLUE),
         DutyType("오후", 1, department, Color.RED),

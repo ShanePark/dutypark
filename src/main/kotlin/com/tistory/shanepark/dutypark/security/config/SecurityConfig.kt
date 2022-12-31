@@ -1,4 +1,4 @@
-package com.tistory.shanepark.dutypark.common.config
+package com.tistory.shanepark.dutypark.security.config
 
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
@@ -11,8 +11,8 @@ import org.springframework.security.web.SecurityFilterChain
 @Configuration
 class SecurityConfig {
 
-    @Value("\${spring.profiles.active}")
-    private val activeProfile: String? = null
+    @Value("\${spring.profiles.active:default}")
+    private lateinit var activeProfile: String
 
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {

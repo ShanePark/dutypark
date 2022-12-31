@@ -1,0 +1,7 @@
+POST localhost:8080/member/authenticate
+Content-Type: application/json
+
+{
+    "id": "1",
+    "password": "1234"
+}

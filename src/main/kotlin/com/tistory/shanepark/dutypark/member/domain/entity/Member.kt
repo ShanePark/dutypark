@@ -7,10 +7,17 @@ class Member(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")
     val department: Department,
-    @Column(unique = true)
+
+    @Column(nullable = false)
     val name: String,
+
+    @Column(unique = true, nullable = false)
+    val email: String,
+
+    @Column(nullable = false)
     val password: String,
-) {
+
+    ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
