@@ -1,7 +1,7 @@
-POST localhost:8080/member/authenticate
+POST localhost:8080/auth/login
 Content-Type: application/json
 
 {
-    "id": "1",
+    "email": "test@duty.park",
     "password": "1234"
 }

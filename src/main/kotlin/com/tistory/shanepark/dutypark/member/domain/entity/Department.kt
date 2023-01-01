@@ -8,6 +8,7 @@ import jakarta.persistence.*
 class Department(
     @Column(unique = true)
     val name: String,
+
     @Enumerated(EnumType.STRING)
     var offColor: Color = Color.GREY,
 ) {

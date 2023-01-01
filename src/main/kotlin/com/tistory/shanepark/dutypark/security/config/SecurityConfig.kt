@@ -17,7 +17,7 @@ class SecurityConfig {
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
         return http.requiresChannel {
-            if ("dev" != activeProfile) {
+            if (activeProfile != "dev" && activeProfile != "test") {
                 it.anyRequest().requiresSecure()
             }
         }.authorizeHttpRequests()

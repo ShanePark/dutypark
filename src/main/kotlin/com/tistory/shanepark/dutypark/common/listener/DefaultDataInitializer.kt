@@ -9,6 +9,7 @@ import com.tistory.shanepark.dutypark.member.domain.entity.Department
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.ApplicationListener
 import org.springframework.context.event.ContextRefreshedEvent
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -23,13 +24,15 @@ class DefaultDataInitializer(
     private val passwordEncoder: PasswordEncoder
 ) : ApplicationListener<ContextRefreshedEvent?> {
 
-    override fun onApplicationEvent(event: ContextRefreshedEvent) {
-        if (memberRepository.findMemberByName("이동현") != null)
-            return
+    @Value("\${spring.profiles.active:default}")
+    private lateinit var activeProfile: String
 
+    override fun onApplicationEvent(event: ContextRefreshedEvent) {
+        if (activeProfile == "test" || memberRepository.count() > 0)
+            return
         jennyInit()
         paulInit()
-
+        testerInit()
     }
 
     private fun jennyInit() {
@@ -81,5 +84,16 @@ class DefaultDataInitializer(
         dutyTypeRepository.save(DutyType(name = "데이", position = 0, department = department2, BLUE))
         dutyTypeRepository.save(DutyType(name = "이브", position = 1, department = department2, PURPLE))
         dutyTypeRepository.save(DutyType(name = "나이트", position = 2, department = department2, RED))
+    }
+
+    private fun testerInit() {
+        val department = departmentRepository.findAll()[0]
+        val tester = Member(
+            name = "테스트",
+            department = department,
+            email = "test@duty.park",
+            password = passwordEncoder.encode("1234")
+        )
+        memberRepository.save(tester);
     }
 }

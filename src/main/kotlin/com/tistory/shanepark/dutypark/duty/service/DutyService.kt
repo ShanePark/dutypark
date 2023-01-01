@@ -7,14 +7,13 @@ import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
-import com.tistory.shanepark.dutypark.member.domain.dto.LoginDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
-@Transactional
+@Transactional(readOnly = true)
 class DutyService(
     val dutyRepository: DutyRepository,
     val dutyTypeRepository: DutyTypeRepository,
@@ -25,9 +24,9 @@ class DutyService(
             .associate { it.dutyDay to DutyDto(it) }
     }
 
+    @Transactional
     fun update(dutyUpdateDto: DutyUpdateDto) {
         val member = memberService.findById(dutyUpdateDto.memberId)
-        passwordCheck(member, dutyUpdateDto.password)
 
         val duty: Duty? = dutyRepository.findByMemberAndDutyYearAndDutyMonthAndDutyDay(
             member = member,
@@ -57,19 +56,14 @@ class DutyService(
         }
     }
 
+    @Transactional
     fun save(duty: Duty) {
         dutyRepository.save(duty)
     }
 
-    private fun passwordCheck(member: Member, password: String) {
-        val validation = memberService.authenticate(LoginDto(member.id!!, password))
-        if (!validation)
-            throw IllegalArgumentException("Not authenticated")
-    }
-
+    @Transactional
     fun updateMemo(memoDto: MemoDto) {
         val member = memberService.findById(memoDto.memberId)
-        passwordCheck(member, memoDto.password)
 
         val duty: Duty? = dutyRepository.findByMemberAndDutyYearAndDutyMonthAndDutyDay(
             member = member,
