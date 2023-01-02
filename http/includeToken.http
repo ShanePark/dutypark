@@ -1,0 +1,2 @@
+GET localhost:8080/auth/check
+Authorization: 3e663d0f-af10-49f8-bdee-fa8ecdd43ade
