@@ -22,29 +22,31 @@ class DutyApiController(
     @SlackNotification
     fun updateDuty(
         @RequestBody dutyUpdateDto: DutyUpdateDto,
-        @RequestAttribute loginMember: LoginMember?
+        loginMember: LoginMember
     ): ResponseEntity<Boolean> {
-        loginMember?.let {
-            it.id?.let { memberId ->
-                if (memberId == dutyUpdateDto.memberId) {
-                    dutyService.update(dutyUpdateDto)
-                    return ResponseEntity.ok(true)
-                }
-                log.warn("login member and request duty member does not match: $memberId, ${dutyUpdateDto.memberId}")
-                throw AuthenticationException("login member and request duty member does not match")
-            }
-        } ?: throw AuthenticationException("login is required")
+        checkAuthentication(loginMember, dutyUpdateDto.memberId)
+        dutyService.update(dutyUpdateDto)
+        return ResponseEntity.ok(true)
     }
 
     @PutMapping("memo")
     @SlackNotification
     fun updateMemo(
         @RequestBody memoDto: MemoDto,
-        @RequestAttribute loginMember: LoginMember?
+        loginMember: LoginMember
     ): ResponseEntity<Boolean> {
-        // TODO: there will be a lot of duplicated code to use loginMember. need to refactor
+        checkAuthentication(loginMember, memoDto.memberId)
         dutyService.updateMemo(memoDto)
         return ResponseEntity.ok(true)
+    }
+
+    private fun checkAuthentication(
+        loginMember: LoginMember, dutyMemberId: Long
+    ) {
+        if (loginMember.id != dutyMemberId) {
+            log.warn("login member and request duty member does not match: login:$loginMember.id, dutyMemberId:${dutyMemberId}")
+            throw AuthenticationException("login member and request dutyMemberId does not match")
+        }
     }
 
 }

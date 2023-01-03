@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.common.exceptions.AuthenticationException
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginSessionResponse
 import com.tistory.shanepark.dutypark.security.domain.entity.LoginSession
 import com.tistory.shanepark.dutypark.security.repository.LoginSessionRepository
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -19,7 +20,7 @@ class AuthService(
 ) {
 
     @Transactional
-    fun authenticate(login: LoginDto): LoginSession {
+    fun authenticate(login: LoginDto): LoginSessionResponse {
         val member = memberRepository.findByEmail(login.email).orElseThrow {
             AuthenticationException()
         }
@@ -27,7 +28,8 @@ class AuthService(
             throw AuthenticationException()
         }
 
-        return member.addSession()
+        val session = member.addSession()
+        return LoginSessionResponse(session.accessToken)
     }
 
     fun findLoginMemberByToken(token: String): LoginMember {

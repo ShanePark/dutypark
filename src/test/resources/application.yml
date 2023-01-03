@@ -17,6 +17,7 @@ decorator:
       enable-logging: true
 
 dutypark:
+  domain: localhost
   slack:
     token: ""
     channel: "error-log"

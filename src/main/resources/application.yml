@@ -18,6 +18,7 @@ decorator:
       enable-logging: false
 
 dutypark:
+  domain: dutypark.o-r.kr
   slack:
     token: ""
     channel: "error-log"
