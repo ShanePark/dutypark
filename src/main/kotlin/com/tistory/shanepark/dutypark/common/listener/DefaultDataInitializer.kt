@@ -21,11 +21,10 @@ class DefaultDataInitializer(
     private val memberRepository: MemberRepository,
     private val dutyTypeRepository: DutyTypeRepository,
     private val dutyRepository: DutyRepository,
-    private val passwordEncoder: PasswordEncoder
+    private val passwordEncoder: PasswordEncoder,
+    @param:Value("\${spring.profiles.active:default}")
+    val activeProfile: String
 ) : ApplicationListener<ContextRefreshedEvent?> {
-
-    @Value("\${spring.profiles.active:default}")
-    private lateinit var activeProfile: String
 
     override fun onApplicationEvent(event: ContextRefreshedEvent) {
         if (activeProfile == "test" || memberRepository.count() > 0)

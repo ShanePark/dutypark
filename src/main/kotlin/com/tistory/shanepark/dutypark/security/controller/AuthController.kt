@@ -8,35 +8,32 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseCookie
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
-import java.time.Duration
 
 @RestController
 @RequestMapping("/auth/")
 class AuthController(
-    private val authService: AuthService
+    private val authService: AuthService,
+    @param:Value("\${dutypark.domain}")
+    private val domain: String,
+    @Value("\${jwt.token-validity-in-seconds}") val tokenValidityInSeconds: Long
 ) {
 
     private val log = org.slf4j.LoggerFactory.getLogger(AuthController::class.java)
 
-    @Value("\${dutypark.domain}")
-    lateinit var domain: String
-
     @PostMapping("/login")
-    fun login(@RequestBody loginDto: LoginDto): ResponseEntity<Any> {
-        val session = authService.authenticate(loginDto)
-        val responseCookie = ResponseCookie.from("SESSION", session.accessToken)
+    fun login(@RequestBody loginDto: LoginDto): ResponseEntity<String> {
+        val token = authService.authenticate(loginDto)
+        val cookie = ResponseCookie.from("SESSION", token)
             .domain(domain)
+            .httpOnly(true)
             .path("/")
             .secure(true)
-            .maxAge(Duration.ofDays(30))
+            .maxAge(tokenValidityInSeconds)
             .sameSite(SameSite.STRICT.name)
             .build()
 
-        log.info("domain: $domain")
-        log.info("responseCookie: $responseCookie")
-
         return ResponseEntity.ok()
-            .header(HttpHeaders.SET_COOKIE, responseCookie.toString())
+            .header(HttpHeaders.SET_COOKIE, cookie.toString())
             .build()
     }
 

@@ -22,13 +22,11 @@ class AuthResolver(
         mavContainer: ModelAndViewContainer?,
         webRequest: NativeWebRequest,
         binderFactory: WebDataBinderFactory?
-    ): Any? {
+    ): LoginMember {
         webRequest.getNativeRequest(HttpServletRequest::class.java)?.let {
             it.cookies?.forEach { cookie ->
                 if (cookie.name == "SESSION") {
-                    authService.findLoginMemberByToken(cookie.value)?.let { loginMember ->
-                        return loginMember
-                    }
+                    return authService.validateToken(cookie.value)
                 }
             }
         }

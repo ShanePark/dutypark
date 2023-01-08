@@ -4,9 +4,8 @@ import com.tistory.shanepark.dutypark.common.exceptions.AuthenticationException
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
-import com.tistory.shanepark.dutypark.security.domain.dto.LoginSessionResponse
-import com.tistory.shanepark.dutypark.security.domain.entity.LoginSession
-import com.tistory.shanepark.dutypark.security.repository.LoginSessionRepository
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -16,11 +15,13 @@ import org.springframework.transaction.annotation.Transactional
 class AuthService(
     private val memberRepository: MemberRepository,
     private val passwordEncoder: PasswordEncoder,
-    private val sessionRepository: LoginSessionRepository
+    private val jwtProvider: JwtProvider,
 ) {
 
+    val log: Logger = LoggerFactory.getLogger(AuthService::class.java)
+
     @Transactional
-    fun authenticate(login: LoginDto): LoginSessionResponse {
+    fun authenticate(login: LoginDto): String {
         val member = memberRepository.findByEmail(login.email).orElseThrow {
             AuthenticationException()
         }
@@ -28,15 +29,14 @@ class AuthService(
             throw AuthenticationException()
         }
 
-        val session = member.addSession()
-        return LoginSessionResponse(session.accessToken)
+        return jwtProvider.createToken(member)
     }
 
-    fun findLoginMemberByToken(token: String): LoginMember {
-        sessionRepository.findByAccessToken(token)?.let {
-            val member = it.member
-            return LoginMember(member.id!!, member.email, member.name)
-        } ?: throw AuthenticationException()
+    fun validateToken(token: String): LoginMember {
+        if (!jwtProvider.isValidToken(token)) {
+            throw AuthenticationException()
+        }
+        return jwtProvider.parseToken(token)
     }
 
 }

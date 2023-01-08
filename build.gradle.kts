@@ -39,6 +39,11 @@ dependencies {
     // Utilities
     implementation("net.gpedro.integrations.slack:slack-webhook:1.4.0")
 
+    // JWT
+    implementation("io.jsonwebtoken:jjwt-api:0.11.5")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
+
 }
 
 tasks.withType<KotlinCompile> {

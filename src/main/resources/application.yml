@@ -30,3 +30,8 @@ server:
     key-store-password: "key_password_here"
     key-store-type: PKCS12
     enabled: true
+
+jwt:
+  header: Authorization
+  secret: "WvQiOAms2XFyW/UnmfO/9xL24ch4IlfUikP9QohMuso=" # Change it on production
+  token-validity-in-seconds: 86400 # 24 hours

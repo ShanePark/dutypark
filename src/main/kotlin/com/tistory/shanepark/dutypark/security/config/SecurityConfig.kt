@@ -9,10 +9,10 @@ import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
 
 @Configuration
-class SecurityConfig {
-
-    @Value("\${spring.profiles.active:default}")
-    private lateinit var activeProfile: String
+class SecurityConfig(
+    @param:Value("\${spring.profiles.active:default}")
+    private val activeProfile: String
+) {
 
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {

@@ -9,11 +9,8 @@ import com.tistory.shanepark.dutypark.member.domain.entity.Department
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
-import com.tistory.shanepark.dutypark.security.repository.LoginSessionRepository
 import jakarta.servlet.http.Cookie
-import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.springframework.beans.factory.annotation.Autowired
@@ -35,9 +32,6 @@ class AuthControllerTest {
 
     @Autowired
     lateinit var memberRepository: MemberRepository
-
-    @Autowired
-    lateinit var loginSessionRepository: LoginSessionRepository
 
     @Autowired
     lateinit var dutyTypeRepository: DutyTypeRepository
@@ -83,11 +77,6 @@ class AuthControllerTest {
         dutyTypeId = dutyTypes[0].id!!
     }
 
-    @BeforeEach
-    fun clean() {
-        loginSessionRepository.deleteAll()
-    }
-
     @Test
     fun `login Success`() {
         val loginDto = LoginDto("test@duty.park", memberPassword)
@@ -115,7 +104,7 @@ class AuthControllerTest {
     }
 
     @Test
-    fun `login Success and make a session`() {
+    fun `login Success and return proper token`() {
         // Given
         val email = "test@duty.park"
 
@@ -130,12 +119,6 @@ class AuthControllerTest {
         ).andExpect(status().isOk)
             .andExpect(cookie().exists("SESSION"))
             .andDo(MockMvcResultHandlers.print())
-
-        val member = memberRepository.findByEmail(email).orElseThrow()
-
-        // Then
-        assertThat(loginSessionRepository.findByMember(member)).hasSize(1)
-        assertThat(loginSessionRepository.count()).isEqualTo(1)
     }
 
     @Test

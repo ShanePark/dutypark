@@ -27,7 +27,7 @@ class ErrorDetectAdvisor(
     ): ResponseEntity<Any> {
         val requestURI = req.requestURI
         if (!requestURI.equals("/")) {
-            log.info("${e.message}, requestURI: $requestURI")
+            log.info("MethodNotSupportedException ${e.message}, requestURI: $requestURI")
         }
         return ResponseEntity.status(404).build()
     }
