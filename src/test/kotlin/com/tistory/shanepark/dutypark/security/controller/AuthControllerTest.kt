@@ -234,13 +234,12 @@ class AuthControllerTest {
 
         val anotherMember = memberRepository.findByEmail(anotherMemberEmail).orElseThrow()
         val loginDto = LoginDto(anotherMember.email, memberPassword)
-        val loginJson = objectMapper.writeValueAsString(loginDto)
 
         // save login session token on variable
         val accessToken = mockMvc.perform(
             MockMvcRequestBuilders.post("/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(loginJson)
+                .content(objectMapper.writeValueAsString(loginDto))
         ).andReturn().response.getCookie("SESSION")?.let { it.value }
 
         log.info("accessToken: $accessToken")

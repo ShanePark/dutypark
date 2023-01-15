@@ -29,9 +29,11 @@ class AuthService(
 
     fun login(login: LoginDto): String {
         val member = memberRepository.findByEmail(login.email).orElseThrow {
+            log.info("Login failed. email not exist:${login.email}")
             AuthenticationException()
         }
         if (!passwordEncoder.matches(login.password, member.password)) {
+            log.info("Login failed. password not match:${login.email}")
             throw AuthenticationException()
         }
 
@@ -49,7 +51,7 @@ class AuthService(
         return null
     }
 
-    fun refreshToken(refreshToken: String): String? {
+    fun tokenRefresh(refreshToken: String): String? {
         refreshTokenRepository.findByToken(refreshToken)?.let {
             if (it.validUntil.isAfter(LocalDateTime.now())) {
                 it.slideValidUntil()

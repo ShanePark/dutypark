@@ -126,13 +126,18 @@ ol.day-grid li.month-prev, ol.day-grid li.month-next {
 }
 
 h1 a {
-    color: white;
+    color: #333;
     text-decoration: none;
     font-weight: bold;
 }
 
+h1 a:hover {
+    color: black;
+}
+
 h1 a.move:hover {
-    color: lightgrey;
+    font-weight: bold;
+    color: black;
 }
 
 .date {
@@ -191,6 +196,11 @@ header .current {
 
 .homeButton {
     font-size: 1.7em;
+    color: #ccc;
+}
+
+a.homeButton:hover {
+    color: white;
 }
 
 header .left-area {
@@ -258,4 +268,8 @@ header .left-area {
         min-height: 20vw;
     }
 
+}
+
+.month-control {
+    text-align: center;
 }

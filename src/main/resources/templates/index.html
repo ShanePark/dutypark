@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<head th:replace="~{layout/header::head}"></head>
+<head th:replace="~{layout/header::link}"></head>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Duty Park</title>
 </head>
 <body>
+<head th:replace="~{layout/header::header(${'Duty Park'})}"></head>
 <h2>Main</h2>
 <ul th:each="member: ${members}">
   <ui>

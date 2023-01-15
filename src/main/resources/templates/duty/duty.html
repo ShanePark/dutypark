@@ -1,33 +1,28 @@
 <!DOCTYPE html>
-<head th:replace="~{layout/header::head}"></head>
+<head th:replace="~{layout/header::link}"></head>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Duty Park</title>
 </head>
 <body>
-<header class="row">
-  <div class="left-area col-2">
-    <i class="homeButton h_pointer bi bi-house-door"></i>
-  </div>
-  <div class="month-control col-8">
-    <h1>
-      <a class="move"
-         th:href="@{/duty/{member}(member=${member.name},year=${prevMonth.year}, month=${prevMonth.monthValue})}">
-        <i class="bi bi-arrow-left-circle"></i>
-      </a>
-      <a class="current" th:href="@{/duty/edit/{member}(member=${member.name},year=${year}, month=${month})}"
-         th:text="|${year}년 ${month}월|"></a>
-      <a class="move"
-         th:href="@{/duty/{member}(member=${member.name},year=${nextMonth.year}, month=${nextMonth.monthValue})}">
-        <i class="bi bi-arrow-right-circle"></i>
-      </a>
-    </h1>
-  </div>
-  <div class="col-2">
-    <span class="profile" th:text="|${member.department} ${member.name}|"></span>
-  </div>
-</header>
+
+<head th:replace="~{layout/header::header(|${member.department} ${member.name}|)}"></head>
+
+<div class="month-control">
+  <h1>
+    <a class="move"
+       th:href="@{/duty/{member}(member=${member.name},year=${prevMonth.year}, month=${prevMonth.monthValue})}">
+      <i class="bi bi-arrow-left-circle"></i>
+    </a>
+    <a class="current" th:href="@{/duty/edit/{member}(member=${member.name},year=${year}, month=${month})}"
+       th:text="|${year}년 ${month}월|"></a>
+    <a class="move"
+       th:href="@{/duty/{member}(member=${member.name},year=${nextMonth.year}, month=${nextMonth.monthValue})}">
+      <i class="bi bi-arrow-right-circle"></i>
+    </a>
+  </h1>
+</div>
 
 <div class="dutyTypes">
     <span th:each="type : ${dutyTypes}">
@@ -86,11 +81,3 @@
 </div>
 </body>
 </html>
-
-<script>
-    $(function () {
-        $(".homeButton").on("click", function () {
-            location.href = "/";
-        })
-    })
-</script>
