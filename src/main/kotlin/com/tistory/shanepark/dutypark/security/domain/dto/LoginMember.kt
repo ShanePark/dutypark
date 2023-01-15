@@ -4,4 +4,6 @@ data class LoginMember(
     val id: Long,
     val email: String,
     val name: String,
+    val departmentId: Long,
+    val departmentName: String,
 )

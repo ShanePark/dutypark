@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.member.domain.entity
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import jakarta.persistence.*
 
@@ -7,6 +8,7 @@ import jakarta.persistence.*
 class Member(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")
+    @field:JsonIgnore
     val department: Department,
 
     @Column(nullable = false)

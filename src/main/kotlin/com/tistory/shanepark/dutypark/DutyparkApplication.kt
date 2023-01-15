@@ -1,5 +1,7 @@
 package com.tistory.shanepark.dutypark
 
+import com.tistory.shanepark.dutypark.security.config.JwtAuthInterceptor
+import com.tistory.shanepark.dutypark.security.service.AuthService
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
 import org.springframework.boot.runApplication
@@ -7,10 +9,20 @@ import org.springframework.context.annotation.Bean
 import org.springframework.core.task.TaskExecutor
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 
 @SpringBootApplication(exclude = [UserDetailsServiceAutoConfiguration::class])
 @EnableJpaAuditing
-class DutyparkApplication
+class DutyparkApplication(
+    private val authService: AuthService
+) : WebMvcConfigurer {
+    override fun addInterceptors(registry: InterceptorRegistry) {
+        registry.addInterceptor(JwtAuthInterceptor(authService))
+            .addPathPatterns("/**")
+            .excludePathPatterns("/login")
+    }
+}
 
 fun main(args: Array<String>) {
     runApplication<DutyparkApplication>(*args)

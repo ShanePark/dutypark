@@ -18,6 +18,12 @@ class RefreshToken(
     var validUntil: LocalDateTime
 
 ) : BaseTimeEntity() {
+    fun slideValidUntil() {
+        if (validUntil.isBefore(LocalDateTime.now().plusWeeks(1))) {
+            validUntil = LocalDateTime.now().plusMonths(1)
+        }
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
