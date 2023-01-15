@@ -34,4 +34,4 @@ server:
 jwt:
   header: Authorization
   secret: "WvQiOAms2XFyW/UnmfO/9xL24ch4IlfUikP9QohMuso=" # Change it on production
-  token-validity-in-seconds: 86400 # 24 hours
+  token-validity-in-seconds: 3600 # 1 hour

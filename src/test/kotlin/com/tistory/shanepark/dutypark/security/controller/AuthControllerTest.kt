@@ -7,6 +7,7 @@ import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.domain.entity.Department
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.member.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import jakarta.servlet.http.Cookie
@@ -37,6 +38,9 @@ class AuthControllerTest {
     lateinit var dutyTypeRepository: DutyTypeRepository
 
     @Autowired
+    lateinit var departmentRepository: DepartmentRepository
+
+    @Autowired
     lateinit var passwordEncoder: org.springframework.security.crypto.password.PasswordEncoder
 
     private val objectMapper = com.fasterxml.jackson.databind.ObjectMapper()
@@ -49,10 +53,15 @@ class AuthControllerTest {
 
     @BeforeAll
     fun beforeAll() {
+        val dept1 = Department("devs")
+        val dept2 = Department("others")
+        departmentRepository.save(dept1)
+        departmentRepository.save(dept2)
+
         val member = memberRepository.save(
             Member(
                 email = memberEmail,
-                department = Department("devs"),
+                department = dept1,
                 name = "test",
                 password = passwordEncoder.encode(memberPassword)
             )
@@ -60,7 +69,7 @@ class AuthControllerTest {
         memberRepository.save(
             Member(
                 email = anotherMemberEmail,
-                department = Department("others"),
+                department = dept2,
                 name = "diff",
                 password = passwordEncoder.encode(memberPassword)
             )

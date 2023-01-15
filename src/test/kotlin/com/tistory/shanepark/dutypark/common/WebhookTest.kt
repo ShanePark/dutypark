@@ -11,6 +11,7 @@ import org.springframework.test.context.ActiveProfiles
 
 @SpringBootTest
 @ActiveProfiles("dev")
+@Disabled("token is required")
 class WebhookTest {
 
     @Value("\${dutypark.slack.token}")
@@ -18,7 +19,6 @@ class WebhookTest {
 
     @Test
     @DisplayName("Slack Webhook Test")
-    @Disabled("Webhook test")
     fun test() {
         val api = SlackApi("https://hooks.slack.com/services/$token")
         api.call(SlackMessage("Hello SpringBoot Test!"))

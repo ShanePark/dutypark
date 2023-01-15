@@ -1,10 +1,11 @@
 package com.tistory.shanepark.dutypark.member.domain.entity
 
+import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import jakarta.persistence.*
 
 @Entity
 class Member(
-    @ManyToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")
     val department: Department,
 
@@ -18,8 +19,12 @@ class Member(
     val password: String,
 
     ) {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
+
+    @OneToMany(mappedBy = "member", orphanRemoval = true, cascade = [CascadeType.REMOVE], fetch = FetchType.LAZY)
+    val refreshTokens = mutableListOf<RefreshToken>()
 
 }

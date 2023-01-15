@@ -40,10 +40,9 @@ internal class DutyServiceTest {
     val password = "1234"
     val dummy = "dummy"
 
-    var department = Department("dummy")
     var member = Member(
         email = dummy,
-        department = department,
+        department = Department("dummy"),
         name = "dummy",
         password = passwordEncoder.encode(dummy)
     )
@@ -55,8 +54,9 @@ internal class DutyServiceTest {
         dutyTypeRepository.deleteAll()
         memberRepository.deleteAll()
         departmentRepository.deleteAll()
+        val dept = departmentRepository.save(Department("개발팀"))
 
-        val member = Member(Department("개발팀"), "test", email, passwordEncoder.encode(password))
+        val member = Member(dept, "test", email, passwordEncoder.encode(password))
         val department = member.department
         val dutyTypes = listOf(
             DutyType("오전", 0, department, Color.BLUE),
@@ -67,7 +67,6 @@ internal class DutyServiceTest {
         memberRepository.save(member)
         dutyTypeRepository.saveAll(dutyTypes)
 
-        this.department = department
         this.member = member
         this.dutyTypes = dutyTypes
     }
