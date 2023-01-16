@@ -14,24 +14,26 @@
 
 <head th:fragment="header(title)">
   <header class="row">
-    <div class="left-area col-2">
+    <div class="left-area col-3">
       <a class="homeButton" th:href="@{/}">
         <i class="h_pointer bi bi-house-door"></i>
       </a>
     </div>
-    <div class="month-control col-7">
+    <div class="month-control col-6">
       <h1 th:text="${title}"></h1>
     </div>
     <div class="col-3">
       <div th:if="${loginMember != null}">
         <span class="profile" th:text="|${loginMember?.name}|"/>
         <i class="bi bi-person"></i>
-        <a href="/auth/logout">
+        <a href="/logout">
           Logout<i class="bi bi-box-arrow-right"></i>
         </a>
       </div>
       <div th:if="${loginMember == null}">
-        <span th:if="${loginMember == null}" class="profile">로그인</span>
+        <a th:if="${loginMember == null}" th:href="@{/login}" class="profile link">로그인
+          <i class="bi bi-person-badge"></i>
+        </a>
       </div>
     </div>
   </header>

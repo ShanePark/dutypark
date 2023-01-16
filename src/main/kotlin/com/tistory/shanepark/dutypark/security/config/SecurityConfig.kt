@@ -24,7 +24,7 @@ class SecurityConfig(
             .anyRequest()
             .permitAll()
             .and()
-            .logout().logoutUrl("/auth/logout").logoutSuccessUrl("/")
+            .logout().logoutUrl("/logout").logoutSuccessUrl("/")
             .deleteCookies("SESSION", "REFRESH_TOKEN")
             .and()
             .csrf().disable()

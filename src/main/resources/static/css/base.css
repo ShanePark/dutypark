@@ -273,3 +273,44 @@ header .left-area {
 .month-control {
     text-align: center;
 }
+
+.link {
+    color: unset;
+}
+
+.link:hover {
+    cursor: pointer;
+}
+
+.login-box {
+    width: 100%;
+    max-width: 500px;
+    background: #fff;
+    border-radius: 5px;
+    padding: 30px;
+    box-sizing: border-box;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.125), 0 25px 50px rgba(0, 0, 0, 0.25);
+    margin: 0 auto;
+    margin-top: 100px;
+}
+
+.form-buttons {
+    text-align: center;
+}
+
+.form-buttons div {
+    padding: 0px 10px;
+}
+
+.form-buttons button {
+    width: 100%;
+    margin-top: 10px;
+    margin-left: 0px;
+    margin-right: 0px;
+    background-color: #eaeaea;
+    border: 0px;
+}
+
+.form-buttons button:hover {
+    background-color: #ccc;
+}

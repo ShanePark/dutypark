@@ -22,7 +22,7 @@ class DutyparkApplication(
     override fun addInterceptors(registry: InterceptorRegistry) {
         registry.addInterceptor(JwtAuthInterceptor(authService, tokenValidityInSeconds))
             .addPathPatterns("/**")
-            .excludePathPatterns("/auth/login", "/**/*.css", "/**/*.js", "/**/*.map", "/error")
+            .excludePathPatterns("/login", "/**/*.css", "/**/*.js", "/**/*.map", "/error")
     }
 }
 

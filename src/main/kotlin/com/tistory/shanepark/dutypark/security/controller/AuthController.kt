@@ -8,10 +8,11 @@ import org.springframework.boot.web.server.Cookie.SameSite
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseCookie
 import org.springframework.http.ResponseEntity
+import org.springframework.stereotype.Controller
+import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
 
-@RestController
-@RequestMapping("/auth/")
+@Controller
 class AuthController(
     private val authService: AuthService,
     @param:Value("\${dutypark.domain}")
@@ -22,10 +23,34 @@ class AuthController(
 
     private val log = org.slf4j.LoggerFactory.getLogger(AuthController::class.java)
 
+    @GetMapping("/login")
+    fun loginPage(
+        @CookieValue(name = "rememberMe", required = false) rememberMe: String?,
+        model: Model
+    ): String {
+        rememberMe?.let {
+            model.addAttribute("rememberMe", rememberMe)
+        }
+        return "member/login"
+    }
+
     @PostMapping("/login")
-    fun login(@RequestBody loginDto: LoginDto): ResponseEntity<String> {
+    @ResponseBody
+    fun login(
+        @RequestBody loginDto: LoginDto,
+    ): ResponseEntity<String> {
         val token = authService.login(loginDto)
         val refreshToken = authService.createRefreshToken(loginDto)
+
+        val rememberMeCookieAge = if (loginDto.rememberMe) 3600 * 24 * 365L else 1L
+        val rememberMeCookie = ResponseCookie.from("rememberMe", loginDto.email)
+            .domain(domain)
+            .httpOnly(true)
+            .path("/")
+            .maxAge(rememberMeCookieAge)
+            .sameSite(SameSite.STRICT.name)
+            .build()
+
         val jwtCookie = ResponseCookie.from("SESSION", token)
             .domain(domain)
             .httpOnly(true)
@@ -34,6 +59,7 @@ class AuthController(
             .maxAge(tokenValidityInSeconds)
             .sameSite(SameSite.STRICT.name)
             .build()
+
         val refToken = ResponseCookie.from("REFRESH_TOKEN", refreshToken)
             .domain(domain)
             .httpOnly(true)
@@ -46,10 +72,12 @@ class AuthController(
         return ResponseEntity.ok()
             .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
             .header(HttpHeaders.SET_COOKIE, refToken.toString())
+            .header(HttpHeaders.SET_COOKIE, rememberMeCookie.toString())
             .build()
     }
 
     @GetMapping("/status")
+    @ResponseBody
     fun loginStatus(loginMember: LoginMember): LoginMember {
         return loginMember
     }

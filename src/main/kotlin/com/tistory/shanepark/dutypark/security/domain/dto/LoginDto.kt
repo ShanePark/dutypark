@@ -12,4 +12,6 @@ data class LoginDto(
     @field:Length(max = 20)
     val password: String,
 
+    val rememberMe: Boolean = false
+
 )

@@ -92,7 +92,7 @@ class AuthControllerTest {
         val json = objectMapper.writeValueAsString(loginDto)
 
         mockMvc.perform(
-            MockMvcRequestBuilders.post("/auth/login")
+            MockMvcRequestBuilders.post("/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
         ).andExpect(status().isOk)
@@ -105,7 +105,7 @@ class AuthControllerTest {
         val json = objectMapper.writeValueAsString(loginDto)
 
         mockMvc.perform(
-            MockMvcRequestBuilders.post("/auth/login")
+            MockMvcRequestBuilders.post("/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
         ).andExpect(status().isUnauthorized)
@@ -122,7 +122,7 @@ class AuthControllerTest {
 
         // When
         mockMvc.perform(
-            MockMvcRequestBuilders.post("/auth/login")
+            MockMvcRequestBuilders.post("/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
         ).andExpect(status().isOk)
@@ -161,7 +161,7 @@ class AuthControllerTest {
 
         // save login session token on variable
         val accessToken = mockMvc.perform(
-            MockMvcRequestBuilders.post("/auth/login")
+            MockMvcRequestBuilders.post("/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginJson)
         ).andReturn().response.getCookie("SESSION")?.let { it.value }
@@ -192,7 +192,7 @@ class AuthControllerTest {
 
         // save login session token on variable
         val accessToken = mockMvc.perform(
-            MockMvcRequestBuilders.post("/auth/login")
+            MockMvcRequestBuilders.post("/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginJson)
         ).andReturn().response.getCookie("SESSION")?.let { it.value }
@@ -237,7 +237,7 @@ class AuthControllerTest {
 
         // save login session token on variable
         val accessToken = mockMvc.perform(
-            MockMvcRequestBuilders.post("/auth/login")
+            MockMvcRequestBuilders.post("/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(loginDto))
         ).andReturn().response.getCookie("SESSION")?.let { it.value }
@@ -266,7 +266,7 @@ class AuthControllerTest {
 
         // save login session token on variable
         val accessToken = mockMvc.perform(
-            MockMvcRequestBuilders.post("/auth/login")
+            MockMvcRequestBuilders.post("/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(loginDto))
         ).andReturn().response.getCookie("SESSION")?.let { it.value }
