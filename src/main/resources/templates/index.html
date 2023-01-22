@@ -7,11 +7,13 @@
 </head>
 <body>
 <head th:replace="~{layout/header::header(${'Duty Park'})}"></head>
-<h2>Main</h2>
-<ul th:each="member: ${members}">
-  <ui>
-    <a th:href="@{/duty/{name}(name=${member.name})}" th:text="${ '(' + member.department + ') ' + member.name}"></a>
-  </ui>
-</ul>
+<div class="members">
+  Members
+  <ul>
+    <li th:each="member: ${members}">
+      <a th:href="@{/duty/{name}(name=${member.name})}" th:text="${ '(' + member.department + ') ' + member.name}"></a>
+    </li>
+  </ul>
+</div>
 </body>
 </html>
