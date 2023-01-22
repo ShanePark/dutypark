@@ -15,10 +15,8 @@ import org.junit.jupiter.api.*
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
-import org.springframework.transaction.annotation.Transactional
 
 @SpringBootTest
-@Transactional
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class DutyServiceTest {
 
@@ -38,26 +36,39 @@ internal class DutyServiceTest {
     lateinit var dutyTypeRepository: DutyTypeRepository
 
     val passwordEncoder = BCryptPasswordEncoder()
+    val email = "test@duty.park"
+    val password = "1234"
+    val dummy = "dummy"
 
-    val department = Department("개발팀")
-    val password = "test"
-    val member = Member(department, "test", passwordEncoder.encode(password))
-    val dutyTypes = listOf(
-        DutyType("오전", 0, department, Color.BLUE),
-        DutyType("오후", 1, department, Color.RED),
-        DutyType("야간", 2, department, Color.GREEN),
+    var member = Member(
+        email = dummy,
+        department = Department("dummy"),
+        name = "dummy",
+        password = passwordEncoder.encode(dummy)
     )
-
-    @BeforeAll
-    fun beforeAll() {
-        departmentRepository.save(department)
-        memberRepository.save(member);
-        dutyTypes.forEach { dutyTypeRepository.save(it) }
-    }
+    var dutyTypes = emptyList<DutyType>()
 
     @BeforeEach
     fun beforeEach() {
         dutyRepository.deleteAll()
+        dutyTypeRepository.deleteAll()
+        memberRepository.deleteAll()
+        departmentRepository.deleteAll()
+        val dept = departmentRepository.save(Department("개발팀"))
+
+        val member = Member(dept, "test", email, passwordEncoder.encode(password))
+        val department = member.department
+        val dutyTypes = listOf(
+            DutyType("오전", 0, department, Color.BLUE),
+            DutyType("오후", 1, department, Color.RED),
+            DutyType("야간", 2, department, Color.GREEN),
+        )
+
+        memberRepository.save(member)
+        dutyTypeRepository.saveAll(dutyTypes)
+
+        this.member = member
+        this.dutyTypes = dutyTypes
     }
 
     @Test
@@ -70,7 +81,6 @@ internal class DutyServiceTest {
                 day = 10,
                 dutyTypeId = dutyTypes[0].id,
                 memberId = member.id!!,
-                password = password
             )
         )
 
@@ -101,7 +111,6 @@ internal class DutyServiceTest {
                 day = 10,
                 dutyTypeId = dutyTypes[1].id,
                 memberId = member.id!!,
-                password = password
             )
         )
 
@@ -130,40 +139,9 @@ internal class DutyServiceTest {
                 day = 10,
                 dutyTypeId = null,
                 memberId = member.id!!,
-                password = password
             )
         )
         assertThat(dutyService.findDutyByMemberAndYearAndMonth(member, 2022, 10)[10]).isNull()
-    }
-
-    @Test
-    @DisplayName("incorrect password")
-    fun password() {
-        val duty = Duty(
-            dutyYear = 2022,
-            dutyMonth = 10,
-            dutyDay = 10,
-            dutyType = dutyTypes[0],
-            member = member
-        )
-        dutyRepository.save(duty)
-
-        assertThrows<IllegalArgumentException> {
-            dutyService.update(
-                DutyUpdateDto(
-                    year = 2022,
-                    month = 10,
-                    day = 10,
-                    dutyTypeId = null,
-                    memberId = member.id!!,
-                    password = "wrong pass"
-                )
-            )
-        }
-
-        dutyService.findDutyByMemberAndYearAndMonth(member, 2022, 10)[10]?.let {
-            assert(it.dutyType == dutyTypes[0].name)
-        }
     }
 
     @Test
@@ -186,7 +164,6 @@ internal class DutyServiceTest {
                     day = 10,
                     dutyTypeId = null,
                     memberId = -1L,
-                    password = "wrong pass"
                 )
             )
         }
@@ -216,7 +193,6 @@ internal class DutyServiceTest {
                     day = 10,
                     dutyTypeId = -1,
                     memberId = member.id!!,
-                    password = password
                 )
             )
         }

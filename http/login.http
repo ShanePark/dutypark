@@ -1,0 +1,8 @@
+POST localhost:8080/login
+Content-Type: application/json
+
+{
+  "email": "test@duty.park",
+  "password": "1234"
+}
+

@@ -1,42 +1,45 @@
 <!DOCTYPE html>
-<head th:replace="~{layout/header::head}"></head>
+<head th:replace="~{layout/header::link}"></head>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Duty Park</title>
 </head>
 <body>
-<header class="row">
-  <div class="left-area col-2">
-    <i class="homeButton h_pointer bi bi-house-door"></i>
-  </div>
-  <div class="month-control col-8">
-    <h1>
-      <a class="move"
-         th:href="@{/duty/{member}(member=${member.name},year=${prevMonth.year}, month=${prevMonth.monthValue})}">
-        <i class="bi bi-arrow-left-circle"></i>
-      </a>
-      <a class="current" th:href="@{/duty/edit/{member}(member=${member.name},year=${year}, month=${month})}"
-         th:text="|${year}년 ${month}월|"></a>
-      <a class="move"
-         th:href="@{/duty/{member}(member=${member.name},year=${nextMonth.year}, month=${nextMonth.monthValue})}">
-        <i class="bi bi-arrow-right-circle"></i>
-      </a>
-    </h1>
-  </div>
-  <div class="col-2">
-    <span class="profile" th:text="|${member.department} ${member.name}|"></span>
-  </div>
-</header>
 
-<div class="dutyTypes">
+<head th:replace="~{layout/header::header(|${member.department} ${member.name}|)}"></head>
+
+<div class="calendar">
+  <div class="month-control row">
+    <div class="col-3"></div>
+    <div class="col-6">
+      <h1>
+        <a class="move"
+           th:href="@{/duty/{member}(member=${member.name},year=${prevMonth.year}, month=${prevMonth.monthValue})}">
+          <i class="bi bi-arrow-left-circle"></i>
+        </a>
+        <a class="current" th:text="|${year}년 ${month}월|"></a>
+        <a class="move"
+           th:href="@{/duty/{member}(member=${member.name},year=${nextMonth.year}, month=${nextMonth.monthValue})}">
+          <i class="bi bi-arrow-right-circle"></i>
+        </a>
+      </h1>
+    </div>
+    <div class="col-3">
+      <button class="edit-btn"
+              th:if="${#strings.equals(member.id, loginMember?.id)}"
+              th:onclick="|window.location.href='@{/duty/edit/{member}(member=${member.name},year=${year}, month=${month})}'|">
+        <i class="bi bi-pencil-square"></i>
+        Edit
+      </button>
+    </div>
+  </div>
+  <div class="dutyTypes">
     <span th:each="type : ${dutyTypes}">
       <span th:class="|indicator BACKGROUND-${type.color}|">&nbsp;&nbsp;&nbsp;</span>
       <span th:text="${type.name}"></span>
     </span>
-</div>
-
-<div class="calendar">
+  </div>
   <ul class="weekdays">
     <li>
       <abbr title="S">SUN</abbr>
@@ -86,11 +89,3 @@
 </div>
 </body>
 </html>
-
-<script>
-    $(function () {
-        $(".homeButton").on("click", function () {
-            location.href = "/";
-        })
-    })
-</script>

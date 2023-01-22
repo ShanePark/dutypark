@@ -6,14 +6,14 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 @Configuration
-class SlackApiConfiguration {
-
-    @Value("\${dutypark.slack.token}")
-    lateinit var token: String
+class SlackApiConfiguration(
+    @param:Value("\${dutypark.slack.token}")
+    val slackToken: String
+) {
 
     @Bean
     fun slackApi(): SlackApi {
-        return SlackApi("https://hooks.slack.com/services/$token")
+        return SlackApi("https://hooks.slack.com/services/$slackToken")
     }
 
 }

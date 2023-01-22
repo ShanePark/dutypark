@@ -38,3 +38,5 @@ out/
 
 ### Ignore other profiles ###
 src/main/resources/application-**.yml
+src/main/resources/spy.properties
+spy.log

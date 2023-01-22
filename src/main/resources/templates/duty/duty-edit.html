@@ -1,151 +1,107 @@
 <!DOCTYPE html>
-<head th:replace="~{layout/header::head}"></head>
+<head th:replace="~{layout/header::link}"></head>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Duty Park</title>
 </head>
 <body class="edit">
-<header class="row">
-  <div class="col-2"></div>
-  <div class="col-8">
-    <h1>
-      <a class="move"
-         th:href="@{/duty/edit/{member}(member=${member.name},year=${prevMonth.year}, month=${prevMonth.monthValue})}">
-        <i class="bi bi-arrow-left-circle"></i>
-      </a>
-      <a th:href="@{/duty/{member}(member=${member.name},year=${year}, month=${month})}"
-         class="current" th:text="|${year}년 ${month}월 수정중|"></a>
-      <a class="move"
-         th:href="@{/duty/edit/{member}(member=${member.name},year=${nextMonth.year}, month=${nextMonth.monthValue})}">
-        <i class="bi bi-arrow-right-circle"></i>
-      </a>
-    </h1>
-  </div>
-  <div class="col-2">
-    <span class="profile" th:text="|${member.department} ${member.name}|"></span>
-  </div>
-</header>
+<head th:replace="~{layout/header::header(|[Edit] ${member.department} ${member.name}|)}"></head>
 
-<ul class="weekdays">
-  <li>
-    <abbr title="S">SUN</abbr>
-  </li>
-  <li>
-    <abbr title="M">MON</abbr>
-  </li>
-  <li>
-    <abbr title="T">TUE</abbr>
-  </li>
-  <li>
-    <abbr title="W">WED</abbr>
-  </li>
-  <li>
-    <abbr title="T">THU</abbr>
-  </li>
-  <li>
-    <abbr title="F">FRI</abbr>
-  </li>
-  <li>
-    <abbr title="S">SAT</abbr>
-  </li>
-</ul>
+<div class="calendar">
+  <div class="month-control row">
+    <div class="col-3">
+      <button class="back-btn"
+              th:onclick="|window.location.href='@{/duty/{member}(member=${member.name},year=${year}, month=${month})}'|">
+        <i class="bi bi-backspace"></i>
+        Back
+      </button>
+    </div>
+    <div class="col-md-6">
+      <h1>
+        <a class="move"
+           th:href="@{/duty/edit/{member}(member=${member.name},year=${prevMonth.year}, month=${prevMonth.monthValue})}">
+          <i class="bi bi-arrow-left-circle"></i>
+        </a>
+        <a class="current" th:text="|${year}년 ${month}월|"></a>
+        <a class="move"
+           th:href="@{/duty/edit/{member}(member=${member.name},year=${nextMonth.year}, month=${nextMonth.monthValue})}">
+          <i class="bi bi-arrow-right-circle"></i>
+        </a>
+      </h1>
+    </div>
+    <div class="col-3"></div>
+  </div>
 
-<ol class="day-grid">
-  <th:block th:each="i : ${#numbers.sequence(0, offset % 7 -1, 1)}">
-    <li class="month-prev"></li>
-  </th:block>
-  <th:block th:each="i : ${#numbers.sequence(1, lastDay)}">
-    <li th:with="duty=${duties.get(i)}" th:data-day="${i}"
-        th:classappend="|BACKGROUND-${duty==null ? offColor : duty.dutyColor}|">
-      <div class="date container">
-        <div class="day">
-          <span th:text="${i}"></span>
-          <i class="bi edit-memo"
-             th:classappend="${#strings.isEmpty(duty?.memo) ? 'bi-calendar-plus' : 'bi-calendar-check'}"
-             th:attr='data-memo=${duty?.memo?:""}'></i>
-        </div>
-        <div class="duty">
-          <div class="duty-type-list" th:each="type:${dutyTypes}">
-            <div class="duty-type" th:data-type_id="${type.id}">
-              <btn class="btn btn-sm btn-outline-dark"
-                   th:classappend='|BACKGROUND-${type.color} ${(type.name == duty?.dutyType or (type.id == null and duty?.dutyType==null) ) ? "selected" : ""}|'
-                   th:text="${type.name}"></btn>
+  <ul class="weekdays">
+    <li>
+      <abbr title="S">SUN</abbr>
+    </li>
+    <li>
+      <abbr title="M">MON</abbr>
+    </li>
+    <li>
+      <abbr title="T">TUE</abbr>
+    </li>
+    <li>
+      <abbr title="W">WED</abbr>
+    </li>
+    <li>
+      <abbr title="T">THU</abbr>
+    </li>
+    <li>
+      <abbr title="F">FRI</abbr>
+    </li>
+    <li>
+      <abbr title="S">SAT</abbr>
+    </li>
+  </ul>
+
+  <ol class="day-grid">
+    <th:block th:each="i : ${#numbers.sequence(0, offset % 7 -1, 1)}">
+      <li class="month-prev"></li>
+    </th:block>
+    <th:block th:each="i : ${#numbers.sequence(1, lastDay)}">
+      <li th:with="duty=${duties.get(i)}" th:data-day="${i}"
+          th:classappend="|BACKGROUND-${duty==null ? offColor : duty.dutyColor}|">
+        <div class="date container">
+          <div class="day">
+            <span th:text="${i}"></span>
+            <i class="bi edit-memo"
+               th:classappend="${#strings.isEmpty(duty?.memo) ? 'bi-calendar-plus' : 'bi-calendar-check'}"
+               th:attr='data-memo=${duty?.memo?:""}'></i>
+          </div>
+          <div class="duty">
+            <div class="duty-type-list" th:each="type:${dutyTypes}">
+              <div class="duty-type" th:data-type_id="${type.id}">
+                <btn class="btn btn-sm btn-outline-dark"
+                     th:classappend='|BACKGROUND-${type.color} ${(type.name == duty?.dutyType or (type.id == null and duty?.dutyType==null) ) ? "selected" : ""}|'
+                     th:text="${type.name}"></btn>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </li>
-  </th:block>
-  <th:block th:each="i : ${#numbers.sequence(1, 7 - ((offset + lastDay) % 7) )}">
-    <li class="month-next"></li>
-  </th:block>
-</ol>
+      </li>
+    </th:block>
+    <th:block th:each="i : ${#numbers.sequence(1, 7 - ((offset + lastDay) % 7) )}">
+      <li class="month-next"></li>
+    </th:block>
+  </ol>
+</div>
+
 </body>
 </html>
 
 <script>
-    let password;
-
     const year = parseInt("[[${year}]]");
     const month = parseInt("[[${month}]]");
     const memberId = parseInt("[[${member.id}]]");
-    const memberName = "[[${member.name}]]";
-
-    function login() {
-        Swal.fire({
-            title: roChecker(memberName) + ' 로그인',
-            input: 'password',
-            inputAttributes: {
-                autocapitalize: 'off',
-                maxlength: 12,
-                placeholder: '비밀번호를 입력하세요'
-            },
-            showCancelButton: true,
-            confirmButtonText: '확인',
-            cancelButtonText: '취소',
-            showLoaderOnConfirm: true,
-            preConfirm: (pass) => {
-                return fetch('/member/authenticate', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        id: memberId,
-                        password: pass
-                    })
-                }).then(response => {
-                    if (!response.ok) {
-                        throw new Error(response.statusText)
-                    }
-                    password = pass;
-                    Swal.fire({
-                        title: '로그인 되었습니다.',
-                        icon: 'success',
-                        confirmButtonText: '확인'
-                    })
-                    return true;
-                })
-                    .catch(error => {
-                        Swal.showValidationMessage(
-                            `암호가 올바르지 않습니다 : ${error}`
-                        )
-                    })
-            },
-            allowOutsideClick: () => !Swal.isLoading()
-        });
-    }
 
     $(function () {
 
         $('.edit-memo').on('click', function () {
             let btn = $(this);
             const originalMemo = btn.data('memo');
-            if (!password) {
-                if (!login())
-                    return;
-            }
             const date = btn.parents('li');
             const day = date.data('day');
             Swal.fire({
@@ -171,7 +127,6 @@
                             day: day,
                             memo: memo,
                             memberId: memberId,
-                            password: password
                         })
                     }).then(response => {
                         if (!response.ok) {
@@ -205,10 +160,6 @@
         });
 
         $('.btn-outline-dark').click(function () {
-            if (!password) {
-                if (!login())
-                    return;
-            }
             const date = $(this).parents('li');
             const day = date.data('day');
             const type = $(this).parent('.duty-type');
@@ -229,7 +180,6 @@
                     day: day,
                     dutyTypeId: type_id,
                     memberId: memberId,
-                    password: password
                 }),
                 contentType: 'application/json; charset=utf-8',
                 dataType: 'json',
@@ -276,7 +226,5 @@
     const roChecker = function (text) {
         return text + (isSingleCharacter(text) ? '로' : '으로');
     }
-
-    login();
 
 </script>

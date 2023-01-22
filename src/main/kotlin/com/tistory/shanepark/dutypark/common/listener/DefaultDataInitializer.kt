@@ -9,6 +9,7 @@ import com.tistory.shanepark.dutypark.member.domain.entity.Department
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.ApplicationListener
 import org.springframework.context.event.ContextRefreshedEvent
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -20,22 +21,28 @@ class DefaultDataInitializer(
     private val memberRepository: MemberRepository,
     private val dutyTypeRepository: DutyTypeRepository,
     private val dutyRepository: DutyRepository,
-    private val passwordEncoder: PasswordEncoder
+    private val passwordEncoder: PasswordEncoder,
+    @param:Value("\${spring.profiles.active:default}")
+    val activeProfile: String
 ) : ApplicationListener<ContextRefreshedEvent?> {
 
     override fun onApplicationEvent(event: ContextRefreshedEvent) {
-        if (memberRepository.findMemberByName("이동현") != null)
+        if (activeProfile == "test" || memberRepository.count() > 0)
             return
-
         jennyInit()
         paulInit()
-
+        testerInit()
     }
 
     private fun jennyInit() {
         val department = Department("케익부")
         departmentRepository.save(department)
-        val jenny = Member(name = "이동현", department = department, password = passwordEncoder.encode("1234"))
+        val jenny = Member(
+            name = "이동현",
+            department = department,
+            email = "jen@duty.park",
+            password = passwordEncoder.encode("1234")
+        )
         memberRepository.save(jenny);
 
         val open = dutyTypeRepository.save(DutyType(name = "새벽", position = 0, department = department, PURPLE))
@@ -65,11 +72,27 @@ class DefaultDataInitializer(
     private fun paulInit() {
         val department2 = Department("PACU")
         departmentRepository.save(department2)
-        val paul = Member(name = "박재현", department = department2, password = passwordEncoder.encode("1234"))
+        val paul = Member(
+            name = "박재현",
+            department = department2,
+            email = "jh@duty.park",
+            password = passwordEncoder.encode("1234")
+        )
         memberRepository.save(paul)
 
         dutyTypeRepository.save(DutyType(name = "데이", position = 0, department = department2, BLUE))
         dutyTypeRepository.save(DutyType(name = "이브", position = 1, department = department2, PURPLE))
         dutyTypeRepository.save(DutyType(name = "나이트", position = 2, department = department2, RED))
+    }
+
+    private fun testerInit() {
+        val department = departmentRepository.findAll()[0]
+        val tester = Member(
+            name = "테스트",
+            department = department,
+            email = "test@duty.park",
+            password = passwordEncoder.encode("1234")
+        )
+        memberRepository.save(tester);
     }
 }
