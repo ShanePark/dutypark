@@ -41,11 +41,10 @@ class JwtAuthInterceptor(
         if (status == VALID) {
             val loginMember = authService.tokenToLoginMember(jwt)
             request.setAttribute("loginMember", loginMember)
-        } else { // remove invalid token
+        } else if (status != NOT_EXIST) { // remove invalid token
             log.info("Token is invalid. Removing the tokens. status: $status, jwt: $jwt")
             removeCookie("SESSION", response)
         }
-
         return true
     }
 

@@ -17,12 +17,9 @@ import org.springframework.web.bind.annotation.*
 @Controller
 class AuthController(
     private val authService: AuthService,
-    @param:Value("\${dutypark.domain}")
-    private val domain: String,
     @Value("\${jwt.token-validity-in-seconds}") val tokenValidityInSeconds: Long,
     @Value("\${jwt.refresh-token-validity-in-days}") val refreshTokenValidDays: Long
 ) {
-
     private val log = org.slf4j.LoggerFactory.getLogger(AuthController::class.java)
 
     @GetMapping("/login")
@@ -52,17 +49,7 @@ class AuthController(
             val token = authService.login(loginDto)
             val refreshToken = authService.createRefreshToken(loginDto)
 
-            val rememberMeCookieAge = if (loginDto.rememberMe) 3600 * 24 * 365L else 1L
-            val rememberMeCookie = ResponseCookie.from("rememberMe", loginDto.email)
-                .domain(domain)
-                .httpOnly(true)
-                .path("/")
-                .maxAge(rememberMeCookieAge)
-                .sameSite(SameSite.STRICT.name)
-                .build()
-
             val jwtCookie = ResponseCookie.from("SESSION", token)
-                .domain(domain)
                 .httpOnly(true)
                 .path("/")
                 .secure(true)
@@ -71,7 +58,6 @@ class AuthController(
                 .build()
 
             val refToken = ResponseCookie.from("REFRESH_TOKEN", refreshToken)
-                .domain(domain)
                 .httpOnly(true)
                 .path("/")
                 .secure(true)
@@ -79,11 +65,29 @@ class AuthController(
                 .sameSite(SameSite.STRICT.name)
                 .build()
 
-            return ResponseEntity.ok()
+            val rememberMeCookieAge = if (loginDto.rememberMe) 3600 * 24 * 365L else 0L
+            val rememberMeCookie = ResponseCookie
+                .from("rememberMe", if (loginDto.rememberMe) loginDto.email else "")
+                .httpOnly(true)
+                .path("/")
+                .maxAge(rememberMeCookieAge)
+                .sameSite(SameSite.STRICT.name)
+                .build()
+
+            log.info("Login Success: ${loginDto.email}")
+
+            val responseEntity = ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
                 .header(HttpHeaders.SET_COOKIE, refToken.toString())
                 .header(HttpHeaders.SET_COOKIE, rememberMeCookie.toString())
-                .body(referer)
+                .body(referer?.let {
+                    if (it.contains("login")) {
+                        "/"
+                    } else {
+                        it
+                    }
+                })
+            return responseEntity
 
         } catch (e: AuthenticationException) {
             return ResponseEntity.status(401).body(e.message)

@@ -28,7 +28,6 @@ class SecurityConfig(
             .and()
             .logout().logoutUrl("/logout")
             .logoutSuccessHandler(logoutHandler)
-            .deleteCookies("SESSION", "REFRESH_TOKEN")
             .and()
             .csrf().disable()
             .build()
