@@ -55,6 +55,7 @@ class AuthService(
         refreshTokenRepository.findByToken(refreshToken)?.let {
             if (it.validUntil.isAfter(LocalDateTime.now())) {
                 it.slideValidUntil()
+                log.info("refresh token succeed. member:${it.member.email}")
                 return jwtProvider.createToken(it.member)
             }
         }
