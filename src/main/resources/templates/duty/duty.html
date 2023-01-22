@@ -29,8 +29,7 @@
       <button class="edit-btn"
               th:if="${#strings.equals(member.id, loginMember?.id)}"
               th:onclick="|window.location.href='@{/duty/edit/{member}(member=${member.name},year=${year}, month=${month})}'|">
-        <i class="bi bi-pencil-square"></i>
-        Edit
+        수정 <i class="bi bi-pencil-square"></i>
       </button>
     </div>
   </div>
