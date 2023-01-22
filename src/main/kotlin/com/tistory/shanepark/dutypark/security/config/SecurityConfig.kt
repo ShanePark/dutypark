@@ -7,11 +7,13 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.web.authentication.logout.LogoutSuccessHandler
 
 @Configuration
 class SecurityConfig(
     @param:Value("\${spring.profiles.active:default}")
-    private val activeProfile: String
+    private val activeProfile: String,
+    private val logoutHandler: LogoutSuccessHandler
 ) {
 
     @Bean
@@ -24,7 +26,8 @@ class SecurityConfig(
             .anyRequest()
             .permitAll()
             .and()
-            .logout().logoutUrl("/logout").logoutSuccessUrl("/")
+            .logout().logoutUrl("/logout")
+            .logoutSuccessHandler(logoutHandler)
             .deleteCookies("SESSION", "REFRESH_TOKEN")
             .and()
             .csrf().disable()

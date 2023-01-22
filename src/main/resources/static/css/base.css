@@ -20,7 +20,7 @@ header.row {
     align-items: center;
     font-size: calc(16px + (26 - 16) * ((100vw - 300px) / (1600 - 300)));
     justify-content: center;
-    background: #000;
+    background: #222;
     color: #fff;
     min-height: 8vh;
     text-align: center;
@@ -224,8 +224,7 @@ header .left-area {
 .dutyTypes {
     font-size: 1.3em;
     text-align: right;
-    margin-right: 50px;
-    margin-bottom: 20px;
+    margin: 0 auto;
 }
 
 .dutyTypes .indicator {
@@ -290,8 +289,7 @@ header .left-area {
     padding: 30px;
     box-sizing: border-box;
     box-shadow: 0 0 2px rgba(0, 0, 0, 0.125), 0 25px 50px rgba(0, 0, 0, 0.25);
-    margin: 0 auto;
-    margin-top: 100px;
+    margin: 100px auto 0;
 }
 
 .form-buttons {
@@ -313,4 +311,41 @@ header .left-area {
 
 .form-buttons button:hover {
     background-color: #ccc;
+}
+
+.calendar {
+    max-width: 64rem;
+    margin: 0 auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+.calendar .month-control button {
+    font-size: 1.5em;
+    width: 100%;
+    border: 1px solid black;
+    background: none;
+    border-radius: 20px;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.125), 0 3px 5px rgba(0, 0, 0, 0.25);
+}
+
+.calendar .month-control button:hover {
+    background-color: #ddd;
+    transition: 0.3s;
+}
+
+.day-grid {
+    padding-left: 0px;
+}
+
+.logout-button {
+    font-size: 0.5em;
+    padding: 3px;
+    border-radius: 5px;
+    background-color: #555;
+    color: black;
+}
+
+.logout-button:hover {
+    background-color: #777;
 }

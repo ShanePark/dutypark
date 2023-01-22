@@ -1,10 +1,12 @@
 package com.tistory.shanepark.dutypark.duty.controller
 
+import com.tistory.shanepark.dutypark.common.exceptions.AuthenticationException
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeDto
 import com.tistory.shanepark.dutypark.duty.service.DutyService
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.service.MemberService
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.Logger
 import org.springframework.stereotype.Controller
@@ -29,8 +31,15 @@ class DutyController(
         model: Model,
         year: Int,
         month: Int,
+        loginMember: LoginMember
     ): String {
         val member = memberService.findMemberByName(name)
+        if (loginMember.id != member.id) {
+            val message =
+                "login member and request duty member does not match: login:$loginMember.id, dutyMemberId:${member.id}"
+            log.warn(message)
+            throw AuthenticationException(message)
+        }
         addDutyData(member, year, month, model)
         addYearMonthData(year, month, model)
 

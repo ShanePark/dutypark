@@ -1,8 +1,10 @@
 package com.tistory.shanepark.dutypark.security.controller
 
+import com.tistory.shanepark.dutypark.common.exceptions.AuthenticationException
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.service.AuthService
+import jakarta.servlet.http.HttpSession
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.web.server.Cookie.SameSite
 import org.springframework.http.HttpHeaders
@@ -26,10 +28,15 @@ class AuthController(
     @GetMapping("/login")
     fun loginPage(
         @CookieValue(name = "rememberMe", required = false) rememberMe: String?,
+        @RequestHeader(HttpHeaders.REFERER, required = false) referer: String?,
+        httpSession: HttpSession,
         model: Model
     ): String {
         rememberMe?.let {
             model.addAttribute("rememberMe", rememberMe)
+        }
+        referer?.let {
+            httpSession.setAttribute("referer", referer)
         }
         return "member/login"
     }
@@ -38,42 +45,49 @@ class AuthController(
     @ResponseBody
     fun login(
         @RequestBody loginDto: LoginDto,
+        model: Model,
+        @SessionAttribute(name = "referer", required = false) referer: String?
     ): ResponseEntity<String> {
-        val token = authService.login(loginDto)
-        val refreshToken = authService.createRefreshToken(loginDto)
+        try {
+            val token = authService.login(loginDto)
+            val refreshToken = authService.createRefreshToken(loginDto)
 
-        val rememberMeCookieAge = if (loginDto.rememberMe) 3600 * 24 * 365L else 1L
-        val rememberMeCookie = ResponseCookie.from("rememberMe", loginDto.email)
-            .domain(domain)
-            .httpOnly(true)
-            .path("/")
-            .maxAge(rememberMeCookieAge)
-            .sameSite(SameSite.STRICT.name)
-            .build()
+            val rememberMeCookieAge = if (loginDto.rememberMe) 3600 * 24 * 365L else 1L
+            val rememberMeCookie = ResponseCookie.from("rememberMe", loginDto.email)
+                .domain(domain)
+                .httpOnly(true)
+                .path("/")
+                .maxAge(rememberMeCookieAge)
+                .sameSite(SameSite.STRICT.name)
+                .build()
 
-        val jwtCookie = ResponseCookie.from("SESSION", token)
-            .domain(domain)
-            .httpOnly(true)
-            .path("/")
-            .secure(true)
-            .maxAge(tokenValidityInSeconds)
-            .sameSite(SameSite.STRICT.name)
-            .build()
+            val jwtCookie = ResponseCookie.from("SESSION", token)
+                .domain(domain)
+                .httpOnly(true)
+                .path("/")
+                .secure(true)
+                .maxAge(tokenValidityInSeconds)
+                .sameSite(SameSite.STRICT.name)
+                .build()
 
-        val refToken = ResponseCookie.from("REFRESH_TOKEN", refreshToken)
-            .domain(domain)
-            .httpOnly(true)
-            .path("/")
-            .secure(true)
-            .maxAge(refreshTokenValidDays * 24 * 60 * 60)
-            .sameSite(SameSite.STRICT.name)
-            .build()
+            val refToken = ResponseCookie.from("REFRESH_TOKEN", refreshToken)
+                .domain(domain)
+                .httpOnly(true)
+                .path("/")
+                .secure(true)
+                .maxAge(refreshTokenValidDays * 24 * 60 * 60)
+                .sameSite(SameSite.STRICT.name)
+                .build()
 
-        return ResponseEntity.ok()
-            .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-            .header(HttpHeaders.SET_COOKIE, refToken.toString())
-            .header(HttpHeaders.SET_COOKIE, rememberMeCookie.toString())
-            .build()
+            return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, refToken.toString())
+                .header(HttpHeaders.SET_COOKIE, rememberMeCookie.toString())
+                .body(referer)
+
+        } catch (e: AuthenticationException) {
+            return ResponseEntity.status(401).body(e.message)
+        }
     }
 
     @GetMapping("/status")

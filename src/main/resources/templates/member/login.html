@@ -25,7 +25,7 @@
     </div>
     <div class="form-buttons row">
       <div class="col-6">
-        <button type="button" class="btn">회원가입</button>
+        <button type="button" class="btn" disabled>회원가입</button>
       </div>
       <div class="col-6">
         <button id="login" type="submit" class="btn">로그인</button>
@@ -54,8 +54,8 @@
             url: '/login',
             data: JSON.stringify(data),
             contentType: 'application/json; charset=utf-8',
-            success: function (data) {
-                location.href = '/';
+            success: function (referer) {
+                location.href = referer;
             }, error: function (error) {
                 Swal.fire({
                     icon: 'error',
