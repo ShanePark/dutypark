@@ -71,7 +71,10 @@
     }
 
     .members {
+        color: #fff;
         font-size: 3em;
+        background-image: url("/images/hanoi.jpeg");
+        background-size: cover;
     }
 
 }
