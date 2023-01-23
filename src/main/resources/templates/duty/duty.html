@@ -11,26 +11,23 @@
 
 <div class="calendar">
   <div class="month-control row">
-    <div class="col-3"></div>
-    <div class="col-6">
+    <div th:classappend="${#strings.equals(member.id, loginMember?.id)} ? col-9 : col-12">
       <h1>
         <a class="move"
            th:href="@{/duty/{member}(member=${member.name},year=${prevMonth.year}, month=${prevMonth.monthValue})}">
           <i class="bi bi-arrow-left-circle"></i>
         </a>
-        <a class="current" th:text="|${year}년 ${month}월|"></a>
+        <input type="month" th:value="|${year}-${month < 10 ? '0' + month : month}|" onclick="this.showPicker()">
         <a class="move"
            th:href="@{/duty/{member}(member=${member.name},year=${nextMonth.year}, month=${nextMonth.monthValue})}">
           <i class="bi bi-arrow-right-circle"></i>
         </a>
       </h1>
     </div>
-    <div class="col-3">
+    <div class="col-3" th:if="${#strings.equals(member.id, loginMember?.id)}">
       <button class="edit-btn"
-              th:if="${#strings.equals(member.id, loginMember?.id)}"
               th:onclick="|window.location.href='@{/duty/edit/{member}(member=${member.name},year=${year}, month=${month})}'|">
-        <i class="bi bi-pencil-square"></i>
-        Edit
+        수정 <i class="bi bi-pencil-square"></i>
       </button>
     </div>
   </div>
@@ -66,26 +63,33 @@
 
   <ol class="day-grid" th:with="today=${#dates.createNow()}">
     <th:block th:each="i : ${#numbers.sequence(0, offset % 7 -1, 1)}">
-      <li class="month-prev"></li>
+      <li class="month-prev"/>
     </th:block>
     <th:block th:each="i : ${#numbers.sequence(1, lastDay)}">
       <li th:classappend='|BACKGROUND-${ duties.get(i)?.dutyColor ?: offColor}${today.getYear()+1900==year and today.getMonth()+1 == month and today.getDate() == i ? " today": "" }|'>
         <div th:with="duty=${duties.get(i)}" class="date container">
           <div class="day row">
-            <span class="date_number"
-                  th:text='|${i}|'></span>
+            <span class="date_number" th:text='|${i}|'></span>
           </div>
           <div class="duty">
-            <p class="memo" th:if="${duty!=null and duty.memo != null && duty.memo.length > 0}"
+            <p class="memo" th:if="${duty?.memo?.length > 0}"
                th:text="|${duty.memo}|"></p>
           </div>
         </div>
       </li>
     </th:block>
     <th:block th:each="i : ${#numbers.sequence(1, 7 - ((offset + lastDay) % 7) )}">
-      <li class="month-next"></li>
+      <li class="month-next"/>
     </th:block>
   </ol>
 </div>
 </body>
 </html>
+
+<script>
+    $('input[type="month"]').on('change', function () {
+        let year = $(this).val().split('-')[0];
+        let month = $(this).val().split('-')[1];
+        window.location.href = window.location.href.split('?')[0] + '?year=' + year + '&month=' + month;
+    });
+</script>

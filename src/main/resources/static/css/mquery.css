@@ -1,0 +1,80 @@
+/* mobile */
+@media (max-width: 1024px) {
+    .calendar {
+        margin-right: 20px;
+    }
+
+    header h1 {
+        font-size: 2em;
+    }
+
+    header a {
+        font-size: 1.5em;
+    }
+
+    header .profile {
+        font-size: 1.2em;
+    }
+
+    header .homeButton {
+        font-size: 3em;
+    }
+
+    ul.weekdays li {
+        font-size: 0px;
+    }
+
+    .dutyTypes {
+        font-size: 2em;
+        margin-right: 10px;
+    }
+
+    .duty .memo {
+        font-size: 1.3em;
+    }
+
+    ol.day-grid li {
+        min-height: 20vw;
+    }
+
+    ul, ol {
+        grid-gap: .25em;
+    }
+
+    ul.weekdays > li abbr:after {
+        content: attr(title);
+        font-size: calc(16px + (26 - 16) * ((100vw - 300px) / (1600 - 300)));
+        text-align: center;
+    }
+
+    .login-box {
+        max-width: 90%;
+    }
+
+    .login-box .form-group {
+        font-size: 1.5em;
+    }
+
+    .login-box input {
+        font-size: 1em;
+    }
+
+    .login-box button {
+        font-size: 1.5em;
+    }
+
+    .login-box #remember {
+        width: 2.5rem;
+        height: 2.5rem;
+        margin-left: 1rem;
+        margin-top: 1rem;
+    }
+
+    .members {
+        color: #fff;
+        font-size: 3em;
+        background-image: url("/images/hanoi.jpeg");
+        background-size: cover;
+    }
+
+}
