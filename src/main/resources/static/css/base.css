@@ -61,7 +61,7 @@ ol.day-grid li {
     padding: 5px;
     display: inline-table;
     border-radius: 0.625rem;
-    box-shadow: 6px 11px 41px -28px #a99de7;
+    box-shadow: 2px 4px 7px 3px #eaeaea;
 }
 
 ol.day-grid li.today {
@@ -196,7 +196,7 @@ header .left-area {
     cursor: pointer !important;
 }
 
-.duty-type btn {
+.duty-type button {
     width: 100%;
     margin-bottom: 0.5em;
 }
@@ -302,9 +302,12 @@ header .left-area {
 
 .members {
     padding: 20px;
-    color: #fff;
-    background-image: url("/images/hanoi.jpeg");
-    background-size: cover;
     width: 100%;
     height: 100vh;
+}
+
+.calendar input[type="month"] {
+    background: none;
+    border: none;
+    text-align: center;
 }
