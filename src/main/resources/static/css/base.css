@@ -174,6 +174,11 @@ header .current {
     font-size: 0.9em;
 }
 
+.edit .today .day {
+    text-decoration: underline;
+    font-weight: bolder;
+}
+
 .day .date_number {
     font-size: 1.2em;
 }
