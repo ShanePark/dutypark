@@ -55,13 +55,13 @@
     </li>
   </ul>
 
-  <ol class="day-grid">
+  <ol class="day-grid" th:with="today=${#dates.createNow()}">
     <th:block th:each="i : ${#numbers.sequence(0, offset % 7 -1, 1)}">
       <li class="month-prev"/>
     </th:block>
     <th:block th:each="i : ${#numbers.sequence(1, lastDay)}">
       <li th:with="duty=${duties.get(i)}" th:data-day="${i}"
-          th:classappend="|BACKGROUND-${duty==null ? offColor : duty.dutyColor}|">
+          th:classappend='|BACKGROUND-${duty==null ? offColor : duty.dutyColor}${today.getYear()+1900==year and today.getMonth()+1 == month and today.getDate() == i ? " today": "" }|'>
         <div class="date container">
           <div class="day">
             <span th:text="${i}"></span>
@@ -81,7 +81,8 @@
         </div>
       </li>
     </th:block>
-    <th:block th:each="i : ${#numbers.sequence(1, 7 - ((offset + lastDay) % 7) )}">
+    <th:block th:if="(${offset} + ${lastDay}) % 7 > 0"
+              th:each="i : ${#numbers.sequence(1, 7 - ((offset + lastDay) % 7) )}">
       <li class="month-next"/>
     </th:block>
   </ol>
@@ -103,11 +104,13 @@
             const date = btn.parents('li');
             const day = date.data('day');
             Swal.fire({
-                title: '메모를 입력 해 주세요.',
+                title: `${year}년 ${month}월 ${day}일 메모 수정`,
+                text: '메모는 50자 이내로 입력 가능합니다.',
                 input: 'textarea',
                 inputValue: originalMemo,
                 inputAttributes: {
-                    autocapitalize: 'off'
+                    autocapitalize: 'off',
+                    maxlength: 50
                 },
                 showCancelButton: true,
                 confirmButtonText: '확인',
