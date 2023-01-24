@@ -78,7 +78,8 @@
         </div>
       </li>
     </th:block>
-    <th:block th:each="i : ${#numbers.sequence(1, 7 - ((offset + lastDay) % 7) )}">
+    <th:block th:if="(${offset} + ${lastDay}) % 7 > 0"
+              th:each="i : ${#numbers.sequence(1, 7 - ((offset + lastDay) % 7) )}">
       <li class="month-next"/>
     </th:block>
   </ol>
