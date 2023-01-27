@@ -316,3 +316,8 @@ header .left-area {
     border: none;
     text-align: center;
 }
+
+.calendar input[type="month"]:hover {
+    cursor: pointer;
+}
+
