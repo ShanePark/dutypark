@@ -315,4 +315,13 @@ header .left-area {
     background: none;
     border: none;
     text-align: center;
+    color: black;
+}
+
+.calendar input[type="month"]:hover {
+    cursor: pointer;
+}
+
+.dutyTypes button {
+    color: black;
 }
