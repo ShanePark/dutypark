@@ -294,11 +294,11 @@ header .left-area {
 }
 
 .logout-button {
-    font-size: 0.5em;
+    font-size: 0.8em;
     padding: 3px;
     border-radius: 5px;
     background-color: #555;
-    color: black;
+    color: #ccc;
 }
 
 .logout-button:hover {

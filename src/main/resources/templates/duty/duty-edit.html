@@ -58,8 +58,9 @@
       <li class="month-prev"/>
     </th:block>
     <th:block th:each="i : ${#numbers.sequence(1, lastDay)}">
-      <li th:with="duty=${duties.get(i)}" th:data-day="${i}"
-          th:classappend='|BACKGROUND-${duty==null ? offColor : duty.dutyColor}${today.getYear()+1900==year and today.getMonth()+1 == month and today.getDate() == i ? " today": "" }|'>
+      <li th:with="duty=${duties.get(i)}"
+          th:data-day="${i}"
+          th:classappend='|BACKGROUND-${ duty?.dutyColor ?: offColor}${today.getYear()+1900==year and today.getMonth()+1 == month and today.getDate() == i ? " today": "" }|'>
         <div class="date container">
           <div class="day">
             <span th:text="${i}"></span>
@@ -72,7 +73,8 @@
               <div class="duty-type" th:data-type_id="${type.id}">
                 <button class="btn btn-sm btn-outline-dark"
                         th:classappend='|BACKGROUND-${type.color} ${(type.name == duty?.dutyType or (type.id == null and duty?.dutyType==null) ) ? "selected" : ""}|'
-                        th:text="${type.name}"></button>
+                        th:text="${type.name}">
+                </button>
               </div>
             </div>
           </div>

@@ -8,6 +8,10 @@
         font-size: 2em;
     }
 
+    .calendar h1 {
+        font-size: 3em;
+    }
+
     header a {
         font-size: 1.5em;
     }
@@ -75,6 +79,10 @@
         font-size: 3em;
         background-image: url("/images/hanoi.jpeg");
         background-size: cover;
+    }
+
+    .logout-button {
+        font-size: 1em;
     }
 
 }
