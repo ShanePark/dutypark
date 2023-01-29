@@ -17,6 +17,8 @@ class DDayService(
     private val dDayRepository: DDayRepository
 ) {
 
+    val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(this.javaClass)
+
     fun createDDay(loginMember: LoginMember, title: String, date: LocalDate, isPrivate: Boolean): DDayEvent {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
         val countByMember = dDayRepository.countByMember(member)
@@ -42,7 +44,29 @@ class DDayService(
             .map { DDayDto.of(it) }
     }
 
-    fun rearrangeOrders(prefix: Long, ids: List<Long>) {
+    fun rearrangeOrders(loginMember: LoginMember, prefix: Long, ids: List<Long>) {
+
+        val affectedDDays = dDayRepository.findAllById(ids)
+
+        // validation. if any of ids is not in the range of prefix ~ prefix + ids.size, throw exception
+        affectedDDays.map { it.position }
+            .any { position -> position < prefix || prefix + ids.size <= position }
+            .let {
+                if (it) {
+                    log.warn("Invalid ids or prefix. ids: $ids, prefix: $prefix")
+                    throw IllegalArgumentException("Invalid ids or prefix. ids: $ids, prefix: $prefix")
+                }
+            }
+        // validation. if any of ids is not belong to loginMember, throw exception
+        affectedDDays.map { it.member.id }
+            .any { it != loginMember.id }.let {
+                if (it) {
+                    log.warn("Can't access other member's d-day event. ids: $ids, loginMember: $loginMember")
+                    throw AuthenticationException("Can't access other member's d-day event")
+                }
+            }
+
+        // update position
         ids.forEachIndexed { index, id ->
             val dDayEvent = dDayRepository.findById(id).orElseThrow()
             dDayEvent.position = prefix + index.toLong()

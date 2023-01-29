@@ -10,6 +10,9 @@ data class DDayDto(
     val isPrivate: Boolean,
     val position: Long,
 ) {
+
+    val daysLeft: Long = date.toEpochDay() - LocalDate.now().toEpochDay()
+
     companion object {
         fun of(dDayEvent: DDayEvent): DDayDto {
             return DDayDto(
