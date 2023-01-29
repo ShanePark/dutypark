@@ -62,14 +62,16 @@
       <li class="month-prev"/>
     </th:block>
     <th:block th:each="i : ${#numbers.sequence(1, lastDay)}">
-      <li th:classappend='|BACKGROUND-${ duties.get(i)?.dutyColor ?: offColor}${today.getYear()+1900==year and today.getMonth()+1 == month and today.getDate() == i ? " today": "" }|'>
-        <div th:with="duty=${duties.get(i)}" class="date container">
+      <li th:with="duty=${duties.get(i)}"
+          th:classappend='|BACKGROUND-${ duty?.dutyColor ?: offColor}${today.getYear()+1900==year and today.getMonth()+1 == month and today.getDate() == i ? " today": "" }|'>
+        <div class="date container">
           <div class="day row">
             <span class="date_number" th:text='|${i}|'></span>
           </div>
           <div class="duty">
             <p class="memo" th:if="${duty?.memo?.length > 0}"
-               th:text="|${duty.memo}|"></p>
+               th:text="|${duty.memo}|">
+            </p>
           </div>
         </div>
       </li>
