@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.security.controller
 
 import com.tistory.shanepark.dutypark.common.exceptions.AuthenticationException
+import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.service.AuthService
@@ -96,7 +97,11 @@ class AuthController(
 
     @GetMapping("/status")
     @ResponseBody
-    fun loginStatus(loginMember: LoginMember): LoginMember {
+    fun loginStatus(
+        @Login(required = false)
+        loginMember: LoginMember?
+    ): LoginMember? {
+        log.info("Login Member: $loginMember")
         return loginMember
     }
 

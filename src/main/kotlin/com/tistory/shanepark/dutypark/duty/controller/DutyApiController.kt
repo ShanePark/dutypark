@@ -5,6 +5,7 @@ import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.MemoDto
 import com.tistory.shanepark.dutypark.duty.service.DutyService
+import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.slf4j.Logger
 import org.springframework.http.ResponseEntity
@@ -22,6 +23,7 @@ class DutyApiController(
     @SlackNotification
     fun updateDuty(
         @RequestBody dutyUpdateDto: DutyUpdateDto,
+        @Login
         loginMember: LoginMember
     ): ResponseEntity<Boolean> {
         checkAuthentication(loginMember, dutyUpdateDto.memberId)
@@ -33,6 +35,7 @@ class DutyApiController(
     @SlackNotification
     fun updateMemo(
         @RequestBody memoDto: MemoDto,
+        @Login
         loginMember: LoginMember
     ): ResponseEntity<Boolean> {
         checkAuthentication(loginMember, memoDto.memberId)

@@ -50,10 +50,6 @@ internal class DutyServiceTest {
 
     @BeforeEach
     fun beforeEach() {
-        dutyRepository.deleteAll()
-        dutyTypeRepository.deleteAll()
-        memberRepository.deleteAll()
-        departmentRepository.deleteAll()
         val dept = departmentRepository.save(Department("개발팀"))
 
         val member = Member(dept, "test", email, passwordEncoder.encode(password))
@@ -69,6 +65,14 @@ internal class DutyServiceTest {
 
         this.member = member
         this.dutyTypes = dutyTypes
+    }
+
+    @AfterEach
+    fun afterEach() {
+        dutyRepository.deleteAll()
+        dutyTypeRepository.deleteAll()
+        memberRepository.deleteAll()
+        departmentRepository.deleteAll()
     }
 
     @Test

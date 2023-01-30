@@ -48,13 +48,19 @@ class DDayServiceTest {
 
     @BeforeAll
     fun beforeAll() {
+        memberRepository.deleteAll()
         departmentRepository.save(dept)
         memberRepository.save(member)
         memberRepository.save(member2)
     }
 
-    @BeforeEach
-    fun beforeEach() {
+    @AfterAll
+    fun afterAll() {
+        memberRepository.deleteAll()
+    }
+
+    @AfterEach
+    fun afterEach() {
         dDayRepository.deleteAll()
     }
 
