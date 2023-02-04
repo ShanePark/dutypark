@@ -54,11 +54,6 @@ class DDayServiceTest {
         memberRepository.save(member2)
     }
 
-    @AfterAll
-    fun afterAll() {
-        memberRepository.deleteAll()
-    }
-
     @AfterEach
     fun afterEach() {
         dDayRepository.deleteAll()
@@ -66,7 +61,7 @@ class DDayServiceTest {
 
     @Test
     fun createDDay() {
-        val loginMember = getLoginMember(member)
+        val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             title = "test",
@@ -91,7 +86,7 @@ class DDayServiceTest {
 
     @Test
     fun findDDay() {
-        val loginMember = getLoginMember(member)
+        val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             title = "test",
@@ -114,8 +109,8 @@ class DDayServiceTest {
 
     @Test
     fun `can't find private D-day of other person`() {
-        val loginMember = getLoginMember(member)
-        val loginMember2 = getLoginMember(member2)
+        val loginMember = LoginMember.from(member)
+        val loginMember2 = LoginMember.from(member2)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             title = "test",
@@ -129,7 +124,7 @@ class DDayServiceTest {
 
     @Test
     fun findDDays() {
-        val loginMember = getLoginMember(member)
+        val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             title = "test",
@@ -150,8 +145,8 @@ class DDayServiceTest {
 
     @Test
     fun `find D-Day by another person, private ones are not show`() {
-        val loginMember = getLoginMember(member)
-        val loginMember2 = getLoginMember(member2)
+        val loginMember = LoginMember.from(member)
+        val loginMember2 = LoginMember.from(member2)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             title = "test",
@@ -172,7 +167,7 @@ class DDayServiceTest {
 
     @Test
     fun updateDDay() {
-        val loginMember = getLoginMember(member)
+        val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             title = "test",
@@ -195,8 +190,8 @@ class DDayServiceTest {
 
     @Test
     fun `Can't update other member's D-Day event`() {
-        val loginMember = getLoginMember(member)
-        val loginMember2 = getLoginMember(member2)
+        val loginMember = LoginMember.from(member)
+        val loginMember2 = LoginMember.from(member2)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             title = "test",
@@ -216,7 +211,7 @@ class DDayServiceTest {
 
     @Test
     fun updatePrivacy() {
-        val loginMember = getLoginMember(member)
+        val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             title = "test",
@@ -232,7 +227,7 @@ class DDayServiceTest {
 
     @Test
     fun rearrangeOrders() {
-        val loginMember = getLoginMember(member)
+        val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             title = "test",
@@ -284,8 +279,8 @@ class DDayServiceTest {
 
     @Test
     fun `can't rearrange if any of D-Day event is other member's`() {
-        val loginMember = getLoginMember(member)
-        val loginMember2 = getLoginMember(member2)
+        val loginMember = LoginMember.from(member)
+        val loginMember2 = LoginMember.from(member2)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             title = "test",
@@ -328,7 +323,7 @@ class DDayServiceTest {
 
     @Test
     fun `can't rearrange if prefix is not valid`() {
-        val loginMember = getLoginMember(member)
+        val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             title = "test",
@@ -375,7 +370,7 @@ class DDayServiceTest {
 
     @Test
     fun deleteDDay() {
-        val loginMember = getLoginMember(member)
+        val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             title = "test",
@@ -389,8 +384,8 @@ class DDayServiceTest {
 
     @Test
     fun `can't delete D-day event of other member`() {
-        val loginMember = getLoginMember(member)
-        val loginMember2 = getLoginMember(member2)
+        val loginMember = LoginMember.from(member)
+        val loginMember2 = LoginMember.from(member2)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             title = "test",
@@ -401,13 +396,5 @@ class DDayServiceTest {
             dDayService.deleteDDay(loginMember2, createDDay.id!!)
         }
     }
-
-    private fun getLoginMember(member: Member): LoginMember {
-        return LoginMember(
-            id = member.id!!,
-            email = member.email,
-            name = member.name,
-            0, "dept"
-        )
-    }
+    
 }

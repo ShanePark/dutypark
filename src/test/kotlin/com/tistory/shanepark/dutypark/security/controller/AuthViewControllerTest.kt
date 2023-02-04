@@ -26,7 +26,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class AuthControllerTest {
+class AuthViewControllerTest {
 
     @Autowired
     lateinit var mockMvc: MockMvc
@@ -44,7 +44,7 @@ class AuthControllerTest {
     lateinit var passwordEncoder: org.springframework.security.crypto.password.PasswordEncoder
 
     private val objectMapper = com.fasterxml.jackson.databind.ObjectMapper()
-    private val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(AuthControllerTest::class.java)
+    private val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(AuthViewControllerTest::class.java)
 
     var dutyTypeId = 0L
     val memberEmail = "test@duty.park"

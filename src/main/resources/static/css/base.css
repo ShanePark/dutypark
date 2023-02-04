@@ -325,3 +325,13 @@ header .left-area {
 .dutyTypes button {
     color: black;
 }
+
+a.memberPage-link {
+    color: #ddd;
+    text-decoration: none;
+}
+
+a.memberPage-link:hover {
+    color: whitesmoke;
+    transition: 0.3s;
+}

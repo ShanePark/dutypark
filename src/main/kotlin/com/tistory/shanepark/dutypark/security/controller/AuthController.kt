@@ -5,7 +5,6 @@ import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.service.AuthService
-import jakarta.servlet.http.HttpSession
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.web.server.Cookie.SameSite
 import org.springframework.http.HttpHeaders
@@ -15,7 +14,7 @@ import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
 
-@Controller
+@RestController
 class AuthController(
     private val authService: AuthService,
     @Value("\${jwt.token-validity-in-seconds}") val tokenValidityInSeconds: Long,
@@ -23,24 +22,7 @@ class AuthController(
 ) {
     private val log = org.slf4j.LoggerFactory.getLogger(AuthController::class.java)
 
-    @GetMapping("/login")
-    fun loginPage(
-        @CookieValue(name = "rememberMe", required = false) rememberMe: String?,
-        @RequestHeader(HttpHeaders.REFERER, required = false) referer: String?,
-        httpSession: HttpSession,
-        model: Model
-    ): String {
-        rememberMe?.let {
-            model.addAttribute("rememberMe", rememberMe)
-        }
-        referer?.let {
-            httpSession.setAttribute("referer", referer)
-        }
-        return "member/login"
-    }
-
     @PostMapping("/login")
-    @ResponseBody
     fun login(
         @RequestBody loginDto: LoginDto,
         model: Model,
@@ -96,7 +78,6 @@ class AuthController(
     }
 
     @GetMapping("/status")
-    @ResponseBody
     fun loginStatus(
         @Login(required = false)
         loginMember: LoginMember?

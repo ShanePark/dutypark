@@ -15,24 +15,26 @@
 
 <head th:fragment="header(title)">
   <header class="row">
-    <div class="left-area col-3">
+    <div class="left-area col-4">
       <a class="homeButton" th:href="@{/}">
         <i class="h_pointer bi bi-house-door"></i>
       </a>
     </div>
-    <div class="month-control col-6">
+    <div class="month-control col-4">
       <h1 th:text="${title}"></h1>
     </div>
-    <div class="col-3 profile">
+    <div class="col-4 profile">
       <div th:if="${loginMember == null}">
         <a th:href="@{/login}" class="link">로그인
           <i class="bi bi-person-badge"></i>
         </a>
       </div>
       <div th:if="${loginMember != null}">
-        <span class="profile" th:text="|${loginMember?.name}|"/>
-        <i class="bi bi-person"></i>
-        <button class="logout-button" th:onclick="|window.location.href='/logout'|">Logout</button>
+        <a class="memberPage-link link" href="/member">
+          <span class="profile" th:text="|${loginMember?.name}|"/>
+          <i class="bi bi-person"></i>
+        </a>
+        <button class="logout-button" th:onclick="|window.location.href='/logout'|">로그아웃</button>
       </div>
     </div>
   </header>
