@@ -3,11 +3,14 @@
 <html lang="en">
 <body>
 <div th:replace="~{layout/header-member::head}"/>
-<div class="body d-day-edit">
-  <button class="btn btn-primary">
+<div class="body d-day-list">
+  <button v-on:click="add()" class="btn btn-primary">
     <i class="bi bi-calendar-plus-fill"></i> 추가
   </button>
-  <div v-for="dDay in dDays" class="d-day-list card">
+  <div v-for="(dDay, index) in dDays"
+       class="card"
+       :data-day="JSON.stringify(dDay)"
+       :class="{'d-day-private': dDay.isPrivate}">
     <div class="d-day-item row">
       <div class="d-day_day col-2">
         <span>{{dDay.dDayText}}</span>
@@ -17,16 +20,16 @@
         <p>{{dDay.title}}</p>
       </div>
       <div class="col-3 d-day_menu">
+        <button v-on:click="moveUp(dDay, index)" v-if="index>0" class="btn btn-primary">
+          <i class="bi bi-arrow-up"></i>
+        </button>
+        <button v-on:click="moveDown(dDay, index)" v-if="index < dDays.length-1" class="btn btn-primary">
+          <i class="bi bi-arrow-down"></i>
+        </button>
         <button class="btn btn-primary">
           <i class="bi bi-pencil-square"></i>
         </button>
-        <button class="btn btn-primary">
-          <i class="bi bi-arrow-up"></i>
-        </button>
-        <button class="btn btn-primary">
-          <i class="bi bi-arrow-down"></i>
-        </button>
-        <button class="btn btn-danger">
+        <button v-on:click="remove(dDay)" class="btn btn-danger">
           <i class="bi bi-trash"></i>
         </button>
       </div>
@@ -48,73 +51,124 @@
 </div>
 
 <script>
-    const app = new Vue({
-        el: '.d-day-edit',
-        data: {
-            dDays: []
-        },
-        mounted() {
-            this.load();
-        }, methods: {
-            load: function () {
-                $.ajax({
-                    url: '/api/dday',
-                    type: 'GET',
-                    success: function (response) {
-                        app.dDays = response;
-                        for (const dDay of app.dDays) {
-                            dDay.dDay = Math.floor((new Date(dDay.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) + 1;
-                            if (dDay.dDay == 0) {
-                                dDay.dDayText = 'D-Day';
-                            } else if (dDay.dDay < 0) {
-                                dDay.dDayText = 'D+' + Math.abs(dDay.dDay);
-                            } else dDay.dDayText = 'D-' + dDay.dDay;
+    $(function () {
+        const app = new Vue({
+            el: '.d-day-list',
+            data: {
+                dDays: []
+            },
+            mounted() {
+                this.load();
+            }, methods: {
+                load: function () {
+                    $.ajax({
+                        url: '/api/dday',
+                        type: 'GET',
+                        success: function (response) {
+                            app.dDays = response;
+                            for (const dDay of app.dDays) {
+                                dDay.dDay = Math.floor((new Date(dDay.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                                if (dDay.dDay == 0) {
+                                    dDay.dDayText = 'D-Day';
+                                } else if (dDay.dDay < 0) {
+                                    dDay.dDayText = 'D+' + Math.abs(dDay.dDay);
+                                } else dDay.dDayText = 'D-' + dDay.dDay;
+                            }
+                        },
+                        error: function (error) {
+                            console.log(error);
                         }
-                    },
-                    error: function (error) {
-                        console.log(error);
-                    }
-                })
-            }
-        }
-    })
-
-    $('.d-day-edit .btn-primary').click(function () {
-        let modal = $('.add_modal').clone();
-        modal.attr('hidden', false)
-        Swal.fire({
-            title: '디데이 추가',
-            html: modal,
-            cancelButtonText: '닫기',
-            confirmButtonText: '추가',
-            showCancelButton: true,
-            preConfirm: () => {
-                const title = Swal.getPopup().querySelector('input[name="title"]').value
-                const date = Swal.getPopup().querySelector('input[name="date"]').value
-                const isPrivate = Swal.getPopup().querySelector('input[name="isPrivate"]').checked
-                if (!title || !date) {
-                    Swal.showValidationMessage(`모든 항목을 입력해주세요.`)
+                    })
+                },
+                add: function () {
+                    let modal = $('.add_modal').clone();
+                    modal.attr('hidden', false)
+                    Swal.fire({
+                        title: '디데이 추가',
+                        html: modal,
+                        cancelButtonText: '닫기',
+                        confirmButtonText: '추가',
+                        showCancelButton: true,
+                        preConfirm: () => {
+                            const title = Swal.getPopup().querySelector('input[name="title"]').value
+                            const date = Swal.getPopup().querySelector('input[name="date"]').value
+                            const isPrivate = Swal.getPopup().querySelector('input[name="isPrivate"]').checked
+                            if (!title || !date) {
+                                Swal.showValidationMessage(`모든 항목을 입력해주세요.`)
+                            }
+                            return {title: title, date: date, isPrivate: isPrivate}
+                        }
+                    }).then((result) => {
+                        console.log(result.value);
+                        if (result.isConfirmed) {
+                            $.ajax({
+                                url: '/api/dday',
+                                type: 'POST',
+                                data: JSON.stringify(result.value),
+                                contentType: 'application/json',
+                                success: function (response) {
+                                    app.load();
+                                },
+                                error: function (error) {
+                                    console.log(error);
+                                }
+                            })
+                        }
+                    })
+                },
+                moveUp: function (dDay, index) {
+                    if (index == 0) return;
+                    const ids = [];
+                    ids.push(dDay.id);
+                    ids.push(app.dDays[index - 1].id);
+                    app.rearrange(index - 1, ids);
+                },
+                moveDown: function (dDay, index) {
+                    if (index == app.dDays.length - 1) return;
+                    const ids = [];
+                    ids.push(app.dDays[index + 1].id);
+                    ids.push(dDay.id);
+                    app.rearrange(index, ids);
+                },
+                rearrange: function (prefix, ids) {
+                    $.ajax({
+                        url: '/api/dday?prefix=' + prefix + '&ids=' + ids.join(','),
+                        type: 'PATCH',
+                        contentType: 'application/json',
+                        success: function (response) {
+                            app.load();
+                        },
+                        error: function (error) {
+                            console.log(error);
+                        }
+                    })
+                },
+                remove: function (dDay) {
+                    Swal.fire({
+                        title: '디데이 삭제',
+                        text: '[' + dDay.title + '] ' + rulChecker(dDay.title) + ' 정말로 삭제하시겠습니까?',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: '삭제',
+                        cancelButtonText: '취소'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $.ajax({
+                                url: '/api/dday/' + dDay.id,
+                                type: 'DELETE',
+                                success: function (response) {
+                                    app.load();
+                                },
+                                error: function (error) {
+                                    console.log(error);
+                                }
+                            })
+                        }
+                    })
                 }
-                return {title: title, date: date, isPrivate: isPrivate}
             }
-        }).then((result) => {
-            console.log(result.value);
-            if (result.isConfirmed) {
-                $.ajax({
-                    url: '/api/dday',
-                    type: 'POST',
-                    data: JSON.stringify(result.value),
-                    contentType: 'application/json',
-                    success: function (response) {
-                        app.load();
-                    },
-                    error: function (error) {
-                        console.log(error);
-                    }
-                })
-            }
-        })
-    });
+        });
+    })
 </script>
 
 </body>

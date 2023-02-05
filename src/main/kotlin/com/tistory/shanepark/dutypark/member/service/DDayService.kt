@@ -22,14 +22,14 @@ class DDayService(
 
     fun createDDay(loginMember: LoginMember, dDayCreateDto: DDayCreateDto): DDayEvent {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
-        val countByMember = dDayRepository.countByMember(member)
+        val maxPosition = dDayRepository.findMaxPositionByMember(member)
 
         val dDayEvent = DDayEvent(
             member = member,
             title = dDayCreateDto.title,
             date = dDayCreateDto.date,
             isPrivate = dDayCreateDto.isPrivate,
-            position = countByMember
+            position = maxPosition + 1
         )
         return dDayRepository.save(dDayEvent)
     }
@@ -53,6 +53,16 @@ class DDayService(
     }
 
     fun rearrangeOrders(loginMember: LoginMember, prefix: Long, ids: List<Long>) {
+        val member = memberRepository.findById(loginMember.id).orElseThrow()
+
+        val maxPosition = dDayRepository.findMaxPositionByMember(member)
+        val countByMember = dDayRepository.countByMember(member)
+        if (maxPosition >= countByMember) { // if some d-day event is deleted, rearrange all d-day events
+            dDayRepository.findAllByMemberOrderByPosition(member)
+                .forEachIndexed { index, dDayEvent ->
+                    dDayEvent.position = index.toLong()
+                }
+        }
 
         val affectedDDays = dDayRepository.findAllById(ids)
 
@@ -67,7 +77,7 @@ class DDayService(
             }
         // validation. if any of ids is not belong to loginMember, throw exception
         affectedDDays.map { it.member.id }
-            .any { it != loginMember.id }.let {
+            .any { it != member.id }.let {
                 if (it) {
                     log.warn("Can't access other member's d-day event. ids: $ids, loginMember: $loginMember")
                     throw AuthenticationException("Can't access other member's d-day event")

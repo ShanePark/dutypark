@@ -1,12 +1,14 @@
 package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.common.exceptions.AuthenticationException
+import com.tistory.shanepark.dutypark.member.domain.dto.DDayCreateDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Department
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.DDayRepository
 import com.tistory.shanepark.dutypark.member.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import jakarta.persistence.EntityManager
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.springframework.beans.factory.annotation.Autowired
@@ -29,6 +31,9 @@ class DDayServiceTest {
 
     @Autowired
     lateinit var dDayRepository: DDayRepository
+
+    @Autowired
+    lateinit var em: EntityManager
 
     val dept = Department("dummy")
 
@@ -64,9 +69,11 @@ class DDayServiceTest {
         val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(3),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(3),
+                isPrivate = false
+            )
         )
         assertThat(createDDay.id).isNotNull
         assertThat(dDayRepository.findAll().size).isEqualTo(1)
@@ -77,9 +84,11 @@ class DDayServiceTest {
         assertThrows<NoSuchElementException> {
             dDayService.createDDay(
                 loginMember = LoginMember(id = -1, email = "", name = "", 0, "dept"),
-                title = "test",
-                date = LocalDate.now().plusDays(3),
-                isPrivate = false
+                dDayCreateDto = DDayCreateDto(
+                    title = "test",
+                    date = LocalDate.now().plusDays(3),
+                    isPrivate = false
+                )
             )
         }
     }
@@ -89,9 +98,11 @@ class DDayServiceTest {
         val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(3),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(3),
+                isPrivate = false
+            )
         )
         val findDDay = dDayService.findDDay(loginMember, createDDay.id!!)
         assertThat(findDDay.id).isEqualTo(createDDay.id)
@@ -99,9 +110,11 @@ class DDayServiceTest {
 
         val dDayToday = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now(),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now(),
+                isPrivate = false
+            )
         )
         val findDDayToday = dDayService.findDDay(loginMember, dDayToday.id!!)
         assertThat(findDDayToday.daysLeft).isEqualTo(0)
@@ -113,9 +126,11 @@ class DDayServiceTest {
         val loginMember2 = LoginMember.from(member2)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(3),
-            isPrivate = true
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(3),
+                isPrivate = true
+            )
         )
         assertThrows<AuthenticationException> {
             dDayService.findDDay(loginMember2, createDDay.id!!)
@@ -127,15 +142,19 @@ class DDayServiceTest {
         val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(3),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(3),
+                isPrivate = false
+            )
         )
         val createDDay2 = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(5),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(5),
+                isPrivate = false
+            )
         )
         val findDDays = dDayService.findDDays(loginMember, member.id!!)
         assertThat(findDDays.size).isEqualTo(2)
@@ -149,15 +168,19 @@ class DDayServiceTest {
         val loginMember2 = LoginMember.from(member2)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(3),
-            isPrivate = true
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(3),
+                isPrivate = true
+            )
         )
         val createDDay2 = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(5),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(5),
+                isPrivate = false
+            )
         )
         val findDDays = dDayService.findDDays(loginMember2, member.id!!)
         assertThat(findDDays.size).isEqualTo(1)
@@ -170,9 +193,11 @@ class DDayServiceTest {
         val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(3),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(3),
+                isPrivate = false
+            )
         )
         dDayService.updateDDay(
             loginMember = loginMember,
@@ -194,9 +219,11 @@ class DDayServiceTest {
         val loginMember2 = LoginMember.from(member2)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(3),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(3),
+                isPrivate = false
+            )
         )
         assertThrows<AuthenticationException> {
             dDayService.updateDDay(
@@ -214,9 +241,11 @@ class DDayServiceTest {
         val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(3),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(3),
+                isPrivate = false
+            )
         )
         dDayService.updatePrivacy(loginMember, createDDay.id!!, true)
         val updateDDay = dDayService.findDDay(loginMember, createDDay.id!!)
@@ -230,33 +259,43 @@ class DDayServiceTest {
         val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(3),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(3),
+                isPrivate = false
+            )
         )
         val createDDay2 = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(5),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(5),
+                isPrivate = false
+            )
         )
         val createDDay3 = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(7),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(7),
+                isPrivate = false
+            )
         )
         val createDDay4 = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(9),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(9),
+                isPrivate = false
+            )
         )
         val createDDay5 = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(11),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(11),
+                isPrivate = false
+            )
         )
         dDayRepository.saveAll(listOf(createDDay, createDDay2, createDDay3, createDDay4, createDDay5))
         assertThat(createDDay.position).isEqualTo(0)
@@ -265,9 +304,9 @@ class DDayServiceTest {
         assertThat(createDDay4.position).isEqualTo(3)
         assertThat(createDDay5.position).isEqualTo(4)
         dDayService.rearrangeOrders(
-            loginMember,
-            0,
-            listOf(createDDay5.id!!, createDDay4.id!!, createDDay3.id!!, createDDay2.id!!, createDDay.id!!)
+            loginMember = loginMember,
+            prefix = 0,
+            ids = listOf(createDDay5.id!!, createDDay4.id!!, createDDay3.id!!, createDDay2.id!!, createDDay.id!!)
         )
         val findDDays = dDayService.findDDays(loginMember, member.id!!)
         assertThat(findDDays[0].id).isEqualTo(createDDay5.id)
@@ -278,38 +317,107 @@ class DDayServiceTest {
     }
 
     @Test
+    fun `can rearrange even if some middle ones are deleted`() {
+        val loginMember = LoginMember.from(member)
+        val createDDay = dDayService.createDDay(
+            loginMember = loginMember,
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(3),
+                isPrivate = false
+            )
+        )
+        val createDDay2 = dDayService.createDDay(
+            loginMember = loginMember,
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(5),
+                isPrivate = false
+            )
+        )
+        val createDDay3 = dDayService.createDDay(
+            loginMember = loginMember,
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(7),
+                isPrivate = false
+            )
+        )
+        val createDDay4 = dDayService.createDDay(
+            loginMember = loginMember,
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(9),
+                isPrivate = false
+            )
+        )
+        val createDDay5 = dDayService.createDDay(
+            loginMember = loginMember,
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(11),
+                isPrivate = false
+            )
+        )
+
+        dDayService.deleteDDay(loginMember, createDDay3.id!!)
+        dDayService.deleteDDay(loginMember, createDDay4.id!!)
+
+        dDayService.rearrangeOrders(
+            loginMember,
+            0,
+            listOf(createDDay5.id!!, createDDay2.id!!, createDDay.id!!)
+        )
+
+        val dDays = dDayService.findDDays(loginMember, member.id!!)
+        assertThat(dDays[0].id).isEqualTo(createDDay5.id)
+        assertThat(dDays[1].id).isEqualTo(createDDay2.id)
+        assertThat(dDays[2].id).isEqualTo(createDDay.id)
+    }
+
+    @Test
     fun `can't rearrange if any of D-Day event is other member's`() {
         val loginMember = LoginMember.from(member)
         val loginMember2 = LoginMember.from(member2)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(3),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(3),
+                isPrivate = false
+            )
         )
         val createDDay2 = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(5),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(5),
+                isPrivate = false
+            )
         )
         val createDDay3 = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(7),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(7),
+                isPrivate = false
+            )
         )
         val createDDay4 = dDayService.createDDay(
             loginMember = loginMember2,
-            title = "test",
-            date = LocalDate.now().plusDays(9),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(9),
+                isPrivate = false
+            )
         )
         val createDDay5 = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(11),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(11),
+                isPrivate = false
+            )
         )
         dDayRepository.saveAll(listOf(createDDay, createDDay2, createDDay3, createDDay4, createDDay5))
         assertThrows<AuthenticationException> {
@@ -326,33 +434,43 @@ class DDayServiceTest {
         val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(3),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(3),
+                isPrivate = false
+            )
         )
         val createDDay2 = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(5),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(5),
+                isPrivate = false
+            )
         )
         val createDDay3 = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(7),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(7),
+                isPrivate = false
+            )
         )
         val createDDay4 = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(9),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(9),
+                isPrivate = false
+            )
         )
         val createDDay5 = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(11),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(11),
+                isPrivate = false
+            )
         )
         dDayService.rearrangeOrders(
             loginMember,
@@ -373,9 +491,11 @@ class DDayServiceTest {
         val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(3),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(3),
+                isPrivate = false
+            )
         )
         assertThat(dDayRepository.findAll()).hasSize(1)
         dDayService.deleteDDay(loginMember, createDDay.id!!)
@@ -388,13 +508,15 @@ class DDayServiceTest {
         val loginMember2 = LoginMember.from(member2)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            title = "test",
-            date = LocalDate.now().plusDays(3),
-            isPrivate = false
+            dDayCreateDto = DDayCreateDto(
+                title = "test",
+                date = LocalDate.now().plusDays(3),
+                isPrivate = false
+            )
         )
         assertThrows<AuthenticationException> {
             dDayService.deleteDDay(loginMember2, createDDay.id!!)
         }
     }
-    
+
 }

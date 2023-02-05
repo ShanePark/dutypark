@@ -38,4 +38,31 @@ class DDayController(
             .body(findDDays)
     }
 
+    @DeleteMapping
+    @RequestMapping("/{id}")
+    fun deleteDDay(
+        @Login member: LoginMember,
+        @PathVariable id: Long
+    ): ResponseEntity<Any> {
+        dDayService.deleteDDay(member, id)
+
+        return ResponseEntity
+            .status(HttpStatus.NO_CONTENT)
+            .build()
+    }
+
+    @PatchMapping
+    @RequestMapping(params = ["prefix", "ids"])
+    fun rearrangeOrders(
+        @Login member: LoginMember,
+        @RequestParam prefix: Long,
+        @RequestParam ids: List<Long>
+    ): ResponseEntity<Any> {
+        dDayService.rearrangeOrders(member, prefix, ids)
+
+        return ResponseEntity
+            .status(HttpStatus.NO_CONTENT)
+            .build()
+    }
+
 }

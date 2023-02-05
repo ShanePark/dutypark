@@ -376,3 +376,11 @@ a.memberPage-link:hover {
 .add_modal input {
     width: 80%;
 }
+
+.d-day-list .card {
+    background-color: mintcream;
+}
+
+.d-day-list .d-day-private {
+    background-color: mistyrose;
+}
