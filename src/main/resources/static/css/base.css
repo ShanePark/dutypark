@@ -15,6 +15,17 @@ body {
     --bs-body-font-family: NexonMaplestory;
 }
 
+body a {
+    text-decoration: none;
+    color: inherit;
+}
+
+body a:hover {
+    text-decoration: none;
+    color: inherit;
+    opacity: 0.7;
+}
+
 header.row {
     display: flex;
     align-items: center;
@@ -268,7 +279,7 @@ header .left-area {
     background-color: #ccc;
 }
 
-.calendar {
+.body, .calendar {
     max-width: 64rem;
     margin: 20px auto;
     padding-left: 1rem;
@@ -324,4 +335,60 @@ header .left-area {
 
 .dutyTypes button {
     color: black;
+}
+
+a.memberPage-link {
+    color: #ddd;
+    text-decoration: none;
+}
+
+a.memberPage-link:hover {
+    color: whitesmoke;
+    transition: 0.3s;
+}
+
+.member-menu {
+}
+
+.member-menu li {
+    display: inline;
+    margin-right: 20px;
+}
+
+.d-day-item {
+    padding: 10px;
+    box-shadow: 6px 10px 40px -28px rgba(0, 0, 0, 0.75);
+}
+
+.d-day-item .d-day_menu {
+    text-align: right;
+}
+
+.d-day-item .d-day_day {
+    font-size: 1.5em;
+    font-weight: bold;
+    text-align: center;
+    padding-top: 10px;
+}
+
+.d-day-item p {
+    font-size: 1.2em;
+}
+
+.add_modal input {
+    width: 80%;
+}
+
+.d-day-list .d-day-item {
+    background-color: mintcream;
+    height: 100px;
+    margin: 10px;
+}
+
+.d-day-list .d-day-private {
+    background-color: mistyrose;
+}
+
+.d-day-item .d-day_day .pretty {
+    font-size: 0.8em;
 }

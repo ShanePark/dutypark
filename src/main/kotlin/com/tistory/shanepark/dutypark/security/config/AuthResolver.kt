@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.security.config
 
 import com.tistory.shanepark.dutypark.common.exceptions.AuthenticationException
+import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.core.MethodParameter
@@ -20,7 +21,11 @@ class AuthResolver : HandlerMethodArgumentResolver {
         mavContainer: ModelAndViewContainer?,
         webRequest: NativeWebRequest,
         binderFactory: WebDataBinderFactory?
-    ): LoginMember {
+    ): LoginMember? {
+        val required = parameter.getParameterAnnotation(Login::class.java)?.let {
+            it.required
+        } ?: true
+
         webRequest.getNativeRequest(HttpServletRequest::class.java)?.let {
             it.cookies?.forEach { cookie ->
                 if (cookie.name == "SESSION") {
@@ -28,6 +33,8 @@ class AuthResolver : HandlerMethodArgumentResolver {
                 }
             }
         }
-        throw AuthenticationException("login is required")
+        if (required)
+            throw AuthenticationException("login is required")
+        return null
     }
 }

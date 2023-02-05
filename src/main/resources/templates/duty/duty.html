@@ -1,13 +1,8 @@
 <!DOCTYPE html>
 <head th:replace="~{layout/header::link}"></head>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Duty Park</title>
-</head>
 <body>
 
-<head th:replace="~{layout/header::header(|${member.department} ${member.name}|)}"></head>
+<div th:replace="~{layout/header::header(|${member.department} ${member.name}|)}"></div>
 
 <div class="calendar">
   <div class="month-control row">
@@ -82,13 +77,64 @@
     </th:block>
   </ol>
 </div>
+<div class="body">
+  <div class="d-day-list row">
+    <div v-for="(dDay, index) in dDays" class="col-6">
+      <div class="d-day-item card row"
+           :data-id="dDay.id"
+           :class="{'d-day-private': dDay.isPrivate}">
+        <div class="d-day_day col-4">
+          <span v-if="!dDay.editMode">{{dDay.dDayText}}</span>
+        </div>
+        <div class="d-day_content col-8">
+          <p v-if="!dDay.editMode">{{dDay.date}}</p>
+          <p v-if="!dDay.editMode">{{dDay.title}}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
 
 <script>
-    $('input[type="month"]').on('change', function () {
-        let year = $(this).val().split('-')[0];
-        let month = $(this).val().split('-')[1];
-        window.location.href = window.location.href.split('?')[0] + '?year=' + year + '&month=' + month;
-    });
+    $(function () {
+        $('input[type="month"]').on('change', function () {
+            let year = $(this).val().split('-')[0];
+            let month = $(this).val().split('-')[1];
+            window.location.href = window.location.href.split('?')[0] + '?year=' + year + '&month=' + month;
+        });
+
+        const memberId = parseInt("[[${member.id}]]");
+        const app = new Vue({
+            el: '.d-day-list',
+            data: {
+                dDays: []
+            },
+            mounted() {
+                this.load();
+            }, methods: {
+                load() {
+                    $.ajax({
+                        url: '/api/dday/' + memberId,
+                        type: 'GET',
+                        success: (data) => {
+                            this.dDays = data;
+                            for (const dDay of app.dDays) {
+                                dDay.editMode = false;
+                                dDay.dDay = Math.floor((new Date(dDay.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                                if (dDay.dDay == 0) {
+                                    dDay.dDayText = 'D-Day';
+                                } else if (dDay.dDay < 0) {
+                                    dDay.dDayText = 'D+' + Math.abs(dDay.dDay);
+                                } else {
+                                    dDay.dDayText = 'D-' + dDay.dDay;
+                                }
+                            }
+                        }
+                    })
+                }
+            }
+        })
+    })
 </script>

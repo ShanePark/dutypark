@@ -1,19 +1,22 @@
 <!DOCTYPE html>
 <head th:fragment="link">
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-  <title>Home</title>
-  <link rel="stylesheet" th:href="@{/css/base.css?v=20230129}"/>
-  <link rel="stylesheet" th:href="@{/css/mquery.css?v=20230129}"/>
+  <title>Duty Park</title>
+  <link rel="stylesheet" th:href="@{/css/base.css?v=20230205}"/>
+  <link rel="stylesheet" th:href="@{/css/mquery.css?v=20230205}"/>
   <link rel="stylesheet" th:href="@{/lib/bootstrap/bootstrap.min.css}"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
   <link rel="stylesheet" th:href="@{/lib/waitme/waitMe.min.css}">
+  <link rel="stylesheet" th:href="@{/lib/pretty-checkbox/pretty-checkbox.min.css}">
 
   <script th:src="@{/js/jquery.min.js}"></script>
   <script th:src="@{/js/sweetalert2.all.min.js}"></script>
   <script th:src="@{/lib/waitme/waitMe.min.js}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+  <script th:src="@{/js/common.js?v=20230205}"></script>
 </head>
 
-<head th:fragment="header(title)">
+<div th:fragment="header(title)">
   <header class="row">
     <div class="left-area col-3">
       <a class="homeButton" th:href="@{/}">
@@ -30,10 +33,11 @@
         </a>
       </div>
       <div th:if="${loginMember != null}">
-        <span class="profile" th:text="|${loginMember?.name}|"/>
-        <i class="bi bi-person"></i>
-        <button class="logout-button" th:onclick="|window.location.href='/logout'|">Logout</button>
+        <a class="memberPage-link link" href="/member">
+          <span class="profile" th:text="|${loginMember?.name}|"/>
+          <i class="bi bi-person"></i>
+        </a>
       </div>
     </div>
   </header>
-</head>
+</div>

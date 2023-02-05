@@ -26,7 +26,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class AuthControllerTest {
+class AuthViewControllerTest {
 
     @Autowired
     lateinit var mockMvc: MockMvc
@@ -44,7 +44,7 @@ class AuthControllerTest {
     lateinit var passwordEncoder: org.springframework.security.crypto.password.PasswordEncoder
 
     private val objectMapper = com.fasterxml.jackson.databind.ObjectMapper()
-    private val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(AuthControllerTest::class.java)
+    private val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(AuthViewControllerTest::class.java)
 
     var dutyTypeId = 0L
     val memberEmail = "test@duty.park"
@@ -280,6 +280,44 @@ class AuthControllerTest {
                 .content(json)
                 .cookie(Cookie("SESSION", accessToken))
         ).andExpect(status().isOk)
+            .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
+    fun `if login Member, health point returns login info`() {
+        // Given
+        val member = memberRepository.findByEmail(memberEmail).orElseThrow()
+        val loginDto = LoginDto(email = memberEmail, password = memberPassword)
+
+        // save login session token on variable
+        val accessToken = mockMvc.perform(
+            MockMvcRequestBuilders.post("/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginDto))
+        ).andReturn().response.getCookie("SESSION")?.let { it.value }
+
+        log.info("accessToken: $accessToken")
+
+        // Therefore
+        mockMvc.perform(
+            MockMvcRequestBuilders.get("/status")
+                .contentType(MediaType.APPLICATION_JSON)
+                .cookie(Cookie("SESSION", accessToken))
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(member.id))
+            .andExpect(jsonPath("$.email").value(member.email))
+            .andExpect(jsonPath("$.name").value(member.name))
+            .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
+    fun `even if not login, health point doesn't throws error`() {
+        // Therefore
+        mockMvc.perform(
+            MockMvcRequestBuilders.get("/status")
+                .contentType(MediaType.APPLICATION_JSON)
+        ).andExpect(status().isOk)
+            .andExpect(content().string(""))
             .andDo(MockMvcResultHandlers.print())
     }
 

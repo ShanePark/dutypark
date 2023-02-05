@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<head th:replace="~{layout/header::link}"/>
+<html lang="en">
+<body>
+<div th:replace="~{layout/header-member::head}"/>
+<div class="body d-day-list">
+  <button v-on:click="add()" class="btn btn-primary">
+    추가 <i class="bi bi-calendar-plus-fill"></i>
+  </button>
+  <div v-for="(dDay, index) in dDays"
+       class="d-day-item card row"
+       :data-id="dDay.id"
+       :class="{'d-day-private': dDay.isPrivate}">
+    <div class="d-day_day col-2">
+      <span v-if="!dDay.editMode">{{dDay.dDayText}}</span>
+      <div v-if="dDay.editMode" class="pretty p-switch p-fill p-2">
+        <input type="checkbox" name="isPrivate" :checked="dDay.isPrivate"/>
+        <div class="state p-success">
+          <label>비공개</label>
+        </div>
+      </div>
+    </div>
+    <div class="d-day_content col-7">
+      <p v-if="!dDay.editMode">{{dDay.date}}</p>
+      <input class="form-control" v-if="dDay.editMode" type="date" name="date" :value="dDay.date"/>
+      <p v-if="!dDay.editMode">{{dDay.title}}</p>
+      <input class="form-control" v-if="dDay.editMode" type="text" name="title" :value="dDay.title"/>
+    </div>
+    <div class="col-3 d-day_menu">
+      <button v-if="!dDay.editMode && index>0" v-on:click="moveUp(dDay, index)" class="btn btn-primary">
+        <i class="bi bi-arrow-up"></i></button>
+      <button v-if="!dDay.editMode && index < dDays.length-1" v-on:click="moveDown(dDay, index)"
+              class="btn btn-primary">
+        <i class="bi bi-arrow-down"></i></button>
+      <button v-if="!dDay.editMode" v-on:click="editMode(dDay)" class="btn btn-primary">
+        <i class="bi bi-pencil-square"></i></button>
+      <button v-if="!dDay.editMode" v-on:click="remove(dDay)" class="btn btn-danger">
+        <i class="bi bi-trash"></i></button>
+      <button v-if="dDay.editMode" v-on:click="saveEdit($event)" class="btn btn-success">
+        저장<i class="bi bi-check"></i></button>
+      <button v-if="dDay.editMode" v-on:click="cancelEdit(dDay)" class="btn btn-danger">
+        취소<i class="bi bi-x"></i></button>
+    </div>
+  </div>
+</div>
+
+<div class="add_modal" hidden>
+  <input type="text" class="swal2-input" placeholder="기념일 제목" name="title">
+  <input type="date" class="swal2-input" placeholder="기념일 날짜" name="date">
+  <div class="mt-2">
+    <div class="pretty p-switch p-fill">
+      <input type="checkbox" name="isPrivate"/>
+      <div class="state p-success">
+        <label>비공개</label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    $(function () {
+        const app = new Vue({
+            el: '.d-day-list',
+            data: {
+                dDays: []
+            },
+            mounted() {
+                this.load();
+            }, methods: {
+                load: function () {
+                    $.ajax({
+                        url: '/api/dday',
+                        type: 'GET',
+                        success: function (response) {
+                            app.dDays = response;
+                            for (const dDay of app.dDays) {
+                                dDay.editMode = false;
+                                dDay.dDay = Math.floor((new Date(dDay.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                                if (dDay.dDay == 0) {
+                                    dDay.dDayText = 'D-Day';
+                                } else if (dDay.dDay < 0) {
+                                    dDay.dDayText = 'D+' + Math.abs(dDay.dDay);
+                                } else {
+                                    dDay.dDayText = 'D-' + dDay.dDay;
+                                }
+                            }
+                        },
+                        error: function (error) {
+                            console.log(error);
+                        }
+                    })
+                },
+                add: function () {
+                    let modal = $('.add_modal').clone();
+                    modal.attr('hidden', false)
+                    Swal.fire({
+                        title: '디데이 추가',
+                        html: modal,
+                        cancelButtonText: '닫기',
+                        confirmButtonText: '추가',
+                        showCancelButton: true,
+                        preConfirm: () => {
+                            const title = Swal.getPopup().querySelector('input[name="title"]').value
+                            const date = Swal.getPopup().querySelector('input[name="date"]').value
+                            const isPrivate = Swal.getPopup().querySelector('input[name="isPrivate"]').checked
+                            if (!title || !date) {
+                                Swal.showValidationMessage(`모든 항목을 입력해주세요.`)
+                            }
+                            return {title: title, date: date, isPrivate: isPrivate}
+                        }
+                    }).then((result) => {
+                        console.log(result.value);
+                        if (result.isConfirmed) {
+                            $.ajax({
+                                url: '/api/dday',
+                                type: 'POST',
+                                data: JSON.stringify(result.value),
+                                contentType: 'application/json',
+                                success: function (response) {
+                                    app.load();
+                                },
+                                error: function (error) {
+                                    console.log(error);
+                                }
+                            })
+                        }
+                    })
+                },
+                moveUp: function (dDay, index) {
+                    if (index == 0) return;
+                    const ids = [];
+                    ids.push(dDay.id);
+                    ids.push(app.dDays[index - 1].id);
+                    app.rearrange(index - 1, ids);
+                },
+                moveDown: function (dDay, index) {
+                    if (index == app.dDays.length - 1) return;
+                    const ids = [];
+                    ids.push(app.dDays[index + 1].id);
+                    ids.push(dDay.id);
+                    app.rearrange(index, ids);
+                },
+                rearrange: function (prefix, ids) {
+                    $.ajax({
+                        url: '/api/dday?prefix=' + prefix + '&ids=' + ids.join(','),
+                        type: 'PATCH',
+                        contentType: 'application/json',
+                        success: function (response) {
+                            app.load();
+                        },
+                        error: function (error) {
+                            console.log(error);
+                        }
+                    })
+                },
+                saveEdit: function (event) {
+                    const target = event.target;
+                    const item = target.closest('.d-day-item');
+                    const dDay = {
+                        id: item.attributes['data-id'].value,
+                        title: item.querySelector('input[name="title"]').value,
+                        date: item.querySelector('input[name="date"]').value,
+                        isPrivate: item.querySelector('input[name="isPrivate"]').checked
+                    }
+                    $.ajax({
+                        url: '/api/dday/' + dDay.id,
+                        type: 'PUT',
+                        data: JSON.stringify(dDay),
+                        contentType: 'application/json',
+                        success: function (response) {
+                            app.load();
+                        },
+                        error: function (error) {
+                            console.log(error);
+                        }
+                    })
+                },
+                editMode: function (dDay) {
+                    dDay.editMode = true;
+                    // when editMode is changed, vue doesn't update the dom
+                    // So, need to update the dom by changing the title
+                    const title = dDay.title;
+                    dDay.title = '';
+                    dDay.title = title;
+                },
+                cancelEdit: function (dDay) {
+                    dDay.editMode = false;
+                    const title = dDay.title;
+                    dDay.title = '';
+                    dDay.title = title;
+                },
+                remove: function (dDay) {
+                    Swal.fire({
+                        title: '디데이 삭제',
+                        text: '[' + dDay.title + '] ' + rulChecker(dDay.title) + ' 정말로 삭제하시겠습니까?',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: '삭제',
+                        cancelButtonText: '취소'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $.ajax({
+                                url: '/api/dday/' + dDay.id,
+                                type: 'DELETE',
+                                success: function (response) {
+                                    app.load();
+                                },
+                                error: function (error) {
+                                    console.log(error);
+                                }
+                            })
+                        }
+                    })
+                }
+            }
+        });
+    })
+</script>
+
+</body>
+</html>
