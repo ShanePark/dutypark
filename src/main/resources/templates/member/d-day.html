@@ -5,7 +5,7 @@
 <div th:replace="~{layout/header-member::head}"/>
 <div class="body d-day-list">
   <button v-on:click="add()" class="btn btn-primary">
-    <i class="bi bi-calendar-plus-fill"></i> 추가
+    추가 <i class="bi bi-calendar-plus-fill"></i>
   </button>
   <div v-for="(dDay, index) in dDays"
        class="d-day-item card row"
@@ -23,7 +23,7 @@
     <div class="d-day_content col-7">
       <p v-if="!dDay.editMode">{{dDay.date}}</p>
       <input class="form-control" v-if="dDay.editMode" type="date" name="date" :value="dDay.date"/>
-      <p v-if="!dDay.editMode">{{dDay.title}} {{dDay.editMode}}</p>
+      <p v-if="!dDay.editMode">{{dDay.title}}</p>
       <input class="form-control" v-if="dDay.editMode" type="text" name="title" :value="dDay.title"/>
     </div>
     <div class="col-3 d-day_menu">

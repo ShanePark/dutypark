@@ -355,10 +355,8 @@ a.memberPage-link:hover {
     margin-right: 20px;
 }
 
-.card {
-    margin: 10px;
+.d-day-item {
     padding: 10px;
-    border-radius: 0.625rem;
     box-shadow: 6px 10px 40px -28px rgba(0, 0, 0, 0.75);
 }
 
@@ -367,10 +365,14 @@ a.memberPage-link:hover {
 }
 
 .d-day-item .d-day_day {
-    font-size: 2em;
+    font-size: 1.5em;
     font-weight: bold;
     text-align: center;
     padding-top: 10px;
+}
+
+.d-day-item p {
+    font-size: 1.2em;
 }
 
 .add_modal input {
@@ -380,7 +382,7 @@ a.memberPage-link:hover {
 .d-day-list .d-day-item {
     background-color: mintcream;
     height: 100px;
-    margin-top:10px;
+    margin: 10px;
 }
 
 .d-day-list .d-day-private {

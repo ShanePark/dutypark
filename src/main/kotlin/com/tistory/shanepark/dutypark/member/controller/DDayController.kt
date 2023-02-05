@@ -38,6 +38,19 @@ class DDayController(
             .body(findDDays)
     }
 
+    @GetMapping("/{id}")
+    fun findDDaysByMemberId(
+        @Login(required = false) member: LoginMember?,
+        @PathVariable id: Long
+    ): ResponseEntity<Any> {
+        val findDDay = dDayService.findDDays(member, id)
+
+        return ResponseEntity
+            .status(HttpStatus.OK)
+            .body(findDDay)
+    }
+
+
     @DeleteMapping("/{id}")
     fun deleteDDay(
         @Login member: LoginMember,
