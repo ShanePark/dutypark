@@ -15,6 +15,17 @@ body {
     --bs-body-font-family: NexonMaplestory;
 }
 
+body a {
+    text-decoration: none;
+    color: inherit;
+}
+
+body a:hover {
+    text-decoration: none;
+    color: inherit;
+    opacity: 0.7;
+}
+
 header.row {
     display: flex;
     align-items: center;
@@ -268,7 +279,7 @@ header .left-area {
     background-color: #ccc;
 }
 
-.calendar {
+.body, .calendar {
     max-width: 64rem;
     margin: 20px auto;
     padding-left: 1rem;
@@ -334,4 +345,34 @@ a.memberPage-link {
 a.memberPage-link:hover {
     color: whitesmoke;
     transition: 0.3s;
+}
+
+.member-menu {
+}
+
+.member-menu li {
+    display: inline;
+    margin-right: 20px;
+}
+
+.card {
+    margin: 10px;
+    padding: 10px;
+    border-radius: 0.625rem;
+    box-shadow: 6px 10px 40px -28px rgba(0, 0, 0, 0.75);
+}
+
+.d-day-item .d-day_menu {
+    text-align: right;
+}
+
+.d-day-item .d-day_day {
+    font-size: 2em;
+    font-weight: bold;
+    text-align: center;
+    padding-top: 10px;
+}
+
+.add_modal input {
+    width: 80%;
 }

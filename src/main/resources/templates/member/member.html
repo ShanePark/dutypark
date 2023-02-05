@@ -1,15 +1,11 @@
 <!DOCTYPE html>
-<head th:replace="~{layout/header::link}"></head>
+<head th:replace="~{layout/header::link}"/>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Duty Park</title>
-</head>
 <body>
-<head th:replace="~{layout/header::header(${'회원 관리'})}"></head>
+<div th:replace="~{layout/header-member::head}"/>
 <div class="memberPage">
-<!--  TODO : 회원 관리 페이지 생성-->
-    <a th:href="@{/duty/{name}(name=${member.name})}" th:text="${ '(' + member.departmentName + ') ' + member.name}"></a>
+  <!--  TODO : 회원 관리 페이지 생성-->
+  회원정보
 </div>
 </body>
 </html>

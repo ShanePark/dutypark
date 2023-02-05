@@ -1,13 +1,8 @@
 <!DOCTYPE html>
 <head th:replace="~{layout/header::link}"></head>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Duty Park</title>
-</head>
 <body>
 
-<head th:replace="~{layout/header::header(|${member.department} ${member.name}|)}"></head>
+<div th:replace="~{layout/header::header(|${member.department} ${member.name}|)}"></div>
 
 <div class="calendar">
   <div class="month-control row">

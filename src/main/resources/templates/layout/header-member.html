@@ -1,0 +1,19 @@
+<div th:fragment="head">
+  <header class="row">
+    <div th:replace="~{/layout/header::header-left}"/>
+    <div class="col-6 member-menu">
+      <ul>
+        <li>
+          <a href="/member/d-day">디데이</a>
+        </li>
+        <li>
+          <a th:href="@{/duty/{name}(name=${loginMember?.name})}">내 시간표</a>
+        </li>
+        <li>
+          <a href="/logout">로그아웃</a>
+        </li>
+      </ul>
+    </div>
+    <div th:replace="~{/layout/header::header-right}"/>
+  </header>
+</div>

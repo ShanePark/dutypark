@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<head th:replace="~{layout/header::link}"/>
+<html lang="en">
+<body>
+<div th:replace="~{layout/header-member::head}"/>
+<div class="body d-day-edit">
+  <button class="btn btn-primary">
+    <i class="bi bi-calendar-plus-fill"></i> 추가
+  </button>
+  <div v-for="dDay in dDays" class="d-day-list card">
+    <div class="d-day-item row">
+      <div class="d-day_day col-2">
+        <span>{{dDay.dDayText}}</span>
+      </div>
+      <div class="d-day_content col-7">
+        <p>{{dDay.date}}</p>
+        <p>{{dDay.title}}</p>
+      </div>
+      <div class="col-3 d-day_menu">
+        <button class="btn btn-primary">
+          <i class="bi bi-pencil-square"></i>
+        </button>
+        <button class="btn btn-primary">
+          <i class="bi bi-arrow-up"></i>
+        </button>
+        <button class="btn btn-primary">
+          <i class="bi bi-arrow-down"></i>
+        </button>
+        <button class="btn btn-danger">
+          <i class="bi bi-trash"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="add_modal" hidden>
+  <input type="text" class="swal2-input" placeholder="기념일 제목" name="title">
+  <input type="date" class="swal2-input" placeholder="기념일 날짜" name="date">
+  <div class="mt-2">
+    <div class="pretty p-switch p-fill">
+      <input type="checkbox" name="isPrivate"/>
+      <div class="state p-success">
+        <label>비공개</label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    const app = new Vue({
+        el: '.d-day-edit',
+        data: {
+            dDays: []
+        },
+        mounted() {
+            this.load();
+        }, methods: {
+            load: function () {
+                $.ajax({
+                    url: '/api/dday',
+                    type: 'GET',
+                    success: function (response) {
+                        app.dDays = response;
+                        for (const dDay of app.dDays) {
+                            dDay.dDay = Math.floor((new Date(dDay.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                            if (dDay.dDay == 0) {
+                                dDay.dDayText = 'D-Day';
+                            } else if (dDay.dDay < 0) {
+                                dDay.dDayText = 'D+' + Math.abs(dDay.dDay);
+                            } else dDay.dDayText = 'D-' + dDay.dDay;
+                        }
+                    },
+                    error: function (error) {
+                        console.log(error);
+                    }
+                })
+            }
+        }
+    })
+
+    $('.d-day-edit .btn-primary').click(function () {
+        let modal = $('.add_modal').clone();
+        modal.attr('hidden', false)
+        Swal.fire({
+            title: '디데이 추가',
+            html: modal,
+            cancelButtonText: '닫기',
+            confirmButtonText: '추가',
+            showCancelButton: true,
+            preConfirm: () => {
+                const title = Swal.getPopup().querySelector('input[name="title"]').value
+                const date = Swal.getPopup().querySelector('input[name="date"]').value
+                const isPrivate = Swal.getPopup().querySelector('input[name="isPrivate"]').checked
+                if (!title || !date) {
+                    Swal.showValidationMessage(`모든 항목을 입력해주세요.`)
+                }
+                return {title: title, date: date, isPrivate: isPrivate}
+            }
+        }).then((result) => {
+            console.log(result.value);
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '/api/dday',
+                    type: 'POST',
+                    data: JSON.stringify(result.value),
+                    contentType: 'application/json',
+                    success: function (response) {
+                        app.load();
+                    },
+                    error: function (error) {
+                        console.log(error);
+                    }
+                })
+            }
+        })
+    });
+</script>
+
+</body>
+</html>

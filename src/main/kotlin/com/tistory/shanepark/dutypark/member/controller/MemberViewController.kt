@@ -24,4 +24,10 @@ class MemberViewController(
         return "member/member"
     }
 
+    @GetMapping("/member/d-day")
+    fun dDayPage(@Login loginMember: LoginMember, model: Model): String {
+        model.addAttribute("member", loginMember)
+        return "member/d-day"
+    }
+
 }

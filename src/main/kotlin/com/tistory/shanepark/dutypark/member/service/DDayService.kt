@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.common.exceptions.AuthenticationException
+import com.tistory.shanepark.dutypark.member.domain.dto.DDayCreateDto
 import com.tistory.shanepark.dutypark.member.domain.dto.DDayDto
 import com.tistory.shanepark.dutypark.member.domain.entity.DDayEvent
 import com.tistory.shanepark.dutypark.member.repository.DDayRepository
@@ -19,10 +20,17 @@ class DDayService(
 
     val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(this.javaClass)
 
-    fun createDDay(loginMember: LoginMember, title: String, date: LocalDate, isPrivate: Boolean): DDayEvent {
+    fun createDDay(loginMember: LoginMember, dDayCreateDto: DDayCreateDto): DDayEvent {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
         val countByMember = dDayRepository.countByMember(member)
-        val dDayEvent = DDayEvent(member = member, title, date, isPrivate, countByMember)
+
+        val dDayEvent = DDayEvent(
+            member = member,
+            title = dDayCreateDto.title,
+            date = dDayCreateDto.date,
+            isPrivate = dDayCreateDto.isPrivate,
+            position = countByMember
+        )
         return dDayRepository.save(dDayEvent)
     }
 
