@@ -75,13 +75,12 @@
                             app.dDays = response;
                             for (const dDay of app.dDays) {
                                 dDay.editMode = false;
-                                dDay.dDay = Math.floor((new Date(dDay.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) + 1;
-                                if (dDay.dDay == 0) {
+                                if (dDay.calc == 0) {
                                     dDay.dDayText = 'D-Day';
-                                } else if (dDay.dDay < 0) {
-                                    dDay.dDayText = 'D+' + Math.abs(dDay.dDay);
+                                } else if (dDay.calc < 0) {
+                                    dDay.dDayText = 'D+' + Math.abs(dDay.calc);
                                 } else {
-                                    dDay.dDayText = 'D-' + dDay.dDay;
+                                    dDay.dDayText = 'D-' + dDay.calc;
                                 }
                             }
                         },
@@ -92,7 +91,11 @@
                 },
                 add: function () {
                     let modal = $('.add_modal').clone();
+
+                    const tzOffset = (new Date()).getTimezoneOffset() * 60000; //offset in milliseconds
+                    modal.find('input[name="date"]').val((new Date(Date.now() - tzOffset)).toISOString().slice(0, 10));
                     modal.attr('hidden', false)
+
                     Swal.fire({
                         title: '디데이 추가',
                         html: modal,
@@ -109,7 +112,6 @@
                             return {title: title, date: date, isPrivate: isPrivate}
                         }
                     }).then((result) => {
-                        console.log(result.value);
                         if (result.isConfirmed) {
                             $.ajax({
                                 url: '/api/dday',

@@ -9,6 +9,7 @@ data class DDayDto(
     val date: LocalDate,
     val isPrivate: Boolean,
     val position: Long,
+    val calc: Long
 ) {
 
     val daysLeft: Long = date.toEpochDay() - LocalDate.now().toEpochDay()
@@ -20,7 +21,8 @@ data class DDayDto(
                 title = dDayEvent.title,
                 date = dDayEvent.date,
                 isPrivate = dDayEvent.isPrivate,
-                position = dDayEvent.position
+                position = dDayEvent.position,
+                calc = dDayEvent.date.toEpochDay() - LocalDate.now().toEpochDay()
             )
         }
     }
