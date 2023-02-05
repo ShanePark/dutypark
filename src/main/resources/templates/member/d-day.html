@@ -8,31 +8,38 @@
     <i class="bi bi-calendar-plus-fill"></i> 추가
   </button>
   <div v-for="(dDay, index) in dDays"
-       class="card"
-       :data-day="JSON.stringify(dDay)"
+       class="d-day-item card row"
+       :data-id="dDay.id"
        :class="{'d-day-private': dDay.isPrivate}">
-    <div class="d-day-item row">
-      <div class="d-day_day col-2">
-        <span>{{dDay.dDayText}}</span>
+    <div class="d-day_day col-2">
+      <span v-if="!dDay.editMode">{{dDay.dDayText}}</span>
+      <div v-if="dDay.editMode" class="pretty p-switch p-fill p-2">
+        <input type="checkbox" name="isPrivate" :checked="dDay.isPrivate"/>
+        <div class="state p-success">
+          <label>비공개</label>
+        </div>
       </div>
-      <div class="d-day_content col-7">
-        <p>{{dDay.date}}</p>
-        <p>{{dDay.title}}</p>
-      </div>
-      <div class="col-3 d-day_menu">
-        <button v-on:click="moveUp(dDay, index)" v-if="index>0" class="btn btn-primary">
-          <i class="bi bi-arrow-up"></i>
-        </button>
-        <button v-on:click="moveDown(dDay, index)" v-if="index < dDays.length-1" class="btn btn-primary">
-          <i class="bi bi-arrow-down"></i>
-        </button>
-        <button class="btn btn-primary">
-          <i class="bi bi-pencil-square"></i>
-        </button>
-        <button v-on:click="remove(dDay)" class="btn btn-danger">
-          <i class="bi bi-trash"></i>
-        </button>
-      </div>
+    </div>
+    <div class="d-day_content col-7">
+      <p v-if="!dDay.editMode">{{dDay.date}}</p>
+      <input class="form-control" v-if="dDay.editMode" type="date" name="date" :value="dDay.date"/>
+      <p v-if="!dDay.editMode">{{dDay.title}} {{dDay.editMode}}</p>
+      <input class="form-control" v-if="dDay.editMode" type="text" name="title" :value="dDay.title"/>
+    </div>
+    <div class="col-3 d-day_menu">
+      <button v-if="!dDay.editMode && index>0" v-on:click="moveUp(dDay, index)" class="btn btn-primary">
+        <i class="bi bi-arrow-up"></i></button>
+      <button v-if="!dDay.editMode && index < dDays.length-1" v-on:click="moveDown(dDay, index)"
+              class="btn btn-primary">
+        <i class="bi bi-arrow-down"></i></button>
+      <button v-if="!dDay.editMode" v-on:click="editMode(dDay)" class="btn btn-primary">
+        <i class="bi bi-pencil-square"></i></button>
+      <button v-if="!dDay.editMode" v-on:click="remove(dDay)" class="btn btn-danger">
+        <i class="bi bi-trash"></i></button>
+      <button v-if="dDay.editMode" v-on:click="saveEdit($event)" class="btn btn-success">
+        저장<i class="bi bi-check"></i></button>
+      <button v-if="dDay.editMode" v-on:click="cancelEdit(dDay)" class="btn btn-danger">
+        취소<i class="bi bi-x"></i></button>
     </div>
   </div>
 </div>
@@ -67,12 +74,15 @@
                         success: function (response) {
                             app.dDays = response;
                             for (const dDay of app.dDays) {
+                                dDay.editMode = false;
                                 dDay.dDay = Math.floor((new Date(dDay.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) + 1;
                                 if (dDay.dDay == 0) {
                                     dDay.dDayText = 'D-Day';
                                 } else if (dDay.dDay < 0) {
                                     dDay.dDayText = 'D+' + Math.abs(dDay.dDay);
-                                } else dDay.dDayText = 'D-' + dDay.dDay;
+                                } else {
+                                    dDay.dDayText = 'D-' + dDay.dDay;
+                                }
                             }
                         },
                         error: function (error) {
@@ -142,6 +152,42 @@
                             console.log(error);
                         }
                     })
+                },
+                saveEdit: function (event) {
+                    const target = event.target;
+                    const item = target.closest('.d-day-item');
+                    const dDay = {
+                        id: item.attributes['data-id'].value,
+                        title: item.querySelector('input[name="title"]').value,
+                        date: item.querySelector('input[name="date"]').value,
+                        isPrivate: item.querySelector('input[name="isPrivate"]').checked
+                    }
+                    $.ajax({
+                        url: '/api/dday/' + dDay.id,
+                        type: 'PUT',
+                        data: JSON.stringify(dDay),
+                        contentType: 'application/json',
+                        success: function (response) {
+                            app.load();
+                        },
+                        error: function (error) {
+                            console.log(error);
+                        }
+                    })
+                },
+                editMode: function (dDay) {
+                    dDay.editMode = true;
+                    // when editMode is changed, vue doesn't update the dom
+                    // So, need to update the dom by changing the title
+                    const title = dDay.title;
+                    dDay.title = '';
+                    dDay.title = title;
+                },
+                cancelEdit: function (dDay) {
+                    dDay.editMode = false;
+                    const title = dDay.title;
+                    dDay.title = '';
+                    dDay.title = title;
                 },
                 remove: function (dDay) {
                     Swal.fire({

@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.common.exceptions.AuthenticationException
-import com.tistory.shanepark.dutypark.member.domain.dto.DDayCreateDto
+import com.tistory.shanepark.dutypark.member.domain.dto.DDaySaveDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Department
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.DDayRepository
@@ -69,7 +69,7 @@ class DDayServiceTest {
         val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(3),
                 isPrivate = false
@@ -84,7 +84,7 @@ class DDayServiceTest {
         assertThrows<NoSuchElementException> {
             dDayService.createDDay(
                 loginMember = LoginMember(id = -1, email = "", name = "", 0, "dept"),
-                dDayCreateDto = DDayCreateDto(
+                dDaySaveDto = DDaySaveDto(
                     title = "test",
                     date = LocalDate.now().plusDays(3),
                     isPrivate = false
@@ -98,7 +98,7 @@ class DDayServiceTest {
         val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(3),
                 isPrivate = false
@@ -110,7 +110,7 @@ class DDayServiceTest {
 
         val dDayToday = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now(),
                 isPrivate = false
@@ -126,7 +126,7 @@ class DDayServiceTest {
         val loginMember2 = LoginMember.from(member2)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(3),
                 isPrivate = true
@@ -142,7 +142,7 @@ class DDayServiceTest {
         val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(3),
                 isPrivate = false
@@ -150,7 +150,7 @@ class DDayServiceTest {
         )
         val createDDay2 = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(5),
                 isPrivate = false
@@ -168,7 +168,7 @@ class DDayServiceTest {
         val loginMember2 = LoginMember.from(member2)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(3),
                 isPrivate = true
@@ -176,7 +176,7 @@ class DDayServiceTest {
         )
         val createDDay2 = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(5),
                 isPrivate = false
@@ -193,7 +193,7 @@ class DDayServiceTest {
         val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(3),
                 isPrivate = false
@@ -219,7 +219,7 @@ class DDayServiceTest {
         val loginMember2 = LoginMember.from(member2)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(3),
                 isPrivate = false
@@ -241,7 +241,7 @@ class DDayServiceTest {
         val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(3),
                 isPrivate = false
@@ -259,7 +259,7 @@ class DDayServiceTest {
         val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(3),
                 isPrivate = false
@@ -267,7 +267,7 @@ class DDayServiceTest {
         )
         val createDDay2 = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(5),
                 isPrivate = false
@@ -275,7 +275,7 @@ class DDayServiceTest {
         )
         val createDDay3 = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(7),
                 isPrivate = false
@@ -283,7 +283,7 @@ class DDayServiceTest {
         )
         val createDDay4 = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(9),
                 isPrivate = false
@@ -291,7 +291,7 @@ class DDayServiceTest {
         )
         val createDDay5 = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(11),
                 isPrivate = false
@@ -321,7 +321,7 @@ class DDayServiceTest {
         val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(3),
                 isPrivate = false
@@ -329,7 +329,7 @@ class DDayServiceTest {
         )
         val createDDay2 = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(5),
                 isPrivate = false
@@ -337,7 +337,7 @@ class DDayServiceTest {
         )
         val createDDay3 = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(7),
                 isPrivate = false
@@ -345,7 +345,7 @@ class DDayServiceTest {
         )
         val createDDay4 = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(9),
                 isPrivate = false
@@ -353,7 +353,7 @@ class DDayServiceTest {
         )
         val createDDay5 = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(11),
                 isPrivate = false
@@ -381,7 +381,7 @@ class DDayServiceTest {
         val loginMember2 = LoginMember.from(member2)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(3),
                 isPrivate = false
@@ -389,7 +389,7 @@ class DDayServiceTest {
         )
         val createDDay2 = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(5),
                 isPrivate = false
@@ -397,7 +397,7 @@ class DDayServiceTest {
         )
         val createDDay3 = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(7),
                 isPrivate = false
@@ -405,7 +405,7 @@ class DDayServiceTest {
         )
         val createDDay4 = dDayService.createDDay(
             loginMember = loginMember2,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(9),
                 isPrivate = false
@@ -413,7 +413,7 @@ class DDayServiceTest {
         )
         val createDDay5 = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(11),
                 isPrivate = false
@@ -434,7 +434,7 @@ class DDayServiceTest {
         val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(3),
                 isPrivate = false
@@ -442,7 +442,7 @@ class DDayServiceTest {
         )
         val createDDay2 = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(5),
                 isPrivate = false
@@ -450,7 +450,7 @@ class DDayServiceTest {
         )
         val createDDay3 = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(7),
                 isPrivate = false
@@ -458,7 +458,7 @@ class DDayServiceTest {
         )
         val createDDay4 = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(9),
                 isPrivate = false
@@ -466,7 +466,7 @@ class DDayServiceTest {
         )
         val createDDay5 = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(11),
                 isPrivate = false
@@ -491,7 +491,7 @@ class DDayServiceTest {
         val loginMember = LoginMember.from(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(3),
                 isPrivate = false
@@ -508,7 +508,7 @@ class DDayServiceTest {
         val loginMember2 = LoginMember.from(member2)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
-            dDayCreateDto = DDayCreateDto(
+            dDaySaveDto = DDaySaveDto(
                 title = "test",
                 date = LocalDate.now().plusDays(3),
                 isPrivate = false

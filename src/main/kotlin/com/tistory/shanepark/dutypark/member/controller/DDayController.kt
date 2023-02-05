@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.member.controller
 
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
-import com.tistory.shanepark.dutypark.member.domain.dto.DDayCreateDto
+import com.tistory.shanepark.dutypark.member.domain.dto.DDaySaveDto
 import com.tistory.shanepark.dutypark.member.service.DDayService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.http.HttpStatus
@@ -18,9 +18,9 @@ class DDayController(
     @PostMapping
     fun create(
         @Login member: LoginMember,
-        @RequestBody dDayCreateDto: DDayCreateDto
+        @RequestBody dDaySaveDto: DDaySaveDto
     ): ResponseEntity<Any> {
-        val createDDay = dDayService.createDDay(member, dDayCreateDto)
+        val createDDay = dDayService.createDDay(member, dDaySaveDto)
 
         return ResponseEntity
             .status(HttpStatus.CREATED)
@@ -38,8 +38,7 @@ class DDayController(
             .body(findDDays)
     }
 
-    @DeleteMapping
-    @RequestMapping("/{id}")
+    @DeleteMapping("/{id}")
     fun deleteDDay(
         @Login member: LoginMember,
         @PathVariable id: Long
@@ -51,8 +50,7 @@ class DDayController(
             .build()
     }
 
-    @PatchMapping
-    @RequestMapping(params = ["prefix", "ids"])
+    @PatchMapping(params = ["prefix", "ids"])
     fun rearrangeOrders(
         @Login member: LoginMember,
         @RequestParam prefix: Long,
@@ -63,6 +61,24 @@ class DDayController(
         return ResponseEntity
             .status(HttpStatus.NO_CONTENT)
             .build()
+    }
+
+    @PutMapping("/{id}")
+    fun updateDDay(
+        @Login member: LoginMember,
+        @PathVariable id: Long,
+        @RequestBody dDaySaveDto: DDaySaveDto
+    ): ResponseEntity<Any> {
+        val updateDDay = dDayService.updateDDay(
+            loginMember = member,
+            id = id,
+            title = dDaySaveDto.title,
+            date = dDaySaveDto.date,
+            isPrivate = dDaySaveDto.isPrivate
+        )
+        return ResponseEntity
+            .status(HttpStatus.OK)
+            .body(updateDDay)
     }
 
 }
