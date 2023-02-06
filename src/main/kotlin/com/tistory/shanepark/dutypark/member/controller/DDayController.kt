@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.member.controller
 
+import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.domain.dto.DDaySaveDto
 import com.tistory.shanepark.dutypark.member.service.DDayService
@@ -16,7 +17,8 @@ class DDayController(
     private val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(this.javaClass)
 
     @PostMapping
-    fun create(
+    @SlackNotification
+    fun createDDay(
         @Login member: LoginMember,
         @RequestBody dDaySaveDto: DDaySaveDto
     ): ResponseEntity<Any> {
@@ -52,6 +54,7 @@ class DDayController(
 
 
     @DeleteMapping("/{id}")
+    @SlackNotification
     fun deleteDDay(
         @Login member: LoginMember,
         @PathVariable id: Long
@@ -64,7 +67,8 @@ class DDayController(
     }
 
     @PatchMapping(params = ["prefix", "ids"])
-    fun rearrangeOrders(
+    @SlackNotification
+    fun rearrangeDDayOrders(
         @Login member: LoginMember,
         @RequestParam prefix: Long,
         @RequestParam ids: List<Long>
@@ -77,6 +81,7 @@ class DDayController(
     }
 
     @PutMapping("/{id}")
+    @SlackNotification
     fun updateDDay(
         @Login member: LoginMember,
         @PathVariable id: Long,
