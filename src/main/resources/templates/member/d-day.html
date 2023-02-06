@@ -81,7 +81,7 @@
                                 if (dDay.calc == 0) {
                                     dDay.dDayText = 'D-Day';
                                 } else if (dDay.calc < 0) {
-                                    dDay.dDayText = 'D+' + Math.abs(dDay.calc);
+                                    dDay.dDayText = 'D+' + -dDay.calc;
                                 } else {
                                     dDay.dDayText = 'D-' + dDay.calc;
                                 }
