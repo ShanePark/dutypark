@@ -16,13 +16,16 @@ data class DDayDto(
 
     companion object {
         fun of(dDayEvent: DDayEvent): DDayDto {
+            var calc = dDayEvent.date.toEpochDay() - LocalDate.now().toEpochDay()
+            if (calc < 0)
+                calc--
             return DDayDto(
                 id = dDayEvent.id!!,
                 title = dDayEvent.title,
                 date = dDayEvent.date,
                 isPrivate = dDayEvent.isPrivate,
                 position = dDayEvent.position,
-                calc = dDayEvent.date.toEpochDay() - LocalDate.now().toEpochDay()
+                calc = calc
             )
         }
     }
