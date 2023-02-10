@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.security.service
 
 import com.tistory.shanepark.dutypark.common.exceptions.AuthenticationException
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
@@ -9,7 +10,6 @@ import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus
 import com.tistory.shanepark.dutypark.security.repository.RefreshTokenRepository
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -22,7 +22,7 @@ class AuthService(
     private val passwordEncoder: PasswordEncoder,
     private val refreshTokenRepository: RefreshTokenRepository,
     private val jwtProvider: JwtProvider,
-    @Value("\${jwt.refresh-token-validity-in-days}") val refreshTokenValidDays: Long
+    private val jwtConfig: JwtConfig,
 ) {
 
     val log: Logger = LoggerFactory.getLogger(AuthService::class.java)
@@ -66,7 +66,7 @@ class AuthService(
         memberRepository.findByEmail(loginDto.email).orElseThrow {
             AuthenticationException()
         }.let {
-            val refreshToken = RefreshToken(it, LocalDateTime.now().plusDays(refreshTokenValidDays))
+            val refreshToken = RefreshToken(it, LocalDateTime.now().plusDays(jwtConfig.refreshTokenValidityInDays))
             refreshTokenRepository.save(refreshToken)
             return refreshToken.token
         }

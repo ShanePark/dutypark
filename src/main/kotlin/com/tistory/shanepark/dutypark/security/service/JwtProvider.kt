@@ -1,31 +1,27 @@
 package com.tistory.shanepark.dutypark.security.service
 
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus
 import io.jsonwebtoken.*
 import io.jsonwebtoken.io.Decoders
 import io.jsonwebtoken.security.Keys
 import io.jsonwebtoken.security.SecurityException
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.security.Key
 import java.util.*
 
 @Component
 class JwtProvider(
-    @param:Value("\${jwt.secret}")
-    val secretKey: String,
-    @Value("\${jwt.token-validity-in-seconds}") tokenValidityInSeconds: Long
+    jwtConfig: JwtConfig,
 ) {
-
     private val key: Key
-    private val tokenValidityInMilliseconds: Long
+    private val tokenValidityInMilliseconds: Long = 1000L * jwtConfig.tokenValidityInSeconds
     private val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(JwtProvider::class.java)
 
     init {
-        tokenValidityInMilliseconds = 1000 * tokenValidityInSeconds
-        key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey))
+        key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtConfig.secret))
     }
 
     fun createToken(member: Member): String {

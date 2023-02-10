@@ -1,17 +1,17 @@
 package com.tistory.shanepark.dutypark.security.config
 
-import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus.*
+import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus.NOT_EXIST
+import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus.VALID
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.Logger
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.web.servlet.HandlerInterceptor
 
 class JwtAuthInterceptor(
     private val authService: AuthService,
-    @Value("\${jwt.token-validity-in-seconds}") private val tokenValidityInSeconds: Int
+    private val tokenValidityInSeconds: Long
 ) : HandlerInterceptor {
     private val log: Logger = org.slf4j.LoggerFactory.getLogger(JwtAuthInterceptor::class.java)
 
@@ -61,7 +61,7 @@ class JwtAuthInterceptor(
         val cookie = Cookie("SESSION", jwt)
             .apply {
                 path = "/"
-                maxAge = tokenValidityInSeconds
+                maxAge = tokenValidityInSeconds.toInt()
             }
         response.addCookie(cookie)
     }
