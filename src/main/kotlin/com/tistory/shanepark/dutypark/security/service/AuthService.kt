@@ -8,6 +8,7 @@ import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus
 import com.tistory.shanepark.dutypark.security.repository.RefreshTokenRepository
+import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -51,22 +52,26 @@ class AuthService(
         return null
     }
 
-    fun tokenRefresh(refreshToken: String): String? {
+    fun tokenRefresh(refreshToken: String, request: HttpServletRequest): String? {
         refreshTokenRepository.findByToken(refreshToken)?.let {
-            if (it.validUntil.isAfter(LocalDateTime.now())) {
-                it.slideValidUntil()
-                log.info("refresh token succeed. member:${it.member.email}")
+            val remoteAddr = request.remoteAddr
+            if (it.validation(remoteAddr)) {
+                log.info("refresh token succeed. member:${it.member.email}, remoteAddr:$remoteAddr")
                 return jwtProvider.createToken(it.member)
             }
         }
         return null
     }
 
-    fun createRefreshToken(loginDto: LoginDto): String {
+    fun createRefreshToken(loginDto: LoginDto, requestIp: String): String {
         memberRepository.findByEmail(loginDto.email).orElseThrow {
             AuthenticationException()
         }.let {
-            val refreshToken = RefreshToken(it, LocalDateTime.now().plusDays(jwtConfig.refreshTokenValidityInDays))
+            val refreshToken = RefreshToken(
+                member = it,
+                validUntil = LocalDateTime.now().plusDays(jwtConfig.refreshTokenValidityInDays),
+                remoteAddr = requestIp
+            )
             refreshTokenRepository.save(refreshToken)
             return refreshToken.token
         }

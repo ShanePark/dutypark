@@ -26,7 +26,7 @@ class JwtAuthInterceptor(
 
         if (refreshToken != null && status != VALID) {
             log.info("Token is expired. Trying to refresh token.")
-            authService.tokenRefresh(refreshToken)?.let { newToken ->
+            authService.tokenRefresh(refreshToken, request)?.let { newToken ->
                 jwt = newToken
                 addSessionCookie(jwt, response)
                 status = VALID

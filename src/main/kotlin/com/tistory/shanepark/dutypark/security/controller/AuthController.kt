@@ -6,6 +6,7 @@ import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.service.AuthService
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.boot.web.server.Cookie.SameSite
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseCookie
@@ -24,11 +25,13 @@ class AuthController(
     fun login(
         @RequestBody loginDto: LoginDto,
         model: Model,
+        httpServletRequest: HttpServletRequest,
         @SessionAttribute(name = "referer", required = false) referer: String?
     ): ResponseEntity<String> {
         try {
             val token = authService.login(loginDto)
-            val refreshToken = authService.createRefreshToken(loginDto)
+            val refreshToken =
+                authService.createRefreshToken(loginDto = loginDto, requestIp = httpServletRequest.remoteAddr)
 
             val jwtCookie = ResponseCookie.from("SESSION", token)
                 .httpOnly(true)
