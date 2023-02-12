@@ -29,7 +29,10 @@ class AuthResolver : HandlerMethodArgumentResolver {
         webRequest.getNativeRequest(HttpServletRequest::class.java)?.let {
             it.cookies?.forEach { cookie ->
                 if (cookie.name == "SESSION") {
-                    return webRequest.getAttribute("loginMember", RequestAttributes.SCOPE_REQUEST) as LoginMember
+                    val attribute = webRequest.getAttribute("loginMember", RequestAttributes.SCOPE_REQUEST)
+                    attribute?.let {
+                        return attribute as LoginMember
+                    } ?: return null
                 }
             }
         }

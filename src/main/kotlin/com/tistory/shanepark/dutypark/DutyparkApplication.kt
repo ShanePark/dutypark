@@ -3,7 +3,6 @@ package com.tistory.shanepark.dutypark
 import com.tistory.shanepark.dutypark.security.config.JwtAuthInterceptor
 import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.service.AuthService
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
 import org.springframework.boot.runApplication
@@ -23,7 +22,7 @@ class DutyparkApplication(
     override fun addInterceptors(registry: InterceptorRegistry) {
         registry.addInterceptor(JwtAuthInterceptor(authService, jwtConfig.tokenValidityInSeconds))
             .addPathPatterns("/**")
-            .excludePathPatterns("/login", "/**/*.css", "/**/*.js", "/**/*.map", "/error")
+            .excludePathPatterns("/**/*.css", "/**/*.js", "/**/*.map", "/error")
     }
 }
 
