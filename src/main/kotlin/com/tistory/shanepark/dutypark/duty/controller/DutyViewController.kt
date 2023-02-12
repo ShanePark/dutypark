@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.duty.controller
 import com.tistory.shanepark.dutypark.common.exceptions.AuthenticationException
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeDto
 import com.tistory.shanepark.dutypark.duty.service.DutyService
+import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.service.MemberService
@@ -31,7 +32,7 @@ class DutyViewController(
         model: Model,
         year: Int,
         month: Int,
-        loginMember: LoginMember
+        @Login loginMember: LoginMember
     ): String {
         val member = memberService.findMemberByName(name)
         if (loginMember.id != member.id) {

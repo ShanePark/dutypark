@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.security.config
 
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus.NOT_EXIST
 import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus.VALID
 import com.tistory.shanepark.dutypark.security.service.AuthService
@@ -38,7 +39,7 @@ class JwtAuthInterceptor(
 
         if (status == VALID) {
             val loginMember = authService.tokenToLoginMember(jwt)
-            request.setAttribute("loginMember", loginMember)
+            request.setAttribute(LoginMember.attrName, loginMember)
         } else if (status != NOT_EXIST) { // remove invalid token
             log.info("Token is invalid. Removing the tokens. status: $status, jwt: $jwt")
             removeCookie("SESSION", response)

@@ -10,6 +10,8 @@ data class LoginMember(
     val departmentName: String,
 ) {
     companion object {
+        const val attrName: String = "loginMember"
+
         fun from(member: Member): LoginMember {
             return LoginMember(
                 id = member.id!!,

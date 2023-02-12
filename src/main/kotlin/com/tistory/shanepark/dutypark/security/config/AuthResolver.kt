@@ -13,7 +13,8 @@ import org.springframework.web.method.support.ModelAndViewContainer
 
 class AuthResolver : HandlerMethodArgumentResolver {
     override fun supportsParameter(parameter: MethodParameter): Boolean {
-        return parameter.parameterType == LoginMember::class.java
+        return parameter.parameterType.isAssignableFrom(LoginMember::class.java)
+                && parameter.hasParameterAnnotation(Login::class.java)
     }
 
     override fun resolveArgument(
@@ -22,22 +23,24 @@ class AuthResolver : HandlerMethodArgumentResolver {
         webRequest: NativeWebRequest,
         binderFactory: WebDataBinderFactory?
     ): LoginMember? {
-        val required = parameter.getParameterAnnotation(Login::class.java)?.let {
-            it.required
-        } ?: true
-
-        webRequest.getNativeRequest(HttpServletRequest::class.java)?.let {
-            it.cookies?.forEach { cookie ->
-                if (cookie.name == "SESSION") {
-                    val attribute = webRequest.getAttribute("loginMember", RequestAttributes.SCOPE_REQUEST)
-                    attribute?.let {
-                        return attribute as LoginMember
-                    } ?: return null
-                }
-            }
+        val nativeRequest = webRequest.getNativeRequest(HttpServletRequest::class.java)
+        val sessionCookie = nativeRequest?.cookies?.find { it.name == "SESSION" }
+        val loginMember = sessionCookie?.let {
+            webRequest.getAttribute(LoginMember.attrName, RequestAttributes.SCOPE_REQUEST) as LoginMember?
         }
-        if (required)
-            throw AuthenticationException("login is required")
-        return null
+        handleRequired(parameter, loginMember)
+        return loginMember
     }
+
+    private fun handleRequired(
+        parameter: MethodParameter,
+        loginMember: LoginMember?
+    ) {
+        if (loginMember == null &&
+            parameter.getParameterAnnotation(Login::class.java)?.required == true
+        ) {
+            throw AuthenticationException("login is required")
+        }
+    }
+
 }
