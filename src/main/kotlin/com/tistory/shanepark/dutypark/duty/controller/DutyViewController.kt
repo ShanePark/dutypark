@@ -58,12 +58,12 @@ class DutyViewController(
         log.info("request: $name, $year-$month, ip: ${request.remoteAddr}")
 
         val now = LocalDateTime.now()
-        val year = year ?: now.year
-        val month = month ?: now.monthValue
+        val yearValue = year ?: now.year
+        val monthValue = month ?: now.monthValue
         val member = memberService.findMemberByName(name)
 
-        addDutyData(member, year, month, model)
-        addYearMonthData(year, month, model)
+        addDutyData(member, yearValue, monthValue, model)
+        addYearMonthData(yearValue, monthValue, model)
         return "duty/duty"
     }
 

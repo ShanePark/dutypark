@@ -484,6 +484,14 @@ class DDayServiceTest {
                 listOf(createDDay3.id!!, createDDay4.id!!)
             )
         }
+        dDayService.rearrangeOrders(loginMember, 0, listOf(createDDay.id!!, createDDay2.id!!))
+        assertThrows<IllegalArgumentException> {
+            dDayService.rearrangeOrders(
+                loginMember,
+                2,
+                listOf(createDDay.id!!, createDDay5.id!!)
+            )
+        }
     }
 
     @Test
