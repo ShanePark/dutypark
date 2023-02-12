@@ -2,23 +2,22 @@ package com.tistory.shanepark.dutypark.security.controller
 
 import com.tistory.shanepark.dutypark.common.exceptions.AuthenticationException
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
+import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.service.AuthService
-import org.springframework.beans.factory.annotation.Value
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.boot.web.server.Cookie.SameSite
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseCookie
 import org.springframework.http.ResponseEntity
-import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
 
 @RestController
 class AuthController(
     private val authService: AuthService,
-    @Value("\${jwt.token-validity-in-seconds}") val tokenValidityInSeconds: Long,
-    @Value("\${jwt.refresh-token-validity-in-days}") val refreshTokenValidDays: Long
+    private val jwtConfig: JwtConfig,
 ) {
     private val log = org.slf4j.LoggerFactory.getLogger(AuthController::class.java)
 
@@ -26,17 +25,19 @@ class AuthController(
     fun login(
         @RequestBody loginDto: LoginDto,
         model: Model,
+        req: HttpServletRequest,
         @SessionAttribute(name = "referer", required = false) referer: String?
     ): ResponseEntity<String> {
         try {
             val token = authService.login(loginDto)
-            val refreshToken = authService.createRefreshToken(loginDto)
+            val refreshToken =
+                authService.createRefreshToken(loginDto = loginDto, request = req)
 
             val jwtCookie = ResponseCookie.from("SESSION", token)
                 .httpOnly(true)
                 .path("/")
                 .secure(true)
-                .maxAge(tokenValidityInSeconds)
+                .maxAge(jwtConfig.tokenValidityInSeconds)
                 .sameSite(SameSite.STRICT.name)
                 .build()
 
@@ -44,7 +45,7 @@ class AuthController(
                 .httpOnly(true)
                 .path("/")
                 .secure(true)
-                .maxAge(refreshTokenValidDays * 24 * 60 * 60)
+                .maxAge(jwtConfig.refreshTokenValidityInDays * 24 * 60 * 60)
                 .sameSite(SameSite.STRICT.name)
                 .build()
 
