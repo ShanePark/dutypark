@@ -25,13 +25,13 @@ class AuthController(
     fun login(
         @RequestBody loginDto: LoginDto,
         model: Model,
-        httpServletRequest: HttpServletRequest,
+        req: HttpServletRequest,
         @SessionAttribute(name = "referer", required = false) referer: String?
     ): ResponseEntity<String> {
         try {
             val token = authService.login(loginDto)
             val refreshToken =
-                authService.createRefreshToken(loginDto = loginDto, requestIp = httpServletRequest.remoteAddr)
+                authService.createRefreshToken(loginDto = loginDto, request = req)
 
             val jwtCookie = ResponseCookie.from("SESSION", token)
                 .httpOnly(true)

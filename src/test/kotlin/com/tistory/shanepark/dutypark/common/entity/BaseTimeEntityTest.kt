@@ -31,7 +31,7 @@ class BaseTimeEntityTest {
         val member = Member(department, "test", "test", "1234")
         memberRepository.save(member)
 
-        val refreshToken = RefreshToken(member, LocalDateTime.now(), "")
+        val refreshToken = RefreshToken(member, LocalDateTime.now(), "", "")
         refreshTokenRepository.save(refreshToken)
 
         assertThat(refreshToken.createdDate).isNotNull

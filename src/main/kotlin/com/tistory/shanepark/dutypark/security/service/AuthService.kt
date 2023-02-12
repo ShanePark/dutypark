@@ -11,6 +11,7 @@ import com.tistory.shanepark.dutypark.security.repository.RefreshTokenRepository
 import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.http.HttpHeaders.USER_AGENT
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -54,8 +55,9 @@ class AuthService(
 
     fun tokenRefresh(refreshToken: String, request: HttpServletRequest): String? {
         refreshTokenRepository.findByToken(refreshToken)?.let {
-            val remoteAddr = request.remoteAddr
-            if (it.validation(remoteAddr)) {
+            val remoteAddr: String? = request.remoteAddr
+            val userAgent: String? = request.getHeader(USER_AGENT)
+            if (it.validation(remoteAddr, userAgent)) {
                 log.info("refresh token succeed. member:${it.member.email}, remoteAddr:$remoteAddr")
                 return jwtProvider.createToken(it.member)
             }
@@ -63,14 +65,15 @@ class AuthService(
         return null
     }
 
-    fun createRefreshToken(loginDto: LoginDto, requestIp: String): String {
+    fun createRefreshToken(loginDto: LoginDto, request: HttpServletRequest): String {
         memberRepository.findByEmail(loginDto.email).orElseThrow {
             AuthenticationException()
         }.let {
             val refreshToken = RefreshToken(
                 member = it,
                 validUntil = LocalDateTime.now().plusDays(jwtConfig.refreshTokenValidityInDays),
-                remoteAddr = requestIp
+                remoteAddr = request.remoteAddr,
+                userAgent = request.getHeader(USER_AGENT)
             )
             refreshTokenRepository.save(refreshToken)
             return refreshToken.token

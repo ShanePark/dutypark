@@ -9,6 +9,7 @@ import java.util.*
 
 @Entity
 class RefreshToken(
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
     @JsonIgnore
@@ -18,7 +19,9 @@ class RefreshToken(
     var validUntil: LocalDateTime,
 
     @Column(name = "remote_addr", nullable = true)
-    var remoteAddr: String,
+    var remoteAddr: String?,
+    @Column(name = "user_agent", nullable = true)
+    var userAgent: String?,
 
     ) : BaseTimeEntity() {
 
@@ -29,12 +32,12 @@ class RefreshToken(
     @Column(name = "refresh_token")
     val token: String = UUID.randomUUID().toString()
 
-    fun validation(remoteAddr: String): Boolean {
+    fun validation(remoteAddr: String?, userAgent: String?): Boolean {
         val valid = this.validUntil.isAfter(LocalDateTime.now())
         if (valid) {
             slideValidUntil()
             this.remoteAddr = remoteAddr
-
+            this.userAgent = userAgent
         }
         return valid
     }
