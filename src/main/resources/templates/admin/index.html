@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<head th:replace="~{layout/header::link}"/>
+<html lang="en">
+<body>
+<div th:replace="~{layout/header-member::head}"/>
+<div class="body adminPage">
+  Active Refresh Tokens
+  <div th:each="refreshToken : ${refreshTokens}">
+    <div th:text="${refreshToken}"></div>
+  </div>
+</div>
+</body>
+</html>
