@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark
 
+import com.tistory.shanepark.dutypark.security.config.AdminAuthInterceptor
 import com.tistory.shanepark.dutypark.security.config.JwtAuthInterceptor
 import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.service.AuthService
@@ -23,6 +24,10 @@ class DutyparkApplication(
         registry.addInterceptor(JwtAuthInterceptor(authService, jwtConfig.tokenValidityInSeconds))
             .addPathPatterns("/**")
             .excludePathPatterns("/**/*.css", "/**/*.js", "/**/*.map", "/error")
+            .order(0)
+        registry.addInterceptor(AdminAuthInterceptor(authService))
+            .addPathPatterns("/admin/**")
+            .order(1)
     }
 }
 

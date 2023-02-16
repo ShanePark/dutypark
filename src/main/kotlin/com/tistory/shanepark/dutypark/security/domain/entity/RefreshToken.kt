@@ -32,12 +32,16 @@ class RefreshToken(
     @Column(name = "refresh_token")
     val token: String = UUID.randomUUID().toString()
 
+    @Column(name = "last_used")
+    var lastUsed: LocalDateTime = LocalDateTime.now()
+
     fun validation(remoteAddr: String?, userAgent: String?): Boolean {
         val valid = this.validUntil.isAfter(LocalDateTime.now())
         if (valid) {
             slideValidUntil()
             this.remoteAddr = remoteAddr
             this.userAgent = userAgent
+            this.lastUsed = LocalDateTime.now()
         }
         return valid
     }
