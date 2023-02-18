@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.admin.controller
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.tistory.shanepark.dutypark.security.repository.RefreshTokenRepository
+import com.tistory.shanepark.dutypark.security.domain.dto.RefreshTokenDto
+import com.tistory.shanepark.dutypark.security.service.AuthService
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
@@ -10,17 +10,16 @@ import org.springframework.web.bind.annotation.RequestMapping
 @Controller
 @RequestMapping("/admin")
 class AdminViewController(
-    private val refreshTokenRepository: RefreshTokenRepository,
-    private val objectMapper: ObjectMapper
+    private val authService: AuthService,
 ) {
 
     @GetMapping
     fun admin(model: Model): String {
-        val refreshTokens = refreshTokenRepository.findAll()
-            .map { objectMapper.writeValueAsString(it) }
-            .toList()
-        model.addAttribute("refreshTokens", refreshTokens)
+        val refreshTokens = authService.findAllRefreshTokens()
+            .sortedWith(compareBy<RefreshTokenDto> { it.memberId }
+                .thenByDescending { it.lastUsed })
 
+        model.addAttribute("refreshTokens", refreshTokens)
         return "admin/index"
     }
 

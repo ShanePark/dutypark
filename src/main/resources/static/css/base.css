@@ -76,13 +76,14 @@ ol.day-grid li {
 }
 
 ol.day-grid li.today {
-    box-shadow: 2px 4px 7px 3px lightcoral;
+    box-shadow: 2px 4px 7px 3px grey;
     border: 0px;
 }
 
 .today .date_number {
     font-weight: bold;
     text-decoration: underline;
+    font-size: 1.1em;
 }
 
 .BACKGROUND-RED {
@@ -188,10 +189,6 @@ header .current {
 .edit .today .day {
     text-decoration: underline;
     font-weight: bolder;
-}
-
-.day .date_number {
-    font-size: 1.2em;
 }
 
 .homeButton {
