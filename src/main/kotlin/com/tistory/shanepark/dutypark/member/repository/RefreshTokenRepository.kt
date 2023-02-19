@@ -1,4 +1,4 @@
-package com.tistory.shanepark.dutypark.security.repository
+package com.tistory.shanepark.dutypark.member.repository
 
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import org.springframework.data.jpa.repository.JpaRepository
@@ -9,5 +9,7 @@ interface RefreshTokenRepository : JpaRepository<RefreshToken, Long> {
 
     @Query("select r from RefreshToken r join fetch r.member order by r.lastUsed desc")
     fun findAllWithMemberOrderByLastUsedDesc(): List<RefreshToken>
+
+    fun findAllByMemberId(id: Long): List<RefreshToken>
 
 }

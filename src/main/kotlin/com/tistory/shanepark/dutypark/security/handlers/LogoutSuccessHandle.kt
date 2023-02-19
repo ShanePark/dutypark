@@ -1,6 +1,6 @@
 package com.tistory.shanepark.dutypark.security.handlers
 
-import com.tistory.shanepark.dutypark.security.repository.RefreshTokenRepository
+import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse

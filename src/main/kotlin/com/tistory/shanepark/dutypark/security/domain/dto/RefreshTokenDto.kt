@@ -14,6 +14,8 @@ data class RefreshTokenDto(
     val token: String,
     val userAgent: UserAgent?,
 ) {
+    var isCurrentLogin: Boolean? = null
+
     companion object {
         fun of(refreshToken: RefreshToken): RefreshTokenDto {
             return RefreshTokenDto(

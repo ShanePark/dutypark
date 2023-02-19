@@ -5,7 +5,7 @@ import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
-import com.tistory.shanepark.dutypark.security.repository.RefreshTokenRepository
+import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
