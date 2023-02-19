@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.Query
 interface RefreshTokenRepository : JpaRepository<RefreshToken, Long> {
     fun findByToken(token: String): RefreshToken?
 
-    @Query("select r from RefreshToken r join fetch r.member")
-    fun findAllWithMember(): List<RefreshToken>
+    @Query("select r from RefreshToken r join fetch r.member order by r.lastUsed desc")
+    fun findAllWithMemberOrderByLastUsedDesc(): List<RefreshToken>
 
 }

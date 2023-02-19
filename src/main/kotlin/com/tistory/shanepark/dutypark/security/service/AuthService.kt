@@ -83,7 +83,7 @@ class AuthService(
     }
 
     fun findAllRefreshTokens(): List<RefreshTokenDto> {
-        return refreshTokenRepository.findAllWithMember()
+        return refreshTokenRepository.findAllWithMemberOrderByLastUsedDesc()
             .map { RefreshTokenDto.of(it) }
     }
 
