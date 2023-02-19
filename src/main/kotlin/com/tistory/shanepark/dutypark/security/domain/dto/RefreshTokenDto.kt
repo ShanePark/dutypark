@@ -36,9 +36,11 @@ data class RefreshTokenDto(
     ) {
 
         companion object {
+            private val parser = Parser()
+
             fun of(userAgent: String?): UserAgent? {
                 if (userAgent == null) return null
-                val client = Parser().parse(userAgent)
+                val client = parser.parse(userAgent)
                 return UserAgent(
                     os = client.os.family,
                     browser = client.userAgent.family,
@@ -46,6 +48,5 @@ data class RefreshTokenDto(
                 )
             }
         }
-
     }
 }
