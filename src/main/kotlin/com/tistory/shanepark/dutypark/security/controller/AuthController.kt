@@ -7,6 +7,7 @@ import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import jakarta.servlet.http.HttpServletRequest
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.web.server.Cookie.SameSite
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseCookie
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.*
 class AuthController(
     private val authService: AuthService,
     private val jwtConfig: JwtConfig,
+    @Value("\${server.ssl.enabled}") private val isSecure: Boolean
 ) {
     private val log = org.slf4j.LoggerFactory.getLogger(AuthController::class.java)
 
@@ -44,7 +46,7 @@ class AuthController(
             val refToken = ResponseCookie.from("REFRESH_TOKEN", refreshToken)
                 .httpOnly(true)
                 .path("/")
-                .secure(true)
+                .secure(isSecure)
                 .maxAge(jwtConfig.refreshTokenValidityInDays * 24 * 60 * 60)
                 .sameSite(SameSite.STRICT.name)
                 .build()

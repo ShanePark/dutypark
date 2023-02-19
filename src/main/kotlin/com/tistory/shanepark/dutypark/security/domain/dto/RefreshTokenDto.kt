@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.security.domain.dto
 
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
+import ua_parser.Parser
 import java.time.LocalDateTime
 
 data class RefreshTokenDto(
@@ -11,7 +12,7 @@ data class RefreshTokenDto(
     val remoteAddr: String?,
     val id: Long,
     val token: String,
-    val userAgent: String?,
+    val userAgent: UserAgent?,
 ) {
     companion object {
         fun of(refreshToken: RefreshToken): RefreshTokenDto {
@@ -23,8 +24,28 @@ data class RefreshTokenDto(
                 remoteAddr = refreshToken.remoteAddr,
                 id = refreshToken.id!!,
                 token = refreshToken.token,
-                userAgent = refreshToken.userAgent,
+                userAgent = UserAgent.of(refreshToken.userAgent),
             )
         }
+    }
+
+    data class UserAgent(
+        val os: String,
+        val browser: String,
+        val device: String,
+    ) {
+
+        companion object {
+            fun of(userAgent: String?): UserAgent? {
+                if (userAgent == null) return null
+                val client = Parser().parse(userAgent)
+                return UserAgent(
+                    os = client.os.family,
+                    browser = client.userAgent.family,
+                    device = client.device.family,
+                )
+            }
+        }
+
     }
 }

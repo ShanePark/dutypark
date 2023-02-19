@@ -8,11 +8,15 @@ import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.Logger
+import org.springframework.boot.web.server.Cookie.SameSite
+import org.springframework.http.HttpHeaders
+import org.springframework.http.ResponseCookie
 import org.springframework.web.servlet.HandlerInterceptor
 
 class JwtAuthInterceptor(
     private val authService: AuthService,
-    private val tokenValidityInSeconds: Long
+    private val tokenValidityInSeconds: Long,
+    private val isSecure: Boolean,
 ) : HandlerInterceptor {
     private val log: Logger = org.slf4j.LoggerFactory.getLogger(JwtAuthInterceptor::class.java)
 
@@ -57,12 +61,14 @@ class JwtAuthInterceptor(
     }
 
     private fun addSessionCookie(jwt: String, response: HttpServletResponse) {
-        val cookie = Cookie("SESSION", jwt)
-            .apply {
-                path = "/"
-                maxAge = tokenValidityInSeconds.toInt()
-            }
-        response.addCookie(cookie)
+        val sessionCookie = ResponseCookie.from("SESSION", jwt)
+            .httpOnly(true)
+            .path("/")
+            .secure(isSecure)
+            .maxAge(tokenValidityInSeconds)
+            .sameSite(SameSite.STRICT.name)
+            .build()
+        response.addHeader(HttpHeaders.SET_COOKIE, sessionCookie.toString())
     }
 
     private fun findCookie(request: HttpServletRequest, name: String): String? {
@@ -74,3 +80,4 @@ class JwtAuthInterceptor(
         return null
     }
 }
+

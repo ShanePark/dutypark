@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<head th:replace="~{layout/header::link}"></head>
+<head th:replace="~{layout/include::link}"/>
 <body class="edit">
-<div th:replace="~{layout/header::header(|[Edit] ${member.department} ${member.name}|)}"></div>
+<div th:replace="~{layout/header::header-title(|[Edit] ${member.department} ${member.name}|)}"></div>
 
 <div class="calendar">
   <div class="month-control row">
