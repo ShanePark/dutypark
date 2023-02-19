@@ -1,13 +1,95 @@
 <!DOCTYPE html>
-<head th:replace="~{layout/header::link}"/>
+<head th:replace="~{layout/include::link}"/>
 <html lang="en">
 <body>
-<div th:replace="~{layout/header-member::head}"/>
+<div th:replace="~{layout/header::header-member}"/>
 <div class="body adminPage">
   Active Refresh Tokens
-  <div th:each="refreshToken : ${refreshTokens}">
-    <div th:text="${refreshToken}"></div>
+  <div class="refresh-tokens">
+    <div v-for="user in users">
+      <table>
+        <colgroup>
+          <col style="width: 60px;">
+          <col style="width: 190px;">
+          <col style="width: 110px;">
+          <col style="width: 120px;">
+          <col style="width: 200px;">
+          <col style="width: 120px;">
+        </colgroup>
+        <tr>
+          <th colspan="6" style="text-align: center; font-size:1.3em;">{{ user.name }}</th>
+        </tr>
+        <tr>
+          <th></th>
+          <th>Last active</th>
+          <th>Valid until</th>
+          <th>Ip</th>
+          <th>Device</th>
+          <th>Browser</th>
+        </tr>
+        <tr v-for="(token, index) in user.tokens">
+          <td>{{ index+1 }}</td>
+          <td>{{ token.lastUsed | formatDateTime }}</td>
+          <td>{{ token.validUntil | formatDate }}</td>
+          <td>{{ token.remoteAddr}}</td>
+          <td>{{ token.userAgent ? token.userAgent.device : '' }}</td>
+          <td>{{ token.userAgent ? token.userAgent.browser : '' }}</td>
+        </tr>
+      </table>
+    </div>
   </div>
 </div>
 </body>
 </html>
+
+<script>
+    $(function () {
+        const app = new Vue({
+            el: '.body',
+            data: {
+                users: []
+            },
+            mounted() {
+                this.load();
+            }, methods: {
+                load: function () {
+                    $.ajax({
+                        url: '/admin/api/refresh-tokens',
+                        type: 'GET',
+                        success: function (refreshTokens) {
+                            const map = new Map();
+                            for (const refreshToken of refreshTokens) {
+                                if (map.has(refreshToken.memberId)) {
+                                    map.get(refreshToken.memberId).push(refreshToken);
+                                } else {
+                                    map.set(refreshToken.memberId, [refreshToken]);
+                                }
+                            }
+                            map.forEach((value, key) => {
+                                app.users.push({
+                                    name: value[0].memberName,
+                                    id: value[0].memberId,
+                                    tokens: value
+                                });
+                            });
+                        },
+                        error: function (error) {
+                            console.log(error);
+                        }
+                    })
+                },
+            }, filters: {
+                formatDate: function (value) {
+                    if (value && value.length > 10) {
+                        return value.substring(0, 10);
+                    }
+                },
+                formatDateTime: function (value) {
+                    if (value && value.length > 19) {
+                        return value.substring(0, 19);
+                    }
+                }
+            }
+        });
+    })
+</script>

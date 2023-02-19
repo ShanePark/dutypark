@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.security.service
 
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.security.config.DutyparkProperties
 import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus
@@ -14,6 +15,7 @@ import java.util.*
 
 @Component
 class JwtProvider(
+    private val dutyparkProperties: DutyparkProperties,
     jwtConfig: JwtConfig,
 ) {
     private val key: Key
@@ -48,12 +50,15 @@ class JwtProvider(
             .parseClaimsJws(token)
             .body
 
+        val email = claims["email"] as String
+
         return LoginMember(
             id = claims.subject.toLong(),
-            email = claims["email"] as String,
+            email = email,
             name = claims["name"] as String,
             departmentId = claims["departmentId"].toString().toLong(),
-            departmentName = claims["departmentName"] as String
+            departmentName = claims["departmentName"] as String,
+            isAdmin = dutyparkProperties.adminEmails.contains(email)
         )
     }
 

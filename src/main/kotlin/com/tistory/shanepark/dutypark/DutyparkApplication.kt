@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.security.config.AdminAuthInterceptor
 import com.tistory.shanepark.dutypark.security.config.JwtAuthInterceptor
 import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.service.AuthService
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
 import org.springframework.boot.runApplication
@@ -19,13 +20,16 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 class DutyparkApplication(
     private val authService: AuthService,
     private val jwtConfig: JwtConfig,
+    @Value("\${server.ssl.enabled}") private val isSecure: Boolean
 ) : WebMvcConfigurer {
-    override fun addInterceptors(registry: InterceptorRegistry) {
-        registry.addInterceptor(JwtAuthInterceptor(authService, jwtConfig.tokenValidityInSeconds))
+    override fun addInterceptors(
+        registry: InterceptorRegistry
+    ) {
+        registry.addInterceptor(JwtAuthInterceptor(authService, jwtConfig.tokenValidityInSeconds, isSecure))
             .addPathPatterns("/**")
             .excludePathPatterns("/**/*.css", "/**/*.js", "/**/*.map", "/error")
             .order(0)
-        registry.addInterceptor(AdminAuthInterceptor(authService))
+        registry.addInterceptor(AdminAuthInterceptor())
             .addPathPatterns("/admin/**")
             .order(1)
     }

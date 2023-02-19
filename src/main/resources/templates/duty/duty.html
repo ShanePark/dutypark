@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<head th:replace="~{layout/header::link}"></head>
+<head th:replace="~{layout/include::link}"/>
 <body>
 
-<div th:replace="~{layout/header::header(|${member.department} ${member.name}|)}"></div>
+<div th:replace="~{layout/header::header-title(|${member.department} ${member.name}|)}"></div>
 
 <div class="calendar">
   <div class="month-control row">

@@ -2,10 +2,10 @@ package com.tistory.shanepark.dutypark.security.service
 
 import com.tistory.shanepark.dutypark.common.exceptions.AuthenticationException
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
-import com.tistory.shanepark.dutypark.security.config.DutyparkProperties
 import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.security.domain.dto.RefreshTokenDto
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus
 import com.tistory.shanepark.dutypark.security.repository.RefreshTokenRepository
@@ -26,7 +26,6 @@ class AuthService(
     private val refreshTokenRepository: RefreshTokenRepository,
     private val jwtProvider: JwtProvider,
     private val jwtConfig: JwtConfig,
-    private val dutyparkProperties: DutyparkProperties
 ) {
 
     val log: Logger = LoggerFactory.getLogger(AuthService::class.java)
@@ -83,9 +82,9 @@ class AuthService(
         }
     }
 
-    fun isAdmin(loginMember: LoginMember): Boolean {
-        return dutyparkProperties.adminEmails
-            .contains(loginMember.email)
+    fun findAllRefreshTokens(): List<RefreshTokenDto> {
+        return refreshTokenRepository.findAllWithMemberOrderByLastUsedDesc()
+            .map { RefreshTokenDto.of(it) }
     }
 
 }

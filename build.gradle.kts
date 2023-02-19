@@ -34,10 +34,11 @@ dependencies {
     // Database
     runtimeOnly("com.h2database:h2")
     runtimeOnly("mysql:mysql-connector-java")
-    implementation("com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.8.1")
+    implementation("com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.9.0")
 
     // Utilities
     implementation("net.gpedro.integrations.slack:slack-webhook:1.4.0")
+    implementation("com.github.ua-parser:uap-java:1.5.4")
 
     // JWT
     implementation("io.jsonwebtoken:jjwt-api:0.11.5")
