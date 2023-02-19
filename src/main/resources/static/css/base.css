@@ -168,6 +168,10 @@ header .current {
     text-align: left !important;
 }
 
+.text-align-center {
+    text-align: center !important;
+}
+
 .edit-memo {
     font-size: 1.2em;
     float: right;

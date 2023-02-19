@@ -8,7 +8,7 @@ import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.RefreshTokenDto
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus
-import com.tistory.shanepark.dutypark.security.repository.RefreshTokenRepository
+import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
 import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory

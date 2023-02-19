@@ -22,6 +22,108 @@
       <input type="text" readonly class="form-control-plaintext" id="email" th:value="*{member.email}">
     </div>
   </div>
+
+  <div class="refresh-tokens mt-5">
+    <table>
+      <thead>
+      <h4>내 아이디 로그인 정보</h4>
+      </thead>
+      <colgroup>
+        <col style="width: 60px;">
+        <col style="width: 200px;">
+        <col style="width: 120px;">
+        <col style="width: 200px;">
+        <col style="width: 120px;">
+        <col style="width: 80px;">
+      </colgroup>
+      <tr>
+        <th></th>
+        <th>마지막 접속</th>
+        <th>Ip</th>
+        <th>접속 기기</th>
+        <th>브라우저</th>
+        <th class="text-align-center">관리</th>
+      </tr>
+      <tr v-for="(token, index) in tokens">
+        <td>{{ index+1 }}</td>
+        <td>{{ token.lastUsed | formatDateTime }}</td>
+        <td>{{ token.remoteAddr}}</td>
+        <td>{{ token.userAgent ? token.userAgent.device : '' }}</td>
+        <td>{{ token.userAgent ? token.userAgent.browser : '' }}</td>
+        <td class="text-align-center">
+          <button v-if="!token.isCurrentLogin" class="btn btn-outline-danger btn-sm" @click="deleteToken(token.id)">
+            로그아웃
+          </button>
+          <button v-else class="btn btn-success btn-sm" disabled>
+            사용중
+          </button>
+        </td>
+      </tr>
+    </table>
+  </div>
 </div>
 </body>
 </html>
+
+<script>
+    $(function () {
+        const app = new Vue({
+            el: '.body',
+            data: {
+                tokens: []
+            },
+            mounted() {
+                this.load();
+            }, methods: {
+                load: function () {
+                    $.ajax({
+                        url: '/api/refresh-tokens',
+                        type: 'GET',
+                        success: function (refreshTokens) {
+                            app.tokens = refreshTokens;
+                        },
+                        error: function (error) {
+                            console.log(error);
+                        }
+                    })
+                },
+                deleteToken: function (tokenId) {
+                    Swal.fire({
+                        title: '정말 로그아웃 하시겠습니까?',
+                        text: "해당 기기에서 로그아웃 됩니다.",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#999',
+                        confirmButtonText: '로그아웃',
+                        cancelButtonText: '취소'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $.ajax({
+                                url: '/api/refresh-tokens/' + tokenId,
+                                type: 'DELETE',
+                                success: function () {
+                                    app.load();
+                                },
+                                error: function (error) {
+                                    console.log(error);
+                                }
+                            })
+                        }
+                    })
+                }
+            }, filters: {
+                formatDate: function (value) {
+                    if (value && value.length > 10) {
+                        return value.substring(0, 10);
+                    }
+                },
+                formatDateTime: function (value) {
+                    if (value && value.length > 19) {
+                        return value.substring(0, 19);
+                    }
+                }
+            }
+        });
+    })
+</script>
