@@ -14,7 +14,7 @@ class RefreshTokenService(
     private val log: Logger = org.slf4j.LoggerFactory.getLogger(this.javaClass)
 
     fun findAllRefreshTokensByMember(id: Long): List<RefreshTokenDto> {
-        return refreshTokenRepository.findAllByMemberId(id)
+        return refreshTokenRepository.findAllByMemberIdOrderByLastUsedDesc(id)
             .map { RefreshTokenDto.of(it) }
     }
 

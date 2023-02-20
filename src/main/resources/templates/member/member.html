@@ -30,8 +30,8 @@
       </thead>
       <colgroup>
         <col style="width: 60px;">
-        <col style="width: 200px;">
-        <col style="width: 120px;">
+        <col style="width: 150px;">
+        <col style="width: 150px;">
         <col style="width: 200px;">
         <col style="width: 120px;">
         <col style="width: 80px;">
@@ -46,7 +46,7 @@
       </tr>
       <tr v-for="(token, index) in tokens">
         <td>{{ index+1 }}</td>
-        <td>{{ token.lastUsed | formatDateTime }}</td>
+        <td>{{ token.lastUsed | fromNow }}</td>
         <td>{{ token.remoteAddr}}</td>
         <td>{{ token.userAgent ? token.userAgent.device : '' }}</td>
         <td>{{ token.userAgent ? token.userAgent.browser : '' }}</td>
@@ -54,9 +54,7 @@
           <button v-if="!token.isCurrentLogin" class="btn btn-outline-danger btn-sm" @click="deleteToken(token.id)">
             로그아웃
           </button>
-          <button v-else class="btn btn-success btn-sm" disabled>
-            사용중
-          </button>
+          <button v-else class="btn btn-outline-success btn-sm" disabled>현재접속</button>
         </td>
       </tr>
     </table>
@@ -122,6 +120,9 @@
                     if (value && value.length > 19) {
                         return value.substring(0, 19);
                     }
+                },
+                fromNow: function (value) {
+                    return dayjs(value).fromNow();
                 }
             }
         });
