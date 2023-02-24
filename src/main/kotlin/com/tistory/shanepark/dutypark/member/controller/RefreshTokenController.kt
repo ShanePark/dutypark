@@ -20,8 +20,8 @@ class RefreshTokenController(
     ): List<RefreshTokenDto> {
         val refreshTokens = refreshTokenService.findAllRefreshTokensByMember(loginMember.id)
         refreshTokens
-            .first { it.token == currentToken }
-            .isCurrentLogin = true
+            .firstOrNull { it.token == currentToken }
+            ?.isCurrentLogin = true
         return refreshTokens
     }
 

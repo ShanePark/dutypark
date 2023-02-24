@@ -12,5 +12,14 @@
   <script th:src="@{/js/sweetalert2.all.min.js}"></script>
   <script th:src="@{/lib/waitme/waitMe.min.js}"></script>
   <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+  <!-- dayjs -->
+  <script th:src="@{/lib/dayjs/dayjs.min.js}"></script>
+  <script th:src="@{/lib/dayjs/relativeTime.js}"></script>
+  <script th:src="@{/lib/dayjs/ko.js}"></script>
+  <script>
+      dayjs.extend(window.dayjs_plugin_relativeTime)
+      dayjs.locale('ko')
+  </script>
+
   <script th:src="@{/js/common.js?v=20230205}"></script>
 </head>

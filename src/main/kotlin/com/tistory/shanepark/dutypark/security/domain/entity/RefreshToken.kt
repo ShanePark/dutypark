@@ -29,10 +29,10 @@ class RefreshToken(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
 
-    @Column(name = "refresh_token")
+    @Column(name = "refresh_token", nullable = false)
     val token: String = UUID.randomUUID().toString()
 
-    @Column(name = "last_used")
+    @Column(name = "last_used", nullable = false)
     var lastUsed: LocalDateTime = LocalDateTime.now()
 
     fun validation(remoteAddr: String?, userAgent: String?): Boolean {
@@ -51,5 +51,4 @@ class RefreshToken(
             validUntil = LocalDateTime.now().plusMonths(1)
         }
     }
-
 }
