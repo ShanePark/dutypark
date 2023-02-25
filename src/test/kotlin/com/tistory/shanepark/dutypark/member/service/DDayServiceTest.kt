@@ -1,68 +1,30 @@
 package com.tistory.shanepark.dutypark.member.service
 
+import com.tistory.shanepark.dutypark.TestData
 import com.tistory.shanepark.dutypark.common.exceptions.AuthenticationException
 import com.tistory.shanepark.dutypark.member.domain.dto.DDaySaveDto
-import com.tistory.shanepark.dutypark.member.domain.entity.Department
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.DDayRepository
-import com.tistory.shanepark.dutypark.member.repository.DepartmentRepository
-import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
-import jakarta.persistence.EntityManager
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 
 
 @SpringBootTest
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@Transactional
 class DDayServiceTest {
 
     @Autowired
     lateinit var dDayService: DDayService
-
-    @Autowired
-    lateinit var memberRepository: MemberRepository
-
-    @Autowired
-    lateinit var departmentRepository: DepartmentRepository
-
     @Autowired
     lateinit var dDayRepository: DDayRepository
 
-    @Autowired
-    lateinit var em: EntityManager
-
-    val dept = Department("dummy")
-
-    var member = Member(
-        email = "test@duty.park",
-        department = dept,
-        name = "dummy",
-        password = "dummy"
-    )
-
-    var member2 = Member(
-        email = "test2@duty.park",
-        department = dept,
-        name = "dummy",
-        password = "dummy"
-    )
-
-    @BeforeAll
-    fun beforeAll() {
-        memberRepository.deleteAll()
-        departmentRepository.save(dept)
-        memberRepository.save(member)
-        memberRepository.save(member2)
-    }
-
-    @AfterEach
-    fun afterEach() {
-        dDayRepository.deleteAll()
-    }
+    val member = TestData.member
+    val member2 = TestData.member2
 
     @Test
     fun createDDay() {

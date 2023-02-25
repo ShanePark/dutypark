@@ -18,7 +18,7 @@ class Member(
     val email: String,
 
     @Column(nullable = false)
-    val password: String,
+    var password: String,
 
     ) {
 
