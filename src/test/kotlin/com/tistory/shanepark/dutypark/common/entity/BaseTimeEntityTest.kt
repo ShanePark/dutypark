@@ -1,36 +1,30 @@
 package com.tistory.shanepark.dutypark.common.entity
 
-import com.tistory.shanepark.dutypark.member.domain.entity.Department
-import com.tistory.shanepark.dutypark.member.domain.entity.Member
-import com.tistory.shanepark.dutypark.member.repository.DepartmentRepository
-import com.tistory.shanepark.dutypark.member.repository.MemberRepository
-import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
+import com.tistory.shanepark.dutypark.TestData
 import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
+import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
+import jakarta.persistence.EntityManager
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 
 @SpringBootTest
+@Transactional
 class BaseTimeEntityTest {
 
     @Autowired
     lateinit var refreshTokenRepository: RefreshTokenRepository
 
     @Autowired
-    lateinit var memberRepository: MemberRepository
-
-    @Autowired
-    lateinit var departmentRepository: DepartmentRepository
+    lateinit var em: EntityManager
 
     @Test
     fun test() {
-        val department = Department("testDept")
-        departmentRepository.save(department)
-        val member = Member(department, "test", "test", "1234")
-        memberRepository.save(member)
-
+        // Given
+        val member = TestData.member
         val refreshToken = RefreshToken(member, LocalDateTime.now(), "", "")
         refreshTokenRepository.save(refreshToken)
 
@@ -38,8 +32,11 @@ class BaseTimeEntityTest {
         assertThat(refreshToken.modifiedDate).isNotNull
         assertThat(refreshToken.createdDate).isSameAs(refreshToken.modifiedDate)
 
+        // When
         refreshToken.validUntil = LocalDateTime.now()
+        em.flush()
 
+        // Then
         val saved = refreshTokenRepository.save(refreshToken)
         assertThat(saved.modifiedDate).isAfter(refreshToken.createdDate)
     }

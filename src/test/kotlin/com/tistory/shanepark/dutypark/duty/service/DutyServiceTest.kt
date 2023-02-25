@@ -1,79 +1,27 @@
 package com.tistory.shanepark.dutypark.duty.service
 
+import com.tistory.shanepark.dutypark.TestData
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
-import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
-import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
-import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
-import com.tistory.shanepark.dutypark.member.domain.entity.Department
-import com.tistory.shanepark.dutypark.member.domain.entity.Member
-import com.tistory.shanepark.dutypark.member.repository.DepartmentRepository
-import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.transaction.annotation.Transactional
 
 @SpringBootTest
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@Transactional
 internal class DutyServiceTest {
 
     @Autowired
     lateinit var dutyService: DutyService
 
     @Autowired
-    lateinit var memberRepository: MemberRepository
-
-    @Autowired
-    lateinit var departmentRepository: DepartmentRepository
-
-    @Autowired
     lateinit var dutyRepository: DutyRepository
 
-    @Autowired
-    lateinit var dutyTypeRepository: DutyTypeRepository
-
-    val passwordEncoder = BCryptPasswordEncoder()
-    val email = "test@duty.park"
-    val password = "1234"
-    val dummy = "dummy"
-
-    var member = Member(
-        email = dummy,
-        department = Department("dummy"),
-        name = "dummy",
-        password = passwordEncoder.encode(dummy)
-    )
-    var dutyTypes = emptyList<DutyType>()
-
-    @BeforeEach
-    fun beforeEach() {
-        val dept = departmentRepository.save(Department("개발팀"))
-
-        val member = Member(dept, "test", email, passwordEncoder.encode(password))
-        val department = member.department
-        val dutyTypes = listOf(
-            DutyType("오전", 0, department, Color.BLUE),
-            DutyType("오후", 1, department, Color.RED),
-            DutyType("야간", 2, department, Color.GREEN),
-        )
-
-        memberRepository.save(member)
-        dutyTypeRepository.saveAll(dutyTypes)
-
-        this.member = member
-        this.dutyTypes = dutyTypes
-    }
-
-    @AfterEach
-    fun afterEach() {
-        dutyRepository.deleteAll()
-        dutyTypeRepository.deleteAll()
-        memberRepository.deleteAll()
-        departmentRepository.deleteAll()
-    }
+    var member = TestData.member
+    var dutyTypes = TestData.dutyTypes
 
     @Test
     @DisplayName("create new duty")
