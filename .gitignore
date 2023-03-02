@@ -40,3 +40,5 @@ out/
 src/main/resources/application-**.yml
 src/main/resources/spy.properties
 spy.log
+src/main/resources/static/.well-known/**
+src/main/resources/keystore.p12
