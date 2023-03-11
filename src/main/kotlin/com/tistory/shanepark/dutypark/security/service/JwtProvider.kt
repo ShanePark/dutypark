@@ -15,7 +15,6 @@ import java.util.*
 
 @Component
 class JwtProvider(
-    private val dutyparkProperties: DutyparkProperties,
     jwtConfig: JwtConfig,
 ) {
     private val key: Key
