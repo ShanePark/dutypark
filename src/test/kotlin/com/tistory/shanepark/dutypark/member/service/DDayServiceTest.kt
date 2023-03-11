@@ -1,13 +1,14 @@
 package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.TestData
-import com.tistory.shanepark.dutypark.common.exceptions.AuthenticationException
+import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.member.domain.dto.DDaySaveDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.DDayRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.transaction.annotation.Transactional
@@ -20,6 +21,7 @@ class DDayServiceTest {
 
     @Autowired
     lateinit var dDayService: DDayService
+
     @Autowired
     lateinit var dDayRepository: DDayRepository
 
@@ -45,7 +47,7 @@ class DDayServiceTest {
     fun `Create fail if login Member has Problem`() {
         assertThrows<NoSuchElementException> {
             dDayService.createDDay(
-                loginMember = LoginMember(id = -1, email = "", name = "", 0, "dept", isAdmin = false),
+                loginMember = LoginMember(id = -1, email = "", name = "", 0, "dept", isAdmin = false, jwt = ""),
                 dDaySaveDto = DDaySaveDto(
                     title = "test",
                     date = LocalDate.now().plusDays(3),
@@ -94,7 +96,7 @@ class DDayServiceTest {
                 isPrivate = true
             )
         )
-        assertThrows<AuthenticationException> {
+        assertThrows<DutyparkAuthException> {
             dDayService.findDDay(loginMember2, createDDay.id!!)
         }
     }
@@ -187,7 +189,7 @@ class DDayServiceTest {
                 isPrivate = false
             )
         )
-        assertThrows<AuthenticationException> {
+        assertThrows<DutyparkAuthException> {
             dDayService.updateDDay(
                 loginMember = loginMember2,
                 id = createDDay.id!!,
@@ -382,7 +384,7 @@ class DDayServiceTest {
             )
         )
         dDayRepository.saveAll(listOf(createDDay, createDDay2, createDDay3, createDDay4, createDDay5))
-        assertThrows<AuthenticationException> {
+        assertThrows<DutyparkAuthException> {
             dDayService.rearrangeOrders(
                 loginMember,
                 0,
@@ -484,7 +486,7 @@ class DDayServiceTest {
                 isPrivate = false
             )
         )
-        assertThrows<AuthenticationException> {
+        assertThrows<DutyparkAuthException> {
             dDayService.deleteDDay(loginMember2, createDDay.id!!)
         }
     }
@@ -496,7 +498,8 @@ class DDayServiceTest {
             name = member.name,
             departmentId = member.department.id,
             departmentName = member.department.name,
-            false
+            jwt = "",
+            isAdmin = false
         )
     }
 

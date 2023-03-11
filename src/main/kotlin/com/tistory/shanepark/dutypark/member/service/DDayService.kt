@@ -1,6 +1,6 @@
 package com.tistory.shanepark.dutypark.member.service
 
-import com.tistory.shanepark.dutypark.common.exceptions.AuthenticationException
+import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.member.domain.dto.DDaySaveDto
 import com.tistory.shanepark.dutypark.member.domain.dto.DDayDto
 import com.tistory.shanepark.dutypark.member.domain.entity.DDayEvent
@@ -80,7 +80,7 @@ class DDayService(
             .any { it != member.id }.let {
                 if (it) {
                     log.warn("Can't access other member's d-day event. ids: $ids, loginMember: $loginMember")
-                    throw AuthenticationException("Can't access other member's d-day event")
+                    throw DutyparkAuthException("Can't access other member's d-day event")
                 }
             }
 
@@ -116,7 +116,7 @@ class DDayService(
         loginMember: LoginMember?
     ) {
         if (dDayEvent.member.id != loginMember?.id) {
-            throw AuthenticationException("Can't access other member's d-day event")
+            throw DutyparkAuthException("Can't access other member's d-day event")
         }
     }
 

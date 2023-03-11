@@ -16,12 +16,15 @@ class RefreshTokenController(
     @GetMapping
     fun findAllRefreshTokens(
         @Login loginMember: LoginMember,
-        @CookieValue("REFRESH_TOKEN", required = false) currentToken: String?
+        @CookieValue("REFRESH_TOKEN", required = false) currentToken: String?,
+        @RequestParam("validOnly", required = false, defaultValue = "true") validOnly: Boolean,
     ): List<RefreshTokenDto> {
-        val refreshTokens = refreshTokenService.findAllRefreshTokensByMember(loginMember.id)
+        val refreshTokens = refreshTokenService.findRefreshTokens(loginMember.id, validOnly)
+
         refreshTokens
             .firstOrNull { it.token == currentToken }
             ?.isCurrentLogin = true
+
         return refreshTokens
     }
 

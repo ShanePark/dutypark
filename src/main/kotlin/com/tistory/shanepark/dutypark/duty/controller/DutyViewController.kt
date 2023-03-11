@@ -1,6 +1,6 @@
 package com.tistory.shanepark.dutypark.duty.controller
 
-import com.tistory.shanepark.dutypark.common.exceptions.AuthenticationException
+import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeDto
 import com.tistory.shanepark.dutypark.duty.service.DutyService
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
@@ -39,7 +39,7 @@ class DutyViewController(
             val message =
                 "login member and request duty member does not match: login:$loginMember.id, dutyMemberId:${member.id}"
             log.warn(message)
-            throw AuthenticationException(message)
+            throw DutyparkAuthException(message)
         }
         addDutyData(member, year, month, model)
         addYearMonthData(year, month, model)

@@ -11,12 +11,14 @@ import org.springframework.boot.runApplication
 import org.springframework.context.annotation.Bean
 import org.springframework.core.task.TaskExecutor
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing
+import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 
 @SpringBootApplication(exclude = [UserDetailsServiceAutoConfiguration::class])
 @EnableJpaAuditing
+@EnableScheduling
 class DutyparkApplication(
     private val authService: AuthService,
     private val jwtConfig: JwtConfig,

@@ -58,7 +58,8 @@ class JwtProvider(
             name = claims["name"] as String,
             departmentId = claims["departmentId"].toString().toLong(),
             departmentName = claims["departmentName"] as String,
-            isAdmin = dutyparkProperties.adminEmails.contains(email)
+            isAdmin = dutyparkProperties.adminEmails.contains(email),
+            jwt = token
         )
     }
 
