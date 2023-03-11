@@ -33,4 +33,4 @@ server:
 jwt:
   secret: "WvQiOAms2XFyW/UnmfO/9xL24ch4IlfUikP9QohMuso=" # Change it on production
   token-validity-in-seconds: 1800 # 30 minutes
-  refresh-token-validity-in-days: 30 # 30 days
+  refresh-token-validity-in-days: 7 # 7 days

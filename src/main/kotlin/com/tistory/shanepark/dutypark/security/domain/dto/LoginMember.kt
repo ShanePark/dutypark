@@ -6,9 +6,9 @@ data class LoginMember(
     val name: String,
     val departmentId: Long?,
     val departmentName: String,
+    val jwt: String,
     var isAdmin: Boolean
 ) {
-
     companion object {
         const val attrName: String = "loginMember"
     }

@@ -1,7 +1,8 @@
 package com.tistory.shanepark.dutypark.security.controller
 
-import com.tistory.shanepark.dutypark.common.exceptions.AuthenticationException
+import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
+import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.*
 @RestController
 class AuthController(
     private val authService: AuthService,
+    private val refreshTokenService: RefreshTokenService,
     private val jwtConfig: JwtConfig,
     @Value("\${server.ssl.enabled}") private val isSecure: Boolean
 ) {
@@ -31,11 +33,14 @@ class AuthController(
         @SessionAttribute(name = "referer", required = false) referer: String?
     ): ResponseEntity<String> {
         try {
-            val token = authService.login(loginDto)
-            val refreshToken =
-                authService.createRefreshToken(loginDto = loginDto, request = req)
+            val loginMember = authService.login(loginDto)
+            val refreshToken = refreshTokenService.createRefreshToken(
+                memberId = loginMember.id,
+                remoteAddr = req.remoteAddr,
+                userAgent = req.getHeader(HttpHeaders.USER_AGENT)
+            )
 
-            val jwtCookie = ResponseCookie.from("SESSION", token)
+            val jwtCookie = ResponseCookie.from("SESSION", loginMember.jwt)
                 .httpOnly(true)
                 .path("/")
                 .secure(true)
@@ -43,7 +48,7 @@ class AuthController(
                 .sameSite(SameSite.STRICT.name)
                 .build()
 
-            val refToken = ResponseCookie.from("REFRESH_TOKEN", refreshToken)
+            val refToken = ResponseCookie.from("REFRESH_TOKEN", refreshToken.token)
                 .httpOnly(true)
                 .path("/")
                 .secure(isSecure)
@@ -75,7 +80,7 @@ class AuthController(
                 })
             return responseEntity
 
-        } catch (e: AuthenticationException) {
+        } catch (e: DutyparkAuthException) {
             return ResponseEntity.status(401).body(e.message)
         }
     }

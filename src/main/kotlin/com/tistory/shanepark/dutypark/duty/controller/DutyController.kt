@@ -1,6 +1,6 @@
 package com.tistory.shanepark.dutypark.duty.controller
 
-import com.tistory.shanepark.dutypark.common.exceptions.AuthenticationException
+import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.MemoDto
@@ -46,7 +46,7 @@ class DutyController(
     ) {
         if (loginMember.id != dutyMemberId) {
             log.warn("login member and request duty member does not match: login:$loginMember.id, dutyMemberId:${dutyMemberId}")
-            throw AuthenticationException("login member and request dutyMemberId does not match")
+            throw DutyparkAuthException("login member and request dutyMemberId does not match")
         }
     }
 

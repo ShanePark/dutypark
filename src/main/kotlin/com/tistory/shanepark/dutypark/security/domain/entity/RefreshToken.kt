@@ -48,7 +48,11 @@ class RefreshToken(
 
     private fun slideValidUntil() {
         if (validUntil.isBefore(LocalDateTime.now().plusWeeks(1))) {
-            validUntil = LocalDateTime.now().plusMonths(1)
+            validUntil = LocalDateTime.now().plusWeeks(1)
         }
+    }
+
+    fun isValid(): Boolean {
+        return this.validUntil.isAfter(LocalDateTime.now())
     }
 }
