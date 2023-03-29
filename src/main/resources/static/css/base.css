@@ -86,6 +86,10 @@ ol.day-grid li.today {
     color: #444;
 }
 
+.edit .today .bi-pin-angle-fill {
+    right: 0px;
+}
+
 .today .date_number {
     color: indianred;
 }

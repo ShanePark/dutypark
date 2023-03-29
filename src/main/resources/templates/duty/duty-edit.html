@@ -58,11 +58,8 @@
           th:classappend='|BACKGROUND-${ duty?.dutyColor ?: offColor}${today.getYear()+1900==year and today.getMonth()+1 == month and today.getDate() == i ? " today": "" }|'>
         <div class="date container">
           <div class="day">
+            <i class="bi bi-pin-angle-fill hidden"></i>
             <span th:text="${i}"></span>
-            <i class="bi edit-memo"
-               th:if='${#strings.isEmpty(duty?.memo)}'
-               th:classappend= 'bi-calendar-plus'
-               th:attr='data-memo=${duty?.memo?:""}'></i>
           </div>
           <div class="duty">
             <div class="duty-type-list" th:each="type:${dutyTypes}">
@@ -81,6 +78,10 @@
                th:attr='data-memo=${duty?.memo?:""}'
                th:text="${duty?.memo}">
             </i>
+            <i class="bi edit-memo"
+               th:if='${#strings.isEmpty(duty?.memo)}'
+               th:classappend='bi-calendar-plus'
+               th:attr='data-memo=${duty?.memo?:""}'></i>
           </div>
         </div>
       </li>
@@ -143,23 +144,22 @@
                             confirmButtonText: '확인'
                         })
                         btn.data('memo', memo);
+                        btn.text(memo);
                         if (memo.length > 0) {
                             date.find('.bi-calendar-plus').removeClass('bi-calendar-plus').addClass('bi-calendar-check');
                         } else {
                             date.find('.bi-calendar-check').removeClass('bi-calendar-check').addClass('bi-calendar-plus');
                         }
                         return true;
+                    }).catch(error => {
+                        Swal.showValidationMessage(
+                            `메모 저장에 실패 하였습니다 : ${error}`
+                        )
                     })
-                        .catch(error => {
-                            Swal.showValidationMessage(
-                                `메모 저장에 실패 하였습니다 : ${error}`
-                            )
-                        })
                 },
                 allowOutsideClick: () => !Swal.isLoading()
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // TODO: 메모 저장
                 }
             });
         });
