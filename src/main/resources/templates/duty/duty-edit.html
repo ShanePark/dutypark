@@ -60,7 +60,8 @@
           <div class="day">
             <span th:text="${i}"></span>
             <i class="bi edit-memo"
-               th:classappend="${#strings.isEmpty(duty?.memo) ? 'bi-calendar-plus' : 'bi-calendar-check'}"
+               th:if='${#strings.isEmpty(duty?.memo)}'
+               th:classappend= 'bi-calendar-plus'
                th:attr='data-memo=${duty?.memo?:""}'></i>
           </div>
           <div class="duty">
@@ -72,6 +73,14 @@
                 </button>
               </div>
             </div>
+          </div>
+          <div class="memo">
+            <i class="bi edit-memo"
+               th:if='!${#strings.isEmpty(duty?.memo)}'
+               th:classappend='bi-pencil-square'
+               th:attr='data-memo=${duty?.memo?:""}'
+               th:text="${duty?.memo}">
+            </i>
           </div>
         </div>
       </li>

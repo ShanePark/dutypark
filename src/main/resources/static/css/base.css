@@ -76,14 +76,18 @@ ol.day-grid li {
 }
 
 ol.day-grid li.today {
-    box-shadow: 2px 4px 7px 3px grey;
-    border: 0px;
+    position: relative;
+}
+
+.today .bi-pin-angle-fill {
+    display: block;
+    position: absolute;
+    left: 2em;
+    color: #444;
 }
 
 .today .date_number {
-    font-weight: bold;
-    text-decoration: underline;
-    font-size: 1.1em;
+    color: indianred;
 }
 
 .BACKGROUND-RED {
@@ -172,27 +176,17 @@ header .current {
     text-align: center !important;
 }
 
-.edit-memo {
-    font-size: 1.2em;
-    float: right;
-}
-
 .edit-memo:hover {
     cursor: pointer;
 }
 
-.memo {
+p.memo {
     white-space: pre-line;
 }
 
 .edit .day .memo {
     text-align: left;
     font-size: 0.9em;
-}
-
-.edit .today .day {
-    text-decoration: underline;
-    font-weight: bolder;
 }
 
 .homeButton {
@@ -392,4 +386,8 @@ a.memberPage-link:hover {
 
 .d-day-item .d-day_day .pretty {
     font-size: 0.8em;
+}
+
+.hidden {
+    display: none;
 }

@@ -61,6 +61,7 @@
           th:classappend='|BACKGROUND-${ duty?.dutyColor ?: offColor}${today.getYear()+1900==year and today.getMonth()+1 == month and today.getDate() == i ? " today": "" }|'>
         <div class="date container">
           <div class="day row">
+            <i class="bi bi-pin-angle-fill hidden"></i>
             <span class="date_number" th:text='|${i}|'></span>
           </div>
           <div class="duty">
