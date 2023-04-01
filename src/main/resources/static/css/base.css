@@ -75,25 +75,6 @@ ol.day-grid li {
     box-shadow: 2px 4px 7px 3px #eaeaea;
 }
 
-ol.day-grid li.today {
-    position: relative;
-}
-
-.today .bi-pin-angle-fill {
-    display: block;
-    position: absolute;
-    left: 2em;
-    color: #444;
-}
-
-.edit .today .bi-pin-angle-fill {
-    right: 0px;
-}
-
-.today .date_number {
-    color: indianred;
-}
-
 .BACKGROUND-RED {
     background-color: lightpink !important;
 }
@@ -186,6 +167,35 @@ header .current {
 
 p.memo {
     white-space: pre-line;
+}
+
+.day {
+    width: fit-content;
+    position: relative;
+    margin: 0px auto;
+}
+
+.day span {
+    text-align: center;
+}
+
+.day-grid li:nth-child(7n+1) .day {
+    color: red;
+}
+
+.day-grid li:nth-child(7n) .day {
+    color: blue;
+}
+
+.day-grid .today .day span {
+    color: white;
+}
+
+.day-grid .today .day {
+    background-color: red;
+    border-radius: 100%;
+    width: 1.5em;
+    height: 1.5em;
 }
 
 .edit .day .memo {
