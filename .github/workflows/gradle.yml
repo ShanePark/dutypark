@@ -1,4 +1,4 @@
-name: Java CI with Gradle
+name: Dutypark CI/CD
 
 on:
   push:
@@ -11,17 +11,40 @@ permissions:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up JDK 17
-      uses: actions/setup-java@v3
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-    - name: Build with Gradle
-      uses: gradle/gradle-build-action@67421db6bd0bf253fb4bd25b31ebb98943c375e1
-      with:
-        arguments: build
+      - uses: actions/checkout@v3
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - name: Build with Gradle
+        uses: gradle/gradle-build-action@67421db6bd0bf253fb4bd25b31ebb98943c375e1
+        with:
+          arguments: build
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: dutypark-ci
+          path: build/libs/*.jar
+
+  deploy:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: dutypark-ci
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: SCP transfer
+        run: scp *.jar ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }}:/shane
+      - name: Execute remote commands
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} "sudo fuser -k 443/tcp"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} "sudo nohup java -jar /shane/*.jar --spring.profiles.active=op > /shane/nohup.log 2>&1 &"
