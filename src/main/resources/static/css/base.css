@@ -75,17 +75,6 @@ ol.day-grid li {
     box-shadow: 2px 4px 7px 3px #eaeaea;
 }
 
-ol.day-grid li.today {
-    box-shadow: 2px 4px 7px 3px grey;
-    border: 0px;
-}
-
-.today .date_number {
-    font-weight: bold;
-    text-decoration: underline;
-    font-size: 1.1em;
-}
-
 .BACKGROUND-RED {
     background-color: lightpink !important;
 }
@@ -172,27 +161,46 @@ header .current {
     text-align: center !important;
 }
 
-.edit-memo {
-    font-size: 1.2em;
-    float: right;
-}
-
 .edit-memo:hover {
     cursor: pointer;
 }
 
-.memo {
+p.memo {
     white-space: pre-line;
+}
+
+.day {
+    width: fit-content;
+    position: relative;
+    margin: 0px auto;
+}
+
+.day span {
+    text-align: center;
+}
+
+.day-grid li:nth-child(7n+1) .day {
+    color: red;
+}
+
+.day-grid li:nth-child(7n) .day {
+    color: blue;
+}
+
+.day-grid .today .day span {
+    color: white;
+}
+
+.day-grid .today .day {
+    background-color: red;
+    border-radius: 100%;
+    width: 1.5em;
+    height: 1.5em;
 }
 
 .edit .day .memo {
     text-align: left;
     font-size: 0.9em;
-}
-
-.edit .today .day {
-    text-decoration: underline;
-    font-weight: bolder;
 }
 
 .homeButton {
@@ -392,4 +400,8 @@ a.memberPage-link:hover {
 
 .d-day-item .d-day_day .pretty {
     font-size: 0.8em;
+}
+
+.hidden {
+    display: none;
 }

@@ -13,6 +13,7 @@ interface MemberRepository : JpaRepository<Member, Long> {
     @EntityGraph(attributePaths = ["department"])
     override fun findAll(): MutableList<Member>
 
+    @EntityGraph(attributePaths = ["department"])
     fun findByEmail(email: String): Optional<Member>
 
 }

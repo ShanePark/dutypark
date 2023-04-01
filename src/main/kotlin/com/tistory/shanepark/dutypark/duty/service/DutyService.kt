@@ -13,18 +13,19 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
-@Transactional(readOnly = true)
+@Transactional
 class DutyService(
     val dutyRepository: DutyRepository,
     val dutyTypeRepository: DutyTypeRepository,
     val memberService: MemberService
 ) {
+
+    @Transactional(readOnly = true)
     fun findDutyByMemberAndYearAndMonth(member: Member, year: Int, month: Int): Map<Int, DutyDto?> {
         return dutyRepository.findAllByMemberAndDutyYearAndDutyMonth(member, year, month)
             .associate { it.dutyDay to DutyDto(it) }
     }
 
-    @Transactional
     fun update(dutyUpdateDto: DutyUpdateDto) {
         val member = memberService.findById(dutyUpdateDto.memberId)
 
@@ -56,12 +57,10 @@ class DutyService(
         }
     }
 
-    @Transactional
     fun save(duty: Duty) {
         dutyRepository.save(duty)
     }
 
-    @Transactional
     fun updateMemo(memoDto: MemoDto) {
         val member = memberService.findById(memoDto.memberId)
 

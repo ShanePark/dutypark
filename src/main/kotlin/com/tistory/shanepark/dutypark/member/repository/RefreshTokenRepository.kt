@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.Query
 import java.time.LocalDateTime
 
 interface RefreshTokenRepository : JpaRepository<RefreshToken, Long> {
+
+    @EntityGraph(attributePaths = ["member", "member.department"])
     fun findByToken(token: String): RefreshToken?
 
     @Query("select r from RefreshToken r join fetch r.member order by r.lastUsed desc")

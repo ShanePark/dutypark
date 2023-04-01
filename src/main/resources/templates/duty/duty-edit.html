@@ -52,29 +52,38 @@
     <th:block th:each="i : ${#numbers.sequence(0, offset % 7 -1, 1)}">
       <li class="month-prev"/>
     </th:block>
-    <th:block th:each="i : ${#numbers.sequence(1, lastDay)}">
-      <li th:with="duty=${duties.get(i)}"
-          th:data-day="${i}"
-          th:classappend='|BACKGROUND-${ duty?.dutyColor ?: offColor}${today.getYear()+1900==year and today.getMonth()+1 == month and today.getDate() == i ? " today": "" }|'>
-        <div class="date container">
-          <div class="day">
-            <span th:text="${i}"></span>
-            <i class="bi edit-memo"
-               th:classappend="${#strings.isEmpty(duty?.memo) ? 'bi-calendar-plus' : 'bi-calendar-check'}"
-               th:attr='data-memo=${duty?.memo?:""}'></i>
-          </div>
-          <div class="duty">
-            <div class="duty-type-list" th:each="type:${dutyTypes}">
-              <div class="duty-type" th:data-type_id="${type.id}">
-                <button class="btn btn-sm btn-outline-dark"
-                        th:classappend='|BACKGROUND-${type.color} ${(type.name == duty?.dutyType or (type.id == null and duty?.dutyType==null) ) ? "selected" : ""}|'
-                        th:text="${type.name}">
-                </button>
+      <th:block th:each="i : ${#numbers.sequence(1, lastDay)}">
+        <li th:with="duty=${duties.get(i)}"
+            th:data-day="${i}"
+            th:classappend='|BACKGROUND-${ duty?.dutyColor ?: offColor}${today.getYear()+1900==year and today.getMonth()+1 == month and today.getDate() == i ? " today": "" }|'>
+          <div class="date container">
+            <div class="day">
+              <span th:text="${i}"></span>
+            </div>
+            <div class="duty">
+              <div class="duty-type-list" th:each="type:${dutyTypes}">
+                <div class="duty-type" th:data-type_id="${type.id}">
+                  <button class="btn btn-sm btn-outline-dark"
+                          th:classappend='|BACKGROUND-${type.color} ${(type.name == duty?.dutyType or (type.id == null and duty?.dutyType==null) ) ? "selected" : ""}|'
+                          th:text="${type.name}">
+                  </button>
+                </div>
               </div>
             </div>
+            <div class="memo">
+              <i class="bi edit-memo"
+                 th:if='!${#strings.isEmpty(duty?.memo)}'
+                 th:classappend='bi-pencil-square'
+                 th:attr='data-memo=${duty?.memo?:""}'
+                 th:text="${duty?.memo}">
+              </i>
+              <i class="bi edit-memo"
+                 th:if='${#strings.isEmpty(duty?.memo)}'
+                 th:classappend='bi-calendar-plus'
+                 th:attr='data-memo=${duty?.memo?:""}'></i>
+            </div>
           </div>
-        </div>
-      </li>
+        </li>
     </th:block>
     <th:block th:if="(${offset} + ${lastDay}) % 7 > 0"
               th:each="i : ${#numbers.sequence(1, 7 - ((offset + lastDay) % 7) )}">
@@ -134,23 +143,22 @@
                             confirmButtonText: '확인'
                         })
                         btn.data('memo', memo);
+                        btn.text(memo);
                         if (memo.length > 0) {
                             date.find('.bi-calendar-plus').removeClass('bi-calendar-plus').addClass('bi-calendar-check');
                         } else {
                             date.find('.bi-calendar-check').removeClass('bi-calendar-check').addClass('bi-calendar-plus');
                         }
                         return true;
+                    }).catch(error => {
+                        Swal.showValidationMessage(
+                            `메모 저장에 실패 하였습니다 : ${error}`
+                        )
                     })
-                        .catch(error => {
-                            Swal.showValidationMessage(
-                                `메모 저장에 실패 하였습니다 : ${error}`
-                            )
-                        })
                 },
                 allowOutsideClick: () => !Swal.isLoading()
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // TODO: 메모 저장
                 }
             });
         });
