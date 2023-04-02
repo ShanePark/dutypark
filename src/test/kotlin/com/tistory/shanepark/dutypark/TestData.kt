@@ -5,19 +5,20 @@ import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
+import com.tistory.shanepark.dutypark.member.domain.dto.MemberCreateDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.member.service.MemberService
 import org.springframework.context.ApplicationListener
 import org.springframework.context.event.ContextRefreshedEvent
-import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Component
 
 @Component
 class TestData(
     private val departmentRepository: DepartmentRepository,
     private val memberRepository: MemberRepository,
+    private val memberService: MemberService,
     private val dutyTypeRepository: DutyTypeRepository,
-    private val passwordEncoder: PasswordEncoder
 ) : ApplicationListener<ContextRefreshedEvent> {
 
     override fun onApplicationEvent(event: ContextRefreshedEvent) {
@@ -32,11 +33,18 @@ class TestData(
 
     private fun initTestMember() {
         listOf(member, member2).forEach {
-            it.password = passwordEncoder.encode(it.password)
-            memberRepository.saveAll(mutableListOf(member, member2))
+            val memberCreateDto = MemberCreateDto(
+                name = it.name,
+                email = it.email,
+                password = testPass,
+            )
+            val saved = memberService.createMember(memberCreateDto)
+            saved.department = department
+            memberRepository.save(saved)
+
+            it.id = saved.id
+            it.password = saved.password
         }
-        member.password = "1234"
-        member2.password = "1234"
     }
 
     private fun initTestDepartment() {
@@ -46,18 +54,17 @@ class TestData(
     companion object {
         val department = Department("testDept1")
         val department2 = Department("testDept2")
+        const val testPass = "1234"
 
-        val member = Member(
+        var member = Member(
             email = "test@duty.park",
-            department = department,
             name = "dummy",
-            password = "1234"
+            password = testPass
         )
-        val member2 = Member(
+        var member2 = Member(
             email = "test2@duty.park",
-            department = department,
             name = "dummy",
-            password = "1234"
+            password = testPass
         )
 
         val dutyTypes = listOf(

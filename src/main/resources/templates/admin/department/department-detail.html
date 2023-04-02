@@ -1,21 +1,41 @@
-<div class="department-detail">
-  <h2>{{ department.name }}</h2>
+<div class="department-detail" v-cloak>
+  <h1>{{ department.name }}</h1>
   <div class="department-info">
-    <p>Created at: {{ department.baseTime.createdDate }}</p>
-    <p>Updated at: {{ department.baseTime.modifiedDate }}</p>
+    <h3>Department Information</h3>
+    <table class="table table-striped">
+      <tbody>
+      <tr>
+        <th scope="row">Name</th>
+        <td>{{ department.name }}</td>
+      </tr>
+      <tr>
+        <th scope="row">Description</th>
+        <td>{{ department.description }}</td>
+      </tr>
+      <tr>
+        <th scope="row">Created At</th>
+        <td>{{ department.baseTime.createdDate }}</td>
+      </tr>
+      <tr>
+        <th scope="row">Updated At</th>
+        <td>{{ department.baseTime.modifiedDate }}</td>
+      </tr>
+      </tbody>
+    </table>
   </div>
   <div class="member-list">
-    <span>Members</span>
-    <span>({{ department.members.length }})</span>
+    <h3>Members</h3>
     <table class="table table-striped">
       <thead>
       <tr>
+        <th scope="col"></th>
         <th scope="col">Name</th>
         <th scope="col">Email</th>
       </tr>
       </thead>
       <tbody>
-      <tr v-for="member in department.members">
+      <tr v-for="(member, index) in department.members">
+        <td>{{index+1}}</td>
         <td>{{ member.name }}</td>
         <td>{{ member.email }}</td>
       </tr>

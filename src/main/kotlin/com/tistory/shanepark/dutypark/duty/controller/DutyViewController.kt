@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.duty.controller
 
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
+import com.tistory.shanepark.dutypark.department.domain.entity.Department
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeDto
 import com.tistory.shanepark.dutypark.duty.service.DutyService
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
@@ -74,7 +75,10 @@ class DutyViewController(
         month: Int,
         model: Model
     ) {
-        val department = member.department
+        val department: Department = member.department?.let {
+            it
+        } ?: return
+
         model.addAttribute("member", MemberDto(member))
         model.addAttribute("offColor", department.offColor.name)
 

@@ -8,6 +8,7 @@ import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 data class DepartmentDto(
     val id: Long,
     val name: String,
+    val description: String?,
     val dutyTypes: List<DutyTypeDto>,
     val members: List<MemberDto>,
     val baseTime: BaseTimeDto
@@ -22,6 +23,7 @@ data class DepartmentDto(
             return DepartmentDto(
                 id = department.id!!,
                 name = department.name,
+                description = department.description,
                 dutyTypes = dutyTypes,
                 members = members,
                 baseTime = department.baseTimeDto()

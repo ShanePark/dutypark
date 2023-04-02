@@ -9,7 +9,11 @@ import java.time.LocalDateTime
 class RefreshTokenTest {
 
     private val dept = Department("testDept")
-    private val member = Member(department = dept, name = "", email = "", password = "")
+    private val member = Member(name = "", email = "", password = "")
+
+    init {
+        member.department = dept
+    }
 
     @Test
     fun `validation update its remote Addr`() {

@@ -5,7 +5,7 @@ data class LoginMember(
     val email: String,
     val name: String,
     val departmentId: Long?,
-    val departmentName: String,
+    val departmentName: String?,
     @Transient
     val jwt: String,
     var isAdmin: Boolean

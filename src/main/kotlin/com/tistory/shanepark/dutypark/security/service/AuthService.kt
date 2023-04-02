@@ -22,7 +22,6 @@ class AuthService(
     private val refreshTokenService: RefreshTokenService,
     private val jwtProvider: JwtProvider,
 ) {
-
     val log: Logger = LoggerFactory.getLogger(AuthService::class.java)
 
 

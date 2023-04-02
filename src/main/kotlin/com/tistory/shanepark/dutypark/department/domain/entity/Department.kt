@@ -9,18 +9,26 @@ import jakarta.persistence.*
 @Entity
 class Department(
     @Column(unique = true)
-    val name: String,
-
-    @Enumerated(EnumType.STRING)
-    var offColor: Color = Color.GREY,
+    var name: String,
 ) : BaseTimeEntity() {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
+
+    var description: String = ""
+
+    @Enumerated(EnumType.STRING)
+    var offColor: Color = Color.GREY
 
     @OneToMany(mappedBy = "department")
     val dutyTypes: MutableList<DutyType> = mutableListOf()
 
     @OneToMany(mappedBy = "department")
     val members: MutableList<Member> = mutableListOf()
+
+    fun addMember(member: Member) {
+        members.add(member)
+        member.department = this
+    }
+
 }
