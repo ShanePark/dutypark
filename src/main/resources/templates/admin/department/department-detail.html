@@ -1,0 +1,73 @@
+<div class="department-detail">
+  <h2>{{ department.name }}</h2>
+  <div class="department-info">
+    <p>Created at: {{ department.baseTime.createdDate }}</p>
+    <p>Updated at: {{ department.baseTime.modifiedDate }}</p>
+  </div>
+  <div class="member-list">
+    <span>Members</span>
+    <span>({{ department.members.length }})</span>
+    <table class="table table-striped">
+      <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Email</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr v-for="member in department.members">
+        <td>{{ member.name }}</td>
+        <td>{{ member.email }}</td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="duty_type-list">
+    <h3>Duty Types</h3>
+    <table class="table table-striped">
+      <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Color</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr v-for="dutyType in department.dutyTypes">
+        <td>{{ dutyType.name }}</td>
+        <td>{{ dutyType.color }}</td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+    $(function () {
+        // current url last path is id
+        const departmentId = window.location.pathname.split('/').pop();
+        console.log(departmentId);
+        const app = new Vue({
+            el: '.department-detail',
+            data: {
+                department: {}
+            },
+            mounted() {
+                this.load();
+            },
+            methods: {
+                load: function () {
+                    $.ajax({
+                        url: '/api/departments/' + departmentId,
+                        type: 'GET',
+                        success: function (response) {
+                            app.department = response;
+                        },
+                        error: function (error) {
+                            console.log(error);
+                        }
+                    })
+                }
+            }
+        })
+    })
+</script>

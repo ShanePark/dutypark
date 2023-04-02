@@ -1,8 +1,9 @@
 package com.tistory.shanepark.dutypark.department.domain.entity
 
-import com.tistory.shanepark.dutypark.common.entity.BaseTimeEntity
+import com.tistory.shanepark.dutypark.common.domain.entity.BaseTimeEntity
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.enums.Color
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import jakarta.persistence.*
 
 @Entity
@@ -19,4 +20,7 @@ class Department(
 
     @OneToMany(mappedBy = "department")
     val dutyTypes: MutableList<DutyType> = mutableListOf()
+
+    @OneToMany(mappedBy = "department")
+    val members: MutableList<Member> = mutableListOf()
 }

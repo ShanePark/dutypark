@@ -1,4 +1,4 @@
-package com.tistory.shanepark.dutypark.common.entity
+package com.tistory.shanepark.dutypark.common.domain
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.TestData
@@ -8,8 +8,6 @@ import jakarta.persistence.EntityManager
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 
 class BaseTimeEntityTest :DutyparkIntegrationTest(){

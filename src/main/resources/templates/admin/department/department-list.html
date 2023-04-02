@@ -1,3 +1,47 @@
 <div class="departments">
-
+    <h2>Departments</h2>
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Members</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr v-for="department in departments">
+            <td>
+                <a :href="'/admin/department/' + department.id">{{ department.name }}</a>
+            </td>
+            <td>{{ department.members.length }}</td>
+        </tr>
+        </tbody>
+    </table>
 </div>
+
+<script>
+  $(function() {
+      const app = new Vue({
+          el: '.departments',
+          data: {
+              departments: []
+          },
+          mounted() {
+              this.load();
+          },
+          methods: {
+              load: function() {
+                  $.ajax({
+                      url: '/api/departments',
+                      type: 'GET',
+                      success: function(response) {
+                          app.departments = response.content;
+                      },
+                      error: function(error) {
+                          console.log(error);
+                      }
+                  })
+              }
+          }
+      })
+  })
+</script>

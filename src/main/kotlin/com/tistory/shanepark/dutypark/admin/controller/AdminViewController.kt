@@ -18,8 +18,14 @@ class AdminViewController {
     }
 
     @GetMapping("/department")
-    fun adminMenu(model: Model): String {
+    fun department(model: Model): String {
         addContent(model, "department/department-list")
+        return adminLayout
+    }
+
+    @GetMapping("/department/{id}")
+    fun departmentDetail(model: Model): String {
+        addContent(model, "department/department-detail")
         return adminLayout
     }
 
