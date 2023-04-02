@@ -7,7 +7,9 @@ import java.util.*
 
 interface DepartmentRepository : JpaRepository<Department, Long> {
 
-    @EntityGraph(attributePaths = ["dutyTypes"])
+    @EntityGraph(attributePaths = ["dutyTypes", "members"])
     override fun findById(id: Long): Optional<Department>
+
+    fun findByName(name: String): Department?
 
 }

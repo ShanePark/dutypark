@@ -46,4 +46,10 @@ class DepartmentService(
         repository.deleteById(id)
     }
 
+    fun isDuplicated(name: String): Boolean {
+        repository.findByName(name).let {
+            return it != null
+        }
+    }
+
 }

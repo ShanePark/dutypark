@@ -409,3 +409,7 @@ a.memberPage-link:hover {
 .hidden {
     display: none;
 }
+
+.swal2-html-container form {
+    text-align: left;
+}

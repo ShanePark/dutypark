@@ -25,7 +25,7 @@
   </div>
   <div class="member-list">
     <h3>Members</h3>
-    <table class="table table-striped">
+    <table class="table table-striped" v-if="department.members.length>0">
       <thead>
       <tr>
         <th scope="col"></th>
@@ -41,10 +41,11 @@
       </tr>
       </tbody>
     </table>
+    <p v-else>There is no member in this group</p>
   </div>
   <div class="duty_type-list">
     <h3>Duty Types</h3>
-    <table class="table table-striped">
+    <table class="table table-striped" v-if="department.dutyTypes.length>0">
       <thead>
       <tr>
         <th scope="col">Name</th>
@@ -58,6 +59,7 @@
       </tr>
       </tbody>
     </table>
+    <p v-else>There is no duty type in this group</p>
   </div>
 </div>
 
@@ -65,7 +67,6 @@
     $(function () {
         // current url last path is id
         const departmentId = window.location.pathname.split('/').pop();
-        console.log(departmentId);
         const app = new Vue({
             el: '.department-detail',
             data: {
