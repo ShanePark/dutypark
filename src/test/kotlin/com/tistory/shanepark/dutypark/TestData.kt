@@ -1,11 +1,11 @@
 package com.tistory.shanepark.dutypark
 
+import com.tistory.shanepark.dutypark.department.domain.entity.Department
+import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
-import com.tistory.shanepark.dutypark.member.domain.entity.Department
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
-import com.tistory.shanepark.dutypark.member.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import org.springframework.context.ApplicationListener
 import org.springframework.context.event.ContextRefreshedEvent

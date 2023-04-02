@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.common.entity
 
+import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.TestData
 import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
@@ -11,9 +12,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 
-@SpringBootTest
-@Transactional
-class BaseTimeEntityTest {
+class BaseTimeEntityTest :DutyparkIntegrationTest(){
 
     @Autowired
     lateinit var refreshTokenRepository: RefreshTokenRepository

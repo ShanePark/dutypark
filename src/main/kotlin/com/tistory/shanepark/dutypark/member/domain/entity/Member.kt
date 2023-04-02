@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.member.domain.entity
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.tistory.shanepark.dutypark.department.domain.entity.Department
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import jakarta.persistence.*
 

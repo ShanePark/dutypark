@@ -1,8 +1,7 @@
 package com.tistory.shanepark.dutypark.duty.domain.entity
 
-import com.fasterxml.jackson.annotation.JsonIgnore
+import com.tistory.shanepark.dutypark.department.domain.entity.Department
 import com.tistory.shanepark.dutypark.duty.enums.Color
-import com.tistory.shanepark.dutypark.member.domain.entity.Department
 import jakarta.persistence.*
 
 @Entity

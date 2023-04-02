@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.duty.service
 
+import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.TestData
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
@@ -7,12 +8,8 @@ import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.transaction.annotation.Transactional
 
-@SpringBootTest
-@Transactional
-internal class DutyServiceTest {
+internal class DutyServiceTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var dutyService: DutyService

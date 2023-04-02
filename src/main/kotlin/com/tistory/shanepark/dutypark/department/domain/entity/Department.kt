@@ -1,4 +1,4 @@
-package com.tistory.shanepark.dutypark.member.domain.entity
+package com.tistory.shanepark.dutypark.department.domain.entity
 
 import com.tistory.shanepark.dutypark.common.entity.BaseTimeEntity
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType

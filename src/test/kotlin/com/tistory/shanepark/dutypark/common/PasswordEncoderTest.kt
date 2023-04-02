@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.common
 
+import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.slf4j.Logger
@@ -7,8 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.security.crypto.password.PasswordEncoder
 
-@SpringBootTest
-internal class PasswordEncoderTest {
+internal class PasswordEncoderTest : DutyparkIntegrationTest(){
 
     @Autowired
     lateinit var passwordEncoder: PasswordEncoder
