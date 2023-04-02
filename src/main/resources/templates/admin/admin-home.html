@@ -1,49 +1,40 @@
-<!DOCTYPE html>
-<head th:replace="~{layout/include::link}"/>
-<html lang="en">
-<body>
-<div th:replace="~{layout/header::header-member}"/>
-<div class="body adminPage">
-  Active Refresh Tokens
-  <div class="refresh-tokens">
-    <div v-for="user in users">
-      <table>
-        <colgroup>
-          <col style="width: 60px;">
-          <col style="width: 150px;">
-          <col style="width: 150px;">
-          <col style="width: 200px;">
-          <col style="width: 120px;">
-          <col style="width: 120px;">
-        </colgroup>
-        <tr>
-          <th colspan="6" style="text-align: center; font-size:1.3em;">{{ user.name }}</th>
-        </tr>
-        <tr>
-          <th></th>
-          <th>Last active</th>
-          <th>Ip</th>
-          <th>Device</th>
-          <th>Browser</th>
-        </tr>
-        <tr v-for="(token, index) in user.tokens">
-          <td>{{ index+1 }}</td>
-          <td>{{ token.lastUsed | fromNow }}</td>
-          <td>{{ token.remoteAddr}}</td>
-          <td>{{ token.userAgent ? token.userAgent.device : '' }}</td>
-          <td>{{ token.userAgent ? token.userAgent.browser : '' }}</td>
-        </tr>
-      </table>
-    </div>
+Active Refresh Tokens
+<div class="refresh-tokens">
+  <div v-for="user in users">
+    <table>
+      <colgroup>
+        <col style="width: 60px;">
+        <col style="width: 150px;">
+        <col style="width: 150px;">
+        <col style="width: 200px;">
+        <col style="width: 120px;">
+        <col style="width: 120px;">
+      </colgroup>
+      <tr>
+        <th colspan="6" style="text-align: center; font-size:1.3em;">{{ user.name }}</th>
+      </tr>
+      <tr>
+        <th></th>
+        <th>Last active</th>
+        <th>Ip</th>
+        <th>Device</th>
+        <th>Browser</th>
+      </tr>
+      <tr v-for="(token, index) in user.tokens">
+        <td>{{ index+1 }}</td>
+        <td>{{ token.lastUsed | fromNow }}</td>
+        <td>{{ token.remoteAddr}}</td>
+        <td>{{ token.userAgent ? token.userAgent.device : '' }}</td>
+        <td>{{ token.userAgent ? token.userAgent.browser : '' }}</td>
+      </tr>
+    </table>
   </div>
 </div>
-</body>
-</html>
 
 <script>
     $(function () {
         const app = new Vue({
-            el: '.body',
+            el: '.refresh-tokens',
             data: {
                 users: []
             },

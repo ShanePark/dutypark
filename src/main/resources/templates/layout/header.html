@@ -28,6 +28,23 @@
   </header>
 </div>
 
+<div th:fragment="header-admin">
+  <header class="row">
+    <div th:replace="~{layout/header::header-left}"></div>
+    <div class="col-6 member-menu">
+      <ul>
+        <li>
+          <a href="/admin">토큰관리</a>
+        </li>
+        <li>
+          <a href="/admin/department">부서관리</a>
+        </li>
+      </ul>
+    </div>
+    <div th:replace="~{layout/header::header-right}"></div>
+  </header>
+</div>
+
 <div th:fragment="header-left" class="left-area col-3">
   <a class="homeButton" th:href="@{/}">
     <i class="h_pointer bi bi-house-door"></i>
