@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.department.controller
 
 import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentCreateDto
 import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentDto
+import com.tistory.shanepark.dutypark.department.domain.dto.SimpleDepartmentDto
 import com.tistory.shanepark.dutypark.department.domain.enums.DepartmentNameCheckResult
 import com.tistory.shanepark.dutypark.department.domain.enums.DepartmentNameCheckResult.*
 import com.tistory.shanepark.dutypark.department.service.DepartmentService
@@ -18,8 +19,8 @@ class DepartmentController(
 ) {
 
     @GetMapping
-    fun findAll(@PageableDefault(page = 0, size = 10) page: Pageable): Page<DepartmentDto> {
-        return departmentService.findAll(page);
+    fun findAll(@PageableDefault(page = 0, size = 10) page: Pageable): Page<SimpleDepartmentDto> {
+        return departmentService.findAllWithMemberCount(page)
     }
 
     @GetMapping("/{id}")

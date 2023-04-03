@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.department.service
 
 import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentCreateDto
 import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentDto
+import com.tistory.shanepark.dutypark.department.domain.dto.SimpleDepartmentDto
 import com.tistory.shanepark.dutypark.department.domain.entity.Department
 import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
 import org.springframework.data.domain.Page
@@ -16,9 +17,8 @@ class DepartmentService(
 ) {
 
     @Transactional(readOnly = true)
-    fun findAll(pageable: Pageable): Page<DepartmentDto> {
-        val findAll = repository.findAll(pageable)
-        return findAll.map { DepartmentDto.of(it) }
+    fun findAllWithMemberCount(pageable: Pageable): Page<SimpleDepartmentDto> {
+        return repository.findAllWithMemberCount(pageable)
     }
 
     @Transactional(readOnly = true)
