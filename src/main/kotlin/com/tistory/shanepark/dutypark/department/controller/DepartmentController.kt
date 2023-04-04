@@ -13,7 +13,7 @@ import org.springframework.data.web.PageableDefault
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@RequestMapping("/api/departments")
+@RequestMapping("/admin/api/departments")
 class DepartmentController(
     val departmentService: DepartmentService
 ) {
@@ -43,6 +43,11 @@ class DepartmentController(
         if (departmentService.isDuplicated(name))
             return DUPLICATED
         return OK
+    }
+
+    @DeleteMapping("/{id}")
+    fun delete(@PathVariable id: Long) {
+        departmentService.delete(id)
     }
 
 }

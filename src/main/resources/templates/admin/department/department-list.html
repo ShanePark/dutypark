@@ -58,7 +58,7 @@
             methods: {
                 load: function () {
                     $.ajax({
-                        url: '/api/departments',
+                        url: '/admin/api/departments',
                         type: 'GET',
                         success: function (response) {
                             app.departments = response.content;
@@ -95,7 +95,7 @@
                         if (result.isConfirmed) {
                             const {name, description} = result.value;
                             $.ajax({
-                                url: '/api/departments',
+                                url: '/admin/api/departments',
                                 type: 'POST',
                                 data: JSON.stringify({name, description}),
                                 contentType: 'application/json',
@@ -119,7 +119,7 @@
         $(document).on('click', '.checker', function () {
             const name = $(this).parent().find('input[name="name"]').val();
             $.ajax({
-                url: '/api/departments/check',
+                url: '/admin/api/departments/check',
                 type: 'POST',
                 data: JSON.stringify({name}),
                 contentType: 'application/json',

@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.department.domain.dto
 
-import com.tistory.shanepark.dutypark.common.domain.dto.BaseTimeDto
 import com.tistory.shanepark.dutypark.department.domain.entity.Department
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
@@ -11,7 +10,8 @@ data class DepartmentDto(
     val description: String?,
     val dutyTypes: List<DutyTypeDto>,
     val members: List<MemberDto>,
-    val baseTime: BaseTimeDto
+    val createdDate: String,
+    val lastModifiedDate: String
 ) {
     companion object {
         fun of(department: Department): DepartmentDto {
@@ -26,7 +26,8 @@ data class DepartmentDto(
                 description = department.description,
                 dutyTypes = dutyTypes,
                 members = members,
-                baseTime = department.baseTimeDto()
+                createdDate = department.createdDate.toString(),
+                lastModifiedDate = department.lastModifiedDate.toString()
             )
         }
     }

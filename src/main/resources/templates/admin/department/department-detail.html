@@ -1,4 +1,9 @@
 <div class="department-detail" v-cloak>
+  <div class="buttons">
+    <a class="btn btn-dark" th:href="@{/admin/department}">Back to List</a>
+    <button class="btn btn-danger" v-on:click="remove()" :disabled="hasMember">Delete
+    </button>
+  </div>
   <div class="department-info">
     <h3>Department</h3>
     <table class="table table-striped">
@@ -13,18 +18,18 @@
       </tr>
       <tr>
         <th scope="row">Created At</th>
-        <td>{{ department.baseTime.createdDate }}</td>
+        <td>{{ department.createdDate }}</td>
       </tr>
       <tr>
         <th scope="row">Updated At</th>
-        <td>{{ department.baseTime.modifiedDate }}</td>
+        <td>{{ department.lastModifiedDate }}</td>
       </tr>
       </tbody>
     </table>
   </div>
   <div class="member-list">
     <h3>Members</h3>
-    <table class="table table-striped" v-if="department.members.length>0">
+    <table class="table table-striped" v-if="hasMember">
       <thead>
       <tr>
         <th scope="col"></th>
@@ -44,7 +49,7 @@
   </div>
   <div class="duty_type-list">
     <h3>Duty Types</h3>
-    <table class="table table-striped" v-if="department.dutyTypes.length>0">
+    <table class="table table-striped" v-if="hasDutyType">
       <thead>
       <tr>
         <th scope="col">Name</th>
@@ -74,10 +79,18 @@
             mounted() {
                 this.load();
             },
+            computed: {
+                hasMember: function () {
+                    return this.department.members && this.department.members.length > 0;
+                },
+                hasDutyType: function () {
+                    return this.department.dutyTypes && this.department.dutyTypes.length > 0;
+                }
+            },
             methods: {
                 load: function () {
                     $.ajax({
-                        url: '/api/departments/' + departmentId,
+                        url: '/admin/api/departments/' + departmentId,
                         type: 'GET',
                         success: function (response) {
                             app.department = response;
@@ -86,8 +99,31 @@
                             console.log(error);
                         }
                     })
-                }
+                }, remove: function () {
+                    Swal.fire({
+                        title: 'Delete department',
+                        text: 'Are you sure you want to delete this department?',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Delete',
+                        confirmButtonColor: '#d33',
+                        cancelButtonText: 'Cancel'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $.ajax({
+                                url: '/admin/api/departments/' + app.department.id,
+                                type: 'DELETE',
+                                success: function (response) {
+                                    window.location.href = '/admin/department';
+                                },
+                                error: function (error) {
+                                    console.log(error);
+                                }
+                            })
+                        }
+                    });
+                },
             }
-        })
+        });
     })
 </script>
