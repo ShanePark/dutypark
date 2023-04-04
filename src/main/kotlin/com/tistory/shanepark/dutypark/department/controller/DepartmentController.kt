@@ -6,10 +6,13 @@ import com.tistory.shanepark.dutypark.department.domain.dto.SimpleDepartmentDto
 import com.tistory.shanepark.dutypark.department.domain.enums.DepartmentNameCheckResult
 import com.tistory.shanepark.dutypark.department.domain.enums.DepartmentNameCheckResult.*
 import com.tistory.shanepark.dutypark.department.service.DepartmentService
+import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeCreateDto
 import jakarta.validation.Valid
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 @RestController
@@ -43,6 +46,16 @@ class DepartmentController(
         if (departmentService.isDuplicated(name))
             return DUPLICATED
         return OK
+    }
+
+    @PostMapping
+    @RequestMapping("{id}/duty-types")
+    fun addDutyType(
+        @PathVariable id: Long,
+        @RequestBody @Valid dutyTypeCreateDto: DutyTypeCreateDto
+    ): ResponseEntity<Any> {
+        departmentService.addDutyType(id, dutyTypeCreateDto)
+        return ResponseEntity.status(HttpStatus.CREATED).build()
     }
 
     @DeleteMapping("/{id}")

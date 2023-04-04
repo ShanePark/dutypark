@@ -32,8 +32,13 @@ class Department(
         member.department = this
     }
 
-    fun addDutyType(name: String): DutyType {
-        val dutyType = DutyType(name, dutyTypes.size + 1, this)
+    fun addDutyType(dutyName: String, dutyColor: Color? = null): DutyType {
+        if (dutyTypes.any { it.name == dutyName }) {
+            throw IllegalArgumentException("DutyType already exists")
+        }
+
+        val dutyType = DutyType(dutyName, dutyTypes.size + 1, this)
+        dutyColor?.let { dutyType.color = it }
         dutyTypes.add(dutyType)
         return dutyType
     }

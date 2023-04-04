@@ -130,4 +130,26 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
         assertThat(respository.findById(department.id!!)).isEmpty
     }
 
+    @Test
+    fun `can't add same name DutyType on one Department`() {
+        // Given
+        val department = respository.findById(TestData.department.id!!).orElseThrow()
+        val dutyType1 = department.addDutyType("test1")
+        val dutyType2 = department.addDutyType("test2")
+        val dutyType3 = department.addDutyType("test3")
+        entityManager.flush()
+
+        assertThat(dutyType1.id).isNotNull
+        assertThat(dutyType2.id).isNotNull
+        assertThat(dutyType3.id).isNotNull
+
+        assertThat(department.dutyTypes).containsAll(listOf(dutyType1, dutyType2, dutyType3))
+
+        // When
+        assertThrows<IllegalArgumentException> {
+            department.addDutyType("test1")
+        }
+
+    }
+
 }

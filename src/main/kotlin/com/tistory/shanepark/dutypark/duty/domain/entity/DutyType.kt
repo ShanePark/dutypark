@@ -19,6 +19,9 @@ class DutyType(
     var id: Long? = null
 
     @Enumerated(value = EnumType.STRING)
-    val color: Color? = null
+    var color: Color? = null
 
+    override fun toString(): String {
+        return "DutyType(name='$name', id=$id)"
+    }
 }

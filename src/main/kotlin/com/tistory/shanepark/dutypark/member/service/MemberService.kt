@@ -9,27 +9,28 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
-@Transactional(readOnly = true)
+@Transactional
 class MemberService(
     private val memberRepository: MemberRepository,
     private val passwordEncoder: PasswordEncoder,
 ) {
 
+    @Transactional(readOnly = true)
     fun findAll(): MutableList<MemberDto> {
         return memberRepository.findAll().map { MemberDto(it) }.toMutableList()
     }
 
+    @Transactional(readOnly = true)
     fun findMemberByName(name: String): Member {
         return memberRepository.findMemberByName(name)
             ?: throw NoSuchElementException("Member not found:$name")
     }
 
-
+    @Transactional(readOnly = true)
     fun findById(memberId: Long): Member {
         return memberRepository.findById(memberId).orElseThrow()
     }
 
-    @Transactional(readOnly = false)
     fun createMember(memberCreteDto: MemberCreateDto): Member {
         val password = passwordEncoder.encode(memberCreteDto.password)
         val member = Member(

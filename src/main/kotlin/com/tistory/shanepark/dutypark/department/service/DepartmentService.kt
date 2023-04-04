@@ -5,6 +5,7 @@ import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentDto
 import com.tistory.shanepark.dutypark.department.domain.dto.SimpleDepartmentDto
 import com.tistory.shanepark.dutypark.department.domain.entity.Department
 import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
+import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeCreateDto
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
@@ -47,6 +48,11 @@ class DepartmentService(
         repository.findByName(name).let {
             return it != null
         }
+    }
+
+    fun addDutyType(id: Long, dutyTypeCreateDto: DutyTypeCreateDto) {
+        val department = repository.findById(id).orElseThrow()
+        department.addDutyType(dutyTypeCreateDto.name, dutyTypeCreateDto.color)
     }
 
 }
