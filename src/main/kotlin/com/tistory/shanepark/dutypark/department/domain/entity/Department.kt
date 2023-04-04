@@ -14,13 +14,14 @@ class Department(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
+        protected set
 
     var description: String = ""
 
     @Enumerated(EnumType.STRING)
     var offColor: Color = Color.GREY
 
-    @OneToMany(mappedBy = "department")
+    @OneToMany(mappedBy = "department", cascade = [CascadeType.ALL], orphanRemoval = true)
     val dutyTypes: MutableList<DutyType> = mutableListOf()
 
     @OneToMany(mappedBy = "department")
@@ -29,6 +30,12 @@ class Department(
     fun addMember(member: Member) {
         members.add(member)
         member.department = this
+    }
+
+    fun addDutyType(name: String): DutyType {
+        val dutyType = DutyType(name, dutyTypes.size + 1, this)
+        dutyTypes.add(dutyType)
+        return dutyType
     }
 
 }

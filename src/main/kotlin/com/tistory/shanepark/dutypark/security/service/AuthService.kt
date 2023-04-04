@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
-@Transactional
+@Transactional(readOnly = true)
 class AuthService(
     private val memberRepository: MemberRepository,
     private val passwordEncoder: PasswordEncoder,
@@ -23,7 +23,6 @@ class AuthService(
     private val jwtProvider: JwtProvider,
 ) {
     val log: Logger = LoggerFactory.getLogger(AuthService::class.java)
-
 
     fun login(login: LoginDto): LoginMember {
         val member = memberRepository.findByEmail(login.email).orElseThrow {
@@ -51,6 +50,7 @@ class AuthService(
         throw DutyparkAuthException()
     }
 
+    @Transactional(readOnly = false)
     fun tokenRefresh(refreshToken: String, request: HttpServletRequest): String? {
         refreshTokenService.findByToken(refreshToken)?.let {
             val remoteAddr: String? = request.remoteAddr

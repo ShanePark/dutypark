@@ -29,6 +29,7 @@ class MemberService(
         return memberRepository.findById(memberId).orElseThrow()
     }
 
+    @Transactional(readOnly = false)
     fun createMember(memberCreteDto: MemberCreateDto): Member {
         val password = passwordEncoder.encode(memberCreteDto.password)
         val member = Member(

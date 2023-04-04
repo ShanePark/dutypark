@@ -13,11 +13,12 @@ class DutyType(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")
     val department: Department,
-
-    @Enumerated(value = EnumType.STRING)
-    val color: Color,
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
+
+    @Enumerated(value = EnumType.STRING)
+    val color: Color? = null
+
 }

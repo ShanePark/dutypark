@@ -40,9 +40,6 @@ class DepartmentService(
         if (department.members.isNotEmpty()) {
             throw IllegalStateException("Department has members")
         }
-        if (department.dutyTypes.isNotEmpty()) {
-            throw IllegalStateException("Department has dutyTypes")
-        }
         repository.deleteById(id)
     }
 

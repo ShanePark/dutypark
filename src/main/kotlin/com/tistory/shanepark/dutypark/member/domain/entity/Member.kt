@@ -16,7 +16,6 @@ class Member(
     @Column(nullable = false)
     var password: String,
 ) {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
@@ -28,5 +27,13 @@ class Member(
 
     @OneToMany(mappedBy = "member", orphanRemoval = true, cascade = [CascadeType.REMOVE], fetch = FetchType.LAZY)
     val refreshTokens = mutableListOf<RefreshToken>()
+
+    fun changeDepartment(department: Department) {
+        this.department?.let {
+            it.members.remove(this)
+        }
+        this.department = department
+        department.members.add(this)
+    }
 
 }

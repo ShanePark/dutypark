@@ -3,7 +3,6 @@ package com.tistory.shanepark.dutypark
 import com.tistory.shanepark.dutypark.department.domain.entity.Department
 import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
-import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberCreateDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -68,9 +67,9 @@ class TestData(
         )
 
         val dutyTypes = listOf(
-            DutyType("오전", 0, department, Color.BLUE),
-            DutyType("오후", 1, department, Color.RED),
-            DutyType("야간", 2, department, Color.GREEN),
+            DutyType("오전", 0, department),
+            DutyType("오후", 1, department),
+            DutyType("야간", 2, department),
         )
 
     }
