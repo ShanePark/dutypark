@@ -149,7 +149,6 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
         assertThrows<IllegalArgumentException> {
             department.addDutyType("test1")
         }
-
     }
 
 }

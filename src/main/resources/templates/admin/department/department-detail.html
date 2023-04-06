@@ -170,9 +170,10 @@
                     }).then((result) => {
                         if (result.isConfirmed) {
                             $.ajax({
-                                url: '/admin/api/departments/' + app.department.id + '/duty-types',
+                                url: '/admin/api/duty-types',
                                 type: 'POST',
                                 data: JSON.stringify({
+                                    departmentId: app.department.id,
                                     name: result.value[0],
                                     color: result.value[1]
                                 }),
