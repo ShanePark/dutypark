@@ -1,12 +1,9 @@
 package com.tistory.shanepark.dutypark.department.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
-import com.tistory.shanepark.dutypark.TestData
 import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentCreateDto
-import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
-import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
-import jakarta.persistence.EntityManager
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
@@ -17,18 +14,9 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
     @Autowired
     private lateinit var service: DepartmentService
 
-    @Autowired
-    private lateinit var respository: DepartmentRepository
-
-    @Autowired
-    private lateinit var dutyTypeRepository: DutyTypeRepository
-
-    @Autowired
-    private lateinit var entityManager: EntityManager
-
     @Test
     fun findAllWithMemberCount() {
-        val initial = respository.findAllWithMemberCount(Pageable.ofSize(10))
+        val initial = departmentRepository.findAllWithMemberCount(Pageable.ofSize(10))
         assertThat(initial.content.map { d -> d.id }).containsExactly(TestData.department.id, TestData.department2.id)
     }
 
@@ -89,10 +77,10 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
         val created = service.create(DepartmentCreateDto("deptName", "deptDesc"))
         val totalAfter = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
         assertThat(totalAfter).isEqualTo(totalBefore + 1)
-        val department = respository.findById(created.id!!).orElseThrow()
+        val department = departmentRepository.findById(created.id!!).orElseThrow()
 
-        TestData.member.changeDepartment(department)
-        TestData.member2.changeDepartment(department)
+        department.addMember(TestData.member)
+        department.addMember(TestData.member2)
 
         // When
         assertThrows<IllegalStateException> {
@@ -107,7 +95,7 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
         val created = service.create(DepartmentCreateDto("deptName", "deptDesc"))
         val totalAfter = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
         assertThat(totalAfter).isEqualTo(totalBefore + 1)
-        val department = respository.findById(created.id!!).orElseThrow()
+        val department = departmentRepository.findById(created.id!!).orElseThrow()
 
         val dutyType1 = department.addDutyType("오전")
         val dutyType2 = department.addDutyType("오후")
@@ -127,13 +115,13 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
         assertThat(dutyTypeRepository.findById(dutyType1.id!!)).isEmpty
         assertThat(dutyTypeRepository.findById(dutyType2.id!!)).isEmpty
         assertThat(dutyTypeRepository.findById(dutyType3.id!!)).isEmpty
-        assertThat(respository.findById(department.id!!)).isEmpty
+        assertThat(departmentRepository.findById(department.id!!)).isEmpty
     }
 
     @Test
     fun `can't add same name DutyType on one Department`() {
         // Given
-        val department = respository.findById(TestData.department.id!!).orElseThrow()
+        val department = departmentRepository.findById(TestData.department.id!!).orElseThrow()
         val dutyType1 = department.addDutyType("test1")
         val dutyType2 = department.addDutyType("test2")
         val dutyType3 = department.addDutyType("test3")
@@ -150,5 +138,94 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
             department.addDutyType("test1")
         }
     }
+
+    @Test
+    fun `Delete member from Department Test`() {
+        // Given
+        val department = departmentRepository.findById(TestData.department.id!!).orElseThrow()
+        val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
+        val member2 = memberRepository.findById(TestData.member2.id!!).orElseThrow()
+        assertThat(department.members).hasSize(2)
+        assertThat(member.department).isEqualTo(department)
+        assertThat(member2.department).isEqualTo(department)
+
+        // When
+        service.removeMemberFromDepartment(department, member)
+        service.removeMemberFromDepartment(department, member2)
+
+        // Then
+        assertThat(department.members).isEmpty()
+        assertThat(member.department).isNull()
+        assertThat(member2.department).isNull()
+    }
+
+    @Test
+    fun `can't delete member from department if not member of department`() {
+        // Given
+        val department = departmentRepository.findById(TestData.department.id!!).orElseThrow()
+        val department2 = departmentRepository.findById(TestData.department2.id!!).orElseThrow()
+        val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
+        val member2 = memberRepository.findById(TestData.member2.id!!).orElseThrow()
+        assertThat(department2.members).isEmpty()
+        assertThat(member.department).isEqualTo(department)
+        assertThat(member2.department).isEqualTo(department)
+
+        // When
+        assertThrows<IllegalStateException> {
+            service.removeMemberFromDepartment(department2, member)
+        }
+    }
+
+    @Test
+    fun `add Member to Department Test`() {
+        // Given
+        val department = departmentRepository.findById(TestData.department.id!!).orElseThrow()
+        val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
+        val member2 = memberRepository.findById(TestData.member2.id!!).orElseThrow()
+        department.removeMember(member)
+        department.removeMember(member2)
+        assertThat(department.members).hasSize(0)
+        assertThat(member.department).isEqualTo(null)
+        assertThat(member2.department).isEqualTo(null)
+
+        // When
+        service.addMemberToDepartment(department, member)
+        service.addMemberToDepartment(department, member2)
+
+        entityManager.flush()
+        entityManager.clear()
+
+        // Then
+        val department1 = departmentRepository.findById(department.id!!).orElseThrow()
+        assertThat(department1.members).hasSize(2)
+        assertThat(member.department?.id).isEqualTo(department1.id)
+        assertThat(member2.department?.id).isEqualTo(department1.id)
+    }
+
+    @Test
+    fun `can't add member to department if already member of department`() {
+        // Given
+        val department = departmentRepository.findById(TestData.department.id!!).orElseThrow()
+        val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
+        val member2 = memberRepository.findById(TestData.member2.id!!).orElseThrow()
+        assertThat(department.members).hasSize(2)
+        assertThat(member.department).isEqualTo(department)
+        assertThat(member2.department).isEqualTo(department)
+
+        // When
+        assertThrows(IllegalStateException::class.java) {
+            service.addMemberToDepartment(department, member)
+        }
+        assertThrows(IllegalStateException::class.java) {
+            service.addMemberToDepartment(department, member2)
+        }
+
+        // Then
+        assertThat(department.members).hasSize(2)
+        assertThat(member.department).isEqualTo(department)
+        assertThat(member2.department).isEqualTo(department)
+    }
+
+    // TODO : add member UI. for this member search UI is necessary
 
 }

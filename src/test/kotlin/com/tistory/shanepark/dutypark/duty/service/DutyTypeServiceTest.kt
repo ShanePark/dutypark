@@ -1,13 +1,10 @@
 package com.tistory.shanepark.dutypark.duty.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
-import com.tistory.shanepark.dutypark.TestData
-import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeCreateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
-import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -19,13 +16,7 @@ class DutyTypeServiceTest : DutyparkIntegrationTest() {
     private lateinit var dutyTypeService: DutyTypeService
 
     @Autowired
-    private lateinit var dutyTypeRepository: DutyTypeRepository
-
-    @Autowired
     private lateinit var dutyRepository: DutyRepository
-
-    @Autowired
-    private lateinit var departmentRepository: DepartmentRepository
 
     @Test
     fun `Create duty Type success`() {

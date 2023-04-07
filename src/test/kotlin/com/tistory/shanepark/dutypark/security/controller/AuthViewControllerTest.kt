@@ -2,10 +2,8 @@ package com.tistory.shanepark.dutypark.security.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
-import com.tistory.shanepark.dutypark.TestData
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.MemoDto
-import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import jakarta.servlet.http.Cookie
 import org.junit.jupiter.api.Test
@@ -22,9 +20,6 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var mockMvc: MockMvc
-
-    @Autowired
-    lateinit var memberRepository: MemberRepository
 
     @Autowired
     lateinit var objectMapper: ObjectMapper

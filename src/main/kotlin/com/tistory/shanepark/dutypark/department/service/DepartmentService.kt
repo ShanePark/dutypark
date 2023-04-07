@@ -5,6 +5,8 @@ import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentDto
 import com.tistory.shanepark.dutypark.department.domain.dto.SimpleDepartmentDto
 import com.tistory.shanepark.dutypark.department.domain.entity.Department
 import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
@@ -13,7 +15,8 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 @Transactional
 class DepartmentService(
-    private val repository: DepartmentRepository
+    private val repository: DepartmentRepository,
+    private val memberRepository: MemberRepository,
 ) {
 
     @Transactional(readOnly = true)
@@ -47,6 +50,20 @@ class DepartmentService(
         repository.findByName(name).let {
             return it != null
         }
+    }
+
+    fun addMemberToDepartment(department: Department, member: Member) {
+        if (member.department != null) {
+            throw IllegalStateException("Member already has department")
+        }
+        department.addMember(member)
+    }
+
+    fun removeMemberFromDepartment(department: Department, member: Member) {
+        if (member.department != department) {
+            throw IllegalStateException("Member does not belong to department")
+        }
+        department.removeMember(member)
     }
 
 }

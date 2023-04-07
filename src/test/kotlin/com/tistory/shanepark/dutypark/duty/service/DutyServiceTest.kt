@@ -1,7 +1,6 @@
 package com.tistory.shanepark.dutypark.duty.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
-import com.tistory.shanepark.dutypark.TestData
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
@@ -17,12 +16,11 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
     @Autowired
     lateinit var dutyRepository: DutyRepository
 
-    var member = TestData.member
-    var dutyTypes = TestData.dutyTypes
-
     @Test
     @DisplayName("create new duty")
     fun create() {
+        val member = TestData.member
+        val dutyTypes = TestData.dutyTypes
         dutyService.update(
             DutyUpdateDto(
                 year = 2022,
@@ -44,6 +42,8 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
     @Test
     @DisplayName("change original duty to new duty")
     fun update() {
+        val member = TestData.member
+        val dutyTypes = TestData.dutyTypes
         val duty = Duty(
             dutyYear = 2022,
             dutyMonth = 10,
@@ -72,6 +72,8 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
     @Test
     @DisplayName("delete original duty")
     fun delete() {
+        val member = TestData.member
+        val dutyTypes = TestData.dutyTypes
         val duty = Duty(
             dutyYear = 2022,
             dutyMonth = 10,
@@ -96,6 +98,8 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
     @Test
     @DisplayName("wrong member Id")
     fun wrongMemberId() {
+        val member = TestData.member
+        val dutyTypes = TestData.dutyTypes
         val duty = Duty(
             dutyYear = 2022,
             dutyMonth = 10,
@@ -125,6 +129,8 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
     @Test
     @DisplayName("wrong duty Type Id")
     fun wrongDutyTypeId() {
+        val member = TestData.member
+        val dutyTypes = TestData.dutyTypes
         val duty = Duty(
             dutyYear = 2022,
             dutyMonth = 10,

@@ -32,6 +32,11 @@ class Department(
         member.department = this
     }
 
+    fun removeMember(member: Member) {
+        members.remove(member)
+        member.department = null
+    }
+
     fun addDutyType(dutyName: String, dutyColor: Color? = null): DutyType {
         if (dutyTypes.any { it.name == dutyName }) {
             throw IllegalArgumentException("DutyType already exists")

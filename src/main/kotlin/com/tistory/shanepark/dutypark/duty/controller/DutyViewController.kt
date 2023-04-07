@@ -75,11 +75,12 @@ class DutyViewController(
         month: Int,
         model: Model
     ) {
+        model.addAttribute("member", MemberDto(member))
+
         val department: Department = member.department?.let {
             it
         } ?: return
 
-        model.addAttribute("member", MemberDto(member))
         model.addAttribute("offColor", department.offColor.name)
 
         dutyService.findDutyByMemberAndYearAndMonth(member, year, month).let {

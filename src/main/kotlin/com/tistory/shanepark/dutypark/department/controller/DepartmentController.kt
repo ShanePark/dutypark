@@ -5,17 +5,22 @@ import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentDto
 import com.tistory.shanepark.dutypark.department.domain.dto.SimpleDepartmentDto
 import com.tistory.shanepark.dutypark.department.domain.enums.DepartmentNameCheckResult
 import com.tistory.shanepark.dutypark.department.domain.enums.DepartmentNameCheckResult.*
+import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.department.service.DepartmentService
+import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import jakarta.validation.Valid
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/admin/api/departments")
 class DepartmentController(
-    val departmentService: DepartmentService
+    val departmentService: DepartmentService,
+    val departmentRepository: DepartmentRepository,
+    val memberRepository: MemberRepository,
 ) {
 
     @GetMapping
@@ -48,6 +53,22 @@ class DepartmentController(
     @DeleteMapping("/{id}")
     fun delete(@PathVariable id: Long) {
         departmentService.delete(id)
+    }
+
+    @PostMapping("/{id}/members/{memberId}")
+    fun addMember(@PathVariable id: Long, @PathVariable memberId: Long): ResponseEntity<Any> {
+        val department = departmentRepository.findById(id).orElseThrow()
+        val member = memberRepository.findById(memberId).orElseThrow()
+        departmentService.addMemberToDepartment(department, member)
+        return ResponseEntity.ok().build()
+    }
+
+    @DeleteMapping("/{id}/members/{memberId}")
+    fun removeMember(@PathVariable id: Long, @PathVariable memberId: Long): ResponseEntity<Any> {
+        val member = memberRepository.findById(memberId).orElseThrow()
+        val department = departmentRepository.findById(id).orElseThrow()
+        departmentService.removeMemberFromDepartment(department, member)
+        return ResponseEntity.ok().build()
     }
 
 }

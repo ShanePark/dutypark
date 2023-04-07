@@ -28,13 +28,23 @@
     </table>
   </div>
   <div class="member-list">
-    <h3>Members</h3>
+    <h3>
+      Members
+      <button class="btn btn-primary" v-on:click="addMember()">Add</button>
+    </h3>
     <table class="table table-striped" v-if="hasMember">
+      <colgroup>
+        <col style="width: 10%">
+        <col style="width: 30%">
+        <col style="width: 40%">
+        <col style="width: 20%">
+      </colgroup>
       <thead>
       <tr>
         <th scope="col"></th>
         <th scope="col">Name</th>
         <th scope="col">Email</th>
+        <th scope="col"></th>
       </tr>
       </thead>
       <tbody>
@@ -42,6 +52,9 @@
         <td>{{index+1}}</td>
         <td>{{ member.name }}</td>
         <td>{{ member.email }}</td>
+        <td>
+          <button class="btn btn-danger" v-on:click="removeMember(member.id)">Delete</button>
+        </td>
       </tr>
       </tbody>
     </table>
@@ -52,20 +65,23 @@
       <button class="btn btn-primary" v-on:click="addDutyType()">Add</button>
     </h3>
     <table class="table table-striped" v-if="hasDutyType">
-      <thead>
       <colgroup>
-        <col style="width: 40%">
+        <col style="width: 10%">
+        <col style="width: 30%">
         <col style="width: 40%">
         <col style="width: 20%">
       </colgroup>
+      <thead>
       <tr>
+        <th scope="col"></th>
         <th scope="col">Name</th>
         <th scope="col">Color</th>
         <th scope="col"></th>
       </tr>
       </thead>
       <tbody>
-      <tr v-for="dutyType in department.dutyTypes">
+      <tr v-for="(dutyType,index) in department.dutyTypes">
+        <td>{{index+1}}</td>
         <td>{{ dutyType.name }}</td>
         <td>{{ dutyType.color }}</td>
         <td>
@@ -213,6 +229,36 @@
                                     Swal.fire({
                                         title: 'Error',
                                         text: 'Failed to delete duty type',
+                                        icon: 'error',
+                                        confirmButtonText: 'OK',
+                                        confirmButtonColor: '#3085d6',
+                                    })
+                                }
+                            })
+                        }
+                    })
+                },
+                removeMember: function (memberId) {
+                    Swal.fire({
+                        title: 'Delete member',
+                        text: 'Are you sure you want to delete this member from department?',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Delete',
+                        confirmButtonColor: '#d33',
+                        cancelButtonText: 'Cancel'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $.ajax({
+                                url: '/admin/api/departments/' + app.department.id + '/members/' + memberId,
+                                type: 'DELETE',
+                                success: function (response) {
+                                    app.load();
+                                },
+                                error: function (error) {
+                                    Swal.fire({
+                                        title: 'Error',
+                                        text: 'Failed to delete member',
                                         icon: 'error',
                                         confirmButtonText: 'OK',
                                         confirmButtonColor: '#3085d6',

@@ -6,7 +6,9 @@
   Members
   <ul>
     <li th:each="member: ${members}">
-      <a th:href="@{/duty/{name}(name=${member.name})}" th:text="${ '(' + member.department + ') ' + member.name}"></a>
+      <a th:href="@{/duty/{name}(name=${member.name})}"
+         th:text="${#strings.concat('(', member.department ?: '부서없음', ') ', member.name)}">
+      </a>
     </li>
   </ul>
 </div>
