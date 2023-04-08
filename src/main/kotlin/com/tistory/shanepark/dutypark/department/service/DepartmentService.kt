@@ -45,7 +45,7 @@ class DepartmentService(
         }
         val dutyTypes = department.dutyTypes
         dutyRepository.setDutyTypeNullIfDutyTypeIn(dutyTypes)
-        
+
         repository.deleteById(id)
     }
 
@@ -57,7 +57,7 @@ class DepartmentService(
 
     fun addMemberToDepartment(department: Department, member: Member) {
         if (member.department != null) {
-            throw IllegalStateException("Member already has department")
+            throw IllegalStateException("The member already belongs to department")
         }
         department.addMember(member)
     }

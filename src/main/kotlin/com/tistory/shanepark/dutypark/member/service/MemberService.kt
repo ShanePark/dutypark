@@ -4,6 +4,8 @@ import com.tistory.shanepark.dutypark.member.domain.dto.MemberCreateDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -39,5 +41,14 @@ class MemberService(
             password = password
         )
         return memberRepository.save(member)
+    }
+
+    @Transactional(readOnly = true)
+    fun searchMembers(
+        page: Pageable, name: String
+    ): Page<MemberDto> {
+        memberRepository.findMembersByNameContainingIgnoreCase(name, page).let { it ->
+            return it.map { MemberDto(it) }
+        }
     }
 }
