@@ -19,4 +19,8 @@ interface DutyRepository : JpaRepository<Duty, Long> {
     @Query("update Duty d set d.dutyType = null where d.dutyType = :dutyType")
     fun setDutyTypeNullIfDutyTypeIs(dutyType: DutyType)
 
+    @Modifying
+    @Query("update Duty d set d.dutyType = null where d.dutyType in :dutyTypes")
+    fun setDutyTypeNullIfDutyTypeIn(dutyTypes: Iterable<DutyType>)
+
 }

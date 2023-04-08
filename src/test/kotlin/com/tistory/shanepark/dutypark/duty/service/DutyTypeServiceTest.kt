@@ -63,7 +63,7 @@ class DutyTypeServiceTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `When Duty Type is deleted, All related duties have null department`() {
+    fun `When DutyType is deleted, All related duties have null dutyType`() {
         // Given
         val dutyType = TestData.dutyTypes[0]
         val member = TestData.member

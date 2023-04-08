@@ -2,6 +2,10 @@ package com.tistory.shanepark.dutypark.department.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentCreateDto
+import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
+import com.tistory.shanepark.dutypark.duty.domain.dto.MemoDto
+import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
+import com.tistory.shanepark.dutypark.duty.service.DutyService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -116,6 +120,52 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
         assertThat(dutyTypeRepository.findById(dutyType2.id!!)).isEmpty
         assertThat(dutyTypeRepository.findById(dutyType3.id!!)).isEmpty
         assertThat(departmentRepository.findById(department.id!!)).isEmpty
+    }
+
+    @Test
+    fun `When Department is deleted, All related duties will have null dutyType`(
+        @Autowired dutyService: DutyService,
+        @Autowired dutyRepository: DutyRepository
+    ) {
+        // Given
+        val created = service.create(DepartmentCreateDto("deptName", "deptDesc"))
+        val department = departmentRepository.findById(created.id!!).orElseThrow()
+        val member = TestData.member
+
+        department.addMember(member)
+        val dutyType1 = department.addDutyType("오전")
+        entityManager.flush()
+
+        val dutyUpdateDto =
+            DutyUpdateDto(year = 2023, month = 4, day = 8, dutyTypeId = dutyType1.id!!, memberId = member.id!!)
+        dutyService.update(dutyUpdateDto)
+        val memoDto = MemoDto(2023, 4, 8, "memo1", member.id!!)
+        val updateMemoResult = dutyService.updateMemo(memoDto)
+
+        val duties = dutyService.findDutyByMemberAndYearAndMonth(member, 2023, 4)
+        assertThat(duties.size).isEqualTo(1)
+        val duty = duties[8]
+        assertThat(duty).isNotNull
+        assertThat(updateMemoResult.id).isEqualTo(duty!!.id)
+        assertThat(duty?.memo).isEqualTo(memoDto.memo)
+
+        // When
+        department.removeMember(member)
+        entityManager.flush()
+
+        service.delete(department.id!!)
+
+        // Then
+        entityManager.flush()
+        entityManager.clear()
+
+        assertThat(dutyTypeRepository.findById(dutyType1.id!!)).isEmpty
+        assertThat(departmentRepository.findById(department.id!!)).isEmpty
+
+        val theDuty = dutyRepository.findById(duty.id!!).orElseThrow()
+        assertThat(theDuty).isNotNull
+        assertThat(theDuty.dutyType).isNull()
+        assertThat(theDuty.memo).isEqualTo(memoDto.memo)
     }
 
     @Test

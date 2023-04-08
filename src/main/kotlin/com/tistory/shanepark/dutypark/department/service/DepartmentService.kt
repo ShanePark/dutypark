@@ -5,8 +5,8 @@ import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentDto
 import com.tistory.shanepark.dutypark.department.domain.dto.SimpleDepartmentDto
 import com.tistory.shanepark.dutypark.department.domain.entity.Department
 import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
+import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
-import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional
 class DepartmentService(
     private val repository: DepartmentRepository,
-    private val memberRepository: MemberRepository,
+    private val dutyRepository: DutyRepository,
 ) {
 
     @Transactional(readOnly = true)
@@ -43,6 +43,9 @@ class DepartmentService(
         if (department.members.isNotEmpty()) {
             throw IllegalStateException("Department has members")
         }
+        val dutyTypes = department.dutyTypes
+        dutyRepository.setDutyTypeNullIfDutyTypeIn(dutyTypes)
+        
         repository.deleteById(id)
     }
 

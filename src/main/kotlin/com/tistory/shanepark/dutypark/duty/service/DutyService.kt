@@ -15,9 +15,9 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 @Transactional
 class DutyService(
-    val dutyRepository: DutyRepository,
-    val dutyTypeRepository: DutyTypeRepository,
-    val memberService: MemberService
+    private val dutyRepository: DutyRepository,
+    private val dutyTypeRepository: DutyTypeRepository,
+    private val memberService: MemberService
 ) {
 
     @Transactional(readOnly = true)
@@ -57,14 +57,14 @@ class DutyService(
         }
     }
 
-    fun save(duty: Duty) {
-        dutyRepository.save(duty)
+    fun save(duty: Duty): Duty {
+        return dutyRepository.save(duty)
     }
 
-    fun updateMemo(memoDto: MemoDto) {
+    fun updateMemo(memoDto: MemoDto): Duty {
         val member = memberService.findById(memoDto.memberId)
 
-        val duty: Duty? = dutyRepository.findByMemberAndDutyYearAndDutyMonthAndDutyDay(
+        var duty: Duty? = dutyRepository.findByMemberAndDutyYearAndDutyMonthAndDutyDay(
             member = member,
             year = memoDto.year,
             month = memoDto.month,
@@ -74,7 +74,7 @@ class DutyService(
         if (duty != null) {
             duty.memo = memoDto.memo
         } else {
-            save(
+            duty = save(
                 Duty(
                     member = member,
                     dutyYear = memoDto.year,
@@ -85,6 +85,6 @@ class DutyService(
                 )
             )
         }
-
+        return duty
     }
 }
