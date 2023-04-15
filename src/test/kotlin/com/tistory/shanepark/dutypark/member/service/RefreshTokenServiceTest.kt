@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.member.service
 
-import com.tistory.shanepark.dutypark.TestData
+import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
+
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -9,14 +10,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 
 
-@SpringBootTest
-@Transactional
-class RefreshTokenServiceTest {
+class RefreshTokenServiceTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var refreshTokenService: RefreshTokenService

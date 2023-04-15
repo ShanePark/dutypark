@@ -1,18 +1,14 @@
 package com.tistory.shanepark.dutypark.duty.service
 
-import com.tistory.shanepark.dutypark.TestData
+import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.transaction.annotation.Transactional
 
-@SpringBootTest
-@Transactional
-internal class DutyServiceTest {
+internal class DutyServiceTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var dutyService: DutyService
@@ -20,12 +16,11 @@ internal class DutyServiceTest {
     @Autowired
     lateinit var dutyRepository: DutyRepository
 
-    var member = TestData.member
-    var dutyTypes = TestData.dutyTypes
-
     @Test
     @DisplayName("create new duty")
     fun create() {
+        val member = TestData.member
+        val dutyTypes = TestData.dutyTypes
         dutyService.update(
             DutyUpdateDto(
                 year = 2022,
@@ -47,6 +42,8 @@ internal class DutyServiceTest {
     @Test
     @DisplayName("change original duty to new duty")
     fun update() {
+        val member = TestData.member
+        val dutyTypes = TestData.dutyTypes
         val duty = Duty(
             dutyYear = 2022,
             dutyMonth = 10,
@@ -75,6 +72,8 @@ internal class DutyServiceTest {
     @Test
     @DisplayName("delete original duty")
     fun delete() {
+        val member = TestData.member
+        val dutyTypes = TestData.dutyTypes
         val duty = Duty(
             dutyYear = 2022,
             dutyMonth = 10,
@@ -99,6 +98,8 @@ internal class DutyServiceTest {
     @Test
     @DisplayName("wrong member Id")
     fun wrongMemberId() {
+        val member = TestData.member
+        val dutyTypes = TestData.dutyTypes
         val duty = Duty(
             dutyYear = 2022,
             dutyMonth = 10,
@@ -128,6 +129,8 @@ internal class DutyServiceTest {
     @Test
     @DisplayName("wrong duty Type Id")
     fun wrongDutyTypeId() {
+        val member = TestData.member
+        val dutyTypes = TestData.dutyTypes
         val duty = Duty(
             dutyYear = 2022,
             dutyMonth = 10,

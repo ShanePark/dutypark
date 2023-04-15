@@ -35,8 +35,8 @@ class JwtProvider(
             .setSubject(member.id.toString())
             .claim("email", member.email)
             .claim("name", member.name)
-            .claim("departmentId", department.id)
-            .claim("departmentName", department.name)
+            .claim("departmentId", department?.id)
+            .claim("departmentName", department?.name)
             .signWith(key, SignatureAlgorithm.HS256)
             .setExpiration(validity)
             .compact()
@@ -56,8 +56,8 @@ class JwtProvider(
             id = claims.subject.toLong(),
             email = email,
             name = claims["name"] as String,
-            departmentId = claims["departmentId"].toString().toLong(),
-            departmentName = claims["departmentName"] as String,
+            departmentId = claims["departmentId"]?.toString()?.toLong(),
+            departmentName = claims["departmentName"] as String?,
             isAdmin = dutyparkProperties.adminEmails.contains(email),
             jwt = token
         )

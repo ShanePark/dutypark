@@ -2,9 +2,9 @@
 <head th:replace="~{layout/include::link}"/>
 <body>
 
-<div th:replace="~{layout/header::header-title(|${member.department} ${member.name}|)}"></div>
+<div th:replace="~{layout/header::header-title(|${member.name}|)}"></div>
 
-<div class="calendar">
+<div th:if="${duties}" class="calendar">
   <div class="month-control row">
     <h1>
       <a class="move"
@@ -77,8 +77,12 @@
     </th:block>
   </ol>
 </div>
+<div th:if="!${duties}" class="no-data p-5">
+  <h3>어느 부서에도 소속되어 있지 않습니다.</h3>
+</div>
+
 <div class="body">
-  <div class="d-day-list row">
+  <div class="d-day-list row" v-cloak>
     <div v-for="(dDay, index) in dDays" class="col-6">
       <div class="d-day-item card row"
            :data-id="dDay.id"
@@ -94,6 +98,7 @@
     </div>
   </div>
 </div>
+
 </body>
 </html>
 

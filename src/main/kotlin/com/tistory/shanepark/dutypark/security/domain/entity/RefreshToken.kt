@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.security.domain.entity
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import com.tistory.shanepark.dutypark.common.entity.BaseTimeEntity
+import com.tistory.shanepark.dutypark.common.domain.entity.BaseTimeEntity
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import jakarta.persistence.*
 import java.time.LocalDateTime

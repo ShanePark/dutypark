@@ -1,6 +1,8 @@
 package com.tistory.shanepark.dutypark.member.repository
 
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.EntityGraph
 import org.springframework.data.jpa.repository.JpaRepository
 import java.util.*
@@ -15,5 +17,8 @@ interface MemberRepository : JpaRepository<Member, Long> {
 
     @EntityGraph(attributePaths = ["department"])
     fun findByEmail(email: String): Optional<Member>
+
+    @EntityGraph(attributePaths = ["department"])
+    fun findMembersByNameContainingIgnoreCase(name: String, pageable: Pageable): Page<Member>
 
 }

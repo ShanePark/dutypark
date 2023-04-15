@@ -1,5 +1,6 @@
-package com.tistory.shanepark.dutypark.common.entity
+package com.tistory.shanepark.dutypark.common.domain.entity
 
+import com.tistory.shanepark.dutypark.common.domain.dto.BaseTimeDto
 import jakarta.persistence.EntityListeners
 import jakarta.persistence.MappedSuperclass
 import org.springframework.data.annotation.CreatedDate
@@ -11,8 +12,10 @@ import java.time.LocalDateTime
 @EntityListeners(AuditingEntityListener::class)
 abstract class BaseTimeEntity {
     @LastModifiedDate
-    var modifiedDate: LocalDateTime? = null
+    var lastModifiedDate: LocalDateTime? = null
 
     @CreatedDate
     var createdDate: LocalDateTime? = null
+
+    fun baseTimeDto() = BaseTimeDto(this)
 }

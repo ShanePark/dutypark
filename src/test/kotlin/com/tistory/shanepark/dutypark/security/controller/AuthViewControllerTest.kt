@@ -1,42 +1,35 @@
 package com.tistory.shanepark.dutypark.security.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.tistory.shanepark.dutypark.TestData
+import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.MemoDto
-import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import jakarta.servlet.http.Cookie
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
-import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
-import org.springframework.transaction.annotation.Transactional
 
-@SpringBootTest
-@Transactional
 @AutoConfigureMockMvc
-class AuthViewControllerTest {
+class AuthViewControllerTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var mockMvc: MockMvc
 
     @Autowired
-    lateinit var memberRepository: MemberRepository
-
-    @Autowired
     lateinit var objectMapper: ObjectMapper
 
     private val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(AuthViewControllerTest::class.java)
+    private val testPass = TestData.testPass
 
     @Test
     fun `login Success`() {
-        val loginDto = LoginDto(TestData.member.email, TestData.member.password)
+        val loginDto = LoginDto(TestData.member.email, testPass)
         val json = objectMapper.writeValueAsString(loginDto)
 
         mockMvc.perform(
@@ -65,7 +58,7 @@ class AuthViewControllerTest {
         // Given
         val email = TestData.member.email
 
-        val loginDto = LoginDto(email, TestData.member.password)
+        val loginDto = LoginDto(email, testPass)
         val json = objectMapper.writeValueAsString(loginDto)
 
         // When
@@ -116,7 +109,7 @@ class AuthViewControllerTest {
         val json = objectMapper.writeValueAsString(dutyUpdateDto)
         val anotherMember = memberRepository.findByEmail(TestData.member2.email).orElseThrow()
 
-        val loginDto = LoginDto(anotherMember.email, TestData.member.password)
+        val loginDto = LoginDto(anotherMember.email, testPass)
         val loginJson = objectMapper.writeValueAsString(loginDto)
 
         // save login session token on variable
@@ -153,7 +146,7 @@ class AuthViewControllerTest {
             )
         val json = objectMapper.writeValueAsString(dutyUpdateDto)
 
-        val loginDto = LoginDto(email = TestData.member.email, password = TestData.member.password)
+        val loginDto = LoginDto(email = TestData.member.email, password = testPass)
         val loginJson = objectMapper.writeValueAsString(loginDto)
 
         // save login session token on variable
@@ -199,7 +192,7 @@ class AuthViewControllerTest {
             MemoDto(year = 2023, month = 1, day = 1, memberId = member.id!!, memo = "memo")
 
         val anotherMember = memberRepository.findByEmail(TestData.member2.email).orElseThrow()
-        val loginDto = LoginDto(anotherMember.email, TestData.member.password)
+        val loginDto = LoginDto(anotherMember.email, testPass)
 
         // save login session token on variable
         val accessToken = mockMvc.perform(
@@ -228,7 +221,7 @@ class AuthViewControllerTest {
             MemoDto(year = 2023, month = 1, day = 1, memberId = member.id!!, memo = "memo")
         val json = objectMapper.writeValueAsString(momoDto)
 
-        val loginDto = LoginDto(email = TestData.member.email, password = TestData.member.password)
+        val loginDto = LoginDto(email = TestData.member.email, password = testPass)
 
         // save login session token on variable
         val accessToken = mockMvc.perform(
@@ -253,7 +246,7 @@ class AuthViewControllerTest {
     fun `if login Member, health point returns login info`() {
         // Given
         val member = memberRepository.findByEmail(TestData.member.email).orElseThrow()
-        val loginDto = LoginDto(email = TestData.member.email, password = TestData.member.password)
+        val loginDto = LoginDto(email = TestData.member.email, password = testPass)
 
         // save login session token on variable
         val accessToken = mockMvc.perform(

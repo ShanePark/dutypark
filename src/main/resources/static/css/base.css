@@ -10,6 +10,10 @@
     font-display: swap;
 }
 
+[v-cloak] {
+    display: none;
+}
+
 body {
     font-family: NexonMaplestory;
     --bs-body-font-family: NexonMaplestory;
@@ -404,4 +408,8 @@ a.memberPage-link:hover {
 
 .hidden {
     display: none;
+}
+
+.swal2-html-container form {
+    text-align: left;
 }

@@ -1,19 +1,15 @@
-package com.tistory.shanepark.dutypark.common.entity
+package com.tistory.shanepark.dutypark.common.domain
 
-import com.tistory.shanepark.dutypark.TestData
+import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import jakarta.persistence.EntityManager
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 
-@SpringBootTest
-@Transactional
-class BaseTimeEntityTest {
+class BaseTimeEntityTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var refreshTokenRepository: RefreshTokenRepository
@@ -29,8 +25,8 @@ class BaseTimeEntityTest {
         refreshTokenRepository.save(refreshToken)
 
         assertThat(refreshToken.createdDate).isNotNull
-        assertThat(refreshToken.modifiedDate).isNotNull
-        assertThat(refreshToken.createdDate).isSameAs(refreshToken.modifiedDate)
+        assertThat(refreshToken.lastModifiedDate).isNotNull
+        assertThat(refreshToken.createdDate).isSameAs(refreshToken.lastModifiedDate)
 
         // When
         refreshToken.validUntil = LocalDateTime.now()
@@ -38,7 +34,7 @@ class BaseTimeEntityTest {
 
         // Then
         val saved = refreshTokenRepository.save(refreshToken)
-        assertThat(saved.modifiedDate).isAfter(refreshToken.createdDate)
+        assertThat(saved.lastModifiedDate).isAfter(refreshToken.createdDate)
     }
 
 }

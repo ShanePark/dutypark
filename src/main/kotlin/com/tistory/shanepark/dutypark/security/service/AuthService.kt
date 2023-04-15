@@ -22,10 +22,9 @@ class AuthService(
     private val refreshTokenService: RefreshTokenService,
     private val jwtProvider: JwtProvider,
 ) {
-
     val log: Logger = LoggerFactory.getLogger(AuthService::class.java)
 
-
+    @Transactional(readOnly = true)
     fun login(login: LoginDto): LoginMember {
         val member = memberRepository.findByEmail(login.email).orElseThrow {
             log.info("Login failed. email not exist:${login.email}")
@@ -41,10 +40,12 @@ class AuthService(
         return tokenToLoginMember(jwt)
     }
 
+    @Transactional(readOnly = true)
     fun validateToken(token: String): TokenStatus {
         return jwtProvider.validateToken(token)
     }
 
+    @Transactional(readOnly = true)
     fun tokenToLoginMember(token: String): LoginMember {
         if (validateToken(token) == TokenStatus.VALID) {
             return jwtProvider.parseToken(token)

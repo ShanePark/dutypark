@@ -1,0 +1,140 @@
+<div class="departments" v-cloak>
+  <h2>Departments</h2>
+  <button class="btn btn-primary" v-on:click="add()">New Department</button>
+  <table class="table table-striped mt-2">
+    <thead>
+    <colgroup>
+      <col style="width: 20%">
+      <col style="width: 10%">
+      <col style="width: 70%">
+    </colgroup>
+    <tr>
+      <th scope="col">Name</th>
+      <th scope="col">Members</th>
+      <th scope="col">Description</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr v-for="department in departments">
+      <td>
+        <a :href="'/admin/department/' + department.id">{{ department.name }}</a>
+      </td>
+      <td>{{ department.memberCount }}</td>
+      <td>{{ department.description }}</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal -->
+<form class="add_modal" hidden>
+  <div class="form-group">
+    <div class="form-group">
+      <label for="name">Name</label>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <input type="text" maxlength="20" minlength="2" class="form-control" id="name" name="name"
+               placeholder="Department name"
+               style="flex-grow: 1; margin-right: 10px;">
+        <button type="button" class="btn btn-primary checker">Check</button>
+      </div>
+    </div>
+    <div class="form-group mt-2">
+      <label for="description">Description</label><br/>
+      <input type="text" class="form-control" id="description" name="description" placeholder="description">
+    </div>
+  </div>
+</form>
+
+<script>
+    $(function () {
+        const app = new Vue({
+            el: '.departments',
+            data: {
+                departments: []
+            },
+            mounted() {
+                this.load();
+            },
+            methods: {
+                load: function () {
+                    $.ajax({
+                        url: '/admin/api/departments',
+                        type: 'GET',
+                        success: function (response) {
+                            app.departments = response.content;
+                        },
+                        error: function (error) {
+                            console.log(error);
+                        }
+                    })
+                },
+                add: function () {
+                    const modal = $('.add_modal').clone();
+                    modal.attr('hidden', false);
+
+                    Swal.fire({
+                        title: 'Add Department',
+                        html: modal,
+                        cancelButtonText: 'Cancel',
+                        showCancelButton: true,
+                        confirmButtonText: 'Add',
+                        didOpen: () => {
+                            Swal.getConfirmButton().setAttribute('disabled', true);
+                            Swal.getPopup().querySelector('input[name="name"]').addEventListener('input', () => {
+                                Swal.getConfirmButton().setAttribute('disabled', true);
+                            });
+                        },
+                        preConfirm: () => {
+                            const name = Swal.getPopup().querySelector('input[name="name"]').value
+                            const description = Swal.getPopup().querySelector('input[name="description"]').value
+                            if (!name || !description)
+                                Swal.showValidationMessage(`Please enter name and description`);
+                            return {name, description}
+                        },
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            const {name, description} = result.value;
+                            $.ajax({
+                                url: '/admin/api/departments',
+                                type: 'POST',
+                                data: JSON.stringify({name, description}),
+                                contentType: 'application/json',
+                                success: function (response) {
+                                    app.load();
+                                },
+                                error: function (error) {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: '등록 실패.',
+                                        text: error.responseJSON.errors[0].defaultMessage.toString()
+                                    })
+                                }
+                            })
+                        }
+                    })
+                },
+            }
+        });
+
+        $(document).on('click', '.checker', function () {
+            const name = $(this).parent().find('input[name="name"]').val();
+            $.ajax({
+                url: '/admin/api/departments/check',
+                type: 'POST',
+                data: JSON.stringify({name}),
+                contentType: 'application/json',
+                success: function (response) {
+                    if (response != "OK") {
+                        Swal.showValidationMessage(response);
+                        return;
+                    }
+                    Swal.resetValidationMessage();
+                    Swal.getConfirmButton().disabled = false;
+                },
+                error: function (error) {
+                    console.log(error);
+                }
+            })
+        });
+    })
+</script>
