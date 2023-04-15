@@ -19,7 +19,7 @@ class DutyController(
 
     val log: Logger = org.slf4j.LoggerFactory.getLogger(DutyController::class.java)
 
-    @PutMapping("update")
+    @PutMapping("change")
     @SlackNotification
     fun updateDuty(
         @RequestBody dutyUpdateDto: DutyUpdateDto,

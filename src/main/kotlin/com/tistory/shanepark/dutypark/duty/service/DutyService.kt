@@ -40,21 +40,26 @@ class DutyService(
             dutyTypeRepository.findById(it).orElseThrow()
         }
 
-        if (duty != null && dutyType == null) {
-            dutyRepository.delete(duty)
-        } else if (duty == null && dutyType != null) {
-            save(
-                Duty(
+        if (duty == null) {
+            if (dutyType != null) {
+                val duty = Duty(
                     member = member,
                     dutyYear = dutyUpdateDto.year,
                     dutyMonth = dutyUpdateDto.month,
                     dutyDay = dutyUpdateDto.day,
                     dutyType = dutyType
                 )
-            )
-        } else if (duty != null && dutyType != null) {
-            duty.dutyType = dutyType
+                save(duty)
+            }
+            return
         }
+
+        if (dutyType == null && duty.memo == null) {
+            dutyRepository.delete(duty)
+            return
+        }
+
+        duty.dutyType = dutyType
     }
 
     fun save(duty: Duty): Duty {

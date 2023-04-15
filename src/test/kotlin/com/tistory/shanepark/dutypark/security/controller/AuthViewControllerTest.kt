@@ -87,7 +87,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
 
         // Therefore
         mockMvc.perform(
-            MockMvcRequestBuilders.put("/api/duty/update")
+            MockMvcRequestBuilders.put("/api/duty/change")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
         ).andExpect(status().isUnauthorized)
@@ -123,7 +123,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
 
         // Therefore
         mockMvc.perform(
-            MockMvcRequestBuilders.put("/api/duty/update")
+            MockMvcRequestBuilders.put("/api/duty/change")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
                 .cookie(Cookie("SESSION", accessToken))
@@ -160,7 +160,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
 
         // Therefore
         mockMvc.perform(
-            MockMvcRequestBuilders.put("/api/duty/update")
+            MockMvcRequestBuilders.put("/api/duty/change")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
                 .cookie(Cookie("SESSION", accessToken))
