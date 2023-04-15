@@ -55,16 +55,22 @@ class DepartmentController(
         departmentService.delete(id)
     }
 
-    @PostMapping("/{id}/members/{memberId}")
-    fun addMember(@PathVariable id: Long, @PathVariable memberId: Long): ResponseEntity<Any> {
+    @PostMapping("/{id}/members")
+    fun addMember(
+        @PathVariable id: Long,
+        @RequestParam memberId: Long
+    ): ResponseEntity<Any> {
         val department = departmentRepository.findById(id).orElseThrow()
         val member = memberRepository.findById(memberId).orElseThrow()
         departmentService.addMemberToDepartment(department, member)
         return ResponseEntity.ok().build()
     }
 
-    @DeleteMapping("/{id}/members/{memberId}")
-    fun removeMember(@PathVariable id: Long, @PathVariable memberId: Long): ResponseEntity<Any> {
+    @DeleteMapping("/{id}/members")
+    fun removeMember(
+        @PathVariable id: Long,
+        @RequestParam memberId: Long
+    ): ResponseEntity<Any> {
         val member = memberRepository.findById(memberId).orElseThrow()
         val department = departmentRepository.findById(id).orElseThrow()
         departmentService.removeMemberFromDepartment(department, member)
