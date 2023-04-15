@@ -18,6 +18,10 @@
     </h1>
   </div>
   <div class="dutyTypes">
+    <span th:each="type : ${dutyTypes}">
+      <span th:class="|indicator BACKGROUND-${type.color}|">&nbsp;&nbsp;&nbsp;</span>
+      <span th:text="${type.name}"></span>
+    </span>
     <button class="back-btn"
             th:onclick="|window.location.href='@{/duty/{member}(member=${member.name},year=${year}, month=${month})}'|">
       완료 <i class="bi bi-check-square"></i>
@@ -52,38 +56,33 @@
     <th:block th:each="i : ${#numbers.sequence(0, offset % 7 -1, 1)}">
       <li class="month-prev"/>
     </th:block>
-      <th:block th:each="i : ${#numbers.sequence(1, lastDay)}">
-        <li th:with="duty=${duties.get(i)}"
-            th:data-day="${i}"
-            th:classappend='|BACKGROUND-${ duty?.dutyColor ?: offColor}${today.getYear()+1900==year and today.getMonth()+1 == month and today.getDate() == i ? " today": "" }|'>
-          <div class="date container">
-            <div class="day">
-              <span th:text="${i}"></span>
-            </div>
-            <div class="duty">
-              <div class="duty-type-list" th:each="type:${dutyTypes}">
-                <div class="duty-type" th:data-type_id="${type.id}">
-                  <button class="btn btn-sm btn-outline-dark"
-                          th:classappend='|BACKGROUND-${type.color} ${(type.name == duty?.dutyType or (type.id == null and duty?.dutyType==null) ) ? "selected" : ""}|'
-                          th:text="${type.name}">
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div class="memo">
-              <i class="bi edit-memo"
-                 th:if='!${#strings.isEmpty(duty?.memo)}'
-                 th:classappend='bi-pencil-square'
-                 th:attr='data-memo=${duty?.memo?:""}'
-                 th:text="${duty?.memo}">
-              </i>
-              <i class="bi edit-memo"
-                 th:if='${#strings.isEmpty(duty?.memo)}'
-                 th:classappend='bi-calendar-plus'
-                 th:attr='data-memo=${duty?.memo?:""}'></i>
-            </div>
+    <th:block th:each="i : ${#numbers.sequence(1, lastDay)}">
+      <li th:with="duty=${duties.get(i)}"
+          th:data-day="${i}"
+          th:classappend='|BACKGROUND-${ duty?.dutyColor ?: offColor}${today.getYear()+1900==year and today.getMonth()+1 == month and today.getDate() == i ? " today": "" }|'>
+        <div class="date container">
+          <div class="day">
+            <span th:text="${i}"></span>
           </div>
-        </li>
+          <div class="duty row">
+            <button class="duty-type col-md-4 btn btn-sm btn-outline-dark"
+                    th:with="selected=${type.name == duty?.dutyType or (type.id == null and duty?.dutyType==null)},
+                              size=${dutyTypes.size()}"
+                    th:classappend='|col-md-${size == 2 || size==4 ? 6 : 4} BACKGROUND-${type.color} ${selected ? "selected" : ""}|'
+                    th:each="type:${dutyTypes}"
+                    th:data-type_id="${type.id}"
+                    th:disabled="${selected}"
+                    th:text="${type.name != null ? #strings.substring(type.name, 0, (type.name.length() >= 3) ? 3 : type.name.length()) : ''}"
+            >
+            </button>
+          </div>
+        </div>
+        <div class="memo">
+          <i class="bi edit-memo"
+             th:classappend='|bi-${#strings.isEmpty(duty?.memo) ? "calendar-plus" : "pencil-square"}|'></i>
+          <p th:text="${duty?.memo}"></p>
+        </div>
+      </li>
     </th:block>
     <th:block th:if="(${offset} + ${lastDay}) % 7 > 0"
               th:each="i : ${#numbers.sequence(1, 7 - ((offset + lastDay) % 7) )}">
@@ -103,15 +102,14 @@
     $(function () {
 
         $('.edit-memo').on('click', function () {
-            let btn = $(this);
-            const originalMemo = btn.data('memo');
-            const date = btn.parents('li');
+            const memoArea = $(this).siblings('p');
+            const date = $(this).parents('li');
             const day = date.data('day');
             Swal.fire({
                 title: `${year}년 ${month}월 ${day}일 메모 수정`,
                 text: '메모는 50자 이내로 입력 가능합니다.',
                 input: 'textarea',
-                inputValue: originalMemo,
+                inputValue: memoArea.text(),
                 inputAttributes: {
                     autocapitalize: 'off',
                     maxlength: 50
@@ -142,12 +140,11 @@
                             icon: 'success',
                             confirmButtonText: '확인'
                         })
-                        btn.data('memo', memo);
-                        btn.text(memo);
+                        memoArea.text(memo);
                         if (memo.length > 0) {
-                            date.find('.bi-calendar-plus').removeClass('bi-calendar-plus').addClass('bi-calendar-check');
+                            date.find('i').removeClass('bi-calendar-plus').addClass('bi-calendar-check');
                         } else {
-                            date.find('.bi-calendar-check').removeClass('bi-calendar-check').addClass('bi-calendar-plus');
+                            date.find('i').removeClass('bi-calendar-check').addClass('bi-calendar-plus');
                         }
                         return true;
                     }).catch(error => {
@@ -163,20 +160,18 @@
             });
         });
 
-        $('.duty-type button').click(function () {
-            const date = $(this).parents('li');
-            const day = date.data('day');
-            const type = $(this).parent('.duty-type');
-            const type_id = type.data('type_id');
-            const backgroundColor = $(this).attr('class').match(/BACKGROUND-([A-Z]+)/)[0];
-
+        $('.duty-type').click(function () {
             let button = $(this);
+            const date = button.parents('li');
+            const day = date.data('day');
+            const type_id = button.data('type_id');
+            const backgroundColor = button.attr('class').match(/BACKGROUND-([A-Z]+)/)[0];
 
             date.waitMe({
                 effect: 'win8_linear',
             });
             $.ajax({
-                url: '/api/duty/update',
+                url: '/api/duty/change',
                 type: 'PUT',
                 data: JSON.stringify({
                     year: year,
@@ -189,18 +184,21 @@
                 dataType: 'json',
                 success: function (data) {
                     if (data) {
-                        date.find('.duty-type').find('.selected').removeClass('selected');
+                        let beforeSelected = date.find('.duty-type.selected');
+                        beforeSelected.removeClass('selected');
+                        beforeSelected.removeAttr('disabled');
                         date.get(0).className = date.get(0).className.replace(/BACKGROUND-[A-Z]+/g, '');
                         date.addClass(backgroundColor);
                         button.addClass('selected');
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: '저장에 실패했습니다.',
-                            showConfirmButton: false,
-                            timer: 1500
-                        });
+                        button.attr('disabled', true);
+                        return;
                     }
+                    Swal.fire({
+                        icon: 'error',
+                        title: '저장에 실패했습니다.',
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
                 }, error: function (e) {
                     Swal.fire({
                         icon: 'error',

@@ -64,9 +64,11 @@
             <span th:text='|${i}|'></span>
           </div>
           <div class="duty">
-            <p class="memo" th:if="${duty?.memo?.length > 0}"
-               th:text="|${duty.memo}|">
-            </p>
+            <div class="memo">
+              <p th:if="${duty?.memo?.length > 0}"
+                 th:text="|${duty.memo}|">
+              </p>
+            </div>
           </div>
         </div>
       </li>

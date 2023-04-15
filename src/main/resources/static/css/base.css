@@ -58,7 +58,7 @@ header.row {
     justify-content: center;
     list-style: none;
     margin-left: 0;
-    font-size: calc(16px + (21 - 16) * ((100vw - 300px) / (1600 - 300)));
+    font-size: 1.2em;
 }
 
 ul.weekdays {
@@ -70,10 +70,9 @@ ul.weekdays li {
 }
 
 ol.day-grid li {
-    border: 1px solid #eaeaea;
     min-height: 6vw;
     height: 100%;
-    padding: 5px;
+    padding: 0px;
     display: inline-table;
     border-radius: 0.625rem;
     box-shadow: 2px 4px 7px 3px #eaeaea;
@@ -129,8 +128,8 @@ h1 a.move:hover {
     color: black;
 }
 
-.date {
-    height: 100%;
+.day-grid .date {
+    text-align: center;
     width: 100%;
     padding: 5px 0px;
 }
@@ -144,17 +143,8 @@ header .current {
     text-decoration: none !important;
 }
 
-.btn-outline-dark.selected {
-    display: none;
-}
-
-.date {
-    text-align: center;
-}
-
-.duty p {
-    font-size: 0.7em;
-    margin-bottom: 0px;
+.btn-outline-dark.selected:disabled {
+    border: 3px dotted red;
 }
 
 .text-align-left {
@@ -167,10 +157,6 @@ header .current {
 
 .edit-memo:hover {
     cursor: pointer;
-}
-
-p.memo {
-    white-space: pre-line;
 }
 
 .day {
@@ -189,6 +175,10 @@ p.memo {
 
 .day-grid li:nth-child(7n) .day {
     color: blue;
+}
+
+.day-grid .today {
+    border: 3px solid red;
 }
 
 .day-grid .today .day span {
@@ -412,4 +402,25 @@ a.memberPage-link:hover {
 
 .swal2-html-container form {
     text-align: left;
+}
+
+.date .duty {
+    width: 100%;
+    margin: 0px;
+}
+
+.duty .duty-type {
+    margin: 0px;
+    padding: 0px;
+    height: 2em;
+}
+
+.day-grid .memo {
+    margin-left: 5px;
+    text-align: left;
+}
+
+.day-grid .memo p {
+    white-space: pre-line;
+    display: inline;
 }
