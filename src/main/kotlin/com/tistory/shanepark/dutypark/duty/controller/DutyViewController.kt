@@ -36,7 +36,7 @@ class DutyViewController(
         @Login loginMember: LoginMember
     ): String {
         val member = memberService.findMemberByName(name)
-        if (loginMember.id != member.id) {
+        if (!dutyService.canEdit(loginMember, member)) {
             val message =
                 "login member and request duty member does not match: login:$loginMember.id, dutyMemberId:${member.id}"
             log.warn(message)

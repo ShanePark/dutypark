@@ -40,7 +40,7 @@ class DepartmentService(
         Department(departmentCreateDto.name).let {
             it.description = departmentCreateDto.description
             repository.save(it)
-            return DepartmentDto.of(it)
+            return DepartmentDto.ofSimple(it)
         }
     }
 
@@ -73,6 +73,10 @@ class DepartmentService(
             throw IllegalStateException("Member does not belong to department")
         }
         department.removeMember(member)
+    }
+
+    fun changeManager(department: Department, member: Member?) {
+        department.changeManager(member)
     }
 
 }

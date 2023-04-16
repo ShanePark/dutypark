@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.EntityGraph
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Query
 import java.util.*
 
 interface MemberRepository : JpaRepository<Member, Long> {
@@ -20,5 +21,8 @@ interface MemberRepository : JpaRepository<Member, Long> {
 
     @EntityGraph(attributePaths = ["department"])
     fun findMembersByNameContainingIgnoreCase(name: String, pageable: Pageable): Page<Member>
+
+    @Query("select m from Member m join fetch m.department d  where m.id = :dutyMemberId")
+    fun findMemberWithDepartment(dutyMemberId: Long): Optional<Member>
 
 }

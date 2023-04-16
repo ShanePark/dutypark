@@ -6,6 +6,7 @@ import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.MemoDto
 import com.tistory.shanepark.dutypark.duty.service.DutyService
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
+import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.slf4j.Logger
 import org.springframework.http.ResponseEntity
@@ -14,7 +15,8 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/api/duty")
 class DutyController(
-    private val dutyService: DutyService
+    private val dutyService: DutyService,
+    private val memberRepository: MemberRepository,
 ) {
 
     val log: Logger = org.slf4j.LoggerFactory.getLogger(DutyController::class.java)
@@ -44,7 +46,8 @@ class DutyController(
     private fun checkAuthentication(
         loginMember: LoginMember, dutyMemberId: Long
     ) {
-        if (loginMember.id != dutyMemberId) {
+        val dutyMember = memberRepository.findMemberWithDepartment(dutyMemberId).orElseThrow()
+        if (!dutyService.canEdit(loginMember, dutyMember)) {
             log.warn("login member and request duty member does not match: login:$loginMember.id, dutyMemberId:${dutyMemberId}")
             throw DutyparkAuthException("login member and request dutyMemberId does not match")
         }

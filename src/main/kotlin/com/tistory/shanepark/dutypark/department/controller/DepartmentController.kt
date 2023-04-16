@@ -55,6 +55,17 @@ class DepartmentController(
         departmentService.delete(id)
     }
 
+    @PutMapping("/{id}/manager")
+    fun changeManager(
+        @PathVariable id: Long,
+        @RequestParam memberId: Long?
+    ): ResponseEntity<Any> {
+        val department = departmentRepository.findById(id).orElseThrow()
+        val member = memberId?.let { memberRepository.findById(it).orElseThrow() }
+        departmentService.changeManager(department, member)
+        return ResponseEntity.ok().build()
+    }
+
     @PostMapping("/{id}/members")
     fun addMember(
         @PathVariable id: Long,

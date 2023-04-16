@@ -9,6 +9,7 @@ import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.service.MemberService
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -91,5 +92,17 @@ class DutyService(
             )
         }
         return duty
+    }
+
+    fun canEdit(
+        loginMember: LoginMember, member: Member
+    ): Boolean {
+        if (member.id == loginMember.id) {
+            return true
+        }
+        if (member.department?.manager?.id == loginMember.id) {
+            return true
+        }
+        return false
     }
 }

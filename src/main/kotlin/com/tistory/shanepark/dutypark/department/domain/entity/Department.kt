@@ -18,6 +18,10 @@ class Department(
 
     var description: String = ""
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "manager_id")
+    var manager: Member? = null
+
     @Enumerated(EnumType.STRING)
     var offColor: Color = Color.GREY
 
@@ -46,6 +50,10 @@ class Department(
         dutyColor?.let { dutyType.color = it }
         dutyTypes.add(dutyType)
         return dutyType
+    }
+
+    fun changeManager(member: Member?) {
+        this.manager = member
     }
 
 }

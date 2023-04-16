@@ -276,6 +276,27 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
         assertThat(member2.department).isEqualTo(department)
     }
 
-    // TODO : add member UI. for this member search UI is necessary
+    @Test
+    fun `change department manager`() {
+        // Given
+        val department = departmentRepository.findById(TestData.department.id!!).orElseThrow()
+        val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
+        val member2 = memberRepository.findById(TestData.member2.id!!).orElseThrow()
+        assertThat(department.members).hasSize(2)
+        assertThat(member.department).isEqualTo(department)
+        assertThat(member2.department).isEqualTo(department)
+        assertThat(department.manager).isNull()
+
+        // Then
+        service.changeManager(department, member)
+        assertThat(department.manager).isEqualTo(member)
+
+        service.changeManager(department, member2)
+        assertThat(department.manager).isEqualTo(member2)
+
+        service.changeManager(department, null)
+        assertThat(department.manager).isNull()
+
+    }
 
 }
