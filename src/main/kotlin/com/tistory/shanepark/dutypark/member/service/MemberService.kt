@@ -19,7 +19,10 @@ class MemberService(
 
     @Transactional(readOnly = true)
     fun findAll(): MutableList<MemberDto> {
-        return memberRepository.findAll().map { MemberDto(it) }.toMutableList()
+        return memberRepository.findAll()
+            .sortedWith(compareBy({ it.department?.name }, { it.name }))
+            .map { MemberDto(it) }
+            .toMutableList()
     }
 
     @Transactional(readOnly = true)
