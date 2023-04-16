@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.duty.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeCreateDto
+import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
@@ -59,6 +60,47 @@ class DutyTypeServiceTest : DutyparkIntegrationTest() {
         assertThrows<IllegalArgumentException> {
             val dutyTypeCreateDto = DutyTypeCreateDto(TestData.department.id!!, "dutyType2", Color.BLUE)
             dutyTypeService.addDutyType(dutyTypeCreateDto)
+        }
+    }
+
+    @Test
+    fun `update duty-type success`() {
+        // Given
+        val dutyTypeCreateDto = DutyTypeCreateDto(TestData.department.id!!, "dutyType", Color.BLUE)
+        val created = dutyTypeService.addDutyType(dutyTypeCreateDto)
+        val dutyTypeSize = departmentRepository.findById(TestData.department.id!!).orElseThrow().dutyTypes
+        em.flush()
+
+        // When
+        val dutyTypeUpdateDto = DutyTypeUpdateDto(created.id!!, "changedName", Color.BLUE)
+        dutyTypeService.update(dutyTypeUpdateDto)
+        em.flush()
+        em.clear()
+
+        // Then
+        val dutyType = dutyTypeRepository.findById(created.id!!).orElseThrow()
+
+        assertThat(dutyType.id).isEqualTo(created.id)
+        assertThat(
+            departmentRepository.findById(TestData.department.id!!).orElseThrow().dutyTypes
+        ).hasSize(dutyTypeSize.size)
+        assertThat(dutyType.name).isEqualTo(dutyTypeUpdateDto.name)
+        assertThat(dutyType.color).isEqualTo(dutyTypeUpdateDto.color)
+    }
+
+    @Test
+    fun `update duty type fails if same name already exist in the department`() {
+        // Given
+        val dutyTypeCreateDto = DutyTypeCreateDto(TestData.department.id!!, "dutyType", Color.BLUE)
+        val created = dutyTypeService.addDutyType(dutyTypeCreateDto)
+        val dutyTypeCreateDto2 = DutyTypeCreateDto(TestData.department.id!!, "dutyType2", Color.BLUE)
+        val created2 = dutyTypeService.addDutyType(dutyTypeCreateDto2)
+        em.flush()
+
+        // Then
+        val dutyTypeUpdateDto = DutyTypeUpdateDto(created.id!!, created2.name, Color.BLUE)
+        assertThrows<IllegalArgumentException> {
+            dutyTypeService.update(dutyTypeUpdateDto)
         }
     }
 

@@ -18,13 +18,17 @@ class Department(
 
     var description: String = ""
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "manager_id")
+    var manager: Member? = null
+
     @Enumerated(EnumType.STRING)
     var offColor: Color = Color.GREY
 
-    @OneToMany(mappedBy = "department", cascade = [CascadeType.ALL], orphanRemoval = true)
+    @OneToMany(mappedBy = "department", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
     val dutyTypes: MutableList<DutyType> = mutableListOf()
 
-    @OneToMany(mappedBy = "department")
+    @OneToMany(mappedBy = "department", fetch = FetchType.LAZY)
     val members: MutableList<Member> = mutableListOf()
 
     fun addMember(member: Member) {
@@ -46,6 +50,10 @@ class Department(
         dutyColor?.let { dutyType.color = it }
         dutyTypes.add(dutyType)
         return dutyType
+    }
+
+    fun changeManager(member: Member?) {
+        this.manager = member
     }
 
 }

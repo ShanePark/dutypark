@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.duty.controller
 
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeCreateDto
+import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeUpdateDto
 import com.tistory.shanepark.dutypark.duty.service.DutyTypeService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -19,9 +20,16 @@ class DutyTypeController(
         return ResponseEntity.status(HttpStatus.CREATED).build()
     }
 
+    @PatchMapping
+    fun updateDutyType(@RequestBody @Valid dutyTypeUpdateDto: DutyTypeUpdateDto): ResponseEntity<Any> {
+        dutyTypeService.update(dutyTypeUpdateDto)
+        return ResponseEntity.status(HttpStatus.OK).build()
+    }
+
     @DeleteMapping("/{id}")
-    fun delete(@PathVariable id: Long) {
+    fun delete(@PathVariable id: Long): ResponseEntity<Any> {
         dutyTypeService.delete(id)
+        return ResponseEntity.status(HttpStatus.OK).build()
     }
 
 }

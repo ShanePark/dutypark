@@ -31,13 +31,15 @@ class DutyparkIntegrationTest {
     lateinit var dutyTypeRepository: DutyTypeRepository
 
     @Autowired
-    lateinit var entityManager: EntityManager
+    lateinit var em: EntityManager
 
     @BeforeEach
     fun init() {
         initTestDepartment()
         initDutyTypes()
         initTestMember()
+        em.flush()
+        em.clear()
     }
 
     private fun initTestDepartment() {

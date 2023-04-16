@@ -7,11 +7,13 @@ data class MemberDto(
     val name: String,
     val email: String,
     val department: String?,
+    val managerId: Long?,
 ) {
     constructor (member: Member) : this(
         id = member.id!!,
         name = member.name,
         email = member.email,
-        department = member.department?.name
+        department = member.department?.name,
+        managerId = member.department?.manager?.id,
     )
 }

@@ -26,15 +26,21 @@ class DepartmentService(
 
     @Transactional(readOnly = true)
     fun findById(id: Long): DepartmentDto {
-        val findById = repository.findById(id).orElseThrow()
-        return DepartmentDto.of(findById)
+        val withMembers = repository.findByIdWithMembers(id).orElseThrow()
+        val withDutyTypes = repository.findByIdWithDutyTypes(id).orElseThrow()
+
+        return DepartmentDto.of(
+            department = withMembers,
+            members = withMembers.members,
+            dutyTypes = withDutyTypes.dutyTypes
+        )
     }
 
     fun create(departmentCreateDto: DepartmentCreateDto): DepartmentDto {
         Department(departmentCreateDto.name).let {
             it.description = departmentCreateDto.description
             repository.save(it)
-            return DepartmentDto.of(it)
+            return DepartmentDto.ofSimple(it)
         }
     }
 
@@ -67,6 +73,10 @@ class DepartmentService(
             throw IllegalStateException("Member does not belong to department")
         }
         department.removeMember(member)
+    }
+
+    fun changeManager(department: Department, member: Member?) {
+        department.changeManager(member)
     }
 
 }
