@@ -7,7 +7,7 @@ import jakarta.persistence.*
 @Entity
 @Table(name = "duty_type")
 class DutyType(
-    val name: String,
+    var name: String,
     val position: Int,
 
     @ManyToOne(fetch = FetchType.LAZY)

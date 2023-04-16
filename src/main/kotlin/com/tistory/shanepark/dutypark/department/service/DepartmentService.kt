@@ -26,8 +26,14 @@ class DepartmentService(
 
     @Transactional(readOnly = true)
     fun findById(id: Long): DepartmentDto {
-        val findById = repository.findById(id).orElseThrow()
-        return DepartmentDto.of(findById)
+        val withMembers = repository.findByIdWithMembers(id).orElseThrow()
+        val withDutyTypes = repository.findByIdWithDutyTypes(id).orElseThrow()
+
+        return DepartmentDto.of(
+            department = withMembers,
+            members = withMembers.members,
+            dutyTypes = withDutyTypes.dutyTypes
+        )
     }
 
     fun create(departmentCreateDto: DepartmentCreateDto): DepartmentDto {

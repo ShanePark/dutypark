@@ -80,12 +80,17 @@
       </tr>
       </thead>
       <tbody>
-      <tr v-for="(dutyType,index) in department.dutyTypes">
+      <tr class="duty-type"
+          v-on:click="updateDutyType($event.target)"
+          v-for="(dutyType,index) in department.dutyTypes"
+          v-bind:id="dutyType.id">
         <td>{{index+1}}</td>
-        <td>{{ dutyType.name }}</td>
-        <td>{{ dutyType.color }}</td>
+        <td class="duty-type-name">{{ dutyType.name }}</td>
+        <td class="duty-type-color">{{ dutyType.color }}</td>
         <td>
-          <button class="btn btn-danger" v-on:click="removeDutyType(dutyType.id)">Delete</button>
+          <button class="btn btn-danger"
+                  v-on:click.stop="removeDutyType(dutyType.name, dutyType.id)">Delete
+          </button>
         </td>
       </tr>
       </tbody>
@@ -94,7 +99,9 @@
   </div>
 </div>
 
-<div class="modal fade" id="member-search-modal" tabindex="-1" aria-hidden="true">
+<!-- Modals -->
+
+<div id="member-search-modal" class="modal fade" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
@@ -165,6 +172,19 @@
       </div>
     </div>
   </div>
+</div>
+
+<div id="duty-type-modal" hidden>
+  <input class="swal2-input" placeholder="Name" name="name">
+  <select class="swal2-input" name="color">
+    <option value="RED">Red</option>
+    <option value="BLUE">Blue</option>
+    <option value="WHITE">White</option>
+    <option value="GREEN">Green</option>
+    <option value="YELLOW">Yellow</option>
+    <option value="PURPLE">Purple</option>
+    <option value="GREY">Grey</option>
+  </select>
 </div>
 
 <script>
@@ -316,22 +336,73 @@
                     }
                 });
             },
+            updateDutyType: function (element) {
+                const dutyType = element.closest('.duty-type');
+                const dutyTypeName = dutyType.querySelector('.duty-type-name').textContent;
+                const dutyTypeColor = dutyType.querySelector('.duty-type-color').textContent;
+                const dutyTypeId = dutyType.attributes['id'].value;
+
+                const modal = document.querySelector('#duty-type-modal').cloneNode(true);
+                modal.querySelector('input[name="name"]').setAttribute('value', dutyTypeName);
+                modal.querySelectorAll('option').forEach(option => {
+                    if (option.value === dutyTypeColor) {
+                        option.setAttribute('selected', 'selected');
+                    }
+                });
+
+                Swal.fire({
+                    title: 'Update Duty Type',
+                    html: modal.innerHTML,
+                    focusConfirm: false,
+                    preConfirm: () => {
+                        let swalPopup = document.querySelector('.swal2-popup');
+                        const name = swalPopup.querySelector('input[name="name"]').value
+                        const color = swalPopup.querySelector('select[name="color"]').value
+                        if (!name) {
+                            Swal.showValidationMessage(`Name is required`)
+                        }
+                        if (app.department.dutyTypes.some(dutyType => dutyType.name === name && dutyType.id != dutyTypeId)) {
+                            Swal.showValidationMessage(`Duty type with name ${name} already exists`)
+                        }
+                        return [name, color]
+                    },
+                    showCancelButton: true,
+                    confirmButtonText: 'Update',
+                    confirmButtonColor: '#29945A',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: '/admin/api/duty-types',
+                            type: 'PATCH',
+                            data: JSON.stringify({
+                                id: dutyTypeId,
+                                name: result.value[0],
+                                color: result.value[1]
+                            }),
+                            contentType: 'application/json',
+                            success: function (response) {
+                                app.load();
+                            },
+                            error: function (error) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Oops...',
+                                    text: 'Failed to add duty type'
+                                })
+                            }
+                        })
+                    }
+                });
+            },
             addDutyType: function () {
                 Swal.fire({
                     title: 'Add Duty Type',
-                    html: '<input id="swal-input1" class="swal2-input" placeholder="Name">' +
-                        '<select id="swal-input2" class="swal2-input">' +
-                        '<option value="RED">Red</option>' +
-                        '<option value="BLUE">Blue</option>' +
-                        '<option value="WHITE">White</option>' +
-                        '<option value="GREEN">Green</option>' +
-                        '<option value="YELLOW">Yellow</option>' +
-                        '<option value="PURPLE">Purple</option>' +
-                        '<option value="GREY">Grey</option>',
+                    html: $('#duty-type-modal').clone().html(),
                     focusConfirm: false,
                     preConfirm: () => {
-                        const name = document.getElementById('swal-input1').value
-                        const color = document.getElementById('swal-input2').value
+                        let swalPopup = document.querySelector('.swal2-popup');
+                        const name = swalPopup.querySelector('input[name="name"]').value
+                        const color = swalPopup.querySelector('select[name="color"]').value
                         if (!name) {
                             Swal.showValidationMessage(`Name is required`)
                         }
@@ -368,10 +439,10 @@
                     }
                 });
             },
-            removeDutyType: function (dutyTypeId) {
+            removeDutyType: function (dutyTypeName, dutyTypeId) {
                 Swal.fire({
                     title: 'Delete duty type',
-                    text: 'Are you sure you want to delete this duty type?',
+                    text: 'Are you sure you want to delete duty type [ ' + dutyTypeName + ' ] ?',
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonText: 'Delete',

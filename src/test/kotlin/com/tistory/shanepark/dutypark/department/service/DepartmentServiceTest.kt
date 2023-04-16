@@ -104,7 +104,7 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
         val dutyType1 = department.addDutyType("오전")
         val dutyType2 = department.addDutyType("오후")
         val dutyType3 = department.addDutyType("야간")
-        entityManager.flush()
+        em.flush()
 
         assertThat(dutyType1.id).isNotNull
         assertThat(dutyType2.id).isNotNull
@@ -134,7 +134,7 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
 
         department.addMember(member)
         val dutyType1 = department.addDutyType("오전")
-        entityManager.flush()
+        em.flush()
 
         val dutyUpdateDto =
             DutyUpdateDto(year = 2023, month = 4, day = 8, dutyTypeId = dutyType1.id!!, memberId = member.id!!)
@@ -151,13 +151,13 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
 
         // When
         department.removeMember(member)
-        entityManager.flush()
+        em.flush()
 
         service.delete(department.id!!)
 
         // Then
-        entityManager.flush()
-        entityManager.clear()
+        em.flush()
+        em.clear()
 
         assertThat(dutyTypeRepository.findById(dutyType1.id!!)).isEmpty
         assertThat(departmentRepository.findById(department.id!!)).isEmpty
@@ -175,7 +175,7 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
         val dutyType1 = department.addDutyType("test1")
         val dutyType2 = department.addDutyType("test2")
         val dutyType3 = department.addDutyType("test3")
-        entityManager.flush()
+        em.flush()
 
         assertThat(dutyType1.id).isNotNull
         assertThat(dutyType2.id).isNotNull
@@ -242,8 +242,8 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
         service.addMemberToDepartment(department, member)
         service.addMemberToDepartment(department, member2)
 
-        entityManager.flush()
-        entityManager.clear()
+        em.flush()
+        em.clear()
 
         // Then
         val department1 = departmentRepository.findById(department.id!!).orElseThrow()

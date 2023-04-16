@@ -2,7 +2,9 @@ package com.tistory.shanepark.dutypark.department.domain.dto
 
 import com.tistory.shanepark.dutypark.department.domain.entity.Department
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeDto
+import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
 
 data class DepartmentDto(
     val id: Long,
@@ -26,6 +28,26 @@ data class DepartmentDto(
                 description = department.description,
                 dutyTypes = dutyTypes,
                 members = members,
+                createdDate = department.createdDate.toString(),
+                lastModifiedDate = department.lastModifiedDate.toString()
+            )
+        }
+
+        fun of(department: Department, members: MutableList<Member>, dutyTypes: MutableList<DutyType>): DepartmentDto {
+
+            return DepartmentDto(
+                id = department.id!!,
+                name = department.name,
+                description = department.description,
+                dutyTypes = dutyTypes.map {
+                    DutyTypeDto(
+                        it.id,
+                        it.name,
+                        it.position,
+                        it.color.toString()
+                    )
+                },
+                members = members.map { MemberDto(it) },
                 createdDate = department.createdDate.toString(),
                 lastModifiedDate = department.lastModifiedDate.toString()
             )

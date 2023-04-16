@@ -21,10 +21,10 @@ class Department(
     @Enumerated(EnumType.STRING)
     var offColor: Color = Color.GREY
 
-    @OneToMany(mappedBy = "department", cascade = [CascadeType.ALL], orphanRemoval = true)
+    @OneToMany(mappedBy = "department", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
     val dutyTypes: MutableList<DutyType> = mutableListOf()
 
-    @OneToMany(mappedBy = "department")
+    @OneToMany(mappedBy = "department", fetch = FetchType.LAZY)
     val members: MutableList<Member> = mutableListOf()
 
     fun addMember(member: Member) {

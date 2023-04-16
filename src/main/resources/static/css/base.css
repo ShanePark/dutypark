@@ -215,11 +215,6 @@ header .left-area {
     cursor: pointer !important;
 }
 
-.duty-type button {
-    width: 100%;
-    margin-bottom: 0.5em;
-}
-
 .bi-calendar-plus {
     opacity: 0.5;
 }
@@ -415,6 +410,11 @@ a.memberPage-link:hover {
     height: 2em;
 }
 
+.duty .duty-type button {
+    width: 100%;
+    margin-bottom: 0.5em;
+}
+
 .day-grid .memo {
     margin-left: 5px;
     text-align: left;
@@ -423,4 +423,9 @@ a.memberPage-link:hover {
 .day-grid .memo p {
     white-space: pre-line;
     display: inline;
+}
+
+.duty_type-list .duty-type:hover {
+    cursor: pointer;
+    background-color: aliceblue;
 }
