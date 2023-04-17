@@ -9,7 +9,6 @@ data class DutyDto(
     val day: Int,
     val dutyType: String?,
     val dutyColor: String?,
-    val memo: String,
 ) {
     constructor(duty: Duty) : this(
         duty.id!!,
@@ -18,6 +17,5 @@ data class DutyDto(
         duty.dutyDay,
         duty.dutyType?.name,
         duty.dutyType?.color?.name,
-        duty.memo ?: ""
     )
 }

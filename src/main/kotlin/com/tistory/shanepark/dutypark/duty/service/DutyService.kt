@@ -2,7 +2,6 @@ package com.tistory.shanepark.dutypark.duty.service
 
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
-import com.tistory.shanepark.dutypark.duty.domain.dto.MemoDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
@@ -55,7 +54,7 @@ class DutyService(
             return
         }
 
-        if (dutyType == null && duty.memo == null) {
+        if (dutyType == null) {
             dutyRepository.delete(duty)
             return
         }
@@ -65,33 +64,6 @@ class DutyService(
 
     fun save(duty: Duty): Duty {
         return dutyRepository.save(duty)
-    }
-
-    fun updateMemo(memoDto: MemoDto): Duty {
-        val member = memberService.findById(memoDto.memberId)
-
-        var duty: Duty? = dutyRepository.findByMemberAndDutyYearAndDutyMonthAndDutyDay(
-            member = member,
-            year = memoDto.year,
-            month = memoDto.month,
-            day = memoDto.day
-        )
-
-        if (duty != null) {
-            duty.memo = memoDto.memo
-        } else {
-            duty = save(
-                Duty(
-                    member = member,
-                    dutyYear = memoDto.year,
-                    dutyMonth = memoDto.month,
-                    dutyDay = memoDto.day,
-                    memo = memoDto.memo,
-                    dutyType = null
-                )
-            )
-        }
-        return duty
     }
 
     fun canEdit(

@@ -155,10 +155,6 @@ header .current {
     text-align: center !important;
 }
 
-.edit-memo:hover {
-    cursor: pointer;
-}
-
 .day {
     width: fit-content;
     position: relative;
@@ -190,11 +186,6 @@ header .current {
     border-radius: 100%;
     width: 1.5em;
     height: 1.5em;
-}
-
-.edit .day .memo {
-    text-align: left;
-    font-size: 0.9em;
 }
 
 .homeButton {
@@ -413,16 +404,6 @@ a.memberPage-link:hover {
 .duty .duty-type button {
     width: 100%;
     margin-bottom: 0.5em;
-}
-
-.day-grid .memo {
-    margin-left: 5px;
-    text-align: left;
-}
-
-.day-grid .memo p {
-    white-space: pre-line;
-    display: inline;
 }
 
 .duty_type-list .duty-type:hover {

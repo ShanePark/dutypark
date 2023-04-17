@@ -3,7 +3,6 @@ package com.tistory.shanepark.dutypark.security.controller
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
-import com.tistory.shanepark.dutypark.duty.domain.dto.MemoDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import jakarta.servlet.http.Cookie
 import org.junit.jupiter.api.Test
@@ -168,79 +167,6 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
             .andDo(MockMvcResultHandlers.print())
     }
 
-    @Test
-    fun `without login session can't update memo`() {
-        // Given
-        val member = memberRepository.findByEmail(TestData.member.email).orElseThrow()
-        val momoDto =
-            MemoDto(year = 2023, month = 1, day = 1, memberId = member.id!!, memo = "memo")
-
-        // Therefore
-        mockMvc.perform(
-            MockMvcRequestBuilders.put("/api/duty/memo")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(momoDto))
-        ).andExpect(status().isUnauthorized)
-            .andDo(MockMvcResultHandlers.print())
-    }
-
-    @Test
-    fun `different user can't request memo update`() {
-        // Given
-        val member = memberRepository.findByEmail(TestData.member.email).orElseThrow()
-        val momoDto =
-            MemoDto(year = 2023, month = 1, day = 1, memberId = member.id!!, memo = "memo")
-
-        val anotherMember = memberRepository.findByEmail(TestData.member2.email).orElseThrow()
-        val loginDto = LoginDto(anotherMember.email, testPass)
-
-        // save login session token on variable
-        val accessToken = mockMvc.perform(
-            MockMvcRequestBuilders.post("/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(loginDto))
-        ).andReturn().response.getCookie("SESSION")?.let { it.value }
-
-        log.info("accessToken: $accessToken")
-
-        // Therefore
-        mockMvc.perform(
-            MockMvcRequestBuilders.put("/api/duty/memo")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(momoDto))
-                .cookie(Cookie("SESSION", accessToken))
-        ).andExpect(status().isUnauthorized)
-            .andDo(MockMvcResultHandlers.print())
-    }
-
-    @Test
-    fun `with proper token, memo update success`() {
-        // Given
-        val member = memberRepository.findByEmail(TestData.member.email).orElseThrow()
-        val momoDto =
-            MemoDto(year = 2023, month = 1, day = 1, memberId = member.id!!, memo = "memo")
-        val json = objectMapper.writeValueAsString(momoDto)
-
-        val loginDto = LoginDto(email = TestData.member.email, password = testPass)
-
-        // save login session token on variable
-        val accessToken = mockMvc.perform(
-            MockMvcRequestBuilders.post("/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(loginDto))
-        ).andReturn().response.getCookie("SESSION")?.let { it.value }
-
-        log.info("accessToken: $accessToken")
-
-        // Therefore
-        mockMvc.perform(
-            MockMvcRequestBuilders.put("/api/duty/memo")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json)
-                .cookie(Cookie("SESSION", accessToken))
-        ).andExpect(status().isOk)
-            .andDo(MockMvcResultHandlers.print())
-    }
 
     @Test
     fun `if login Member, health point returns login info`() {

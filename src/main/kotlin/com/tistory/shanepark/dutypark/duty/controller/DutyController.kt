@@ -3,7 +3,6 @@ package com.tistory.shanepark.dutypark.duty.controller
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
-import com.tistory.shanepark.dutypark.duty.domain.dto.MemoDto
 import com.tistory.shanepark.dutypark.duty.service.DutyService
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -29,17 +28,6 @@ class DutyController(
     ): ResponseEntity<Boolean> {
         checkAuthentication(loginMember, dutyUpdateDto.memberId)
         dutyService.update(dutyUpdateDto)
-        return ResponseEntity.ok(true)
-    }
-
-    @PutMapping("memo")
-    @SlackNotification
-    fun updateMemo(
-        @RequestBody memoDto: MemoDto,
-        @Login loginMember: LoginMember
-    ): ResponseEntity<Boolean> {
-        checkAuthentication(loginMember, memoDto.memberId)
-        dutyService.updateMemo(memoDto)
         return ResponseEntity.ok(true)
     }
 

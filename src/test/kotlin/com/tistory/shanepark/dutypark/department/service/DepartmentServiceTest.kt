@@ -3,7 +3,6 @@ package com.tistory.shanepark.dutypark.department.service
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentCreateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
-import com.tistory.shanepark.dutypark.duty.domain.dto.MemoDto
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.service.DutyService
 import org.assertj.core.api.Assertions.assertThat
@@ -139,15 +138,11 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
         val dutyUpdateDto =
             DutyUpdateDto(year = 2023, month = 4, day = 8, dutyTypeId = dutyType1.id!!, memberId = member.id!!)
         dutyService.update(dutyUpdateDto)
-        val memoDto = MemoDto(2023, 4, 8, "memo1", member.id!!)
-        val updateMemoResult = dutyService.updateMemo(memoDto)
 
         val duties = dutyService.findDutyByMemberAndYearAndMonth(member, 2023, 4)
         assertThat(duties.size).isEqualTo(1)
         val duty = duties[8]
         assertThat(duty).isNotNull
-        assertThat(updateMemoResult.id).isEqualTo(duty!!.id)
-        assertThat(duty?.memo).isEqualTo(memoDto.memo)
 
         // When
         department.removeMember(member)
@@ -162,10 +157,9 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
         assertThat(dutyTypeRepository.findById(dutyType1.id!!)).isEmpty
         assertThat(departmentRepository.findById(department.id!!)).isEmpty
 
-        val theDuty = dutyRepository.findById(duty.id!!).orElseThrow()
+        val theDuty = dutyRepository.findById(duty?.id!!).orElseThrow()
         assertThat(theDuty).isNotNull
         assertThat(theDuty.dutyType).isNull()
-        assertThat(theDuty.memo).isEqualTo(memoDto.memo)
     }
 
     @Test
