@@ -16,6 +16,7 @@ interface ScheduleRepository : JpaRepository<Schedule, UUID> {
                 "(s.startDateTime < :start AND s.endDateTime > :end)" +
                 ")"
     )
-    fun findSchedulesForMonth(member: Member, start: LocalDateTime, end: LocalDateTime): List<Schedule>
+    fun findSchedulesOfMonth(member: Member, start: LocalDateTime, end: LocalDateTime): List<Schedule>
+
 }
 

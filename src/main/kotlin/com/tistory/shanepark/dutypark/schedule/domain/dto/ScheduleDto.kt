@@ -20,8 +20,9 @@ data class ScheduleDto(
             val startDate = schedule.startDateTime
             val endDate = schedule.endDateTime
             val totalDays = ChronoUnit.DAYS.between(startDate, endDate).toInt() + 1
+            val validDays = validDays(startDate, endDate, yearMonth)
 
-            return validDays(startDate, endDate, yearMonth).map {
+            return validDays.map {
                 ScheduleDto(
                     id = schedule.id,
                     content = schedule.content,
