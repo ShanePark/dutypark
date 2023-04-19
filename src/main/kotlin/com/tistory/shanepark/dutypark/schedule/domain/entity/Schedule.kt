@@ -9,8 +9,8 @@ import java.time.LocalDateTime
 class Schedule(
     member: Member,
     content: String,
-    from: LocalDateTime,
-    until: LocalDateTime,
+    startDateTime: LocalDateTime,
+    endDateTime: LocalDateTime,
     position: Int,
 ) : EntityBase() {
 
@@ -19,10 +19,10 @@ class Schedule(
     val member: Member = member
 
     @Column(name = "start_date_time")
-    var startDateTime: LocalDateTime = from
+    var startDateTime: LocalDateTime = startDateTime
 
     @Column(name = "end_date_time")
-    var endDateTime: LocalDateTime = until
+    var endDateTime: LocalDateTime = endDateTime
 
     var content: String = content
 

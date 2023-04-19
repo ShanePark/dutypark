@@ -14,6 +14,8 @@ data class ScheduleDto(
     val dayOfMonth: Int,
     val daysFromStart: Int,
     val totalDays: Int,
+    val startDateTime: LocalDateTime,
+    val endDateTime: LocalDateTime,
 ) {
     companion object {
         fun of(yearMonth: YearMonth, schedule: Schedule): List<ScheduleDto> {
@@ -29,7 +31,9 @@ data class ScheduleDto(
                     position = schedule.position,
                     dayOfMonth = it.dayOfMonth,
                     daysFromStart = ChronoUnit.DAYS.between(startDate.toLocalDate(), it).toInt() + 1,
-                    totalDays = totalDays
+                    totalDays = totalDays,
+                    startDateTime = startDate,
+                    endDateTime = endDate,
                 )
             }
         }

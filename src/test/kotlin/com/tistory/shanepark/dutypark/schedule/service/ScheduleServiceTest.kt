@@ -24,15 +24,15 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         val schedule1 = Schedule(
             member = member,
             content = "schedule1",
-            from = LocalDateTime.of(2023, 4, 10, 0, 0),
-            until = LocalDateTime.of(2023, 4, 10, 0, 0),
+            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
             position = 0
         )
         val schedule2 = Schedule(
             member = member,
             content = "schedule2",
-            from = LocalDateTime.of(2023, 4, 10, 0, 0),
-            until = LocalDateTime.of(2023, 4, 12, 0, 0),
+            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 12, 0, 0),
             position = 0
         )
         scheduleRepository.saveAll(listOf(schedule1, schedule2))
@@ -55,15 +55,15 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         val schedule1 = Schedule(
             member = member,
             content = "schedule1",
-            from = LocalDateTime.of(2023, 3, 30, 0, 0),
-            until = LocalDateTime.of(2023, 4, 5, 0, 0),
+            startDateTime = LocalDateTime.of(2023, 3, 30, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 5, 0, 0),
             position = 0
         )
         val schedule2 = Schedule(
             member = member,
             content = "schedule2",
-            from = LocalDateTime.of(2023, 4, 6, 0, 0),
-            until = LocalDateTime.of(2023, 4, 6, 0, 0),
+            startDateTime = LocalDateTime.of(2023, 4, 6, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 6, 0, 0),
             position = 0
         )
         scheduleRepository.saveAll(listOf(schedule1, schedule2))
