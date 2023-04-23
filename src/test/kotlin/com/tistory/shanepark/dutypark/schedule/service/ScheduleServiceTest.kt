@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.schedule.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
+import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import org.assertj.core.api.Assertions.assertThat
@@ -16,6 +17,105 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var scheduleRepository: ScheduleRepository
+
+    @Test
+    fun `Create schedule success test`() {
+        // given
+        val member = TestData.member
+        val scheduleUpdateDto1 = ScheduleUpdateDto(
+            memberId = member.id!!,
+            content = "schedule1",
+            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+        )
+        val scheduleUpdateDto2 = ScheduleUpdateDto(
+            memberId = member.id!!,
+            content = "schedule2",
+            startDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
+        )
+        val scheduleUpdateDto3 = ScheduleUpdateDto(
+            memberId = member.id!!,
+            content = "schedule3",
+            startDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
+        )
+
+        // When
+        val createSchedule1 = scheduleService.createSchedule(scheduleUpdateDto1)
+        val createSchedule2 = scheduleService.createSchedule(scheduleUpdateDto2)
+        val createSchedule3 = scheduleService.createSchedule(scheduleUpdateDto3)
+
+        // Then
+        assertThat(createSchedule1).isNotNull
+        val id = createSchedule1.id
+        assertThat(id).isNotNull
+        val findSchedule = scheduleRepository.findById(id!!).orElseThrow()
+        assertThat(findSchedule).isNotNull
+        assertThat(findSchedule.content).isEqualTo(scheduleUpdateDto1.content)
+        assertThat(findSchedule.startDateTime).isEqualTo(scheduleUpdateDto1.startDateTime)
+        assertThat(findSchedule.endDateTime).isEqualTo(scheduleUpdateDto1.endDateTime)
+        assertThat(findSchedule.position).isEqualTo(0)
+
+        assertThat(createSchedule2).isNotNull
+        assertThat(createSchedule2.position).isEqualTo(0)
+        assertThat(createSchedule3.position).isEqualTo(1)
+    }
+
+    @Test
+    fun `update Schedule Test`() {
+        // given
+        val member = TestData.member
+        val schedule = Schedule(
+            member = member,
+            content = "schedule1",
+            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            position = 0
+        )
+        scheduleRepository.save(schedule)
+        assertThat(schedule.id).isNotNull
+
+        // When
+        val scheduleUpdateDto = ScheduleUpdateDto(
+            memberId = member.id!!,
+            content = "schedule2",
+            startDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
+        )
+        val updatedSchedule = scheduleService.updateSchedule(schedule.id!!, scheduleUpdateDto)
+
+        // Then
+        assertThat(updatedSchedule).isNotNull
+        assertThat(updatedSchedule.content).isEqualTo(scheduleUpdateDto.content)
+        assertThat(updatedSchedule.startDateTime).isEqualTo(scheduleUpdateDto.startDateTime)
+        assertThat(updatedSchedule.endDateTime).isEqualTo(scheduleUpdateDto.endDateTime)
+        assertThat(updatedSchedule.position).isEqualTo(0)
+    }
+
+    @Test
+    fun `delete schedule test`() {
+        // given
+        val member = TestData.member
+        val schedule = Schedule(
+            member = member,
+            content = "schedule1",
+            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            position = 0
+        )
+        scheduleRepository.save(schedule)
+        assertThat(schedule.id).isNotNull
+
+        // When
+        scheduleService.deleteSchedule(schedule.id!!)
+
+        em.clear()
+
+        // Then
+        val findSchedule = scheduleRepository.findById(schedule.id!!)
+        assertThat(findSchedule).isEmpty
+    }
 
     @Test
     fun `Find Schedules`() {
