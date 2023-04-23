@@ -110,66 +110,69 @@
         });
 
         const memberId = parseInt("[[${member.id}]]");
-        const yearAndMonth = $('.month-control input').val().split('-');
-        const year = parseInt(yearAndMonth[0]);
-        const month = parseInt(yearAndMonth[1]);
 
-        const calendar = new Vue({
-            el: '.calendar',
-            data: {
-                days: [],
-            }, mounted() {
-                this.load();
-            }, methods: {
-                load() {
-                    $.ajax({
-                        url: '/api/schedules',
-                        type: 'GET',
-                        data: {
-                            memberId: memberId,
-                            year: year,
-                            month: month,
-                        },
-                        success: (data) => {
-                            this.days = data;
-                            // TODO: DutyViewController.retrieveMemberDuty model data goes vue binding
-                            for (let i = 0; i < data.length; i++) {
-                                const schedules = data[i];
-                                const $day = $('#day-' + (i + 1));
-                                for (const schedule of schedules) {
-                                    const daysFromStart = schedule.daysFromStart;
-                                    const totalDays = schedule.totalDays;
-                                    let $schedule = $('<div class="schedule">');
-                                    $schedule.append($('<span class="schedule-content">').text(schedule.content));
-                                    const $timeContainer = $('<div class="schedule-time-container">');
-                                    const startDateTime = new Date(schedule.startDateTime);
-                                    const endDateTime = new Date(schedule.endDateTime);
-                                    const startHour = startDateTime.getHours().toString().padStart(2, '0');
-                                    if (daysFromStart == 1 && startHour != '00') {
-                                        const $startTime = $('<span class="start-time">');
-                                        const scheduleMinute = startDateTime.getMinutes().toString().padStart(2, '0');
-                                        $startTime.text(startHour + ':' + scheduleMinute);
-                                        $timeContainer.append($startTime);
+        if (document.querySelector('.calendar')) {
+            const yearAndMonth = $('.month-control input').val().split('-');
+            const year = parseInt(yearAndMonth[0]);
+            const month = parseInt(yearAndMonth[1]);
+
+            const calendar = new Vue({
+                el: '.calendar',
+                data: {
+                    days: [],
+                }, mounted() {
+                    this.load();
+                }, methods: {
+                    load() {
+                        $.ajax({
+                            url: '/api/schedules',
+                            type: 'GET',
+                            data: {
+                                memberId: memberId,
+                                year: year,
+                                month: month,
+                            },
+                            success: (data) => {
+                                this.days = data;
+                                // TODO: DutyViewController.retrieveMemberDuty model data goes vue binding
+                                for (let i = 0; i < data.length; i++) {
+                                    const schedules = data[i];
+                                    const $day = $('#day-' + (i + 1));
+                                    for (const schedule of schedules) {
+                                        const daysFromStart = schedule.daysFromStart;
+                                        const totalDays = schedule.totalDays;
+                                        let $schedule = $('<div class="schedule">');
+                                        $schedule.append($('<span class="schedule-content">').text(schedule.content));
+                                        const $timeContainer = $('<div class="schedule-time-container">');
+                                        const startDateTime = new Date(schedule.startDateTime);
+                                        const endDateTime = new Date(schedule.endDateTime);
+                                        const startHour = startDateTime.getHours().toString().padStart(2, '0');
+                                        if (daysFromStart == 1 && startHour != '00') {
+                                            const $startTime = $('<span class="start-time">');
+                                            const scheduleMinute = startDateTime.getMinutes().toString().padStart(2, '0');
+                                            $startTime.text(startHour + ':' + scheduleMinute);
+                                            $timeContainer.append($startTime);
+                                        }
+                                        const endHour = endDateTime.getHours().toString().padStart(2, '0');
+                                        if (daysFromStart == totalDays && endHour != '00' && !(totalDays == 1 && sameDate(startDateTime, endDateTime))) {
+                                            const $endTime = $('<span class="end-time">');
+                                            const scheduleMinute = endDateTime.getMinutes().toString().padStart(2, '0');
+                                            $endTime.text(endHour + ':' + scheduleMinute);
+                                            $timeContainer.append($endTime);
+                                        }
+                                        $schedule.append($timeContainer);
+                                        if ($timeContainer.children().length < 2) {
+                                            $timeContainer.find('span').addClass('single-time');
+                                        }
+                                        $day.find('.schedules').append($schedule);
                                     }
-                                    const endHour = endDateTime.getHours().toString().padStart(2, '0');
-                                    if (daysFromStart == totalDays && endHour != '00' && !(totalDays == 1 && sameDate(startDateTime, endDateTime))) {
-                                        const $endTime = $('<span class="end-time">');
-                                        const scheduleMinute = endDateTime.getMinutes().toString().padStart(2, '0');
-                                        $endTime.text(endHour + ':' + scheduleMinute);
-                                        $timeContainer.append($endTime);
-                                    }
-                                    $schedule.append($timeContainer);
-                                    if ($timeContainer.children().length < 2) {
-                                        $timeContainer.find('span').addClass('single-time');
-                                    }
-                                    $day.find('.schedules').append($schedule);
                                 }
                             }
-                        }
-                    })
+                        })
+                    }
                 }
-            }
-        })
+            })
+        }
 
         const app = new Vue({
             el: '.d-day-list',
