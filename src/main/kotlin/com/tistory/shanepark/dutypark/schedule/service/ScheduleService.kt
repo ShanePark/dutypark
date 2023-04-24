@@ -75,8 +75,21 @@ class ScheduleService(
         return scheduleRepository.save(schedule)
     }
 
-    fun updateSchedulePosition() {
-        // TODO
+    fun updateSchedulePosition(order: List<UUID>) {
+        if (order.isEmpty())
+            return
+        val schedulesMap = scheduleRepository.findAllById(order).associateBy { it.id }
+
+        val startDate = schedulesMap.values.first().startDateTime.toLocalDate()
+        schedulesMap.values.forEach {
+            if (it.startDateTime.toLocalDate() != startDate) {
+                throw IllegalArgumentException("All schedules must have same start date")
+            }
+        }
+
+        order.forEachIndexed { index, scheduleId ->
+            schedulesMap[scheduleId]?.position = index
+        }
     }
 
     fun deleteSchedule(id: UUID) {

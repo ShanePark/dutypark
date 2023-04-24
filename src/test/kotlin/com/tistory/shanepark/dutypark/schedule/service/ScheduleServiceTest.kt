@@ -6,6 +6,7 @@ import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import java.time.LocalDateTime
 import java.time.YearMonth
@@ -83,7 +84,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
             startDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
             endDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
         )
-        val updatedSchedule = scheduleService.updateSchedule(schedule.id!!, scheduleUpdateDto)
+        val updatedSchedule = scheduleService.updateSchedule(schedule.id, scheduleUpdateDto)
 
         // Then
         assertThat(updatedSchedule).isNotNull
@@ -108,12 +109,12 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         assertThat(schedule.id).isNotNull
 
         // When
-        scheduleService.deleteSchedule(schedule.id!!)
+        scheduleService.deleteSchedule(schedule.id)
 
         em.clear()
 
         // Then
-        val findSchedule = scheduleRepository.findById(schedule.id!!)
+        val findSchedule = scheduleRepository.findById(schedule.id)
         assertThat(findSchedule).isEmpty
     }
 
@@ -189,6 +190,85 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         assertThat(result[6 - 1]).hasSize(1)
         for (i in 7..30) {
             assertThat(result[i - 1]).isEmpty()
+        }
+    }
+
+    @Test
+    fun `update Schedule Position test`() {
+        // Given
+        val member = TestData.member
+        val scheduleUpdateDto1 = ScheduleUpdateDto(
+            memberId = member.id!!,
+            content = "schedule1",
+            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+        )
+        val scheduleUpdateDto2 = ScheduleUpdateDto(
+            memberId = member.id!!,
+            content = "schedule2",
+            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+        )
+        val scheduleUpdateDto3 = ScheduleUpdateDto(
+            memberId = member.id!!,
+            content = "schedule3",
+            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+        )
+
+        val schedule1 = scheduleService.createSchedule(scheduleUpdateDto1)
+        val schedule2 = scheduleService.createSchedule(scheduleUpdateDto2)
+        val schedule3 = scheduleService.createSchedule(scheduleUpdateDto3)
+        assertThat(schedule1.position).isEqualTo(0)
+        assertThat(schedule2.position).isEqualTo(1)
+        assertThat(schedule3.position).isEqualTo(2)
+
+        // When
+        scheduleService.updateSchedulePosition(
+            listOf(schedule3.id, schedule1.id, schedule2.id)
+        )
+        em.flush()
+        em.clear()
+
+        // Then
+        val findSchedule1 = scheduleRepository.findById(schedule1.id)
+        val findSchedule2 = scheduleRepository.findById(schedule2.id)
+        val findSchedule3 = scheduleRepository.findById(schedule3.id)
+        assertThat(findSchedule3.get().position).isEqualTo(0)
+        assertThat(findSchedule2.get().position).isEqualTo(2)
+        assertThat(findSchedule1.get().position).isEqualTo(1)
+    }
+
+    @Test
+    fun `Different start date can't update schedule position`() {
+        // Given
+        val member = TestData.member
+        val scheduleUpdateDto1 = ScheduleUpdateDto(
+            memberId = member.id!!,
+            content = "schedule1",
+            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+        )
+        val scheduleUpdateDto2 = ScheduleUpdateDto(
+            memberId = member.id!!,
+            content = "schedule2",
+            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+        )
+        val scheduleUpdateDto3 = ScheduleUpdateDto(
+            memberId = member.id!!,
+            content = "schedule3",
+            startDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
+        )
+
+        val schedule1 = scheduleService.createSchedule(scheduleUpdateDto1)
+        val schedule2 = scheduleService.createSchedule(scheduleUpdateDto2)
+        val schedule3 = scheduleService.createSchedule(scheduleUpdateDto3)
+
+        // Then
+        assertThrows<IllegalArgumentException> {
+            scheduleService.updateSchedulePosition(listOf(schedule3.id, schedule1.id, schedule2.id))
         }
     }
 
