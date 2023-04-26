@@ -134,6 +134,10 @@ h1 a.move:hover {
     padding: 5px 0px;
 }
 
+.day-grid .date .d-day-count {
+    font-size: 0.8em;
+}
+
 .text-right {
     text-align: right !important;
 }
@@ -353,11 +357,6 @@ a.memberPage-link:hover {
     margin-right: 20px;
 }
 
-.d-day-item {
-    padding: 10px;
-    box-shadow: 6px 10px 40px -28px rgba(0, 0, 0, 0.75);
-}
-
 .d-day-item .d-day_menu {
     text-align: right;
 }
@@ -381,6 +380,18 @@ a.memberPage-link:hover {
     background-color: mintcream;
     height: 100px;
     margin: 10px;
+    padding: 10px;
+    box-shadow: 6px 10px 40px -28px rgba(0, 0, 0, 0.75);
+}
+
+.d-day-list .d-day-item.selected {
+    border: 3px solid lightpink;
+    filter: brightness(90%);
+}
+
+.d-day-list .d-day-item:hover {
+    cursor: pointer;
+    filter: brightness(90%);
 }
 
 .d-day-list .d-day-private {
