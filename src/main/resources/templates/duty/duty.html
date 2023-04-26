@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<head th:replace="~{layout/include::link}"/>
+<head th:replace="~{layout/include::link}" xmlns:v-on="http://www.w3.org/1999/xhtml"/>
 <body>
 
 <div th:replace="~{layout/header::header-title(|${member.name}|)}"></div>
@@ -88,6 +88,7 @@
   <div class="d-day-list row" v-cloak>
     <div v-for="(dDay, index) in dDays" class="col-6">
       <div class="d-day-item card row"
+           v-on:click="dDayToggle(dDay)"
            :data-id="dDay.id"
            :class="{'d-day-private': dDay.isPrivate}">
         <div class="d-day_day col-4">
@@ -117,11 +118,16 @@
         const app = new Vue({
             el: '.d-day-list',
             data: {
-                dDays: []
+                dDays: [],
+                selectedDday: null,
             },
             mounted() {
                 this.load();
-            }, methods: {
+            },
+            updated() {
+                this.loadSelectedDday();
+            },
+            methods: {
                 load() {
                     $.ajax({
                         url: '/api/dday/' + memberId,
@@ -140,6 +146,50 @@
                             }
                         }
                     })
+                },
+                dDayToggle(clickedDday) {
+                    $('.d-day-item.selected').removeClass('selected');
+                    document.querySelectorAll('span.d-day-count').forEach((span) => {
+                        span.remove();
+                    })
+                    if (app.selectedDday == clickedDday) {
+                        app.selectedDday = null;
+                        this.saveSelectedDday(null);
+                        return;
+                    }
+                    app.selectedDday = clickedDday;
+                    this.saveSelectedDday(app.selectedDday);
+
+                    const element = document.querySelector(`.d-day-item[data-id='${app.selectedDday.id}']`);
+                    element.classList.add('selected');
+
+                    const calendarYear = parseInt($("input[type='month']").val().split('-')[0]);
+                    const calendarMonth = parseInt($("input[type='month']").val().split('-')[1]);
+
+                    document.querySelectorAll('.day-grid li .date').forEach((li) => {
+                        const day = li.querySelector('.day span').innerText
+                        const date = new Date(calendarYear, calendarMonth - 1, day);
+                        const calc = Math.floor((date.getTime() - new Date(app.selectedDday.date).getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                        const dDayText = calc < 0 ? 'D' + calc : calc == 0 ? 'D-Day' : 'D+' + (calc + 1);
+                        const countElement = document.createElement('span');
+                        countElement.classList.add('d-day-count');
+                        countElement.innerText = dDayText;
+                        li.prepend(countElement);
+                    })
+                },
+                saveSelectedDday(selectedDday) {
+                    if (!selectedDday) {
+                        localStorage.removeItem('selectedDday_' + memberId);
+                        return;
+                    }
+                    localStorage.setItem('selectedDday_' + memberId, this.selectedDday.id);
+                },
+                loadSelectedDday() {
+                    const savedSelectedDday = localStorage.getItem('selectedDday_' + memberId);
+                    if (savedSelectedDday) {
+                        const element = document.querySelector(`.d-day-item[data-id='${savedSelectedDday}']`);
+                        element.click();
+                    }
                 }
             }
         })
