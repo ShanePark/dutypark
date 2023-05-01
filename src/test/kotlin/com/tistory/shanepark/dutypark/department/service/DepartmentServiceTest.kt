@@ -139,7 +139,7 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
             DutyUpdateDto(year = 2023, month = 4, day = 8, dutyTypeId = dutyType1.id!!, memberId = member.id!!)
         dutyService.update(dutyUpdateDto)
 
-        val duties = dutyService.findDutyByMemberAndYearAndMonth(member, 2023, 4)
+        val duties = dutyService.getDutiesAsMap(member, 2023, 4)
         assertThat(duties.size).isEqualTo(1)
         val duty = duties[8]
         assertThat(duty).isNotNull

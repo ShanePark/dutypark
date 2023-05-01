@@ -7,6 +7,7 @@ import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.springframework.beans.factory.annotation.Autowired
+import java.time.YearMonth
 
 internal class DutyServiceTest : DutyparkIntegrationTest() {
 
@@ -31,7 +32,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
             )
         )
 
-        val dutyDto = dutyService.findDutyByMemberAndYearAndMonth(member, 2022, 10)[10]
+        val dutyDto = dutyService.getDutiesAsMap(member, 2022, 10)[10]
         assertThat(dutyDto).isNotNull
         dutyDto?.let {
             assert(it.dutyType == dutyTypes[0].name)
@@ -63,7 +64,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
             )
         )
 
-        dutyService.findDutyByMemberAndYearAndMonth(member, 2022, 10)[10]?.let {
+        dutyService.getDutiesAsMap(member, 2022, 10)[10]?.let {
             assert(it.dutyType == dutyTypes[1].name)
         }
 
@@ -92,7 +93,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
                 memberId = member.id!!,
             )
         )
-        assertThat(dutyService.findDutyByMemberAndYearAndMonth(member, 2022, 10)[10]).isNull()
+        assertThat(dutyService.getDutiesAsMap(member, 2022, 10)[10]).isNull()
     }
 
     @Test
@@ -121,7 +122,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
             )
         }
 
-        dutyService.findDutyByMemberAndYearAndMonth(member, 2022, 10)[10]?.let {
+        dutyService.getDutiesAsMap(member, 2022, 10)[10]?.let {
             assert(it.dutyType == dutyTypes[0].name)
         }
     }
@@ -152,8 +153,50 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
             )
         }
 
-        dutyService.findDutyByMemberAndYearAndMonth(member, 2022, 10)[10]?.let {
+        dutyService.getDutiesAsMap(member, 2022, 10)[10]?.let {
             assert(it.dutyType == dutyTypes[0].name)
+        }
+    }
+
+    @Test
+    fun `test getDuties`() {
+        // Given
+        val member = TestData.member
+        val dutyTypes = TestData.dutyTypes
+        dutyRepository.save(
+            Duty(
+                dutyYear = 2023,
+                dutyMonth = 3,
+                dutyDay = 31,
+                dutyType = dutyTypes[0],
+                member = member
+            )
+        )
+        dutyRepository.save(
+            Duty(
+                dutyYear = 2023,
+                dutyMonth = 4,
+                dutyDay = 10,
+                dutyType = dutyTypes[0],
+                member = member
+            )
+        )
+
+        // When
+        val duties = dutyService.getDuties(member, YearMonth.of(2023, 4))
+
+        // Then
+        assertThat(duties).hasSize(42)
+        assertThat(duties[0].month).isEqualTo(3)
+        assertThat(duties[0].day).isEqualTo(26)
+        assertThat(duties[5].dutyType).isEqualTo(dutyTypes[0].name)
+        assertThat(duties[6].day).isEqualTo(1)
+        val dutyDto = duties[15]
+        assertThat(dutyDto.day).isEqualTo(10)
+        assertThat(dutyDto.dutyType).isEqualTo(dutyTypes[0].name)
+        duties[41].let {
+            assertThat(it.month).isEqualTo(5)
+            assertThat(it.day).isEqualTo(6)
         }
     }
 

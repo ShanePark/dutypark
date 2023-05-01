@@ -83,7 +83,7 @@ class DutyViewController(
 
         model.addAttribute("offColor", department.offColor.name)
 
-        dutyService.findDutyByMemberAndYearAndMonth(member, year, month).let {
+        dutyService.getDutiesAsMap(member, year, month).let {
             model.addAttribute("duties", it)
         }
 

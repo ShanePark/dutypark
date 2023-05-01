@@ -3,7 +3,7 @@ package com.tistory.shanepark.dutypark.duty.domain.dto
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 
 data class DutyDto(
-    val id: Long,
+    val id: Long? = null,
     val year: Int,
     val month: Int,
     val day: Int,
@@ -11,7 +11,7 @@ data class DutyDto(
     val dutyColor: String?,
 ) {
     constructor(duty: Duty) : this(
-        duty.id!!,
+        duty.id,
         duty.dutyYear,
         duty.dutyMonth,
         duty.dutyDay,
