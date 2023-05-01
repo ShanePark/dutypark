@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.schedule.domain.dto
 
+import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import org.assertj.core.api.Assertions.assertThat
@@ -18,7 +19,9 @@ class ScheduleDtoTest {
         val schedule = Schedule(member, "content", from, end, 1)
 
         // When
-        val list = ScheduleDto.of(YearMonth.of(2021, 1), schedule)
+        val yearMonth = YearMonth.of(2021, 1)
+        val calendarView = CalendarView(yearMonth)
+        val list = ScheduleDto.of(calendarView, schedule)
 
         // Then
         assertThat(list).hasSize(4)
@@ -48,21 +51,29 @@ class ScheduleDtoTest {
         val schedule = Schedule(member, "content", from, end, 1)
 
         // When
-        val list = ScheduleDto.of(YearMonth.of(2021, 1), schedule)
+        val yearMonth = YearMonth.of(2021, 1)
+        val calendarView = CalendarView(yearMonth)
+        val list = ScheduleDto.of(calendarView, schedule)
 
         // Then
-        assertThat(list).hasSize(3)
-        assertThat(list[0].dayOfMonth).isEqualTo(1)
-        assertThat(list[0].daysFromStart).isEqualTo(3)
+        assertThat(list).hasSize(5)
+        assertThat(list[0].dayOfMonth).isEqualTo(30)
+        assertThat(list[0].daysFromStart).isEqualTo(1)
         assertThat(list[0].totalDays).isEqualTo(5)
 
-        assertThat(list[1].dayOfMonth).isEqualTo(2)
-        assertThat(list[1].daysFromStart).isEqualTo(4)
+        assertThat(list[1].dayOfMonth).isEqualTo(31)
+        assertThat(list[1].daysFromStart).isEqualTo(2)
         assertThat(list[1].totalDays).isEqualTo(5)
 
-        assertThat(list[2].dayOfMonth).isEqualTo(3)
-        assertThat(list[2].daysFromStart).isEqualTo(5)
+        assertThat(list[2].dayOfMonth).isEqualTo(1)
+        assertThat(list[2].daysFromStart).isEqualTo(3)
         assertThat(list[2].totalDays).isEqualTo(5)
+
+        assertThat(list[3].dayOfMonth).isEqualTo(2)
+        assertThat(list[3].daysFromStart).isEqualTo(4)
+
+        assertThat(list[4].dayOfMonth).isEqualTo(3)
+        assertThat(list[4].daysFromStart).isEqualTo(5)
     }
 
     @Test
@@ -73,7 +84,9 @@ class ScheduleDtoTest {
         val schedule = Schedule(member, "content", day, day, 1)
 
         // When
-        val list = ScheduleDto.of(YearMonth.of(2023, 3), schedule)
+        val yearMonth = YearMonth.of(2023, 3)
+        val calendarView = CalendarView(yearMonth)
+        val list = ScheduleDto.of(calendarView, schedule)
         assertThat(list).isEmpty()
     }
 
@@ -85,7 +98,9 @@ class ScheduleDtoTest {
         val schedule = Schedule(member, "content", day, day, 1)
 
         // When
-        val list = ScheduleDto.of(YearMonth.of(2023, 4), schedule)
+        val yearMonth = YearMonth.of(2023, 4)
+        val calendarView = CalendarView(yearMonth)
+        val list = ScheduleDto.of(calendarView, schedule)
         assertThat(list.size).isEqualTo(1)
         assertThat(list[0].dayOfMonth).isEqualTo(17)
         assertThat(list[0].daysFromStart).isEqualTo(1)

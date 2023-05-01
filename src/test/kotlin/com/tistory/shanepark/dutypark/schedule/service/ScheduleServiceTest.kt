@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.schedule.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
+import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
@@ -139,14 +140,17 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         scheduleRepository.saveAll(listOf(schedule1, schedule2))
 
         // When
-        val result = scheduleService.findSchedulesByYearAndMonth(member, YearMonth.of(2023, 4))
+        val yearMonth = YearMonth.of(2023, 4)
+        val result = scheduleService.findSchedulesByYearAndMonth(member, yearMonth)
 
         // Then
-        assertThat(result).hasSize(30)
-        assertThat(result[9 - 1]).hasSize(0)
-        assertThat(result[10 - 1]).hasSize(2)
-        assertThat(result[11 - 1]).hasSize(1)
-        assertThat(result[12 - 1]).hasSize(1)
+        val calendarView = CalendarView(yearMonth)
+        assertThat(result).hasSize(calendarView.size)
+        val paddingBefore = calendarView.paddingBefore
+        assertThat(result[paddingBefore + 9 - 1]).hasSize(0)
+        assertThat(result[paddingBefore + 10 - 1]).hasSize(2)
+        assertThat(result[paddingBefore + 11 - 1]).hasSize(1)
+        assertThat(result[paddingBefore + 12 - 1]).hasSize(1)
     }
 
     @Test
@@ -170,11 +174,21 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         scheduleRepository.saveAll(listOf(schedule1, schedule2))
 
         // When
-        val result = scheduleService.findSchedulesByYearAndMonth(member, YearMonth.of(2023, 4))
+        val yearMonth = YearMonth.of(2023, 4)
+        val result = scheduleService.findSchedulesByYearAndMonth(member, yearMonth)
 
         // Then
-        assertThat(result).hasSize(30)
-        val aprilFirst = result[0]
+        val calendarView = CalendarView(yearMonth)
+        assertThat(result).hasSize(calendarView.size)
+        val paddingBefore = calendarView.paddingBefore
+
+        val lastDayOfMarch = result[paddingBefore - 1]
+        assertThat(lastDayOfMarch).hasSize(1)
+        assertThat(lastDayOfMarch[0].content).isEqualTo(schedule1.content)
+        assertThat(lastDayOfMarch[0].dayOfMonth).isEqualTo(31)
+        assertThat(lastDayOfMarch[0].daysFromStart).isEqualTo(2)
+
+        val aprilFirst = result[paddingBefore]
         assertThat(aprilFirst).hasSize(1)
         assertThat(aprilFirst[0].content).isEqualTo(schedule1.content)
         assertThat(aprilFirst[0].dayOfMonth).isEqualTo(1)
@@ -182,15 +196,18 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         assertThat(aprilFirst[0].daysFromStart).isEqualTo(3)
         assertThat(aprilFirst[0].position).isEqualTo(0)
 
-        assertThat(result[1 - 1]).hasSize(1)
-        assertThat(result[2 - 1]).hasSize(1)
-        assertThat(result[3 - 1]).hasSize(1)
-        assertThat(result[4 - 1]).hasSize(1)
-        assertThat(result[5 - 1]).hasSize(1)
-        assertThat(result[6 - 1]).hasSize(1)
+        assertThat(result[paddingBefore + 1 - 1]).hasSize(1)
+        assertThat(result[paddingBefore + 2 - 1]).hasSize(1)
+        assertThat(result[paddingBefore + 3 - 1]).hasSize(1)
+        assertThat(result[paddingBefore + 4 - 1]).hasSize(1)
+        assertThat(result[paddingBefore + 5 - 1]).hasSize(1)
+        assertThat(result[paddingBefore + 6 - 1]).hasSize(1)
         for (i in 7..30) {
-            assertThat(result[i - 1]).isEmpty()
+            assertThat(result[paddingBefore + i - 1]).isEmpty()
         }
+
+        val mayFirst = result[calendarView.paddingBefore + calendarView.lengthOfMonth]
+        assertThat(mayFirst).isEmpty()
     }
 
     @Test

@@ -77,6 +77,11 @@ ol.day-grid li {
     box-shadow: 2px 4px 7px 3px #eaeaea;
 }
 
+ol.day-grid li.month-prev,
+ol.day-grid li.month-next {
+    filter: opacity(0.5);
+}
+
 .BACKGROUND-RED {
     background-color: lightpink !important;
 }

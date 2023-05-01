@@ -27,8 +27,7 @@ class DutyController(
         @RequestParam month: Int,
         @RequestParam memberId: Long,
     ): List<DutyDto> {
-        val member = memberRepository.findById(memberId).orElseThrow()
-        return dutyService.getDuties(member = member, YearMonth.of(year, month))
+        return dutyService.getDuties(memberId = memberId, YearMonth.of(year, month))
     }
 
     @PutMapping("change")

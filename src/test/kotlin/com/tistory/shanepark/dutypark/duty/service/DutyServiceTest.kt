@@ -183,7 +183,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
         )
 
         // When
-        val duties = dutyService.getDuties(member, YearMonth.of(2023, 4))
+        val duties = dutyService.getDuties(member.id!!, YearMonth.of(2023, 4))
 
         // Then
         assertThat(duties).hasSize(42)

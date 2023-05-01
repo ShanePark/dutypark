@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.schedule.service
 
+import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
@@ -21,27 +22,29 @@ class ScheduleService(
 
     @Transactional(readOnly = true)
     fun findSchedulesByYearAndMonth(member: Member, yearMonth: YearMonth): Array<List<ScheduleDto>> {
-        val (start, end) = getRangeOfMonth(yearMonth)
-        val schedules = scheduleRepository.findSchedulesOfMonth(member, start, end)
-        return groupSchedulesByDay(yearMonth, schedules)
-    }
+        val calendarView = CalendarView(yearMonth)
 
-    private fun getRangeOfMonth(yearMonth: YearMonth): Pair<LocalDateTime, LocalDateTime> {
-        val startOfMonth = LocalDateTime.of(yearMonth.year, yearMonth.monthValue, 1, 0, 0)
-        val endOfMonth = startOfMonth.plusMonths(1).minusSeconds(1)
-        return Pair(startOfMonth, endOfMonth)
-    }
+        val paddingBefore = calendarView.paddingBefore
+        val lengthOfMonth = calendarView.lengthOfMonth
 
-    private fun groupSchedulesByDay(yearMonth: YearMonth, schedules: List<Schedule>): Array<List<ScheduleDto>> {
-        val totalDaysOfMonth = yearMonth.lengthOfMonth()
-        val array = Array(totalDaysOfMonth) { emptyList<ScheduleDto>() }
-        val schedules = schedules.map { ScheduleDto.of(yearMonth, it) }.flatten()
+        val array = Array<List<ScheduleDto>>(paddingBefore + lengthOfMonth + calendarView.paddingAfter) { emptyList() }
+        val start = calendarView.rangeFrom
+        val end = calendarView.rangeEnd
 
-        schedules.forEach {
-            val dayIndex = it.dayOfMonth - 1
-            array[dayIndex] = array[dayIndex] + it
-        }
+        scheduleRepository.findSchedulesOfMonth(member, start, end)
+            .map { ScheduleDto.of(calendarView, it) }
+            .flatten()
+            .forEach { scheduleDto ->
+                var dayIndex = paddingBefore + scheduleDto.dayOfMonth - 1
+                if (scheduleDto.month < yearMonth.monthValue) {
+                    dayIndex -= calendarView.prevMonth.lengthOfMonth()
+                }
+                if (scheduleDto.month > yearMonth.monthValue) {
+                    dayIndex += lengthOfMonth
+                }
 
+                array[dayIndex] = array[dayIndex] + scheduleDto
+            }
         return array
     }
 

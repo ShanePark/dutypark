@@ -1,12 +1,10 @@
 package com.tistory.shanepark.dutypark.duty.controller
 
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
-import com.tistory.shanepark.dutypark.department.domain.entity.Department
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeDto
 import com.tistory.shanepark.dutypark.duty.service.DutyService
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
-import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import jakarta.servlet.http.HttpServletRequest
@@ -36,13 +34,27 @@ class DutyViewController(
         @Login loginMember: LoginMember
     ): String {
         val member = memberService.findMemberByName(name)
+        model.addAttribute("member", MemberDto(member))
+
         if (!dutyService.canEdit(loginMember, member)) {
             val message =
                 "login member and request duty member does not match: login:$loginMember.id, dutyMemberId:${member.id}"
             log.warn(message)
             throw DutyparkAuthException(message)
         }
-        addDutyData(member, year, month, model)
+        member.department?.let { department ->
+            model.addAttribute("offColor", department.offColor.name)
+            dutyService.getDutiesAsMap(member, year, month).let {
+                model.addAttribute("duties", it)
+            }
+            val dutyTypes = department.dutyTypes
+                .map { DutyTypeDto(it) }
+                .sortedBy { it.position }
+                .toMutableList()
+            dutyTypes.add(0, DutyTypeDto(name = "OFF", position = -1, color = department.offColor.toString()))
+            model.addAttribute("dutyTypes", dutyTypes)
+            Unit
+        }
         addYearMonthData(year, month, model)
 
         return "duty/duty-edit"
@@ -56,43 +68,25 @@ class DutyViewController(
         @RequestParam(required = false) month: Int?,
         request: HttpServletRequest,
     ): String {
+        val member = memberService.findMemberByName(name)
+        member.department?.let { department ->
+            model.addAttribute("offColor", department.offColor.name)
+            val dutyTypes = department.dutyTypes
+                .map { DutyTypeDto(it) }
+                .sortedBy { it.position }
+                .toMutableList()
+            dutyTypes.add(0, DutyTypeDto(name = "OFF", position = -1, color = department.offColor.toString()))
+            model.addAttribute("dutyTypes", dutyTypes)
+        }
+        model.addAttribute("member", MemberDto(member))
 
         log.info("request: $name, $year-$month, ip: ${request.remoteAddr}")
 
         val now = LocalDateTime.now()
         val yearValue = year ?: now.year
         val monthValue = month ?: now.monthValue
-        val member = memberService.findMemberByName(name)
-
-        addDutyData(member, yearValue, monthValue, model)
         addYearMonthData(yearValue, monthValue, model)
         return "duty/duty"
-    }
-
-    private fun addDutyData(
-        member: Member,
-        year: Int,
-        month: Int,
-        model: Model
-    ) {
-        model.addAttribute("member", MemberDto(member))
-
-        val department: Department = member.department?.let {
-            it
-        } ?: return
-
-        model.addAttribute("offColor", department.offColor.name)
-
-        dutyService.getDutiesAsMap(member, year, month).let {
-            model.addAttribute("duties", it)
-        }
-
-        val dutyTypes = department.dutyTypes
-            .map { DutyTypeDto(it) }
-            .sortedBy { it.position }
-            .toMutableList()
-        dutyTypes.add(0, DutyTypeDto(name = "OFF", position = -1, color = department.offColor.toString()))
-        model.addAttribute("dutyTypes", dutyTypes)
     }
 
     private fun addYearMonthData(year: Int, month: Int, model: Model) {
@@ -101,8 +95,6 @@ class DutyViewController(
             model.addAttribute("month", month)
             model.addAttribute("prevMonth", it.minusMonths(1))
             model.addAttribute("nextMonth", it.plusMonths(1))
-            model.addAttribute("offset", it.atDay(1).dayOfWeek.value)
-            model.addAttribute("lastDay", it.lengthOfMonth())
         }
     }
 
