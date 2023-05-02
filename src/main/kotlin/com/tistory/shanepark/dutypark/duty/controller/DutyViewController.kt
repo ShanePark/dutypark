@@ -13,8 +13,6 @@ import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.RequestParam
-import java.time.LocalDateTime
 import java.time.YearMonth
 
 @Controller
@@ -24,6 +22,14 @@ class DutyViewController(
 ) {
 
     val log: Logger = org.slf4j.LoggerFactory.getLogger(this.javaClass)
+
+    @GetMapping("/duty/{name}")
+    fun retrieveMemberDuty(model: Model, @PathVariable name: String, request: HttpServletRequest): String {
+        val member = memberService.findMemberByName(name)
+        model.addAttribute("member", MemberDto(member))
+        log.info("request: $name, ip: ${request.remoteAddr}")
+        return "duty/duty"
+    }
 
     @GetMapping("/duty/edit/{name}")
     fun editDuty(
@@ -58,26 +64,6 @@ class DutyViewController(
         addYearMonthData(year, month, model)
 
         return "duty/duty-edit"
-    }
-
-    @GetMapping("/duty/{name}")
-    fun retrieveMemberDuty(
-        model: Model,
-        @PathVariable name: String,
-        @RequestParam(required = false) year: Int?,
-        @RequestParam(required = false) month: Int?,
-        request: HttpServletRequest,
-    ): String {
-        val member = memberService.findMemberByName(name)
-        model.addAttribute("member", MemberDto(member))
-
-        log.info("request: $name, $year-$month, ip: ${request.remoteAddr}")
-
-        val now = LocalDateTime.now()
-        val yearValue = year ?: now.year
-        val monthValue = month ?: now.monthValue
-        addYearMonthData(yearValue, monthValue, model)
-        return "duty/duty"
     }
 
     private fun addYearMonthData(year: Int, month: Int, model: Model) {

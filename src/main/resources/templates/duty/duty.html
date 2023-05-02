@@ -7,13 +7,11 @@
 <div th:if="${member.department}" class="calendar">
   <div class="month-control row">
     <h1>
-      <a class="move"
-         th:href="@{/duty/{member}(member=${member.name},year=${prevMonth.year}, month=${prevMonth.monthValue})}">
+      <a class="move h_pointer" v-on:click="addMonth(-1)">
         <i class="bi bi-arrow-left-circle"></i>
       </a>
-      <input type="month" th:value="|${year}-${month < 10 ? '0' + month : month}|" onclick="this.showPicker()">
-      <a class="move"
-         th:href="@{/duty/{member}(member=${member.name},year=${nextMonth.year}, month=${nextMonth.monthValue})}">
+      <input type="month" v-model="combinedYearMonth">
+      <a class="move h_pointer" v-on:click="addMonth(1)">
         <i class="bi bi-arrow-right-circle"></i>
       </a>
     </h1>
@@ -100,96 +98,112 @@
 
 <script>
     $(function () {
-        $('input[type="month"]').on('change', function () {
-            let year = $(this).val().split('-')[0];
-            let month = $(this).val().split('-')[1];
-            window.location.href = window.location.href.split('?')[0] + '?year=' + year + '&month=' + month;
-        });
-
         const memberId = parseInt("[[${member.id}]]");
 
         if (document.querySelector('.calendar')) {
-            const yearAndMonth = $('.month-control input').val().split('-');
-            const year = parseInt(yearAndMonth[0]);
-            const month = parseInt(yearAndMonth[1]);
+            const today = new Date();
             const departmentId = parseInt("[[${member.departmentId}]]");
+            const thisYear = today.getFullYear();
+            const thisMonth = today.getMonth() + 1;
 
             const calendar = new Vue({
-                el: '.calendar',
-                data: {
-                    year: year,
-                    month: month,
-                    duties: [],
-                    schedulesByDays: [],
-                    department: {},
-                }, mounted() {
-                    this.loadDuties();
-                    this.loadSchedule();
-                    this.loadDepartment();
-                }, methods: {
-                    loadDuties() {
-                        $.ajax({
-                            url: '/api/duty',
-                            type: 'GET',
-                            data: {
-                                memberId: memberId,
-                                year: year,
-                                month: month,
+                    el: '.calendar',
+                    data: {
+                        year: thisYear,
+                        month: thisMonth,
+                        duties: [],
+                        schedulesByDays: [],
+                        department: {},
+                    }, mounted() {
+                        this.loadDuties(thisYear, thisMonth);
+                        this.loadSchedule(thisYear, thisMonth);
+                        this.loadDepartment();
+                    }, computed: {
+                        combinedYearMonth: {
+                            get() {
+                                return `${this.year}-${this.month.toString().padStart(2, '0')}`;
                             },
-                            success: (data) => {
-                                this.duties = data;
-                            }
-                        })
-                    },
-                    loadSchedule() {
-                        $.ajax({
-                            url: '/api/schedules',
-                            type: 'GET',
-                            data: {
-                                memberId: memberId,
-                                year: year,
-                                month: month,
+                            set(value) {
+                                const [year, month] = value.split('-');
+                                this.year = parseInt(year);
+                                this.month = parseInt(month);
                             },
-                            success: (data) => {
-                                this.schedulesByDays = data;
-                            }
-                        })
-                    },
-                    loadDepartment() {
-                        fetch(`/api/departments/${departmentId}`)
-                            .then(response => response.json())
-                            .then(data => {
-                                this.department = data;
+                        },
+                    }, watch: {
+                        combinedYearMonth() {
+                            this.loadDuties(calendar.year, calendar.month);
+                            this.loadSchedule(calendar.year, calendar.month);
+                        },
+                    }, methods: {
+                        addMonth(month) {
+                            const newDate = new Date(calendar.year, calendar.month - 1 + month);
+                            calendar.year = newDate.getFullYear();
+                            calendar.month = newDate.getMonth() + 1;
+                        },
+                        loadDuties(year, month) {
+                            $.ajax({
+                                url: '/api/duty',
+                                type: 'GET',
+                                data: {
+                                    memberId: memberId,
+                                    year: year,
+                                    month: month,
+                                },
+                                success: (data) => {
+                                    this.duties = data;
+                                }
                             })
-                    },
-                    shouldDisplayStartTime(schedule) {
-                        const daysFromStart = schedule.daysFromStart;
-                        const startDateTime = new Date(schedule.startDateTime);
-                        const startHour = startDateTime.getHours().toString().padStart(2, '0');
-                        return daysFromStart === 1 && startHour !== '00';
-                    },
-                    shouldDisplayEndTime(schedule) {
-                        const daysFromStart = schedule.daysFromStart;
-                        const totalDays = schedule.totalDays;
-                        const startDateTime = new Date(schedule.startDateTime);
-                        const endDateTime = new Date(schedule.endDateTime);
-                        const endHour = endDateTime.getHours().toString().padStart(2, '0');
-                        return (
-                            daysFromStart === totalDays &&
-                            endHour !== '00' &&
-                            !(totalDays === 1 && sameDate(startDateTime, endDateTime))
-                        );
-                    }, formattedTime(startDateTime) {
-                        const dateTime = new Date(startDateTime);
-                        const hour = dateTime.getHours().toString().padStart(2, '0');
-                        const minute = dateTime.getMinutes().toString().padStart(2, '0');
-                        return hour + ':' + minute;
-                    }, isToday(duty) {
-                        const today = new Date();
-                        return duty.month === today.getMonth() + 1 && duty.day === today.getDate();
+                        },
+                        loadSchedule(year, month) {
+                            $.ajax({
+                                url: '/api/schedules',
+                                type: 'GET',
+                                data: {
+                                    memberId: memberId,
+                                    year: year,
+                                    month: month,
+                                },
+                                success: (data) => {
+                                    this.schedulesByDays = data;
+                                }
+                            })
+                        },
+                        loadDepartment() {
+                            fetch(`/api/departments/${departmentId}`)
+                                .then(response => response.json())
+                                .then(data => {
+                                    this.department = data;
+                                })
+                        },
+                        shouldDisplayStartTime(schedule) {
+                            const daysFromStart = schedule.daysFromStart;
+                            const startDateTime = new Date(schedule.startDateTime);
+                            const startHour = startDateTime.getHours().toString().padStart(2, '0');
+                            return daysFromStart === 1 && startHour !== '00';
+                        },
+                        shouldDisplayEndTime(schedule) {
+                            const daysFromStart = schedule.daysFromStart;
+                            const totalDays = schedule.totalDays;
+                            const startDateTime = new Date(schedule.startDateTime);
+                            const endDateTime = new Date(schedule.endDateTime);
+                            const endHour = endDateTime.getHours().toString().padStart(2, '0');
+                            return (
+                                daysFromStart === totalDays &&
+                                endHour !== '00' &&
+                                !(totalDays === 1 && sameDate(startDateTime, endDateTime))
+                            );
+                        }, formattedTime(startDateTime) {
+                            const dateTime = new Date(startDateTime);
+                            const hour = dateTime.getHours().toString().padStart(2, '0');
+                            const minute = dateTime.getMinutes().toString().padStart(2, '0');
+                            return hour + ':' + minute;
+                        }, isToday(duty) {
+                            const today = new Date();
+                            return duty.month === today.getMonth() + 1 && duty.day === today.getDate();
+                        }
                     }
                 }
-            })
+            )
         }
 
         const app = new Vue({
