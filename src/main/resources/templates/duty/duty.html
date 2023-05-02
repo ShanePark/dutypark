@@ -19,9 +19,9 @@
     </h1>
   </div>
   <div class="dutyTypes">
-    <span th:each="type : ${dutyTypes}">
-      <span th:class="|indicator BACKGROUND-${type.color}|">&nbsp;&nbsp;&nbsp;</span>
-      <span th:text="${type.name}"></span>
+    <span v-for="type in department.dutyTypes">
+      <span :class="['indicator', 'BACKGROUND-' + type.color]">&nbsp;&nbsp;&nbsp;</span>
+      <span v-text="type.name"></span>
     </span>
     <button th:if="${#strings.equals(member.id, loginMember?.id) || member.managerId==loginMember?.id}"
             class="edit-btn"
@@ -112,6 +112,7 @@
             const yearAndMonth = $('.month-control input').val().split('-');
             const year = parseInt(yearAndMonth[0]);
             const month = parseInt(yearAndMonth[1]);
+            const departmentId = parseInt("[[${member.departmentId}]]");
 
             const calendar = new Vue({
                 el: '.calendar',
@@ -120,9 +121,11 @@
                     month: month,
                     duties: [],
                     schedulesByDays: [],
+                    department: {},
                 }, mounted() {
                     this.loadDuties();
                     this.loadSchedule();
+                    this.loadDepartment();
                 }, methods: {
                     loadDuties() {
                         $.ajax({
@@ -151,6 +154,13 @@
                                 this.schedulesByDays = data;
                             }
                         })
+                    },
+                    loadDepartment() {
+                        fetch(`/api/departments/${departmentId}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                this.department = data;
+                            })
                     },
                     shouldDisplayStartTime(schedule) {
                         const daysFromStart = schedule.daysFromStart;
@@ -191,9 +201,6 @@
             mounted() {
                 this.load();
             },
-            updated() {
-                this.loadSelectedDday();
-            },
             methods: {
                 load() {
                     $.ajax({
@@ -221,11 +228,9 @@
                     })
                     if (app.selectedDday == clickedDday) {
                         app.selectedDday = null;
-                        this.saveSelectedDday(null);
                         return;
                     }
                     app.selectedDday = clickedDday;
-                    this.saveSelectedDday(app.selectedDday);
 
                     const element = document.querySelector(`.d-day-item[data-id='${app.selectedDday.id}']`);
                     element.classList.add('selected');
@@ -244,20 +249,6 @@
                         li.prepend(countElement);
                     })
                 },
-                saveSelectedDday(selectedDday) {
-                    if (!selectedDday) {
-                        localStorage.removeItem('selectedDday_' + memberId);
-                        return;
-                    }
-                    localStorage.setItem('selectedDday_' + memberId, this.selectedDday.id);
-                },
-                loadSelectedDday() {
-                    const savedSelectedDday = localStorage.getItem('selectedDday_' + memberId);
-                    if (savedSelectedDday) {
-                        const element = document.querySelector(`.d-day-item[data-id='${savedSelectedDday}']`);
-                        element.click();
-                    }
-                }
             }
         })
     })

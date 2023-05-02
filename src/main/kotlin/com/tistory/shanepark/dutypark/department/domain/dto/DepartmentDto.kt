@@ -21,23 +21,23 @@ data class DepartmentDto(
             return of(department, mutableListOf(), mutableListOf())
         }
 
-        fun of(
-            department: Department,
-            members: MutableList<Member>,
-            dutyTypes: MutableList<DutyType>
-        ): DepartmentDto {
-            return DepartmentDto(
-                id = department.id!!,
-                name = department.name,
-                description = department.description,
-                dutyTypes = dutyTypes.map {
+        fun of(department: Department, members: List<Member>, dutyTypes: List<DutyType>): DepartmentDto {
+            val dutyTypes = dutyTypes.sortedBy { it.position }
+                .map {
                     DutyTypeDto(
                         it.id,
                         it.name,
                         it.position,
                         it.color.toString()
                     )
-                },
+                }.toMutableList()
+            dutyTypes.add(0, DutyTypeDto(name = "OFF", position = -1, color = department.offColor.toString()))
+
+            return DepartmentDto(
+                id = department.id!!,
+                name = department.name,
+                description = department.description,
+                dutyTypes = dutyTypes,
                 members = members.map { MemberDto(it) },
                 createdDate = department.createdDate.toString(),
                 lastModifiedDate = department.lastModifiedDate.toString(),

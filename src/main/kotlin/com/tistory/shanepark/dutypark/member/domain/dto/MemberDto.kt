@@ -6,6 +6,7 @@ data class MemberDto(
     val id: Long,
     val name: String,
     val email: String,
+    val departmentId: Long?,
     val department: String?,
     val managerId: Long?,
 ) {
@@ -13,6 +14,7 @@ data class MemberDto(
         id = member.id!!,
         name = member.name,
         email = member.email,
+        departmentId = member.department?.id,
         department = member.department?.name,
         managerId = member.department?.manager?.id,
     )

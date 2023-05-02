@@ -69,15 +69,6 @@ class DutyViewController(
         request: HttpServletRequest,
     ): String {
         val member = memberService.findMemberByName(name)
-        member.department?.let { department ->
-            model.addAttribute("offColor", department.offColor.name)
-            val dutyTypes = department.dutyTypes
-                .map { DutyTypeDto(it) }
-                .sortedBy { it.position }
-                .toMutableList()
-            dutyTypes.add(0, DutyTypeDto(name = "OFF", position = -1, color = department.offColor.toString()))
-            model.addAttribute("dutyTypes", dutyTypes)
-        }
         model.addAttribute("member", MemberDto(member))
 
         log.info("request: $name, $year-$month, ip: ${request.remoteAddr}")

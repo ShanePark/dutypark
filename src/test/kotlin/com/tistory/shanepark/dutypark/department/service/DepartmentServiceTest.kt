@@ -25,7 +25,7 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
 
     @Test
     fun findById() {
-        val findOne = service.findById(TestData.department.id!!)
+        val findOne = service.findByIdWithMembersAndDutyTypes(TestData.department.id!!)
         assertThat(findOne.id).isEqualTo(TestData.department.id)
         assertThat(findOne.name).isEqualTo(TestData.department.name)
     }
