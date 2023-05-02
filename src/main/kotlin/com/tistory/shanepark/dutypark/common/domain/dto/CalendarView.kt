@@ -15,8 +15,21 @@ class CalendarView(yearMonth: YearMonth) {
     val paddingAfter = 7 - (yearMonth.atDay(lengthOfMonth).dayOfWeek.value % 7 + 1)
 
     val size = paddingBefore + lengthOfMonth + paddingAfter
-    val rangeFrom: LocalDateTime =
-        LocalDate.of(prevMonth.year, prevMonth.monthValue, prevMonth.lengthOfMonth() - paddingBefore + 1)
+    val rangeFrom: LocalDateTime = calcRangeProm()
+    val rangeEnd: LocalDateTime = calcRangeEnd()
+
+    private fun calcRangeProm(): LocalDateTime {
+        if (paddingBefore == 0) {
+            return LocalDate.of(currentMonth.year, currentMonth.monthValue, 1).atStartOfDay()
+        }
+        return LocalDate.of(prevMonth.year, prevMonth.monthValue, prevMonth.lengthOfMonth() - paddingBefore + 1)
             .atStartOfDay()
-    val rangeEnd: LocalDateTime = LocalDate.of(nextMonth.year, nextMonth.monthValue, paddingAfter).atTime(23, 59, 59)
+    }
+
+    private fun calcRangeEnd(): LocalDateTime {
+        if (paddingAfter == 0) {
+            return LocalDate.of(currentMonth.year, currentMonth.monthValue, lengthOfMonth).atTime(23, 59, 59)
+        }
+        return LocalDate.of(nextMonth.year, nextMonth.monthValue, paddingAfter).atTime(23, 59, 59)
+    }
 }
