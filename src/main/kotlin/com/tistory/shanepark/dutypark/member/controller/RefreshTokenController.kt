@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.RefreshTokenDto
+import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -16,7 +17,7 @@ class RefreshTokenController(
     @GetMapping
     fun findAllRefreshTokens(
         @Login loginMember: LoginMember,
-        @CookieValue("REFRESH_TOKEN", required = false) currentToken: String?,
+        @CookieValue(value = RefreshToken.cookieName, required = false) currentToken: String?,
         @RequestParam("validOnly", required = false, defaultValue = "true") validOnly: Boolean,
     ): List<RefreshTokenDto> {
         val refreshTokens = refreshTokenService.findRefreshTokens(loginMember.id, validOnly)

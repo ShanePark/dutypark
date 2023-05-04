@@ -5,8 +5,11 @@ import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus
+import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpHeaders.USER_AGENT
@@ -53,16 +56,27 @@ class AuthService(
         throw DutyparkAuthException()
     }
 
-    fun tokenRefresh(refreshToken: String, request: HttpServletRequest): String? {
+    fun tokenRefresh(refreshToken: String, request: HttpServletRequest, response: HttpServletResponse): String? {
         refreshTokenService.findByToken(refreshToken)?.let {
-            val remoteAddr: String? = request.remoteAddr
-            val userAgent: String? = request.getHeader(USER_AGENT)
-            if (it.validation(remoteAddr, userAgent)) {
-                log.info("refresh token succeed. member:${it.member.email}, remoteAddr:$remoteAddr")
+            if (it.isValid()) {
+                slideRefreshToken(request = request, response = response, refreshToken = it)
+                log.info("refresh token succeed. member:${it.member.email}, remoteAddr:$request.remoteAddr")
                 return jwtProvider.createToken(it.member)
             }
         }
         return null
+    }
+
+    private fun slideRefreshToken(
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+        refreshToken: RefreshToken
+    ) {
+        val remoteAddr: String? = request.remoteAddr
+        val userAgent: String? = request.getHeader(USER_AGENT)
+        refreshToken.slideValidUntil(remoteAddr, userAgent)
+        val cookie:Cookie=refreshToken.createCookie()
+        response.addCookie(cookie)
     }
 
 }
