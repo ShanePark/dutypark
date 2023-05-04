@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.security.handlers
 
 import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
+import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -21,24 +22,30 @@ class LogoutSuccessHandle(
         response: HttpServletResponse,
         authentication: Authentication?
     ) {
-        request.cookies?.firstOrNull { it.name == "REFRESH_TOKEN" }?.value
+        request.cookies?.firstOrNull { it.name == RefreshToken.cookieName }?.value
             ?.let {
                 refreshTokenRepository.findByToken(it)?.let { refreshToken ->
                     refreshTokenRepository.delete(refreshToken);
+                    removeRefreshTokenCookie(response)
                 }
             }
+        removeSessionCookie(response)
+        response.sendRedirect(request.getHeader("Referer"))
+    }
 
+    private fun removeRefreshTokenCookie(response: HttpServletResponse) {
+        response.addCookie(Cookie(RefreshToken.cookieName, "").apply {
+            maxAge = 0
+            path = "/"
+            isHttpOnly = true
+        })
+    }
+
+    private fun removeSessionCookie(response: HttpServletResponse) {
         response.addCookie(Cookie("SESSION", "").apply {
             maxAge = 0
             path = "/"
             isHttpOnly = true
         })
-        response.addCookie(Cookie("REFRESH_TOKEN", "").apply {
-            maxAge = 0
-            path = "/"
-            isHttpOnly = true
-        })
-
-        response.sendRedirect(request.getHeader("Referer"))
     }
 }
