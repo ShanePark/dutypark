@@ -6,6 +6,7 @@ import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.beans.factory.annotation.Value
@@ -48,7 +49,7 @@ class AuthController(
                 .sameSite(SameSite.STRICT.name)
                 .build()
 
-            val refToken = ResponseCookie.from("REFRESH_TOKEN", refreshToken.token)
+            val refToken = ResponseCookie.from(RefreshToken.cookieName, refreshToken.token)
                 .httpOnly(true)
                 .path("/")
                 .secure(isSecure)

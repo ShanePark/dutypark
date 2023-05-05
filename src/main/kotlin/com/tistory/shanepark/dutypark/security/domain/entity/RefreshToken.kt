@@ -4,7 +4,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.tistory.shanepark.dutypark.common.domain.entity.BaseTimeEntity
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import jakarta.persistence.*
+import jakarta.servlet.http.Cookie
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.util.*
 
 @Entity
@@ -36,23 +38,30 @@ class RefreshToken(
     var lastUsed: LocalDateTime = LocalDateTime.now()
 
     fun validation(remoteAddr: String?, userAgent: String?): Boolean {
-        val valid = this.validUntil.isAfter(LocalDateTime.now())
-        if (valid) {
-            slideValidUntil()
-            this.remoteAddr = remoteAddr
-            this.userAgent = userAgent
-            this.lastUsed = LocalDateTime.now()
-        }
-        return valid
-    }
-
-    private fun slideValidUntil() {
-        if (validUntil.isBefore(LocalDateTime.now().plusWeeks(1))) {
-            validUntil = LocalDateTime.now().plusWeeks(1)
-        }
+        return validUntil.isAfter(LocalDateTime.now())
     }
 
     fun isValid(): Boolean {
         return this.validUntil.isAfter(LocalDateTime.now())
+    }
+
+    fun slideValidUntil(remoteAddr: String?, userAgent: String?) {
+        validUntil = LocalDateTime.now().plusWeeks(1)
+        this.lastUsed = LocalDateTime.now()
+        this.remoteAddr = remoteAddr
+        this.userAgent = userAgent
+    }
+
+    fun createCookie(): Cookie {
+        val maxAge = validUntil.toEpochSecond(ZoneOffset.UTC) - LocalDateTime.now().toEpochSecond(ZoneOffset.UTC)
+        return Cookie(cookieName, this.token).apply {
+            this.path = "/"
+            this.maxAge = maxAge.toInt()
+            this.isHttpOnly = true
+        }
+    }
+
+    companion object {
+        const val cookieName: String = "REFRESH_TOKEN"
     }
 }

@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.security.config
 
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus.NOT_EXIST
 import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus.VALID
 import com.tistory.shanepark.dutypark.security.service.AuthService
@@ -23,7 +24,7 @@ class JwtAuthInterceptor(
     override fun preHandle(request: HttpServletRequest, response: HttpServletResponse, handler: Any): Boolean {
         var jwt = ""
         var status = NOT_EXIST
-        val refreshToken = findCookie(request, "REFRESH_TOKEN")
+        val refreshToken = findCookie(request, RefreshToken.cookieName)
         findCookie(request, "SESSION")?.let {
             status = authService.validateToken(it)
             jwt = it
@@ -31,13 +32,13 @@ class JwtAuthInterceptor(
 
         if (refreshToken != null && status != VALID) {
             log.info("Token is expired. Trying to refresh token.")
-            authService.tokenRefresh(refreshToken, request)?.let { newToken ->
+            authService.tokenRefresh(refreshToken, request, response)?.let { newToken ->
                 jwt = newToken
                 addSessionCookie(jwt, response)
                 status = VALID
             } ?: run {
                 log.info("Refresh token is expired or invalid.")
-                removeCookie("REFRESH_TOKEN", response)
+                removeCookie(RefreshToken.cookieName, response)
             }
         }
 
