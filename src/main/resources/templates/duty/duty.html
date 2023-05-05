@@ -5,7 +5,7 @@
 <div th:replace="~{layout/header::header-title(|${member.name}|)}"></div>
 
 <div class="body">
-  <div th:if="${member.department}" class="calendar">
+  <div th:if="${member.department}" class="calendar" th:attr="data-member_id=${member.id}">
     <div class="month-control row">
       <h1>
         <a class="move h_pointer" v-on:click="addMonth(-1)">
@@ -24,7 +24,8 @@
     </span>
       <button th:if="${#strings.equals(member.id, loginMember?.id) || member.managerId==loginMember?.id}"
               class="edit-btn"
-              th:onclick="|window.location.href='@{/duty/edit/{member}(member=${member.name},year=${year}, month=${month})}'|">
+              v-on:click="editDuty"
+      >
         수정<i class="bi bi-pencil-square"></i>
       </button>
     </div>
@@ -103,24 +104,23 @@
         const memberId = parseInt("[[${member.id}]]");
 
         if (document.querySelector('.calendar')) {
-            const today = new Date();
+            let year = parseInt("[[${year}]]");
+            let month = parseInt("[[${month}]]");
             const departmentId = parseInt("[[${member.departmentId}]]");
-            const thisYear = today.getFullYear();
-            const thisMonth = today.getMonth() + 1;
 
             const app = new Vue({
                     el: '.body',
                     data: {
-                        year: thisYear,
-                        month: thisMonth,
+                        year: year,
+                        month: month,
                         duties: [],
                         schedulesByDays: [],
                         department: {},
                         dDays: [],
                         selectedDday: null,
                     }, mounted() {
-                        this.loadDuties(thisYear, thisMonth);
-                        this.loadSchedule(thisYear, thisMonth);
+                        this.loadDuties(year, month);
+                        this.loadSchedule(year, month);
                         this.loadDepartment();
                         this.loadDDays();
                     }, computed: {
@@ -146,6 +146,10 @@
                         combinedYearMonth() {
                             this.loadDuties(app.year, app.month);
                             this.loadSchedule(app.year, app.month);
+                            const currentUrl = new URL(window.location.href);
+                            currentUrl.searchParams.set('year', app.year);
+                            currentUrl.searchParams.set('month', app.month);
+                            window.history.replaceState(null, '', currentUrl.toString());
                         },
                     }, methods: {
                         addMonth(month) {
@@ -218,6 +222,10 @@
                                 .then(data => {
                                     this.department = data;
                                 })
+                        },
+                        editDuty() {
+                            const memberId = document.getElementsByClassName('calendar')[0].getAttribute('data-member_id');
+                            window.location.href = `/duty/edit?memberId=${memberId}&year=${(app.year)}&month=${(app.month)}`;
                         },
                         shouldDisplayStartTime(schedule) {
                             const daysFromStart = schedule.daysFromStart;

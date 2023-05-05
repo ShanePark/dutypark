@@ -1,7 +1,6 @@
 package com.tistory.shanepark.dutypark.duty.controller
 
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
-import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeDto
 import com.tistory.shanepark.dutypark.duty.service.DutyService
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
@@ -13,7 +12,8 @@ import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
-import java.time.YearMonth
+import org.springframework.web.bind.annotation.RequestParam
+import java.time.LocalDate
 
 @Controller
 class DutyViewController(
@@ -24,23 +24,28 @@ class DutyViewController(
     val log: Logger = org.slf4j.LoggerFactory.getLogger(this.javaClass)
 
     @GetMapping("/duty/{name}")
-    fun retrieveMemberDuty(model: Model, @PathVariable name: String, request: HttpServletRequest): String {
+    fun retrieveMemberDuty(
+        model: Model, @PathVariable name: String, request: HttpServletRequest,
+        @RequestParam(required = false) year: Int?,
+        @RequestParam(required = false) month: Int?,
+    ): String {
+        log.info("request: $name, ip: ${request.remoteAddr}")
         val member = memberService.findMemberByName(name)
         model.addAttribute("member", MemberDto(member))
-        log.info("request: $name, ip: ${request.remoteAddr}")
+        model.addAttribute("year", year?.let { it } ?: LocalDate.now().year)
+        model.addAttribute("month", month?.let { it } ?: LocalDate.now().monthValue)
         return "duty/duty"
     }
 
-    @GetMapping("/duty/edit/{name}")
+    @GetMapping("/duty/edit")
     fun editDuty(
-        @PathVariable name: String,
+        @RequestParam memberId: Long,
+        @RequestParam year: Int,
+        @RequestParam month: Int,
         model: Model,
-        year: Int,
-        month: Int,
         @Login loginMember: LoginMember
     ): String {
-        val member = memberService.findMemberByName(name)
-        model.addAttribute("member", MemberDto(member))
+        val member = memberService.findById(memberId)
 
         if (!dutyService.canEdit(loginMember, member)) {
             val message =
@@ -48,31 +53,12 @@ class DutyViewController(
             log.warn(message)
             throw DutyparkAuthException(message)
         }
-        member.department?.let { department ->
-            model.addAttribute("offColor", department.offColor.name)
-            dutyService.getDutiesAsMap(member, year, month).let {
-                model.addAttribute("duties", it)
-            }
-            val dutyTypes = department.dutyTypes
-                .map { DutyTypeDto(it) }
-                .sortedBy { it.position }
-                .toMutableList()
-            dutyTypes.add(0, DutyTypeDto(name = "OFF", position = -1, color = department.offColor.toString()))
-            model.addAttribute("dutyTypes", dutyTypes)
-            Unit
-        }
-        addYearMonthData(year, month, model)
+
+        model.addAttribute("member", MemberDto(member))
+        model.addAttribute("year", year)
+        model.addAttribute("month", month)
 
         return "duty/duty-edit"
-    }
-
-    private fun addYearMonthData(year: Int, month: Int, model: Model) {
-        YearMonth.of(year, month).let {
-            model.addAttribute("year", year)
-            model.addAttribute("month", month)
-            model.addAttribute("prevMonth", it.minusMonths(1))
-            model.addAttribute("nextMonth", it.plusMonths(1))
-        }
     }
 
 }

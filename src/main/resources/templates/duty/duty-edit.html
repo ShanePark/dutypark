@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<!-- TODO: Need to change all the page into Vue -->
+
 <head th:replace="~{layout/include::link}"/>
 <body class="edit">
 <div th:replace="~{layout/header::header-title(|[Edit] ${member.department} ${member.name}|)}"></div>
@@ -6,88 +8,61 @@
 <div class="calendar">
   <div class="month-control row">
     <h1>
-      <a class="move"
-         th:href="@{/duty/edit/{member}(member=${member.name},year=${prevMonth.year}, month=${prevMonth.monthValue})}">
+      <a class="move h_pointer" v-on:click="addMonth(-1)">
         <i class="bi bi-arrow-left-circle"></i>
       </a>
-      <input type="month" th:value="|${year}-${month < 10 ? '0' + month : month}|" onclick="this.showPicker()">
-      <a class="move"
-         th:href="@{/duty/edit/{member}(member=${member.name},year=${nextMonth.year}, month=${nextMonth.monthValue})}">
+      <input type="month" v-model="combinedYearMonth">
+      <a class="move h_pointer" v-on:click="addMonth(1)">
         <i class="bi bi-arrow-right-circle"></i>
       </a>
     </h1>
   </div>
   <div class="dutyTypes">
-    <span th:each="type : ${dutyTypes}">
-      <span th:class="|indicator BACKGROUND-${type.color}|">&nbsp;&nbsp;&nbsp;</span>
-      <span th:text="${type.name}"></span>
+    <span v-for="type in department.dutyTypes">
+      <span :class="['indicator', 'BACKGROUND-' + type.color]">&nbsp;&nbsp;&nbsp;</span>
+      <span v-text="type.name"></span>
     </span>
     <button class="back-btn"
-            th:onclick="|window.location.href='@{/duty/{member}(member=${member.name},year=${year}, month=${month})}'|">
+            v-on:click="completeEdit"
+    >
       완료 <i class="bi bi-check-square"></i>
     </button>
   </div>
 
   <ul class="weekdays">
-    <li>
-      <abbr title="S">SUN</abbr>
-    </li>
-    <li>
-      <abbr title="M">MON</abbr>
-    </li>
-    <li>
-      <abbr title="T">TUE</abbr>
-    </li>
-    <li>
-      <abbr title="W">WED</abbr>
-    </li>
-    <li>
-      <abbr title="T">THU</abbr>
-    </li>
-    <li>
-      <abbr title="F">FRI</abbr>
-    </li>
-    <li>
-      <abbr title="S">SAT</abbr>
-    </li>
+    <li><abbr title="S">SUN</abbr></li>
+    <li><abbr title="M">MON</abbr></li>
+    <li><abbr title="T">TUE</abbr></li>
+    <li><abbr title="W">WED</abbr></li>
+    <li><abbr title="T">THU</abbr></li>
+    <li><abbr title="F">FRI</abbr></li>
+    <li><abbr title="S">SAT</abbr></li>
   </ul>
 
-  <ol class="day-grid" th:with="today=${#dates.createNow()}">
-    <th:block th:each="i : ${#numbers.sequence(0, offset % 7 -1, 1)}">
-      <li class="month-prev"/>
-    </th:block>
-    <th:block th:each="i : ${#numbers.sequence(1, lastDay)}">
-      <li th:with="duty=${duties.get(i)}"
-          th:data-day="${i}"
-          th:classappend='|BACKGROUND-${ duty?.dutyColor ?: offColor}${today.getYear()+1900==year and today.getMonth()+1 == month and today.getDate() == i ? " today": "" }|'>
-        <div class="date container">
-          <div class="day">
-            <span th:text="${i}"></span>
-          </div>
-          <div class="duty row">
-            <button class="duty-type col-md-4 btn btn-sm btn-outline-dark"
-                    th:with="selected=${type.name == duty?.dutyType or (type.id == null and duty?.dutyType==null)},
-                              size=${dutyTypes.size()}"
-                    th:classappend='|col-md-${size == 2 || size==4 ? 6 : 4} BACKGROUND-${type.color} ${selected ? "selected" : ""}|'
-                    th:each="type:${dutyTypes}"
-                    th:data-type_id="${type.id}"
-                    th:disabled="${selected}"
-                    th:text="${type.name != null ? #strings.substring(type.name, 0, (type.name.length() >= 3) ? 3 : type.name.length()) : ''}"
-            >
-            </button>
-          </div>
+  <ol class="day-grid">
+    <li v-for="(duty, index) in duties"
+        :class="{
+          ['BACKGROUND-' + duty.dutyColor]: true,
+          'month-prev': (duty.month < month),
+          'month-next': (duty.month > month),
+          'today': isToday(duty),
+        }">
+      <div class="date container">
+        <div class="day">
+          <span v-text="duty.day"></span>
         </div>
-        <div class="memo">
-          <i class="bi edit-memo"
-             th:classappend='|bi-${#strings.isEmpty(duty?.memo) ? "calendar-plus" : "pencil-square"}|'></i>
-          <p th:text="${duty?.memo}"></p>
+        <div class="duty row">
+          <button v-for="type in department.dutyTypes"
+                  class="duty-type btn btn-sm btn-outline-dark"
+                  v-text="type.name.length > 3 ? type.name.substring(0, 3) : type.name"
+                  :class="dutyTypeClasses(type, duty)"
+                  :disabled="(duty.dutyType == type.name) || (!duty.dutyType && !type.id)"
+                  v-on:click="changeDutyType(duty, type)"
+          >
+          </button>
         </div>
-      </li>
-    </th:block>
-    <th:block th:if="(${offset} + ${lastDay}) % 7 > 0"
-              th:each="i : ${#numbers.sequence(1, 7 - ((offset + lastDay) % 7) )}">
-      <li class="month-next"/>
-    </th:block>
+      </div>
+    </li>
   </ol>
 </div>
 
@@ -95,123 +70,117 @@
 </html>
 
 <script>
-    const year = parseInt("[[${year}]]");
-    const month = parseInt("[[${month}]]");
-    const memberId = parseInt("[[${member.id}]]");
-
     $(function () {
+        let year = parseInt("[[${year}]]");
+        let month = parseInt("[[${month}]]");
+        const memberId = parseInt("[[${member.id}]]");
+        const departmentId = parseInt("[[${member.departmentId}]]");
 
-        $('.edit-memo').on('click', function () {
-            const memoArea = $(this).siblings('p');
-            const date = $(this).parents('li');
-            const day = date.data('day');
-            Swal.fire({
-                title: `${year}년 ${month}월 ${day}일 메모 수정`,
-                text: '메모는 50자 이내로 입력 가능합니다.',
-                input: 'textarea',
-                inputValue: memoArea.text(),
-                inputAttributes: {
-                    autocapitalize: 'off',
-                    maxlength: 50
+        const app = new Vue({
+            el: '.calendar',
+            data: {
+                year: year,
+                month: month,
+                duties: [],
+                department: {},
+            }, mounted() {
+                this.loadDuties(year, month);
+                this.loadDepartment();
+            }, computed: {
+                combinedYearMonth: {
+                    get() {
+                        return `${this.year}-${this.month.toString().padStart(2, '0')}`;
+                    },
+                    set(value) {
+                        const [year, month] = value.split('-');
+                        this.year = parseInt(year);
+                        this.month = parseInt(month);
+                    },
                 },
-                showCancelButton: true,
-                confirmButtonText: '확인',
-                cancelButtonText: '취소',
-                showLoaderOnConfirm: true,
-                preConfirm: (memo) => {
-                    return fetch('/api/duty/memo', {
-                        method: 'put',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
+                isToday() {
+                    return (duty) => {
+                        const today = new Date();
+                        return duty.month === today.getMonth() + 1 && duty.day === today.getDate();
+                    }
+                }
+            }, watch: {
+                combinedYearMonth() {
+                    this.loadDuties(app.year, app.month);
+                    const currentUrl = new URL(window.location.href);
+                    currentUrl.searchParams.set('year', app.year);
+                    currentUrl.searchParams.set('month', app.month);
+                    window.history.replaceState(null, '', currentUrl.toString());
+                },
+            }, methods: {
+                addMonth(month) {
+                    const newDate = new Date(app.year, app.month - 1 + month);
+                    app.year = newDate.getFullYear();
+                    app.month = newDate.getMonth() + 1;
+                },
+                loadDuties(year, month) {
+                    $.ajax({
+                        url: '/api/duty',
+                        type: 'GET',
+                        data: {
+                            memberId: memberId,
                             year: year,
                             month: month,
-                            day: day,
-                            memo: memo,
-                            memberId: memberId,
-                        })
-                    }).then(response => {
-                        if (!response.ok) {
-                            throw new Error(response.statusText)
+                        },
+                        success: (data) => {
+                            this.duties = data;
                         }
-                        Swal.fire({
-                            title: '메모가 저장 되었습니다.',
-                            icon: 'success',
-                            confirmButtonText: '확인'
-                        })
-                        memoArea.text(memo);
-                        if (memo.length > 0) {
-                            date.find('i').removeClass('bi-calendar-plus').addClass('bi-calendar-check');
-                        } else {
-                            date.find('i').removeClass('bi-calendar-check').addClass('bi-calendar-plus');
-                        }
-                        return true;
-                    }).catch(error => {
-                        Swal.showValidationMessage(
-                            `메모 저장에 실패 하였습니다 : ${error}`
-                        )
                     })
                 },
-                allowOutsideClick: () => !Swal.isLoading()
-            }).then((result) => {
-                if (result.isConfirmed) {
+                loadDepartment() {
+                    fetch(`/api/departments/${departmentId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            this.department = data;
+                        })
+                },
+                dutyTypeClasses(type, duty) {
+                    const departmentLength = app.department.dutyTypes.length;
+                    const colClass = (departmentLength === 2 || departmentLength === 4) ? 'col-md-6' : 'col-md-4';
+                    return {
+                        ['BACKGROUND-' + type.color]: true,
+                        selected: type.id === duty.dutyTypeId,
+                        [colClass]: true,
+                    };
+                },
+                changeDutyType(duty, type) {
+                    $.ajax({
+                        url: '/api/duty/change',
+                        type: 'PUT',
+                        data: JSON.stringify({
+                            year: duty.year,
+                            month: duty.month,
+                            day: duty.day,
+                            dutyTypeId: type.id,
+                            memberId: memberId,
+                        }),
+                        contentType: 'application/json',
+                        success: (data) => {
+                            duty.dutyType = type.name;
+                            duty.dutyColor = type.color;
+                        },
+                        fail: (data) => {
+                            Swal.fire({
+                                icon: 'error',
+                                title: '저장에 실패했습니다.',
+                                showConfirmButton: false,
+                                timer: 1500
+                            });
+                        }
+                    })
+                },
+                completeEdit() {
+                    const memberName = "[[${member.name}]]";
+                    window.location.href = `/duty/${memberName}?year=${app.year}&month=${app.month}`;
                 }
-            });
-        });
+            }
+        })
 
-        $('.duty-type').click(function () {
-            let button = $(this);
-            const date = button.parents('li');
-            const day = date.data('day');
-            const type_id = button.data('type_id');
-            const backgroundColor = button.attr('class').match(/BACKGROUND-([A-Z]+)/)[0];
 
-            date.waitMe({
-                effect: 'win8_linear',
-            });
-            $.ajax({
-                url: '/api/duty/change',
-                type: 'PUT',
-                data: JSON.stringify({
-                    year: year,
-                    month: month,
-                    day: day,
-                    dutyTypeId: type_id,
-                    memberId: memberId,
-                }),
-                contentType: 'application/json; charset=utf-8',
-                dataType: 'json',
-                success: function (data) {
-                    if (data) {
-                        let beforeSelected = date.find('.duty-type.selected');
-                        beforeSelected.removeClass('selected');
-                        beforeSelected.removeAttr('disabled');
-                        date.get(0).className = date.get(0).className.replace(/BACKGROUND-[A-Z]+/g, '');
-                        date.addClass(backgroundColor);
-                        button.addClass('selected');
-                        button.attr('disabled', true);
-                        return;
-                    }
-                    Swal.fire({
-                        icon: 'error',
-                        title: '저장에 실패했습니다.',
-                        showConfirmButton: false,
-                        timer: 1500
-                    });
-                }, error: function (e) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: '저장에 실패했습니다.',
-                        showConfirmButton: false,
-                        timer: 1500
-                    });
-                }, complete: function () {
-                    date.waitMe('hide');
-                }
-            });
-
-        });
     })
 
     $('input[type="month"]').on('change', function () {
