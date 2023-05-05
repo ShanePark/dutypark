@@ -4,83 +4,85 @@
 
 <div th:replace="~{layout/header::header-title(|${member.name}|)}"></div>
 
-<div th:if="${member.department}" class="calendar">
-  <div class="month-control row">
-    <h1>
-      <a class="move h_pointer" v-on:click="addMonth(-1)">
-        <i class="bi bi-arrow-left-circle"></i>
-      </a>
-      <input type="month" v-model="combinedYearMonth">
-      <a class="move h_pointer" v-on:click="addMonth(1)">
-        <i class="bi bi-arrow-right-circle"></i>
-      </a>
-    </h1>
-  </div>
-  <div class="dutyTypes">
+<div class="body">
+  <div th:if="${member.department}" class="calendar">
+    <div class="month-control row">
+      <h1>
+        <a class="move h_pointer" v-on:click="addMonth(-1)">
+          <i class="bi bi-arrow-left-circle"></i>
+        </a>
+        <input type="month" v-model="combinedYearMonth">
+        <a class="move h_pointer" v-on:click="addMonth(1)">
+          <i class="bi bi-arrow-right-circle"></i>
+        </a>
+      </h1>
+    </div>
+    <div class="dutyTypes">
     <span v-for="type in department.dutyTypes">
       <span :class="['indicator', 'BACKGROUND-' + type.color]">&nbsp;&nbsp;&nbsp;</span>
       <span v-text="type.name"></span>
     </span>
-    <button th:if="${#strings.equals(member.id, loginMember?.id) || member.managerId==loginMember?.id}"
-            class="edit-btn"
-            th:onclick="|window.location.href='@{/duty/edit/{member}(member=${member.name},year=${year}, month=${month})}'|">
-      수정<i class="bi bi-pencil-square"></i>
-    </button>
-  </div>
-  <ul class="weekdays">
-    <li><abbr title="S">SUN</abbr></li>
-    <li><abbr title="M">MON</abbr></li>
-    <li><abbr title="T">TUE</abbr></li>
-    <li><abbr title="W">WED</abbr></li>
-    <li><abbr title="T">THU</abbr></li>
-    <li><abbr title="F">FRI</abbr></li>
-    <li><abbr title="S">SAT</abbr></li>
-  </ul>
+      <button th:if="${#strings.equals(member.id, loginMember?.id) || member.managerId==loginMember?.id}"
+              class="edit-btn"
+              th:onclick="|window.location.href='@{/duty/edit/{member}(member=${member.name},year=${year}, month=${month})}'|">
+        수정<i class="bi bi-pencil-square"></i>
+      </button>
+    </div>
+    <ul class="weekdays">
+      <li><abbr title="S">SUN</abbr></li>
+      <li><abbr title="M">MON</abbr></li>
+      <li><abbr title="T">TUE</abbr></li>
+      <li><abbr title="W">WED</abbr></li>
+      <li><abbr title="T">THU</abbr></li>
+      <li><abbr title="F">FRI</abbr></li>
+      <li><abbr title="S">SAT</abbr></li>
+    </ul>
 
-  <ol class="day-grid">
-    <li v-for="(duty, index) in duties"
-        :class="{
+    <ol class="day-grid">
+      <li v-for="(duty, index) in duties"
+          :class="{
           ['BACKGROUND-' + duty.dutyColor]: true,
           'month-prev': (duty.month < month),
           'month-next': (duty.month > month),
           'today': isToday(duty),
         }">
-      <div class="date container">
-        <div class="day">
-          <span v-text="duty.day"></span>
-        </div>
-        <div class="schedules">
-          <div class="schedule" v-for="schedule in schedulesByDays[index]">
-            <span class="schedule=content" v-text="schedule.content"></span>
-            <div class="schedule-time-container">
+        <div class="date container">
+          <span v-if="selectedDday" v-text="calcDday(duty)" class="d-day-count"></span>
+          <div class="day">
+            <span v-text="duty.day"></span>
+          </div>
+          <div class="schedules">
+            <div class="schedule" v-for="schedule in schedulesByDays[index]">
+              <span class="schedule=content" v-text="schedule.content"></span>
+              <div class="schedule-time-container">
               <span
                   v-if="shouldDisplayStartTime(schedule)"
                   class="start-time single-time"
                   v-text="formattedTime(schedule.startDateTime)"
               />
-              <span
-                  v-if="shouldDisplayEndTime(schedule)"
-                  class="end-time single-time"
-                  v-text="formattedTime(schedule.endDateTime)"
-              />
+                <span
+                    v-if="shouldDisplayEndTime(schedule)"
+                    class="end-time single-time"
+                    v-text="formattedTime(schedule.endDateTime)"
+                />
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </li>
-  </ol>
-</div>
-<div th:if="!${member.department}" class="no-data p-5">
-  <h3>어느 부서에도 소속되어 있지 않습니다.</h3>
-</div>
+      </li>
+    </ol>
+  </div>
+  <div th:if="!${member.department}" class="no-data p-5">
+    <h3>어느 부서에도 소속되어 있지 않습니다.</h3>
+  </div>
 
-<div class="body">
   <div class="d-day-list row" v-cloak>
     <div v-for="(dDay, index) in dDays" class="col-6">
       <div class="d-day-item card row"
            v-on:click="dDayToggle(dDay)"
            :data-id="dDay.id"
-           :class="{'d-day-private': dDay.isPrivate}">
+           :class="{'d-day-private': dDay.isPrivate, 'selected': dDay == selectedDday}"
+      >
         <div class="d-day_day col-4">
           <span v-if="!dDay.editMode">{{dDay.dDayText}}</span>
         </div>
@@ -106,18 +108,21 @@
             const thisYear = today.getFullYear();
             const thisMonth = today.getMonth() + 1;
 
-            const calendar = new Vue({
-                    el: '.calendar',
+            const app = new Vue({
+                    el: '.body',
                     data: {
                         year: thisYear,
                         month: thisMonth,
                         duties: [],
                         schedulesByDays: [],
                         department: {},
+                        dDays: [],
+                        selectedDday: null,
                     }, mounted() {
                         this.loadDuties(thisYear, thisMonth);
                         this.loadSchedule(thisYear, thisMonth);
                         this.loadDepartment();
+                        this.loadDDays();
                     }, computed: {
                         combinedYearMonth: {
                             get() {
@@ -129,16 +134,24 @@
                                 this.month = parseInt(month);
                             },
                         },
+                        calcDday() {
+                            return (duty) => {
+                                const date = new Date(duty.year, duty.month - 1, duty.day);
+                                const calc = Math.floor((date.getTime() - new Date(app.selectedDday.date).getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                                const dDayText = calc < 0 ? 'D' + calc : calc == 0 ? 'D-Day' : 'D+' + (calc + 1);
+                                return dDayText;
+                            }
+                        },
                     }, watch: {
                         combinedYearMonth() {
-                            this.loadDuties(calendar.year, calendar.month);
-                            this.loadSchedule(calendar.year, calendar.month);
+                            this.loadDuties(app.year, app.month);
+                            this.loadSchedule(app.year, app.month);
                         },
                     }, methods: {
                         addMonth(month) {
-                            const newDate = new Date(calendar.year, calendar.month - 1 + month);
-                            calendar.year = newDate.getFullYear();
-                            calendar.month = newDate.getMonth() + 1;
+                            const newDate = new Date(app.year, app.month - 1 + month);
+                            app.year = newDate.getFullYear();
+                            app.month = newDate.getMonth() + 1;
                         },
                         loadDuties(year, month) {
                             $.ajax({
@@ -153,6 +166,37 @@
                                     this.duties = data;
                                 }
                             })
+                        },
+                        loadDDays() {
+                            const selectedDdayId = localStorage.getItem('selectedDday_' + memberId);
+                            $.ajax({
+                                url: '/api/dday/' + memberId,
+                                type: 'GET',
+                                success: (data) => {
+                                    this.dDays = data;
+                                    for (const dDay of app.dDays) {
+                                        if (dDay.id == selectedDdayId) {
+                                            app.selectedDday = dDay;
+                                        }
+                                        if (dDay.calc == 0) {
+                                            dDay.dDayText = 'D-Day';
+                                        } else if (dDay.calc < 0) {
+                                            dDay.dDayText = 'D+' + -dDay.calc;
+                                        } else {
+                                            dDay.dDayText = 'D-' + dDay.calc;
+                                        }
+                                    }
+                                }
+                            })
+                        },
+                        dDayToggle(dDay) {
+                            if (app.selectedDday == dDay) {
+                                app.selectedDday = null;
+                                localStorage.removeItem('selectedDday_' + memberId);
+                            } else {
+                                app.selectedDday = dDay;
+                                localStorage.setItem('selectedDday_' + memberId, dDay.id);
+                            }
                         },
                         loadSchedule(year, month) {
                             $.ajax({
@@ -205,66 +249,6 @@
                 }
             )
         }
-
-        const app = new Vue({
-            el: '.d-day-list',
-            data: {
-                dDays: [],
-                selectedDday: null,
-            },
-            mounted() {
-                this.load();
-            },
-            methods: {
-                load() {
-                    $.ajax({
-                        url: '/api/dday/' + memberId,
-                        type: 'GET',
-                        success: (data) => {
-                            this.dDays = data;
-                            for (const dDay of app.dDays) {
-                                dDay.editMode = false;
-                                if (dDay.calc == 0) {
-                                    dDay.dDayText = 'D-Day';
-                                } else if (dDay.calc < 0) {
-                                    dDay.dDayText = 'D+' + -dDay.calc;
-                                } else {
-                                    dDay.dDayText = 'D-' + dDay.calc;
-                                }
-                            }
-                        }
-                    })
-                },
-                dDayToggle(clickedDday) {
-                    $('.d-day-item.selected').removeClass('selected');
-                    document.querySelectorAll('span.d-day-count').forEach((span) => {
-                        span.remove();
-                    })
-                    if (app.selectedDday == clickedDday) {
-                        app.selectedDday = null;
-                        return;
-                    }
-                    app.selectedDday = clickedDday;
-
-                    const element = document.querySelector(`.d-day-item[data-id='${app.selectedDday.id}']`);
-                    element.classList.add('selected');
-
-                    const calendarYear = parseInt($("input[type='month']").val().split('-')[0]);
-                    const calendarMonth = parseInt($("input[type='month']").val().split('-')[1]);
-
-                    document.querySelectorAll('.day-grid li .date').forEach((li) => {
-                        const day = li.querySelector('.day span').innerText
-                        const date = new Date(calendarYear, calendarMonth - 1, day);
-                        const calc = Math.floor((date.getTime() - new Date(app.selectedDday.date).getTime()) / (1000 * 60 * 60 * 24)) + 1;
-                        const dDayText = calc < 0 ? 'D' + calc : calc == 0 ? 'D-Day' : 'D+' + (calc + 1);
-                        const countElement = document.createElement('span');
-                        countElement.classList.add('d-day-count');
-                        countElement.innerText = dDayText;
-                        li.prepend(countElement);
-                    })
-                },
-            }
-        })
     })
 
     function sameDate(startDateTime, endDateTime) {
