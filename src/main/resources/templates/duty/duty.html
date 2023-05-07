@@ -56,7 +56,7 @@
           </div>
           <div class="schedules">
             <div class="schedule" v-for="schedule in schedulesByDays[index]">
-              <span class="schedule=content" v-text="schedule.content"></span>
+              <span class="schedule=content" v-text="printSchedule(schedule)"></span>
               <div class="schedule-time-container">
               <span
                   v-if="shouldDisplayStartTime(schedule)"
@@ -137,14 +137,15 @@
                 <button class="btn btn-secondary" v-on:click="cancelEditMode(schedule)">취소</button>
               </div>
             </div>
-            <div class="schedule schedule-add">
+            <div class="schedule schedule-add" v-if="!editingSchedule.id">
               <label>일정 추가</label>
               <input type="text" class="form-control" placeholder="일정을 입력하세요." v-model="createSchedule.content"/>
               <label>시작일</label>
               <input type="datetime-local" class="form-control"
                      v-model="createSchedule.startDateTime"/>
               <label>종료일</label>
-              <input type="datetime-local" class="form-control" v-model="createSchedule.endDateTime"/>
+              <input type="datetime-local" class="form-control" v-model="createSchedule.endDateTime"
+                     :min="createSchedule.startDateTime"/>
               <div class="buttons mt-3">
                 <button class="btn btn-success" v-on:click="saveSchedule">추가</button>
               </div>
@@ -219,6 +220,14 @@
                                 return dDayText;
                             }
                         },
+                        printSchedule(schedule) {
+                            return (schedule) => {
+                                if (schedule.totalDays > 1)
+                                    return schedule.content + ' (' + schedule.daysFromStart + '/' + schedule.totalDays + ')'
+                                else
+                                    return schedule.content;
+                            }
+                        },
                     }, watch: {
                         combinedYearMonth() {
                             this.loadDuties(app.year, app.month);
@@ -228,6 +237,11 @@
                             currentUrl.searchParams.set('month', app.month);
                             window.history.replaceState(null, '', currentUrl.toString());
                         },
+                        'createSchedule.startDateTime': function () {
+                            if (app.createSchedule.startDateTime > app.createSchedule.endDateTime) {
+                                app.createSchedule.endDateTime = app.createSchedule.startDateTime;
+                            }
+                        }
                     }, methods: {
                         addMonth(month) {
                             const newDate = new Date(app.year, app.month - 1 + month);
