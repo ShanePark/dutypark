@@ -22,11 +22,10 @@
       <span :class="['indicator', 'BACKGROUND-' + type.color]">&nbsp;&nbsp;&nbsp;</span>
       <span v-text="type.name"></span>
     </span>
-      <button th:if="${#strings.equals(member.id, loginMember?.id) || member.managerId==loginMember?.id}"
-              class="edit-btn"
-              v-on:click="editDuty"
-      >
-        편집모드<i class="bi bi-pencil-square"></i>
+      <button v-if="canEdit"
+              class="edit-btn btn btn-warning"
+              v-on:click="editDuty">
+        편집<i class="bi bi-pencil-square"></i>
       </button>
     </div>
     <ul class="weekdays">
@@ -46,7 +45,10 @@
           'month-prev': (duty.month < month),
           'month-next': (duty.month > month),
           'today': isToday(duty),
-        }">
+          'editable': canEdit,
+        }"
+          v-on:click="viewDay(duty)"
+      >
         <div class="date container">
           <span v-if="selectedDday" v-text="calcDday(duty)" class="d-day-count"></span>
           <div class="day">
@@ -72,55 +74,83 @@
         </div>
       </li>
     </ol>
+    <div class="d-day-list row" v-cloak>
+      <div v-for="(dDay, index) in dDays" class="col-6">
+        <div class="d-day-item card row"
+             v-on:click="dDayToggle(dDay)"
+             :data-id="dDay.id"
+             :class="{'d-day-private': dDay.isPrivate, 'selected': dDay == selectedDday}"
+        >
+          <div class="d-day_day col-4">
+            <span v-if="!dDay.editMode">{{dDay.dDayText}}</span>
+          </div>
+          <div class="d-day_content col-8">
+            <p v-if="!dDay.editMode">{{dDay.date}}</p>
+            <p v-if="!dDay.editMode">{{dDay.title}}</p>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   <div th:if="!${member.department}" class="no-data p-5">
     <h3>어느 부서에도 소속되어 있지 않습니다.</h3>
   </div>
 
-  <div class="d-day-list row" v-cloak>
-    <div v-for="(dDay, index) in dDays" class="col-6">
-      <div class="d-day-item card row"
-           v-on:click="dDayToggle(dDay)"
-           :data-id="dDay.id"
-           :class="{'d-day-private': dDay.isPrivate, 'selected': dDay == selectedDday}"
-      >
-        <div class="d-day_day col-4">
-          <span v-if="!dDay.editMode">{{dDay.dDayText}}</span>
+  <div id="detail-view-modal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 v-text="detailView?.year + '년 ' + detailView?.month + '월 ' + detailView?.day + '일'"></h5>
         </div>
-        <div class="d-day_content col-8">
-          <p v-if="!dDay.editMode">{{dDay.date}}</p>
-          <p v-if="!dDay.editMode">{{dDay.title}}</p>
+        <div class="modal-body">
+          <div class="dutyTypes">
+            <form>
+              <div v-for="type in department.dutyTypes" class="pretty p-icon p-round p-jelly">
+                <input type="radio" name="dutyType"
+                       :checked="isDutyType(detailView, type)"
+                       v-on:click="changeDutyType(detailView, type)"
+                />
+                <div class="state p-primary">
+                  <i class="icon mdi mdi-check"></i>
+                  <label v-text="type.name"></label>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
         </div>
       </div>
     </div>
   </div>
-</div>
 
+</div>
 </body>
 </html>
 
 <script>
     $(function () {
-        const memberId = parseInt("[[${member.id}]]");
-
         if (document.querySelector('.calendar')) {
-            let year = parseInt("[[${year}]]");
-            let month = parseInt("[[${month}]]");
+            const memberId = parseInt("[[${member.id}]]");
             const departmentId = parseInt("[[${member.departmentId}]]");
+            const loginMemberId = parseInt("[[${loginMember?.id}]]");
+            const managerId = parseInt("[[${member.managerId}]]");
 
             const app = new Vue({
                     el: '.body',
                     data: {
-                        year: year,
-                        month: month,
+                        year: parseInt("[[${year}]]"),
+                        month: parseInt("[[${month}]]"),
                         duties: [],
                         schedulesByDays: [],
                         department: {},
                         dDays: [],
                         selectedDday: null,
+                        detailView: null,
                     }, mounted() {
-                        this.loadDuties(year, month);
-                        this.loadSchedule(year, month);
+                        this.loadDuties(this.year, this.month);
+                        this.loadSchedule(this.year, this.month);
                         this.loadDepartment();
                         this.loadDDays();
                     }, computed: {
@@ -133,6 +163,9 @@
                                 this.year = parseInt(year);
                                 this.month = parseInt(month);
                             },
+                        },
+                        canEdit() {
+                            return loginMemberId == memberId || loginMemberId == managerId;
                         },
                         calcDday() {
                             return (duty) => {
@@ -252,7 +285,43 @@
                         }, isToday(duty) {
                             const today = new Date();
                             return duty.month === today.getMonth() + 1 && duty.day === today.getDate();
-                        }
+                        }, viewDay(duty) {
+                            if (!app.canEdit) {
+                                return;
+                            }
+                            $('#detail-view-modal').modal('show');
+                            app.detailView = duty;
+                        }, isDutyType(duty, dutyType) {
+                            if (duty?.dutyType) {
+                                return dutyType.name == duty.dutyType
+                            }
+                            return !dutyType.id
+                        }, changeDutyType(duty, type) {
+                            $.ajax({
+                                url: '/api/duty/change',
+                                type: 'PUT',
+                                data: JSON.stringify({
+                                    year: duty.year,
+                                    month: duty.month,
+                                    day: duty.day,
+                                    dutyTypeId: type.id,
+                                    memberId: memberId,
+                                }),
+                                contentType: 'application/json',
+                                success: (data) => {
+                                    duty.dutyType = type.name;
+                                    duty.dutyColor = type.color;
+                                },
+                                fail: (data) => {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: '저장에 실패했습니다.',
+                                        showConfirmButton: false,
+                                        timer: 1500
+                                    });
+                                }
+                            })
+                        },
                     }
                 }
             )

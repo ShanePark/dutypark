@@ -82,6 +82,11 @@ ol.day-grid li.month-next {
     filter: opacity(0.5);
 }
 
+.day-grid li.editable:hover {
+    cursor: pointer;
+    filter: opacity(0.8);
+}
+
 .BACKGROUND-RED {
     background-color: lightpink !important;
 }
