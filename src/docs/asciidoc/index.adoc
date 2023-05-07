@@ -14,3 +14,9 @@ operation::schedules/create[]
 
 ==== Create [Unauthorized]
 operation::schedules/create-unauthorized[]
+
+=== Update
+operation::schedules/update[]
+
+=== Delete
+operation::schedules/delete[]

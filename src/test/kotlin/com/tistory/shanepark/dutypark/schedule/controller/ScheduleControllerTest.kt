@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.schedule.controller
 
 import com.tistory.shanepark.dutypark.RestDocsTest
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
+import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import jakarta.servlet.http.Cookie
 import org.assertj.core.api.Assertions.assertThat
@@ -84,6 +85,91 @@ class ScheduleControllerTest : RestDocsTest() {
                     )
                 )
             )
+    }
+
+    @Test
+    fun `update schedule test`() {
+        // Given
+        val member = TestData.member
+        val oldSchedule = scheduleRepository.save(
+            Schedule(
+                member = member,
+                content = "test",
+                startDateTime = LocalDateTime.now(),
+                endDateTime = LocalDateTime.now().plusHours(1),
+                position = 0
+            )
+        )
+
+        val jwt = getJwt(member)
+        val updateScheduleDto = ScheduleUpdateDto(
+            memberId = member.id!!,
+            content = "test2",
+            startDateTime = LocalDateTime.now().plusHours(2),
+            endDateTime = LocalDateTime.now().plusHours(3)
+        )
+        val json = objectMapper.writeValueAsString(updateScheduleDto)
+
+        // Then
+        mockMvc!!.perform(
+            MockMvcRequestBuilders.put("/api/schedules/{id}", oldSchedule.id)
+                .accept("application/json")
+                .contentType("application/json")
+                .content(json)
+                .cookie(Cookie("SESSION", jwt))
+        ).andExpect(status().isOk)
+            .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "schedules/update",
+                    requestFields(
+                        fieldWithPath("memberId").description("Member Id"),
+                        fieldWithPath("content").description("Schedule Content"),
+                        fieldWithPath("startDateTime").description("Schedule Start DateTime"),
+                        fieldWithPath("endDateTime").description("Schedule End DateTime")
+                    )
+                )
+            )
+        scheduleRepository.findById(oldSchedule.id!!).orElseThrow().apply {
+            assertThat(this.content).isEqualTo(updateScheduleDto.content)
+            assertThat(this.startDateTime).isEqualTo(updateScheduleDto.startDateTime)
+            assertThat(this.endDateTime).isEqualTo(updateScheduleDto.endDateTime)
+        }
+    }
+
+    @Test
+    fun `delete Test`() {
+        // Given
+        val member = TestData.member
+        val oldSchedule = scheduleRepository.save(
+            Schedule(
+                member = member,
+                content = "test",
+                startDateTime = LocalDateTime.now(),
+                endDateTime = LocalDateTime.now().plusHours(1),
+                position = 0
+            )
+        )
+
+        val jwt = getJwt(member)
+
+        // Then
+        mockMvc!!.perform(
+            MockMvcRequestBuilders.delete("/api/schedules/{id}", oldSchedule.id)
+                .accept("application/json")
+                .contentType("application/json")
+                .cookie(Cookie("SESSION", jwt))
+        ).andExpect(status().isOk)
+            .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "schedules/delete"
+                )
+            )
+
+        em.clear()
+
+        assertThat(scheduleRepository.findById(oldSchedule.id!!)).isEmpty
     }
 
 }

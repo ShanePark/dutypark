@@ -1,7 +1,6 @@
 package com.tistory.shanepark.dutypark.schedule.controller
 
 import com.tistory.shanepark.dutypark.common.domain.dto.constraint.CreateDtoConstraint
-import com.tistory.shanepark.dutypark.common.domain.dto.constraint.UpdateDtoConstraint
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
@@ -42,25 +41,21 @@ class ScheduleController(
         return ResponseEntity.ok().build()
     }
 
-    @PutMapping
+    @PutMapping("/{id}")
     fun updateSchedule(
-        @RequestBody @Validated(UpdateDtoConstraint::class)
+        @RequestBody @Validated
         scheduleUpdateDto: ScheduleUpdateDto,
-        @Login loginMember: LoginMember
+        @Login loginMember: LoginMember,
+        @PathVariable id: UUID
     ): ResponseEntity<Any> {
         scheduleService.checkAuthentication(loginMember, scheduleUpdateDto.memberId)
-
-        scheduleUpdateDto.id?.let { id ->
-            scheduleService.updateSchedule(id, scheduleUpdateDto)
-            return ResponseEntity.ok().build()
-        }
-        return ResponseEntity.badRequest().build()
+        scheduleService.updateSchedule(id, scheduleUpdateDto)
+        return ResponseEntity.ok().build()
     }
 
     @DeleteMapping("/{id}")
     fun deleteSchedule(@PathVariable id: UUID) {
         scheduleService.deleteSchedule(id)
     }
-
 
 }

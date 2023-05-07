@@ -1,13 +1,10 @@
 package com.tistory.shanepark.dutypark.schedule.domain.dto
 
-import com.tistory.shanepark.dutypark.common.domain.dto.constraint.CreateDtoConstraint
-import com.tistory.shanepark.dutypark.common.domain.dto.constraint.UpdateDtoConstraint
 import jakarta.validation.Validation
 import jakarta.validation.Validator
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
-import java.util.*
 
 class ScheduleUpdateDtoTest {
 
@@ -21,45 +18,11 @@ class ScheduleUpdateDtoTest {
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
             endDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
         )
-        val validation = validator.validate(scheduleUpdateDto, CreateDtoConstraint::class.java)
+        val validation = validator.validate(scheduleUpdateDto)
         assertThat(validation).hasSize(1)
         validation.iterator().next().let {
             assertThat(it.propertyPath.toString()).isEqualTo("content")
             assertThat(it.message).isEqualTo("must not be blank")
-        }
-    }
-
-    @Test
-    fun `when update schedule, ScheduleUpdateDto should have id`() {
-        val scheduleUpdateDto = ScheduleUpdateDto(
-            id = null,
-            memberId = 1,
-            content = "schedule1",
-            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-            endDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
-        )
-        val validation = validator.validate(scheduleUpdateDto, UpdateDtoConstraint::class.java)
-        assertThat(validation).hasSize(1)
-        validation.iterator().next().let {
-            assertThat(it.propertyPath.toString()).isEqualTo("id")
-            assertThat(it.message).isEqualTo("must not be null")
-        }
-    }
-
-    @Test
-    fun `when create schedule, ScheduleCreateDto should not have id`() {
-        val scheduleUpdateDto = ScheduleUpdateDto(
-            id = UUID.randomUUID(),
-            memberId = 1,
-            content = "schedule1",
-            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-            endDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
-        )
-        val validation = validator.validate(scheduleUpdateDto, CreateDtoConstraint::class.java)
-        assertThat(validation).hasSize(1)
-        validation.iterator().next().let {
-            assertThat(it.propertyPath.toString()).isEqualTo("id")
-            assertThat(it.message).isEqualTo("must be null")
         }
     }
 

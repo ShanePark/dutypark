@@ -2,68 +2,71 @@
 <!-- TODO: Need to change all the page into Vue -->
 
 <head th:replace="~{layout/include::link}"/>
-<body class="edit">
+<body>
 <div th:replace="~{layout/header::header-title(|[Edit] ${member.department} ${member.name}|)}"></div>
 
-<div class="calendar">
-  <div class="month-control row">
-    <h1>
-      <a class="move h_pointer" v-on:click="addMonth(-1)">
-        <i class="bi bi-arrow-left-circle"></i>
-      </a>
-      <input type="month" v-model="combinedYearMonth">
-      <a class="move h_pointer" v-on:click="addMonth(1)">
-        <i class="bi bi-arrow-right-circle"></i>
-      </a>
-    </h1>
-  </div>
-  <div class="dutyTypes">
+<div class="body">
+
+  <div class="calendar">
+    <div class="month-control row">
+      <h1>
+        <a class="move h_pointer" v-on:click="addMonth(-1)">
+          <i class="bi bi-arrow-left-circle"></i>
+        </a>
+        <input type="month" v-model="combinedYearMonth">
+        <a class="move h_pointer" v-on:click="addMonth(1)">
+          <i class="bi bi-arrow-right-circle"></i>
+        </a>
+      </h1>
+    </div>
+    <div class="dutyTypes">
     <span v-for="type in department.dutyTypes">
       <span :class="['indicator', 'BACKGROUND-' + type.color]">&nbsp;&nbsp;&nbsp;</span>
       <span v-text="type.name"></span>
     </span>
-    <button class="back-btn"
-            v-on:click="completeEdit"
-    >
-      완료 <i class="bi bi-check-square"></i>
-    </button>
-  </div>
+      <button class="back-btn"
+              v-on:click="completeEdit"
+      >
+        일반모드<i class="bi bi-calendar-event"></i>
+      </button>
+    </div>
 
-  <ul class="weekdays">
-    <li><abbr title="S">SUN</abbr></li>
-    <li><abbr title="M">MON</abbr></li>
-    <li><abbr title="T">TUE</abbr></li>
-    <li><abbr title="W">WED</abbr></li>
-    <li><abbr title="T">THU</abbr></li>
-    <li><abbr title="F">FRI</abbr></li>
-    <li><abbr title="S">SAT</abbr></li>
-  </ul>
+    <ul class="weekdays">
+      <li><abbr title="S">SUN</abbr></li>
+      <li><abbr title="M">MON</abbr></li>
+      <li><abbr title="T">TUE</abbr></li>
+      <li><abbr title="W">WED</abbr></li>
+      <li><abbr title="T">THU</abbr></li>
+      <li><abbr title="F">FRI</abbr></li>
+      <li><abbr title="S">SAT</abbr></li>
+    </ul>
 
-  <ol class="day-grid">
-    <li v-for="(duty, index) in duties"
-        :class="{
+    <ol class="day-grid">
+      <li v-for="(duty, index) in duties"
+          :class="{
           ['BACKGROUND-' + duty.dutyColor]: true,
           'month-prev': (duty.month < month),
           'month-next': (duty.month > month),
           'today': isToday(duty),
         }">
-      <div class="date container">
-        <div class="day">
-          <span v-text="duty.day"></span>
+        <div class="date container">
+          <div class="day">
+            <span v-text="duty.day"></span>
+          </div>
+          <div class="duty row">
+            <button v-for="type in department.dutyTypes"
+                    class="duty-type btn btn-sm btn-outline-dark"
+                    v-text="type.name.length > 3 ? type.name.substring(0, 3) : type.name"
+                    :class="dutyTypeClasses(type, duty)"
+                    :disabled="(duty.dutyType == type.name) || (!duty.dutyType && !type.id)"
+                    v-on:click="changeDutyType(duty, type)"
+            >
+            </button>
+          </div>
         </div>
-        <div class="duty row">
-          <button v-for="type in department.dutyTypes"
-                  class="duty-type btn btn-sm btn-outline-dark"
-                  v-text="type.name.length > 3 ? type.name.substring(0, 3) : type.name"
-                  :class="dutyTypeClasses(type, duty)"
-                  :disabled="(duty.dutyType == type.name) || (!duty.dutyType && !type.id)"
-                  v-on:click="changeDutyType(duty, type)"
-          >
-          </button>
-        </div>
-      </div>
-    </li>
-  </ol>
+      </li>
+    </ol>
+  </div>
 </div>
 
 </body>
