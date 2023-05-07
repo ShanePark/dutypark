@@ -36,6 +36,7 @@ class ScheduleService(
         scheduleRepository.findSchedulesOfMonth(member, start, end)
             .map { ScheduleDto.of(calendarView, it) }
             .flatten()
+            .sortedWith(compareBy({ it.startDateTime }, { it.position }))
             .forEach { scheduleDto ->
                 var dayIndex = paddingBefore + scheduleDto.dayOfMonth - 1
                 if (scheduleDto.month < yearMonth.monthValue) {

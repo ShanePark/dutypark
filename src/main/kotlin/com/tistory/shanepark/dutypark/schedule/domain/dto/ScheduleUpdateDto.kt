@@ -6,7 +6,7 @@ import java.time.LocalDateTime
 
 data class ScheduleUpdateDto(
     val memberId: Long,
-    @field:Length(max = 30)
+    @field:Length(max = 50)
     @field:NotBlank
     val content: String,
     val startDateTime: LocalDateTime,

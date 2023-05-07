@@ -3,7 +3,6 @@ package com.tistory.shanepark.dutypark.schedule.domain.entity
 import com.tistory.shanepark.dutypark.common.domain.entity.EntityBase
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import jakarta.persistence.*
-import jakarta.validation.constraints.Size
 import java.time.LocalDateTime
 
 @Entity
@@ -25,7 +24,7 @@ class Schedule(
     @Column(name = "end_date_time", nullable = false)
     var endDateTime: LocalDateTime = endDateTime
 
-    @Column(name = "content", nullable = false, length = 30)
+    @Column(name = "content", nullable = false, length = 50)
     var content: String = content
 
     @Column(name = "position", nullable = false)

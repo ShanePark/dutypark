@@ -120,9 +120,21 @@
           <div class="schedules mt-4">
             <div class="schedule" v-for="schedule in schedulesByDays[detailView.index]">
               <span v-text="schedule.content"></span>
-              <div class="buttons">
-                <button class="btn btn-info">수정</button>
-                <button class="btn btn-danger">삭제</button>
+              <div v-if="isEditing(schedule)" class="schedule-edit">
+                <input type="text" class="form-control" placeholder="일정을 입력하세요." v-model="editingSchedule.content"/>
+                <label>시작일</label>
+                <input type="datetime-local" class="form-control"
+                       v-model="editingSchedule.startDateTime"/>
+                <label>종료일</label>
+                <input type="datetime-local" class="form-control" v-model="editingSchedule.endDateTime"/>
+              </div>
+              <div class="buttons mt-3" v-if="!isEditing(schedule)">
+                <button class="btn btn-info" v-on:click="scheduleEditMode(schedule)">수정</button>
+                <button class="btn btn-danger" v-on:click="deleteSchedule(schedule)">삭제</button>
+              </div>
+              <div class="buttons mt-3" v-if="isEditing(schedule)">
+                <button class="btn btn-success" v-on:click="editSchedule()">저장</button>
+                <button class="btn btn-secondary" v-on:click="cancelEditMode(schedule)">취소</button>
               </div>
             </div>
             <div class="schedule schedule-add">
@@ -170,6 +182,12 @@
                         selectedDday: null,
                         detailView: null,
                         createSchedule: {
+                            content: '',
+                            startDateTime: '',
+                            endDateTime: '',
+                        },
+                        editingSchedule: {
+                            id: '',
                             content: '',
                             startDateTime: '',
                             endDateTime: '',
@@ -360,6 +378,12 @@
                             const day = duty.day.toString().padStart(2, '0');
                             return `${duty.year}-${month}-${day}T00:00`;
                         }, saveSchedule() {
+                            if (!isValidContent(app.createSchedule.content)) {
+                                return;
+                            }
+                            if (!isValidDateTime(app.createSchedule.startDateTime, app.createSchedule.endDateTime)) {
+                                return;
+                            }
                             $.ajax({
                                 url: '/api/schedules',
                                 type: 'POST',
@@ -384,6 +408,82 @@
                                     });
                                 }
                             })
+                        }, scheduleEditMode(schedule) {
+                            app.editingSchedule.id = schedule.id;
+                            app.editingSchedule.content = schedule.content;
+                            app.editingSchedule.startDateTime = schedule.startDateTime;
+                            app.editingSchedule.endDateTime = schedule.endDateTime;
+                        }, cancelEditMode() {
+                            app.editingSchedule.id = null;
+                            app.editingSchedule.content = '';
+                            app.editingSchedule.startDateTime = '';
+                            app.editingSchedule.endDateTime = '';
+                        },
+                        isEditing(schedule) {
+                            return app.editingSchedule.id === schedule.id;
+                        },
+                        editSchedule() {
+                            const schedule = app.editingSchedule;
+                            if (!isValidContent(schedule.content)) {
+                                return;
+                            }
+                            if (!isValidDateTime(schedule.startDateTime, schedule.endDateTime)) {
+                                return;
+                            }
+
+                            $.ajax({
+                                url: '/api/schedules/' + schedule.id,
+                                type: 'PUT',
+                                data: JSON.stringify({
+                                    content: schedule.content,
+                                    startDateTime: toLocalISOString(new Date(schedule.startDateTime)),
+                                    endDateTime: toLocalISOString(new Date(schedule.endDateTime)),
+                                    memberId: memberId,
+                                }),
+                                contentType: 'application/json',
+                                success: (data) => {
+                                    app.cancelEditMode();
+                                    app.loadSchedule(app.year, app.month);
+                                },
+                                error: (data) => {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: '저장에 실패했습니다.',
+                                        showConfirmButton: false,
+                                        timer: 1500
+                                    });
+                                }
+                            })
+                        },
+                        deleteSchedule(schedule) {
+                            Swal.fire({
+                                title: '일정을 삭제하시겠습니까?',
+                                text: "삭제된 일정은 복구할 수 없습니다.",
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonColor: '#d33',
+                                cancelButtonColor: '#999',
+                                confirmButtonText: '삭제',
+                                cancelButtonText: '취소',
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    $.ajax({
+                                        url: '/api/schedules/' + schedule.id,
+                                        type: 'DELETE',
+                                        success: (data) => {
+                                            app.loadSchedule(app.year, app.month);
+                                        },
+                                        error: (data) => {
+                                            Swal.fire({
+                                                icon: 'error',
+                                                title: '삭제에 실패했습니다.',
+                                                showConfirmButton: false,
+                                                timer: 1500
+                                            });
+                                        }
+                                    })
+                                }
+                            })
                         },
                     }
                 }
@@ -395,5 +495,30 @@
         return startDateTime.getTime() == endDateTime.getTime();
     }
 
+    function isValidContent(content) {
+        if (!content) {
+            Swal.fire({
+                icon: 'error',
+                title: '내용을 입력해주세요.',
+                showConfirmButton: false,
+                timer: 1500
+            });
+            return false;
+        }
+        return true;
+    }
+
+    function isValidDateTime(startDateTime, endDateTime) {
+        if (startDateTime > endDateTime) {
+            Swal.fire({
+                icon: 'error',
+                title: '시작일시는 종료일시보다 빨라야 합니다.',
+                showConfirmButton: false,
+                timer: 1500
+            });
+            return false;
+        }
+        return true;
+    }
 
 </script>

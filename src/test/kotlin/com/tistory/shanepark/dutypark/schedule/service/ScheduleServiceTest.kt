@@ -137,7 +137,14 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
             endDateTime = LocalDateTime.of(2023, 4, 12, 0, 0),
             position = 0
         )
-        scheduleRepository.saveAll(listOf(schedule1, schedule2))
+        val schedule3 = Schedule(
+            member = member,
+            content = "schedule3",
+            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 12, 0, 0),
+            position = 1
+        )
+        scheduleRepository.saveAll(listOf(schedule1, schedule2, schedule3))
 
         // When
         val yearMonth = YearMonth.of(2023, 4)
@@ -148,9 +155,13 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         assertThat(result).hasSize(calendarView.size)
         val paddingBefore = calendarView.paddingBefore
         assertThat(result[paddingBefore + 9 - 1]).hasSize(0)
-        assertThat(result[paddingBefore + 10 - 1]).hasSize(2)
-        assertThat(result[paddingBefore + 11 - 1]).hasSize(1)
-        assertThat(result[paddingBefore + 12 - 1]).hasSize(1)
+        assertThat(result[paddingBefore + 10 - 1]).hasSize(3)
+        assertThat(result[paddingBefore + 11 - 1]).hasSize(2)
+        assertThat(result[paddingBefore + 12 - 1]).hasSize(2)
+
+        val schedules = result[paddingBefore + 12 - 1]
+        assertThat(schedules[0].position).isLessThan(schedules[1].position)
+
     }
 
     @Test
