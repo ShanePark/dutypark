@@ -2,7 +2,9 @@ package com.tistory.shanepark.dutypark.common.domain.entity
 
 import com.github.f4b6a3.ulid.UlidCreator
 import jakarta.persistence.*
+import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.proxy.HibernateProxy
+import org.hibernate.type.SqlTypes
 import org.springframework.data.domain.Persistable
 import java.util.*
 import kotlin.jvm.Transient
@@ -12,6 +14,7 @@ class EntityBase : Persistable<UUID> {
 
     @Id
     @Column(columnDefinition = "char(36)")
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     private val id: UUID = UlidCreator.getMonotonicUlid().toUuid()
 
     @Transient

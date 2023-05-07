@@ -457,3 +457,17 @@ a.memberPage-link:hover {
     font-size: 1.5em;
     margin-top: 0.5em;
 }
+
+#detail-view-modal .schedules .schedule {
+    font-size: 1.2em;
+    border: 1px solid black;
+    border-radius: 15px;
+    background-color: aliceblue;
+    padding: 10px;
+    margin: 5px;
+}
+
+
+#detail-view-modal .schedules .schedule .buttons {
+    text-align: right;
+}

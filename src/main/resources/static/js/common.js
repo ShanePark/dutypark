@@ -16,3 +16,9 @@ const roChecker = function (text) {
 const rulChecker = function (text) {
     return isEndsWithLastConsonantLetter(text) ? '를' : '을';
 }
+
+function toLocalISOString(date) {
+    const offsetInMs = date.getTimezoneOffset() * 60000;
+    const localDate = new Date(date - offsetInMs);
+    return localDate.toISOString().slice(0, -1);
+}

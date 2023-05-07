@@ -47,7 +47,7 @@
           'today': isToday(duty),
           'editable': canEdit,
         }"
-          v-on:click="viewDay(duty)"
+          v-on:click="viewDay(duty, index)"
       >
         <div class="date container">
           <span v-if="selectedDday" v-text="calcDday(duty)" class="d-day-count"></span>
@@ -98,7 +98,7 @@
 
   <div id="detail-view-modal" class="modal fade" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-      <div class="modal-content">
+      <div class="modal-content" v-if="detailView">
         <div class="modal-header">
           <h5 v-text="detailView?.year + '년 ' + detailView?.month + '월 ' + detailView?.day + '일'"></h5>
         </div>
@@ -116,6 +116,27 @@
                 </div>
               </div>
             </form>
+          </div>
+          <div class="schedules mt-4">
+            <div class="schedule" v-for="schedule in schedulesByDays[detailView.index]">
+              <span v-text="schedule.content"></span>
+              <div class="buttons">
+                <button class="btn btn-info">수정</button>
+                <button class="btn btn-danger">삭제</button>
+              </div>
+            </div>
+            <div class="schedule schedule-add">
+              <label>일정 추가</label>
+              <input type="text" class="form-control" placeholder="일정을 입력하세요." v-model="createSchedule.content"/>
+              <label>시작일</label>
+              <input type="datetime-local" class="form-control"
+                     v-model="createSchedule.startDateTime"/>
+              <label>종료일</label>
+              <input type="datetime-local" class="form-control" v-model="createSchedule.endDateTime"/>
+              <div class="buttons mt-3">
+                <button class="btn btn-success" v-on:click="saveSchedule">추가</button>
+              </div>
+            </div>
           </div>
         </div>
         <div class="modal-footer">
@@ -148,6 +169,11 @@
                         dDays: [],
                         selectedDday: null,
                         detailView: null,
+                        createSchedule: {
+                            content: '',
+                            startDateTime: '',
+                            endDateTime: '',
+                        },
                     }, mounted() {
                         this.loadDuties(this.year, this.month);
                         this.loadSchedule(this.year, this.month);
@@ -285,12 +311,20 @@
                         }, isToday(duty) {
                             const today = new Date();
                             return duty.month === today.getMonth() + 1 && duty.day === today.getDate();
-                        }, viewDay(duty) {
+                        }, viewDay(duty, index) {
                             if (!app.canEdit) {
                                 return;
                             }
                             $('#detail-view-modal').modal('show');
                             app.detailView = duty;
+                            app.detailView.index = index;
+                            app.resetCreateSchedule();
+                        }, resetCreateSchedule() {
+                            app.createSchedule = {
+                                content: '',
+                                startDateTime: app.formattedDateTime(app.detailView),
+                                endDateTime: app.formattedDateTime(app.detailView),
+                            }
                         }, isDutyType(duty, dutyType) {
                             if (duty?.dutyType) {
                                 return dutyType.name == duty.dutyType
@@ -321,6 +355,35 @@
                                     });
                                 }
                             })
+                        }, formattedDateTime(duty) {
+                            const month = duty.month.toString().padStart(2, '0');
+                            const day = duty.day.toString().padStart(2, '0');
+                            return `${duty.year}-${month}-${day}T00:00`;
+                        }, saveSchedule() {
+                            $.ajax({
+                                url: '/api/schedules',
+                                type: 'POST',
+                                data: JSON.stringify({
+                                    memberId: memberId,
+                                    content: app.createSchedule.content,
+                                    startDateTime: toLocalISOString(new Date(app.createSchedule.startDateTime)),
+                                    endDateTime: toLocalISOString(new Date(app.createSchedule.endDateTime)),
+                                }),
+                                contentType: 'application/json',
+                                success: (data) => {
+                                    // SAVED
+                                    app.resetCreateSchedule();
+                                    app.loadSchedule(app.year, app.month);
+                                },
+                                error: (data) => {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: '저장에 실패했습니다.',
+                                        showConfirmButton: false,
+                                        timer: 1500
+                                    });
+                                }
+                            })
                         },
                     }
                 }
@@ -331,4 +394,6 @@
     function sameDate(startDateTime, endDateTime) {
         return startDateTime.getTime() == endDateTime.getTime();
     }
+
+
 </script>
