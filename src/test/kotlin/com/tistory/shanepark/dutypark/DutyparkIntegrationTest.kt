@@ -1,5 +1,8 @@
 package com.tistory.shanepark.dutypark
 
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.tistory.shanepark.dutypark.department.domain.entity.Department
 import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
@@ -8,6 +11,7 @@ import com.tistory.shanepark.dutypark.member.domain.dto.MemberCreateDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.MemberService
+import com.tistory.shanepark.dutypark.security.service.JwtProvider
 import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
@@ -32,6 +36,13 @@ class DutyparkIntegrationTest {
 
     @Autowired
     lateinit var em: EntityManager
+
+    @Autowired
+    lateinit var jwtProvider: JwtProvider
+
+    val objectMapper: ObjectMapper = ObjectMapper()
+        .setSerializationInclusion(JsonInclude.Include.NON_NULL)
+        .registerModule(JavaTimeModule())
 
     @BeforeEach
     fun init() {
@@ -85,6 +96,10 @@ class DutyparkIntegrationTest {
         var member2: Member = Member("", "", "")
 
         val dutyTypes = mutableListOf<DutyType>()
+    }
+
+    fun getJwt(member: Member): String {
+        return jwtProvider.createToken(member)
     }
 
 }

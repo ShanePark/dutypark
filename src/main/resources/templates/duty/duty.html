@@ -4,194 +4,535 @@
 
 <div th:replace="~{layout/header::header-title(|${member.name}|)}"></div>
 
-<div th:if="${duties}" class="calendar">
-  <div class="month-control row">
-    <h1>
-      <a class="move"
-         th:href="@{/duty/{member}(member=${member.name},year=${prevMonth.year}, month=${prevMonth.monthValue})}">
-        <i class="bi bi-arrow-left-circle"></i>
-      </a>
-      <input type="month" th:value="|${year}-${month < 10 ? '0' + month : month}|" onclick="this.showPicker()">
-      <a class="move"
-         th:href="@{/duty/{member}(member=${member.name},year=${nextMonth.year}, month=${nextMonth.monthValue})}">
-        <i class="bi bi-arrow-right-circle"></i>
-      </a>
-    </h1>
-  </div>
-  <div class="dutyTypes">
-    <span th:each="type : ${dutyTypes}">
-      <span th:class="|indicator BACKGROUND-${type.color}|">&nbsp;&nbsp;&nbsp;</span>
-      <span th:text="${type.name}"></span>
+<div class="body">
+  <div th:if="${member.department}" class="calendar" th:attr="data-member_id=${member.id}">
+    <div class="month-control row">
+      <h1>
+        <a class="move h_pointer" v-on:click="addMonth(-1)">
+          <i class="bi bi-arrow-left-circle"></i>
+        </a>
+        <input type="month" v-model="combinedYearMonth">
+        <a class="move h_pointer" v-on:click="addMonth(1)">
+          <i class="bi bi-arrow-right-circle"></i>
+        </a>
+      </h1>
+    </div>
+    <div class="dutyTypes">
+    <span v-for="type in department.dutyTypes">
+      <span :class="['indicator', 'BACKGROUND-' + type.color]">&nbsp;&nbsp;&nbsp;</span>
+      <span v-text="type.name"></span>
     </span>
-    <button th:if="${#strings.equals(member.id, loginMember?.id) || member.managerId==loginMember?.id}"
-            class="edit-btn"
-            th:onclick="|window.location.href='@{/duty/edit/{member}(member=${member.name},year=${year}, month=${month})}'|">
-      수정<i class="bi bi-pencil-square"></i>
-    </button>
-  </div>
-  <ul class="weekdays">
-    <li>
-      <abbr title="S">SUN</abbr>
-    </li>
-    <li>
-      <abbr title="M">MON</abbr>
-    </li>
-    <li>
-      <abbr title="T">TUE</abbr>
-    </li>
-    <li>
-      <abbr title="W">WED</abbr>
-    </li>
-    <li>
-      <abbr title="T">THU</abbr>
-    </li>
-    <li>
-      <abbr title="F">FRI</abbr>
-    </li>
-    <li>
-      <abbr title="S">SAT</abbr>
-    </li>
-  </ul>
+      <button v-if="canEdit"
+              class="edit-btn btn btn-warning"
+              v-on:click="editDuty">
+        편집<i class="bi bi-pencil-square"></i>
+      </button>
+    </div>
+    <ul class="weekdays">
+      <li><abbr title="S">SUN</abbr></li>
+      <li><abbr title="M">MON</abbr></li>
+      <li><abbr title="T">TUE</abbr></li>
+      <li><abbr title="W">WED</abbr></li>
+      <li><abbr title="T">THU</abbr></li>
+      <li><abbr title="F">FRI</abbr></li>
+      <li><abbr title="S">SAT</abbr></li>
+    </ul>
 
-  <ol class="day-grid" th:with="today=${#dates.createNow()}">
-    <th:block th:each="i : ${#numbers.sequence(0, offset % 7 -1, 1)}">
-      <li class="month-prev"/>
-    </th:block>
-    <th:block th:each="i : ${#numbers.sequence(1, lastDay)}">
-      <li th:with="duty=${duties.get(i)}"
-          th:classappend='|BACKGROUND-${ duty?.dutyColor ?: offColor}${today.getYear()+1900==year and today.getMonth()+1 == month and today.getDate() == i ? " today": "" }|'>
+    <ol class="day-grid">
+      <li v-for="(duty, index) in duties"
+          :class="{
+          ['BACKGROUND-' + duty.dutyColor]: true,
+          'month-prev': (duty.month < month),
+          'month-next': (duty.month > month),
+          'today': isToday(duty),
+          'editable': canEdit,
+        }"
+          v-on:click="viewDay(duty, index)"
+      >
         <div class="date container">
+          <span v-if="selectedDday" v-text="calcDday(duty)" class="d-day-count"></span>
           <div class="day">
-            <span th:text='|${i}|'></span>
+            <span v-text="duty.day"></span>
           </div>
-          <div class="duty">
-            <div class="memo">
-              <p th:if="${duty?.memo?.length > 0}"
-                 th:text="|${duty.memo}|">
-              </p>
+          <div class="schedules">
+            <div class="schedule" v-for="schedule in schedulesByDays[index]">
+              <span class="schedule=content" v-text="printSchedule(schedule)"></span>
+              <div class="schedule-time-container">
+              <span
+                  v-if="shouldDisplayStartTime(schedule)"
+                  class="start-time single-time"
+                  v-text="formattedTime(schedule.startDateTime)"
+              />
+                <span
+                    v-if="shouldDisplayEndTime(schedule)"
+                    class="end-time single-time"
+                    v-text="formattedTime(schedule.endDateTime)"
+                />
+              </div>
             </div>
           </div>
         </div>
       </li>
-    </th:block>
-    <th:block th:if="(${offset} + ${lastDay}) % 7 > 0"
-              th:each="i : ${#numbers.sequence(1, 7 - ((offset + lastDay) % 7) )}">
-      <li class="month-next"/>
-    </th:block>
-  </ol>
-</div>
-<div th:if="!${duties}" class="no-data p-5">
-  <h3>어느 부서에도 소속되어 있지 않습니다.</h3>
-</div>
-
-<div class="body">
-  <div class="d-day-list row" v-cloak>
-    <div v-for="(dDay, index) in dDays" class="col-6">
-      <div class="d-day-item card row"
-           v-on:click="dDayToggle(dDay)"
-           :data-id="dDay.id"
-           :class="{'d-day-private': dDay.isPrivate}">
-        <div class="d-day_day col-4">
-          <span v-if="!dDay.editMode">{{dDay.dDayText}}</span>
-        </div>
-        <div class="d-day_content col-8">
-          <p v-if="!dDay.editMode">{{dDay.date}}</p>
-          <p v-if="!dDay.editMode">{{dDay.title}}</p>
+    </ol>
+    <div class="d-day-list row" v-cloak>
+      <div v-for="(dDay, index) in dDays" class="col-6">
+        <div class="d-day-item card row"
+             v-on:click="dDayToggle(dDay)"
+             :data-id="dDay.id"
+             :class="{'d-day-private': dDay.isPrivate, 'selected': dDay == selectedDday}"
+        >
+          <div class="d-day_day col-4">
+            <span v-if="!dDay.editMode">{{dDay.dDayText}}</span>
+          </div>
+          <div class="d-day_content col-8">
+            <p v-if="!dDay.editMode">{{dDay.date}}</p>
+            <p v-if="!dDay.editMode">{{dDay.title}}</p>
+          </div>
         </div>
       </div>
     </div>
   </div>
-</div>
+  <div th:if="!${member.department}" class="no-data p-5">
+    <h3>어느 부서에도 소속되어 있지 않습니다.</h3>
+  </div>
 
+  <div id="detail-view-modal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content" v-if="detailView">
+        <div class="modal-header">
+          <h5 v-text="detailView?.year + '년 ' + detailView?.month + '월 ' + detailView?.day + '일'"></h5>
+        </div>
+        <div class="modal-body">
+          <div class="dutyTypes">
+            <form>
+              <div v-for="type in department.dutyTypes" class="pretty p-icon p-round p-jelly">
+                <input type="radio" name="dutyType"
+                       :checked="isDutyType(detailView, type)"
+                       v-on:click="changeDutyType(detailView, type)"
+                />
+                <div class="state p-primary">
+                  <i class="icon mdi mdi-check"></i>
+                  <label v-text="type.name"></label>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="schedules mt-4">
+            <div class="schedule" v-for="schedule in schedulesByDays[detailView.index]">
+              <span v-text="schedule.content"></span>
+              <div v-if="isEditing(schedule)" class="schedule-edit">
+                <input type="text" class="form-control" placeholder="일정을 입력하세요." v-model="editingSchedule.content"/>
+                <label>시작일</label>
+                <input type="datetime-local" class="form-control"
+                       v-model="editingSchedule.startDateTime"/>
+                <label>종료일</label>
+                <input type="datetime-local" class="form-control" v-model="editingSchedule.endDateTime"/>
+              </div>
+              <div class="buttons mt-3" v-if="!isEditing(schedule)">
+                <button class="btn btn-info" v-on:click="scheduleEditMode(schedule)">수정</button>
+                <button class="btn btn-danger" v-on:click="deleteSchedule(schedule)">삭제</button>
+              </div>
+              <div class="buttons mt-3" v-if="isEditing(schedule)">
+                <button class="btn btn-success" v-on:click="editSchedule()">저장</button>
+                <button class="btn btn-secondary" v-on:click="cancelEditMode(schedule)">취소</button>
+              </div>
+            </div>
+            <div class="schedule schedule-add" v-if="!editingSchedule.id">
+              <label>일정 추가</label>
+              <input type="text" class="form-control" placeholder="일정을 입력하세요." v-model="createSchedule.content"/>
+              <label>시작일</label>
+              <input type="datetime-local" class="form-control"
+                     v-model="createSchedule.startDateTime"/>
+              <label>종료일</label>
+              <input type="datetime-local" class="form-control" v-model="createSchedule.endDateTime"
+                     :min="createSchedule.startDateTime"/>
+              <div class="buttons mt-3">
+                <button class="btn btn-success" v-on:click="saveSchedule">추가</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
 </body>
 </html>
 
 <script>
     $(function () {
-        $('input[type="month"]').on('change', function () {
-            let year = $(this).val().split('-')[0];
-            let month = $(this).val().split('-')[1];
-            window.location.href = window.location.href.split('?')[0] + '?year=' + year + '&month=' + month;
-        });
+        if (document.querySelector('.calendar')) {
+            const memberId = parseInt("[[${member.id}]]");
+            const departmentId = parseInt("[[${member.departmentId}]]");
+            const loginMemberId = parseInt("[[${loginMember?.id}]]");
+            const managerId = parseInt("[[${member.managerId}]]");
 
-        const memberId = parseInt("[[${member.id}]]");
-        const app = new Vue({
-            el: '.d-day-list',
-            data: {
-                dDays: [],
-                selectedDday: null,
-            },
-            mounted() {
-                this.load();
-            },
-            updated() {
-                this.loadSelectedDday();
-            },
-            methods: {
-                load() {
-                    $.ajax({
-                        url: '/api/dday/' + memberId,
-                        type: 'GET',
-                        success: (data) => {
-                            this.dDays = data;
-                            for (const dDay of app.dDays) {
-                                dDay.editMode = false;
-                                if (dDay.calc == 0) {
-                                    dDay.dDayText = 'D-Day';
-                                } else if (dDay.calc < 0) {
-                                    dDay.dDayText = 'D+' + -dDay.calc;
-                                } else {
-                                    dDay.dDayText = 'D-' + dDay.calc;
-                                }
+            const app = new Vue({
+                    el: '.body',
+                    data: {
+                        year: parseInt("[[${year}]]"),
+                        month: parseInt("[[${month}]]"),
+                        duties: [],
+                        schedulesByDays: [],
+                        department: {},
+                        dDays: [],
+                        selectedDday: null,
+                        detailView: null,
+                        createSchedule: {
+                            content: '',
+                            startDateTime: '',
+                            endDateTime: '',
+                        },
+                        editingSchedule: {
+                            id: '',
+                            content: '',
+                            startDateTime: '',
+                            endDateTime: '',
+                        },
+                    }, mounted() {
+                        this.loadDuties(this.year, this.month);
+                        this.loadSchedule(this.year, this.month);
+                        this.loadDepartment();
+                        this.loadDDays();
+                    }, computed: {
+                        combinedYearMonth: {
+                            get() {
+                                return `${this.year}-${this.month.toString().padStart(2, '0')}`;
+                            },
+                            set(value) {
+                                const [year, month] = value.split('-');
+                                this.year = parseInt(year);
+                                this.month = parseInt(month);
+                            },
+                        },
+                        canEdit() {
+                            return loginMemberId == memberId || loginMemberId == managerId;
+                        },
+                        calcDday() {
+                            return (duty) => {
+                                const date = new Date(duty.year, duty.month - 1, duty.day);
+                                const calc = Math.floor((date.getTime() - new Date(app.selectedDday.date).getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                                const dDayText = calc < 0 ? 'D' + calc : calc == 0 ? 'D-Day' : 'D+' + (calc + 1);
+                                return dDayText;
+                            }
+                        },
+                        printSchedule(schedule) {
+                            return (schedule) => {
+                                if (schedule.totalDays > 1)
+                                    return schedule.content + ' (' + schedule.daysFromStart + '/' + schedule.totalDays + ')'
+                                else
+                                    return schedule.content;
+                            }
+                        },
+                    }, watch: {
+                        combinedYearMonth() {
+                            this.loadDuties(app.year, app.month);
+                            this.loadSchedule(app.year, app.month);
+                            const currentUrl = new URL(window.location.href);
+                            currentUrl.searchParams.set('year', app.year);
+                            currentUrl.searchParams.set('month', app.month);
+                            window.history.replaceState(null, '', currentUrl.toString());
+                        },
+                        'createSchedule.startDateTime': function () {
+                            if (app.createSchedule.startDateTime > app.createSchedule.endDateTime) {
+                                app.createSchedule.endDateTime = app.createSchedule.startDateTime;
                             }
                         }
-                    })
-                },
-                dDayToggle(clickedDday) {
-                    $('.d-day-item.selected').removeClass('selected');
-                    document.querySelectorAll('span.d-day-count').forEach((span) => {
-                        span.remove();
-                    })
-                    if (app.selectedDday == clickedDday) {
-                        app.selectedDday = null;
-                        this.saveSelectedDday(null);
-                        return;
-                    }
-                    app.selectedDday = clickedDday;
-                    this.saveSelectedDday(app.selectedDday);
+                    }, methods: {
+                        addMonth(month) {
+                            const newDate = new Date(app.year, app.month - 1 + month);
+                            app.year = newDate.getFullYear();
+                            app.month = newDate.getMonth() + 1;
+                        },
+                        loadDuties(year, month) {
+                            $.ajax({
+                                url: '/api/duty',
+                                type: 'GET',
+                                data: {
+                                    memberId: memberId,
+                                    year: year,
+                                    month: month,
+                                },
+                                success: (data) => {
+                                    this.duties = data;
+                                }
+                            })
+                        },
+                        loadDDays() {
+                            const selectedDdayId = localStorage.getItem('selectedDday_' + memberId);
+                            $.ajax({
+                                url: '/api/dday/' + memberId,
+                                type: 'GET',
+                                success: (data) => {
+                                    this.dDays = data;
+                                    for (const dDay of app.dDays) {
+                                        if (dDay.id == selectedDdayId) {
+                                            app.selectedDday = dDay;
+                                        }
+                                        if (dDay.calc == 0) {
+                                            dDay.dDayText = 'D-Day';
+                                        } else if (dDay.calc < 0) {
+                                            dDay.dDayText = 'D+' + -dDay.calc;
+                                        } else {
+                                            dDay.dDayText = 'D-' + dDay.calc;
+                                        }
+                                    }
+                                }
+                            })
+                        },
+                        dDayToggle(dDay) {
+                            if (app.selectedDday == dDay) {
+                                app.selectedDday = null;
+                                localStorage.removeItem('selectedDday_' + memberId);
+                            } else {
+                                app.selectedDday = dDay;
+                                localStorage.setItem('selectedDday_' + memberId, dDay.id);
+                            }
+                        },
+                        loadSchedule(year, month) {
+                            $.ajax({
+                                url: '/api/schedules',
+                                type: 'GET',
+                                data: {
+                                    memberId: memberId,
+                                    year: year,
+                                    month: month,
+                                },
+                                success: (data) => {
+                                    this.schedulesByDays = data;
+                                }
+                            })
+                        },
+                        loadDepartment() {
+                            fetch(`/api/departments/${departmentId}`)
+                                .then(response => response.json())
+                                .then(data => {
+                                    this.department = data;
+                                })
+                        },
+                        editDuty() {
+                            const memberId = document.getElementsByClassName('calendar')[0].getAttribute('data-member_id');
+                            window.location.href = `/duty/edit?memberId=${memberId}&year=${(app.year)}&month=${(app.month)}`;
+                        },
+                        shouldDisplayStartTime(schedule) {
+                            const daysFromStart = schedule.daysFromStart;
+                            const startDateTime = new Date(schedule.startDateTime);
+                            const startHour = startDateTime.getHours().toString().padStart(2, '0');
+                            return daysFromStart === 1 && startHour !== '00';
+                        },
+                        shouldDisplayEndTime(schedule) {
+                            const daysFromStart = schedule.daysFromStart;
+                            const totalDays = schedule.totalDays;
+                            const startDateTime = new Date(schedule.startDateTime);
+                            const endDateTime = new Date(schedule.endDateTime);
+                            const endHour = endDateTime.getHours().toString().padStart(2, '0');
+                            return (
+                                daysFromStart === totalDays &&
+                                endHour !== '00' &&
+                                !(totalDays === 1 && sameDate(startDateTime, endDateTime))
+                            );
+                        }, formattedTime(startDateTime) {
+                            const dateTime = new Date(startDateTime);
+                            const hour = dateTime.getHours().toString().padStart(2, '0');
+                            const minute = dateTime.getMinutes().toString().padStart(2, '0');
+                            return hour + ':' + minute;
+                        }, isToday(duty) {
+                            const today = new Date();
+                            return duty.month === today.getMonth() + 1 && duty.day === today.getDate();
+                        }, viewDay(duty, index) {
+                            if (!app.canEdit) {
+                                return;
+                            }
+                            $('#detail-view-modal').modal('show');
+                            app.detailView = duty;
+                            app.detailView.index = index;
+                            app.resetCreateSchedule();
+                        }, resetCreateSchedule() {
+                            app.createSchedule = {
+                                content: '',
+                                startDateTime: app.formattedDateTime(app.detailView),
+                                endDateTime: app.formattedDateTime(app.detailView),
+                            }
+                        }, isDutyType(duty, dutyType) {
+                            if (duty?.dutyType) {
+                                return dutyType.name == duty.dutyType
+                            }
+                            return !dutyType.id
+                        }, changeDutyType(duty, type) {
+                            $.ajax({
+                                url: '/api/duty/change',
+                                type: 'PUT',
+                                data: JSON.stringify({
+                                    year: duty.year,
+                                    month: duty.month,
+                                    day: duty.day,
+                                    dutyTypeId: type.id,
+                                    memberId: memberId,
+                                }),
+                                contentType: 'application/json',
+                                success: (data) => {
+                                    duty.dutyType = type.name;
+                                    duty.dutyColor = type.color;
+                                },
+                                fail: (data) => {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: '저장에 실패했습니다.',
+                                        showConfirmButton: false,
+                                        timer: 1500
+                                    });
+                                }
+                            })
+                        }, formattedDateTime(duty) {
+                            const month = duty.month.toString().padStart(2, '0');
+                            const day = duty.day.toString().padStart(2, '0');
+                            return `${duty.year}-${month}-${day}T00:00`;
+                        }, saveSchedule() {
+                            if (!isValidContent(app.createSchedule.content)) {
+                                return;
+                            }
+                            if (!isValidDateTime(app.createSchedule.startDateTime, app.createSchedule.endDateTime)) {
+                                return;
+                            }
+                            $.ajax({
+                                url: '/api/schedules',
+                                type: 'POST',
+                                data: JSON.stringify({
+                                    memberId: memberId,
+                                    content: app.createSchedule.content,
+                                    startDateTime: toLocalISOString(new Date(app.createSchedule.startDateTime)),
+                                    endDateTime: toLocalISOString(new Date(app.createSchedule.endDateTime)),
+                                }),
+                                contentType: 'application/json',
+                                success: (data) => {
+                                    // SAVED
+                                    app.resetCreateSchedule();
+                                    app.loadSchedule(app.year, app.month);
+                                },
+                                error: (data) => {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: '저장에 실패했습니다.',
+                                        showConfirmButton: false,
+                                        timer: 1500
+                                    });
+                                }
+                            })
+                        }, scheduleEditMode(schedule) {
+                            app.editingSchedule.id = schedule.id;
+                            app.editingSchedule.content = schedule.content;
+                            app.editingSchedule.startDateTime = schedule.startDateTime;
+                            app.editingSchedule.endDateTime = schedule.endDateTime;
+                        }, cancelEditMode() {
+                            app.editingSchedule.id = null;
+                            app.editingSchedule.content = '';
+                            app.editingSchedule.startDateTime = '';
+                            app.editingSchedule.endDateTime = '';
+                        },
+                        isEditing(schedule) {
+                            return app.editingSchedule.id === schedule.id;
+                        },
+                        editSchedule() {
+                            const schedule = app.editingSchedule;
+                            if (!isValidContent(schedule.content)) {
+                                return;
+                            }
+                            if (!isValidDateTime(schedule.startDateTime, schedule.endDateTime)) {
+                                return;
+                            }
 
-                    const element = document.querySelector(`.d-day-item[data-id='${app.selectedDday.id}']`);
-                    element.classList.add('selected');
-
-                    const calendarYear = parseInt($("input[type='month']").val().split('-')[0]);
-                    const calendarMonth = parseInt($("input[type='month']").val().split('-')[1]);
-
-                    document.querySelectorAll('.day-grid li .date').forEach((li) => {
-                        const day = li.querySelector('.day span').innerText
-                        const date = new Date(calendarYear, calendarMonth - 1, day);
-                        const calc = Math.floor((date.getTime() - new Date(app.selectedDday.date).getTime()) / (1000 * 60 * 60 * 24)) + 1;
-                        const dDayText = calc < 0 ? 'D' + calc : calc == 0 ? 'D-Day' : 'D+' + (calc + 1);
-                        const countElement = document.createElement('span');
-                        countElement.classList.add('d-day-count');
-                        countElement.innerText = dDayText;
-                        li.prepend(countElement);
-                    })
-                },
-                saveSelectedDday(selectedDday) {
-                    if (!selectedDday) {
-                        localStorage.removeItem('selectedDday_' + memberId);
-                        return;
-                    }
-                    localStorage.setItem('selectedDday_' + memberId, this.selectedDday.id);
-                },
-                loadSelectedDday() {
-                    const savedSelectedDday = localStorage.getItem('selectedDday_' + memberId);
-                    if (savedSelectedDday) {
-                        const element = document.querySelector(`.d-day-item[data-id='${savedSelectedDday}']`);
-                        element.click();
+                            $.ajax({
+                                url: '/api/schedules/' + schedule.id,
+                                type: 'PUT',
+                                data: JSON.stringify({
+                                    content: schedule.content,
+                                    startDateTime: toLocalISOString(new Date(schedule.startDateTime)),
+                                    endDateTime: toLocalISOString(new Date(schedule.endDateTime)),
+                                    memberId: memberId,
+                                }),
+                                contentType: 'application/json',
+                                success: (data) => {
+                                    app.cancelEditMode();
+                                    app.loadSchedule(app.year, app.month);
+                                },
+                                error: (data) => {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: '저장에 실패했습니다.',
+                                        showConfirmButton: false,
+                                        timer: 1500
+                                    });
+                                }
+                            })
+                        },
+                        deleteSchedule(schedule) {
+                            Swal.fire({
+                                title: '일정을 삭제하시겠습니까?',
+                                text: "삭제된 일정은 복구할 수 없습니다.",
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonColor: '#d33',
+                                cancelButtonColor: '#999',
+                                confirmButtonText: '삭제',
+                                cancelButtonText: '취소',
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    $.ajax({
+                                        url: '/api/schedules/' + schedule.id,
+                                        type: 'DELETE',
+                                        success: (data) => {
+                                            app.loadSchedule(app.year, app.month);
+                                        },
+                                        error: (data) => {
+                                            Swal.fire({
+                                                icon: 'error',
+                                                title: '삭제에 실패했습니다.',
+                                                showConfirmButton: false,
+                                                timer: 1500
+                                            });
+                                        }
+                                    })
+                                }
+                            })
+                        },
                     }
                 }
-            }
-        })
+            )
+        }
     })
+
+    function sameDate(startDateTime, endDateTime) {
+        return startDateTime.getTime() == endDateTime.getTime();
+    }
+
+    function isValidContent(content) {
+        if (!content) {
+            Swal.fire({
+                icon: 'error',
+                title: '내용을 입력해주세요.',
+                showConfirmButton: false,
+                timer: 1500
+            });
+            return false;
+        }
+        return true;
+    }
+
+    function isValidDateTime(startDateTime, endDateTime) {
+        if (startDateTime > endDateTime) {
+            Swal.fire({
+                icon: 'error',
+                title: '시작일시는 종료일시보다 빨라야 합니다.',
+                showConfirmButton: false,
+                timer: 1500
+            });
+            return false;
+        }
+        return true;
+    }
+
 </script>

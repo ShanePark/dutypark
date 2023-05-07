@@ -25,13 +25,23 @@ class DepartmentService(
     }
 
     @Transactional(readOnly = true)
-    fun findById(id: Long): DepartmentDto {
+    fun findByIdWithMembersAndDutyTypes(id: Long): DepartmentDto {
         val withMembers = repository.findByIdWithMembers(id).orElseThrow()
         val withDutyTypes = repository.findByIdWithDutyTypes(id).orElseThrow()
 
         return DepartmentDto.of(
             department = withMembers,
             members = withMembers.members,
+            dutyTypes = withDutyTypes.dutyTypes
+        )
+    }
+
+    @Transactional(readOnly = true)
+    fun findByIdWithDutyTypes(id: Long): DepartmentDto {
+        val withDutyTypes = repository.findByIdWithDutyTypes(id).orElseThrow()
+        return DepartmentDto.of(
+            department = withDutyTypes,
+            members = emptyList(),
             dutyTypes = withDutyTypes.dutyTypes
         )
     }
@@ -78,5 +88,6 @@ class DepartmentService(
     fun changeManager(department: Department, member: Member?) {
         department.changeManager(member)
     }
+
 
 }

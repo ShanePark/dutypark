@@ -58,7 +58,6 @@ header.row {
     justify-content: center;
     list-style: none;
     margin-left: 0;
-    font-size: 1.2em;
 }
 
 ul.weekdays {
@@ -76,6 +75,16 @@ ol.day-grid li {
     display: inline-table;
     border-radius: 0.625rem;
     box-shadow: 2px 4px 7px 3px #eaeaea;
+}
+
+ol.day-grid li.month-prev,
+ol.day-grid li.month-next {
+    filter: opacity(0.5);
+}
+
+.day-grid li.editable:hover {
+    cursor: pointer;
+    filter: opacity(0.8);
 }
 
 .BACKGROUND-RED {
@@ -159,14 +168,11 @@ header .current {
     text-align: center !important;
 }
 
-.edit-memo:hover {
-    cursor: pointer;
-}
-
-.day {
+.date .day {
     width: fit-content;
     position: relative;
     margin: 0px auto;
+    font-size: 1.2em;
 }
 
 .day span {
@@ -194,11 +200,6 @@ header .current {
     border-radius: 100%;
     width: 1.5em;
     height: 1.5em;
-}
-
-.edit .day .memo {
-    text-align: left;
-    font-size: 0.9em;
 }
 
 .homeButton {
@@ -426,17 +427,47 @@ a.memberPage-link:hover {
     margin-bottom: 0.5em;
 }
 
-.day-grid .memo {
-    margin-left: 5px;
-    text-align: left;
-}
-
-.day-grid .memo p {
-    white-space: pre-line;
-    display: inline;
-}
-
 .duty_type-list .duty-type:hover {
     cursor: pointer;
     background-color: aliceblue;
+}
+
+.calendar .date .schedule {
+    display: flex;
+    align-items: flex-start;
+    font-size: 1em;
+}
+
+.calendar .date .schedule .schedule-content {
+    text-align: left;
+    margin-bottom: 0px;
+    margin-left: 5px;
+    line-height: 2;
+    width: 70%;
+}
+
+.calendar .date .schedule .schedule-time-container {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.5em;
+    width: 30%;
+}
+
+.calendar .date .schedule .schedule-time-container .single-time {
+    font-size: 1.5em;
+    margin-top: 0.5em;
+}
+
+#detail-view-modal .schedules .schedule {
+    font-size: 1.2em;
+    border: 1px solid black;
+    border-radius: 15px;
+    background-color: aliceblue;
+    padding: 10px;
+    margin: 5px;
+}
+
+
+#detail-view-modal .schedules .schedule .buttons {
+    text-align: right;
 }

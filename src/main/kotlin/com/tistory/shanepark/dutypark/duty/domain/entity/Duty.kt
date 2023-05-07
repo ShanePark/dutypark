@@ -14,7 +14,6 @@ class Duty(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
     val member: Member,
-    var memo: String? = null
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

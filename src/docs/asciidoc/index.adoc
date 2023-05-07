@@ -1,0 +1,22 @@
+= DutyPark API
+DutyPark Server REST API
+:doctype: book
+:icons: font
+:source-highlighter: highlightjs
+:toc: left
+:toclevels: 2
+:sectlinks:
+
+== Schedules
+
+=== Create
+operation::schedules/create[]
+
+==== Create [Unauthorized]
+operation::schedules/create-unauthorized[]
+
+=== Update
+operation::schedules/update[]
+
+=== Delete
+operation::schedules/delete[]
