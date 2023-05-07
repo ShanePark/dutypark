@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.security.controller
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
@@ -19,9 +18,6 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var mockMvc: MockMvc
-
-    @Autowired
-    lateinit var objectMapper: ObjectMapper
 
     private val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(AuthViewControllerTest::class.java)
     private val testPass = TestData.testPass

@@ -1,12 +1,14 @@
 package com.tistory.shanepark.dutypark.schedule.service
 
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
+import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -98,6 +100,18 @@ class ScheduleService(
     fun deleteSchedule(id: UUID) {
         val schedule = scheduleRepository.findById(id).orElseThrow()
         scheduleRepository.delete(schedule)
+    }
+
+    @Transactional(readOnly = true)
+    fun checkAuthentication(loginMember: LoginMember, targetMemberId: Long) {
+        val targetMember = memberRepository.findMemberWithDepartment(targetMemberId).orElseThrow()
+
+        if (targetMember.id == loginMember.id)
+            return
+        if (targetMember.department?.manager?.id == loginMember.id)
+            return
+
+        throw DutyparkAuthException("login member doesn't have permission to update schedule")
     }
 
 }

@@ -47,7 +47,7 @@ class DutyController(
         val dutyMember = memberRepository.findMemberWithDepartment(dutyMemberId).orElseThrow()
         if (!dutyService.canEdit(loginMember, dutyMember)) {
             log.warn("login member and request duty member does not match: login:$loginMember.id, dutyMemberId:${dutyMemberId}")
-            throw DutyparkAuthException("login member and request dutyMemberId does not match")
+            throw DutyparkAuthException("login member doesn't have permission to edit duty")
         }
     }
 

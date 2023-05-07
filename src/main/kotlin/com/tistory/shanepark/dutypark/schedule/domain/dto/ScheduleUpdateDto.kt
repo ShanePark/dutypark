@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.schedule.domain.dto
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.tistory.shanepark.dutypark.common.domain.dto.constraint.CreateDtoConstraint
 import com.tistory.shanepark.dutypark.common.domain.dto.constraint.UpdateDtoConstraint
 import jakarta.validation.constraints.AssertTrue
@@ -23,6 +24,7 @@ data class ScheduleUpdateDto(
 ) {
 
     @AssertTrue(message = "StartDateTime must be before or equal to EndDateTime")
+    @JsonIgnore
     fun isDateRangeValid(): Boolean {
         return !startDateTime.isAfter(endDateTime)
     }
