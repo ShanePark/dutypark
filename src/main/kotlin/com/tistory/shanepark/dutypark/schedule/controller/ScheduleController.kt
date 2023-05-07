@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.schedule.controller
 
 import com.tistory.shanepark.dutypark.common.domain.dto.constraint.CreateDtoConstraint
+import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
@@ -31,6 +32,7 @@ class ScheduleController(
     }
 
     @PostMapping
+    @SlackNotification
     fun createSchedule(
         @RequestBody @Validated(CreateDtoConstraint::class) scheduleUpdateDto: ScheduleUpdateDto,
         @Login loginMember: LoginMember
@@ -42,6 +44,7 @@ class ScheduleController(
     }
 
     @PutMapping("/{id}")
+    @SlackNotification
     fun updateSchedule(
         @RequestBody @Validated
         scheduleUpdateDto: ScheduleUpdateDto,
