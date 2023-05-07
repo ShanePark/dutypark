@@ -10,6 +10,8 @@ import org.aspectj.lang.annotation.Aspect
 import org.springframework.context.annotation.Profile
 import org.springframework.core.task.TaskExecutor
 import org.springframework.stereotype.Component
+import java.time.LocalDateTime
+import java.util.concurrent.atomic.AtomicLong
 
 @Aspect
 @Component
@@ -18,11 +20,18 @@ class SlackNotificationAspect(
     private val slackApi: SlackApi,
     private val taskExecutor: TaskExecutor,
 ) {
+    private val lastSlackSent = AtomicLong(0)
 
     @Around("@annotation(com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification)")
     fun slackNotification(proceedingJoinPoint: ProceedingJoinPoint): Any? {
+        synchronized(this) {
+            val currentEpochSecond = LocalDateTime.now().toEpochSecond(java.time.ZoneOffset.UTC)
+            if (currentEpochSecond - lastSlackSent.get() < 10) {
+                return proceedingJoinPoint.proceed()
+            }
+            lastSlackSent.set(currentEpochSecond)
+        }
 
-        // it keeps sending Slack message. After enough test done, remove this aop.
         val slackAttachment = SlackAttachment()
         slackAttachment.setFallback("Post")
         slackAttachment.setColor("good")
