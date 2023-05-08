@@ -1,13 +1,12 @@
 package com.tistory.shanepark.dutypark.common.slack.aspect
 
-import net.gpedro.integrations.slack.SlackApi
+import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifier
 import net.gpedro.integrations.slack.SlackAttachment
 import net.gpedro.integrations.slack.SlackField
 import net.gpedro.integrations.slack.SlackMessage
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.Around
 import org.aspectj.lang.annotation.Aspect
-import org.springframework.context.annotation.Profile
 import org.springframework.core.task.TaskExecutor
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime
@@ -15,9 +14,8 @@ import java.util.concurrent.atomic.AtomicLong
 
 @Aspect
 @Component
-@Profile("!dev")
 class SlackNotificationAspect(
-    private val slackApi: SlackApi,
+    private val slackNotifier: SlackNotifier,
     private val taskExecutor: TaskExecutor,
 ) {
     private val lastSlackSent = AtomicLong(0)
@@ -50,7 +48,7 @@ class SlackNotificationAspect(
         slackMessage.setUsername("DutyPark")
 
         taskExecutor.execute {
-            slackApi.call(slackMessage)
+            slackNotifier.call(slackMessage)
         }
 
         return proceedingJoinPoint.proceed()

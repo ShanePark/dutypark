@@ -47,7 +47,7 @@
           'today': isToday(duty),
           'editable': canEdit,
         }"
-          v-on:click="viewDay(duty, index)"
+          v-on:click="viewDayDetail(duty, index)"
       >
         <div class="date container">
           <span v-if="selectedDday" v-text="calcDday(duty)" class="d-day-count"></span>
@@ -56,19 +56,7 @@
           </div>
           <div class="schedules">
             <div class="schedule" v-for="schedule in schedulesByDays[index]">
-              <span class="schedule=content" v-text="printSchedule(schedule)"></span>
-              <div class="schedule-time-container">
-              <span
-                  v-if="shouldDisplayStartTime(schedule)"
-                  class="start-time single-time"
-                  v-text="formattedTime(schedule.startDateTime)"
-              />
-                <span
-                    v-if="shouldDisplayEndTime(schedule)"
-                    class="end-time single-time"
-                    v-text="formattedTime(schedule.endDateTime)"
-                />
-              </div>
+              <span class="schedule-content" v-html="printSchedule(schedule)"></span>
             </div>
           </div>
         </div>
@@ -118,8 +106,8 @@
             </form>
           </div>
           <div class="schedules mt-4">
-            <div class="schedule" v-for="schedule in schedulesByDays[detailView.index]">
-              <span v-text="schedule.content"></span>
+            <div class="schedule card shadow" v-for="schedule in schedulesByDays[detailView.index]">
+              <span v-html="printSchedule(schedule)"></span>
               <div v-if="isEditing(schedule)" class="schedule-edit">
                 <input type="text" class="form-control" placeholder="일정을 입력하세요." v-model="editingSchedule.content"/>
                 <label>시작일</label>
@@ -137,7 +125,7 @@
                 <button class="btn btn-secondary" v-on:click="cancelEditMode(schedule)">취소</button>
               </div>
             </div>
-            <div class="schedule schedule-add" v-if="!editingSchedule.id">
+            <div class="schedule schedule-add card shadow" v-if="!editingSchedule.id">
               <label>일정 추가</label>
               <input type="text" class="form-control" placeholder="일정을 입력하세요." v-model="createSchedule.content"/>
               <label>시작일</label>
@@ -222,10 +210,52 @@
                         },
                         printSchedule(schedule) {
                             return (schedule) => {
-                                if (schedule.totalDays > 1)
-                                    return schedule.content + ' (' + schedule.daysFromStart + '/' + schedule.totalDays + ')'
-                                else
-                                    return schedule.content;
+                                let content = schedule.content;
+                                if (schedule.totalDays > 1) {
+                                    content += '[' + schedule.daysFromStart + '/' + schedule.totalDays + '] ';
+                                }
+                                return content + '<small>' + app.printScheduleTime(schedule) + '</small>';
+                            }
+                        },
+                        printScheduleTime(schedule) {
+                            return (schedule) => {
+                                let result = '';
+                                if (app.shouldDisplayStartTime(schedule)) {
+                                    const startTime = app.formattedTime(schedule.startDateTime);
+                                    result += ' (' + startTime + '~';
+                                    if (app.shouldDisplayEndTime(schedule)) {
+                                        const endTime = app.formattedTime(schedule.endDateTime);
+                                        return result + endTime + ')';
+                                    }
+                                    return result + ')';
+                                }
+
+                                if (app.shouldDisplayEndTime(schedule)) {
+                                    const endTime = app.formattedTime(schedule.endDateTime);
+                                    return result + ' (~' + endTime + ')';
+                                }
+                                return result;
+                            }
+                        },
+                        shouldDisplayStartTime(schedule) {
+                            return (schedule) => {
+                                const daysFromStart = schedule.daysFromStart;
+                                const startDateTime = new Date(schedule.startDateTime);
+                                const startHour = startDateTime.getHours().toString().padStart(2, '0');
+                                return daysFromStart === 1 && startHour !== '00';
+                            }
+                        },
+                        shouldDisplayEndTime(schedule) {
+                            return (schedule) => {
+                                const daysFromStart = schedule.daysFromStart;
+                                console.log(schedule.content);
+                                console.log(daysFromStart);
+                                const totalDays = schedule.totalDays;
+                                const startDateTime = new Date(schedule.startDateTime);
+                                const endDateTime = new Date(schedule.endDateTime);
+                                const endHour = endDateTime.getHours().toString().padStart(2, '0');
+                                return (daysFromStart === totalDays) && (endHour !== '00') &&
+                                    !(totalDays === 1 && sameDate(startDateTime, endDateTime));
                             }
                         },
                     }, watch: {
@@ -240,6 +270,11 @@
                         'createSchedule.startDateTime': function () {
                             if (app.createSchedule.startDateTime > app.createSchedule.endDateTime) {
                                 app.createSchedule.endDateTime = app.createSchedule.startDateTime;
+                            }
+                        },
+                        'editingSchedule.startDateTime': function () {
+                            if (app.editingSchedule.startDateTime > app.editingSchedule.endDateTime) {
+                                app.editingSchedule.endDateTime = app.editingSchedule.startDateTime;
                             }
                         }
                     }, methods: {
@@ -318,32 +353,18 @@
                             const memberId = document.getElementsByClassName('calendar')[0].getAttribute('data-member_id');
                             window.location.href = `/duty/edit?memberId=${memberId}&year=${(app.year)}&month=${(app.month)}`;
                         },
-                        shouldDisplayStartTime(schedule) {
-                            const daysFromStart = schedule.daysFromStart;
-                            const startDateTime = new Date(schedule.startDateTime);
-                            const startHour = startDateTime.getHours().toString().padStart(2, '0');
-                            return daysFromStart === 1 && startHour !== '00';
-                        },
-                        shouldDisplayEndTime(schedule) {
-                            const daysFromStart = schedule.daysFromStart;
-                            const totalDays = schedule.totalDays;
-                            const startDateTime = new Date(schedule.startDateTime);
-                            const endDateTime = new Date(schedule.endDateTime);
-                            const endHour = endDateTime.getHours().toString().padStart(2, '0');
-                            return (
-                                daysFromStart === totalDays &&
-                                endHour !== '00' &&
-                                !(totalDays === 1 && sameDate(startDateTime, endDateTime))
-                            );
-                        }, formattedTime(startDateTime) {
+                        formattedTime(startDateTime) {
                             const dateTime = new Date(startDateTime);
-                            const hour = dateTime.getHours().toString().padStart(2, '0');
-                            const minute = dateTime.getMinutes().toString().padStart(2, '0');
-                            return hour + ':' + minute;
+                            const hour = dateTime.getHours() % 12;
+                            let minute = '';
+                            if (dateTime.getMinutes() != 0) {
+                                minute = ':' + dateTime.getMinutes().toString().padStart(2, '0');
+                            }
+                            return hour + minute + (dateTime.getHours() > 12 ? 'PM ' : 'AM');
                         }, isToday(duty) {
                             const today = new Date();
                             return duty.month === today.getMonth() + 1 && duty.day === today.getDate();
-                        }, viewDay(duty, index) {
+                        }, viewDayDetail(duty, index) {
                             if (!app.canEdit) {
                                 return;
                             }
@@ -351,6 +372,7 @@
                             app.detailView = duty;
                             app.detailView.index = index;
                             app.resetCreateSchedule();
+                            app.cancelEditMode();
                         }, resetCreateSchedule() {
                             app.createSchedule = {
                                 content: '',

@@ -443,31 +443,29 @@ a.memberPage-link:hover {
     margin-bottom: 0px;
     margin-left: 5px;
     line-height: 2;
-    width: 70%;
 }
 
-.calendar .date .schedule .schedule-time-container {
-    display: flex;
-    flex-direction: column;
-    font-size: 0.5em;
-    width: 30%;
-}
-
-.calendar .date .schedule .schedule-time-container .single-time {
-    font-size: 1.5em;
-    margin-top: 0.5em;
+.date .schedules .schedule:not(:last-child) {
+    border-bottom: 2px dashed white;
 }
 
 #detail-view-modal .schedules .schedule {
     font-size: 1.2em;
-    border: 1px solid black;
     border-radius: 15px;
     background-color: aliceblue;
     padding: 10px;
-    margin: 5px;
+    margin: 10px;
+}
+
+.schedules .schedule small {
+    font-size: 0.75em;
 }
 
 
 #detail-view-modal .schedules .schedule .buttons {
     text-align: right;
+}
+
+.shadow {
+    box-shadow: 2px 4px 7px 3px #eaeaea;
 }
