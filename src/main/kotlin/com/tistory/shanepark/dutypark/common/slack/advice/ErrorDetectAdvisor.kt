@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.common.slack.advice
 
+import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifier
 import jakarta.servlet.http.HttpServletRequest
-import net.gpedro.integrations.slack.SlackApi
 import net.gpedro.integrations.slack.SlackAttachment
 import net.gpedro.integrations.slack.SlackField
 import net.gpedro.integrations.slack.SlackMessage
@@ -15,7 +15,7 @@ import java.util.*
 
 @ControllerAdvice
 class ErrorDetectAdvisor(
-    private val slackApi: SlackApi,
+    private val slackNotifier: SlackNotifier,
 ) {
     val log: Logger = org.slf4j.LoggerFactory.getLogger(this.javaClass)
 
@@ -58,7 +58,7 @@ class ErrorDetectAdvisor(
         slackMessage.setText("Error Detect")
         slackMessage.setUsername("DutyPark")
 
-        slackApi.call(slackMessage)
+        slackNotifier.call(slackMessage)
         throw e
     }
 
