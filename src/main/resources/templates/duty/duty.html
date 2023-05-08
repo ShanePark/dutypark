@@ -56,7 +56,7 @@
           </div>
           <div class="schedules">
             <div class="schedule" v-for="schedule in schedulesByDays[index]">
-              <span class="schedule-content" v-text="printSchedule(schedule)"></span>
+              <span class="schedule-content" v-html="printSchedule(schedule)"></span>
             </div>
           </div>
         </div>
@@ -107,7 +107,7 @@
           </div>
           <div class="schedules mt-4">
             <div class="schedule card shadow" v-for="schedule in schedulesByDays[detailView.index]">
-              <span v-text="printScheduleTime(schedule)"></span>
+              <span v-html="printSchedule(schedule)"></span>
               <div v-if="isEditing(schedule)" class="schedule-edit">
                 <input type="text" class="form-control" placeholder="일정을 입력하세요." v-model="editingSchedule.content"/>
                 <label>시작일</label>
@@ -210,16 +210,16 @@
                         },
                         printSchedule(schedule) {
                             return (schedule) => {
+                                let content = schedule.content;
                                 if (schedule.totalDays > 1) {
-                                    const dateExpression = '[' + schedule.daysFromStart + '/' + schedule.totalDays + '] ';
-                                    return app.printScheduleTime(schedule) + dateExpression;
+                                    content += '[' + schedule.daysFromStart + '/' + schedule.totalDays + '] ';
                                 }
-                                return app.printScheduleTime(schedule);
+                                return content + '<small>' + app.printScheduleTime(schedule) + '</small>';
                             }
                         },
                         printScheduleTime(schedule) {
                             return (schedule) => {
-                                let result = schedule.content;
+                                let result = '';
                                 if (app.shouldDisplayStartTime(schedule)) {
                                     const startTime = app.formattedTime(schedule.startDateTime);
                                     result += ' (' + startTime + '~';
@@ -355,9 +355,12 @@
                         },
                         formattedTime(startDateTime) {
                             const dateTime = new Date(startDateTime);
-                            const hour = dateTime.getHours().toString().padStart(2, '0');
-                            const minute = dateTime.getMinutes().toString().padStart(2, '0');
-                            return hour + ':' + minute;
+                            const hour = dateTime.getHours() % 12;
+                            let minute = '';
+                            if (dateTime.getMinutes() != 0) {
+                                minute = ':' + dateTime.getMinutes().toString().padStart(2, '0');
+                            }
+                            return hour + minute + (dateTime.getHours() > 12 ? 'PM ' : 'AM');
                         }, isToday(duty) {
                             const today = new Date();
                             return duty.month === today.getMonth() + 1 && duty.day === today.getDate();

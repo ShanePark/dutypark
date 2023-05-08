@@ -443,11 +443,10 @@ a.memberPage-link:hover {
     margin-bottom: 0px;
     margin-left: 5px;
     line-height: 2;
-    width: 70%;
 }
 
 .date .schedules .schedule:not(:last-child) {
-    border-bottom: 1px dashed white;
+    border-bottom: 2px dashed white;
 }
 
 #detail-view-modal .schedules .schedule {
@@ -456,6 +455,10 @@ a.memberPage-link:hover {
     background-color: aliceblue;
     padding: 10px;
     margin: 10px;
+}
+
+.schedules .schedule small {
+    font-size: 0.75em;
 }
 
 
