@@ -446,16 +446,8 @@ a.memberPage-link:hover {
     width: 70%;
 }
 
-.calendar .date .schedule .schedule-time-container {
-    display: flex;
-    flex-direction: column;
-    font-size: 0.5em;
-    width: 30%;
-}
-
-.calendar .date .schedule .schedule-time-container .single-time {
-    font-size: 1.5em;
-    margin-top: 0.5em;
+.date .schedules .schedule:not(:last-child) {
+    border-bottom: 1px dashed white;
 }
 
 #detail-view-modal .schedules .schedule {
