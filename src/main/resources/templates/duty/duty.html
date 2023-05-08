@@ -222,10 +222,10 @@
                                 let result = '';
                                 if (app.shouldDisplayStartTime(schedule)) {
                                     const startTime = app.formattedTime(schedule.startDateTime);
-                                    result += ' (' + startTime + '~';
+                                    result += '(' + startTime;
                                     if (app.shouldDisplayEndTime(schedule)) {
                                         const endTime = app.formattedTime(schedule.endDateTime);
-                                        return result + endTime + ')';
+                                        return result + '~' + endTime + ')';
                                     }
                                     return result + ')';
                                 }
@@ -248,8 +248,6 @@
                         shouldDisplayEndTime(schedule) {
                             return (schedule) => {
                                 const daysFromStart = schedule.daysFromStart;
-                                console.log(schedule.content);
-                                console.log(daysFromStart);
                                 const totalDays = schedule.totalDays;
                                 const startDateTime = new Date(schedule.startDateTime);
                                 const endDateTime = new Date(schedule.endDateTime);
@@ -353,8 +351,8 @@
                             const memberId = document.getElementsByClassName('calendar')[0].getAttribute('data-member_id');
                             window.location.href = `/duty/edit?memberId=${memberId}&year=${(app.year)}&month=${(app.month)}`;
                         },
-                        formattedTime(startDateTime) {
-                            const dateTime = new Date(startDateTime);
+                        formattedTime(timeString) {
+                            const dateTime = new Date(timeString);
                             const hour = dateTime.getHours() % 12;
                             let minute = '';
                             if (dateTime.getMinutes() != 0) {
