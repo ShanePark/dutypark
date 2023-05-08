@@ -20,7 +20,7 @@ class SlackApiConfiguration(
     private val log: Logger = org.slf4j.LoggerFactory.getLogger(this.javaClass)
 
     @Bean
-    @Profile("prod")
+    @Profile("op")
     fun slackNotifierProd(): SlackNotifier {
         log.info("Slack API registered. slackToken = ${slackToken}")
         val slackApi = SlackApi("https://hooks.slack.com/services/$slackToken")
@@ -35,7 +35,7 @@ class SlackApiConfiguration(
     }
 
     @Bean
-    @Profile("!prod && !dev")
+    @Profile("!op && !dev")
     fun dummySlackNotifier(): SlackNotifier {
         log.info("Dummy Slack Notifier registered.")
         return object : SlackNotifier {
