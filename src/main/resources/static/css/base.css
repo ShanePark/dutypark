@@ -460,14 +460,17 @@ a.memberPage-link:hover {
 
 #detail-view-modal .schedules .schedule {
     font-size: 1.2em;
-    border: 1px solid black;
     border-radius: 15px;
     background-color: aliceblue;
     padding: 10px;
-    margin: 5px;
+    margin: 10px;
 }
 
 
 #detail-view-modal .schedules .schedule .buttons {
     text-align: right;
+}
+
+.shadow {
+    box-shadow: 2px 4px 7px 3px #eaeaea;
 }

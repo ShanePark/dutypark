@@ -118,8 +118,8 @@
             </form>
           </div>
           <div class="schedules mt-4">
-            <div class="schedule" v-for="schedule in schedulesByDays[detailView.index]">
-              <span v-text="schedule.content"></span>
+            <div class="schedule card shadow" v-for="schedule in schedulesByDays[detailView.index]">
+              <span v-text="printSchedule(schedule)"></span>
               <div v-if="isEditing(schedule)" class="schedule-edit">
                 <input type="text" class="form-control" placeholder="일정을 입력하세요." v-model="editingSchedule.content"/>
                 <label>시작일</label>
@@ -137,7 +137,7 @@
                 <button class="btn btn-secondary" v-on:click="cancelEditMode(schedule)">취소</button>
               </div>
             </div>
-            <div class="schedule schedule-add" v-if="!editingSchedule.id">
+            <div class="schedule schedule-add card shadow" v-if="!editingSchedule.id">
               <label>일정 추가</label>
               <input type="text" class="form-control" placeholder="일정을 입력하세요." v-model="createSchedule.content"/>
               <label>시작일</label>
@@ -240,6 +240,11 @@
                         'createSchedule.startDateTime': function () {
                             if (app.createSchedule.startDateTime > app.createSchedule.endDateTime) {
                                 app.createSchedule.endDateTime = app.createSchedule.startDateTime;
+                            }
+                        },
+                        'editingSchedule.startDateTime': function () {
+                            if (app.editingSchedule.startDateTime > app.editingSchedule.endDateTime) {
+                                app.editingSchedule.endDateTime = app.editingSchedule.startDateTime;
                             }
                         }
                     }, methods: {
