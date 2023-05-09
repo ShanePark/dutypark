@@ -137,16 +137,6 @@ h1 a.move:hover {
     color: black;
 }
 
-.day-grid .date {
-    text-align: center;
-    width: 100%;
-    padding: 5px 0px;
-}
-
-.day-grid .date .d-day-count {
-    font-size: 0.8em;
-}
-
 .text-right {
     text-align: right !important;
 }
@@ -168,15 +158,22 @@ header .current {
     text-align: center !important;
 }
 
-.date .day {
-    width: fit-content;
-    position: relative;
-    margin: 0px auto;
-    font-size: 1.2em;
+.day-grid .date {
+    text-align: center;
+    width: 100%;
 }
 
-.day span {
-    text-align: center;
+.day-grid .date .d-day-count {
+    font-size: 0.8em;
+}
+
+.date .day-header {
+    margin-top: 5px;
+}
+
+.date .day {
+    margin-left: 5px;
+    font-size: 1.2em;
 }
 
 .day-grid li:nth-child(7n+1) .day {
@@ -198,8 +195,7 @@ header .current {
 .day-grid .today .day {
     background-color: red;
     border-radius: 100%;
-    width: 1.5em;
-    height: 1.5em;
+    width: 100%;
 }
 
 .homeButton {

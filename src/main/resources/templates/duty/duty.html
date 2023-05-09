@@ -50,9 +50,15 @@
           v-on:click="viewDayDetail(duty, index)"
       >
         <div class="date container">
-          <span v-if="selectedDday" v-text="calcDday(duty)" class="d-day-count"></span>
-          <div class="day">
-            <span v-text="duty.day"></span>
+          <div class="row day-header">
+            <div class="col-md-5">
+              <div class="day">
+                <span v-text="duty.day"></span>
+              </div>
+            </div>
+            <div class="col-md-7">
+              <span v-if="selectedDday" v-text="calcDday(duty)" class="d-day-count"></span>
+            </div>
           </div>
           <div class="schedules">
             <div class="schedule" v-for="schedule in schedulesByDays[index]">
