@@ -9,7 +9,6 @@ import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.Logger
-import org.springframework.boot.web.server.Cookie.SameSite
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseCookie
 import org.springframework.web.servlet.HandlerInterceptor
@@ -67,7 +66,6 @@ class JwtAuthInterceptor(
             .path("/")
             .secure(isSecure)
             .maxAge(tokenValidityInSeconds)
-            .sameSite(SameSite.STRICT.name)
             .build()
         response.addHeader(HttpHeaders.SET_COOKIE, sessionCookie.toString())
     }
