@@ -549,7 +549,7 @@
     }
 
     function isValidDateTime(startDateTime, endDateTime) {
-        if (startDateTime > endDateTime) {
+        if (new Date(startDateTime) > new Date(endDateTime)) {
             Swal.fire({
                 icon: 'error',
                 title: '시작일시는 종료일시보다 빨라야 합니다.',
