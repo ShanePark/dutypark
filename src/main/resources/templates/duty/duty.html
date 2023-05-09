@@ -50,9 +50,15 @@
           v-on:click="viewDayDetail(duty, index)"
       >
         <div class="date container">
-          <span v-if="selectedDday" v-text="calcDday(duty)" class="d-day-count"></span>
-          <div class="day">
-            <span v-text="duty.day"></span>
+          <div class="row day-header">
+            <div class="col-md-5">
+              <div class="day">
+                <span v-text="duty.day"></span>
+              </div>
+            </div>
+            <div class="col-md-7">
+              <span v-if="selectedDday" v-text="calcDday(duty)" class="d-day-count"></span>
+            </div>
           </div>
           <div class="schedules">
             <div class="schedule" v-for="schedule in schedulesByDays[index]">
@@ -353,12 +359,12 @@
                         },
                         formattedTime(timeString) {
                             const dateTime = new Date(timeString);
-                            const hour = dateTime.getHours() % 12;
+                            const hour = dateTime.getHours() == 12 ? 12 : dateTime.getHours() % 12;
                             let minute = '';
                             if (dateTime.getMinutes() != 0) {
                                 minute = ':' + dateTime.getMinutes().toString().padStart(2, '0');
                             }
-                            return hour + minute + (dateTime.getHours() > 12 ? 'PM ' : 'AM');
+                            return hour + minute + (dateTime.getHours() >= 12 ? 'PM ' : 'AM');
                         }, isToday(duty) {
                             const today = new Date();
                             return duty.month === today.getMonth() + 1 && duty.day === today.getDate();
@@ -543,7 +549,7 @@
     }
 
     function isValidDateTime(startDateTime, endDateTime) {
-        if (startDateTime > endDateTime) {
+        if (new Date(startDateTime) > new Date(endDateTime)) {
             Swal.fire({
                 icon: 'error',
                 title: '시작일시는 종료일시보다 빨라야 합니다.',

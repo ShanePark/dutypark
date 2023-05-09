@@ -7,6 +7,7 @@ import com.tistory.shanepark.dutypark.department.domain.enums.DepartmentNameChec
 import com.tistory.shanepark.dutypark.department.domain.enums.DepartmentNameCheckResult.*
 import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.department.service.DepartmentService
+import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import jakarta.validation.Valid
 import org.springframework.data.domain.Page
@@ -63,6 +64,17 @@ class DepartmentAdminController(
         val department = departmentRepository.findById(id).orElseThrow()
         val member = memberId?.let { memberRepository.findById(it).orElseThrow() }
         departmentService.changeManager(department, member)
+        return ResponseEntity.ok().build()
+    }
+
+    @PatchMapping("/{id}/off-color")
+    fun changeOffColor(
+        @PathVariable id: Long,
+        @RequestParam color: String
+    ): ResponseEntity<Any> {
+        val department = departmentRepository.findById(id).orElseThrow()
+        department.offColor = Color.valueOf(color)
+        departmentRepository.save(department)
         return ResponseEntity.ok().build()
     }
 

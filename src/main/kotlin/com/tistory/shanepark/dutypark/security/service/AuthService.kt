@@ -60,7 +60,7 @@ class AuthService(
         refreshTokenService.findByToken(refreshToken)?.let {
             if (it.isValid()) {
                 slideRefreshToken(request = request, response = response, refreshToken = it)
-                log.info("refresh token succeed. member:${it.member.email}, remoteAddr:$request.remoteAddr")
+                log.info("refresh token succeed. member:${it.member.email}, remoteAddr:${request.remoteAddr}")
                 return jwtProvider.createToken(it.member)
             }
         }
@@ -75,7 +75,7 @@ class AuthService(
         val remoteAddr: String? = request.remoteAddr
         val userAgent: String? = request.getHeader(USER_AGENT)
         refreshToken.slideValidUntil(remoteAddr, userAgent)
-        val cookie:Cookie=refreshToken.createCookie()
+        val cookie: Cookie = refreshToken.createCookie()
         response.addCookie(cookie)
     }
 
