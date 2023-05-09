@@ -10,7 +10,6 @@ import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.boot.web.server.Cookie.SameSite
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseCookie
 import org.springframework.http.ResponseEntity
@@ -44,9 +43,8 @@ class AuthController(
             val jwtCookie = ResponseCookie.from("SESSION", loginMember.jwt)
                 .httpOnly(true)
                 .path("/")
-                .secure(true)
+                .secure(isSecure)
                 .maxAge(jwtConfig.tokenValidityInSeconds)
-                .sameSite(SameSite.STRICT.name)
                 .build()
 
             val refToken = ResponseCookie.from(RefreshToken.cookieName, refreshToken.token)
@@ -54,7 +52,6 @@ class AuthController(
                 .path("/")
                 .secure(isSecure)
                 .maxAge(jwtConfig.refreshTokenValidityInDays * 24 * 60 * 60)
-                .sameSite(SameSite.STRICT.name)
                 .build()
 
             val rememberMeCookieAge = if (loginDto.rememberMe) 3600 * 24 * 365L else 0L
@@ -63,7 +60,6 @@ class AuthController(
                 .httpOnly(true)
                 .path("/")
                 .maxAge(rememberMeCookieAge)
-                .sameSite(SameSite.STRICT.name)
                 .build()
 
             log.info("Login Success: ${loginDto.email}")
