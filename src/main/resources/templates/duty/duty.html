@@ -359,12 +359,12 @@
                         },
                         formattedTime(timeString) {
                             const dateTime = new Date(timeString);
-                            const hour = dateTime.getHours() % 12;
+                            const hour = dateTime.getHours() == 12 ? 12 : dateTime.getHours() % 12;
                             let minute = '';
                             if (dateTime.getMinutes() != 0) {
                                 minute = ':' + dateTime.getMinutes().toString().padStart(2, '0');
                             }
-                            return hour + minute + (dateTime.getHours() > 12 ? 'PM ' : 'AM');
+                            return hour + minute + (dateTime.getHours() >= 12 ? 'PM ' : 'AM');
                         }, isToday(duty) {
                             const today = new Date();
                             return duty.month === today.getMonth() + 1 && duty.day === today.getDate();
