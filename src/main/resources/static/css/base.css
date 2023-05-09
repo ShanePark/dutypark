@@ -228,6 +228,7 @@ header .left-area {
 }
 
 .dutyTypes .indicator {
+    margin-left: 5px;
     border: 2px solid #eaeaea;
 }
 

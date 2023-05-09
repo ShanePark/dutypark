@@ -4,7 +4,7 @@
 
 <div th:replace="~{layout/header::header-title(|${member.name}|)}"></div>
 
-<div class="body">
+<div class="body" v-cloak>
   <div th:if="${member.department}" class="calendar" th:attr="data-member_id=${member.id}">
     <div class="month-control row">
       <h1>
@@ -22,10 +22,13 @@
       <span :class="['indicator', 'BACKGROUND-' + type.color]">&nbsp;&nbsp;&nbsp;</span>
       <span v-text="type.name"></span>
     </span>
-      <button v-if="canEdit"
+      <button v-if="canEdit && !editMode"
               class="edit-btn btn btn-warning"
-              v-on:click="editDuty">
-        편집<i class="bi bi-pencil-square"></i>
+              v-on:click="editMode=true;">편집
+      </button>
+      <button v-if="canEdit && editMode"
+              class="edit-btn btn btn-success"
+              v-on:click="editMode=false;">완료
       </button>
     </div>
     <ul class="weekdays">
@@ -60,15 +63,25 @@
               <span v-if="selectedDday" v-text="calcDday(duty)" class="d-day-count"></span>
             </div>
           </div>
-          <div class="schedules">
+          <div v-if="!editMode" class="schedules">
             <div class="schedule" v-for="schedule in schedulesByDays[index]">
               <span class="schedule-content" v-html="printSchedule(schedule)"></span>
             </div>
           </div>
+          <div v-if="editMode" class="duty row">
+            <button v-for="type in department.dutyTypes"
+                    class="duty-type btn btn-sm btn-outline-dark"
+                    v-text="type.name.length > 3 ? type.name.substring(0, 3) : type.name"
+                    :class="dutyTypeClasses(type, duty)"
+                    :disabled="(duty.dutyType == type.name) || (!duty.dutyType && !type.id)"
+                    v-on:click="changeDutyType(duty, type)"
+            >
+            </button>
+          </div>
         </div>
       </li>
     </ol>
-    <div class="d-day-list row" v-cloak>
+    <div class="d-day-list row">
       <div v-for="(dDay, index) in dDays" class="col-6">
         <div class="d-day-item card row"
              v-on:click="dDayToggle(dDay)"
@@ -176,6 +189,7 @@
                         dDays: [],
                         selectedDday: null,
                         detailView: null,
+                        editMode: false,
                         createSchedule: {
                             content: '',
                             startDateTime: '',
@@ -369,7 +383,7 @@
                             const today = new Date();
                             return duty.month === today.getMonth() + 1 && duty.day === today.getDate();
                         }, viewDayDetail(duty, index) {
-                            if (!app.canEdit) {
+                            if (app.editMode || !app.canEdit) {
                                 return;
                             }
                             $('#detail-view-modal').modal('show');
@@ -522,6 +536,41 @@
                                             });
                                         }
                                     })
+                                }
+                            })
+                        },
+                        dutyTypeClasses(type, duty) {
+                            const departmentLength = app.department.dutyTypes.length;
+                            const colClass = (departmentLength === 2 || departmentLength === 4) ? 'col-md-6' : 'col-md-4';
+                            return {
+                                ['BACKGROUND-' + type.color]: true,
+                                selected: type.id === duty.dutyTypeId,
+                                [colClass]: true,
+                            };
+                        },
+                        changeDutyType(duty, type) {
+                            $.ajax({
+                                url: '/api/duty/change',
+                                type: 'PUT',
+                                data: JSON.stringify({
+                                    year: duty.year,
+                                    month: duty.month,
+                                    day: duty.day,
+                                    dutyTypeId: type.id,
+                                    memberId: memberId,
+                                }),
+                                contentType: 'application/json',
+                                success: (data) => {
+                                    duty.dutyType = type.name;
+                                    duty.dutyColor = type.color;
+                                },
+                                fail: (data) => {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: '저장에 실패했습니다.',
+                                        showConfirmButton: false,
+                                        timer: 1500
+                                    });
                                 }
                             })
                         },
