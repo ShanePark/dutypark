@@ -50,8 +50,12 @@
           'today': isToday(duty),
         }">
         <div class="date container">
-          <div class="day">
-            <span v-text="duty.day"></span>
+          <div class="row day-header">
+            <div class="col-md-5">
+              <div class="day">
+                <span v-text="duty.day"></span>
+              </div>
+            </div>
           </div>
           <div class="duty row">
             <button v-for="type in department.dutyTypes"

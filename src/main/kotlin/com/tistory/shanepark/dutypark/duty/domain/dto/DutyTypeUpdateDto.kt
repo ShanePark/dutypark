@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Size
 
 data class DutyTypeUpdateDto(
     val id: Long,
-    @field:Size(min = 1, max = 10)
+    @field:Size(min = 1, max = 12)
     @field:NotBlank
     val name: String,
     val color: Color,

@@ -159,6 +159,7 @@ header .current {
 }
 
 .day-grid .date {
+    padding: 0px;
     text-align: center;
     width: 100%;
 }
