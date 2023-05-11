@@ -9,8 +9,9 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
+import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.*
 import org.springframework.restdocs.payload.PayloadDocumentation.*
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+import org.springframework.restdocs.request.RequestDocumentation.*
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDateTime
@@ -36,8 +37,8 @@ class ScheduleControllerTest : RestDocsTest() {
         val sizeBefore = scheduleRepository.findAll().size
 
         // Then
-        mockMvc!!.perform(
-            MockMvcRequestBuilders.post("/api/schedules")
+        mockMvc.perform(
+            post("/api/schedules")
                 .accept("application/json")
                 .contentType("application/json")
                 .content(json)
@@ -70,8 +71,8 @@ class ScheduleControllerTest : RestDocsTest() {
         val json = objectMapper.writeValueAsString(updateScheduleDto)
 
         // Then
-        mockMvc!!.perform(
-            MockMvcRequestBuilders.post("/api/schedules")
+        mockMvc.perform(
+            post("/api/schedules")
                 .accept("application/json")
                 .contentType("application/json")
                 .content(json)
@@ -111,8 +112,8 @@ class ScheduleControllerTest : RestDocsTest() {
         val json = objectMapper.writeValueAsString(updateScheduleDto)
 
         // Then
-        mockMvc!!.perform(
-            MockMvcRequestBuilders.put("/api/schedules/{id}", oldSchedule.id)
+        mockMvc.perform(
+            put("/api/schedules/{id}", oldSchedule.id)
                 .accept("application/json")
                 .contentType("application/json")
                 .content(json)
@@ -138,6 +139,53 @@ class ScheduleControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `swap schedule position test`() {
+        // Given
+        val member = TestData.member
+        val date = LocalDateTime.of(2021, 1, 1, 0, 0)
+        val schedule1 = scheduleRepository.save(
+            Schedule(
+                member = member,
+                content = "test",
+                startDateTime = date,
+                endDateTime = date,
+                position = 0
+            )
+        )
+        val schedule2 = scheduleRepository.save(
+            Schedule(
+                member = member,
+                content = "test2",
+                startDateTime = date,
+                endDateTime = date,
+                position = 1
+            )
+        )
+        val jwt = getJwt(member)
+
+        // When
+        mockMvc.perform(
+            patch("/api/schedules/{id}/position?id2={id2}", schedule1.id, schedule2.id)
+                .accept("application/json")
+                .contentType("application/json")
+                .cookie(Cookie("SESSION", jwt))
+        ).andExpect(status().isOk)
+            .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "schedules/position",
+                    pathParameters(
+                        parameterWithName("id").description("Schedule Id1")
+                    ),
+                    queryParameters(
+                        parameterWithName("id2").description("Schedule Id2")
+                    )
+                )
+            )
+
+    }
+
+    @Test
     fun `delete Test`() {
         // Given
         val member = TestData.member
@@ -154,8 +202,8 @@ class ScheduleControllerTest : RestDocsTest() {
         val jwt = getJwt(member)
 
         // Then
-        mockMvc!!.perform(
-            MockMvcRequestBuilders.delete("/api/schedules/{id}", oldSchedule.id)
+        mockMvc.perform(
+            delete("/api/schedules/{id}", oldSchedule.id)
                 .accept("application/json")
                 .contentType("application/json")
                 .cookie(Cookie("SESSION", jwt))
