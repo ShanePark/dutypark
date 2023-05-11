@@ -19,7 +19,9 @@ interface ScheduleRepository : JpaRepository<Schedule, UUID> {
     )
     fun findSchedulesOfMonth(member: Member, start: LocalDateTime, end: LocalDateTime): List<Schedule>
 
-    @Query("SELECT COALESCE(MAX(s.position), -1) FROM Schedule s WHERE s.member = :member AND s.startDateTime = :startDateTime")
+    @Query("SELECT COALESCE(MAX(s.position), -1)" +
+            " FROM Schedule s" +
+            " WHERE s.member = :member AND YEAR(s.startDateTime) = YEAR(:startDateTime) AND MONTH(s.startDateTime) = MONTH(:startDateTime) AND DAY(s.startDateTime) = DAY(:startDateTime)")
     fun findMaxPosition(member: Member, startDateTime: LocalDateTime): Int
 
 }

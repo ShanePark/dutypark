@@ -19,7 +19,7 @@ import org.springframework.web.context.WebApplicationContext
 )
 abstract class RestDocsTest : DutyparkIntegrationTest() {
 
-    protected var mockMvc: MockMvc? = null
+    protected lateinit var mockMvc: MockMvc
 
     @BeforeEach
     fun setUp(webApplicationContext: WebApplicationContext, restDocumentation: RestDocumentationContextProvider) {

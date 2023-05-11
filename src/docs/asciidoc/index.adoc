@@ -10,13 +10,21 @@ DutyPark Server REST API
 == Schedules
 
 === Create
+
 operation::schedules/create[]
 
 ==== Create [Unauthorized]
+
 operation::schedules/create-unauthorized[]
 
 === Update
+
 operation::schedules/update[]
 
+=== Position swap
+
+operation::schedules/position[]
+
 === Delete
+
 operation::schedules/delete[]

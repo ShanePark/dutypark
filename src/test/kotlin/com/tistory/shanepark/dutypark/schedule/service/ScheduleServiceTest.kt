@@ -252,9 +252,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         assertThat(schedule3.position).isEqualTo(2)
 
         // When
-        scheduleService.updateSchedulePosition(
-            listOf(schedule3.id, schedule1.id, schedule2.id)
-        )
+        scheduleService.swapSchedulePosition(schedule1, schedule2)
         em.flush()
         em.clear()
 
@@ -262,9 +260,9 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         val findSchedule1 = scheduleRepository.findById(schedule1.id)
         val findSchedule2 = scheduleRepository.findById(schedule2.id)
         val findSchedule3 = scheduleRepository.findById(schedule3.id)
-        assertThat(findSchedule3.get().position).isEqualTo(0)
-        assertThat(findSchedule2.get().position).isEqualTo(2)
+        assertThat(findSchedule2.get().position).isEqualTo(0)
         assertThat(findSchedule1.get().position).isEqualTo(1)
+        assertThat(findSchedule3.get().position).isEqualTo(2)
     }
 
     @Test
@@ -294,9 +292,10 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         val schedule2 = scheduleService.createSchedule(scheduleUpdateDto2)
         val schedule3 = scheduleService.createSchedule(scheduleUpdateDto3)
 
+        scheduleService.swapSchedulePosition(schedule1, schedule2)
         // Then
         assertThrows<IllegalArgumentException> {
-            scheduleService.updateSchedulePosition(listOf(schedule3.id, schedule1.id, schedule2.id))
+            scheduleService.swapSchedulePosition(schedule2, schedule3)
         }
     }
 

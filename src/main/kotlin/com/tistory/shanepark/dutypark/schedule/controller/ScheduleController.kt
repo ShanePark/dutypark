@@ -6,6 +6,7 @@ import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
+import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.schedule.service.ScheduleService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.http.ResponseEntity
@@ -18,6 +19,7 @@ import java.util.*
 @RequestMapping("/api/schedules")
 class ScheduleController(
     private val scheduleService: ScheduleService,
+    private val scheduleRepository: ScheduleRepository,
     private val memberRepository: MemberRepository,
 ) {
 
@@ -53,6 +55,22 @@ class ScheduleController(
     ): ResponseEntity<Any> {
         scheduleService.checkAuthentication(loginMember, scheduleUpdateDto.memberId)
         scheduleService.updateSchedule(id, scheduleUpdateDto)
+        return ResponseEntity.ok().build()
+    }
+
+    @PatchMapping("/{id1}/position")
+    @SlackNotification
+    fun swapSchedulePosition(
+        @PathVariable id1: UUID,
+        @RequestParam id2: UUID,
+        @Login loginMember: LoginMember,
+    ): ResponseEntity<Any> {
+        val schedule1 = scheduleRepository.findById(id1).orElseThrow()
+        val schedule2 = scheduleRepository.findById(id2).orElseThrow()
+        scheduleService.checkAuthentication(loginMember, schedule1.member.id!!)
+        scheduleService.checkAuthentication(loginMember, schedule2.member.id!!)
+
+        scheduleService.swapSchedulePosition(schedule1, schedule2)
         return ResponseEntity.ok().build()
     }
 

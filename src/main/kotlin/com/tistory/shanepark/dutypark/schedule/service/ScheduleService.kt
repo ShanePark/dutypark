@@ -36,7 +36,7 @@ class ScheduleService(
         scheduleRepository.findSchedulesOfMonth(member, start, end)
             .map { ScheduleDto.of(calendarView, it) }
             .flatten()
-            .sortedWith(compareBy({ it.startDateTime }, { it.position }))
+            .sortedWith(compareBy({ it.startDateTime.toLocalDate() }, { it.position }))
             .forEach { scheduleDto ->
                 var dayIndex = paddingBefore + scheduleDto.dayOfMonth - 1
                 if (scheduleDto.month < yearMonth.monthValue) {
@@ -81,21 +81,12 @@ class ScheduleService(
         return scheduleRepository.save(schedule)
     }
 
-    fun updateSchedulePosition(order: List<UUID>) {
-        if (order.isEmpty())
-            return
-        val schedulesMap = scheduleRepository.findAllById(order).associateBy { it.id }
-
-        val startDate = schedulesMap.values.first().startDateTime.toLocalDate()
-        schedulesMap.values.forEach {
-            if (it.startDateTime.toLocalDate() != startDate) {
-                throw IllegalArgumentException("All schedules must have same start date")
-            }
+    fun swapSchedulePosition(schedule1: Schedule, schedule2: Schedule) {
+        if (schedule1.startDateTime.toLocalDate() != schedule2.startDateTime.toLocalDate()) {
+            throw IllegalArgumentException("Schedule must have same date")
         }
 
-        order.forEachIndexed { index, scheduleId ->
-            schedulesMap[scheduleId]?.position = index
-        }
+        schedule1.position = schedule2.position.also { schedule2.position = schedule1.position }
     }
 
     fun deleteSchedule(id: UUID) {
