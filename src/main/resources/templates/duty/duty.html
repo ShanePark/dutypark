@@ -125,7 +125,7 @@
             </form>
           </div>
           <div class="schedules mt-4">
-            <div class="schedule card shadow" v-for="schedule in schedulesByDays[detailView.index]">
+            <div class="schedule card shadow" v-for="(schedule, s_index) in schedulesByDays[detailView.index]">
               <span v-html="printSchedule(schedule)"></span>
               <div v-if="isEditing(schedule)" class="schedule-edit">
                 <input type="text" class="form-control" placeholder="일정을 입력하세요." v-model="editingSchedule.content"/>
@@ -136,6 +136,21 @@
                 <input type="datetime-local" class="form-control" v-model="editingSchedule.endDateTime"/>
               </div>
               <div class="buttons mt-3" v-if="!isEditing(schedule)">
+                <template
+                    v-if="schedulesByDays[detailView.index].length > detailView.scheduleStartDiffCount + 1 && dutyAndDateTimeSame(detailView, schedule.startDateTime)">
+                  <button :disabled="s_index == schedulesByDays[detailView.index].length -1"
+                          v-on:click="swapSchedule(schedule, schedulesByDays[detailView.index][s_index+1])"
+                          class="btn btn-secondary"
+                  >
+                    <i class="bi bi-arrow-down-square"></i>
+                  </button>
+                  <button :disabled="s_index <= detailView.scheduleStartDiffCount"
+                          v-on:click="swapSchedule(schedule, schedulesByDays[detailView.index][s_index-1])"
+                          class="btn btn-secondary">
+                    <i class="bi bi-arrow-up-square"></i>
+                  </button>
+                </template>
+                </button>
                 <button class="btn btn-info" v-on:click="scheduleEditMode(schedule)">수정</button>
                 <button class="btn btn-danger" v-on:click="deleteSchedule(schedule)">삭제</button>
               </div>
@@ -228,7 +243,7 @@
                                 return dDayText;
                             }
                         },
-                        printSchedule(schedule) {
+                        printSchedule() {
                             return (schedule) => {
                                 let content = schedule.content;
                                 if (schedule.totalDays > 1) {
@@ -237,7 +252,7 @@
                                 return content + '<small>' + app.printScheduleTime(schedule) + '</small>';
                             }
                         },
-                        printScheduleTime(schedule) {
+                        printScheduleTime() {
                             return (schedule) => {
                                 let result = '';
                                 if (app.shouldDisplayStartTime(schedule)) {
@@ -257,7 +272,7 @@
                                 return result;
                             }
                         },
-                        shouldDisplayStartTime(schedule) {
+                        shouldDisplayStartTime() {
                             return (schedule) => {
                                 const daysFromStart = schedule.daysFromStart;
                                 const startDateTime = new Date(schedule.startDateTime);
@@ -265,7 +280,7 @@
                                 return daysFromStart === 1 && startHour !== '00';
                             }
                         },
-                        shouldDisplayEndTime(schedule) {
+                        shouldDisplayEndTime() {
                             return (schedule) => {
                                 const daysFromStart = schedule.daysFromStart;
                                 const totalDays = schedule.totalDays;
@@ -273,9 +288,18 @@
                                 const endDateTime = new Date(schedule.endDateTime);
                                 const endHour = endDateTime.getHours().toString().padStart(2, '0');
                                 return (daysFromStart === totalDays) && (endHour !== '00') &&
-                                    !(totalDays === 1 && sameDate(startDateTime, endDateTime));
+                                    !(totalDays === 1 && sameDateTime(startDateTime, endDateTime));
                             }
                         },
+                        dutyAndDateTimeSame() {
+                            return (duty, dateTimeString) => {
+                                const year = duty.year;
+                                const month = duty.month - 1;
+                                const day = duty.day;
+                                const dateTime = new Date(dateTimeString);
+                                return year === dateTime.getFullYear() && month === dateTime.getMonth() && day === dateTime.getDate();
+                            }
+                        }
                     }, watch: {
                         combinedYearMonth() {
                             this.loadDuties(app.year, app.month);
@@ -389,6 +413,12 @@
                             $('#detail-view-modal').modal('show');
                             app.detailView = duty;
                             app.detailView.index = index;
+                            app.detailView.scheduleStartDiffCount = app.schedulesByDays[index].length;
+                            for (const schedule of app.schedulesByDays[index]) {
+                                if (app.dutyAndDateTimeSame(duty, schedule.startDateTime)) {
+                                    app.detailView.scheduleStartDiffCount--;
+                                }
+                            }
                             app.resetCreateSchedule();
                             app.cancelEditMode();
                         }, resetCreateSchedule() {
@@ -509,6 +539,30 @@
                                 }
                             })
                         },
+                        swapSchedule(schedule1, schedule2) {
+                            $('.schedules').waitMe();
+                            if (!schedule1 || !schedule2 || schedule1 == schedule2) {
+                                return;
+                            }
+                            fetch(`/api/schedules/${schedule1.id}/position?id2=${schedule2.id}`, {
+                                method: 'PATCH',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                            }).then((response) => {
+                                $('.schedules').waitMe('hide');
+                                if (response.ok) {
+                                    app.loadSchedule(app.year, app.month);
+                                } else {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: '순서 변경에 실패했습니다.',
+                                        showConfirmButton: false,
+                                        timer: 1500
+                                    });
+                                }
+                            });
+                        },
                         deleteSchedule(schedule) {
                             Swal.fire({
                                 title: '일정을 삭제하시겠습니까?',
@@ -580,7 +634,7 @@
         }
     })
 
-    function sameDate(startDateTime, endDateTime) {
+    function sameDateTime(startDateTime, endDateTime) {
         return startDateTime.getTime() == endDateTime.getTime();
     }
 
