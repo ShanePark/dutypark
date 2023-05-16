@@ -11,7 +11,7 @@ import org.springframework.web.context.request.RequestAttributes
 import org.springframework.web.method.support.HandlerMethodArgumentResolver
 import org.springframework.web.method.support.ModelAndViewContainer
 
-class AuthResolver : HandlerMethodArgumentResolver {
+class LoginMemberArgumentResolver : HandlerMethodArgumentResolver {
     override fun supportsParameter(parameter: MethodParameter): Boolean {
         return parameter.parameterType.isAssignableFrom(LoginMember::class.java)
                 && parameter.hasParameterAnnotation(Login::class.java)

@@ -1,26 +1,41 @@
-package com.tistory.shanepark.dutypark.security.config
+package com.tistory.shanepark.dutypark.security.filters
 
+import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus.NOT_EXIST
 import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus.VALID
 import com.tistory.shanepark.dutypark.security.service.AuthService
+import jakarta.servlet.Filter
+import jakarta.servlet.FilterChain
+import jakarta.servlet.ServletRequest
+import jakarta.servlet.ServletResponse
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseCookie
-import org.springframework.web.servlet.HandlerInterceptor
+import org.springframework.stereotype.Component
 
-class JwtAuthInterceptor(
+@Component
+class JwtAuthFilter(
     private val authService: AuthService,
-    private val tokenValidityInSeconds: Long,
-    private val isSecure: Boolean,
-) : HandlerInterceptor {
-    private val log: Logger = org.slf4j.LoggerFactory.getLogger(JwtAuthInterceptor::class.java)
+    private val jwtConfig: JwtConfig,
+    @Value("\${server.ssl.enabled}") private val isSecure: Boolean
+) : Filter {
+    private val log: Logger = LoggerFactory.getLogger(JwtAuthFilter::class.java)
 
-    override fun preHandle(request: HttpServletRequest, response: HttpServletResponse, handler: Any): Boolean {
+    override fun doFilter(req: ServletRequest, resp: ServletResponse, chain: FilterChain) {
+
+        val request = req as HttpServletRequest
+        val response = resp as HttpServletResponse
+
+        if (shouldSkipTheFilter(req))
+            return chain.doFilter(req, response)
+
         var jwt = ""
         var status = NOT_EXIST
         val refreshToken = findCookie(request, RefreshToken.cookieName)
@@ -48,7 +63,18 @@ class JwtAuthInterceptor(
             log.info("Token is invalid. Removing the tokens. status: $status, jwt: $jwt")
             removeCookie("SESSION", response)
         }
-        return true
+
+        chain.doFilter(req, response)
+    }
+
+    private fun shouldSkipTheFilter(request: HttpServletRequest): Boolean {
+        val requestURI = request.requestURI
+        return requestURI.endsWith(".css")
+                || requestURI.endsWith(".js")
+                || requestURI.endsWith(".map")
+                || requestURI.endsWith(".ico")
+                || requestURI.endsWith("/error")
+                || requestURI.endsWith("/login")
     }
 
     private fun removeCookie(name: String, response: HttpServletResponse) {
@@ -65,7 +91,7 @@ class JwtAuthInterceptor(
             .httpOnly(true)
             .path("/")
             .secure(isSecure)
-            .maxAge(tokenValidityInSeconds)
+            .maxAge(jwtConfig.tokenValidityInSeconds)
             .build()
         response.addHeader(HttpHeaders.SET_COOKIE, sessionCookie.toString())
     }

@@ -7,7 +7,7 @@ import org.slf4j.Logger
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.security.crypto.password.PasswordEncoder
 
-internal class PasswordEncoderTest : DutyparkIntegrationTest() {
+internal class PasswordEncoderConfigTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var passwordEncoder: PasswordEncoder
