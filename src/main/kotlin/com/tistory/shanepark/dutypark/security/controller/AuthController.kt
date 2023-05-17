@@ -40,7 +40,7 @@ class AuthController(
                 userAgent = req.getHeader(HttpHeaders.USER_AGENT)
             )
 
-            val jwtCookie = ResponseCookie.from("SESSION", loginMember.jwt)
+            val jwtCookie = ResponseCookie.from(jwtConfig.cookieName, loginMember.jwt)
                 .httpOnly(true)
                 .path("/")
                 .secure(isSecure)

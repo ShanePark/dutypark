@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.RestDocsTest
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
+import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import jakarta.servlet.http.Cookie
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -20,6 +21,9 @@ class ScheduleControllerTest : RestDocsTest() {
 
     @Autowired
     lateinit var scheduleRepository: ScheduleRepository
+
+    @Autowired
+    lateinit var jwtConfig: JwtConfig
 
     @Test
     fun `createScheduleTest`() {
@@ -42,7 +46,7 @@ class ScheduleControllerTest : RestDocsTest() {
                 .accept("application/json")
                 .contentType("application/json")
                 .content(json)
-                .cookie(Cookie("SESSION", jwt))
+                .cookie(Cookie(jwtConfig.cookieName, jwt))
         ).andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
             .andDo(
@@ -117,7 +121,7 @@ class ScheduleControllerTest : RestDocsTest() {
                 .accept("application/json")
                 .contentType("application/json")
                 .content(json)
-                .cookie(Cookie("SESSION", jwt))
+                .cookie(Cookie(jwtConfig.cookieName, jwt))
         ).andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
             .andDo(
@@ -168,7 +172,7 @@ class ScheduleControllerTest : RestDocsTest() {
             patch("/api/schedules/{id}/position?id2={id2}", schedule1.id, schedule2.id)
                 .accept("application/json")
                 .contentType("application/json")
-                .cookie(Cookie("SESSION", jwt))
+                .cookie(Cookie(jwtConfig.cookieName, jwt))
         ).andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
             .andDo(
@@ -206,7 +210,7 @@ class ScheduleControllerTest : RestDocsTest() {
             delete("/api/schedules/{id}", oldSchedule.id)
                 .accept("application/json")
                 .contentType("application/json")
-                .cookie(Cookie("SESSION", jwt))
+                .cookie(Cookie(jwtConfig.cookieName, jwt))
         ).andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
             .andDo(

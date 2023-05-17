@@ -3,7 +3,6 @@ package com.tistory.shanepark.dutypark.security.config
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
-import jakarta.servlet.http.HttpServletRequest
 import org.springframework.core.MethodParameter
 import org.springframework.web.bind.support.WebDataBinderFactory
 import org.springframework.web.context.request.NativeWebRequest
@@ -23,11 +22,7 @@ class LoginMemberArgumentResolver : HandlerMethodArgumentResolver {
         webRequest: NativeWebRequest,
         binderFactory: WebDataBinderFactory?
     ): LoginMember? {
-        val nativeRequest = webRequest.getNativeRequest(HttpServletRequest::class.java)
-        val sessionCookie = nativeRequest?.cookies?.find { it.name == "SESSION" }
-        val loginMember = sessionCookie?.let {
-            webRequest.getAttribute(LoginMember.attrName, RequestAttributes.SCOPE_REQUEST) as LoginMember?
-        }
+        val loginMember = webRequest.getAttribute(LoginMember.attrName, RequestAttributes.SCOPE_REQUEST) as LoginMember?
         handleRequired(parameter, loginMember)
         return loginMember
     }

@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.security.handlers
 
 import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
+import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component
 @Component
 class LogoutSuccessHandle(
     private val refreshTokenRepository: RefreshTokenRepository,
+    private val jwtConfig: JwtConfig,
 ) : LogoutSuccessHandler {
     val log: Logger = LoggerFactory.getLogger(LogoutSuccessHandle::class.java)
 
@@ -29,7 +31,7 @@ class LogoutSuccessHandle(
                     removeRefreshTokenCookie(response)
                 }
             }
-        removeSessionCookie(response)
+        removeJwtCookie(response)
         response.sendRedirect(request.getHeader("Referer"))
     }
 
@@ -41,8 +43,8 @@ class LogoutSuccessHandle(
         })
     }
 
-    private fun removeSessionCookie(response: HttpServletResponse) {
-        response.addCookie(Cookie("SESSION", "").apply {
+    private fun removeJwtCookie(response: HttpServletResponse) {
+        response.addCookie(Cookie(jwtConfig.cookieName, "").apply {
             maxAge = 0
             path = "/"
             isHttpOnly = true

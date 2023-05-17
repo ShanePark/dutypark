@@ -39,7 +39,7 @@ class JwtAuthFilter(
         var jwt = ""
         var status = NOT_EXIST
         val refreshToken = findCookie(request, RefreshToken.cookieName)
-        findCookie(request, "SESSION")?.let {
+        findCookie(request, jwtConfig.cookieName)?.let {
             status = authService.validateToken(it)
             jwt = it
         }
@@ -61,7 +61,7 @@ class JwtAuthFilter(
             request.setAttribute(LoginMember.attrName, loginMember)
         } else if (status != NOT_EXIST) { // remove invalid token
             log.info("Token is invalid. Removing the tokens. status: $status, jwt: $jwt")
-            removeCookie("SESSION", response)
+            removeCookie(jwtConfig.cookieName, response)
         }
 
         chain.doFilter(req, response)
@@ -87,7 +87,7 @@ class JwtAuthFilter(
     }
 
     private fun addSessionCookie(jwt: String, response: HttpServletResponse) {
-        val sessionCookie = ResponseCookie.from("SESSION", jwt)
+        val sessionCookie = ResponseCookie.from(jwtConfig.cookieName, jwt)
             .httpOnly(true)
             .path("/")
             .secure(isSecure)
