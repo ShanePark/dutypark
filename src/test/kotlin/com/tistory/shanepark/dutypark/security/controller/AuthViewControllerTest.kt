@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.security.controller
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
+import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import jakarta.servlet.http.Cookie
 import org.junit.jupiter.api.Test
@@ -18,6 +19,9 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var mockMvc: MockMvc
+
+    @Autowired
+    lateinit var jwtConfig: JwtConfig
 
     private val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(AuthViewControllerTest::class.java)
     private val testPass = TestData.testPass
@@ -62,7 +66,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
         ).andExpect(status().isOk)
-            .andExpect(cookie().exists("SESSION"))
+            .andExpect(cookie().exists(jwtConfig.cookieName))
             .andDo(MockMvcResultHandlers.print())
     }
 
@@ -112,7 +116,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
             MockMvcRequestBuilders.post("/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginJson)
-        ).andReturn().response.getCookie("SESSION")?.let { it.value }
+        ).andReturn().response.getCookie(jwtConfig.cookieName)?.let { it.value }
 
         log.info("accessToken: $accessToken")
 
@@ -121,7 +125,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
             MockMvcRequestBuilders.put("/api/duty/change")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
-                .cookie(Cookie("SESSION", accessToken))
+                .cookie(Cookie(jwtConfig.cookieName, accessToken))
 
         ).andExpect(status().isUnauthorized)
             .andDo(MockMvcResultHandlers.print())
@@ -149,7 +153,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
             MockMvcRequestBuilders.post("/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginJson)
-        ).andReturn().response.getCookie("SESSION")?.let { it.value }
+        ).andReturn().response.getCookie(jwtConfig.cookieName)?.let { it.value }
 
         log.info("accessToken: $accessToken")
 
@@ -158,7 +162,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
             MockMvcRequestBuilders.put("/api/duty/change")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
-                .cookie(Cookie("SESSION", accessToken))
+                .cookie(Cookie(jwtConfig.cookieName, accessToken))
         ).andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
     }
@@ -175,7 +179,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
             MockMvcRequestBuilders.post("/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(loginDto))
-        ).andReturn().response.getCookie("SESSION")?.let { it.value }
+        ).andReturn().response.getCookie(jwtConfig.cookieName)?.let { it.value }
 
         log.info("accessToken: $accessToken")
 
@@ -183,7 +187,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
         mockMvc.perform(
             MockMvcRequestBuilders.get("/status")
                 .contentType(MediaType.APPLICATION_JSON)
-                .cookie(Cookie("SESSION", accessToken))
+                .cookie(Cookie(jwtConfig.cookieName, accessToken))
         ).andExpect(status().isOk)
             .andExpect(jsonPath("$.id").value(member.id))
             .andExpect(jsonPath("$.email").value(member.email))
