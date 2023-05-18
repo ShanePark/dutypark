@@ -7,6 +7,7 @@ import net.gpedro.integrations.slack.SlackMessage
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.Around
 import org.aspectj.lang.annotation.Aspect
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.task.TaskExecutor
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime
@@ -17,6 +18,8 @@ import java.util.concurrent.atomic.AtomicLong
 class SlackNotificationAspect(
     private val slackNotifier: SlackNotifier,
     private val taskExecutor: TaskExecutor,
+    @param:Value("\${dutypark.slack.minimum-interval:60}")
+    private val minimumSlackInterval: Long
 ) {
     private val lastSlackSent = AtomicLong(0)
 
@@ -24,7 +27,7 @@ class SlackNotificationAspect(
     fun slackNotification(proceedingJoinPoint: ProceedingJoinPoint): Any? {
         synchronized(this) {
             val currentEpochSecond = LocalDateTime.now().toEpochSecond(java.time.ZoneOffset.UTC)
-            if (currentEpochSecond - lastSlackSent.get() < 10) {
+            if (currentEpochSecond - lastSlackSent.get() < minimumSlackInterval) {
                 return proceedingJoinPoint.proceed()
             }
             lastSlackSent.set(currentEpochSecond)
