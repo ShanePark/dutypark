@@ -20,7 +20,6 @@ dutypark:
   domain: localhost
   slack:
     token: ""
-    channel: "error-log"
 
 server:
   ssl:

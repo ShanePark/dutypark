@@ -20,7 +20,7 @@ decorator:
 dutypark:
   slack:
     token: ""
-    channel: "error-log"
+    minimum-interval: 60
 
 server:
   port: 443
