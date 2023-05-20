@@ -9,6 +9,8 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.access.intercept.AuthorizationFilter
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher
+import org.springframework.security.web.util.matcher.NegatedRequestMatcher
 
 @Configuration
 class SecurityConfig(
@@ -21,7 +23,8 @@ class SecurityConfig(
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
         http.requiresChannel {
             if (isSecure) {
-                it.anyRequest().requiresSecure()
+                it.requestMatchers(NegatedRequestMatcher(AntPathRequestMatcher("/.well-known/**")))
+                    .requiresSecure()
             }
         }
 
