@@ -13,18 +13,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Copy secret files
+        run: |
+          cp dutypark_secret/application-op.yml src/main/resources/
+          cp dutypark_secret/keystore.p12 src/main/resources/
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'temurin'
-      - name: Retrieve secrets
-        env:
-          MY_SECRETS_ARCHIVE: ${{ secrets.MY_SECRETS_ARCHIVE }}
-        run: |
-          echo "$MY_SECRETS_ARCHIVE" | base64 --decode > secrets.tar.gz
-          tar xzvf secrets.tar.gz -C src/main/resources
       - name: Build with Gradle
         uses: gradle/gradle-build-action@67421db6bd0bf253fb4bd25b31ebb98943c375e1
         with:
