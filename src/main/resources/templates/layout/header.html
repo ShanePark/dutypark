@@ -5,6 +5,13 @@
       Dutypark
     </a>
     <div class="collapse navbar-collapse" id="navbarToggler">
+      <div class="navbar-header d-lg-none">
+        <div class="collapse-header-profile-name">
+          <span th:text="|${loginMember?.name}|"></span>님
+          <i class="bi bi-x"></i>
+        </div>
+        <hr/>
+      </div>
       <ul th:if="${loginMember}" class="navbar-nav mr-auto mt-2 mt-lg-0">
         <li class="nav-item active">
           <a class="nav-link" th:href="@{/duty/{name}(name=${loginMember?.name})}">내 시간표</a>
@@ -46,12 +53,12 @@
         </a>
       </div>
       <div class="member-hover" th:if="${loginMember != null}">
-        <a class="memberPage-link link">
+        <a class="link">
           <span class="profile" th:text="|${loginMember?.name}|"/>님
           <div class="member-hover-menu">
             <ul>
               <li>
-                <a class="memberPage-link link" href="/member">
+                <a class="link" href="/member">
                   내정보 <i class="bi bi-person"></i>
                 </a>
               </li>
