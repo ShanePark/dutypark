@@ -319,15 +319,6 @@ a.homeButton:hover {
     color: black;
 }
 
-a.memberPage-link {
-    text-decoration: none;
-}
-
-a.memberPage-link:hover {
-    color: whitesmoke;
-    transition: 0.3s;
-}
-
 .d-day-item .d-day_menu {
     text-align: right;
 }
@@ -442,12 +433,17 @@ a.memberPage-link:hover {
 
 .navbar {
     font-size: 1.5em;
+    color: rgba(255, 255, 255, 0.55);
 }
 
 .navbar .nav-right {
     color: white;
     margin-right: 20px;
     display: flex;
+}
+
+.nav-item {
+    margin-right: 10px;
 }
 
 .navbar-brand {
