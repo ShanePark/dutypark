@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<head th:replace="~{layout/include::link}"/>
+<html lang="en">
+<body>
+<div th:replace="~{layout/header::header}"/>
+<div class="body">
+  <div th:replace="~{${content}}"/>
+</div>
+</body>
+</html>
+
+<script>
+    document.addEventListener('click', function (event) {
+        const isClickInside = document.querySelector('.navbar-collapse').contains(event.target);
+        const isNavbarTogglerOpen = document.querySelector('.navbar-toggler').getAttribute('aria-expanded') == 'true';
+
+        if (!isClickInside && isNavbarTogglerOpen) {
+            document.querySelector('.navbar-toggler').click();
+        }
+    });
+
+    document.querySelector('.navbar-header').addEventListener('click', function (event) {
+        document.querySelector('.navbar-toggler').click();
+    });
+</script>

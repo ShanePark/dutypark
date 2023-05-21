@@ -1,21 +1,29 @@
-<!DOCTYPE html>
-<head th:replace="~{layout/include::link}" xmlns:v-on="http://www.w3.org/1999/xhtml"/>
-<body>
-
-<div th:replace="~{layout/header::header-title(|${member.name}|)}"></div>
-
-<div class="body" v-cloak>
+<div class="duty-vue" v-cloak>
   <div th:if="${member.department}" class="calendar" th:attr="data-member_id=${member.id}">
     <div class="month-control row">
-      <h1>
-        <a class="move h_pointer" v-on:click="addMonth(-1)">
-          <i class="bi bi-arrow-left-circle"></i>
-        </a>
-        <input type="month" v-model="combinedYearMonth">
-        <a class="move h_pointer" v-on:click="addMonth(1)">
-          <i class="bi bi-arrow-right-circle"></i>
-        </a>
-      </h1>
+      <div class="month-control-left col-md-3">
+        <div class="info department-info">
+          <i class="bi bi-people-fill"></i>
+          <span th:text="${member.department}"></span>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <h1>
+          <a class="move h_pointer" v-on:click="addMonth(-1)">
+            <i class="bi bi-arrow-left-circle"></i>
+          </a>
+          <input type="month" v-model="combinedYearMonth">
+          <a class="move h_pointer" v-on:click="addMonth(1)">
+            <i class="bi bi-arrow-right-circle"></i>
+          </a>
+        </h1>
+      </div>
+      <div class="month-control-right col-md-3">
+        <div class="info member-info">
+          <span th:text="${member.name}"></span>
+          <i class="bi bi-person-badge"></i>
+        </div>
+      </div>
     </div>
     <div class="dutyTypes">
     <span v-for="type in department.dutyTypes">
@@ -182,8 +190,6 @@
   </div>
 
 </div>
-</body>
-</html>
 
 <script>
     $(function () {
@@ -194,7 +200,7 @@
             const managerId = parseInt("[[${member.managerId}]]");
 
             const app = new Vue({
-                    el: '.body',
+                    el: '.duty-vue',
                     data: {
                         year: parseInt("[[${year}]]"),
                         month: parseInt("[[${month}]]"),

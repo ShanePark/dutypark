@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.security.controller
 
+import com.tistory.shanepark.dutypark.common.controller.ViewController
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import jakarta.servlet.http.HttpSession
@@ -9,7 +10,7 @@ import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
 
 @Controller
-class AuthViewController {
+class AuthViewController : ViewController() {
 
     @GetMapping("/login")
     fun loginPage(
@@ -29,7 +30,7 @@ class AuthViewController {
         referer?.let {
             httpSession.setAttribute("referer", referer)
         }
-        return "member/login"
+        return layout(model, "member/login")
     }
 
 }

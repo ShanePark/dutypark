@@ -1,69 +1,81 @@
-<div th:fragment="header-title(title)">
-  <header class="row">
-    <div th:replace="~{layout/header::header-left}"></div>
-    <div class="month-control col-6">
-      <h1 th:text="${title}"></h1>
-    </div>
-    <div th:replace="~{layout/header::header-right}"></div>
-  </header>
-</div>
-
-<div th:fragment="header-member">
-  <header class="row">
-    <div th:replace="~{layout/header::header-left}"></div>
-    <div class="col-6 member-menu">
-      <ul>
-        <li>
-          <a href="/member/d-day">디데이</a>
+<div th:fragment="header">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <a class="navbar-brand" th:href="@{/}">
+      <img src="/favicon-32x32.png" width="32" height="32" color="white" class="d-inline-block align-top" alt="">
+      Dutypark
+    </a>
+    <div class="collapse navbar-collapse" id="navbarToggler">
+      <div class="navbar-header d-lg-none">
+        <div class="collapse-header-profile-name">
+          <span th:text="|${loginMember?.name}|"></span>님
+          <i class="bi bi-x"></i>
+        </div>
+        <hr/>
+      </div>
+      <ul th:if="${loginMember}" class="navbar-nav mr-auto mt-2 mt-lg-0">
+        <li class="nav-item active">
+          <a class="nav-link" th:href="@{/duty/{name}(name=${loginMember?.name})}">내 시간표</a>
         </li>
-        <li>
-          <a th:href="@{/duty/{name}(name=${loginMember?.name})}">내 시간표</a>
+        <li class="nav-item">
+          <a class="nav-link" href="/member/d-day">디데이</a>
         </li>
-        <li>
-          <a href="/logout">로그아웃</a>
+        <th:block th:if="${loginMember?.isAdmin}">
+          <li class="nav-item">
+            <a class="nav-link" href="/admin">
+              접속관리
+              <i class="bi bi-gear-wide-connected"></i>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/admin/department">
+              부서관리
+              <i class="bi bi-gear-wide-connected"></i>
+            </a>
+          </li>
+        </th:block>
+        <li class="nav-item d-lg-none">
+          <a class="nav-link memberPage-link link" href="/member">
+            내정보 <i class="bi bi-person"></i>
+          </a>
+        </li>
+        <li class="nav-item d-lg-none">
+          <a class="nav-link" href="/logout">
+            로그아웃 <i class="bi bi-person-fill-x"></i>
+          </a>
         </li>
       </ul>
     </div>
-    <div th:replace="~{layout/header::header-right}"></div>
-  </header>
-</div>
-
-<div th:fragment="header-admin">
-  <header class="row">
-    <div th:replace="~{layout/header::header-left}"></div>
-    <div class="col-6 member-menu">
-      <ul>
-        <li>
-          <a href="/admin">Tokens</a>
-        </li>
-        <li>
-          <a href="/admin/department">Departments</a>
-        </li>
-      </ul>
+    <!-- DIV for right side -->
+    <div class="nav-right">
+      <div th:if="${loginMember == null}">
+        <a th:href="@{/login}" class="link">로그인
+          <i class="bi bi-person-badge"></i>
+        </a>
+      </div>
+      <div class="member-hover" th:if="${loginMember != null}">
+        <a class="link">
+          <span class="profile" th:text="|${loginMember?.name}|"/>님
+          <div class="member-hover-menu">
+            <ul>
+              <li>
+                <a class="link" href="/member">
+                  내정보 <i class="bi bi-person"></i>
+                </a>
+              </li>
+              <li>
+                <a href="/logout">
+                  로그아웃 <i class="bi bi-person-fill-x"></i>
+                </a>
+              </li>
+            </ul>
+          </div>
+        </a>
+      </div>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarToggler"
+              aria-controls="navbarToggler" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
     </div>
-    <div th:replace="~{layout/header::header-right}"></div>
-  </header>
-</div>
-
-<div th:fragment="header-left" class="left-area col-3">
-  <a class="homeButton" th:href="@{/}">
-    <i class="h_pointer bi bi-house-door"></i>
-  </a>
-</div>
-
-<div th:fragment="header-right" class="col-3 profile">
-  <div th:if="${loginMember == null}">
-    <a th:href="@{/login}" class="link">로그인
-      <i class="bi bi-person-badge"></i>
-    </a>
-  </div>
-  <div th:if="${loginMember != null}">
-    <a class="memberPage-link link" href="/member">
-      <span class="profile" th:text="|${loginMember?.name}|"/>
-      <i class="bi bi-person"></i>
-    </a>
-    <a th:if="${loginMember?.isAdmin}" th:href="@{/admin}" class="link">
-      <i class="bi bi-gear-wide-connected"></i>
-    </a>
-  </div>
+    <!-- DIV for right side END -->
+  </nav>
 </div>
