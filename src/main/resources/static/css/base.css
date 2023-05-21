@@ -298,10 +298,6 @@ a.homeButton:hover {
     padding-left: 0px;
 }
 
-.logout-button:hover {
-    background-color: #777;
-}
-
 .members {
     padding: 20px;
     font-size: 2.5em;
@@ -451,6 +447,7 @@ a.memberPage-link:hover {
 .navbar .nav-right {
     color: white;
     margin-right: 20px;
+    display: flex;
 }
 
 .navbar-brand {

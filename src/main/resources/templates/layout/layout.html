@@ -8,3 +8,14 @@
 </div>
 </body>
 </html>
+
+<script>
+    document.addEventListener('click', function(event) {
+        var isClickInside = document.querySelector('.navbar-collapse').contains(event.target);
+        var isNavbarTogglerOpen = document.querySelector('.navbar-toggler').getAttribute('aria-expanded') == 'true';
+
+        if (!isClickInside && isNavbarTogglerOpen) {
+            document.querySelector('.navbar-toggler').click();
+        }
+    });
+</script>
