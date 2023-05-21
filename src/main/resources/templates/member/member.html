@@ -1,9 +1,4 @@
-<!DOCTYPE html>
-<head th:replace="~{layout/include::link}"/>
-<html lang="en">
-<body>
-<div th:replace="~{layout/header::header-member}"/>
-<div class="body memberPage" v-cloak>
+<div class="member-vue" v-cloak>
   <div class="form-group row">
     <label for="name" class="col-sm-2 col-form-label">이름</label>
     <div class="col-sm-10">
@@ -60,13 +55,11 @@
     </table>
   </div>
 </div>
-</body>
-</html>
 
 <script>
     $(function () {
         const app = new Vue({
-            el: '.body',
+            el: '.member-vue',
             data: {
                 tokens: []
             },
