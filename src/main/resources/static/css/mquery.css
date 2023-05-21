@@ -1,5 +1,5 @@
 /* mobile */
-@media (max-width: 1024px) {
+@media (max-width: 991px) {
     .calendar {
         margin-right: 20px;
     }
@@ -74,15 +74,21 @@
         margin-top: 1rem;
     }
 
-    .members {
-        color: #fff;
-        font-size: 3em;
-        background-image: url("/images/hanoi.jpeg");
-        background-size: cover;
+    .navbar {
+        height: 4em;
     }
 
-    .logout-button {
-        font-size: 1em;
+    .navbar-collapse {
+        z-index: 1;
+        position: absolute;
+        font-size: 1.5em;
+        top: 2em;
+        right: 0;
+        text-align: right;
+        padding-right: 15px;
+        width: 30%;
+        background: rgba(var(--bs-dark-rgb), var(--bs-bg-opacity)) !important;
+        opacity: 0.95;
     }
 
 }
