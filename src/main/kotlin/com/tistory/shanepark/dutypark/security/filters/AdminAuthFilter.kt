@@ -17,7 +17,7 @@ class AdminAuthFilter : Filter {
         val request = req as HttpServletRequest
         val response = resp as HttpServletResponse
 
-        if (!isAdminRequest(request)) {
+        if (shouldSkipFilter(request)) {
             return chain.doFilter(request, response)
         }
 
@@ -32,7 +32,19 @@ class AdminAuthFilter : Filter {
         response.sendRedirect("/login")
     }
 
-    private fun isAdminRequest(request: HttpServletRequest): Boolean {
-        return request.requestURI.startsWith("/admin") || request.requestURI.startsWith("/actuator")
+    private fun shouldSkipFilter(request: HttpServletRequest): Boolean {
+        if (isLocalRequest(request)) {
+            return true
+        }
+        val adminRequest = request.requestURI.startsWith("/admin")
+        val actuatorRequest = request.requestURI.startsWith("/actuator")
+
+        return !adminRequest && !actuatorRequest
     }
+
+    private fun isLocalRequest(request: HttpServletRequest): Boolean {
+        val remoteAddr = request.remoteAddr
+        return remoteAddr == "0:0:0:0:0:0:0:1" || remoteAddr == "127.0.0.1"
+    }
+
 }
