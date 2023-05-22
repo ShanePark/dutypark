@@ -32,7 +32,7 @@ abstract class RestDocsTest : DutyparkIntegrationTest() {
         this.mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
             .apply<DefaultMockMvcBuilder>(MockMvcRestDocumentation.documentationConfiguration(restDocumentation))
             .addFilters<DefaultMockMvcBuilder>(jwtAuthFilter)
-            .addFilters<DefaultMockMvcBuilder>(AdminAuthFilter())
+            .addFilters<DefaultMockMvcBuilder>(AdminAuthFilter(emptyList()))
             .build()
     }
 

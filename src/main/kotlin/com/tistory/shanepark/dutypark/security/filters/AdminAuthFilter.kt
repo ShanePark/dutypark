@@ -10,7 +10,9 @@ import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-class AdminAuthFilter : Filter {
+class AdminAuthFilter(
+    private val whiteIpList: List<String>
+) : Filter {
     private val log: Logger = LoggerFactory.getLogger(AdminAuthFilter::class.java)
 
     override fun doFilter(req: ServletRequest, resp: ServletResponse, chain: FilterChain) {
@@ -33,13 +35,16 @@ class AdminAuthFilter : Filter {
     }
 
     private fun shouldSkipFilter(request: HttpServletRequest): Boolean {
-        if (isLocalRequest(request)) {
-            return true
-        }
         val adminRequest = request.requestURI.startsWith("/admin")
         val actuatorRequest = request.requestURI.startsWith("/actuator")
 
-        return !adminRequest && !actuatorRequest
+        if (!adminRequest && !actuatorRequest)
+            return true
+
+        if (isLocalRequest(request))
+            return true
+
+        return request.remoteAddr in whiteIpList
     }
 
     private fun isLocalRequest(request: HttpServletRequest): Boolean {

@@ -37,7 +37,11 @@ dutypark:
   slack:
     token: "SLACK_TOKEN_HERE"
     minimum-interval: 60
-
+  adminEmails:
+    - ADMIN@EMAIL.HERE
+  whiteIpList:
+    - "127.0.0.1"
+    - "0:0:0:0:0:0:0:1"
 decorator:
   datasource:
     p6spy:
