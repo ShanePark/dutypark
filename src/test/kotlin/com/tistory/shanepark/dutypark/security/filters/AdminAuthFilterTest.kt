@@ -25,36 +25,13 @@ class AdminAuthFilterTest {
 
     private lateinit var adminAuthFilter: AdminAuthFilter
 
-    private val whiteListIp = listOf("1.2.3.4")
-
     @BeforeEach
     fun setup() {
-        adminAuthFilter = AdminAuthFilter(whiteListIp)
-    }
-
-    @Test
-    fun `should continue filter chain for local request`() {
-        `when`(request.remoteAddr).thenReturn("127.0.0.1")
-        `when`(request.requestURI).thenReturn("/admin")
-
-        adminAuthFilter.doFilter(request, response, filterChain)
-
-        verify(filterChain).doFilter(request, response)
-    }
-
-    @Test
-    fun `should continue filter chain for non-admin or non-actuator request`() {
-        `when`(request.requestURI).thenReturn("/nonAdminOrActuator")
-
-        adminAuthFilter.doFilter(request, response, filterChain)
-
-        verify(filterChain).doFilter(request, response)
+        adminAuthFilter = AdminAuthFilter()
     }
 
     @Test
     fun `should continue filter chain for admin user`() {
-        `when`(request.remoteAddr).thenReturn("192.168.0.1")
-        `when`(request.requestURI).thenReturn("/admin")
         val loginMember = mock(LoginMember::class.java)
         `when`(loginMember.isAdmin).thenReturn(true)
         `when`(request.getAttribute(LoginMember.attrName)).thenReturn(loginMember)
@@ -65,17 +42,7 @@ class AdminAuthFilterTest {
     }
 
     @Test
-    fun `should continue filter chain for whiteListIp`() {
-        `when`(request.remoteAddr).thenReturn(whiteListIp[0])
-        `when`(request.requestURI).thenReturn("/actuator")
-        adminAuthFilter.doFilter(request, response, filterChain)
-        verify(filterChain).doFilter(request, response)
-    }
-
-    @Test
     fun `should redirect for non-admin user`() {
-        `when`(request.remoteAddr).thenReturn("192.168.0.1")
-        `when`(request.requestURI).thenReturn("/admin")
         val loginMember = mock(LoginMember::class.java)
         `when`(loginMember.isAdmin).thenReturn(false)
         `when`(request.getAttribute(LoginMember.attrName)).thenReturn(loginMember)
