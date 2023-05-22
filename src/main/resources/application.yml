@@ -9,29 +9,40 @@ spring:
     hibernate:
       ddl-auto: create-drop
     database-platform: org.hibernate.dialect.H2Dialect
-  mvc:
-    log-resolved-exception: false
-
-decorator:
-  datasource:
-    p6spy:
-      enable-logging: false
-
-dutypark:
-  slack:
-    token: ""
-    minimum-interval: 60
 
 server:
   port: 443
   ssl:
     key-store: classpath:keystore.p12
-    key-store-password: "key_password_here"
+    key-store-password: "KEY_PASSWORD_HERE"
     key-store-type: PKCS12
     enabled: true
+  tomcat:
+    mbeanregistry:
+      enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health, metrics, prometheus"
 
 jwt:
   secret: "WvQiOAms2XFyW/UnmfO/9xL24ch4IlfUikP9QohMuso=" # Change it on production
   token-validity-in-seconds: 1800 # 30 minutes
   refresh-token-validity-in-days: 7 # 7 days
   cookie_name: "SESSION"
+
+dutypark:
+  slack:
+    token: "SLACK_TOKEN_HERE"
+    minimum-interval: 60
+  adminEmails:
+    - ADMIN@EMAIL.HERE
+  whiteIpList:
+    - "127.0.0.1"
+    - "0:0:0:0:0:0:0:1"
+decorator:
+  datasource:
+    p6spy:
+      enable-logging: false

@@ -17,8 +17,8 @@ class SecurityConfig(
     @Value("\${server.ssl.enabled}") private val isSecure: Boolean,
     private val logoutHandler: LogoutSuccessHandle,
     private val jwtAuthFilter: JwtAuthFilter,
+    private val dutyparkProperties: DutyparkProperties,
 ) {
-
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
         http.requiresChannel {
@@ -29,7 +29,7 @@ class SecurityConfig(
         }
 
         http.addFilterBefore(jwtAuthFilter, AuthorizationFilter::class.java)
-            .addFilterAfter(AdminAuthFilter(), JwtAuthFilter::class.java)
+            .addFilterAfter(AdminAuthFilter(dutyparkProperties.whiteIpList), JwtAuthFilter::class.java)
 
         http.authorizeHttpRequests()
             .anyRequest()

@@ -33,6 +33,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
 
+    // Monitoring
+    implementation("io.micrometer:micrometer-registry-prometheus")
+
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 
@@ -42,7 +45,6 @@ dependencies {
 
     // Database
     runtimeOnly("com.h2database:h2")
-    // mysql
     runtimeOnly("com.mysql:mysql-connector-j")
     implementation("com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.9.0")
 
