@@ -1,11 +1,15 @@
 package com.tistory.shanepark.dutypark.security.config
 
+import com.tistory.shanepark.dutypark.security.filters.ActuatorFilter
 import com.tistory.shanepark.dutypark.security.filters.AdminAuthFilter
 import com.tistory.shanepark.dutypark.security.filters.JwtAuthFilter
 import com.tistory.shanepark.dutypark.security.handlers.LogoutSuccessHandle
+import jakarta.servlet.Filter
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.Ordered
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.access.intercept.AuthorizationFilter
@@ -29,7 +33,6 @@ class SecurityConfig(
         }
 
         http.addFilterBefore(jwtAuthFilter, AuthorizationFilter::class.java)
-            .addFilterAfter(AdminAuthFilter(dutyparkProperties.whiteIpList), JwtAuthFilter::class.java)
 
         http.authorizeHttpRequests()
             .anyRequest()
@@ -41,6 +44,24 @@ class SecurityConfig(
             .csrf().disable()
 
         return http.build()
+    }
+
+    @Bean
+    fun adminFilterBean(): FilterRegistrationBean<Filter> {
+        val filterRegBean = FilterRegistrationBean<Filter>()
+        filterRegBean.filter = AdminAuthFilter()
+        filterRegBean.addUrlPatterns("/admin/*")
+        filterRegBean.order = Ordered.LOWEST_PRECEDENCE
+        return filterRegBean
+    }
+
+    @Bean
+    fun actuatorFilterBean(): FilterRegistrationBean<Filter> {
+        val filterRegBean = FilterRegistrationBean<Filter>()
+        filterRegBean.filter = ActuatorFilter(dutyparkProperties.whiteIpList)
+        filterRegBean.addUrlPatterns("/actuator/*")
+        filterRegBean.order = Ordered.HIGHEST_PRECEDENCE
+        return filterRegBean
     }
 
 }

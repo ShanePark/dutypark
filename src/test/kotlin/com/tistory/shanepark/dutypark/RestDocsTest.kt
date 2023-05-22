@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark
 
-import com.tistory.shanepark.dutypark.security.filters.AdminAuthFilter
 import com.tistory.shanepark.dutypark.security.filters.JwtAuthFilter
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.extension.ExtendWith
@@ -32,7 +31,6 @@ abstract class RestDocsTest : DutyparkIntegrationTest() {
         this.mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
             .apply<DefaultMockMvcBuilder>(MockMvcRestDocumentation.documentationConfiguration(restDocumentation))
             .addFilters<DefaultMockMvcBuilder>(jwtAuthFilter)
-            .addFilters<DefaultMockMvcBuilder>(AdminAuthFilter(emptyList()))
             .build()
     }
 
