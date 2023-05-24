@@ -29,7 +29,6 @@
     }
 
     .dutyTypes {
-        font-size: 2em;
         margin-right: 10px;
     }
 
@@ -108,6 +107,31 @@
 
     .navbar .navbar-toggler, .navbar .navbar-brand {
         font-size: 1.2em;
+    }
+
+    #detail-view-modal .modal-dialog.modal-lg {
+        max-width: 90%;
+        font-size: 1.8em;
+    }
+
+    .modal-dialog.modal-lg input,
+    .modal-dialog.modal-lg button,
+    .modal-dialog.modal-lg {
+        font-size: 1em;
+    }
+
+    .swal2-container .swal2-popup {
+        font-size: 1.5em;
+    }
+
+    .vue-dday,
+    .vue-dday button,
+    .vue-dday input {
+        font-size: 1.5em;
+    }
+
+    .d-day-list .d-day-item {
+        max-height: 150px;
     }
 
 }
