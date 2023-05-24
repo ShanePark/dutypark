@@ -418,6 +418,10 @@ a.homeButton:hover {
     margin: 10px;
 }
 
+#detail-view-modal .schedules .schedule.schedule-add-button {
+    padding: 0px;
+}
+
 .schedules .schedule small {
     font-size: 0.75em;
 }

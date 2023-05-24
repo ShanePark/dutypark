@@ -116,6 +116,7 @@
       <div class="modal-content" v-if="detailView">
         <div class="modal-header">
           <h5 v-text="detailView?.year + '년 ' + detailView?.month + '월 ' + detailView?.day + '일'"></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
           <div class="dutyTypes">
@@ -164,10 +165,13 @@
               </div>
               <div class="buttons mt-3" v-if="isEditing(schedule)">
                 <button class="btn btn-success" v-on:click="editSchedule()">저장</button>
-                <button class="btn btn-secondary" v-on:click="cancelEditMode(schedule)">취소</button>
+                <button class="btn btn-secondary" v-on:click="cancelEditMode()">취소</button>
               </div>
             </div>
-            <div class="schedule schedule-add card shadow" v-if="!editingSchedule.id">
+            <div class="schedule schedule-add-button card shadow" v-if="!isCreateScheduleMode">
+              <button class="btn btn-success" v-on:click="scheduleCreateMode()">일정 추가</button>
+            </div>
+            <div class="schedule schedule-add card shadow" v-if="isCreateScheduleMode">
               <label>일정 추가</label>
               <input type="text" class="form-control" placeholder="일정을 입력하세요." v-model="createSchedule.content"/>
               <label>시작일</label>
@@ -178,6 +182,7 @@
                      :min="createSchedule.startDateTime"/>
               <div class="buttons mt-3">
                 <button class="btn btn-success" v-on:click="saveSchedule">추가</button>
+                <button class="btn btn-secondary" v-on:click="cancelCreateSchedule">취소</button>
               </div>
             </div>
           </div>
@@ -211,6 +216,7 @@
                         selectedDday: null,
                         detailView: null,
                         editMode: false,
+                        isCreateScheduleMode: false,
                         createSchedule: {
                             content: '',
                             startDateTime: '',
@@ -416,6 +422,7 @@
                             if (app.editMode || !app.canEdit) {
                                 return;
                             }
+                            app.isCreateScheduleMode = false;
                             $('#detail-view-modal').modal('show');
                             app.detailView = duty;
                             app.detailView.index = index;
@@ -467,6 +474,12 @@
                             const month = duty.month.toString().padStart(2, '0');
                             const day = duty.day.toString().padStart(2, '0');
                             return `${duty.year}-${month}-${day}T00:00`;
+                        }, scheduleCreateMode() {
+                            app.cancelEditMode();
+                            app.isCreateScheduleMode = true;
+                        }, cancelCreateSchedule() {
+                            app.isCreateScheduleMode = false;
+                            app.resetCreateSchedule();
                         }, saveSchedule() {
                             if (!isValidContent(app.createSchedule.content)) {
                                 return;
@@ -488,6 +501,7 @@
                                     // SAVED
                                     app.resetCreateSchedule();
                                     app.loadSchedule(app.year, app.month);
+                                    app.isCreateScheduleMode = false;
                                 },
                                 error: (data) => {
                                     Swal.fire({
@@ -499,6 +513,7 @@
                                 }
                             })
                         }, scheduleEditMode(schedule) {
+                            app.cancelCreateSchedule();
                             app.editingSchedule.id = schedule.id;
                             app.editingSchedule.content = schedule.content;
                             app.editingSchedule.startDateTime = schedule.startDateTime;
