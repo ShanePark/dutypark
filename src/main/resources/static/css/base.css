@@ -340,7 +340,7 @@ a.homeButton:hover {
 
 .d-day-list .d-day-item {
     background-color: mintcream;
-    height: 100px;
+    max-height: 100px;
     margin: 10px;
     padding: 10px;
     box-shadow: 6px 10px 40px -28px rgba(0, 0, 0, 0.75);
@@ -422,10 +422,13 @@ a.homeButton:hover {
     padding: 0px;
 }
 
+#detail-view-modal .modal-header .current-date-label {
+    font-size: 1.3em;
+}
+
 .schedules .schedule small {
     font-size: 0.75em;
 }
-
 
 #detail-view-modal .schedules .schedule .buttons {
     text-align: right;

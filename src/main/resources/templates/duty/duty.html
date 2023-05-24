@@ -115,7 +115,7 @@
     <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content" v-if="detailView">
         <div class="modal-header">
-          <h5 v-text="detailView?.year + '년 ' + detailView?.month + '월 ' + detailView?.day + '일'"></h5>
+          <p class="current-date-label" v-text="detailView?.year + '년 ' + detailView?.month + '월 ' + detailView?.day + '일'"></p>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
@@ -188,7 +188,7 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
         </div>
       </div>
     </div>
