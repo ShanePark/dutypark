@@ -7,6 +7,7 @@ import net.gpedro.integrations.slack.SlackMessage
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.Around
 import org.aspectj.lang.annotation.Aspect
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.task.TaskExecutor
 import org.springframework.stereotype.Component
@@ -17,6 +18,7 @@ import java.util.concurrent.atomic.AtomicLong
 @Component
 class SlackNotificationAspect(
     private val slackNotifier: SlackNotifier,
+    @Qualifier("slackTaskExecutor")
     private val taskExecutor: TaskExecutor,
     @param:Value("\${dutypark.slack.minimum-interval:60}")
     private val minimumSlackInterval: Long
