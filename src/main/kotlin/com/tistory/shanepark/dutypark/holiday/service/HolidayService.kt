@@ -20,17 +20,16 @@ class HolidayService(
 ) {
     private val holidayMap: MutableMap<Int, List<HolidayDto>> = ConcurrentHashMap()
 
-    fun findHolidays(calendarView: CalendarView): Array<List<HolidayDto>?> {
+    fun findHolidays(calendarView: CalendarView): Array<List<HolidayDto>> {
+        val answer = Array<List<HolidayDto>>(calendarView.size) { emptyList() }
         val years: Set<Int> = calendarView.getRangeYears()
         val holidaysInRange: List<HolidayDto> = holidaysInRangeFromMemory(years)
-
-        val answer = arrayOfNulls<List<HolidayDto>>(calendarView.size)
 
         for (holiday in holidaysInRange) {
             val holidayDate = holiday.localDate
             if (calendarView.isInRange(holidayDate)) {
                 val index = calendarView.getIndex(holidayDate)
-                answer[index] = answer[index]?.plus(holiday) ?: listOf(holiday)
+                answer[index] = answer[index].plus(holiday)
             }
         }
 
@@ -61,7 +60,8 @@ class HolidayService(
     private fun loadAndSaveHolidaysFromAPI(year: Int): List<Holiday> {
         val holidays = holidayAPI.requestHolidays(year)
             .map { holiday -> Holiday(holiday.dateName, holiday.isHoliday, holiday.localDate) }
-        return holidayRepository.saveAll(holidays)
+        holidayRepository.saveAll(holidays)
+        return holidays
     }
 
 }

@@ -2,7 +2,7 @@ package com.tistory.shanepark.dutypark.holiday.domain
 
 import java.time.LocalDate
 
-class HolidayDto(
+data class HolidayDto(
     val dateName: String,
     val isHoliday: Boolean,
     val localDate: LocalDate
