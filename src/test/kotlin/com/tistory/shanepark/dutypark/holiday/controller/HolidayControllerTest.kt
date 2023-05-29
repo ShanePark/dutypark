@@ -5,19 +5,25 @@ import com.tistory.shanepark.dutypark.common.datagokr.DataGoKrApi
 import com.tistory.shanepark.dutypark.holiday.service.HolidayService
 import com.tistory.shanepark.dutypark.holiday.service.holidayAPI.HolidayAPIDataGoKr
 import com.tistory.shanepark.dutypark.holiday.service.holidayAPI.HolidayAPIDataGoKrTest
+import com.tistory.shanepark.dutypark.security.config.JwtConfig
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
+import jakarta.servlet.http.Cookie
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mock
 import org.mockito.Mockito
 import org.mockito.kotlin.any
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.MediaType
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
+import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.delete
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.get
 import org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath
 import org.springframework.restdocs.payload.PayloadDocumentation.responseFields
 import org.springframework.restdocs.request.RequestDocumentation
 import org.springframework.restdocs.request.RequestDocumentation.parameterWithName
 import org.springframework.test.util.ReflectionTestUtils
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
@@ -68,6 +74,25 @@ class HolidayControllerTest : RestDocsTest() {
                     )
                 )
             )
+    }
+
+    @Test
+    fun resetHolidays(@Autowired jwtConfig: JwtConfig) {
+        val loginDto = LoginDto(email = TestData.admin.email, password = TestData.testPass)
+        val loginJson = objectMapper.writeValueAsString(loginDto)
+        val accessToken = mockMvc.perform(
+            MockMvcRequestBuilders.post("/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginJson)
+        ).andReturn().response.getCookie(jwtConfig.cookieName)?.let { it.value }
+
+        mockMvc.perform(
+            delete("/api/holidays")
+                .accept("application/json")
+                .cookie(Cookie(jwtConfig.cookieName, accessToken))
+        ).andExpect(status().isOk)
+            .andDo(MockMvcResultHandlers.print())
+            .andDo(document("holiday/reset"))
     }
 
 }

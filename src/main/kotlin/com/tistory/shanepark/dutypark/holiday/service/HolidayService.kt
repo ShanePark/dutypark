@@ -5,6 +5,8 @@ import com.tistory.shanepark.dutypark.holiday.domain.Holiday
 import com.tistory.shanepark.dutypark.holiday.domain.HolidayDto
 import com.tistory.shanepark.dutypark.holiday.repository.HolidayRepository
 import com.tistory.shanepark.dutypark.holiday.service.holidayAPI.HolidayAPI
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -19,6 +21,7 @@ class HolidayService(
     private val holidayAPI: HolidayAPI,
 ) {
     private val holidayMap: MutableMap<Int, List<HolidayDto>> = ConcurrentHashMap()
+    val log: Logger = LoggerFactory.getLogger(this::class.java)
 
     fun findHolidays(calendarView: CalendarView): Array<List<HolidayDto>> {
         val answer = Array<List<HolidayDto>>(calendarView.size) { emptyList() }
@@ -34,6 +37,12 @@ class HolidayService(
         }
 
         return answer
+    }
+
+    fun resetHolidayInfo() {
+        holidayRepository.deleteAll()
+        holidayMap.clear()
+        log.info("Holiday info has been reset.")
     }
 
     private fun holidaysInRangeFromMemory(years: Set<Int>): List<HolidayDto> {

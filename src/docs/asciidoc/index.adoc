@@ -34,3 +34,7 @@ operation::schedules/delete[]
 === GET
 
 operation::holiday/get[]
+
+=== RESET
+
+operation::holiday/reset[]

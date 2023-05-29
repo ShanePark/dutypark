@@ -51,6 +51,7 @@ class SecurityConfig(
         val filterRegBean = FilterRegistrationBean<Filter>()
         filterRegBean.filter = AdminAuthFilter()
         filterRegBean.addUrlPatterns("/admin/*")
+        filterRegBean.addUrlPatterns("/docs/*")
         filterRegBean.order = Ordered.LOWEST_PRECEDENCE
         return filterRegBean
     }

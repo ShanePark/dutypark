@@ -81,6 +81,13 @@ class DutyparkIntegrationTest {
                 TestData.member2 = saved
             }
         }
+        TestData.admin = memberService.createMember(
+            MemberCreateDto(
+                name = "admin",
+                email = "admin@email.com",
+                password = TestData.testPass,
+            )
+        )
     }
 
     companion object {
@@ -94,6 +101,7 @@ class DutyparkIntegrationTest {
 
         var member: Member = Member("", "", "")
         var member2: Member = Member("", "", "")
+        var admin: Member = Member("", "", "")
 
         val dutyTypes = mutableListOf<DutyType>()
     }

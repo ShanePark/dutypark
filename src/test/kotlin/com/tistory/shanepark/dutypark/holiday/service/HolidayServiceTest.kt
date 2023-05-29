@@ -109,7 +109,7 @@ class HolidayServiceTest {
         fun holiday2023Dto(): List<HolidayDto> {
             return listOf(
                 HolidayDto(
-                    dateName = "1월1일",
+                    dateName = "신정",
                     localDate = LocalDate.of(2023, 1, 1),
                     isHoliday = true
                 ),
@@ -194,7 +194,7 @@ class HolidayServiceTest {
                     isHoliday = true
                 ),
                 HolidayDto(
-                    dateName = "기독탄신일",
+                    dateName = "크리스마스",
                     localDate = LocalDate.of(2023, 12, 25),
                     isHoliday = true
                 ),
