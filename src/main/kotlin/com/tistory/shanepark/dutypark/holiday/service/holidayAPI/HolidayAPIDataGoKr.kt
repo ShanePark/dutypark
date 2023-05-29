@@ -47,8 +47,19 @@ class HolidayAPIDataGoKr(
             val dateString = item.getElementsByTagName("locdate").item(0).textContent
             val localDate = LocalDate.parse(dateString, DateTimeFormatter.ofPattern("yyyyMMdd"))
             val isHoliday = item.getElementsByTagName("isHoliday").item(0).textContent.equals("Y")
-            HolidayDto(name, isHoliday, localDate)
+            HolidayDto(adjustName(name), isHoliday, localDate)
         }.collect(Collectors.toList())
+    }
+
+    /**
+     * Some Holiday names on DataGoKr API are not good. So, I change them.
+     */
+    private fun adjustName(name: String): String {
+        return when (name) {
+            "1월1일" -> "신정"
+            "기독탄신일" -> "크리스마스"
+            else -> name
+        }
     }
 
 }

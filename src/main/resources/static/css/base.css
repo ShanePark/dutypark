@@ -305,7 +305,7 @@ a.homeButton:hover {
 }
 
 .calendar input[type="month"] {
-    width: 6em;
+    width: 9em;
     background: none;
     border: none;
     text-align: center;
