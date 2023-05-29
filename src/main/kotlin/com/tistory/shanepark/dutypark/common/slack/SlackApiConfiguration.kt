@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
+import org.springframework.core.task.TaskExecutor
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
 
 @Configuration
 class SlackApiConfiguration(
@@ -18,6 +20,15 @@ class SlackApiConfiguration(
 ) {
 
     private val log: Logger = org.slf4j.LoggerFactory.getLogger(this.javaClass)
+
+    @Bean("slackTaskExecutor")
+    fun threadPoolTaskExecutor(): TaskExecutor {
+        val executor = ThreadPoolTaskExecutor()
+        executor.corePoolSize = 1
+        executor.maxPoolSize = 3
+        executor.initialize()
+        return executor
+    }
 
     @Bean
     @Profile("op")

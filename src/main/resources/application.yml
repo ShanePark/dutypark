@@ -34,14 +34,17 @@ jwt:
   cookie_name: "SESSION"
 
 dutypark:
-  slack:
-    token: "SLACK_TOKEN_HERE"
-    minimum-interval: 60
   adminEmails:
     - ADMIN@EMAIL.HERE
   whiteIpList:
     - "127.0.0.1"
     - "0:0:0:0:0:0:0:1"
+  slack:
+    token: "SLACK_TOKEN_HERE"
+    minimum-interval: 60
+  data-go-kr:
+    service-key: "DECODED_SERVICE_KEY_HERE"
+
 decorator:
   datasource:
     p6spy:

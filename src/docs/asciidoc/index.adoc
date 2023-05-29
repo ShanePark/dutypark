@@ -28,3 +28,13 @@ operation::schedules/position[]
 === Delete
 
 operation::schedules/delete[]
+
+== Holiday
+
+=== GET
+
+operation::holiday/get[]
+
+=== RESET
+
+operation::holiday/reset[]

@@ -1,13 +1,13 @@
 <div class="duty-vue" v-cloak>
   <div th:if="${member.department}" class="calendar" th:attr="data-member_id=${member.id}">
     <div class="month-control row">
-      <div class="month-control-left col-md-3">
+      <div class="month-control-left col-md-2">
         <div class="info department-info">
           <i class="bi bi-people-fill"></i>
           <span th:text="${member.department}"></span>
         </div>
       </div>
-      <div class="col-md-6">
+      <div class="col-md-8">
         <h1>
           <a class="move h_pointer" v-on:click="addMonth(-1)">
             <i class="bi bi-arrow-left-circle"></i>
@@ -18,7 +18,7 @@
           </a>
         </h1>
       </div>
-      <div class="month-control-right col-md-3">
+      <div class="month-control-right col-md-2">
         <div class="info member-info">
           <span th:text="${member.name}"></span>
           <i class="bi bi-person-badge"></i>
@@ -40,23 +40,23 @@
       </button>
     </div>
     <ul class="weekdays">
-      <li><abbr title="S">SUN</abbr></li>
-      <li><abbr title="M">MON</abbr></li>
-      <li><abbr title="T">TUE</abbr></li>
-      <li><abbr title="W">WED</abbr></li>
-      <li><abbr title="T">THU</abbr></li>
-      <li><abbr title="F">FRI</abbr></li>
-      <li><abbr title="S">SAT</abbr></li>
+      <li><abbr title="일요일">SUN</abbr></li>
+      <li><abbr title="월요일">MON</abbr></li>
+      <li><abbr title="화요일">TUE</abbr></li>
+      <li><abbr title="수요일">WED</abbr></li>
+      <li><abbr title="목요일">THU</abbr></li>
+      <li><abbr title="금요일">FRI</abbr></li>
+      <li><abbr title="토요일">SAT</abbr></li>
     </ul>
 
-    <ol class="day-grid">
+    <ol class="day-grid" :class="{'editable': canEdit}">
       <li v-for="(duty, index) in duties"
           :class="{
           ['BACKGROUND-' + duty.dutyColor]: true,
           'month-prev': (duty.month < month),
           'month-next': (duty.month > month),
           'today': isToday(duty),
-          'editable': canEdit,
+          'holiday': isHoliday(index),
         }"
           v-on:click="viewDayDetail(duty, index)"
       >
@@ -72,6 +72,10 @@
             </div>
           </div>
           <div v-if="!editMode" class="schedules">
+            <div v-if="holidaysByDays[index]"
+                 class="holiday-info" v-for="holiday in holidaysByDays[index]">
+              <span v-text="holiday.dateName"></span>
+            </div>
             <div class="schedule" v-for="schedule in schedulesByDays[index]">
               <span class="schedule-content" v-html="printSchedule(schedule)"></span>
             </div>
@@ -115,7 +119,8 @@
     <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content" v-if="detailView">
         <div class="modal-header">
-          <p class="current-date-label" v-text="detailView?.year + '년 ' + detailView?.month + '월 ' + detailView?.day + '일'"></p>
+          <p class="current-date-label"
+             v-text="detailView?.year + '년 ' + detailView?.month + '월 ' + detailView?.day + '일'"></p>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
@@ -211,6 +216,7 @@
                         month: parseInt("[[${month}]]"),
                         duties: [],
                         schedulesByDays: [],
+                        holidaysByDays: [],
                         department: {},
                         dDays: [],
                         selectedDday: null,
@@ -233,6 +239,7 @@
                         this.loadSchedule(this.year, this.month);
                         this.loadDepartment();
                         this.loadDDays();
+                        this.loadHolidays(this.year, this.month);
                     }, computed: {
                         combinedYearMonth: {
                             get() {
@@ -316,6 +323,7 @@
                         combinedYearMonth() {
                             this.loadDuties(app.year, app.month);
                             this.loadSchedule(app.year, app.month);
+                            this.loadHolidays(app.year, app.month);
                             const currentUrl = new URL(window.location.href);
                             currentUrl.searchParams.set('year', app.year);
                             currentUrl.searchParams.set('month', app.month);
@@ -417,7 +425,17 @@
                             return hour + minute + (dateTime.getHours() >= 12 ? 'PM ' : 'AM');
                         }, isToday(duty) {
                             const today = new Date();
-                            return duty.month === today.getMonth() + 1 && duty.day === today.getDate();
+                            return duty.year === today.getFullYear() && duty.month === today.getMonth() + 1 && duty.day === today.getDate();
+                        }, isHoliday(index) {
+                            const holidays = app.holidaysByDays[index];
+                            if (!holidays || holidays.length === 0) {
+                                return false;
+                            }
+                            for (const holiday of holidays) {
+                                if (holiday.isHoliday)
+                                    return true;
+                            }
+                            return false;
                         }, viewDayDetail(duty, index) {
                             if (app.editMode || !app.canEdit) {
                                 return;
@@ -649,6 +667,16 @@
                                 }
                             })
                         },
+                        async loadHolidays(year, month) {
+                            const response = await fetch(`/api/holidays?year=${year}&month=${month}`);
+
+                            if (!response.ok) {
+                                console.log(`Error loading holidays. Status Code: ${response.status}`);
+                                return;
+                            }
+
+                            this.holidaysByDays = await response.json();
+                        }
                     }
                 }
             )

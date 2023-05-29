@@ -32,4 +32,30 @@ class CalendarView(yearMonth: YearMonth) {
         }
         return LocalDate.of(nextMonth.year, nextMonth.monthValue, paddingAfter).atTime(23, 59, 59)
     }
+
+    fun getRangeYears(): Set<Int> {
+        val set = HashSet<Int>()
+        set.add(prevMonth.year)
+        set.add(currentMonth.year)
+        set.add(nextMonth.year)
+        return set
+    }
+
+    fun isInRange(holidayDate: LocalDate): Boolean {
+        return !holidayDate.isBefore(rangeFrom.toLocalDate()) && !holidayDate.isAfter(rangeEnd.toLocalDate())
+    }
+
+    fun getIndex(target: LocalDate): Int {
+        if (!isInRange(target)) {
+            return -1
+        }
+        if (target.month == prevMonth.month) {
+            return target.dayOfMonth - rangeFrom.dayOfMonth
+        }
+        if (target.month == currentMonth.month) {
+            return paddingBefore + (target.dayOfMonth - 1)
+        }
+        return paddingBefore + lengthOfMonth + target.dayOfMonth
+    }
+
 }

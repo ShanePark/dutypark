@@ -20,6 +20,10 @@ dutypark:
   domain: localhost
   slack:
     token: ""
+  adminEmails:
+    - "admin@email.com"
+  data-go-kr:
+    service-key: "DECODED_SERVICE_KEY_HERE"
 
 server:
   ssl:
