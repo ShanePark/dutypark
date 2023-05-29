@@ -69,7 +69,7 @@ ol.day-grid li.month-next {
     filter: opacity(0.5);
 }
 
-.day-grid li.editable:hover {
+.day-grid.editable li:hover {
     cursor: pointer;
     filter: opacity(0.8);
 }
@@ -159,11 +159,12 @@ h1 a.move:hover {
     font-size: 1.2em;
 }
 
+.day-grid li.holiday .day,
 .day-grid li:nth-child(7n+1) .day {
     color: red;
 }
 
-.day-grid li:nth-child(7n) .day {
+.day-grid li:not(.holiday):nth-child(7n) .day {
     color: blue;
 }
 
@@ -393,6 +394,13 @@ a.homeButton:hover {
     background-color: aliceblue;
 }
 
+.date .holiday-info {
+    text-align: left;
+    margin-left: 5px;
+    padding-bottom: 5px;
+    text-decoration: underline;
+}
+
 .calendar .date .schedule {
     display: flex;
     align-items: flex-start;
@@ -406,6 +414,7 @@ a.homeButton:hover {
     line-height: 2;
 }
 
+.date .holiday-info,
 .date .schedules .schedule:not(:last-child) {
     border-bottom: 2px dashed white;
 }

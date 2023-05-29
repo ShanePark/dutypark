@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController
 import java.time.YearMonth
 
 @RestController
-@RequestMapping("/api/holiday")
+@RequestMapping("/api/holidays")
 class HolidayController(
     private val holidayService: HolidayService
 ) {

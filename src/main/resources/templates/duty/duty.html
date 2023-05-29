@@ -49,14 +49,14 @@
       <li><abbr title="S">SAT</abbr></li>
     </ul>
 
-    <ol class="day-grid">
+    <ol class="day-grid" :class="{'editable': canEdit}">
       <li v-for="(duty, index) in duties"
           :class="{
           ['BACKGROUND-' + duty.dutyColor]: true,
           'month-prev': (duty.month < month),
           'month-next': (duty.month > month),
           'today': isToday(duty),
-          'editable': canEdit,
+          'holiday': isHoliday(index),
         }"
           v-on:click="viewDayDetail(duty, index)"
       >
@@ -72,6 +72,10 @@
             </div>
           </div>
           <div v-if="!editMode" class="schedules">
+            <div v-if="holidaysByDays[index]"
+                 class="holiday-info" v-for="holiday in holidaysByDays[index]">
+              <span v-text="holiday.dateName"></span>
+            </div>
             <div class="schedule" v-for="schedule in schedulesByDays[index]">
               <span class="schedule-content" v-html="printSchedule(schedule)"></span>
             </div>
@@ -115,7 +119,8 @@
     <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content" v-if="detailView">
         <div class="modal-header">
-          <p class="current-date-label" v-text="detailView?.year + '년 ' + detailView?.month + '월 ' + detailView?.day + '일'"></p>
+          <p class="current-date-label"
+             v-text="detailView?.year + '년 ' + detailView?.month + '월 ' + detailView?.day + '일'"></p>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
@@ -211,6 +216,7 @@
                         month: parseInt("[[${month}]]"),
                         duties: [],
                         schedulesByDays: [],
+                        holidaysByDays: [],
                         department: {},
                         dDays: [],
                         selectedDday: null,
@@ -233,6 +239,7 @@
                         this.loadSchedule(this.year, this.month);
                         this.loadDepartment();
                         this.loadDDays();
+                        this.loadHolidays(this.year, this.month);
                     }, computed: {
                         combinedYearMonth: {
                             get() {
@@ -316,6 +323,7 @@
                         combinedYearMonth() {
                             this.loadDuties(app.year, app.month);
                             this.loadSchedule(app.year, app.month);
+                            this.loadHolidays(app.year, app.month);
                             const currentUrl = new URL(window.location.href);
                             currentUrl.searchParams.set('year', app.year);
                             currentUrl.searchParams.set('month', app.month);
@@ -418,6 +426,16 @@
                         }, isToday(duty) {
                             const today = new Date();
                             return duty.month === today.getMonth() + 1 && duty.day === today.getDate();
+                        }, isHoliday(index) {
+                            const holidays = app.holidaysByDays[index];
+                            if (!holidays || holidays.length === 0) {
+                                return false;
+                            }
+                            for (const holiday of holidays) {
+                                if (holiday.isHoliday)
+                                    return true;
+                            }
+                            return false;
                         }, viewDayDetail(duty, index) {
                             if (app.editMode || !app.canEdit) {
                                 return;
@@ -649,6 +667,16 @@
                                 }
                             })
                         },
+                        async loadHolidays(year, month) {
+                            const response = await fetch(`/api/holidays?year=${year}&month=${month}`);
+
+                            if (!response.ok) {
+                                console.log(`Error loading holidays. Status Code: ${response.status}`);
+                                return;
+                            }
+
+                            this.holidaysByDays = await response.json();
+                        }
                     }
                 }
             )

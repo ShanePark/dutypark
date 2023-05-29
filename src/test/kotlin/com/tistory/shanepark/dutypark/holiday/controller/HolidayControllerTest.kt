@@ -46,7 +46,7 @@ class HolidayControllerTest : RestDocsTest() {
     @Test
     fun getHolidays() {
         mockMvc.perform(
-            get("/api/holiday")
+            get("/api/holidays")
                 .accept("application/json")
                 .param("year", "2023")
                 .param("month", "5")
