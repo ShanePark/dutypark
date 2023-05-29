@@ -395,10 +395,9 @@ a.homeButton:hover {
 }
 
 .date .holiday-info {
-    text-align: left;
-    margin-left: 5px;
+    text-align: center;
     padding-bottom: 5px;
-    text-decoration: underline;
+    color: red;
 }
 
 .calendar .date .schedule {
@@ -414,9 +413,8 @@ a.homeButton:hover {
     line-height: 2;
 }
 
-.date .holiday-info,
-.date .schedules .schedule:not(:last-child) {
-    border-bottom: 2px dashed white;
+.date .schedules .schedule {
+    border-top: 2px dashed white;
 }
 
 #detail-view-modal .schedules .schedule {

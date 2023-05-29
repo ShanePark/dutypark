@@ -6,6 +6,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
+import org.springframework.util.StopWatch
 import org.w3c.dom.Element
 import org.w3c.dom.NodeList
 import java.io.ByteArrayInputStream
@@ -27,7 +28,15 @@ class HolidayAPIDataGoKr(
     private lateinit var serviceKey: String
 
     override fun requestHolidays(year: Int): List<HolidayDto> {
+        log.info("Requesting holidays from DataGoKr API...")
+        val stopWatch = StopWatch()
+        stopWatch.start()
         val result = dataGoKrApi.getHolidays(serviceKey = serviceKey, year = year)
+        stopWatch.stop()
+        log.info(
+            "Holidays from DataGoKr API has been received in {} ms",
+            stopWatch.totalTimeMillis
+        )
         return parse(result)
     }
 
