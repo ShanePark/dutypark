@@ -12,7 +12,7 @@
           <a class="move h_pointer" v-on:click="addMonth(-1)">
             <i class="bi bi-arrow-left-circle"></i>
           </a>
-          <input type="month" v-model="combinedYearMonth">
+          <input id="month-selector" type="month" v-model="combinedYearMonth">
           <a class="move h_pointer" v-on:click="addMonth(1)">
             <i class="bi bi-arrow-right-circle"></i>
           </a>
@@ -246,6 +246,10 @@
                                 return `${this.year}-${this.month.toString().padStart(2, '0')}`;
                             },
                             set(value) {
+                                if (!value) {
+                                    value = new Date().toISOString().slice(0, 7);
+                                    document.getElementById('month-selector').value = value;
+                                }
                                 const [year, month] = value.split('-');
                                 this.year = parseInt(year);
                                 this.month = parseInt(month);
