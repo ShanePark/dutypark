@@ -3,10 +3,11 @@
 <html lang="en">
 <body>
 <div th:replace="~{layout/header::header}"/>
-<div class="body">
+<div id="body">
   <div th:replace="~{${content}}"/>
 </div>
 </body>
+<div th:replace="~{layout/footer}"/>
 </html>
 
 <script>

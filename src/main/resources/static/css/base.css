@@ -274,13 +274,6 @@ a.homeButton:hover {
     background-color: #ccc;
 }
 
-.body, .calendar {
-    max-width: 64rem;
-    margin: 20px auto;
-    padding-left: 1rem;
-    padding-right: 1rem;
-}
-
 .calendar .month-control button {
     font-size: 1.5em;
     width: 100%;
@@ -483,4 +476,28 @@ a.homeButton:hover {
 
 .member-hover:hover .member-hover-menu {
     display: block;
+}
+
+#header {
+    min-height: 6vh;
+    margin: 0px;
+}
+
+#body {
+    max-width: 64rem;
+    min-height: 88vh;
+    padding: 30px;
+    margin: 0 auto;
+}
+
+#footer {
+    min-height: 6vh;
+    padding-top: 1rem;
+    padding-right: 1rem;
+    text-align: right;
+    background-color: rgb(33, 37, 41);
+    color: white;
+    font-size: 1.4em;
+    width: 100%;
+    margin: 0px;
 }
