@@ -1,96 +1,94 @@
-<div th:fragment="header">
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <a class="navbar-brand" th:href="@{/}">
-      <img src="/favicon-32x32.png" width="32" height="32" color="white" class="d-inline-block align-top" alt="">
-      Dutypark
-    </a>
-    <div class="collapse navbar-collapse" id="navbarToggler">
-      <div class="navbar-header d-lg-none">
-        <div class="collapse-header-profile-name">
-          <span th:text="|${loginMember!= null ? loginMember.name +'님' : 'Guest'}|"></span>
-          <i class="bi bi-x"></i>
-        </div>
-        <hr/>
+<nav th:fragment="header" id="header" class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <a class="navbar-brand" th:href="@{/}">
+    <img src="/favicon-32x32.png" width="32" height="32" color="white" class="d-inline-block align-top" alt="">
+    Dutypark
+  </a>
+  <div class="collapse navbar-collapse" id="navbarToggler">
+    <div class="navbar-header d-lg-none">
+      <div class="collapse-header-profile-name">
+        <span th:text="|${loginMember!= null ? loginMember.name +'님' : 'Guest'}|"></span>
+        <i class="bi bi-x"></i>
       </div>
-      <ul class="navbar-nav mr-auto mt-2 mt-lg-0">
-        <th:block th:if="${loginMember != null}">
-          <li class="nav-item active">
-            <a class="nav-link" th:href="@{/duty/{name}(name=${loginMember?.name})}">내 시간표</a>
+      <hr/>
+    </div>
+    <ul class="navbar-nav mr-auto mt-2 mt-lg-0">
+      <th:block th:if="${loginMember != null}">
+        <li class="nav-item active">
+          <a class="nav-link" th:href="@{/duty/{name}(name=${loginMember?.name})}">내 시간표</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/member/d-day">디데이</a>
+        </li>
+        <th:block th:if="${loginMember?.isAdmin}">
+          <li class="nav-item">
+            <a class="nav-link" href="/admin">
+              접속관리
+              <i class="bi bi-gear-wide-connected"></i>
+            </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="/member/d-day">디데이</a>
-          </li>
-          <th:block th:if="${loginMember?.isAdmin}">
-            <li class="nav-item">
-              <a class="nav-link" href="/admin">
-                접속관리
-                <i class="bi bi-gear-wide-connected"></i>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/admin/department">
-                부서관리
-                <i class="bi bi-gear-wide-connected"></i>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/docs">
-                API Docs
-                <i class="bi bi-gear-wide-connected"></i>
-              </a>
-            </li>
-          </th:block>
-          <li class="nav-item d-lg-none">
-            <a class="nav-link memberPage-link link" href="/member">
-              내정보 <i class="bi bi-person"></i>
+            <a class="nav-link" href="/admin/department">
+              부서관리
+              <i class="bi bi-gear-wide-connected"></i>
             </a>
           </li>
-          <li class="nav-item d-lg-none">
-            <a class="nav-link" href="/logout">
-              로그아웃 <i class="bi bi-person-fill-x"></i>
+          <li class="nav-item">
+            <a class="nav-link" href="/docs">
+              API Docs
+              <i class="bi bi-gear-wide-connected"></i>
             </a>
           </li>
         </th:block>
-        <th:block th:if="${loginMember == null}">
-          <li class="nav-item d-lg-none">
-            <a th:href="@{/login}" class="link">로그인
-              <i class="bi bi-person-badge"></i>
-            </a>
-          </li>
-        </th:block>
-      </ul>
+        <li class="nav-item d-lg-none">
+          <a class="nav-link memberPage-link link" href="/member">
+            내정보 <i class="bi bi-person"></i>
+          </a>
+        </li>
+        <li class="nav-item d-lg-none">
+          <a class="nav-link" href="/logout">
+            로그아웃 <i class="bi bi-person-fill-x"></i>
+          </a>
+        </li>
+      </th:block>
+      <th:block th:if="${loginMember == null}">
+        <li class="nav-item d-lg-none">
+          <a th:href="@{/login}" class="link">로그인
+            <i class="bi bi-person-badge"></i>
+          </a>
+        </li>
+      </th:block>
+    </ul>
+  </div>
+  <!-- DIV for right side -->
+  <div class="nav-right">
+    <div class="d-sm-none d-lg-block" th:if="${loginMember == null}">
+      <a th:href="@{/login}" class="link">로그인
+        <i class="bi bi-person-badge"></i>
+      </a>
     </div>
-    <!-- DIV for right side -->
-    <div class="nav-right">
-      <div class="d-sm-none d-lg-block" th:if="${loginMember == null}">
-        <a th:href="@{/login}" class="link">로그인
-          <i class="bi bi-person-badge"></i>
-        </a>
-      </div>
-      <div class="member-hover" th:if="${loginMember != null}">
-        <a class="link">
-          <span class="profile" th:text="|${loginMember?.name}|"/>님
-          <div class="member-hover-menu">
-            <ul>
-              <li>
-                <a class="link" href="/member">
-                  내정보 <i class="bi bi-person"></i>
-                </a>
-              </li>
-              <li>
-                <a href="/logout">
-                  로그아웃 <i class="bi bi-person-fill-x"></i>
-                </a>
-              </li>
-            </ul>
-          </div>
-        </a>
-      </div>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarToggler"
-              aria-controls="navbarToggler" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
+    <div class="member-hover" th:if="${loginMember != null}">
+      <a class="link">
+        <span class="profile" th:text="|${loginMember?.name}|"/>님
+        <div class="member-hover-menu">
+          <ul>
+            <li>
+              <a class="link" href="/member">
+                내정보 <i class="bi bi-person"></i>
+              </a>
+            </li>
+            <li>
+              <a href="/logout">
+                로그아웃 <i class="bi bi-person-fill-x"></i>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </a>
     </div>
-    <!-- DIV for right side END -->
-  </nav>
-</div>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarToggler"
+            aria-controls="navbarToggler" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+  </div>
+  <!-- DIV for right side END -->
+</nav>
