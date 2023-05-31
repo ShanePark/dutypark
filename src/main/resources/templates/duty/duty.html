@@ -705,10 +705,19 @@
     }
 
     function isValidDateTime(startDateTime, endDateTime) {
+        if (!startDateTime || !endDateTime) {
+            Swal.fire({
+                icon: 'error',
+                title: '시작일시와 종료일시를 모두 입력해주세요.',
+                showConfirmButton: false,
+                timer: 1500
+            });
+            return false;
+        }
         if (new Date(startDateTime) > new Date(endDateTime)) {
             Swal.fire({
                 icon: 'error',
-                title: '시작일시는 종료일시보다 빨라야 합니다.',
+                title: '종료일시는 시작일시보다 빠를 수 없습니다.',
                 showConfirmButton: false,
                 timer: 1500
             });
