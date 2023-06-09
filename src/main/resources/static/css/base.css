@@ -201,7 +201,6 @@ a.homeButton:hover {
 
 .dutyTypes {
     font-size: 1.3em;
-    text-align: right;
     margin: 0 auto;
 }
 
@@ -310,6 +309,7 @@ a.homeButton:hover {
 }
 
 .dutyTypes button {
+    float: right;
     color: black;
 }
 
