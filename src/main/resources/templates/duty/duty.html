@@ -30,13 +30,13 @@
       <span :class="['indicator', 'BACKGROUND-' + type.color]">&nbsp;&nbsp;&nbsp;</span>
       <span v-text="type.name"></span>
     </span>
-      <button v-if="canEdit && !editMode"
+      <button v-if="canEdit && !batchEditMode"
               class="edit-btn btn btn-warning"
-              v-on:click="editMode=true;">편집
+              v-on:click="batchEditMode=true;">편집
       </button>
-      <button v-if="canEdit && editMode"
+      <button v-if="canEdit && batchEditMode"
               class="edit-btn btn btn-success"
-              v-on:click="editMode=false;">완료
+              v-on:click="batchEditMode=false;">편집완료
       </button>
     </div>
     <ul class="weekdays">
@@ -71,7 +71,7 @@
               <span v-if="selectedDday" v-text="calcDday(duty)" class="d-day-count"></span>
             </div>
           </div>
-          <div v-if="!editMode" class="schedules">
+          <div v-if="!batchEditMode" class="schedules">
             <div v-if="holidaysByDays[index]"
                  class="holiday-info" v-for="holiday in holidaysByDays[index]">
               <span v-text="holiday.dateName"></span>
@@ -80,7 +80,7 @@
               <span class="schedule-content" v-html="printSchedule(schedule)"></span>
             </div>
           </div>
-          <div v-if="editMode" class="duty row">
+          <div v-if="batchEditMode" class="duty row">
             <button v-for="type in department.dutyTypes"
                     class="duty-type btn btn-sm btn-outline-dark"
                     v-text="type.name.length > 3 ? type.name.substring(0, 3) : type.name"
@@ -173,7 +173,7 @@
                 <button class="btn btn-secondary" v-on:click="cancelEditMode()">취소</button>
               </div>
             </div>
-            <div class="schedule schedule-add-button card shadow" v-if="!isCreateScheduleMode">
+            <div class="schedule schedule-add-button card shadow" v-if="!isCreateScheduleMode && !editingSchedule.id">
               <button class="btn btn-success" v-on:click="scheduleCreateMode()">일정 추가</button>
             </div>
             <div class="schedule schedule-add card shadow" v-if="isCreateScheduleMode">
@@ -221,7 +221,7 @@
                         dDays: [],
                         selectedDday: null,
                         detailView: null,
-                        editMode: false,
+                        batchEditMode: false,
                         isCreateScheduleMode: false,
                         createSchedule: {
                             content: '',
@@ -441,7 +441,7 @@
                             }
                             return false;
                         }, viewDayDetail(duty, index) {
-                            if (app.editMode || !app.canEdit) {
+                            if (app.batchEditMode || !app.canEdit) {
                                 return;
                             }
                             app.isCreateScheduleMode = false;
