@@ -57,6 +57,8 @@
 
 <script>
     $(function () {
+        const body = $('#body');
+
         const app = new Vue({
             el: '.vue-dday',
             data: {
@@ -111,16 +113,25 @@
                         }
                     }).then((result) => {
                         if (result.isConfirmed) {
+                            body.waitMe();
                             $.ajax({
                                 url: '/api/dday',
                                 type: 'POST',
                                 data: JSON.stringify(result.value),
                                 contentType: 'application/json',
                                 success: function (response) {
+                                    Swal.fire({
+                                        title: '성공',
+                                        text: '디데이가 추가되었습니다.',
+                                        icon: 'success',
+                                        confirmButtonText: '확인'
+                                    })
                                     app.load();
                                 },
                                 error: function (error) {
                                     console.log(error);
+                                }, complete: function () {
+                                    body.waitMe('hide');
                                 }
                             })
                         }
@@ -165,6 +176,7 @@
                         date: item.querySelector('input[name="date"]').value,
                         isPrivate: item.querySelector('input[name="isPrivate"]').checked
                     }
+                    body.waitMe();
                     $.ajax({
                         url: '/api/dday/' + dDay.id,
                         type: 'PUT',
@@ -175,6 +187,8 @@
                         },
                         error: function (error) {
                             console.log(error);
+                        }, complete: function () {
+                            body.waitMe('hide');
                         }
                     })
                 },
@@ -209,14 +223,24 @@
                         cancelButtonText: '취소'
                     }).then((result) => {
                         if (result.isConfirmed) {
+                            body.waitMe();
                             $.ajax({
                                 url: '/api/dday/' + dDay.id,
                                 type: 'DELETE',
                                 success: function (response) {
+                                    Swal.fire({
+                                        title: '성공',
+                                        text: '디데이가 삭제되었습니다.',
+                                        icon: 'success',
+                                        confirmButtonText: '확인'
+                                    })
                                     app.load();
                                 },
                                 error: function (error) {
                                     console.log(error);
+                                },
+                                complete: function () {
+                                    body.waitMe('hide');
                                 }
                             })
                         }
