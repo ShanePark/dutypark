@@ -391,9 +391,12 @@ a.homeButton:hover {
     background-color: aliceblue;
 }
 
-.date .holiday-info {
-    text-align: center;
-    padding-bottom: 5px;
+.calendar .date .holiday-info,
+.date .schedules .schedule {
+    text-align: left;
+    line-height: 2;
+    margin-left: 5px;
+    border-top: 2px dashed white;
 }
 
 .date .holiday-info span.holiday {
@@ -404,17 +407,6 @@ a.homeButton:hover {
     display: flex;
     align-items: flex-start;
     font-size: 1em;
-}
-
-.calendar .date .schedule .schedule-content {
-    text-align: left;
-    margin-bottom: 0px;
-    margin-left: 5px;
-    line-height: 2;
-}
-
-.date .schedules .schedule {
-    border-top: 2px dashed white;
 }
 
 #detail-view-modal .schedules .schedule {
