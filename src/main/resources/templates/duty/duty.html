@@ -50,16 +50,17 @@
         </ul>
 
         <ol class="day-grid" :class="{'editable': canEdit}">
-            <li v-for="(duty, index) in duties"
+            <li class="DAY"
+                v-for="(duty, index) in duties"
                 :class="{
           ['BACKGROUND-' + duty.dutyColor]: true,
           'month-prev': (duty.month < month),
           'month-next': (duty.month > month),
           'today': isToday(duty),
           'holiday': isHoliday(index),
+          'has-schedule': hasSchedule(index),
         }"
-                v-on:click="viewDayDetail(duty, index)"
-            >
+                v-on:click="viewDayDetail(duty, index)">
                 <div class="date container">
                     <div class="row day-header">
                         <div class="col-md-5">
@@ -330,6 +331,11 @@
                                 const day = duty.day;
                                 const dateTime = new Date(dateTimeString);
                                 return year === dateTime.getFullYear() && month === dateTime.getMonth() && day === dateTime.getDate();
+                            }
+                        },
+                        hasSchedule() {
+                            return (index) => {
+                                return this.schedulesByDays[index] && this.schedulesByDays[index].length > 0;
                             }
                         }
                     }, watch: {
