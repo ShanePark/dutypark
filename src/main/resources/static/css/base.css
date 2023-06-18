@@ -390,6 +390,9 @@ a.homeButton:hover {
 .date .holiday-info {
     text-align: center;
     padding-bottom: 5px;
+}
+
+.date .holiday-info span.holiday {
     color: red;
 }
 
