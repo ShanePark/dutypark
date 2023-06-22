@@ -145,7 +145,8 @@
                     </div>
                     <div class="schedules mt-4">
                         <div class="schedule card shadow"
-                             v-for="(schedule, s_index) in schedulesByDays[detailView.index]">
+                             v-for="(schedule, s_index) in schedulesByDays[detailView.index]"
+                             :id="'schedule-' + schedule.id">
                             <span v-html="printSchedule(schedule)"></span>
                             <div v-if="isEditing(schedule)" class="schedule-edit">
                                 <input type="text" class="form-control" placeholder="일정을 입력하세요."
@@ -196,7 +197,7 @@
                             <input type="datetime-local" class="form-control" v-model="createSchedule.endDateTime"
                                    :min="createSchedule.startDateTime"/>
                             <div class="buttons mt-3">
-                                <button class="btn btn-success" v-on:click="saveSchedule">추가</button>
+                                <button id="add-btn" class="btn btn-success" v-on:click="saveSchedule">추가</button>
                                 <button class="btn btn-secondary" v-on:click="cancelCreateSchedule">취소</button>
                             </div>
                         </div>
@@ -524,6 +525,8 @@
                             if (!isValidDateTime(app.createSchedule.startDateTime, app.createSchedule.endDateTime)) {
                                 return;
                             }
+                            const addArea = $('.schedule-add');
+                            addArea.waitMe();
                             $.ajax({
                                 url: '/api/schedules',
                                 type: 'POST',
@@ -547,6 +550,8 @@
                                         showConfirmButton: false,
                                         timer: 1500
                                     });
+                                }, complete: () => {
+                                    addArea.waitMe('hide');
                                 }
                             })
                         }, scheduleEditMode(schedule) {
@@ -573,6 +578,8 @@
                                 return;
                             }
 
+                            const editArea = $('#schedule-' + schedule.id);
+                            editArea.waitMe();
                             $.ajax({
                                 url: '/api/schedules/' + schedule.id,
                                 type: 'PUT',
@@ -594,6 +601,8 @@
                                         showConfirmButton: false,
                                         timer: 1500
                                     });
+                                }, complete: () => {
+                                    editArea.waitMe('hide');
                                 }
                             })
                         },
@@ -633,6 +642,8 @@
                                 cancelButtonText: '취소',
                             }).then((result) => {
                                 if (result.isConfirmed) {
+                                    const deleteArea = $('#schedule-' + schedule.id);
+                                    deleteArea.waitMe();
                                     $.ajax({
                                         url: '/api/schedules/' + schedule.id,
                                         type: 'DELETE',
@@ -646,6 +657,8 @@
                                                 showConfirmButton: false,
                                                 timer: 1500
                                             });
+                                        }, complete: () => {
+                                            deleteArea.waitMe('hide');
                                         }
                                     })
                                 }
