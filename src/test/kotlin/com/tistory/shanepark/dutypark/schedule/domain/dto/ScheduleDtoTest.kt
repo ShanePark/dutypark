@@ -9,11 +9,12 @@ import java.time.LocalDateTime
 import java.time.YearMonth
 
 class ScheduleDtoTest {
+    val member = Member(name = "name", email = "email", password = "pass")
 
     @Test
     fun `Long day Schedule on same month`() {
         // Given
-        val member = Member(name = "name", email = "email", password = "pass")
+        val member = member
         val from = LocalDateTime.of(2021, 1, 5, 0, 0)
         val end = LocalDateTime.of(2021, 1, 8, 0, 0)
         val schedule = Schedule(member, "content", from, end, 1)
@@ -45,7 +46,6 @@ class ScheduleDtoTest {
     @Test
     fun `Long day Schedule until next month`() {
         // Given
-        val member = Member(name = "name", email = "email", password = "pass")
         val from = LocalDateTime.of(2020, 12, 30, 0, 0)
         val end = LocalDateTime.of(2021, 1, 3, 23, 59)
         val schedule = Schedule(member, "content", from, end, 1)
@@ -79,7 +79,6 @@ class ScheduleDtoTest {
     @Test
     fun `empty if there is no schedule on the month`() {
         // Given
-        val member = Member(name = "name", email = "email", password = "pass")
         val day = LocalDateTime.of(2023, 4, 17, 0, 0)
         val schedule = Schedule(member, "content", day, day, 1)
 
@@ -93,7 +92,6 @@ class ScheduleDtoTest {
     @Test
     fun `One day Schedule`() {
         // Given
-        val member = Member(name = "name", email = "email", password = "pass")
         val day = LocalDateTime.of(2023, 4, 17, 0, 0)
         val schedule = Schedule(member, "content", day, day, 1)
 
@@ -106,6 +104,19 @@ class ScheduleDtoTest {
         assertThat(list[0].daysFromStart).isEqualTo(1)
         assertThat(list[0].totalDays).isEqualTo(1)
         assertThat(list[0].content).isEqualTo(schedule.content)
+    }
+
+    @Test
+    fun `Four day schedule but end time is faster than start time`() {
+        val start = LocalDateTime.of(2023, 6, 30, 22, 0)
+        val end = LocalDateTime.of(2023, 7, 3, 17, 0)
+        val schedule = Schedule(member, "content", start, end, 0)
+
+        val yearMonth = YearMonth.of(2023, 7)
+        val calendarView = CalendarView(yearMonth)
+        val list = ScheduleDto.of(calendarView, schedule)
+
+        assertThat(list.size).isEqualTo(4)
     }
 
 }

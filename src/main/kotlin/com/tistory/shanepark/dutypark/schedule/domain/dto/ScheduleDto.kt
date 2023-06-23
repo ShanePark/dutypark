@@ -20,8 +20,11 @@ data class ScheduleDto(
 ) {
     companion object {
         fun of(calendarView: CalendarView, schedule: Schedule): List<ScheduleDto> {
-            val startDate = schedule.startDateTime
-            val endDate = schedule.endDateTime
+            val startDateTime = schedule.startDateTime
+            val startDate = startDateTime.toLocalDate()
+            val endDateTime = schedule.endDateTime
+            val endDate = endDateTime.toLocalDate()
+
             val totalDays = ChronoUnit.DAYS.between(startDate, endDate).toInt() + 1
             val validDays = validDays(startDate, endDate, calendarView)
 
@@ -32,36 +35,36 @@ data class ScheduleDto(
                     position = schedule.position,
                     month = it.monthValue,
                     dayOfMonth = it.dayOfMonth,
-                    daysFromStart = ChronoUnit.DAYS.between(startDate.toLocalDate(), it).toInt() + 1,
+                    daysFromStart = ChronoUnit.DAYS.between(startDate, it).toInt() + 1,
                     totalDays = totalDays,
-                    startDateTime = startDate,
-                    endDateTime = endDate,
+                    startDateTime = startDateTime,
+                    endDateTime = endDateTime,
                 )
             }
         }
 
         private fun validDays(
-            startDate: LocalDateTime,
-            endDate: LocalDateTime,
+            startDate: LocalDate,
+            endDate: LocalDate,
             calendarView: CalendarView,
         ): MutableList<LocalDate> {
-            val rangeFrom = calendarView.rangeFrom
+            val rangeFrom = calendarView.rangeFrom.toLocalDate()
             var current = startDate
             if (current.isBefore(rangeFrom))
                 current = rangeFrom
 
             val daysInRange = mutableListOf<LocalDate>()
-            while (validDate(current, endDate, calendarView.rangeEnd)) {
-                daysInRange.add(current.toLocalDate())
+            while (validDate(current, endDate, calendarView.rangeEnd.toLocalDate())) {
+                daysInRange.add(current)
                 current = current.plusDays(1)
             }
             return daysInRange
         }
 
         private fun validDate(
-            current: LocalDateTime,
-            endDate: LocalDateTime,
-            limitRangeUntil: LocalDateTime,
+            current: LocalDate,
+            endDate: LocalDate,
+            limitRangeUntil: LocalDate,
         ) = !current.isAfter(endDate) && !current.isAfter(limitRangeUntil)
     }
 }
