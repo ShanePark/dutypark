@@ -1,8 +1,10 @@
 package com.tistory.shanepark.dutypark.duty.controller
 
 import com.tistory.shanepark.dutypark.common.controller.ViewController
+import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.service.MemberService
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.Logger
 import org.springframework.stereotype.Controller
@@ -20,6 +22,7 @@ class DutyViewController(
 
     @GetMapping("/duty/{name}")
     fun retrieveMemberDuty(
+        @Login loginMember: LoginMember,
         model: Model, @PathVariable name: String, request: HttpServletRequest,
         @RequestParam(required = false) year: Int?,
         @RequestParam(required = false) month: Int?,

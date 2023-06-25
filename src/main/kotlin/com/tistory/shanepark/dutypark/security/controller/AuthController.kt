@@ -30,6 +30,7 @@ class AuthController(
         @RequestBody loginDto: LoginDto,
         model: Model,
         req: HttpServletRequest,
+        @RequestParam(name = "referer", required = false) urlReferer: String?,
         @SessionAttribute(name = "referer", required = false) referer: String?
     ): ResponseEntity<String> {
         try {
@@ -63,6 +64,8 @@ class AuthController(
                 .build()
 
             log.info("Login Success: ${loginDto.email}")
+
+            val referer = urlReferer ?: referer
 
             val responseEntity = ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())

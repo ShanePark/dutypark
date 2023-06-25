@@ -1,11 +1,14 @@
 package com.tistory.shanepark.dutypark.common.advice
 
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.core.Ordered
 import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
+import org.springframework.web.servlet.ModelAndView
+import java.net.URLEncoder
 
 @ControllerAdvice(annotations = [Controller::class])
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -13,8 +16,9 @@ class ViewExceptionControllerAdvice {
     val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(this.javaClass)
 
     @ExceptionHandler
-    fun notAuthorizedHandler(e: DutyparkAuthException): String {
-        return "redirect:/login"
+    fun notAuthorizedHandler(e: DutyparkAuthException, request: HttpServletRequest): ModelAndView {
+        val redirectUrl = "redirect:/login?referer=" + URLEncoder.encode(request.requestURI, "UTF-8")
+        return ModelAndView(redirectUrl)
     }
 
     @ExceptionHandler(java.util.NoSuchElementException::class)
