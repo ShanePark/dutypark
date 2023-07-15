@@ -51,6 +51,7 @@
 
         <ol class="day-grid" :class="{'editable': canEdit}">
             <li class="DAY"
+                :id="formattedDate(duty.year, duty.month, duty.day)"
                 v-for="(duty, index) in duties"
                 :class="{
           ['BACKGROUND-' + duty.dutyColor]: true,
@@ -81,6 +82,7 @@
 
                             </span>
                         </div>
+                        <div class="d-day-schedules"></div>
                         <div class="schedule" v-for="schedule in schedulesByDays[index]">
                             <span class="schedule-content" v-html="printSchedule(schedule)"></span>
                         </div>
@@ -249,7 +251,6 @@
                         this.loadDuties(this.year, this.month);
                         this.loadSchedule(this.year, this.month);
                         this.loadDepartment();
-                        this.loadDDays();
                         this.loadHolidays(this.year, this.month);
                     }, computed: {
                         combinedYearMonth: {
@@ -365,8 +366,8 @@
                             app.year = newDate.getFullYear();
                             app.month = newDate.getMonth() + 1;
                         },
-                        loadDuties(year, month) {
-                            $.ajax({
+                        async loadDuties(year, month) {
+                            await $.ajax({
                                 url: '/api/duty',
                                 type: 'GET',
                                 data: {
@@ -378,6 +379,7 @@
                                     this.duties = data;
                                 }
                             })
+                            this.loadDDays();
                         },
                         loadDDays() {
                             const selectedDdayId = localStorage.getItem('selectedDday_' + memberId);
@@ -385,8 +387,19 @@
                                 url: '/api/dday/' + memberId,
                                 type: 'GET',
                                 success: (data) => {
+                                    let dDaySchedules = document.getElementsByClassName('d-day-schedules');
+                                    for (let i = 0; i < dDaySchedules.length; i++) {
+                                        dDaySchedules[i].innerHTML = '';
+                                    }
                                     this.dDays = data;
                                     for (const dDay of app.dDays) {
+                                        const dayElement = document.getElementById(dDay.date);
+                                        if (dayElement) {
+                                            let scheduleElement = document.createElement('div');
+                                            scheduleElement.classList.add('schedule', 'd-day-schedule');
+                                            scheduleElement.innerHTML = '[D-Day] ' + dDay.title;
+                                            dayElement.querySelector('.d-day-schedules').prepend(scheduleElement);
+                                        }
                                         if (dDay.id == selectedDdayId) {
                                             app.selectedDday = dDay;
                                         }
@@ -443,6 +456,10 @@
                                 minute = ':' + dateTime.getMinutes().toString().padStart(2, '0');
                             }
                             return hour + minute + (dateTime.getHours() >= 12 ? 'PM ' : 'AM');
+                        }, formattedDate(year, month, day) {
+                            month = (month < 10) ? '0' + month : month;
+                            day = (day < 10) ? '0' + day : day;
+                            return year + '-' + month + '-' + day;
                         }, isToday(duty) {
                             const today = new Date();
                             return duty.year === today.getFullYear() && duty.month === today.getMonth() + 1 && duty.day === today.getDate();
