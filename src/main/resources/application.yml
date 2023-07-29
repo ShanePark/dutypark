@@ -13,7 +13,7 @@ spring:
 server:
   port: 443
   ssl:
-    key-store: classpath:keystore.p12
+    key-store: "KEY_STORE_PATH_HERE"
     key-store-password: "KEY_PASSWORD_HERE"
     key-store-type: PKCS12
     enabled: true

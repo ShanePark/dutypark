@@ -21,7 +21,6 @@ jobs:
       - name: Copy secret files
         run: |
           cp dutypark_secret/application-op.yml src/main/resources/
-          cp dutypark_secret/keystore.p12 src/main/resources/
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
