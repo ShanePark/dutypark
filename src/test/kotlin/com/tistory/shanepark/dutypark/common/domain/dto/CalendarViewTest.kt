@@ -56,7 +56,7 @@ class CalendarViewTest {
             val target = LocalDate.of(2023, Month.APRIL, i)
             assertThat(calendarView.getIndex(target)).isEqualTo(calendarView.paddingBefore + i - 1)
         }
-        assertThat(calendarView.getIndex(LocalDate.of(2023, Month.MAY, 6))).isEqualTo(42)
+        assertThat(calendarView.getIndex(LocalDate.of(2023, Month.MAY, 6))).isEqualTo(41)
         assertThat(calendarView.getIndex(LocalDate.of(2023, Month.MAY, 7))).isEqualTo(-1)
     }
 
