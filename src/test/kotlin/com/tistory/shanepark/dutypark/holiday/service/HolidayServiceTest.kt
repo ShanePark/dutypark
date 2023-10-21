@@ -15,7 +15,6 @@ import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import java.time.LocalDate
 import java.time.YearMonth
-import java.util.*
 
 @ExtendWith(MockitoExtension::class)
 class HolidayServiceTest {
@@ -76,6 +75,24 @@ class HolidayServiceTest {
         assert2023MayResult(result)
     }
 
+    @Test
+    fun `test december 2023`() {
+        // Given
+        val calendarView = CalendarView(YearMonth.of(2023, 12))
+
+        // When
+        `when`(holidayRepository.findAllByLocalDateBetween(any(), any())).thenReturn(listOf())
+        `when`(holidayAPI.requestHolidays(2023)).thenReturn(holiday2023Dto())
+        `when`(holidayAPI.requestHolidays(2024)).thenReturn(holiday2024Dto())
+        val result = holidayService.findHolidays(calendarView)
+
+        for (i in result.indices) {
+            print("result[$i]: ${result[i]}  ")
+            if (i % 7 == 6) println()
+        }
+        assert2023DecemberResult(result);
+    }
+
     private fun assert2023MayResult(result: Array<List<HolidayDto>>) {
         assertThat(result.size).isEqualTo(35)
         assertThat(result[0]).isEmpty()
@@ -84,23 +101,33 @@ class HolidayServiceTest {
         assertThat(result[3]).isEmpty()
         assertThat(result[4]).isEmpty()
         assertThat(result[5]).hasSize(1)
-        val childrenDay = result[5]!![0]
+        val childrenDay = result[5][0]
         childrenDay.let {
             assertThat(it.dateName).isEqualTo("어린이날")
             assertThat(it.localDate).isEqualTo(LocalDate.of(2023, 5, 5))
             assertThat(it.isHoliday).isTrue
         }
         assertThat(result[27]).hasSize(1)
-        val buddhaBirthday = result[27]!![0]
+        val buddhaBirthday = result[27][0]
         buddhaBirthday.let {
             assertThat(it.localDate).isEqualTo(LocalDate.of(2023, 5, 27))
             assertThat(it.isHoliday).isTrue
         }
         assertThat(result[29]).hasSize(1)
-        val substituteHoliday = result[29]!![0]
+        val substituteHoliday = result[29][0]
         substituteHoliday.let {
             assertThat(it.dateName).isEqualTo("대체공휴일")
             assertThat(it.localDate).isEqualTo(LocalDate.of(2023, 5, 29))
+            assertThat(it.isHoliday).isTrue
+        }
+    }
+
+    private fun assert2023DecemberResult(result: Array<List<HolidayDto>>) {
+        assertThat(result.size).isEqualTo(42)
+        val newYear = result[36][0]
+        newYear.let {
+            assertThat(it.dateName).isEqualTo("신정")
+            assertThat(it.localDate).isEqualTo(LocalDate.of(2024, 1, 1))
             assertThat(it.isHoliday).isTrue
         }
     }
@@ -198,6 +225,16 @@ class HolidayServiceTest {
                     localDate = LocalDate.of(2023, 12, 25),
                     isHoliday = true
                 ),
+            )
+        }
+
+        fun holiday2024Dto(): List<HolidayDto> {
+            return listOf(
+                HolidayDto(
+                    dateName = "신정",
+                    localDate = LocalDate.of(2024, 1, 1),
+                    isHoliday = true
+                )
             )
         }
 

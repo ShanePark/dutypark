@@ -55,7 +55,7 @@ class CalendarView(yearMonth: YearMonth) {
         if (target.month == currentMonth.month) {
             return paddingBefore + (target.dayOfMonth - 1)
         }
-        return paddingBefore + lengthOfMonth + target.dayOfMonth
+        return paddingBefore + lengthOfMonth + target.dayOfMonth - 1
     }
 
 }
