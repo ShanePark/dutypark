@@ -5,6 +5,7 @@ import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.domain.dto.DDaySaveDto
 import com.tistory.shanepark.dutypark.member.service.DDayService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -20,7 +21,7 @@ class DDayController(
     @SlackNotification
     fun createDDay(
         @Login member: LoginMember,
-        @RequestBody dDaySaveDto: DDaySaveDto
+        @Valid @RequestBody dDaySaveDto: DDaySaveDto
     ): ResponseEntity<Any> {
         val createDDay = dDayService.createDDay(member, dDaySaveDto)
 
@@ -85,7 +86,7 @@ class DDayController(
     fun updateDDay(
         @Login member: LoginMember,
         @PathVariable id: Long,
-        @RequestBody dDaySaveDto: DDaySaveDto
+        @Valid @RequestBody dDaySaveDto: DDaySaveDto
     ): ResponseEntity<Any> {
         val updateDDay = dDayService.updateDDay(
             loginMember = member,
