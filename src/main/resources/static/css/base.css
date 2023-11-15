@@ -338,7 +338,7 @@ a.homeButton:hover {
 
 .d-day-list .d-day-item {
     background-color: mintcream;
-    max-height: 100px;
+    max-height: 120px;
     margin: 10px;
     padding: 10px;
     box-shadow: 6px 10px 40px -28px rgba(0, 0, 0, 0.75);
