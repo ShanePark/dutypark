@@ -221,6 +221,38 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         assertThat(mayFirst).isEmpty()
     }
 
+
+    @Test
+    fun `findSchedulesOveryear`() {
+        // given
+        val member = TestData.member
+        val schedule1 = Schedule(
+            member = member,
+            content = "schedule1",
+            startDateTime = LocalDateTime.of(2023, 12, 31, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 12, 31, 0, 0),
+            position = 0
+        )
+        val schedule2 = Schedule(
+            member = member,
+            content = "schedule2",
+            startDateTime = LocalDateTime.of(2024, 1, 1, 0, 0),
+            endDateTime = LocalDateTime.of(2024, 1, 1, 0, 0),
+            position = 0
+        )
+        scheduleRepository.saveAll(listOf(schedule1, schedule2))
+
+        // When
+        val yearMonth = YearMonth.of(2023, 12)
+        val result = scheduleService.findSchedulesByYearAndMonth(member, yearMonth)
+
+        // Then
+        val calendarView = CalendarView(yearMonth)
+        assertThat(result).hasSize(calendarView.size)
+        assertThat(result[35][0].content).isEqualTo("schedule1")
+        assertThat(result[36][0].content).isEqualTo("schedule2")
+    }
+
     @Test
     fun `update Schedule Position test`() {
         // Given

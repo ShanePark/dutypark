@@ -39,10 +39,13 @@ class ScheduleService(
             .sortedWith(compareBy({ it.startDateTime.toLocalDate() }, { it.position }))
             .forEach { scheduleDto ->
                 var dayIndex = paddingBefore + scheduleDto.dayOfMonth - 1
-                if (scheduleDto.month < yearMonth.monthValue) {
+                val isPreviousMonth =
+                    scheduleDto.year * 12 + scheduleDto.month < yearMonth.year * 12 + yearMonth.monthValue
+                if (isPreviousMonth) {
                     dayIndex -= calendarView.prevMonth.lengthOfMonth()
                 }
-                if (scheduleDto.month > yearMonth.monthValue) {
+                val isNextMonth = scheduleDto.year * 12 + scheduleDto.month > yearMonth.year * 12 + yearMonth.monthValue
+                if (isNextMonth) {
                     dayIndex += lengthOfMonth
                 }
 
