@@ -149,10 +149,12 @@
                         <div class="schedule card shadow"
                              v-for="(schedule, s_index) in schedulesByDays[detailView.index]"
                              :id="'schedule-' + schedule.id">
-                            <span v-html="printSchedule(schedule)"></span>
+                            <span v-if="!isEditing(schedule)" v-html="printSchedule(schedule)"></span>
                             <div v-if="isEditing(schedule)" class="schedule-edit">
-                                <input type="text" class="form-control" placeholder="일정을 입력하세요."
-                                       v-model="editingSchedule.content"/>
+                                <label>일정 추가 <span class="content-length"
+                                                   v-text="editingSchedule.content.length + ' / 50'"></span></label>
+                                <textarea class="form-control" placeholder="일정을 입력하세요." maxlength="50"
+                                          v-model="editingSchedule.content"></textarea>
                                 <label>시작일</label>
                                 <input type="datetime-local" class="form-control"
                                        v-model="editingSchedule.startDateTime"/>
@@ -189,9 +191,10 @@
                             <button class="btn btn-success" v-on:click="scheduleCreateMode()">일정 추가</button>
                         </div>
                         <div class="schedule schedule-add card shadow" v-if="isCreateScheduleMode">
-                            <label>일정 추가</label>
-                            <input type="text" class="form-control" placeholder="일정을 입력하세요."
-                                   v-model="createSchedule.content"/>
+                            <label>일정 추가 <span class="content-length"
+                                               v-text="createSchedule.content.length + ' / 50'"></span></label>
+                            <textarea class="form-control" placeholder="일정을 입력하세요." maxlength="50"
+                                      v-model="createSchedule.content"></textarea>
                             <label>시작일</label>
                             <input type="datetime-local" class="form-control"
                                    v-model="createSchedule.startDateTime"/>
