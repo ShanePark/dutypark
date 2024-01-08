@@ -28,6 +28,24 @@ class ScheduleUpdateDtoTest {
     }
 
     @Test
+    fun `schedule content should not be longer than 50 characters`() {
+        val contentLength51 = IntRange(1, 51).joinToString("") { "a" }
+
+        val scheduleUpdateDto = ScheduleUpdateDto(
+            memberId = 0L,
+            content = contentLength51,
+            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
+        )
+        val validation = validator.validate(scheduleUpdateDto)
+        assertThat(validation).hasSize(1)
+        validation.iterator().next().let {
+            assertThat(it.propertyPath.toString()).isEqualTo("content")
+            assertThat(it.message).isEqualTo("length must be between 0 and 50")
+        }
+    }
+
+    @Test
     fun `validation success if startDateTime and endDateTime are same`() {
         val scheduleUpdateDto = ScheduleUpdateDto(
             memberId = 1,

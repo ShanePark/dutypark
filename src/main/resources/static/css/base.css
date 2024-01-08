@@ -421,6 +421,12 @@ a.homeButton:hover {
     padding: 0px;
 }
 
+.schedule-add .content-length,
+.schedule-edit .content-length {
+    font-size: 0.6em;
+    color: #333;
+}
+
 #detail-view-modal .modal-header .current-date-label {
     font-size: 1.3em;
 }
