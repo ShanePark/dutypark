@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.locks.ReentrantLock
 
 @Service
 @Transactional
@@ -20,7 +21,10 @@ class HolidayService(
     @Qualifier("holidayAPIDataGoKr")
     private val holidayAPI: HolidayAPI,
 ) {
+
     private val holidayMap: MutableMap<Int, List<HolidayDto>> = ConcurrentHashMap()
+    private val locks: ConcurrentHashMap<Int, ReentrantLock> = ConcurrentHashMap()
+
     val log: Logger = LoggerFactory.getLogger(this::class.java)
 
     fun findHolidays(calendarView: CalendarView): Array<List<HolidayDto>> {
@@ -61,16 +65,28 @@ class HolidayService(
         val end = LocalDate.of(year, 12, 31)
         var holidaysOfYear = holidayRepository.findAllByLocalDateBetween(start, end)
         if (holidaysOfYear.isEmpty()) {
-            holidaysOfYear = loadAndSaveHolidaysFromAPI(year)
+            return loadAndSaveHolidaysFromAPI(year)
         }
         return holidaysOfYear.map { HolidayDto.of(it) }
     }
 
-    private fun loadAndSaveHolidaysFromAPI(year: Int): List<Holiday> {
-        val holidays = holidayAPI.requestHolidays(year)
-            .map { holiday -> Holiday(holiday.dateName, holiday.isHoliday, holiday.localDate) }
-        holidayRepository.saveAll(holidays)
-        return holidays
+    private fun loadAndSaveHolidaysFromAPI(year: Int): List<HolidayDto> {
+        val lock = locks.computeIfAbsent(year) { ReentrantLock() }
+        lock.lock()
+        try {
+            val existingHolidays = holidayMap[year]
+            if (existingHolidays != null) {
+                return existingHolidays
+            }
+
+            val holidays = holidayAPI.requestHolidays(year)
+                .map { holiday -> Holiday(holiday.dateName, holiday.isHoliday, holiday.localDate) }
+            holidayRepository.saveAll(holidays)
+            holidayMap[year] = holidays.map { HolidayDto.of(it) }
+            return holidays.map { HolidayDto.of(it) }
+        } finally {
+            lock.unlock()
+        }
     }
 
 }
