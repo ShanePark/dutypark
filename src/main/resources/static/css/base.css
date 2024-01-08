@@ -427,6 +427,11 @@ a.homeButton:hover {
     color: #333;
 }
 
+.schedule-add textarea,
+.schedule-edit textarea {
+    font-size: 1em;
+}
+
 #detail-view-modal .modal-header .current-date-label {
     font-size: 1.3em;
 }
