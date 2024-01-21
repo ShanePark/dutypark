@@ -6,6 +6,7 @@ import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.security.domain.dto.PasswordChangeDto
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import jakarta.servlet.http.HttpServletRequest
@@ -17,6 +18,7 @@ import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
 
 @RestController
+@RequestMapping("/api/auth")
 class AuthController(
     private val authService: AuthService,
     private val refreshTokenService: RefreshTokenService,
@@ -25,7 +27,7 @@ class AuthController(
 ) {
     private val log = org.slf4j.LoggerFactory.getLogger(AuthController::class.java)
 
-    @PostMapping("/login")
+    @PostMapping("login")
     fun login(
         @RequestBody loginDto: LoginDto,
         model: Model,
@@ -83,6 +85,18 @@ class AuthController(
         } catch (e: DutyparkAuthException) {
             return ResponseEntity.status(401).body(e.message)
         }
+    }
+
+    @PutMapping("password")
+    fun changePassword(
+        @Login loginMember: LoginMember,
+        @RequestBody(required = true) param: PasswordChangeDto
+    ): ResponseEntity<String> {
+        if (loginMember.id != param.memberId && !loginMember.isAdmin) {
+            throw DutyparkAuthException("You are not authorized to change this password")
+        }
+        authService.changePassword(param, loginMember.isAdmin)
+        return ResponseEntity.ok().body("Password Changed")
     }
 
     @GetMapping("/status")

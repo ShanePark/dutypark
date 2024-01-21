@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.member.repository
 
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import org.springframework.data.jpa.repository.EntityGraph
 import org.springframework.data.jpa.repository.JpaRepository
@@ -16,6 +17,8 @@ interface RefreshTokenRepository : JpaRepository<RefreshToken, Long> {
 
     @EntityGraph(attributePaths = ["member"])
     fun findAllByMemberIdOrderByLastUsedDesc(id: Long): List<RefreshToken>
+
+    fun findAllByMember(member: Member): List<RefreshToken>
 
     fun findAllByValidUntilIsBefore(now: LocalDateTime): List<RefreshToken>
 

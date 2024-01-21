@@ -1,34 +1,44 @@
-Active Refresh Tokens
+<h1>Active Refresh Tokens</h1>
 <div class="refresh-tokens" v-cloak>
-  <div v-for="user in users">
-    <table>
-      <colgroup>
-        <col style="width: 60px;">
-        <col style="width: 150px;">
-        <col style="width: 150px;">
-        <col style="width: 200px;">
-        <col style="width: 120px;">
-        <col style="width: 120px;">
-      </colgroup>
-      <tr>
-        <th colspan="6" style="text-align: center; font-size:1.3em;">{{ user.name }}</th>
-      </tr>
-      <tr>
-        <th></th>
-        <th>Last active</th>
-        <th>Ip</th>
-        <th>Device</th>
-        <th>Browser</th>
-      </tr>
-      <tr v-for="(token, index) in user.tokens">
-        <td>{{ index+1 }}</td>
-        <td>{{ token.lastUsed | fromNow }}</td>
-        <td>{{ token.remoteAddr}}</td>
-        <td>{{ token.userAgent ? token.userAgent.device : '' }}</td>
-        <td>{{ token.userAgent ? token.userAgent.browser : '' }}</td>
-      </tr>
-    </table>
-  </div>
+    <div v-for="member in members">
+        <table class="table table-striped">
+            <colgroup>
+                <col style="width: 60px;">
+                <col style="width: 150px;">
+                <col style="width: 150px;">
+                <col style="width: 200px;">
+                <col style="width: 120px;">
+                <col style="width: 150px;">
+            </colgroup>
+            <thead>
+            <tr>
+                <th class="p-3" colspan="4" style="text-align: center; font-size:1.3em;">
+                    {{ member.name }}
+                </th>
+                <th colspan="1">
+                    <button class="btn btn-outline-warning btn-sm" @click="changePassword(member)">Change Password
+                    </button>
+                </th>
+            </tr>
+            <tr>
+                <th></th>
+                <th>Last active</th>
+                <th>Ip</th>
+                <th>Device</th>
+                <th>Browser</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="(token, index) in member.tokens">
+                <td>{{ index+1 }}</td>
+                <td>{{ token.lastUsed | fromNow }}</td>
+                <td>{{ token.remoteAddr}}</td>
+                <td>{{ token.userAgent ? token.userAgent.device : '' }}</td>
+                <td>{{ token.userAgent ? token.userAgent.browser : '' }}</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <script>
@@ -36,13 +46,24 @@ Active Refresh Tokens
         const app = new Vue({
             el: '.refresh-tokens',
             data: {
-                users: []
+                members: []
             },
-            mounted() {
-                this.load();
+            async mounted() {
+                await this.load();
             }, methods: {
-                load: function () {
-                    $.ajax({
+                load: async function () {
+                    await $.ajax({
+                        url: '/admin/api/members-all',
+                        type: 'GET',
+                        success: function (members) {
+                            members.forEach(member => {
+                                member.tokens = [];
+                                app.members.push(member);
+                            });
+                        },
+                    })
+
+                    await $.ajax({
                         url: '/admin/api/refresh-tokens',
                         type: 'GET',
                         success: function (refreshTokens) {
@@ -55,11 +76,18 @@ Active Refresh Tokens
                                 }
                             }
                             map.forEach((value, key) => {
-                                app.users.push({
-                                    name: value[0].memberName,
-                                    id: value[0].memberId,
-                                    tokens: value
-                                });
+                                const member = app.members.find(member => member.id === value[0].memberId);
+                                member.tokens = value;
+                            });
+                            // sort members by last active
+                            app.members.sort((a, b) => {
+                                if (a.tokens.length === 0) {
+                                    return 1;
+                                } else if (b.tokens.length === 0) {
+                                    return -1;
+                                } else {
+                                    return dayjs(b.tokens[0].lastUsed).diff(dayjs(a.tokens[0].lastUsed));
+                                }
                             });
                         },
                         error: function (error) {
@@ -67,6 +95,54 @@ Active Refresh Tokens
                         }
                     })
                 },
+                changePassword: function (member) {
+                    Swal.fire({
+                        title: 'Change ' + member.name + '\'s password',
+                        html: '<input id="swal-input1" class="swal2-input" placeholder="New Password" type="password">' +
+                            '<input id="swal-input2" class="swal2-input" placeholder="Confirm Password" type="password">',
+                        focusConfirm: false,
+                        preConfirm: () => {
+                            const newPassword = Swal.getPopup().querySelector('#swal-input1').value;
+                            const confirmPassword = Swal.getPopup().querySelector('#swal-input2').value;
+                            if (!newPassword || !confirmPassword) {
+                                Swal.showValidationMessage(`Please enter new password and confirm password`);
+                                return false;
+                            } else if (newPassword !== confirmPassword) {
+                                Swal.showValidationMessage(`Passwords do not match`);
+                                return false;
+                            }
+                            return {
+                                memberId: member.id,
+                                newPassword: newPassword,
+                            }
+                        }
+                    }).then((result) => {
+                        if (!result.isConfirmed) {
+                            return;
+                        }
+                        $.ajax({
+                            url: '/api/auth/password',
+                            type: 'PUT',
+                            data: JSON.stringify(result.value),
+                            contentType: 'application/json',
+                            success: function () {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Password changed successfully',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                })
+                            },
+                            error: function (error) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Oops...',
+                                    text: error.responseJSON.message
+                                })
+                            }
+                        })
+                    })
+                }
             }, filters: {
                 formatDate: function (value) {
                     if (value && value.length > 10) {

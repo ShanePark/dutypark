@@ -1,59 +1,63 @@
 <div class="member-vue" v-cloak>
-  <div class="form-group row">
-    <label for="name" class="col-sm-2 col-form-label">이름</label>
-    <div class="col-sm-10">
-      <input type="text" readonly class="form-control-plaintext" id="name" th:value="*{member.name}">
+    <div class="form-group row">
+        <label for="name" class="col-sm-2 col-form-label">이름</label>
+        <div class="col-sm-10">
+            <input type="text" readonly class="form-control-plaintext" id="name" th:value="*{member.name}">
+        </div>
     </div>
-  </div>
-  <div class="form-group row">
-    <label for="department" class="col-sm-2 col-form-label">소속</label>
-    <div class="col-sm-10">
-      <input type="text" readonly class="form-control-plaintext" id="department" th:value="*{member.departmentName}">
+    <div class="form-group row">
+        <label for="department" class="col-sm-2 col-form-label">소속</label>
+        <div class="col-sm-10">
+            <input type="text" readonly class="form-control-plaintext" id="department"
+                   th:value="*{member.departmentName}">
+        </div>
     </div>
-  </div>
-  <div class="form-group row">
-    <label for="email" class="col-sm-2 col-form-label">이메일</label>
-    <div class="col-sm-10">
-      <input type="text" readonly class="form-control-plaintext" id="email" th:value="*{member.email}">
+    <div class="form-group row">
+        <label for="email" class="col-sm-2 col-form-label">이메일</label>
+        <div class="col-sm-10">
+            <input type="text" readonly class="form-control-plaintext" id="email" th:value="*{member.email}">
+        </div>
     </div>
-  </div>
 
-  <div class="refresh-tokens mt-5">
-    <table>
-      <thead>
-      <h4>내 아이디 로그인 정보</h4>
-      </thead>
-      <colgroup>
-        <col style="width: 60px;">
-        <col style="width: 150px;">
-        <col style="width: 150px;">
-        <col style="width: 200px;">
-        <col style="width: 120px;">
-        <col style="width: 80px;">
-      </colgroup>
-      <tr>
-        <th></th>
-        <th>마지막 접속</th>
-        <th>Ip</th>
-        <th>접속 기기</th>
-        <th>브라우저</th>
-        <th class="text-align-center">관리</th>
-      </tr>
-      <tr v-for="(token, index) in tokens">
-        <td>{{ index+1 }}</td>
-        <td>{{ token.lastUsed | fromNow }}</td>
-        <td>{{ token.remoteAddr}}</td>
-        <td>{{ token.userAgent ? token.userAgent.device : '' }}</td>
-        <td>{{ token.userAgent ? token.userAgent.browser : '' }}</td>
-        <td class="text-align-center">
-          <button v-if="!token.isCurrentLogin" class="btn btn-outline-danger btn-sm" @click="deleteToken(token.id)">
-            로그아웃
-          </button>
-          <button v-else class="btn btn-outline-success btn-sm" disabled>현재접속</button>
-        </td>
-      </tr>
-    </table>
-  </div>
+    <button class="btn btn-warning" @click="changePassword">비밀번호 변경</button>
+
+    <div class="refresh-tokens mt-5">
+        <table>
+            <thead>
+            <h4>내 아이디 로그인 정보</h4>
+            </thead>
+            <colgroup>
+                <col style="width: 60px;">
+                <col style="width: 150px;">
+                <col style="width: 150px;">
+                <col style="width: 200px;">
+                <col style="width: 120px;">
+                <col style="width: 80px;">
+            </colgroup>
+            <tr>
+                <th></th>
+                <th>마지막 접속</th>
+                <th>Ip</th>
+                <th>접속 기기</th>
+                <th>브라우저</th>
+                <th class="text-align-center">관리</th>
+            </tr>
+            <tr v-for="(token, index) in tokens">
+                <td>{{ index+1 }}</td>
+                <td>{{ token.lastUsed | fromNow }}</td>
+                <td>{{ token.remoteAddr}}</td>
+                <td>{{ token.userAgent ? token.userAgent.device : '' }}</td>
+                <td>{{ token.userAgent ? token.userAgent.browser : '' }}</td>
+                <td class="text-align-center">
+                    <button v-if="!token.isCurrentLogin" class="btn btn-outline-danger btn-sm"
+                            @click="deleteToken(token.id)">
+                        로그아웃
+                    </button>
+                    <button v-else class="btn btn-outline-success btn-sm" disabled>현재접속</button>
+                </td>
+            </tr>
+        </table>
+    </div>
 </div>
 
 <script>
@@ -98,6 +102,65 @@
                                 },
                                 error: function (error) {
                                     console.log(error);
+                                }
+                            })
+                        }
+                    })
+                },
+                changePassword: function () {
+                    Swal.fire({
+                        title: '비밀번호 변경',
+                        html: '<input id="swal-input1" class="swal2-input" placeholder="현재 비밀번호" type="password">' +
+                            '<input id="swal-input2" class="swal2-input" placeholder="변경할 비밀번호" type="password">' +
+                            '<input id="swal-input3" class="swal2-input" placeholder="변경할 비밀번호 확인" type="password">',
+                        focusConfirm: false,
+                        showCancelButton: true,
+                        confirmButtonText: '변경',
+                        cancelButtonText: '취소',
+                        preConfirm: () => {
+                            const currentPassword = Swal.getPopup().querySelector('#swal-input1').value
+                            const newPassword = Swal.getPopup().querySelector('#swal-input2').value
+                            const newPasswordConfirm = Swal.getPopup().querySelector('#swal-input3').value
+                            if (!currentPassword || !newPassword || !newPasswordConfirm) {
+                                Swal.showValidationMessage(`비밀번호를 입력해주세요.`)
+                                return false
+                            }
+                            if (newPassword !== newPasswordConfirm) {
+                                Swal.showValidationMessage(`비밀번호가 일치하지 않습니다.`)
+                                return false
+                            }
+                            if (currentPassword === newPassword) {
+                                Swal.showValidationMessage(`현재 비밀번호와 동일합니다.`)
+                                return false
+                            }
+                            return {currentPassword: currentPassword, newPassword: newPassword}
+                        }
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            const memberId = parseInt("[[${member.id}]]");
+                            result.value.memberId = memberId;
+
+                            $.ajax({
+                                url: '/api/auth/password',
+                                type: 'PUT',
+                                data: JSON.stringify(result.value),
+                                contentType: 'application/json',
+                                success: function () {
+                                    Swal.fire({
+                                        title: '비밀번호가 변경되었습니다. 다시 로그인 해주세요.',
+                                        icon: 'success',
+                                        confirmButtonText: '확인',
+                                    }).then((result) => {
+                                        location.href = '/logout';
+                                    });
+                                },
+                                error: function (error) {
+                                    Swal.fire({
+                                        title: '비밀번호 변경에 실패하였습니다.',
+                                        text: error.responseJSON.message,
+                                        icon: 'error',
+                                        confirmButtonText: '확인',
+                                    })
                                 }
                             })
                         }

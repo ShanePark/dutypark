@@ -5,6 +5,7 @@ import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.security.domain.dto.PasswordChangeDto
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus
 import jakarta.servlet.http.Cookie
@@ -77,6 +78,26 @@ class AuthService(
         refreshToken.slideValidUntil(remoteAddr, userAgent)
         val cookie: Cookie = refreshToken.createCookie()
         response.addCookie(cookie)
+    }
+
+    fun changePassword(param: PasswordChangeDto, byAdmin: Boolean = false) {
+        val member = memberRepository.findById(param.memberId).orElseThrow {
+            log.info("change password failed. member not exist:${param.memberId}")
+            throw DutyparkAuthException("존재하지 않는 회원입니다.")
+        }
+
+        if (!byAdmin) {
+            val passwordMatch = passwordEncoder.matches(param.currentPassword, member.password)
+            if (!passwordMatch) {
+                log.info("change password failed. password not match:${param.memberId}")
+                throw DutyparkAuthException("비밀번호가 일치하지 않습니다.")
+            }
+        }
+
+        member.password = passwordEncoder.encode(param.newPassword)
+        refreshTokenService.revokeAllRefreshTokensByMember(member)
+
+        log.info("Member password changed. member:${param.memberId}")
     }
 
 }

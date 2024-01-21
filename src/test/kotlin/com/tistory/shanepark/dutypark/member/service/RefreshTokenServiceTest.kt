@@ -108,4 +108,20 @@ class RefreshTokenServiceTest : DutyparkIntegrationTest() {
         refreshTokenRepository.save(token)
     }
 
+    @Test
+    fun `Revoke All refresh Tokens by Member Test`() {
+        // Given
+        assertThat(refreshTokenService.findAllWithMemberOrderByLastUsedDesc()).isEmpty()
+        val member = TestData.member
+        val refeshTokenCount = 10
+        for (i in 1..refeshTokenCount) {
+            refreshTokenService.createRefreshToken(memberId = member.id!!, null, null)
+        }
+        assertThat(refreshTokenService.findAllWithMemberOrderByLastUsedDesc()).hasSize(refeshTokenCount)
+
+        // Then
+        refreshTokenService.revokeAllRefreshTokensByMember(member)
+        assertThat(refreshTokenService.findAllWithMemberOrderByLastUsedDesc()).isEmpty()
+    }
+
 }
