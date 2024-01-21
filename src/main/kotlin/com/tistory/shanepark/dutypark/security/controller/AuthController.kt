@@ -6,7 +6,7 @@ import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
-import com.tistory.shanepark.dutypark.security.domain.dto.PasswordChangeParam
+import com.tistory.shanepark.dutypark.security.domain.dto.PasswordChangeDto
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import jakarta.servlet.http.HttpServletRequest
@@ -90,12 +90,12 @@ class AuthController(
     @PutMapping("password")
     fun changePassword(
         @Login loginMember: LoginMember,
-        @RequestBody(required = true) param: PasswordChangeParam
+        @RequestBody(required = true) param: PasswordChangeDto
     ): ResponseEntity<String> {
         if (loginMember.id != param.memberId && !loginMember.isAdmin) {
             throw DutyparkAuthException("You are not authorized to change this password")
         }
-        authService.changePassword(param)
+        authService.changePassword(param, loginMember.isAdmin)
         return ResponseEntity.ok().body("Password Changed")
     }
 
