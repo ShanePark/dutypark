@@ -1,13 +1,9 @@
 @font-face {
+    src: url('../fonts/NexonMaplestoryLight.woff2') format('woff2');
+    font-display: swap;
     font-family: 'NexonMaplestory';
     font-weight: 300;
     font-style: normal;
-    src: url('https://cdn.jsdelivr.net/gh/webfontworld/NexonMaplestory/NexonMaplestoryLight.eot');
-    src: url('https://cdn.jsdelivr.net/gh/webfontworld/NexonMaplestory/NexonMaplestoryLight.eot?#iefix') format('embedded-opentype'),
-    url('https://cdn.jsdelivr.net/gh/webfontworld/NexonMaplestory/NexonMaplestoryLight.woff2') format('woff2'),
-    url('https://cdn.jsdelivr.net/gh/webfontworld/NexonMaplestory/NexonMaplestoryLight.woff') format('woff'),
-    url('https://cdn.jsdelivr.net/gh/webfontworld/NexonMaplestory/NexonMaplestoryLight.ttf') format("truetype");
-    font-display: swap;
 }
 
 [v-cloak] {
@@ -15,7 +11,7 @@
 }
 
 body {
-    font-family: NexonMaplestory;
+    font-family: NexonMaplestory, sans-serif;
     --bs-body-font-family: NexonMaplestory;
 }
 
