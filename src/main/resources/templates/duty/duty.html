@@ -133,13 +133,12 @@
                 <div class="modal-body">
                     <div class="dutyTypes">
                         <form>
-                            <div v-for="type in department.dutyTypes" class="pretty p-icon p-round p-jelly">
+                            <div v-for="type in department.dutyTypes" class="pretty p-round p-pulse">
                                 <input type="radio" name="dutyType"
                                        :checked="isDutyType(detailView, type)"
                                        v-on:click="changeDutyType(detailView, type)"
                                 />
                                 <div class="state p-primary">
-                                    <i class="icon mdi mdi-check"></i>
                                     <label v-text="type.name"></label>
                                 </div>
                             </div>
