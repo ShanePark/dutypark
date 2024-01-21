@@ -17,7 +17,7 @@ class ViewExceptionControllerAdvice {
 
     @ExceptionHandler
     fun notAuthorizedHandler(e: DutyparkAuthException, request: HttpServletRequest): ModelAndView {
-        val redirectUrl = "redirect:/login?referer=" + URLEncoder.encode(request.requestURI, "UTF-8")
+        val redirectUrl = "redirect:/auth/login?referer=" + URLEncoder.encode(request.requestURI, "UTF-8")
         return ModelAndView(redirectUrl)
     }
 

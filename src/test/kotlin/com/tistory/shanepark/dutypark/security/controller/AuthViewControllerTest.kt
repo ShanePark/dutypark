@@ -32,7 +32,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
         val json = objectMapper.writeValueAsString(loginDto)
 
         mockMvc.perform(
-            MockMvcRequestBuilders.post("/login")
+            MockMvcRequestBuilders.post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
         ).andExpect(status().isOk)
@@ -45,7 +45,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
         val json = objectMapper.writeValueAsString(loginDto)
 
         mockMvc.perform(
-            MockMvcRequestBuilders.post("/login")
+            MockMvcRequestBuilders.post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
         ).andExpect(status().isUnauthorized)
@@ -62,7 +62,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
 
         // When
         mockMvc.perform(
-            MockMvcRequestBuilders.post("/login")
+            MockMvcRequestBuilders.post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
         ).andExpect(status().isOk)
@@ -113,7 +113,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
 
         // save login session token on variable
         val accessToken = mockMvc.perform(
-            MockMvcRequestBuilders.post("/login")
+            MockMvcRequestBuilders.post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginJson)
         ).andReturn().response.getCookie(jwtConfig.cookieName)?.let { it.value }
@@ -150,7 +150,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
 
         // save login session token on variable
         val accessToken = mockMvc.perform(
-            MockMvcRequestBuilders.post("/login")
+            MockMvcRequestBuilders.post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginJson)
         ).andReturn().response.getCookie(jwtConfig.cookieName)?.let { it.value }
@@ -176,7 +176,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
 
         // save login session token on variable
         val accessToken = mockMvc.perform(
-            MockMvcRequestBuilders.post("/login")
+            MockMvcRequestBuilders.post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(loginDto))
         ).andReturn().response.getCookie(jwtConfig.cookieName)?.let { it.value }
@@ -185,7 +185,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
 
         // Therefore
         mockMvc.perform(
-            MockMvcRequestBuilders.get("/status")
+            MockMvcRequestBuilders.get("/api/auth/status")
                 .contentType(MediaType.APPLICATION_JSON)
                 .cookie(Cookie(jwtConfig.cookieName, accessToken))
         ).andExpect(status().isOk)
@@ -199,7 +199,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
     fun `even if not login, health point doesn't throws error`() {
         // Therefore
         mockMvc.perform(
-            MockMvcRequestBuilders.get("/status")
+            MockMvcRequestBuilders.get("/api/auth/status")
                 .contentType(MediaType.APPLICATION_JSON)
         ).andExpect(status().isOk)
             .andExpect(content().string(""))

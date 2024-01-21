@@ -52,7 +52,7 @@
       </th:block>
       <th:block th:if="${loginMember == null}">
         <li class="nav-item d-lg-none">
-          <a th:href="@{/login}" class="link">로그인
+          <a th:href="@{/auth/login}" class="link">로그인
             <i class="bi bi-person-badge"></i>
           </a>
         </li>
@@ -62,7 +62,7 @@
   <!-- DIV for right side -->
   <div class="nav-right">
     <div class="d-sm-none d-lg-block" th:if="${loginMember == null}">
-      <a th:href="@{/login}" class="link">로그인
+      <a th:href="@{/auth/login}" class="link">로그인
         <i class="bi bi-person-badge"></i>
       </a>
     </div>

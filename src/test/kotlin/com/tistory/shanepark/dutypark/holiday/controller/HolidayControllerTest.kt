@@ -81,7 +81,7 @@ class HolidayControllerTest : RestDocsTest() {
         val loginDto = LoginDto(email = TestData.admin.email, password = TestData.testPass)
         val loginJson = objectMapper.writeValueAsString(loginDto)
         val accessToken = mockMvc.perform(
-            MockMvcRequestBuilders.post("/login")
+            MockMvcRequestBuilders.post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginJson)
         ).andReturn().response.getCookie(jwtConfig.cookieName)?.let { it.value }

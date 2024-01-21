@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
 import com.tistory.shanepark.dutypark.security.config.JwtConfig
@@ -61,6 +62,12 @@ class RefreshTokenService(
 
     fun findAllWithMemberOrderByLastUsedDesc(): List<RefreshTokenDto> {
         return refreshTokenRepository.findAllWithMemberOrderByLastUsedDesc().map { RefreshTokenDto.of(it) }
+    }
+
+    fun revokeAllRefreshTokensByMember(member: Member) {
+        val findAllByMember = refreshTokenRepository.findAllByMember(member)
+        log.info("Revoked {} refresh tokens of member {}", findAllByMember.size, member.email)
+        refreshTokenRepository.deleteAll(findAllByMember)
     }
 
 }

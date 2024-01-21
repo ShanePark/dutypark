@@ -49,7 +49,7 @@ class AdminAuthFilterTest {
 
         adminAuthFilter.doFilter(request, response, filterChain)
 
-        verify(response).sendRedirect("/login")
+        verify(response).sendRedirect("/auth/login")
     }
 
 }
