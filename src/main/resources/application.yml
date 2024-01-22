@@ -1,4 +1,5 @@
 spring:
+  web.resources.cache.period: PT720H # 30 days
   datasource:
     url: jdbc:h2:mem:testdb;
     username: sa
@@ -9,6 +10,7 @@ spring:
     hibernate:
       ddl-auto: create-drop
     database-platform: org.hibernate.dialect.H2Dialect
+    open-in-view: false
 
 server:
   port: 443
