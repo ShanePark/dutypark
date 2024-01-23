@@ -15,16 +15,14 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseCookie
-import org.springframework.stereotype.Component
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher
 
-@Component
 class JwtAuthFilter(
     private val authService: AuthService,
     private val jwtConfig: JwtConfig,
-    @Value("\${server.ssl.enabled}") private val isSecure: Boolean
+    private val isSecure: Boolean
 ) : Filter {
     private val log: Logger = LoggerFactory.getLogger(JwtAuthFilter::class.java)
 
@@ -67,14 +65,20 @@ class JwtAuthFilter(
         chain.doFilter(req, response)
     }
 
+    private val skipMatchers = listOf(
+        AntPathRequestMatcher("/css/**"),
+        AntPathRequestMatcher("/js/**"),
+        AntPathRequestMatcher("/fonts/**"),
+        AntPathRequestMatcher("/lib/**"),
+        AntPathRequestMatcher("/favicon**"),
+        AntPathRequestMatcher("/*.ico"),
+        AntPathRequestMatcher("/error"),
+        AntPathRequestMatcher("/login"),
+        AntPathRequestMatcher("/android-chrome-**")
+    )
+
     private fun shouldSkipTheFilter(request: HttpServletRequest): Boolean {
-        val requestURI = request.requestURI
-        return requestURI.endsWith(".css")
-                || requestURI.endsWith(".js")
-                || requestURI.endsWith(".map")
-                || requestURI.endsWith(".ico")
-                || requestURI.endsWith("/error")
-                || requestURI.endsWith("/login")
+        return skipMatchers.any { matcher -> matcher.matches(request) }
     }
 
     private fun removeCookie(name: String, response: HttpServletResponse) {

@@ -4,7 +4,6 @@ import com.tistory.shanepark.dutypark.RestDocsTest
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
-import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import jakarta.servlet.http.Cookie
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -22,11 +21,8 @@ class ScheduleControllerTest : RestDocsTest() {
     @Autowired
     lateinit var scheduleRepository: ScheduleRepository
 
-    @Autowired
-    lateinit var jwtConfig: JwtConfig
-
     @Test
-    fun `createScheduleTest`() {
+    fun `createSchedule test`() {
         // Given
         val member = TestData.member
 
@@ -64,7 +60,7 @@ class ScheduleControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `createScheduleTest_unauthorized`() {
+    fun `createScheduleTest unauthorized`() {
         // Given
         val updateScheduleDto = ScheduleUpdateDto(
             memberId = 1234,
@@ -135,7 +131,7 @@ class ScheduleControllerTest : RestDocsTest() {
                     )
                 )
             )
-        scheduleRepository.findById(oldSchedule.id!!).orElseThrow().apply {
+        scheduleRepository.findById(oldSchedule.id).orElseThrow().apply {
             assertThat(this.content).isEqualTo(updateScheduleDto.content)
             assertThat(this.startDateTime).isEqualTo(updateScheduleDto.startDateTime)
             assertThat(this.endDateTime).isEqualTo(updateScheduleDto.endDateTime)
@@ -221,7 +217,7 @@ class ScheduleControllerTest : RestDocsTest() {
 
         em.clear()
 
-        assertThat(scheduleRepository.findById(oldSchedule.id!!)).isEmpty
+        assertThat(scheduleRepository.findById(oldSchedule.id)).isEmpty
     }
 
 }

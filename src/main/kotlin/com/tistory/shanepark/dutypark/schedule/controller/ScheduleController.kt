@@ -38,7 +38,6 @@ class ScheduleController(
         @RequestBody @Validated scheduleUpdateDto: ScheduleUpdateDto,
         @Login loginMember: LoginMember
     ): ResponseEntity<Any> {
-        System.err.println("scheduleUpdateDto = ${scheduleUpdateDto.content.length}")
         scheduleService.checkAuthentication(loginMember, scheduleUpdateDto.memberId)
         scheduleService.createSchedule(scheduleUpdateDto)
 

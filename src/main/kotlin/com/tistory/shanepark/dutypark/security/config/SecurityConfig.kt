@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.security.filters.ActuatorFilter
 import com.tistory.shanepark.dutypark.security.filters.AdminAuthFilter
 import com.tistory.shanepark.dutypark.security.filters.JwtAuthFilter
 import com.tistory.shanepark.dutypark.security.handlers.LogoutSuccessHandle
+import com.tistory.shanepark.dutypark.security.service.AuthService
 import jakarta.servlet.Filter
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.web.servlet.FilterRegistrationBean
@@ -20,8 +21,9 @@ import org.springframework.security.web.util.matcher.NegatedRequestMatcher
 class SecurityConfig(
     @Value("\${server.ssl.enabled}") private val isSecure: Boolean,
     private val logoutHandler: LogoutSuccessHandle,
-    private val jwtAuthFilter: JwtAuthFilter,
     private val dutyparkProperties: DutyparkProperties,
+    private val authService: AuthService,
+    private val jwtConfig: JwtConfig
 ) {
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
@@ -32,6 +34,7 @@ class SecurityConfig(
             }
         }
 
+        val jwtAuthFilter = JwtAuthFilter(authService, jwtConfig, isSecure)
         http.addFilterBefore(jwtAuthFilter, AuthorizationFilter::class.java)
 
         http.authorizeHttpRequests()
