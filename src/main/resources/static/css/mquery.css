@@ -36,10 +36,6 @@
         font-size: 1.3em;
     }
 
-    ol.day-grid li {
-        min-height: 20vw;
-    }
-
     ul, ol {
         grid-gap: .25em;
     }
