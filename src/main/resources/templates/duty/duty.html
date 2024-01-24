@@ -1,59 +1,59 @@
 <div class="duty-vue" v-cloak>
-    <div th:if="${member.department}" class="calendar" th:attr="data-member_id=${member.id}">
-        <div class="month-control row">
-            <div class="month-control-left col-md-2">
-                <div class="info department-info">
-                    <i class="bi bi-people-fill"></i>
-                    <span th:text="${member.department}"></span>
-                </div>
-            </div>
-            <div class="col-md-8">
-                <h1>
-                    <a class="move h_pointer" v-on:click="addMonth(-1)">
-                        <i class="bi bi-arrow-left-circle"></i>
-                    </a>
-                    <input id="month-selector" type="month" v-model="combinedYearMonth">
-                    <a class="move h_pointer" v-on:click="addMonth(1)">
-                        <i class="bi bi-arrow-right-circle"></i>
-                    </a>
-                </h1>
-            </div>
-            <div class="month-control-right col-md-2">
-                <div class="info member-info">
-                    <span th:text="${member.name}"></span>
-                    <i class="bi bi-person-badge"></i>
-                </div>
-            </div>
+  <div th:if="${member.department}" class="calendar" th:attr="data-member_id=${member.id}">
+    <div class="month-control row">
+      <div class="month-control-left col-md-2">
+        <div class="info department-info">
+          <i class="bi bi-people-fill"></i>
+          <span th:text="${member.department}"></span>
         </div>
-        <div class="dutyTypes">
+      </div>
+      <div class="col-md-8">
+        <h1>
+          <a class="move h_pointer" v-on:click="addMonth(-1)">
+            <i class="bi bi-arrow-left-circle"></i>
+          </a>
+          <input id="month-selector" type="month" v-model="combinedYearMonth">
+          <a class="move h_pointer" v-on:click="addMonth(1)">
+            <i class="bi bi-arrow-right-circle"></i>
+          </a>
+        </h1>
+      </div>
+      <div class="month-control-right col-md-2">
+        <div class="info member-info">
+          <span th:text="${member.name}"></span>
+          <i class="bi bi-person-badge"></i>
+        </div>
+      </div>
+    </div>
+    <div class="dutyTypes">
     <span v-for="type in department.dutyTypes">
       <span :class="['indicator', 'BACKGROUND-' + type.color]">&nbsp;&nbsp;&nbsp;</span>
       <span v-text="type.name"></span>
     </span>
-            <button v-if="canEdit && !batchEditMode"
-                    class="edit-btn btn btn-warning"
-                    v-on:click="batchEditMode=true;">편집
-            </button>
-            <button v-if="canEdit && batchEditMode"
-                    class="edit-btn btn btn-success"
-                    v-on:click="batchEditMode=false;">편집완료
-            </button>
-        </div>
-        <ul class="weekdays">
-            <li><abbr title="일요일">SUN</abbr></li>
-            <li><abbr title="월요일">MON</abbr></li>
-            <li><abbr title="화요일">TUE</abbr></li>
-            <li><abbr title="수요일">WED</abbr></li>
-            <li><abbr title="목요일">THU</abbr></li>
-            <li><abbr title="금요일">FRI</abbr></li>
-            <li><abbr title="토요일">SAT</abbr></li>
-        </ul>
+      <button v-if="canEdit && !batchEditMode"
+              class="edit-btn btn btn-warning"
+              v-on:click="batchEditMode=true;">편집
+      </button>
+      <button v-if="canEdit && batchEditMode"
+              class="edit-btn btn btn-success"
+              v-on:click="batchEditMode=false;">편집완료
+      </button>
+    </div>
+    <ol class="weekdays day-grid">
+      <li><abbr title="일요일">SUN</abbr></li>
+      <li><abbr title="월요일">MON</abbr></li>
+      <li><abbr title="화요일">TUE</abbr></li>
+      <li><abbr title="수요일">WED</abbr></li>
+      <li><abbr title="목요일">THU</abbr></li>
+      <li><abbr title="금요일">FRI</abbr></li>
+      <li><abbr title="토요일">SAT</abbr></li>
+    </ol>
 
-        <ol class="day-grid" :class="{'editable': canEdit}">
-            <li class="DAY"
-                :id="formattedDate(duty.year, duty.month, duty.day)"
-                v-for="(duty, index) in duties"
-                :class="{
+    <ol class="day-grid" :class="{'editable': canEdit}">
+      <li class="DAY"
+          :id="formattedDate(duty.year, duty.month, duty.day)"
+          v-for="(duty, index) in duties"
+          :class="{
           ['BACKGROUND-' + duty.dutyColor]: true,
           'month-prev': (duty.month < month),
           'month-next': (duty.month > month),
@@ -61,158 +61,158 @@
           'holiday': isHoliday(index),
           'has-schedule': hasSchedule(index),
         }"
-                v-on:click="viewDayDetail(duty, index)">
-                <div class="date container">
-                    <div class="row day-header">
-                        <div class="col-md-5">
-                            <div class="day">
-                                <span v-text="duty.day"></span>
-                            </div>
-                        </div>
-                        <div class="col-md-7">
-                            <span v-if="selectedDday" v-text="calcDday(duty)" class="d-day-count"></span>
-                        </div>
-                    </div>
-                    <div v-if="!batchEditMode" class="schedules">
-                        <div v-if="holidaysByDays[index]"
-                             class="holiday-info"
-                             v-for="holiday in holidaysByDays[index]">
+          v-on:click="viewDayDetail(duty, index)">
+        <div class="date container">
+          <div class="row day-header">
+            <div class="col-md-5">
+              <div class="day">
+                <span v-text="duty.day"></span>
+              </div>
+            </div>
+            <div class="col-md-7">
+              <span v-if="selectedDday" v-text="calcDday(duty)" class="d-day-count"></span>
+            </div>
+          </div>
+          <div v-if="!batchEditMode" class="schedules">
+            <div v-if="holidaysByDays[index]"
+                 class="holiday-info"
+                 v-for="holiday in holidaysByDays[index]">
                             <span :class="holiday.isHoliday ? 'holiday' : 'not-holiday'"
                                   v-text="holiday.dateName">
 
                             </span>
-                        </div>
-                        <div class="d-day-schedules"></div>
-                        <div class="schedule" v-for="schedule in schedulesByDays[index]">
-                            <span class="schedule-content" v-html="printSchedule(schedule)"></span>
-                        </div>
-                    </div>
-                    <div v-if="batchEditMode" class="duty row">
-                        <button v-for="type in department.dutyTypes"
-                                class="duty-type btn btn-sm btn-outline-dark"
-                                v-text="type.name.length > 3 ? type.name.substring(0, 3) : type.name"
-                                :class="dutyTypeClasses(type, duty)"
-                                :disabled="(duty.dutyType == type.name) || (!duty.dutyType && !type.id)"
-                                v-on:click="changeDutyType(duty, type)"
-                        >
-                        </button>
-                    </div>
-                </div>
-            </li>
-        </ol>
-        <div class="d-day-list row">
-            <div v-for="(dDay, index) in dDays" class="col-6">
-                <div class="d-day-item card row"
-                     v-on:click="dDayToggle(dDay)"
-                     :data-id="dDay.id"
-                     :class="{'d-day-private': dDay.isPrivate, 'selected': dDay == selectedDday}"
-                >
-                    <div class="d-day_day col-4">
-                        <span v-if="!dDay.editMode">{{dDay.dDayText}}</span>
-                    </div>
-                    <div class="d-day_content col-8">
-                        <p v-if="!dDay.editMode">{{dDay.date}}</p>
-                        <p v-if="!dDay.editMode">{{dDay.title}}</p>
-                    </div>
-                </div>
             </div>
+            <div class="d-day-schedules"></div>
+            <div class="schedule" v-for="schedule in schedulesByDays[index]">
+              <span class="schedule-content" v-html="printSchedule(schedule)"></span>
+            </div>
+          </div>
+          <div v-if="batchEditMode" class="duty row">
+            <button v-for="type in department.dutyTypes"
+                    class="duty-type btn btn-sm btn-outline-dark"
+                    v-text="type.name.length > 3 ? type.name.substring(0, 3) : type.name"
+                    :class="dutyTypeClasses(type, duty)"
+                    :disabled="(duty.dutyType == type.name) || (!duty.dutyType && !type.id)"
+                    v-on:click="changeDutyType(duty, type)"
+            >
+            </button>
+          </div>
         </div>
+      </li>
+    </ol>
+    <div class="d-day-list row">
+      <div v-for="(dDay, index) in dDays" class="col-6">
+        <div class="d-day-item card row shadow"
+             v-on:click="dDayToggle(dDay)"
+             :data-id="dDay.id"
+             :class="{'d-day-private': dDay.isPrivate, 'selected': dDay == selectedDday}"
+        >
+          <div class="d-day_day col-4">
+            <span v-if="!dDay.editMode">{{dDay.dDayText}}</span>
+          </div>
+          <div class="d-day_content col-8">
+            <p v-if="!dDay.editMode">{{dDay.date}}</p>
+            <p v-if="!dDay.editMode">{{dDay.title}}</p>
+          </div>
+        </div>
+      </div>
     </div>
-    <div th:if="!${member.department}" class="no-data p-5">
-        <h3>어느 부서에도 소속되어 있지 않습니다.</h3>
-    </div>
+  </div>
+  <div th:if="!${member.department}" class="no-data p-5">
+    <h3>어느 부서에도 소속되어 있지 않습니다.</h3>
+  </div>
 
-    <div id="detail-view-modal" class="modal fade" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content" v-if="detailView">
-                <div class="modal-header">
-                    <p class="current-date-label"
-                       v-text="detailView?.year + '년 ' + detailView?.month + '월 ' + detailView?.day + '일'"></p>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="dutyTypes">
-                        <form>
-                            <div v-for="type in department.dutyTypes" class="pretty p-round p-pulse">
-                                <input type="radio" name="dutyType"
-                                       :checked="isDutyType(detailView, type)"
-                                       v-on:click="changeDutyType(detailView, type)"
-                                />
-                                <div class="state p-primary">
-                                    <label v-text="type.name"></label>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                    <div class="schedules mt-4">
-                        <div class="schedule card shadow"
-                             v-for="(schedule, s_index) in schedulesByDays[detailView.index]"
-                             :id="'schedule-' + schedule.id">
-                            <span v-if="!isEditing(schedule)" v-html="printSchedule(schedule)"></span>
-                            <div v-if="isEditing(schedule)" class="schedule-edit">
-                                <label>일정 추가 <span class="content-length"
-                                                   v-text="editingSchedule.content.length + ' / 50'"></span></label>
-                                <textarea class="form-control" placeholder="일정을 입력하세요." maxlength="50" rows="3"
-                                          v-model="editingSchedule.content"></textarea>
-                                <label>시작일</label>
-                                <input type="datetime-local" class="form-control"
-                                       v-model="editingSchedule.startDateTime"/>
-                                <label>종료일</label>
-                                <input type="datetime-local" class="form-control"
-                                       v-model="editingSchedule.endDateTime"/>
-                            </div>
-                            <div class="buttons mt-3" v-if="!isEditing(schedule)">
-                                <template
-                                        v-if="schedulesByDays[detailView.index].length > detailView.scheduleStartDiffCount + 1 && dutyAndDateTimeSame(detailView, schedule.startDateTime)">
-                                    <button :disabled="s_index == schedulesByDays[detailView.index].length -1"
-                                            v-on:click="swapSchedule(schedule, schedulesByDays[detailView.index][s_index+1])"
-                                            class="btn btn-secondary"
-                                    >
-                                        <i class="bi bi-arrow-down-square"></i>
-                                    </button>
-                                    <button :disabled="s_index <= detailView.scheduleStartDiffCount"
-                                            v-on:click="swapSchedule(schedule, schedulesByDays[detailView.index][s_index-1])"
-                                            class="btn btn-secondary">
-                                        <i class="bi bi-arrow-up-square"></i>
-                                    </button>
-                                </template>
-                                </button>
-                                <button class="btn btn-info" v-on:click="scheduleEditMode(schedule)">수정</button>
-                                <button class="btn btn-danger" v-on:click="deleteSchedule(schedule)">삭제</button>
-                            </div>
-                            <div class="buttons mt-3" v-if="isEditing(schedule)">
-                                <button class="btn btn-success" v-on:click="editSchedule()">저장</button>
-                                <button class="btn btn-secondary" v-on:click="cancelEditMode()">취소</button>
-                            </div>
-                        </div>
-                        <div class="schedule schedule-add-button card shadow"
-                             v-if="!isCreateScheduleMode && !editingSchedule.id">
-                            <button class="btn btn-success" v-on:click="scheduleCreateMode()">일정 추가</button>
-                        </div>
-                        <div class="schedule schedule-add card shadow" v-if="isCreateScheduleMode">
-                            <label>일정 추가 <span class="content-length"
-                                               v-text="createSchedule.content.length + ' / 50'"></span></label>
-                            <textarea class="form-control" placeholder="일정을 입력하세요." maxlength="50" rows="3"
-                                      v-model="createSchedule.content"></textarea>
-                            <label>시작일</label>
-                            <input type="datetime-local" class="form-control"
-                                   v-model="createSchedule.startDateTime"/>
-                            <label>종료일</label>
-                            <input type="datetime-local" class="form-control" v-model="createSchedule.endDateTime"
-                                   :min="createSchedule.startDateTime"/>
-                            <div class="buttons mt-3">
-                                <button id="add-btn" class="btn btn-success" v-on:click="saveSchedule">추가</button>
-                                <button class="btn btn-secondary" v-on:click="cancelCreateSchedule">취소</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
-                </div>
-            </div>
+  <div id="detail-view-modal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content" v-if="detailView">
+        <div class="modal-header">
+          <p class="current-date-label"
+             v-text="detailView?.year + '년 ' + detailView?.month + '월 ' + detailView?.day + '일'"></p>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
+        <div class="modal-body">
+          <div class="dutyTypes">
+            <form>
+              <div v-for="type in department.dutyTypes" class="pretty p-round p-pulse">
+                <input type="radio" name="dutyType"
+                       :checked="isDutyType(detailView, type)"
+                       v-on:click="changeDutyType(detailView, type)"
+                />
+                <div class="state p-primary">
+                  <label v-text="type.name"></label>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="schedules mt-4">
+            <div class="schedule card shadow"
+                 v-for="(schedule, s_index) in schedulesByDays[detailView.index]"
+                 :id="'schedule-' + schedule.id">
+              <span v-if="!isEditing(schedule)" v-html="printSchedule(schedule)"></span>
+              <div v-if="isEditing(schedule)" class="schedule-edit">
+                <label>일정 추가 <span class="content-length"
+                                   v-text="editingSchedule.content.length + ' / 50'"></span></label>
+                <textarea class="form-control" placeholder="일정을 입력하세요." maxlength="50" rows="3"
+                          v-model="editingSchedule.content"></textarea>
+                <label>시작일</label>
+                <input type="datetime-local" class="form-control"
+                       v-model="editingSchedule.startDateTime"/>
+                <label>종료일</label>
+                <input type="datetime-local" class="form-control"
+                       v-model="editingSchedule.endDateTime"/>
+              </div>
+              <div class="buttons mt-3" v-if="!isEditing(schedule)">
+                <template
+                    v-if="schedulesByDays[detailView.index].length > detailView.scheduleStartDiffCount + 1 && dutyAndDateTimeSame(detailView, schedule.startDateTime)">
+                  <button :disabled="s_index == schedulesByDays[detailView.index].length -1"
+                          v-on:click="swapSchedule(schedule, schedulesByDays[detailView.index][s_index+1])"
+                          class="btn btn-secondary"
+                  >
+                    <i class="bi bi-arrow-down-square"></i>
+                  </button>
+                  <button :disabled="s_index <= detailView.scheduleStartDiffCount"
+                          v-on:click="swapSchedule(schedule, schedulesByDays[detailView.index][s_index-1])"
+                          class="btn btn-secondary">
+                    <i class="bi bi-arrow-up-square"></i>
+                  </button>
+                </template>
+                </button>
+                <button class="btn btn-info" v-on:click="scheduleEditMode(schedule)">수정</button>
+                <button class="btn btn-danger" v-on:click="deleteSchedule(schedule)">삭제</button>
+              </div>
+              <div class="buttons mt-3" v-if="isEditing(schedule)">
+                <button class="btn btn-success" v-on:click="editSchedule()">저장</button>
+                <button class="btn btn-secondary" v-on:click="cancelEditMode()">취소</button>
+              </div>
+            </div>
+            <div class="schedule schedule-add-button card shadow"
+                 v-if="!isCreateScheduleMode && !editingSchedule.id">
+              <button class="btn btn-success" v-on:click="scheduleCreateMode()">일정 추가</button>
+            </div>
+            <div class="schedule schedule-add card shadow" v-if="isCreateScheduleMode">
+              <label>일정 추가 <span class="content-length"
+                                 v-text="createSchedule.content.length + ' / 50'"></span></label>
+              <textarea class="form-control" placeholder="일정을 입력하세요." maxlength="50" rows="3"
+                        v-model="createSchedule.content"></textarea>
+              <label>시작일</label>
+              <input type="datetime-local" class="form-control"
+                     v-model="createSchedule.startDateTime"/>
+              <label>종료일</label>
+              <input type="datetime-local" class="form-control" v-model="createSchedule.endDateTime"
+                     :min="createSchedule.startDateTime"/>
+              <div class="buttons mt-3">
+                <button id="add-btn" class="btn btn-success" v-on:click="saveSchedule">추가</button>
+                <button class="btn btn-secondary" v-on:click="cancelCreateSchedule">취소</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+        </div>
+      </div>
     </div>
+  </div>
 
 </div>
 
