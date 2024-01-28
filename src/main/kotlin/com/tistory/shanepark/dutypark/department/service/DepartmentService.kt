@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional
 class DepartmentService(
     private val repository: DepartmentRepository,
     private val dutyRepository: DutyRepository,
+    private val departmentRepository: DepartmentRepository
 ) {
 
     @Transactional(readOnly = true)
@@ -87,7 +88,7 @@ class DepartmentService(
 
     fun changeManager(department: Department, member: Member?) {
         department.changeManager(member)
+        departmentRepository.save(department)
     }
-
 
 }
