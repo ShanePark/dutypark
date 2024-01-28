@@ -42,6 +42,10 @@ body a:hover {
     margin-left: 0;
 }
 
+.calendar .weekdays {
+    width: 100%;
+}
+
 ol.weekdays {
     margin-top: 1rem;
     margin-bottom: 1px;

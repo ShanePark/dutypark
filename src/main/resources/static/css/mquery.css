@@ -12,6 +12,14 @@
         font-size: 3em;
     }
 
+    .calendar .weekdays {
+        font-size: 1.2em;
+    }
+
+    .calendar .day-grid {
+        font-size: 1.2em;
+    }
+
     header a {
         font-size: 1.5em;
     }
@@ -25,7 +33,7 @@
     }
 
     ul.weekdays li {
-        font-size: 0px;
+        font-size: 0;
     }
 
     .dutyTypes {
