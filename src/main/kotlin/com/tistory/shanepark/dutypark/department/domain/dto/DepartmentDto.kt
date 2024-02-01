@@ -40,7 +40,7 @@ data class DepartmentDto(
                 dutyTypes = dutyTypes,
                 members = members.map { MemberDto(it) },
                 createdDate = department.createdDate.toString(),
-                lastModifiedDate = department.lastModifiedDate.toString(),
+                lastModifiedDate = department.modifiedDate.toString(),
                 manager = department.manager?.name,
             )
         }

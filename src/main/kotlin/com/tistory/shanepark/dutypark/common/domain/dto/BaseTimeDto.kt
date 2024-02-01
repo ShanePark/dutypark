@@ -8,6 +8,6 @@ data class BaseTimeDto(
 ) {
     constructor(baseTime: BaseTimeEntity) : this(
         createdDate = baseTime.createdDate.toString(),
-        modifiedDate = baseTime.lastModifiedDate.toString(),
+        modifiedDate = baseTime.modifiedDate.toString(),
     )
 }
