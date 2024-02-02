@@ -25,4 +25,8 @@ class FriendRequest(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
 
+    fun accepted() {
+        this.status = FriendRequestStatus.ACCEPTED
+    }
+
 }
