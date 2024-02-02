@@ -3,7 +3,8 @@ package com.tistory.shanepark.dutypark.member.service
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
-import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus
+import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus.PENDING
+import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus.REJECTED
 import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import org.springframework.stereotype.Service
@@ -15,7 +16,6 @@ class FriendService(
     private val friendRelationRepository: FriendRelationRepository,
     private val friendRequestRepository: FriendRequestRepository
 ) {
-
     @Transactional(readOnly = true)
     fun findAllFriends(member: Member): List<Member> {
         return friendRelationRepository.findAllByMember(member).map { it.friend }
@@ -23,31 +23,45 @@ class FriendService(
 
     @Transactional(readOnly = true)
     fun getPendingRequestsTo(member: Member): List<FriendRequest> {
-        return friendRequestRepository.findAllByToMemberAndStatus(member, FriendRequestStatus.PENDING)
+        return friendRequestRepository.findAllByToMemberAndStatus(member, PENDING)
     }
 
     @Transactional(readOnly = true)
     fun getPendingRequestsFrom(member: Member): List<FriendRequest> {
-        return friendRequestRepository.findAllByFromMemberAndStatus(member, FriendRequestStatus.PENDING)
+        return friendRequestRepository.findAllByFromMemberAndStatus(member, PENDING)
     }
 
     fun sendFriendRequest(member1: Member, member2: Member) {
+        if (member1 == member2)
+            throw IllegalArgumentException("Cannot send friend request to self")
+
         if (isFriend(member1, member2))
             throw IllegalArgumentException("Already friend")
+
+        val pending = friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(member1, member2, PENDING)
+
+        if (pending.isNotEmpty())
+            throw IllegalArgumentException("Already requested")
+
         friendRequestRepository.save(FriendRequest(member1, member2))
     }
 
-    fun cancelFriendRequest(member1: Member, member2: Member) {
-        val friendRequest = friendRequestRepository.findByFromMemberAndToMember(member1, member2)
-            ?: throw IllegalArgumentException("There is No friend request from " + member1.id + " to " + member2.id)
-        if (friendRequest.status != FriendRequestStatus.PENDING)
+    fun cancelFriendRequest(fromMember: Member, toMember: Member) {
+        val friendRequest = findPendingOrThrow(fromMember, toMember)
+
+        if (friendRequest.status != PENDING)
             throw IllegalArgumentException("Already accepted or rejected")
         friendRequestRepository.delete(friendRequest)
     }
 
+    fun rejectFriendRequest(fromMember: Member, toMember: Member) {
+        val friendRequest = findPendingOrThrow(fromMember, toMember)
+        friendRequest.status = REJECTED
+    }
+
+
     fun acceptFriendRequest(member1: Member, member2: Member) {
-        val friendRequest = friendRequestRepository.findByFromMemberAndToMember(member1, member2)
-            ?: throw IllegalArgumentException("There is No friend request from " + member1.id + " to " + member2.id)
+        val friendRequest = findPendingOrThrow(member1, member2)
 
         friendRequest.accepted()
         friendRelationRepository.save(FriendRelation(member1, member2))
@@ -64,9 +78,14 @@ class FriendService(
     }
 
     fun isFriend(member1: Member, member2: Member): Boolean {
-        friendRelationRepository.findByMemberAndFriend(member1, member2)
-            ?.let { return true }
-            .run { return false }
+        return friendRelationRepository.findByMemberAndFriend(member1, member2) != null
+    }
+
+    private fun findPendingOrThrow(from: Member, to: Member): FriendRequest {
+        return friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(
+            from, to, PENDING
+        ).firstOrNull()
+            ?: throw IllegalArgumentException("No pending request")
     }
 
 }

@@ -9,6 +9,7 @@ import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 
 class FriendServiceTest : DutyparkIntegrationTest() {
@@ -27,7 +28,7 @@ class FriendServiceTest : DutyparkIntegrationTest() {
      ***********************************************/
 
     @Test
-    fun `send friend request test`() {
+    fun `send friend request success`() {
         // Given
         val member1 = TestData.member
         val member2 = TestData.member2
@@ -44,8 +45,45 @@ class FriendServiceTest : DutyparkIntegrationTest() {
                 FriendRequestStatus.PENDING
             )
         ).hasSize(1)
-        assertThat(friendRequestRepository.findByFromMemberAndToMember(member1, member2)).isNotNull
+        assertThat(
+            friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(
+                member1,
+                member2,
+                FriendRequestStatus.PENDING
+            )
+        ).isNotNull
         assertThat(friendService.isFriend(member1, member2)).isFalse
+    }
+
+    @Test
+    fun `cannot send friend request to friend`() {
+        // Given
+        val member1 = TestData.member
+        val member2 = TestData.member2
+        friendRelationRepository.save(FriendRelation(member1, member2))
+
+        // Then
+        assertThrows<IllegalArgumentException> { friendService.sendFriendRequest(member1, member2) }
+    }
+
+    @Test
+    fun `can't send friend request to self`() {
+        // Given
+        val self = TestData.member
+
+        // Then
+        assertThrows<IllegalArgumentException> { friendService.sendFriendRequest(self, self) }
+    }
+
+    @Test
+    fun `cannot send friend request to friend twice`() {
+        // Given
+        val member1 = TestData.member
+        val member2 = TestData.member2
+        friendRequestRepository.save(FriendRequest(member1, member2))
+
+        // Then
+        assertThrows<IllegalArgumentException> { friendService.sendFriendRequest(member1, member2) }
     }
 
     @Test
@@ -60,6 +98,35 @@ class FriendServiceTest : DutyparkIntegrationTest() {
 
         // When
         friendService.cancelFriendRequest(member1, member2)
+
+        // Then
+        assertThat(friendService.getPendingRequestsTo(member2)).isEmpty()
+        assertThat(friendService.getPendingRequestsFrom(member1)).isEmpty()
+    }
+
+    @Test
+    fun `Can't cancle friend request if not pending`() {
+        // Given
+        val member1 = TestData.member
+        val member2 = TestData.member2
+        friendRequestRepository.save(FriendRequest(member1, member2).apply { accepted() })
+
+        // Then
+        assertThrows<IllegalArgumentException> { friendService.cancelFriendRequest(member1, member2) }
+    }
+
+    @Test
+    fun `Reject friend request test`() {
+        // Given
+        val member1 = TestData.member
+        val member2 = TestData.member2
+        friendRequestRepository.save(FriendRequest(member1, member2))
+
+        assertThat(friendService.getPendingRequestsTo(member2)).hasSize(1)
+        assertThat(friendService.getPendingRequestsFrom(member1)).hasSize(1)
+
+        // When
+        friendService.rejectFriendRequest(member1, member2)
 
         // Then
         assertThat(friendService.getPendingRequestsTo(member2)).isEmpty()
@@ -158,6 +225,18 @@ class FriendServiceTest : DutyparkIntegrationTest() {
 
         // Then
         assertThat(friendService.isFriend(member1, member2)).isFalse
+    }
+
+    @Test
+    fun `Can't unfriend if not friend`() {
+        // Given
+        val member1 = TestData.member
+        val member2 = TestData.member2
+
+        assertThat(friendService.isFriend(member1, member2)).isFalse
+
+        // Then
+        assertThrows<IllegalArgumentException> { friendService.unfriend(member1, member2) }
     }
 
     @Test

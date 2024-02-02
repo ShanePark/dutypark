@@ -7,7 +7,11 @@ import org.springframework.data.jpa.repository.JpaRepository
 
 interface FriendRequestRepository : JpaRepository<FriendRequest, Long> {
 
-    fun findByFromMemberAndToMember(fromMember: Member, toMember: Member): FriendRequest?
+    fun findAllByFromMemberAndToMemberAndStatus(
+        fromMember: Member,
+        toMember: Member,
+        status: FriendRequestStatus
+    ): List<FriendRequest>
 
     fun findAllByToMemberAndStatus(toMember: Member, status: FriendRequestStatus): List<FriendRequest>
     fun findAllByFromMemberAndStatus(fromMember: Member, status: FriendRequestStatus): List<FriendRequest>
