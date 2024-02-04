@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.common.domain.entity
 
-import com.tistory.shanepark.dutypark.common.domain.dto.BaseTimeDto
 import jakarta.persistence.Column
 import jakarta.persistence.EntityListeners
 import jakarta.persistence.MappedSuperclass
@@ -21,5 +20,4 @@ abstract class BaseTimeEntity {
     @Column(name = "created_date", updatable = false)
     var createdDate: LocalDateTime? = null
 
-    fun baseTimeDto() = BaseTimeDto(this)
 }

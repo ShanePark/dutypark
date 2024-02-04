@@ -35,7 +35,7 @@ class FriendServiceTest : DutyparkIntegrationTest() {
         assertThat(friendService.isFriend(member1, member2)).isFalse
 
         // When
-        friendService.sendFriendRequest(member1, member2)
+        friendService.sendFriendRequest(loginMember(member1), member2.id!!)
 
         // Then
         assertThat(friendRequestRepository.findAllByToMemberAndStatus(member2, FriendRequestStatus.PENDING)).hasSize(1)
@@ -63,7 +63,9 @@ class FriendServiceTest : DutyparkIntegrationTest() {
         friendRelationRepository.save(FriendRelation(member1, member2))
 
         // Then
-        assertThrows<IllegalArgumentException> { friendService.sendFriendRequest(member1, member2) }
+        assertThrows<IllegalArgumentException> {
+            friendService.sendFriendRequest(loginMember(member1), member2.id!!)
+        }
     }
 
     @Test
@@ -72,7 +74,9 @@ class FriendServiceTest : DutyparkIntegrationTest() {
         val self = TestData.member
 
         // Then
-        assertThrows<IllegalArgumentException> { friendService.sendFriendRequest(self, self) }
+        assertThrows<IllegalArgumentException> {
+            friendService.sendFriendRequest(loginMember(self), self.id!!)
+        }
     }
 
     @Test
@@ -83,7 +87,9 @@ class FriendServiceTest : DutyparkIntegrationTest() {
         friendRequestRepository.save(FriendRequest(member1, member2))
 
         // Then
-        assertThrows<IllegalArgumentException> { friendService.sendFriendRequest(member1, member2) }
+        assertThrows<IllegalArgumentException> {
+            friendService.sendFriendRequest(loginMember(member1), member2.id!!)
+        }
     }
 
     @Test
@@ -97,7 +103,7 @@ class FriendServiceTest : DutyparkIntegrationTest() {
         assertThat(friendService.getPendingRequestsFrom(member1)).hasSize(1)
 
         // When
-        friendService.cancelFriendRequest(member1, member2)
+        friendService.cancelFriendRequest(loginMember(member1), member2.id!!)
 
         // Then
         assertThat(friendService.getPendingRequestsTo(member2)).isEmpty()
@@ -105,14 +111,14 @@ class FriendServiceTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `Can't cancle friend request if not pending`() {
+    fun `Can't cancel friend request if there is no pending request`() {
         // Given
         val member1 = TestData.member
         val member2 = TestData.member2
         friendRequestRepository.save(FriendRequest(member1, member2).apply { accepted() })
 
         // Then
-        assertThrows<IllegalArgumentException> { friendService.cancelFriendRequest(member1, member2) }
+        assertThrows<IllegalArgumentException> { friendService.cancelFriendRequest(loginMember(member1), member2.id!!) }
     }
 
     @Test
@@ -143,7 +149,7 @@ class FriendServiceTest : DutyparkIntegrationTest() {
         assertThat(friendService.isFriend(member1, member2)).isFalse
 
         // When
-        friendService.acceptFriendRequest(member2, member1)
+        friendService.acceptFriendRequest(loginMember(member2), member1.id!!)
 
         // Then
         assertThat(friendService.isFriend(member1, member2)).isTrue
@@ -195,12 +201,12 @@ class FriendServiceTest : DutyparkIntegrationTest() {
     @Test
     fun `find All Friends test`() {
         // Given
-        val member1 = TestData.member
-        val member2 = TestData.member2
+        val member1 = loginMember(TestData.member)
+        val member2 = loginMember(TestData.member2)
         assertThat(friendService.findAllFriends(member1)).isEmpty()
         assertThat(friendService.findAllFriends(member2)).isEmpty()
 
-        setFriend(member1, member2)
+        setFriend(TestData.member, TestData.member2)
 
         // When
         val friends = friendService.findAllFriends(member1)
@@ -221,7 +227,7 @@ class FriendServiceTest : DutyparkIntegrationTest() {
         assertThat(friendService.isFriend(member1, member2)).isTrue
 
         // When
-        friendService.unfriend(member1, member2)
+        friendService.unfriend(loginMember(member1), member2.id!!)
 
         // Then
         assertThat(friendService.isFriend(member1, member2)).isFalse
@@ -236,7 +242,7 @@ class FriendServiceTest : DutyparkIntegrationTest() {
         assertThat(friendService.isFriend(member1, member2)).isFalse
 
         // Then
-        assertThrows<IllegalArgumentException> { friendService.unfriend(member1, member2) }
+        assertThrows<IllegalArgumentException> { friendService.unfriend(loginMember(member1), member2.id!!) }
     }
 
     @Test
