@@ -224,10 +224,14 @@ a.homeButton:hover {
 
 .month-control .info {
     display: inline;
-    font-size: 1.5em;
+    font-size: 1.4em;
     background-color: #eee;
     padding: 10px;
     border-radius: 15px;
+}
+
+.month-control .today-button {
+    background-color: #eee;
 }
 
 .month-control-left {

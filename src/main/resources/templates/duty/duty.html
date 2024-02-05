@@ -9,6 +9,7 @@
       </div>
       <div class="col-md-8">
         <h1>
+          <button class="btn today-button" v-on:click="today()">오늘</button>
           <a class="move h_pointer" v-on:click="addMonth(-1)">
             <i class="bi bi-arrow-left-circle"></i>
           </a>
@@ -367,6 +368,11 @@
                             const newDate = new Date(app.year, app.month - 1 + month);
                             app.year = newDate.getFullYear();
                             app.month = newDate.getMonth() + 1;
+                        },
+                        today() {
+                            const today = new Date();
+                            app.year = today.getFullYear();
+                            app.month = today.getMonth() + 1;
                         },
                         async loadDuties(year, month) {
                             await $.ajax({
