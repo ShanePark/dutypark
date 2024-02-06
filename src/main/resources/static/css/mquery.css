@@ -12,7 +12,7 @@
         font-size: 2.5em;
     }
 
-    .calendar .weekdays {
+    .calendar .day-of-the-week {
         font-size: 1.2em;
     }
 
@@ -32,7 +32,7 @@
         font-size: 3em;
     }
 
-    ul.weekdays li {
+    ul.day-of-the-week li {
         font-size: 0;
     }
 
@@ -52,7 +52,7 @@
         grid-gap: .25em;
     }
 
-    ul.weekdays > li abbr:after {
+    ul.day-of-the-week > li abbr:after {
         content: attr(title);
         font-size: calc(16px + (26 - 16) * ((100vw - 300px) / (1600 - 300)));
         text-align: center;
