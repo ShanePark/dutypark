@@ -38,3 +38,9 @@ operation::holiday/get[]
 === RESET
 
 operation::holiday/reset[]
+
+== Friends
+
+=== friend-info
+
+operation::friends/friend-info[]

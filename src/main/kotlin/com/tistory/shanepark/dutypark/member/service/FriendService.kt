@@ -40,13 +40,11 @@ class FriendService(
         return FriendsInfoDto(friends, pendingRequestsTo, pendingRequestsFrom)
     }
 
-    @Transactional(readOnly = true)
-    fun getPendingRequestsTo(member: Member): List<FriendRequest> {
+    private fun getPendingRequestsTo(member: Member): List<FriendRequest> {
         return friendRequestRepository.findAllByToMemberAndStatus(member, PENDING)
     }
 
-    @Transactional(readOnly = true)
-    fun getPendingRequestsFrom(member: Member): List<FriendRequest> {
+    private fun getPendingRequestsFrom(member: Member): List<FriendRequest> {
         return friendRequestRepository.findAllByFromMemberAndStatus(member, PENDING)
     }
 
@@ -79,7 +77,10 @@ class FriendService(
         friendRequestRepository.delete(friendRequest)
     }
 
-    fun rejectFriendRequest(fromMember: Member, toMember: Member) {
+    fun rejectFriendRequest(login: LoginMember, toMemberId: Long) {
+        val fromMember = memberRepository.findById(toMemberId).orElseThrow()
+        val toMember = memberRepository.findById(login.id).orElseThrow()
+
         val friendRequest = findPendingOrThrow(fromMember, toMember)
         friendRequest.status = REJECTED
     }
@@ -108,6 +109,7 @@ class FriendService(
         friendRelationRepository.deleteByMemberAndFriend(targetMember, member)
     }
 
+    @Transactional(readOnly = true)
     fun isFriend(member1: Member, member2: Member): Boolean {
         return friendRelationRepository.findByMemberAndFriend(member1, member2) != null
     }

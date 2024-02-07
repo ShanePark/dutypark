@@ -99,15 +99,15 @@ class FriendServiceTest : DutyparkIntegrationTest() {
         val member2 = TestData.member2
         friendRequestRepository.save(FriendRequest(member1, member2))
 
-        assertThat(friendService.getPendingRequestsTo(member2)).hasSize(1)
-        assertThat(friendService.getPendingRequestsFrom(member1)).hasSize(1)
+        assertThat(getPendingRequestsTo(member2)).hasSize(1)
+        assertThat(getPendingRequestsFrom(member1)).hasSize(1)
 
         // When
         friendService.cancelFriendRequest(loginMember(member1), member2.id!!)
 
         // Then
-        assertThat(friendService.getPendingRequestsTo(member2)).isEmpty()
-        assertThat(friendService.getPendingRequestsFrom(member1)).isEmpty()
+        assertThat(getPendingRequestsTo(member2)).isEmpty()
+        assertThat(getPendingRequestsFrom(member1)).isEmpty()
     }
 
     @Test
@@ -128,15 +128,15 @@ class FriendServiceTest : DutyparkIntegrationTest() {
         val member2 = TestData.member2
         friendRequestRepository.save(FriendRequest(member1, member2))
 
-        assertThat(friendService.getPendingRequestsTo(member2)).hasSize(1)
-        assertThat(friendService.getPendingRequestsFrom(member1)).hasSize(1)
+        assertThat(getPendingRequestsTo(member2)).hasSize(1)
+        assertThat(getPendingRequestsFrom(member1)).hasSize(1)
 
         // When
-        friendService.rejectFriendRequest(member1, member2)
+        friendService.rejectFriendRequest(loginMember(member2), member1.id!!)
 
         // Then
-        assertThat(friendService.getPendingRequestsTo(member2)).isEmpty()
-        assertThat(friendService.getPendingRequestsFrom(member1)).isEmpty()
+        assertThat(getPendingRequestsTo(member2)).isEmpty()
+        assertThat(getPendingRequestsFrom(member1)).isEmpty()
     }
 
     @Test
@@ -160,19 +160,19 @@ class FriendServiceTest : DutyparkIntegrationTest() {
         // Given
         val member1 = TestData.member
         val member2 = TestData.member2
-        assertThat(friendService.getPendingRequestsTo(member1)).isEmpty()
-        assertThat(friendService.getPendingRequestsTo(member2)).isEmpty()
+        assertThat(getPendingRequestsTo(member1)).isEmpty()
+        assertThat(getPendingRequestsTo(member2)).isEmpty()
 
         friendRequestRepository.save(FriendRequest(member2, member1))
 
         // When
-        val friendRequests = friendService.getPendingRequestsTo(member1)
+        val friendRequests = getPendingRequestsTo(member1)
 
         // Then
         assertThat(friendRequests).hasSize(1)
         assertThat(friendRequests[0].fromMember.id).isEqualTo(member2.id)
-        assertThat(friendService.getPendingRequestsTo(member2)).isEmpty()
-        assertThat(friendService.getPendingRequestsFrom(member2)).hasSize(1)
+        assertThat(getPendingRequestsTo(member2)).isEmpty()
+        assertThat(getPendingRequestsFrom(member2)).hasSize(1)
     }
 
     @Test
@@ -180,18 +180,18 @@ class FriendServiceTest : DutyparkIntegrationTest() {
         // Given
         val member1 = TestData.member
         val member2 = TestData.member2
-        assertThat(friendService.getPendingRequestsTo(member1)).isEmpty()
-        assertThat(friendService.getPendingRequestsTo(member2)).isEmpty()
+        assertThat(getPendingRequestsTo(member1)).isEmpty()
+        assertThat(getPendingRequestsTo(member2)).isEmpty()
 
         friendRequestRepository.save(FriendRequest(member2, member1).apply { accepted() })
 
         // When
-        val friendRequests = friendService.getPendingRequestsTo(member1)
+        val friendRequests = getPendingRequestsTo(member1)
 
         // Then
         assertThat(friendRequests).isEmpty()
-        assertThat(friendService.getPendingRequestsTo(member2)).isEmpty()
-        assertThat(friendService.getPendingRequestsFrom(member2)).isEmpty()
+        assertThat(getPendingRequestsTo(member2)).isEmpty()
+        assertThat(getPendingRequestsFrom(member2)).isEmpty()
     }
 
     /*************************************************
@@ -269,6 +269,13 @@ class FriendServiceTest : DutyparkIntegrationTest() {
         friendRelationRepository.save(FriendRelation(member2, member1))
     }
 
+    private fun getPendingRequestsTo(member: Member): List<FriendRequest> {
+        return friendRequestRepository.findAllByToMemberAndStatus(member, FriendRequestStatus.PENDING)
+    }
+
+    private fun getPendingRequestsFrom(member: Member): List<FriendRequest> {
+        return friendRequestRepository.findAllByFromMemberAndStatus(member, FriendRequestStatus.PENDING)
+    }
 
 }
 

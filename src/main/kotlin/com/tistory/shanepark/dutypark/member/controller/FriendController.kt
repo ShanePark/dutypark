@@ -51,4 +51,12 @@ class FriendController(
         friendService.acceptFriendRequest(loginMember, fromMemberId)
     }
 
+    @PostMapping("request/reject/{fromMemberId}")
+    fun rejectFriendRequest(
+        @Login loginMember: LoginMember,
+        @PathVariable fromMemberId: Long
+    ) {
+        friendService.rejectFriendRequest(loginMember, fromMemberId)
+    }
+
 }
