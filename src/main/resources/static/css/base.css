@@ -42,23 +42,24 @@ body a:hover {
     margin-left: 0;
 }
 
-.calendar .weekdays {
+.calendar .day-of-the-week {
     width: 100%;
+    padding-left: 0;
 }
 
-ol.weekdays {
+ol.day-of-the-week {
     margin-top: 1rem;
     margin-bottom: 1px;
     background: mintcream;
     border-radius: 10px 10px 0 0;
 }
 
-ol.weekdays li {
+ol.day-of-the-week li {
     text-align: center;
     padding: 0.5rem;
 }
 
-.weekdays abbr[title] {
+.day-of-the-week abbr[title] {
     border: none;
     font-weight: 800;
     text-decoration: none;
