@@ -12,6 +12,8 @@ import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -131,6 +133,17 @@ class FriendService(
             ?: throw IllegalArgumentException("No pending request")
     }
 
+    @Transactional(readOnly = true)
+    fun searchPossibleFriends(login: LoginMember, keyword: String, page: Pageable): Page<MemberDto> {
+        val member = loginMemberToMember(login)
+
+        val friends = findAllFriends(login).map { it.id }
+        val pendingRequestsFrom = getPendingRequestsFrom(member).map { it.toMember.id }
+        val excludeIds = friends + pendingRequestsFrom + member.id
+
+        return memberRepository.findMembersByNameContainingIgnoreCaseAndIdNotIn(keyword, excludeIds, page)
+            .map { MemberDto(it) }
+    }
 
     private fun loginMemberToMember(login: LoginMember): Member {
         return memberRepository.findById(login.id).orElseThrow()

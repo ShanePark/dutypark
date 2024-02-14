@@ -136,7 +136,7 @@
           </thead>
           <tbody>
           <tr v-for="(member, index) in searchResult">
-            <td>{{page * pageSize + index + 1}}</td>
+            <td>{{(page-1) * pageSize + index + 1}}</td>
             <td>{{ member.name }}</td>
             <td>{{ member.email }}</td>
             <td>{{ member.department }}</td>

@@ -11,6 +11,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.data.domain.Pageable
 
 class FriendServiceTest : DutyparkIntegrationTest() {
 
@@ -289,6 +290,41 @@ class FriendServiceTest : DutyparkIntegrationTest() {
 
         // Then
         assertThat(isFriend).isTrue
+    }
+
+    @Test
+    fun `search Possible friends test - must not include self`() {
+        val loginMember = loginMember(TestData.member)
+
+        val page = Pageable.ofSize(5)
+        val searchResult = friendService.searchPossibleFriends(loginMember, "", page)
+
+        assertThat(searchResult.content).noneMatch { it.id == loginMember.id }
+    }
+
+    @Test
+    fun `search Possible friends test - must not include friends`() {
+        val loginMember = loginMember(TestData.member)
+        val friend = TestData.member2
+        setFriend(TestData.member, friend)
+
+        val page = Pageable.ofSize(5)
+        val searchResult = friendService.searchPossibleFriends(loginMember, "", page)
+
+        assertThat(searchResult.content).noneMatch { it.id == friend.id }
+    }
+
+    @Test
+    fun `search Possible friends test - must not include pending requests`() {
+        val loginMember = loginMember(TestData.member)
+        val taget = TestData.member2
+        friendRequestRepository.save(FriendRequest(fromMember = TestData.member, toMember = taget))
+
+        val page = Pageable.ofSize(5)
+        val searchResult = friendService.searchPossibleFriends(loginMember, "", page)
+
+        assertThat(searchResult).isNotEmpty
+        assertThat(searchResult.content).noneMatch { it.id == taget.id }
     }
 
     private fun setFriend(

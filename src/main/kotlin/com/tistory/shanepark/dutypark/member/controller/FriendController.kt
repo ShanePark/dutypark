@@ -2,8 +2,14 @@ package com.tistory.shanepark.dutypark.member.controller
 
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendsInfoDto
+import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
+import org.springframework.data.domain.Sort
+import org.springframework.data.web.PageableDefault
+import org.springframework.data.web.SortDefault
 import org.springframework.web.bind.annotation.*
 
 @RestController
@@ -19,12 +25,15 @@ class FriendController(
         return friendService.getMyFriendInfo(loginMember)
     }
 
-    @DeleteMapping("{deleteMemberId}")
-    fun unfriend(
+    @GetMapping("search")
+    fun searchPossibleFriends(
         @Login loginMember: LoginMember,
-        @PathVariable deleteMemberId: Long
-    ) {
-        friendService.unfriend(loginMember, deleteMemberId)
+        @PageableDefault(page = 0, size = 10)
+        @SortDefault(sort = ["name"], direction = Sort.Direction.ASC)
+        page: Pageable,
+        @RequestParam(required = false, defaultValue = "") keyword: String,
+    ): Page<MemberDto> {
+        return friendService.searchPossibleFriends(loginMember, keyword, page)
     }
 
     @PostMapping("request/send/{toMemberId}")
@@ -57,6 +66,14 @@ class FriendController(
         @PathVariable fromMemberId: Long
     ) {
         friendService.rejectFriendRequest(loginMember, fromMemberId)
+    }
+
+    @DeleteMapping("{deleteMemberId}")
+    fun unfriend(
+        @Login loginMember: LoginMember,
+        @PathVariable deleteMemberId: Long
+    ) {
+        friendService.unfriend(loginMember, deleteMemberId)
     }
 
 }

@@ -21,6 +21,7 @@ class MemberViewController(
 
     @GetMapping("/member")
     fun memberPage(@Login loginMember: LoginMember, model: Model): String {
+        model.addAttribute("member", loginMember)
         return layout(model, "member/member")
     }
 
