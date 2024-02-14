@@ -25,7 +25,7 @@ class FriendService(
 
     @Transactional(readOnly = true)
     fun findAllFriends(loginMember: LoginMember): List<MemberDto> {
-        val member = memberRepository.findById(loginMember.id).orElseThrow()
+        val member = loginMemberToMember(loginMember)
         return friendRelationRepository.findAllByMember(member)
             .map { it.friend }
             .map { MemberDto(it) }
@@ -33,7 +33,7 @@ class FriendService(
 
     @Transactional(readOnly = true)
     fun getMyFriendInfo(loginMember: LoginMember): FriendsInfoDto {
-        val member = memberRepository.findById(loginMember.id).orElseThrow()
+        val member = loginMemberToMember(loginMember)
         val friends = findAllFriends(loginMember)
         val pendingRequestsTo = getPendingRequestsTo(member).map { FriendRequestDto(it) }
         val pendingRequestsFrom = getPendingRequestsFrom(member).map { FriendRequestDto(it) }
@@ -49,7 +49,7 @@ class FriendService(
     }
 
     fun sendFriendRequest(loginMember: LoginMember, toMemberId: Long) {
-        val fromMember = memberRepository.findById(loginMember.id).orElseThrow()
+        val fromMember = loginMemberToMember(loginMember)
         val toMember = memberRepository.findById(toMemberId).orElseThrow()
 
         if (fromMember == toMember)
@@ -67,7 +67,7 @@ class FriendService(
     }
 
     fun cancelFriendRequest(login: LoginMember, targetId: Long) {
-        val fromMember = memberRepository.findById(login.id).orElseThrow()
+        val fromMember = loginMemberToMember(login)
         val targetMember = memberRepository.findById(targetId).orElseThrow()
 
         val friendRequest = findPendingOrThrow(fromMember, targetMember)
@@ -79,34 +79,44 @@ class FriendService(
 
     fun rejectFriendRequest(login: LoginMember, toMemberId: Long) {
         val fromMember = memberRepository.findById(toMemberId).orElseThrow()
-        val toMember = memberRepository.findById(login.id).orElseThrow()
+        val loginMember = loginMemberToMember(login)
 
-        val friendRequest = findPendingOrThrow(fromMember, toMember)
+        val friendRequest = findPendingOrThrow(fromMember, loginMember)
         friendRequest.status = REJECTED
     }
 
 
     fun acceptFriendRequest(login: LoginMember, friendId: Long) {
-        val loginMember = memberRepository.findById(login.id).orElseThrow()
+        val loginMember = loginMemberToMember(login)
         val friend = memberRepository.findById(friendId).orElseThrow()
 
-        val friendRequest = findPendingOrThrow(loginMember, friend)
+        val friendRequest = findPendingOrThrow(friend, loginMember)
+        deleteViceVersaRequestIfPresent(loginMember, friend)
 
         friendRequest.accepted()
+
         friendRelationRepository.save(FriendRelation(loginMember, friend))
         friendRelationRepository.save(FriendRelation(friend, loginMember))
     }
 
+    private fun deleteViceVersaRequestIfPresent(loginMember: Member, friend: Member) {
+        friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(
+            fromMember = loginMember, toMember = friend, PENDING
+        ).firstOrNull()?.let {
+            friendRequestRepository.delete(it)
+        }
+    }
+
     fun unfriend(login: LoginMember, target: Long) {
-        val member = memberRepository.findById(login.id).orElseThrow()
+        val loginMember = loginMemberToMember(login)
         val targetMember = memberRepository.findById(target).orElseThrow()
 
-        val isFriend = isFriend(member, targetMember)
+        val isFriend = isFriend(loginMember, targetMember)
         if (!isFriend)
             throw IllegalArgumentException("Not friend")
 
-        friendRelationRepository.deleteByMemberAndFriend(member, targetMember)
-        friendRelationRepository.deleteByMemberAndFriend(targetMember, member)
+        friendRelationRepository.deleteByMemberAndFriend(loginMember, targetMember)
+        friendRelationRepository.deleteByMemberAndFriend(targetMember, loginMember)
     }
 
     @Transactional(readOnly = true)
@@ -121,4 +131,8 @@ class FriendService(
             ?: throw IllegalArgumentException("No pending request")
     }
 
+
+    private fun loginMemberToMember(login: LoginMember): Member {
+        return memberRepository.findById(login.id).orElseThrow()
+    }
 }

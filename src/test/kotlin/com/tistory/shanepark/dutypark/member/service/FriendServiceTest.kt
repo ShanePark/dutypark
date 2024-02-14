@@ -144,15 +144,45 @@ class FriendServiceTest : DutyparkIntegrationTest() {
         // Given
         val member1 = TestData.member
         val member2 = TestData.member2
-        friendRequestRepository.save(FriendRequest(member2, member1))
+        friendRequestRepository.save(FriendRequest(fromMember = member2, toMember = member1))
 
         assertThat(friendService.isFriend(member1, member2)).isFalse
 
         // When
-        friendService.acceptFriendRequest(loginMember(member2), member1.id!!)
+        friendService.acceptFriendRequest(loginMember(member1), member2.id!!)
 
         // Then
         assertThat(friendService.isFriend(member1, member2)).isTrue
+    }
+
+    @Test
+    fun `Can't accept friend request if there is no pending request`() {
+        // Given
+        val member1 = TestData.member
+        val member2 = TestData.member2
+        friendRequestRepository.save(FriendRequest(fromMember = member1, toMember = member2))
+
+        // Then
+        assertThrows<IllegalArgumentException> { friendService.acceptFriendRequest(loginMember(member1), member2.id!!) }
+    }
+
+    @Test
+    fun `if there were vice versa request when accept friend request, delete it`() {
+        // Given
+        val member1 = TestData.member
+        val member2 = TestData.member2
+        friendRequestRepository.save(FriendRequest(fromMember = member2, toMember = member1))
+        friendRequestRepository.save(FriendRequest(fromMember = member1, toMember = member2))
+
+        assertThat(friendService.isFriend(member1, member2)).isFalse
+
+        // When
+        friendService.acceptFriendRequest(loginMember(member1), member2.id!!)
+
+        // Then
+        assertThat(friendService.isFriend(member1, member2)).isTrue
+        assertThat(getPendingRequestsTo(member1)).isEmpty()
+        assertThat(getPendingRequestsTo(member2)).isEmpty()
     }
 
     @Test
