@@ -7,8 +7,8 @@ CREATE TABLE `friend_requests`
     `created_date`   datetime    NOT NULL,
     `modified_date`  datetime    NOT NULL,
 
-    unique (`from_member_id`, `to_member_id`),
-    index `idx_friend_requests_from_member_id` (`from_member_id`),
-    index `idx_friend_requests_to_member_id` (`to_member_id`),
-    index `idx_friend_requests_status` (`status`)
+    index            `idx_friend_requests_from_member_id` (`from_member_id`),
+    index            `idx_friend_requests_to_member_id` (`to_member_id`),
+    index            `idx_friend_requests_status` (`status`)
 )
+

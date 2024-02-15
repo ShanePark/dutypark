@@ -44,7 +44,7 @@ class FriendController(
         friendService.sendFriendRequest(loginMember, toMemberId)
     }
 
-    @PostMapping("request/cancel/{toMemberId}")
+    @DeleteMapping("request/cancel/{toMemberId}")
     fun cancelFriendRequest(
         @Login loginMember: LoginMember,
         @PathVariable toMemberId: Long

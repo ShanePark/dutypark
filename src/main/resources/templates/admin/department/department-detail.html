@@ -159,7 +159,7 @@
                   <span aria-hidden="true">&laquo;</span>
                 </button>
               </li>
-              <li class="page-item" :class="{ 'active': i == page-1 }" v-for="i in totalPage" :key="i">
+              <li class="page-item" :class="{ 'active': i == page }" v-for="i in totalPage" :key="i">
                 <button class="page-link" @click="goToPage(i)">{{ i }}</button>
               </li>
               <li class="page-item" :class="{ 'disabled': page == totalPage }">
