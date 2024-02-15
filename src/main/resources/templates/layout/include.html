@@ -9,8 +9,6 @@
   <meta name="msapplication-TileColor" content="#da532c">
   <meta name="theme-color" content="#ffffff">
   <title>Duty Park</title>
-  <link rel="stylesheet" th:href="@{/css/base.css?v=20240206}"/>
-  <link rel="stylesheet" th:href="@{/css/mquery.css?v=20240206}"/>
 
   <link th:href="@{/lib/bootstrap/bootstrap.min.css}" rel="stylesheet">
   <script th:src="@{/lib/bootstrap/bootstrap.bundle.min.js}"></script>
@@ -27,6 +25,9 @@
   <script th:src="@{/lib/dayjs/dayjs.min.js}"></script>
   <script th:src="@{/lib/dayjs/relativeTime.js}"></script>
   <script th:src="@{/lib/dayjs/ko.js}"></script>
+
+  <link rel="stylesheet" th:href="@{/css/base.css?v=20240206}"/>
+  <link rel="stylesheet" th:href="@{/css/mquery.css?v=20240206}"/>
   <script>
       dayjs.extend(window.dayjs_plugin_relativeTime)
       dayjs.locale('ko')

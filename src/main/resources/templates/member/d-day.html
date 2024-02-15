@@ -1,58 +1,58 @@
 <div class="vue-dday" v-cloak>
-    <button v-on:click="add()" class="btn btn-primary">
-        추가 <i class="bi bi-calendar-plus-fill"></i>
-    </button>
-    <div class="d-day-list">
-        <div v-for="(dDay, index) in dDays"
-             class="d-day-item card row"
-             :data-id="dDay.id"
-             :class="{'d-day-private': dDay.isPrivate}">
-            <div class="d-day_day col-2">
-                <span v-if="!dDay.editMode">{{dDay.dDayText}}</span>
-                <div v-if="dDay.editMode" class="pretty p-switch p-fill p-2">
-                    <input type="checkbox" name="isPrivate" :checked="dDay.isPrivate"/>
-                    <div class="state p-success">
-                        <label>비공개</label>
-                    </div>
-                </div>
-            </div>
-            <div class="d-day_content col-7">
-                <p v-if="!dDay.editMode">{{dDay.date}}</p>
-                <input class="form-control" v-if="dDay.editMode" type="date" name="date" :value="dDay.date"/>
-                <p v-if="!dDay.editMode">{{dDay.title}}</p>
-                <input class="form-control" v-if="dDay.editMode" type="text" name="title" :value="dDay.title"
-                       maxlength="30"/>
-            </div>
-            <div class="col-3 d-day_menu">
-                <button v-if="!dDay.editMode && index>0" v-on:click="moveUp(dDay, index)" class="btn btn-primary">
-                    <i class="bi bi-arrow-up"></i></button>
-                <button v-if="!dDay.editMode && index < dDays.length-1" v-on:click="moveDown(dDay, index)"
-                        class="btn btn-primary">
-                    <i class="bi bi-arrow-down"></i></button>
-                <button v-if="!dDay.editMode" v-on:click="editMode(dDay)" class="btn btn-primary">
-                    <i class="bi bi-pencil-square"></i></button>
-                <button v-if="!dDay.editMode" v-on:click="remove(dDay)" class="btn btn-danger">
-                    <i class="bi bi-trash"></i></button>
-                <button v-if="dDay.editMode" v-on:click="saveEdit($event)" class="btn btn-success">
-                    저장<i class="bi bi-check"></i></button>
-                <button v-if="dDay.editMode" v-on:click="cancelEdit(dDay)" class="btn btn-warning">
-                    취소<i class="bi bi-x"></i></button>
-            </div>
+  <button v-on:click="add()" class="btn btn-primary">
+    추가 <i class="bi bi-calendar-plus-fill"></i>
+  </button>
+  <div class="d-day-list">
+    <div v-for="(dDay, index) in dDays"
+         class="d-day-item card row"
+         :data-id="dDay.id"
+         :class="{'d-day-private': dDay.isPrivaste}">
+      <div class="d-day_day col-2">
+        <span v-if="!dDay.editMode">{{dDay.dDayText}}</span>
+        <div v-if="dDay.editMode" class="pretty p-switch p-fill p-2">
+          <input type="checkbox" name="isPrivate" :checked="dDay.isPrivate"/>
+          <div class="state p-success">
+            <label>비공개</label>
+          </div>
         </div>
+      </div>
+      <div class="d-day_content col-7">
+        <p v-if="!dDay.editMode">{{dDay.date}}</p>
+        <input class="form-control" v-if="dDay.editMode" type="date" name="date" :value="dDay.date"/>
+        <p v-if="!dDay.editMode">{{dDay.title}}</p>
+        <input class="form-control" v-if="dDay.editMode" type="text" name="title" :value="dDay.title"
+               maxlength="30"/>
+      </div>
+      <div class="col-3 d-day_menu">
+        <button v-if="!dDay.editMode && index>0" v-on:click="moveUp(dDay, index)" class="btn btn-primary">
+          <i class="bi bi-arrow-up"></i></button>
+        <button v-if="!dDay.editMode && index < dDays.length-1" v-on:click="moveDown(dDay, index)"
+                class="btn btn-primary">
+          <i class="bi bi-arrow-down"></i></button>
+        <button v-if="!dDay.editMode" v-on:click="editMode(dDay)" class="btn btn-primary">
+          <i class="bi bi-pencil-square"></i></button>
+        <button v-if="!dDay.editMode" v-on:click="remove(dDay)" class="btn btn-danger">
+          <i class="bi bi-trash"></i></button>
+        <button v-if="dDay.editMode" v-on:click="saveEdit($event)" class="btn btn-success">
+          저장<i class="bi bi-check"></i></button>
+        <button v-if="dDay.editMode" v-on:click="cancelEdit(dDay)" class="btn btn-warning">
+          취소<i class="bi bi-x"></i></button>
+      </div>
     </div>
+  </div>
 </div>
 
 <div class="add_modal" hidden>
-    <input type="text" class="swal2-input" placeholder="기념일 제목" name="title" maxlength="30">
-    <input type="date" class="swal2-input" placeholder="기념일 날짜" name="date">
-    <div class="mt-2">
-        <div class="pretty p-switch p-fill">
-            <input type="checkbox" name="isPrivate"/>
-            <div class="state p-success">
-                <label>비공개</label>
-            </div>
-        </div>
+  <input type="text" class="swal2-input" placeholder="기념일 제목" name="title" maxlength="30">
+  <input type="date" class="swal2-input" placeholder="기념일 날짜" name="date">
+  <div class="mt-2">
+    <div class="pretty p-switch p-fill">
+      <input type="checkbox" name="isPrivate"/>
+      <div class="state p-success">
+        <label>비공개</label>
+      </div>
     </div>
+  </div>
 </div>
 
 

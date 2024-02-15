@@ -3,7 +3,6 @@ package com.tistory.shanepark.dutypark.member.service
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.member.domain.dto.DDaySaveDto
-import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.DDayRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.assertj.core.api.Assertions.assertThat
@@ -24,7 +23,7 @@ class DDayServiceTest : DutyparkIntegrationTest() {
     @Test
     fun createDDay() {
         val member = TestData.member
-        val loginMember = memberToLoginMember(member)
+        val loginMember = loginMember(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             dDaySaveDto = DDaySaveDto(
@@ -54,7 +53,7 @@ class DDayServiceTest : DutyparkIntegrationTest() {
     @Test
     fun findDDay() {
         val member = TestData.member
-        val loginMember = memberToLoginMember(member)
+        val loginMember = loginMember(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             dDaySaveDto = DDaySaveDto(
@@ -83,8 +82,8 @@ class DDayServiceTest : DutyparkIntegrationTest() {
     fun `can't find private D-day of other person`() {
         val member = TestData.member
         val member2 = TestData.member2
-        val loginMember = memberToLoginMember(member)
-        val loginMember2 = memberToLoginMember(member2)
+        val loginMember = loginMember(member)
+        val loginMember2 = loginMember(member2)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             dDaySaveDto = DDaySaveDto(
@@ -101,7 +100,7 @@ class DDayServiceTest : DutyparkIntegrationTest() {
     @Test
     fun findDDays() {
         val member = TestData.member
-        val loginMember = memberToLoginMember(member)
+        val loginMember = loginMember(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             dDaySaveDto = DDaySaveDto(
@@ -128,8 +127,8 @@ class DDayServiceTest : DutyparkIntegrationTest() {
     fun `find D-Day by another person, private ones are not show`() {
         val member = TestData.member
         val member2 = TestData.member2
-        val loginMember = memberToLoginMember(member)
-        val loginMember2 = memberToLoginMember(member2)
+        val loginMember = loginMember(member)
+        val loginMember2 = loginMember(member2)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             dDaySaveDto = DDaySaveDto(
@@ -155,7 +154,7 @@ class DDayServiceTest : DutyparkIntegrationTest() {
     @Test
     fun updateDDay() {
         val member = TestData.member
-        val loginMember = memberToLoginMember(member)
+        val loginMember = loginMember(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             dDaySaveDto = DDaySaveDto(
@@ -182,8 +181,8 @@ class DDayServiceTest : DutyparkIntegrationTest() {
     fun `Can't update other member's D-Day event`() {
         val member = TestData.member
         val member2 = TestData.member2
-        val loginMember = memberToLoginMember(member)
-        val loginMember2 = memberToLoginMember(member2)
+        val loginMember = loginMember(member)
+        val loginMember2 = loginMember(member2)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             dDaySaveDto = DDaySaveDto(
@@ -206,7 +205,7 @@ class DDayServiceTest : DutyparkIntegrationTest() {
     @Test
     fun updatePrivacy() {
         val member = TestData.member
-        val loginMember = memberToLoginMember(member)
+        val loginMember = loginMember(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             dDaySaveDto = DDaySaveDto(
@@ -225,7 +224,7 @@ class DDayServiceTest : DutyparkIntegrationTest() {
     @Test
     fun rearrangeOrders() {
         val member = TestData.member
-        val loginMember = memberToLoginMember(member)
+        val loginMember = loginMember(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             dDaySaveDto = DDaySaveDto(
@@ -288,7 +287,7 @@ class DDayServiceTest : DutyparkIntegrationTest() {
     @Test
     fun `can rearrange even if some middle ones are deleted`() {
         val member = TestData.member
-        val loginMember = memberToLoginMember(member)
+        val loginMember = loginMember(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             dDaySaveDto = DDaySaveDto(
@@ -349,8 +348,8 @@ class DDayServiceTest : DutyparkIntegrationTest() {
     fun `can't rearrange if any of D-Day event is other member's`() {
         val member = TestData.member
         val member2 = TestData.member2
-        val loginMember = memberToLoginMember(member)
-        val loginMember2 = memberToLoginMember(member2)
+        val loginMember = loginMember(member)
+        val loginMember2 = loginMember(member2)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             dDaySaveDto = DDaySaveDto(
@@ -404,7 +403,7 @@ class DDayServiceTest : DutyparkIntegrationTest() {
     @Test
     fun `can't rearrange if prefix is not valid`() {
         val member = TestData.member
-        val loginMember = memberToLoginMember(member)
+        val loginMember = loginMember(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             dDaySaveDto = DDaySaveDto(
@@ -470,7 +469,7 @@ class DDayServiceTest : DutyparkIntegrationTest() {
     @Test
     fun deleteDDay() {
         val member = TestData.member
-        val loginMember = memberToLoginMember(member)
+        val loginMember = loginMember(member)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             dDaySaveDto = DDaySaveDto(
@@ -488,8 +487,8 @@ class DDayServiceTest : DutyparkIntegrationTest() {
     fun `can't delete D-day event of other member`() {
         val member = TestData.member
         val member2 = TestData.member2
-        val loginMember = memberToLoginMember(member)
-        val loginMember2 = memberToLoginMember(member2)
+        val loginMember = loginMember(member)
+        val loginMember2 = loginMember(member2)
         val createDDay = dDayService.createDDay(
             loginMember = loginMember,
             dDaySaveDto = DDaySaveDto(
@@ -501,18 +500,6 @@ class DDayServiceTest : DutyparkIntegrationTest() {
         assertThrows<DutyparkAuthException> {
             dDayService.deleteDDay(loginMember2, createDDay.id!!)
         }
-    }
-
-    fun memberToLoginMember(member: Member): LoginMember {
-        return LoginMember(
-            id = member.id!!,
-            email = member.email,
-            name = member.name,
-            departmentId = member.department?.id,
-            departmentName = member.department?.name,
-            jwt = "",
-            isAdmin = false
-        )
     }
 
 }

@@ -11,6 +11,7 @@ import com.tistory.shanepark.dutypark.member.domain.dto.MemberCreateDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.MemberService
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.service.JwtProvider
 import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.BeforeEach
@@ -108,6 +109,18 @@ class DutyparkIntegrationTest {
 
     fun getJwt(member: Member): String {
         return jwtProvider.createToken(member)
+    }
+
+    fun loginMember(member: Member): LoginMember {
+        return LoginMember(
+            id = member.id!!,
+            email = member.email,
+            name = member.name,
+            departmentId = member.department?.id,
+            departmentName = member.department?.name,
+            jwt = "",
+            isAdmin = false
+        )
     }
 
 }

@@ -1,0 +1,289 @@
+<div id="friends-page" class="container">
+  <h2 class="mt-3">친구관리</h2>
+
+  <div class="row mt-4">
+    <div class="col-md-6" v-if="friendInfo.pendingRequestsTo && friendInfo.pendingRequestsTo.length > 0">
+      <h4>처리할 친구요청</h4>
+      <ul class="list-group">
+        <li v-for="req in friendInfo.pendingRequestsTo"
+            class="list-group-item d-flex justify-content-between align-items-center">
+          <span v-text="'[' + req.fromMember.department + '] ' + req.fromMember.name"></span>
+          <div>
+            <button v-on:click="acceptFriendRequest(req)" class="btn btn-success btn-sm">승인</button>
+            <button v-on:click="rejectFriendRequest(req)" class="btn btn-danger btn-sm">거절</button>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="col-md-6" v-if="friendInfo.pendingRequestsFrom && friendInfo.pendingRequestsFrom.length > 0">
+      <h4>나의 친구 요청</h4>
+      <ul class="list-group">
+        <li v-for="req in friendInfo.pendingRequestsFrom"
+            class="list-group-item d-flex justify-content-between align-items-center">
+          <span v-text="'[' + req.toMember.department + '] ' + req.toMember.name"></span>
+          <button class="btn btn-warning btn-sm" v-on:click="cancelRequest(req)">요청취소</button>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="friend-list row mt-3">
+    <div class="col-12">
+      <h4>
+        친구 목록
+        <button class="btn btn-primary" data-toggle="modal" data-target="#searchModal" onclick="searchMember()">추가
+        </button>
+      </h4>
+      <ul class="list-group">
+        <li v-for="member in friendInfo.friends"
+            class="list-group-item d-flex justify-content-between align-items-center">
+          <span v-text="'[' + member.department + '] ' + member.name"></span>
+          <div class="btn-group">
+            <button type="button" class="btn btn-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+              관리
+            </button>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" :href="'/duty/' + member.name">시간표</a></li>
+              <li>
+                <hr class="dropdown-divider">
+              </li>
+              <li><a class="dropdown-item" v-on:click="unfriend(member)">친구 삭제</a></li>
+            </ul>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="member-search-modal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">친구 추가</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="input-group mb-3">
+            <input type="text" class="form-control" placeholder="Search" aria-label="Search"
+                   aria-describedby="button-addon2" v-model="keyword" v-on:keyup.enter="search">
+            <button class="btn btn-outline-secondary" type="button" id="button-addon2" v-on:click="search">Search
+            </button>
+          </div>
+          <table class="table table-striped" v-if="searchResult.length > 0">
+            <colgroup>
+              <col style="width: 10%">
+              <col style="width: 35%">
+              <col style="width: 35%">
+              <col style="width: 20%">
+            </colgroup>
+            <thead>
+            <tr>
+              <th scope="col"></th>
+              <th scope="col">부서</th>
+              <th scope="col">이름</th>
+              <th scope="col"></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="(member, index) in searchResult">
+              <td>{{(page-1) * pageSize + index + 1}}</td>
+              <td>{{ member.department }}</td>
+              <td>{{ member.name }}</td>
+              <td>
+                <button class="btn btn-success float-end" v-on:click="requestFriend(member)">친구요청</button>
+              </td>
+            </tr>
+            </tbody>
+          </table>
+          <p v-else>검색 결과가 없습니다.</p>
+          <div class="page-info">
+            <p>페이지 ({{ page }} / {{ totalPage }}) | 전체 검색결과: {{ totalElements }}</p>
+            <nav aria-label="Page navigation">
+              <ul class="pagination">
+                <li class="page-item" :class="{ 'disabled': page == 1 }">
+                  <button class="page-link" @click="prevPage" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                  </button>
+                </li>
+                <li class="page-item" :class="{ 'active': i == page }" v-for="i in totalPage" :key="i">
+                  <button class="page-link" @click="goToPage(i)">{{ i }}</button>
+                </li>
+                <li class="page-item" :class="{ 'disabled': page == totalPage }">
+                  <button class="page-link" @click="nextPage" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                  </button>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    function searchMember() {
+        vue.reset();
+        $('#member-search-modal').modal('show');
+    }
+
+    const vue = new Vue({
+        el: '#friends-page',
+        data: {
+            keyword: '',
+            searchResult: [],
+            page: 1,
+            totalPage: 0,
+            pageSize: 5,
+            totalElements: 0,
+            friendInfo: {},
+        },
+        mounted() {
+            this.loadFriendInfo();
+        },
+        methods: {
+            prevPage: function () {
+                if (this.page > 1) {
+                    this.page--;
+                    this.search();
+                }
+            },
+            nextPage: function () {
+                if (this.page < this.totalPage) {
+                    this.page++;
+                    this.search();
+                }
+            },
+            goToPage: function (page) {
+                this.page = page;
+                this.search();
+            },
+            reset: function () {
+                this.keyword = '';
+                this.searchResult = [];
+                this.page = 1;
+                this.totalPage = 0;
+                this.pageSize = 5;
+                this.totalElements = 0;
+                this.search();
+            },
+            search: function () {
+                $.ajax({
+                    url: '/api/friends/search',
+                    type: 'GET',
+                    data: {
+                        keyword: this.keyword,
+                        page: this.page - 1,
+                        size: this.pageSize
+                    },
+                    success: function (response) {
+                        vue.searchResult = response.content;
+                        vue.totalPage = response.totalPages;
+                        vue.totalElements = response.totalElements;
+                    },
+                    error: function (error) {
+                        console.log(error);
+                    }
+                })
+            },
+            loadFriendInfo: function () {
+                fetch('/api/friends')
+                    .then(function (response) {
+                        if (response.ok) {
+                            return response.json();
+                        }
+                    }).then(function (data) {
+                    vue.friendInfo = data;
+                    vue.search();
+                    console.log(data);
+                }).catch(function (error) {
+                    alert('친구정보 로딩 실패');
+                })
+            },
+            requestFriend: function (member) {
+                const url = '/api/friends/request/send/' + member.id;
+                fetch(url, {
+                    method: 'POST',
+                }).then(function (response) {
+                    if (response.ok) {
+                        vue.loadFriendInfo();
+                        return;
+                    }
+                    throw new Error('친구요청 실패');
+                }).catch(function (error) {
+                    alert('친구요청 실패');
+                })
+            },
+            cancelRequest: function (req) {
+                fetch('/api/friends/request/cancel/' + req.toMember.id, {
+                    method: 'DELETE'
+                }).then(function (response) {
+                    if (response.ok) {
+                        vue.loadFriendInfo();
+                        return;
+                    }
+                    throw new Error('친구요청 취소 실패');
+                }).catch(function (error) {
+                    alert('친구요청 취소 실패');
+                })
+            },
+            acceptFriendRequest: function (req) {
+                fetch('/api/friends/request/accept/' + req.fromMember.id, {
+                    method: 'POST'
+                }).then(function (response) {
+                    if (response.ok) {
+                        vue.loadFriendInfo();
+                        return;
+                    }
+                    throw new Error('친구요청 수락 실패');
+                }).catch(function (error) {
+                    alert('친구요청 수락 실패');
+                })
+            },
+            rejectFriendRequest: function (req) {
+                fetch('/api/friends/request/reject/' + req.fromMember.id, {
+                    method: 'POST'
+                }).then(function (response) {
+                    if (response.ok) {
+                        vue.loadFriendInfo();
+                        return;
+                    }
+                    throw new Error('친구요청 거절 실패');
+                }).catch(function (error) {
+                    alert('친구요청 거절 실패');
+                })
+            },
+            unfriend: function (member) {
+                Swal.fire({
+                    title: '친구 삭제',
+                    text: `정말로 [${member.name}]님을 친구목록에서 삭제하시겠습니까?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    confirmButtonText: '삭제',
+                    cancelButtonText: '취소'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        fetch('/api/friends/' + member.id, {
+                            method: 'DELETE'
+                        }).then(function (response) {
+                            if (response.ok) {
+                                vue.loadFriendInfo();
+                                return;
+                            }
+                            throw new Error('친구 삭제 실패');
+                        }).catch(function (error) {
+                            alert('친구 삭제 실패');
+                        })
+                    }
+                })
+            }
+        }
+    })
+
+</script>

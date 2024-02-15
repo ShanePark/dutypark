@@ -27,11 +27,10 @@ class DutyViewController(
         @RequestParam(required = false) year: Int?,
         @RequestParam(required = false) month: Int?,
     ): String {
-        log.info("request: $name, ip: ${request.remoteAddr}")
         val member = memberService.findMemberByName(name)
         model.addAttribute("member", MemberDto(member))
-        model.addAttribute("year", year?.let { it } ?: LocalDate.now().year)
-        model.addAttribute("month", month?.let { it } ?: LocalDate.now().monthValue)
+        model.addAttribute("year", year ?: LocalDate.now().year)
+        model.addAttribute("month", month ?: LocalDate.now().monthValue)
         return layout(model, "duty/duty")
     }
 

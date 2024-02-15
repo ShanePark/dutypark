@@ -27,8 +27,12 @@ class MemberViewController(
 
     @GetMapping("/member/d-day")
     fun dDayPage(@Login loginMember: LoginMember, model: Model): String {
-        model.addAttribute("member", loginMember)
         return layout(model, "member/d-day")
+    }
+
+    @GetMapping("/member/friends")
+    fun friendsPage(@Login loginMember: LoginMember, model: Model): String {
+        return layout(model, "member/friends")
     }
 
 }

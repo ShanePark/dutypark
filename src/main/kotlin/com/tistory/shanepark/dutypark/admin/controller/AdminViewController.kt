@@ -25,5 +25,4 @@ class AdminViewController : ViewController() {
         return layout(model, "admin/department/department-detail")
     }
 
-
 }
