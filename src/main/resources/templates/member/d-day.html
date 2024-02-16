@@ -24,11 +24,6 @@
                maxlength="30"/>
       </div>
       <div class="col-3 d-day_menu">
-        <button v-if="!dDay.editMode && index>0" v-on:click="moveUp(dDay, index)" class="btn btn-primary">
-          <i class="bi bi-arrow-up"></i></button>
-        <button v-if="!dDay.editMode && index < dDays.length-1" v-on:click="moveDown(dDay, index)"
-                class="btn btn-primary">
-          <i class="bi bi-arrow-down"></i></button>
         <button v-if="!dDay.editMode" v-on:click="editMode(dDay)" class="btn btn-primary">
           <i class="bi bi-pencil-square"></i></button>
         <button v-if="!dDay.editMode" v-on:click="remove(dDay)" class="btn btn-danger">
@@ -145,41 +140,6 @@
                                     body.waitMe('hide');
                                 }
                             })
-                        }
-                    })
-                },
-                moveUp: function (dDay, index) {
-                    if (index == 0) return;
-                    const ids = [];
-                    ids.push(dDay.id);
-                    ids.push(app.dDays[index - 1].id);
-                    app.rearrange(index - 1, ids);
-                },
-                moveDown: function (dDay, index) {
-                    if (index == app.dDays.length - 1) return;
-                    const ids = [];
-                    ids.push(app.dDays[index + 1].id);
-                    ids.push(dDay.id);
-                    app.rearrange(index, ids);
-                },
-                rearrange: function (prefix, ids) {
-                    $('.d-day-list').waitMe();
-                    $.ajax({
-                        url: '/api/dday?prefix=' + prefix + '&ids=' + ids.join(','),
-                        type: 'PATCH',
-                        contentType: 'application/json',
-                        success: function (response) {
-                            app.load();
-                        },
-                        error: function (error) {
-                            Swal.fire({
-                                title: '실패',
-                                text: '디데이 순서 변경에 실패하였습니다.',
-                                icon: 'error',
-                                confirmButtonText: '확인'
-                            })
-                        }, complete: function () {
-                            $('.d-day-list').waitMe('hide');
                         }
                     })
                 },

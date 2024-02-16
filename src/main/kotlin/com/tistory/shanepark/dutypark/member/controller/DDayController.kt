@@ -67,20 +67,6 @@ class DDayController(
             .build()
     }
 
-    @PatchMapping(params = ["prefix", "ids"])
-    @SlackNotification
-    fun rearrangeDDayOrders(
-        @Login member: LoginMember,
-        @RequestParam prefix: Long,
-        @RequestParam ids: List<Long>
-    ): ResponseEntity<Any> {
-        dDayService.rearrangeOrders(member, prefix, ids)
-
-        return ResponseEntity
-            .status(HttpStatus.NO_CONTENT)
-            .build()
-    }
-
     @PutMapping("/{id}")
     @SlackNotification
     fun updateDDay(

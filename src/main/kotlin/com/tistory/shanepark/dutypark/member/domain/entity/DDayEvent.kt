@@ -13,7 +13,6 @@ class DDayEvent(
     var title: String,
     var date: LocalDate,
     var isPrivate: Boolean = false,
-    var position: Long,
 ) {
 
     @Id

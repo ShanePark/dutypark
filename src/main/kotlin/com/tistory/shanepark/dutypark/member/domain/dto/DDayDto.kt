@@ -8,7 +8,6 @@ data class DDayDto(
     val title: String,
     val date: LocalDate,
     val isPrivate: Boolean,
-    val position: Long,
     val calc: Long
 ) {
 
@@ -24,7 +23,6 @@ data class DDayDto(
                 title = dDayEvent.title,
                 date = dDayEvent.date,
                 isPrivate = dDayEvent.isPrivate,
-                position = dDayEvent.position,
                 calc = calc
             )
         }
