@@ -71,17 +71,20 @@
     </div>
     <div class="member-hover" th:if="${loginMember != null}">
       <a class="link">
-        <span class="profile" th:text="|${loginMember?.name}|"/>님
+        <span class="profile" th:text="|${loginMember?.name}|"></span>님
+        <i class="bi bi-person-circle"></i>
         <div class="member-hover-menu">
           <ul>
             <li>
               <a class="link" href="/member">
-                내정보 <i class="bi bi-person"></i>
+                <span>내정보</span>
+                <i class="bi bi-person"></i>
               </a>
             </li>
             <li>
               <a href="/logout">
-                로그아웃 <i class="bi bi-person-fill-x"></i>
+                <span>로그아웃</span>
+                <i class="bi bi-box-arrow-right"></i>
               </a>
             </li>
           </ul>
