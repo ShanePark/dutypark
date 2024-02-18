@@ -126,6 +126,13 @@ class FriendService(
         return friendRelationRepository.findByMemberAndFriend(member1, member2) != null
     }
 
+    @Transactional(readOnly = true)
+    fun isFriend(memberId1: Long, memberId2: Long): Boolean {
+        val member1 = memberRepository.findById(memberId1).orElseThrow()
+        val member2 = memberRepository.findById(memberId2).orElseThrow()
+        return isFriend(member1, member2)
+    }
+
     private fun findPendingOrThrow(from: Member, to: Member): FriendRequest {
         return friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(
             from, to, PENDING

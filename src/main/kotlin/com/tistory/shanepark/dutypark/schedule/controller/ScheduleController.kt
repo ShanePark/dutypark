@@ -38,8 +38,7 @@ class ScheduleController(
         @RequestBody @Validated scheduleUpdateDto: ScheduleUpdateDto,
         @Login loginMember: LoginMember
     ): ResponseEntity<Any> {
-        scheduleService.checkAuthentication(loginMember, scheduleUpdateDto.memberId)
-        scheduleService.createSchedule(scheduleUpdateDto)
+        scheduleService.createSchedule(loginMember, scheduleUpdateDto)
 
         return ResponseEntity.ok().build()
     }
@@ -52,8 +51,7 @@ class ScheduleController(
         @Login loginMember: LoginMember,
         @PathVariable id: UUID
     ): ResponseEntity<Any> {
-        scheduleService.checkAuthentication(loginMember, scheduleUpdateDto.memberId)
-        scheduleService.updateSchedule(id, scheduleUpdateDto)
+        scheduleService.updateSchedule(loginMember, id, scheduleUpdateDto)
         return ResponseEntity.ok().build()
     }
 
@@ -66,16 +64,17 @@ class ScheduleController(
     ): ResponseEntity<Any> {
         val schedule1 = scheduleRepository.findById(id1).orElseThrow()
         val schedule2 = scheduleRepository.findById(id2).orElseThrow()
-        scheduleService.checkAuthentication(loginMember, schedule1.member.id!!)
-        scheduleService.checkAuthentication(loginMember, schedule2.member.id!!)
 
-        scheduleService.swapSchedulePosition(schedule1, schedule2)
+        scheduleService.swapSchedulePosition(loginMember, schedule1, schedule2)
         return ResponseEntity.ok().build()
     }
 
     @DeleteMapping("/{id}")
-    fun deleteSchedule(@PathVariable id: UUID) {
-        scheduleService.deleteSchedule(id)
+    fun deleteSchedule(
+        @PathVariable id: UUID,
+        @Login loginMember: LoginMember,
+    ) {
+        scheduleService.deleteSchedule(loginMember, id)
     }
 
 }
