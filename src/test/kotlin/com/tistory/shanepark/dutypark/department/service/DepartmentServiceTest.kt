@@ -51,7 +51,7 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
         assertThat(totalAfter).isEqualTo(totalBefore + 1)
 
         // When
-        service.delete(created.id!!)
+        service.delete(created.id)
 
         // Then
         val totalAfterDelete = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
@@ -194,8 +194,8 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
         assertThat(member2.department).isEqualTo(department)
 
         // When
-        service.removeMemberFromDepartment(department, member)
-        service.removeMemberFromDepartment(department, member2)
+        service.removeMemberFromDepartment(department.id!!, member.id!!)
+        service.removeMemberFromDepartment(department.id!!, member2.id!!)
 
         // Then
         assertThat(department.members).isEmpty()
@@ -216,7 +216,7 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
 
         // When
         assertThrows<IllegalStateException> {
-            service.removeMemberFromDepartment(department2, member)
+            service.removeMemberFromDepartment(department2.id!!, member.id!!)
         }
     }
 
@@ -233,8 +233,8 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
         assertThat(member2.department).isEqualTo(null)
 
         // When
-        service.addMemberToDepartment(department, member)
-        service.addMemberToDepartment(department, member2)
+        service.addMemberToDepartment(department.id!!, member.id!!)
+        service.addMemberToDepartment(department.id!!, member2.id!!)
 
         em.flush()
         em.clear()
@@ -258,10 +258,10 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
 
         // When
         assertThrows(IllegalStateException::class.java) {
-            service.addMemberToDepartment(department, member)
+            service.addMemberToDepartment(department.id!!, member.id!!)
         }
         assertThrows(IllegalStateException::class.java) {
-            service.addMemberToDepartment(department, member2)
+            service.addMemberToDepartment(department.id!!, member2.id!!)
         }
 
         // Then
@@ -282,13 +282,13 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
         assertThat(department.manager).isNull()
 
         // Then
-        service.changeManager(department, member)
+        service.changeManager(department.id!!, member.id!!)
         assertThat(department.manager).isEqualTo(member)
 
-        service.changeManager(department, member2)
+        service.changeManager(department.id!!, member2.id!!)
         assertThat(department.manager).isEqualTo(member2)
 
-        service.changeManager(department, null)
+        service.changeManager(department.id!!, null)
         assertThat(department.manager).isNull()
 
     }
