@@ -18,9 +18,10 @@ data class ScheduleDto(
     val totalDays: Int,
     val startDateTime: LocalDateTime,
     val endDateTime: LocalDateTime,
+    val isTagged: Boolean,
 ) {
     companion object {
-        fun of(calendarView: CalendarView, schedule: Schedule): List<ScheduleDto> {
+        fun of(calendarView: CalendarView, schedule: Schedule, isTagged: Boolean = false): List<ScheduleDto> {
             val startDateTime = schedule.startDateTime
             val startDate = startDateTime.toLocalDate()
             val endDateTime = schedule.endDateTime
@@ -41,6 +42,7 @@ data class ScheduleDto(
                     totalDays = totalDays,
                     startDateTime = startDateTime,
                     endDateTime = endDateTime,
+                    isTagged = isTagged
                 )
             }
         }

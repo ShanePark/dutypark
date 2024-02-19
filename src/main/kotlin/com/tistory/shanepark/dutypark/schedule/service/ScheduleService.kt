@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.schedule.service
 
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
+import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
@@ -35,8 +36,13 @@ class ScheduleService(
         val start = calendarView.rangeFrom
         val end = calendarView.rangeEnd
 
-        scheduleRepository.findSchedulesOfMonth(member, start, end)
-            .map { ScheduleDto.of(calendarView, it) }
+        val userSchedules = scheduleRepository.findSchedulesOfMonth(member, start, end)
+            .map { ScheduleDto.of(calendarView, it, isTagged = false) }
+
+        val taggedSchedules = scheduleRepository.findTaggedSchedulesOfRange(member, start, end)
+            .map { ScheduleDto.of(calendarView, it, isTagged = true) }
+
+        userSchedules.plus(taggedSchedules)
             .flatten()
             .sortedWith(compareBy({ it.startDateTime.toLocalDate() }, { it.position }))
             .forEach { scheduleDto ->
@@ -53,6 +59,7 @@ class ScheduleService(
 
                 array[dayIndex] = array[dayIndex] + scheduleDto
             }
+
         return array
     }
 
@@ -142,6 +149,13 @@ class ScheduleService(
         checkScheduleUpdateAuthority(schedule = schedule, loginMember = loginMember)
 
         schedule.removeTag(member)
+    }
+
+    fun loadTags(scheduleId: UUID): List<MemberDto> {
+        val schedule = scheduleRepository.findById(scheduleId).orElseThrow()
+        return schedule.tags
+            .map { it.member }
+            .map { MemberDto(it) }
     }
 
     private fun checkScheduleCreateAuthority(loginMember: LoginMember, scheduleMember: Member) {

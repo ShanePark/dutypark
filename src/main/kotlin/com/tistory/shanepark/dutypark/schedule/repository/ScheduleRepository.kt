@@ -10,7 +10,9 @@ import java.util.*
 interface ScheduleRepository : JpaRepository<Schedule, UUID> {
 
     @Query(
-        "SELECT s FROM Schedule s WHERE s.member = :member AND (" +
+        "SELECT s" +
+                " FROM Schedule s JOIN FETCH s.member m" +
+                " WHERE m = :member AND (" +
                 "(s.startDateTime < :start AND s.endDateTime BETWEEN :start AND :end) OR " +
                 "(s.startDateTime BETWEEN :start AND :end) OR " +
                 "(s.startDateTime BETWEEN :start AND :end AND s.endDateTime > :end) OR " +
@@ -19,10 +21,25 @@ interface ScheduleRepository : JpaRepository<Schedule, UUID> {
     )
     fun findSchedulesOfMonth(member: Member, start: LocalDateTime, end: LocalDateTime): List<Schedule>
 
-    @Query("SELECT COALESCE(MAX(s.position), -1)" +
-            " FROM Schedule s" +
-            " WHERE s.member = :member AND YEAR(s.startDateTime) = YEAR(:startDateTime) AND MONTH(s.startDateTime) = MONTH(:startDateTime) AND DAY(s.startDateTime) = DAY(:startDateTime)")
+    @Query(
+        "SELECT COALESCE(MAX(s.position), -1)" +
+                " FROM Schedule s" +
+                " WHERE s.member = :member AND YEAR(s.startDateTime) = YEAR(:startDateTime) AND MONTH(s.startDateTime) = MONTH(:startDateTime) AND DAY(s.startDateTime) = DAY(:startDateTime)"
+    )
     fun findMaxPosition(member: Member, startDateTime: LocalDateTime): Int
+
+    @Query(
+        "SELECT s FROM Schedule s" +
+                " JOIN FETCH s.tags t" +
+                " JOIN FETCH t.member m" +
+                " WHERE m = :member AND (" +
+                "(s.startDateTime < :start AND s.endDateTime BETWEEN :start AND :end) OR " +
+                "(s.startDateTime BETWEEN :start AND :end) OR " +
+                "(s.startDateTime BETWEEN :start AND :end AND s.endDateTime > :end) OR " +
+                "(s.startDateTime < :start AND s.endDateTime > :end)" +
+                ")"
+    )
+    fun findTaggedSchedulesOfRange(member: Member, start: LocalDateTime, end: LocalDateTime): List<Schedule>
 
 }
 

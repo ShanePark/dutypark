@@ -519,4 +519,69 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         assertThat(findSchedule.tags).isEmpty()
     }
 
+    @Test
+    fun `loadTags returns tagged friends`() {
+        // Given
+        val member = TestData.member
+        val friend = TestData.member2
+        val scheduleUpdateDto = ScheduleUpdateDto(
+            memberId = member.id!!,
+            content = "schedule1",
+            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+        )
+        val loginMember = loginMember(member)
+
+        val schedule = scheduleService.createSchedule(loginMember, scheduleUpdateDto)
+        friendRelationRepository.save(FriendRelation(member, friend))
+        friendRelationRepository.save(FriendRelation(friend, member))
+        scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
+
+        // When
+        val tags = scheduleService.loadTags(schedule.id)
+
+        // Then
+        assertThat(tags).hasSize(1)
+        assertThat(tags[0].id).isEqualTo(friend.id)
+    }
+
+    @Test
+    fun `find schedules include tagged schedules`() {
+        // Given
+        val owner = TestData.member
+        val taggedPerson = TestData.member2
+        val scheduleUpdateDto = ScheduleUpdateDto(
+            memberId = owner.id!!,
+            content = "schedule1",
+            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+        )
+        val loginMember = loginMember(owner)
+
+        val schedule = scheduleService.createSchedule(loginMember, scheduleUpdateDto)
+        friendRelationRepository.save(FriendRelation(owner, taggedPerson))
+        friendRelationRepository.save(FriendRelation(taggedPerson, owner))
+
+        scheduleService.tagFriend(loginMember, schedule.id, taggedPerson.id!!)
+
+        // When
+        val yearMonth = YearMonth.of(2023, 4)
+        val taggedPersonSchedules = scheduleService.findSchedulesByYearAndMonth(taggedPerson, yearMonth)
+        val ownerSchedules = scheduleService.findSchedulesByYearAndMonth(owner, yearMonth)
+
+        // Then
+        val calendarView = CalendarView(yearMonth)
+        val paddingBefore = calendarView.paddingBefore
+
+        val scheduleForOwner = ownerSchedules[paddingBefore + 10 - 1]
+        assertThat(scheduleForOwner).hasSize(1)
+        assertThat(scheduleForOwner[0].isTagged).isFalse
+
+        val scheduleForTaggedPerson = taggedPersonSchedules[paddingBefore + 10 - 1]
+        assertThat(scheduleForTaggedPerson).hasSize(1)
+        assertThat(scheduleForTaggedPerson[0].isTagged).isTrue
+
+        assertThat(scheduleForTaggedPerson[0].id).isEqualTo(schedule.id)
+    }
+
 }
