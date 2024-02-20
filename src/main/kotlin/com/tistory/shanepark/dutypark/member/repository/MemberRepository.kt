@@ -25,6 +25,7 @@ interface MemberRepository : JpaRepository<Member, Long> {
     @Query("select m from Member m join fetch m.department d  where m.id = :memberId")
     fun findMemberWithDepartment(memberId: Long): Optional<Member>
 
+    @EntityGraph(attributePaths = ["department"])
     fun findMembersByNameContainingIgnoreCaseAndIdNotIn(
         name: String,
         excludeIds: List<Long?>,

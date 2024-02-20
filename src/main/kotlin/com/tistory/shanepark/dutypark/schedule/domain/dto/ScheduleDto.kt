@@ -1,6 +1,8 @@
 package com.tistory.shanepark.dutypark.schedule.domain.dto
 
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
+import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
+import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto.Companion.ofSimple
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -19,6 +21,7 @@ data class ScheduleDto(
     val startDateTime: LocalDateTime,
     val endDateTime: LocalDateTime,
     val isTagged: Boolean,
+    val tags: List<MemberDto>
 ) {
     companion object {
         fun of(calendarView: CalendarView, schedule: Schedule, isTagged: Boolean = false): List<ScheduleDto> {
@@ -29,6 +32,7 @@ data class ScheduleDto(
 
             val totalDays = ChronoUnit.DAYS.between(startDate, endDate).toInt() + 1
             val validDays = validDays(startDate, endDate, calendarView)
+            val tags = schedule.tags.map { t -> ofSimple(t.member) }
 
             return validDays.map {
                 ScheduleDto(
@@ -42,7 +46,8 @@ data class ScheduleDto(
                     totalDays = totalDays,
                     startDateTime = startDateTime,
                     endDateTime = endDateTime,
-                    isTagged = isTagged
+                    isTagged = isTagged,
+                    tags = tags
                 )
             }
         }

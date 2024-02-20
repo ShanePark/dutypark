@@ -11,7 +11,10 @@ interface ScheduleRepository : JpaRepository<Schedule, UUID> {
 
     @Query(
         "SELECT s" +
-                " FROM Schedule s JOIN FETCH s.member m" +
+                " FROM Schedule s" +
+                " JOIN FETCH s.member m" +
+                " LEFT JOIN FETCH s.tags t" +
+                " LEFT JOIN FETCH t.member tm" +
                 " WHERE m = :member AND (" +
                 "(s.startDateTime < :start AND s.endDateTime BETWEEN :start AND :end) OR " +
                 "(s.startDateTime BETWEEN :start AND :end) OR " +
@@ -30,9 +33,10 @@ interface ScheduleRepository : JpaRepository<Schedule, UUID> {
 
     @Query(
         "SELECT s FROM Schedule s" +
+                " JOIN FETCH s.member m" +
                 " JOIN FETCH s.tags t" +
-                " JOIN FETCH t.member m" +
-                " WHERE m = :member AND (" +
+                " JOIN FETCH t.member tm" +
+                " WHERE tm = :member AND (" +
                 "(s.startDateTime < :start AND s.endDateTime BETWEEN :start AND :end) OR " +
                 "(s.startDateTime BETWEEN :start AND :end) OR " +
                 "(s.startDateTime BETWEEN :start AND :end AND s.endDateTime > :end) OR " +

@@ -12,8 +12,8 @@ data class FriendRequestDto(
 ) {
     constructor(friendRequest: FriendRequest) : this(
         id = friendRequest.id!!,
-        fromMember = MemberDto(friendRequest.fromMember),
-        toMember = MemberDto(friendRequest.toMember),
+        fromMember = MemberDto.ofSimple(friendRequest.fromMember),
+        toMember = MemberDto.ofSimple(friendRequest.toMember),
         status = friendRequest.status.name,
         createdAt = friendRequest.createdDate
     )

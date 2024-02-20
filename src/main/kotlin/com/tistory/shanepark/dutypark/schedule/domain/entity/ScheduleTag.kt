@@ -5,6 +5,7 @@ import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import jakarta.persistence.*
 
 @Entity
+@Table(name = "schedule_tags")
 class ScheduleTag(
 
     @ManyToOne(fetch = FetchType.LAZY)

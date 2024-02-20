@@ -2,7 +2,6 @@ package com.tistory.shanepark.dutypark.schedule.service
 
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
-import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
@@ -71,7 +70,7 @@ class ScheduleService(
         val startDateTime = scheduleUpdateDto.startDateTime
         val endDateTime = scheduleUpdateDto.endDateTime
 
-        val position = nextPosition(scheduleMember, startDateTime)
+        val position = findNextPosition(scheduleMember, startDateTime)
 
         val schedule = Schedule(
             member = scheduleMember,
@@ -83,7 +82,7 @@ class ScheduleService(
         return scheduleRepository.save(schedule)
     }
 
-    private fun nextPosition(
+    private fun findNextPosition(
         member: Member,
         startDateTime: LocalDateTime
     ) = scheduleRepository.findMaxPosition(member, startDateTime) + 1
@@ -149,13 +148,6 @@ class ScheduleService(
         checkScheduleUpdateAuthority(schedule = schedule, loginMember = loginMember)
 
         schedule.removeTag(member)
-    }
-
-    fun loadTags(scheduleId: UUID): List<MemberDto> {
-        val schedule = scheduleRepository.findById(scheduleId).orElseThrow()
-        return schedule.tags
-            .map { it.member }
-            .map { MemberDto(it) }
     }
 
     private fun checkScheduleCreateAuthority(loginMember: LoginMember, scheduleMember: Member) {

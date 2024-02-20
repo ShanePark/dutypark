@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
@@ -308,12 +309,14 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
     @Test
     fun `find Schedules Over year`() {
         // given
+        val yearMonth = YearMonth.of(2023, 12)
+
         val member = TestData.member
         val schedule1 = Schedule(
             member = member,
             content = "schedule1",
-            startDateTime = LocalDateTime.of(2023, 12, 31, 0, 0),
-            endDateTime = LocalDateTime.of(2023, 12, 31, 0, 0),
+            startDateTime = LocalDateTime.of(yearMonth.year, yearMonth.month, 31, 0, 0),
+            endDateTime = LocalDateTime.of(yearMonth.year, yearMonth.month, 31, 0, 0),
             position = 0
         )
         val schedule2 = Schedule(
@@ -326,14 +329,13 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         scheduleRepository.saveAll(listOf(schedule1, schedule2))
 
         // When
-        val yearMonth = YearMonth.of(2023, 12)
         val result = scheduleService.findSchedulesByYearAndMonth(member, yearMonth)
 
         // Then
         val calendarView = CalendarView(yearMonth)
         assertThat(result).hasSize(calendarView.size)
-        assertThat(result[35][0].content).isEqualTo("schedule1")
-        assertThat(result[36][0].content).isEqualTo("schedule2")
+        assertThat(result[calendarView.paddingBefore - 1 + 31][0].content).isEqualTo("schedule1")
+        assertThat(result[calendarView.paddingBefore - 1 + 31 + 1][0].content).isEqualTo("schedule2")
     }
 
     @Test
@@ -458,8 +460,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         val loginMember = loginMember(member)
 
         val schedule = scheduleService.createSchedule(loginMember, scheduleUpdateDto)
-        friendRelationRepository.save(FriendRelation(member, friend))
-        friendRelationRepository.save(FriendRelation(friend, member))
+        makeThemFriend(member, friend)
 
         // When
         scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
@@ -507,8 +508,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         val loginMember = loginMember(member)
 
         val schedule = scheduleService.createSchedule(loginMember, scheduleUpdateDto)
-        friendRelationRepository.save(FriendRelation(member, friend))
-        friendRelationRepository.save(FriendRelation(friend, member))
+        makeThemFriend(member, friend)
         scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
 
         // When
@@ -517,32 +517,6 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         // Then
         val findSchedule = scheduleRepository.findById(schedule.id).orElseThrow()
         assertThat(findSchedule.tags).isEmpty()
-    }
-
-    @Test
-    fun `loadTags returns tagged friends`() {
-        // Given
-        val member = TestData.member
-        val friend = TestData.member2
-        val scheduleUpdateDto = ScheduleUpdateDto(
-            memberId = member.id!!,
-            content = "schedule1",
-            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-        )
-        val loginMember = loginMember(member)
-
-        val schedule = scheduleService.createSchedule(loginMember, scheduleUpdateDto)
-        friendRelationRepository.save(FriendRelation(member, friend))
-        friendRelationRepository.save(FriendRelation(friend, member))
-        scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
-
-        // When
-        val tags = scheduleService.loadTags(schedule.id)
-
-        // Then
-        assertThat(tags).hasSize(1)
-        assertThat(tags[0].id).isEqualTo(friend.id)
     }
 
     @Test
@@ -559,8 +533,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         val loginMember = loginMember(owner)
 
         val schedule = scheduleService.createSchedule(loginMember, scheduleUpdateDto)
-        friendRelationRepository.save(FriendRelation(owner, taggedPerson))
-        friendRelationRepository.save(FriendRelation(taggedPerson, owner))
+        makeThemFriend(owner, taggedPerson)
 
         scheduleService.tagFriend(loginMember, schedule.id, taggedPerson.id!!)
 
@@ -582,6 +555,60 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         assertThat(scheduleForTaggedPerson[0].isTagged).isTrue
 
         assertThat(scheduleForTaggedPerson[0].id).isEqualTo(schedule.id)
+    }
+
+    @Test
+    fun `schedules include tags`() {
+        // Given
+        val member1 = TestData.member
+        val member2 = TestData.member2
+        val updateDto1 = ScheduleUpdateDto(
+            memberId = member1.id!!,
+            content = "member1Schedule",
+            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+        )
+        val updateDto2 = ScheduleUpdateDto(
+            memberId = member2.id!!,
+            content = "member2Schedule",
+            startDateTime = LocalDateTime.of(2023, 4, 10, 1, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 10, 1, 0),
+        )
+
+        val loginMember = loginMember(member1)
+        val loginMember2 = loginMember(member2)
+
+        val member1Schedule = scheduleService.createSchedule(loginMember, updateDto1)
+        val member2Schedule = scheduleService.createSchedule(loginMember2, updateDto2)
+        makeThemFriend(member1, member2)
+
+        scheduleService.tagFriend(loginMember, member1Schedule.id, member2.id!!)
+        scheduleService.tagFriend(loginMember2, member2Schedule.id, member1.id!!)
+
+        // When
+        val yearMonth = YearMonth.of(2023, 4)
+        val ownerSchedules = scheduleService.findSchedulesByYearAndMonth(member1, yearMonth)
+
+        // Then
+        val calendarView = CalendarView(yearMonth)
+
+        val scheduleForOwner = ownerSchedules[calendarView.paddingBefore + 10 - 1]
+        assertThat(scheduleForOwner).hasSize(2)
+
+        val member1ScheduleDto = scheduleForOwner[0]
+        assertThat(member1ScheduleDto.isTagged).isFalse
+        assertThat(member1ScheduleDto.tags).hasSize(1)
+        assertThat(member1ScheduleDto.tags[0].id).isEqualTo(member2.id)
+
+        val member2ScheduleDto = scheduleForOwner[1]
+        assertThat(member2ScheduleDto.isTagged).isTrue()
+        assertThat(member2ScheduleDto.tags).hasSize(1)
+        assertThat(member2ScheduleDto.tags[0].id).isEqualTo(member1.id)
+    }
+
+    private fun makeThemFriend(member1: Member, member2: Member) {
+        friendRelationRepository.save(FriendRelation(member1, member2))
+        friendRelationRepository.save(FriendRelation(member2, member1))
     }
 
 }

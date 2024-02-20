@@ -30,7 +30,7 @@ class FriendService(
         val member = loginMemberToMember(loginMember)
         return friendRelationRepository.findAllByMember(member)
             .map { it.friend }
-            .map { MemberDto(it) }
+            .map { MemberDto.of(it) }
     }
 
     @Transactional(readOnly = true)
@@ -149,7 +149,7 @@ class FriendService(
         val excludeIds = friends + pendingRequestsFrom + member.id
 
         return memberRepository.findMembersByNameContainingIgnoreCaseAndIdNotIn(keyword, excludeIds, page)
-            .map { MemberDto(it) }
+            .map { MemberDto.of(it) }
     }
 
     private fun loginMemberToMember(login: LoginMember): Member {

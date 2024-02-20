@@ -21,7 +21,7 @@ class MemberService(
     fun findAll(): MutableList<MemberDto> {
         return memberRepository.findAll()
             .sortedWith(compareBy({ it.department?.name }, { it.name }))
-            .map { MemberDto(it) }
+            .map { MemberDto.of(it) }
             .toMutableList()
     }
 
@@ -51,7 +51,7 @@ class MemberService(
         page: Pageable, name: String
     ): Page<MemberDto> {
         memberRepository.findMembersByNameContainingIgnoreCase(name, page).let { it ->
-            return it.map { MemberDto(it) }
+            return it.map { MemberDto.of(it) }
         }
     }
 }
