@@ -432,6 +432,15 @@ a.homeButton:hover {
     font-size: 1em;
 }
 
+.schedule-tag {
+    font-size: 0.8em;
+    padding: 0.5em;
+    border-radius: 15px;
+    margin: 0.1em;
+    border: 1px solid black;
+    background-color: #eaeaea;
+}
+
 #detail-view-modal .modal-header .current-date-label {
     font-size: 1.3em;
 }

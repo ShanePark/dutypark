@@ -287,7 +287,21 @@
                                 if (schedule.totalDays > 1) {
                                     content += '[' + schedule.daysFromStart + '/' + schedule.totalDays + '] ';
                                 }
-                                return content + '<small>' + app.printScheduleTime(schedule) + '</small>';
+                                const tags = []
+                                schedule.tags.forEach(tag => {
+                                    if (tag.id !== memberId) {
+                                        tags.push({name: tag.name});
+                                    }
+                                });
+                                if (schedule.isTagged) {
+                                    tags.push({name: schedule.owner});
+                                }
+                                const tagElements = '<p>' + tags.map(tag => `<span class="schedule-tag">${tag.name}</span>`).join('') + '</p>';
+                                let scheduleElement = content + '<small>' + app.printScheduleTime(schedule) + '</small>'
+                                if (tags.length > 0) {
+                                    scheduleElement += tagElements;
+                                }
+                                return scheduleElement;
                             }
                         },
                         printScheduleTime() {

@@ -21,6 +21,7 @@ data class ScheduleDto(
     val startDateTime: LocalDateTime,
     val endDateTime: LocalDateTime,
     val isTagged: Boolean,
+    val owner: String,
     val tags: List<MemberDto>
 ) {
     companion object {
@@ -47,6 +48,7 @@ data class ScheduleDto(
                     startDateTime = startDateTime,
                     endDateTime = endDateTime,
                     isTagged = isTagged,
+                    owner = schedule.member.name,
                     tags = tags
                 )
             }
