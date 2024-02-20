@@ -37,8 +37,8 @@ class FriendService(
     fun getMyFriendInfo(loginMember: LoginMember): FriendsInfoDto {
         val member = loginMemberToMember(loginMember)
         val friends = findAllFriends(loginMember)
-        val pendingRequestsTo = getPendingRequestsTo(member).map { FriendRequestDto(it) }
-        val pendingRequestsFrom = getPendingRequestsFrom(member).map { FriendRequestDto(it) }
+        val pendingRequestsTo = getPendingRequestsTo(member).map { FriendRequestDto.of(it) }
+        val pendingRequestsFrom = getPendingRequestsFrom(member).map { FriendRequestDto.of(it) }
         return FriendsInfoDto(friends, pendingRequestsTo, pendingRequestsFrom)
     }
 
