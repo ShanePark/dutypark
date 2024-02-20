@@ -315,7 +315,8 @@
                                 const daysFromStart = schedule.daysFromStart;
                                 const startDateTime = new Date(schedule.startDateTime);
                                 const startHour = startDateTime.getHours().toString().padStart(2, '0');
-                                return daysFromStart === 1 && startHour !== '00';
+                                const startMinute = startDateTime.getMinutes().toString().padStart(2, '0');
+                                return daysFromStart === 1 && !(startHour === '00' && startMinute === '00');
                             }
                         },
                         shouldDisplayEndTime() {
@@ -325,8 +326,10 @@
                                 const startDateTime = new Date(schedule.startDateTime);
                                 const endDateTime = new Date(schedule.endDateTime);
                                 const endHour = endDateTime.getHours().toString().padStart(2, '0');
-                                return (daysFromStart === totalDays) && (endHour !== '00') &&
-                                    !(totalDays === 1 && sameDateTime(startDateTime, endDateTime));
+                                const endMinute = endDateTime.getMinutes().toString().padStart(2, '0');
+                                return (daysFromStart === totalDays)
+                                    && !(endHour === '00' && endMinute === '00')
+                                    && !(totalDays === 1 && sameDateTime(startDateTime, endDateTime));
                             }
                         },
                         dutyAndDateTimeSame() {
