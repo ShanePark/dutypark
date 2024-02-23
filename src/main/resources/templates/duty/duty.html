@@ -84,8 +84,7 @@
                             </span>
             </div>
             <div class="d-day-schedules"></div>
-            <div class="schedule" v-for="schedule in schedulesByDays[index]">
-              <span class="schedule-content" v-html="printSchedule(schedule)"></span>
+            <div class="schedule" v-for="schedule in schedulesByDays[index]" v-html="printSchedule(schedule)">
             </div>
           </div>
           <div v-if="batchEditMode" class="duty row">
@@ -163,23 +162,27 @@
                        v-model="editingSchedule.endDateTime"/>
               </div>
               <div class="buttons mt-3" v-if="!isEditing(schedule)">
-                <template
-                    v-if="schedulesByDays[detailView.index].length > detailView.scheduleStartDiffCount + 1 && dutyAndDateTimeSame(detailView, schedule.startDateTime)">
-                  <button :disabled="s_index == schedulesByDays[detailView.index].length -1"
-                          v-on:click="swapSchedule(schedule, schedulesByDays[detailView.index][s_index+1])"
-                          class="btn btn-secondary"
-                  >
-                    <i class="bi bi-arrow-down-square"></i>
-                  </button>
-                  <button :disabled="s_index <= detailView.scheduleStartDiffCount"
-                          v-on:click="swapSchedule(schedule, schedulesByDays[detailView.index][s_index-1])"
-                          class="btn btn-secondary">
-                    <i class="bi bi-arrow-up-square"></i>
-                  </button>
+                <template v-if="schedule.isTagged">
+                  <button class="btn btn-danger" v-on:click="deleteSchedule(schedule)">태그제거</button>
                 </template>
-                </button>
-                <button class="btn btn-info" v-on:click="scheduleEditMode(schedule)">수정</button>
-                <button class="btn btn-danger" v-on:click="deleteSchedule(schedule)">삭제</button>
+                <template v-else>
+                  <template
+                      v-if="schedulesByDays[detailView.index].length > detailView.scheduleStartDiffCount + 1 && dutyAndDateTimeSame(detailView, schedule.startDateTime)">
+                    <button :disabled="s_index == schedulesByDays[detailView.index].length -1"
+                            v-on:click="swapSchedule(schedule, schedulesByDays[detailView.index][s_index+1])"
+                            class="btn btn-secondary"
+                    >
+                      <i class="bi bi-arrow-down-square"></i>
+                    </button>
+                    <button :disabled="s_index <= detailView.scheduleStartDiffCount"
+                            v-on:click="swapSchedule(schedule, schedulesByDays[detailView.index][s_index-1])"
+                            class="btn btn-secondary">
+                      <i class="bi bi-arrow-up-square"></i>
+                    </button>
+                  </template>
+                  <button class="btn btn-info" v-on:click="scheduleEditMode(schedule)">수정</button>
+                  <button class="btn btn-danger" v-on:click="deleteSchedule(schedule)">삭제</button>
+                </template>
               </div>
               <div class="buttons mt-3" v-if="isEditing(schedule)">
                 <button class="btn btn-success" v-on:click="editSchedule()">저장</button>
@@ -296,9 +299,12 @@
                                 if (schedule.isTagged) {
                                     tags.push({name: schedule.owner});
                                 }
-                                const tagElements = '<p>' + tags.map(tag => `<span class="schedule-tag">${tag.name}</span>`).join('') + '</p>';
-                                let scheduleElement = content + '<small>' + app.printScheduleTime(schedule) + '</small>'
+                                let scheduleElement = `<p class="schedule-content">${content} <small>${app.printScheduleTime(schedule)}</small></p>`;
                                 if (tags.length > 0) {
+                                    const tagElements = '<div class="schedule-tags">' + tags.map(tag => {
+                                        const tagName = `${schedule.isTagged ? '<i class="bi bi-tags-fill"></i>' : '<i class="bi bi-person-circle"></i>'} ${tag.name}`;
+                                        return `<span class="schedule-tag tagged-${schedule.isTagged}">${tagName}</span>`;
+                                    }).join('') + '</div>';
                                     scheduleElement += tagElements;
                                 }
                                 return scheduleElement;
