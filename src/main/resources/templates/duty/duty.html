@@ -300,14 +300,16 @@
                                     tags.push({name: schedule.owner});
                                 }
                                 let scheduleElement = `<p class="schedule-content">${content} <small>${app.printScheduleTime(schedule)}</small></p>`;
+                                let tagElements = ''
                                 if (tags.length > 0) {
-                                    const tagElements = '<div class="schedule-tags">' + tags.map(tag => {
-                                        const tagName = `${schedule.isTagged ? '<i class="bi bi-tags-fill"></i>' : '<i class="bi bi-person-circle"></i>'} ${tag.name}`;
-                                        return `<span class="schedule-tag tagged-${schedule.isTagged}">${tagName}</span>`;
-                                    }).join('') + '</div>';
-                                    scheduleElement += tagElements;
+                                    tagElements += tags.map(tag => {
+                                        return `<span class="schedule-tag tagged-${schedule.isTagged}">${tag.name}</span>`;
+                                    }).join('');
                                 }
-                                return scheduleElement;
+                                if (!schedule.isTagged) {
+                                    tagElements += `<span class="schedule-tag schedule-tag-add"></span>`;
+                                }
+                                return scheduleElement + `<div class="schedule-tags">${tagElements}</div>`;
                             }
                         },
                         printScheduleTime() {
