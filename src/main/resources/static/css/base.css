@@ -493,6 +493,7 @@ a.homeButton:hover {
     border: none;
     width: 3.5em;
     background: floralwhite;
+    -webkit-appearance: none;
 }
 
 .schedule-tag.schedule-tag-add::before {
