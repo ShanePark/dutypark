@@ -495,6 +495,31 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
     }
 
     @Test
+    fun `can't tag a friend who is already tagged`() {
+        // Given
+        val member = TestData.member
+        val friend = TestData.member2
+        val scheduleUpdateDto = ScheduleUpdateDto(
+            memberId = member.id!!,
+            content = "schedule1",
+            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+        )
+        val loginMember = loginMember(member)
+
+        val schedule = scheduleService.createSchedule(loginMember, scheduleUpdateDto)
+        makeThemFriend(member, friend)
+        scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
+
+        // When
+        // Then
+        assertThrows<IllegalArgumentException> {
+            scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
+        }
+
+    }
+
+    @Test
     fun `untag friend test`() {
         // Given
         val member = TestData.member
@@ -517,6 +542,60 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         // Then
         val findSchedule = scheduleRepository.findById(schedule.id).orElseThrow()
         assertThat(findSchedule.tags).isEmpty()
+    }
+
+    @Test
+    fun `untag self test`() {
+        // Given
+        val member = TestData.member
+        val friend = TestData.member2
+        val scheduleUpdateDto = ScheduleUpdateDto(
+            memberId = member.id!!,
+            content = "schedule1",
+            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+        )
+        val loginMember = loginMember(member)
+
+        val schedule = scheduleService.createSchedule(loginMember, scheduleUpdateDto)
+        makeThemFriend(member, friend)
+
+        scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
+        assertThat(scheduleRepository.findById(schedule.id).orElseThrow().tags).hasSize(1)
+
+
+        // When
+        val friendLoginMember = loginMember(friend)
+        scheduleService.untagSelf(friendLoginMember, schedule.id)
+
+        // Then
+        val findSchedule = scheduleRepository.findById(schedule.id).orElseThrow()
+        assertThat(findSchedule.tags).isEmpty()
+    }
+
+    @Test
+    fun `can't untag self if not tagged`() {
+        // Given
+        val member = TestData.member
+        val friend = TestData.member2
+        val scheduleUpdateDto = ScheduleUpdateDto(
+            memberId = member.id!!,
+            content = "schedule1",
+            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+        )
+        val loginMember = loginMember(member)
+
+        val schedule = scheduleService.createSchedule(loginMember, scheduleUpdateDto)
+        makeThemFriend(member, friend)
+
+        // When
+        val friendLoginMember = loginMember(friend)
+
+        // Then
+        assertThrows<IllegalArgumentException> {
+            scheduleService.untagSelf(friendLoginMember, schedule.id)
+        }
     }
 
     @Test

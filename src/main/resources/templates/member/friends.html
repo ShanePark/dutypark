@@ -192,7 +192,7 @@
                 })
             },
             loadFriendInfo: function () {
-                fetch('/api/friends')
+                fetch('/api/friends/info')
                     .then(function (response) {
                         if (response.ok) {
                             return response.json();

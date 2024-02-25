@@ -28,6 +28,9 @@ class Schedule(
     val tags: MutableList<ScheduleTag> = mutableListOf()
 
     fun addTag(member: Member) {
+        tags.find { it.member.id == member.id }
+            ?.let { throw IllegalArgumentException("$member is already tagged in schedule $this") }
+
         val scheduleTag = ScheduleTag(this, member)
         tags.add(scheduleTag)
     }

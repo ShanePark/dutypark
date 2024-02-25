@@ -455,6 +455,7 @@ a.homeButton:hover {
     border: 1px solid black;
     background-color: floralwhite;
     width: fit-content;
+    white-space: nowrap;
 }
 
 #detail-view-modal .schedule-tag:hover {
@@ -486,6 +487,12 @@ a.homeButton:hover {
 
 .schedule-tag.schedule-tag-add {
     display: none;
+}
+
+.schedule-tag.schedule-tag-add select {
+    border: none;
+    width: 3.5em;
+    background: floralwhite;
 }
 
 .schedule-tag.schedule-tag-add::before {

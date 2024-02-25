@@ -77,4 +77,30 @@ class ScheduleController(
         scheduleService.deleteSchedule(loginMember, id)
     }
 
+    @PostMapping("/{scheduleId}/tags/{friendId}")
+    fun tagFriend(
+        @PathVariable scheduleId: UUID,
+        @PathVariable friendId: Long,
+        @Login loginMember: LoginMember
+    ) {
+        scheduleService.tagFriend(loginMember, scheduleId, friendId)
+    }
+
+    @DeleteMapping("/{scheduleId}/tags/{friendId}")
+    fun untagFriend(
+        @PathVariable scheduleId: UUID,
+        @PathVariable friendId: Long,
+        @Login loginMember: LoginMember
+    ) {
+        scheduleService.untagFriend(loginMember, scheduleId, friendId)
+    }
+
+    @DeleteMapping("/{scheduleId}/tags")
+    fun untagSelf(
+        @PathVariable scheduleId: UUID,
+        @Login loginMember: LoginMember
+    ) {
+        scheduleService.untagSelf(loginMember, scheduleId)
+    }
+
 }

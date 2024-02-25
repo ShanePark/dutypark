@@ -150,6 +150,12 @@ class ScheduleService(
         schedule.removeTag(member)
     }
 
+    fun untagSelf(loginMember: LoginMember, scheduleId: UUID) {
+        val schedule = scheduleRepository.findById(scheduleId).orElseThrow()
+        val member = memberRepository.findById(loginMember.id).orElseThrow()
+        schedule.removeTag(member)
+    }
+
     private fun checkScheduleCreateAuthority(loginMember: LoginMember, scheduleMember: Member) {
         if (loginMember.id == scheduleMember.id)
             return
