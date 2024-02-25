@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository
 
 interface FriendRelationRepository : JpaRepository<FriendRelation, Long> {
 
-    @EntityGraph(attributePaths = ["friend"])
+    @EntityGraph(attributePaths = ["friend", "friend.department"])
     fun findAllByMember(member: Member): List<FriendRelation>
 
     fun findByMemberAndFriend(member: Member, friend: Member): FriendRelation?

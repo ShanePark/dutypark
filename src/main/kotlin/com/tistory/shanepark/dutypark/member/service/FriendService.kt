@@ -29,6 +29,7 @@ class FriendService(
     fun findAllFriends(loginMember: LoginMember): List<MemberDto> {
         val member = loginMemberToMember(loginMember)
         return friendRelationRepository.findAllByMember(member)
+            .sortedWith(compareBy({ it.friend.department?.name }, { it.friend.name }))
             .map { it.friend }
             .map { MemberDto.of(it) }
     }
