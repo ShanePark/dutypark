@@ -7,27 +7,40 @@ import java.time.LocalDateTime
 
 @Entity
 class Schedule(
-    member: Member,
-    content: String,
-    startDateTime: LocalDateTime,
-    endDateTime: LocalDateTime,
-    position: Int,
-) : EntityBase() {
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
-    val member: Member = member
-
-    @Column(name = "start_date_time", nullable = false)
-    var startDateTime: LocalDateTime = startDateTime
-
-    @Column(name = "end_date_time", nullable = false)
-    var endDateTime: LocalDateTime = endDateTime
+    val member: Member,
 
     @Column(name = "content", nullable = false, length = 50)
-    var content: String = content
+    var content: String,
+
+    @Column(name = "start_date_time", nullable = false)
+    var startDateTime: LocalDateTime,
+
+    @Column(name = "end_date_time", nullable = false)
+    var endDateTime: LocalDateTime,
 
     @Column(name = "position", nullable = false)
-    var position: Int = position
+    var position: Int,
+) : EntityBase() {
+
+    @OneToMany(mappedBy = "schedule", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+    val tags: MutableList<ScheduleTag> = mutableListOf()
+
+    fun addTag(member: Member) {
+        tags.find { it.member.id == member.id }
+            ?.let { throw IllegalArgumentException("$member is already tagged in schedule $this") }
+
+        val scheduleTag = ScheduleTag(this, member)
+        tags.add(scheduleTag)
+    }
+
+    fun removeTag(member: Member) {
+        val scheduleTag = tags.find { it.member.id == member.id }
+        if (scheduleTag == null) {
+            throw IllegalArgumentException("$member is not tagged in schedule $this")
+        }
+        tags.remove(scheduleTag)
+    }
 
 }

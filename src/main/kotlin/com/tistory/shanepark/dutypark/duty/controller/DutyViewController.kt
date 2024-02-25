@@ -28,7 +28,7 @@ class DutyViewController(
         @RequestParam(required = false) month: Int?,
     ): String {
         val member = memberService.findMemberByName(name)
-        model.addAttribute("member", MemberDto(member))
+        model.addAttribute("member", MemberDto.of(member))
         model.addAttribute("year", year ?: LocalDate.now().year)
         model.addAttribute("month", month ?: LocalDate.now().monthValue)
         return layout(model, "duty/duty")

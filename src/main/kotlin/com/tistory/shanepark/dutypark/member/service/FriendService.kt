@@ -29,16 +29,17 @@ class FriendService(
     fun findAllFriends(loginMember: LoginMember): List<MemberDto> {
         val member = loginMemberToMember(loginMember)
         return friendRelationRepository.findAllByMember(member)
+            .sortedWith(compareBy({ it.friend.department?.name }, { it.friend.name }))
             .map { it.friend }
-            .map { MemberDto(it) }
+            .map { MemberDto.of(it) }
     }
 
     @Transactional(readOnly = true)
     fun getMyFriendInfo(loginMember: LoginMember): FriendsInfoDto {
         val member = loginMemberToMember(loginMember)
         val friends = findAllFriends(loginMember)
-        val pendingRequestsTo = getPendingRequestsTo(member).map { FriendRequestDto(it) }
-        val pendingRequestsFrom = getPendingRequestsFrom(member).map { FriendRequestDto(it) }
+        val pendingRequestsTo = getPendingRequestsTo(member).map { FriendRequestDto.of(it) }
+        val pendingRequestsFrom = getPendingRequestsFrom(member).map { FriendRequestDto.of(it) }
         return FriendsInfoDto(friends, pendingRequestsTo, pendingRequestsFrom)
     }
 
@@ -126,6 +127,13 @@ class FriendService(
         return friendRelationRepository.findByMemberAndFriend(member1, member2) != null
     }
 
+    @Transactional(readOnly = true)
+    fun isFriend(memberId1: Long, memberId2: Long): Boolean {
+        val member1 = memberRepository.findById(memberId1).orElseThrow()
+        val member2 = memberRepository.findById(memberId2).orElseThrow()
+        return isFriend(member1, member2)
+    }
+
     private fun findPendingOrThrow(from: Member, to: Member): FriendRequest {
         return friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(
             from, to, PENDING
@@ -142,7 +150,7 @@ class FriendService(
         val excludeIds = friends + pendingRequestsFrom + member.id
 
         return memberRepository.findMembersByNameContainingIgnoreCaseAndIdNotIn(keyword, excludeIds, page)
-            .map { MemberDto(it) }
+            .map { MemberDto.of(it) }
     }
 
     private fun loginMemberToMember(login: LoginMember): Member {

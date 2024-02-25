@@ -10,11 +10,15 @@ data class FriendRequestDto(
     val status: String,
     val createdAt: LocalDateTime?
 ) {
-    constructor(friendRequest: FriendRequest) : this(
-        id = friendRequest.id!!,
-        fromMember = MemberDto(friendRequest.fromMember),
-        toMember = MemberDto(friendRequest.toMember),
-        status = friendRequest.status.name,
-        createdAt = friendRequest.createdDate
-    )
+    companion object {
+        fun of(friendRequest: FriendRequest): FriendRequestDto {
+            return FriendRequestDto(
+                id = friendRequest.id!!,
+                fromMember = MemberDto.of(friendRequest.fromMember),
+                toMember = MemberDto.of(friendRequest.toMember),
+                status = friendRequest.status.name,
+                createdAt = friendRequest.createdDate
+            )
+        }
+    }
 }

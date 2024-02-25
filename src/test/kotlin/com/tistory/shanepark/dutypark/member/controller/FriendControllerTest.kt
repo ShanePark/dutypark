@@ -46,7 +46,7 @@ class FriendControllerTest : RestDocsTest() {
 
         // Then
         mockMvc.perform(
-            RestDocumentationRequestBuilders.get("/api/friends")
+            RestDocumentationRequestBuilders.get("/api/friends/info")
                 .accept("application/json")
                 .cookie(Cookie(jwtConfig.cookieName, getJwt(member)))
         ).andExpect(MockMvcResultMatchers.status().isOk)

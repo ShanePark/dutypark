@@ -5978,7 +5978,7 @@
       remove$2(keys, key);
   }
   var patternTypes = [String, RegExp, Array];
-  // TODO defineComponent
+
   var KeepAlive = {
       name: 'keep-alive',
       abstract: true,
@@ -11310,7 +11310,6 @@
       // OR when it is inside another scoped slot or v-for (the reactivity may be
       // disconnected due to the intermediate scope variable)
       // #9438, #9506
-      // TODO: this can be further optimized by properly analyzing in-scope bindings
       // and skip force updating ones that do not actually use scope variables.
       if (!needsForceUpdate) {
           var parent_2 = el.parent;

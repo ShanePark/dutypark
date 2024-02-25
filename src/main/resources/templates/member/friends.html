@@ -44,11 +44,11 @@
               관리
             </button>
             <ul class="dropdown-menu">
-              <li><a class="dropdown-item" :href="'/duty/' + member.name">시간표</a></li>
+              <li><a class="dropdown-item h_pointer" :href="'/duty/' + member.name">시간표</a></li>
               <li>
                 <hr class="dropdown-divider">
               </li>
-              <li><a class="dropdown-item" v-on:click="unfriend(member)">친구 삭제</a></li>
+              <li><a class="dropdown-item h_pointer" v-on:click="unfriend(member)">친구 삭제</a></li>
             </ul>
           </div>
         </li>
@@ -192,7 +192,7 @@
                 })
             },
             loadFriendInfo: function () {
-                fetch('/api/friends')
+                fetch('/api/friends/info')
                     .then(function (response) {
                         if (response.ok) {
                             return response.json();

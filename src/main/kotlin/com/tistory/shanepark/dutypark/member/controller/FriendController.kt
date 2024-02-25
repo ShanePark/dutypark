@@ -18,11 +18,18 @@ class FriendController(
     private val friendService: FriendService
 ) {
 
-    @GetMapping
+    @GetMapping("/info")
     fun friendInfo(
         @Login loginMember: LoginMember
     ): FriendsInfoDto {
         return friendService.getMyFriendInfo(loginMember)
+    }
+
+    @GetMapping
+    fun getFriends(
+        @Login loginMember: LoginMember
+    ): List<MemberDto> {
+        return friendService.findAllFriends(loginMember)
     }
 
     @GetMapping("search")

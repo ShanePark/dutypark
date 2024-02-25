@@ -28,4 +28,9 @@ class Member(
     @OneToMany(mappedBy = "member", orphanRemoval = true, cascade = [CascadeType.REMOVE], fetch = FetchType.LAZY)
     val refreshTokens = mutableListOf<RefreshToken>()
 
+    override fun toString(): String {
+        return "Member(name='$name', email='$email', id=$id)"
+    }
+
+
 }

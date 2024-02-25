@@ -6,6 +6,14 @@
     font-style: normal;
 }
 
+@font-face {
+    src: url('../lib/bootstrap/bootstrap-icons-1.3.0/fonts/bootstrap-icons.woff2') format('woff2');
+    font-display: swap;
+    font-family: 'Bootstrap Icons';
+    font-weight: normal;
+    font-style: normal;
+}
+
 [v-cloak] {
     display: none;
 }
@@ -404,8 +412,6 @@ a.homeButton:hover {
 }
 
 .calendar .date .schedule {
-    display: flex;
-    align-items: flex-start;
     font-size: 1em;
 }
 
@@ -415,6 +421,11 @@ a.homeButton:hover {
     background-color: aliceblue;
     padding: 10px;
     margin: 10px;
+}
+
+.schedules .schedule .schedule-content {
+    margin: 0;
+    padding: 0;
 }
 
 #detail-view-modal .schedules .schedule.schedule-add-button {
@@ -430,6 +441,67 @@ a.homeButton:hover {
 .schedule-add textarea,
 .schedule-edit textarea {
     font-size: 1em;
+}
+
+.schedule-tags {
+    text-align: right;
+}
+
+.schedule-tag {
+    font-size: 0.7em;
+    padding: 0.5em;
+    border-radius: 15px;
+    margin: 0.1em;
+    border: 1px solid black;
+    background-color: floralwhite;
+    width: fit-content;
+    white-space: nowrap;
+}
+
+#detail-view-modal .schedule-tag:hover {
+    cursor: pointer;
+}
+
+.schedule-tag::after,
+.schedule-tag::before {
+    font-family: 'Bootstrap Icons', serif;
+}
+
+.schedule-tag::before {
+    content: 'bi-tags-fill';
+    margin-right: 0.5em;
+}
+
+.schedule-tag.tagged-false::before {
+    content: 'bi-person-circle';
+}
+
+#detail-view-modal .schedule-tag.tagged-false::before {
+    content: none;
+}
+
+#detail-view-modal .schedule-tag.tagged-false::after {
+    content: 'bi-x-circle-fill';
+    margin-left: 0.5em;
+}
+
+.schedule-tag.schedule-tag-add {
+    display: none;
+}
+
+.schedule-tag.schedule-tag-add select {
+    border: none;
+    width: 3.5em;
+    background: floralwhite;
+}
+
+.schedule-tag.schedule-tag-add::before {
+    content: 'bi-person-plus-fill';
+    margin: 0;
+}
+
+#detail-view-modal .schedule-tag-add {
+    display: unset;
 }
 
 #detail-view-modal .modal-header .current-date-label {

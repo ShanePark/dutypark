@@ -84,8 +84,7 @@
                             </span>
             </div>
             <div class="d-day-schedules"></div>
-            <div class="schedule" v-for="schedule in schedulesByDays[index]">
-              <span class="schedule-content" v-html="printSchedule(schedule)"></span>
+            <div class="schedule" v-for="schedule in schedulesByDays[index]" v-html="printSchedule(schedule)">
             </div>
           </div>
           <div v-if="batchEditMode" class="duty row">
@@ -163,23 +162,27 @@
                        v-model="editingSchedule.endDateTime"/>
               </div>
               <div class="buttons mt-3" v-if="!isEditing(schedule)">
-                <template
-                    v-if="schedulesByDays[detailView.index].length > detailView.scheduleStartDiffCount + 1 && dutyAndDateTimeSame(detailView, schedule.startDateTime)">
-                  <button :disabled="s_index == schedulesByDays[detailView.index].length -1"
-                          v-on:click="swapSchedule(schedule, schedulesByDays[detailView.index][s_index+1])"
-                          class="btn btn-secondary"
-                  >
-                    <i class="bi bi-arrow-down-square"></i>
-                  </button>
-                  <button :disabled="s_index <= detailView.scheduleStartDiffCount"
-                          v-on:click="swapSchedule(schedule, schedulesByDays[detailView.index][s_index-1])"
-                          class="btn btn-secondary">
-                    <i class="bi bi-arrow-up-square"></i>
-                  </button>
+                <template v-if="schedule.isTagged">
+                  <button class="btn btn-danger" v-on:click="untagSelf(schedule.id)">태그제거</button>
                 </template>
-                </button>
-                <button class="btn btn-info" v-on:click="scheduleEditMode(schedule)">수정</button>
-                <button class="btn btn-danger" v-on:click="deleteSchedule(schedule)">삭제</button>
+                <template v-else>
+                  <template
+                      v-if="schedulesByDays[detailView.index].length > detailView.scheduleStartDiffCount + 1 && dutyAndDateTimeSame(detailView, schedule.startDateTime)">
+                    <button :disabled="s_index == schedulesByDays[detailView.index].length -1"
+                            v-on:click="swapSchedule(schedule, schedulesByDays[detailView.index][s_index+1])"
+                            class="btn btn-secondary"
+                    >
+                      <i class="bi bi-arrow-down-square"></i>
+                    </button>
+                    <button :disabled="s_index <= detailView.scheduleStartDiffCount"
+                            v-on:click="swapSchedule(schedule, schedulesByDays[detailView.index][s_index-1])"
+                            class="btn btn-secondary">
+                      <i class="bi bi-arrow-up-square"></i>
+                    </button>
+                  </template>
+                  <button class="btn btn-info" v-on:click="scheduleEditMode(schedule)">수정</button>
+                  <button class="btn btn-danger" v-on:click="deleteSchedule(schedule)">삭제</button>
+                </template>
               </div>
               <div class="buttons mt-3" v-if="isEditing(schedule)">
                 <button class="btn btn-success" v-on:click="editSchedule()">저장</button>
@@ -250,11 +253,29 @@
                             startDateTime: '',
                             endDateTime: '',
                         },
+                        friends: []
                     }, mounted() {
                         this.loadDuties(this.year, this.month);
                         this.loadSchedule(this.year, this.month);
                         this.loadDepartment();
                         this.loadHolidays(this.year, this.month);
+                        this.loadFriends();
+
+                        document.addEventListener('change', function (event) {
+                            if (event.target && event.target.matches('.schedule-tag-add select')) {
+                                const selectedOption = event.target.options[event.target.selectedIndex];
+                                const scheduleId = event.target.closest('.schedule').id.replace('schedule-', '');
+                                const friendId = selectedOption.getAttribute('data-id');
+                                app.addTag(scheduleId, friendId);
+                            }
+                        });
+                        document.addEventListener('click', function (event) {
+                            if (event.target && event.target.matches('#detail-view-modal .schedule-tag.tagged-false')) {
+                                const scheduleId = event.target.closest('.schedule').id.replace('schedule-', '');
+                                const friendId = event.target.getAttribute('data-id');
+                                app.untag(scheduleId, friendId);
+                            }
+                        });
                     }, computed: {
                         combinedYearMonth: {
                             get() {
@@ -287,7 +308,41 @@
                                 if (schedule.totalDays > 1) {
                                     content += '[' + schedule.daysFromStart + '/' + schedule.totalDays + '] ';
                                 }
-                                return content + '<small>' + app.printScheduleTime(schedule) + '</small>';
+                                const tags = []
+                                schedule.tags.forEach(tag => {
+                                    if (tag.id !== memberId) {
+                                        tags.push({
+                                            name: tag.name,
+                                            id: tag.id,
+                                        });
+                                    }
+                                });
+                                if (schedule.isTagged) {
+                                    tags.push({name: schedule.owner});
+                                }
+                                let scheduleElement = `<p class="schedule-content">${content} <small>${app.printScheduleTime(schedule)}</small></p>`;
+                                let tagElements = ''
+                                if (tags.length > 0) {
+                                    tagElements += tags.map(tag => {
+                                        return `<span class="schedule-tag tagged-${schedule.isTagged}" data-id="${tag.id}">${tag.name}</span>`;
+                                    }).join('');
+                                }
+                                if (!schedule.isTagged) {
+                                    let tagFriendAria = `
+                                      <span class="schedule-tag schedule-tag-add">
+                                        <select>
+                                        <option>추가</option>
+                                        ${app.friends.map(friend => {
+                                        if (tags.find(tag => tag.id === friend.id)) {
+                                            return '';
+                                        }
+                                        return `<option data-id="${friend.id}">[${friend.department}] ${friend.name}</option>`;
+                                    }).join('')}
+                                      </select>
+                                      </span>`;
+                                    tagElements += tagFriendAria;
+                                }
+                                return scheduleElement + `<div class="schedule-tags">${tagElements}</div>`;
                             }
                         },
                         printScheduleTime() {
@@ -701,32 +756,6 @@
                                 [colClass]: true,
                             };
                         },
-                        changeDutyType(duty, type) {
-                            $.ajax({
-                                url: '/api/duty/change',
-                                type: 'PUT',
-                                data: JSON.stringify({
-                                    year: duty.year,
-                                    month: duty.month,
-                                    day: duty.day,
-                                    dutyTypeId: type.id,
-                                    memberId: memberId,
-                                }),
-                                contentType: 'application/json',
-                                success: (data) => {
-                                    duty.dutyType = type.name;
-                                    duty.dutyColor = type.color;
-                                },
-                                fail: (data) => {
-                                    Swal.fire({
-                                        icon: 'error',
-                                        title: '저장에 실패했습니다.',
-                                        showConfirmButton: false,
-                                        timer: 1500
-                                    });
-                                }
-                            })
-                        },
                         async loadHolidays(year, month) {
                             const response = await fetch(`/api/holidays?year=${year}&month=${month}`);
 
@@ -736,6 +765,66 @@
                             }
 
                             this.holidaysByDays = await response.json();
+                        },
+                        loadFriends() {
+                            fetch('/api/friends')
+                                .then(response => {
+                                    if (!response.ok) {
+                                        console.log(`Error loading friends. Status Code: ${response.status}`);
+                                        return;
+                                    }
+                                    return response.json();
+                                }).then(data => {
+                                this.friends = data;
+                            });
+                        },
+                        addTag(scheduleId, friendId) {
+                            fetch(`/api/schedules/${scheduleId}/tags/${friendId}`, {
+                                method: 'POST',
+                            }).then(response => {
+                                if (!response.ok) {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: '태그 추가에 실패했습니다.',
+                                        showConfirmButton: false,
+                                        timer: 1500
+                                    });
+                                    return;
+                                }
+                                app.loadSchedule(app.year, app.month);
+                            });
+                        },
+                        untag(scheduleId, friendId) {
+                            fetch(`/api/schedules/${scheduleId}/tags/${friendId}`, {
+                                method: 'DELETE',
+                            }).then(response => {
+                                if (!response.ok) {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: '태그 제거에 실패했습니다.',
+                                        showConfirmButton: false,
+                                        timer: 1500
+                                    });
+                                    return;
+                                }
+                                app.loadSchedule(app.year, app.month);
+                            });
+                        },
+                        untagSelf(scheduleId) {
+                            fetch(`/api/schedules/${scheduleId}/tags`, {
+                                method: 'DELETE',
+                            }).then(response => {
+                                if (!response.ok) {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: '태그 제거에 실패했습니다.',
+                                        showConfirmButton: false,
+                                        timer: 1500
+                                    });
+                                    return;
+                                }
+                                app.loadSchedule(app.year, app.month);
+                            });
                         }
                     }
                 }
