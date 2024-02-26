@@ -260,6 +260,7 @@
                         this.loadDepartment();
                         this.loadHolidays(this.year, this.month);
                         this.loadFriends();
+                        this.loadDDays();
 
                         document.addEventListener('change', function (event) {
                             if (event.target && event.target.matches('.schedule-tag-add select')) {
@@ -432,8 +433,8 @@
                             app.year = today.getFullYear();
                             app.month = today.getMonth() + 1;
                         },
-                        async loadDuties(year, month) {
-                            await $.ajax({
+                        loadDuties(year, month) {
+                            $.ajax({
                                 url: '/api/duty',
                                 type: 'GET',
                                 data: {
@@ -443,33 +444,25 @@
                                 },
                                 success: (data) => {
                                     this.duties = data;
+                                    // wait for rendering then check d-day
+                                    setTimeout(() => {
+                                        this.checkDDays();
+                                    });
                                 }
                             })
-                            this.loadDDays();
                         },
                         loadDDays() {
-                            const selectedDdayId = localStorage.getItem('selectedDday_' + memberId);
                             $.ajax({
                                 url: '/api/dday/' + memberId,
                                 type: 'GET',
                                 success: (data) => {
-                                    let dDaySchedules = document.getElementsByClassName('d-day-schedules');
-                                    for (let i = 0; i < dDaySchedules.length; i++) {
-                                        dDaySchedules[i].innerHTML = '';
-                                    }
                                     this.dDays = data;
+                                    const selectedDdayId = parseInt(localStorage.getItem('selectedDday_' + memberId));
                                     for (const dDay of app.dDays) {
-                                        const dayElement = document.getElementById(dDay.date);
-                                        if (dayElement) {
-                                            let scheduleElement = document.createElement('div');
-                                            scheduleElement.classList.add('schedule', 'd-day-schedule');
-                                            scheduleElement.innerHTML = '[D-Day] ' + dDay.title;
-                                            dayElement.querySelector('.d-day-schedules').prepend(scheduleElement);
-                                        }
-                                        if (dDay.id == selectedDdayId) {
+                                        if (dDay.id === selectedDdayId) {
                                             app.selectedDday = dDay;
                                         }
-                                        if (dDay.calc == 0) {
+                                        if (dDay.calc === 0) {
                                             dDay.dDayText = 'D-Day';
                                         } else if (dDay.calc < 0) {
                                             dDay.dDayText = 'D+' + -dDay.calc;
@@ -479,6 +472,18 @@
                                     }
                                 }
                             })
+                        },
+                        checkDDays() {
+                            $('.d-day-schedules').html('');
+                            for (const dDay of app.dDays) {
+                                const dayElement = document.getElementById(dDay.date);
+                                if (dayElement) {
+                                    let scheduleElement = document.createElement('div');
+                                    scheduleElement.classList.add('schedule', 'd-day-schedule');
+                                    scheduleElement.innerHTML = '[D-Day] ' + dDay.title;
+                                    dayElement.querySelector('.d-day-schedules').prepend(scheduleElement);
+                                }
+                            }
                         },
                         dDayToggle(dDay) {
                             if (app.selectedDday == dDay) {
