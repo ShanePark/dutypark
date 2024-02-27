@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.schedule.domain.entity
 
 import com.tistory.shanepark.dutypark.common.domain.entity.EntityBase
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import jakarta.persistence.*
 import java.time.LocalDateTime
 
@@ -22,6 +23,11 @@ class Schedule(
 
     @Column(name = "position", nullable = false)
     var position: Int,
+
+    @Column(name = "visibility", nullable = false)
+    @Enumerated(EnumType.STRING)
+    var visibility: Visibility = Visibility.FRIENDS
+
 ) : EntityBase() {
 
     @OneToMany(mappedBy = "schedule", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
