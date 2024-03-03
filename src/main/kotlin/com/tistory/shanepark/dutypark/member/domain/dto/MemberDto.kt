@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.member.domain.dto
 
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 
 data class MemberDto(
     val id: Long,
@@ -9,6 +10,7 @@ data class MemberDto(
     val departmentId: Long? = null,
     val department: String? = null,
     val managerId: Long? = null,
+    val calendarVisibility: Visibility,
 ) {
     companion object {
         fun of(member: Member): MemberDto {
@@ -19,6 +21,7 @@ data class MemberDto(
                 departmentId = member.department?.id,
                 department = member.department?.name,
                 managerId = member.department?.manager?.id,
+                calendarVisibility = member.calendarVisibility
             )
         }
 
@@ -27,6 +30,7 @@ data class MemberDto(
                 id = member.id!!,
                 name = member.name,
                 email = member.email,
+                calendarVisibility = member.calendarVisibility
             )
         }
     }

@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.data.domain.PageRequest
@@ -10,7 +11,7 @@ import org.springframework.data.domain.Sort
 class MemberServiceTest : DutyparkIntegrationTest() {
 
     @Test
-    fun `Search member test`() {
+    fun `Search member`() {
         // Given
         memberRepository.deleteAll()
         val member1 = memberRepository.save(Member("shane", "shane_email", "pass"))
@@ -37,6 +38,20 @@ class MemberServiceTest : DutyparkIntegrationTest() {
         assertThat(search(page, "j")).hasSize(4)
         assertThat(search(page, "john").content.map { it.id }).containsExactly(member3.id)
         assertThat(search(page, "han").content.map { it.id }).containsExactly(member1.id)
+    }
+
+    @Test
+    fun `update calendar visibility`() {
+        // Given
+        val member = memberRepository.save(Member("shane", "shane_email", "pass"))
+        val loginMember = loginMember(member)
+
+        // When
+        memberService.updateCalendarVisibility(loginMember, Visibility.PRIVATE)
+
+        // Then
+        val findMember = memberRepository.findById(member.id!!).orElseThrow()
+        assertThat(findMember.calendarVisibility).isEqualTo(Visibility.PRIVATE)
     }
 
     private fun search(page: PageRequest, name: String) = memberService.searchMembers(page, name)

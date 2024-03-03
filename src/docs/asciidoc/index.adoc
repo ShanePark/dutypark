@@ -7,6 +7,12 @@ DutyPark Server REST API
 :toclevels: 2
 :sectlinks:
 
+== Member
+
+=== Calendar Visibility
+
+operation::members/update-visibility[]
+
 == Schedules
 
 === Create

@@ -45,14 +45,15 @@ class DutyService(
 
         if (duty == null) {
             if (dutyType != null) {
-                val duty = Duty(
-                    member = member,
-                    dutyYear = dutyUpdateDto.year,
-                    dutyMonth = dutyUpdateDto.month,
-                    dutyDay = dutyUpdateDto.day,
-                    dutyType = dutyType
+                save(
+                    Duty(
+                        member = member,
+                        dutyYear = dutyUpdateDto.year,
+                        dutyMonth = dutyUpdateDto.month,
+                        dutyDay = dutyUpdateDto.day,
+                        dutyType = dutyType
+                    )
                 )
-                save(duty)
             }
             return
         }

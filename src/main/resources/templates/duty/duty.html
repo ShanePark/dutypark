@@ -31,9 +31,15 @@
       <span :class="['indicator', 'BACKGROUND-' + type.color]">&nbsp;&nbsp;&nbsp;</span>
       <span v-text="type.name"></span>
     </span>
+      <button v-if="isMyCalendar"
+              class="btn btn-warning"
+              v-on:click="privacyPopup()"
+              v-text="'공개대상:' + privacyLabel"
+      >
+      </button>
       <button v-if="canEdit && !batchEditMode"
-              class="edit-btn btn btn-warning"
-              v-on:click="batchEditMode=true;">편집
+              class="edit-btn btn btn-info"
+              v-on:click="batchEditMode=true;">편집모드
       </button>
       <button v-if="canEdit && batchEditMode"
               class="edit-btn btn btn-success"
@@ -120,6 +126,34 @@
   </div>
   <div th:if="!${member.department}" class="no-data p-5">
     <h3>어느 부서에도 소속되어 있지 않습니다.</h3>
+  </div>
+
+  <div id="privacy-config-modal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">시간표 공개 대상 설정</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>내 신가표를 공개할 범위를 설정하세요</p>
+          <div class="privacy-config btn-group" role="group" aria-label="Privacy setting">
+            <button type="button" class="btn btn-success" :class="{'selected': calendarVisibility=='PUBLIC'}"
+                    data-privacy="PUBLIC" v-on:click="setPrivacy">누구나
+            </button>
+            <button type="button" class="btn btn-warning" :class="{'selected': calendarVisibility=='FRIENDS'}"
+                    data-privacy="FRIENDS" v-on:click="setPrivacy">친구만
+            </button>
+            <button type="button" class="btn btn-danger" :class="{'selected': calendarVisibility=='PRIVATE'}"
+                    data-privacy="PRIVATE" v-on:click="setPrivacy">비공개
+            </button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="detail-view-modal" class="modal fade" tabindex="-1" aria-hidden="true">
@@ -242,6 +276,7 @@
                         detailView: null,
                         batchEditMode: false,
                         isCreateScheduleMode: false,
+                        calendarVisibility: "[[${member.calendarVisibility}]]",
                         createSchedule: {
                             content: '',
                             startDateTime: '',
@@ -293,7 +328,10 @@
                             },
                         },
                         canEdit() {
-                            return loginMemberId == memberId || loginMemberId == managerId;
+                            return loginMemberId === memberId || loginMemberId === managerId;
+                        },
+                        isMyCalendar() {
+                            return loginMemberId === memberId;
                         },
                         calcDday() {
                             return (duty) => {
@@ -321,11 +359,11 @@
                                 if (schedule.isTagged) {
                                     tags.push({name: schedule.owner});
                                 }
-                                let scheduleElement = `<p class="schedule-content">${content} <small>${app.printScheduleTime(schedule)}</small></p>`;
+                                let scheduleElement = `<p class="schedule-content" >${content}<small>${app.printScheduleTime(schedule)}</small></p>`;
                                 let tagElements = ''
                                 if (tags.length > 0) {
                                     tagElements += tags.map(tag => {
-                                        return `<span class="schedule-tag tagged-${schedule.isTagged}" data-id="${tag.id}">${tag.name}</span>`;
+                                        return `<span class="schedule-tag tagged-${schedule.isTagged}" data-id="${tag.id}" >${tag.name} </span>`;
                                     }).join('');
                                 }
                                 if (!schedule.isTagged) {
@@ -365,7 +403,8 @@
                                 }
                                 return result;
                             }
-                        },
+                        }
+                        ,
                         shouldDisplayStartTime() {
                             return (schedule) => {
                                 const daysFromStart = schedule.daysFromStart;
@@ -374,7 +413,8 @@
                                 const startMinute = startDateTime.getMinutes().toString().padStart(2, '0');
                                 return daysFromStart === 1 && !(startHour === '00' && startMinute === '00');
                             }
-                        },
+                        }
+                        ,
                         shouldDisplayEndTime() {
                             return (schedule) => {
                                 const daysFromStart = schedule.daysFromStart;
@@ -387,7 +427,8 @@
                                     && !(endHour === '00' && endMinute === '00')
                                     && !(totalDays === 1 && sameDateTime(startDateTime, endDateTime));
                             }
-                        },
+                        }
+                        ,
                         dutyAndDateTimeSame() {
                             return (duty, dateTimeString) => {
                                 const year = duty.year;
@@ -396,13 +437,22 @@
                                 const dateTime = new Date(dateTimeString);
                                 return year === dateTime.getFullYear() && month === dateTime.getMonth() && day === dateTime.getDate();
                             }
-                        },
+                        }
+                        ,
                         hasSchedule() {
                             return (index) => {
                                 return this.schedulesByDays[index] && this.schedulesByDays[index].length > 0;
                             }
+                        },
+                        privacyLabel() {
+                            return {
+                                PUBLIC: '누구나',
+                                FRIENDS: '친구만',
+                                PRIVATE: '비공개',
+                            }[this.calendarVisibility];
                         }
-                    }, watch: {
+                    },
+                    watch: {
                         combinedYearMonth() {
                             this.loadDuties(app.year, app.month);
                             this.loadSchedule(app.year, app.month);
@@ -411,28 +461,39 @@
                             currentUrl.searchParams.set('year', app.year);
                             currentUrl.searchParams.set('month', app.month);
                             window.history.replaceState(null, '', currentUrl.toString());
-                        },
-                        'createSchedule.startDateTime': function () {
-                            if (app.createSchedule.startDateTime > app.createSchedule.endDateTime) {
-                                app.createSchedule.endDateTime = app.createSchedule.startDateTime;
-                            }
-                        },
-                        'editingSchedule.startDateTime': function () {
-                            if (app.editingSchedule.startDateTime > app.editingSchedule.endDateTime) {
-                                app.editingSchedule.endDateTime = app.editingSchedule.startDateTime;
-                            }
                         }
-                    }, methods: {
+                        ,
+                        'createSchedule.startDateTime':
+
+                            function () {
+                                if (app.createSchedule.startDateTime > app.createSchedule.endDateTime) {
+                                    app.createSchedule.endDateTime = app.createSchedule.startDateTime;
+                                }
+                            }
+
+                        ,
+                        'editingSchedule.startDateTime':
+
+                            function () {
+                                if (app.editingSchedule.startDateTime > app.editingSchedule.endDateTime) {
+                                    app.editingSchedule.endDateTime = app.editingSchedule.startDateTime;
+                                }
+                            }
+                    }
+                    ,
+                    methods: {
                         addMonth(month) {
                             const newDate = new Date(app.year, app.month - 1 + month);
                             app.year = newDate.getFullYear();
                             app.month = newDate.getMonth() + 1;
-                        },
+                        }
+                        ,
                         today() {
                             const today = new Date();
                             app.year = today.getFullYear();
                             app.month = today.getMonth() + 1;
-                        },
+                        }
+                        ,
                         loadDuties(year, month) {
                             $.ajax({
                                 url: '/api/duty',
@@ -450,7 +511,8 @@
                                     });
                                 }
                             })
-                        },
+                        }
+                        ,
                         loadDDays() {
                             $.ajax({
                                 url: '/api/dday/' + memberId,
@@ -472,7 +534,8 @@
                                     }
                                 }
                             })
-                        },
+                        }
+                        ,
                         checkDDays() {
                             $('.d-day-schedules').html('');
                             for (const dDay of app.dDays) {
@@ -484,7 +547,8 @@
                                     dayElement.querySelector('.d-day-schedules').prepend(scheduleElement);
                                 }
                             }
-                        },
+                        }
+                        ,
                         dDayToggle(dDay) {
                             if (app.selectedDday == dDay) {
                                 app.selectedDday = null;
@@ -493,7 +557,8 @@
                                 app.selectedDday = dDay;
                                 localStorage.setItem('selectedDday_' + memberId, dDay.id);
                             }
-                        },
+                        }
+                        ,
                         loadSchedule(year, month) {
                             $.ajax({
                                 url: '/api/schedules',
@@ -507,18 +572,21 @@
                                     this.schedulesByDays = data;
                                 }
                             })
-                        },
+                        }
+                        ,
                         loadDepartment() {
                             fetch(`/api/departments/${departmentId}`)
                                 .then(response => response.json())
                                 .then(data => {
                                     this.department = data;
                                 })
-                        },
+                        }
+                        ,
                         editDuty() {
                             const memberId = document.getElementsByClassName('calendar')[0].getAttribute('data-member_id');
                             window.location.href = `/duty/edit?memberId=${memberId}&year=${(app.year)}&month=${(app.month)}`;
-                        },
+                        }
+                        ,
                         formattedTime(timeString) {
                             const dateTime = new Date(timeString);
                             const hour = dateTime.getHours() == 12 ? 12 : dateTime.getHours() % 12;
@@ -527,14 +595,20 @@
                                 minute = ':' + dateTime.getMinutes().toString().padStart(2, '0');
                             }
                             return hour + minute + (dateTime.getHours() >= 12 ? 'PM ' : 'AM');
-                        }, formattedDate(year, month, day) {
+                        }
+                        ,
+                        formattedDate(year, month, day) {
                             month = (month < 10) ? '0' + month : month;
                             day = (day < 10) ? '0' + day : day;
                             return year + '-' + month + '-' + day;
-                        }, isToday(duty) {
+                        }
+                        ,
+                        isToday(duty) {
                             const today = new Date();
                             return duty.year === today.getFullYear() && duty.month === today.getMonth() + 1 && duty.day === today.getDate();
-                        }, isHoliday(index) {
+                        }
+                        ,
+                        isHoliday(index) {
                             const holidays = app.holidaysByDays[index];
                             if (!holidays || holidays.length === 0) {
                                 return false;
@@ -544,7 +618,9 @@
                                     return true;
                             }
                             return false;
-                        }, viewDayDetail(duty, index) {
+                        }
+                        ,
+                        viewDayDetail(duty, index) {
                             if (app.batchEditMode || !app.canEdit) {
                                 return;
                             }
@@ -560,18 +636,24 @@
                             }
                             app.resetCreateSchedule();
                             app.cancelEditMode();
-                        }, resetCreateSchedule() {
+                        }
+                        ,
+                        resetCreateSchedule() {
                             app.createSchedule = {
                                 content: '',
                                 startDateTime: app.formattedDateTime(app.detailView),
                                 endDateTime: app.formattedDateTime(app.detailView),
                             }
-                        }, isDutyType(duty, dutyType) {
+                        }
+                        ,
+                        isDutyType(duty, dutyType) {
                             if (duty?.dutyType) {
                                 return dutyType.name == duty.dutyType
                             }
                             return !dutyType.id
-                        }, changeDutyType(duty, type) {
+                        }
+                        ,
+                        changeDutyType(duty, type) {
                             $.ajax({
                                 url: '/api/duty/change',
                                 type: 'PUT',
@@ -596,17 +678,25 @@
                                     });
                                 }
                             })
-                        }, formattedDateTime(duty) {
+                        }
+                        ,
+                        formattedDateTime(duty) {
                             const month = duty.month.toString().padStart(2, '0');
                             const day = duty.day.toString().padStart(2, '0');
                             return `${duty.year}-${month}-${day}T00:00`;
-                        }, scheduleCreateMode() {
+                        }
+                        ,
+                        scheduleCreateMode() {
                             app.cancelEditMode();
                             app.isCreateScheduleMode = true;
-                        }, cancelCreateSchedule() {
+                        }
+                        ,
+                        cancelCreateSchedule() {
                             app.isCreateScheduleMode = false;
                             app.resetCreateSchedule();
-                        }, saveSchedule() {
+                        }
+                        ,
+                        saveSchedule() {
                             if (!isValidContent(app.createSchedule.content)) {
                                 return;
                             }
@@ -642,21 +732,27 @@
                                     addArea.waitMe('hide');
                                 }
                             })
-                        }, scheduleEditMode(schedule) {
+                        }
+                        ,
+                        scheduleEditMode(schedule) {
                             app.cancelCreateSchedule();
                             app.editingSchedule.id = schedule.id;
                             app.editingSchedule.content = schedule.content;
                             app.editingSchedule.startDateTime = schedule.startDateTime;
                             app.editingSchedule.endDateTime = schedule.endDateTime;
-                        }, cancelEditMode() {
+                        }
+                        ,
+                        cancelEditMode() {
                             app.editingSchedule.id = null;
                             app.editingSchedule.content = '';
                             app.editingSchedule.startDateTime = '';
                             app.editingSchedule.endDateTime = '';
-                        },
+                        }
+                        ,
                         isEditing(schedule) {
                             return app.editingSchedule.id === schedule.id;
-                        },
+                        }
+                        ,
                         editSchedule() {
                             const schedule = app.editingSchedule;
                             if (!isValidContent(schedule.content)) {
@@ -693,7 +789,8 @@
                                     editArea.waitMe('hide');
                                 }
                             })
-                        },
+                        }
+                        ,
                         swapSchedule(schedule1, schedule2) {
                             $('#detail-view-modal .schedules').waitMe();
                             if (!schedule1 || !schedule2 || schedule1 == schedule2) {
@@ -717,7 +814,8 @@
                                     });
                                 }
                             });
-                        },
+                        }
+                        ,
                         deleteSchedule(schedule) {
                             Swal.fire({
                                 title: '일정을 삭제하시겠습니까?',
@@ -751,7 +849,8 @@
                                     })
                                 }
                             })
-                        },
+                        }
+                        ,
                         dutyTypeClasses(type, duty) {
                             const departmentLength = app.department.dutyTypes.length;
                             const colClass = (departmentLength === 2 || departmentLength === 4) ? 'col-md-6' : 'col-md-4';
@@ -760,7 +859,8 @@
                                 selected: type.id === duty.dutyTypeId,
                                 [colClass]: true,
                             };
-                        },
+                        }
+                        ,
                         async loadHolidays(year, month) {
                             const response = await fetch(`/api/holidays?year=${year}&month=${month}`);
 
@@ -770,7 +870,8 @@
                             }
 
                             this.holidaysByDays = await response.json();
-                        },
+                        }
+                        ,
                         loadFriends() {
                             fetch('/api/friends')
                                 .then(response => {
@@ -782,7 +883,8 @@
                                 }).then(data => {
                                 this.friends = data;
                             });
-                        },
+                        }
+                        ,
                         addTag(scheduleId, friendId) {
                             fetch(`/api/schedules/${scheduleId}/tags/${friendId}`, {
                                 method: 'POST',
@@ -798,7 +900,8 @@
                                 }
                                 app.loadSchedule(app.year, app.month);
                             });
-                        },
+                        }
+                        ,
                         untag(scheduleId, friendId) {
                             fetch(`/api/schedules/${scheduleId}/tags/${friendId}`, {
                                 method: 'DELETE',
@@ -814,7 +917,8 @@
                                 }
                                 app.loadSchedule(app.year, app.month);
                             });
-                        },
+                        }
+                        ,
                         untagSelf(scheduleId) {
                             fetch(`/api/schedules/${scheduleId}/tags`, {
                                 method: 'DELETE',
@@ -831,6 +935,36 @@
                                 app.loadSchedule(app.year, app.month);
                             });
                         }
+                        ,
+                        privacyPopup() {
+                            $('#privacy-config-modal').modal('show');
+                        }
+                        ,
+                        setPrivacy(event) {
+                            document.querySelector('.privacy-config .btn.selected').classList.remove('selected');
+                            const privacy = event.target.getAttribute('data-privacy');
+
+                            fetch(`/api/members/${memberId}/visibility`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    visibility: privacy
+                                })
+                            }).then(response => {
+                                if (!response.ok) {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: '공개 대상 설정 변경에 실패했습니다.',
+                                        showConfirmButton: false,
+                                        timer: 1500
+                                    });
+                                    return;
+                                }
+                                app.calendarVisibility = privacy;
+                            });
+                        }
                     }
                 }
             )
@@ -838,7 +972,7 @@
     })
 
     function sameDateTime(startDateTime, endDateTime) {
-        return startDateTime.getTime() == endDateTime.getTime();
+        return startDateTime.getTime() === endDateTime.getTime();
     }
 
     function isValidContent(content) {

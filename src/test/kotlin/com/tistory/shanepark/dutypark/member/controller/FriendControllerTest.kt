@@ -61,6 +61,7 @@ class FriendControllerTest : RestDocsTest() {
                         fieldWithPath("friends[].departmentId").description("The friend's department ID"),
                         fieldWithPath("friends[].department").description("The friend's department name"),
                         fieldWithPath("friends[].managerId").optional().description("The friend's manager ID (if any)"),
+                        fieldWithPath("friends[].calendarVisibility").description("The friend's calendar visibility"),
                         fieldWithPath("pendingRequestsTo[].id").description("The request ID"),
                         fieldWithPath("pendingRequestsTo[].status").description("The status of the request"),
                         fieldWithPath("pendingRequestsTo[].createdAt").description("The date and time the request was created"),
@@ -71,6 +72,7 @@ class FriendControllerTest : RestDocsTest() {
                         fieldWithPath("pendingRequestsTo[].fromMember.department").description("The department name of the member who sent the request"),
                         fieldWithPath("pendingRequestsTo[].fromMember.managerId").optional()
                             .description("The manager ID of the member who sent the request (if any)"),
+                        fieldWithPath("pendingRequestsTo[].fromMember.calendarVisibility").description ("The calendar visibility of the member to whom the request was sent"),
                         fieldWithPath("pendingRequestsTo[].toMember.id").description("The ID of the member to whom the request was sent"),
                         fieldWithPath("pendingRequestsTo[].toMember.name").description("The name of the member to whom the request was sent"),
                         fieldWithPath("pendingRequestsTo[].toMember.email").description("The email address of the member to whom the request was sent"),
@@ -78,6 +80,7 @@ class FriendControllerTest : RestDocsTest() {
                         fieldWithPath("pendingRequestsTo[].toMember.department").description("The department name of the member to whom the request was sent"),
                         fieldWithPath("pendingRequestsTo[].toMember.managerId").optional()
                             .description("The manager ID of the member to whom the request was sent (if any)"),
+                        fieldWithPath("pendingRequestsTo[].toMember.calendarVisibility").description ("The calendar visibility of the member to whom the request was sent"),
                         fieldWithPath("pendingRequestsFrom[].id").description("The request ID"),
                         fieldWithPath("pendingRequestsFrom[].status").description("The status of the request"),
                         fieldWithPath("pendingRequestsFrom[].createdAt").description("The date and time the request was created"),
@@ -88,13 +91,15 @@ class FriendControllerTest : RestDocsTest() {
                         fieldWithPath("pendingRequestsFrom[].toMember.department").description("The department name of the member to whom the request was sent"),
                         fieldWithPath("pendingRequestsFrom[].toMember.managerId").optional()
                             .description("The manager ID of the member to whom the request was sent (if any)"),
+                        fieldWithPath("pendingRequestsFrom[].toMember.calendarVisibility").description("The calendar visibility of the member who sent the request"),
                         fieldWithPath("pendingRequestsFrom[].fromMember.id").description("The ID of the member who sent the request"),
                         fieldWithPath("pendingRequestsFrom[].fromMember.name").description("The name of the member who sent the request"),
                         fieldWithPath("pendingRequestsFrom[].fromMember.email").description("The email address of the member who sent the request"),
                         fieldWithPath("pendingRequestsFrom[].fromMember.departmentId").description("The department ID of the member who sent the request"),
                         fieldWithPath("pendingRequestsFrom[].fromMember.department").description("The department name of the member who sent the request"),
                         fieldWithPath("pendingRequestsFrom[].fromMember.managerId").optional()
-                            .description("The manager ID of the member who sent the request (if any)")
+                            .description("The manager ID of the member who sent the request (if any)"),
+                        fieldWithPath("pendingRequestsFrom[].fromMember.calendarVisibility").description("The calendar visibility of the member who sent the request")
                     )
                 )
 

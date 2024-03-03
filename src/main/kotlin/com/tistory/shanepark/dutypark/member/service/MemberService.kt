@@ -3,7 +3,9 @@ package com.tistory.shanepark.dutypark.member.service
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberCreateDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -54,4 +56,10 @@ class MemberService(
             return it.map { MemberDto.of(it) }
         }
     }
+
+    fun updateCalendarVisibility(loginMember: LoginMember, visibility: Visibility) {
+        val member = memberRepository.findById(loginMember.id).orElseThrow()
+        member.calendarVisibility = visibility
+    }
+
 }
