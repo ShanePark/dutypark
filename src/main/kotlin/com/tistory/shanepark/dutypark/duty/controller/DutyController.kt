@@ -23,11 +23,16 @@ class DutyController(
 
     @GetMapping
     fun getDuties(
+        @Login loginMember: LoginMember,
         @RequestParam year: Int,
         @RequestParam month: Int,
         @RequestParam memberId: Long,
     ): List<DutyDto> {
-        return dutyService.getDuties(memberId = memberId, YearMonth.of(year, month))
+        return dutyService.getDuties(
+            loginMember = loginMember,
+            memberId = memberId,
+            yearMonth = YearMonth.of(year, month)
+        )
     }
 
     @PutMapping("change")

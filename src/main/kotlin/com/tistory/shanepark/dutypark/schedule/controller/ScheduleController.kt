@@ -24,12 +24,13 @@ class ScheduleController(
 
     @GetMapping
     fun getSchedules(
+        @Login loginMember: LoginMember,
         @RequestParam memberId: Long,
         @RequestParam year: Int,
         @RequestParam month: Int
     ): Array<List<ScheduleDto>> {
         val member = memberRepository.findById(memberId).orElseThrow()
-        return scheduleService.findSchedulesByYearAndMonth(member, YearMonth.of(year, month))
+        return scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember, member, YearMonth.of(year, month))
     }
 
     @PostMapping

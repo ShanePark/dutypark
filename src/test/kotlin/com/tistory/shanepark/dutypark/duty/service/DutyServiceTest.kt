@@ -1,11 +1,16 @@
 package com.tistory.shanepark.dutypark.duty.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
+import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
+import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
+import com.tistory.shanepark.dutypark.member.service.FriendService
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import java.time.YearMonth
 
@@ -16,6 +21,9 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var dutyRepository: DutyRepository
+
+    @Autowired
+    lateinit var friendService: FriendService
 
     @Test
     @DisplayName("create new duty")
@@ -183,7 +191,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
         )
 
         // When
-        val duties = dutyService.getDuties(member.id!!, YearMonth.of(2023, 4))
+        val duties = dutyService.getDuties(member.id!!, YearMonth.of(2023, 4), loginMember(member))
 
         // Then
         assertThat(duties).hasSize(42)
@@ -197,6 +205,86 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
         duties[41].let {
             assertThat(it.month).isEqualTo(5)
             assertThat(it.day).isEqualTo(6)
+        }
+    }
+
+    @Test
+    fun `if not friend and calendar is only open for friends can't get duty `() {
+        // Given
+        val member = TestData.member
+        val dutyTypes = TestData.dutyTypes
+        dutyRepository.save(
+            Duty(
+                dutyYear = 2023,
+                dutyMonth = 3,
+                dutyDay = 31,
+                dutyType = dutyTypes[0],
+                member = member
+            )
+        )
+        dutyRepository.save(
+            Duty(
+                dutyYear = 2023,
+                dutyMonth = 4,
+                dutyDay = 10,
+                dutyType = dutyTypes[0],
+                member = member
+            )
+        )
+
+        val member2 = TestData.member2
+        // When
+        assertThrows<DutyparkAuthException> {
+            dutyService.getDuties(member.id!!, YearMonth.of(2023, 4), loginMember(member2))
+        }
+    }
+
+    @Test
+    fun `if friend and calendar is only open for friends can get duty`() {
+        // Given
+        val target = TestData.member
+        target.calendarVisibility = Visibility.FRIENDS
+        val login = TestData.member2
+
+        val dutyTypes = TestData.dutyTypes
+        dutyRepository.save(
+            Duty(
+                dutyYear = 2023,
+                dutyMonth = 3,
+                dutyDay = 31,
+                dutyType = dutyTypes[0],
+                member = target
+            )
+        )
+        dutyRepository.save(
+            Duty(
+                dutyYear = 2023,
+                dutyMonth = 4,
+                dutyDay = 10,
+                dutyType = dutyTypes[0],
+                member = target
+            )
+        )
+
+        friendService.sendFriendRequest(loginMember(login), target.id!!)
+        friendService.acceptFriendRequest(loginMember(target), login.id!!)
+
+        // When
+        val duties = dutyService.getDuties(target.id!!, YearMonth.of(2023, 4), loginMember(login))
+
+        // Then
+        assertThat(duties).hasSize(42)
+    }
+
+    @Test
+    fun `if not my calendar and the member's calendar visibility is private can't get duty`() {
+        // Given
+        val target = TestData.member
+        val login = TestData.member2
+        target.calendarVisibility = Visibility.PRIVATE
+        // When
+        assertThrows<DutyparkAuthException> {
+            dutyService.getDuties(target.id!!, YearMonth.of(2023, 4), loginMember(login))
         }
     }
 

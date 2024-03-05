@@ -25,7 +25,13 @@ class ScheduleService(
 ) {
 
     @Transactional(readOnly = true)
-    fun findSchedulesByYearAndMonth(member: Member, yearMonth: YearMonth): Array<List<ScheduleDto>> {
+    fun findSchedulesByYearAndMonth(
+        loginMember: LoginMember,
+        member: Member,
+        yearMonth: YearMonth
+    ): Array<List<ScheduleDto>> {
+        friendService.checkVisibility(loginMember, member)
+
         val calendarView = CalendarView(yearMonth)
 
         val paddingBefore = calendarView.paddingBefore
