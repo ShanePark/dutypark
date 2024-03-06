@@ -73,8 +73,9 @@ class DutyService(
     }
 
     fun canEdit(
-        loginMember: LoginMember, member: Member
+        loginMember: LoginMember, memberId: Long
     ): Boolean {
+        val member = memberRepository.findMemberWithDepartment(memberId).orElseThrow()
         if (member.id == loginMember.id) {
             return true
         }

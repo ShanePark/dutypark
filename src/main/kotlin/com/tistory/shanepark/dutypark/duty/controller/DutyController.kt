@@ -6,7 +6,6 @@ import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.service.DutyService
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
-import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.slf4j.Logger
 import org.springframework.http.ResponseEntity
@@ -17,7 +16,6 @@ import java.time.YearMonth
 @RequestMapping("/api/duty")
 class DutyController(
     private val dutyService: DutyService,
-    private val memberRepository: MemberRepository,
 ) {
     val log: Logger = org.slf4j.LoggerFactory.getLogger(DutyController::class.java)
 
@@ -49,8 +47,7 @@ class DutyController(
     private fun checkAuthentication(
         loginMember: LoginMember, dutyMemberId: Long
     ) {
-        val dutyMember = memberRepository.findMemberWithDepartment(dutyMemberId).orElseThrow()
-        if (!dutyService.canEdit(loginMember, dutyMember)) {
+        if (!dutyService.canEdit(loginMember, dutyMemberId)) {
             log.warn("login member and request duty member does not match: login:$loginMember.id, dutyMemberId:${dutyMemberId}")
             throw DutyparkAuthException("login member doesn't have permission to edit duty")
         }

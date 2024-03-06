@@ -4,7 +4,6 @@ import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
-import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.schedule.service.ScheduleService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.http.ResponseEntity
@@ -17,7 +16,6 @@ import java.util.*
 @RequestMapping("/api/schedules")
 class ScheduleController(
     private val scheduleService: ScheduleService,
-    private val scheduleRepository: ScheduleRepository,
 ) {
 
     @GetMapping
@@ -64,10 +62,7 @@ class ScheduleController(
         @RequestParam id2: UUID,
         @Login loginMember: LoginMember,
     ): ResponseEntity<Any> {
-        val schedule1 = scheduleRepository.findById(id1).orElseThrow()
-        val schedule2 = scheduleRepository.findById(id2).orElseThrow()
-
-        scheduleService.swapSchedulePosition(loginMember, schedule1, schedule2)
+        scheduleService.swapSchedulePosition(loginMember, id1, id2)
         return ResponseEntity.ok().build()
     }
 

@@ -374,7 +374,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         assertThat(schedule3.position).isEqualTo(2)
 
         // When
-        scheduleService.swapSchedulePosition(loginMember, schedule1, schedule2)
+        scheduleService.swapSchedulePosition(loginMember, schedule1.id, schedule2.id)
         em.flush()
         em.clear()
 
@@ -415,10 +415,10 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         val schedule2 = scheduleService.createSchedule(loginMember, scheduleUpdateDto2)
         val schedule3 = scheduleService.createSchedule(loginMember, scheduleUpdateDto3)
 
-        scheduleService.swapSchedulePosition(loginMember, schedule1, schedule2)
+        scheduleService.swapSchedulePosition(loginMember, schedule1.id, schedule2.id)
         // Then
         assertThrows<IllegalArgumentException> {
-            scheduleService.swapSchedulePosition(loginMember, schedule2, schedule3)
+            scheduleService.swapSchedulePosition(loginMember, schedule2.id, schedule3.id)
         }
     }
 
@@ -446,7 +446,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
         // Then
         assertThrows<DutyparkAuthException> {
-            scheduleService.swapSchedulePosition(loginMember, schedule1, schedule2)
+            scheduleService.swapSchedulePosition(loginMember, schedule1.id, schedule2.id)
         }
     }
 
