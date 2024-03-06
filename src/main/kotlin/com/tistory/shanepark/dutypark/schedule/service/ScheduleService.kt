@@ -25,7 +25,14 @@ class ScheduleService(
 ) {
 
     @Transactional(readOnly = true)
-    fun findSchedulesByYearAndMonth(member: Member, yearMonth: YearMonth): Array<List<ScheduleDto>> {
+    fun findSchedulesByYearAndMonth(
+        loginMember: LoginMember,
+        memberId: Long,
+        yearMonth: YearMonth
+    ): Array<List<ScheduleDto>> {
+        val member = memberRepository.findById(memberId).orElseThrow()
+        friendService.checkVisibility(loginMember, member)
+
         val calendarView = CalendarView(yearMonth)
 
         val paddingBefore = calendarView.paddingBefore
@@ -97,7 +104,10 @@ class ScheduleService(
         return scheduleRepository.save(schedule)
     }
 
-    fun swapSchedulePosition(loginMember: LoginMember, schedule1: Schedule, schedule2: Schedule) {
+    fun swapSchedulePosition(loginMember: LoginMember, schedule1Id: UUID, schedule2Id: UUID) {
+        val schedule1 = scheduleRepository.findById(schedule1Id).orElseThrow()
+        val schedule2 = scheduleRepository.findById(schedule2Id).orElseThrow()
+
         if (schedule1.startDateTime.toLocalDate() != schedule2.startDateTime.toLocalDate()) {
             throw IllegalArgumentException("Schedule must have same date")
         }

@@ -67,13 +67,13 @@ class AuthController(
 
             log.info("Login Success: ${loginDto.email}")
 
-            val referer = urlReferer ?: referer
+            val refererValue = urlReferer ?: referer
 
             val responseEntity = ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
                 .header(HttpHeaders.SET_COOKIE, refToken.toString())
                 .header(HttpHeaders.SET_COOKIE, rememberMeCookie.toString())
-                .body(referer?.let {
+                .body(refererValue?.let {
                     if (it.contains("login")) {
                         "/"
                     } else {

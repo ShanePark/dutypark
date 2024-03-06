@@ -9,6 +9,7 @@ import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberCreateDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -121,6 +122,11 @@ class DutyparkIntegrationTest {
             jwt = "",
             isAdmin = false
         )
+    }
+
+    protected fun updateVisibility(target: Member, visibility: Visibility) {
+        target.calendarVisibility = visibility
+        memberRepository.save(target)
     }
 
 }

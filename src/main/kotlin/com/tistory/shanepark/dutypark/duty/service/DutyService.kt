@@ -10,6 +10,7 @@ import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -21,6 +22,7 @@ class DutyService(
     private val dutyRepository: DutyRepository,
     private val dutyTypeRepository: DutyTypeRepository,
     private val memberRepository: MemberRepository,
+    private val friendService: FriendService
 ) {
 
     @Transactional(readOnly = true)
@@ -45,14 +47,15 @@ class DutyService(
 
         if (duty == null) {
             if (dutyType != null) {
-                val duty = Duty(
-                    member = member,
-                    dutyYear = dutyUpdateDto.year,
-                    dutyMonth = dutyUpdateDto.month,
-                    dutyDay = dutyUpdateDto.day,
-                    dutyType = dutyType
+                save(
+                    Duty(
+                        member = member,
+                        dutyYear = dutyUpdateDto.year,
+                        dutyMonth = dutyUpdateDto.month,
+                        dutyDay = dutyUpdateDto.day,
+                        dutyType = dutyType
+                    )
                 )
-                save(duty)
             }
             return
         }
@@ -70,8 +73,9 @@ class DutyService(
     }
 
     fun canEdit(
-        loginMember: LoginMember, member: Member
+        loginMember: LoginMember, memberId: Long
     ): Boolean {
+        val member = memberRepository.findMemberWithDepartment(memberId).orElseThrow()
         if (member.id == loginMember.id) {
             return true
         }
@@ -82,8 +86,9 @@ class DutyService(
     }
 
     @Transactional(readOnly = true)
-    fun getDuties(memberId: Long, yearMonth: YearMonth): List<DutyDto> {
+    fun getDuties(memberId: Long, yearMonth: YearMonth, loginMember: LoginMember): List<DutyDto> {
         val member = memberRepository.findMemberWithDepartment(memberId).orElseThrow()
+        friendService.checkVisibility(loginMember, member)
         val department = member.department ?: return emptyList()
         val offColor = department.offColor
 

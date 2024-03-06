@@ -80,14 +80,14 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
         val created = service.create(DepartmentCreateDto("deptName", "deptDesc"))
         val totalAfter = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
         assertThat(totalAfter).isEqualTo(totalBefore + 1)
-        val department = departmentRepository.findById(created.id!!).orElseThrow()
+        val department = departmentRepository.findById(created.id).orElseThrow()
 
         department.addMember(TestData.member)
         department.addMember(TestData.member2)
 
         // When
         assertThrows<IllegalStateException> {
-            service.delete(created.id!!)
+            service.delete(created.id)
         }
     }
 
@@ -98,7 +98,7 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
         val created = service.create(DepartmentCreateDto("deptName", "deptDesc"))
         val totalAfter = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
         assertThat(totalAfter).isEqualTo(totalBefore + 1)
-        val department = departmentRepository.findById(created.id!!).orElseThrow()
+        val department = departmentRepository.findById(created.id).orElseThrow()
 
         val dutyType1 = department.addDutyType("오전")
         val dutyType2 = department.addDutyType("오후")
@@ -112,7 +112,7 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
         assertThat(department.dutyTypes).hasSize(3)
 
         // When
-        service.delete(created.id!!)
+        service.delete(created.id)
 
         // Then
         assertThat(dutyTypeRepository.findById(dutyType1.id!!)).isEmpty
@@ -128,7 +128,7 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
     ) {
         // Given
         val created = service.create(DepartmentCreateDto("deptName", "deptDesc"))
-        val department = departmentRepository.findById(created.id!!).orElseThrow()
+        val department = departmentRepository.findById(created.id).orElseThrow()
         val member = TestData.member
 
         department.addMember(member)

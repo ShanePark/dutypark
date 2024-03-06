@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.member.service
 
+import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendRequestDto
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendsInfoDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
@@ -8,6 +9,7 @@ import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus.PENDING
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus.REJECTED
+import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -156,4 +158,23 @@ class FriendService(
     private fun loginMemberToMember(login: LoginMember): Member {
         return memberRepository.findById(login.id).orElseThrow()
     }
+
+    fun checkVisibility(login: LoginMember, target: Member) {
+        if (!isVisible(login, target))
+            throw DutyparkAuthException("Not visible")
+    }
+
+    fun isVisible(login: LoginMember, target: Member): Boolean {
+        val loginMember = memberRepository.findById(login.id).orElseThrow()
+        if (login.id == target.id)
+            return true
+        if (target.department?.manager?.id == login.id)
+            return true
+        return when (target.calendarVisibility) {
+            Visibility.PUBLIC -> true
+            Visibility.FRIENDS -> isFriend(loginMember, target)
+            Visibility.PRIVATE -> false
+        }
+    }
+
 }

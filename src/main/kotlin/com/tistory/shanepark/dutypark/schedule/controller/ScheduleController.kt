@@ -2,10 +2,8 @@ package com.tistory.shanepark.dutypark.schedule.controller
 
 import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
-import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
-import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.schedule.service.ScheduleService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.http.ResponseEntity
@@ -18,18 +16,20 @@ import java.util.*
 @RequestMapping("/api/schedules")
 class ScheduleController(
     private val scheduleService: ScheduleService,
-    private val scheduleRepository: ScheduleRepository,
-    private val memberRepository: MemberRepository,
 ) {
 
     @GetMapping
     fun getSchedules(
+        @Login loginMember: LoginMember,
         @RequestParam memberId: Long,
         @RequestParam year: Int,
         @RequestParam month: Int
     ): Array<List<ScheduleDto>> {
-        val member = memberRepository.findById(memberId).orElseThrow()
-        return scheduleService.findSchedulesByYearAndMonth(member, YearMonth.of(year, month))
+        return scheduleService.findSchedulesByYearAndMonth(
+            loginMember = loginMember,
+            memberId,
+            YearMonth.of(year, month)
+        )
     }
 
     @PostMapping
@@ -62,10 +62,7 @@ class ScheduleController(
         @RequestParam id2: UUID,
         @Login loginMember: LoginMember,
     ): ResponseEntity<Any> {
-        val schedule1 = scheduleRepository.findById(id1).orElseThrow()
-        val schedule2 = scheduleRepository.findById(id2).orElseThrow()
-
-        scheduleService.swapSchedulePosition(loginMember, schedule1, schedule2)
+        scheduleService.swapSchedulePosition(loginMember, id1, id2)
         return ResponseEntity.ok().build()
     }
 

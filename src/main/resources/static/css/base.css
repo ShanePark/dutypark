@@ -278,16 +278,16 @@ a.homeButton:hover {
 }
 
 .form-buttons div {
-    padding: 0px 10px;
+    padding: 0 10px;
 }
 
 .form-buttons button {
     width: 100%;
     margin-top: 10px;
-    margin-left: 0px;
-    margin-right: 0px;
+    margin-left: 0;
+    margin-right: 0;
     background-color: #eaeaea;
-    border: 0px;
+    border: 0;
 }
 
 .form-buttons button:hover {
@@ -380,12 +380,12 @@ a.homeButton:hover {
 
 .date .duty {
     width: 100%;
-    margin: 0px;
+    margin: 0;
 }
 
 .duty .duty-type {
-    margin: 0px;
-    padding: 0px;
+    margin: 0;
+    padding: 0;
     height: 2em;
 }
 
@@ -429,7 +429,7 @@ a.homeButton:hover {
 }
 
 #detail-view-modal .schedules .schedule.schedule-add-button {
-    padding: 0px;
+    padding: 0;
 }
 
 .schedule-add .content-length,
@@ -553,8 +553,8 @@ a.homeButton:hover {
 
 .member-hover-menu ul {
     list-style: none;
-    padding: 0px;
-    margin: 0px;
+    padding: 0;
+    margin: 0;
 }
 
 .member-hover:hover .member-hover-menu {
@@ -563,7 +563,7 @@ a.homeButton:hover {
 
 #header {
     min-height: 6vh;
-    margin: 0px;
+    margin: 0;
 }
 
 #body {
@@ -582,5 +582,11 @@ a.homeButton:hover {
     color: white;
     font-size: 1.4em;
     width: 100%;
-    margin: 0px;
+    margin: 0;
 }
+
+.privacy-config .btn.selected {
+    border: 3px solid #000;
+    position: relative;
+}
+

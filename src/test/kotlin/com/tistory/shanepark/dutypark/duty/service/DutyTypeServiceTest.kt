@@ -54,12 +54,10 @@ class DutyTypeServiceTest : DutyparkIntegrationTest() {
 
         // When
         assertThrows<IllegalArgumentException> {
-            val dutyTypeCreateDto = DutyTypeCreateDto(TestData.department.id!!, "dutyType", Color.BLUE)
-            dutyTypeService.addDutyType(dutyTypeCreateDto)
+            dutyTypeService.addDutyType(DutyTypeCreateDto(TestData.department.id!!, "dutyType", Color.BLUE))
         }
         assertThrows<IllegalArgumentException> {
-            val dutyTypeCreateDto = DutyTypeCreateDto(TestData.department.id!!, "dutyType2", Color.BLUE)
-            dutyTypeService.addDutyType(dutyTypeCreateDto)
+            dutyTypeService.addDutyType(DutyTypeCreateDto(TestData.department.id!!, "dutyType2", Color.BLUE))
         }
     }
 

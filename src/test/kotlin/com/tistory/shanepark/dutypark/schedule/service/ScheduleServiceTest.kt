@@ -5,6 +5,7 @@ import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
@@ -233,7 +234,8 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
         // When
         val yearMonth = YearMonth.of(2023, 4)
-        val result = scheduleService.findSchedulesByYearAndMonth(member, yearMonth)
+        val result =
+            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member), member.id!!, yearMonth)
 
         // Then
         val calendarView = CalendarView(yearMonth)
@@ -271,7 +273,8 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
         // When
         val yearMonth = YearMonth.of(2023, 4)
-        val result = scheduleService.findSchedulesByYearAndMonth(member, yearMonth)
+        val result =
+            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member), member.id!!, yearMonth)
 
         // Then
         val calendarView = CalendarView(yearMonth)
@@ -329,7 +332,8 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         scheduleRepository.saveAll(listOf(schedule1, schedule2))
 
         // When
-        val result = scheduleService.findSchedulesByYearAndMonth(member, yearMonth)
+        val result =
+            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member), member.id!!, yearMonth)
 
         // Then
         val calendarView = CalendarView(yearMonth)
@@ -370,7 +374,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         assertThat(schedule3.position).isEqualTo(2)
 
         // When
-        scheduleService.swapSchedulePosition(loginMember, schedule1, schedule2)
+        scheduleService.swapSchedulePosition(loginMember, schedule1.id, schedule2.id)
         em.flush()
         em.clear()
 
@@ -411,10 +415,10 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         val schedule2 = scheduleService.createSchedule(loginMember, scheduleUpdateDto2)
         val schedule3 = scheduleService.createSchedule(loginMember, scheduleUpdateDto3)
 
-        scheduleService.swapSchedulePosition(loginMember, schedule1, schedule2)
+        scheduleService.swapSchedulePosition(loginMember, schedule1.id, schedule2.id)
         // Then
         assertThrows<IllegalArgumentException> {
-            scheduleService.swapSchedulePosition(loginMember, schedule2, schedule3)
+            scheduleService.swapSchedulePosition(loginMember, schedule2.id, schedule3.id)
         }
     }
 
@@ -442,7 +446,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
         // Then
         assertThrows<DutyparkAuthException> {
-            scheduleService.swapSchedulePosition(loginMember, schedule1, schedule2)
+            scheduleService.swapSchedulePosition(loginMember, schedule1.id, schedule2.id)
         }
     }
 
@@ -618,8 +622,10 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
         // When
         val yearMonth = YearMonth.of(2023, 4)
-        val taggedPersonSchedules = scheduleService.findSchedulesByYearAndMonth(taggedPerson, yearMonth)
-        val ownerSchedules = scheduleService.findSchedulesByYearAndMonth(owner, yearMonth)
+        val taggedPersonSchedules =
+            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(owner), taggedPerson.id!!, yearMonth)
+        val ownerSchedules =
+            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(owner), owner.id!!, yearMonth)
 
         // Then
         val calendarView = CalendarView(yearMonth)
@@ -666,7 +672,8 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
         // When
         val yearMonth = YearMonth.of(2023, 4)
-        val ownerSchedules = scheduleService.findSchedulesByYearAndMonth(member1, yearMonth)
+        val ownerSchedules =
+            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member1), member1.id!!, yearMonth)
 
         // Then
         val calendarView = CalendarView(yearMonth)
@@ -683,6 +690,50 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         assertThat(member2ScheduleDto.isTagged).isTrue()
         assertThat(member2ScheduleDto.tags).hasSize(1)
         assertThat(member2ScheduleDto.tags[0].id).isEqualTo(member1.id)
+    }
+
+    @Test
+    fun `if not friend and calendar visibility is only for friends, can not get schedules`() {
+        // Given
+        val target = TestData.member
+        updateVisibility(target, Visibility.FRIENDS)
+        val login = TestData.member2
+
+        // Then
+        assertThrows<DutyparkAuthException> {
+            scheduleService.findSchedulesByYearAndMonth(loginMember(login), target.id!!, YearMonth.of(2023, 4))
+        }
+    }
+
+    @Test
+    fun `if friend and calendar is only open for friends can get schedules`() {
+        // Given
+        val target = TestData.member
+        updateVisibility(target, Visibility.FRIENDS)
+        val login = TestData.member2
+
+        val member2 = TestData.member2
+        makeThemFriend(target, member2)
+
+        // When
+        val result = scheduleService.findSchedulesByYearAndMonth(loginMember(login), target.id!!, YearMonth.of(2023, 4))
+
+        // Then
+        assertThat(result).isNotEmpty
+    }
+
+    @Test
+    fun `if calendar visibility is private, even they are friend, can't get schedules`() {
+        // Given
+        val target = TestData.member
+        updateVisibility(target, Visibility.PRIVATE)
+        val login = TestData.member2
+        makeThemFriend(target, login)
+
+        // Then
+        assertThrows<DutyparkAuthException> {
+            scheduleService.findSchedulesByYearAndMonth(loginMember(login), target.id!!, YearMonth.of(2023, 4))
+        }
     }
 
     private fun makeThemFriend(member1: Member, member2: Member) {
