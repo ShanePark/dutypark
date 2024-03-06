@@ -24,7 +24,7 @@ class DutyViewController(
 
     @GetMapping("/duty/{name}")
     fun retrieveMemberDuty(
-        @Login loginMember: LoginMember,
+        @Login(required = false) loginMember: LoginMember?,
         model: Model, @PathVariable name: String, request: HttpServletRequest,
         @RequestParam(required = false) year: Int?,
         @RequestParam(required = false) month: Int?,

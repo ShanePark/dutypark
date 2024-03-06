@@ -86,7 +86,7 @@ class DutyService(
     }
 
     @Transactional(readOnly = true)
-    fun getDuties(memberId: Long, yearMonth: YearMonth, loginMember: LoginMember): List<DutyDto> {
+    fun getDuties(memberId: Long, yearMonth: YearMonth, loginMember: LoginMember?): List<DutyDto> {
         val member = memberRepository.findMemberWithDepartment(memberId).orElseThrow()
         friendService.checkVisibility(loginMember, member)
         val department = member.department ?: return emptyList()

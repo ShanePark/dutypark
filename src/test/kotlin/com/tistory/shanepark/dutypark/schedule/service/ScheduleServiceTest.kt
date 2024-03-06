@@ -741,4 +741,17 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         friendRelationRepository.save(FriendRelation(member2, member1))
     }
 
+    @Test
+    fun `if calendar visibility is public, even guest can get schedules`() {
+        // Given
+        val target = TestData.member
+        updateVisibility(target, Visibility.PUBLIC)
+
+        // When
+        val result = scheduleService.findSchedulesByYearAndMonth(null, target.id!!, YearMonth.of(2023, 4))
+
+        // Then
+        assertThat(result).isNotEmpty
+    }
+
 }

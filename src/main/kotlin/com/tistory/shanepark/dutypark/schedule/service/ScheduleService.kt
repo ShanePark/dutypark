@@ -26,7 +26,7 @@ class ScheduleService(
 
     @Transactional(readOnly = true)
     fun findSchedulesByYearAndMonth(
-        loginMember: LoginMember,
+        loginMember: LoginMember?,
         memberId: Long,
         yearMonth: YearMonth
     ): Array<List<ScheduleDto>> {

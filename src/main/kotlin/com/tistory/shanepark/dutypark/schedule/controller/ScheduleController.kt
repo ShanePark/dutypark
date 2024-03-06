@@ -20,7 +20,7 @@ class ScheduleController(
 
     @GetMapping
     fun getSchedules(
-        @Login loginMember: LoginMember,
+        @Login(required = false) loginMember: LoginMember?,
         @RequestParam memberId: Long,
         @RequestParam year: Int,
         @RequestParam month: Int
