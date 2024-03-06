@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.duty.controller
 import com.tistory.shanepark.dutypark.common.controller.ViewController
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
+import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import jakarta.servlet.http.HttpServletRequest
@@ -17,6 +18,7 @@ import java.time.LocalDate
 @Controller
 class DutyViewController(
     val memberService: MemberService,
+    val friendService: FriendService,
 ) : ViewController() {
     val log: Logger = org.slf4j.LoggerFactory.getLogger(this.javaClass)
 
@@ -28,6 +30,10 @@ class DutyViewController(
         @RequestParam(required = false) month: Int?,
     ): String {
         val member = memberService.findMemberByName(name)
+
+        val visible = friendService.isVisible(loginMember, member)
+        model.addAttribute("visible", visible)
+
         model.addAttribute("member", MemberDto.of(member))
         model.addAttribute("year", year ?: LocalDate.now().year)
         model.addAttribute("month", month ?: LocalDate.now().monthValue)

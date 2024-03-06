@@ -1,4 +1,10 @@
-<div class="duty-vue" v-cloak>
+<div th:unless="${visible}">
+  <div class="alert alert-danger" role="alert">
+    <p></p><span th:text="${member.name}"></span> 님의 시간표를 조회할 수 없습니다.</p>
+    <p>해당 시간표는 <span class="text-bg-warning" th:text="${member.calendarVisibility.label}"></span> 상태입니다.</p>
+  </div>
+</div>
+<div class="duty-vue" v-cloak th:if="${visible}">
   <div th:if="${member.department}" class="calendar" th:attr="data-member_id=${member.id}">
     <div class="month-control row">
       <div class="month-control-left col-md-2">

@@ -160,25 +160,20 @@ class FriendService(
     }
 
     fun checkVisibility(login: LoginMember, target: Member) {
+        if (!isVisible(login, target))
+            throw DutyparkAuthException("Not visible")
+    }
+
+    fun isVisible(login: LoginMember, target: Member): Boolean {
         val loginMember = memberRepository.findById(login.id).orElseThrow()
         if (login.id == target.id)
-            return
+            return true
         if (target.department?.manager?.id == login.id)
-            return
-        when (target.calendarVisibility) {
-            Visibility.PUBLIC -> {
-                return
-            }
-
-            Visibility.FRIENDS -> {
-                if (!isFriend(loginMember, target))
-                    throw DutyparkAuthException("Not friend")
-            }
-
-            Visibility.PRIVATE -> {
-                throw DutyparkAuthException("Not friend")
-            }
-
+            return true
+        return when (target.calendarVisibility) {
+            Visibility.PUBLIC -> true
+            Visibility.FRIENDS -> isFriend(loginMember, target)
+            Visibility.PRIVATE -> false
         }
     }
 
