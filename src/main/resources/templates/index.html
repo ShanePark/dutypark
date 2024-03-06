@@ -1,10 +1,13 @@
 <div class="members">
   Members
-  <ul>
-    <li th:each="member: ${members}">
+  <dl>
+    <dd th:each="member: ${members}" th:with="visibility=${member.calendarVisibility}">
+      <span class="badge"
+            th:classappend="${visibility.name == 'PUBLIC' ? 'bg-success' : visibility.name == 'FRIENDS' ? 'bg-warning' : 'bg-danger'}"
+            th:text="${visibility.label}"/>
       <a th:href="@{/duty/{name}(name=${member.name})}"
          th:text="${#strings.concat('(', member.department ?: '부서없음', ') ', member.name)}">
       </a>
-    </li>
-  </ul>
+    </dd>
+  </dl>
 </div>
