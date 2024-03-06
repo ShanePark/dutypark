@@ -31,10 +31,8 @@ class DDayController(
     }
 
     @GetMapping
-    fun findDDays(
-        @Login member: LoginMember
-    ): ResponseEntity<Any> {
-        val findDDays = dDayService.findDDays(member, member.id)
+    fun findDDays(@Login login: LoginMember): ResponseEntity<Any> {
+        val findDDays = dDayService.findDDays(login, login.id)
 
         return ResponseEntity
             .status(HttpStatus.OK)

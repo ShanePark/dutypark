@@ -3,7 +3,6 @@ package com.tistory.shanepark.dutypark.member.domain.entity
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.tistory.shanepark.dutypark.department.domain.entity.Department
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
-import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import jakarta.persistence.*
 
 @Entity
@@ -25,9 +24,6 @@ class Member(
     @JoinColumn(name = "department_id")
     @field:JsonIgnore
     var department: Department? = null
-
-    @OneToMany(mappedBy = "member", orphanRemoval = true, cascade = [CascadeType.REMOVE], fetch = FetchType.LAZY)
-    val refreshTokens = mutableListOf<RefreshToken>()
 
     @Column(nullable = false, name = "calendar_visibility")
     @Enumerated(EnumType.STRING)
