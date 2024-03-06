@@ -159,12 +159,14 @@ class FriendService(
         return memberRepository.findById(login.id).orElseThrow()
     }
 
-    fun checkVisibility(login: LoginMember, target: Member) {
+    fun checkVisibility(login: LoginMember?, target: Member) {
         if (!isVisible(login, target))
             throw DutyparkAuthException("Not visible")
     }
 
-    fun isVisible(login: LoginMember, target: Member): Boolean {
+    fun isVisible(login: LoginMember?, target: Member): Boolean {
+        login ?: return target.calendarVisibility == Visibility.PUBLIC
+
         val loginMember = memberRepository.findById(login.id).orElseThrow()
         if (login.id == target.id)
             return true

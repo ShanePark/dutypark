@@ -21,7 +21,7 @@ class DutyController(
 
     @GetMapping
     fun getDuties(
-        @Login loginMember: LoginMember,
+        @Login(required = false) loginMember: LoginMember?,
         @RequestParam year: Int,
         @RequestParam month: Int,
         @RequestParam memberId: Long,
