@@ -163,6 +163,8 @@ class FriendService(
         val loginMember = memberRepository.findById(login.id).orElseThrow()
         if (login.id == target.id)
             return
+        if (target.department?.manager?.id == login.id)
+            return
         when (target.calendarVisibility) {
             Visibility.PUBLIC -> {
                 return

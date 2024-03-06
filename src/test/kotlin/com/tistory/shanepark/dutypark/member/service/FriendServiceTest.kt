@@ -1,10 +1,12 @@
 package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
+import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus
+import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import org.assertj.core.api.Assertions.assertThat
@@ -325,6 +327,26 @@ class FriendServiceTest : DutyparkIntegrationTest() {
 
         assertThat(searchResult).isNotEmpty
         assertThat(searchResult.content).noneMatch { it.id == taget.id }
+    }
+
+    @Test
+    fun `check visibility can't pass if the setting is private and login is not his manager`() {
+        val loginMember = loginMember(TestData.member)
+        val targetMember = TestData.member2
+        targetMember.calendarVisibility = Visibility.PRIVATE
+
+        assertThrows<DutyparkAuthException> {
+            friendService.checkVisibility(loginMember, targetMember)
+        }
+    }
+
+    @Test
+    fun `check visibility pass even if the setting is private, when login is his manager`() {
+        val loginMember = loginMember(TestData.member)
+        val targetMember = TestData.member2
+        targetMember.department?.manager = TestData.member
+
+        friendService.checkVisibility(loginMember, targetMember)
     }
 
     private fun setFriend(
