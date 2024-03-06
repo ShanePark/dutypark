@@ -2,7 +2,6 @@ package com.tistory.shanepark.dutypark.schedule.controller
 
 import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
-import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
@@ -19,7 +18,6 @@ import java.util.*
 class ScheduleController(
     private val scheduleService: ScheduleService,
     private val scheduleRepository: ScheduleRepository,
-    private val memberRepository: MemberRepository,
 ) {
 
     @GetMapping
@@ -29,8 +27,11 @@ class ScheduleController(
         @RequestParam year: Int,
         @RequestParam month: Int
     ): Array<List<ScheduleDto>> {
-        val member = memberRepository.findById(memberId).orElseThrow()
-        return scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember, member, YearMonth.of(year, month))
+        return scheduleService.findSchedulesByYearAndMonth(
+            loginMember = loginMember,
+            memberId,
+            YearMonth.of(year, month)
+        )
     }
 
     @PostMapping

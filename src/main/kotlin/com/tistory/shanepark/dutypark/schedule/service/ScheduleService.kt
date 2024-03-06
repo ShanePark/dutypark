@@ -27,9 +27,10 @@ class ScheduleService(
     @Transactional(readOnly = true)
     fun findSchedulesByYearAndMonth(
         loginMember: LoginMember,
-        member: Member,
+        memberId: Long,
         yearMonth: YearMonth
     ): Array<List<ScheduleDto>> {
+        val member = memberRepository.findById(memberId).orElseThrow()
         friendService.checkVisibility(loginMember, member)
 
         val calendarView = CalendarView(yearMonth)

@@ -243,7 +243,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
     fun `if friend and calendar is only open for friends can get duty`() {
         // Given
         val target = TestData.member
-        target.calendarVisibility = Visibility.FRIENDS
+        updateVisibility(target, Visibility.FRIENDS)
         val login = TestData.member2
 
         val dutyTypes = TestData.dutyTypes
@@ -281,7 +281,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
         // Given
         val target = TestData.member
         val login = TestData.member2
-        target.calendarVisibility = Visibility.PRIVATE
+        updateVisibility(target, Visibility.PRIVATE)
         // When
         assertThrows<DutyparkAuthException> {
             dutyService.getDuties(target.id!!, YearMonth.of(2023, 4), loginMember(login))

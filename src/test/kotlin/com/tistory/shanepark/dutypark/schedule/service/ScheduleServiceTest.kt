@@ -234,7 +234,8 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
         // When
         val yearMonth = YearMonth.of(2023, 4)
-        val result = scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member), member, yearMonth)
+        val result =
+            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member), member.id!!, yearMonth)
 
         // Then
         val calendarView = CalendarView(yearMonth)
@@ -272,7 +273,8 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
         // When
         val yearMonth = YearMonth.of(2023, 4)
-        val result = scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member), member, yearMonth)
+        val result =
+            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member), member.id!!, yearMonth)
 
         // Then
         val calendarView = CalendarView(yearMonth)
@@ -330,7 +332,8 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         scheduleRepository.saveAll(listOf(schedule1, schedule2))
 
         // When
-        val result = scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member), member, yearMonth)
+        val result =
+            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member), member.id!!, yearMonth)
 
         // Then
         val calendarView = CalendarView(yearMonth)
@@ -620,9 +623,9 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         // When
         val yearMonth = YearMonth.of(2023, 4)
         val taggedPersonSchedules =
-            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(owner), taggedPerson, yearMonth)
+            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(owner), taggedPerson.id!!, yearMonth)
         val ownerSchedules =
-            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(owner), owner, yearMonth)
+            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(owner), owner.id!!, yearMonth)
 
         // Then
         val calendarView = CalendarView(yearMonth)
@@ -670,7 +673,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         // When
         val yearMonth = YearMonth.of(2023, 4)
         val ownerSchedules =
-            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member1), member1, yearMonth)
+            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member1), member1.id!!, yearMonth)
 
         // Then
         val calendarView = CalendarView(yearMonth)
@@ -693,12 +696,12 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
     fun `if not friend and calendar visibility is only for friends, can not get schedules`() {
         // Given
         val target = TestData.member
-        target.calendarVisibility = Visibility.FRIENDS
+        updateVisibility(target, Visibility.FRIENDS)
         val login = TestData.member2
 
         // Then
         assertThrows<DutyparkAuthException> {
-            scheduleService.findSchedulesByYearAndMonth(loginMember(login), target, YearMonth.of(2023, 4))
+            scheduleService.findSchedulesByYearAndMonth(loginMember(login), target.id!!, YearMonth.of(2023, 4))
         }
     }
 
@@ -706,14 +709,14 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
     fun `if friend and calendar is only open for friends can get schedules`() {
         // Given
         val target = TestData.member
-        target.calendarVisibility = Visibility.FRIENDS
+        updateVisibility(target, Visibility.FRIENDS)
         val login = TestData.member2
 
         val member2 = TestData.member2
         makeThemFriend(target, member2)
 
         // When
-        val result = scheduleService.findSchedulesByYearAndMonth(loginMember(login), target, YearMonth.of(2023, 4))
+        val result = scheduleService.findSchedulesByYearAndMonth(loginMember(login), target.id!!, YearMonth.of(2023, 4))
 
         // Then
         assertThat(result).isNotEmpty
@@ -723,15 +726,13 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
     fun `if calendar visibility is private, even they are friend, can't get schedules`() {
         // Given
         val target = TestData.member
-        target.calendarVisibility = Visibility.PRIVATE
+        updateVisibility(target, Visibility.PRIVATE)
         val login = TestData.member2
-
-        val member2 = TestData.member2
-        makeThemFriend(target, member2)
+        makeThemFriend(target, login)
 
         // Then
         assertThrows<DutyparkAuthException> {
-            scheduleService.findSchedulesByYearAndMonth(loginMember(login), target, YearMonth.of(2023, 4))
+            scheduleService.findSchedulesByYearAndMonth(loginMember(login), target.id!!, YearMonth.of(2023, 4))
         }
     }
 
