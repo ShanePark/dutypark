@@ -472,6 +472,12 @@ a.homeButton:hover {
     margin-right: 0.5em;
 }
 
+.schedule-tag.tagged-true::before {
+    font-family: unset;
+    margin-right: 0.1em;
+    content: 'by';
+}
+
 .schedule-tag.tagged-false::before {
     content: 'bi-person-circle';
 }
