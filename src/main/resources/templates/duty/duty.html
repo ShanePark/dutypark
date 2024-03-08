@@ -52,21 +52,21 @@
               v-on:click="batchEditMode=false;">편집완료
       </button>
     </div>
-    <ol class="day-of-the-week">
-      <li><abbr title="일요일">SUN</abbr></li>
-      <li><abbr title="월요일">MON</abbr></li>
-      <li><abbr title="화요일">TUE</abbr></li>
-      <li><abbr title="수요일">WED</abbr></li>
-      <li><abbr title="목요일">THU</abbr></li>
-      <li><abbr title="금요일">FRI</abbr></li>
-      <li><abbr title="토요일">SAT</abbr></li>
-    </ol>
+    <div class="day-of-the-week row-7">
+      <div><abbr title="일요일">SUN</abbr></div>
+      <div><abbr title="월요일">MON</abbr></div>
+      <div><abbr title="화요일">TUE</abbr></div>
+      <div><abbr title="수요일">WED</abbr></div>
+      <div><abbr title="목요일">THU</abbr></div>
+      <div><abbr title="금요일">FRI</abbr></div>
+      <div><abbr title="토요일">SAT</abbr></div>
+    </div>
 
-    <ol class="day-grid" :class="{'editable': canEdit}">
-      <li class="DAY"
-          :id="formattedDate(duty.year, duty.month, duty.day)"
-          v-for="(duty, index) in duties"
-          :class="{
+    <div class="day-grid row-7" :class="{'editable': canEdit}">
+      <div class="DAY"
+           :id="formattedDate(duty.year, duty.month, duty.day)"
+           v-for="(duty, index) in duties"
+           :class="{
           ['BACKGROUND-' + duty.dutyColor]: true,
           'month-prev': (duty.month < month),
           'month-next': (duty.month > month),
@@ -74,7 +74,7 @@
           'holiday': isHoliday(index),
           'has-schedule': hasSchedule(index),
         }"
-          v-on:click="viewDayDetail(duty, index)">
+           v-on:click="viewDayDetail(duty, index)">
         <div class="date container">
           <div class="row day-header">
             <div class="col-md-5">
@@ -110,8 +110,8 @@
             </button>
           </div>
         </div>
-      </li>
-    </ol>
+      </div>
+    </div>
     <div class="d-day-list row">
       <div v-for="(dDay, index) in dDays" class="col-6">
         <div class="d-day-item card row shadow"
@@ -302,6 +302,12 @@
                         this.loadHolidays(this.year, this.month);
                         this.loadFriends();
                         this.loadDDays();
+
+                        document.addEventListener('click', function (event) {
+                            if (event.target && event.target.matches('.schedule-tag-add')) {
+                                event.target.querySelector('select').focus();
+                            }
+                        });
 
                         document.addEventListener('change', function (event) {
                             if (event.target && event.target.matches('.schedule-tag-add select')) {

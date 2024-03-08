@@ -34,20 +34,13 @@ body a:hover {
     opacity: 0.7;
 }
 
-.calendar ul, ol {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    grid-gap: 0.2em;
-    margin: 0 auto;
-    padding: 0;
+.row-7 {
+    display: flex;
+    flex-wrap: wrap;
 }
 
-.calendar li {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    list-style: none;
-    margin-left: 0;
+.row-7 > * {
+    width: 14.28571428571429%;
 }
 
 .calendar .day-of-the-week {
@@ -55,14 +48,14 @@ body a:hover {
     padding-left: 0;
 }
 
-ol.day-of-the-week {
+.day-of-the-week {
     margin-top: 1rem;
     margin-bottom: 1px;
     background: mintcream;
     border-radius: 10px 10px 0 0;
 }
 
-ol.day-of-the-week li {
+.day-of-the-week > div {
     text-align: center;
     padding: 0.5rem;
 }
@@ -73,26 +66,24 @@ ol.day-of-the-week li {
     text-decoration: none;
 }
 
-ol.day-grid li.DAY {
+.day-grid .DAY {
+    border: 1px solid white;
     word-break: break-all;
     min-height: 6vw;
-    height: 100%;
-    padding: 0;
-    display: inline-table;
     border-radius: 3px;
-    border: 1px solid darkgrey;
+    padding: 0 0 5px;
 }
 
-ol.day-grid li.DAY.has-schedule {
+.day-grid .DAY.has-schedule {
     filter: brightness(85%);
 }
 
-ol.day-grid li.month-prev,
-ol.day-grid li.month-next {
+.day-grid .month-prev,
+.day-grid .month-next {
     filter: opacity(0.5);
 }
 
-.day-grid.editable li:hover {
+.day-grid.editable .DAY:hover {
     cursor: pointer;
     filter: opacity(0.8);
 }
@@ -121,7 +112,7 @@ ol.day-grid li.month-next {
     background-color: lightgrey !important;
 }
 
-ol.day-grid li.month-prev, ol.day-grid li.month-next {
+.day-grid .month-prev, .day-grid .month-next {
     background-color: #fff;
 }
 
@@ -175,14 +166,14 @@ h1 a.move:hover {
     font-size: 1.2em;
 }
 
-.day-grid li.holiday .day,
-.day-grid li:nth-child(7n+1) abbr,
-.day-grid li:nth-child(7n+1) .day {
+.day-grid .holiday .day,
+.day-of-the-week > div:nth-child(7n+1) abbr,
+.day-grid > div:nth-child(7n+1) .day {
     color: red;
 }
 
-.day-grid li:not(.holiday):nth-child(7n) .day,
-.day-grid li:nth-child(7n) abbr {
+.day-grid > div:not(.holiday):nth-child(7n) .day,
+.day-of-the-week > div:nth-child(7n) abbr {
     color: blue;
 }
 
@@ -347,6 +338,7 @@ a.homeButton:hover {
 
 .d-day-list .d-day-item {
     background-color: mintcream;
+    height: 90%;
     max-height: 120px;
     margin: 5px;
     padding: 10px;
@@ -449,13 +441,14 @@ a.homeButton:hover {
 
 .schedule-tag {
     font-size: 0.7em;
-    padding: 0.5em;
+    padding: 0 0.5em;
     border-radius: 15px;
     margin: 0.1em;
     border: 1px solid black;
     background-color: floralwhite;
     width: fit-content;
     white-space: nowrap;
+    display: inline-block
 }
 
 #detail-view-modal .schedule-tag:hover {
@@ -508,7 +501,8 @@ a.homeButton:hover {
 }
 
 #detail-view-modal .schedule-tag-add {
-    display: unset;
+    display: inline-block;
+    line-height: 1.5;
 }
 
 #detail-view-modal .modal-header .current-date-label {
@@ -555,12 +549,6 @@ a.homeButton:hover {
     right: 5px;
     background: #333;
     border-radius: 5px;
-}
-
-.member-hover-menu ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
 }
 
 .member-hover:hover .member-hover-menu {

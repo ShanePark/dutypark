@@ -32,10 +32,6 @@
         font-size: 3em;
     }
 
-    ul.day-of-the-week li {
-        font-size: 0;
-    }
-
     .dutyTypes {
         margin-right: 10px;
     }
@@ -44,18 +40,8 @@
         font-size: 1.3em;
     }
 
-    ol.day-grid li.DAY {
+    .day-grid .DAY {
         min-height: 10vw;
-    }
-
-    ul, ol {
-        grid-gap: .25em;
-    }
-
-    ul.day-of-the-week > li abbr:after {
-        content: attr(title);
-        font-size: calc(16px + (26 - 16) * ((100vw - 300px) / (1600 - 300)));
-        text-align: center;
     }
 
     .login-box {
