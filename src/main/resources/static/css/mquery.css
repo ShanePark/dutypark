@@ -128,4 +128,8 @@
         max-height: 150px;
     }
 
+    #detail-view-modal .schedules {
+        max-height: 700px;
+    }
+
 }
