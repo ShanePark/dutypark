@@ -52,7 +52,8 @@ class ScheduleControllerTest : RestDocsTest() {
                         fieldWithPath("memberId").description("Member Id"),
                         fieldWithPath("content").description("Schedule Content"),
                         fieldWithPath("startDateTime").description("Schedule Start DateTime"),
-                        fieldWithPath("endDateTime").description("Schedule End DateTime")
+                        fieldWithPath("endDateTime").description("Schedule End DateTime"),
+                        fieldWithPath("visibility").description("Schedule Visibility")
                     )
                 )
             )
@@ -98,7 +99,7 @@ class ScheduleControllerTest : RestDocsTest() {
                 content = "test",
                 startDateTime = LocalDateTime.now(),
                 endDateTime = LocalDateTime.now().plusHours(1),
-                position = 0
+                position = 0,
             )
         )
 
@@ -127,7 +128,8 @@ class ScheduleControllerTest : RestDocsTest() {
                         fieldWithPath("memberId").description("Member Id"),
                         fieldWithPath("content").description("Schedule Content"),
                         fieldWithPath("startDateTime").description("Schedule Start DateTime"),
-                        fieldWithPath("endDateTime").description("Schedule End DateTime")
+                        fieldWithPath("endDateTime").description("Schedule End DateTime"),
+                        fieldWithPath("visibility").description("Schedule Visibility")
                     )
                 )
             )

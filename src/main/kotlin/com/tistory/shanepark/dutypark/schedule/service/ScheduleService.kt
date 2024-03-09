@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.schedule.service
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
@@ -42,11 +43,15 @@ class ScheduleService(
         val start = calendarView.rangeFrom
         val end = calendarView.rangeEnd
 
-        val userSchedules = scheduleRepository.findSchedulesOfMonth(member, start, end)
-            .map { ScheduleDto.of(calendarView, it, isTagged = false) }
+        val availableVisibilities = availableVisibilities(loginMember, member)
 
-        val taggedSchedules = scheduleRepository.findTaggedSchedulesOfRange(member, start, end)
-            .map { ScheduleDto.of(calendarView, it, isTagged = true) }
+        val userSchedules =
+            scheduleRepository.findSchedulesOfMonth(member, start, end, visibilities = availableVisibilities)
+                .map { ScheduleDto.of(calendarView, it, isTagged = false) }
+
+        val taggedSchedules =
+            scheduleRepository.findTaggedSchedulesOfRange(member, start, end, visibilities = availableVisibilities)
+                .map { ScheduleDto.of(calendarView, it, isTagged = true) }
 
         userSchedules.plus(taggedSchedules)
             .flatten()
@@ -67,6 +72,18 @@ class ScheduleService(
             }
 
         return array
+    }
+
+    private fun availableVisibilities(loginMember: LoginMember?, member: Member): Collection<Visibility> {
+        if (loginMember == null)
+            return setOf(Visibility.PUBLIC)
+        if (loginMember.id == member.id) {
+            return Visibility.values().toList()
+        }
+        if (friendService.isFriend(loginMember.id, member.id!!)) {
+            return setOf(Visibility.PUBLIC, Visibility.FRIENDS)
+        }
+        return setOf(Visibility.PUBLIC)
     }
 
     fun createSchedule(loginMember: LoginMember, scheduleUpdateDto: ScheduleUpdateDto): Schedule {
