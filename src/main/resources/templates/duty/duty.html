@@ -186,6 +186,7 @@
           </div>
           <div class="schedules mt-4">
             <div class="schedule card shadow"
+                 :class="{'visibility-public': schedule.visibility == 'PUBLIC', 'visibility-friends': schedule.visibility == 'FRIENDS', 'visibility-private': schedule.visibility == 'PRIVATE'}"
                  v-for="(schedule, s_index) in schedulesByDays[detailView.index]"
                  :id="'schedule-' + schedule.id">
               <span v-if="!isEditing(schedule)" v-html="printSchedule(schedule)"></span>
@@ -430,7 +431,7 @@
                                     let tagFriendAria = `
                                       <span class="schedule-tag schedule-tag-add">
                                         <select>
-                                        <option>추가</option>
+                                        <option>태그</option>
                                         ${app.friends.map(friend => {
                                         if (tags.find(tag => tag.id === friend.id)) {
                                             return '';

@@ -407,12 +407,28 @@ a.homeButton:hover {
     font-size: 1em;
 }
 
+#detail-view-modal .schedules {
+    max-height: 500px;
+    overflow: scroll;
+}
+
 #detail-view-modal .schedules .schedule {
     font-size: 1.2em;
     border-radius: 15px;
-    background-color: aliceblue;
     padding: 10px;
     margin: 10px;
+}
+
+#detail-view-modal .schedules .schedule.visibility-private {
+    background-color: mistyrose;
+}
+
+#detail-view-modal .schedules .schedule.visibility-public {
+    background-color: honeydew;
+}
+
+#detail-view-modal .schedules .schedule.visibility-friends {
+    background-color: aliceblue;
 }
 
 .schedules .schedule .schedule-content {
@@ -453,6 +469,11 @@ a.homeButton:hover {
 
 #detail-view-modal .schedule-tag:hover {
     cursor: pointer;
+}
+
+#detail-view-modal input,
+#detail-view-modal textarea {
+    margin-bottom: 0.5em;
 }
 
 .schedule-tag::after,
