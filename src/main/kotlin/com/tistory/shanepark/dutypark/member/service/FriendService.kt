@@ -161,7 +161,7 @@ class FriendService(
 
     fun checkVisibility(login: LoginMember?, target: Member) {
         if (!isVisible(login, target))
-            throw DutyparkAuthException("Not visible")
+            throw DutyparkAuthException("${target.name} Calendar is not visible to ${login?.name}")
     }
 
     fun isVisible(login: LoginMember?, target: Member): Boolean {

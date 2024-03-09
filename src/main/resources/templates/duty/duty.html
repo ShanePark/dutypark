@@ -427,7 +427,7 @@
                                         return `<span class="schedule-tag tagged-${schedule.isTagged}" data-id="${tag.id}" >${tag.name} </span>`;
                                     }).join('');
                                 }
-                                if (!schedule.isTagged) {
+                                if (!schedule.isTagged && app.friends.length > 0) {
                                     let tagFriendAria = `
                                       <span class="schedule-tag schedule-tag-add">
                                         <select>
@@ -944,12 +944,9 @@
                                         console.log(`Error loading friends. Status Code: ${response.status}`);
                                         return;
                                     }
-                                    return response.json();
-                                }).then(data => {
-                                this.friends = data;
-                            });
-                        }
-                        ,
+                                    this.friends = response.json();
+                                });
+                        },
                         addTag(scheduleId, friendId) {
                             fetch(`/api/schedules/${scheduleId}/tags/${friendId}`, {
                                 method: 'POST',

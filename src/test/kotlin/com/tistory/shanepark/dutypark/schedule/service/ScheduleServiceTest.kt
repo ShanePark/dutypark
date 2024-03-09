@@ -821,5 +821,139 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         assertThat(updatedSchedule.visibility).isEqualTo(Visibility.PUBLIC)
     }
 
+    @Test
+    fun `guest can't see private and friends level schedules`() {
+        // Given
+        val target = TestData.member
+        updateVisibility(target, Visibility.PUBLIC)
+
+        val dateTime = LocalDateTime.of(2024, 3, 9, 0, 0)
+        val private = makeSchedule(target, Visibility.PRIVATE, dateTime)
+        val friends = makeSchedule(target, Visibility.FRIENDS, dateTime)
+        val public = makeSchedule(target, Visibility.PUBLIC, dateTime)
+
+        // When
+        val result = scheduleService.findSchedulesByYearAndMonth(null, target.id!!, YearMonth.of(2024, 3))
+
+        // Then
+        val calendarView = CalendarView(YearMonth.of(2024, 3))
+        val index = calendarView.getIndex(target = dateTime.toLocalDate())
+        val schedulesIds = result[index].map { it.id }.toList()
+        assertThat(schedulesIds).contains(public.id)
+        assertThat(schedulesIds).doesNotContain(friends.id)
+        assertThat(schedulesIds).doesNotContain(private.id)
+    }
+
+    @Test
+    fun `friend can retrieve schedules for friends`() {
+        // Given
+        val target = TestData.member
+        updateVisibility(target, Visibility.FRIENDS)
+
+        val dateTime = LocalDateTime.of(2024, 3, 9, 0, 0)
+        val private = makeSchedule(target, Visibility.PRIVATE, dateTime)
+        val friends = makeSchedule(target, Visibility.FRIENDS, dateTime)
+        val public = makeSchedule(target, Visibility.PUBLIC, dateTime)
+
+        val friend = TestData.member2
+        makeThemFriend(target, friend)
+
+        // When
+        val result =
+            scheduleService.findSchedulesByYearAndMonth(loginMember(friend), target.id!!, YearMonth.of(2024, 3))
+
+        // Then
+        val calendarView = CalendarView(YearMonth.of(2024, 3))
+        val index = calendarView.getIndex(target = dateTime.toLocalDate())
+        val schedulesIds = result[index].map { it.id }.toList()
+        assertThat(schedulesIds).contains(public.id)
+        assertThat(schedulesIds).contains(friends.id)
+        assertThat(schedulesIds).doesNotContain(private.id)
+    }
+
+    @Test
+    fun `user can retrieve self private schedules`() {
+        // Given
+        val target = TestData.member
+        updateVisibility(target, Visibility.PRIVATE)
+
+        val dateTime = LocalDateTime.of(2024, 3, 9, 0, 0)
+        val private = makeSchedule(target, Visibility.PRIVATE, dateTime)
+        val friends = makeSchedule(target, Visibility.FRIENDS, dateTime)
+        val public = makeSchedule(target, Visibility.PUBLIC, dateTime)
+
+        // When
+        val result =
+            scheduleService.findSchedulesByYearAndMonth(loginMember(target), target.id!!, YearMonth.of(2024, 3))
+
+        // Then
+        val calendarView = CalendarView(YearMonth.of(2024, 3))
+        val index = calendarView.getIndex(target = dateTime.toLocalDate())
+        val schedulesIds = result[index].map { it.id }.toList()
+        assertThat(schedulesIds).contains(public.id)
+        assertThat(schedulesIds).contains(friends.id)
+        assertThat(schedulesIds).contains(private.id)
+    }
+
+    @Test
+    fun `can not retrieve other's friends-level-tagged schedules if not logged in but friends can`() {
+        // Given
+        val target = TestData.member
+        updateVisibility(target, Visibility.PUBLIC)
+        val friend = TestData.member2
+        makeThemFriend(target, friend)
+
+        val dateTime = LocalDateTime.of(2024, 3, 9, 0, 0)
+        val friendsSchedule = makeSchedule(friend, Visibility.FRIENDS, dateTime)
+
+        scheduleService.tagFriend(loginMember(friend), friendsSchedule.id, target.id!!)
+
+        // When
+        val notLoginResult = scheduleService.findSchedulesByYearAndMonth(null, target.id!!, YearMonth.of(2024, 3))
+        val friendResult =
+            scheduleService.findSchedulesByYearAndMonth(loginMember(friend), target.id!!, YearMonth.of(2024, 3))
+
+        // Then
+        val calendarView = CalendarView(YearMonth.of(2024, 3))
+        val index = calendarView.getIndex(target = dateTime.toLocalDate())
+
+        assertThat(notLoginResult[index].map { it.id }.toList()).doesNotContain(friendsSchedule.id)
+        assertThat(friendResult[index].map { it.id }.toList()).contains(friendsSchedule.id)
+    }
+
+    @Test
+    fun `can retreive other's tagged public schedule even if not logged in`() {
+        // Given
+        val target = TestData.member
+        updateVisibility(target, Visibility.PUBLIC)
+        val friend = TestData.member2
+        makeThemFriend(target, friend)
+
+        val dateTime = LocalDateTime.of(2024, 3, 9, 0, 0)
+        val publicSchedule = makeSchedule(friend, Visibility.PUBLIC, dateTime)
+
+        scheduleService.tagFriend(loginMember(friend), publicSchedule.id, target.id!!)
+
+        // When
+        val notLoginResult = scheduleService.findSchedulesByYearAndMonth(null, target.id!!, YearMonth.of(2024, 3))
+
+        // Then
+        val calendarView = CalendarView(YearMonth.of(2024, 3))
+        val index = calendarView.getIndex(target = dateTime.toLocalDate())
+
+        assertThat(notLoginResult[index].map { it.id }.toList()).contains(publicSchedule.id)
+    }
+
+    private fun makeSchedule(target: Member, visibility: Visibility, dateTime: LocalDateTime): Schedule {
+        return scheduleService.createSchedule(
+            loginMember(target), ScheduleUpdateDto(
+                memberId = target.id!!,
+                content = "private",
+                startDateTime = dateTime,
+                endDateTime = dateTime,
+                visibility = visibility,
+            )
+        )
+    }
 
 }

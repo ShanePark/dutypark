@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.schedule.repository
 
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
@@ -15,14 +16,21 @@ interface ScheduleRepository : JpaRepository<Schedule, UUID> {
                 " JOIN FETCH s.member m" +
                 " LEFT JOIN FETCH s.tags t" +
                 " LEFT JOIN FETCH t.member tm" +
-                " WHERE m = :member AND (" +
+                " WHERE m = :member " +
+                " AND (" +
                 "(s.startDateTime < :start AND s.endDateTime BETWEEN :start AND :end) OR " +
                 "(s.startDateTime BETWEEN :start AND :end) OR " +
                 "(s.startDateTime BETWEEN :start AND :end AND s.endDateTime > :end) OR " +
                 "(s.startDateTime < :start AND s.endDateTime > :end)" +
-                ")"
+                ")" +
+                " AND s.visibility IN (:visibilities)"
     )
-    fun findSchedulesOfMonth(member: Member, start: LocalDateTime, end: LocalDateTime): List<Schedule>
+    fun findSchedulesOfMonth(
+        member: Member,
+        start: LocalDateTime,
+        end: LocalDateTime,
+        visibilities: Collection<Visibility>
+    ): List<Schedule>
 
     @Query(
         "SELECT COALESCE(MAX(s.position), -1)" +
@@ -41,9 +49,15 @@ interface ScheduleRepository : JpaRepository<Schedule, UUID> {
                 "(s.startDateTime BETWEEN :start AND :end) OR " +
                 "(s.startDateTime BETWEEN :start AND :end AND s.endDateTime > :end) OR " +
                 "(s.startDateTime < :start AND s.endDateTime > :end)" +
-                ")"
+                ")" +
+                "AND s.visibility IN (:visibilities)"
     )
-    fun findTaggedSchedulesOfRange(member: Member, start: LocalDateTime, end: LocalDateTime): List<Schedule>
+    fun findTaggedSchedulesOfRange(
+        member: Member,
+        start: LocalDateTime,
+        end: LocalDateTime,
+        visibilities: Collection<Visibility>
+    ): List<Schedule>
 
 }
 
