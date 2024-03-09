@@ -50,14 +50,13 @@ body a:hover {
 
 .day-of-the-week {
     margin-top: 1rem;
-    margin-bottom: 1px;
-    background: mintcream;
-    border-radius: 10px 10px 0 0;
+    background: #eee;
 }
 
 .day-of-the-week > div {
     text-align: center;
     padding: 0.5rem;
+    border: 1px solid black;
 }
 
 .day-of-the-week abbr[title] {
@@ -67,10 +66,9 @@ body a:hover {
 }
 
 .day-grid .DAY {
-    border: 1px solid white;
+    border: 1px solid black;
     word-break: break-all;
     min-height: 6vw;
-    border-radius: 3px;
     padding: 0 0 5px;
 }
 
