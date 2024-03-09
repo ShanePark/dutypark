@@ -31,7 +31,7 @@ class ScheduleControllerTest : RestDocsTest() {
             memberId = member.id!!,
             content = "test",
             startDateTime = LocalDateTime.now(),
-            endDateTime = LocalDateTime.now().plusHours(1)
+            endDateTime = LocalDateTime.now().plusHours(1),
         )
         val json = objectMapper.writeValueAsString(updateScheduleDto)
         val sizeBefore = scheduleRepository.findAll().size

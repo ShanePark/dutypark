@@ -754,4 +754,72 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         assertThat(result).isNotEmpty
     }
 
+    @Test
+    fun `create schedule with private visibility`() {
+        // Given
+        val member = TestData.member
+        val scheduleUpdateDto = ScheduleUpdateDto(
+            memberId = member.id!!,
+            content = "schedule1",
+            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            visibility = Visibility.PRIVATE
+        )
+
+        // When
+        val loginMember = loginMember(member)
+        val schedule = scheduleService.createSchedule(loginMember, scheduleUpdateDto)
+
+        // Then
+        assertThat(schedule.visibility).isEqualTo(Visibility.PRIVATE)
+    }
+
+    @Test
+    fun `create schedule with public visibility`() {
+        // Given
+        val member = TestData.member
+        val scheduleUpdateDto = ScheduleUpdateDto(
+            memberId = member.id!!,
+            content = "schedule1",
+            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            visibility = Visibility.PUBLIC
+        )
+
+        // When
+        val loginMember = loginMember(member)
+        val schedule = scheduleService.createSchedule(loginMember, scheduleUpdateDto)
+
+        // Then
+        assertThat(schedule.visibility).isEqualTo(Visibility.PUBLIC)
+    }
+
+    @Test
+    fun `update schedule's visibility`() {
+        // Given
+        val member = TestData.member
+        val scheduleUpdateDto = ScheduleUpdateDto(
+            memberId = member.id!!,
+            content = "schedule1",
+            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            visibility = Visibility.PRIVATE
+        )
+
+        val loginMember = loginMember(member)
+        val schedule = scheduleService.createSchedule(loginMember, scheduleUpdateDto)
+        assertThat(schedule.visibility).isEqualTo(Visibility.PRIVATE)
+
+        // When
+        val updatedSchedule = scheduleService.updateSchedule(
+            loginMember,
+            schedule.id,
+            scheduleUpdateDto.copy(visibility = Visibility.PUBLIC)
+        )
+
+        // Then
+        assertThat(updatedSchedule.visibility).isEqualTo(Visibility.PUBLIC)
+    }
+
+
 }

@@ -200,6 +200,29 @@
                 <label>종료일</label>
                 <input type="datetime-local" class="form-control"
                        v-model="editingSchedule.endDateTime"/>
+                <label>공개설정</label>
+                <div class="schedule-visibility">
+                  <div class="pretty p-default p-curve">
+                    <input type="radio" value="PUBLIC" v-model="editingSchedule.visibility"/>
+                    <div class="state p-success-o">
+                      <label>전체공개</label>
+                    </div>
+                  </div>
+
+                  <div class="pretty p-default p-curve">
+                    <input type="radio" value="FRIENDS" v-model="editingSchedule.visibility"/>
+                    <div class="state p-warning-o">
+                      <label>친구공개</label>
+                    </div>
+                  </div>
+
+                  <div class="pretty p-default p-curve">
+                    <input type="radio" value="PRIVATE" v-model="editingSchedule.visibility"/>
+                    <div class="state p-danger-o">
+                      <label>비공개</label>
+                    </div>
+                  </div>
+                </div>
               </div>
               <div class="buttons mt-3" v-if="!isEditing(schedule)">
                 <template v-if="schedule.isTagged">
@@ -244,6 +267,29 @@
               <label>종료일</label>
               <input type="datetime-local" class="form-control" v-model="createSchedule.endDateTime"
                      :min="createSchedule.startDateTime"/>
+              <label>공개설정</label>
+              <div class="schedule-visibility">
+                <div class="pretty p-default p-curve">
+                  <input type="radio" value="PUBLIC" v-model="createSchedule.visibility"/>
+                  <div class="state p-success-o">
+                    <label>전체공개</label>
+                  </div>
+                </div>
+
+                <div class="pretty p-default p-curve">
+                  <input type="radio" value="FRIENDS" v-model="createSchedule.visibility"/>
+                  <div class="state p-warning-o">
+                    <label>친구공개</label>
+                  </div>
+                </div>
+
+                <div class="pretty p-default p-curve">
+                  <input type="radio" value="PRIVATE" v-model="createSchedule.visibility"/>
+                  <div class="state p-danger-o">
+                    <label>비공개</label>
+                  </div>
+                </div>
+              </div>
               <div class="buttons mt-3">
                 <button id="add-btn" class="btn btn-success" v-on:click="saveSchedule">추가</button>
                 <button class="btn btn-secondary" v-on:click="cancelCreateSchedule">취소</button>
@@ -287,12 +333,14 @@
                             content: '',
                             startDateTime: '',
                             endDateTime: '',
+                            visibility: 'FRIENDS',
                         },
                         editingSchedule: {
                             id: '',
                             content: '',
                             startDateTime: '',
                             endDateTime: '',
+                            visibility: '',
                         },
                         friends: []
                     }, mounted() {
@@ -655,6 +703,7 @@
                                 content: '',
                                 startDateTime: app.formattedDateTime(app.detailView),
                                 endDateTime: app.formattedDateTime(app.detailView),
+                                visibility: 'FRIENDS',
                             }
                         }
                         ,
@@ -725,6 +774,7 @@
                                     content: app.createSchedule.content,
                                     startDateTime: toLocalISOString(new Date(app.createSchedule.startDateTime)),
                                     endDateTime: toLocalISOString(new Date(app.createSchedule.endDateTime)),
+                                    visibility: app.createSchedule.visibility,
                                 }),
                                 contentType: 'application/json',
                                 success: (data) => {
@@ -752,6 +802,7 @@
                             app.editingSchedule.content = schedule.content;
                             app.editingSchedule.startDateTime = schedule.startDateTime;
                             app.editingSchedule.endDateTime = schedule.endDateTime;
+                            app.editingSchedule.visibility = schedule.visibility;
                         }
                         ,
                         cancelEditMode() {
@@ -784,6 +835,7 @@
                                     startDateTime: toLocalISOString(new Date(schedule.startDateTime)),
                                     endDateTime: toLocalISOString(new Date(schedule.endDateTime)),
                                     memberId: memberId,
+                                    visibility: schedule.visibility,
                                 }),
                                 contentType: 'application/json',
                                 success: (data) => {

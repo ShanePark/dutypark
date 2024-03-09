@@ -75,7 +75,6 @@ class ScheduleService(
         checkScheduleCreateAuthority(loginMember, scheduleMember)
 
         val startDateTime = scheduleUpdateDto.startDateTime
-        val endDateTime = scheduleUpdateDto.endDateTime
 
         val position = findNextPosition(scheduleMember, startDateTime)
 
@@ -83,8 +82,9 @@ class ScheduleService(
             member = scheduleMember,
             content = scheduleUpdateDto.content,
             startDateTime = startDateTime,
-            endDateTime = endDateTime,
-            position = position
+            endDateTime = scheduleUpdateDto.endDateTime,
+            position = position,
+            visibility = scheduleUpdateDto.visibility
         )
         return scheduleRepository.save(schedule)
     }
@@ -101,6 +101,7 @@ class ScheduleService(
         schedule.startDateTime = scheduleUpdateDto.startDateTime
         schedule.endDateTime = scheduleUpdateDto.endDateTime
         schedule.content = scheduleUpdateDto.content
+        schedule.visibility = scheduleUpdateDto.visibility
         return scheduleRepository.save(schedule)
     }
 
