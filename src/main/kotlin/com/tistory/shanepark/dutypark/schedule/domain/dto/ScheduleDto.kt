@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.schedule.domain.dto
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto.Companion.ofSimple
+import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -22,7 +23,8 @@ data class ScheduleDto(
     val endDateTime: LocalDateTime,
     val isTagged: Boolean,
     val owner: String,
-    val tags: List<MemberDto>
+    val tags: List<MemberDto>,
+    val visibility: Visibility,
 ) {
     companion object {
         fun of(calendarView: CalendarView, schedule: Schedule, isTagged: Boolean = false): List<ScheduleDto> {
@@ -49,7 +51,8 @@ data class ScheduleDto(
                     endDateTime = endDateTime,
                     isTagged = isTagged,
                     owner = schedule.member.name,
-                    tags = tags
+                    tags = tags,
+                    visibility = schedule.visibility
                 )
             }
         }
