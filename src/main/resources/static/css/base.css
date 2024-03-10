@@ -262,6 +262,16 @@ a.homeButton:hover {
     margin-bottom: 1em;
 }
 
+.login-box .sso-login:hover {
+    cursor: pointer;
+    filter: brightness(95%);
+}
+
+.login-box .sso-login img {
+    width: 100%;
+    margin-top: 10px;
+}
+
 .form-buttons {
     text-align: center;
 }
