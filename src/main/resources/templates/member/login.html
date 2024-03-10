@@ -32,8 +32,15 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        Kakao.init('fe206dfae05cfafc94806ad67abbcfc1');
+        const testKey = '962c00be36be55bd0c0b55478cc25149';
+        const opKey = 'fe206dfae05cfafc94806ad67abbcfc1';
+        const curUrl = window.location.href;
+        const curKey = curUrl.includes('localhost') ? testKey : opKey;
+        Kakao.init(curKey);
         Kakao.isInitialized();
+
+        const currentPageRequestParam = new URLSearchParams(window.location.search);
+        const referer = currentPageRequestParam.get('referer') || '';
 
         const app = new Vue({
             el: '.login-box',
@@ -63,10 +70,7 @@
                         rememberMe: remember,
                     };
 
-                    const currentPageRequestParam = new URLSearchParams(window.location.search);
-                    const referer = currentPageRequestParam.get('referer');
-
-                    fetch('/api/auth/login' + (referer ? '?referer=' + referer : ''), {
+                    fetch('/api/auth/login?referer=' + referer, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -96,7 +100,10 @@
                     });
                 },
                 kakaoLogin() {
-                    alert('카카오 로그인을 시도합니다.');
+                    Kakao.Auth.authorize({
+                        redirectUri: window.location.origin + '/api/auth/Oauth2ClientCallback/kakao',
+                        state: JSON.stringify({referer: referer}),
+                    });
                 }
             }
         });
