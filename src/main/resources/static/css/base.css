@@ -477,17 +477,22 @@ a.homeButton:hover {
 .schedule-tag::after,
 .schedule-tag::before {
     font-family: 'Bootstrap Icons', serif;
+    position: relative;
+    top: 3px;
 }
 
 .schedule-tag::before {
     content: 'bi-tags-fill';
-    margin-right: 0.5em;
+    margin-right: 0.2em;
+    position: relative;
+    top: 3px;
 }
 
 .schedule-tag.tagged-true::before {
     font-family: unset;
     margin-right: 0.1em;
     content: 'by';
+    top: 0px;
 }
 
 .schedule-tag.tagged-false::before {
@@ -500,7 +505,6 @@ a.homeButton:hover {
 
 #detail-view-modal .schedule-tag.tagged-false::after {
     content: 'bi-x-circle-fill';
-    margin-left: 0.5em;
 }
 
 .schedule-tag.schedule-tag-add {
