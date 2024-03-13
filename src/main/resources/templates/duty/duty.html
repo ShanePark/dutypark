@@ -343,7 +343,7 @@
                             endDateTime: '',
                             visibility: '',
                         },
-                        friends: []
+                        friends: [],
                     }, mounted() {
                         this.loadDuties(this.year, this.month);
                         this.loadSchedule(this.year, this.month);
@@ -939,12 +939,12 @@
                         ,
                         loadFriends() {
                             fetch('/api/friends')
-                                .then(response => {
+                                .then(async response => {
                                     if (!response.ok) {
                                         console.log(`Error loading friends. Status Code: ${response.status}`);
                                         return;
                                     }
-                                    this.friends = response.json();
+                                    this.friends = await response.json();
                                 });
                         },
                         addTag(scheduleId, friendId) {
