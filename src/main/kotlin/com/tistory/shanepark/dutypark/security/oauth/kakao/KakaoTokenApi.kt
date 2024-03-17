@@ -7,7 +7,7 @@ import org.springframework.web.service.annotation.PostExchange
 interface KakaoTokenApi {
 
     @PostExchange(value = "/token", contentType = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-    fun getToken(
+    fun getAccessToken(
         @RequestParam("grant_type") grantType: String,
         @RequestParam("client_id") clientId: String,
         @RequestParam("redirect_uri") redirectUri: String,

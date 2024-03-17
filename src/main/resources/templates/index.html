@@ -5,7 +5,7 @@
       <span class="badge"
             th:classappend="${visibility.name == 'PUBLIC' ? 'bg-success' : visibility.name == 'FRIENDS' ? 'bg-warning' : 'bg-danger'}"
             th:text="${visibility.label}"/>
-      <a th:href="@{/duty/{name}(name=${member.name})}"
+      <a th:href="@{/duty/{name}(name=${member.id})}"
          th:text="${#strings.concat('(', member.department ?: '부서없음', ') ', member.name)}">
       </a>
     </dd>

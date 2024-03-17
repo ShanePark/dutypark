@@ -2,11 +2,9 @@ package com.tistory.shanepark.dutypark.duty.controller
 
 import com.tistory.shanepark.dutypark.common.controller.ViewController
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
-import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
-import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.Logger
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
@@ -22,21 +20,20 @@ class DutyViewController(
 ) : ViewController() {
     val log: Logger = org.slf4j.LoggerFactory.getLogger(this.javaClass)
 
-    @GetMapping("/duty/{name}")
+    @GetMapping("/duty/{id}")
     fun retrieveMemberDuty(
         @Login(required = false) loginMember: LoginMember?,
-        model: Model, @PathVariable name: String, request: HttpServletRequest,
+        model: Model, @PathVariable id: Long,
         @RequestParam(required = false) year: Int?,
         @RequestParam(required = false) month: Int?,
     ): String {
-        val member = memberService.findMemberByName(name)
+        val member = memberService.findById(id)
 
-        val visible = friendService.isVisible(loginMember, member)
-        model.addAttribute("visible", visible)
-
-        model.addAttribute("member", MemberDto.of(member))
+        model.addAttribute("visible", friendService.isVisible(loginMember, id))
+        model.addAttribute("member", member)
         model.addAttribute("year", year ?: LocalDate.now().year)
         model.addAttribute("month", month ?: LocalDate.now().monthValue)
+
         return layout(model, "duty/duty")
     }
 

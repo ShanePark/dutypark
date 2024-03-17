@@ -3,12 +3,13 @@ package com.tistory.shanepark.dutypark.security.controller
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.tistory.shanepark.dutypark.security.oauth.kakao.KakaoLoginService
 import jakarta.servlet.http.HttpServletRequest
-import org.springframework.stereotype.Controller
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RestController
 
-@Controller
+@RestController
 @RequestMapping("/api/auth")
 class OAuthController(
     private val kakaoLoginService: KakaoLoginService
@@ -20,14 +21,12 @@ class OAuthController(
         @RequestParam code: String,
         @RequestParam(value = "state") stateString: String,
         httpServletRequest: HttpServletRequest
-    ): String {
+    ): ResponseEntity<Any> {
         val curUrl = httpServletRequest.requestURL.toString()
-        kakaoLoginService.login(code, redirectUrl = curUrl)
-
         val state = objectMapper.readValue(stateString, Map::class.java)
-        val referer = state["referer"]
+        val referer = state["referer"] as String
 
-        return "redirect:/$referer"
+        return kakaoLoginService.login(code = code, redirectUrl = curUrl, referer = referer, req = httpServletRequest)
     }
 
 }

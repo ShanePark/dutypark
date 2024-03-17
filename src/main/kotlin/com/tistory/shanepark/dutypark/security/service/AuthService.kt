@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.security.service
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
+import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.PasswordChangeDto
@@ -13,7 +14,10 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpHeaders.USER_AGENT
+import org.springframework.http.ResponseCookie
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -25,11 +29,12 @@ class AuthService(
     private val passwordEncoder: PasswordEncoder,
     private val refreshTokenService: RefreshTokenService,
     private val jwtProvider: JwtProvider,
+    private val jwtConfig: JwtConfig,
+    @Value("\${server.ssl.enabled}") private val isSecure: Boolean
 ) {
     val log: Logger = LoggerFactory.getLogger(AuthService::class.java)
 
-    @Transactional(readOnly = true)
-    fun login(login: LoginDto): LoginMember {
+    fun getLoginCookieHeaders(login: LoginDto, req: HttpServletRequest, referer: String): HttpHeaders {
         val member = memberRepository.findByEmail(login.email).orElseThrow {
             log.info("Login failed. email not exist:${login.email}")
             DutyparkAuthException()
@@ -40,8 +45,63 @@ class AuthService(
             throw DutyparkAuthException()
         }
 
+        return getLoginCookieHeaders(
+            memberId = member.id,
+            req = req,
+            rememberMe = login.rememberMe,
+            rememberMeEmail = login.email
+        )
+    }
+
+    fun getLoginCookieHeaders(
+        memberId: Long?,
+        req: HttpServletRequest,
+        rememberMe: Boolean,
+        rememberMeEmail: String?
+    ): HttpHeaders {
+        val member = memberRepository.findById(memberId!!).orElseThrow {
+            log.info("Login failed. member not exist:${memberId}")
+            throw DutyparkAuthException()
+        }
+
         val jwt = jwtProvider.createToken(member)
-        return tokenToLoginMember(jwt)
+
+        val refreshToken = refreshTokenService.createRefreshToken(
+            memberId = memberId,
+            remoteAddr = req.remoteAddr,
+            userAgent = req.getHeader(USER_AGENT)
+        )
+
+        val jwtCookie = ResponseCookie.from(jwtConfig.cookieName, jwt)
+            .httpOnly(true)
+            .path("/")
+            .secure(isSecure)
+            .maxAge(jwtConfig.tokenValidityInSeconds)
+            .build()
+
+        val refToken = ResponseCookie.from(RefreshToken.cookieName, refreshToken.token)
+            .httpOnly(true)
+            .path("/")
+            .secure(isSecure)
+            .maxAge(jwtConfig.refreshTokenValidityInDays * 24 * 60 * 60)
+            .build()
+
+        val rememberMeCookieAge = if (rememberMe) 3600 * 24 * 365L else 0L
+        val rememberMeCookie = ResponseCookie
+            .from("rememberMe", if (rememberMe) rememberMeEmail ?: "" else "")
+            .httpOnly(true)
+            .path("/")
+            .maxAge(rememberMeCookieAge)
+            .build()
+
+        log.info("Login Success: ${member.name}")
+
+        val httpHeaders = HttpHeaders()
+        httpHeaders.add(HttpHeaders.SET_COOKIE, jwtCookie.toString())
+        httpHeaders.add(HttpHeaders.SET_COOKIE, refToken.toString())
+        httpHeaders.add(HttpHeaders.SET_COOKIE, rememberMeCookie.toString())
+
+        return httpHeaders
     }
 
     @Transactional(readOnly = true)

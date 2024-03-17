@@ -6,7 +6,7 @@ import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 data class MemberDto(
     val id: Long,
     val name: String,
-    val email: String,
+    val email: String? = null,
     val departmentId: Long? = null,
     val department: String? = null,
     val managerId: Long? = null,

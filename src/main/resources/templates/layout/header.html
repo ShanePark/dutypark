@@ -14,7 +14,7 @@
     <ul class="navbar-nav mr-auto mt-2 mt-lg-0">
       <th:block th:if="${loginMember != null}">
         <li class="nav-item active">
-          <a class="nav-link" th:href="@{/duty/{name}(name=${loginMember?.name})}">내 시간표</a>
+          <a class="nav-link" th:href="@{/duty/{name}(name=${loginMember?.id})}">내 시간표</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="/member/friends">친구관리</a>

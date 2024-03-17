@@ -16,7 +16,7 @@ spring:
 decorator:
   datasource:
     p6spy:
-#      enable-logging: true
+      #      enable-logging: true
       enable-logging: false
 
 dutypark:
@@ -38,3 +38,7 @@ jwt:
   token-validity-in-seconds: 1800
   refresh-token-validity-in-days: 30 # 30 days
   cookie_name: "SESSION"
+
+oauth:
+  kakao:
+    rest-api-key: "KAKAO_REST_API_KEY_HERE"

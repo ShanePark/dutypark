@@ -28,14 +28,9 @@ class MemberService(
     }
 
     @Transactional(readOnly = true)
-    fun findMemberByName(name: String): Member {
-        return memberRepository.findMemberByName(name)
-            ?: throw NoSuchElementException("Member not found:$name")
-    }
-
-    @Transactional(readOnly = true)
-    fun findById(memberId: Long): Member {
-        return memberRepository.findById(memberId).orElseThrow()
+    fun findById(memberId: Long): MemberDto {
+        val member = memberRepository.findById(memberId).orElseThrow()
+        return MemberDto.of(member)
     }
 
     fun createMember(memberCreteDto: MemberCreateDto): Member {

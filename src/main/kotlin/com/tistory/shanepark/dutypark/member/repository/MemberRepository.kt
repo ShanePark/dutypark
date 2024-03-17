@@ -32,4 +32,6 @@ interface MemberRepository : JpaRepository<Member, Long> {
         page: Pageable
     ): Page<Member>
 
+    fun findMemberByKakaoId(kakaoId: String): Member?
+
 }
