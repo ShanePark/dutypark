@@ -26,6 +26,8 @@ class OAuthController(
         val state = objectMapper.readValue(stateString, Map::class.java)
         val referer = state["referer"] as String
 
+        // TODO: if it's logged in, then set kakao-id to member
+
         return kakaoLoginService.login(code = code, redirectUrl = curUrl, referer = referer, req = httpServletRequest)
     }
 

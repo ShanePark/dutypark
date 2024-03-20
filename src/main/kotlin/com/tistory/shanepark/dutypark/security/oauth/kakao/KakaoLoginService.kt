@@ -1,6 +1,9 @@
 package com.tistory.shanepark.dutypark.security.oauth.kakao
 
+import com.tistory.shanepark.dutypark.member.domain.entity.MemberSsoRegister
+import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.Logger
@@ -17,6 +20,7 @@ class KakaoLoginService(
     private val kakaoUserInfoApi: KakaoUserInfoApi,
     private val memberRepository: MemberRepository,
     private val authService: AuthService,
+    private val MemberSsoRegisterRepository: MemberSsoRegisterRepository,
     @Value("\${oauth.kakao.rest-api-key}") private val restApiKey: String
 ) {
     val log: Logger = LoggerFactory.getLogger(KakaoLoginService::class.java)
@@ -48,8 +52,11 @@ class KakaoLoginService(
                 .location(getLocation(referer)).build()
         }
 
-        // TODO: create new member
-        return ResponseEntity.ok().body("Kakao Login Success")
+        val ssoRegister = MemberSsoRegisterRepository.save(MemberSsoRegister(ssoId = kakaoId, ssoType = SsoType.KAKAO))
+
+        return ResponseEntity.status(HttpStatus.FOUND)
+            .location(URI.create("/sso-signup?uuid=${ssoRegister.uuid}"))
+            .build()
     }
 
     private fun getLocation(referer: String): URI {
