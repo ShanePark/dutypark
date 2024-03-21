@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.security.service
 
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
 import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
@@ -26,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional
 class AuthService(
     private val memberRepository: MemberRepository,
+    private val memberSsoRegisterRepository: MemberSsoRegisterRepository,
     private val passwordEncoder: PasswordEncoder,
     private val refreshTokenService: RefreshTokenService,
     private val jwtProvider: JwtProvider,
@@ -56,8 +58,8 @@ class AuthService(
     fun getLoginCookieHeaders(
         memberId: Long?,
         req: HttpServletRequest,
-        rememberMe: Boolean,
-        rememberMeEmail: String?
+        rememberMe: Boolean = false,
+        rememberMeEmail: String? = null
     ): HttpHeaders {
         val member = memberRepository.findById(memberId!!).orElseThrow {
             log.info("Login failed. member not exist:${memberId}")
@@ -158,6 +160,13 @@ class AuthService(
         refreshTokenService.revokeAllRefreshTokensByMember(member)
 
         log.info("Member password changed. member:${param.memberId}")
+    }
+
+    fun validateSsoRegister(uuid: String) {
+        val memberSsoRegister = memberSsoRegisterRepository.findByUuid(uuid).orElseThrow()
+        if (!memberSsoRegister.isValid()) {
+            throw IllegalArgumentException("만료된 요청 입니다.")
+        }
     }
 
 }

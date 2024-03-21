@@ -15,6 +15,9 @@ class MemberSsoRegister(
     @Column(name = "sso_id")
     val ssoId: String,
 ) {
+    fun isValid(): Boolean {
+        return LocalDateTime.now().isBefore(createdDate.plusDays(1))
+    }
 
     @Id
     @Column(name = "id")

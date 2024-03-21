@@ -17,7 +17,7 @@ interface MemberRepository : JpaRepository<Member, Long> {
     override fun findAll(): MutableList<Member>
 
     @EntityGraph(attributePaths = ["department"])
-    fun findByEmail(email: String): Optional<Member>
+    fun findByEmail(email: String?): Optional<Member>
 
     @EntityGraph(attributePaths = ["department"])
     fun findMembersByNameContainingIgnoreCase(name: String, pageable: Pageable): Page<Member>

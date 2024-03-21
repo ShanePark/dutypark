@@ -44,7 +44,6 @@ class ScheduleController(
     }
 
     @PutMapping("/{id}")
-    @SlackNotification
     fun updateSchedule(
         @RequestBody @Validated
         scheduleUpdateDto: ScheduleUpdateDto,
@@ -56,7 +55,6 @@ class ScheduleController(
     }
 
     @PatchMapping("/{id1}/position")
-    @SlackNotification
     fun swapSchedulePosition(
         @PathVariable id1: UUID,
         @RequestParam id2: UUID,

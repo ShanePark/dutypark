@@ -43,8 +43,6 @@ class KakaoLoginService(
             val headers = authService.getLoginCookieHeaders(
                 memberId = member.id,
                 req = req,
-                rememberMe = false,
-                rememberMeEmail = null,
             )
             return ResponseEntity
                 .status(HttpStatus.FOUND)
@@ -55,7 +53,7 @@ class KakaoLoginService(
         val ssoRegister = MemberSsoRegisterRepository.save(MemberSsoRegister(ssoId = kakaoId, ssoType = SsoType.KAKAO))
 
         return ResponseEntity.status(HttpStatus.FOUND)
-            .location(URI.create("/sso-signup?uuid=${ssoRegister.uuid}"))
+            .location(URI.create("/auth/sso-signup?uuid=${ssoRegister.uuid}"))
             .build()
     }
 

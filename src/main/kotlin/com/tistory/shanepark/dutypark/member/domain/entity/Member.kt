@@ -11,15 +11,17 @@ class Member(
     var name: String,
 
     @Column(unique = true)
-    val email: String,
+    val email: String? = null,
 
     @Column(nullable = false)
     var password: String,
 
     ) {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
+
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")

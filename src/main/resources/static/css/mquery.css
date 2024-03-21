@@ -132,4 +132,8 @@
         max-height: 700px;
     }
 
+    #sso-signup {
+        font-size: 2em;
+    }
+
 }

@@ -3,18 +3,18 @@ package com.tistory.shanepark.dutypark.security.controller
 import com.tistory.shanepark.dutypark.common.controller.ViewController
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.security.service.AuthService
 import jakarta.servlet.http.HttpSession
 import org.springframework.http.HttpHeaders
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
-import org.springframework.web.bind.annotation.CookieValue
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.RequestHeader
-import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.*
 
 @Controller
 @RequestMapping("/auth")
-class AuthViewController : ViewController() {
+class AuthViewController(
+    private val authService: AuthService
+) : ViewController() {
 
     @GetMapping("login")
     fun loginPage(
@@ -35,6 +35,20 @@ class AuthViewController : ViewController() {
             httpSession.setAttribute("referer", referer)
         }
         return layout(model, "member/login")
+    }
+
+    @GetMapping("/sso-signup")
+    fun ssoSignupPage(@RequestParam uuid: String, model: Model): String {
+        authService.validateSsoRegister(uuid)
+        model.addAttribute("uuid", uuid)
+        return layout(model, "member/sso-signup")
+    }
+
+    @GetMapping("/sso-congrats")
+    fun ssoCongratsPage(@Login loginMember: LoginMember, model: Model): String {
+        model.addAttribute("member_name", loginMember.name)
+        model.addAttribute("member_id", loginMember.id)
+        return layout(model, "member/sso-congrats")
     }
 
 }

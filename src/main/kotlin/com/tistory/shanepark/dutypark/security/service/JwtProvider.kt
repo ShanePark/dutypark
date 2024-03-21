@@ -50,7 +50,7 @@ class JwtProvider(
             .parseClaimsJws(token)
             .body
 
-        val email = claims["email"] as String
+        val email = claims["email"] as String?
 
         return LoginMember(
             id = claims.subject.toLong(),

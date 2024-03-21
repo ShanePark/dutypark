@@ -53,7 +53,6 @@ class DDayController(
 
 
     @DeleteMapping("/{id}")
-    @SlackNotification
     fun deleteDDay(
         @Login member: LoginMember,
         @PathVariable id: Long
@@ -66,7 +65,6 @@ class DDayController(
     }
 
     @PutMapping("/{id}")
-    @SlackNotification
     fun updateDDay(
         @Login member: LoginMember,
         @PathVariable id: Long,
