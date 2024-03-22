@@ -2,9 +2,13 @@ package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.member.domain.entity.MemberSsoRegister
+import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
+import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 
@@ -52,6 +56,21 @@ class MemberServiceTest : DutyparkIntegrationTest() {
         // Then
         val findMember = memberRepository.findById(member.id!!).orElseThrow()
         assertThat(findMember.calendarVisibility).isEqualTo(Visibility.PRIVATE)
+    }
+
+    @Test
+    fun `create Sso member`(@Autowired memberSsoRegisterRepository: MemberSsoRegisterRepository) {
+        // Given
+        memberSsoRegisterRepository.deleteAll()
+        val ssoRegister = memberSsoRegisterRepository.save(MemberSsoRegister(SsoType.KAKAO, "kakao_id"))
+
+        // When
+        val member = memberService.createSsoMember("shane", ssoRegister.uuid)
+
+        // Then
+        assertThat(member.name).isEqualTo("shane")
+        assertThat(member.password).isEqualTo("")
+        assertThat(member.kakaoId).isEqualTo("kakao_id")
     }
 
     private fun search(page: PageRequest, name: String) = memberService.searchMembers(page, name)

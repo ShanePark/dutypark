@@ -7,18 +7,21 @@ import jakarta.persistence.*
 
 @Entity
 class Member(
-    @Column(nullable = false)
+    @Column
     var name: String,
 
-    @Column(unique = true, nullable = false)
-    val email: String,
+    @Column(unique = true)
+    val email: String? = null,
 
     @Column(nullable = false)
     var password: String,
-) {
+
+    ) {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
+
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")
@@ -28,6 +31,9 @@ class Member(
     @Column(nullable = false, name = "calendar_visibility")
     @Enumerated(EnumType.STRING)
     var calendarVisibility: Visibility = Visibility.FRIENDS
+
+    @Column(name = "oauth_kakao_id")
+    var kakaoId: String? = null
 
     override fun toString(): String {
         return "Member(name='$name', email='$email', id=$id)"

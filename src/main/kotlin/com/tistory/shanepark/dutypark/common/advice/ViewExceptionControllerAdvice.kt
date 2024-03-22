@@ -27,4 +27,10 @@ class ViewExceptionControllerAdvice {
         return "error/404"
     }
 
+    @ExceptionHandler(IllegalArgumentException::class)
+    fun illegalArgumentExceptionHandler(e: IllegalArgumentException): String {
+        log.info("illegal argument: ${e.message}")
+        return "error/400"
+    }
+
 }

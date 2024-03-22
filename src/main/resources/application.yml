@@ -54,6 +54,10 @@ dutypark:
   data-go-kr:
     service-key: "DECODED_SERVICE_KEY_HERE"
 
+oauth:
+  kakao:
+    rest-api-key: "KAKAO_REST_API_KEY_HERE"
+
 decorator:
   datasource:
     p6spy:

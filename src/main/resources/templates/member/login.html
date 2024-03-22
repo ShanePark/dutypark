@@ -1,76 +1,113 @@
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.0/kakao.min.js"
+        integrity="sha384-l+xbElFSnPZ2rOaPrU//2FF5B4LB8FiX5q4fXYTlfcG4PGpMkE1vcL7kNXI6Cci0"
+        crossorigin="anonymous"></script>
+
 <div class="login-box shadow">
-  <form>
+  <form @submit.prevent="login">
     <div class="form-group">
-      <label for="exampleInputEmail1">이메일 주소</label>
-      <input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp"
-             placeholder="email" th:value="${rememberMe}">
-      <!-- remember id -->
-      <small class="form-text text-muted">아이디 저장
-        <input type="checkbox" id="remember" name="remember" th:checked="${rememberMe}">
+      <label for="emailInput">이메일 주소</label>
+      <input id="emailInput" type="email" class="form-control" placeholder="email" v-model="email">
+      <small class="form-text text-muted"><label for="remember">아이디 저장</label>
+        <input type="checkbox" id="remember" name="remember" v-model="remember">
       </small>
     </div>
     <div class="form-group">
-      <label for="exampleInputPassword1">비밀번호</label>
-      <input type="password" class="form-control" id="exampleInputPassword1" placeholder="Password"
-             maxlength="16">
+      <label for="passwordInput">비밀번호</label>
+      <input type="password" class="form-control" id="passwordInput" placeholder="Password"
+             maxlength="16" v-model="password">
     </div>
     <div class="form-buttons row">
       <div class="col-6">
-        <button id="sign-up" type="button" class="btn">회원가입</button>
+        <button type="button" class="btn" @click="signUp">회원가입</button>
       </div>
       <div class="col-6">
-        <button id="sign-in" type="submit" class="btn">로그인</button>
+        <button type="submit" class="btn" @click="login">로그인</button>
+      </div>
+      <div class="col-12 sso-login kakao-login" @click="kakaoLogin">
+        <img src="/lib/kakao/kakao_login_large_wide.png" alt="kakao-login">
       </div>
     </div>
   </form>
 </div>
 
 <script>
-    $('form').on('submit', function () {
-        event.preventDefault();
-        const email = $('#exampleInputEmail1').val();
-        const password = $('#exampleInputPassword1').val();
-        const remember = $('#remember').is(':checked');
-
-        if (!email || !password) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Oops...',
-                text: '아이디 또는 비밀번호를 입력해주세요.'
-            })
-            return;
-        }
-
-        let data = {
-            email: email,
-            password: password,
-            rememberMe: remember
-        };
+    document.addEventListener('DOMContentLoaded', function () {
+        const testKey = '962c00be36be55bd0c0b55478cc25149';
+        const opKey = 'fe206dfae05cfafc94806ad67abbcfc1';
+        const curUrl = window.location.href;
+        const curKey = curUrl.includes('localhost') ? testKey : opKey;
+        Kakao.init(curKey);
+        Kakao.isInitialized();
 
         const currentPageRequestParam = new URLSearchParams(window.location.search);
-        const referer = currentPageRequestParam.get('referer');
+        const referer = currentPageRequestParam.get('referer') || '';
 
-        $.ajax({
-            type: 'POST',
-            url: '/api/auth/login' + (referer ? '?referer=' + referer : ''),
-            data: JSON.stringify(data),
-            contentType: 'application/json; charset=utf-8',
-            success: function (referer) {
-                location.href = referer;
-            }, error: function (error) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Oops...',
-                    text: '아이디 또는 비밀번호가 일치하지 않습니다.'
-                })
+        const app = new Vue({
+            el: '.login-box',
+            data: {
+                email: "[[${rememberMe}]]",
+                password: '',
+                remember: !!"[[${rememberMe}]]",
+            },
+            methods: {
+                login() {
+                    const remember = !!app.remember
+                    const email = app.email;
+                    const password = app.password;
+
+                    if (!email || !password) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Oops...',
+                            text: '아이디 또는 비밀번호를 입력해주세요.'
+                        })
+                        return;
+                    }
+
+                    let data = {
+                        email: email,
+                        password: password,
+                        rememberMe: remember,
+                    };
+
+                    fetch('/api/auth/login?referer=' + referer, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(data),
+                    }).then(async response => {
+                        if (response.ok) {
+                            location.href = await response.text();
+                        } else if (response.status === 401) {
+                            throw new Error('아이디 또는 비밀번호가 일치하지 않습니다.');
+                        } else {
+                            throw new Error('로그인에 실패했습니다.');
+                        }
+                    }).catch(error => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Oops...',
+                            text: error.message
+                        });
+                    });
+                },
+                signUp() {
+                    Swal.fire({
+                        title: '회원가입',
+                        text: '회원가입 기능은 제공하지 않습니다. 카카오 로그인을 이용해주세요.',
+                        icon: 'info',
+                    });
+                },
+                kakaoLogin() {
+                    Kakao.Auth.authorize({
+                        redirectUri: window.location.origin + '/api/auth/Oauth2ClientCallback/kakao',
+                        state: JSON.stringify({referer: referer}),
+                    });
+                }
             }
-        })
-    })
-    $('#sign-up').on('click', function () {
-        swal.fire({
-            title: '회원가입',
-            text: '회원가입은 준비중 입니다.',
-            icon: 'info',
         });
-    })
+
+    });
+
 </script>

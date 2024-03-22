@@ -32,7 +32,7 @@ class RefreshTokenServiceTest : DutyparkIntegrationTest() {
             email = "",
             name = "",
             departmentId = null,
-            departmentName = "",
+            department = "",
             isAdmin = false,
             jwt = ""
         )
@@ -51,7 +51,7 @@ class RefreshTokenServiceTest : DutyparkIntegrationTest() {
             email = "",
             name = "",
             departmentId = null,
-            departmentName = "",
+            department = "",
             isAdmin = true,
             jwt = ""
         )
@@ -69,7 +69,7 @@ class RefreshTokenServiceTest : DutyparkIntegrationTest() {
             email = "",
             name = "",
             departmentId = null,
-            departmentName = "",
+            department = "",
             isAdmin = false,
             jwt = ""
         )

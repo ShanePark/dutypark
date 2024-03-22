@@ -160,11 +160,12 @@ class FriendService(
     }
 
     fun checkVisibility(login: LoginMember?, target: Member) {
-        if (!isVisible(login, target))
+        if (!isVisible(login, target.id))
             throw DutyparkAuthException("${target.name} Calendar is not visible to ${login?.name}")
     }
 
-    fun isVisible(login: LoginMember?, target: Member): Boolean {
+    fun isVisible(login: LoginMember?, targetId: Long?): Boolean {
+        val target = memberRepository.findById(targetId!!).orElseThrow()
         login ?: return target.calendarVisibility == Visibility.PUBLIC
 
         val loginMember = memberRepository.findById(login.id).orElseThrow()

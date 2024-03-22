@@ -8,7 +8,7 @@ import org.springframework.validation.annotation.Validated
 data class LoginDto(
 
     @field:NotBlank
-    val email: String,
+    val email: String?,
 
     @field:NotBlank
     @field:Length(max = 20)

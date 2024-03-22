@@ -262,6 +262,16 @@ a.homeButton:hover {
     margin-bottom: 1em;
 }
 
+.login-box .sso-login:hover {
+    cursor: pointer;
+    filter: brightness(95%);
+}
+
+.login-box .sso-login img {
+    width: 100%;
+    margin-top: 10px;
+}
+
 .form-buttons {
     text-align: center;
 }
@@ -607,3 +617,21 @@ a.homeButton:hover {
     position: relative;
 }
 
+.border-red {
+    border: 2px solid red;
+}
+
+.sso-logins .sso-service {
+    justify-content: space-between;
+    display: flex;
+    padding: 10px;
+}
+
+.sso-logins .sso-icon {
+    width: 50px;
+    height: 50px;
+}
+
+.member-info th {
+    background-color: #eee;
+}

@@ -3,8 +3,10 @@ package com.tistory.shanepark.dutypark.member.service
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberCreateDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -17,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional
 class MemberService(
     private val memberRepository: MemberRepository,
     private val passwordEncoder: PasswordEncoder,
+    private val memberSsoRegisterRepository: MemberSsoRegisterRepository,
 ) {
 
     @Transactional(readOnly = true)
@@ -28,14 +31,9 @@ class MemberService(
     }
 
     @Transactional(readOnly = true)
-    fun findMemberByName(name: String): Member {
-        return memberRepository.findMemberByName(name)
-            ?: throw NoSuchElementException("Member not found:$name")
-    }
-
-    @Transactional(readOnly = true)
-    fun findById(memberId: Long): Member {
-        return memberRepository.findById(memberId).orElseThrow()
+    fun findById(memberId: Long): MemberDto {
+        val member = memberRepository.findById(memberId).orElseThrow()
+        return MemberDto.of(member)
     }
 
     fun createMember(memberCreteDto: MemberCreateDto): Member {
@@ -46,6 +44,29 @@ class MemberService(
             password = password
         )
         return memberRepository.save(member)
+    }
+
+    fun createSsoMember(username: String, memberSsoRegisterUUID: String): Member {
+        val ssoRegister = memberSsoRegisterRepository.findByUuid(memberSsoRegisterUUID).orElseThrow()
+        if (!ssoRegister.isValid()) {
+            throw IllegalArgumentException("Invalid SSO Register")
+        }
+        val member = Member(
+            name = username,
+            password = ""
+        )
+        memberRepository.save(member)
+        when (ssoRegister.ssoType) {
+            SsoType.KAKAO -> {
+                member.kakaoId = ssoRegister.ssoId
+            }
+
+            SsoType.NAVER -> {
+                // not implemented yet
+//                member.naverId = ssoRegister.ssoId
+            }
+        }
+        return member
     }
 
     @Transactional(readOnly = true)

@@ -61,7 +61,9 @@ class RefreshTokenService(
     }
 
     fun findAllWithMemberOrderByLastUsedDesc(): List<RefreshTokenDto> {
-        return refreshTokenRepository.findAllWithMemberOrderByLastUsedDesc().map { RefreshTokenDto.of(it) }
+        return refreshTokenRepository.findAllWithMemberOrderByLastUsedDesc()
+            .filter { it.isValid() }
+            .map { RefreshTokenDto.of(it) }
     }
 
     fun revokeAllRefreshTokensByMember(member: Member) {

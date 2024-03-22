@@ -342,11 +342,19 @@ class FriendServiceTest : DutyparkIntegrationTest() {
 
     @Test
     fun `check visibility pass even if the setting is private, when login is his manager`() {
-        val loginMember = loginMember(TestData.member)
+        // Given
+        val viewer = TestData.member
+        val loginMember = loginMember(viewer)
         val targetMember = TestData.member2
-        targetMember.department?.manager = TestData.member
 
-        friendService.checkVisibility(loginMember, targetMember)
+        // When
+        TestData.department.manager = viewer
+        departmentRepository.save(TestData.department)
+        targetMember.department = TestData.department
+        memberRepository.save(targetMember)
+
+        // Then no exception
+        friendService.checkVisibility(login = loginMember, target = targetMember)
     }
 
     private fun setFriend(
