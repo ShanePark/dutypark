@@ -2,7 +2,9 @@ package com.tistory.shanepark.dutypark.security.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
+import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.service.MemberService
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.oauth.kakao.KakaoLoginService
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import jakarta.servlet.http.HttpServletRequest
@@ -24,15 +26,32 @@ class OAuthController(
     fun kakaoLoginCallback(
         @RequestParam code: String,
         @RequestParam(value = "state") stateString: String,
-        httpServletRequest: HttpServletRequest
+        httpServletRequest: HttpServletRequest,
+        @Login(required = false) loginMember: LoginMember?
     ): ResponseEntity<Any> {
-        val curUrl = httpServletRequest.requestURL.toString()
         val state = objectMapper.readValue(stateString, Map::class.java)
-        val referer = state["referer"] as String
+        val referer = (state["referer"] as String?) ?: "/"
 
-        // TODO: if it's already logged in, then set kakao-id to member
+        val redirectUrl = httpServletRequest.requestURL.toString()
 
-        return kakaoLoginService.login(code = code, redirectUrl = curUrl, referer = referer, req = httpServletRequest)
+        val login = (state["login"] as Boolean?) ?: false
+        if (login && loginMember != null) {
+            kakaoLoginService.setKakaoIdToMember(
+                code = code,
+                redirectUrl = redirectUrl,
+                loginMember = loginMember,
+            )
+            return ResponseEntity.status(HttpStatus.FOUND)
+                .location(URI.create(referer))
+                .build()
+        }
+
+        return kakaoLoginService.login(
+            code = code,
+            redirectUrl = redirectUrl,
+            referer = referer,
+            req = httpServletRequest
+        )
     }
 
     @PostMapping("sso/signup")
