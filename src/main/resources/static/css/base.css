@@ -416,8 +416,9 @@ a.homeButton:hover {
 }
 
 #detail-view-modal .schedules {
-    max-height: 500px;
+    max-height: 600px;
     overflow: scroll;
+    scroll-behavior: smooth;
 }
 
 #detail-view-modal .schedules .schedule {

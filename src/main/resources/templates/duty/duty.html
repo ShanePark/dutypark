@@ -752,8 +752,12 @@
                     scheduleCreateMode() {
                         app.cancelEditMode();
                         app.isCreateScheduleMode = true;
-                    }
-                    ,
+                        const schedules = document.querySelector('#detail-view-modal .schedules');
+                        console.log(schedules);
+                        requestAnimationFrame(() => {
+                            schedules.scrollTop = schedules.scrollHeight;
+                        });
+                    },
                     cancelCreateSchedule() {
                         app.isCreateScheduleMode = false;
                         app.resetCreateSchedule();
