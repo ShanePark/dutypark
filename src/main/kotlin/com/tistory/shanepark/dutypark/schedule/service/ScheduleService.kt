@@ -55,7 +55,7 @@ class ScheduleService(
 
         userSchedules.plus(taggedSchedules)
             .flatten()
-            .sortedWith(compareBy({ it.startDateTime.toLocalDate() }, { it.position }))
+            .sortedWith(compareBy({ it.isTagged }, { it.position }, { it.startDateTime.toLocalDate() }))
             .forEach { scheduleDto ->
                 var dayIndex = paddingBefore + scheduleDto.dayOfMonth - 1
                 val isPreviousMonth =
