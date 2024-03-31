@@ -7,6 +7,7 @@ import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
+import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import java.time.LocalDateTime
 import java.time.YearMonth
+import java.util.*
 
 class ScheduleServiceTest : DutyparkIntegrationTest() {
 
@@ -693,6 +695,71 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
     }
 
     @Test
+    fun `Tagged schedules always comes after their own schedules`() {
+        // Given
+        val member1 = TestData.member
+        val member2 = TestData.member2
+
+        val loginMember = loginMember(member1)
+        val loginMember2 = loginMember(member2)
+
+        val dayOfMonth = 10
+        val own1 = scheduleService.createSchedule(
+            loginMember, ScheduleUpdateDto(
+                memberId = member1.id!!,
+                content = "own1Schedule",
+                startDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 0, 0),
+                endDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 0, 0),
+            )
+        )
+        val tagged = scheduleService.createSchedule(
+            loginMember2, ScheduleUpdateDto(
+                memberId = member2.id!!,
+                content = "member2Schedule",
+                startDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
+                endDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
+            )
+        )
+        val own2 = scheduleService.createSchedule(
+            loginMember, ScheduleUpdateDto(
+                memberId = member1.id!!,
+                content = "own2Schedule",
+                startDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 2, 0),
+                endDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 2, 0),
+            )
+        )
+        makeThemFriend(member1, member2)
+
+        scheduleService.tagFriend(loginMember2, tagged.id, member1.id!!)
+
+        // When
+        val yearMonth = YearMonth.of(2023, 4)
+        val ownerSchedules =
+            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member1), member1.id!!, yearMonth)
+
+        // Then
+        val calendarView = CalendarView(yearMonth)
+
+        val scheduleForOwner = ownerSchedules[calendarView.paddingBefore + dayOfMonth - 1]
+        assertThat(scheduleForOwner).hasSize(3)
+        System.err.println("scheduleForOwner = ${scheduleForOwner}")
+        val own1Index = findIndex(scheduleForOwner, own1.id)
+        val own2Index = findIndex(scheduleForOwner, own2.id)
+        val taggedIndex = findIndex(scheduleForOwner, tagged.id)
+        assertThat(own1Index).isLessThan(taggedIndex)
+        assertThat(own2Index).isLessThan(taggedIndex)
+    }
+
+    private fun findIndex(schedules: List<ScheduleDto>, id: UUID): Int {
+        for (i in schedules.indices) {
+            if (schedules[i].id == id) {
+                return i
+            }
+        }
+        return -1
+    }
+
+    @Test
     fun `if not friend and calendar visibility is only for friends, can not get schedules`() {
         // Given
         val target = TestData.member
@@ -922,7 +989,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `can retreive other's tagged public schedule even if not logged in`() {
+    fun `can retrieve other's tagged public schedule even if not logged in`() {
         // Given
         val target = TestData.member
         updateVisibility(target, Visibility.PUBLIC)
