@@ -90,6 +90,18 @@
           <button class="btn btn-primary"
                   v-on:click="updateDutyType($event.target)">Edit
           </button>
+          <button class="btn btn-secondary"
+                  :disabled="index==0 || index == (department.dutyTypes.length - 1)"
+                  v-on:click="swapPosition(index, index + 1)"
+          >
+            <i class="bi bi-arrow-down-square"></i>
+          </button>
+          <button class="btn btn-secondary"
+                  :disabled="index <= 1"
+                  v-on:click="swapPosition(index, index - 1)"
+          >
+            <i class="bi bi-arrow-up-square"></i>
+          </button>
           <button class="btn btn-danger"
                   :disabled="!dutyType.id"
                   v-on:click.stop="removeDutyType(dutyType)">Delete
@@ -504,6 +516,26 @@
                         })
                     }
                 });
+            },
+            swapPosition: function (index1, index2) {
+                const dutyType1 = app.department.dutyTypes[index1];
+                const dutyType2 = app.department.dutyTypes[index2];
+                $.ajax({
+                    url: '/admin/api/duty-types/swap-position?id1=' + dutyType1.id + '&id2=' + dutyType2.id,
+                    type: 'PATCH',
+                    success: function (response) {
+                        app.load();
+                    },
+                    error: function (error) {
+                        Swal.fire({
+                            title: 'Error',
+                            text: 'Failed to swap duty types',
+                            icon: 'error',
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#3085d6',
+                        })
+                    }
+                })
             },
             removeDutyType: function (dutyType) {
                 Swal.fire({

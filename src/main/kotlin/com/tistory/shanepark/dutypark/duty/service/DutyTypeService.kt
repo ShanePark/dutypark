@@ -52,4 +52,14 @@ class DutyTypeService(
         return dutyType
     }
 
+    fun swapDutyTypePosition(dutyTypeId1: Long, dutyTypeId2: Long) {
+        if (dutyTypeId1 == dutyTypeId2)
+            throw IllegalArgumentException("Same duty types can't be swapped")
+
+        val dutyType1 = dutyTypeRepository.findById(dutyTypeId1).orElseThrow()
+        val dutyType2 = dutyTypeRepository.findById(dutyTypeId2).orElseThrow()
+
+        dutyType1.position = dutyType2.position.also { dutyType2.position = dutyType1.position }
+    }
+
 }
