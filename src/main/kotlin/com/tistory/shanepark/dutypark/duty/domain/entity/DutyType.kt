@@ -8,7 +8,7 @@ import jakarta.persistence.*
 @Table(name = "duty_type")
 class DutyType(
     var name: String,
-    val position: Int,
+    var position: Int,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")

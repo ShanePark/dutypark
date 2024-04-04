@@ -26,6 +26,12 @@ class DutyTypeController(
         return ResponseEntity.status(HttpStatus.OK).build()
     }
 
+    @PatchMapping("/swap-position")
+    fun swapDutyTypePosition(@RequestParam id1: Long, @RequestParam id2: Long): ResponseEntity<Any> {
+        dutyTypeService.swapDutyTypePosition(id1, id2)
+        return ResponseEntity.ok().build()
+    }
+
     @DeleteMapping("/{id}")
     fun delete(@PathVariable id: Long): ResponseEntity<Any> {
         dutyTypeService.delete(id)

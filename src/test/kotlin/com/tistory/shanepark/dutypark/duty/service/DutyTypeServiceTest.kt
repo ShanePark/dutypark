@@ -139,4 +139,19 @@ class DutyTypeServiceTest : DutyparkIntegrationTest() {
         assertThat(dutyRepository.findById(duty2.id!!).get().dutyType).isNull()
     }
 
+    @Test
+    fun `swap dutyType position`() {
+        val dutyType1 = TestData.dutyTypes[0]
+        val dutyType2 = TestData.dutyTypes[1]
+        val position1 = dutyType1.position
+        val position2 = dutyType2.position
+
+        // When
+        dutyTypeService.swapDutyTypePosition(dutyType1.id!!, dutyType2.id!!)
+
+        // Then
+        assertThat(dutyTypeRepository.findById(dutyType1.id!!).get().position).isEqualTo(position2)
+        assertThat(dutyTypeRepository.findById(dutyType2.id!!).get().position).isEqualTo(position1)
+    }
+
 }
