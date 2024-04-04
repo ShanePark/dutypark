@@ -46,7 +46,9 @@ class Department(
             throw IllegalArgumentException("DutyType already exists")
         }
 
-        val dutyType = DutyType(dutyName, dutyTypes.size + 1, this)
+        val maxPosition = dutyTypes.maxOfOrNull { it.position } ?: -1
+
+        val dutyType = DutyType(dutyName, maxPosition + 1, this)
         dutyColor?.let { dutyType.color = it }
         dutyTypes.add(dutyType)
         return dutyType
