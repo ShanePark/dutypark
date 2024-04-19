@@ -233,8 +233,8 @@
                   <template
                       v-if="schedulesByDays[detailView.index].length > detailView.scheduleStartDiffCount + 1 && dutyAndDateTimeSame(detailView, schedule.startDateTime)">
                     <button :disabled="s_index == schedulesByDays[detailView.index].length -1 || schedulesByDays[detailView.index][s_index+1].isTagged"
-                            v-on:click="swapSchedule(schedule, schedulesByDays[detailView.index][s_index+1])"
-                            class="btn btn-secondary"
+                        v-on:click="swapSchedule(schedule, schedulesByDays[detailView.index][s_index+1])"
+                        class="btn btn-secondary"
                     >
                       <i class="bi bi-arrow-down-square"></i>
                     </button>
@@ -331,6 +331,7 @@
                     createSchedule: {
                         content: '',
                         startDateTime: '',
+                        startDateTimeOld: '',
                         endDateTime: '',
                         visibility: 'FRIENDS',
                     },
@@ -338,6 +339,7 @@
                         id: '',
                         content: '',
                         startDateTime: '',
+                        startDateTimeOld: '',
                         endDateTime: '',
                         visibility: '',
                     },
@@ -525,23 +527,21 @@
                     }
                     ,
                     'createSchedule.startDateTime':
-
                         function () {
-                            if (app.createSchedule.startDateTime > app.createSchedule.endDateTime) {
+                            if (app.createSchedule.startDateTimeOld === app.createSchedule.endDateTime || app.createSchedule.startDateTime > app.createSchedule.endDateTime) {
                                 app.createSchedule.endDateTime = app.createSchedule.startDateTime;
                             }
+                            app.createSchedule.startDateTimeOld = app.createSchedule.startDateTime;
                         }
-
                     ,
                     'editingSchedule.startDateTime':
-
                         function () {
-                            if (app.editingSchedule.startDateTime > app.editingSchedule.endDateTime) {
+                            if (app.editingSchedule.startDateTimeOld === app.editingSchedule.endDateTime || app.editingSchedule.startDateTime > app.editingSchedule.endDateTime) {
                                 app.editingSchedule.endDateTime = app.editingSchedule.startDateTime;
                             }
+                            app.editingSchedule.startDateTimeOld = app.editingSchedule.startDateTime;
                         }
-                }
-                ,
+                },
                 methods: {
                     addMonth(month) {
                         const newDate = new Date(app.year, app.month - 1 + month);
@@ -1058,8 +1058,7 @@
             Swal.fire({
                 icon: 'error',
                 title: '시작일시와 종료일시를 모두 입력해주세요.',
-                showConfirmButton: false,
-                timer: 1500
+                confirmButtonText: '확인',
             });
             return false;
         }
@@ -1067,8 +1066,7 @@
             Swal.fire({
                 icon: 'error',
                 title: '종료일시는 시작일시보다 빠를 수 없습니다.',
-                showConfirmButton: false,
-                timer: 1500
+                confirmButtonText: '확인',
             });
             return false;
         }
