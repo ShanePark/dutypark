@@ -11,6 +11,7 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver
 import org.springframework.web.method.support.ModelAndViewContainer
 
 class LoginMemberArgumentResolver : HandlerMethodArgumentResolver {
+
     override fun supportsParameter(parameter: MethodParameter): Boolean {
         return parameter.parameterType.isAssignableFrom(LoginMember::class.java)
                 && parameter.hasParameterAnnotation(Login::class.java)
@@ -31,9 +32,8 @@ class LoginMemberArgumentResolver : HandlerMethodArgumentResolver {
         parameter: MethodParameter,
         loginMember: LoginMember?
     ) {
-        if (loginMember == null &&
-            parameter.getParameterAnnotation(Login::class.java)?.required == true
-        ) {
+        val required = parameter.getParameterAnnotation(Login::class.java)?.required ?: true
+        if (loginMember == null && required) {
             throw DutyparkAuthException("login is required")
         }
     }

@@ -232,7 +232,8 @@
                 <template v-else>
                   <template
                       v-if="schedulesByDays[detailView.index].length > detailView.scheduleStartDiffCount + 1 && dutyAndDateTimeSame(detailView, schedule.startDateTime)">
-                    <button :disabled="s_index == schedulesByDays[detailView.index].length -1 || schedulesByDays[detailView.index][s_index+1].isTagged"
+                    <button
+                        :disabled="s_index == schedulesByDays[detailView.index].length -1 || schedulesByDays[detailView.index][s_index+1].isTagged"
                         v-on:click="swapSchedule(schedule, schedulesByDays[detailView.index][s_index+1])"
                         class="btn btn-secondary"
                     >
@@ -942,6 +943,9 @@
                     }
                     ,
                     loadFriends() {
+                        if (!loginMemberId) {
+                            return;
+                        }
                         fetch('/api/friends')
                             .then(async response => {
                                 if (!response.ok) {

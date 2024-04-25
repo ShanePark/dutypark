@@ -742,7 +742,6 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
         val scheduleForOwner = ownerSchedules[calendarView.paddingBefore + dayOfMonth - 1]
         assertThat(scheduleForOwner).hasSize(3)
-        System.err.println("scheduleForOwner = ${scheduleForOwner}")
         val own1Index = findIndex(scheduleForOwner, own1.id)
         val own2Index = findIndex(scheduleForOwner, own2.id)
         val taggedIndex = findIndex(scheduleForOwner, tagged.id)
