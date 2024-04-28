@@ -10,6 +10,12 @@ import java.util.*
 
 interface ScheduleRepository : JpaRepository<Schedule, UUID> {
 
+//    fun findByMemberAndContentContainingAndVisibilityIn(
+//        member: Member,
+//        content: String,
+//        visibility: Collection<Visibility>
+//    ): List<Schedule>
+
     @Query(
         "SELECT s" +
                 " FROM Schedule s" +
