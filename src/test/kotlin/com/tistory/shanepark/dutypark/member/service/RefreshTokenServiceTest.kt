@@ -34,7 +34,6 @@ class RefreshTokenServiceTest : DutyparkIntegrationTest() {
             departmentId = null,
             department = "",
             isAdmin = false,
-            jwt = ""
         )
         refreshTokenService.deleteRefreshToken(loginMember, token.id!!)
         assertThat(refreshTokenService.findAllWithMemberOrderByLastUsedDesc()).isEmpty()
@@ -53,7 +52,6 @@ class RefreshTokenServiceTest : DutyparkIntegrationTest() {
             departmentId = null,
             department = "",
             isAdmin = true,
-            jwt = ""
         )
         refreshTokenService.deleteRefreshToken(loginMember, token.id!!)
         assertThat(refreshTokenService.findAllWithMemberOrderByLastUsedDesc()).isEmpty()
@@ -71,7 +69,6 @@ class RefreshTokenServiceTest : DutyparkIntegrationTest() {
             departmentId = null,
             department = "",
             isAdmin = false,
-            jwt = ""
         )
 
         assertThrows<DutyparkAuthException> {

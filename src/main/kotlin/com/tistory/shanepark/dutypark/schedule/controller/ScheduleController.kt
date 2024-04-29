@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.schedule.controller
 
-import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
@@ -33,7 +32,6 @@ class ScheduleController(
     }
 
     @PostMapping
-    @SlackNotification
     fun createSchedule(
         @RequestBody @Validated scheduleUpdateDto: ScheduleUpdateDto,
         @Login loginMember: LoginMember

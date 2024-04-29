@@ -7,6 +7,7 @@ import net.gpedro.integrations.slack.SlackMessage
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.Around
 import org.aspectj.lang.annotation.Aspect
+import org.aspectj.lang.reflect.MethodSignature
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.task.TaskExecutor
@@ -35,13 +36,19 @@ class SlackNotificationAspect(
             lastSlackSent.set(currentEpochSecond)
         }
 
+        val arguments = (proceedingJoinPoint.signature as MethodSignature).method.parameters
+            .map { it.name }
+            .zip(proceedingJoinPoint.args)
+            .joinToString { "${it.first} : ${it.second}" }
+
         val slackAttachment = SlackAttachment()
         slackAttachment.setFallback("Post")
         slackAttachment.setColor("good")
         slackAttachment.setTitle("Data save detected")
+
         slackAttachment.setFields(
             listOf(
-                SlackField().setTitle("Arguments").setValue(proceedingJoinPoint.args.joinToString()),
+                SlackField().setTitle("Arguments").setValue(arguments),
                 SlackField().setTitle("method").setValue(proceedingJoinPoint.signature.name),
             )
         )

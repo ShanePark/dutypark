@@ -11,6 +11,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException
 import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.ResponseBody
+import org.springframework.web.servlet.resource.NoResourceFoundException
 import java.util.*
 
 @ControllerAdvice
@@ -34,6 +35,9 @@ class ErrorDetectAdvisor(
 
     @ExceptionHandler(Exception::class)
     fun handleException(req: HttpServletRequest, e: Exception) {
+        if (e is NoResourceFoundException) {
+            return
+        }
 
         val slackAttachment = SlackAttachment()
         slackAttachment.setFallback("Error")

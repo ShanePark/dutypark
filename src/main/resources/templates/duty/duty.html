@@ -889,7 +889,7 @@
                     deleteSchedule(schedule) {
                         Swal.fire({
                             title: '일정을 삭제하시겠습니까?',
-                            text: "삭제된 일정은 복구할 수 없습니다.",
+                            html: `다음의 일정을 삭제합니다.<br/>[${schedule.content}]<br/> 삭제된 일정은 복구할 수 없습니다.`,
                             icon: 'warning',
                             showCancelButton: true,
                             confirmButtonColor: '#d33',

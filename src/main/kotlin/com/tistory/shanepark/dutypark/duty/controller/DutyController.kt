@@ -1,7 +1,6 @@
 package com.tistory.shanepark.dutypark.duty.controller
 
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
-import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.service.DutyService
@@ -34,7 +33,6 @@ class DutyController(
     }
 
     @PutMapping("change")
-    @SlackNotification
     fun updateDuty(
         @RequestBody dutyUpdateDto: DutyUpdateDto,
         @Login loginMember: LoginMember
