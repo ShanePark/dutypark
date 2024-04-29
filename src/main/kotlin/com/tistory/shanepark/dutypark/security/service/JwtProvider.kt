@@ -52,15 +52,15 @@ class JwtProvider(
 
         val email = claims["email"] as String?
 
-        return LoginMember(
+        val loginMember = LoginMember(
             id = claims.subject.toLong(),
             email = email,
             name = claims["name"] as String,
             departmentId = claims["departmentId"]?.toString()?.toLong(),
             department = claims["departmentName"] as String?,
             isAdmin = dutyparkProperties.adminEmails.contains(email),
-            jwt = token
         )
+        return loginMember
     }
 
     fun validateToken(token: String?): TokenStatus {

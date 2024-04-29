@@ -119,7 +119,6 @@ class DutyparkIntegrationTest {
             name = member.name,
             departmentId = member.department?.id,
             department = member.department?.name,
-            jwt = "",
             isAdmin = false
         )
     }
