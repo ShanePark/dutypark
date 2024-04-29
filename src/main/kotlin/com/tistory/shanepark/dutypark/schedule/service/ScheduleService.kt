@@ -24,6 +24,7 @@ class ScheduleService(
     private val memberRepository: MemberRepository,
     private val friendService: FriendService
 ) {
+    private val log = org.slf4j.LoggerFactory.getLogger(this.javaClass)
 
     @Transactional(readOnly = true)
     fun findSchedulesByYearAndMonth(
@@ -103,6 +104,8 @@ class ScheduleService(
             position = position,
             visibility = scheduleUpdateDto.visibility
         )
+
+        log.info("create schedule: $scheduleUpdateDto")
         return scheduleRepository.save(schedule)
     }
 
@@ -119,6 +122,8 @@ class ScheduleService(
         schedule.endDateTime = scheduleUpdateDto.endDateTime
         schedule.content = scheduleUpdateDto.content
         schedule.visibility = scheduleUpdateDto.visibility
+
+        log.info("update schedule: $scheduleUpdateDto")
         return scheduleRepository.save(schedule)
     }
 

@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.member.controller
 
+import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendsInfoDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
@@ -44,6 +45,7 @@ class FriendController(
     }
 
     @PostMapping("request/send/{toMemberId}")
+    @SlackNotification
     fun sendFriendRequest(
         @Login loginMember: LoginMember,
         @PathVariable toMemberId: Long
@@ -60,6 +62,7 @@ class FriendController(
     }
 
     @PostMapping("request/accept/{fromMemberId}")
+    @SlackNotification
     fun acceptFriendRequest(
         @Login loginMember: LoginMember,
         @PathVariable fromMemberId: Long
