@@ -31,7 +31,14 @@ data class DepartmentDto(
                         it.color.toString()
                     )
                 }.toMutableList()
-            sortedTypes.add(0, DutyTypeDto(name = "OFF", position = -1, color = department.offColor.toString()))
+            sortedTypes.add(
+                0,
+                DutyTypeDto(
+                    name = department.defaultDutyName,
+                    position = -1,
+                    color = department.defaultDutyColor.toString()
+                )
+            )
 
             return DepartmentDto(
                 id = department.id!!,

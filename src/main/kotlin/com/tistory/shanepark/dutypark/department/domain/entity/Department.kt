@@ -23,7 +23,11 @@ class Department(
     var manager: Member? = null
 
     @Enumerated(EnumType.STRING)
-    var offColor: Color = Color.GREY
+    @Column(nullable = false, name = "default_duty_color")
+    var defaultDutyColor: Color = Color.GREY
+
+    @Column(nullable = false, name = "default_duty_name")
+    var defaultDutyName: String = "OFF"
 
     @OneToMany(mappedBy = "department", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
     val dutyTypes: MutableList<DutyType> = mutableListOf()
