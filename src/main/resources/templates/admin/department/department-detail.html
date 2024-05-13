@@ -76,7 +76,7 @@
         <th scope="col"></th>
         <th scope="col">Name</th>
         <th scope="col">Color</th>
-        <th scope="col"></th>
+        <th scope="col">Note</th>
       </tr>
       </thead>
       <tbody>
@@ -107,6 +107,7 @@
                   v-on:click.stop="removeDutyType(dutyType)">Delete
           </button>
         </td>
+        <td>{{dutyType.id ? '' : 'Default'}}</td>
       </tr>
       </tbody>
     </table>
@@ -415,9 +416,7 @@
                 const modal = document.querySelector('#duty-type-modal').cloneNode(true);
                 let nameInput = modal.querySelector('input[name="name"]');
                 nameInput.setAttribute('value', dutyTypeName);
-                if (!dutyTypeId) {
-                    nameInput.disabled = true;
-                }
+
                 modal.querySelectorAll('option').forEach(option => {
                     if (option.value === dutyTypeColor) {
                         option.setAttribute('selected', 'selected');
@@ -446,7 +445,7 @@
                 }).then((result) => {
                     if (result.isConfirmed) {
                         if (!dutyTypeId) {
-                            app.changeOffColor(result.value[1]);
+                            app.updateDefaultDuty(result.value[0], result.value[1]);
                             return;
                         }
                         $.ajax({
@@ -607,13 +606,14 @@
                         })
                     }
                 })
-            }, changeOffColor(color) {
+            }, updateDefaultDuty(name, color) {
                 const departmentId = app.department.id;
                 $.ajax({
-                    url: '/admin/api/departments/' + departmentId + '/off-color',
+                    url: '/admin/api/departments/' + departmentId + '/default-duty',
                     type: 'PATCH',
                     data: {
-                        color: color
+                        name: name,
+                        color: color,
                     },
                     success: function () {
                         app.load();

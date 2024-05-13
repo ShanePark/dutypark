@@ -90,7 +90,7 @@ class DutyService(
         val member = memberRepository.findMemberWithDepartment(memberId).orElseThrow()
         friendService.checkVisibility(loginMember, member)
         val department = member.department ?: return emptyList()
-        val offColor = department.offColor
+        val defaultDutyColor = department.defaultDutyColor
 
         val answer = mutableListOf<DutyDto>()
         val calendarView = CalendarView(yearMonth)
@@ -103,7 +103,7 @@ class DutyService(
         for (i in 1..calendarView.paddingBefore) {
             val day = calendarView.prevMonth.atEndOfMonth().dayOfMonth - (calendarView.paddingBefore - i)
             val duty = dutiesLastMonth[day]
-            addDutyDto(calendarView.prevMonth, day, duty, answer, offColor)
+            addDutyDto(calendarView.prevMonth, day, duty, answer, defaultDutyColor)
         }
 
         val dutiesOfMonth =
@@ -112,7 +112,7 @@ class DutyService(
         val lengthOfMonth = yearMonth.lengthOfMonth()
         for (i in 1..lengthOfMonth) {
             val duty = dutiesOfMonth[i]
-            addDutyDto(yearMonth, i, duty, answer, offColor)
+            addDutyDto(yearMonth, i, duty, answer, defaultDutyColor)
         }
 
         val dutiesNextMonth = dutyRepository.findAllByMemberAndDutyYearAndDutyMonth(
@@ -122,19 +122,19 @@ class DutyService(
         ).associateBy { it.dutyDay }
         for (i in 1..calendarView.paddingAfter) {
             val duty = dutiesNextMonth[i]
-            addDutyDto(calendarView.nextMonth, i, duty, answer, offColor)
+            addDutyDto(calendarView.nextMonth, i, duty, answer, defaultDutyColor)
         }
 
         return answer
     }
 
-    private fun addDutyDto(yearMonth: YearMonth, day: Int, duty: Duty?, list: MutableList<DutyDto>, offColor: Color) {
+    private fun addDutyDto(yearMonth: YearMonth, day: Int, duty: Duty?, list: MutableList<DutyDto>, defaultDutyColor: Color) {
         val dutyDto = DutyDto(
             year = yearMonth.year,
             month = yearMonth.month.value,
             day = day,
             dutyType = duty?.dutyType?.name,
-            dutyColor = duty?.dutyType?.color?.name ?: offColor.name
+            dutyColor = duty?.dutyType?.color?.name ?: defaultDutyColor.name
         )
         list.add(dutyDto)
     }

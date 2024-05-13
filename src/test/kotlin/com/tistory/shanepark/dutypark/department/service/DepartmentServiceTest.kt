@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.department.service
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentCreateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
+import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.service.DutyService
 import org.assertj.core.api.Assertions.assertThat
@@ -291,6 +292,22 @@ class DepartmentServiceTest : DutyparkIntegrationTest() {
         service.changeManager(department.id!!, null)
         assertThat(department.manager).isNull()
 
+    }
+
+    @Test
+    fun `update default duty success`() {
+        // Given
+        val department = service.create(DepartmentCreateDto("deptName", "deptDesc"))
+
+        // When
+        val updatedDutyName = "newDutyName"
+        val updatedDutyColor = Color.RED
+        service.updateDefaultDuty(department.id, updatedDutyName, updatedDutyColor.name)
+
+        // Then
+        val updated = departmentRepository.findById(department.id).orElseThrow()
+        assertThat(updated.defaultDutyName).isEqualTo(updatedDutyName)
+        assertThat(updated.defaultDutyColor).isEqualTo(updatedDutyColor)
     }
 
 }
