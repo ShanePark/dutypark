@@ -8,8 +8,10 @@ import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberCreateDto
+import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
+import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -35,6 +37,9 @@ class DutyparkIntegrationTest {
 
     @Autowired
     lateinit var dutyTypeRepository: DutyTypeRepository
+
+    @Autowired
+    lateinit var friendRelationRepository: FriendRelationRepository
 
     @Autowired
     lateinit var em: EntityManager
@@ -126,6 +131,11 @@ class DutyparkIntegrationTest {
     protected fun updateVisibility(target: Member, visibility: Visibility) {
         target.calendarVisibility = visibility
         memberRepository.save(target)
+    }
+
+    protected fun makeThemFriend(member1: Member, member2: Member) {
+        friendRelationRepository.save(FriendRelation(member1, member2))
+        friendRelationRepository.save(FriendRelation(member2, member1))
     }
 
 }

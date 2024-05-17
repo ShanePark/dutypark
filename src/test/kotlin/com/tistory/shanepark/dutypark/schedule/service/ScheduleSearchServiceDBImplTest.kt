@@ -3,8 +3,9 @@ package com.tistory.shanepark.dutypark.schedule.service
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
+import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
-import org.assertj.core.api.Assertions
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.Pageable
@@ -32,18 +33,72 @@ class ScheduleSearchServiceDBImplTest : DutyparkIntegrationTest() {
 
         // When
         val result = scheduleSearchServiceDBImpl.search(loginMember, loginMember.id, Pageable.ofSize(10), "test")
+        System.err.println("result = ${result}")
 
         // Then
-        Assertions.assertThat(result).hasSize(3)
-        Assertions.assertThat(result.content.get(0).content).isEqualTo("test3")
-        Assertions.assertThat(result.content.get(1).content).isEqualTo("test2")
-        Assertions.assertThat(result.content.get(2).content).isEqualTo("test1")
+        assertThat(result).hasSize(3)
+        assertThat(result.content[0].content).isEqualTo("test3")
+        assertThat(result.content[1].content).isEqualTo("test2")
+        assertThat(result.content[2].content).isEqualTo("test1")
+    }
+
+    @Test
+    fun `search schedule 20 results, it should be paginated`() {
+        val member = TestData.member
+        val loginMember = loginMember(member)
+
+        // Given
+        for (i in 1..20) {
+            makeSchedule(loginMember, "test$i", LocalDateTime.of(2024, 1, 1, 0, i))
+        }
+
+        // When
+        val result = scheduleSearchServiceDBImpl.search(loginMember, loginMember.id, Pageable.ofSize(10), "test")
+
+        // Then
+        assertThat(result).hasSize(10)
+        assertThat(result.content[0].content).isEqualTo("test20")
+        assertThat(
+            scheduleSearchServiceDBImpl.search(
+                loginMember,
+                loginMember.id,
+                Pageable.ofSize(10).next(),
+                "INVALID_KEYWORD"
+            )
+        ).hasSize(0)
+    }
+
+    @Test
+    fun `tagged schedules should be included in the search result`() {
+        // Given
+        val member1 = TestData.member
+        val loginMember = loginMember(member1)
+        val member2 = TestData.member2
+        val loginMember2 = loginMember(member2)
+        makeThemFriend(member1, member2)
+
+        makeSchedule(loginMember, "test1", LocalDateTime.of(2024, 1, 1, 0, 0))
+        scheduleService.tagFriend(
+            loginMember = loginMember2,
+            scheduleId = makeSchedule(
+                loginMember2, "test-tagged", LocalDateTime.of(2024, 1, 1, 0, 1)
+            ).id,
+            friendId = member1.id!!
+        )
+
+        // When
+        val result = scheduleSearchServiceDBImpl.search(loginMember, loginMember.id, Pageable.ofSize(10), "test")
+
+        // Then
+        assertThat(result).hasSize(2)
+        assertThat(result.content[0].content).isEqualTo("test-tagged")
+        assertThat(result.content[1].content).isEqualTo("test1")
     }
 
     private fun makeSchedule(
         loginMember: LoginMember, title: String, date: LocalDateTime
-    ) {
-        scheduleService.createSchedule(
+    ): Schedule {
+        return scheduleService.createSchedule(
             loginMember,
             ScheduleUpdateDto(
                 loginMember.id,

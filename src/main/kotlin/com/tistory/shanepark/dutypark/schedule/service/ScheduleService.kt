@@ -3,7 +3,6 @@ package com.tistory.shanepark.dutypark.schedule.service
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
-import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
@@ -44,7 +43,7 @@ class ScheduleService(
         val start = calendarView.rangeFrom
         val end = calendarView.rangeEnd
 
-        val availableVisibilities = availableVisibilities(loginMember, member)
+        val availableVisibilities = friendService.availableVisibilities(loginMember, member)
 
         val userSchedules =
             scheduleRepository.findSchedulesOfMonth(member, start, end, visibilities = availableVisibilities)
@@ -75,17 +74,6 @@ class ScheduleService(
         return array
     }
 
-    private fun availableVisibilities(loginMember: LoginMember?, member: Member): Collection<Visibility> {
-        if (loginMember == null)
-            return setOf(Visibility.PUBLIC)
-        if (loginMember.id == member.id) {
-            return Visibility.values().toList()
-        }
-        if (friendService.isFriend(loginMember.id, member.id!!)) {
-            return setOf(Visibility.PUBLIC, Visibility.FRIENDS)
-        }
-        return setOf(Visibility.PUBLIC)
-    }
 
     fun createSchedule(loginMember: LoginMember, scheduleUpdateDto: ScheduleUpdateDto): Schedule {
         val scheduleMember = memberRepository.findById(scheduleUpdateDto.memberId).orElseThrow()

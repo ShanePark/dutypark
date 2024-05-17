@@ -21,9 +21,6 @@ class FriendServiceTest : DutyparkIntegrationTest() {
     lateinit var friendService: FriendService
 
     @Autowired
-    lateinit var friendRelationRepository: FriendRelationRepository
-
-    @Autowired
     lateinit var friendRequestRepository: FriendRequestRepository
 
     /*************************************************

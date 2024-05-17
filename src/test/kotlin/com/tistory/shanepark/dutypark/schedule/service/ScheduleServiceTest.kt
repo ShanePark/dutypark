@@ -3,10 +3,8 @@ package com.tistory.shanepark.dutypark.schedule.service
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
-import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
-import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
@@ -26,9 +24,6 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var scheduleRepository: ScheduleRepository
-
-    @Autowired
-    lateinit var friendRelationRepository: FriendRelationRepository
 
     @Test
     fun `Create schedule success test`() {
@@ -800,11 +795,6 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         assertThrows<DutyparkAuthException> {
             scheduleService.findSchedulesByYearAndMonth(loginMember(login), target.id!!, YearMonth.of(2023, 4))
         }
-    }
-
-    private fun makeThemFriend(member1: Member, member2: Member) {
-        friendRelationRepository.save(FriendRelation(member1, member2))
-        friendRelationRepository.save(FriendRelation(member2, member1))
     }
 
     @Test
