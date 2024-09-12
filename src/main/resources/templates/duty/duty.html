@@ -186,6 +186,7 @@
           </div>
           <div class="schedules mt-4">
             <div class="schedule card shadow"
+                 v-if="!isCreateScheduleMode && (editingSchedule.id == null || isEditing(schedule) )"
                  :class="{'visibility-public': schedule.visibility == 'PUBLIC', 'visibility-friends': schedule.visibility == 'FRIENDS', 'visibility-private': schedule.visibility == 'PRIVATE'}"
                  v-for="(schedule, s_index) in schedulesByDays[detailView.index]"
                  :id="'schedule-' + schedule.id">
@@ -750,13 +751,8 @@
                     }
                     ,
                     scheduleCreateMode() {
-                        app.cancelEditMode();
                         app.isCreateScheduleMode = true;
                         const schedules = document.querySelector('#detail-view-modal .schedules');
-                        console.log(schedules);
-                        requestAnimationFrame(() => {
-                            schedules.scrollTop = schedules.scrollHeight;
-                        });
                     },
                     cancelCreateSchedule() {
                         app.isCreateScheduleMode = false;
