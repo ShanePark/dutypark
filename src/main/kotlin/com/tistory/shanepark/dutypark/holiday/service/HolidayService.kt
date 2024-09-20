@@ -8,6 +8,7 @@ import com.tistory.shanepark.dutypark.holiday.service.holidayAPI.HolidayAPI
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.cache.annotation.CacheEvict
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
@@ -43,6 +44,7 @@ class HolidayService(
         return answer
     }
 
+    @CacheEvict(value = ["holidays"], allEntries = true)
     fun resetHolidayInfo() {
         holidayRepository.deleteAll()
         holidayMap.clear()
