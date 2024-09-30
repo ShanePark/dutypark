@@ -92,7 +92,7 @@ class TodoServiceTest {
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
 
         // When
-        todoService.deleteTodoById(loginMember, todoId)
+        todoService.deleteTodo(loginMember, todoId)
 
         // Then
         verify(todoRepository, times(1)).delete(todo)
@@ -110,7 +110,7 @@ class TodoServiceTest {
 
         // When & Then
         val exception = assertThrows<IllegalArgumentException> {
-            todoService.deleteTodoById(loginMember, todoId)
+            todoService.deleteTodo(loginMember, todoId)
         }
         assertEquals("Todo is not yours", exception.message)
     }

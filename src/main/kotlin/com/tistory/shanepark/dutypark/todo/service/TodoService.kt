@@ -58,7 +58,7 @@ class TodoService(
         }
     }
 
-    fun deleteTodoById(loginMember: LoginMember, id: UUID) {
+    fun deleteTodo(loginMember: LoginMember, id: UUID) {
         val member = findMember(loginMember)
         val todo = todoRepository.findById(id).orElseThrow { IllegalArgumentException("Todo not found") }
         verifyOwnership(todo, member)
