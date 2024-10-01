@@ -50,7 +50,7 @@ class TodoController(
     @DeleteMapping("/{id}")
     fun deleteTodo(
         @Login loginMember: LoginMember,
-        id: UUID
+        @PathVariable id: UUID
     ) {
         todoService.deleteTodo(loginMember, id)
     }

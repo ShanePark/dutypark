@@ -181,5 +181,53 @@ class TodoControllerTest : RestDocsTest() {
             )
     }
 
+    @Test
+    fun `updatePosition test`() {
+        // Given
+        val saved1 = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Todo 1",
+                content = "Content 1",
+                position = 1
+            )
+        )
+
+        val saved2 = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Todo 2",
+                content = "Content 2",
+                position = 2
+            )
+        )
+
+        val json = """
+            [
+                "${saved2.id}",
+                "${saved1.id}"
+            ]
+        """.trimIndent()
+
+        // Then
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.patch("/api/todos/position")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+        )
+            .andExpect(status().isOk)
+            .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "todos/update-position",
+                    requestFields(
+                        fieldWithPath("[]").description("Todo ID List")
+                    )
+                )
+            )
+    }
+
 
 }

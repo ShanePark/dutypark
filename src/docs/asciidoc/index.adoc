@@ -50,3 +50,27 @@ operation::holiday/reset[]
 === friend-info
 
 operation::friends/friend-info[]
+
+== TODO
+
+=== GET
+
+operation::todos/get-list[]
+
+=== CREATE
+
+operation::todos/create[]
+
+=== UPDATE
+
+operation::todos/update[]
+
+=== UPDATE-POSITION
+
+operation::todos/update-position[]
+
+=== DELETE
+
+operation::todos/delete[]
+
+
