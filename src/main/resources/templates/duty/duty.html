@@ -5,6 +5,18 @@
   </div>
 </div>
 <div class="duty-vue" v-cloak th:if="${visible}">
+  <div class="todo-container">
+    <div class="d-flex align-items-center">
+      <button id="add-todo-btn" v-on:click="addTodoModal()">할일&nbsp;+</button>
+      <div class="d-flex flex-row ms-3" id="todo-list-container">
+        <div class="d-flex flex-row" id="todo-list">
+          <div v-for="todo in todos" class="todo-item">
+            <strong class="todo-text" v-text="todo.title" v-on:click="showTodoDetails(todo)"></strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
   <div th:if="${member.department}" class="calendar" th:attr="data-member_id=${member.id}">
     <div class="month-control row">
       <div class="month-control-left col-md-2">
@@ -157,6 +169,59 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="todo-details-modal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-body">
+          <button type="button" class="btn btn-danger btn-sm delete-todo-btn" v-on:click="deleteTodo()">할일 삭제</button>
+          <div class="modal-body">
+            <h5 class="todo-title mb-3">TODO Title</h5>
+            <p class="mb-3 todo-content">TODO Content</p>
+            <p class="text-muted todo-date"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div
+      class="modal fade"
+      id="add-todo-modal"
+      tabindex="-1"
+      aria-hidden="true"
+  >
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addModalLabel">Add New TODO</h5>
+          <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <input
+              type="text"
+              class="form-control todo-title"
+              name="title"
+              placeholder="할일 제목"
+          />
+          <textarea
+              class="form-control todo-content"
+              name="content"
+              rows="4"
+              placeholder="할일 상세내용"
+          ></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-success" v-on:click="addTodo()">Add</button>
         </div>
       </div>
     </div>
@@ -346,6 +411,28 @@
                         visibility: '',
                     },
                     friends: [],
+                    todos: [
+                        {
+                            title: "룰렛돌리기",
+                            content: "매일 룰렛을 돌려 아이템을 받기 위해 룰렛을 돌릴 것",
+                            date: new Date(),
+                        },
+                        {
+                            title: "안부전화",
+                            content: "아기가 잘 놀고 있는지 안부 전화 걸 것",
+                            date: new Date(),
+                        },
+                        {
+                            title: "산책하기",
+                            content: "저녁에 30분 동안 산책하며 운동하기",
+                            date: new Date(),
+                        },
+                        {
+                            title: "독서",
+                            content: "매일 30분씩 책 읽기",
+                            date: new Date(),
+                        },
+                    ],
                 }, mounted() {
                     if (departmentId) {
                         this.loadDepartment();
@@ -377,6 +464,7 @@
                             app.untag(scheduleId, friendId);
                         }
                     });
+                    this.initSortable();
                 }, computed: {
                     combinedYearMonth: {
                         get() {
@@ -543,6 +631,12 @@
                             }
                             app.editingSchedule.startDateTimeOld = app.editingSchedule.startDateTime;
                         }
+                    ,
+                    todos() {
+                        this.$nextTick(() => {
+                            this.initSortable();
+                        });
+                    }
                 },
                 methods: {
                     addMonth(month) {
@@ -1047,6 +1141,51 @@
                             }
                             app.calendarVisibility = privacy;
                         });
+                    },
+                    addTodoModal() {
+                        const modal = document.getElementById('add-todo-modal');
+                        modal.querySelector('.todo-title').value = '';
+                        modal.querySelector('.todo-content').value = '';
+                        $('#add-todo-modal').modal('show');
+                        // TODO: Implement TODO Modify
+                    },
+                    addTodo() {
+                        // TODO: Implement add todo modal
+                        const addTodoModal = document.getElementById('add-todo-modal');
+                        const title = addTodoModal.querySelector('.todo-title').value;
+                        const content = addTodoModal.querySelector('.todo-content').value;
+                        const date = new Date();
+                        this.todos.push({
+                            title: title,
+                            content: content,
+                            date: date,
+                        });
+                        $('#add-todo-modal').modal('hide');
+                    },
+                    showTodoDetails(todo) {
+                        const modal = document.getElementById("todo-details-modal");
+                        modal.querySelector(".todo-title").textContent = todo.title;
+                        modal.querySelector(".todo-content").textContent = todo.content;
+                        modal.querySelector(".todo-date").textContent = todo.date;
+                        $('#todo-details-modal').modal('show');
+                        // TODO: Time format
+                    },
+                    deleteTodo() {
+                        alert('delete todo');
+                        // TODO: Implement delete todo
+                    },
+                    initSortable() {
+                        let todoListElement = document.getElementById('todo-list');
+                        if (todoListElement) {
+                            const sortable = new Sortable(todoListElement, {
+                                animation: 150,
+                                draggable: ".todo-item",
+                                onEnd: (evt) => {
+                                    // TODO : Implement move todo
+                                    alert('move todo');
+                                },
+                            });
+                        }
                     }
                 }
             }
