@@ -5,6 +5,18 @@
   </div>
 </div>
 <div class="duty-vue" v-cloak th:if="${visible}">
+  <div class="todo-container" v-if="isMyCalendar">
+    <div class="d-flex align-items-center">
+      <button id="add-todo-btn" v-on:click="addTodoModal()">할일&nbsp;+</button>
+      <div class="d-flex flex-row ms-3" id="todo-list-container">
+        <div class="d-flex flex-row" id="todo-list">
+          <div v-for="todo in todos" class="todo-item" :data-id="todo.id">
+            <strong class="todo-text" v-text="todo.title" v-on:click="showTodoDetails(todo)"></strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
   <div th:if="${member.department}" class="calendar" th:attr="data-member_id=${member.id}">
     <div class="month-control row">
       <div class="month-control-left col-md-2">
@@ -157,6 +169,70 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="todo-details-modal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="todo-details-title">할일 상세</h5>
+        </div>
+        <div class="modal-body">
+          <div class="modal-body">
+            <div class="input-group mb-2">
+              <span class="input-group-text" id="todo-title-input">제목</span>
+              <input type="text" class="todo-title form-control" aria-labelledby="todo-title-input"
+                     aria-label="title" :readonly="!editTodoMode"/>
+            </div>
+            <div class="input-group">
+              <span class="input-group-text" id="todo-content-input">내용</span>
+              <textarea class="todo-content form-control" aria-label="content" aria-labelledby="todo-content-input"
+                        :readonly="!editTodoMode"></textarea>
+            </div>
+          </div>
+          <div class="text-right">
+            <p class="text-muted todo-date"></p>
+            <button type="button" class="btn btn-info btn-sm" v-on:click="editTodoMode=true" v-if="!editTodoMode">수정
+            </button>
+            <button type="button" class="btn btn-success btn-sm" v-on:click="updateTodo()" v-if="editTodoMode">저장
+            </button>
+            <button type="button" class="btn btn-danger btn-sm" v-on:click="deleteTodo()">삭제</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div
+      class="modal fade"
+      id="add-todo-modal"
+      tabindex="-1"
+      aria-hidden="true"
+  >
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addModalLabel">할일 추가</h5>
+        </div>
+        <div class="modal-body">
+          <input
+              type="text"
+              class="form-control todo-title"
+              name="title"
+              placeholder="할일 제목"
+          />
+          <textarea
+              class="form-control todo-content"
+              name="content"
+              rows="4"
+              placeholder="할일 상세내용"
+          ></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-success" v-on:click="addTodo()">Add</button>
         </div>
       </div>
     </div>
@@ -346,6 +422,8 @@
                         visibility: '',
                     },
                     friends: [],
+                    todos: [],
+                    editTodoMode: false,
                 }, mounted() {
                     if (departmentId) {
                         this.loadDepartment();
@@ -355,6 +433,7 @@
                     this.loadHolidays(this.year, this.month);
                     this.loadFriends();
                     this.loadDDays();
+                    this.loadTodos();
 
                     document.addEventListener('click', function (event) {
                         if (event.target && event.target.matches('.schedule-tag-add')) {
@@ -377,6 +456,7 @@
                             app.untag(scheduleId, friendId);
                         }
                     });
+                    this.initSortable();
                 }, computed: {
                     combinedYearMonth: {
                         get() {
@@ -543,6 +623,12 @@
                             }
                             app.editingSchedule.startDateTimeOld = app.editingSchedule.startDateTime;
                         }
+                    ,
+                    todos() {
+                        this.$nextTick(() => {
+                            this.initSortable();
+                        });
+                    }
                 },
                 methods: {
                     addMonth(month) {
@@ -1047,7 +1133,175 @@
                             }
                             app.calendarVisibility = privacy;
                         });
-                    }
+                    },
+                    addTodoModal() {
+                        const modal = document.getElementById('add-todo-modal');
+                        modal.querySelector('.todo-title').value = '';
+                        modal.querySelector('.todo-content').value = '';
+                        $('#add-todo-modal').modal('show');
+                    },
+                    addTodo() {
+                        const addTodoModal = document.getElementById('add-todo-modal');
+                        const title = addTodoModal.querySelector('.todo-title').value;
+                        const content = addTodoModal.querySelector('.todo-content').value;
+
+                        fetch('/api/todos', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                title: title,
+                                content: content,
+                            })
+                        }).then(response => {
+                            if (!response.ok) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '할 일 추가에 실패했습니다.',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                });
+                                return;
+                            }
+                            Swal.fire({
+                                icon: 'success',
+                                title: '할 일이 추가되었습니다.',
+                                showConfirmButton: false,
+                                timer: 1500
+                            });
+                            app.loadTodos();
+                            $('#add-todo-modal').modal('hide');
+                        });
+
+                    }, showTodoDetails(todo) {
+                        const modal = document.getElementById("todo-details-modal");
+                        modal.querySelector(".todo-title").value = todo.title;
+                        modal.querySelector(".todo-content").textContent = todo.content;
+                        modal.querySelector(".todo-date").textContent = todo.createdDate;
+                        $('#todo-details-modal').modal('show');
+
+                        modal.setAttribute('data-id', todo.id);
+                        app.editTodoMode = false;
+                    },
+                    deleteTodo() {
+                        const modal = document.getElementById("todo-details-modal");
+                        const todoId = modal.getAttribute('data-id');
+                        Swal.fire({
+                            title: '할 일을 삭제하시겠습니까?',
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#d33',
+                            cancelButtonColor: '#999',
+                            confirmButtonText: '삭제',
+                            cancelButtonText: '취소',
+                        }).then((result) => {
+                            if (!result.isConfirmed) {
+                                return;
+                            }
+                            fetch(`/api/todos/${todoId}`, {
+                                method: 'DELETE',
+                            }).then(response => {
+                                if (!response.ok) {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: '할 일 삭제에 실패했습니다.',
+                                        showConfirmButton: false,
+                                        timer: 1500
+                                    });
+                                    return;
+                                }
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: '할 일이 삭제되었습니다.',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                });
+                                app.loadTodos();
+                                $('#todo-details-modal').modal('hide');
+                            });
+                        });
+                    },
+                    initSortable() {
+                        let todoListElement = document.getElementById('todo-list');
+                        if (todoListElement) {
+                            const sortable = new Sortable(todoListElement, {
+                                animation: 150,
+                                draggable: ".todo-item",
+                                onEnd: (evt) => {
+                                    app.updatePosition();
+                                },
+                            });
+                        }
+                    },
+                    loadTodos() {
+                        fetch('/api/todos')
+                            .then(response => {
+                                if (!response.ok) {
+                                    console.log(`Error loading todos. Status Code: ${response.status}`);
+                                    return;
+                                }
+                                return response.json();
+                            }).then(data => {
+                            this.todos = data;
+                        });
+                    },
+                    updatePosition() {
+                        const todoListElement = document.getElementById('todo-list');
+                        const todoItems = todoListElement.querySelectorAll('.todo-item');
+                        const todoIds = Array.from(todoItems).map(todo => todo.getAttribute('data-id'));
+                        fetch('/api/todos/position', {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(todoIds)
+                        }).then(response => {
+                            if (!response.ok) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '할 일 순서 변경에 실패했습니다.',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                });
+                                return;
+                            }
+                        });
+                    },
+                    updateTodo() {
+                        const modal = document.getElementById("todo-details-modal");
+                        const todoId = modal.getAttribute('data-id');
+                        const title = modal.querySelector('.todo-title').value;
+                        const content = modal.querySelector('.todo-content').textContent;
+                        fetch(`/api/todos/${todoId}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                title: title,
+                                content: content,
+                            })
+                        }).then(response => {
+                            if (!response.ok) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '할 일 수정에 실패했습니다.',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                });
+                                return;
+                            }
+                            Swal.fire({
+                                icon: 'success',
+                                title: '할 일이 수정되었습니다.',
+                                showConfirmButton: false,
+                                timer: 1500
+                            });
+                            app.loadTodos();
+                            $('#todo-details-modal').modal('hide');
+                        });
+                    },
                 }
             }
         )
