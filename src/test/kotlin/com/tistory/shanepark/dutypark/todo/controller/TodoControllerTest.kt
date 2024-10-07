@@ -58,7 +58,8 @@ class TodoControllerTest : RestDocsTest() {
                         fieldWithPath("[].id").description("Todo ID"),
                         fieldWithPath("[].title").description("Todo Title"),
                         fieldWithPath("[].content").description("Todo Content"),
-                        fieldWithPath("[].position").description("Todo Position")
+                        fieldWithPath("[].position").description("Todo Position"),
+                        fieldWithPath("[].createdDate").description("createdDate")
                     )
                 )
             )
@@ -95,7 +96,8 @@ class TodoControllerTest : RestDocsTest() {
                         fieldWithPath("id").description("Todo ID"),
                         fieldWithPath("title").description("Todo Title"),
                         fieldWithPath("content").description("Todo Content"),
-                        fieldWithPath("position").description("Todo Position")
+                        fieldWithPath("position").description("Todo Position"),
+                        fieldWithPath("createdDate").description("createdDate")
                     )
                 )
             )
@@ -145,7 +147,8 @@ class TodoControllerTest : RestDocsTest() {
                         fieldWithPath("id").description("Todo ID"),
                         fieldWithPath("title").description("Updated Todo Title"),
                         fieldWithPath("content").description("Updated Todo Content"),
-                        fieldWithPath("position").description("Todo Position")
+                        fieldWithPath("position").description("Todo Position"),
+                        fieldWithPath("createdDate").description("createdDate")
                     )
                 )
             )
