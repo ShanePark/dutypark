@@ -624,11 +624,6 @@
                             app.editingSchedule.startDateTimeOld = app.editingSchedule.startDateTime;
                         }
                     ,
-                    todos() {
-                        this.$nextTick(() => {
-                            this.initSortable();
-                        });
-                    }
                 },
                 methods: {
                     addMonth(month) {
