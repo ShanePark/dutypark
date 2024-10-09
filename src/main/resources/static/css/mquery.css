@@ -168,5 +168,8 @@
         font-size: 1.5em;
     }
 
+    .todo-item .handle {
+        font-size: 2.3rem;
+    }
 
 }

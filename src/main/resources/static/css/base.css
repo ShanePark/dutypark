@@ -660,8 +660,12 @@ a.homeButton:hover {
 
 #todo-list-container {
     display: flex;
-    overflow-x: auto;
+    overflow: hidden;
     padding-top: 0.5rem;
+}
+
+#todo-list {
+    overflow-x: scroll;
 }
 
 .todo-item {
@@ -676,6 +680,7 @@ a.homeButton:hover {
     position: relative;
     user-select: none;
     cursor: pointer;
+    align-items: center;
 }
 
 .todo-item .handle {
@@ -689,13 +694,13 @@ a.homeButton:hover {
     background-color: #e2e8f0;
 }
 
-.todo-item.dragging {
-    opacity: 0.5;
+.todo-text {
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
 }
 
-.todo-text {
-    flex-grow: 1;
-    margin: 0.5rem 1rem;
+.todo-item.dragging {
+    opacity: 0.5;
 }
 
 input[readonly], textarea[readonly] {
