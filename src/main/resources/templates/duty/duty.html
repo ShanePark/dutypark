@@ -6,11 +6,16 @@
 </div>
 <div class="duty-vue" v-cloak th:if="${visible}">
   <div class="todo-container" v-if="isMyCalendar">
-    <div class="d-flex align-items-center">
-      <button id="add-todo-btn" v-on:click="addTodoModal()">할일&nbsp;+</button>
-      <div class="d-flex flex-row ms-3" id="todo-list-container">
+    <div class="d-flex">
+      <div id="add-todo-btn" v-on:click="addTodoModal()">
+        <span>할일 +</span>
+      </div>
+      <div class="d-flex flex-row" id="todo-list-container">
         <div class="d-flex flex-row" id="todo-list">
           <div v-for="todo in todos" class="todo-item" :data-id="todo.id">
+            <div class="handle">
+              <i class="bi bi-list"></i>
+            </div>
             <strong class="todo-text" v-text="todo.title" v-on:click="showTodoDetails(todo)"></strong>
           </div>
         </div>
@@ -1223,6 +1228,7 @@
                             const sortable = new Sortable(todoListElement, {
                                 animation: 150,
                                 draggable: ".todo-item",
+                                handle: '.handle',
                                 onEnd: (evt) => {
                                     app.updatePosition();
                                 },
