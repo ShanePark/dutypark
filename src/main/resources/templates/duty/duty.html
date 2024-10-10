@@ -395,6 +395,7 @@
         const departmentId = parseInt("[[${member.departmentId}]]");
         const loginMemberId = parseInt("[[${loginMember?.id}]]");
         const managerId = parseInt("[[${member.managerId}]]");
+        const isMyCalendar = loginMemberId === memberId;
 
         const app = new Vue({
                 el: '.duty-vue',
@@ -1025,7 +1026,7 @@
                     }
                     ,
                     loadFriends() {
-                        if (!loginMemberId || !app.isMyCalendar) {
+                        if (!loginMemberId || !isMyCalendar) {
                             return;
                         }
                         fetch('/api/friends')
@@ -1055,7 +1056,7 @@
                     }
                     ,
                     untag(scheduleId, friendId) {
-                        if (!app.isMyCalendar) {
+                        if (!isMyCalendar) {
                             return;
                         }
                         fetch(`/api/schedules/${scheduleId}/tags/${friendId}`, {
@@ -1075,7 +1076,7 @@
                     }
                     ,
                     untagSelf(schedule) {
-                        if (!app.isMyCalendar) {
+                        if (!isMyCalendar) {
                             return;
                         }
                         const scheduleId = schedule.id;
