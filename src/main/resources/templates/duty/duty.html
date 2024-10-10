@@ -1177,7 +1177,7 @@
                     }, showTodoDetails(todo) {
                         const modal = document.getElementById("todo-details-modal");
                         modal.querySelector(".todo-title").value = todo.title;
-                        modal.querySelector(".todo-content").textContent = todo.content;
+                        modal.querySelector(".todo-content").value = todo.content;
                         modal.querySelector(".todo-date").textContent = todo.createdDate;
                         $('#todo-details-modal').modal('show');
 
@@ -1273,7 +1273,7 @@
                         const modal = document.getElementById("todo-details-modal");
                         const todoId = modal.getAttribute('data-id');
                         const title = modal.querySelector('.todo-title').value;
-                        const content = modal.querySelector('.todo-content').textContent;
+                        const content = modal.querySelector('.todo-content').value;
                         fetch(`/api/todos/${todoId}`, {
                             method: 'PUT',
                             headers: {
