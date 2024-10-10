@@ -72,13 +72,13 @@ body a:hover {
     padding: 0 0 5px;
 }
 
-.day-grid .DAY.has-schedule {
-    filter: brightness(85%);
+.day-grid .DAY.has-schedule:not(.month-next):not(.month-prev) {
+    filter: brightness(90%);
 }
 
 .day-grid .month-prev,
 .day-grid .month-next {
-    filter: opacity(0.5);
+    filter: opacity(0.6);
 }
 
 .day-grid.editable .DAY:hover {
