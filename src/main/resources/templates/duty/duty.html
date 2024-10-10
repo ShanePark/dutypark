@@ -308,7 +308,7 @@
                 </div>
               </div>
               <div class="buttons mt-3" v-if="!isEditing(schedule)">
-                <template v-if="schedule.isTagged">
+                <template v-if="schedule.isTagged && isMyCalendar">
                   <button class="btn btn-danger" v-on:click="untagSelf(schedule)">태그제거</button>
                 </template>
                 <template v-else>
@@ -1025,7 +1025,7 @@
                     }
                     ,
                     loadFriends() {
-                        if (!loginMemberId) {
+                        if (!loginMemberId || !app.isMyCalendar) {
                             return;
                         }
                         fetch('/api/friends')
@@ -1055,6 +1055,9 @@
                     }
                     ,
                     untag(scheduleId, friendId) {
+                        if (!app.isMyCalendar) {
+                            return;
+                        }
                         fetch(`/api/schedules/${scheduleId}/tags/${friendId}`, {
                             method: 'DELETE',
                         }).then(response => {
@@ -1072,6 +1075,9 @@
                     }
                     ,
                     untagSelf(schedule) {
+                        if (!app.isMyCalendar) {
+                            return;
+                        }
                         const scheduleId = schedule.id;
                         const scheduleElement = document.getElementById('schedule-' + scheduleId);
                         const scheduleBy = scheduleElement.querySelector('.schedule-tags').querySelector('.schedule-tag').innerText;
