@@ -308,7 +308,7 @@
                 </div>
               </div>
               <div class="buttons mt-3" v-if="!isEditing(schedule)">
-                <template v-if="schedule.isTagged">
+                <template v-if="schedule.isTagged && isMyCalendar">
                   <button class="btn btn-danger" v-on:click="untagSelf(schedule)">태그제거</button>
                 </template>
                 <template v-else>
@@ -1025,7 +1025,7 @@
                     }
                     ,
                     loadFriends() {
-                        if (!loginMemberId) {
+                        if (!loginMemberId || !app.isMyCalendar) {
                             return;
                         }
                         fetch('/api/friends')
@@ -1055,6 +1055,9 @@
                     }
                     ,
                     untag(scheduleId, friendId) {
+                        if (!app.isMyCalendar) {
+                            return;
+                        }
                         fetch(`/api/schedules/${scheduleId}/tags/${friendId}`, {
                             method: 'DELETE',
                         }).then(response => {
@@ -1072,6 +1075,9 @@
                     }
                     ,
                     untagSelf(schedule) {
+                        if (!app.isMyCalendar) {
+                            return;
+                        }
                         const scheduleId = schedule.id;
                         const scheduleElement = document.getElementById('schedule-' + scheduleId);
                         const scheduleBy = scheduleElement.querySelector('.schedule-tags').querySelector('.schedule-tag').innerText;
@@ -1177,7 +1183,7 @@
                     }, showTodoDetails(todo) {
                         const modal = document.getElementById("todo-details-modal");
                         modal.querySelector(".todo-title").value = todo.title;
-                        modal.querySelector(".todo-content").textContent = todo.content;
+                        modal.querySelector(".todo-content").value = todo.content;
                         modal.querySelector(".todo-date").textContent = todo.createdDate;
                         $('#todo-details-modal').modal('show');
 
@@ -1187,39 +1193,27 @@
                     deleteTodo() {
                         const modal = document.getElementById("todo-details-modal");
                         const todoId = modal.getAttribute('data-id');
-                        Swal.fire({
-                            title: '할 일을 삭제하시겠습니까?',
-                            icon: 'warning',
-                            showCancelButton: true,
-                            confirmButtonColor: '#d33',
-                            cancelButtonColor: '#999',
-                            confirmButtonText: '삭제',
-                            cancelButtonText: '취소',
-                        }).then((result) => {
-                            if (!result.isConfirmed) {
-                                return;
-                            }
-                            fetch(`/api/todos/${todoId}`, {
-                                method: 'DELETE',
-                            }).then(response => {
-                                if (!response.ok) {
-                                    Swal.fire({
-                                        icon: 'error',
-                                        title: '할 일 삭제에 실패했습니다.',
-                                        showConfirmButton: false,
-                                        timer: 1500
-                                    });
-                                    return;
-                                }
+
+                        fetch(`/api/todos/${todoId}`, {
+                            method: 'DELETE',
+                        }).then(response => {
+                            if (!response.ok) {
                                 Swal.fire({
-                                    icon: 'success',
-                                    title: '할 일이 삭제되었습니다.',
+                                    icon: 'error',
+                                    title: '할 일 삭제에 실패했습니다.',
                                     showConfirmButton: false,
                                     timer: 1500
                                 });
-                                app.loadTodos();
-                                $('#todo-details-modal').modal('hide');
+                                return;
+                            }
+                            Swal.fire({
+                                icon: 'success',
+                                title: '할 일이 삭제되었습니다.',
+                                showConfirmButton: false,
+                                timer: 1500
                             });
+                            app.loadTodos();
+                            $('#todo-details-modal').modal('hide');
                         });
                     },
                     initSortable() {
@@ -1273,7 +1267,7 @@
                         const modal = document.getElementById("todo-details-modal");
                         const todoId = modal.getAttribute('data-id');
                         const title = modal.querySelector('.todo-title').value;
-                        const content = modal.querySelector('.todo-content').textContent;
+                        const content = modal.querySelector('.todo-content').value;
                         fetch(`/api/todos/${todoId}`, {
                             method: 'PUT',
                             headers: {

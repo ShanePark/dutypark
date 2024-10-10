@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest
 import net.gpedro.integrations.slack.SlackAttachment
 import net.gpedro.integrations.slack.SlackField
 import net.gpedro.integrations.slack.SlackMessage
+import org.apache.catalina.connector.ClientAbortException
 import org.slf4j.Logger
 import org.springframework.http.ResponseEntity
 import org.springframework.web.HttpRequestMethodNotSupportedException
@@ -35,7 +36,7 @@ class ErrorDetectAdvisor(
 
     @ExceptionHandler(Exception::class)
     fun handleException(req: HttpServletRequest, e: Exception) {
-        if (e is NoResourceFoundException) {
+        if (e is NoResourceFoundException || e is ClientAbortException) {
             return
         }
 
