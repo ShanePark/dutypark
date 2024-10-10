@@ -1187,39 +1187,27 @@
                     deleteTodo() {
                         const modal = document.getElementById("todo-details-modal");
                         const todoId = modal.getAttribute('data-id');
-                        Swal.fire({
-                            title: '할 일을 삭제하시겠습니까?',
-                            icon: 'warning',
-                            showCancelButton: true,
-                            confirmButtonColor: '#d33',
-                            cancelButtonColor: '#999',
-                            confirmButtonText: '삭제',
-                            cancelButtonText: '취소',
-                        }).then((result) => {
-                            if (!result.isConfirmed) {
-                                return;
-                            }
-                            fetch(`/api/todos/${todoId}`, {
-                                method: 'DELETE',
-                            }).then(response => {
-                                if (!response.ok) {
-                                    Swal.fire({
-                                        icon: 'error',
-                                        title: '할 일 삭제에 실패했습니다.',
-                                        showConfirmButton: false,
-                                        timer: 1500
-                                    });
-                                    return;
-                                }
+
+                        fetch(`/api/todos/${todoId}`, {
+                            method: 'DELETE',
+                        }).then(response => {
+                            if (!response.ok) {
                                 Swal.fire({
-                                    icon: 'success',
-                                    title: '할 일이 삭제되었습니다.',
+                                    icon: 'error',
+                                    title: '할 일 삭제에 실패했습니다.',
                                     showConfirmButton: false,
                                     timer: 1500
                                 });
-                                app.loadTodos();
-                                $('#todo-details-modal').modal('hide');
+                                return;
+                            }
+                            Swal.fire({
+                                icon: 'success',
+                                title: '할 일이 삭제되었습니다.',
+                                showConfirmButton: false,
+                                timer: 1500
                             });
+                            app.loadTodos();
+                            $('#todo-details-modal').modal('hide');
                         });
                     },
                     initSortable() {

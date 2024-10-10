@@ -656,16 +656,19 @@ a.homeButton:hover {
     display: flex;
     align-items: center;
     justify-content: center;
+    min-height: 60px;
+    border-right: 0.5px solid black;
 }
 
 #todo-list-container {
     display: flex;
     overflow: hidden;
-    padding-top: 0.5rem;
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
 }
 
 #todo-list {
-    overflow-x: scroll;
+    overflow-x: auto;
 }
 
 .todo-item {
