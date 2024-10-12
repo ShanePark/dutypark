@@ -194,7 +194,8 @@
             </div>
             <div class="input-group">
               <span class="input-group-text" id="todo-content-input">내용</span>
-              <textarea rows="4" class="todo-content form-control" aria-label="content" aria-labelledby="todo-content-input"
+              <textarea rows="4" class="todo-content form-control" aria-label="content"
+                        aria-labelledby="todo-content-input"
                         :readonly="!editTodoMode"></textarea>
             </div>
           </div>
@@ -233,7 +234,7 @@
               class="form-control todo-content"
               name="content"
               rows="4"
-              placeholder="할일 상세내용"
+              placeholder="할일 상세(선택)"
           ></textarea>
         </div>
         <div class="modal-footer">
@@ -1151,6 +1152,10 @@
                         const addTodoModal = document.getElementById('add-todo-modal');
                         const title = addTodoModal.querySelector('.todo-title').value;
                         const content = addTodoModal.querySelector('.todo-content').value;
+                        if (!title) {
+                            alertTodoTitle();
+                            return;
+                        }
 
                         fetch('/api/todos', {
                             method: 'POST',
@@ -1269,6 +1274,12 @@
                         const todoId = modal.getAttribute('data-id');
                         const title = modal.querySelector('.todo-title').value;
                         const content = modal.querySelector('.todo-content').value;
+
+                        if (!title) {
+                            alertTodoTitle();
+                            return;
+                        }
+
                         fetch(`/api/todos/${todoId}`, {
                             method: 'PUT',
                             headers: {
@@ -1338,6 +1349,15 @@
             return false;
         }
         return true;
+    }
+
+    function alertTodoTitle() {
+        Swal.fire({
+            icon: 'error',
+            title: '할일 제목을 입력해주세요.',
+            showConfirmButton: false,
+            timer: 1500
+        });
     }
 
 </script>
