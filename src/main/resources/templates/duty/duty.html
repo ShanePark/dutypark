@@ -431,6 +431,8 @@
                     friends: [],
                     todos: [],
                     editTodoMode: false,
+                    dDaysLoaded: false,
+                    dDaysPromise: null,
                 }, mounted() {
                     if (departmentId) {
                         this.loadDepartment();
@@ -656,8 +658,13 @@
                             },
                             success: (data) => {
                                 this.duties = data;
-                                // wait for rendering then check d-day
                                 setTimeout(() => {
+                                    if (!this.dDaysLoaded) {
+                                        this.dDaysPromise.then(() => {
+                                            this.checkDDays();
+                                        });
+                                        return;
+                                    }
                                     this.checkDDays();
                                 });
                             }
@@ -665,26 +672,30 @@
                     }
                     ,
                     loadDDays() {
-                        $.ajax({
-                            url: '/api/dday/' + memberId,
-                            type: 'GET',
-                            success: (data) => {
-                                this.dDays = data;
-                                const selectedDdayId = parseInt(localStorage.getItem('selectedDday_' + memberId));
-                                for (const dDay of app.dDays) {
-                                    if (dDay.id === selectedDdayId) {
-                                        app.selectedDday = dDay;
+                        this.dDaysPromise = new Promise((resolve) => {
+                            $.ajax({
+                                url: '/api/dday/' + memberId,
+                                type: 'GET',
+                                success: (data) => {
+                                    this.dDays = data;
+                                    const selectedDdayId = parseInt(localStorage.getItem('selectedDday_' + memberId));
+                                    for (const dDay of app.dDays) {
+                                        if (dDay.id === selectedDdayId) {
+                                            app.selectedDday = dDay;
+                                        }
+                                        if (dDay.calc === 0) {
+                                            dDay.dDayText = 'D-Day';
+                                        } else if (dDay.calc < 0) {
+                                            dDay.dDayText = 'D+' + -dDay.calc;
+                                        } else {
+                                            dDay.dDayText = 'D-' + dDay.calc;
+                                        }
                                     }
-                                    if (dDay.calc === 0) {
-                                        dDay.dDayText = 'D-Day';
-                                    } else if (dDay.calc < 0) {
-                                        dDay.dDayText = 'D+' + -dDay.calc;
-                                    } else {
-                                        dDay.dDayText = 'D-' + dDay.calc;
-                                    }
+                                    this.dDaysLoaded = true;
+                                    resolve();
                                 }
-                            }
-                        })
+                            })
+                        });
                     }
                     ,
                     checkDDays() {
