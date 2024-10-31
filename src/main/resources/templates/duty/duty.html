@@ -337,10 +337,6 @@
                 <button class="btn btn-secondary" v-on:click="cancelEditMode()">취소</button>
               </div>
             </div>
-            <div class="schedule schedule-add-button card shadow"
-                 v-if="!isCreateScheduleMode && !editingSchedule.id">
-              <button class="btn btn-success" v-on:click="scheduleCreateMode()">일정 추가</button>
-            </div>
             <div class="schedule schedule-add card shadow" v-if="isCreateScheduleMode">
               <label>일정 추가 <span class="content-length"
                                  v-text="createSchedule.content.length + ' / 50'"></span></label>
@@ -380,6 +376,10 @@
                 <button class="btn btn-secondary" v-on:click="cancelCreateSchedule">취소</button>
               </div>
             </div>
+          </div>
+          <div class="schedule-add-button card shadow"
+               v-if="!isCreateScheduleMode && !editingSchedule.id">
+            <button class="btn btn-success" v-on:click="scheduleCreateMode()">일정 추가</button>
           </div>
         </div>
         <div class="modal-footer">
