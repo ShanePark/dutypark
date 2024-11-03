@@ -52,10 +52,10 @@ jobs:
       - name: Add remote server to known hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan ${{ secrets.SSH_IP }} >> ~/.ssh/known_hosts
+          ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_IP }} >> ~/.ssh/known_hosts
       - name: SCP transfer
-        run: scp *.jar ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }}:/shane
+        run: scp -P ${{ secrets.SSH_PORT }} *.jar ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }}:/shane
       - name: Execute remote commands
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} "sudo fuser -k 443/tcp || true"
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} "sudo nohup java -jar /shane/*.jar --spring.profiles.active=op > /shane/nohup.log 2>&1 &"
+          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} "sudo fuser -k 443/tcp || true"
+          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} "sudo nohup java -jar /shane/*.jar --spring.profiles.active=op > /shane/nohup.log 2>&1 &"
