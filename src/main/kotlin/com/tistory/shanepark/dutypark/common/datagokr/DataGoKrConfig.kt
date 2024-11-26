@@ -26,7 +26,7 @@ class DataGoKrConfig {
             .build()
 
         return HttpServiceProxyFactory
-            .builder(WebClientAdapter.forClient(client))
+            .builderFor(WebClientAdapter.create(client))
             .build()
             .createClient(DataGoKrApi::class.java)
     }
