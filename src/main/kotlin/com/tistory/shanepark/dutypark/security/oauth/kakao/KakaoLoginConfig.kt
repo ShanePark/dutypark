@@ -24,8 +24,7 @@ class KakaoLoginConfig {
             .clientConnector(connector)
             .build()
 
-        return HttpServiceProxyFactory
-            .builder(WebClientAdapter.forClient(client))
+        return HttpServiceProxyFactory.builderFor(WebClientAdapter.create(client))
             .build()
             .createClient(KakaoTokenApi::class.java)
     }
@@ -42,7 +41,7 @@ class KakaoLoginConfig {
             .build()
 
         return HttpServiceProxyFactory
-            .builder(WebClientAdapter.forClient(client))
+            .builderFor(WebClientAdapter.create(client))
             .build()
             .createClient(KakaoUserInfoApi::class.java)
     }
