@@ -37,16 +37,11 @@ class SecurityConfig(
         val jwtAuthFilter = JwtAuthFilter(authService, jwtConfig, isSecure)
         http.addFilterBefore(jwtAuthFilter, AuthorizationFilter::class.java)
 
-        http.authorizeHttpRequests()
-            .anyRequest()
-            .permitAll()
-
-        http.logout().logoutUrl("/logout")
-            .logoutSuccessHandler(logoutHandler)
-            .and()
-            .csrf().disable()
-
-        return http.build()
+        return http
+            .authorizeHttpRequests { it.anyRequest().permitAll() }
+            .logout { it.logoutUrl("/logout").logoutSuccessHandler(logoutHandler) }
+            .csrf { it.disable() }
+            .build()
     }
 
     @Bean
