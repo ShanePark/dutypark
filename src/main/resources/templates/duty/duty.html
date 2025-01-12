@@ -5,6 +5,23 @@
   </div>
 </div>
 <div class="duty-vue" v-cloak th:if="${visible}">
+  <div class="todo-container" v-if="isMyCalendar">
+    <div class="d-flex">
+      <div id="add-todo-btn" v-on:click="addTodoModal()">
+        <span>할일 +</span>
+      </div>
+      <div class="d-flex flex-row" id="todo-list-container">
+        <div class="d-flex flex-row" id="todo-list">
+          <div v-for="todo in todos" class="todo-item" :data-id="todo.id">
+            <div class="handle">
+              <i class="bi bi-list"></i>
+            </div>
+            <strong class="todo-text" v-text="todo.title" v-on:click="showTodoDetails(todo)"></strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
   <div th:if="${member.department}" class="calendar" th:attr="data-member_id=${member.id}">
     <div class="month-control row">
       <div class="month-control-left col-md-2">
@@ -38,18 +55,22 @@
       <span v-text="type.name"></span>
     </span>
       <button v-if="isMyCalendar"
-              class="btn btn-warning"
+              class="btn btn-outline-dark"
               v-on:click="privacyPopup()"
               v-text="'공개대상:' + privacyLabel"
       >
       </button>
       <button v-if="canEdit && !batchEditMode"
-              class="edit-btn btn btn-info"
+              class="edit-btn btn btn-warning"
               v-on:click="batchEditMode=true;">편집모드
       </button>
       <button v-if="canEdit && batchEditMode"
               class="edit-btn btn btn-success"
               v-on:click="batchEditMode=false;">편집완료
+      </button>
+      <button v-if="canEdit && batchEditMode"
+              class="edit-btn btn btn-warning"
+              v-on:click="showBatchUpdate">한번에 수정
       </button>
     </div>
     <div class="day-of-the-week row-7">
@@ -142,7 +163,7 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <p>내 신가표를 공개할 범위를 설정하세요</p>
+          <p>내 시간표를 공개할 범위를 설정하세요</p>
           <div class="privacy-config btn-group" role="group" aria-label="Privacy setting">
             <button type="button" class="btn btn-success" :class="{'selected': calendarVisibility=='PUBLIC'}"
                     data-privacy="PUBLIC" v-on:click="setPrivacy">누구나
@@ -157,6 +178,71 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="todo-details-modal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="todo-details-title">할일 상세</h5>
+        </div>
+        <div class="modal-body">
+          <div class="modal-body">
+            <div class="input-group mb-2">
+              <span class="input-group-text" id="todo-title-input">제목</span>
+              <input type="text" class="todo-title form-control" aria-labelledby="todo-title-input"
+                     aria-label="title" :readonly="!editTodoMode"/>
+            </div>
+            <div class="input-group">
+              <span class="input-group-text" id="todo-content-input">내용</span>
+              <textarea rows="4" class="todo-content form-control" aria-label="content"
+                        aria-labelledby="todo-content-input"
+                        :readonly="!editTodoMode"></textarea>
+            </div>
+          </div>
+          <div class="text-right">
+            <p class="text-muted todo-date"></p>
+            <button type="button" class="btn btn-info btn-sm" v-on:click="editTodoMode=true" v-if="!editTodoMode">수정
+            </button>
+            <button type="button" class="btn btn-success btn-sm" v-on:click="updateTodo()" v-if="editTodoMode">저장
+            </button>
+            <button type="button" class="btn btn-danger btn-sm" v-on:click="deleteTodo()">삭제</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div
+      class="modal fade"
+      id="add-todo-modal"
+      tabindex="-1"
+      aria-hidden="true"
+  >
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addModalLabel">할일 추가</h5>
+        </div>
+        <div class="modal-body">
+          <input
+              type="text"
+              class="form-control todo-title"
+              name="title"
+              placeholder="할일 제목"
+          />
+          <textarea
+              class="form-control todo-content"
+              name="content"
+              rows="4"
+              placeholder="할일 상세(선택)"
+          ></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-success" v-on:click="addTodo()">Add</button>
         </div>
       </div>
     </div>
@@ -186,6 +272,7 @@
           </div>
           <div class="schedules mt-4">
             <div class="schedule card shadow"
+                 v-if="!isCreateScheduleMode && (editingSchedule.id == null || isEditing(schedule) )"
                  :class="{'visibility-public': schedule.visibility == 'PUBLIC', 'visibility-friends': schedule.visibility == 'FRIENDS', 'visibility-private': schedule.visibility == 'PRIVATE'}"
                  v-for="(schedule, s_index) in schedulesByDays[detailView.index]"
                  :id="'schedule-' + schedule.id">
@@ -226,7 +313,7 @@
                 </div>
               </div>
               <div class="buttons mt-3" v-if="!isEditing(schedule)">
-                <template v-if="schedule.isTagged">
+                <template v-if="schedule.isTagged && isMyCalendar">
                   <button class="btn btn-danger" v-on:click="untagSelf(schedule)">태그제거</button>
                 </template>
                 <template v-else>
@@ -253,10 +340,6 @@
                 <button class="btn btn-success" v-on:click="editSchedule()">저장</button>
                 <button class="btn btn-secondary" v-on:click="cancelEditMode()">취소</button>
               </div>
-            </div>
-            <div class="schedule schedule-add-button card shadow"
-                 v-if="!isCreateScheduleMode && !editingSchedule.id">
-              <button class="btn btn-success" v-on:click="scheduleCreateMode()">일정 추가</button>
             </div>
             <div class="schedule schedule-add card shadow" v-if="isCreateScheduleMode">
               <label>일정 추가 <span class="content-length"
@@ -298,6 +381,10 @@
               </div>
             </div>
           </div>
+          <div class="schedule-add-button card shadow"
+               v-if="!isCreateScheduleMode && !editingSchedule.id">
+            <button class="btn btn-success" v-on:click="scheduleCreateMode()">일정 추가</button>
+          </div>
         </div>
         <div class="modal-footer">
         </div>
@@ -313,6 +400,7 @@
         const departmentId = parseInt("[[${member.departmentId}]]");
         const loginMemberId = parseInt("[[${loginMember?.id}]]");
         const managerId = parseInt("[[${member.managerId}]]");
+        const isMyCalendar = loginMemberId === memberId;
 
         const app = new Vue({
                 el: '.duty-vue',
@@ -345,6 +433,10 @@
                         visibility: '',
                     },
                     friends: [],
+                    todos: [],
+                    editTodoMode: false,
+                    dDaysLoaded: false,
+                    dDaysPromise: null,
                 }, mounted() {
                     if (departmentId) {
                         this.loadDepartment();
@@ -354,6 +446,7 @@
                     this.loadHolidays(this.year, this.month);
                     this.loadFriends();
                     this.loadDDays();
+                    this.loadTodos();
 
                     document.addEventListener('click', function (event) {
                         if (event.target && event.target.matches('.schedule-tag-add')) {
@@ -376,6 +469,7 @@
                             app.untag(scheduleId, friendId);
                         }
                     });
+                    this.initSortable();
                 }, computed: {
                     combinedYearMonth: {
                         get() {
@@ -542,6 +636,7 @@
                             }
                             app.editingSchedule.startDateTimeOld = app.editingSchedule.startDateTime;
                         }
+                    ,
                 },
                 methods: {
                     addMonth(month) {
@@ -567,8 +662,13 @@
                             },
                             success: (data) => {
                                 this.duties = data;
-                                // wait for rendering then check d-day
                                 setTimeout(() => {
+                                    if (!this.dDaysLoaded) {
+                                        this.dDaysPromise.then(() => {
+                                            this.checkDDays();
+                                        });
+                                        return;
+                                    }
                                     this.checkDDays();
                                 });
                             }
@@ -576,26 +676,30 @@
                     }
                     ,
                     loadDDays() {
-                        $.ajax({
-                            url: '/api/dday/' + memberId,
-                            type: 'GET',
-                            success: (data) => {
-                                this.dDays = data;
-                                const selectedDdayId = parseInt(localStorage.getItem('selectedDday_' + memberId));
-                                for (const dDay of app.dDays) {
-                                    if (dDay.id === selectedDdayId) {
-                                        app.selectedDday = dDay;
+                        this.dDaysPromise = new Promise((resolve) => {
+                            $.ajax({
+                                url: '/api/dday/' + memberId,
+                                type: 'GET',
+                                success: (data) => {
+                                    this.dDays = data;
+                                    const selectedDdayId = parseInt(localStorage.getItem('selectedDday_' + memberId));
+                                    for (const dDay of app.dDays) {
+                                        if (dDay.id === selectedDdayId) {
+                                            app.selectedDday = dDay;
+                                        }
+                                        if (dDay.calc === 0) {
+                                            dDay.dDayText = 'D-Day';
+                                        } else if (dDay.calc < 0) {
+                                            dDay.dDayText = 'D+' + -dDay.calc;
+                                        } else {
+                                            dDay.dDayText = 'D-' + dDay.calc;
+                                        }
                                     }
-                                    if (dDay.calc === 0) {
-                                        dDay.dDayText = 'D-Day';
-                                    } else if (dDay.calc < 0) {
-                                        dDay.dDayText = 'D+' + -dDay.calc;
-                                    } else {
-                                        dDay.dDayText = 'D-' + dDay.calc;
-                                    }
+                                    this.dDaysLoaded = true;
+                                    resolve();
                                 }
-                            }
-                        })
+                            })
+                        });
                     }
                     ,
                     checkDDays() {
@@ -750,13 +854,8 @@
                     }
                     ,
                     scheduleCreateMode() {
-                        app.cancelEditMode();
                         app.isCreateScheduleMode = true;
                         const schedules = document.querySelector('#detail-view-modal .schedules');
-                        console.log(schedules);
-                        requestAnimationFrame(() => {
-                            schedules.scrollTop = schedules.scrollHeight;
-                        });
                     },
                     cancelCreateSchedule() {
                         app.isCreateScheduleMode = false;
@@ -943,7 +1042,7 @@
                     }
                     ,
                     loadFriends() {
-                        if (!loginMemberId) {
+                        if (!loginMemberId || !isMyCalendar) {
                             return;
                         }
                         fetch('/api/friends')
@@ -973,6 +1072,9 @@
                     }
                     ,
                     untag(scheduleId, friendId) {
+                        if (!isMyCalendar) {
+                            return;
+                        }
                         fetch(`/api/schedules/${scheduleId}/tags/${friendId}`, {
                             method: 'DELETE',
                         }).then(response => {
@@ -990,6 +1092,9 @@
                     }
                     ,
                     untagSelf(schedule) {
+                        if (!isMyCalendar) {
+                            return;
+                        }
                         const scheduleId = schedule.id;
                         const scheduleElement = document.getElementById('schedule-' + scheduleId);
                         const scheduleBy = scheduleElement.querySelector('.schedule-tags').querySelector('.schedule-tag').innerText;
@@ -1051,6 +1156,227 @@
                             }
                             app.calendarVisibility = privacy;
                         });
+                    },
+                    addTodoModal() {
+                        const modal = document.getElementById('add-todo-modal');
+                        modal.querySelector('.todo-title').value = '';
+                        modal.querySelector('.todo-content').value = '';
+                        $('#add-todo-modal').modal('show');
+                    },
+                    addTodo() {
+                        const addTodoModal = document.getElementById('add-todo-modal');
+                        const title = addTodoModal.querySelector('.todo-title').value;
+                        const content = addTodoModal.querySelector('.todo-content').value;
+                        if (!title) {
+                            alertTodoTitle();
+                            return;
+                        }
+
+                        fetch('/api/todos', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                title: title,
+                                content: content,
+                            })
+                        }).then(response => {
+                            if (!response.ok) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '할 일 추가에 실패했습니다.',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                });
+                                return;
+                            }
+                            Swal.fire({
+                                icon: 'success',
+                                title: '할 일이 추가되었습니다.',
+                                showConfirmButton: false,
+                                timer: 1500
+                            });
+                            app.loadTodos();
+                            $('#add-todo-modal').modal('hide');
+                        });
+
+                    }, showTodoDetails(todo) {
+                        const modal = document.getElementById("todo-details-modal");
+                        modal.querySelector(".todo-title").value = todo.title;
+                        modal.querySelector(".todo-content").value = todo.content;
+                        modal.querySelector(".todo-date").textContent = todo.createdDate;
+                        $('#todo-details-modal').modal('show');
+
+                        modal.setAttribute('data-id', todo.id);
+                        app.editTodoMode = false;
+                    },
+                    deleteTodo() {
+                        const modal = document.getElementById("todo-details-modal");
+                        const todoId = modal.getAttribute('data-id');
+
+                        fetch(`/api/todos/${todoId}`, {
+                            method: 'DELETE',
+                        }).then(response => {
+                            if (!response.ok) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '할 일 삭제에 실패했습니다.',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                });
+                                return;
+                            }
+                            Swal.fire({
+                                icon: 'success',
+                                title: '할 일이 삭제되었습니다.',
+                                showConfirmButton: false,
+                                timer: 1500
+                            });
+                            app.loadTodos();
+                            $('#todo-details-modal').modal('hide');
+                        });
+                    },
+                    initSortable() {
+                        let todoListElement = document.getElementById('todo-list');
+                        if (todoListElement) {
+                            const sortable = new Sortable(todoListElement, {
+                                animation: 150,
+                                draggable: ".todo-item",
+                                handle: '.handle',
+                                onEnd: (evt) => {
+                                    app.updatePosition();
+                                },
+                            });
+                        }
+                    },
+                    loadTodos() {
+                        fetch('/api/todos')
+                            .then(response => {
+                                if (!response.ok) {
+                                    console.log(`Error loading todos. Status Code: ${response.status}`);
+                                    return;
+                                }
+                                return response.json();
+                            }).then(data => {
+                            this.todos = data;
+                        });
+                    },
+                    updatePosition() {
+                        const todoListElement = document.getElementById('todo-list');
+                        const todoItems = todoListElement.querySelectorAll('.todo-item');
+                        const todoIds = Array.from(todoItems).map(todo => todo.getAttribute('data-id'));
+                        fetch('/api/todos/position', {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(todoIds)
+                        }).then(response => {
+                            if (!response.ok) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '할 일 순서 변경에 실패했습니다.',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                });
+                                return;
+                            }
+                        });
+                    },
+                    updateTodo() {
+                        const modal = document.getElementById("todo-details-modal");
+                        const todoId = modal.getAttribute('data-id');
+                        const title = modal.querySelector('.todo-title').value;
+                        const content = modal.querySelector('.todo-content').value;
+
+                        if (!title) {
+                            alertTodoTitle();
+                            return;
+                        }
+
+                        fetch(`/api/todos/${todoId}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                title: title,
+                                content: content,
+                            })
+                        }).then(response => {
+                            if (!response.ok) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '할 일 수정에 실패했습니다.',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                });
+                                return;
+                            }
+                            Swal.fire({
+                                icon: 'success',
+                                title: '할 일이 수정되었습니다.',
+                                showConfirmButton: false,
+                                timer: 1500
+                            });
+                            app.loadTodos();
+                            $('#todo-details-modal').modal('hide');
+                        });
+                    },
+                    showBatchUpdate() {
+                        Swal.fire({
+                            title: '한번에 수정',
+                            html: `
+                              <p>${app.year}년 ${app.month}월의 기본 듀티를 선택해주세요.</p>
+                              <p>현재 월의 모든 날짜가 선택한 듀티로 설정됩니다.</p>
+                              <p class="bg-warning">클릭시 바로 변경됩니다.</p>
+                              <div>
+                                  ${app.department.dutyTypes.map(type => `
+                                      <button class="btn duty-type BACKGROUND-${type.color}" data-id="${type.id}">
+                                          ${type.name}
+                                      </button>
+                                  `).join('')}
+                              </div>`,
+                            showConfirmButton: false,
+                            showCancelButton: true,
+                            cancelButtonText: '취소',
+                            didOpen: () => {
+                                const buttons = document.querySelectorAll('.swal2-html-container button');
+                                buttons.forEach(button => {
+                                    button.addEventListener('click', () => {
+                                        const dutyId = button.getAttribute('data-id');
+                                        this.batchUpdate(dutyId);
+                                        Swal.close();
+                                    });
+                                });
+                            }
+                        });
+                    },
+                    batchUpdate(dutyTypeId) {
+                        fetch(`/api/duty/batch`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                year: app.year,
+                                month: app.month,
+                                dutyTypeId: dutyTypeId,
+                                memberId: memberId,
+                            })
+                        }).then(response => {
+                            if (!response.ok) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '일괄 수정에 실패했습니다.',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                });
+                                return;
+                            }
+                            app.loadDuties(app.year, app.month);
+                        });
                     }
                 }
             }
@@ -1092,6 +1418,15 @@
             return false;
         }
         return true;
+    }
+
+    function alertTodoTitle() {
+        Swal.fire({
+            icon: 'error',
+            title: '할일 제목을 입력해주세요.',
+            showConfirmButton: false,
+            timer: 1500
+        });
     }
 
 </script>

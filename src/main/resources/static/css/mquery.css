@@ -20,6 +20,10 @@
         font-size: 1.2em;
     }
 
+    .todo-container {
+        font-size: 1.5em;
+    }
+
     header a {
         font-size: 1.5em;
     }
@@ -138,6 +142,34 @@
 
     .member-info {
         font-size: 1.8em;
+    }
+
+    #add-todo-modal .modal-dialog,
+    #add-todo-modal .modal-header,
+    #todo-details-modal .modal-dialog,
+    #todo-details-modal .modal-header {
+        max-width: 90%;
+        font-size: 1.5rem;
+    }
+
+    #add-todo-modal h5,
+    #todo-details-modal h5 {
+        font-size: 2em;
+    }
+
+    #add-todo-modal input,
+    #add-todo-modal textarea,
+    #add-todo-modal button,
+    #add-todo-modal span,
+    #todo-details-modal input,
+    #todo-details-modal textarea,
+    #todo-details-modal button,
+    #todo-details-modal span {
+        font-size: 1.5em;
+    }
+
+    .todo-item .handle {
+        font-size: 2.3rem;
     }
 
 }

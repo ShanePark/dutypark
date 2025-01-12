@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.duty.service
 
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
+import com.tistory.shanepark.dutypark.duty.domain.dto.DutyBatchUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
@@ -68,6 +69,38 @@ class DutyService(
         duty.dutyType = dutyType
     }
 
+    fun update(dutyBatchUpdateDto: DutyBatchUpdateDto) {
+        val member = memberRepository.findById(dutyBatchUpdateDto.memberId).orElseThrow()
+        val dutyType: DutyType? = dutyBatchUpdateDto.dutyTypeId?.let {
+            dutyTypeRepository.findById(it).orElseThrow()
+        }
+
+        // 1. delete all duties with same year and month
+        val old = dutyRepository.findAllByMemberAndDutyYearAndDutyMonth(
+            member,
+            dutyBatchUpdateDto.year,
+            dutyBatchUpdateDto.month
+        )
+        dutyRepository.deleteAll(old)
+
+        if (dutyType == null) {
+            return
+        }
+
+        // 2. make all duties if dutyTypeId is not null
+        val duties = (1..YearMonth.of(dutyBatchUpdateDto.year, dutyBatchUpdateDto.month).lengthOfMonth())
+            .map { day ->
+                Duty(
+                    member = member,
+                    dutyYear = dutyBatchUpdateDto.year,
+                    dutyMonth = dutyBatchUpdateDto.month,
+                    dutyDay = day,
+                    dutyType = dutyType
+                )
+            }
+        dutyRepository.saveAll(duties)
+    }
+
     fun save(duty: Duty): Duty {
         return dutyRepository.save(duty)
     }
@@ -128,7 +161,13 @@ class DutyService(
         return answer
     }
 
-    private fun addDutyDto(yearMonth: YearMonth, day: Int, duty: Duty?, list: MutableList<DutyDto>, defaultDutyColor: Color) {
+    private fun addDutyDto(
+        yearMonth: YearMonth,
+        day: Int,
+        duty: Duty?,
+        list: MutableList<DutyDto>,
+        defaultDutyColor: Color
+    ) {
         val dutyDto = DutyDto(
             year = yearMonth.year,
             month = yearMonth.month.value,

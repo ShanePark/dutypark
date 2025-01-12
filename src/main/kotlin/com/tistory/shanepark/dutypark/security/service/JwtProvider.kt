@@ -18,13 +18,9 @@ class JwtProvider(
     private val dutyparkProperties: DutyparkProperties,
     jwtConfig: JwtConfig,
 ) {
-    private val key: Key
+    private val key: Key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtConfig.secret))
     private val tokenValidityInMilliseconds: Long = 1000L * jwtConfig.tokenValidityInSeconds
     private val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(JwtProvider::class.java)
-
-    init {
-        key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtConfig.secret))
-    }
 
     fun createToken(member: Member): String {
 

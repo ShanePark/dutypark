@@ -1,0 +1,2 @@
+ALTER TABLE `todo`
+    MODIFY COLUMN `content` TEXT NOT NULL;

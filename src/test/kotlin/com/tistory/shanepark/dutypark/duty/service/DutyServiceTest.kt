@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.duty.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
+import com.tistory.shanepark.dutypark.duty.domain.dto.DutyBatchUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
@@ -287,5 +288,89 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
             dutyService.getDuties(target.id!!, YearMonth.of(2023, 4), loginMember(login))
         }
     }
+
+    @Test
+    fun `duty batch update set all duties`() {
+        // Given
+        val member = TestData.member
+        val dutyTypes = TestData.dutyTypes
+
+        // When
+        dutyService.update(
+            DutyBatchUpdateDto(
+                year = 2025,
+                month = 1,
+                dutyTypeId = dutyTypes[1].id,
+                memberId = member.id!!
+            )
+        )
+
+        // Then
+        val duties = dutyService.getDutiesAsMap(member, 2025, 1)
+        assertThat(duties).hasSize(31)
+        assertThat(duties.filter { it.value?.dutyType == dutyTypes[1].name }).hasSize(31)
+    }
+
+    @Test
+    fun `duty batch update delete all duties if dutyTypeId is null`() {
+        // Given
+        val member = TestData.member
+        val dutyTypes = TestData.dutyTypes
+        dutyRepository.save(
+            Duty(
+                dutyYear = 2025,
+                dutyMonth = 1,
+                dutyDay = 1,
+                dutyType = dutyTypes[0],
+                member = member
+            )
+        )
+
+        // When
+        dutyService.update(
+            DutyBatchUpdateDto(
+                year = 2025,
+                month = 1,
+                dutyTypeId = null,
+                memberId = member.id!!
+            )
+        )
+
+        // Then
+        val duties = dutyService.getDutiesAsMap(member, 2025, 1)
+        assertThat(duties).isEmpty()
+    }
+
+    @Test
+    fun `duty batch update dutyTypeId if already exists`() {
+        // Given
+        val member = TestData.member
+        val dutyTypes = TestData.dutyTypes
+        dutyRepository.save(
+            Duty(
+                dutyYear = 2025,
+                dutyMonth = 1,
+                dutyDay = 1,
+                dutyType = dutyTypes[0],
+                member = member
+            )
+        )
+
+        // When
+        dutyService.update(
+            DutyBatchUpdateDto(
+                year = 2025,
+                month = 1,
+                dutyTypeId = dutyTypes[1].id,
+                memberId = member.id!!
+            )
+        )
+
+        // Then
+        val duties = dutyService.getDutiesAsMap(member, 2025, 1)
+        assertThat(duties).hasSize(31)
+        assertThat(duties.filter { it.value?.dutyType == dutyTypes[1].name }).hasSize(31)
+    }
+
 
 }

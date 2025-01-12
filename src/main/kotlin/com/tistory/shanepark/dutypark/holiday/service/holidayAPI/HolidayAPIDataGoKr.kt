@@ -28,7 +28,7 @@ class HolidayAPIDataGoKr(
     private lateinit var serviceKey: String
 
     override fun requestHolidays(year: Int): List<HolidayDto> {
-        log.info("Requesting holidays from DataGoKr API...")
+        log.info("Requesting holidays from DataGoKr API... year:{}", year)
         val stopWatch = StopWatch()
         stopWatch.start()
         val result = dataGoKrApi.getHolidays(serviceKey = serviceKey, year = year)
