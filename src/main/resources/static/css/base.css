@@ -710,3 +710,11 @@ input[readonly], textarea[readonly] {
     background-color: #f8f9fa;
     cursor: not-allowed;
 }
+
+.search-bar input {
+    border-radius: 10px 0 0 10px;
+}
+
+.search-bar .btn {
+    border-radius: 0 10px 10px 0;
+}

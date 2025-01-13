@@ -23,14 +23,14 @@ class ScheduleSearchServiceDBImpl(
         loginMember: LoginMember,
         targetMemberId: Long,
         page: Pageable,
-        keyword: String
+        query: String
     ): Page<ScheduleSearchResult> {
         val target = memberRepository.findById(targetMemberId).orElseThrow()
         val availableVisibilities = friendService.availableVisibilities(loginMember, target)
 
         return scheduleRepository.findByMemberAndContentContainingAndVisibilityIn(
             member = target,
-            content = keyword,
+            content = query,
             visibility = availableVisibilities,
             pageable = page
         ).map { ScheduleSearchResult.of(it) }

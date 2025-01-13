@@ -185,7 +185,7 @@ class FriendService(
         if (loginMember == null)
             return setOf(Visibility.PUBLIC)
         if (loginMember.id == member.id) {
-            return Visibility.values().toSet()
+            return Visibility.entries.toSet()
         }
         if (isFriend(loginMember.id, member.id!!)) {
             return setOf(Visibility.PUBLIC, Visibility.FRIENDS)

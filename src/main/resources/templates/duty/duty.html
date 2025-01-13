@@ -25,9 +25,9 @@
   <div th:if="${member.department}" class="calendar" th:attr="data-member_id=${member.id}">
     <div class="month-control row">
       <div class="month-control-left col-md-2">
-        <div class="info department-info">
+        <div class="info member-info">
           <i class="bi bi-people-fill"></i>
-          <span th:text="${member.department}"></span>
+          <span th:text="${member.name}"></span>
         </div>
       </div>
       <div class="col-md-8">
@@ -36,16 +36,22 @@
           <a class="move h_pointer" v-on:click="addMonth(-1)">
             <i class="bi bi-arrow-left-circle"></i>
           </a>
-          <input id="month-selector" type="month" v-model="combinedYearMonth">
+          <label for="month-selector"></label><input id="month-selector" type="month" v-model="combinedYearMonth">
           <a class="move h_pointer" v-on:click="addMonth(1)">
             <i class="bi bi-arrow-right-circle"></i>
           </a>
         </h1>
       </div>
-      <div class="month-control-right col-md-2">
-        <div class="info member-info">
-          <span th:text="${member.name}"></span>
-          <i class="bi bi-person-badge"></i>
+      <div class="month-control-right col-md-2 p-0">
+        <div class="search-bar d-flex align-items-center">
+          <form>
+            <label class="d-flex w-100">
+              <input type="text" class="form-control" placeholder="검색" style="flex: 1;">
+              <button class="btn btn-outline-dark" type="submit">
+                <i class="bi bi-search"></i>
+              </button>
+            </label>
+          </form>
         </div>
       </div>
     </div>
