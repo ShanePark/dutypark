@@ -3,12 +3,32 @@ package com.tistory.shanepark.dutypark.schedule.repository
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import java.time.LocalDateTime
 import java.util.*
 
 interface ScheduleRepository : JpaRepository<Schedule, UUID> {
+
+    @Query(
+        "SELECT s" +
+                " FROM Schedule s" +
+                " JOIN FETCH s.member m" +
+                " LEFT JOIN FETCH s.tags t" +
+                " LEFT JOIN FETCH t.member tm" +
+                " WHERE (m = :member or tm = :member)" +
+                " AND s.content LIKE %:content%" +
+                " AND s.visibility IN (:visibility)" +
+                " ORDER BY s.startDateTime DESC"
+    )
+    fun findByMemberAndContentContainingAndVisibilityIn(
+        member: Member,
+        content: String,
+        visibility: Collection<Visibility>,
+        pageable: Pageable,
+    ): Page<Schedule>
 
     @Query(
         "SELECT s" +

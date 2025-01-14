@@ -180,4 +180,17 @@ class FriendService(
         }
     }
 
+    @Transactional(readOnly = true)
+    fun availableVisibilities(loginMember: LoginMember?, member: Member): Set<Visibility> {
+        if (loginMember == null)
+            return setOf(Visibility.PUBLIC)
+        if (loginMember.id == member.id) {
+            return Visibility.entries.toSet()
+        }
+        if (isFriend(loginMember.id, member.id!!)) {
+            return setOf(Visibility.PUBLIC, Visibility.FRIENDS)
+        }
+        return setOf(Visibility.PUBLIC)
+    }
+
 }

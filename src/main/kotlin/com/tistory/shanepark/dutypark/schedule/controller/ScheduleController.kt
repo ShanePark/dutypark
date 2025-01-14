@@ -2,9 +2,14 @@ package com.tistory.shanepark.dutypark.schedule.controller
 
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
+import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSearchResult
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
+import com.tistory.shanepark.dutypark.schedule.service.ScheduleSearchService
 import com.tistory.shanepark.dutypark.schedule.service.ScheduleService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
+import org.springframework.data.web.PageableDefault
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.*
@@ -15,6 +20,7 @@ import java.util.*
 @RequestMapping("/api/schedules")
 class ScheduleController(
     private val scheduleService: ScheduleService,
+    private val scheduleSearchService: ScheduleSearchService,
 ) {
 
     @GetMapping
@@ -29,6 +35,16 @@ class ScheduleController(
             memberId,
             YearMonth.of(year, month)
         )
+    }
+
+    @GetMapping("/{id}/search")
+    fun searchSchedule(
+        @Login(required = false) loginMember: LoginMember,
+        @PathVariable(value = "id") targetMemberId: Long,
+        @PageableDefault(size = 10) pageable: Pageable,
+        @RequestParam q: String
+    ): Page<ScheduleSearchResult> {
+        return scheduleSearchService.search(loginMember, targetMemberId, pageable, q)
     }
 
     @PostMapping
