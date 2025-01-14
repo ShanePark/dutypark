@@ -286,17 +286,31 @@
               <li class="page-item" :class="{ disabled: searchResults.first }">
                 <button class="page-link" @click="search(searchResults.pageable.pageNumber - 1)">이전</button>
               </li>
+              <li class="page-item" v-if="startPage > 1">
+                <button class="page-link" @click="search(0)">1</button>
+              </li>
+              <li class="page-item disabled" v-if="startPage > 2">
+                <span class="page-link">...</span>
+              </li>
               <li class="page-item"
-                  v-for="page in searchResults.totalPages"
+                  v-for="page in pagesToShow"
                   :key="page"
                   :class="{ active: page - 1 === searchResults.pageable.pageNumber }">
                 <button class="page-link" @click="search(page - 1)">{{ page }}</button>
+              </li>
+              <li class="page-item disabled" v-if="endPage < searchResults.totalPages - 1">
+                <span class="page-link">...</span>
+              </li>
+              <li class="page-item" v-if="endPage < searchResults.totalPages">
+                <button class="page-link" @click="search(searchResults.totalPages - 1)">{{ searchResults.totalPages }}
+                </button>
               </li>
               <li class="page-item" :class="{ disabled: searchResults.last }">
                 <button class="page-link" @click="search(searchResults.pageable.pageNumber + 1)">다음</button>
               </li>
             </ul>
           </nav>
+
         </div>
       </div>
     </div>
@@ -664,6 +678,23 @@
                             FRIENDS: '친구만',
                             PRIVATE: '비공개',
                         }[this.calendarVisibility];
+                    },
+                    startPage() {
+                        const currentPage = this.searchResults.pageable.pageNumber + 1;
+                        const totalPages = this.searchResults.totalPages;
+                        return Math.max(1, currentPage - 2);
+                    },
+                    endPage() {
+                        const currentPage = this.searchResults.pageable.pageNumber + 1;
+                        const totalPages = this.searchResults.totalPages;
+                        return Math.min(totalPages, currentPage + 2);
+                    },
+                    pagesToShow() {
+                        const pages = [];
+                        for (let i = this.startPage; i <= this.endPage; i++) {
+                            pages.push(i);
+                        }
+                        return pages;
                     }
                 },
                 watch: {

@@ -713,6 +713,7 @@ input[readonly], textarea[readonly] {
 
 .search-bar input {
     border-radius: 10px 0 0 10px;
+    font-size: 16px;
 }
 
 .search-bar .btn {
