@@ -9,6 +9,7 @@ data class ScheduleSearchResult(
     val endDateTime: LocalDateTime,
     val visibility: String,
     val isTagged: Boolean,
+    val author: String
 ) {
     companion object {
         fun of(schedule: Schedule): ScheduleSearchResult {
@@ -17,7 +18,8 @@ data class ScheduleSearchResult(
                 startDateTime = schedule.startDateTime,
                 endDateTime = schedule.endDateTime,
                 visibility = schedule.visibility.name,
-                isTagged = schedule.tags.isNotEmpty()
+                isTagged = schedule.tags.isNotEmpty(),
+                author = schedule.member.name
             )
         }
     }

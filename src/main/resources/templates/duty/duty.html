@@ -267,6 +267,7 @@
             <tr>
               <th scope="col">#</th>
               <th scope="col">내용</th>
+              <th scope="col">작성자</th>
               <th scope="col">시작일</th>
               <th scope="col">종료일</th>
             </tr>
@@ -276,6 +277,7 @@
               <th scope="row">{{ index + 1 + (searchResults.pageable.pageNumber * searchResults.pageable.pageSize) }}
               </th>
               <td>{{ item.content }}</td>
+              <td>{{ item.author }}</td>
               <td>{{ formattedDateYMD(item.startDateTime) }}</td>
               <td>{{ formattedDateYMD(item.endDateTime) }}</td>
             </tr>
@@ -850,7 +852,7 @@
                         return hour + minute + (dateTime.getHours() >= 12 ? 'PM ' : 'AM');
                     },
                     formattedDateYMD(dateTimeString) {
-                        return new Date(dateTimeString).toISOString().split('T')[0];
+                        return new Date(dateTimeString).toISOString().split('T')[0].replaceAll('-', '.');
                     },
                     formattedDate(year, month, day) {
                         month = (month < 10) ? '0' + month : month;
