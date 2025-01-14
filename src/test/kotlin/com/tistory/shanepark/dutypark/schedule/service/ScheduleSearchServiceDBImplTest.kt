@@ -33,7 +33,6 @@ class ScheduleSearchServiceDBImplTest : DutyparkIntegrationTest() {
 
         // When
         val result = scheduleSearchServiceDBImpl.search(loginMember, loginMember.id, Pageable.ofSize(10), "test")
-        System.err.println("result = ${result}")
 
         // Then
         assertThat(result).hasSize(3)

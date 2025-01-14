@@ -44,9 +44,9 @@
       </div>
       <div class="month-control-right col-md-2 p-0">
         <div class="search-bar d-flex align-items-center">
-          <form>
+          <form @submit.prevent="search()">
             <label class="d-flex w-100">
-              <input type="text" class="form-control" placeholder="검색" style="flex: 1;">
+              <input type="text" class="form-control" placeholder="검색" style="flex: 1;" v-model="searchQuery">
               <button class="btn btn-outline-dark" type="submit">
                 <i class="bi bi-search"></i>
               </button>
@@ -254,6 +254,54 @@
     </div>
   </div>
 
+  <div id="search-result-modal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">[ <b v-text="searchQuery"></b> ] 검색 결과</h5>
+          <button type="button" data-bs-dismiss="modal" aria-label="Close" class="btn-close"></button>
+        </div>
+        <div class="modal-body">
+          <table class="table table-striped">
+            <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">내용</th>
+              <th scope="col">시작일</th>
+              <th scope="col">종료일</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="(item, index) in searchResults.content" :key="index">
+              <th scope="row">{{ index + 1 + (searchResults.pageable.pageNumber * searchResults.pageable.pageSize) }}
+              </th>
+              <td>{{ item.content }}</td>
+              <td>{{ formattedDateYMD(item.startDateTime) }}</td>
+              <td>{{ formattedDateYMD(item.endDateTime) }}</td>
+            </tr>
+            </tbody>
+          </table>
+          <nav v-if="searchResults.totalPages > 1">
+            <ul class="pagination justify-content-center">
+              <li class="page-item" :class="{ disabled: searchResults.first }">
+                <button class="page-link" @click="search(searchResults.pageable.pageNumber - 1)">이전</button>
+              </li>
+              <li class="page-item"
+                  v-for="page in searchResults.totalPages"
+                  :key="page"
+                  :class="{ active: page - 1 === searchResults.pageable.pageNumber }">
+                <button class="page-link" @click="search(page - 1)">{{ page }}</button>
+              </li>
+              <li class="page-item" :class="{ disabled: searchResults.last }">
+                <button class="page-link" @click="search(searchResults.pageable.pageNumber + 1)">다음</button>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="detail-view-modal" class="modal fade" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content" v-if="detailView">
@@ -443,6 +491,8 @@
                     editTodoMode: false,
                     dDaysLoaded: false,
                     dDaysPromise: null,
+                    searchQuery: '',
+                    searchResults: [],
                 }, mounted() {
                     if (departmentId) {
                         this.loadDepartment();
@@ -767,14 +817,15 @@
                             minute = ':' + dateTime.getMinutes().toString().padStart(2, '0');
                         }
                         return hour + minute + (dateTime.getHours() >= 12 ? 'PM ' : 'AM');
-                    }
-                    ,
+                    },
+                    formattedDateYMD(dateTimeString) {
+                        return new Date(dateTimeString).toISOString().split('T')[0];
+                    },
                     formattedDate(year, month, day) {
                         month = (month < 10) ? '0' + month : month;
                         day = (day < 10) ? '0' + day : day;
                         return year + '-' + month + '-' + day;
-                    }
-                    ,
+                    },
                     isToday(duty) {
                         const today = new Date();
                         return duty.year === today.getFullYear() && duty.month === today.getMonth() + 1 && duty.day === today.getDate();
@@ -1383,7 +1434,22 @@
                             }
                             app.loadDuties(app.year, app.month);
                         });
-                    }
+                    },
+                    search(page = 0) {
+                        $('#search-result-modal').modal('show');
+                        const query = app.searchQuery;
+                        fetch(`/api/schedules/${memberId}/search?q=${query}&page=${page}`)
+                            .then((response) => {
+                                if (!response.ok) {
+                                    console.log(`Error searching schedules. Status Code: ${response.status}`);
+                                    return;
+                                }
+                                return response.json();
+                            })
+                            .then((data) => {
+                                app.searchResults = data;
+                            });
+                    },
                 }
             }
         )
