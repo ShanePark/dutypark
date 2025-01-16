@@ -45,12 +45,14 @@
       <div class="month-control-right col-md-2 p-0">
         <div class="search-bar d-flex align-items-center">
           <form @submit.prevent="search()">
-            <label class="d-flex w-100">
-              <input type="text" class="form-control" placeholder="검색" style="flex: 1;" v-model="searchQuery">
+            <div class="d-flex w-100">
+              <label>
+                <input type="text" class="form-control" placeholder="검색" style="flex: 1;" v-model="searchQuery">
+              </label>
               <button class="btn btn-outline-dark" type="submit">
                 <i class="bi bi-search"></i>
               </button>
-            </label>
+            </div>
           </form>
         </div>
       </div>

@@ -172,4 +172,9 @@
         font-size: 2.3rem;
     }
 
+    /*prevent iOS Safari zoom */
+    .search-bar input:active {
+        font-size: 32px;
+    }
+
 }
