@@ -1,15 +1,15 @@
 spring:
   web.resources.cache.period: PT720H # 30 days
   datasource:
-    url: jdbc:h2:mem:testdb;
-    username: sa
-    password:
+    url: jdbc:mysql://localhost:3306/dutypark
+    username: dutypark
+    password: dutypark
     hikari:
       maximum-pool-size: 5
   jpa:
     hibernate:
       ddl-auto: none
-    database-platform: org.hibernate.dialect.H2Dialect
+    database-platform: org.hibernate.dialect.MySQLDialect
     open-in-view: false
   flyway:
     enabled: true
@@ -45,7 +45,7 @@ jwt:
 dutypark:
   adminEmails:
     - ADMIN@EMAIL.HERE
-  whiteIpList:
+  whiteIpList: # for actuator
     - "127.0.0.1"
     - "0:0:0:0:0:0:0:1"
   slack:
