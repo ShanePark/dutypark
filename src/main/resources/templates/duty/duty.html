@@ -24,7 +24,7 @@
   </div>
   <div th:if="${member.department}" class="calendar" th:attr="data-member_id=${member.id}">
     <div class="month-control row">
-      <div class="month-control-left align-content-center col-md-3">
+      <div class="month-control-left col-md-3">
         <div class="info member-info">
           <i class="bi bi-people-fill"></i>
           <span th:text="${member.name}"></span>
@@ -36,7 +36,7 @@
         </a>
         <button class="year-month-btn btn text-center" data-bs-toggle="dropdown"
                 data-bs-auto-close="outside">
-          <span class="combinedYearMonth" v-text="combinedYearMonth"></span>
+          <span class="currentCalendar" v-text="combinedYearMonth"></span>
         </button>
 
         <div class="dropdown-menu p-3 shadow">
@@ -74,8 +74,8 @@
           <i class="bi bi-arrow-right-circle"></i>
         </a>
       </div>
-      <div class="month-control-right col-md-3 p-0">
-        <div class="search-bar d-flex align-items-center">
+      <div class="month-control-right col-md-3 p-0 position-relative">
+        <div class="search-bar d-flex align-items-center" v-if="isMyCalendar">
           <form @submit.prevent="search()">
             <div class="d-flex w-100">
               <label>
@@ -86,6 +86,10 @@
               </button>
             </div>
           </form>
+        </div>
+        <div class="info department-info position-absolute end-0" v-if="!isMyCalendar">
+          <i class="bi bi-people-fill"></i>
+          <span th:text="${member.department}"></span>
         </div>
       </div>
     </div>
@@ -132,6 +136,7 @@
           'month-prev': (duty.month < month),
           'month-next': (duty.month > month),
           'today': isToday(duty),
+          'searchDay' : isSearchDay(duty),
           'holiday': isHoliday(index),
           'has-schedule': hasSchedule(index),
         }"
@@ -288,11 +293,11 @@
     </div>
   </div>
 
-  <div id="search-result-modal" class="modal fade" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+  <div id="search-result-modal" class="modal fade fs-3" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">[ <b v-text="searchQuery"></b> ] 검색 결과</h5>
+          <span class="fs-2"><b v-text="searchQuery"></b> 검색 결과</span>
           <button type="button" data-bs-dismiss="modal" aria-label="Close" class="btn-close"></button>
         </div>
         <div class="modal-body">
@@ -307,7 +312,8 @@
             </tr>
             </thead>
             <tbody>
-            <tr v-for="(item, index) in searchResults.content" :key="index">
+            <tr class="search-result-row" v-for="(item, index) in searchResults.content" :key="index"
+                v-on:click="moveToSearch(item)">
               <th scope="row">{{ index + 1 + (searchResults.pageable.pageNumber * searchResults.pageable.pageSize) }}
               </th>
               <td>{{ item.content }}</td>
@@ -511,6 +517,7 @@
         data: {
           year: parseInt("[[${year}]]"),
           month: parseInt("[[${month}]]"),
+          searchDay: parseInt("[[${day}]]"),
           duties: [],
           schedulesByDays: [],
           holidaysByDays: [],
@@ -580,19 +587,16 @@
           });
           this.initSortable();
         }, computed: {
+          currentCalendar: {
+            get() {
+              const day = this.searchDay || -1;
+              return `${this.year}-${this.month.toString().padStart(2, '0')}-${day}`;
+            },
+          },
           combinedYearMonth: {
             get() {
               return `${this.year}-${this.month.toString().padStart(2, '0')}`;
-            },
-            set(value) {
-              if (!value) {
-                value = new Date().toISOString().slice(0, 7);
-                document.getElementById('month-selector').value = value;
-              }
-              const [year, month] = value.split('-');
-              this.year = parseInt(year);
-              this.month = parseInt(month);
-            },
+            }
           },
           canEdit() {
             return loginMemberId === memberId || loginMemberId === managerId;
@@ -720,13 +724,12 @@
           },
           startPage() {
             const currentPage = this.searchResults.pageable.pageNumber + 1;
-            const totalPages = this.searchResults.totalPages;
-            return Math.max(1, currentPage - 2);
+            return Math.max(1, currentPage - 5);
           },
           endPage() {
             const currentPage = this.searchResults.pageable.pageNumber + 1;
             const totalPages = this.searchResults.totalPages;
-            return Math.min(totalPages, currentPage + 2);
+            return Math.min(totalPages, currentPage + 5);
           },
           pagesToShow() {
             const pages = [];
@@ -737,13 +740,18 @@
           }
         },
         watch: {
-          combinedYearMonth() {
+          currentCalendar() {
             this.loadDuties(app.year, app.month);
             this.loadSchedule(app.year, app.month);
             this.loadHolidays(app.year, app.month);
             const currentUrl = new URL(window.location.href);
             currentUrl.searchParams.set('year', app.year);
             currentUrl.searchParams.set('month', app.month);
+            currentUrl.searchParams.set('day', app.searchDay);
+            console.log(app.searchDay);
+            if (!app.searchDay) {
+              currentUrl.searchParams.delete('day');
+            }
             window.history.replaceState(null, '', currentUrl.toString());
             app.monthSelector.year = app.year;
           }
@@ -770,11 +778,13 @@
             const newDate = new Date(app.year, app.month - 1 + month);
             app.year = newDate.getFullYear();
             app.month = newDate.getMonth() + 1;
+            app.searchDay = null;
           },
           today() {
             const today = new Date();
             app.year = today.getFullYear();
             app.month = today.getMonth() + 1;
+            app.searchDay = null;
             app.monthSelector.year = app.year;
             app.closeDropdown();
           },
@@ -786,6 +796,7 @@
           selectMonth(month) {
             app.year = app.monthSelector.year;
             app.month = month;
+            app.searchDay = null;
             app.closeDropdown();
           },
           loadDuties(year, month) {
@@ -910,8 +921,10 @@
           isToday(duty) {
             const today = new Date();
             return duty.year === today.getFullYear() && duty.month === today.getMonth() + 1 && duty.day === today.getDate();
-          }
-          ,
+          },
+          isSearchDay(duty) {
+            return duty.year === app.year && duty.month === app.month && duty.day === app.searchDay;
+          },
           isHoliday(index) {
             const holidays = app.holidaysByDays[index];
             if (!holidays || holidays.length === 0) {
@@ -1531,6 +1544,13 @@
                 app.searchResults = data;
               });
           },
+          moveToSearch(item) {
+            const startDateTime = new Date(item.startDateTime);
+            app.year = startDateTime.getFullYear();
+            app.month = startDateTime.getMonth() + 1;
+            app.searchDay = startDateTime.getDate();
+            $('#search-result-modal').modal('hide');
+          }
         }
       }
     )

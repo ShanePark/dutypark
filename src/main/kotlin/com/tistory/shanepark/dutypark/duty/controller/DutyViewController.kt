@@ -26,6 +26,7 @@ class DutyViewController(
         model: Model, @PathVariable id: Long,
         @RequestParam(required = false) year: Int?,
         @RequestParam(required = false) month: Int?,
+        @RequestParam(required = false) day: Int?,
     ): String {
         val member = memberService.findById(id)
 
@@ -33,6 +34,7 @@ class DutyViewController(
         model.addAttribute("member", member)
         model.addAttribute("year", year ?: LocalDate.now().year)
         model.addAttribute("month", month ?: LocalDate.now().monthValue)
+        model.addAttribute("day", day)
 
         return layout(model, "duty/duty")
     }

@@ -168,4 +168,8 @@
         font-size: 2.3rem;
     }
 
+    .modal-dialog {
+        max-width: 95%;
+    }
+
 }

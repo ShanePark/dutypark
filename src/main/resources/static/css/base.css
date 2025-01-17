@@ -174,7 +174,8 @@ h1 a.move:hover {
     color: blue;
 }
 
-.day-grid .today {
+.day-grid .today,
+.day-grid .searchDay {
     border: 3px solid red;
 }
 
@@ -483,7 +484,7 @@ a.homeButton:hover {
     font-family: unset;
     margin-right: 0.1em;
     content: 'by';
-    top: 0px;
+    top: 0;
 }
 
 .schedule-tag.tagged-false::before {
@@ -635,7 +636,7 @@ a.homeButton:hover {
     align-items: center;
     justify-content: center;
     min-height: 60px;
-    border-right: 0.5px solid black;
+    border-right: 1px solid black;
 }
 
 #todo-list-container {
@@ -713,7 +714,7 @@ input[readonly], textarea[readonly] {
     border-radius: 15px;
 }
 
-.month-control .combinedYearMonth,
+.month-control .currentCalendar,
 .month-control input {
     font-size: 2.5em;
 }
@@ -749,4 +750,13 @@ input[readonly], textarea[readonly] {
 
 .monthSelector .dropdown-menu .month-btn {
     padding: 20px;
+}
+
+#search-result-modal .search-result-row:hover {
+    cursor: pointer;
+    background-color: #e2e8f0;
+}
+
+.position-relative {
+    position: relative !important;
 }

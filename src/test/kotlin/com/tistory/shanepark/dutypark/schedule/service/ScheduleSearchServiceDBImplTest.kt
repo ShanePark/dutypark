@@ -35,7 +35,7 @@ class ScheduleSearchServiceDBImplTest : DutyparkIntegrationTest() {
         val result = scheduleSearchServiceDBImpl.search(loginMember, loginMember.id, Pageable.ofSize(10), "test")
 
         // Then
-        assertThat(result).hasSize(3)
+        assertThat(result.content).hasSize(3)
         assertThat(result.content[0].content).isEqualTo("test3")
         assertThat(result.content[1].content).isEqualTo("test2")
         assertThat(result.content[2].content).isEqualTo("test1")
@@ -55,7 +55,7 @@ class ScheduleSearchServiceDBImplTest : DutyparkIntegrationTest() {
         val result = scheduleSearchServiceDBImpl.search(loginMember, loginMember.id, Pageable.ofSize(10), "test")
 
         // Then
-        assertThat(result).hasSize(10)
+        assertThat(result.content).hasSize(10)
         assertThat(result.content[0].content).isEqualTo("test20")
         assertThat(
             scheduleSearchServiceDBImpl.search(
@@ -63,7 +63,7 @@ class ScheduleSearchServiceDBImplTest : DutyparkIntegrationTest() {
                 loginMember.id,
                 Pageable.ofSize(10).next(),
                 "INVALID_KEYWORD"
-            )
+            ).content
         ).hasSize(0)
     }
 
@@ -89,7 +89,7 @@ class ScheduleSearchServiceDBImplTest : DutyparkIntegrationTest() {
         val result = scheduleSearchServiceDBImpl.search(loginMember, loginMember.id, Pageable.ofSize(10), "test")
 
         // Then
-        assertThat(result).hasSize(2)
+        assertThat(result.content).hasSize(2)
         assertThat(result.content[0].content).isEqualTo("test-tagged")
         assertThat(result.content[1].content).isEqualTo("test1")
     }
