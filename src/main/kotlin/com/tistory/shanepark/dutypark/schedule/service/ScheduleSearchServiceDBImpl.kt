@@ -1,11 +1,11 @@
 package com.tistory.shanepark.dutypark.schedule.service
 
+import com.tistory.shanepark.dutypark.common.domain.dto.PageResponse
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSearchResult
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
-import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 
@@ -24,16 +24,18 @@ class ScheduleSearchServiceDBImpl(
         targetMemberId: Long,
         page: Pageable,
         query: String
-    ): Page<ScheduleSearchResult> {
+    ): PageResponse<ScheduleSearchResult> {
         val target = memberRepository.findById(targetMemberId).orElseThrow()
         val availableVisibilities = friendService.availableVisibilities(loginMember, target)
 
-        return scheduleRepository.findByMemberAndContentContainingAndVisibilityIn(
+        val result = scheduleRepository.findByMemberAndContentContainingAndVisibilityIn(
             member = target,
             content = query,
             visibility = availableVisibilities,
             pageable = page
         ).map { ScheduleSearchResult.of(it) }
+
+        return PageResponse(result)
     }
 
 }

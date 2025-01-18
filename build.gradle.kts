@@ -44,13 +44,13 @@ dependencies {
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.mockito.kotlin:mockito-kotlin:4.1.0")
+    testImplementation("com.h2database:h2")
 
     // Spring Docs
     testImplementation("org.springframework.restdocs:spring-restdocs-mockmvc")
     asciidoctorExt("org.springframework.restdocs:spring-restdocs-asciidoctor")
 
     // Database
-    runtimeOnly("com.h2database:h2")
     runtimeOnly("com.mysql:mysql-connector-j")
     implementation("com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.9.0")
     implementation("org.flywaydb:flyway-core")

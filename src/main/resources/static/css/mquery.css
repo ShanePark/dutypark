@@ -1,7 +1,7 @@
 /* mobile */
 @media (max-width: 991px) {
     .calendar {
-        margin-right: 20px;
+        margin: 0 10px;
     }
 
     header h1 {
@@ -140,10 +140,6 @@
         font-size: 2em;
     }
 
-    .member-info {
-        font-size: 1.8em;
-    }
-
     #add-todo-modal .modal-dialog,
     #add-todo-modal .modal-header,
     #todo-details-modal .modal-dialog,
@@ -170,6 +166,10 @@
 
     .todo-item .handle {
         font-size: 2.3rem;
+    }
+
+    .modal-dialog {
+        max-width: 95%;
     }
 
 }

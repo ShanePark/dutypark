@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.schedule.controller
 
+import com.tistory.shanepark.dutypark.common.domain.dto.PageResponse
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSearchResult
@@ -43,7 +44,7 @@ class ScheduleController(
         @PathVariable(value = "id") targetMemberId: Long,
         @PageableDefault(size = 10) pageable: Pageable,
         @RequestParam q: String
-    ): Page<ScheduleSearchResult> {
+    ): PageResponse<ScheduleSearchResult> {
         return scheduleSearchService.search(loginMember, targetMemberId, pageable, q)
     }
 

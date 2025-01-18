@@ -31,7 +31,6 @@ body a {
 body a:hover {
     text-decoration: none;
     color: inherit;
-    opacity: 0.7;
 }
 
 .row-7 {
@@ -175,7 +174,8 @@ h1 a.move:hover {
     color: blue;
 }
 
-.day-grid .today {
+.day-grid .today,
+.day-grid .searchDay {
     border: 3px solid red;
 }
 
@@ -218,22 +218,20 @@ a.homeButton:hover {
 
 .month-control {
     text-align: center;
+    margin: 0;
 }
 
 .month-control .info {
-    display: inline;
-    font-size: 1.4em;
     background-color: #eee;
-    padding: 10px;
+    padding: 5px 15px;
+    margin: 10px 0;
     border-radius: 15px;
-}
-
-.month-control .today-button {
-    background-color: #eee;
+    width: fit-content;
 }
 
 .month-control-left {
     text-align: left;
+    padding-left: 0;
 }
 
 .month-control-right {
@@ -293,11 +291,6 @@ a.homeButton:hover {
     background-color: #ccc;
 }
 
-.calendar .month-control button:hover {
-    background-color: #ddd;
-    transition: 0.3s;
-}
-
 .day-grid {
     padding-left: 0;
     width: 100%;
@@ -306,18 +299,6 @@ a.homeButton:hover {
 .members {
     padding: 20px;
     font-size: 2.5em;
-}
-
-.calendar input[type="month"] {
-    width: 9em;
-    background: none;
-    border: none;
-    text-align: center;
-    color: black;
-}
-
-.calendar input[type="month"]:hover {
-    cursor: pointer;
 }
 
 .dutyTypes button {
@@ -503,7 +484,7 @@ a.homeButton:hover {
     font-family: unset;
     margin-right: 0.1em;
     content: 'by';
-    top: 0px;
+    top: 0;
 }
 
 .schedule-tag.tagged-false::before {
@@ -590,14 +571,13 @@ a.homeButton:hover {
 }
 
 #header {
-    min-height: 6vh;
     margin: 0;
 }
 
 #body {
     max-width: 64rem;
     min-height: 88vh;
-    padding: 30px;
+    padding: 10px;
     margin: 0 auto;
 }
 
@@ -641,7 +621,6 @@ a.homeButton:hover {
     border: 1px solid black;
     border-radius: 10px;
     padding: 0 5px 0 0;
-    margin-bottom: 15px;
 }
 
 #add-todo-btn {
@@ -657,7 +636,7 @@ a.homeButton:hover {
     align-items: center;
     justify-content: center;
     min-height: 60px;
-    border-right: 0.5px solid black;
+    border-right: 1px solid black;
 }
 
 #todo-list-container {
@@ -711,11 +690,73 @@ input[readonly], textarea[readonly] {
     cursor: not-allowed;
 }
 
+.search-bar {
+    height: 100%;
+}
+
 .search-bar input {
     border-radius: 10px 0 0 10px;
-    font-size: 16px;
 }
 
 .search-bar .btn {
     border-radius: 0 10px 10px 0;
+}
+
+.monthSelector-header {
+    padding-right: 0;
+}
+
+.monthSelector-header div {
+    padding-right: 0;
+}
+
+.monthSelector-header button {
+    border-radius: 15px;
+}
+
+.month-control .currentCalendar,
+.month-control input {
+    font-size: 2.5em;
+}
+
+.month-control span,
+.month-control .monthSelector-header button,
+.month-control .move {
+    font-size: 2em;
+}
+
+.month-control .year-month-btn,
+.month-control i,
+.month-control .month-btn,
+.month-control .today-button,
+.month-control a {
+    font-size: 1.5em;
+}
+
+.monthSelector button.active {
+    background-color: #0d6efd;
+}
+
+.monthSelector .year-month-btn,
+.monthSelector .year-month-btn:active,
+.monthSelector .year-month-btn:hover {
+    border: none;
+    background: none;
+}
+
+.monthSelector .dropdown-menu {
+    left: -10% !important;
+}
+
+.monthSelector .dropdown-menu .month-btn {
+    padding: 20px;
+}
+
+#search-result-modal .search-result-row:hover {
+    cursor: pointer;
+    background-color: #e2e8f0;
+}
+
+.position-relative {
+    position: relative !important;
 }

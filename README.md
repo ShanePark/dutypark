@@ -14,21 +14,24 @@ Simple Duty Manager <br>
 </div>
 
 ## What's DutyPark?
+
 > [Demo Page](https://dutypark.o-r.kr)
+
 - I planned and developed it in one day when my wife just forgot her duty and late for work
 - It is a simple duty manager that can be used by anyone
 - Easy to put in your own duty and share it with your family or friends
 
 ## How to install
 
+### MySQL
+
+Prepare your database. Here's the simplest way
+
 ```bash
-$ git clone https://github.com/Shane-Park/dutypark.git
-$ ./gradlew build
-$ java -jar build/libs/dutypark-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod
+$ docker run -d -p 3306:3306 --name mysql -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=dutypark -e MYSQL_USER=dutypark -e MYSQL_PASSWORD=dutypark mysql:8.0
 ```
 
-It's recommended to prepare your own database as default is in-memory database
-run your database and add it to application-prod.yml
+When your database is ready, add it to application-prod.yml
 
 ```yaml
 spring:
@@ -37,12 +40,21 @@ spring:
     username: dutypark
     password: dutypark
   jpa:
-    hibernate:
-      ddl-auto: update
     database-platform: org.hibernate.dialect.MySQL8Dialect  
 ```
 
-```bash
-$ docker run -d -p 3306:3306 --name mysql -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=dutypark -e MYSQL_USER=dutypark -e MYSQL_PASSWORD=dutypark mysql:8.0
-```
+### Properties
 
+- fill up things with `_HERE` like `"SLACK_TOKEN_HERE"`.
+- if you want to test it without SSL, you can change the following properties
+  > - `server.ssl.enabled=false`
+  > - `server.port=8080`
+  > - remove keystore related properties
+
+### Run
+
+```bash
+$ git clone https://github.com/Shane-Park/dutypark.git
+$ ./gradlew build
+$ java -jar build/libs/dutypark-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod
+```
