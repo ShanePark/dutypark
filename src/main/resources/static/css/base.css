@@ -7,7 +7,7 @@
 }
 
 @font-face {
-    src: url('../lib/bootstrap/bootstrap-icons-1.3.0/fonts/bootstrap-icons.woff2') format('woff2');
+    src: url('../lib/bootstrap/bootstrap-icons-1.11.0/fonts/bootstrap-icons.woff2') format('woff2');
     font-display: swap;
     font-family: 'Bootstrap Icons';
     font-weight: normal;
@@ -200,10 +200,6 @@ a.homeButton:hover {
 
 .h_pointer:hover {
     cursor: pointer !important;
-}
-
-.bi-calendar-plus {
-    opacity: 0.5;
 }
 
 .dutyTypes {
@@ -474,7 +470,7 @@ a.homeButton:hover {
 }
 
 .schedule-tag::before {
-    content: 'bi-tags-fill';
+    content: '\F5B1';
     margin-right: 0.2em;
     position: relative;
     top: 3px;
@@ -488,7 +484,7 @@ a.homeButton:hover {
 }
 
 .schedule-tag.tagged-false::before {
-    content: 'bi-person-circle';
+    content: '\F4DC';
 }
 
 #detail-view-modal .schedule-tag.tagged-false::before {
@@ -496,7 +492,7 @@ a.homeButton:hover {
 }
 
 #detail-view-modal .schedule-tag.tagged-false::after {
-    content: 'bi-x-circle-fill';
+    content: '\F622';
 }
 
 .schedule-tag.schedule-tag-add {
@@ -511,7 +507,7 @@ a.homeButton:hover {
 }
 
 .schedule-tag.schedule-tag-add::before {
-    content: 'bi-person-plus-fill';
+    content: '\F4DC';
     margin: 0;
 }
 

@@ -26,7 +26,7 @@
     <div class="month-control row">
       <div class="month-control-left col-md-3">
         <div class="info member-info">
-          <i class="bi bi-people-fill"></i>
+          <i class="bi bi-person-fill"></i>
           <span th:text="${member.name}"></span>
         </div>
       </div>
@@ -505,980 +505,980 @@
 </div>
 
 <script>
-  $(function () {
-    const memberId = parseInt("[[${member.id}]]");
-    const departmentId = parseInt("[[${member.departmentId}]]");
-    const loginMemberId = parseInt("[[${loginMember?.id}]]");
-    const managerId = parseInt("[[${member.managerId}]]");
-    const isMyCalendar = loginMemberId === memberId;
+    $(function () {
+        const memberId = parseInt("[[${member.id}]]");
+        const departmentId = parseInt("[[${member.departmentId}]]");
+        const loginMemberId = parseInt("[[${loginMember?.id}]]");
+        const managerId = parseInt("[[${member.managerId}]]");
+        const isMyCalendar = loginMemberId === memberId;
 
-    const app = new Vue({
-        el: '.duty-vue',
-        data: {
-          year: parseInt("[[${year}]]"),
-          month: parseInt("[[${month}]]"),
-          searchDay: parseInt("[[${day}]]"),
-          duties: [],
-          schedulesByDays: [],
-          holidaysByDays: [],
-          department: {},
-          dDays: [],
-          selectedDday: null,
-          detailView: null,
-          batchEditMode: false,
-          isCreateScheduleMode: false,
-          calendarVisibility: "[[${member.calendarVisibility}]]",
-          monthSelector: {
-            year: parseInt("[[${year}]]"),
-          },
-          createSchedule: {
-            content: '',
-            startDateTime: '',
-            startDateTimeOld: '',
-            endDateTime: '',
-            visibility: 'FRIENDS',
-          },
-          editingSchedule: {
-            id: '',
-            content: '',
-            startDateTime: '',
-            startDateTimeOld: '',
-            endDateTime: '',
-            visibility: '',
-          },
-          friends: [],
-          todos: [],
-          editTodoMode: false,
-          dDaysLoaded: false,
-          dDaysPromise: null,
-          searchQuery: '',
-          searchResults: [],
-        }, mounted() {
-          if (departmentId) {
-            this.loadDepartment();
-            this.loadDuties(this.year, this.month);
-          }
-          this.loadSchedule(this.year, this.month);
-          this.loadHolidays(this.year, this.month);
-          this.loadFriends();
-          this.loadDDays();
-          this.loadTodos();
+        const app = new Vue({
+                el: '.duty-vue',
+                data: {
+                    year: parseInt("[[${year}]]"),
+                    month: parseInt("[[${month}]]"),
+                    searchDay: parseInt("[[${day}]]"),
+                    duties: [],
+                    schedulesByDays: [],
+                    holidaysByDays: [],
+                    department: {},
+                    dDays: [],
+                    selectedDday: null,
+                    detailView: null,
+                    batchEditMode: false,
+                    isCreateScheduleMode: false,
+                    calendarVisibility: "[[${member.calendarVisibility}]]",
+                    monthSelector: {
+                        year: parseInt("[[${year}]]"),
+                    },
+                    createSchedule: {
+                        content: '',
+                        startDateTime: '',
+                        startDateTimeOld: '',
+                        endDateTime: '',
+                        visibility: 'FRIENDS',
+                    },
+                    editingSchedule: {
+                        id: '',
+                        content: '',
+                        startDateTime: '',
+                        startDateTimeOld: '',
+                        endDateTime: '',
+                        visibility: '',
+                    },
+                    friends: [],
+                    todos: [],
+                    editTodoMode: false,
+                    dDaysLoaded: false,
+                    dDaysPromise: null,
+                    searchQuery: '',
+                    searchResults: [],
+                }, mounted() {
+                    if (departmentId) {
+                        this.loadDepartment();
+                        this.loadDuties(this.year, this.month);
+                    }
+                    this.loadSchedule(this.year, this.month);
+                    this.loadHolidays(this.year, this.month);
+                    this.loadFriends();
+                    this.loadDDays();
+                    this.loadTodos();
 
-          document.addEventListener('click', function (event) {
-            if (event.target && event.target.matches('.schedule-tag-add')) {
-              event.target.querySelector('select').focus();
-            }
-          });
+                    document.addEventListener('click', function (event) {
+                        if (event.target && event.target.matches('.schedule-tag-add')) {
+                            event.target.querySelector('select').focus();
+                        }
+                    });
 
-          document.addEventListener('change', function (event) {
-            if (event.target && event.target.matches('.schedule-tag-add select')) {
-              const selectedOption = event.target.options[event.target.selectedIndex];
-              const scheduleId = event.target.closest('.schedule').id.replace('schedule-', '');
-              const friendId = selectedOption.getAttribute('data-id');
-              app.addTag(scheduleId, friendId);
-            }
-          });
-          document.addEventListener('click', function (event) {
-            if (event.target && event.target.matches('#detail-view-modal .schedule-tag.tagged-false')) {
-              const scheduleId = event.target.closest('.schedule').id.replace('schedule-', '');
-              const friendId = event.target.getAttribute('data-id');
-              app.untag(scheduleId, friendId);
-            }
-          });
-          this.initSortable();
-        }, computed: {
-          currentCalendar: {
-            get() {
-              const day = this.searchDay || -1;
-              return `${this.year}-${this.month.toString().padStart(2, '0')}-${day}`;
-            },
-          },
-          combinedYearMonth: {
-            get() {
-              return `${this.year}-${this.month.toString().padStart(2, '0')}`;
-            }
-          },
-          canEdit() {
-            return loginMemberId === memberId || loginMemberId === managerId;
-          },
-          isMyCalendar() {
-            return loginMemberId === memberId;
-          },
-          calcDday() {
-            return (duty) => {
-              const date = new Date(duty.year, duty.month - 1, duty.day);
-              const calc = Math.floor((date.getTime() - new Date(app.selectedDday.date).getTime()) / (1000 * 60 * 60 * 24)) + 1;
-              const dDayText = calc < 0 ? 'D' + calc : calc == 0 ? 'D-Day' : 'D+' + (calc + 1);
-              return dDayText;
-            }
-          },
-          printSchedule() {
-            return (schedule) => {
-              let content = schedule.content.replace(/\n/g, '<br>');
-              if (schedule.totalDays > 1) {
-                content += '[' + schedule.daysFromStart + '/' + schedule.totalDays + '] ';
-              }
-              const tags = []
-              schedule.tags.forEach(tag => {
-                if (tag.id !== memberId) {
-                  tags.push({
-                    name: tag.name,
-                    id: tag.id,
-                  });
-                }
-              });
-              if (schedule.isTagged) {
-                tags.push({name: schedule.owner});
-              }
-              let scheduleElement = `<p class="schedule-content" >${content}<small>${app.printScheduleTime(schedule)}</small></p>`;
-              let tagElements = ''
-              if (tags.length > 0) {
-                tagElements += tags.map(tag => {
-                  return `<span class="schedule-tag tagged-${schedule.isTagged}" data-id="${tag.id}" >${tag.name} </span>`;
-                }).join('');
-              }
-              if (!schedule.isTagged && app.friends.length > 0) {
-                let tagFriendAria = `
+                    document.addEventListener('change', function (event) {
+                        if (event.target && event.target.matches('.schedule-tag-add select')) {
+                            const selectedOption = event.target.options[event.target.selectedIndex];
+                            const scheduleId = event.target.closest('.schedule').id.replace('schedule-', '');
+                            const friendId = selectedOption.getAttribute('data-id');
+                            app.addTag(scheduleId, friendId);
+                        }
+                    });
+                    document.addEventListener('click', function (event) {
+                        if (event.target && event.target.matches('#detail-view-modal .schedule-tag.tagged-false')) {
+                            const scheduleId = event.target.closest('.schedule').id.replace('schedule-', '');
+                            const friendId = event.target.getAttribute('data-id');
+                            app.untag(scheduleId, friendId);
+                        }
+                    });
+                    this.initSortable();
+                }, computed: {
+                    currentCalendar: {
+                        get() {
+                            const day = this.searchDay || -1;
+                            return `${this.year}-${this.month.toString().padStart(2, '0')}-${day}`;
+                        },
+                    },
+                    combinedYearMonth: {
+                        get() {
+                            return `${this.year}-${this.month.toString().padStart(2, '0')}`;
+                        }
+                    },
+                    canEdit() {
+                        return loginMemberId === memberId || loginMemberId === managerId;
+                    },
+                    isMyCalendar() {
+                        return loginMemberId === memberId;
+                    },
+                    calcDday() {
+                        return (duty) => {
+                            const date = new Date(duty.year, duty.month - 1, duty.day);
+                            const calc = Math.floor((date.getTime() - new Date(app.selectedDday.date).getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                            const dDayText = calc < 0 ? 'D' + calc : calc == 0 ? 'D-Day' : 'D+' + (calc + 1);
+                            return dDayText;
+                        }
+                    },
+                    printSchedule() {
+                        return (schedule) => {
+                            let content = schedule.content.replace(/\n/g, '<br>');
+                            if (schedule.totalDays > 1) {
+                                content += '[' + schedule.daysFromStart + '/' + schedule.totalDays + '] ';
+                            }
+                            const tags = []
+                            schedule.tags.forEach(tag => {
+                                if (tag.id !== memberId) {
+                                    tags.push({
+                                        name: tag.name,
+                                        id: tag.id,
+                                    });
+                                }
+                            });
+                            if (schedule.isTagged) {
+                                tags.push({name: schedule.owner});
+                            }
+                            let scheduleElement = `<p class="schedule-content schedule-content">${content}<small>${app.printScheduleTime(schedule)}</small> ${schedule.visibility === 'PRIVATE' ? '<i class="bi bi-lock-fill"></i>' : ''}</p>`;
+                            let tagElements = ''
+                            if (tags.length > 0) {
+                                tagElements += tags.map(tag => {
+                                    return `<span class="schedule-tag tagged-${schedule.isTagged}" data-id="${tag.id}" >${tag.name} </span>`;
+                                }).join('');
+                            }
+                            if (!schedule.isTagged && app.friends.length > 0) {
+                                let tagFriendAria = `
                                       <span class="schedule-tag schedule-tag-add">
                                         <select>
                                         <option>태그</option>
                                         ${app.friends.map(friend => {
-                  if (tags.find(tag => tag.id === friend.id)) {
-                    return '';
-                  }
-                  return `<option data-id="${friend.id}">[${friend.department}] ${friend.name}</option>`;
-                }).join('')}
+                                    if (tags.find(tag => tag.id === friend.id)) {
+                                        return '';
+                                    }
+                                    return `<option data-id="${friend.id}">[${friend.department}] ${friend.name}</option>`;
+                                }).join('')}
                                       </select>
                                       </span>`;
-                tagElements += tagFriendAria;
-              }
-              return scheduleElement + `<div class="schedule-tags">${tagElements}</div>`;
-            }
-          },
-          printScheduleTime() {
-            return (schedule) => {
-              let result = '';
-              if (app.shouldDisplayStartTime(schedule)) {
-                const startTime = app.formattedTime(schedule.startDateTime);
-                result += '(' + startTime;
-                if (app.shouldDisplayEndTime(schedule)) {
-                  const endTime = app.formattedTime(schedule.endDateTime);
-                  return result + '~' + endTime + ')';
-                }
-                return result + ')';
-              }
+                                tagElements += tagFriendAria;
+                            }
+                            return scheduleElement + `<div class="schedule-tags">${tagElements}</div>`;
+                        }
+                    },
+                    printScheduleTime() {
+                        return (schedule) => {
+                            let result = '';
+                            if (app.shouldDisplayStartTime(schedule)) {
+                                const startTime = app.formattedTime(schedule.startDateTime);
+                                result += '(' + startTime;
+                                if (app.shouldDisplayEndTime(schedule)) {
+                                    const endTime = app.formattedTime(schedule.endDateTime);
+                                    return result + '~' + endTime + ')';
+                                }
+                                return result + ')';
+                            }
 
-              if (app.shouldDisplayEndTime(schedule)) {
-                const endTime = app.formattedTime(schedule.endDateTime);
-                return result + ' (~' + endTime + ')';
-              }
-              return result;
-            }
-          }
-          ,
-          shouldDisplayStartTime() {
-            return (schedule) => {
-              const daysFromStart = schedule.daysFromStart;
-              const startDateTime = new Date(schedule.startDateTime);
-              const startHour = startDateTime.getHours().toString().padStart(2, '0');
-              const startMinute = startDateTime.getMinutes().toString().padStart(2, '0');
-              return daysFromStart === 1 && !(startHour === '00' && startMinute === '00');
-            }
-          }
-          ,
-          shouldDisplayEndTime() {
-            return (schedule) => {
-              const daysFromStart = schedule.daysFromStart;
-              const totalDays = schedule.totalDays;
-              const startDateTime = new Date(schedule.startDateTime);
-              const endDateTime = new Date(schedule.endDateTime);
-              const endHour = endDateTime.getHours().toString().padStart(2, '0');
-              const endMinute = endDateTime.getMinutes().toString().padStart(2, '0');
-              return (daysFromStart === totalDays)
-                && !(endHour === '00' && endMinute === '00')
-                && !(totalDays === 1 && sameDateTime(startDateTime, endDateTime));
-            }
-          }
-          ,
-          dutyAndDateTimeSame() {
-            return (duty, dateTimeString) => {
-              const year = duty.year;
-              const month = duty.month - 1;
-              const day = duty.day;
-              const dateTime = new Date(dateTimeString);
-              return year === dateTime.getFullYear() && month === dateTime.getMonth() && day === dateTime.getDate();
-            }
-          }
-          ,
-          hasSchedule() {
-            return (index) => {
-              return this.schedulesByDays[index] && this.schedulesByDays[index].length > 0;
-            }
-          },
-          privacyLabel() {
-            return {
-              PUBLIC: '누구나',
-              FRIENDS: '친구만',
-              PRIVATE: '비공개',
-            }[this.calendarVisibility];
-          },
-          startPage() {
-            const currentPage = this.searchResults.pageable.pageNumber + 1;
-            return Math.max(1, currentPage - 5);
-          },
-          endPage() {
-            const currentPage = this.searchResults.pageable.pageNumber + 1;
-            const totalPages = this.searchResults.totalPages;
-            return Math.min(totalPages, currentPage + 5);
-          },
-          pagesToShow() {
-            const pages = [];
-            for (let i = this.startPage; i <= this.endPage; i++) {
-              pages.push(i);
-            }
-            return pages;
-          }
-        },
-        watch: {
-          currentCalendar() {
-            this.loadDuties(app.year, app.month);
-            this.loadSchedule(app.year, app.month);
-            this.loadHolidays(app.year, app.month);
-            const currentUrl = new URL(window.location.href);
-            currentUrl.searchParams.set('year', app.year);
-            currentUrl.searchParams.set('month', app.month);
-            currentUrl.searchParams.set('day', app.searchDay);
-            console.log(app.searchDay);
-            if (!app.searchDay) {
-              currentUrl.searchParams.delete('day');
-            }
-            window.history.replaceState(null, '', currentUrl.toString());
-            app.monthSelector.year = app.year;
-          }
-          ,
-          'createSchedule.startDateTime':
-            function () {
-              if (app.createSchedule.startDateTimeOld === app.createSchedule.endDateTime || app.createSchedule.startDateTime > app.createSchedule.endDateTime) {
-                app.createSchedule.endDateTime = app.createSchedule.startDateTime;
-              }
-              app.createSchedule.startDateTimeOld = app.createSchedule.startDateTime;
-            }
-          ,
-          'editingSchedule.startDateTime':
-            function () {
-              if (app.editingSchedule.startDateTimeOld === app.editingSchedule.endDateTime || app.editingSchedule.startDateTime > app.editingSchedule.endDateTime) {
-                app.editingSchedule.endDateTime = app.editingSchedule.startDateTime;
-              }
-              app.editingSchedule.startDateTimeOld = app.editingSchedule.startDateTime;
-            }
-          ,
-        },
-        methods: {
-          addMonth(month) {
-            const newDate = new Date(app.year, app.month - 1 + month);
-            app.year = newDate.getFullYear();
-            app.month = newDate.getMonth() + 1;
-            app.searchDay = null;
-          },
-          today() {
-            const today = new Date();
-            app.year = today.getFullYear();
-            app.month = today.getMonth() + 1;
-            app.searchDay = null;
-            app.monthSelector.year = app.year;
-            app.closeDropdown();
-          },
-          closeDropdown() {
-            const dropdownElement = document.querySelector('.dropdown-menu');
-            const dropdownInstance = new bootstrap.Dropdown(dropdownElement, {autoClose: true});
-            dropdownInstance.hide();
-          },
-          selectMonth(month) {
-            app.year = app.monthSelector.year;
-            app.month = month;
-            app.searchDay = null;
-            app.closeDropdown();
-          },
-          loadDuties(year, month) {
-            $.ajax({
-              url: '/api/duty',
-              type: 'GET',
-              data: {
-                memberId: memberId,
-                year: year,
-                month: month,
-              },
-              success: (data) => {
-                this.duties = data;
-                setTimeout(() => {
-                  if (!this.dDaysLoaded) {
-                    this.dDaysPromise.then(() => {
-                      this.checkDDays();
-                    });
-                    return;
-                  }
-                  this.checkDDays();
-                });
-              }
-            })
-          }
-          ,
-          loadDDays() {
-            this.dDaysPromise = new Promise((resolve) => {
-              $.ajax({
-                url: '/api/dday/' + memberId,
-                type: 'GET',
-                success: (data) => {
-                  this.dDays = data;
-                  const selectedDdayId = parseInt(localStorage.getItem('selectedDday_' + memberId));
-                  for (const dDay of app.dDays) {
-                    if (dDay.id === selectedDdayId) {
-                      app.selectedDday = dDay;
+                            if (app.shouldDisplayEndTime(schedule)) {
+                                const endTime = app.formattedTime(schedule.endDateTime);
+                                return result + ' (~' + endTime + ')';
+                            }
+                            return result;
+                        }
                     }
-                    if (dDay.calc === 0) {
-                      dDay.dDayText = 'D-Day';
-                    } else if (dDay.calc < 0) {
-                      dDay.dDayText = 'D+' + -dDay.calc;
-                    } else {
-                      dDay.dDayText = 'D-' + dDay.calc;
+                    ,
+                    shouldDisplayStartTime() {
+                        return (schedule) => {
+                            const daysFromStart = schedule.daysFromStart;
+                            const startDateTime = new Date(schedule.startDateTime);
+                            const startHour = startDateTime.getHours().toString().padStart(2, '0');
+                            const startMinute = startDateTime.getMinutes().toString().padStart(2, '0');
+                            return daysFromStart === 1 && !(startHour === '00' && startMinute === '00');
+                        }
                     }
-                  }
-                  this.dDaysLoaded = true;
-                  resolve();
-                }
-              })
-            });
-          }
-          ,
-          checkDDays() {
-            $('.d-day-schedules').html('');
-            for (const dDay of app.dDays) {
-              const dayElement = document.getElementById(dDay.date);
-              if (dayElement) {
-                let scheduleElement = document.createElement('div');
-                scheduleElement.classList.add('schedule', 'd-day-schedule');
-                scheduleElement.innerHTML = '[D-Day] ' + dDay.title;
-                dayElement.querySelector('.d-day-schedules').prepend(scheduleElement);
-              }
-            }
-          }
-          ,
-          dDayToggle(dDay) {
-            if (app.selectedDday == dDay) {
-              app.selectedDday = null;
-              localStorage.removeItem('selectedDday_' + memberId);
-            } else {
-              app.selectedDday = dDay;
-              localStorage.setItem('selectedDday_' + memberId, dDay.id);
-            }
-          }
-          ,
-          loadSchedule(year, month) {
-            $.ajax({
-              url: '/api/schedules',
-              type: 'GET',
-              data: {
-                memberId: memberId,
-                year: year,
-                month: month,
-              },
-              success: (data) => {
-                this.schedulesByDays = data;
-              }
-            })
-          }
-          ,
-          loadDepartment() {
-            fetch(`/api/departments/${departmentId}`)
-              .then(response => response.json())
-              .then(data => {
-                this.department = data;
-              })
-          }
-          ,
-          editDuty() {
-            const memberId = document.getElementsByClassName('calendar')[0].getAttribute('data-member_id');
-            window.location.href = `/duty/edit?memberId=${memberId}&year=${(app.year)}&month=${(app.month)}`;
-          }
-          ,
-          formattedTime(timeString) {
-            const dateTime = new Date(timeString);
-            const hour = dateTime.getHours() == 12 ? 12 : dateTime.getHours() % 12;
-            let minute = '';
-            if (dateTime.getMinutes() != 0) {
-              minute = ':' + dateTime.getMinutes().toString().padStart(2, '0');
-            }
-            return hour + minute + (dateTime.getHours() >= 12 ? 'PM ' : 'AM');
-          },
-          formattedDateYMD(dateTimeString) {
-            return new Date(dateTimeString).toISOString().split('T')[0].replaceAll('-', '.');
-          },
-          formattedDate(year, month, day) {
-            month = (month < 10) ? '0' + month : month;
-            day = (day < 10) ? '0' + day : day;
-            return year + '-' + month + '-' + day;
-          },
-          isToday(duty) {
-            const today = new Date();
-            return duty.year === today.getFullYear() && duty.month === today.getMonth() + 1 && duty.day === today.getDate();
-          },
-          isSearchDay(duty) {
-            return duty.year === app.year && duty.month === app.month && duty.day === app.searchDay;
-          },
-          isHoliday(index) {
-            const holidays = app.holidaysByDays[index];
-            if (!holidays || holidays.length === 0) {
-              return false;
-            }
-            for (const holiday of holidays) {
-              if (holiday.isHoliday)
-                return true;
-            }
-            return false;
-          }
-          ,
-          viewDayDetail(duty, index) {
-            if (app.batchEditMode || !app.canEdit) {
-              return;
-            }
-            app.isCreateScheduleMode = false;
-            $('#detail-view-modal').modal('show');
-            app.detailView = duty;
-            app.detailView.index = index;
-            app.detailView.scheduleStartDiffCount = app.schedulesByDays[index].length;
-            for (const schedule of app.schedulesByDays[index]) {
-              if (app.dutyAndDateTimeSame(duty, schedule.startDateTime)) {
-                app.detailView.scheduleStartDiffCount--;
-              }
-            }
-            app.resetCreateSchedule();
-            app.cancelEditMode();
-          }
-          ,
-          resetCreateSchedule() {
-            app.createSchedule = {
-              content: '',
-              startDateTime: app.formattedDateTime(app.detailView),
-              endDateTime: app.formattedDateTime(app.detailView),
-              visibility: 'FRIENDS',
-            }
-          }
-          ,
-          isDutyType(duty, dutyType) {
-            if (duty?.dutyType) {
-              return dutyType.name == duty.dutyType
-            }
-            return !dutyType.id
-          }
-          ,
-          changeDutyType(duty, type) {
-            $.ajax({
-              url: '/api/duty/change',
-              type: 'PUT',
-              data: JSON.stringify({
-                year: duty.year,
-                month: duty.month,
-                day: duty.day,
-                dutyTypeId: type.id,
-                memberId: memberId,
-              }),
-              contentType: 'application/json',
-              success: (data) => {
-                duty.dutyType = type.name;
-                duty.dutyColor = type.color;
-              },
-              fail: (data) => {
-                Swal.fire({
-                  icon: 'error',
-                  title: '저장에 실패했습니다.',
-                  showConfirmButton: false,
-                  timer: 1500
-                });
-              }
-            })
-          }
-          ,
-          formattedDateTime(duty) {
-            const month = duty.month.toString().padStart(2, '0');
-            const day = duty.day.toString().padStart(2, '0');
-            return `${duty.year}-${month}-${day}T00:00`;
-          }
-          ,
-          scheduleCreateMode() {
-            app.isCreateScheduleMode = true;
-            const schedules = document.querySelector('#detail-view-modal .schedules');
-          },
-          cancelCreateSchedule() {
-            app.isCreateScheduleMode = false;
-            app.resetCreateSchedule();
-          }
-          ,
-          saveSchedule() {
-            if (!isValidContent(app.createSchedule.content)) {
-              return;
-            }
-            if (!isValidDateTime(app.createSchedule.startDateTime, app.createSchedule.endDateTime)) {
-              return;
-            }
-            const addArea = $('.schedule-add');
-            addArea.waitMe();
-            $.ajax({
-              url: '/api/schedules',
-              type: 'POST',
-              data: JSON.stringify({
-                memberId: memberId,
-                content: app.createSchedule.content,
-                startDateTime: toLocalISOString(new Date(app.createSchedule.startDateTime)),
-                endDateTime: toLocalISOString(new Date(app.createSchedule.endDateTime)),
-                visibility: app.createSchedule.visibility,
-              }),
-              contentType: 'application/json',
-              success: (data) => {
-                // SAVED
-                app.resetCreateSchedule();
-                app.loadSchedule(app.year, app.month);
-                app.isCreateScheduleMode = false;
-              },
-              error: (data) => {
-                Swal.fire({
-                  icon: 'error',
-                  title: '저장에 실패했습니다.',
-                  showConfirmButton: false,
-                  timer: 1500
-                });
-              }, complete: () => {
-                addArea.waitMe('hide');
-              }
-            })
-          }
-          ,
-          scheduleEditMode(schedule) {
-            app.cancelCreateSchedule();
-            app.editingSchedule.id = schedule.id;
-            app.editingSchedule.content = schedule.content;
-            app.editingSchedule.startDateTime = schedule.startDateTime;
-            app.editingSchedule.endDateTime = schedule.endDateTime;
-            app.editingSchedule.visibility = schedule.visibility;
-          }
-          ,
-          cancelEditMode() {
-            app.editingSchedule.id = null;
-            app.editingSchedule.content = '';
-            app.editingSchedule.startDateTime = '';
-            app.editingSchedule.endDateTime = '';
-          }
-          ,
-          isEditing(schedule) {
-            return app.editingSchedule.id === schedule.id;
-          }
-          ,
-          editSchedule() {
-            const schedule = app.editingSchedule;
-            if (!isValidContent(schedule.content)) {
-              return;
-            }
-            if (!isValidDateTime(schedule.startDateTime, schedule.endDateTime)) {
-              return;
-            }
-
-            const editArea = $('#schedule-' + schedule.id);
-            editArea.waitMe();
-            $.ajax({
-              url: '/api/schedules/' + schedule.id,
-              type: 'PUT',
-              data: JSON.stringify({
-                content: schedule.content,
-                startDateTime: toLocalISOString(new Date(schedule.startDateTime)),
-                endDateTime: toLocalISOString(new Date(schedule.endDateTime)),
-                memberId: memberId,
-                visibility: schedule.visibility,
-              }),
-              contentType: 'application/json',
-              success: (data) => {
-                app.cancelEditMode();
-                app.loadSchedule(app.year, app.month);
-              },
-              error: (data) => {
-                Swal.fire({
-                  icon: 'error',
-                  title: '저장에 실패했습니다.',
-                  showConfirmButton: false,
-                  timer: 1500
-                });
-              }, complete: () => {
-                editArea.waitMe('hide');
-              }
-            })
-          }
-          ,
-          swapSchedule(schedule1, schedule2) {
-            $('#detail-view-modal .schedules').waitMe();
-            if (!schedule1 || !schedule2 || schedule1 == schedule2) {
-              return;
-            }
-            fetch(`/api/schedules/${schedule1.id}/position?id2=${schedule2.id}`, {
-              method: 'PATCH',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-            }).then((response) => {
-              $('.schedules').waitMe('hide');
-              if (response.ok) {
-                app.loadSchedule(app.year, app.month);
-              } else {
-                Swal.fire({
-                  icon: 'error',
-                  title: '순서 변경에 실패했습니다.',
-                  showConfirmButton: false,
-                  timer: 1500
-                });
-              }
-            });
-          }
-          ,
-          deleteSchedule(schedule) {
-            Swal.fire({
-              title: '일정을 삭제하시겠습니까?',
-              html: `다음의 일정을 삭제합니다.<br/>[${schedule.content}]<br/> 삭제된 일정은 복구할 수 없습니다.`,
-              icon: 'warning',
-              showCancelButton: true,
-              confirmButtonColor: '#d33',
-              cancelButtonColor: '#999',
-              confirmButtonText: '삭제',
-              cancelButtonText: '취소',
-            }).then((result) => {
-              if (result.isConfirmed) {
-                const deleteArea = $('#schedule-' + schedule.id);
-                deleteArea.waitMe();
-                $.ajax({
-                  url: '/api/schedules/' + schedule.id,
-                  type: 'DELETE',
-                  success: (data) => {
-                    app.loadSchedule(app.year, app.month);
-                  },
-                  error: (data) => {
-                    Swal.fire({
-                      icon: 'error',
-                      title: '삭제에 실패했습니다.',
-                      showConfirmButton: false,
-                      timer: 1500
-                    });
-                  }, complete: () => {
-                    deleteArea.waitMe('hide');
-                  }
-                })
-              }
-            })
-          }
-          ,
-          dutyTypeClasses(type, duty) {
-            const departmentLength = app.department.dutyTypes.length;
-            const colClass = (departmentLength === 2 || departmentLength === 4) ? 'col-md-6' : 'col-md-4';
-            return {
-              ['BACKGROUND-' + type.color]: true,
-              selected: type.id === duty.dutyTypeId,
-              [colClass]: true,
-            };
-          }
-          ,
-          async loadHolidays(year, month) {
-            const response = await fetch(`/api/holidays?year=${year}&month=${month}`);
-
-            if (!response.ok) {
-              console.log(`Error loading holidays. Status Code: ${response.status}`);
-              return;
-            }
-
-            this.holidaysByDays = await response.json();
-          }
-          ,
-          loadFriends() {
-            if (!loginMemberId || !isMyCalendar) {
-              return;
-            }
-            fetch('/api/friends')
-              .then(async response => {
-                if (!response.ok) {
-                  console.log(`Error loading friends. Status Code: ${response.status}`);
-                  return;
-                }
-                this.friends = await response.json();
-              });
-          },
-          addTag(scheduleId, friendId) {
-            fetch(`/api/schedules/${scheduleId}/tags/${friendId}`, {
-              method: 'POST',
-            }).then(response => {
-              if (!response.ok) {
-                Swal.fire({
-                  icon: 'error',
-                  title: '태그 추가에 실패했습니다.',
-                  showConfirmButton: false,
-                  timer: 1500
-                });
-                return;
-              }
-              app.loadSchedule(app.year, app.month);
-            });
-          }
-          ,
-          untag(scheduleId, friendId) {
-            if (!isMyCalendar) {
-              return;
-            }
-            fetch(`/api/schedules/${scheduleId}/tags/${friendId}`, {
-              method: 'DELETE',
-            }).then(response => {
-              if (!response.ok) {
-                Swal.fire({
-                  icon: 'error',
-                  title: '태그 제거에 실패했습니다.',
-                  showConfirmButton: false,
-                  timer: 1500
-                });
-                return;
-              }
-              app.loadSchedule(app.year, app.month);
-            });
-          }
-          ,
-          untagSelf(schedule) {
-            if (!isMyCalendar) {
-              return;
-            }
-            const scheduleId = schedule.id;
-            const scheduleElement = document.getElementById('schedule-' + scheduleId);
-            const scheduleBy = scheduleElement.querySelector('.schedule-tags').querySelector('.schedule-tag').innerText;
-
-            Swal.fire({
-              title: '정말로 태그를 제거하시겠습니까?',
-              html: `태그된 아래의 일정을 제거합니다.<br/>[${schedule.content}] by${scheduleBy}<br/> 태그를 다시 복구하려면 해당 사용자에게 요청해야합니다.`,
-              icon: 'warning',
-              showCancelButton: true,
-              confirmButtonColor: '#d33',
-              cancelButtonColor: '#999',
-              confirmButtonText: '제거',
-              cancelButtonText: '취소',
-            }).then((result) => {
-              if (result.isConfirmed) {
-                fetch(`/api/schedules/${scheduleId}/tags`, {
-                  method: 'DELETE',
-                }).then(response => {
-                  if (!response.ok) {
-                    Swal.fire({
-                      icon: 'error',
-                      title: '태그 제거에 실패했습니다.',
-                      showConfirmButton: false,
-                      timer: 1500
-                    });
-                    return;
-                  }
-                  app.loadSchedule(app.year, app.month);
-                });
-              }
-            });
-          }
-          ,
-          privacyPopup() {
-            $('#privacy-config-modal').modal('show');
-          }
-          ,
-          setPrivacy(event) {
-            document.querySelector('.privacy-config .btn.selected').classList.remove('selected');
-            const privacy = event.target.getAttribute('data-privacy');
-
-            fetch(`/api/members/${memberId}/visibility`, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                visibility: privacy
-              })
-            }).then(response => {
-              if (!response.ok) {
-                Swal.fire({
-                  icon: 'error',
-                  title: '공개 대상 설정 변경에 실패했습니다.',
-                  showConfirmButton: false,
-                  timer: 1500
-                });
-                return;
-              }
-              app.calendarVisibility = privacy;
-            });
-          },
-          addTodoModal() {
-            const modal = document.getElementById('add-todo-modal');
-            modal.querySelector('.todo-title').value = '';
-            modal.querySelector('.todo-content').value = '';
-            $('#add-todo-modal').modal('show');
-          },
-          addTodo() {
-            const addTodoModal = document.getElementById('add-todo-modal');
-            const title = addTodoModal.querySelector('.todo-title').value;
-            const content = addTodoModal.querySelector('.todo-content').value;
-            if (!title) {
-              alertTodoTitle();
-              return;
-            }
-
-            fetch('/api/todos', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                title: title,
-                content: content,
-              })
-            }).then(response => {
-              if (!response.ok) {
-                Swal.fire({
-                  icon: 'error',
-                  title: '할 일 추가에 실패했습니다.',
-                  showConfirmButton: false,
-                  timer: 1500
-                });
-                return;
-              }
-              Swal.fire({
-                icon: 'success',
-                title: '할 일이 추가되었습니다.',
-                showConfirmButton: false,
-                timer: 1500
-              });
-              app.loadTodos();
-              $('#add-todo-modal').modal('hide');
-            });
-
-          }, showTodoDetails(todo) {
-            const modal = document.getElementById("todo-details-modal");
-            modal.querySelector(".todo-title").value = todo.title;
-            modal.querySelector(".todo-content").value = todo.content;
-            modal.querySelector(".todo-date").textContent = todo.createdDate;
-            $('#todo-details-modal').modal('show');
-
-            modal.setAttribute('data-id', todo.id);
-            app.editTodoMode = false;
-          },
-          deleteTodo() {
-            const modal = document.getElementById("todo-details-modal");
-            const todoId = modal.getAttribute('data-id');
-
-            fetch(`/api/todos/${todoId}`, {
-              method: 'DELETE',
-            }).then(response => {
-              if (!response.ok) {
-                Swal.fire({
-                  icon: 'error',
-                  title: '할 일 삭제에 실패했습니다.',
-                  showConfirmButton: false,
-                  timer: 1500
-                });
-                return;
-              }
-              Swal.fire({
-                icon: 'success',
-                title: '할 일이 삭제되었습니다.',
-                showConfirmButton: false,
-                timer: 1500
-              });
-              app.loadTodos();
-              $('#todo-details-modal').modal('hide');
-            });
-          },
-          initSortable() {
-            let todoListElement = document.getElementById('todo-list');
-            if (todoListElement) {
-              const sortable = new Sortable(todoListElement, {
-                animation: 150,
-                draggable: ".todo-item",
-                handle: '.handle',
-                onEnd: (evt) => {
-                  app.updatePosition();
+                    ,
+                    shouldDisplayEndTime() {
+                        return (schedule) => {
+                            const daysFromStart = schedule.daysFromStart;
+                            const totalDays = schedule.totalDays;
+                            const startDateTime = new Date(schedule.startDateTime);
+                            const endDateTime = new Date(schedule.endDateTime);
+                            const endHour = endDateTime.getHours().toString().padStart(2, '0');
+                            const endMinute = endDateTime.getMinutes().toString().padStart(2, '0');
+                            return (daysFromStart === totalDays)
+                                && !(endHour === '00' && endMinute === '00')
+                                && !(totalDays === 1 && sameDateTime(startDateTime, endDateTime));
+                        }
+                    }
+                    ,
+                    dutyAndDateTimeSame() {
+                        return (duty, dateTimeString) => {
+                            const year = duty.year;
+                            const month = duty.month - 1;
+                            const day = duty.day;
+                            const dateTime = new Date(dateTimeString);
+                            return year === dateTime.getFullYear() && month === dateTime.getMonth() && day === dateTime.getDate();
+                        }
+                    }
+                    ,
+                    hasSchedule() {
+                        return (index) => {
+                            return this.schedulesByDays[index] && this.schedulesByDays[index].length > 0;
+                        }
+                    },
+                    privacyLabel() {
+                        return {
+                            PUBLIC: '누구나',
+                            FRIENDS: '친구만',
+                            PRIVATE: '비공개',
+                        }[this.calendarVisibility];
+                    },
+                    startPage() {
+                        const currentPage = this.searchResults.pageable.pageNumber + 1;
+                        return Math.max(1, currentPage - 5);
+                    },
+                    endPage() {
+                        const currentPage = this.searchResults.pageable.pageNumber + 1;
+                        const totalPages = this.searchResults.totalPages;
+                        return Math.min(totalPages, currentPage + 5);
+                    },
+                    pagesToShow() {
+                        const pages = [];
+                        for (let i = this.startPage; i <= this.endPage; i++) {
+                            pages.push(i);
+                        }
+                        return pages;
+                    }
                 },
-              });
-            }
-          },
-          loadTodos() {
-            fetch('/api/todos')
-              .then(response => {
-                if (!response.ok) {
-                  console.log(`Error loading todos. Status Code: ${response.status}`);
-                  return;
-                }
-                return response.json();
-              }).then(data => {
-              this.todos = data;
-            });
-          },
-          updatePosition() {
-            const todoListElement = document.getElementById('todo-list');
-            const todoItems = todoListElement.querySelectorAll('.todo-item');
-            const todoIds = Array.from(todoItems).map(todo => todo.getAttribute('data-id'));
-            fetch('/api/todos/position', {
-              method: 'PATCH',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(todoIds)
-            }).then(response => {
-              if (!response.ok) {
-                Swal.fire({
-                  icon: 'error',
-                  title: '할 일 순서 변경에 실패했습니다.',
-                  showConfirmButton: false,
-                  timer: 1500
-                });
-                return;
-              }
-            });
-          },
-          updateTodo() {
-            const modal = document.getElementById("todo-details-modal");
-            const todoId = modal.getAttribute('data-id');
-            const title = modal.querySelector('.todo-title').value;
-            const content = modal.querySelector('.todo-content').value;
+                watch: {
+                    currentCalendar() {
+                        this.loadDuties(app.year, app.month);
+                        this.loadSchedule(app.year, app.month);
+                        this.loadHolidays(app.year, app.month);
+                        const currentUrl = new URL(window.location.href);
+                        currentUrl.searchParams.set('year', app.year);
+                        currentUrl.searchParams.set('month', app.month);
+                        currentUrl.searchParams.set('day', app.searchDay);
+                        console.log(app.searchDay);
+                        if (!app.searchDay) {
+                            currentUrl.searchParams.delete('day');
+                        }
+                        window.history.replaceState(null, '', currentUrl.toString());
+                        app.monthSelector.year = app.year;
+                    }
+                    ,
+                    'createSchedule.startDateTime':
+                        function () {
+                            if (app.createSchedule.startDateTimeOld === app.createSchedule.endDateTime || app.createSchedule.startDateTime > app.createSchedule.endDateTime) {
+                                app.createSchedule.endDateTime = app.createSchedule.startDateTime;
+                            }
+                            app.createSchedule.startDateTimeOld = app.createSchedule.startDateTime;
+                        }
+                    ,
+                    'editingSchedule.startDateTime':
+                        function () {
+                            if (app.editingSchedule.startDateTimeOld === app.editingSchedule.endDateTime || app.editingSchedule.startDateTime > app.editingSchedule.endDateTime) {
+                                app.editingSchedule.endDateTime = app.editingSchedule.startDateTime;
+                            }
+                            app.editingSchedule.startDateTimeOld = app.editingSchedule.startDateTime;
+                        }
+                    ,
+                },
+                methods: {
+                    addMonth(month) {
+                        const newDate = new Date(app.year, app.month - 1 + month);
+                        app.year = newDate.getFullYear();
+                        app.month = newDate.getMonth() + 1;
+                        app.searchDay = null;
+                    },
+                    today() {
+                        const today = new Date();
+                        app.year = today.getFullYear();
+                        app.month = today.getMonth() + 1;
+                        app.searchDay = null;
+                        app.monthSelector.year = app.year;
+                        app.closeDropdown();
+                    },
+                    closeDropdown() {
+                        const dropdownElement = document.querySelector('.dropdown-menu');
+                        const dropdownInstance = new bootstrap.Dropdown(dropdownElement, {autoClose: true});
+                        dropdownInstance.hide();
+                    },
+                    selectMonth(month) {
+                        app.year = app.monthSelector.year;
+                        app.month = month;
+                        app.searchDay = null;
+                        app.closeDropdown();
+                    },
+                    loadDuties(year, month) {
+                        $.ajax({
+                            url: '/api/duty',
+                            type: 'GET',
+                            data: {
+                                memberId: memberId,
+                                year: year,
+                                month: month,
+                            },
+                            success: (data) => {
+                                this.duties = data;
+                                setTimeout(() => {
+                                    if (!this.dDaysLoaded) {
+                                        this.dDaysPromise.then(() => {
+                                            this.checkDDays();
+                                        });
+                                        return;
+                                    }
+                                    this.checkDDays();
+                                });
+                            }
+                        })
+                    }
+                    ,
+                    loadDDays() {
+                        this.dDaysPromise = new Promise((resolve) => {
+                            $.ajax({
+                                url: '/api/dday/' + memberId,
+                                type: 'GET',
+                                success: (data) => {
+                                    this.dDays = data;
+                                    const selectedDdayId = parseInt(localStorage.getItem('selectedDday_' + memberId));
+                                    for (const dDay of app.dDays) {
+                                        if (dDay.id === selectedDdayId) {
+                                            app.selectedDday = dDay;
+                                        }
+                                        if (dDay.calc === 0) {
+                                            dDay.dDayText = 'D-Day';
+                                        } else if (dDay.calc < 0) {
+                                            dDay.dDayText = 'D+' + -dDay.calc;
+                                        } else {
+                                            dDay.dDayText = 'D-' + dDay.calc;
+                                        }
+                                    }
+                                    this.dDaysLoaded = true;
+                                    resolve();
+                                }
+                            })
+                        });
+                    }
+                    ,
+                    checkDDays() {
+                        $('.d-day-schedules').html('');
+                        for (const dDay of app.dDays) {
+                            const dayElement = document.getElementById(dDay.date);
+                            if (dayElement) {
+                                let scheduleElement = document.createElement('div');
+                                scheduleElement.classList.add('schedule', 'd-day-schedule');
+                                scheduleElement.innerHTML = '[D-Day] ' + dDay.title;
+                                dayElement.querySelector('.d-day-schedules').prepend(scheduleElement);
+                            }
+                        }
+                    }
+                    ,
+                    dDayToggle(dDay) {
+                        if (app.selectedDday == dDay) {
+                            app.selectedDday = null;
+                            localStorage.removeItem('selectedDday_' + memberId);
+                        } else {
+                            app.selectedDday = dDay;
+                            localStorage.setItem('selectedDday_' + memberId, dDay.id);
+                        }
+                    }
+                    ,
+                    loadSchedule(year, month) {
+                        $.ajax({
+                            url: '/api/schedules',
+                            type: 'GET',
+                            data: {
+                                memberId: memberId,
+                                year: year,
+                                month: month,
+                            },
+                            success: (data) => {
+                                this.schedulesByDays = data;
+                            }
+                        })
+                    }
+                    ,
+                    loadDepartment() {
+                        fetch(`/api/departments/${departmentId}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                this.department = data;
+                            })
+                    }
+                    ,
+                    editDuty() {
+                        const memberId = document.getElementsByClassName('calendar')[0].getAttribute('data-member_id');
+                        window.location.href = `/duty/edit?memberId=${memberId}&year=${(app.year)}&month=${(app.month)}`;
+                    }
+                    ,
+                    formattedTime(timeString) {
+                        const dateTime = new Date(timeString);
+                        const hour = dateTime.getHours() == 12 ? 12 : dateTime.getHours() % 12;
+                        let minute = '';
+                        if (dateTime.getMinutes() != 0) {
+                            minute = ':' + dateTime.getMinutes().toString().padStart(2, '0');
+                        }
+                        return hour + minute + (dateTime.getHours() >= 12 ? 'PM ' : 'AM');
+                    },
+                    formattedDateYMD(dateTimeString) {
+                        return new Date(dateTimeString).toISOString().split('T')[0].replaceAll('-', '.');
+                    },
+                    formattedDate(year, month, day) {
+                        month = (month < 10) ? '0' + month : month;
+                        day = (day < 10) ? '0' + day : day;
+                        return year + '-' + month + '-' + day;
+                    },
+                    isToday(duty) {
+                        const today = new Date();
+                        return duty.year === today.getFullYear() && duty.month === today.getMonth() + 1 && duty.day === today.getDate();
+                    },
+                    isSearchDay(duty) {
+                        return duty.year === app.year && duty.month === app.month && duty.day === app.searchDay;
+                    },
+                    isHoliday(index) {
+                        const holidays = app.holidaysByDays[index];
+                        if (!holidays || holidays.length === 0) {
+                            return false;
+                        }
+                        for (const holiday of holidays) {
+                            if (holiday.isHoliday)
+                                return true;
+                        }
+                        return false;
+                    }
+                    ,
+                    viewDayDetail(duty, index) {
+                        if (app.batchEditMode || !app.canEdit) {
+                            return;
+                        }
+                        app.isCreateScheduleMode = false;
+                        $('#detail-view-modal').modal('show');
+                        app.detailView = duty;
+                        app.detailView.index = index;
+                        app.detailView.scheduleStartDiffCount = app.schedulesByDays[index].length;
+                        for (const schedule of app.schedulesByDays[index]) {
+                            if (app.dutyAndDateTimeSame(duty, schedule.startDateTime)) {
+                                app.detailView.scheduleStartDiffCount--;
+                            }
+                        }
+                        app.resetCreateSchedule();
+                        app.cancelEditMode();
+                    }
+                    ,
+                    resetCreateSchedule() {
+                        app.createSchedule = {
+                            content: '',
+                            startDateTime: app.formattedDateTime(app.detailView),
+                            endDateTime: app.formattedDateTime(app.detailView),
+                            visibility: 'FRIENDS',
+                        }
+                    }
+                    ,
+                    isDutyType(duty, dutyType) {
+                        if (duty?.dutyType) {
+                            return dutyType.name == duty.dutyType
+                        }
+                        return !dutyType.id
+                    }
+                    ,
+                    changeDutyType(duty, type) {
+                        $.ajax({
+                            url: '/api/duty/change',
+                            type: 'PUT',
+                            data: JSON.stringify({
+                                year: duty.year,
+                                month: duty.month,
+                                day: duty.day,
+                                dutyTypeId: type.id,
+                                memberId: memberId,
+                            }),
+                            contentType: 'application/json',
+                            success: (data) => {
+                                duty.dutyType = type.name;
+                                duty.dutyColor = type.color;
+                            },
+                            fail: (data) => {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '저장에 실패했습니다.',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                });
+                            }
+                        })
+                    }
+                    ,
+                    formattedDateTime(duty) {
+                        const month = duty.month.toString().padStart(2, '0');
+                        const day = duty.day.toString().padStart(2, '0');
+                        return `${duty.year}-${month}-${day}T00:00`;
+                    }
+                    ,
+                    scheduleCreateMode() {
+                        app.isCreateScheduleMode = true;
+                        const schedules = document.querySelector('#detail-view-modal .schedules');
+                    },
+                    cancelCreateSchedule() {
+                        app.isCreateScheduleMode = false;
+                        app.resetCreateSchedule();
+                    }
+                    ,
+                    saveSchedule() {
+                        if (!isValidContent(app.createSchedule.content)) {
+                            return;
+                        }
+                        if (!isValidDateTime(app.createSchedule.startDateTime, app.createSchedule.endDateTime)) {
+                            return;
+                        }
+                        const addArea = $('.schedule-add');
+                        addArea.waitMe();
+                        $.ajax({
+                            url: '/api/schedules',
+                            type: 'POST',
+                            data: JSON.stringify({
+                                memberId: memberId,
+                                content: app.createSchedule.content,
+                                startDateTime: toLocalISOString(new Date(app.createSchedule.startDateTime)),
+                                endDateTime: toLocalISOString(new Date(app.createSchedule.endDateTime)),
+                                visibility: app.createSchedule.visibility,
+                            }),
+                            contentType: 'application/json',
+                            success: (data) => {
+                                // SAVED
+                                app.resetCreateSchedule();
+                                app.loadSchedule(app.year, app.month);
+                                app.isCreateScheduleMode = false;
+                            },
+                            error: (data) => {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '저장에 실패했습니다.',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                });
+                            }, complete: () => {
+                                addArea.waitMe('hide');
+                            }
+                        })
+                    }
+                    ,
+                    scheduleEditMode(schedule) {
+                        app.cancelCreateSchedule();
+                        app.editingSchedule.id = schedule.id;
+                        app.editingSchedule.content = schedule.content;
+                        app.editingSchedule.startDateTime = schedule.startDateTime;
+                        app.editingSchedule.endDateTime = schedule.endDateTime;
+                        app.editingSchedule.visibility = schedule.visibility;
+                    }
+                    ,
+                    cancelEditMode() {
+                        app.editingSchedule.id = null;
+                        app.editingSchedule.content = '';
+                        app.editingSchedule.startDateTime = '';
+                        app.editingSchedule.endDateTime = '';
+                    }
+                    ,
+                    isEditing(schedule) {
+                        return app.editingSchedule.id === schedule.id;
+                    }
+                    ,
+                    editSchedule() {
+                        const schedule = app.editingSchedule;
+                        if (!isValidContent(schedule.content)) {
+                            return;
+                        }
+                        if (!isValidDateTime(schedule.startDateTime, schedule.endDateTime)) {
+                            return;
+                        }
 
-            if (!title) {
-              alertTodoTitle();
-              return;
-            }
+                        const editArea = $('#schedule-' + schedule.id);
+                        editArea.waitMe();
+                        $.ajax({
+                            url: '/api/schedules/' + schedule.id,
+                            type: 'PUT',
+                            data: JSON.stringify({
+                                content: schedule.content,
+                                startDateTime: toLocalISOString(new Date(schedule.startDateTime)),
+                                endDateTime: toLocalISOString(new Date(schedule.endDateTime)),
+                                memberId: memberId,
+                                visibility: schedule.visibility,
+                            }),
+                            contentType: 'application/json',
+                            success: (data) => {
+                                app.cancelEditMode();
+                                app.loadSchedule(app.year, app.month);
+                            },
+                            error: (data) => {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '저장에 실패했습니다.',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                });
+                            }, complete: () => {
+                                editArea.waitMe('hide');
+                            }
+                        })
+                    }
+                    ,
+                    swapSchedule(schedule1, schedule2) {
+                        $('#detail-view-modal .schedules').waitMe();
+                        if (!schedule1 || !schedule2 || schedule1 == schedule2) {
+                            return;
+                        }
+                        fetch(`/api/schedules/${schedule1.id}/position?id2=${schedule2.id}`, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                        }).then((response) => {
+                            $('.schedules').waitMe('hide');
+                            if (response.ok) {
+                                app.loadSchedule(app.year, app.month);
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '순서 변경에 실패했습니다.',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                });
+                            }
+                        });
+                    }
+                    ,
+                    deleteSchedule(schedule) {
+                        Swal.fire({
+                            title: '일정을 삭제하시겠습니까?',
+                            html: `다음의 일정을 삭제합니다.<br/>[${schedule.content}]<br/> 삭제된 일정은 복구할 수 없습니다.`,
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#d33',
+                            cancelButtonColor: '#999',
+                            confirmButtonText: '삭제',
+                            cancelButtonText: '취소',
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                const deleteArea = $('#schedule-' + schedule.id);
+                                deleteArea.waitMe();
+                                $.ajax({
+                                    url: '/api/schedules/' + schedule.id,
+                                    type: 'DELETE',
+                                    success: (data) => {
+                                        app.loadSchedule(app.year, app.month);
+                                    },
+                                    error: (data) => {
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: '삭제에 실패했습니다.',
+                                            showConfirmButton: false,
+                                            timer: 1500
+                                        });
+                                    }, complete: () => {
+                                        deleteArea.waitMe('hide');
+                                    }
+                                })
+                            }
+                        })
+                    }
+                    ,
+                    dutyTypeClasses(type, duty) {
+                        const departmentLength = app.department.dutyTypes.length;
+                        const colClass = (departmentLength === 2 || departmentLength === 4) ? 'col-md-6' : 'col-md-4';
+                        return {
+                            ['BACKGROUND-' + type.color]: true,
+                            selected: type.id === duty.dutyTypeId,
+                            [colClass]: true,
+                        };
+                    }
+                    ,
+                    async loadHolidays(year, month) {
+                        const response = await fetch(`/api/holidays?year=${year}&month=${month}`);
 
-            fetch(`/api/todos/${todoId}`, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                title: title,
-                content: content,
-              })
-            }).then(response => {
-              if (!response.ok) {
-                Swal.fire({
-                  icon: 'error',
-                  title: '할 일 수정에 실패했습니다.',
-                  showConfirmButton: false,
-                  timer: 1500
-                });
-                return;
-              }
-              Swal.fire({
-                icon: 'success',
-                title: '할 일이 수정되었습니다.',
-                showConfirmButton: false,
-                timer: 1500
-              });
-              app.loadTodos();
-              $('#todo-details-modal').modal('hide');
-            });
-          },
-          showBatchUpdate() {
-            Swal.fire({
-              title: '한번에 수정',
-              html: `
+                        if (!response.ok) {
+                            console.log(`Error loading holidays. Status Code: ${response.status}`);
+                            return;
+                        }
+
+                        this.holidaysByDays = await response.json();
+                    }
+                    ,
+                    loadFriends() {
+                        if (!loginMemberId || !isMyCalendar) {
+                            return;
+                        }
+                        fetch('/api/friends')
+                            .then(async response => {
+                                if (!response.ok) {
+                                    console.log(`Error loading friends. Status Code: ${response.status}`);
+                                    return;
+                                }
+                                this.friends = await response.json();
+                            });
+                    },
+                    addTag(scheduleId, friendId) {
+                        fetch(`/api/schedules/${scheduleId}/tags/${friendId}`, {
+                            method: 'POST',
+                        }).then(response => {
+                            if (!response.ok) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '태그 추가에 실패했습니다.',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                });
+                                return;
+                            }
+                            app.loadSchedule(app.year, app.month);
+                        });
+                    }
+                    ,
+                    untag(scheduleId, friendId) {
+                        if (!isMyCalendar) {
+                            return;
+                        }
+                        fetch(`/api/schedules/${scheduleId}/tags/${friendId}`, {
+                            method: 'DELETE',
+                        }).then(response => {
+                            if (!response.ok) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '태그 제거에 실패했습니다.',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                });
+                                return;
+                            }
+                            app.loadSchedule(app.year, app.month);
+                        });
+                    }
+                    ,
+                    untagSelf(schedule) {
+                        if (!isMyCalendar) {
+                            return;
+                        }
+                        const scheduleId = schedule.id;
+                        const scheduleElement = document.getElementById('schedule-' + scheduleId);
+                        const scheduleBy = scheduleElement.querySelector('.schedule-tags').querySelector('.schedule-tag').innerText;
+
+                        Swal.fire({
+                            title: '정말로 태그를 제거하시겠습니까?',
+                            html: `태그된 아래의 일정을 제거합니다.<br/>[${schedule.content}] by${scheduleBy}<br/> 태그를 다시 복구하려면 해당 사용자에게 요청해야합니다.`,
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#d33',
+                            cancelButtonColor: '#999',
+                            confirmButtonText: '제거',
+                            cancelButtonText: '취소',
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                fetch(`/api/schedules/${scheduleId}/tags`, {
+                                    method: 'DELETE',
+                                }).then(response => {
+                                    if (!response.ok) {
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: '태그 제거에 실패했습니다.',
+                                            showConfirmButton: false,
+                                            timer: 1500
+                                        });
+                                        return;
+                                    }
+                                    app.loadSchedule(app.year, app.month);
+                                });
+                            }
+                        });
+                    }
+                    ,
+                    privacyPopup() {
+                        $('#privacy-config-modal').modal('show');
+                    }
+                    ,
+                    setPrivacy(event) {
+                        document.querySelector('.privacy-config .btn.selected').classList.remove('selected');
+                        const privacy = event.target.getAttribute('data-privacy');
+
+                        fetch(`/api/members/${memberId}/visibility`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                visibility: privacy
+                            })
+                        }).then(response => {
+                            if (!response.ok) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '공개 대상 설정 변경에 실패했습니다.',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                });
+                                return;
+                            }
+                            app.calendarVisibility = privacy;
+                        });
+                    },
+                    addTodoModal() {
+                        const modal = document.getElementById('add-todo-modal');
+                        modal.querySelector('.todo-title').value = '';
+                        modal.querySelector('.todo-content').value = '';
+                        $('#add-todo-modal').modal('show');
+                    },
+                    addTodo() {
+                        const addTodoModal = document.getElementById('add-todo-modal');
+                        const title = addTodoModal.querySelector('.todo-title').value;
+                        const content = addTodoModal.querySelector('.todo-content').value;
+                        if (!title) {
+                            alertTodoTitle();
+                            return;
+                        }
+
+                        fetch('/api/todos', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                title: title,
+                                content: content,
+                            })
+                        }).then(response => {
+                            if (!response.ok) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '할 일 추가에 실패했습니다.',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                });
+                                return;
+                            }
+                            Swal.fire({
+                                icon: 'success',
+                                title: '할 일이 추가되었습니다.',
+                                showConfirmButton: false,
+                                timer: 1500
+                            });
+                            app.loadTodos();
+                            $('#add-todo-modal').modal('hide');
+                        });
+
+                    }, showTodoDetails(todo) {
+                        const modal = document.getElementById("todo-details-modal");
+                        modal.querySelector(".todo-title").value = todo.title;
+                        modal.querySelector(".todo-content").value = todo.content;
+                        modal.querySelector(".todo-date").textContent = todo.createdDate;
+                        $('#todo-details-modal').modal('show');
+
+                        modal.setAttribute('data-id', todo.id);
+                        app.editTodoMode = false;
+                    },
+                    deleteTodo() {
+                        const modal = document.getElementById("todo-details-modal");
+                        const todoId = modal.getAttribute('data-id');
+
+                        fetch(`/api/todos/${todoId}`, {
+                            method: 'DELETE',
+                        }).then(response => {
+                            if (!response.ok) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '할 일 삭제에 실패했습니다.',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                });
+                                return;
+                            }
+                            Swal.fire({
+                                icon: 'success',
+                                title: '할 일이 삭제되었습니다.',
+                                showConfirmButton: false,
+                                timer: 1500
+                            });
+                            app.loadTodos();
+                            $('#todo-details-modal').modal('hide');
+                        });
+                    },
+                    initSortable() {
+                        let todoListElement = document.getElementById('todo-list');
+                        if (todoListElement) {
+                            const sortable = new Sortable(todoListElement, {
+                                animation: 150,
+                                draggable: ".todo-item",
+                                handle: '.handle',
+                                onEnd: (evt) => {
+                                    app.updatePosition();
+                                },
+                            });
+                        }
+                    },
+                    loadTodos() {
+                        fetch('/api/todos')
+                            .then(response => {
+                                if (!response.ok) {
+                                    console.log(`Error loading todos. Status Code: ${response.status}`);
+                                    return;
+                                }
+                                return response.json();
+                            }).then(data => {
+                            this.todos = data;
+                        });
+                    },
+                    updatePosition() {
+                        const todoListElement = document.getElementById('todo-list');
+                        const todoItems = todoListElement.querySelectorAll('.todo-item');
+                        const todoIds = Array.from(todoItems).map(todo => todo.getAttribute('data-id'));
+                        fetch('/api/todos/position', {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(todoIds)
+                        }).then(response => {
+                            if (!response.ok) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '할 일 순서 변경에 실패했습니다.',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                });
+                                return;
+                            }
+                        });
+                    },
+                    updateTodo() {
+                        const modal = document.getElementById("todo-details-modal");
+                        const todoId = modal.getAttribute('data-id');
+                        const title = modal.querySelector('.todo-title').value;
+                        const content = modal.querySelector('.todo-content').value;
+
+                        if (!title) {
+                            alertTodoTitle();
+                            return;
+                        }
+
+                        fetch(`/api/todos/${todoId}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                title: title,
+                                content: content,
+                            })
+                        }).then(response => {
+                            if (!response.ok) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '할 일 수정에 실패했습니다.',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                });
+                                return;
+                            }
+                            Swal.fire({
+                                icon: 'success',
+                                title: '할 일이 수정되었습니다.',
+                                showConfirmButton: false,
+                                timer: 1500
+                            });
+                            app.loadTodos();
+                            $('#todo-details-modal').modal('hide');
+                        });
+                    },
+                    showBatchUpdate() {
+                        Swal.fire({
+                            title: '한번에 수정',
+                            html: `
                               <p>${app.year}년 ${app.month}월의 기본 듀티를 선택해주세요.</p>
                               <p>현재 월의 모든 날짜가 선택한 듀티로 설정됩니다.</p>
                               <p class="bg-warning">클릭시 바로 변경됩니다.</p>
@@ -1489,117 +1489,117 @@
                                       </button>
                                   `).join('')}
                               </div>`,
-              showConfirmButton: false,
-              showCancelButton: true,
-              cancelButtonText: '취소',
-              didOpen: () => {
-                const buttons = document.querySelectorAll('.swal2-html-container button');
-                buttons.forEach(button => {
-                  button.addEventListener('click', () => {
-                    const dutyId = button.getAttribute('data-id');
-                    this.batchUpdate(dutyId);
-                    Swal.close();
-                  });
-                });
-              }
-            });
-          },
-          batchUpdate(dutyTypeId) {
-            fetch(`/api/duty/batch`, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                year: app.year,
-                month: app.month,
-                dutyTypeId: dutyTypeId,
-                memberId: memberId,
-              })
-            }).then(response => {
-              if (!response.ok) {
-                Swal.fire({
-                  icon: 'error',
-                  title: '일괄 수정에 실패했습니다.',
-                  showConfirmButton: false,
-                  timer: 1500
-                });
-                return;
-              }
-              app.loadDuties(app.year, app.month);
-            });
-          },
-          search(page = 0) {
-            $('#search-result-modal').modal('show');
-            const query = app.searchQuery;
-            fetch(`/api/schedules/${memberId}/search?q=${query}&page=${page}`)
-              .then((response) => {
-                if (!response.ok) {
-                  console.log(`Error searching schedules. Status Code: ${response.status}`);
-                  return;
+                            showConfirmButton: false,
+                            showCancelButton: true,
+                            cancelButtonText: '취소',
+                            didOpen: () => {
+                                const buttons = document.querySelectorAll('.swal2-html-container button');
+                                buttons.forEach(button => {
+                                    button.addEventListener('click', () => {
+                                        const dutyId = button.getAttribute('data-id');
+                                        this.batchUpdate(dutyId);
+                                        Swal.close();
+                                    });
+                                });
+                            }
+                        });
+                    },
+                    batchUpdate(dutyTypeId) {
+                        fetch(`/api/duty/batch`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                year: app.year,
+                                month: app.month,
+                                dutyTypeId: dutyTypeId,
+                                memberId: memberId,
+                            })
+                        }).then(response => {
+                            if (!response.ok) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '일괄 수정에 실패했습니다.',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                });
+                                return;
+                            }
+                            app.loadDuties(app.year, app.month);
+                        });
+                    },
+                    search(page = 0) {
+                        $('#search-result-modal').modal('show');
+                        const query = app.searchQuery;
+                        fetch(`/api/schedules/${memberId}/search?q=${query}&page=${page}`)
+                            .then((response) => {
+                                if (!response.ok) {
+                                    console.log(`Error searching schedules. Status Code: ${response.status}`);
+                                    return;
+                                }
+                                return response.json();
+                            })
+                            .then((data) => {
+                                app.searchResults = data;
+                            });
+                    },
+                    moveToSearch(item) {
+                        const startDateTime = new Date(item.startDateTime);
+                        app.year = startDateTime.getFullYear();
+                        app.month = startDateTime.getMonth() + 1;
+                        app.searchDay = startDateTime.getDate();
+                        $('#search-result-modal').modal('hide');
+                    }
                 }
-                return response.json();
-              })
-              .then((data) => {
-                app.searchResults = data;
-              });
-          },
-          moveToSearch(item) {
-            const startDateTime = new Date(item.startDateTime);
-            app.year = startDateTime.getFullYear();
-            app.month = startDateTime.getMonth() + 1;
-            app.searchDay = startDateTime.getDate();
-            $('#search-result-modal').modal('hide');
-          }
+            }
+        )
+    })
+
+    function sameDateTime(startDateTime, endDateTime) {
+        return startDateTime.getTime() === endDateTime.getTime();
+    }
+
+    function isValidContent(content) {
+        if (!content) {
+            Swal.fire({
+                icon: 'error',
+                title: '내용을 입력해주세요.',
+                showConfirmButton: false,
+                timer: 1500
+            });
+            return false;
         }
-      }
-    )
-  })
-
-  function sameDateTime(startDateTime, endDateTime) {
-    return startDateTime.getTime() === endDateTime.getTime();
-  }
-
-  function isValidContent(content) {
-    if (!content) {
-      Swal.fire({
-        icon: 'error',
-        title: '내용을 입력해주세요.',
-        showConfirmButton: false,
-        timer: 1500
-      });
-      return false;
+        return true;
     }
-    return true;
-  }
 
-  function isValidDateTime(startDateTime, endDateTime) {
-    if (!startDateTime || !endDateTime) {
-      Swal.fire({
-        icon: 'error',
-        title: '시작일시와 종료일시를 모두 입력해주세요.',
-        confirmButtonText: '확인',
-      });
-      return false;
+    function isValidDateTime(startDateTime, endDateTime) {
+        if (!startDateTime || !endDateTime) {
+            Swal.fire({
+                icon: 'error',
+                title: '시작일시와 종료일시를 모두 입력해주세요.',
+                confirmButtonText: '확인',
+            });
+            return false;
+        }
+        if (new Date(startDateTime) > new Date(endDateTime)) {
+            Swal.fire({
+                icon: 'error',
+                title: '종료일시는 시작일시보다 빠를 수 없습니다.',
+                confirmButtonText: '확인',
+            });
+            return false;
+        }
+        return true;
     }
-    if (new Date(startDateTime) > new Date(endDateTime)) {
-      Swal.fire({
-        icon: 'error',
-        title: '종료일시는 시작일시보다 빠를 수 없습니다.',
-        confirmButtonText: '확인',
-      });
-      return false;
-    }
-    return true;
-  }
 
-  function alertTodoTitle() {
-    Swal.fire({
-      icon: 'error',
-      title: '할일 제목을 입력해주세요.',
-      showConfirmButton: false,
-      timer: 1500
-    });
-  }
+    function alertTodoTitle() {
+        Swal.fire({
+            icon: 'error',
+            title: '할일 제목을 입력해주세요.',
+            showConfirmButton: false,
+            timer: 1500
+        });
+    }
 
 </script>
