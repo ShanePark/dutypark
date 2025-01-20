@@ -29,6 +29,8 @@ server:
   tomcat:
     mbeanregistry:
       enabled: true
+  http2:
+    enabled: true
 
 management:
   endpoints:
