@@ -6,12 +6,14 @@ import net.gpedro.integrations.slack.SlackAttachment
 import net.gpedro.integrations.slack.SlackField
 import net.gpedro.integrations.slack.SlackMessage
 import org.apache.catalina.connector.ClientAbortException
+import org.apache.coyote.CloseNowException
 import org.slf4j.Logger
 import org.springframework.http.ResponseEntity
 import org.springframework.web.HttpRequestMethodNotSupportedException
 import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.ResponseBody
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException
 import org.springframework.web.servlet.resource.NoResourceFoundException
 import java.util.*
 
@@ -36,9 +38,8 @@ class ErrorDetectAdvisor(
 
     @ExceptionHandler(Exception::class)
     fun handleException(req: HttpServletRequest, e: Exception) {
-        if (e is NoResourceFoundException || e is ClientAbortException) {
+        if (isNotNotify(e))
             return
-        }
 
         val slackAttachment = SlackAttachment()
         slackAttachment.setFallback("Error")
@@ -66,5 +67,8 @@ class ErrorDetectAdvisor(
         slackNotifier.call(slackMessage)
         throw e
     }
+
+    private fun isNotNotify(e: Exception) =
+        e is NoResourceFoundException || e is ClientAbortException || e is CloseNowException || e is AsyncRequestNotUsableException
 
 }
