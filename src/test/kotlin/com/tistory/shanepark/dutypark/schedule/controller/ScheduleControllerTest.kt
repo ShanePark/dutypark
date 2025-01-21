@@ -51,6 +51,7 @@ class ScheduleControllerTest : RestDocsTest() {
                     requestFields(
                         fieldWithPath("memberId").description("Member Id"),
                         fieldWithPath("content").description("Schedule Content"),
+                        fieldWithPath("description").description("Schedule Description"),
                         fieldWithPath("startDateTime").description("Schedule Start DateTime"),
                         fieldWithPath("endDateTime").description("Schedule End DateTime"),
                         fieldWithPath("visibility").description("Schedule Visibility")
@@ -127,6 +128,7 @@ class ScheduleControllerTest : RestDocsTest() {
                     requestFields(
                         fieldWithPath("memberId").description("Member Id"),
                         fieldWithPath("content").description("Schedule Content"),
+                        fieldWithPath("description").description("Schedule Description"),
                         fieldWithPath("startDateTime").description("Schedule Start DateTime"),
                         fieldWithPath("endDateTime").description("Schedule End DateTime"),
                         fieldWithPath("visibility").description("Schedule Visibility")

@@ -17,7 +17,8 @@ class ScheduleDtoTest {
         val member = member
         val from = LocalDateTime.of(2021, 1, 5, 0, 0)
         val end = LocalDateTime.of(2021, 1, 8, 0, 0)
-        val schedule = Schedule(member, "content", from, end, 1)
+        val schedule =
+            Schedule(member = member, content = "content", startDateTime = from, endDateTime = end, position = 1)
 
         // When
         val yearMonth = YearMonth.of(2021, 1)
@@ -48,7 +49,8 @@ class ScheduleDtoTest {
         // Given
         val from = LocalDateTime.of(2020, 12, 30, 0, 0)
         val end = LocalDateTime.of(2021, 1, 3, 23, 59)
-        val schedule = Schedule(member, "content", from, end, 1)
+        val schedule =
+            Schedule(member = member, content = "content", startDateTime = from, endDateTime = end, position = 1)
 
         // When
         val yearMonth = YearMonth.of(2021, 1)
@@ -80,7 +82,8 @@ class ScheduleDtoTest {
     fun `empty if there is no schedule on the month`() {
         // Given
         val day = LocalDateTime.of(2023, 4, 17, 0, 0)
-        val schedule = Schedule(member, "content", day, day, 1)
+        val schedule =
+            Schedule(member = member, content = "content", startDateTime = day, endDateTime = day, position = 1)
 
         // When
         val yearMonth = YearMonth.of(2023, 3)
@@ -93,7 +96,8 @@ class ScheduleDtoTest {
     fun `One day Schedule`() {
         // Given
         val day = LocalDateTime.of(2023, 4, 17, 0, 0)
-        val schedule = Schedule(member, "content", day, day, 1)
+        val schedule =
+            Schedule(member = member, content = "content", startDateTime = day, endDateTime = day, position = 1)
 
         // When
         val yearMonth = YearMonth.of(2023, 4)
@@ -110,7 +114,8 @@ class ScheduleDtoTest {
     fun `Four day schedule but end time is faster than start time`() {
         val start = LocalDateTime.of(2023, 6, 30, 22, 0)
         val end = LocalDateTime.of(2023, 7, 3, 17, 0)
-        val schedule = Schedule(member, "content", start, end, 0)
+        val schedule =
+            Schedule(member = member, content = "content", startDateTime = start, endDateTime = end, position = 0)
 
         val yearMonth = YearMonth.of(2023, 7)
         val calendarView = CalendarView(yearMonth)
