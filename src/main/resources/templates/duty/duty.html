@@ -646,7 +646,7 @@
                             if (schedule.isTagged) {
                                 tags.push({name: schedule.owner});
                             }
-                            let scheduleElement = `<p class="schedule-content">${content}<small>${app.printScheduleTime(schedule)}</small> ${schedule.visibility === 'PRIVATE' ? '<i class="bi bi-lock-fill"></i>' : ''}</p>`;
+                            let scheduleElement = `<p class="schedule-content">${schedule.visibility === 'PRIVATE' ? '<i class="bi bi-lock-fill"></i>' : ''} ${content}<small>${app.printScheduleTime(schedule)}</small></p>`;
                             if (schedule.description) {
                                 scheduleElement += '<div class="schedule-description"><hr>' + schedule.description.replace(/\n/g, '<br>') + '</div>';
                             }
@@ -876,7 +876,7 @@
                             if (dayElement) {
                                 let scheduleElement = document.createElement('div');
                                 scheduleElement.classList.add('schedule', 'd-day-schedule');
-                                scheduleElement.innerHTML = '[D-Day] ' + dDay.title;
+                                scheduleElement.innerHTML = '<i class="bi bi-calendar-check"></i> ' + dDay.title;
                                 dayElement.querySelector('.d-day-schedules').prepend(scheduleElement);
                             }
                         }
