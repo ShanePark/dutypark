@@ -393,7 +393,7 @@ a.homeButton:hover {
 }
 
 #detail-view-modal .schedules {
-    max-height: 600px;
+    max-height: 650px;
     overflow-y: scroll;
     scroll-behavior: smooth;
 }
@@ -755,4 +755,19 @@ input[readonly], textarea[readonly] {
 
 .position-relative {
     position: relative !important;
+}
+
+.schedule small.help-note {
+    font-size: 0.6em;
+    position: absolute;
+    right: 15px;
+    margin-top: 10px;
+}
+
+.schedule .schedule-description {
+    font-size: 0.8em;
+}
+
+.DAY .schedule .schedule-description {
+    display: none;
 }
