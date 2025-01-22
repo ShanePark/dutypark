@@ -32,6 +32,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         val scheduleUpdateDto1 = ScheduleUpdateDto(
             memberId = member.id!!,
             content = "schedule1",
+            description = "description1",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
             endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
         )
@@ -61,6 +62,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         val findSchedule = scheduleRepository.findById(id).orElseThrow()
         assertThat(findSchedule).isNotNull
         assertThat(findSchedule.content).isEqualTo(scheduleUpdateDto1.content)
+        assertThat(findSchedule.description).isEqualTo(scheduleUpdateDto1.description)
         assertThat(findSchedule.startDateTime).isEqualTo(scheduleUpdateDto1.startDateTime)
         assertThat(findSchedule.endDateTime).isEqualTo(scheduleUpdateDto1.endDateTime)
         assertThat(findSchedule.position).isEqualTo(0)
@@ -98,6 +100,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         val schedule = Schedule(
             member = member,
             content = "schedule1",
+            description = "description1",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
             endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
             position = 0
@@ -109,6 +112,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         val scheduleUpdateDto = ScheduleUpdateDto(
             memberId = member.id!!,
             content = "schedule2",
+            description = "description2",
             startDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
             endDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
         )
@@ -118,6 +122,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         // Then
         assertThat(updatedSchedule).isNotNull
         assertThat(updatedSchedule.content).isEqualTo(scheduleUpdateDto.content)
+        assertThat(updatedSchedule.description).isEqualTo(scheduleUpdateDto.description)
         assertThat(updatedSchedule.startDateTime).isEqualTo(scheduleUpdateDto.startDateTime)
         assertThat(updatedSchedule.endDateTime).isEqualTo(scheduleUpdateDto.endDateTime)
         assertThat(updatedSchedule.position).isEqualTo(0)

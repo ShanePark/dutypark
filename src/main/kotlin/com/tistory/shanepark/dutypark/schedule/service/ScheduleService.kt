@@ -77,16 +77,14 @@ class ScheduleService(
 
     fun createSchedule(loginMember: LoginMember, scheduleUpdateDto: ScheduleUpdateDto): Schedule {
         val scheduleMember = memberRepository.findById(scheduleUpdateDto.memberId).orElseThrow()
-
         checkScheduleCreateAuthority(loginMember, scheduleMember)
 
         val startDateTime = scheduleUpdateDto.startDateTime
-
         val position = findNextPosition(scheduleMember, startDateTime)
-
         val schedule = Schedule(
             member = scheduleMember,
             content = scheduleUpdateDto.content,
+            description = scheduleUpdateDto.description,
             startDateTime = startDateTime,
             endDateTime = scheduleUpdateDto.endDateTime,
             position = position,
@@ -109,6 +107,7 @@ class ScheduleService(
         schedule.startDateTime = scheduleUpdateDto.startDateTime
         schedule.endDateTime = scheduleUpdateDto.endDateTime
         schedule.content = scheduleUpdateDto.content
+        schedule.description = scheduleUpdateDto.description
         schedule.visibility = scheduleUpdateDto.visibility
 
         log.info("update schedule: $scheduleUpdateDto")
@@ -131,22 +130,9 @@ class ScheduleService(
 
     fun deleteSchedule(loginMember: LoginMember, id: UUID) {
         val schedule = scheduleRepository.findById(id).orElseThrow()
-
         checkScheduleUpdateAuthority(schedule = schedule, loginMember = loginMember)
 
         scheduleRepository.delete(schedule)
-    }
-
-    @Transactional(readOnly = true)
-    fun checkAuthentication(loginMember: LoginMember, targetMemberId: Long) {
-        val targetMember = memberRepository.findMemberWithDepartment(targetMemberId).orElseThrow()
-
-        if (targetMember.id == loginMember.id)
-            return
-        if (targetMember.department?.manager?.id == loginMember.id)
-            return
-
-        throw DutyparkAuthException("login member doesn't have permission to update schedule")
     }
 
     fun tagFriend(loginMember: LoginMember, scheduleId: UUID, friendId: Long) {
@@ -165,7 +151,6 @@ class ScheduleService(
     fun untagFriend(loginMember: LoginMember, scheduleId: UUID, memberId: Long) {
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow()
         val member = memberRepository.findById(memberId).orElseThrow()
-
         checkScheduleUpdateAuthority(schedule = schedule, loginMember = loginMember)
 
         schedule.removeTag(member)
@@ -178,11 +163,8 @@ class ScheduleService(
     }
 
     private fun checkScheduleCreateAuthority(loginMember: LoginMember, scheduleMember: Member) {
-        if (loginMember.id == scheduleMember.id)
-            return
-
-        if (scheduleMember.department?.manager?.id == loginMember.id)
-            return
+        if (loginMember.id == scheduleMember.id) return
+        if (scheduleMember.department?.manager?.id == loginMember.id) return
 
         throw DutyparkAuthException("login member doesn't have permission to create the schedule")
     }
@@ -191,13 +173,8 @@ class ScheduleService(
         loginMember: LoginMember,
         schedule: Schedule,
     ) {
-        if (schedule.member.id == loginMember.id) {
-            return
-        }
-
-        if (isDepartmentManager(schedule, loginMember)) {
-            return
-        }
+        if (schedule.member.id == loginMember.id) return
+        if (isDepartmentManager(schedule, loginMember)) return
 
         throw DutyparkAuthException("login member doesn't have permission to update schedule")
     }

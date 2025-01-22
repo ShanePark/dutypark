@@ -14,13 +14,14 @@
     <ul class="navbar-nav mr-auto mt-2 mt-lg-0">
       <th:block th:if="${loginMember != null}">
         <li class="nav-item active">
-          <a class="nav-link" th:href="@{/duty/{name}(name=${loginMember?.id})}">내 시간표</a>
+          <a class="nav-link" th:href="@{/duty/{name}(name=${loginMember?.id})}">내 시간표 <i
+              class="bi bi-calendar2-week"></i></a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="/member/friends">친구관리</a>
+          <a class="nav-link" href="/member/friends">친구관리 <i class="bi bi-people"></i></a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="/member/d-day">디데이</a>
+          <a class="nav-link" href="/member/d-day">디데이 <i class="bi bi-calendar-check"></i></a>
         </li>
         <th:block th:if="${loginMember?.isAdmin}">
           <li class="nav-item">

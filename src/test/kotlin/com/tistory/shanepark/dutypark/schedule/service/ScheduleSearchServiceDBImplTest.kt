@@ -100,11 +100,11 @@ class ScheduleSearchServiceDBImplTest : DutyparkIntegrationTest() {
         return scheduleService.createSchedule(
             loginMember,
             ScheduleUpdateDto(
-                loginMember.id,
-                title,
-                Visibility.FRIENDS,
-                date,
-                date
+                memberId = loginMember.id,
+                content = title,
+                visibility = Visibility.FRIENDS,
+                startDateTime = date,
+                endDateTime = date
             )
         )
     }

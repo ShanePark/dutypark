@@ -283,7 +283,7 @@
               class="form-control todo-content"
               name="content"
               rows="4"
-              placeholder="할일 상세(선택)"
+              placeholder="할일 상세(선택사항)"
           ></textarea>
         </div>
         <div class="modal-footer">
@@ -381,21 +381,28 @@
             </form>
           </div>
           <div class="schedules mt-4">
-            <div class="schedule card shadow"
+            <div id="schedule-edit" class="schedule card shadow"
                  v-if="!isCreateScheduleMode && (editingSchedule.id == null || isEditing(schedule) )"
                  :class="{'visibility-public': schedule.visibility == 'PUBLIC', 'visibility-friends': schedule.visibility == 'FRIENDS', 'visibility-private': schedule.visibility == 'PRIVATE'}"
                  v-for="(schedule, s_index) in schedulesByDays[detailView.index]"
                  :id="'schedule-' + schedule.id">
-              <span v-if="!isEditing(schedule)" v-html="printSchedule(schedule)"></span>
+              <div v-if="!isEditing(schedule)" v-html="printSchedule(schedule)"></div>
               <div v-if="isEditing(schedule)" class="schedule-edit">
                 <label>일정 추가 <span class="content-length"
-                                   v-text="editingSchedule.content.length + ' / 50'"></span></label>
+                                   v-text="editingSchedule.content.length + ' / 50'"></span>
+                  <small class="help-note">달력에 표시되는 제목이에요 <i class="bi bi-info-circle-fill"></i></small>
+                </label>
                 <textarea class="form-control" placeholder="일정을 입력하세요." maxlength="50" rows="3"
                           v-model="editingSchedule.content"></textarea>
+                <label>일정 상세<small class="help-note">달력에 표시되지 않고 클릭했을때만 보여져요 <i
+                    class="bi bi-info-circle-fill"></i></small>
+                </label>
+                <textarea class="form-control" placeholder="(선택사항) 일정 상세정보를 입력하세요." rows="4"
+                          v-model="editingSchedule.description"></textarea>
                 <label>시작일</label>
                 <input type="datetime-local" class="form-control"
                        v-model="editingSchedule.startDateTime"/>
-                <label>종료일</label>
+                <label>종료일 (선택사항)</label>
                 <input type="datetime-local" class="form-control"
                        v-model="editingSchedule.endDateTime"/>
                 <label>공개설정</label>
@@ -451,15 +458,22 @@
                 <button class="btn btn-secondary" v-on:click="cancelEditMode()">취소</button>
               </div>
             </div>
-            <div class="schedule schedule-add card shadow" v-if="isCreateScheduleMode">
-              <label>일정 추가 <span class="content-length"
-                                 v-text="createSchedule.content.length + ' / 50'"></span></label>
-              <textarea class="form-control" placeholder="일정을 입력하세요." maxlength="50" rows="3"
-                        v-model="createSchedule.content"></textarea>
+            <div id="schedule-create" class="schedule schedule-add card shadow" v-if="isCreateScheduleMode">
+              <label>일정 제목 <span class="content-length"
+                                 v-text="createSchedule.content.length + ' / 50'"></span>
+                <small class="help-note">달력에 표시되는 제목이에요 <i class="bi bi-info-circle-fill"></i></small>
+                <textarea class="form-control" placeholder="일정 제목을 입력하세요." maxlength="50" rows="2"
+                          v-model="createSchedule.content"></textarea>
+              </label>
+              <label>일정 상세<small class="help-note">달력에 표시되지 않고 클릭했을때만 보여져요 <i
+                  class="bi bi-info-circle-fill"></i></small>
+                <textarea class="form-control" placeholder="(선택사항) 일정 상세정보를 입력하세요." rows="4"
+                          v-model="createSchedule.description"></textarea>
+              </label>
               <label>시작일</label>
               <input type="datetime-local" class="form-control"
                      v-model="createSchedule.startDateTime"/>
-              <label>종료일</label>
+              <label>종료일 (선택사항)</label>
               <input type="datetime-local" class="form-control" v-model="createSchedule.endDateTime"
                      :min="createSchedule.startDateTime"/>
               <label>공개설정</label>
@@ -533,6 +547,7 @@
                     },
                     createSchedule: {
                         content: '',
+                        description: '',
                         startDateTime: '',
                         startDateTimeOld: '',
                         endDateTime: '',
@@ -541,6 +556,7 @@
                     editingSchedule: {
                         id: '',
                         content: '',
+                        description: '',
                         startDateTime: '',
                         startDateTimeOld: '',
                         endDateTime: '',
@@ -630,7 +646,10 @@
                             if (schedule.isTagged) {
                                 tags.push({name: schedule.owner});
                             }
-                            let scheduleElement = `<p class="schedule-content schedule-content">${content}<small>${app.printScheduleTime(schedule)}</small> ${schedule.visibility === 'PRIVATE' ? '<i class="bi bi-lock-fill"></i>' : ''}</p>`;
+                            let scheduleElement = `<p class="schedule-content">${schedule.visibility === 'PRIVATE' ? '<i class="bi bi-lock-fill"></i>' : ''} ${content}<small>${app.printScheduleTime(schedule)}</small></p>`;
+                            if (schedule.description) {
+                                scheduleElement += '<div class="schedule-description"><hr>' + schedule.description.replace(/\n/g, '<br>') + '</div>';
+                            }
                             let tagElements = ''
                             if (tags.length > 0) {
                                 tagElements += tags.map(tag => {
@@ -857,7 +876,7 @@
                             if (dayElement) {
                                 let scheduleElement = document.createElement('div');
                                 scheduleElement.classList.add('schedule', 'd-day-schedule');
-                                scheduleElement.innerHTML = '[D-Day] ' + dDay.title;
+                                scheduleElement.innerHTML = '<i class="bi bi-calendar-check"></i> ' + dDay.title;
                                 dayElement.querySelector('.d-day-schedules').prepend(scheduleElement);
                             }
                         }
@@ -958,6 +977,7 @@
                     resetCreateSchedule() {
                         app.createSchedule = {
                             content: '',
+                            description: '',
                             startDateTime: app.formattedDateTime(app.detailView),
                             endDateTime: app.formattedDateTime(app.detailView),
                             visibility: 'FRIENDS',
@@ -1028,6 +1048,7 @@
                             data: JSON.stringify({
                                 memberId: memberId,
                                 content: app.createSchedule.content,
+                                description: app.createSchedule.description,
                                 startDateTime: toLocalISOString(new Date(app.createSchedule.startDateTime)),
                                 endDateTime: toLocalISOString(new Date(app.createSchedule.endDateTime)),
                                 visibility: app.createSchedule.visibility,
@@ -1056,6 +1077,7 @@
                         app.cancelCreateSchedule();
                         app.editingSchedule.id = schedule.id;
                         app.editingSchedule.content = schedule.content;
+                        app.editingSchedule.description = schedule.description;
                         app.editingSchedule.startDateTime = schedule.startDateTime;
                         app.editingSchedule.endDateTime = schedule.endDateTime;
                         app.editingSchedule.visibility = schedule.visibility;
@@ -1064,6 +1086,7 @@
                     cancelEditMode() {
                         app.editingSchedule.id = null;
                         app.editingSchedule.content = '';
+                        app.editingSchedule.description = '';
                         app.editingSchedule.startDateTime = '';
                         app.editingSchedule.endDateTime = '';
                     }
@@ -1088,6 +1111,7 @@
                             type: 'PUT',
                             data: JSON.stringify({
                                 content: schedule.content,
+                                description: schedule.description,
                                 startDateTime: toLocalISOString(new Date(schedule.startDateTime)),
                                 endDateTime: toLocalISOString(new Date(schedule.endDateTime)),
                                 memberId: memberId,

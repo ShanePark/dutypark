@@ -13,6 +13,7 @@ import java.util.*
 data class ScheduleDto(
     val id: UUID,
     val content: String,
+    val description: String = "",
     val position: Int,
     val year: Int,
     val month: Int,
@@ -41,6 +42,7 @@ data class ScheduleDto(
                 ScheduleDto(
                     id = schedule.id,
                     content = schedule.content,
+                    description = schedule.description,
                     position = schedule.position,
                     year = it.year,
                     month = it.monthValue,
