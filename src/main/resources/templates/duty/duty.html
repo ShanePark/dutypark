@@ -646,7 +646,7 @@
                             if (schedule.isTagged) {
                                 tags.push({name: schedule.owner});
                             }
-                            let scheduleElement = `<p class="schedule-content">${schedule.visibility === 'PRIVATE' ? '<i class="bi bi-lock-fill"></i>' : ''} ${content}<small>${app.printScheduleTime(schedule)}</small></p>`;
+                            let scheduleElement = `<p class="schedule-content">${schedule.visibility === 'PRIVATE' ? '<i class="bi bi-lock-fill"></i>' : ''} ${content} ${schedule.description ? '<i class="has-description bi bi-chat-left-text"></i>' : ''}<small>${app.printScheduleTime(schedule)}</small></p>`;
                             if (schedule.description) {
                                 scheduleElement += '<div class="schedule-description"><hr>' + schedule.description.replace(/\n/g, '<br>') + '</div>';
                             }
