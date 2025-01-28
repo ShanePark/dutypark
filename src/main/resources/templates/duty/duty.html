@@ -148,7 +148,7 @@
                 <span v-text="duty.day"></span>
               </div>
             </div>
-            <div class="col-md-7">
+            <div class="col-md-7 text-align-right pe-3">
               <span v-if="selectedDday" v-text="calcDday(duty)" class="d-day-count"></span>
             </div>
           </div>
@@ -208,7 +208,8 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <p>내 시간표를 공개할 범위를 설정하세요</p>
+          <p>내 시간표를 공개할 범위를 설정하세요.</p>
+          <p>선택시 변경사항이 즉시 저장됩니다.</p>
           <div class="privacy-config btn-group" role="group" aria-label="Privacy setting">
             <button type="button" class="btn btn-success" :class="{'selected': calendarVisibility=='PUBLIC'}"
                     data-privacy="PUBLIC" v-on:click="setPrivacy">누구나
@@ -273,21 +274,26 @@
           <h5 class="modal-title" id="addModalLabel">할일 추가</h5>
         </div>
         <div class="modal-body">
-          <input
-              type="text"
-              class="form-control todo-title"
-              name="title"
-              placeholder="할일 제목"
-          />
-          <textarea
-              class="form-control todo-content"
-              name="content"
-              rows="4"
-              placeholder="할일 상세(선택사항)"
-          ></textarea>
+          <label class="form-control fs-3 mb-2">할일 제목
+            <input
+                type="text"
+                class="form-control todo-title"
+                name="title"
+                placeholder="할일 제목을 입력하세요."
+            />
+          </label>
+          <label class="form-control fs-3">할일 상세(선택 사항)
+            <textarea
+                class="form-control todo-content"
+                name="content"
+                rows="4"
+                placeholder="해당 할일에 대한 상세 설명을 입력하세요"
+            ></textarea>
+          </label>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-success" v-on:click="addTodo()">Add</button>
+          <button type="button" class="btn btn-success" v-on:click="addTodo()">저장</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
         </div>
       </div>
     </div>
@@ -389,11 +395,11 @@
               <div v-if="!isEditing(schedule)" v-html="printSchedule(schedule)"></div>
               <div v-if="isEditing(schedule)" class="schedule-edit">
                 <label>일정 추가 <span class="content-length"
-                                   v-text="editingSchedule.content.length + ' / 50'"></span>
+                                   v-text="editingSchedule.content.length + ' / ' + schedule_content_max_length"></span>
                   <small class="help-note">달력에 표시되는 제목이에요 <i class="bi bi-info-circle-fill"></i></small>
                 </label>
-                <textarea class="form-control" placeholder="일정을 입력하세요." maxlength="50" rows="3"
-                          v-model="editingSchedule.content"></textarea>
+                <input class="form-control" placeholder="일정을 입력하세요." :maxlength="schedule_content_max_length"
+                       v-model="editingSchedule.content"/>
                 <label>일정 상세<small class="help-note">달력에 표시되지 않고 클릭했을때만 보여져요 <i
                     class="bi bi-info-circle-fill"></i></small>
                 </label>
@@ -460,10 +466,10 @@
             </div>
             <div id="schedule-create" class="schedule schedule-add card shadow" v-if="isCreateScheduleMode">
               <label>일정 제목 <span class="content-length"
-                                 v-text="createSchedule.content.length + ' / 50'"></span>
+                                 v-text="createSchedule.content.length + ' / ' + schedule_content_max_length"></span>
                 <small class="help-note">달력에 표시되는 제목이에요 <i class="bi bi-info-circle-fill"></i></small>
-                <textarea class="form-control" placeholder="일정 제목을 입력하세요." maxlength="50" rows="2"
-                          v-model="createSchedule.content"></textarea>
+                <input class="form-control" placeholder="일정 제목을 입력하세요." :maxlength="schedule_content_max_length"
+                       v-model="createSchedule.content"/>
               </label>
               <label>일정 상세<small class="help-note">달력에 표시되지 않고 클릭했을때만 보여져요 <i
                   class="bi bi-info-circle-fill"></i></small>
@@ -525,6 +531,7 @@
         const loginMemberId = parseInt("[[${loginMember?.id}]]");
         const managerId = parseInt("[[${member.managerId}]]");
         const isMyCalendar = loginMemberId === memberId;
+        const sweetAlTimer = 1500;
 
         const app = new Vue({
                 el: '.duty-vue',
@@ -545,6 +552,7 @@
                     monthSelector: {
                         year: parseInt("[[${year}]]"),
                     },
+                    schedule_content_max_length: 30,
                     createSchedule: {
                         content: '',
                         description: '',
@@ -624,8 +632,7 @@
                         return (duty) => {
                             const date = new Date(duty.year, duty.month - 1, duty.day);
                             const calc = Math.floor((date.getTime() - new Date(app.selectedDday.date).getTime()) / (1000 * 60 * 60 * 24)) + 1;
-                            const dDayText = calc < 0 ? 'D' + calc : calc == 0 ? 'D-Day' : 'D+' + (calc + 1);
-                            return dDayText;
+                            return calc < 0 ? 'D' + calc : calc === 0 ? 'D-Day' : 'D+' + (calc + 1);
                         }
                     },
                     printSchedule() {
@@ -715,7 +722,7 @@
                             const endMinute = endDateTime.getMinutes().toString().padStart(2, '0');
                             return (daysFromStart === totalDays)
                                 && !(endHour === '00' && endMinute === '00')
-                                && !(totalDays === 1 && sameDateTime(startDateTime, endDateTime));
+                                && !(totalDays === 1 && app.sameDateTime(startDateTime, endDateTime));
                         }
                     }
                     ,
@@ -1012,7 +1019,7 @@
                                     icon: 'error',
                                     title: '저장에 실패했습니다.',
                                     showConfirmButton: false,
-                                    timer: 1500
+                                    timer: sweetAlTimer
                                 });
                             }
                         })
@@ -1034,10 +1041,10 @@
                     }
                     ,
                     saveSchedule() {
-                        if (!isValidContent(app.createSchedule.content)) {
+                        if (!app.isValidContent(app.createSchedule.content)) {
                             return;
                         }
-                        if (!isValidDateTime(app.createSchedule.startDateTime, app.createSchedule.endDateTime)) {
+                        if (!app.isValidDateTime(app.createSchedule.startDateTime, app.createSchedule.endDateTime)) {
                             return;
                         }
                         const addArea = $('.schedule-add');
@@ -1065,7 +1072,7 @@
                                     icon: 'error',
                                     title: '저장에 실패했습니다.',
                                     showConfirmButton: false,
-                                    timer: 1500
+                                    timer: sweetAlTimer
                                 });
                             }, complete: () => {
                                 addArea.waitMe('hide');
@@ -1097,10 +1104,10 @@
                     ,
                     editSchedule() {
                         const schedule = app.editingSchedule;
-                        if (!isValidContent(schedule.content)) {
+                        if (!app.isValidContent(schedule.content)) {
                             return;
                         }
-                        if (!isValidDateTime(schedule.startDateTime, schedule.endDateTime)) {
+                        if (!app.isValidDateTime(schedule.startDateTime, schedule.endDateTime)) {
                             return;
                         }
 
@@ -1127,7 +1134,7 @@
                                     icon: 'error',
                                     title: '저장에 실패했습니다.',
                                     showConfirmButton: false,
-                                    timer: 1500
+                                    timer: sweetAlTimer
                                 });
                             }, complete: () => {
                                 editArea.waitMe('hide');
@@ -1154,7 +1161,7 @@
                                     icon: 'error',
                                     title: '순서 변경에 실패했습니다.',
                                     showConfirmButton: false,
-                                    timer: 1500
+                                    timer: sweetAlTimer
                                 });
                             }
                         });
@@ -1185,7 +1192,7 @@
                                             icon: 'error',
                                             title: '삭제에 실패했습니다.',
                                             showConfirmButton: false,
-                                            timer: 1500
+                                            timer: sweetAlTimer
                                         });
                                     }, complete: () => {
                                         deleteArea.waitMe('hide');
@@ -1238,7 +1245,7 @@
                                     icon: 'error',
                                     title: '태그 추가에 실패했습니다.',
                                     showConfirmButton: false,
-                                    timer: 1500
+                                    timer: sweetAlTimer
                                 });
                                 return;
                             }
@@ -1258,7 +1265,7 @@
                                     icon: 'error',
                                     title: '태그 제거에 실패했습니다.',
                                     showConfirmButton: false,
-                                    timer: 1500
+                                    timer: sweetAlTimer
                                 });
                                 return;
                             }
@@ -1293,7 +1300,7 @@
                                             icon: 'error',
                                             title: '태그 제거에 실패했습니다.',
                                             showConfirmButton: false,
-                                            timer: 1500
+                                            timer: sweetAlTimer
                                         });
                                         return;
                                     }
@@ -1325,7 +1332,7 @@
                                     icon: 'error',
                                     title: '공개 대상 설정 변경에 실패했습니다.',
                                     showConfirmButton: false,
-                                    timer: 1500
+                                    timer: sweetAlTimer
                                 });
                                 return;
                             }
@@ -1343,7 +1350,7 @@
                         const title = addTodoModal.querySelector('.todo-title').value;
                         const content = addTodoModal.querySelector('.todo-content').value;
                         if (!title) {
-                            alertTodoTitle();
+                            app.alertTodoTitle();
                             return;
                         }
 
@@ -1362,7 +1369,7 @@
                                     icon: 'error',
                                     title: '할 일 추가에 실패했습니다.',
                                     showConfirmButton: false,
-                                    timer: 1500
+                                    timer: sweetAlTimer
                                 });
                                 return;
                             }
@@ -1370,7 +1377,7 @@
                                 icon: 'success',
                                 title: '할 일이 추가되었습니다.',
                                 showConfirmButton: false,
-                                timer: 1500
+                                timer: sweetAlTimer
                             });
                             app.loadTodos();
                             $('#add-todo-modal').modal('hide');
@@ -1398,7 +1405,7 @@
                                     icon: 'error',
                                     title: '할 일 삭제에 실패했습니다.',
                                     showConfirmButton: false,
-                                    timer: 1500
+                                    timer: sweetAlTimer
                                 });
                                 return;
                             }
@@ -1406,7 +1413,7 @@
                                 icon: 'success',
                                 title: '할 일이 삭제되었습니다.',
                                 showConfirmButton: false,
-                                timer: 1500
+                                timer: sweetAlTimer
                             });
                             app.loadTodos();
                             $('#todo-details-modal').modal('hide');
@@ -1453,7 +1460,7 @@
                                     icon: 'error',
                                     title: '할 일 순서 변경에 실패했습니다.',
                                     showConfirmButton: false,
-                                    timer: 1500
+                                    timer: sweetAlTimer
                                 });
                                 return;
                             }
@@ -1466,7 +1473,7 @@
                         const content = modal.querySelector('.todo-content').value;
 
                         if (!title) {
-                            alertTodoTitle();
+                            app.alertTodoTitle();
                             return;
                         }
 
@@ -1485,7 +1492,7 @@
                                     icon: 'error',
                                     title: '할 일 수정에 실패했습니다.',
                                     showConfirmButton: false,
-                                    timer: 1500
+                                    timer: sweetAlTimer
                                 });
                                 return;
                             }
@@ -1493,7 +1500,7 @@
                                 icon: 'success',
                                 title: '할 일이 수정되었습니다.',
                                 showConfirmButton: false,
-                                timer: 1500
+                                timer: sweetAlTimer
                             });
                             app.loadTodos();
                             $('#todo-details-modal').modal('hide');
@@ -1546,7 +1553,7 @@
                                     icon: 'error',
                                     title: '일괄 수정에 실패했습니다.',
                                     showConfirmButton: false,
-                                    timer: 1500
+                                    timer: sweetAlTimer
                                 });
                                 return;
                             }
@@ -1574,56 +1581,61 @@
                         app.month = startDateTime.getMonth() + 1;
                         app.searchDay = startDateTime.getDate();
                         $('#search-result-modal').modal('hide');
+                    },
+                    isValidContent(content) {
+                        if (!content) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: '내용을 입력해주세요.',
+                                showConfirmButton: false,
+                                timer: sweetAlTimer
+                            });
+                            return false;
+                        }
+                        if (content.length > app.schedule_content_max_length) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: app.schedule_content_max_length + '자 이내로 입력해주세요.',
+                                showConfirmButton: false,
+                                timer: sweetAlTimer
+                            });
+                            return false;
+                        }
+                        return true;
+                    },
+                    alertTodoTitle() {
+                        Swal.fire({
+                            icon: 'error',
+                            title: '할일 제목을 입력해주세요.',
+                            showConfirmButton: false,
+                            timer: sweetAlTimer
+                        });
+                    },
+                    sameDateTime(startDateTime, endDateTime) {
+                        return startDateTime.getTime() === endDateTime.getTime();
+                    },
+                    isValidDateTime(startDateTime, endDateTime) {
+                        if (!startDateTime || !endDateTime) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: '시작일시와 종료일시를 모두 입력해주세요.',
+                                confirmButtonText: '확인',
+                            });
+                            return false;
+                        }
+                        if (new Date(startDateTime) > new Date(endDateTime)) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: '종료일시는 시작일시보다 빠를 수 없습니다.',
+                                confirmButtonText: '확인',
+                            });
+                            return false;
+                        }
+                        return true;
                     }
                 }
             }
         )
     })
-
-    function sameDateTime(startDateTime, endDateTime) {
-        return startDateTime.getTime() === endDateTime.getTime();
-    }
-
-    function isValidContent(content) {
-        if (!content) {
-            Swal.fire({
-                icon: 'error',
-                title: '내용을 입력해주세요.',
-                showConfirmButton: false,
-                timer: 1500
-            });
-            return false;
-        }
-        return true;
-    }
-
-    function isValidDateTime(startDateTime, endDateTime) {
-        if (!startDateTime || !endDateTime) {
-            Swal.fire({
-                icon: 'error',
-                title: '시작일시와 종료일시를 모두 입력해주세요.',
-                confirmButtonText: '확인',
-            });
-            return false;
-        }
-        if (new Date(startDateTime) > new Date(endDateTime)) {
-            Swal.fire({
-                icon: 'error',
-                title: '종료일시는 시작일시보다 빠를 수 없습니다.',
-                confirmButtonText: '확인',
-            });
-            return false;
-        }
-        return true;
-    }
-
-    function alertTodoTitle() {
-        Swal.fire({
-            icon: 'error',
-            title: '할일 제목을 입력해주세요.',
-            showConfirmButton: false,
-            timer: 1500
-        });
-    }
 
 </script>

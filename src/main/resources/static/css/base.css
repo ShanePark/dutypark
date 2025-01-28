@@ -144,6 +144,10 @@ h1 a.move:hover {
     text-align: center !important;
 }
 
+.text-align-right {
+    text-align: right !important;
+}
+
 .day-grid .date {
     padding: 0;
     text-align: center;
