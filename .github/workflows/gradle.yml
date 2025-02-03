@@ -57,5 +57,5 @@ jobs:
         run: scp -P ${{ secrets.SSH_PORT }} *.jar ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }}:/shane
       - name: Execute remote commands
         run: |
-          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} "curl -X POST https://dutypark.o-r.kr/actuator/shutdown"
+          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} "curl -X POST --max-time 60 https://dutypark.o-r.kr/actuator/shutdown || true"
           ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} "sudo nohup java -jar /shane/*.jar --spring.profiles.active=op > /shane/nohup.log 2>&1 &"
