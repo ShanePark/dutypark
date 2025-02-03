@@ -36,7 +36,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: "health, metrics, prometheus"
+        include: "health, metrics, prometheus, shutdown"
+  endpoint:
+    shutdown:
+      enabled: true
 
 jwt:
   secret: "WvQiOAms2XFyW/UnmfO/9xL24ch4IlfUikP9QohMuso=" # Change it on production
