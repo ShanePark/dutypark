@@ -1,5 +1,9 @@
 spring:
   web.resources.cache.period: PT720H # 30 days
+  web.resources:
+    chain.strategy.content:
+      enabled: true
+      paths: /**
   datasource:
     url: jdbc:mysql://localhost:3306/dutypark
     username: dutypark

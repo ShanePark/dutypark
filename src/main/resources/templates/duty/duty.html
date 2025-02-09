@@ -25,10 +25,7 @@
   <div th:if="${member.department}" class="calendar" th:attr="data-member_id=${member.id}">
     <div class="month-control row">
       <div class="month-control-left col-md-3">
-        <div class="info member-info">
-          <i class="bi bi-person-fill"></i>
-          <span th:text="${member.name}"></span>
-        </div>
+        <button class="today-button info" v-on:click="today()"><span>Today</span><i class="bi bi-arrow-counterclockwise"></i></button>
       </div>
       <div class="col-md-6 monthSelector">
         <a class="move h_pointer" v-on:click="addMonth(-1)">
@@ -42,7 +39,7 @@
         <div class="dropdown-menu p-3 shadow">
           <div class="justify-content-between mb-3 monthSelector-header container row">
             <div class="col-md-2">
-              <button class="btn btn-primary today-button" v-on:click="today()">오늘</button>
+              <button class="btn today-button" v-on:click="today()">오늘</button>
             </div>
             <div class="col-md-8">
               <div class="m-auto" style="width:fit-content">
@@ -87,9 +84,9 @@
             </div>
           </form>
         </div>
-        <div class="info department-info position-absolute end-0" v-if="!isMyCalendar">
-          <i class="bi bi-people-fill"></i>
-          <span th:text="${member.department}"></span>
+        <div class="info member-info position-absolute end-0" v-if="!isMyCalendar">
+          <i class="bi bi-person-fill"></i>
+          <span th:text="${member.name}"></span>
         </div>
       </div>
     </div>

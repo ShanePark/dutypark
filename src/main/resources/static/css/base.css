@@ -732,7 +732,6 @@ input[readonly], textarea[readonly] {
 .month-control .year-month-btn,
 .month-control i,
 .month-control .month-btn,
-.month-control .today-button,
 .month-control a {
     font-size: 1.5em;
 }
@@ -778,4 +777,9 @@ input[readonly], textarea[readonly] {
 
 .DAY .schedule .schedule-description {
     display: none;
+}
+
+.month-control .today-button {
+    border: none;
+    background-color: lightskyblue;
 }
