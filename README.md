@@ -28,7 +28,8 @@ Simple Duty Manager <br>
 Prepare your database. Here's the simplest way
 
 ```bash
-$ docker run -d -p 3306:3306 --name mysql -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=dutypark -e MYSQL_USER=dutypark -e MYSQL_PASSWORD=dutypark mysql:8.0
+cd dutypark_db
+docker compose up -d
 ```
 
 When your database is ready, add it to application-prod.yml
@@ -38,7 +39,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/dutypark
     username: dutypark
-    password: dutypark
+    password: PASSWORD_HERE
   jpa:
     database-platform: org.hibernate.dialect.MySQL8Dialect  
 ```
@@ -49,7 +50,7 @@ spring:
 - if you want to test it without SSL, you can change the following properties
   > - `server.ssl.enabled=false`
   > - `server.port=8080`
-  > - remove keystore related properties
+  > - remove properties related to keystore
 
 ### Run
 
