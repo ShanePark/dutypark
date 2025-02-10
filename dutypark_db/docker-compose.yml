@@ -1,0 +1,16 @@
+services:
+  mysql:
+    image: mysql
+    container_name: dutypark-db
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ROOT_PASSWORD_HERE
+      MYSQL_DATABASE: dutypark
+      MYSQL_USER: dutypark
+      MYSQL_PASSWORD: PASSWORD_HERE
+      MYSQL_INITDB_SKIP_TZINFO: 1
+    volumes:
+      - ./my.cnf:/etc/mysql/my.cnf:ro
+      - ./data:/var/lib/mysql     
