@@ -1,0 +1,139 @@
+package com.tistory.shanepark.dutypark.duty.service.batch
+
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
+import java.time.YearMonth
+import kotlin.io.path.Path
+
+class SungsimCakeParserTest {
+
+    @Test
+    fun `Parse 2501xlsx`() {
+        // When
+        val result = SungsimCakeParser().parseDayOff(
+            YearMonth.of(2025, 1),
+            Path("src/test/resources/duty-batch/sungsim-cake/12013_2_25년도1월휴무.xlsx")
+        )
+
+        assertThat(result.keys).containsExactlyInAnyOrder(
+            "레오",
+            "맥스",
+            "노아",
+            "루나",
+            "제이",
+            "자라",
+            "리오",
+            "니아",
+            "벡스",
+            "에이든",
+            "카이",
+            "주드",
+            "테오",
+            "아라",
+            "다샤",
+            "미오",
+            "제이크",
+            "엘라",
+            "코비",
+            "타이",
+            "노엘",
+            "오스카",
+            "루크",
+            "켄지",
+            "소니",
+            "다헤",
+            "니키",
+            "지아",
+            "로건",
+            "오에미",
+            "휴고",
+            "코라",
+            "동현",
+            "제시",
+            "드루",
+            "로이",
+            "사라",
+            "테라",
+            "엘리",
+            "리키",
+            "비비",
+            "벨라"
+        )
+        assertThat(result["동현"]).hasSize(9)
+        assertThat(result["동현"]).containsExactly(
+            YearMonth.of(2025, 1).atDay(7),
+            YearMonth.of(2025, 1).atDay(8),
+            YearMonth.of(2025, 1).atDay(14),
+            YearMonth.of(2025, 1).atDay(15),
+            YearMonth.of(2025, 1).atDay(20),
+            YearMonth.of(2025, 1).atDay(23),
+            YearMonth.of(2025, 1).atDay(28),
+            YearMonth.of(2025, 1).atDay(29),
+            YearMonth.of(2025, 1).atDay(30),
+        )
+    }
+
+    @Test
+    fun `Parse 2502xlsx`() {
+        // When
+        val result = SungsimCakeParser().parseDayOff(
+            YearMonth.of(2025, 2),
+            Path("src/test/resources/duty-batch/sungsim-cake/12028_2_25년도2월휴무.xlsx")
+        )
+
+        // Then
+        assertThat(result.keys).containsExactlyInAnyOrder(
+            "레오",
+            "맥스",
+            "노아",
+            "루나",
+            "제이",
+            "자라",
+            "리오",
+            "니아",
+            "벡스",
+            "에이든",
+            "카이",
+            "주드",
+            "테오",
+            "다샤",
+            "미오",
+            "제이크",
+            "엘라",
+            "코비",
+            "타이",
+            "노엘",
+            "루크",
+            "켄지",
+            "소니",
+            "니키",
+            "코라",
+            "동현",
+            "제시",
+            "드루",
+            "로이",
+            "사라",
+            "테라",
+            "엘리",
+            "리키",
+            "벨라",
+            "로건",
+            "에이미"
+        )
+
+        assertThat(result["동현"]).hasSize(10)
+        assertThat(result["동현"]).containsExactly(
+            YearMonth.of(2025, 2).atDay(4),
+            YearMonth.of(2025, 2).atDay(5),
+            YearMonth.of(2025, 2).atDay(11),
+            YearMonth.of(2025, 2).atDay(12),
+            YearMonth.of(2025, 2).atDay(18),
+            YearMonth.of(2025, 2).atDay(19),
+            YearMonth.of(2025, 2).atDay(25),
+            YearMonth.of(2025, 2).atDay(26),
+            YearMonth.of(2025, 3).atDay(4),
+            YearMonth.of(2025, 3).atDay(5),
+        )
+    }
+
+}
