@@ -11,10 +11,10 @@ data class DutyDto(
     val dutyColor: String?,
 ) {
     constructor(duty: Duty) : this(
-        duty.id,
-        duty.dutyYear,
-        duty.dutyMonth,
-        duty.dutyDay,
+        id = duty.id,
+        year = duty.dutyDate.year,
+        month = duty.dutyDate.monthValue,
+        day = duty.dutyDate.dayOfMonth,
         duty.dutyType?.name,
         duty.dutyType?.color?.name,
     )
