@@ -1,25 +1,24 @@
-package com.tistory.shanepark.dutypark.duty.service.batch
+package com.tistory.shanepark.dutypark.duty.batch
 
 import org.apache.poi.ss.usermodel.Cell
 import org.apache.poi.ss.usermodel.Sheet
 import org.apache.poi.ss.usermodel.WorkbookFactory
-import java.nio.file.Path
+import org.springframework.stereotype.Component
+import java.io.InputStream
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 
+@Component
 class SungsimCakeParser {
 
-    fun parseDayOff(yearMonth: YearMonth, path: Path): Map<String, List<LocalDate>> {
-        if (!path.toString().endsWith(".xlsx")) {
-            throw IllegalArgumentException("Only xlsx file is supported")
-        }
-        val sheet = WorkbookFactory.create(path.toFile()).getSheetAt(0)
+    fun parseDayOff(yearMonth: YearMonth, input: InputStream): BatchParseResult {
+        val sheet = WorkbookFactory.create(input).getSheetAt(0)
         val totalRows = sheet.physicalNumberOfRows
         val rowsInfo = getRowsInfo(sheet)
         val firstDate = calcFirstDate(yearMonth, rowsInfo)
         var curDate = firstDate
-        val result = mutableMapOf<String, List<LocalDate>>()
+        val offDaysMap = mutableMapOf<String, List<LocalDate>>()
 
         for (i in 0 until rowsInfo.size) {
             val rowInfo = rowsInfo[i]
@@ -30,12 +29,16 @@ class SungsimCakeParser {
                     val name = cellToName(cell)
                     if (name.isBlank())
                         continue
-                    result[name] = result.getOrDefault(name, emptyList()) + curDate
+                    offDaysMap[name] = offDaysMap.getOrDefault(name, emptyList()) + curDate
                 }
                 curDate = curDate.plusDays(1)
             }
         }
-        return result.filter { it.value.size != 1 }.toMap()
+        return BatchParseResult(
+            startDate = firstDate,
+            endDate = curDate.minusDays(1),
+            offDayResult = offDaysMap.filter { it.value.size != 1 }.toMap()
+        )
     }
 
     private fun calcFirstDate(

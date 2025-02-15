@@ -1,9 +1,11 @@
 package com.tistory.shanepark.dutypark.duty.service.batch
 
+import com.tistory.shanepark.dutypark.duty.batch.SungsimCakeParser
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.YearMonth
 import kotlin.io.path.Path
+import kotlin.io.path.inputStream
 
 class SungsimCakeParserTest {
 
@@ -12,10 +14,10 @@ class SungsimCakeParserTest {
         // When
         val result = SungsimCakeParser().parseDayOff(
             YearMonth.of(2025, 1),
-            Path("src/test/resources/duty-batch/sungsim-cake/12013_2_25년도1월휴무.xlsx")
+            Path("src/test/resources/duty-batch/sungsim-cake/12013_2_25년도1월휴무.xlsx").inputStream()
         )
 
-        assertThat(result.keys).containsExactlyInAnyOrder(
+        assertThat(result.getNames()).containsExactlyInAnyOrder(
             "레오",
             "맥스",
             "노아",
@@ -59,8 +61,8 @@ class SungsimCakeParserTest {
             "비비",
             "벨라"
         )
-        assertThat(result["동현"]).hasSize(9)
-        assertThat(result["동현"]).containsExactly(
+        assertThat(result.getOffDays("동현")).hasSize(9)
+        assertThat(result.getOffDays("동현")).containsExactly(
             YearMonth.of(2025, 1).atDay(7),
             YearMonth.of(2025, 1).atDay(8),
             YearMonth.of(2025, 1).atDay(14),
@@ -78,11 +80,11 @@ class SungsimCakeParserTest {
         // When
         val result = SungsimCakeParser().parseDayOff(
             YearMonth.of(2025, 2),
-            Path("src/test/resources/duty-batch/sungsim-cake/12028_2_25년도2월휴무.xlsx")
+            Path("src/test/resources/duty-batch/sungsim-cake/12028_2_25년도2월휴무.xlsx").inputStream()
         )
 
         // Then
-        assertThat(result.keys).containsExactlyInAnyOrder(
+        assertThat(result.getNames()).containsExactlyInAnyOrder(
             "레오",
             "맥스",
             "노아",
@@ -121,8 +123,8 @@ class SungsimCakeParserTest {
             "에이미"
         )
 
-        assertThat(result["동현"]).hasSize(10)
-        assertThat(result["동현"]).containsExactly(
+        assertThat(result.getOffDays("동현")).hasSize(10)
+        assertThat(result.getOffDays("동현")).containsExactly(
             YearMonth.of(2025, 2).atDay(4),
             YearMonth.of(2025, 2).atDay(5),
             YearMonth.of(2025, 2).atDay(11),
