@@ -7,13 +7,14 @@ import org.springframework.data.jpa.repository.EntityGraph
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
+import java.time.LocalDate
 
 interface DutyRepository : JpaRepository<Duty, Long> {
 
     @EntityGraph(attributePaths = ["dutyType"])
-    fun findAllByMemberAndDutyYearAndDutyMonth(member: Member, year: Int, month: Int): List<Duty>
+    fun findAllByMemberAndDutyDateBetween(member: Member, start: LocalDate, end: LocalDate): List<Duty>
 
-    fun findByMemberAndDutyYearAndDutyMonthAndDutyDay(member: Member, year: Int, month: Int, day: Int): Duty?
+    fun findByMemberAndDutyDate(member: Member, dutyDate: LocalDate): Duty?
 
     @Modifying
     @Query("update Duty d set d.dutyType = null where d.dutyType = :dutyType")
