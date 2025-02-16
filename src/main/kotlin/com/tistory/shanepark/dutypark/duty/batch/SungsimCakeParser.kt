@@ -1,5 +1,7 @@
 package com.tistory.shanepark.dutypark.duty.batch
 
+import com.tistory.shanepark.dutypark.duty.batch.domain.BatchParseResult
+import com.tistory.shanepark.dutypark.duty.batch.exceptions.YearMonthNotMatchException
 import org.apache.poi.ss.usermodel.Cell
 import org.apache.poi.ss.usermodel.Sheet
 import org.apache.poi.ss.usermodel.WorkbookFactory
@@ -49,7 +51,7 @@ class SungsimCakeParser {
         if (startDate.dayOfWeek != DayOfWeek.SUNDAY) {
             startDate = startDate.minusMonths(1)
             if (startDate.dayOfWeek != DayOfWeek.SUNDAY) {
-                throw IllegalArgumentException("Wrong yearMonth or startDate. yearMonth: $yearMonth, startDate: $startDate")
+                throw YearMonthNotMatchException(yearMonth)
             }
         }
         return startDate

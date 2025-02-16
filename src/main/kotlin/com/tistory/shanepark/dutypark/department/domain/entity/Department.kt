@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.department.domain.entity
 
 import com.tistory.shanepark.dutypark.common.domain.entity.BaseTimeEntity
-import com.tistory.shanepark.dutypark.duty.batch.DutyBatchTemplate
+import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.member.domain.entity.Member

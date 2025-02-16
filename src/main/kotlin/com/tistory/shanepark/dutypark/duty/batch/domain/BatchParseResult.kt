@@ -1,4 +1,4 @@
-package com.tistory.shanepark.dutypark.duty.batch
+package com.tistory.shanepark.dutypark.duty.batch.domain
 
 import java.time.LocalDate
 

@@ -1,8 +1,12 @@
 package com.tistory.shanepark.dutypark.duty.service
 
 import com.tistory.shanepark.dutypark.department.domain.entity.Department
-import com.tistory.shanepark.dutypark.duty.batch.BatchParseResult
 import com.tistory.shanepark.dutypark.duty.batch.SungsimCakeParser
+import com.tistory.shanepark.dutypark.duty.batch.domain.BatchParseResult
+import com.tistory.shanepark.dutypark.duty.batch.exceptions.MultipleNameFoundException
+import com.tistory.shanepark.dutypark.duty.batch.exceptions.NameNotFoundException
+import com.tistory.shanepark.dutypark.duty.batch.exceptions.NotSupportedFileException
+import com.tistory.shanepark.dutypark.duty.batch.service.DutyBatchSungsimService
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
@@ -10,7 +14,6 @@ import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -27,7 +30,7 @@ import java.time.temporal.ChronoUnit
 import java.util.*
 
 @ExtendWith(MockitoExtension::class)
-class DutyBatchTemplateServiceTest {
+class DutyBatchSungsimServiceTest {
 
     @Mock
     private lateinit var sungsimCakeParser: SungsimCakeParser
@@ -41,11 +44,11 @@ class DutyBatchTemplateServiceTest {
     @Mock
     private lateinit var dutyTypeRepository: DutyTypeRepository
 
-    private lateinit var dutyBatchService: DutyBatchService
+    private lateinit var dutyBatchService: DutyBatchSungsimService
 
     @BeforeEach
     fun setUp() {
-        dutyBatchService = DutyBatchService(
+        dutyBatchService = DutyBatchSungsimService(
             sungsimCakeParser,
             memberRepository,
             dutyRepository,
@@ -75,10 +78,9 @@ class DutyBatchTemplateServiceTest {
     @Test
     fun `sungsimDutyBatch throws exception when file is not xlsx`() {
         val file = createMultipartFile("test.txt")
-        val exception = assertThrows<IllegalArgumentException> {
-            dutyBatchService.sungsimDutyBatch(file, 1L, YearMonth.of(2023, 1))
+        assertThrows<NotSupportedFileException> {
+            dutyBatchService.batchUpload(file, 1L, YearMonth.of(2023, 1))
         }
-        assertEquals("Only xlsx file is supported", exception.message)
     }
 
     @Test
@@ -89,10 +91,9 @@ class DutyBatchTemplateServiceTest {
         whenever(sungsimCakeParser.parseDayOff(eq(yearMonth), any<InputStream>())).thenReturn(dummyBatchResult)
         whenever(memberRepository.findById(1L)).thenReturn(Optional.empty())
 
-        val exception = assertThrows<IllegalArgumentException> {
-            dutyBatchService.sungsimDutyBatch(file, 1L, yearMonth)
+        assertThrows<NoSuchElementException> {
+            dutyBatchService.batchUpload(file, 1L, yearMonth)
         }
-        assertThat(exception.message).startsWith("Member not found")
     }
 
 
@@ -106,7 +107,7 @@ class DutyBatchTemplateServiceTest {
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
 
         val exception = assertThrows<IllegalArgumentException> {
-            dutyBatchService.sungsimDutyBatch(file, 1L, yearMonth)
+            dutyBatchService.batchUpload(file, 1L, yearMonth)
         }
         assertThat(exception.message).startsWith("Member has no department")
     }
@@ -122,11 +123,9 @@ class DutyBatchTemplateServiceTest {
         val member = createDummyMember("John", Department("dummy"))
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
 
-        val exception = assertThrows<IllegalArgumentException> {
-            dutyBatchService.sungsimDutyBatch(file, 1L, yearMonth)
+        assertThrows<MultipleNameFoundException> {
+            dutyBatchService.batchUpload(file, 1L, yearMonth)
         }
-        assertThat(exception.message)
-            .startsWith("Member name not found or multiple names found")
     }
 
     @Test
@@ -140,10 +139,9 @@ class DutyBatchTemplateServiceTest {
         val member = createDummyMember("John", Department("dummy"))
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
 
-        val exception = assertThrows<IllegalArgumentException> {
-            dutyBatchService.sungsimDutyBatch(file, 1L, yearMonth)
+        assertThrows<NameNotFoundException> {
+            dutyBatchService.batchUpload(file, 1L, yearMonth)
         }
-        assertThat(exception.message).startsWith("Member name not found or multiple names found")
     }
 
     @Test
@@ -167,7 +165,7 @@ class DutyBatchTemplateServiceTest {
         val dutyType = DutyType(name = "dummy", position = 0, department = department)
         whenever(dutyTypeRepository.findAllByDepartment(department)).thenReturn(listOf(dutyType))
 
-        dutyBatchService.sungsimDutyBatch(createValidXlsxFile(), 1L, yearMonth)
+        dutyBatchService.batchUpload(createValidXlsxFile(), 1L, yearMonth)
 
         verify(dutyRepository).deleteDutiesByMemberAndDutyDateBetween(
             member,

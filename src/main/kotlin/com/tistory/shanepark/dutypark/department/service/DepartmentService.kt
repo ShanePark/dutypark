@@ -5,7 +5,7 @@ import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentDto
 import com.tistory.shanepark.dutypark.department.domain.dto.SimpleDepartmentDto
 import com.tistory.shanepark.dutypark.department.domain.entity.Department
 import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
-import com.tistory.shanepark.dutypark.duty.batch.DutyBatchTemplate
+import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository

@@ -7,7 +7,7 @@ import com.tistory.shanepark.dutypark.department.domain.enums.DepartmentNameChec
 import com.tistory.shanepark.dutypark.department.domain.enums.DepartmentNameCheckResult.*
 import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.department.service.DepartmentService
-import com.tistory.shanepark.dutypark.duty.batch.DutyBatchTemplate
+import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import jakarta.validation.Valid
 import org.springframework.data.domain.Page
