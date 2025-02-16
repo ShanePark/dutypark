@@ -40,7 +40,7 @@ class HolidayControllerTest : RestDocsTest() {
      */
     @BeforeEach
     fun setup() {
-        Mockito.`when`(dataGoKrApi.getHolidays(any(), any())).thenReturn(HolidayAPIDataGoKrTest.apiResponse2023)
+        Mockito.`when`(dataGoKrApi.getHolidays(any(), any())).thenReturn(HolidayAPIDataGoKrTest.`API_RESPONSE_2023`)
         val holidayAPIDataGoKr = HolidayAPIDataGoKr(dataGoKrApi)
         HolidayAPIDataGoKr::class.java.getDeclaredField("serviceKey").apply {
             isAccessible = true

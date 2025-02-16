@@ -27,7 +27,7 @@ import java.time.temporal.ChronoUnit
 import java.util.*
 
 @ExtendWith(MockitoExtension::class)
-class DutyBatchServiceTest {
+class DutyBatchTemplateServiceTest {
 
     @Mock
     private lateinit var sungsimCakeParser: SungsimCakeParser
