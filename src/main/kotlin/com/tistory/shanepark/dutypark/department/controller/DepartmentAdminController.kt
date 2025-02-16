@@ -7,6 +7,7 @@ import com.tistory.shanepark.dutypark.department.domain.enums.DepartmentNameChec
 import com.tistory.shanepark.dutypark.department.domain.enums.DepartmentNameCheckResult.*
 import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.department.service.DepartmentService
+import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import jakarta.validation.Valid
 import org.springframework.data.domain.Page
@@ -61,6 +62,15 @@ class DepartmentAdminController(
         @RequestParam memberId: Long?
     ): ResponseEntity<Any> {
         departmentService.changeManager(departmentId = id, memberId = memberId)
+        return ResponseEntity.ok().build()
+    }
+
+    @PatchMapping("/{id}/batch-template")
+    fun updateBatchTemplate(
+        @PathVariable id: Long,
+        @RequestParam(name = "templateName", required = false) dutyBatchTemplate: DutyBatchTemplate?
+    ): ResponseEntity<Any> {
+        departmentService.updateBatchTemplate(id, dutyBatchTemplate)
         return ResponseEntity.ok().build()
     }
 

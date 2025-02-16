@@ -25,7 +25,8 @@
   <div th:if="${member.department}" class="calendar" th:attr="data-member_id=${member.id}">
     <div class="month-control row">
       <div class="month-control-left col-md-3">
-        <button class="today-button info" v-on:click="today()"><span>Today</span><i class="bi bi-arrow-counterclockwise"></i></button>
+        <button class="today-button info" v-on:click="today()"><span>Today</span><i
+            class="bi bi-arrow-counterclockwise"></i></button>
       </div>
       <div class="col-md-6 monthSelector">
         <a class="move h_pointer" v-on:click="addMonth(-1)">
@@ -108,6 +109,11 @@
       <button v-if="canEdit && batchEditMode"
               class="edit-btn btn btn-success"
               v-on:click="batchEditMode=false;">편집완료
+      </button>
+      <button v-if="canEdit && batchEditMode && department.dutyBatchTemplate"
+              class="btn btn-info"
+              v-on:click="uploadBatchFile"
+      >시간표 파일 업로드
       </button>
       <button v-if="canEdit && batchEditMode"
               class="edit-btn btn btn-warning"
@@ -771,7 +777,6 @@
                         currentUrl.searchParams.set('year', app.year);
                         currentUrl.searchParams.set('month', app.month);
                         currentUrl.searchParams.set('day', app.searchDay);
-                        console.log(app.searchDay);
                         if (!app.searchDay) {
                             currentUrl.searchParams.delete('day');
                         }
@@ -1213,7 +1218,12 @@
                         const response = await fetch(`/api/holidays?year=${year}&month=${month}`);
 
                         if (!response.ok) {
-                            console.log(`Error loading holidays. Status Code: ${response.status}`);
+                            Swal.fire({
+                                icon: 'error',
+                                title: '휴무일 정보를 불러오는데 실패했습니다.',
+                                showConfirmButton: false,
+                                timer: sweetAlTimer
+                            });
                             return;
                         }
 
@@ -1227,7 +1237,12 @@
                         fetch('/api/friends')
                             .then(async response => {
                                 if (!response.ok) {
-                                    console.log(`Error loading friends. Status Code: ${response.status}`);
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: '친구 목록을 불러오는데 실패했습니다.',
+                                        showConfirmButton: false,
+                                        timer: sweetAlTimer
+                                    });
                                     return;
                                 }
                                 this.friends = await response.json();
@@ -1433,7 +1448,12 @@
                         fetch('/api/todos')
                             .then(response => {
                                 if (!response.ok) {
-                                    console.log(`Error loading todos. Status Code: ${response.status}`);
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: '할 일 목록을 불러오는데 실패했습니다.',
+                                        showConfirmButton: false,
+                                        timer: sweetAlTimer
+                                    });
                                     return;
                                 }
                                 return response.json();
@@ -1557,13 +1577,70 @@
                             app.loadDuties(app.year, app.month);
                         });
                     },
+                    async uploadBatchFile() {
+                        const {value: file} = await Swal.fire({
+                            title: "시간표 파일 업로드",
+                            input: "file",
+                            html: "시간표 파일을 업로드해주세요.<br/> 자동으로 파일에 맞춰 시간표를 업데이트 합니다.<br/>파일을 선택하기 전에, 업로드하는 시간표가 현재 선택된 년월에 맞는지 꼭 확인해주세요.",
+                            inputAttributes: {
+                                "accept": ".xlsx",
+                                "aria-label": "시간표 파일을 업로드해주세요.",
+                            },
+                            confirmButtonText: "등록",
+                        });
+                        if (!file)
+                            return;
+                        const formData = new FormData();
+                        formData.append("file", file);
+                        formData.append("year", app.year);
+                        formData.append("month", app.month);
+                        formData.append("memberId", memberId);
+                        fetch("/api/duty_batch", {
+                            method: "POST",
+                            body: formData,
+                        }).then(response => {
+                            if (!response.ok) {
+                                Swal.fire({
+                                    icon: "error",
+                                    title: "파일 업로드에 실패했습니다.",
+                                    showConfirmButton: false,
+                                    timer: sweetAlTimer
+                                });
+                                return;
+                            }
+                            return response.json()
+                        }).then(data => {
+                            if (!data.result) {
+                                Swal.fire({
+                                    icon: "error",
+                                    title: "시간표 파일 업로드 실패",
+                                    text: data.errorMessage,
+                                });
+                                return;
+                            }
+                            const workingDays = data.workingDays;
+                            const offDays = data.offDays;
+                            swal.fire({
+                                icon: "success",
+                                title: "시간표 파일 업로드 성공",
+                                html: `시간표가 업로드 되었습니다.<br/> 총 ${workingDays + offDays}일 중 근무일은 ${workingDays}, 휴무일은 ${offDays}일 입니다.`,
+                                confirmButtonText: "확인",
+                            });
+                            app.loadDuties(app.year, app.month);
+                        });
+                    },
                     search(page = 0) {
                         $('#search-result-modal').modal('show');
                         const query = app.searchQuery;
                         fetch(`/api/schedules/${memberId}/search?q=${query}&page=${page}`)
                             .then((response) => {
                                 if (!response.ok) {
-                                    console.log(`Error searching schedules. Status Code: ${response.status}`);
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: '검색에 실패했습니다.',
+                                        showConfirmButton: false,
+                                        timer: sweetAlTimer
+                                    });
                                     return;
                                 }
                                 return response.json();

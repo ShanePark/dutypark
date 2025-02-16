@@ -28,18 +28,16 @@ class DutyService(
 
     @Transactional(readOnly = true)
     fun getDutiesAsMap(member: Member, year: Int, month: Int): Map<Int, DutyDto?> {
-        return dutyRepository.findAllByMemberAndDutyYearAndDutyMonth(member, year, month)
-            .associate { it.dutyDay to DutyDto(it) }
+        return findDutyByMonthAndYear(member, year, month)
+            .associate { it.dutyDate.dayOfMonth to DutyDto(it) }
     }
 
     fun update(dutyUpdateDto: DutyUpdateDto) {
         val member = memberRepository.findById(dutyUpdateDto.memberId).orElseThrow()
 
-        val duty: Duty? = dutyRepository.findByMemberAndDutyYearAndDutyMonthAndDutyDay(
+        val duty: Duty? = dutyRepository.findByMemberAndDutyDate(
             member = member,
-            year = dutyUpdateDto.year,
-            month = dutyUpdateDto.month,
-            day = dutyUpdateDto.day
+            dutyDate = YearMonth.of(dutyUpdateDto.year, dutyUpdateDto.month).atDay(dutyUpdateDto.day)
         )
 
         val dutyType: DutyType? = dutyUpdateDto.dutyTypeId?.let {
@@ -51,9 +49,7 @@ class DutyService(
                 save(
                     Duty(
                         member = member,
-                        dutyYear = dutyUpdateDto.year,
-                        dutyMonth = dutyUpdateDto.month,
-                        dutyDay = dutyUpdateDto.day,
+                        dutyDate = YearMonth.of(dutyUpdateDto.year, dutyUpdateDto.month).atDay(dutyUpdateDto.day),
                         dutyType = dutyType
                     )
                 )
@@ -76,11 +72,7 @@ class DutyService(
         }
 
         // 1. delete all duties with same year and month
-        val old = dutyRepository.findAllByMemberAndDutyYearAndDutyMonth(
-            member,
-            dutyBatchUpdateDto.year,
-            dutyBatchUpdateDto.month
-        )
+        val old = findDutyByMonthAndYear(member, dutyBatchUpdateDto.year, dutyBatchUpdateDto.month)
         dutyRepository.deleteAll(old)
 
         if (dutyType == null) {
@@ -92,9 +84,7 @@ class DutyService(
             .map { day ->
                 Duty(
                     member = member,
-                    dutyYear = dutyBatchUpdateDto.year,
-                    dutyMonth = dutyBatchUpdateDto.month,
-                    dutyDay = day,
+                    dutyDate = YearMonth.of(dutyBatchUpdateDto.year, dutyBatchUpdateDto.month).atDay(day),
                     dutyType = dutyType
                 )
             }
@@ -128,11 +118,11 @@ class DutyService(
         val answer = mutableListOf<DutyDto>()
         val calendarView = CalendarView(yearMonth)
 
-        val dutiesLastMonth = dutyRepository.findAllByMemberAndDutyYearAndDutyMonth(
-            member = member,
-            year = calendarView.prevMonth.year,
-            month = calendarView.prevMonth.monthValue
-        ).associateBy { it.dutyDay }
+        val dutiesLastMonth = findDutyByMonthAndYear(
+            member,
+            calendarView.prevMonth.year,
+            calendarView.prevMonth.monthValue
+        ).associateBy { it.dutyDate.dayOfMonth }
         for (i in 1..calendarView.paddingBefore) {
             val day = calendarView.prevMonth.atEndOfMonth().dayOfMonth - (calendarView.paddingBefore - i)
             val duty = dutiesLastMonth[day]
@@ -140,25 +130,35 @@ class DutyService(
         }
 
         val dutiesOfMonth =
-            dutyRepository.findAllByMemberAndDutyYearAndDutyMonth(member, yearMonth.year, yearMonth.month.value)
-                .associateBy { it.dutyDay }
+            findDutyByMonthAndYear(member, yearMonth.year, yearMonth.month.value)
+                .associateBy { it.dutyDate.dayOfMonth }
         val lengthOfMonth = yearMonth.lengthOfMonth()
         for (i in 1..lengthOfMonth) {
             val duty = dutiesOfMonth[i]
             addDutyDto(yearMonth, i, duty, answer, defaultDutyColor)
         }
 
-        val dutiesNextMonth = dutyRepository.findAllByMemberAndDutyYearAndDutyMonth(
-            member = member,
-            year = calendarView.nextMonth.year,
-            month = calendarView.nextMonth.monthValue
-        ).associateBy { it.dutyDay }
+        val dutiesNextMonth = findDutyByMonthAndYear(
+            member,
+            calendarView.nextMonth.year,
+            calendarView.nextMonth.monthValue
+        ).associateBy { it.dutyDate.dayOfMonth }
         for (i in 1..calendarView.paddingAfter) {
             val duty = dutiesNextMonth[i]
             addDutyDto(calendarView.nextMonth, i, duty, answer, defaultDutyColor)
         }
 
         return answer
+    }
+
+    private fun findDutyByMonthAndYear(
+        member: Member,
+        year: Int,
+        month: Int
+    ): List<Duty> {
+        val from = YearMonth.of(year, month).atDay(1)
+        val to = YearMonth.of(year, month).atEndOfMonth()
+        return dutyRepository.findAllByMemberAndDutyDateBetween(member, from, to)
     }
 
     private fun addDutyDto(

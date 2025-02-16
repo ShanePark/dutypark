@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.department.domain.entity
 
 import com.tistory.shanepark.dutypark.common.domain.entity.BaseTimeEntity
+import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -34,6 +35,10 @@ class Department(
 
     @OneToMany(mappedBy = "department", fetch = FetchType.LAZY)
     val members: MutableList<Member> = mutableListOf()
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "duty_batch_template")
+    var dutyBatchTemplate: DutyBatchTemplate? = null
 
     fun addMember(member: Member) {
         members.add(member)

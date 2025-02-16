@@ -15,6 +15,7 @@ data class DepartmentDto(
     val createdDate: String,
     val lastModifiedDate: String,
     val manager: String?,
+    val dutyBatchTemplate: String?
 ) {
     companion object {
         fun ofSimple(department: Department): DepartmentDto {
@@ -49,6 +50,7 @@ data class DepartmentDto(
                 createdDate = department.createdDate.toString(),
                 lastModifiedDate = department.modifiedDate.toString(),
                 manager = department.manager?.name,
+                dutyBatchTemplate = department.dutyBatchTemplate?.name
             )
         }
     }

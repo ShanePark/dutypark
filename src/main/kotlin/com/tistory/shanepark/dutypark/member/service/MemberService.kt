@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.member.service
 
+import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberCreateDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -81,6 +82,11 @@ class MemberService(
     fun updateCalendarVisibility(loginMember: LoginMember, visibility: Visibility) {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
         member.calendarVisibility = visibility
+    }
+
+    fun getDutyBatchTemplate(memberId: Long): DutyBatchTemplate? {
+        val member = memberRepository.findById(memberId).orElseThrow()
+        return member.department?.dutyBatchTemplate
     }
 
 }

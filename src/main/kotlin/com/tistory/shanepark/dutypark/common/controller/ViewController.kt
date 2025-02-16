@@ -5,7 +5,7 @@ import org.springframework.ui.Model
 open class ViewController {
 
     protected fun layout(model: Model, menu: String): String {
-        model.addAttribute("content", "${menu}");
+        model.addAttribute("content", menu);
         return "layout/layout"
     }
 
