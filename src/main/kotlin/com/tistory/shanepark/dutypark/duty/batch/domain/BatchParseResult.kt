@@ -17,7 +17,7 @@ class BatchParseResult(
 
     fun getWorkDays(name: String): List<LocalDate> {
         val offDays = getOffDays(name)
-        return startDate.datesUntil(endDate)
+        return startDate.datesUntil(endDate.plusDays(1))
             .filter { it !in offDays }
             .toList()
     }

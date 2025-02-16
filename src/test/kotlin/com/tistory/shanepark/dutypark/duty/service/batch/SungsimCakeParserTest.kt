@@ -17,6 +17,9 @@ class SungsimCakeParserTest {
             Path("src/test/resources/duty-batch/sungsim-cake/12013_2_25년도1월휴무.xlsx").inputStream()
         )
 
+        assertThat(result.startDate).isEqualTo(YearMonth.of(2025, 1).atDay(5))
+        assertThat(result.endDate).isEqualTo(YearMonth.of(2025, 2).atDay(1))
+
         assertThat(result.getNames()).containsExactlyInAnyOrder(
             "레오",
             "맥스",
@@ -73,6 +76,31 @@ class SungsimCakeParserTest {
             YearMonth.of(2025, 1).atDay(29),
             YearMonth.of(2025, 1).atDay(30),
         )
+
+
+        assertThat(result.getWorkDays("레오")).containsExactly(
+            YearMonth.of(2025, 1).atDay(8),
+            YearMonth.of(2025, 1).atDay(9),
+            YearMonth.of(2025, 1).atDay(10),
+            YearMonth.of(2025, 1).atDay(11),
+            YearMonth.of(2025, 1).atDay(12),
+            YearMonth.of(2025, 1).atDay(13),
+            YearMonth.of(2025, 1).atDay(16),
+            YearMonth.of(2025, 1).atDay(17),
+            YearMonth.of(2025, 1).atDay(18),
+            YearMonth.of(2025, 1).atDay(19),
+            YearMonth.of(2025, 1).atDay(22),
+            YearMonth.of(2025, 1).atDay(23),
+            YearMonth.of(2025, 1).atDay(24),
+            YearMonth.of(2025, 1).atDay(25),
+            YearMonth.of(2025, 1).atDay(27),
+            YearMonth.of(2025, 1).atDay(28),
+            YearMonth.of(2025, 1).atDay(29),
+            YearMonth.of(2025, 1).atDay(30),
+            YearMonth.of(2025, 1).atDay(31),
+            YearMonth.of(2025, 2).atDay(1),
+        )
+        assertThat(result.getOffDays("레오")).hasSize(8);
     }
 
     @Test
