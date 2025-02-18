@@ -91,34 +91,42 @@
         </div>
       </div>
     </div>
-    <div class="dutyTypes">
-    <span v-for="type in department.dutyTypes">
-      <span :class="['indicator', 'BACKGROUND-' + type.color]">&nbsp;&nbsp;&nbsp;</span>
-      <span v-text="type.name"></span>
-    </span>
-      <button v-if="isMyCalendar"
-              class="btn btn-outline-dark"
-              v-on:click="privacyPopup()"
-              v-text="'공개대상:' + privacyLabel"
-      >
-      </button>
-      <button v-if="canEdit && !batchEditMode"
-              class="edit-btn btn btn-warning"
-              v-on:click="batchEditMode=true;">편집모드
-      </button>
-      <button v-if="canEdit && batchEditMode"
-              class="edit-btn btn btn-success"
-              v-on:click="batchEditMode=false;">편집완료
-      </button>
-      <button v-if="canEdit && batchEditMode && department.dutyBatchTemplate"
-              class="btn btn-info"
-              v-on:click="uploadBatchFile"
-      >시간표 파일 업로드
-      </button>
-      <button v-if="canEdit && batchEditMode"
-              class="edit-btn btn btn-warning"
-              v-on:click="showBatchUpdate">한번에 수정
-      </button>
+    <div class="duty-table-header">
+      <div class="duty-types d-flex">
+        <div class="duty-type d-flex" v-for="type in department.dutyTypes">
+          <div :class="['indicator', 'BACKGROUND-' + type.color]">
+            <span v-text="type.name"></span>
+          </div>
+          <div class="duty-type-count">
+            <span v-text="type.cnt"></span>
+          </div>
+        </div>
+      </div>
+      <div class="buttons">
+        <button v-if="canEdit && batchEditMode"
+                class="edit-btn btn btn-warning"
+                v-on:click="showBatchUpdate">한번에 수정
+        </button>
+        <button v-if="canEdit && batchEditMode && department.dutyBatchTemplate"
+                class="btn btn-info"
+                v-on:click="uploadBatchFile"
+        >시간표 파일 업로드
+        </button>
+
+        <button v-if="canEdit && batchEditMode"
+                class="edit-btn btn btn-success"
+                v-on:click="batchEditMode=false;">편집완료
+        </button>
+        <button v-if="canEdit && !batchEditMode"
+                class="edit-btn btn btn-warning"
+                v-on:click="batchEditMode=true;">편집모드
+        </button>
+        <button v-if="isMyCalendar"
+                class="btn btn-outline-dark"
+                v-on:click="privacyPopup()"
+                v-text="'공개대상:' + privacyLabel"
+        ></button>
+      </div>
     </div>
     <div class="day-of-the-week row-7">
       <div><abbr title="일요일">SUN</abbr></div>
@@ -576,8 +584,8 @@
                     friends: [],
                     todos: [],
                     editTodoMode: false,
-                    dDaysLoaded: false,
                     dDaysPromise: null,
+                    departmentPromise: null,
                     searchQuery: '',
                     searchResults: [],
                 }, mounted() {
@@ -589,7 +597,9 @@
                     this.loadHolidays(this.year, this.month);
                     this.loadFriends();
                     this.loadDDays();
-                    this.loadTodos();
+                    if (isMyCalendar) {
+                        this.loadTodos();
+                    }
 
                     document.addEventListener('click', function (event) {
                         if (event.target && event.target.matches('.schedule-tag-add')) {
@@ -838,19 +848,37 @@
                             },
                             success: (data) => {
                                 this.duties = data;
-                                setTimeout(() => {
-                                    if (!this.dDaysLoaded) {
-                                        this.dDaysPromise.then(() => {
-                                            this.checkDDays();
-                                        });
-                                        return;
-                                    }
+                                this.departmentPromise.then(() => {
+                                    this.setDutyCounts();
+                                });
+                                this.dDaysPromise.then(() => {
                                     this.checkDDays();
                                 });
                             }
                         })
-                    }
-                    ,
+                    },
+                    setDutyCounts() {
+                        let offCnt = new Date(app.year, app.month, 0).getDate();
+                        this.department.dutyTypes.forEach(dutyType => {
+                            this.$set(dutyType, 'cnt', 0);
+                        });
+                        this.duties.forEach(duty => {
+                            if (duty.month !== this.month) {
+                                return;
+                            }
+                            this.department.dutyTypes.forEach(dutyType => {
+                                if (dutyType.id && dutyType.name === duty.dutyType) {
+                                    this.$set(dutyType, 'cnt', dutyType.cnt + 1);
+                                    offCnt--;
+                                }
+                            });
+                        });
+                        this.department.dutyTypes.forEach(dutyType => {
+                            if (!dutyType.id) {
+                                this.$set(dutyType, 'cnt', offCnt);
+                            }
+                        });
+                    },
                     loadDDays() {
                         this.dDaysPromise = new Promise((resolve) => {
                             $.ajax({
@@ -871,7 +899,6 @@
                                             dDay.dDayText = 'D-' + dDay.calc;
                                         }
                                     }
-                                    this.dDaysLoaded = true;
                                     resolve();
                                 }
                             })
@@ -917,13 +944,15 @@
                     }
                     ,
                     loadDepartment() {
-                        fetch(`/api/departments/${departmentId}`)
-                            .then(response => response.json())
-                            .then(data => {
-                                this.department = data;
-                            })
-                    }
-                    ,
+                        this.departmentPromise = new Promise((resolve) => {
+                            fetch(`/api/departments/${departmentId}`)
+                                .then(response => response.json())
+                                .then(data => {
+                                    this.department = data;
+                                    resolve();
+                                })
+                        });
+                    },
                     editDuty() {
                         const memberId = document.getElementsByClassName('calendar')[0].getAttribute('data-member_id');
                         window.location.href = `/duty/edit?memberId=${memberId}&year=${(app.year)}&month=${(app.month)}`;
@@ -1013,8 +1042,9 @@
                             }),
                             contentType: 'application/json',
                             success: (data) => {
-                                duty.dutyType = type.name;
-                                duty.dutyColor = type.color;
+                                app.$set(duty, 'dutyType', type.name);
+                                app.$set(duty, 'dutyColor', type.color);
+                                app.setDutyCounts();
                             },
                             fail: (data) => {
                                 Swal.fire({
@@ -1620,10 +1650,12 @@
                             }
                             const workingDays = data.workingDays;
                             const offDays = data.offDays;
+                            const startDate = data.startDate;
+                            const endDate = data.endDate;
                             swal.fire({
                                 icon: "success",
-                                title: "시간표 파일 업로드 성공",
-                                html: `시간표가 업로드 되었습니다.<br/> 총 ${workingDays + offDays}일 중 근무일은 ${workingDays}, 휴무일은 ${offDays}일 입니다.`,
+                                title: "시간표 적용 완료",
+                                html: `시간표가 업로드 되었습니다.<br/>[${startDate}] ~ [${endDate}]<br/> 총 ${workingDays + offDays}일 중 근무일은 ${workingDays}, 휴무일은 ${offDays}일 입니다.`,
                                 confirmButtonText: "확인",
                             });
                             app.loadDuties(app.year, app.month);

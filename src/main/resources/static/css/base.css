@@ -206,14 +206,33 @@ a.homeButton:hover {
     cursor: pointer !important;
 }
 
-.dutyTypes {
+.duty-table-header {
     font-size: 1.3em;
     margin: 0 auto;
+    display: flex;
 }
 
-.dutyTypes .indicator {
+.duty-table-header .indicator {
     margin-left: 5px;
     border: 2px solid #eaeaea;
+}
+
+.duty-table-header .buttons {
+    margin-left: auto;
+    color: black;
+}
+
+.duty-table-header .duty-type {
+    margin-right: .7rem;
+}
+
+.duty-table-header .duty-type .indicator {
+    padding: 2px;
+}
+
+.duty-table-header .duty-type-count {
+    margin-left: 2px;
+    width: 1rem;
 }
 
 .month-control {
@@ -299,11 +318,6 @@ a.homeButton:hover {
 .members {
     padding: 20px;
     font-size: 2.5em;
-}
-
-.dutyTypes button {
-    float: right;
-    color: black;
 }
 
 .d-day-item .d-day_menu {

@@ -44,5 +44,8 @@ src/main/resources/static/.well-known/**
 src/main/resources/keystore.p12
 src/main/resources/static/docs/**
 
-# Monitoring
+### Monitoring
 dutypark_monitoring/grafana
+
+### Kotlin
+.kotlin

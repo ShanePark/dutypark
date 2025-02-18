@@ -15,7 +15,7 @@ data class DutyDto(
         year = duty.dutyDate.year,
         month = duty.dutyDate.monthValue,
         day = duty.dutyDate.dayOfMonth,
-        duty.dutyType?.name,
-        duty.dutyType?.color?.name,
+        dutyType = duty.dutyType.name,
+        dutyColor = duty.dutyType.color?.name,
     )
 }

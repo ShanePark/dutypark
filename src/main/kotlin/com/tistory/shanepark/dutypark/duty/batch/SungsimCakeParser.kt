@@ -15,23 +15,27 @@ import java.time.YearMonth
 class SungsimCakeParser {
 
     fun parseDayOff(yearMonth: YearMonth, input: InputStream): BatchParseResult {
-        val sheet = WorkbookFactory.create(input).getSheetAt(0)
+        val sheet = WorkbookFactory.create(input).first()
         val totalRows = sheet.physicalNumberOfRows
         val rowsInfo = getRowsInfo(sheet)
         val firstDate = calcFirstDate(yearMonth, rowsInfo)
         var curDate = firstDate
-        val offDaysMap = mutableMapOf<String, List<LocalDate>>()
+        val offDaysMap = mutableMapOf<String, MutableSet<LocalDate>>()
 
         for (i in 0 until rowsInfo.size) {
             val rowInfo = rowsInfo[i]
-            val nextRowInfoIndex = if (i + 1 < rowsInfo.size) rowsInfo[i + 1].index else totalRows + 1
+            val nextRowInfoIndex = if (i + 1 < rowsInfo.size) rowsInfo[i + 1].index else totalRows
             for (j in 0 until 7) {
-                for (row in rowInfo.index + 1 until nextRowInfoIndex - 1) {
+                val dateCell = sheet.getRow(rowInfo.index).getCell(j * 3)
+                if (curDate.dayOfMonth != cellToDate(dateCell)) {
+                    throw YearMonthNotMatchException(yearMonth)
+                }
+                for (row in rowInfo.index + 1 until nextRowInfoIndex) {
                     val cell = sheet.getRow(row).getCell(1 + j * 3) ?: continue
                     val name = cellToName(cell)
                     if (name.isBlank())
                         continue
-                    offDaysMap[name] = offDaysMap.getOrDefault(name, emptyList()) + curDate
+                    offDaysMap.computeIfAbsent(name) { mutableSetOf() }.add(curDate)
                 }
                 curDate = curDate.plusDays(1)
             }
@@ -50,7 +54,7 @@ class SungsimCakeParser {
         var startDate = yearMonth.atDay(rowsInfo[0].date)
         if (startDate.dayOfWeek != DayOfWeek.SUNDAY) {
             startDate = startDate.minusMonths(1)
-            if (startDate.dayOfWeek != DayOfWeek.SUNDAY) {
+            if (startDate.dayOfMonth < 15 || startDate.dayOfWeek != DayOfWeek.SUNDAY) {
                 throw YearMonthNotMatchException(yearMonth)
             }
         }
@@ -92,6 +96,6 @@ class SungsimCakeParser {
         return text.replace("[^0-9]".toRegex(), "").toInt()
     }
 
-    private class RowInfo(val index: Int, val date: Int)
+    private data class RowInfo(val index: Int, val date: Int)
 
 }

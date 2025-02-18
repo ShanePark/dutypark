@@ -11,7 +11,7 @@ class Duty(
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "duty_type_id")
-    var dutyType: DutyType?,
+    var dutyType: DutyType,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")

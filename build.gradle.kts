@@ -1,7 +1,7 @@
 plugins {
-    kotlin("jvm") version "1.9.25"
-    kotlin("plugin.spring") version "1.9.25"
-    kotlin("plugin.jpa") version "1.9.25"
+    kotlin("jvm") version "2.1.10"
+    kotlin("plugin.spring") version "2.1.10"
+    kotlin("plugin.jpa") version "2.1.10"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.springframework.boot") version "3.3.5"
     id("org.asciidoctor.jvm.convert") version "3.3.2"
@@ -24,7 +24,6 @@ val asciidoctorExt: Configuration by configurations.creating
 dependencies {
     // Kotlin
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
     // Spring Boot
