@@ -29,12 +29,12 @@ class DutyBatchSungsimService(
             throw NotSupportedFileException("xlsx");
 
         file.inputStream.use { input ->
-            val batchResult = sungsimCakeParser.parseDayOff(yearMonth, input)
+            val batchParseResult = sungsimCakeParser.parseDayOff(yearMonth, input)
             val member = memberRepository.findById(memberId).orElseThrow()
             val department =
                 member.department ?: throw IllegalArgumentException("Member has no department: id=$memberId")
 
-            val validName = batchResult.getNames()
+            val validName = batchParseResult.getNames()
                 .filter { member.name == it || member.name.endsWith(it) }
                 .toList()
             if (validName.isEmpty())
@@ -52,16 +52,22 @@ class DutyBatchSungsimService(
 
             dutyRepository.deleteDutiesByMemberAndDutyDateBetween(
                 member,
-                batchResult.startDate,
-                batchResult.endDate
+                batchParseResult.startDate,
+                batchParseResult.endDate
             )
-            val workingDays = batchResult.getWorkDays(nameOnXlsx)
+            val workingDays = batchParseResult.getWorkDays(nameOnXlsx)
             val duties = workingDays.map {
                 Duty(dutyDate = it, dutyType = dutyType, member = member)
             }
-            val offDays = batchResult.getOffDays(nameOnXlsx)
+            val offDays = batchParseResult.getOffDays(nameOnXlsx)
             dutyRepository.saveAll(duties)
-            return DutyBatchResult.success(workingDays.size, offDays.size)
+
+            return DutyBatchResult.success(
+                workingDays = workingDays.size,
+                offDays = offDays.size,
+                batchParseResult.startDate,
+                batchParseResult.endDate
+            )
         }
     }
 

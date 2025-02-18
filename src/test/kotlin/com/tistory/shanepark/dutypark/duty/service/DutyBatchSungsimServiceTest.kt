@@ -146,6 +146,7 @@ class DutyBatchSungsimServiceTest {
 
     @Test
     fun `sungsimDutyBatch successfully processes and calls saveAll`() {
+        // Given
         val yearMonth = YearMonth.of(2023, 1)
         val offDays = listOf(
             LocalDate.of(2022, 12, 31),
@@ -154,32 +155,43 @@ class DutyBatchSungsimServiceTest {
         )
         val startDate = yearMonth.atDay(1).minusDays(1)
         val endDate = yearMonth.atEndOfMonth()
-        val dummyBatchResult = mock<BatchParseResult> {
-            on { getNames() } doReturn listOf("John")
-            on { getWorkDays("John") } doReturn startDate.datesUntil(endDate).filter { it !in offDays }.toList()
-        }
-        whenever(sungsimCakeParser.parseDayOff(eq(yearMonth), any<InputStream>())).thenReturn(dummyBatchResult)
+
+        whenever(sungsimCakeParser.parseDayOff(eq(yearMonth), any<InputStream>())).thenReturn(
+            BatchParseResult(
+                startDate = startDate,
+                endDate = endDate,
+                offDayResult = mapOf("John" to offDays.toSet())
+            )
+        )
         val department = Department("dummy")
         val member = createDummyMember("John", department)
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
         val dutyType = DutyType(name = "dummy", position = 0, department = department)
         whenever(dutyTypeRepository.findAllByDepartment(department)).thenReturn(listOf(dutyType))
 
+        // When
         dutyBatchService.batchUpload(createValidXlsxFile(), 1L, yearMonth)
 
+        // Then
         verify(dutyRepository).deleteDutiesByMemberAndDutyDateBetween(
             member,
-            dummyBatchResult.startDate,
-            dummyBatchResult.endDate
+            startDate,
+            endDate
         )
 
         argumentCaptor<List<Duty>>().apply {
             verify(dutyRepository).saveAll(capture())
             val capturedDuties = firstValue
             assertThat(capturedDuties.size)
-                .isEqualTo(ChronoUnit.DAYS.between(startDate, endDate) - offDays.size)
+                .isEqualTo(ChronoUnit.DAYS.between(startDate, endDate) + 1 - offDays.size)
             assertThat(capturedDuties.map { it.dutyDate })
-                .containsExactlyElementsOf(dummyBatchResult.getWorkDays("John"))
+                .containsExactlyElementsOf(
+                    BatchParseResult(
+                        startDate = startDate,
+                        endDate = endDate,
+                        offDayResult = mapOf("John" to offDays.toSet())
+                    ).getWorkDays("John")
+                )
         }
     }
 
