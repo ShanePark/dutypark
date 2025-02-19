@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.schedule.domain.dto
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto.Companion.ofSimple
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import java.time.LocalDate
@@ -18,16 +19,31 @@ data class ScheduleDto(
     val year: Int,
     val month: Int,
     val dayOfMonth: Int,
-    val daysFromStart: Int,
-    val totalDays: Int,
+    val daysFromStart: Int? = null,
+    val totalDays: Int? = null,
     val startDateTime: LocalDateTime,
     val endDateTime: LocalDateTime,
     val isTagged: Boolean,
     val owner: String,
-    val tags: List<MemberDto>,
-    val visibility: Visibility,
+    val tags: List<MemberDto> = listOf(),
+    val visibility: Visibility? = null,
 ) {
     companion object {
+        fun ofSimple(member: Member, schedule: Schedule): ScheduleDto {
+            return ScheduleDto(
+                id = schedule.id,
+                content = schedule.content,
+                position = schedule.position,
+                year = schedule.startDateTime.year,
+                month = schedule.startDateTime.monthValue,
+                dayOfMonth = schedule.startDateTime.dayOfMonth,
+                startDateTime = schedule.startDateTime,
+                endDateTime = schedule.endDateTime,
+                isTagged = schedule.member.id != member.id,
+                owner = schedule.member.name,
+            )
+        }
+
         fun of(calendarView: CalendarView, schedule: Schedule, isTagged: Boolean = false): List<ScheduleDto> {
             val startDateTime = schedule.startDateTime
             val startDate = startDateTime.toLocalDate()

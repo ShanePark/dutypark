@@ -5,9 +5,9 @@ import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
-import org.springframework.data.jpa.repository.EntityGraph
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
 import java.time.LocalDateTime
 import java.util.*
 
@@ -79,6 +79,25 @@ interface ScheduleRepository : JpaRepository<Schedule, UUID> {
         end: LocalDateTime,
         visibilities: Collection<Visibility>
     ): List<Schedule>
+
+
+    @Query(
+        "SELECT s FROM Schedule s" +
+                " JOIN FETCH s.member m" +
+                " LEFT JOIN FETCH s.tags t" +
+                " LEFT JOIN FETCH t.member tm" +
+                " WHERE m = :member" +
+                " AND (s.startDateTime BETWEEN :startOfDay AND :endOfDay" +
+                " OR s.endDateTime BETWEEN :startOfDay AND :endOfDay" +
+                " OR (s.startDateTime <= :startOfDay AND s.endDateTime >= :endOfDay))"
+    )
+    fun findTodaySchedulesByMember(
+        member: Member,
+        @Param("startOfDay") startOfDay: LocalDateTime = LocalDateTime.now().toLocalDate().atStartOfDay(),
+        @Param("endOfDay") endOfDay: LocalDateTime = LocalDateTime.now().toLocalDate().atTime(23, 59, 59)
+    ): List<Schedule>
+
+
 
 }
 

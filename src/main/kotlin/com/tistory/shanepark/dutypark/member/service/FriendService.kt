@@ -165,17 +165,19 @@ class FriendService(
     }
 
     fun isVisible(login: LoginMember?, targetId: Long?): Boolean {
-        val target = memberRepository.findById(targetId!!).orElseThrow()
-        login ?: return target.calendarVisibility == Visibility.PUBLIC
+        val targetMember = memberRepository.findById(targetId!!).orElseThrow()
+        login ?: return targetMember.calendarVisibility == Visibility.PUBLIC
 
         val loginMember = memberRepository.findById(login.id).orElseThrow()
-        if (login.id == target.id)
+        if (login.id == targetMember.id)
             return true
-        if (target.department?.manager?.id == login.id)
+        if (login.departmentId == targetMember.department?.id)
             return true
-        return when (target.calendarVisibility) {
+        if (targetMember.department?.manager?.id == login.id)
+            return true
+        return when (targetMember.calendarVisibility) {
             Visibility.PUBLIC -> true
-            Visibility.FRIENDS -> isFriend(loginMember, target)
+            Visibility.FRIENDS -> isFriend(loginMember, targetMember)
             Visibility.PRIVATE -> false
         }
     }

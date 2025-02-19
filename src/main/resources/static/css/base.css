@@ -212,7 +212,7 @@ a.homeButton:hover {
     display: flex;
 }
 
-.duty-table-header .indicator {
+.duty-type .indicator {
     margin-left: 5px;
     border: 2px solid #eaeaea;
 }
@@ -222,15 +222,15 @@ a.homeButton:hover {
     color: black;
 }
 
-.duty-table-header .duty-type {
+.duty-types .duty-type {
     margin-right: .7rem;
 }
 
-.duty-table-header .duty-type .indicator {
+.duty-types .duty-type .indicator {
     padding: 2px;
 }
 
-.duty-table-header .duty-type-count {
+.duty-types .duty-type-count {
     margin-left: 2px;
     width: 1rem;
 }

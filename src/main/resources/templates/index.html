@@ -1,13 +1,264 @@
-<div class="members">
-  Members
-  <dl>
-    <dd th:each="member: ${members}" th:with="visibility=${member.calendarVisibility}">
-      <span class="badge"
-            th:classappend="${visibility.name == 'PUBLIC' ? 'bg-success' : visibility.name == 'FRIENDS' ? 'bg-warning' : 'bg-danger'}"
-            th:text="${visibility.label}"/>
-      <a th:href="@{/duty/{name}(name=${member.id})}"
-         th:text="${#strings.concat('(', member.department ?: '부서없음', ') ', member.name)}">
-      </a>
-    </dd>
-  </dl>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!--TODO: tailwind 때문에 bootstrap과 충돌이 좀 있음 -->
+
+<div id="app" class="container mx-auto my-6">
+  <!-- My 섹션 -->
+  <div class="mb-6">
+    <div class="bg-white rounded-lg shadow-lg">
+      <div class="bg-blue-200 text-center py-2 rounded-t-lg font-bold uppercase hover:bg-blue-300 cursor-pointer"
+           @click="moveTo()">내 시간표
+      </div>
+      <div class="p-4">
+        <h5 class="flex items-center">
+          <i class="bi bi-calendar-check mr-2"></i>
+          {{ today }}
+        </h5>
+        <div class="flex items-center mt-2">
+          <h5><i class="bi bi-person-badge mr-2"></i>오늘의 근무</h5>
+          <div class="duty-type">
+            <div :class="['indicator', 'BACKGROUND-' + myDuty.dutyColor]">
+              <span v-text="myDuty.dutyType"></span>
+            </div>
+          </div>
+        </div>
+        <h5 class="mt-4 mb-2 font-semibold">
+          <i class="bi bi-calendar-event mr-2"></i>
+          오늘의 일정</h5>
+        <ul>
+          <li
+              v-for="schedule in mySchedules"
+              :key="schedule.id"
+              class="py-1 border-b last:border-0"
+          >
+            <span class="font-bold">{{ schedule.content }}</span>
+            <span class="text-gray-500 ml-2">{{ printScheduleTime(schedule.startDateTime) }}</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Team 섹션 -->
+  <div class="mb-6">
+    <div class="bg-white rounded-lg shadow-lg">
+      <div class="bg-green-200 text-center py-2 rounded-t-lg font-bold uppercase">
+        Team
+      </div>
+      <div class="p-4">
+        <div
+            v-for="(members, duty) in groupedTeamMembers"
+            :key="duty"
+            class="mb-4"
+        >
+          <h5 class="mb-2 font-semibold">{{ duty }}</h5>
+          <div class="space-x-3">
+            <span
+                v-for="member in members"
+                :key="member.id"
+            >
+              <a
+                  href="#"
+                  @click.prevent="goToSchedule(member)"
+                  class="hover:underline"
+              >
+                <i class="bi bi-person-fill"></i> {{ member.name }}
+              </a>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Friends 섹션 -->
+  <div class="mb-6">
+    <div class="bg-white rounded-lg shadow-lg">
+      <div class="bg-yellow-200 text-center py-2 rounded-t-lg font-bold uppercase">
+        Friends
+      </div>
+      <div class="p-4">
+        <div
+            v-for="friend in friends"
+            :key="friend.id"
+            class="friend-card p-4 border rounded-lg mb-4 cursor-pointer hover:bg-gray-100 transition"
+            @click="goToFriendSchedule(friend)"
+        >
+          <div class="flex justify-between items-center">
+            <div class="text-xl font-bold">
+              {{ friend.name }}
+            </div>
+            <button
+                class="btn btn-outline-secondary btn-sm"
+                @click.stop="toggleManage(friend)"
+            >
+              <i class="bi bi-gear"></i>
+            </button>
+          </div>
+          <p class="mt-2 text-sm flex items-center">
+            <i class="bi bi-person-badge mr-1"></i> 근무: {{ friend.todayDuty }}
+          </p>
+          <div class="mt-2">
+            <template v-if="friend.schedules && friend.schedules.length">
+              <ul>
+                <li
+                    v-for="schedule in friend.schedules"
+                    :key="schedule.id"
+                    class="text-sm py-1 border-b last:border-0"
+                >
+                  <span class="font-semibold">{{ schedule.content }}</span>
+                  <span class="text-gray-500 ml-2">
+                    {{ schedule.startDateTime }} - {{ schedule.endDateTime }}
+                  </span>
+                </li>
+              </ul>
+            </template>
+            <template v-else>
+              <p class="text-sm text-gray-500">일정이 없습니다.</p>
+            </template>
+          </div>
+          <div v-if="friend.showManage" class="mt-2 text-right">
+            <button
+                class="btn btn-danger btn-sm"
+                @click.stop="deleteFriend(friend)"
+            >
+              <i class="bi bi-trash mr-1"></i> 친구삭제
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<script>
+  const app = new Vue({
+    el: "#app",
+    data: {
+      today: new Date().toLocaleDateString("ko-KR", {
+        year: "numeric", month: "long", day: "numeric", weekday: "long"
+      }),
+      myInfo: {},
+      myDuty: {},
+      mySchedules: [],
+      teamMembers: [
+        {id: 1, name: "홍길동", duty: "데이"},
+        {id: 2, name: "김철수", duty: "데이"},
+        {id: 3, name: "이영희", duty: "데이"},
+        {id: 4, name: "박민수", duty: "데이"},
+        {id: 5, name: "최수진", duty: "이브닝"},
+        {id: 6, name: "정은지", duty: "이브닝"},
+        {id: 7, name: "강호동", duty: "이브닝"},
+        {id: 8, name: "서지수", duty: "이브닝"},
+        {id: 9, name: "김유신", duty: "나이트"},
+        {id: 10, name: "장보고", duty: "나이트"},
+        {id: 11, name: "세종대왕", duty: "나이트"},
+        {id: 12, name: "을지문덕", duty: "나이트"},
+        {id: 13, name: "신사임당", duty: "OFF"},
+        {id: 14, name: "이순신", duty: "OFF"},
+        {id: 15, name: "김구", duty: "OFF"},
+        {id: 16, name: "유관순", duty: "OFF"}
+      ],
+      friends: [
+        {
+          id: 1,
+          name: "친구1",
+          todayDuty: "데이",
+          schedules: [
+            {id: 'fs1', content: '일정1', startDateTime: '10:00', endDateTime: '11:00'},
+            {id: 'fs2', content: '일정2', startDateTime: '11:30', endDateTime: '12:30'},
+            {id: 'fs3', content: '일정3', startDateTime: '14:00', endDateTime: '15:00'}
+          ],
+          showManage: false
+        },
+        {
+          id: 2,
+          name: "친구2",
+          todayDuty: "이브닝",
+          schedules: [],
+          showManage: false
+        },
+        {
+          id: 3,
+          name: "친구3",
+          todayDuty: "나이트",
+          schedules: [
+            {id: 'fs4', content: '일정1', startDateTime: '18:00', endDateTime: '19:00'}
+          ],
+          showManage: false
+        },
+        {
+          id: 4,
+          name: "친구4",
+          todayDuty: "OFF",
+          schedules: [
+            {id: 'fs5', content: '일정1', startDateTime: '09:00', endDateTime: '10:00'},
+            {id: 'fs6', content: '일정2', startDateTime: '10:30', endDateTime: '11:30'}
+          ],
+          showManage: false
+        }
+      ]
+    },
+    mounted() {
+      this.loadMy();
+    },
+    computed: {
+      groupedTeamMembers() {
+        const groups = {};
+        this.teamMembers.forEach(member => {
+          if (!groups[member.duty]) {
+            groups[member.duty] = [];
+          }
+          groups[member.duty].push(member);
+        });
+        return groups;
+      }
+    },
+    methods: {
+      loadMy() {
+        fetch("/api/dashboard/my")
+          .then(res => res.json())
+          .then(data => {
+            this.myInfo = data.member;
+            this.myDuty = data.duty;
+            this.mySchedules = data.schedules;
+          });
+      },
+      moveTo(id) {
+        if (!id)
+          id = app.myInfo.id;
+        location.href = "/duty/" + id;
+      },
+      printScheduleTime(startDateTime) {
+        // if not today return ""
+        if (new Date(startDateTime).toLocaleDateString() !== new Date().toLocaleDateString()) {
+          return "";
+        }
+        // if 00:00, return ""
+        if (new Date(startDateTime).toLocaleTimeString() === "00:00:00") {
+          return "";
+        }
+        // return only hour and minute
+        return new Date(startDateTime).toLocaleTimeString("ko-KR", {
+          hour: "2-digit", minute: "2-digit"
+        });
+      },
+      goToSchedule(member) {
+        // 팀원의 스케줄 페이지로 이동 (예시)
+        alert(member.name + "의 스케줄 페이지로 이동합니다.");
+      },
+      goToFriendSchedule(friend) {
+        // 친구의 스케줄 페이지로 이동 (예시)
+        alert(friend.name + "의 시간표 페이지로 이동합니다.");
+      },
+      toggleManage(friend) {
+        friend.showManage = !friend.showManage;
+      },
+      deleteFriend(friend) {
+        if (confirm(friend.name + "을(를) 친구 목록에서 삭제하시겠습니까?")) {
+          this.friends = this.friends.filter(f => f.id !== friend.id);
+        }
+      }
+    }
+  });
+</script>
