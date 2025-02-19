@@ -97,7 +97,5 @@ interface ScheduleRepository : JpaRepository<Schedule, UUID> {
         @Param("endOfDay") endOfDay: LocalDateTime = LocalDateTime.now().toLocalDate().atTime(23, 59, 59)
     ): List<Schedule>
 
-
-
 }
 

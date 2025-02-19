@@ -7,7 +7,7 @@ const isEndsWithLastConsonantLetter = function (text) {
     if (lastStrCode < strGa || lastStrCode > strHih) {
         return false; // if it's not Korean, return false
     }
-    return ((lastStrCode - strGa) % 28 == 0)
+    return ((lastStrCode - strGa) % 28 === 0)
 }
 
 const roChecker = function (text) {

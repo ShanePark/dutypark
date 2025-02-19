@@ -1,8 +1,13 @@
 package com.tistory.shanepark.dutypark.dashboard.service
 
+import com.tistory.shanepark.dutypark.dashboard.domain.DashboardDepartment
+import com.tistory.shanepark.dutypark.dashboard.domain.DashboardDutyType
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardPerson
+import com.tistory.shanepark.dutypark.dashboard.domain.DashboardSimpleMember
+import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
+import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -19,10 +24,11 @@ class DashboardService(
     private val memberRepository: MemberRepository,
     private val dutyRepository: DutyRepository,
     private val scheduleRepository: ScheduleRepository,
+    private val dutyTypeRepository: DutyTypeRepository
 ) {
 
     fun my(loginMember: LoginMember): DashboardPerson {
-        val member = memberRepository.findById(loginMember.id).orElseThrow()
+        val member = memberRepository.findMemberWithDepartment(loginMember.id).orElseThrow()
         return DashboardPerson(
             member = MemberDto.of(member),
             duty = todayDuty(member),
@@ -48,14 +54,36 @@ class DashboardService(
         )
     }
 
+    fun department(loginMember: LoginMember): DashboardDepartment {
+        val member = memberRepository.findMemberWithDepartment(loginMember.id).orElseThrow()
+        val department = member.department ?: return DashboardDepartment(department = null, dutyTypes = emptyList())
 
-    // TODO
-    fun friend(loginMember: LoginMember): List<DashboardPerson> {
-        return emptyList()
+        val departmentMembers = memberRepository.findMembersByDepartment(department)
+
+        val dutyMemberMap = dutyRepository.findByDutyDateAndMemberIn(LocalDate.now(), departmentMembers)
+            .associateBy({ it }, { it.member })
+        val offMembers = departmentMembers.filterNot { m -> dutyMemberMap.containsValue(m) }
+
+        val dutyTypes = dutyTypeRepository.findAllByDepartment(department)
+        val dutyTypeMembers = DepartmentDto.of(department, departmentMembers, dutyTypes)
+            .dutyTypes
+            .map { dutyTypeDto ->
+                val members = dutyTypeDto.id?.let { dutyType ->
+                    dutyMemberMap
+                        .filter { (duty, _) -> duty.dutyType.id == dutyType }
+                        .map { (_, member) -> DashboardSimpleMember(member.id, member.name) }
+                } ?: offMembers.map { member -> DashboardSimpleMember(member.id, member.name) }
+                DashboardDutyType(dutyTypeDto, members)
+            }
+
+        return DashboardDepartment(
+            department = DepartmentDto.ofSimple(department),
+            dutyTypes = dutyTypeMembers
+        )
     }
 
     // TODO
-    fun department(loginMember: LoginMember): List<DashboardPerson> {
+    fun friend(loginMember: LoginMember): List<DashboardPerson> {
         return emptyList()
     }
 

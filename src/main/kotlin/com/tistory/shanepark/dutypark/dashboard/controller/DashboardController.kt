@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.dashboard.controller
 
+import com.tistory.shanepark.dutypark.dashboard.domain.DashboardDepartment
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardPerson
 import com.tistory.shanepark.dutypark.dashboard.service.DashboardService
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
@@ -25,7 +26,7 @@ class DashboardController(
     }
 
     @GetMapping("department")
-    fun departmentDashboard(@Login loginMember: LoginMember): List<DashboardPerson> {
+    fun departmentDashboard(@Login loginMember: LoginMember): DashboardDepartment {
         return dashboardService.department(loginMember)
     }
 

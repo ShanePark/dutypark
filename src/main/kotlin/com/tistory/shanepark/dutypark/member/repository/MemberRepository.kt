@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.member.repository
 
+import com.tistory.shanepark.dutypark.department.domain.entity.Department
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -33,5 +34,5 @@ interface MemberRepository : JpaRepository<Member, Long> {
     ): Page<Member>
 
     fun findMemberByKakaoId(kakaoId: String): Member?
-
+    fun findMembersByDepartment(department: Department): List<Member>
 }

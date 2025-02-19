@@ -7,5 +7,5 @@ import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
 data class DashboardPerson(
     val member: MemberDto,
     val duty: DutyDto?,
-    val schedules: List<ScheduleDto>,
+    val schedules: List<ScheduleDto> = emptyList(),
 )

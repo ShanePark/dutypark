@@ -1,4 +1,4 @@
-<div id="app" class="container mt-4">
+<div id="app" class="container mt-4 dashboard">
   <!-- My 섹션 -->
   <div class="mb-4">
     <div class="bg-white rounded shadow-sm border">
@@ -30,15 +30,20 @@
   </div>
 
   <!-- Team 섹션 -->
-  <div class="mb-4">
+  <div class="mb-4 team-section">
     <div class="bg-white rounded shadow-sm border">
-      <div class="bg-success text-center py-2 rounded-top fw-bold text-uppercase text-white">Team</div>
+      <div class="bg-success text-center py-2 rounded-top fw-bold text-uppercase text-white"
+           v-text="myDepartment.name"></div>
       <div class="p-4">
-        <div v-for="(members, duty) in groupedTeamMembers" :key="duty" class="mb-4">
-          <h5 class="mb-2 fw-semibold">{{ duty }}</h5>
+        <div v-for="group in groupedTeamMembers" class="mb-4">
+          <div class="duty-type ms-lg-2">
+            <div :class="['BACKGROUND-' + group.dutyType.color]">
+              <span v-text="group.dutyType.name"></span>
+            </div>
+          </div>
           <div class="d-flex flex-wrap gap-2">
-            <span v-for="member in members" :key="member.id">
-              <a href="#" @click.prevent="goToSchedule(member)" class="text-decoration-none">
+            <span v-for="member in group.members" :key="member.id">
+              <a href="#" @click.prevent="moveTo(member.id)" class="text-decoration-none">
                 <i class="bi bi-person-fill"></i> {{ member.name }}
               </a>
             </span>
@@ -99,24 +104,8 @@
             myInfo: {},
             myDuty: {},
             mySchedules: [],
-            teamMembers: [
-                {id: 1, name: "홍길동", duty: "데이"},
-                {id: 2, name: "김철수", duty: "데이"},
-                {id: 3, name: "이영희", duty: "데이"},
-                {id: 4, name: "박민수", duty: "데이"},
-                {id: 5, name: "최수진", duty: "이브닝"},
-                {id: 6, name: "정은지", duty: "이브닝"},
-                {id: 7, name: "강호동", duty: "이브닝"},
-                {id: 8, name: "서지수", duty: "이브닝"},
-                {id: 9, name: "김유신", duty: "나이트"},
-                {id: 10, name: "장보고", duty: "나이트"},
-                {id: 11, name: "세종대왕", duty: "나이트"},
-                {id: 12, name: "을지문덕", duty: "나이트"},
-                {id: 13, name: "신사임당", duty: "OFF"},
-                {id: 14, name: "이순신", duty: "OFF"},
-                {id: 15, name: "김구", duty: "OFF"},
-                {id: 16, name: "유관순", duty: "OFF"}
-            ],
+            myDepartment: {},
+            groupedTeamMembers: [],
             friends: [
                 {
                     id: 1,
@@ -159,19 +148,9 @@
         },
         mounted() {
             this.loadMy();
+            this.loadTeamMembers();
         },
-        computed: {
-            groupedTeamMembers() {
-                const groups = {};
-                this.teamMembers.forEach(member => {
-                    if (!groups[member.duty]) {
-                        groups[member.duty] = [];
-                    }
-                    groups[member.duty].push(member);
-                });
-                return groups;
-            }
-        },
+        computed: {},
         methods: {
             loadMy() {
                 fetch("/api/dashboard/my")
@@ -182,28 +161,32 @@
                         this.mySchedules = data.schedules;
                     });
             },
+            loadTeamMembers() {
+                fetch("/api/dashboard/department")
+                    .then(res => res.json())
+                    .then(data => {
+                        app.groupedTeamMembers = data.dutyTypes
+                        app.myDepartment = data.department;
+                    });
+            },
             moveTo(id) {
                 if (!id)
                     id = app.myInfo.id;
                 location.href = "/duty/" + id;
             },
             printScheduleTime(startDateTime) {
-                // if not today return ""
-                if (new Date(startDateTime).toLocaleDateString() !== new Date().toLocaleDateString()) {
+                let date = new Date(startDateTime);
+                if (date.toLocaleDateString() !== new Date().toLocaleDateString()) {
                     return "";
                 }
-                // if 00:00, return ""
-                if (new Date(startDateTime).toLocaleTimeString() === "00:00:00") {
+
+                if (date.getHours() === 0 && date.getMinutes() === 0) {
                     return "";
                 }
-                // return only hour and minute
-                return new Date(startDateTime).toLocaleTimeString("ko-KR", {
+
+                return date.toLocaleTimeString("ko-KR", {
                     hour: "2-digit", minute: "2-digit"
                 });
-            },
-            goToSchedule(member) {
-                // 팀원의 스케줄 페이지로 이동 (예시)
-                alert(member.name + "의 스케줄 페이지로 이동합니다.");
             },
             goToFriendSchedule(friend) {
                 // 친구의 스케줄 페이지로 이동 (예시)

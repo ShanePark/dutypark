@@ -797,3 +797,12 @@ input[readonly], textarea[readonly] {
     border: none;
     background-color: lightskyblue;
 }
+
+.dashboard .duty-type {
+    width: fit-content;
+}
+
+.dashboard .duty-type div {
+    padding: 0.2rem;
+}
+
