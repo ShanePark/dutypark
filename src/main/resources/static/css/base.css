@@ -1,3 +1,7 @@
+:root {
+    --hover-background-color: #f8f9fa;
+}
+
 @font-face {
     src: url('../fonts/NexonMaplestoryLight.woff2') format('woff2');
     font-display: swap;
@@ -202,17 +206,13 @@ a.homeButton:hover {
     color: white;
 }
 
-.h_pointer:hover {
-    cursor: pointer !important;
-}
-
 .duty-table-header {
     font-size: 1.3em;
     margin: 0 auto;
     display: flex;
 }
 
-.duty-table-header .indicator {
+.duty-type .indicator {
     margin-left: 5px;
     border: 2px solid #eaeaea;
 }
@@ -222,15 +222,15 @@ a.homeButton:hover {
     color: black;
 }
 
-.duty-table-header .duty-type {
+.duty-types .duty-type {
     margin-right: .7rem;
 }
 
-.duty-table-header .duty-type .indicator {
+.duty-types .duty-type .indicator {
     padding: 2px;
 }
 
-.duty-table-header .duty-type-count {
+.duty-types .duty-type-count {
     margin-left: 2px;
     width: 1rem;
 }
@@ -671,7 +671,7 @@ a.homeButton:hover {
 .todo-item {
     flex: 0 0 auto;
     display: flex;
-    background-color: #f8f9fa;
+    background-color: var(--hover-background-color);
     border: 1px solid #dee2e6;
     border-radius: 0.5rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -704,7 +704,7 @@ a.homeButton:hover {
 }
 
 input[readonly], textarea[readonly] {
-    background-color: #f8f9fa;
+    background-color: var(--hover-background-color);
     cursor: not-allowed;
 }
 
@@ -796,4 +796,36 @@ input[readonly], textarea[readonly] {
 .month-control .today-button {
     border: none;
     background-color: lightskyblue;
+}
+
+.dashboard .duty-type div {
+    padding: 0.2rem;
+}
+
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.hover-bg-light:hover {
+    background-color: var(--hover-background-color);
+}
+
+.member-card {
+    width: 120px;
+    transition: transform 0.2s ease-in-out;
+}
+
+.member-card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    background-color: var(--hover-background-color);
+}
+
+.blue {
+    color: dodgerblue;
+}
+
+.red {
+    color: orangered;
 }

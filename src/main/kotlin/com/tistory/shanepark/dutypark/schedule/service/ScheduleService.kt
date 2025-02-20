@@ -32,7 +32,7 @@ class ScheduleService(
         yearMonth: YearMonth
     ): Array<List<ScheduleDto>> {
         val member = memberRepository.findById(memberId).orElseThrow()
-        friendService.checkVisibility(loginMember, member)
+        friendService.checkVisibility(loginMember, member, scheduleVisibilityCheck = true)
 
         val calendarView = CalendarView(yearMonth)
 
@@ -43,7 +43,7 @@ class ScheduleService(
         val start = calendarView.rangeFrom
         val end = calendarView.rangeEnd
 
-        val availableVisibilities = friendService.availableVisibilities(loginMember, member)
+        val availableVisibilities = friendService.availableScheduleVisibilities(loginMember, member)
 
         val userSchedules =
             scheduleRepository.findSchedulesOfMonth(member, start, end, visibilities = availableVisibilities)
@@ -138,10 +138,11 @@ class ScheduleService(
     fun tagFriend(loginMember: LoginMember, scheduleId: UUID, friendId: Long) {
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow()
         val friend = memberRepository.findById(friendId).orElseThrow()
+        val login = memberRepository.findById(loginMember.id).orElseThrow()
 
         checkScheduleUpdateAuthority(schedule = schedule, loginMember = loginMember)
 
-        if (!friendService.isFriend(loginMember.id, friendId)) {
+        if (!friendService.isFriend(login, friend)) {
             throw DutyparkAuthException("$friend is not friend of $loginMember")
         }
 

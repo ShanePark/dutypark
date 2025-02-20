@@ -210,7 +210,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `if not friend and calendar is only open for friends can't get duty `() {
+    fun `if not friend and calendar is only open for friends and they are not in same department, then can't get duty`() {
         // Given
         val member = TestData.member
         val dutyTypes = TestData.dutyTypes
@@ -234,7 +234,14 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
         )
 
         val member2 = TestData.member2
+
         // When
+        member.department = TestData.department
+        member2.department = TestData.department2
+        memberRepository.save(member)
+        memberRepository.save(member2)
+
+        // Then
         assertThrows<DutyparkAuthException> {
             dutyService.getDuties(member.id!!, YearMonth.of(2023, 4), loginMember(member2))
         }
@@ -281,12 +288,36 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
     fun `if not my calendar and the member's calendar visibility is private can't get duty`() {
         // Given
         val target = TestData.member
+        target.department = TestData.department2
         val login = TestData.member2
-        updateVisibility(target, Visibility.PRIVATE)
+        login.department = TestData.department
+
+        memberRepository.save(target)
+        memberRepository.save(login)
         // When
+        updateVisibility(target, Visibility.PRIVATE)
+
+        // Then
         assertThrows<DutyparkAuthException> {
             dutyService.getDuties(target.id!!, YearMonth.of(2023, 4), loginMember(login))
         }
+    }
+
+    @Test
+    fun `even if calendar visibility is private, if they are on the same group they can see each other's duty`() {
+        // Given
+        val target = TestData.member
+        target.department = TestData.department
+        val login = TestData.member2
+        login.department = TestData.department
+
+        memberRepository.save(target)
+        memberRepository.save(login)
+        // When
+        updateVisibility(target, Visibility.PRIVATE)
+
+        // Then does not throw exception
+        dutyService.getDuties(target.id!!, YearMonth.of(2023, 4), loginMember(login))
     }
 
     @Test
@@ -371,6 +402,5 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
         assertThat(duties).hasSize(31)
         assertThat(duties.filter { it.value?.dutyType == dutyTypes[1].name }).hasSize(31)
     }
-
 
 }

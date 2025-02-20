@@ -11,7 +11,7 @@ interface FriendRequestRepository : JpaRepository<FriendRequest, Long> {
     fun findAllByFromMemberAndToMemberAndStatus(
         fromMember: Member,
         toMember: Member,
-        status: FriendRequestStatus
+        status: FriendRequestStatus,
     ): List<FriendRequest>
 
     @EntityGraph(attributePaths = ["fromMember", "toMember"])

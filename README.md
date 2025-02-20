@@ -40,8 +40,6 @@ spring:
     url: jdbc:mysql://localhost:3306/dutypark
     username: dutypark
     password: PASSWORD_HERE
-  jpa:
-    database-platform: org.hibernate.dialect.MySQL8Dialect  
 ```
 
 ### Properties

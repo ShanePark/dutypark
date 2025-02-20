@@ -7,7 +7,6 @@ import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
-import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -327,10 +326,15 @@ class FriendServiceTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `check visibility can't pass if the setting is private and login is not his manager`() {
+    fun `check visibility can't pass if the setting is private and login is not his manager and they are not in same department`() {
         val loginMember = loginMember(TestData.member)
         val targetMember = TestData.member2
         targetMember.calendarVisibility = Visibility.PRIVATE
+
+        TestData.member.department = TestData.department
+        targetMember.department = TestData.department2
+        memberRepository.save(TestData.member)
+        memberRepository.save(targetMember)
 
         assertThrows<DutyparkAuthException> {
             friendService.checkVisibility(loginMember, targetMember)

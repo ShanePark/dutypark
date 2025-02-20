@@ -26,4 +26,6 @@ interface DutyRepository : JpaRepository<Duty, Long> {
 
     fun deleteDutiesByMemberAndDutyDateBetween(member: Member, start: LocalDate, end: LocalDate)
 
+    fun findByDutyDateAndMemberIn(dutyDate: LocalDate, members: List<Member>): List<Duty>
+
 }

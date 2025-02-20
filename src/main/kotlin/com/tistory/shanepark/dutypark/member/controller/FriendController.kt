@@ -2,7 +2,6 @@ package com.tistory.shanepark.dutypark.member.controller
 
 import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
-import com.tistory.shanepark.dutypark.member.domain.dto.FriendsInfoDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -18,14 +17,6 @@ import org.springframework.web.bind.annotation.*
 class FriendController(
     private val friendService: FriendService
 ) {
-
-    @GetMapping("/info")
-    fun friendInfo(
-        @Login loginMember: LoginMember
-    ): FriendsInfoDto {
-        return friendService.getMyFriendInfo(loginMember)
-    }
-
     @GetMapping
     fun getFriends(
         @Login loginMember: LoginMember
@@ -76,6 +67,11 @@ class FriendController(
         @PathVariable fromMemberId: Long
     ) {
         friendService.rejectFriendRequest(loginMember, fromMemberId)
+    }
+
+    @PutMapping("/family/{toMemberId}")
+    fun sendFamilyRequest(@Login loginMember: LoginMember, @PathVariable toMemberId: Long) {
+        friendService.sendFamilyRequest(loginMember, toMemberId)
     }
 
     @DeleteMapping("{deleteMemberId}")
