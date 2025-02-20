@@ -1,8 +1,6 @@
 package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
-import com.tistory.shanepark.dutypark.member.domain.dto.FriendRequestDto
-import com.tistory.shanepark.dutypark.member.domain.dto.FriendsInfoDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
@@ -36,20 +34,11 @@ class FriendService(
             .map { MemberDto.of(it) }
     }
 
-    @Transactional(readOnly = true)
-    fun getMyFriendInfo(loginMember: LoginMember): FriendsInfoDto {
-        val member = loginMemberToMember(loginMember)
-        val friends = findAllFriends(loginMember)
-        val pendingRequestsTo = getPendingRequestsTo(member).map { FriendRequestDto.of(it) }
-        val pendingRequestsFrom = getPendingRequestsFrom(member).map { FriendRequestDto.of(it) }
-        return FriendsInfoDto(friends, pendingRequestsTo, pendingRequestsFrom)
-    }
-
-    private fun getPendingRequestsTo(member: Member): List<FriendRequest> {
+    fun getPendingRequestsTo(member: Member): List<FriendRequest> {
         return friendRequestRepository.findAllByToMemberAndStatus(member, PENDING)
     }
 
-    private fun getPendingRequestsFrom(member: Member): List<FriendRequest> {
+    fun getPendingRequestsFrom(member: Member): List<FriendRequest> {
         return friendRequestRepository.findAllByFromMemberAndStatus(member, PENDING)
     }
 
@@ -159,19 +148,19 @@ class FriendService(
         return memberRepository.findById(login.id).orElseThrow()
     }
 
-    fun checkVisibility(login: LoginMember?, target: Member) {
-        if (!isVisible(login, target.id))
+    fun checkVisibility(login: LoginMember?, target: Member, scheduleVisibilityCheck: Boolean = false) {
+        if (!isVisible(login, target.id, scheduleVisibilityCheck = scheduleVisibilityCheck))
             throw DutyparkAuthException("${target.name} Calendar is not visible to ${login?.name}")
     }
 
-    fun isVisible(login: LoginMember?, targetId: Long?): Boolean {
+    fun isVisible(login: LoginMember?, targetId: Long?, scheduleVisibilityCheck: Boolean = false): Boolean {
         val targetMember = memberRepository.findById(targetId!!).orElseThrow()
         login ?: return targetMember.calendarVisibility == Visibility.PUBLIC
 
         val loginMember = memberRepository.findById(login.id).orElseThrow()
         if (login.id == targetMember.id)
             return true
-        if (login.departmentId == targetMember.department?.id)
+        if (!scheduleVisibilityCheck && (login.departmentId == targetMember.department?.id))
             return true
         if (targetMember.department?.manager?.id == login.id)
             return true

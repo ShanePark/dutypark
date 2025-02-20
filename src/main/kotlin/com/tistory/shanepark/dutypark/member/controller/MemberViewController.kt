@@ -31,9 +31,4 @@ class MemberViewController(
         return layout(model, "member/d-day")
     }
 
-    @GetMapping("/member/friends")
-    fun friendsPage(@Login loginMember: LoginMember, model: Model): String {
-        return layout(model, "member/friends")
-    }
-
 }

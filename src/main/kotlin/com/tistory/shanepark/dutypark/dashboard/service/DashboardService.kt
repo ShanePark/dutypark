@@ -1,16 +1,16 @@
 package com.tistory.shanepark.dutypark.dashboard.service
 
-import com.tistory.shanepark.dutypark.dashboard.domain.DashboardDepartment
-import com.tistory.shanepark.dutypark.dashboard.domain.DashboardDutyType
-import com.tistory.shanepark.dutypark.dashboard.domain.DashboardPerson
-import com.tistory.shanepark.dutypark.dashboard.domain.DashboardSimpleMember
+import com.tistory.shanepark.dutypark.dashboard.domain.*
 import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
+import com.tistory.shanepark.dutypark.member.domain.dto.FriendRequestDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -24,7 +24,9 @@ class DashboardService(
     private val memberRepository: MemberRepository,
     private val dutyRepository: DutyRepository,
     private val scheduleRepository: ScheduleRepository,
-    private val dutyTypeRepository: DutyTypeRepository
+    private val dutyTypeRepository: DutyTypeRepository,
+    private val friendRelationRepository: FriendRelationRepository,
+    private val friendService: FriendService,
 ) {
 
     fun my(loginMember: LoginMember): DashboardPerson {
@@ -56,7 +58,7 @@ class DashboardService(
 
     fun department(loginMember: LoginMember): DashboardDepartment {
         val member = memberRepository.findMemberWithDepartment(loginMember.id).orElseThrow()
-        val department = member.department ?: return DashboardDepartment(department = null, dutyTypes = emptyList())
+        val department = member.department ?: return DashboardDepartment(department = null, groups = emptyList())
 
         val departmentMembers = memberRepository.findMembersByDepartment(department)
 
@@ -78,14 +80,27 @@ class DashboardService(
 
         return DashboardDepartment(
             department = DepartmentDto.ofSimple(department),
-            dutyTypes = dutyTypeMembers
+            groups = dutyTypeMembers
         )
     }
 
-    // TODO
-    fun friend(loginMember: LoginMember): List<DashboardPerson> {
-        return emptyList()
+    fun friend(loginMember: LoginMember): DashboardFriendInfo {
+        val member = memberRepository.findMemberWithDepartment(loginMember.id).orElseThrow()
+        val friends = friendRelationRepository.findAllByMember(member)
+            .map {
+                DashboardPerson(
+                    member = MemberDto.of(it.friend),
+                    duty = todayDuty(it.friend),
+                    schedules = todaySchedules(it.friend),
+                )
+            }
+        val pendingRequestsTo = friendService.getPendingRequestsTo(member).map { FriendRequestDto.of(it) }
+        val pendingRequestsFrom = friendService.getPendingRequestsFrom(member).map { FriendRequestDto.of(it) }
+        return DashboardFriendInfo(
+            friends = friends,
+            pendingRequestsFrom = pendingRequestsFrom,
+            pendingRequestsTo = pendingRequestsTo,
+        )
     }
-
 
 }

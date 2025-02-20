@@ -759,11 +759,17 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `if not friend and calendar visibility is only for friends, can not get schedules`() {
+    fun `if not friend and calendar visibility is only for friends, can not get schedules even if they are in same department`() {
         // Given
         val target = TestData.member
         updateVisibility(target, Visibility.FRIENDS)
         val login = TestData.member2
+
+        target.department = TestData.department
+        login.department = TestData.department
+
+        memberRepository.save(target)
+        memberRepository.save(login)
 
         // Then
         assertThrows<DutyparkAuthException> {

@@ -1,8 +1,7 @@
 <div id="app" class="container mt-4 dashboard">
-  <!-- My 섹션 -->
-  <div class="mb-4">
+  <div class="mb-4 my-section">
     <div class="bg-white rounded shadow-sm border">
-      <div class="bg-primary text-center py-2 rounded-top fw-bold text-uppercase text-white cursor-pointer"
+      <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white cursor-pointer"
            @click="moveTo()">내 시간표
       </div>
       <div class="p-4">
@@ -11,16 +10,16 @@
           {{ today }}
         </h5>
         <div class="d-flex align-items-center mb-3">
-          <h5 class="mb-0"><i class="bi bi-person-badge me-2"></i>근무</h5>
-          <div class="duty-type ms-lg-2">
-            <div :class="['BACKGROUND-' + myDuty.dutyColor]">
-              <span v-text="myDuty.dutyType"></span>
+          <h5 class="mb-0 me-2"><i class="bi bi-person-badge me-2"></i>오늘 근무</h5>
+          <div class="duty-type">
+            <div :class="['BACKGROUND-' + myInfo.duty.dutyColor]">
+              <span v-text="myInfo.duty.dutyType"></span>
             </div>
           </div>
         </div>
-        <h5 class="mb-1 fw-semibold"><i class="bi bi-calendar-event me-2"></i>일정</h5>
+        <h5 class="mb-1"><i class="bi bi-calendar-event me-2"></i>오늘 일정</h5>
         <ul class="list-unstyled">
-          <li v-for="schedule in mySchedules" :key="schedule.id" class="py-1 border-bottom last:border-0">
+          <li v-for="schedule in myInfo.schedules" :key="schedule.id" class="py-1 border-bottom last:border-0">
             <span class="fw-bold">{{ schedule.content }}</span>
             <span class="text-secondary ms-2">{{ printScheduleTime(schedule.startDateTime) }}</span>
           </li>
@@ -29,177 +28,418 @@
     </div>
   </div>
 
-  <!-- Team 섹션 -->
   <div class="mb-4 team-section">
     <div class="bg-white rounded shadow-sm border">
-      <div class="bg-success text-center py-2 rounded-top fw-bold text-uppercase text-white"
-           v-text="myDepartment.name"></div>
+      <div class="bg-secondary text-center py-3 rounded-top fw-bold text-uppercase text-white"
+           v-text="departmentInfo.department.name"></div>
+
       <div class="p-4">
-        <div v-for="group in groupedTeamMembers" class="mb-4">
-          <div class="duty-type ms-lg-2">
-            <div :class="['BACKGROUND-' + group.dutyType.color]">
+        <div v-for="group in departmentInfo.groups" class="mb-4">
+          <div class="duty-type border rounded p-3 mb-3"
+               :class="['border-' + group.dutyType.color]"
+               v-if="group.members.length > 0">
+            <div :class="['BACKGROUND-' + group.dutyType.color, 'fw-bold', 'py-2', 'px-3', 'rounded']">
               <span v-text="group.dutyType.name"></span>
             </div>
-          </div>
-          <div class="d-flex flex-wrap gap-2">
-            <span v-for="member in group.members" :key="member.id">
-              <a href="#" @click.prevent="moveTo(member.id)" class="text-decoration-none">
-                <i class="bi bi-person-fill"></i> {{ member.name }}
-              </a>
-            </span>
+
+            <div class="d-flex flex-wrap gap-3 mt-3">
+              <div v-for="member in group.members" :key="member.id"
+                   class="member-card p-3 border rounded shadow-sm text-center cursor-pointer"
+                   @click.prevent="moveTo(member.id)">
+                <i class="bi bi-person-fill fs-4 d-block mb-2"></i>
+                <span v-text="member.name"></span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Friends 섹션 -->
-  <div class="mb-4">
+  <div class="mb-4 friend-section">
     <div class="bg-white rounded shadow-sm border">
-      <div class="bg-warning text-center py-2 rounded-top fw-bold text-uppercase text-dark">Friends</div>
+      <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white">친구목록</div>
       <div class="p-4">
-        <div v-for="friend in friends" :key="friend.id" class="p-4 border rounded mb-4 cursor-pointer hover-bg-light"
-             @click="goToFriendSchedule(friend)">
-          <div class="d-flex justify-content-between align-items-center">
-            <div class="fs-5 fw-bold">{{ friend.name }}</div>
-            <button class="btn btn-outline-secondary btn-sm" @click.stop="toggleManage(friend)">
-              <i class="bi bi-gear"></i>
-            </button>
+        <div class="d-flex flex-wrap gap-3">
+          <div v-for="friend in friendInfo.friends" :key="friend.member.id"
+               class="p-4 border rounded mb-2 cursor-pointer hover-bg-light shadow-sm"
+               style="width: calc(50% - 12px);"
+               @click="moveTo(friend.member.id)">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="fs-5 fw-bold">{{ friend.member.name }}</div>
+              <div class="btn-group" @click.stop>
+                <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown"
+                        aria-expanded="false">
+                  관리
+                </button>
+                <ul class="dropdown-menu">
+                  <li><a class="dropdown-item cursor-pointer" @click.stop="unfriend(friend.member)">친구 삭제</a></li>
+                </ul>
+              </div>
+            </div>
+            <p class="mt-2 text-muted">
+              <i class="bi bi-person-badge me-1"></i> 근무: {{ friend.duty.dutyType }}
+            </p>
+            <div class="mt-2">
+              <template v-if="friend.schedules && friend.schedules.length">
+                <ul class="list-unstyled">
+                  <li v-for="schedule in friend.schedules" :key="schedule.id"
+                      class="text-sm py-1 border-bottom last:border-0">
+                    <span class="fw-semibold">{{ schedule.content }}</span>
+                    <span class="text-secondary ms-2">{{ printScheduleTime(schedule.startDateTime) }}</span>
+                  </li>
+                </ul>
+              </template>
+            </div>
           </div>
-          <p class="mt-2 text-muted">
-            <i class="bi bi-person-badge me-1"></i> 근무: {{ friend.todayDuty }}
-          </p>
-          <div class="mt-2">
-            <template v-if="friend.schedules && friend.schedules.length">
-              <ul class="list-unstyled">
-                <li v-for="schedule in friend.schedules" :key="schedule.id"
-                    class="text-sm py-1 border-bottom last:border-0">
-                  <span class="fw-semibold">{{ schedule.content }}</span>
-                  <span class="text-secondary ms-2">{{ schedule.startDateTime }} - {{ schedule.endDateTime }}</span>
-                </li>
-              </ul>
-            </template>
-            <template v-else>
-              <p class="text-muted">일정이 없습니다.</p>
-            </template>
-          </div>
-          <div v-if="friend.showManage" class="mt-2 text-end">
-            <button class="btn btn-danger btn-sm" @click.stop="deleteFriend(friend)">
-              <i class="bi bi-trash me-1"></i> 친구삭제
-            </button>
+          <div class="p-4 rounded mb-4 text-center cursor-pointer bg-primary bg-gradient border shadow-sm"
+               style="width: calc(50% - 12px);"
+               @click="openSearchModal">
+            <i class="bi bi-person-plus-fill fs-4 d-block mb-2 text-white"></i>
+            <span class="fw-bold text-white">친구 추가</span>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mb-4 friend-request-section"
+       v-if="friendInfo.pendingRequestsTo.length || friendInfo.pendingRequestsFrom.length">
+    <div class="bg-white rounded shadow-sm border">
+      <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white">친구 요청 관리</div>
+      <div class="p-4">
+        <div class="d-flex flex-wrap gap-3">
+          <div v-for="req in friendInfo.pendingRequestsTo" :key="'to-' + req.fromMember.id"
+               class="p-4 border rounded cursor-pointer shadow-sm"
+               style="width: calc(50% - 12px); background-color: #e3f2fd;">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="fs-5 fw-bold">{{ req.fromMember.name }}</div>
+              <div>
+                <button class="btn btn-outline-success btn-sm me-1" @click="acceptFriendRequest(req)">승인</button>
+                <button class="btn btn-outline-danger btn-sm" @click="rejectFriendRequest(req)">거절</button>
+              </div>
+            </div>
+          </div>
+          <div v-for="req in friendInfo.pendingRequestsFrom" :key="'from-' + req.toMember.id"
+               class="p-4 border rounded cursor-pointer shadow-sm"
+               style="width: calc(50% - 12px); background-color: #fff3cd;">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="fs-5 fw-bold">{{ req.toMember.name }}</div>
+              <button class="btn btn-outline-warning btn-sm" @click="cancelRequest(req)">요청 취소</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> <!--END DASHBOARD-->
+
+<div id="member-search-modal" class="modal fade" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">친구 추가</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="input-group mb-3">
+          <input type="text" class="form-control" placeholder="이름 또는 부서 검색"
+                 aria-label="Search" aria-describedby="search-button"
+                 v-model="keyword" v-on:keyup.enter="search">
+          <button class="btn btn-outline-secondary" type="button" id="search-button" v-on:click="search">
+            검색
+          </button>
+        </div>
+
+        <div v-if="searchResult.length > 0">
+          <table class="table table-hover align-middle">
+            <colgroup>
+              <col style="width: 10%">
+              <col style="width: 35%">
+              <col style="width: 35%">
+              <col style="width: 20%">
+            </colgroup>
+            <thead class="table-light">
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">부서</th>
+              <th scope="col">이름</th>
+              <th scope="col" class="text-center">요청</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="(member, index) in searchResult">
+              <td>{{ (page - 1) * pageSize + index + 1 }}</td>
+              <td>{{ member.department }}</td>
+              <td>{{ member.name }}</td>
+              <td class="text-center">
+                <button class="btn btn-outline-success btn-sm" v-on:click="requestFriend(member)">
+                  친구 요청
+                </button>
+              </td>
+            </tr>
+            </tbody>
+          </table>
+
+          <nav class="d-flex justify-content-center mt-3">
+            <ul class="pagination pagination-sm">
+              <li class="page-item" :class="{ 'disabled': page == 1 }">
+                <button class="page-link" @click="prevPage" aria-label="Previous">
+                  &laquo;
+                </button>
+              </li>
+              <li class="page-item" v-for="i in totalPage" :key="i" :class="{ 'active': i == page }">
+                <button class="page-link" @click="goToPage(i)">{{ i }}</button>
+              </li>
+              <li class="page-item" :class="{ 'disabled': page == totalPage }">
+                <button class="page-link" @click="nextPage" aria-label="Next">
+                  &raquo;
+                </button>
+              </li>
+            </ul>
+          </nav>
+          <p class="text-center text-muted mt-2">페이지 {{ page }} / {{ totalPage }} | 전체 결과: {{ totalElements }}</p>
+        </div>
+        <p v-else class="text-center text-muted">검색 결과가 없습니다.</p>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-    const app = new Vue({
-        el: "#app",
-        data: {
-            today: new Date().toLocaleDateString("ko-KR", {
-                year: "numeric", month: "long", day: "numeric", weekday: "long"
-            }),
-            myInfo: {},
-            myDuty: {},
-            mySchedules: [],
-            myDepartment: {},
-            groupedTeamMembers: [],
-            friends: [
-                {
-                    id: 1,
-                    name: "친구1",
-                    todayDuty: "데이",
-                    schedules: [
-                        {id: 'fs1', content: '일정1', startDateTime: '10:00', endDateTime: '11:00'},
-                        {id: 'fs2', content: '일정2', startDateTime: '11:30', endDateTime: '12:30'},
-                        {id: 'fs3', content: '일정3', startDateTime: '14:00', endDateTime: '15:00'}
-                    ],
-                    showManage: false
-                },
-                {
-                    id: 2,
-                    name: "친구2",
-                    todayDuty: "이브닝",
-                    schedules: [],
-                    showManage: false
-                },
-                {
-                    id: 3,
-                    name: "친구3",
-                    todayDuty: "나이트",
-                    schedules: [
-                        {id: 'fs4', content: '일정1', startDateTime: '18:00', endDateTime: '19:00'}
-                    ],
-                    showManage: false
-                },
-                {
-                    id: 4,
-                    name: "친구4",
-                    todayDuty: "OFF",
-                    schedules: [
-                        {id: 'fs5', content: '일정1', startDateTime: '09:00', endDateTime: '10:00'},
-                        {id: 'fs6', content: '일정2', startDateTime: '10:30', endDateTime: '11:30'}
-                    ],
-                    showManage: false
-                }
-            ]
+  const app = new Vue({
+    el: "#app",
+    data: {
+      today: new Date().toLocaleDateString("ko-KR", {
+        year: "numeric", month: "long", day: "numeric", weekday: "long"
+      }),
+      myInfo: {
+        member: {},
+        duty: {
+          dutyType: "",
+          dutyColor: "",
         },
-        mounted() {
-            this.loadMy();
-            this.loadTeamMembers();
-        },
-        computed: {},
-        methods: {
-            loadMy() {
-                fetch("/api/dashboard/my")
-                    .then(res => res.json())
-                    .then(data => {
-                        this.myInfo = data.member;
-                        this.myDuty = data.duty;
-                        this.mySchedules = data.schedules;
-                    });
-            },
-            loadTeamMembers() {
-                fetch("/api/dashboard/department")
-                    .then(res => res.json())
-                    .then(data => {
-                        app.groupedTeamMembers = data.dutyTypes
-                        app.myDepartment = data.department;
-                    });
-            },
-            moveTo(id) {
-                if (!id)
-                    id = app.myInfo.id;
-                location.href = "/duty/" + id;
-            },
-            printScheduleTime(startDateTime) {
-                let date = new Date(startDateTime);
-                if (date.toLocaleDateString() !== new Date().toLocaleDateString()) {
-                    return "";
-                }
-
-                if (date.getHours() === 0 && date.getMinutes() === 0) {
-                    return "";
-                }
-
-                return date.toLocaleTimeString("ko-KR", {
-                    hour: "2-digit", minute: "2-digit"
-                });
-            },
-            goToFriendSchedule(friend) {
-                // 친구의 스케줄 페이지로 이동 (예시)
-                alert(friend.name + "의 시간표 페이지로 이동합니다.");
-            },
-            toggleManage(friend) {
-                friend.showManage = !friend.showManage;
-            },
-            deleteFriend(friend) {
-                if (confirm(friend.name + "을(를) 친구 목록에서 삭제하시겠습니까?")) {
-                    this.friends = this.friends.filter(f => f.id !== friend.id);
-                }
-            }
+        schedules: [],
+      },
+      departmentInfo: {
+        department: {},
+        groups: [],
+      },
+      friendInfo: {
+        friends: [],
+        pendingRequestsTo: [],
+        pendingRequestsFrom: [],
+      },
+    },
+    mounted() {
+      this.loadMy();
+      this.loadTeamMembers();
+      this.loadFriendInfo()
+    },
+    computed: {},
+    methods: {
+      loadMy() {
+        fetch("/api/dashboard/my")
+          .then(res => res.json())
+          .then(data => {
+            this.myInfo = data;
+          });
+      },
+      loadTeamMembers() {
+        fetch("/api/dashboard/department")
+          .then(res => res.json())
+          .then(data => {
+            app.departmentInfo = data;
+          });
+      },
+      loadFriendInfo() {
+        fetch("/api/dashboard/friends")
+          .then(res => res.json())
+          .then(data => {
+            app.friendInfo = data;
+          });
+      },
+      moveTo(id) {
+        if (!id)
+          id = app.myInfo.id;
+        location.href = "/duty/" + id;
+      },
+      printScheduleTime(startDateTime) {
+        let date = new Date(startDateTime);
+        if (date.toLocaleDateString() !== new Date().toLocaleDateString()) {
+          return "";
         }
-    });
+
+        if (date.getHours() === 0 && date.getMinutes() === 0) {
+          return "";
+        }
+
+        return date.toLocaleTimeString("ko-KR", {
+          hour: "2-digit", minute: "2-digit"
+        });
+      },
+      unfriend(member) {
+        Swal.fire({
+          title: '친구 삭제',
+          text: `정말로 [${member.name}]님을 친구목록에서 삭제하시겠습니까?`,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#d33',
+          confirmButtonText: '삭제',
+          cancelButtonText: '취소'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            fetch('/api/friends/' + member.id, {
+              method: 'DELETE'
+            }).then(function (response) {
+              if (response.ok) {
+                app.loadFriendInfo();
+                return;
+              }
+              throw new Error('친구 삭제 실패');
+            }).catch(function (error) {
+              alert('친구 삭제 실패');
+            })
+          }
+        })
+      },
+      openSearchModal() {
+        searchModal.openModal();
+      },
+      search() {
+        fetch(`/api/friends/search?keyword=${this.keyword}`)
+          .then(res => res.json())
+          .then(data => this.searchResult = data.content);
+      },
+      requestFriend(member) {
+        fetch(`/api/friends/request/send/${member.id}`, {method: 'POST'})
+          .then(() => this.loadFriendInfo());
+      },
+      acceptFriendRequest(req) {
+        fetch('/api/friends/request/accept/' + req.fromMember.id, {
+          method: 'POST'
+        }).then(function (response) {
+          if (response.ok) {
+            app.loadFriendInfo();
+            return;
+          }
+          throw new Error('친구요청 수락 실패');
+        }).catch(function (error) {
+          alert('친구요청 수락 실패');
+        })
+      },
+      rejectFriendRequest(req) {
+        fetch('/api/friends/request/reject/' + req.fromMember.id, {
+          method: 'POST'
+        }).then(function (response) {
+          if (response.ok) {
+            app.loadFriendInfo();
+            return;
+          }
+          throw new Error('친구요청 거절 실패');
+        }).catch(function (error) {
+          alert('친구요청 거절 실패');
+        })
+      },
+      cancelRequest(req) {
+        fetch('/api/friends/request/cancel/' + req.toMember.id, {
+          method: 'DELETE'
+        }).then(function (response) {
+          if (response.ok) {
+            app.loadFriendInfo();
+            return;
+          }
+          throw new Error('친구요청 취소 실패');
+        }).catch(function (error) {
+          console.log(error);
+          alert('친구요청 취소 실패');
+        })
+      },
+    }
+  });
+
+  const searchModal = new Vue({
+    el: '#member-search-modal',
+    data: {
+      keyword: '',
+      searchResult: [],
+      page: 1,
+      totalPage: 0,
+      pageSize: 5,
+      totalElements: 0,
+      friendInfo: {},
+    },
+    methods: {
+      openModal() {
+        $('#member-search-modal').modal('show');
+        this.reset();
+      },
+      prevPage: function () {
+        if (this.page > 1) {
+          this.page--;
+          this.search();
+        }
+      },
+      nextPage: function () {
+        if (this.page < this.totalPage) {
+          this.page++;
+          this.search();
+        }
+      },
+      goToPage: function (page) {
+        this.page = page;
+        this.search();
+      },
+      reset: function () {
+        this.keyword = '';
+        this.searchResult = [];
+        this.page = 1;
+        this.totalPage = 0;
+        this.pageSize = 5;
+        this.totalElements = 0;
+        this.search();
+      },
+      search: function () {
+        $.ajax({
+          url: '/api/friends/search',
+          type: 'GET',
+          data: {
+            keyword: this.keyword,
+            page: this.page - 1,
+            size: this.pageSize
+          },
+          success: function (response) {
+            searchModal.searchResult = response.content;
+            searchModal.totalPage = response.totalPages;
+            searchModal.totalElements = response.totalElements;
+          },
+          error: function (error) {
+            console.log(error);
+          }
+        })
+      },
+      requestFriend: function (member) {
+        const url = '/api/friends/request/send/' + member.id;
+        fetch(url, {
+          method: 'POST',
+        }).then(function (response) {
+          if (response.ok) {
+            app.loadFriendInfo();
+            searchModal.search();
+            return;
+          }
+          throw new Error('친구요청 실패');
+        }).catch(function (error) {
+          alert('친구요청 실패');
+        })
+      },
+    }
+  })
+
+
 </script>

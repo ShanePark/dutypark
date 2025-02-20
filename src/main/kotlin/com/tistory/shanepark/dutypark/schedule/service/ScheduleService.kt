@@ -32,7 +32,7 @@ class ScheduleService(
         yearMonth: YearMonth
     ): Array<List<ScheduleDto>> {
         val member = memberRepository.findById(memberId).orElseThrow()
-        friendService.checkVisibility(loginMember, member)
+        friendService.checkVisibility(loginMember, member, scheduleVisibilityCheck = true)
 
         val calendarView = CalendarView(yearMonth)
 

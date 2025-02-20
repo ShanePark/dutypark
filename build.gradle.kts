@@ -70,6 +70,7 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    failFast = true
 }
 
 tasks.jar {
