@@ -172,4 +172,12 @@
         max-width: 95%;
     }
 
+    .dashboard {
+        font-size: 1.8em;
+    }
+
+    .dashboard h5{
+        font-size: 1em;
+    }
+
 }
