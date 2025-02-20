@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.member.domain.dto
 
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
+import com.tistory.shanepark.dutypark.member.enums.FriendRequestType
 import java.time.LocalDateTime
 
 data class FriendRequestDto(
@@ -8,7 +9,8 @@ data class FriendRequestDto(
     val fromMember: MemberDto,
     val toMember: MemberDto,
     val status: String,
-    val createdAt: LocalDateTime?
+    val createdAt: LocalDateTime?,
+    val requestType: FriendRequestType,
 ) {
     companion object {
         fun of(friendRequest: FriendRequest): FriendRequestDto {
@@ -17,7 +19,8 @@ data class FriendRequestDto(
                 fromMember = MemberDto.of(friendRequest.fromMember),
                 toMember = MemberDto.of(friendRequest.toMember),
                 status = friendRequest.status.name,
-                createdAt = friendRequest.createdDate
+                createdAt = friendRequest.createdDate,
+                requestType = friendRequest.requestType
             )
         }
     }

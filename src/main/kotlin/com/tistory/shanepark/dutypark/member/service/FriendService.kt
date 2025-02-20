@@ -8,6 +8,7 @@ import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus.PENDING
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus.REJECTED
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
+import com.tistory.shanepark.dutypark.member.enums.FriendRequestType
 import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -52,7 +53,8 @@ class FriendService(
         if (isFriend(fromMember, toMember))
             throw IllegalArgumentException("Already friend")
 
-        val pending = friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(fromMember, toMember, PENDING)
+        val pending =
+            friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(fromMember, toMember, PENDING)
 
         if (pending.isNotEmpty())
             throw IllegalArgumentException("Already requested")
@@ -60,14 +62,37 @@ class FriendService(
         friendRequestRepository.save(FriendRequest(fromMember, toMember))
     }
 
+
+    fun sendFamilyRequest(loginMember: LoginMember, toMemberId: Long) {
+        val fromMember = loginMemberToMember(loginMember)
+        val toMember = memberRepository.findById(toMemberId).orElseThrow()
+
+        if (!isFriend(fromMember, toMember)) {
+            throw IllegalStateException("Not friend")
+        }
+
+        if (isFamily(fromMember, toMember)) {
+            throw IllegalStateException("Already family")
+        }
+
+        val pending = friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(fromMember, toMember, PENDING)
+        if (pending.isNotEmpty())
+            throw IllegalArgumentException("Already requested")
+
+        friendRequestRepository.save(
+            FriendRequest(
+                fromMember = fromMember,
+                toMember = toMember,
+                requestType = FriendRequestType.FAMILY_REQUEST
+            )
+        )
+    }
+
     fun cancelFriendRequest(login: LoginMember, targetId: Long) {
         val fromMember = loginMemberToMember(login)
         val targetMember = memberRepository.findById(targetId).orElseThrow()
 
-        val friendRequest = findPendingOrThrow(fromMember, targetMember)
-
-        if (friendRequest.status != PENDING)
-            throw IllegalArgumentException("Already accepted or rejected")
+        val friendRequest = findPendingFriendRequestOrThrow(fromMember, targetMember)
         friendRequestRepository.delete(friendRequest)
     }
 
@@ -75,7 +100,7 @@ class FriendService(
         val fromMember = memberRepository.findById(toMemberId).orElseThrow()
         val loginMember = loginMemberToMember(login)
 
-        val friendRequest = findPendingOrThrow(fromMember, loginMember)
+        val friendRequest = findPendingFriendRequestOrThrow(fromMember, loginMember)
         friendRequest.status = REJECTED
     }
 
@@ -84,13 +109,28 @@ class FriendService(
         val loginMember = loginMemberToMember(login)
         val friend = memberRepository.findById(friendId).orElseThrow()
 
-        val friendRequest = findPendingOrThrow(friend, loginMember)
+        val friendRequest = findPendingFriendRequestOrThrow(friend, loginMember)
         deleteViceVersaRequestIfPresent(loginMember, friend)
-
         friendRequest.accepted()
 
+        when (friendRequest.requestType) {
+            FriendRequestType.FRIEND_REQUEST -> setFriend(loginMember, friend)
+            FriendRequestType.FAMILY_REQUEST -> setFamily(loginMember, friend)
+        }
+    }
+
+    private fun setFriend(loginMember: Member, friend: Member) {
         friendRelationRepository.save(FriendRelation(loginMember, friend))
         friendRelationRepository.save(FriendRelation(friend, loginMember))
+    }
+
+    private fun setFamily(member1: Member, member2: Member) {
+        friendRelationRepository.findByMemberAndFriend(member1, member2)?.let {
+            it.isFamily = true
+        } ?: throw IllegalArgumentException("Not friend")
+        friendRelationRepository.findByMemberAndFriend(member2, member1)?.let {
+            it.isFamily = true
+        } ?: throw IllegalArgumentException("Not friend")
     }
 
     private fun deleteViceVersaRequestIfPresent(loginMember: Member, friend: Member) {
@@ -119,17 +159,17 @@ class FriendService(
     }
 
     @Transactional(readOnly = true)
-    fun isFriend(memberId1: Long, memberId2: Long): Boolean {
-        val member1 = memberRepository.findById(memberId1).orElseThrow()
-        val member2 = memberRepository.findById(memberId2).orElseThrow()
-        return isFriend(member1, member2)
+    fun isFamily(member1: Member, member2: Member): Boolean {
+        friendRelationRepository.findByMemberAndFriend(member2, member1)?.let {
+            return it.isFamily
+        }
+        return false
     }
 
-    private fun findPendingOrThrow(from: Member, to: Member): FriendRequest {
+    private fun findPendingFriendRequestOrThrow(from: Member, to: Member): FriendRequest {
         return friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(
             from, to, PENDING
-        ).firstOrNull()
-            ?: throw IllegalArgumentException("No pending request")
+        ).firstOrNull() ?: throw IllegalArgumentException("No pending request")
     }
 
     @Transactional(readOnly = true)
@@ -167,18 +207,23 @@ class FriendService(
         return when (targetMember.calendarVisibility) {
             Visibility.PUBLIC -> true
             Visibility.FRIENDS -> isFriend(loginMember, targetMember)
+            Visibility.FAMILY -> isFamily(member1 = loginMember, member2 = targetMember);
             Visibility.PRIVATE -> false
         }
     }
 
     @Transactional(readOnly = true)
-    fun availableVisibilities(loginMember: LoginMember?, member: Member): Set<Visibility> {
+    fun availableScheduleVisibilities(loginMember: LoginMember?, member: Member): Set<Visibility> {
         if (loginMember == null)
             return setOf(Visibility.PUBLIC)
         if (loginMember.id == member.id) {
             return Visibility.entries.toSet()
         }
-        if (isFriend(loginMember.id, member.id!!)) {
+        val login = loginMemberToMember(loginMember)
+        if (isFamily(member1 = login, member2 = member)) {
+            return setOf(Visibility.PUBLIC, Visibility.FRIENDS, Visibility.FAMILY)
+        }
+        if (isFriend(login, member)) {
             return setOf(Visibility.PUBLIC, Visibility.FRIENDS)
         }
         return setOf(Visibility.PUBLIC)

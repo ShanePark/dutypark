@@ -56,9 +56,47 @@
     </div>
   </div>
 
+  <div class="mb-4 friend-request-section"
+       v-if="friendInfo.pendingRequestsTo.length || friendInfo.pendingRequestsFrom.length">
+    <div class="bg-white rounded shadow-sm border">
+      <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white">친구 요청 관리</div>
+      <div class="p-4">
+        <div class="d-flex flex-wrap gap-3">
+          <div v-for="req in friendInfo.pendingRequestsTo" :key="'to-' + req.fromMember.id"
+               class="p-4 border rounded cursor-pointer shadow-sm"
+               style="width: calc(50% - 12px); background-color: #e3f2fd;">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="fs-5 fw-bold">
+                <i class="bi bi-house-add-fill" v-if="req.requestType === 'FAMILY_REQUEST'"></i>
+                <i class="bi bi-person-fill-add" v-if="req.requestType === 'FRIEND_REQUEST'"></i>
+                {{ req.fromMember.name }}
+              </div>
+              <div>
+                <button class="btn btn-outline-success btn-sm me-1" @click="acceptFriendRequest(req)">승인</button>
+                <button class="btn btn-outline-danger btn-sm" @click="rejectFriendRequest(req)">거절</button>
+              </div>
+            </div>
+          </div>
+          <div v-for="req in friendInfo.pendingRequestsFrom" :key="'from-' + req.toMember.id"
+               class="p-4 border rounded cursor-pointer shadow-sm"
+               style="width: calc(50% - 12px); background-color: #fff3cd;">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="fs-5 fw-bold">
+                <i class="bi bi-house-add-fill" v-if="req.requestType === 'FAMILY_REQUEST'"></i>
+                <i class="bi bi-person-fill-add" v-if="req.requestType === 'FRIEND_REQUEST'"></i>
+                {{ req.toMember.name }}
+              </div>
+              <button class="btn btn-outline-warning btn-sm" @click="cancelRequest(req)">요청 취소</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="mb-4 friend-section">
     <div class="bg-white rounded shadow-sm border">
-      <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white">친구목록</div>
+      <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white">친구 목록</div>
       <div class="p-4">
         <div class="d-flex flex-wrap gap-3">
           <div v-for="friend in friendInfo.friends" :key="friend.member.id"
@@ -66,14 +104,24 @@
                style="width: calc(50% - 12px);"
                @click="moveTo(friend.member.id)">
             <div class="d-flex justify-content-between align-items-center">
-              <div class="fs-5 fw-bold">{{ friend.member.name }}</div>
+              <div class="fs-5 fw-bold">
+                <i class="bi bi-person-circle" v-if="!friend.isFamily"></i>
+                <i class="bi bi-house-heart-fill" v-if="friend.isFamily"></i>
+                {{ friend.member.name }}
+              </div>
               <div class="btn-group" @click.stop>
                 <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown"
-                        aria-expanded="false">
-                  관리
+                        aria-expanded="false">관리
                 </button>
                 <ul class="dropdown-menu">
-                  <li><a class="dropdown-item cursor-pointer" @click.stop="unfriend(friend.member)">친구 삭제</a></li>
+                  <template v-if="!friend.isFamily">
+                    <li><a class="dropdown-item cursor-pointer blue" @click.stop="addFamily(friend.member)"
+                    >가족 등록</a></li>
+                    <li>
+                      <hr class="dropdown-divider">
+                    </li>
+                  </template>
+                  <li><a class="dropdown-item cursor-pointer red" @click.stop="unfriend(friend.member)">친구 삭제</a></li>
                 </ul>
               </div>
             </div>
@@ -92,7 +140,7 @@
               </template>
             </div>
           </div>
-          <div class="p-4 rounded mb-4 text-center cursor-pointer bg-primary bg-gradient border shadow-sm"
+          <div class="p-4 border rounded mb-2 cursor-pointer bg-primary shadow-sm text-center"
                style="width: calc(50% - 12px);"
                @click="openSearchModal">
             <i class="bi bi-person-plus-fill fs-4 d-block mb-2 text-white"></i>
@@ -103,35 +151,6 @@
     </div>
   </div>
 
-  <div class="mb-4 friend-request-section"
-       v-if="friendInfo.pendingRequestsTo.length || friendInfo.pendingRequestsFrom.length">
-    <div class="bg-white rounded shadow-sm border">
-      <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white">친구 요청 관리</div>
-      <div class="p-4">
-        <div class="d-flex flex-wrap gap-3">
-          <div v-for="req in friendInfo.pendingRequestsTo" :key="'to-' + req.fromMember.id"
-               class="p-4 border rounded cursor-pointer shadow-sm"
-               style="width: calc(50% - 12px); background-color: #e3f2fd;">
-            <div class="d-flex justify-content-between align-items-center">
-              <div class="fs-5 fw-bold">{{ req.fromMember.name }}</div>
-              <div>
-                <button class="btn btn-outline-success btn-sm me-1" @click="acceptFriendRequest(req)">승인</button>
-                <button class="btn btn-outline-danger btn-sm" @click="rejectFriendRequest(req)">거절</button>
-              </div>
-            </div>
-          </div>
-          <div v-for="req in friendInfo.pendingRequestsFrom" :key="'from-' + req.toMember.id"
-               class="p-4 border rounded cursor-pointer shadow-sm"
-               style="width: calc(50% - 12px); background-color: #fff3cd;">
-            <div class="d-flex justify-content-between align-items-center">
-              <div class="fs-5 fw-bold">{{ req.toMember.name }}</div>
-              <button class="btn btn-outline-warning btn-sm" @click="cancelRequest(req)">요청 취소</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 </div> <!--END DASHBOARD-->
 
 <div id="member-search-modal" class="modal fade" tabindex="-1" aria-hidden="true">
@@ -212,234 +231,259 @@
 </div>
 
 <script>
-  const app = new Vue({
-    el: "#app",
-    data: {
-      today: new Date().toLocaleDateString("ko-KR", {
-        year: "numeric", month: "long", day: "numeric", weekday: "long"
-      }),
-      myInfo: {
-        member: {},
-        duty: {
-          dutyType: "",
-          dutyColor: "",
+    const app = new Vue({
+        el: "#app",
+        data: {
+            today: new Date().toLocaleDateString("ko-KR", {
+                year: "numeric", month: "long", day: "numeric", weekday: "long"
+            }),
+            myInfo: {
+                member: {},
+                duty: {
+                    dutyType: "",
+                    dutyColor: "",
+                },
+                schedules: [],
+            },
+            departmentInfo: {
+                department: {},
+                groups: [],
+            },
+            friendInfo: {
+                friends: [],
+                pendingRequestsTo: [],
+                pendingRequestsFrom: [],
+            },
         },
-        schedules: [],
-      },
-      departmentInfo: {
-        department: {},
-        groups: [],
-      },
-      friendInfo: {
-        friends: [],
-        pendingRequestsTo: [],
-        pendingRequestsFrom: [],
-      },
-    },
-    mounted() {
-      this.loadMy();
-      this.loadTeamMembers();
-      this.loadFriendInfo()
-    },
-    computed: {},
-    methods: {
-      loadMy() {
-        fetch("/api/dashboard/my")
-          .then(res => res.json())
-          .then(data => {
-            this.myInfo = data;
-          });
-      },
-      loadTeamMembers() {
-        fetch("/api/dashboard/department")
-          .then(res => res.json())
-          .then(data => {
-            app.departmentInfo = data;
-          });
-      },
-      loadFriendInfo() {
-        fetch("/api/dashboard/friends")
-          .then(res => res.json())
-          .then(data => {
-            app.friendInfo = data;
-          });
-      },
-      moveTo(id) {
-        if (!id)
-          id = app.myInfo.id;
-        location.href = "/duty/" + id;
-      },
-      printScheduleTime(startDateTime) {
-        let date = new Date(startDateTime);
-        if (date.toLocaleDateString() !== new Date().toLocaleDateString()) {
-          return "";
-        }
+        mounted() {
+            this.loadMy();
+            this.loadTeamMembers();
+            this.loadFriendInfo()
+        },
+        computed: {},
+        methods: {
+            loadMy() {
+                fetch("/api/dashboard/my")
+                    .then(res => res.json())
+                    .then(data => {
+                        this.myInfo = data;
+                    });
+            },
+            loadTeamMembers() {
+                fetch("/api/dashboard/department")
+                    .then(res => res.json())
+                    .then(data => {
+                        app.departmentInfo = data;
+                    });
+            },
+            loadFriendInfo() {
+                fetch("/api/dashboard/friends")
+                    .then(res => res.json())
+                    .then(data => {
+                        app.friendInfo = data;
+                    });
+            },
+            moveTo(id) {
+                if (!id)
+                    id = app.myInfo.id;
+                location.href = "/duty/" + id;
+            },
+            printScheduleTime(startDateTime) {
+                let date = new Date(startDateTime);
+                if (date.toLocaleDateString() !== new Date().toLocaleDateString()) {
+                    return "";
+                }
 
-        if (date.getHours() === 0 && date.getMinutes() === 0) {
-          return "";
-        }
+                if (date.getHours() === 0 && date.getMinutes() === 0) {
+                    return "";
+                }
 
-        return date.toLocaleTimeString("ko-KR", {
-          hour: "2-digit", minute: "2-digit"
-        });
-      },
-      unfriend(member) {
-        Swal.fire({
-          title: '친구 삭제',
-          text: `정말로 [${member.name}]님을 친구목록에서 삭제하시겠습니까?`,
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonColor: '#d33',
-          confirmButtonText: '삭제',
-          cancelButtonText: '취소'
-        }).then((result) => {
-          if (result.isConfirmed) {
-            fetch('/api/friends/' + member.id, {
-              method: 'DELETE'
-            }).then(function (response) {
-              if (response.ok) {
-                app.loadFriendInfo();
-                return;
-              }
-              throw new Error('친구 삭제 실패');
-            }).catch(function (error) {
-              alert('친구 삭제 실패');
-            })
-          }
-        })
-      },
-      openSearchModal() {
-        searchModal.openModal();
-      },
-      search() {
-        fetch(`/api/friends/search?keyword=${this.keyword}`)
-          .then(res => res.json())
-          .then(data => this.searchResult = data.content);
-      },
-      requestFriend(member) {
-        fetch(`/api/friends/request/send/${member.id}`, {method: 'POST'})
-          .then(() => this.loadFriendInfo());
-      },
-      acceptFriendRequest(req) {
-        fetch('/api/friends/request/accept/' + req.fromMember.id, {
-          method: 'POST'
-        }).then(function (response) {
-          if (response.ok) {
-            app.loadFriendInfo();
-            return;
-          }
-          throw new Error('친구요청 수락 실패');
-        }).catch(function (error) {
-          alert('친구요청 수락 실패');
-        })
-      },
-      rejectFriendRequest(req) {
-        fetch('/api/friends/request/reject/' + req.fromMember.id, {
-          method: 'POST'
-        }).then(function (response) {
-          if (response.ok) {
-            app.loadFriendInfo();
-            return;
-          }
-          throw new Error('친구요청 거절 실패');
-        }).catch(function (error) {
-          alert('친구요청 거절 실패');
-        })
-      },
-      cancelRequest(req) {
-        fetch('/api/friends/request/cancel/' + req.toMember.id, {
-          method: 'DELETE'
-        }).then(function (response) {
-          if (response.ok) {
-            app.loadFriendInfo();
-            return;
-          }
-          throw new Error('친구요청 취소 실패');
-        }).catch(function (error) {
-          console.log(error);
-          alert('친구요청 취소 실패');
-        })
-      },
-    }
-  });
+                return date.toLocaleTimeString("ko-KR", {
+                    hour: "2-digit", minute: "2-digit"
+                });
+            },
+            unfriend(member) {
+                Swal.fire({
+                    title: '친구 삭제',
+                    text: `정말로 [${member.name}]님을 친구목록에서 삭제하시겠습니까?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    confirmButtonText: '삭제',
+                    cancelButtonText: '취소'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        fetch('/api/friends/' + member.id, {
+                            method: 'DELETE'
+                        }).then(function (response) {
+                            if (response.ok) {
+                                app.loadFriendInfo();
+                                return;
+                            }
+                            throw new Error('친구 삭제 실패');
+                        }).catch(function (error) {
+                            alert('친구 삭제 실패');
+                        })
+                    }
+                })
+            },
+            addFamily(member) {
+                if (app.friendInfo.pendingRequestsFrom.filter(req => req.toMember.id === member.id).length > 0) {
+                    Swal.fire({
+                        title: '가족 등록 실패',
+                        text: '이미 가족 요청을 보낸 상태입니다.',
+                        icon: 'warning',
+                        confirmButtonText: '확인'
+                    });
+                    return;
+                }
+                Swal.fire({
+                    title: '가족 등록',
+                    text: `정말로 [${member.name}]님을 가족으로 등록하시겠습니까?`,
+                    icon: 'info',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    confirmButtonText: '가족 요청',
+                    cancelButtonText: '취소'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        fetch('/api/friends/family/' + member.id, {
+                            method: 'PUT'
+                        }).then(function (response) {
+                            if (response.ok) {
+                                app.loadFriendInfo();
+                                return;
+                            }
+                            throw new Error('가족 요청 실패');
+                        }).catch(function (error) {
+                            alert('가족 요청 실패');
+                        })
+                    }
+                })
+            },
+            openSearchModal() {
+                searchModal.openModal();
+            },
+            acceptFriendRequest(req) {
+                fetch('/api/friends/request/accept/' + req.fromMember.id, {
+                    method: 'POST'
+                }).then(function (response) {
+                    if (response.ok) {
+                        app.loadFriendInfo();
+                        return;
+                    }
+                    throw new Error('친구요청 수락 실패');
+                }).catch(function (error) {
+                    alert('친구요청 수락 실패');
+                })
+            },
+            rejectFriendRequest(req) {
+                fetch('/api/friends/request/reject/' + req.fromMember.id, {
+                    method: 'POST'
+                }).then(function (response) {
+                    if (response.ok) {
+                        app.loadFriendInfo();
+                        return;
+                    }
+                    throw new Error('친구요청 거절 실패');
+                }).catch(function (error) {
+                    alert('친구요청 거절 실패');
+                })
+            },
+            cancelRequest(req) {
+                fetch('/api/friends/request/cancel/' + req.toMember.id, {
+                    method: 'DELETE'
+                }).then(function (response) {
+                    if (response.ok) {
+                        app.loadFriendInfo();
+                        return;
+                    }
+                    throw new Error('친구요청 취소 실패');
+                }).catch(function (error) {
+                    console.log(error);
+                    alert('친구요청 취소 실패');
+                })
+            },
+        }
+    });
 
-  const searchModal = new Vue({
-    el: '#member-search-modal',
-    data: {
-      keyword: '',
-      searchResult: [],
-      page: 1,
-      totalPage: 0,
-      pageSize: 5,
-      totalElements: 0,
-      friendInfo: {},
-    },
-    methods: {
-      openModal() {
-        $('#member-search-modal').modal('show');
-        this.reset();
-      },
-      prevPage: function () {
-        if (this.page > 1) {
-          this.page--;
-          this.search();
+    const searchModal = new Vue({
+        el: '#member-search-modal',
+        data: {
+            keyword: '',
+            searchResult: [],
+            page: 1,
+            totalPage: 0,
+            pageSize: 5,
+            totalElements: 0,
+            friendInfo: {},
+        },
+        methods: {
+            openModal() {
+                $('#member-search-modal').modal('show');
+                this.reset();
+            },
+            prevPage: function () {
+                if (this.page > 1) {
+                    this.page--;
+                    this.search();
+                }
+            },
+            nextPage: function () {
+                if (this.page < this.totalPage) {
+                    this.page++;
+                    this.search();
+                }
+            },
+            goToPage: function (page) {
+                this.page = page;
+                this.search();
+            },
+            reset: function () {
+                this.keyword = '';
+                this.searchResult = [];
+                this.page = 1;
+                this.totalPage = 0;
+                this.pageSize = 5;
+                this.totalElements = 0;
+                this.search();
+            },
+            search: function () {
+                $.ajax({
+                    url: '/api/friends/search',
+                    type: 'GET',
+                    data: {
+                        keyword: this.keyword,
+                        page: this.page - 1,
+                        size: this.pageSize
+                    },
+                    success: function (response) {
+                        searchModal.searchResult = response.content;
+                        searchModal.totalPage = response.totalPages;
+                        searchModal.totalElements = response.totalElements;
+                    },
+                    error: function (error) {
+                        console.log(error);
+                    }
+                })
+            },
+            requestFriend: function (member) {
+                const url = '/api/friends/request/send/' + member.id;
+                fetch(url, {
+                    method: 'POST',
+                }).then(function (response) {
+                    if (response.ok) {
+                        app.loadFriendInfo();
+                        searchModal.search();
+                        return;
+                    }
+                    throw new Error('친구요청 실패');
+                }).catch(function (error) {
+                    alert('친구요청 실패');
+                })
+            },
         }
-      },
-      nextPage: function () {
-        if (this.page < this.totalPage) {
-          this.page++;
-          this.search();
-        }
-      },
-      goToPage: function (page) {
-        this.page = page;
-        this.search();
-      },
-      reset: function () {
-        this.keyword = '';
-        this.searchResult = [];
-        this.page = 1;
-        this.totalPage = 0;
-        this.pageSize = 5;
-        this.totalElements = 0;
-        this.search();
-      },
-      search: function () {
-        $.ajax({
-          url: '/api/friends/search',
-          type: 'GET',
-          data: {
-            keyword: this.keyword,
-            page: this.page - 1,
-            size: this.pageSize
-          },
-          success: function (response) {
-            searchModal.searchResult = response.content;
-            searchModal.totalPage = response.totalPages;
-            searchModal.totalElements = response.totalElements;
-          },
-          error: function (error) {
-            console.log(error);
-          }
-        })
-      },
-      requestFriend: function (member) {
-        const url = '/api/friends/request/send/' + member.id;
-        fetch(url, {
-          method: 'POST',
-        }).then(function (response) {
-          if (response.ok) {
-            app.loadFriendInfo();
-            searchModal.search();
-            return;
-          }
-          throw new Error('친구요청 실패');
-        }).catch(function (error) {
-          alert('친구요청 실패');
-        })
-      },
-    }
-  })
+    })
 
 
 </script>

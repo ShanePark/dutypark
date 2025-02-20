@@ -69,6 +69,11 @@ class FriendController(
         friendService.rejectFriendRequest(loginMember, fromMemberId)
     }
 
+    @PutMapping("/family/{toMemberId}")
+    fun sendFamilyRequest(@Login loginMember: LoginMember, @PathVariable toMemberId: Long) {
+        friendService.sendFamilyRequest(loginMember, toMemberId)
+    }
+
     @DeleteMapping("{deleteMemberId}")
     fun unfriend(
         @Login loginMember: LoginMember,

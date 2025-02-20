@@ -759,6 +759,77 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
     }
 
     @Test
+    fun `tagged schedule is visible even if it is only for family`() {
+        // Given
+        // member2 creates a schedule and then tags member1
+        val member1 = TestData.member
+        val member2 = TestData.member2
+        val loginMember2 = loginMember(member2)
+
+        val dayOfMonth = 10
+        val tagged = scheduleService.createSchedule(
+            loginMember2, ScheduleUpdateDto(
+                memberId = member2.id!!,
+                content = "member2Schedule",
+                startDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
+                endDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
+                visibility = Visibility.FAMILY
+            )
+        )
+        makeThemFriend(member1, member2)
+
+        // When
+        scheduleService.tagFriend(loginMember2, tagged.id, member1.id!!)
+        val yearMonth = YearMonth.of(2023, 4)
+        val ownerSchedules =
+            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member1), member1.id!!, yearMonth)
+
+        // Then
+        val calendarView = CalendarView(yearMonth)
+        val schedules = ownerSchedules[calendarView.paddingBefore + dayOfMonth - 1]
+        assertThat(schedules).isNotEmpty
+    }
+
+    @Test
+    fun `can not retrieve FAMILY only schedules even if they are friend`() {
+        // Given
+        val member1 = TestData.member
+        val member2 = TestData.member2
+        val loginMember2 = loginMember(member2)
+
+        val dayOfMonth = 10
+        scheduleService.createSchedule(
+            loginMember2, ScheduleUpdateDto(
+                memberId = member2.id!!,
+                content = "member2Schedule",
+                startDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
+                endDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
+                visibility = Visibility.FAMILY
+            )
+        )
+        scheduleService.createSchedule(
+            loginMember2, ScheduleUpdateDto(
+                memberId = member2.id!!,
+                content = "member2Schedule2",
+                startDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
+                endDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
+                visibility = Visibility.FRIENDS
+            )
+        )
+        makeThemFriend(member1, member2)
+
+        // When
+        val yearMonth = YearMonth.of(2023, 4)
+
+        // Then
+        val schedules =
+            scheduleService.findSchedulesByYearAndMonth(loginMember(member1), member2.id!!, yearMonth)
+        val calendarView = CalendarView(yearMonth)
+        val scheduleOfDay = schedules[calendarView.paddingBefore + dayOfMonth - 1]
+        assertThat(scheduleOfDay).hasSize(1)
+    }
+
+    @Test
     fun `if not friend and calendar visibility is only for friends, can not get schedules even if they are in same department`() {
         // Given
         val target = TestData.member

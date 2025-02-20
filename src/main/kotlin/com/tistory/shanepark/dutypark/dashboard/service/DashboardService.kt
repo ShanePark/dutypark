@@ -92,6 +92,7 @@ class DashboardService(
                     member = MemberDto.of(it.friend),
                     duty = todayDuty(it.friend),
                     schedules = todaySchedules(it.friend),
+                    isFamily = it.isFamily
                 )
             }
         val pendingRequestsTo = friendService.getPendingRequestsTo(member).map { FriendRequestDto.of(it) }

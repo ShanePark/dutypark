@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.member.domain.entity
 
 import com.tistory.shanepark.dutypark.common.domain.entity.BaseTimeEntity
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus
+import com.tistory.shanepark.dutypark.member.enums.FriendRequestType
 import jakarta.persistence.*
 
 @Entity
@@ -18,7 +19,11 @@ class FriendRequest(
 
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
-    var status: FriendRequestStatus = FriendRequestStatus.PENDING
+    var status: FriendRequestStatus = FriendRequestStatus.PENDING,
+
+    @Column(name = "request_type", nullable = false)
+    @Enumerated(EnumType.STRING)
+    val requestType: FriendRequestType = FriendRequestType.FRIEND_REQUEST
 ) : BaseTimeEntity() {
 
     @Id

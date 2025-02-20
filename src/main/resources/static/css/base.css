@@ -821,3 +821,11 @@ input[readonly], textarea[readonly] {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
     background-color: var(--hover-background-color);
 }
+
+.blue {
+    color: dodgerblue;
+}
+
+.red {
+    color: orangered;
+}

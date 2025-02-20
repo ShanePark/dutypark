@@ -8,4 +8,5 @@ data class DashboardPerson(
     val member: MemberDto,
     val duty: DutyDto?,
     val schedules: List<ScheduleDto> = emptyList(),
+    val isFamily: Boolean = false,
 )
