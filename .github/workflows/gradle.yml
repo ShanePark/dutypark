@@ -58,5 +58,6 @@ jobs:
       - name: Execute remote commands
         run: |
           ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} "curl -X POST --max-time 60 https://dutypark.o-r.kr/actuator/shutdown || true"
+          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} "sudo ps -ef | grep dutypark | grep -v grep | awk '{print \$2}' | xargs -r sudo kill -9"
           ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} "sudo fuser -k 443/tcp || true"
           ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} "sudo nohup java -jar /shane/*.jar --spring.profiles.active=op > /shane/nohup.log 2>&1 &"
