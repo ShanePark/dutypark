@@ -6,6 +6,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.ContextClosedEvent
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
+import kotlin.system.exitProcess
 
 @Component
 class ApplicationStartupShutdownListener(
@@ -22,6 +23,7 @@ class ApplicationStartupShutdownListener(
     fun onApplicationShutdown(event: ContextClosedEvent) {
         val slackMessage = makeSlackMessage(text = "Application is shutting down")
         slackNotifier.call(slackMessage)
+        exitProcess(0)
     }
 
     fun makeSlackMessage(text: String): SlackMessage {
