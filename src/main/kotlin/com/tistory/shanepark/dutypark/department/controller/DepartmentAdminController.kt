@@ -6,21 +6,30 @@ import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentDto
 import com.tistory.shanepark.dutypark.department.domain.dto.SimpleDepartmentDto
 import com.tistory.shanepark.dutypark.department.domain.enums.DepartmentNameCheckResult
 import com.tistory.shanepark.dutypark.department.domain.enums.DepartmentNameCheckResult.*
+import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.department.service.DepartmentService
+import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTeamResult
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
+import com.tistory.shanepark.dutypark.duty.batch.exceptions.DutyBatchException
+import com.tistory.shanepark.dutypark.duty.batch.service.DutyBatchService
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import jakarta.validation.Valid
+import org.springframework.context.ApplicationContext
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.multipart.MultipartFile
+import java.time.YearMonth
 
 @RestController
 @RequestMapping("/admin/api/departments")
 class DepartmentAdminController(
     val departmentService: DepartmentService,
     val memberRepository: MemberRepository,
+    private val departmentRepository: DepartmentRepository,
+    private val applicationContext: ApplicationContext,
 ) {
 
     @GetMapping
@@ -76,6 +85,27 @@ class DepartmentAdminController(
     ): ResponseEntity<Any> {
         departmentService.updateBatchTemplate(id, dutyBatchTemplate)
         return ResponseEntity.ok().build()
+    }
+
+    @PostMapping("/{id}/duty")
+    fun uploadBatchTemplate(
+        @PathVariable id: Long,
+        @RequestParam(name = "file") file: MultipartFile,
+        @RequestParam(name = "year") year: Int,
+        @RequestParam(name = "month") month: Int
+    ): DutyBatchTeamResult {
+        val department = departmentRepository.findById(id).orElseThrow()
+        val batchTemplate = department.dutyBatchTemplate ?: throw IllegalArgumentException("templateName is required")
+        val dutyBatchService = applicationContext.getBean(batchTemplate.batchServiceClass) as DutyBatchService
+        try {
+            return dutyBatchService.batchUploadDepartment(
+                departmentId = id,
+                file = file,
+                yearMonth = YearMonth.of(year, month)
+            )
+        } catch (e: DutyBatchException) {
+            return DutyBatchTeamResult.fail(e.message ?: "알 수 없는 원인으로 시간표 업로드 실패.")
+        }
     }
 
     @PatchMapping("/{id}/default-duty")

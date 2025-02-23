@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.department.domain.dto
 
 import com.tistory.shanepark.dutypark.department.domain.entity.Department
+import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
@@ -15,8 +16,19 @@ data class DepartmentDto(
     val createdDate: String,
     val lastModifiedDate: String,
     val manager: String?,
-    val dutyBatchTemplate: String?
+    val dutyBatchTemplate: DutyBatchTemplateDto?
 ) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is DepartmentDto) return false
+        if (this.id != other.id) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return id.hashCode()
+    }
+
     companion object {
         fun ofSimple(department: Department): DepartmentDto {
             return of(department, mutableListOf(), mutableListOf())
@@ -50,22 +62,9 @@ data class DepartmentDto(
                 createdDate = department.createdDate.toString(),
                 lastModifiedDate = department.modifiedDate.toString(),
                 manager = department.manager?.name,
-                dutyBatchTemplate = department.dutyBatchTemplate?.name
+                dutyBatchTemplate = department.dutyBatchTemplate?.let { DutyBatchTemplateDto(it) }
             )
         }
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is DepartmentDto) return false
-
-        if (id != other.id) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        return id.hashCode()
     }
 
 }

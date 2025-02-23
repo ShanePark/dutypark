@@ -6,10 +6,10 @@ import com.tistory.shanepark.dutypark.duty.batch.SungsimCakeParser
 import com.tistory.shanepark.dutypark.duty.batch.domain.BatchParseResult
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchResult
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTeamResult
+import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.duty.batch.exceptions.DutyTypeNotSingleException
 import com.tistory.shanepark.dutypark.duty.batch.exceptions.MultipleNameFoundException
 import com.tistory.shanepark.dutypark.duty.batch.exceptions.NameNotFoundException
-import com.tistory.shanepark.dutypark.duty.batch.exceptions.NotSupportedFileException
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
@@ -32,9 +32,8 @@ class DutyBatchSungsimService(
     private val dutyRepository: DutyRepository,
     private val dutyTypeRepository: DutyTypeRepository
 ) : DutyBatchService {
-
     override fun batchUploadMember(file: MultipartFile, memberId: Long, yearMonth: YearMonth): DutyBatchResult {
-        checkFile(file)
+        DutyBatchTemplate.SUNGSIM_CAKE.checkSupportedFile(file)
 
         file.inputStream.use { input ->
             val batchParseResult = sungsimCakeParser.parseDayOff(yearMonth, input)
@@ -73,7 +72,7 @@ class DutyBatchSungsimService(
         departmentId: Long,
         yearMonth: YearMonth
     ): DutyBatchTeamResult {
-        checkFile(file)
+        DutyBatchTemplate.SUNGSIM_CAKE.checkSupportedFile(file)
         val department = departmentRepository.findById(departmentId).orElseThrow()
         val dutyType = findOnlyDutyType(department)
 
@@ -157,14 +156,9 @@ class DutyBatchSungsimService(
 
         namesOnXlsx.forEach {
             val member = Member(name = it)
-            member.department = department
+            department.addMember(member)
             memberRepository.save(member)
         }
-    }
-
-    private fun checkFile(file: MultipartFile) {
-        if (file.originalFilename?.lowercase()?.endsWith(".xlsx") != true)
-            throw NotSupportedFileException("xlsx");
     }
 
     private fun saveBatchDuty(

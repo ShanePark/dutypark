@@ -16,7 +16,7 @@ class MemberViewController(
     @GetMapping("/")
     fun index(model: Model): String {
         model.addAttribute("members", memberService.findAll())
-        return layout(model, "index")
+        return layout(model, "dashboard")
     }
 
     @GetMapping("/member")

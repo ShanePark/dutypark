@@ -287,7 +287,7 @@ class DutyBatchSungsimServiceTest {
 
         assertThat(result.startDate).isEqualTo(startDate)
         assertThat(result.endDate).isEqualTo(endDate)
-        assertThat(result.dutyBatchResult).hasSize(1)
+        assertThat(result.dutyBatchResult).hasSize(2)
         val aliceResult = result.dutyBatchResult.first { it.first == "Alice" }.second
         assertThat(aliceResult.workingDays).isEqualTo(2)
         assertThat(aliceResult.offDays).isEqualTo(0)
@@ -335,7 +335,7 @@ class DutyBatchSungsimServiceTest {
         val endDate = LocalDate.of(2023, 1, 31)
 
         val batchParseResult = mock<BatchParseResult>()
-        whenever(batchParseResult.getNames()).thenReturn(listOf("Dana"))
+        whenever(batchParseResult.getNames()).thenReturn(emptyList())
         whenever(batchParseResult.findValidNames("Dana")).thenReturn(emptyList())
         whenever(batchParseResult.startDate).thenReturn(startDate)
         whenever(batchParseResult.endDate).thenReturn(endDate)

@@ -1620,12 +1620,13 @@
                         });
                     },
                     async uploadBatchFile() {
+                        const fileExtensions = app.department.dutyBatchTemplate.fileExtensions;
                         const {value: file} = await Swal.fire({
                             title: "시간표 파일 업로드",
                             input: "file",
                             html: "시간표 파일을 업로드해주세요.<br/> 자동으로 파일에 맞춰 시간표를 업데이트 합니다.<br/>파일을 선택하기 전에, 업로드하는 시간표가 현재 선택된 년월에 맞는지 꼭 확인해주세요.",
                             inputAttributes: {
-                                "accept": ".xlsx",
+                                "accept": fileExtensions.join(','),
                                 "aria-label": "시간표 파일을 업로드해주세요.",
                             },
                             confirmButtonText: "등록",
