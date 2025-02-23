@@ -48,7 +48,7 @@ class DutyBatchController(
 
         val dutyBatchService = applicationContext.getBean(dutyBatchTemplate.batchServiceClass) as DutyBatchService
         return try {
-            dutyBatchService.batchUpload(memberId = memberId, file = file, yearMonth = YearMonth.of(year, month))
+            dutyBatchService.batchUploadMember(memberId = memberId, file = file, yearMonth = YearMonth.of(year, month))
         } catch (e: DutyBatchException) {
             DutyBatchResult.fail(e.batchErrorMessage)
         }

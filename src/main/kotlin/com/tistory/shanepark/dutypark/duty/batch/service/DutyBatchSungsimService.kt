@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.duty.batch.service
 
+import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.duty.batch.SungsimCakeParser
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchResult
 import com.tistory.shanepark.dutypark.duty.batch.exceptions.DutyTypeNotSingleException
@@ -20,13 +21,13 @@ import java.time.YearMonth
 class DutyBatchSungsimService(
     private val sungsimCakeParser: SungsimCakeParser,
     private val memberRepository: MemberRepository,
+    private val departmentRepository: DepartmentRepository,
     private val dutyRepository: DutyRepository,
     private val dutyTypeRepository: DutyTypeRepository
 ) : DutyBatchService {
 
-    override fun batchUpload(file: MultipartFile, memberId: Long, yearMonth: YearMonth): DutyBatchResult {
-        if (file.originalFilename?.lowercase()?.endsWith(".xlsx") != true)
-            throw NotSupportedFileException("xlsx");
+    override fun batchUploadMember(file: MultipartFile, memberId: Long, yearMonth: YearMonth): DutyBatchResult {
+        checkFile(file)
 
         file.inputStream.use { input ->
             val batchParseResult = sungsimCakeParser.parseDayOff(yearMonth, input)
@@ -69,6 +70,23 @@ class DutyBatchSungsimService(
                 batchParseResult.endDate
             )
         }
+    }
+
+    override fun batchUploadDepartment(file: MultipartFile, departmentId: Long, yearMonth: YearMonth): Long {
+        checkFile(file)
+        val department = departmentRepository.findById(departmentId).orElseThrow()
+
+        file.inputStream.use { input ->
+            val batchParseResult = sungsimCakeParser.parseDayOff(yearMonth, input)
+            
+        }
+
+        TODO("Not yet implemented")
+    }
+
+    private fun checkFile(file: MultipartFile) {
+        if (file.originalFilename?.lowercase()?.endsWith(".xlsx") != true)
+            throw NotSupportedFileException("xlsx");
     }
 
 }

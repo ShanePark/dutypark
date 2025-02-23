@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.duty.service
 
 import com.tistory.shanepark.dutypark.department.domain.entity.Department
+import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.duty.batch.SungsimCakeParser
 import com.tistory.shanepark.dutypark.duty.batch.domain.BatchParseResult
 import com.tistory.shanepark.dutypark.duty.batch.exceptions.MultipleNameFoundException
@@ -36,6 +37,9 @@ class DutyBatchSungsimServiceTest {
     private lateinit var sungsimCakeParser: SungsimCakeParser
 
     @Mock
+    private lateinit var departmentRepository: DepartmentRepository
+
+    @Mock
     private lateinit var memberRepository: MemberRepository
 
     @Mock
@@ -51,6 +55,7 @@ class DutyBatchSungsimServiceTest {
         dutyBatchService = DutyBatchSungsimService(
             sungsimCakeParser,
             memberRepository,
+            departmentRepository,
             dutyRepository,
             dutyTypeRepository
         )
@@ -79,7 +84,7 @@ class DutyBatchSungsimServiceTest {
     fun `sungsimDutyBatch throws exception when file is not xlsx`() {
         val file = createMultipartFile("test.txt")
         assertThrows<NotSupportedFileException> {
-            dutyBatchService.batchUpload(file, 1L, YearMonth.of(2023, 1))
+            dutyBatchService.batchUploadMember(file, 1L, YearMonth.of(2023, 1))
         }
     }
 
@@ -92,7 +97,7 @@ class DutyBatchSungsimServiceTest {
         whenever(memberRepository.findById(1L)).thenReturn(Optional.empty())
 
         assertThrows<NoSuchElementException> {
-            dutyBatchService.batchUpload(file, 1L, yearMonth)
+            dutyBatchService.batchUploadMember(file, 1L, yearMonth)
         }
     }
 
@@ -107,7 +112,7 @@ class DutyBatchSungsimServiceTest {
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
 
         val exception = assertThrows<IllegalArgumentException> {
-            dutyBatchService.batchUpload(file, 1L, yearMonth)
+            dutyBatchService.batchUploadMember(file, 1L, yearMonth)
         }
         assertThat(exception.message).startsWith("Member has no department")
     }
@@ -124,7 +129,7 @@ class DutyBatchSungsimServiceTest {
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
 
         assertThrows<MultipleNameFoundException> {
-            dutyBatchService.batchUpload(file, 1L, yearMonth)
+            dutyBatchService.batchUploadMember(file, 1L, yearMonth)
         }
     }
 
@@ -140,7 +145,7 @@ class DutyBatchSungsimServiceTest {
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
 
         assertThrows<NameNotFoundException> {
-            dutyBatchService.batchUpload(file, 1L, yearMonth)
+            dutyBatchService.batchUploadMember(file, 1L, yearMonth)
         }
     }
 
@@ -170,7 +175,7 @@ class DutyBatchSungsimServiceTest {
         whenever(dutyTypeRepository.findAllByDepartment(department)).thenReturn(listOf(dutyType))
 
         // When
-        dutyBatchService.batchUpload(createValidXlsxFile(), 1L, yearMonth)
+        dutyBatchService.batchUploadMember(createValidXlsxFile(), 1L, yearMonth)
 
         // Then
         verify(dutyRepository).deleteDutiesByMemberAndDutyDateBetween(

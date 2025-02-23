@@ -1,5 +1,8 @@
 package com.tistory.shanepark.dutypark.department.service
 
+import com.tistory.shanepark.dutypark.dashboard.domain.DashboardDepartment
+import com.tistory.shanepark.dutypark.dashboard.domain.DashboardDutyType
+import com.tistory.shanepark.dutypark.dashboard.domain.DashboardSimpleMember
 import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentCreateDto
 import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentDto
 import com.tistory.shanepark.dutypark.department.domain.dto.SimpleDepartmentDto
@@ -8,16 +11,19 @@ import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
+import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDate
 
 @Service
 @Transactional
 class DepartmentService(
     private val departmentRepository: DepartmentRepository,
+    private val dutyTypeRepository: DutyTypeRepository,
     private val dutyRepository: DutyRepository,
     private val memberRepository: MemberRepository
 ) {
@@ -115,6 +121,32 @@ class DepartmentService(
     fun updateBatchTemplate(departmentId: Long, dutyBatchTemplate: DutyBatchTemplate?) {
         val department = departmentRepository.findById(departmentId).orElseThrow()
         department.dutyBatchTemplate = dutyBatchTemplate
+    }
+
+    fun dashboardDepartment(departmentId: Long): DashboardDepartment {
+        val department = departmentRepository.findById(departmentId).orElseThrow()
+        val departmentMembers = memberRepository.findMembersByDepartment(department)
+
+        val dutyMemberMap = dutyRepository.findByDutyDateAndMemberIn(LocalDate.now(), departmentMembers)
+            .associateBy({ it }, { it.member })
+        val offMembers = departmentMembers.filterNot { m -> dutyMemberMap.containsValue(m) }
+
+        val dutyTypes = dutyTypeRepository.findAllByDepartment(department)
+        val dutyTypeMembers = DepartmentDto.of(department, departmentMembers, dutyTypes)
+            .dutyTypes
+            .map { dutyTypeDto ->
+                val members = dutyTypeDto.id?.let { dutyType ->
+                    dutyMemberMap
+                        .filter { (duty, _) -> duty.dutyType.id == dutyType }
+                        .map { (_, member) -> DashboardSimpleMember(member.id, member.name) }
+                } ?: offMembers.map { member -> DashboardSimpleMember(member.id, member.name) }
+                DashboardDutyType(dutyTypeDto, members)
+            }
+
+        return DashboardDepartment(
+            department = DepartmentDto.ofSimple(department),
+            groups = dutyTypeMembers
+        )
     }
 
 }

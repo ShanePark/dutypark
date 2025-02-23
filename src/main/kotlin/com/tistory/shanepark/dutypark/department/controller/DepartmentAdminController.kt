@@ -1,11 +1,11 @@
 package com.tistory.shanepark.dutypark.department.controller
 
+import com.tistory.shanepark.dutypark.dashboard.domain.DashboardDepartment
 import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentCreateDto
 import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentDto
 import com.tistory.shanepark.dutypark.department.domain.dto.SimpleDepartmentDto
 import com.tistory.shanepark.dutypark.department.domain.enums.DepartmentNameCheckResult
 import com.tistory.shanepark.dutypark.department.domain.enums.DepartmentNameCheckResult.*
-import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.department.service.DepartmentService
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/admin/api/departments")
 class DepartmentAdminController(
     val departmentService: DepartmentService,
-    val departmentRepository: DepartmentRepository,
     val memberRepository: MemberRepository,
 ) {
 
@@ -30,8 +29,13 @@ class DepartmentAdminController(
     }
 
     @GetMapping("/{id}")
-    fun findById(@PathVariable id: Long): DepartmentDto {
-        return departmentService.findByIdWithMembersAndDutyTypes(id)
+    fun findById(@PathVariable id: Long): DashboardDepartment {
+        val info = departmentService.findByIdWithMembersAndDutyTypes(id)
+        val dashboard = departmentService.dashboardDepartment(id)
+        return DashboardDepartment(
+            department = info,
+            groups = dashboard.groups
+        )
     }
 
     @PostMapping

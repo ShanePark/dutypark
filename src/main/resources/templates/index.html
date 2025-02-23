@@ -11,7 +11,7 @@
             {{ today }}
           </h5>
           <div class="d-flex align-items-center mb-3">
-            <h5 class="mb-0 me-2"><i class="bi bi-person-badge me-2"></i>오늘 근무</h5>
+            <h5 class="mb-0 me-2"><i class="bi bi-person-badge me-2"></i>근무</h5>
             <div class="duty-type">
               <div :class="['BACKGROUND-' + myInfo.duty.dutyColor]">
                 <span v-text="myInfo.duty.dutyType"></span>
@@ -19,13 +19,14 @@
             </div>
           </div>
         </div>
-        <div class="col-6">
+        <div class="col-6 border-start">
           <h5 class="mb-1"><i class="bi bi-calendar-event me-2"></i>오늘 일정</h5>
           <ul class="list-unstyled">
             <li v-for="schedule in myInfo.schedules" :key="schedule.id" class="py-1 border-bottom last:border-0">
               <span class="fw-bold">{{ schedule.content }}</span>
               <span class="text-secondary ms-2">{{ printScheduleTime(schedule.startDateTime) }}</span>
             </li>
+            <lli v="if myInfo.schedules.length === 0" class="text-muted">오늘의 일정이 없습니다.</lli>
           </ul>
         </div>
       </div>
@@ -36,8 +37,8 @@
     <div class="bg-white rounded shadow-sm border">
       <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white"
            v-text="departmentInfo.department.name"></div>
-      <div class="p-4 row">
-        <div v-for="group in departmentInfo.groups" class="mb-1 col-6" v-if="group.members.length>0">
+      <div class="p-4">
+        <div v-for="group in departmentInfo.groups" class="mb-1" v-if="group.members.length>0">
           <div class="duty-type border rounded p-3 mb-2"
                :class="['border-' + group.dutyType.color]"
                v-if="group.members.length > 0">

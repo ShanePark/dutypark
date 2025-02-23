@@ -1,132 +1,161 @@
-<div class="department-detail" v-cloak>
-  <div class="buttons">
-    <a class="btn btn-dark" th:href="@{/admin/department}">Back to List</a>
-    <button class="btn btn-danger" v-on:click="remove()" :disabled="hasMember">Delete
+<div class="department-detail container mt-4" v-cloak>
+  <!-- 버튼 그룹 -->
+  <div class="d-flex justify-content-between mb-3">
+    <a class="btn btn-dark" th:href="@{/admin/department}"><i class="bi bi-arrow-left"></i> Back to List</a>
+    <button class="btn btn-danger" v-on:click="remove()" :disabled="hasMember"><i class="bi bi-trash"></i> Delete
     </button>
   </div>
-  <div class="department-info">
-    <h3>Department</h3>
-    <table class="table table-striped">
-      <tbody>
-      <tr>
-        <th scope="row">Name</th>
-        <td>{{ department.name }}</td>
-      </tr>
-      <tr>
-        <th scope="row">Description</th>
-        <td>{{ department.description }}</td>
-      </tr>
-      <tr>
-        <th scope="row">Created At</th>
-        <td>{{ department.createdDate }}</td>
-      </tr>
-      <tr>
-        <th scope="row">Updated At</th>
-        <td>{{ department.lastModifiedDate }}</td>
-      </tr>
-      <tr>
-        <th scope="row">Manager</th>
-        <td class="cursor-pointer"
-            v-on:click="managerSearchModal()">{{ department.manager ? department.manager : 'N/A' }}
-        </td>
-      </tr>
-      <tr>
-        <th scope="row">batch template</th>
-        <td>
-          <select class="form-select" v-on:change="updateBatchTemplate($event.target.value)">
-            <option value="">없음</option>
-            <option v-for="template in dutyBatchTemplates"
-                    v-bind:value="template.name"
-                    v-text="template.label"
-                    :selected="template.name === department.dutyBatchTemplate">
-            </option>
-          </select>
-        </td>
-      </tr>
-      </tbody>
-    </table>
+
+  <!-- 부서 정보 -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0">Department Details</h5>
+    </div>
+    <div class="card-body">
+      <table class="table table-hover table-bordered">
+        <tbody>
+        <tr>
+          <th scope="row">Name</th>
+          <td>{{ department.name }}</td>
+        </tr>
+        <tr>
+          <th scope="row">Description</th>
+          <td>{{ department.description }}</td>
+        </tr>
+        <tr>
+          <th scope="row">Created At</th>
+          <td>{{ department.createdDate }}</td>
+        </tr>
+        <tr>
+          <th scope="row">Updated At</th>
+          <td>{{ department.lastModifiedDate }}</td>
+        </tr>
+        <tr>
+          <th scope="row">Manager</th>
+          <td class="text-primary fw-bold cursor-pointer" v-on:click="managerSearchModal()">
+            {{ department.manager ? department.manager : 'N/A' }}
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">Batch Template</th>
+          <td>
+            <select class="form-select" v-on:change="updateBatchTemplate($event.target.value)">
+              <option value="">없음</option>
+              <option v-for="template in dutyBatchTemplates"
+                      v-bind:value="template.name"
+                      v-text="template.label"
+                      :selected="template.name === department.dutyBatchTemplate">
+              </option>
+            </select>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
-  <div class="member-list">
-    <h3>
-      Members
-      <button class="btn btn-primary" v-on:click="memberSearchModal()">Add</button>
-    </h3>
-    <table class="table table-striped" v-if="hasMember">
-      <colgroup>
-        <col style="width: 10%">
-        <col style="width: 30%">
-        <col style="width: 40%">
-        <col style="width: 20%">
-      </colgroup>
-      <thead>
-      <tr>
-        <th scope="col"></th>
-        <th scope="col">Name</th>
-        <th scope="col">Email</th>
-        <th scope="col"></th>
-      </tr>
-      </thead>
-      <tbody>
-      <tr v-for="(member, index) in department.members">
-        <td>{{index+1}}</td>
-        <td>{{ member.name }}</td>
-        <td>{{ member.email }}</td>
-        <td>
-          <button class="btn btn-danger" v-on:click="removeMember(member.id)">Delete</button>
-        </td>
-      </tr>
-      </tbody>
-    </table>
-    <p v-else>There is no member in this group</p>
+
+  <!-- 오늘의 근무 현황 -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-success text-white">
+      <h5 class="mb-0"><i class="bi bi-calendar-check"></i> 오늘의 근무 현황</h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6 mb-3" v-for="group in groups" :key="group.dutyType.id">
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+              <h6 class="mb-0 text-dark">{{ group.dutyType.name }}</h6>
+            </div>
+            <ul class="list-group list-group-flush">
+              <li v-for="member in group.members" :key="member.id" class="list-group-item">
+                {{ member.name }}
+              </li>
+              <li v-if="group.members.length === 0" class="list-group-item text-muted">없음</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="duty_type-list">
-    <h3>Duty Types
-      <button class="btn btn-primary" v-on:click="addDutyType()">Add</button>
-    </h3>
-    <table class="table table-striped" v-if="hasDutyType">
-      <thead>
-      <tr>
-        <th scope="col"></th>
-        <th scope="col">Name</th>
-        <th scope="col">Color</th>
-        <th scope="col">Note</th>
-      </tr>
-      </thead>
-      <tbody>
-      <tr class="duty-type"
-          v-for="(dutyType,index) in department.dutyTypes"
-          v-bind:id="dutyType.id">
-        <td>{{index+1}}</td>
-        <td class="duty-type-name">{{ dutyType.name }}</td>
-        <td class="duty-type-color">{{ dutyType.color }}</td>
-        <td>
-          <button class="btn btn-primary"
-                  v-on:click="updateDutyType($event.target)">Edit
-          </button>
-          <button class="btn btn-secondary"
-                  :disabled="index==0 || index == (department.dutyTypes.length - 1)"
-                  v-on:click="swapPosition(index, index + 1)"
-          >
-            <i class="bi bi-arrow-down-square"></i>
-          </button>
-          <button class="btn btn-secondary"
-                  :disabled="index <= 1"
-                  v-on:click="swapPosition(index, index - 1)"
-          >
-            <i class="bi bi-arrow-up-square"></i>
-          </button>
-          <button class="btn btn-danger"
-                  :disabled="!dutyType.id"
-                  v-on:click.stop="removeDutyType(dutyType)">Delete
-          </button>
-        </td>
-        <td>{{dutyType.id ? '' : 'Default'}}</td>
-      </tr>
-      </tbody>
-    </table>
-    <p v-else>There is no duty type in this group</p>
+
+  <!-- 멤버 리스트 -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-secondary text-white d-flex justify-content-between">
+      <h5 class="mb-0">Members</h5>
+      <button class="btn btn-light" v-on:click="memberSearchModal()"><i class="bi bi-person-plus"></i> Add</button>
+    </div>
+    <div class="card-body">
+      <table class="table table-hover table-striped" v-if="hasMember">
+        <thead class="table-dark">
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">Name</th>
+          <th scope="col">Email</th>
+          <th scope="col">Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr v-for="(member, index) in department.members">
+          <td>{{ index+1 }}</td>
+          <td>{{ member.name }}</td>
+          <td>{{ member.email }}</td>
+          <td>
+            <button class="btn btn-danger btn-sm" v-on:click="removeMember(member.id)">
+              <i class="bi bi-trash"></i> Delete
+            </button>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+      <p v-else class="text-muted">There is no member in this group</p>
+    </div>
+  </div>
+
+  <!-- 근무 유형 리스트 -->
+  <div class="card shadow-sm">
+    <div class="card-header bg-info text-white d-flex justify-content-between">
+      <h5 class="mb-0">Duty Types</h5>
+      <button class="btn btn-light" v-on:click="addDutyType()"><i class="bi bi-plus-lg"></i> Add</button>
+    </div>
+    <div class="card-body">
+      <table class="table table-hover table-striped" v-if="hasDutyType">
+        <thead class="table-dark">
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">Name</th>
+          <th scope="col">Color</th>
+          <th scope="col">Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr v-for="(dutyType,index) in department.dutyTypes" v-bind:id="dutyType.id" class="duty-type">
+          <td>{{ index+1 }}</td>
+          <td class="fw-bold duty-type-name">{{ dutyType.name }}</td>
+          <td><span :class="['badge', 'rounded-pill', 'duty-type-color' ,'border', 'BACKGROUND-' + dutyType.color]"
+                    :data-color="dutyType.color">&nbsp;&nbsp;</span>
+          <td>
+            <button class="btn btn-primary btn-sm" v-on:click="updateDutyType($event.target)">
+              <i class="bi bi-pencil"></i> Edit
+            </button>
+            <button class="btn btn-secondary btn-sm" :disabled="index==0 || index == (department.dutyTypes.length - 1)"
+                    v-on:click="swapPosition(index, index + 1)">
+              <i class="bi bi-arrow-down"></i>
+            </button>
+            <button class="btn btn-secondary btn-sm" :disabled="index <= 1" v-on:click="swapPosition(index, index - 1)">
+              <i class="bi bi-arrow-up"></i>
+            </button>
+            <button class="btn btn-danger btn-sm" :disabled="!dutyType.id" v-on:click.stop="removeDutyType(dutyType)">
+              <i class="bi bi-trash"></i> Delete
+            </button>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+      <p v-else class="text-muted">There is no duty type in this group</p>
+    </div>
   </div>
 </div>
+
 
 <!-- Modals -->
 
@@ -288,11 +317,11 @@
                 })
             },
             action: function (member) {
-                if (this.mode == 'memberSearch') {
+                if (this.mode === 'memberSearch') {
                     this.addMember(member.id);
                     return;
                 }
-                if (this.mode == 'managerSearch') {
+                if (this.mode === 'managerSearch') {
                     this.changeManager(member.id, member.name);
                     return;
                 }
@@ -367,6 +396,7 @@
             memberSearchKeyword: '',
             memberSearchResult: [],
             dutyBatchTemplates: [],
+            groups: [],
         },
         mounted() {
             this.load();
@@ -386,7 +416,8 @@
                     url: '/admin/api/departments/' + departmentId,
                     type: 'GET',
                     success: function (response) {
-                        app.department = response;
+                        app.department = response.department;
+                        app.groups = response.groups;
                     },
                     error: function (error) {
                         console.log(error);
@@ -439,7 +470,7 @@
             updateDutyType: function (element) {
                 const dutyType = element.closest('.duty-type');
                 const dutyTypeName = dutyType.querySelector('.duty-type-name').textContent;
-                const dutyTypeColor = dutyType.querySelector('.duty-type-color').textContent;
+                const dutyTypeColor = dutyType.querySelector('.duty-type-color').getAttribute('data-color');
                 const dutyTypeId = dutyType.attributes['id']?.value;
 
                 const modal = document.querySelector('#duty-type-modal').cloneNode(true);

@@ -7,17 +7,16 @@ import jakarta.persistence.*
 
 @Entity
 class Member(
-    @Column
+    @Column(nullable = false)
     var name: String,
 
-    @Column(unique = true)
+    @Column
     val email: String? = null,
 
-    @Column(nullable = false)
-    var password: String,
+    @Column
+    var password: String? = null,
 
     ) {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
@@ -38,6 +37,5 @@ class Member(
     override fun toString(): String {
         return "Member(name='$name', email='$email', id=$id)"
     }
-
 
 }
