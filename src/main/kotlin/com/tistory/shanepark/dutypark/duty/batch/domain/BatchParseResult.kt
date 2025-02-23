@@ -39,4 +39,10 @@ class BatchParseResult(
             .toList()
     }
 
+    fun findValidNames(name: String): List<String> {
+        return this.getNames()
+            .filter { name == it || name.endsWith(it) }
+            .toList()
+    }
+
 }

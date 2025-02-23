@@ -812,7 +812,6 @@ input[readonly], textarea[readonly] {
 }
 
 .member-card {
-    width: 140px;
     transition: transform 0.2s ease-in-out;
 }
 
