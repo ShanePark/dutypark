@@ -4,6 +4,8 @@ import com.tistory.shanepark.dutypark.department.domain.entity.Department
 import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.duty.batch.SungsimCakeParser
 import com.tistory.shanepark.dutypark.duty.batch.domain.BatchParseResult
+import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchResult
+import com.tistory.shanepark.dutypark.duty.batch.exceptions.DutyTypeNotSingleException
 import com.tistory.shanepark.dutypark.duty.batch.exceptions.MultipleNameFoundException
 import com.tistory.shanepark.dutypark.duty.batch.exceptions.NameNotFoundException
 import com.tistory.shanepark.dutypark.duty.batch.exceptions.NotSupportedFileException
@@ -122,10 +124,10 @@ class DutyBatchSungsimServiceTest {
         val file = createValidXlsxFile()
         val yearMonth = YearMonth.of(2023, 1)
         val dummyBatchResult = mock<BatchParseResult> {
-            on { getNames() } doReturn listOf("John", "ohn")
+            on { findValidNames("홍길동") } doReturn listOf("홍길동", "길동")
         }
         whenever(sungsimCakeParser.parseDayOff(eq(yearMonth), any<InputStream>())).thenReturn(dummyBatchResult)
-        val member = createDummyMember("John", Department("dummy"))
+        val member = createDummyMember("홍길동", Department("dummy"))
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
 
         assertThrows<MultipleNameFoundException> {
@@ -138,7 +140,7 @@ class DutyBatchSungsimServiceTest {
         val file = createValidXlsxFile()
         val yearMonth = YearMonth.of(2023, 1)
         val dummyBatchResult = mock<BatchParseResult> {
-            on { getNames() } doReturn listOf("Doe")
+            on { findValidNames("John") } doReturn emptyList()
         }
         whenever(sungsimCakeParser.parseDayOff(eq(yearMonth), any<InputStream>())).thenReturn(dummyBatchResult)
         val member = createDummyMember("John", Department("dummy"))
@@ -198,6 +200,160 @@ class DutyBatchSungsimServiceTest {
                     ).getWorkDays("John")
                 )
         }
+    }
+
+    @Test
+    fun `batchUploadDepartment throws exception when file is not xlsx`() {
+        val file = createMultipartFile("test.txt")
+        assertThrows<NotSupportedFileException> {
+            dutyBatchService.batchUploadDepartment(file, 1L, YearMonth.of(2023, 1))
+        }
+    }
+
+    @Test
+    fun `batchUploadDepartment throws exception when department not found`() {
+        val file = createValidXlsxFile()
+        val yearMonth = YearMonth.of(2023, 1)
+        whenever(departmentRepository.findById(1L)).thenReturn(Optional.empty())
+
+        assertThrows<NoSuchElementException> {
+            dutyBatchService.batchUploadDepartment(file, 1L, yearMonth)
+        }
+    }
+
+    @Test
+    fun `batchUploadDepartment throws DutyTypeNotSingleException when multiple duty types found`() {
+        val file = createValidXlsxFile()
+        val yearMonth = YearMonth.of(2023, 1)
+        val department = Department("dummy")
+        whenever(departmentRepository.findById(1L)).thenReturn(Optional.of(department))
+        // dutyTypeRepository 가 여러 개의 DutyType 을 반환하면 예외 발생
+        val dutyType1 = DutyType(name = "dummy1", position = 0, department = department)
+        val dutyType2 = DutyType(name = "dummy2", position = 1, department = department)
+        whenever(dutyTypeRepository.findAllByDepartment(department)).thenReturn(listOf(dutyType1, dutyType2))
+
+        assertThrows<DutyTypeNotSingleException> {
+            dutyBatchService.batchUploadDepartment(file, 1L, yearMonth)
+        }
+    }
+
+    @Test
+    fun `batchUploadDepartment successfully processes members and creates non-members`() {
+        val file = createValidXlsxFile()
+        val yearMonth = YearMonth.of(2023, 1)
+        val startDate = LocalDate.of(2023, 1, 1)
+        val endDate = LocalDate.of(2023, 1, 31)
+
+        val batchParseResult = mock<BatchParseResult>()
+        whenever(batchParseResult.getNames()).thenReturn(listOf("Alice", "Bob"))
+        whenever(batchParseResult.findValidNames("Alice")).thenReturn(listOf("Alice"))
+        whenever(batchParseResult.getWorkDays("Alice")).thenReturn(
+            listOf(
+                LocalDate.of(2023, 1, 5),
+                LocalDate.of(2023, 1, 6)
+            )
+        )
+        whenever(batchParseResult.getOffDays("Alice")).thenReturn(emptyList())
+        whenever(batchParseResult.startDate).thenReturn(startDate)
+        whenever(batchParseResult.endDate).thenReturn(endDate)
+
+        whenever(sungsimCakeParser.parseDayOff(eq(yearMonth), any<InputStream>())).thenReturn(batchParseResult)
+
+        val department = Department("dummy")
+        val alice = createDummyMember("Alice", department)
+        department.members.add(alice)
+        whenever(departmentRepository.findById(1L)).thenReturn(Optional.of(department))
+
+        val dutyType = DutyType(name = "dummyDuty", position = 0, department = department)
+        whenever(dutyTypeRepository.findAllByDepartment(department)).thenReturn(listOf(dutyType))
+
+        val result = dutyBatchService.batchUploadDepartment(file, 1L, yearMonth)
+
+        argumentCaptor<Member>().apply {
+            verify(memberRepository).save(capture())
+            val savedMember = firstValue
+            assertThat(savedMember.name).isEqualTo("Bob")
+            assertThat(savedMember.department).isEqualTo(department)
+        }
+
+        verify(dutyRepository).deleteDutiesByMemberAndDutyDateBetween(alice, startDate, endDate)
+        argumentCaptor<List<Duty>>().apply {
+            verify(dutyRepository).saveAll(capture())
+            val duties = firstValue
+            assertThat(duties.size).isEqualTo(2)
+            assertThat(duties.map { it.dutyDate })
+                .containsExactlyElementsOf(listOf(LocalDate.of(2023, 1, 5), LocalDate.of(2023, 1, 6)))
+        }
+
+        assertThat(result.startDate).isEqualTo(startDate)
+        assertThat(result.endDate).isEqualTo(endDate)
+        assertThat(result.dutyBatchResult).hasSize(1)
+        val aliceResult = result.dutyBatchResult.first { it.first == "Alice" }.second
+        assertThat(aliceResult.workingDays).isEqualTo(2)
+        assertThat(aliceResult.offDays).isEqualTo(0)
+    }
+
+
+    @Test
+    fun `batchUploadDepartment returns failure for member with multiple valid names`() {
+        val file = createValidXlsxFile()
+        val yearMonth = YearMonth.of(2023, 1)
+        val startDate = LocalDate.of(2023, 1, 1)
+        val endDate = LocalDate.of(2023, 1, 31)
+
+        val batchParseResult = mock<BatchParseResult>()
+        whenever(batchParseResult.getNames()).thenReturn(listOf("Charlie"))
+        whenever(batchParseResult.findValidNames("Charlie")).thenReturn(listOf("Charlie", "Charles"))
+        whenever(batchParseResult.startDate).thenReturn(startDate)
+        whenever(batchParseResult.endDate).thenReturn(endDate)
+
+        whenever(sungsimCakeParser.parseDayOff(eq(yearMonth), any<InputStream>())).thenReturn(batchParseResult)
+
+        val department = Department("dummy")
+        val charlie = createDummyMember("Charlie", department)
+        department.members.add(charlie)
+        whenever(departmentRepository.findById(1L)).thenReturn(Optional.of(department))
+
+        val dutyType = DutyType(name = "dummyDuty", position = 0, department = department)
+        whenever(dutyTypeRepository.findAllByDepartment(department)).thenReturn(listOf(dutyType))
+
+        val result = dutyBatchService.batchUploadDepartment(file, 1L, yearMonth)
+
+        verify(dutyRepository, never()).deleteDutiesByMemberAndDutyDateBetween(any(), any(), any())
+        verify(dutyRepository, never()).saveAll(any<List<Duty>>())
+
+        assertThat(result.dutyBatchResult).hasSize(1)
+        val expectedFailResult = DutyBatchResult.fail(MultipleNameFoundException::class.simpleName!!)
+        assertThat(result.dutyBatchResult.first().second).isEqualTo(expectedFailResult)
+    }
+
+    @Test
+    fun `batchUploadDepartment returns failure for member with no valid names`() {
+        val file = createValidXlsxFile()
+        val yearMonth = YearMonth.of(2023, 1)
+        val startDate = LocalDate.of(2023, 1, 1)
+        val endDate = LocalDate.of(2023, 1, 31)
+
+        val batchParseResult = mock<BatchParseResult>()
+        whenever(batchParseResult.getNames()).thenReturn(listOf("Dana"))
+        whenever(batchParseResult.findValidNames("Dana")).thenReturn(emptyList())
+        whenever(batchParseResult.startDate).thenReturn(startDate)
+        whenever(batchParseResult.endDate).thenReturn(endDate)
+
+        whenever(sungsimCakeParser.parseDayOff(eq(yearMonth), any<InputStream>())).thenReturn(batchParseResult)
+
+        val department = Department("dummy")
+        val dana = createDummyMember("Dana", department)
+        department.members.add(dana)
+        whenever(departmentRepository.findById(1L)).thenReturn(Optional.of(department))
+
+        val dutyType = DutyType(name = "dummyDuty", position = 0, department = department)
+        whenever(dutyTypeRepository.findAllByDepartment(department)).thenReturn(listOf(dutyType))
+
+        val result = dutyBatchService.batchUploadDepartment(file, 1L, yearMonth)
+        assertThat(result.dutyBatchResult).hasSize(1)
+        val expectedFailResult = DutyBatchResult.fail(NameNotFoundException::class.simpleName!!)
+        assertThat(result.dutyBatchResult.first().second).isEqualTo(expectedFailResult)
     }
 
 }

@@ -2,7 +2,7 @@ package com.tistory.shanepark.dutypark.duty.batch.domain
 
 import java.time.LocalDate
 
-class DutyBatchResult(
+data class DutyBatchResult(
     val result: Boolean,
     val errorMessage: String = "",
     val startDate: LocalDate? = null,
@@ -10,7 +10,6 @@ class DutyBatchResult(
     val workingDays: Int = 0,
     val offDays: Int = 0,
 ) {
-
     companion object {
         fun success(workingDays: Int, offDays: Int, startDate: LocalDate, endDate: LocalDate): DutyBatchResult {
             return DutyBatchResult(
