@@ -49,9 +49,9 @@
             </div>
 
             <div class="d-flex flex-wrap mt-3 row">
-              <div v-for="member in group.members" :key="member.id" class="col-2"
+              <div v-for="member in group.members" :key="member.id" class="col-3"
                    @click.prevent="moveTo(member.id)">
-                <div class="member-card p-3 border rounded shadow-sm text-center cursor-pointer fs-6">
+                <div class="member-card p-3 border rounded shadow-sm text-center cursor-pointer">
                   <i class="bi bi-person-fill mb-2"></i>
                   <span v-text="member.name"></span>
                 </div>
