@@ -135,11 +135,12 @@ class DepartmentService(
         val dutyTypeMembers = DepartmentDto.of(department, departmentMembers, dutyTypes)
             .dutyTypes
             .map { dutyTypeDto ->
-                val members = dutyTypeDto.id?.let { dutyType ->
-                    dutyMemberMap
-                        .filter { (duty, _) -> duty.dutyType.id == dutyType }
-                        .map { (_, member) -> DashboardSimpleMember(member.id, member.name) }
-                } ?: offMembers.map { member -> DashboardSimpleMember(member.id, member.name) }
+                val sourceMembers = dutyTypeDto.id?.let { id ->
+                    dutyMemberMap.filter { (duty, _) -> duty.dutyType.id == id }.values
+                } ?: offMembers
+                val members = sourceMembers
+                    .map { member -> DashboardSimpleMember(member.id, member.name) }
+                    .sortedBy { it.name }
                 DashboardDutyType(dutyTypeDto, members)
             }
 
