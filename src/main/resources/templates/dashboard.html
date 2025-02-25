@@ -38,17 +38,17 @@
       <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white"
            v-text="departmentInfo.department.name"></div>
       <div class="p-4">
-        <div v-for="group in departmentInfo.groups"
-             class="mb-1"
-             v-if="group.members.length>0">
+        <template v-for="group in departmentInfo.groups"
+                  class="mb-1"
+                  v-if="group.members.length>0">
           <div
-              :class="{'duty-type border rounded p-3 mb-2': true, 'border-warning border-2': group.dutyType.name === myInfo.duty.dutyType}"
+              :class="{'duty-type border rounded p-0 mb-4 overflow-hidden': true, 'border-dark border-2': group.dutyType.name === myInfo.duty.dutyType}"
               v-if="group.members.length > 0">
-            <div :class="['BACKGROUND-' + group.dutyType.color, 'fw-bold', 'py-2', 'px-3', 'rounded', 'border']">
-              <span v-text="group.dutyType.name"></span>
+            <div :class="['BACKGROUND-' + group.dutyType.color, 'p-3']">
+              <span class="fw-bolder" v-text="group.dutyType.name"></span>
             </div>
 
-            <div class="d-flex flex-wrap mt-3 row">
+            <div class="m-0 row p-3">
               <div v-for="member in group.members" :key="member.id" class="col-3"
                    @click.prevent="moveTo(member.id)">
                 <div class="member-card p-3 border rounded shadow-sm text-center cursor-pointer">
@@ -58,7 +58,7 @@
               </div>
             </div>
           </div>
-        </div>
+        </template>
       </div>
     </div>
   </div>
