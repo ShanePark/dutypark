@@ -14,8 +14,11 @@ class MemberViewController(
 ) : ViewController() {
 
     @GetMapping("/")
-    fun index(model: Model): String {
-        model.addAttribute("members", memberService.findAll())
+    fun dashboard(
+        @Login(required = false) loginMember: LoginMember?,
+        model: Model
+    ): String {
+        model.addAttribute("member", loginMember)
         return layout(model, "dashboard")
     }
 

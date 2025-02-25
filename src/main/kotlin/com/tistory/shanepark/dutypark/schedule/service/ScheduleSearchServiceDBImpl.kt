@@ -20,7 +20,7 @@ class ScheduleSearchServiceDBImpl(
 ) : ScheduleSearchService {
 
     override fun search(
-        loginMember: LoginMember,
+        loginMember: LoginMember?,
         targetMemberId: Long,
         page: Pageable,
         query: String
