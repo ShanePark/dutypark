@@ -99,7 +99,7 @@
     <tr>
       <th>관리</th>
       <td>
-        <button class="btn btn-warning" @click="changePassword">비밀번호 변경</button>
+        <button th:if="${member.hasPassword}" class="btn btn-warning" @click="changePassword">비밀번호 변경</button>
         <button class="btn btn-danger" @click="deleteAccount">회원 탈퇴</button>
       </td>
     </tr>

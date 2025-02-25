@@ -12,6 +12,7 @@ data class MemberDto(
     val managerId: Long? = null,
     val calendarVisibility: Visibility,
     val kakaoId: String?,
+    val hasPassword: Boolean = false
 ) {
     companion object {
         fun of(member: Member): MemberDto {
@@ -23,7 +24,8 @@ data class MemberDto(
                 department = member.department?.name,
                 managerId = member.department?.manager?.id,
                 calendarVisibility = member.calendarVisibility,
-                kakaoId = member.kakaoId
+                kakaoId = member.kakaoId,
+                hasPassword = member.password != null
             )
         }
 
@@ -33,7 +35,8 @@ data class MemberDto(
                 name = member.name,
                 email = member.email,
                 calendarVisibility = member.calendarVisibility,
-                kakaoId = member.kakaoId
+                kakaoId = member.kakaoId,
+                hasPassword = member.password != null
             )
         }
     }
