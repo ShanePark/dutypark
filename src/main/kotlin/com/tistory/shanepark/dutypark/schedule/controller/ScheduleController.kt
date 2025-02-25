@@ -8,7 +8,6 @@ import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
 import com.tistory.shanepark.dutypark.schedule.service.ScheduleSearchService
 import com.tistory.shanepark.dutypark.schedule.service.ScheduleService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
-import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
 import org.springframework.http.ResponseEntity
@@ -40,7 +39,7 @@ class ScheduleController(
 
     @GetMapping("/{id}/search")
     fun searchSchedule(
-        @Login(required = false) loginMember: LoginMember,
+        @Login(required = false) loginMember: LoginMember?,
         @PathVariable(value = "id") targetMemberId: Long,
         @PageableDefault(size = 10) pageable: Pageable,
         @RequestParam q: String

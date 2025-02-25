@@ -176,8 +176,12 @@
         font-size: 1.8em;
     }
 
-    .dashboard h5{
+    .dashboard h5 {
         font-size: 1em;
+    }
+
+    .dashboard-intro {
+        font-size: 2em;
     }
 
 }

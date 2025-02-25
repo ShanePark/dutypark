@@ -1,13 +1,15 @@
 <!DOCTYPE html>
-<head th:replace="~{layout/include::link}"/>
+<head th:replace="~{layout/include::link}">
+  <title></title>
+</head>
 <html lang="en">
 <body>
-<div th:replace="~{layout/header::header}"/>
+<div th:replace="~{layout/header::header}"></div>
 <div id="body">
-  <div th:replace="~{${content}}"/>
+  <div th:replace="~{${content}}"></div>
 </div>
 </body>
-<div th:replace="~{layout/footer}"/>
+<div th:replace="~{layout/footer}"></div>
 </html>
 
 <script>

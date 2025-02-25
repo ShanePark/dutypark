@@ -8,7 +8,7 @@ import org.springframework.data.domain.Pageable
 interface ScheduleSearchService {
 
     fun search(
-        loginMember: LoginMember,
+        loginMember: LoginMember?,
         targetMemberId: Long,
         page: Pageable,
         query: String

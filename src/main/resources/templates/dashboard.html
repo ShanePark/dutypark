@@ -1,4 +1,52 @@
-<div id="app" class="mt-4 dashboard m-3">
+<div class="dashboard-intro" th:if="${member == null}">
+  <section class="py-5">
+    <div class="row justify-content-center">
+      <div class="col-12 col-md-10 col-lg-8">
+        <div class="card rounded-3 shadow p-4">
+          <div class="card-body text-center">
+            <h1 class="fw-bold display-5 mb-3">Dutypark</h1>
+            <p class="mb-4">
+              Dutypark는 근무 관리, 시간표 등록, 일정 관리, 할일 관리 및 팀원들의 시간표 조회, 친구 및 가족의 일정 공유 등<br class="d-sm-none">
+              다양한 기능을 통해 여러분의 일상을 도와줍니다.
+            </p>
+            <a href="/auth/login" class="btn btn-dark btn-lg rounded-pill shadow py-2 px-3 fs-3">
+              로그인 / 회원가입
+            </a>
+          </div>
+        </div>
+
+        <div class="card rounded-3 shadow p-4 mt-4">
+          <div class="card-body">
+            <h1 class="card-title mb-3">주요 기능</h1>
+            <ul class="list-group list-group-flush">
+              <li class="list-group-item border-0">
+                <i class="bi bi-calendar-check me-2"></i> 일정 관리 (등록, 검색, 공개 설정)
+              </li>
+              <li class="list-group-item border-0">
+                <i class="bi bi-check2-square me-2"></i> 할일 관리로 까먹지 않는 일상
+              </li>
+              <li class="list-group-item border-0">
+                <i class="bi bi-person-lines-fill me-2"></i> 근무 관리 및 시간표 등록
+              </li>
+              <li class="list-group-item border-0">
+                <i class="bi bi-people me-2"></i> 팀원들의 시간표와 일정 공유
+              </li>
+              <li class="list-group-item border-0">
+                <i class="bi bi-heart me-2"></i> 친구 및 가족의 일정 조회와 태그 기능
+              </li>
+            </ul>
+            <p class="mt-4 mb-0">
+              지금 바로 Dutypark을 사용해보세요!<br>
+              (현재 회원가입은 카카오톡 로그인을 지원합니다.)
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div id="app" class="mt-4 dashboard m-3" v-if="memberId">
   <div class="mb-4 my-section">
     <div class="bg-white rounded shadow-sm border">
       <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white cursor-pointer"
@@ -38,17 +86,17 @@
       <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white"
            v-text="departmentInfo.department.name"></div>
       <div class="p-4">
-        <div v-for="group in departmentInfo.groups"
-             class="mb-1"
-             v-if="group.members.length>0">
+        <template v-for="group in departmentInfo.groups"
+                  class="mb-1"
+                  v-if="group.members.length>0">
           <div
-              :class="{'duty-type border rounded p-3 mb-2': true, 'border-warning border-2': group.dutyType.name === myInfo.duty.dutyType}"
+              :class="{'duty-type border rounded p-0 mb-4 overflow-hidden': true, 'border-dark border-2': group.dutyType.name === myInfo.duty.dutyType}"
               v-if="group.members.length > 0">
-            <div :class="['BACKGROUND-' + group.dutyType.color, 'fw-bold', 'py-2', 'px-3', 'rounded', 'border']">
-              <span v-text="group.dutyType.name"></span>
+            <div :class="['BACKGROUND-' + group.dutyType.color, 'p-3']">
+              <span class="fw-bolder" v-text="group.dutyType.name"></span>
             </div>
 
-            <div class="d-flex flex-wrap mt-3 row">
+            <div class="m-0 row p-3">
               <div v-for="member in group.members" :key="member.id" class="col-3"
                    @click.prevent="moveTo(member.id)">
                 <div class="member-card p-3 border rounded shadow-sm text-center cursor-pointer">
@@ -58,7 +106,7 @@
               </div>
             </div>
           </div>
-        </div>
+        </template>
       </div>
     </div>
   </div>
@@ -241,6 +289,7 @@
     const app = new Vue({
         el: "#app",
         data: {
+            memberId: parseInt("[[${member?.id}]]"),
             today: new Date().toLocaleDateString("ko-KR", {
                 year: "numeric", month: "long", day: "numeric", weekday: "long"
             }),
@@ -263,6 +312,8 @@
             },
         },
         mounted() {
+            if (!this.memberId)
+                return;
             this.loadMy();
             this.loadTeamMembers();
             this.loadFriendInfo()
