@@ -92,7 +92,8 @@
           <div
               :class="{'duty-type border rounded p-0 mb-4 overflow-hidden': true, 'border-dark border-2': group.dutyType.name === myInfo.duty.dutyType}"
               v-if="group.members.length > 0">
-            <div :class="['BACKGROUND-' + group.dutyType.color, 'p-3', 'd-flex', 'justify-content-between', 'align-items-center']">
+            <div
+                :class="['BACKGROUND-' + group.dutyType.color, 'p-3', 'd-flex', 'justify-content-between', 'align-items-center']">
               <span class="fw-bolder fs-3" v-text="group.dutyType.name"></span>
               <span class="badge bg-light text-dark fs-3">{{ group.members.length }}</span>
             </div>
@@ -164,20 +165,29 @@
                 <i class="bi bi-person-circle" v-if="!friend.isFamily"></i>
                 <i class="bi bi-house-heart-fill" v-if="friend.isFamily"></i>
                 {{ friend.member.name }}
+                <i v-if="friend.pinOrder" class="bi bi-pin-fill"></i>
               </div>
               <div class="btn-group" @click.stop>
                 <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown"
                         aria-expanded="false">관리
                 </button>
                 <ul class="dropdown-menu">
+                  <li v-if="!friend.pinOrder" v-on:click="pinFriend(friend.member)"
+                      class="dropdown-item cursor-pointer">
+                    <i class="bi bi-pin-fill"></i> 상단 고정
+                  </li>
+                  <li v-if="friend.pinOrder" v-on:click="unpinFriend(friend.member)"
+                      class="dropdown-item cursor-pointer"><i class="bi bi-pin"></i> 고정 해제
+                  </li>
                   <template v-if="!friend.isFamily">
                     <li><a class="dropdown-item cursor-pointer blue" @click.stop="addFamily(friend.member)"
-                    >가족 등록</a></li>
+                    ><i class="bi bi-house-heart-fill"></i> 가족 등록</a></li>
                     <li>
                       <hr class="dropdown-divider">
                     </li>
                   </template>
-                  <li><a class="dropdown-item cursor-pointer red" @click.stop="unfriend(friend.member)">친구 삭제</a></li>
+                  <li><a class="dropdown-item cursor-pointer red" @click.stop="unfriend(friend.member)"><i
+                      class="bi bi-trash-fill"></i> 친구 삭제</a></li>
                 </ul>
               </div>
             </div>
@@ -462,6 +472,36 @@
                     alert('친구요청 취소 실패');
                 })
             },
+            pinFriend: function (member) {
+                closeDropDown();
+                const url = '/api/friends/pin/' + member.id;
+                fetch(url, {
+                    method: 'PATCH',
+                }).then(function (response) {
+                    if (response.ok) {
+                        app.loadFriendInfo();
+                        return;
+                    }
+                    throw new Error('친구 고정 실패');
+                }).catch(function (error) {
+                    alert('친구 고정 실패');
+                })
+            },
+            unpinFriend: function (member) {
+                closeDropDown();
+                const url = '/api/friends/unpin/' + member.id;
+                fetch(url, {
+                    method: 'PATCH',
+                }).then(function (response) {
+                    if (response.ok) {
+                        app.loadFriendInfo();
+                        return;
+                    }
+                    throw new Error('친구 고정 해제 실패');
+                }).catch(function (error) {
+                    alert('친구 고정 해제 실패');
+                })
+            },
         }
     });
 
@@ -543,5 +583,12 @@
         }
     })
 
-
+    function closeDropDown() {
+        document.querySelectorAll('.dropdown-toggle').forEach(dropdown => {
+            const instance = bootstrap.Dropdown.getInstance(dropdown);
+            if (instance) {
+                instance.hide();
+            }
+        });
+    }
 </script>

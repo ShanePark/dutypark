@@ -2,7 +2,7 @@ package com.tistory.shanepark.dutypark.dashboard.controller
 
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardDepartment
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardFriendInfo
-import com.tistory.shanepark.dutypark.dashboard.domain.DashboardPerson
+import com.tistory.shanepark.dutypark.dashboard.domain.DashboardMyDetail
 import com.tistory.shanepark.dutypark.dashboard.service.DashboardService
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -17,7 +17,7 @@ class DashboardController(
 ) {
 
     @GetMapping("my")
-    fun myDashboard(@Login loginMember: LoginMember): DashboardPerson {
+    fun myDashboard(@Login loginMember: LoginMember): DashboardMyDetail {
         return dashboardService.my(loginMember)
     }
 
