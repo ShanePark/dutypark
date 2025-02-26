@@ -1,8 +1,9 @@
 package com.tistory.shanepark.dutypark.dashboard.service
 
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardDepartment
+import com.tistory.shanepark.dutypark.dashboard.domain.DashboardFriendDetail
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardFriendInfo
-import com.tistory.shanepark.dutypark.dashboard.domain.DashboardPerson
+import com.tistory.shanepark.dutypark.dashboard.domain.DashboardMyDetail
 import com.tistory.shanepark.dutypark.department.service.DepartmentService
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
@@ -30,9 +31,9 @@ class DashboardService(
     private val departmentService: DepartmentService,
 ) {
 
-    fun my(loginMember: LoginMember): DashboardPerson {
+    fun my(loginMember: LoginMember): DashboardMyDetail {
         val member = memberRepository.findMemberWithDepartment(loginMember.id).orElseThrow()
-        return DashboardPerson(
+        return DashboardMyDetail(
             member = MemberDto.of(member),
             duty = todayDuty(member),
             schedules = todaySchedules(member),
@@ -67,13 +68,14 @@ class DashboardService(
         val member = memberRepository.findMemberWithDepartment(loginMember.id).orElseThrow()
         val friends = friendRelationRepository.findAllByMember(member)
             .map {
-                DashboardPerson(
+                DashboardFriendDetail(
                     member = MemberDto.of(it.friend),
                     duty = todayDuty(it.friend),
                     schedules = todaySchedules(it.friend),
-                    isFamily = it.isFamily
+                    isFamily = it.isFamily,
+                    pinOrder = it.pinOrder
                 )
-            }
+            }.sorted()
         val pendingRequestsTo = friendService.getPendingRequestsTo(member).map { FriendRequestDto.of(it) }
         val pendingRequestsFrom = friendService.getPendingRequestsFrom(member).map { FriendRequestDto.of(it) }
         return DashboardFriendInfo(

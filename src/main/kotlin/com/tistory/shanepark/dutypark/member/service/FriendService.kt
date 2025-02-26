@@ -229,4 +229,20 @@ class FriendService(
         return setOf(Visibility.PUBLIC)
     }
 
+    fun pinFriend(loginMember: LoginMember, friendId: Long) {
+        val login = loginMemberToMember(loginMember)
+        val friend = memberRepository.findById(friendId).orElseThrow()
+        friendRelationRepository.findByMemberAndFriend(member = login, friend = friend)?.let {
+            it.pinOrder = -System.currentTimeMillis()
+        } ?: throw IllegalArgumentException("Not friend")
+    }
+
+    fun unpinFriend(loginMember: LoginMember, friendId: Long) {
+        val login = loginMemberToMember(loginMember)
+        val friend = memberRepository.findById(friendId).orElseThrow()
+        friendRelationRepository.findByMemberAndFriend(member = login, friend = friend)?.let {
+            it.pinOrder = null
+        } ?: throw IllegalArgumentException("Not friend")
+    }
+
 }

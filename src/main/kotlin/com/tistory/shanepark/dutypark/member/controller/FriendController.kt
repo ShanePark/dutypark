@@ -82,4 +82,20 @@ class FriendController(
         friendService.unfriend(loginMember, deleteMemberId)
     }
 
+    @PatchMapping("/pin/{friendId}")
+    fun pinFriend(
+        @Login loginMember: LoginMember,
+        @PathVariable friendId: Long,
+    ) {
+        friendService.pinFriend(loginMember, friendId)
+    }
+
+    @PatchMapping("/unpin/{friendId}")
+    fun unpinFriend(
+        @Login loginMember: LoginMember,
+        @PathVariable friendId: Long,
+    ) {
+        friendService.unpinFriend(loginMember, friendId)
+    }
+
 }

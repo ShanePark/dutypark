@@ -1,7 +1,6 @@
 package com.tistory.shanepark.dutypark.member.domain.entity
 
 import com.tistory.shanepark.dutypark.common.domain.entity.BaseTimeEntity
-import com.tistory.shanepark.dutypark.member.enums.FriendRequestType
 import jakarta.persistence.*
 
 @Entity
@@ -15,7 +14,7 @@ class FriendRelation(
     @JoinColumn(name = "friend_id")
     var friend: Member,
 
-) : BaseTimeEntity() {
+    ) : BaseTimeEntity() {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,5 +22,8 @@ class FriendRelation(
 
     @Column(name = "is_family")
     var isFamily: Boolean = false
+
+    @Column(name = "pin_order")
+    var pinOrder: Long? = null
 
 }
