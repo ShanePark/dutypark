@@ -4,7 +4,7 @@ https://simpleicons.org
 -->
 
 <div align="center">
-<h1>Duty Park 📆</h1>
+<h1>Dutypark 📆</h1>
 Simple Duty Manager <br>
 <a href="#" target="_blank"><img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=Kotlin&logoColor=white"/></a>
 <a href="#" target="_blank"><img src="https://img.shields.io/badge/Spring Boot-6DB33F?style=flat-square&logo=Spring-Boot&logoColor=white"/></a>

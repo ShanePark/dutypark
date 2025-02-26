@@ -72,7 +72,7 @@
             </div>
             <ul class="list-group list-group-flush">
               <li v-for="member in group.members" :key="member.id" class="list-group-item">
-                {{ member.name }}
+                <a :href="'/duty/' + member.id">{{ member.name }}</a>
               </li>
               <li v-if="group.members.length === 0" class="list-group-item text-muted">없음</li>
             </ul>
@@ -714,10 +714,21 @@
                 Swal.fire({
                     title: '근무표 업로드',
                     html: `
-                        <input type="file" id="batchFile" class="swal2-file" accept=".xlsx">
-                        <input type="number" id="batchYear" class="swal2-input" placeholder="Year" value="${year}" min="${year}" max="${year + 1}">
-                        <input type="number" id="batchMonth" class="swal2-input" placeholder="Month" value="${month}" min="1" max="12">
-                    `,
+    <div class="mb-3">
+        <label for="batchFile" class="form-label">근무표 파일 업로드 (.xlsx)</label>
+        <input type="file" id="batchFile" class="form-control" accept=".xlsx">
+    </div>
+    <div class="d-flex gap-2">
+        <div class="flex-grow-1">
+            <label for="batchYear" class="form-label">연도</label>
+            <input type="number" id="batchYear" class="form-control" value="${year}" min="${year}" max="${year + 1}">
+        </div>
+        <div class="flex-grow-1">
+            <label for="batchMonth" class="form-label">월</label>
+            <input type="number" id="batchMonth" class="form-control" value="${month}" min="1" max="12">
+        </div>
+    </div>
+`,
                     focusConfirm: false,
                     showCancelButton: true,
                     confirmButtonText: 'Upload',
