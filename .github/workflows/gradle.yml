@@ -53,12 +53,15 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_IP }} >> ~/.ssh/known_hosts
-      - name: SCP transfer
-        run: scp -P ${{ secrets.SSH_PORT }} *.jar ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }}:/shane
+      - name: SCP transfer with temporary filename
+        run: scp -P ${{ secrets.SSH_PORT }} *.jar ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }}:/shane/download.jar
       - name: Execute remote commands
         run: |
-          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} "curl -X POST --max-time 30 https://dutypark.o-r.kr/actuator/shutdown || true"
-          sleep 10;
-          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} "sudo ps -ef | grep dutypark | grep -v grep | awk '{print \$2}' | xargs -r sudo kill -9"
-          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} "sudo fuser -k 443/tcp || true"
-          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} "sudo nohup java -jar /shane/*.jar --spring.profiles.active=op > /shane/nohup.log 2>&1 &"
+          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} << 'EOF'
+            curl -X POST --max-time 30 https://dutypark.o-r.kr/actuator/shutdown || true
+            sleep 10
+            sudo ps -ef | grep dutypark | grep -v grep | awk '{print $2}' | xargs -r sudo kill -9
+            sudo fuser -k 443/tcp || true
+            mv /shane/download.jar /shane/dutypark.jar
+            sudo nohup java -jar /shane/dutypark.jar --spring.profiles.active=op > /shane/nohup.log 2>&1 &
+          EOF
