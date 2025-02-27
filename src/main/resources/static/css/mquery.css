@@ -1,7 +1,12 @@
 /* mobile */
 @media (max-width: 991px) {
+    .navbar {
+        height: 6vh;
+    }
+
     #body {
-        height: 82vh;
+        height: 84vh;
+        overflow-y: scroll;
     }
 
     .calendar {
@@ -77,10 +82,6 @@
         height: 2.5rem;
         margin-left: 1rem;
         margin-top: 1rem;
-    }
-
-    .navbar {
-        height: 8vh;
     }
 
     .navbar-header {
@@ -204,9 +205,12 @@
         font-size: 1.5em;
     }
 
-    .duty-vue .d-day-list {
-        max-height: 20vh;
-        overflow-y: scroll;
+    .member-vue {
+        font-size: 2em;
+    }
+
+    .member-vue .btn {
+        font-size: 1em;
     }
 
 }
