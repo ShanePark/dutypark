@@ -1,5 +1,9 @@
 /* mobile */
 @media (max-width: 991px) {
+    #body {
+        height: 82vh;
+    }
+
     .calendar {
         margin: 0 10px;
     }
@@ -186,6 +190,23 @@
 
     .dashboard-intro {
         font-size: 2em;
+    }
+
+    .pc-footer {
+        display: none;
+    }
+
+    .mobile-footer {
+        display: flex;
+    }
+
+    .mobile-footer i {
+        font-size: 1.5em;
+    }
+
+    .duty-vue .d-day-list {
+        max-height: 20vh;
+        overflow-y: scroll;
     }
 
 }

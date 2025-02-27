@@ -84,8 +84,7 @@
               </div>
             </div>
           </div>
-          <hr/>
-          <div class="sso-service sso-naver">
+          <div class="sso-service sso-naver" hidden>
             <div>
               <img class="sso-icon" src="/lib/naver/naver.png" alt="kakao-icon"> Naver
             </div>
@@ -221,14 +220,14 @@
                 }, deleteAccount() {
                     Swal.fire({
                         title: '회원 탈퇴',
-                        text: '회원 탈퇴는 준비중입니다. 관리자에게 문의해주세요.',
+                        text: '회원 탈퇴는 관리자에게 문의해주세요.',
                         icon: 'alert',
                         confirmButtonText: '확인',
                     })
                 }, ssoNaver() {
                     Swal.fire({
                         title: '네이버 연동',
-                        text: '네이버 연동은 준비중입니다.',
+                        text: '네이버 연동은 아직 준비중입니다.',
                         icon: 'info',
                         confirmButtonText: '확인',
                     })

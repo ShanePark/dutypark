@@ -559,13 +559,13 @@ a.homeButton:hover {
 
 #body {
     max-width: 64rem;
-    min-height: 86vh;
+    min-height: 82vh;
     padding: 10px;
     margin: 0 auto;
 }
 
 #footer {
-    min-height: 6vh;
+    height: 10vh;
     padding-top: 1rem;
     padding-right: 1rem;
     text-align: right;
@@ -796,4 +796,8 @@ input[readonly], textarea[readonly] {
 
 .friend-section .handle {
     cursor: grab;
+}
+
+.mobile-footer {
+    display: none;
 }
