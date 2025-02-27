@@ -23,7 +23,7 @@ class LoginMemberArgumentResolver : HandlerMethodArgumentResolver {
         webRequest: NativeWebRequest,
         binderFactory: WebDataBinderFactory?
     ): LoginMember? {
-        val loginMember = webRequest.getAttribute(LoginMember.attrName, RequestAttributes.SCOPE_REQUEST) as LoginMember?
+        val loginMember = webRequest.getAttribute(LoginMember.ATTR_NAME, RequestAttributes.SCOPE_REQUEST) as LoginMember?
         handleRequired(parameter, loginMember)
         return loginMember
     }

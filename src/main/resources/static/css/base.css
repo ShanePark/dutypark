@@ -594,7 +594,7 @@ a.homeButton:hover {
 
 #body {
     max-width: 64rem;
-    min-height: 88vh;
+    min-height: 86vh;
     padding: 10px;
     margin: 0 auto;
 }
@@ -827,4 +827,8 @@ input[readonly], textarea[readonly] {
 
 .red {
     color: orangered;
+}
+
+.friend-section .handle {
+    cursor: grab;
 }

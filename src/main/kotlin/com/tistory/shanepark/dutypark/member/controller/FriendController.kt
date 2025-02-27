@@ -98,4 +98,12 @@ class FriendController(
         friendService.unpinFriend(loginMember, friendId)
     }
 
+    @PatchMapping("/pin/order")
+    fun updateFriendsPin(
+        @Login loginMember: LoginMember,
+        @RequestBody order: List<Long>
+    ) {
+        friendService.updateFriendsPin(loginMember, order)
+    }
+
 }

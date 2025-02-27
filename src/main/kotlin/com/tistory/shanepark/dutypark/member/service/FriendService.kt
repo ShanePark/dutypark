@@ -245,4 +245,17 @@ class FriendService(
         } ?: throw IllegalArgumentException("Not friend")
     }
 
+    fun updateFriendsPin(loginMember: LoginMember, friendIds: List<Long>) {
+        val login = loginMemberToMember(loginMember)
+        val friends = memberRepository.findAllById(friendIds)
+        val friendMap = friendRelationRepository.findAllByMemberAndFriendIn(login, friends)
+            .filter { it.pinOrder != null }
+            .associateBy { it.friend.id }
+        friendIds.forEachIndexed { index, friendId ->
+            friendMap[friendId]?.let {
+                it.pinOrder = index.toLong() + 1
+            }
+        }
+    }
+
 }

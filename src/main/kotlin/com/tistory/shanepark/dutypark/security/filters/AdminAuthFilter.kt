@@ -17,7 +17,7 @@ class AdminAuthFilter : Filter {
         val request = req as HttpServletRequest
         val response = resp as HttpServletResponse
 
-        request.getAttribute(LoginMember.attrName)?.let {
+        request.getAttribute(LoginMember.ATTR_NAME)?.let {
             val loginMember = it as LoginMember
             if (loginMember.isAdmin) {
                 return chain.doFilter(request, response)

@@ -56,7 +56,7 @@ class JwtAuthFilter(
 
         if (status == VALID) {
             val loginMember = authService.tokenToLoginMember(jwt)
-            request.setAttribute(LoginMember.attrName, loginMember)
+            request.setAttribute(LoginMember.ATTR_NAME, loginMember)
         } else if (status != NOT_EXIST) { // remove invalid token
             log.info("Token is invalid. Removing the tokens. status: $status, jwt: $jwt")
             removeCookie(jwtConfig.cookieName, response)

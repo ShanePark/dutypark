@@ -2,15 +2,14 @@ package com.tistory.shanepark.dutypark.security.domain.dto
 
 data class LoginMember(
     val id: Long,
-    val email: String?,
+    val email: String? = null,
     val name: String,
-    val departmentId: Long?,
-    val department: String?,
-    var isAdmin: Boolean
+    val departmentId: Long? = null,
+    val department: String? = null,
+    var isAdmin: Boolean = false
 ) {
-
     companion object {
-        const val attrName: String = "loginMember"
+        const val ATTR_NAME: String = "loginMember"
     }
 
 }

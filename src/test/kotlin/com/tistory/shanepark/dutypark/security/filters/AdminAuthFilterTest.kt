@@ -34,7 +34,7 @@ class AdminAuthFilterTest {
     fun `should continue filter chain for admin user`() {
         val loginMember = mock(LoginMember::class.java)
         `when`(loginMember.isAdmin).thenReturn(true)
-        `when`(request.getAttribute(LoginMember.attrName)).thenReturn(loginMember)
+        `when`(request.getAttribute(LoginMember.ATTR_NAME)).thenReturn(loginMember)
 
         adminAuthFilter.doFilter(request, response, filterChain)
 
@@ -45,7 +45,7 @@ class AdminAuthFilterTest {
     fun `should redirect for non-admin user`() {
         val loginMember = mock(LoginMember::class.java)
         `when`(loginMember.isAdmin).thenReturn(false)
-        `when`(request.getAttribute(LoginMember.attrName)).thenReturn(loginMember)
+        `when`(request.getAttribute(LoginMember.ATTR_NAME)).thenReturn(loginMember)
 
         adminAuthFilter.doFilter(request, response, filterChain)
 
