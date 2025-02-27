@@ -267,47 +267,12 @@ a.homeButton:hover {
 
 .login-box {
     max-width: 50%;
-    background: #fff;
-    border-radius: 5px;
-    padding: 30px;
-    box-sizing: border-box;
     margin: 100px auto 0;
-    font-size: 1.5em;
-}
-
-.login-box .form-group {
-    margin-bottom: 1em;
 }
 
 .login-box .sso-login:hover {
     cursor: pointer;
     filter: brightness(95%);
-}
-
-.login-box .sso-login img {
-    width: 100%;
-    margin-top: 10px;
-}
-
-.form-buttons {
-    text-align: center;
-}
-
-.form-buttons div {
-    padding: 0 10px;
-}
-
-.form-buttons button {
-    width: 100%;
-    margin-top: 10px;
-    margin-left: 0;
-    margin-right: 0;
-    background-color: #eaeaea;
-    border: 0;
-}
-
-.form-buttons button:hover {
-    background-color: #ccc;
 }
 
 .day-grid {

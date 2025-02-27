@@ -52,16 +52,20 @@
         max-width: 90%;
     }
 
+    .login-box label {
+        font-size: 1.5em;
+    }
+
     .login-box .form-group {
         font-size: 1.5em;
     }
 
     .login-box input {
-        font-size: 1em;
+        font-size: 1.5em;
     }
 
     .login-box button {
-        font-size: 1.5em;
+        font-size: 2em;
     }
 
     .login-box #remember {
