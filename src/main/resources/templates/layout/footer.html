@@ -1,4 +1,4 @@
-<div id="footer" style="z-index:1;">
+<div id="footer">
   <div class="pc-footer">
     <a class="fs-2" href="https://github.com/ShanePark/dutypark" target="_blank" aria-label="Github">
       <svg viewBox="0 0 98 96" xmlns="http://www.w3.org/2000/svg" width="25" height="25">
@@ -9,13 +9,13 @@
       <span>Shane Park © 2025</span>
     </a>
   </div>
-  <div class="mobile-footer row text-align-center fs-1 pt-4">
+  <div class="mobile-footer row text-align-center fs-1 pb-5">
     <a href="/" class="link col-3">
       <i class="bi bi-house-door"></i>
       <br/>
       <span>홈</span>
     </a>
-    <a href="/duty" class="link col-3">
+    <a th:href="@{/duty/{name}(name=${loginMember?.id})}" class="link col-3">
       <i class="bi bi-calendar2-week"></i>
       <br/>
       <span>내 시간표</span>
