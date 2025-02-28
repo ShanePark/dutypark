@@ -39,11 +39,4 @@ class DutyViewController(
         return layout(model, "duty/duty")
     }
 
-    @GetMapping("/duty")
-    fun retrieveMyDuty(
-        @Login loginMember: LoginMember,
-    ): String {
-        return "redirect:/duty/${loginMember.id}"
-    }
-
 }

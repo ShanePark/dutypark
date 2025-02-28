@@ -2,28 +2,30 @@
         integrity="sha384-l+xbElFSnPZ2rOaPrU//2FF5B4LB8FiX5q4fXYTlfcG4PGpMkE1vcL7kNXI6Cci0"
         crossorigin="anonymous"></script>
 
-<div class="login-box shadow rounded p-5">
+<div class="login-box shadow">
   <form @submit.prevent="login">
-    <h1 class="mb-5 pb-3 border-bottom">로그인</h1>
-    <div class="form-group mb-2">
-      <label for="emailInput" class="form-label">이메일</label>
-      <input id="emailInput" type="email" class="form-control" placeholder="이메일 주소" v-model="email">
-      <input type="checkbox" class="form-check-input" id="remember" v-model="remember">
-      <label class="form-check-label" for="remember">아이디 저장</label>
+    <h1 class="mb-5">로그인</h1>
+    <div class="form-group">
+      <label for="emailInput">이메일 주소</label>
+      <input id="emailInput" type="email" class="form-control" placeholder="email" v-model="email">
+      <small class="form-text text-muted"><label for="remember">아이디 저장</label>
+        <input type="checkbox" id="remember" name="remember" v-model="remember">
+      </small>
     </div>
-    <div class="form-group mb-2">
-      <label for="passwordInput" class="form-label">비밀번호</label>
-      <input type="password" class="form-control" id="passwordInput" placeholder="비밀번호"
+    <div class="form-group">
+      <label for="passwordInput">비밀번호</label>
+      <input type="password" class="form-control" id="passwordInput" placeholder="Password"
              maxlength="16" v-model="password">
     </div>
-    <div class="form-buttons mt-3">
-      <button type="submit" class="btn btn-primary w-100 text-align-center" @click="login">로그인
-      </button>
-      <div class="text-center my-3">
-        <span class="text-muted">또는</span>
+    <div class="form-buttons row">
+      <div class="col-6">
+        <button type="button" class="btn" @click="signUp">회원가입</button>
       </div>
-      <div class="col-12 mt-2 kakao-login cursor-pointer" @click="kakaoLogin">
-        <img class="w-100" src="/lib/kakao/kakao_login_large_wide.png" alt="kakao-login">
+      <div class="col-6">
+        <button type="submit" class="btn" @click="login">로그인</button>
+      </div>
+      <div class="col-12 sso-login kakao-login" @click="kakaoLogin">
+        <img src="/lib/kakao/kakao_login_large_wide.png" alt="kakao-login">
       </div>
     </div>
   </form>
@@ -89,6 +91,13 @@
                             title: 'Oops...',
                             text: error.message
                         });
+                    });
+                },
+                signUp() {
+                    Swal.fire({
+                        title: '회원가입',
+                        text: '회원가입 기능은 제공하지 않습니다. 카카오 로그인을 이용해주세요.',
+                        icon: 'info',
                     });
                 },
                 kakaoLogin() {

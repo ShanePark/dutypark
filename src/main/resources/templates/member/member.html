@@ -2,113 +2,108 @@
         integrity="sha384-l+xbElFSnPZ2rOaPrU//2FF5B4LB8FiX5q4fXYTlfcG4PGpMkE1vcL7kNXI6Cci0"
         crossorigin="anonymous"></script>
 
-<div class="mt-4 member-vue" v-cloak>
-  <div class="card shadow-sm">
-    <div class="card-header text-center bg-primary text-white">
-      <h1 class="mb-0">회원 정보</h1>
-    </div>
-    <div class="card-body">
-      <table class="table table-bordered table-responsive">
-        <tbody>
-        <tr>
-          <th class="bg-light"><label for="name" class="col-form-label">이름</label></th>
-          <td>
-            <input type="text" readonly class="form-control-plaintext" id="name" th:value="*{member.name}">
-          </td>
-        </tr>
-        <tr>
-          <th class="bg-light"><label for="department" class="col-form-label">소속</label></th>
-          <td>
-            <input type="text" readonly class="form-control-plaintext" id="department"
-                   th:value="${member.department} ?: '-'">
-          </td>
-        </tr>
-        <tr>
-          <th class="bg-light"><label for="email" class="col-form-label">이메일</label></th>
-          <td>
-            <input type="text" readonly class="form-control-plaintext" id="email" th:value="${member.email} ?: '-'">
-          </td>
-        </tr>
-        <tr>
-          <th class="bg-light">로그인</th>
-          <td>
-            <div class="table-responsive">
-              <table class="table table-bordered text-center">
-                <thead class="table-light">
-                <tr>
-                  <th>#</th>
-                  <th>접속</th>
-                  <th>IP</th>
-                  <th>기기</th>
-                  <th>브라우저</th>
-                  <th>관리</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr v-for="(token, index) in tokens">
-                  <td>{{ index+1 }}</td>
-                  <td>{{ token.lastUsed | fromNow }}</td>
-                  <td>{{ token.remoteAddr }}</td>
-                  <td>{{ token.userAgent ? token.userAgent.device : '' }}</td>
-                  <td>{{ token.userAgent ? token.userAgent.browser : '' }}</td>
-                  <td>
-                    <button v-if="!token.isCurrentLogin" class="btn btn-outline-danger btn-sm"
-                            @click="deleteToken(token.id)">
-                      로그아웃
-                    </button>
-                    <button v-else class="btn btn-outline-success btn-sm" disabled>현재 접속</button>
-                  </td>
-                </tr>
-                </tbody>
-              </table>
-            </div>
-          </td>
-        </tr>
-        <tr class="sso-logins">
-          <th class="bg-light">계정 연동</th>
-          <td>
-            <div class="d-flex flex-column gap-2">
-              <div class="d-flex justify-content-between align-items-center">
-                <div>
-                  <img class="sso-icon me-2" src="/lib/kakao/kakao.png" alt="kakao-icon">
-                  Kakao
-                </div>
-                <button th:if="${member.kakaoId == null}" class="btn btn-outline-primary btn-sm" @click="ssoKakao">
-                  연동하기
+<div class="member-vue" v-cloak>
+  <table class="table table-bordered member-info">
+    <tr>
+      <th><label for="name" class="col-form-label">이름</label></th>
+      <td>
+        <input type="text" readonly class="form-control-plaintext" id="name" th:value="*{member.name}">
+      </td>
+    </tr>
+    <tr>
+      <th><label for="department" class="col-form-label">소속</label></th>
+      <td>
+        <input type="text" readonly class="form-control-plaintext" id="department"
+               th:value="${member.department} ?: '-'">
+      </td>
+    </tr>
+    <tr>
+      <th>
+        <label for="email" class="col-form-label">이메일</label>
+      </th>
+      <td>
+        <input type="text" readonly class="form-control-plaintext" id="email" th:value="${member.email} ?: '-'">
+      </td>
+    </tr>
+    <tr>
+      <th>로그인 정보</th>
+      <td>
+        <div class="refresh-tokens">
+          <table class="table table-bordered">
+            <colgroup>
+              <col style="width: 60px;">
+              <col style="width: 150px;">
+              <col style="width: 150px;">
+              <col style="width: 200px;">
+              <col style="width: 80px;">
+              <col style="width: 100px;">
+            </colgroup>
+            <tr>
+              <th></th>
+              <th>마지막 접속</th>
+              <th>Ip</th>
+              <th>접속 기기</th>
+              <th>브라우저</th>
+              <th class="text-align-center">관리</th>
+            </tr>
+            <tr v-for="(token, index) in tokens">
+              <td>{{ index+1 }}</td>
+              <td>{{ token.lastUsed | fromNow }}</td>
+              <td>{{ token.remoteAddr}}</td>
+              <td>{{ token.userAgent ? token.userAgent.device : '' }}</td>
+              <td>{{ token.userAgent ? token.userAgent.browser : '' }}</td>
+              <td class="text-align-center">
+                <button v-if="!token.isCurrentLogin" class="btn btn-outline-danger btn-sm"
+                        @click="deleteToken(token.id)">
+                  로그아웃
                 </button>
-                <div th:if="${member.kakaoId != null}">
-                  <span class="opacity-75">연동중</span>
-                  <button class="btn btn-outline-dark btn-sm" @click="removeSsoKakao">
-                    연동해제
-                  </button>
-                </div>
-              </div>
-              <div class="d-flex justify-content-between align-items-center d-none">
-                <div>
-                  <img class="sso-icon me-2" src="/lib/naver/naver.png" alt="naver-icon">
-                  Naver
-                </div>
-                <button class="btn btn-outline-primary btn-sm" @click="ssoNaver">
-                  연동하기
+                <button v-else class="btn btn-outline-success btn-sm" disabled>현재접속</button>
+              </td>
+            </tr>
+          </table>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <th>계정연동</th>
+      <td>
+        <div class="sso-logins">
+          <div class="sso-service sso-kakao">
+            <div>
+              <img class="sso-icon" src="/lib/kakao/kakao.png" alt="kakao-icon"> Kakao
+            </div>
+            <div>
+              <button th:if="${member.kakaoId == null}" class="btn btn-outline-primary" @click="ssoKakao">
+                연동하기
+              </button>
+              <div th:if="${member.kakaoId != null}">
+                <span class="opacity-75">연동중</span>
+                <button class="btn btn-outline-dark" @click="removeSsoKakao">
+                  연동해제
                 </button>
               </div>
             </div>
-          </td>
-        </tr>
-        <tr>
-          <th class="bg-light">관리</th>
-          <td class="d-flex flex-wrap gap-2">
-            <button th:if="${member.hasPassword}" class="btn btn-outline-warning btn-sm" @click="changePassword">
-              비밀번호 변경
+          </div>
+          <hr/>
+          <div class="sso-service sso-naver">
+            <div>
+              <img class="sso-icon" src="/lib/naver/naver.png" alt="kakao-icon"> Naver
+            </div>
+            <button class="btn btn-outline-primary" @click="ssoNaver">
+              연동하기
             </button>
-            <a class="btn btn-outline-danger btn-sm" href="/logout">로그아웃</a>
-            <button class="btn btn-outline-secondary btn-sm" @click="deleteAccount">회원 탈퇴</button>
-          </td>
-        </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
+          </div>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <th>관리</th>
+      <td>
+        <button th:if="${member.hasPassword}" class="btn btn-warning" @click="changePassword">비밀번호 변경</button>
+        <button class="btn btn-danger" @click="deleteAccount">회원 탈퇴</button>
+      </td>
+    </tr>
+  </table>
 </div>
 
 <script>
@@ -226,14 +221,14 @@
                 }, deleteAccount() {
                     Swal.fire({
                         title: '회원 탈퇴',
-                        text: '회원 탈퇴는 관리자에게 문의해주세요.',
+                        text: '회원 탈퇴는 준비중입니다. 관리자에게 문의해주세요.',
                         icon: 'alert',
                         confirmButtonText: '확인',
                     })
                 }, ssoNaver() {
                     Swal.fire({
                         title: '네이버 연동',
-                        text: '네이버 연동은 아직 준비중입니다.',
+                        text: '네이버 연동은 준비중입니다.',
                         icon: 'info',
                         confirmButtonText: '확인',
                     })
@@ -241,7 +236,7 @@
                     // if the member's login method is only kakao, then if the member removes the kakao login, the member will not be able to log in.
                     Swal.fire({
                         title: '카카오 연동 해제',
-                        text: '카카오 연동 해제를 위해서는 다른 로그인 방법을 추가해주세요.',
+                        text: '카카오 연동 해제는 준비중입니다.',
                         icon: 'info',
                         confirmButtonText: '확인',
                     })

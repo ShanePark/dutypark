@@ -267,12 +267,47 @@ a.homeButton:hover {
 
 .login-box {
     max-width: 50%;
+    background: #fff;
+    border-radius: 5px;
+    padding: 30px;
+    box-sizing: border-box;
     margin: 100px auto 0;
+    font-size: 1.5em;
+}
+
+.login-box .form-group {
+    margin-bottom: 1em;
 }
 
 .login-box .sso-login:hover {
     cursor: pointer;
     filter: brightness(95%);
+}
+
+.login-box .sso-login img {
+    width: 100%;
+    margin-top: 10px;
+}
+
+.form-buttons {
+    text-align: center;
+}
+
+.form-buttons div {
+    padding: 0 10px;
+}
+
+.form-buttons button {
+    width: 100%;
+    margin-top: 10px;
+    margin-left: 0;
+    margin-right: 0;
+    background-color: #eaeaea;
+    border: 0;
+}
+
+.form-buttons button:hover {
+    background-color: #ccc;
 }
 
 .day-grid {
@@ -559,13 +594,13 @@ a.homeButton:hover {
 
 #body {
     max-width: 64rem;
-    min-height: 82vh;
+    min-height: 86vh;
     padding: 10px;
     margin: 0 auto;
 }
 
 #footer {
-    height: 10vh;
+    min-height: 6vh;
     padding-top: 1rem;
     padding-right: 1rem;
     text-align: right;
@@ -583,6 +618,12 @@ a.homeButton:hover {
 
 .border-red {
     border: 2px solid red;
+}
+
+.sso-logins .sso-service {
+    justify-content: space-between;
+    display: flex;
+    padding: 10px;
 }
 
 .sso-logins .sso-icon {
@@ -790,8 +831,4 @@ input[readonly], textarea[readonly] {
 
 .friend-section .handle {
     cursor: grab;
-}
-
-.mobile-footer {
-    display: none;
 }
