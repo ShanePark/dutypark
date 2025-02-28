@@ -559,13 +559,13 @@ a.homeButton:hover {
 
 #body {
     max-width: 64rem;
-    min-height: 80vh;
+    min-height: 82vh;
     padding: 10px;
     margin: 0 auto;
 }
 
 #footer {
-    height: 12vh;
+    height: 10vh;
     padding-top: 1rem;
     padding-right: 1rem;
     text-align: right;
