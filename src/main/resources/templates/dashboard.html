@@ -1,4 +1,4 @@
-<div class="dashboard-intro" th:if="${member == null}" v-cloak>
+<div class="dashboard-intro" th:if="${member == null}">
   <section class="py-5">
     <div class="row justify-content-center">
       <div class="col-12 col-md-10 col-lg-8">
@@ -46,7 +46,7 @@
   </section>
 </div>
 
-<div id="app" class="mt-4 dashboard m-3" v-if="memberId" v-cloak>
+<div id="app" class="mt-4 dashboard m-3" v-if="memberId">
   <div class="mb-4 my-section">
     <div class="bg-white rounded shadow-sm border">
       <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white cursor-pointer"
@@ -71,7 +71,7 @@
           <h5 class="mb-1"><i class="bi bi-calendar-event me-2"></i>오늘 일정</h5>
           <ul class="list-unstyled">
             <li v-for="schedule in myInfo.schedules" :key="schedule.id" class="py-1 border-bottom last:border-0">
-              <span>{{ schedule.content }}</span>
+              <span class="fw-bold">{{ schedule.content }}</span>
               <span class="text-secondary ms-2">{{ printScheduleTime(schedule.startDateTime) }}</span>
             </li>
             <li v-if="myInfo.schedules.length === 0" class="text-muted">오늘의 일정이 없습니다.</li>
@@ -201,7 +201,7 @@
                 <ul class="list-unstyled">
                   <li v-for="schedule in friend.schedules" :key="schedule.id"
                       class="text-sm py-1 border-bottom last:border-0">
-                    <span>{{ schedule.content }}</span>
+                    <span class="fw-semibold">{{ schedule.content }}</span>
                     <span class="text-secondary ms-2">{{ printScheduleTime(schedule.startDateTime) }}</span>
                   </li>
                 </ul>
