@@ -8,7 +8,7 @@
   <div class="todo-container" v-if="isMyCalendar">
     <div class="d-flex">
       <div id="add-todo-btn" v-on:click="addTodoModal()">
-        <span>할일 + <small v-if="todos.length>0" v-text="'(' + todos.length + ')'"></small></span>
+        <span>할일 +</span>
       </div>
       <div class="d-flex flex-row" id="todo-list-container">
         <div class="d-flex flex-row" id="todo-list">
@@ -153,9 +153,13 @@
         }"
            v-on:click="viewDayDetail(duty, index)">
         <div class="date container">
-          <div class="day-header text-align-left ps-2 position-relative">
-            <span class="day" v-text="(duty.month==month?'':duty.month +'/ ')+ duty.day"></span>
-            <div class="position-absolute" style="right:10px;top:0">
+          <div class="row day-header">
+            <div class="col-md-5">
+              <div class="day">
+                <span v-text="duty.day"></span>
+              </div>
+            </div>
+            <div class="col-md-7 text-align-right pe-3">
               <span v-if="selectedDday" v-text="calcDday(duty)" class="d-day-count"></span>
             </div>
           </div>

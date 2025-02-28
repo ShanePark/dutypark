@@ -187,11 +187,14 @@ h1 a.move:hover {
     border: 3px solid red;
 }
 
+.day-grid .today .day span {
+    color: white;
+}
+
 .day-grid .today .day {
     background-color: red;
-    color: white;
-    border-radius: 70%;
-    padding: 5px;
+    border-radius: 100%;
+    width: 100%;
 }
 
 .homeButton {
