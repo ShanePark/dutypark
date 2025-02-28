@@ -15,12 +15,7 @@
       <br/>
       <span>홈</span>
     </a>
-    <a th:if="${loginMember != null}" th:href="@{/duty/{name}(name=${loginMember.id})}" class="link col-3">
-      <i class="bi bi-calendar2-week"></i>
-      <br/>
-      <span>내 시간표</span>
-    </a>
-    <a th:if="${loginMember == null}" th:href="@{/auth/login}" class="link col-3">
+    <a th:href="@{/duty/{name}(name=${loginMember?.id})}" class="link col-3">
       <i class="bi bi-calendar2-week"></i>
       <br/>
       <span>내 시간표</span>
