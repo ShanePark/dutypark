@@ -6,13 +6,14 @@
     position: fixed;
     width: 100%;
     top: 0;
+    height: 6vh;
     z-index: 1000;
 }
 
 #body {
     max-width: 64rem;
     margin: 0 auto;
-    padding: 6vh 10px 6vh 10px;
+    padding: calc(6vh + 1rem) 10px 6vh 10px;
 }
 
 #footer {
@@ -794,4 +795,17 @@ input[readonly], textarea[readonly] {
 
 .mobile-footer {
     display: none;
+}
+
+.mobile-footer .link {
+    position: relative;
+    display: inline-block;
+    padding-top: 1rem;
+    transition: transform 0.2s ease-out, background-color 0.3s ease-out;
+}
+
+.mobile-footer .link:active {
+    transform: scale(1.1);
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
 }
