@@ -23,7 +23,7 @@ interface MemberRepository : JpaRepository<Member, Long> {
     @EntityGraph(attributePaths = ["department"])
     fun findMembersByNameContainingIgnoreCase(name: String, pageable: Pageable): Page<Member>
 
-    @Query("select m from Member m join fetch m.department d  where m.id = :memberId")
+    @Query("select m from Member m left join fetch m.department d  where m.id = :memberId")
     fun findMemberWithDepartment(memberId: Long): Optional<Member>
 
     @EntityGraph(attributePaths = ["department"])
