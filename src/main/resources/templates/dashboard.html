@@ -46,8 +46,8 @@
   </section>
 </div>
 
-<div id="app" class="mt-4 dashboard m-3" v-if="memberId" v-cloak>
-  <div class="mb-4 my-section">
+<div id="app" class="dashboard" v-if="memberId" v-cloak>
+  <div class="my-section">
     <div class="bg-white rounded shadow-sm border">
       <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white cursor-pointer"
            @click="moveTo()">내 시간표
@@ -61,8 +61,11 @@
           <div class="d-flex align-items-center mb-3">
             <h5 class="mb-0 me-2"><i class="bi bi-person-badge me-2"></i>근무</h5>
             <div class="duty-type">
-              <div :class="['BACKGROUND-' + myInfo.duty.dutyColor]">
+              <div v-if="myInfo.duty" :class="['BACKGROUND-' + myInfo.duty.dutyColor]">
                 <span v-text="myInfo.duty.dutyType"></span>
+              </div>
+              <div v-if="!myInfo.duty">
+                <span class="text-muted">없음</span>
               </div>
             </div>
           </div>
@@ -82,7 +85,7 @@
   </div>
 
   <div class="mb-4 team-section">
-    <div class="bg-white rounded shadow-sm border">
+    <div v-if="departmentInfo.department" class="bg-white rounded shadow-sm border">
       <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white"
            v-text="departmentInfo.department.name"></div>
       <div class="p-4">
@@ -109,6 +112,12 @@
             </div>
           </div>
         </template>
+      </div>
+    </div>
+    <div v-if="!departmentInfo.department" class="bg-white rounded shadow-sm border">
+      <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white">소속 없음</div>
+      <div class="p-4">
+        <p class="text-muted">소속된 그룹이 없습니다. 부서의 관리자에게 등록을 요청하세요.</p>
       </div>
     </div>
   </div>
