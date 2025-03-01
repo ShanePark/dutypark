@@ -4,12 +4,16 @@
 </head>
 <html lang="en">
 <body>
-<div th:replace="~{layout/header::header}"></div>
+<div id="header">
+  <div th:replace="~{layout/header}"></div>
+</div>
 <div id="body">
   <div th:replace="~{${content}}"></div>
 </div>
 </body>
-<div th:replace="~{layout/footer}"></div>
+<div id="footer">
+  <div th:replace="~{layout/footer}"></div>
+</div>
 </html>
 
 <script>

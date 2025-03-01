@@ -1,12 +1,12 @@
 /* mobile */
 @media (max-width: 991px) {
-    .navbar {
-        height: 6vh;
-    }
 
     #body {
-        height: 82vh;
-        overflow-y: scroll;
+        padding: 6vh 10px 12vh 10px;
+    }
+
+    #footer {
+        height: 12vh;
     }
 
     .calendar {
@@ -95,7 +95,6 @@
     }
 
     .navbar-collapse {
-        z-index: 1;
         position: absolute;
         font-size: 1.5em;
         top: 0;

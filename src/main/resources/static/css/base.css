@@ -2,6 +2,32 @@
     --hover-background-color: #f8f9fa;
 }
 
+#header {
+    position: fixed;
+    width: 100%;
+    top: 0;
+    z-index: 1000;
+}
+
+#body {
+    max-width: 64rem;
+    margin: 0 auto;
+    padding: 6vh 10px 6vh 10px;
+}
+
+#footer {
+    position: fixed;
+    bottom: 0;
+    height: 6vh;
+    padding-top: 1rem;
+    text-align: right;
+    background-color: rgb(33, 37, 41);
+    color: white;
+    font-size: 1.4em;
+    width: 100%;
+    margin: 0;
+}
+
 @font-face {
     src: url('../fonts/NexonMaplestoryLight.woff2') format('woff2');
     font-display: swap;
@@ -548,29 +574,6 @@ a.homeButton:hover {
 
 .member-hover:hover .member-hover-menu {
     display: block;
-}
-
-#header {
-    margin: 0;
-}
-
-#body {
-    max-width: 64rem;
-    min-height: 80vh;
-    padding: 10px;
-    margin: 0 auto;
-}
-
-#footer {
-    height: 12vh;
-    padding-top: 1rem;
-    padding-right: 1rem;
-    text-align: right;
-    background-color: rgb(33, 37, 41);
-    color: white;
-    font-size: 1.4em;
-    width: 100%;
-    margin: 0;
 }
 
 .privacy-config .btn.selected {
