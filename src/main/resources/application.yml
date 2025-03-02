@@ -23,7 +23,7 @@ spring:
       enabled: false
   ai:
     openai:
-      api-key: "API_KEY_HERE"
+      api-key: "GEMINI_API_KEY_HERE"
       chat:
         base-url: "https://generativelanguage.googleapis.com/v1beta/openai/"
         options:
