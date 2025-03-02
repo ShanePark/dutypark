@@ -1,7 +1,7 @@
-package com.tistory.shanepark.dutypark.schedule.timeextract.service
+package com.tistory.shanepark.dutypark.schedule.timeparsing.service
 
 import com.tistory.shanepark.dutypark.TestUtils.Companion.jsr310ObjectMapper
-import com.tistory.shanepark.dutypark.schedule.timeextract.domain.ScheduleTimeExtractionRequest
+import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingRequest
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
@@ -11,11 +11,11 @@ import org.springframework.ai.openai.api.OpenAiApi
 import java.time.LocalDate
 
 
-class ScheduleTimeExtractionServiceTest {
+class ScheduleTimeParsingServiceTest {
 
     @Test
     @Disabled("External API test")
-    fun extractScheduleTime() {
+    fun parseScheduleTime() {
         // Given
         val apiKey = "PUT_KEY_HERE_for_external_integration_test"
         val openapi = OpenAiApi
@@ -37,15 +37,15 @@ class ScheduleTimeExtractionServiceTest {
             .defaultOptions(chatOption)
             .build()
 
-        val service = ScheduleTimeExtractionService(
+        val service = ScheduleTimeParsingService(
             chatModel = chatModel,
             objectMapper = jsr310ObjectMapper()
         )
 
 
         // Then
-        val response = service.extractScheduleTime(
-            ScheduleTimeExtractionRequest(
+        val response = service.parseScheduleTime(
+            ScheduleTimeParsingRequest(
                 date = LocalDate.of(2025, 2, 28),
                 content = "친구들과 밤 11시에 만나기"
             )
@@ -56,8 +56,8 @@ class ScheduleTimeExtractionServiceTest {
         Assertions.assertThat(response.dateTime).isEqualTo("2025-02-28T23:00:00")
         Assertions.assertThat(response.content).doesNotContain("11시")
 
-        val response2 = service.extractScheduleTime(
-            ScheduleTimeExtractionRequest(
+        val response2 = service.parseScheduleTime(
+            ScheduleTimeParsingRequest(
                 date = LocalDate.of(2025, 2, 28),
                 content = "다섯시 저녁약속"
             )
@@ -67,8 +67,8 @@ class ScheduleTimeExtractionServiceTest {
         Assertions.assertThat(response2.dateTime).isEqualTo("2025-02-28T17:00:00")
         Assertions.assertThat(response2.content).doesNotContain("다섯시")
 
-        val response3 = service.extractScheduleTime(
-            ScheduleTimeExtractionRequest(
+        val response3 = service.parseScheduleTime(
+            ScheduleTimeParsingRequest(
                 date = LocalDate.of(2025, 2, 28),
                 content = "11:30세탁기설치"
             )
@@ -78,8 +78,8 @@ class ScheduleTimeExtractionServiceTest {
         Assertions.assertThat(response3.dateTime).isEqualTo("2025-02-28T11:30:00")
         Assertions.assertThat(response3.content).doesNotContain("11:30")
 
-        val response4 = service.extractScheduleTime(
-            ScheduleTimeExtractionRequest(
+        val response4 = service.parseScheduleTime(
+            ScheduleTimeParsingRequest(
                 date = LocalDate.of(2025, 2, 28),
                 content = "오사카 여행"
             )

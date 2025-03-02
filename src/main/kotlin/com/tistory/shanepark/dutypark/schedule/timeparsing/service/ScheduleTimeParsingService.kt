@@ -1,46 +1,46 @@
-package com.tistory.shanepark.dutypark.schedule.timeextract.service
+package com.tistory.shanepark.dutypark.schedule.timeparsing.service
 
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.tistory.shanepark.dutypark.schedule.timeextract.domain.ScheduleTimeExtractionRequest
-import com.tistory.shanepark.dutypark.schedule.timeextract.domain.ScheduleTimeExtractionResponse
+import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingRequest
+import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingResponse
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.model.ChatModel
 
-class ScheduleTimeExtractionService(
+class ScheduleTimeParsingService(
     chatModel: ChatModel,
     private val objectMapper: ObjectMapper
 ) {
     private val chatClient = ChatClient.builder(chatModel).build()
-    private val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(ScheduleTimeExtractionService::class.java)
+    private val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(ScheduleTimeParsingService::class.java)
 
-    fun extractScheduleTime(request: ScheduleTimeExtractionRequest): ScheduleTimeExtractionResponse {
+    fun parseScheduleTime(request: ScheduleTimeParsingRequest): ScheduleTimeParsingResponse {
         val prompt = generatePrompt(request)
         val chatResponse = chatClient.prompt(prompt)
             .call()
             .chatResponse()
         if (chatResponse == null) {
-            return ScheduleTimeExtractionResponse(result = false)
+            return ScheduleTimeParsingResponse(result = false)
         }
         val chatAnswer = chatResponse.result.output.text
         val response = parseChatAnswer(chatAnswer)
-        log.info("ScheduleTimeExtraction Request:\n $request \nResponse:\n $response")
+        log.info("ScheduleTimeParsing Request:\n $request \nResponse:\n $response")
         return response
     }
 
-    private fun parseChatAnswer(chatAnswer: String): ScheduleTimeExtractionResponse {
+    private fun parseChatAnswer(chatAnswer: String): ScheduleTimeParsingResponse {
         val json = chatAnswer.lines()
             .filter { !it.contains("```") }
             .joinToString("\n")
         return try {
-            objectMapper.readValue(json, ScheduleTimeExtractionResponse::class.java)
+            objectMapper.readValue(json, ScheduleTimeParsingResponse::class.java)
         } catch (e: JsonProcessingException) {
             log.warn("Failed to parse JSON: $json", e)
-            ScheduleTimeExtractionResponse(result = false)
+            ScheduleTimeParsingResponse(result = false)
         }
     }
 
-    private fun generatePrompt(request: ScheduleTimeExtractionRequest): String {
+    private fun generatePrompt(request: ScheduleTimeParsingRequest): String {
         val jsonRequest = objectMapper.writeValueAsString(request)
         return """
               Task: Extract time from the text and return a JSON response.
