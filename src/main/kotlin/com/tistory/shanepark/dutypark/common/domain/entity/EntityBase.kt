@@ -5,11 +5,16 @@ import jakarta.persistence.*
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.proxy.HibernateProxy
 import org.hibernate.type.SqlTypes
+import org.springframework.data.annotation.CreatedDate
+import org.springframework.data.annotation.LastModifiedDate
 import org.springframework.data.domain.Persistable
+import org.springframework.data.jpa.domain.support.AuditingEntityListener
+import java.time.LocalDateTime
 import java.util.*
 import kotlin.jvm.Transient
 
 @MappedSuperclass
+@EntityListeners(AuditingEntityListener::class)
 class EntityBase : Persistable<UUID> {
 
     @Id
@@ -55,5 +60,13 @@ class EntityBase : Persistable<UUID> {
     protected fun load() {
         _isNew = false
     }
+
+    @LastModifiedDate
+    @Column(name = "modified_date", updatable = true)
+    var lastModifiedDate: LocalDateTime = LocalDateTime.now()
+
+    @CreatedDate
+    @Column(name = "created_date", updatable = false)
+    var createdDate: LocalDateTime = LocalDateTime.now()
 
 }

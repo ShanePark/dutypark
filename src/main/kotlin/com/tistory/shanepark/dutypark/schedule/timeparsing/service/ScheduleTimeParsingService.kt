@@ -6,10 +6,12 @@ import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimePa
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingResponse
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.model.ChatModel
+import org.springframework.stereotype.Service
 
+@Service
 class ScheduleTimeParsingService(
     chatModel: ChatModel,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
 ) {
     private val chatClient = ChatClient.builder(chatModel).build()
     private val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(ScheduleTimeParsingService::class.java)
@@ -24,7 +26,7 @@ class ScheduleTimeParsingService(
         }
         val chatAnswer = chatResponse.result.output.text
         val response = parseChatAnswer(chatAnswer)
-        log.info("ScheduleTimeParsing Request:\n $request \nResponse:\n $response")
+        log.info("ScheduleTimeParsing==\n $request \nResponse:\n $response\n")
         return response
     }
 
@@ -35,7 +37,7 @@ class ScheduleTimeParsingService(
         return try {
             objectMapper.readValue(json, ScheduleTimeParsingResponse::class.java)
         } catch (e: JsonProcessingException) {
-            log.warn("Failed to parse JSON: $json", e)
+            log.warn("Failed to parse JSON:\n$json", e)
             ScheduleTimeParsingResponse(result = false)
         }
     }

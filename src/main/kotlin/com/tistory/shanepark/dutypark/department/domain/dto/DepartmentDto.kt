@@ -60,7 +60,7 @@ data class DepartmentDto(
                 dutyTypes = sortedTypes,
                 members = members.map { MemberDto.ofSimple(it) },
                 createdDate = department.createdDate.toString(),
-                lastModifiedDate = department.modifiedDate.toString(),
+                lastModifiedDate = department.lastModifiedDate.toString(),
                 manager = department.manager?.name,
                 dutyBatchTemplate = department.dutyBatchTemplate?.let { DutyBatchTemplateDto(it) }
             )
