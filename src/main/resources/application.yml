@@ -21,6 +21,15 @@ spring:
   devtools:
     restart:
       enabled: false
+  ai:
+    openai:
+      api-key: "API_KEY_HERE"
+      chat:
+        base-url: "https://generativelanguage.googleapis.com/v1beta/openai/"
+        options:
+          model: "gemini-2.0-flash-lite"
+          temperature: 0.0
+        completions-path: "/chat/completions"
 
 server:
   port: 443

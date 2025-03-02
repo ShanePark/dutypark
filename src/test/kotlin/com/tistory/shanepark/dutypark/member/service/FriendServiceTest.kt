@@ -236,6 +236,8 @@ class FriendServiceTest : DutyparkIntegrationTest() {
         assertThat(friendService.findAllFriends(member2)).isEmpty()
 
         setFriend(TestData.member, TestData.member2)
+        em.flush()
+        em.clear()
 
         // When
         val friends = friendService.findAllFriends(member1)
