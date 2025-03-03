@@ -68,9 +68,8 @@ class DepartmentService(
         if (department.members.isNotEmpty()) {
             throw IllegalStateException("Department has members")
         }
-        val dutyTypes = department.dutyTypes
-        dutyRepository.setDutyTypeNullIfDutyTypeIn(dutyTypes)
 
+        dutyRepository.deleteAllByDutyTypeIn(department.dutyTypes)
         departmentRepository.deleteById(id)
     }
 

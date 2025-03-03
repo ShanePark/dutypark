@@ -8,7 +8,9 @@ import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
+import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
+import com.tistory.shanepark.dutypark.schedule.timeparsing.service.ScheduleTimeParsingQueueManager
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -21,7 +23,8 @@ import java.util.*
 class ScheduleService(
     private val scheduleRepository: ScheduleRepository,
     private val memberRepository: MemberRepository,
-    private val friendService: FriendService
+    private val friendService: FriendService,
+    private val scheduleTimeParsingQueueManager: ScheduleTimeParsingQueueManager,
 ) {
     private val log = org.slf4j.LoggerFactory.getLogger(this.javaClass)
 
@@ -74,7 +77,6 @@ class ScheduleService(
         return array
     }
 
-
     fun createSchedule(loginMember: LoginMember, scheduleUpdateDto: ScheduleUpdateDto): Schedule {
         val scheduleMember = memberRepository.findById(scheduleUpdateDto.memberId).orElseThrow()
         checkScheduleCreateAuthority(loginMember, scheduleMember)
@@ -92,7 +94,9 @@ class ScheduleService(
         )
 
         log.info("create schedule: $scheduleUpdateDto")
-        return scheduleRepository.save(schedule)
+        scheduleRepository.save(schedule)
+        scheduleTimeParsingQueueManager.addTask(schedule)
+        return schedule
     }
 
     private fun findNextPosition(
@@ -109,9 +113,12 @@ class ScheduleService(
         schedule.content = scheduleUpdateDto.content
         schedule.description = scheduleUpdateDto.description
         schedule.visibility = scheduleUpdateDto.visibility
+        schedule.parsingTimeStatus = ParsingTimeStatus.WAIT
 
         log.info("update schedule: $scheduleUpdateDto")
-        return scheduleRepository.save(schedule)
+        scheduleRepository.save(schedule)
+        scheduleTimeParsingQueueManager.addTask(schedule)
+        return schedule
     }
 
     fun swapSchedulePosition(loginMember: LoginMember, schedule1Id: UUID, schedule2Id: UUID) {

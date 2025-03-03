@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.schedule.repository
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
+import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
@@ -96,6 +97,8 @@ interface ScheduleRepository : JpaRepository<Schedule, UUID> {
         @Param("startOfDay") startOfDay: LocalDateTime = LocalDateTime.now().toLocalDate().atStartOfDay(),
         @Param("endOfDay") endOfDay: LocalDateTime = LocalDateTime.now().toLocalDate().atTime(23, 59, 59)
     ): List<Schedule>
+
+    fun findAllByParsingTimeStatus(parsingTimeStatus: ParsingTimeStatus): List<Schedule>
 
 }
 

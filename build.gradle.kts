@@ -3,7 +3,7 @@ plugins {
     kotlin("plugin.spring") version "2.1.10"
     kotlin("plugin.jpa") version "2.1.10"
     id("io.spring.dependency-management") version "1.1.7"
-    id("org.springframework.boot") version "3.3.5"
+    id("org.springframework.boot") version "3.4.3"
     id("org.asciidoctor.jvm.convert") version "3.3.2"
 }
 
@@ -19,6 +19,8 @@ java {
 repositories {
     mavenCentral()
 }
+
+extra["springAiVersion"] = "1.0.0-M6"
 
 val asciidoctorExt: Configuration by configurations.creating
 dependencies {
@@ -36,6 +38,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     runtimeOnly("io.netty:netty-resolver-dns-native-macos:4.1.93.Final:osx-aarch_64")
+    implementation("org.springframework.ai:spring-ai-openai-spring-boot-starter")
 
     // Monitoring
     implementation("io.micrometer:micrometer-registry-prometheus")
@@ -66,6 +69,12 @@ dependencies {
     implementation("io.jsonwebtoken:jjwt-api:0.11.5")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
+}
+
+dependencyManagement {
+    imports {
+        mavenBom("org.springframework.ai:spring-ai-bom:${property("springAiVersion")}")
+    }
 }
 
 tasks.withType<Test> {

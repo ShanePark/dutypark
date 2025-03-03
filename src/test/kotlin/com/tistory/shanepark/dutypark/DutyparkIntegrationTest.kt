@@ -1,8 +1,6 @@
 package com.tistory.shanepark.dutypark
 
-import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.tistory.shanepark.dutypark.department.domain.entity.Department
 import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
@@ -47,9 +45,7 @@ class DutyparkIntegrationTest {
     @Autowired
     lateinit var jwtProvider: JwtProvider
 
-    val objectMapper: ObjectMapper = ObjectMapper()
-        .setSerializationInclusion(JsonInclude.Include.NON_NULL)
-        .registerModule(JavaTimeModule())
+    val objectMapper: ObjectMapper = TestUtils.jsr310ObjectMapper()
 
     @BeforeEach
     fun init() {
