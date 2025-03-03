@@ -413,16 +413,20 @@ a.homeButton:hover {
     margin: 10px;
 }
 
-#detail-view-modal .schedules .schedule.visibility-private {
-    background-color: mistyrose;
-}
-
-#detail-view-modal .schedules .schedule.visibility-public {
+#detail-view-modal .schedules .schedule.visibility-PUBLIC {
     background-color: honeydew;
 }
 
-#detail-view-modal .schedules .schedule.visibility-friends {
+#detail-view-modal .schedules .schedule.visibility-FRIENDS {
     background-color: aliceblue;
+}
+
+#detail-view-modal .schedules .schedule.visibility-FAMILY {
+    background-color: moccasin;
+}
+
+#detail-view-modal .schedules .schedule.visibility-PRIVATE {
+    background-color: mistyrose;
 }
 
 .schedules .schedule .schedule-content {
@@ -438,13 +442,15 @@ a.homeButton:hover {
     display: none;
 }
 
-.schedule-add .content-length,
+.schedule-edit {
+    display: grid;
+}
+
 .schedule-edit .content-length {
     font-size: 0.6em;
     color: #333;
 }
 
-.schedule-add textarea,
 .schedule-edit textarea {
     font-size: 1em;
 }
@@ -538,10 +544,6 @@ a.homeButton:hover {
 
 #detail-view-modal .schedules .schedule .buttons {
     text-align: right;
-}
-
-.shadow {
-    box-shadow: 2px 4px 7px 3px #eaeaea;
 }
 
 .navbar {

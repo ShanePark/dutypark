@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.schedule.timeparsing.service
 
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
-import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus
+import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus.WAIT
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingTask
 import jakarta.annotation.PostConstruct
@@ -32,12 +32,14 @@ class ScheduleTimeParsingQueueManager(
 
     @PostConstruct
     fun init() {
-        val allWaitJobs = scheduleRepository.findAllByParsingTimeStatus(ParsingTimeStatus.WAIT)
+        val allWaitJobs = scheduleRepository.findAllByParsingTimeStatus(WAIT)
         allWaitJobs.forEach { schedule -> addTask(schedule) }
         log.info("${allWaitJobs.size} schedules are added to the queue.")
     }
 
     fun addTask(schedule: Schedule) {
+        if (schedule.parsingTimeStatus != WAIT)
+            return
         queue.add(ScheduleTimeParsingTask(schedule.id))
         startWorkIfNeeded()
     }

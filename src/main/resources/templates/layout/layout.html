@@ -19,11 +19,20 @@
 <script>
     document.addEventListener('click', function (event) {
         const isClickInside = document.querySelector('.navbar-collapse').contains(event.target);
-        const isNavbarTogglerOpen = document.querySelector('.navbar-toggler').getAttribute('aria-expanded') == 'true';
+        const isNavbarTogglerOpen = document.querySelector('.navbar-toggler').getAttribute('aria-expanded') === 'true';
 
         if (!isClickInside && isNavbarTogglerOpen) {
             document.querySelector('.navbar-toggler').click();
         }
+    });
+
+    // Prevent Blocked aria-hidden
+    document.addEventListener("DOMContentLoaded", function () {
+        document.addEventListener('hide.bs.modal', function () {
+            if (document.activeElement) {
+                document.activeElement.blur();
+            }
+        });
     });
 
     document.querySelector('.navbar-header').addEventListener('click', function (event) {

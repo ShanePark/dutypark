@@ -14,7 +14,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeParseException
 
 /**
- * Do not use @Transaction dirty checking since it will be on another thread.
+ * Do not use @Transaction dirty checking since it will be working on another thread.
  */
 @Service
 class ScheduleTimeParsingWorker(
@@ -51,9 +51,11 @@ class ScheduleTimeParsingWorker(
         if (haveNoTimeInfo(response, schedule)) return
 
         try {
-            val parsed: LocalDateTime = LocalDateTime.parse(response.dateTime.toString())
+            val parsedStart = LocalDateTime.parse(response.startDateTime.toString())
+            val parsedEnd = LocalDateTime.parse(response.endDateTime.toString())
             schedule.parsingTimeStatus = PARSED
-            schedule.startDateTime = parsed
+            schedule.startDateTime = parsedStart
+            schedule.endDateTime = parsedEnd
             schedule.contentWithoutTime = response.content ?: ""
             scheduleRepository.save(schedule)
         } catch (e: DateTimeParseException) {
@@ -88,7 +90,7 @@ class ScheduleTimeParsingWorker(
     }
 
     private fun alreadyHaveTimeInfo(schedule: Schedule): Boolean {
-        if (schedule.hasTimeInfo()) {
+        if (schedule.hasTimeInfo() || schedule.startDateTime != schedule.endDateTime) {
             schedule.parsingTimeStatus = ALREADY_HAVE_TIME_INFO
             scheduleRepository.save(schedule)
             return true

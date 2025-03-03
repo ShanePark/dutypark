@@ -11,14 +11,14 @@ import org.springframework.ai.openai.api.OpenAiApi
 import java.time.LocalDate
 
 
+@Disabled("External API test")
 class ScheduleTimeParsingServiceTest {
 
     private val apiKey = "PUT_KEY_HERE_for_external_integration_test"
     val service = makeService()
 
     @Test
-    @Disabled("External API test")
-    fun parseScheduleTime1() {
+    fun `parseScheduleTime guess night`() {
         val response = service.parseScheduleTime(
             ScheduleTimeParsingRequest(
                 date = LocalDate.of(2025, 2, 28),
@@ -28,13 +28,13 @@ class ScheduleTimeParsingServiceTest {
 
         Assertions.assertThat(response.result).isTrue()
         Assertions.assertThat(response.hasTime).isTrue()
-        Assertions.assertThat(response.dateTime).isEqualTo("2025-02-28T23:00:00")
+        Assertions.assertThat(response.startDateTime).isEqualTo("2025-02-28T23:00:00")
+        Assertions.assertThat(response.endDateTime).isEqualTo("2025-02-28T23:00:00")
         Assertions.assertThat(response.content).doesNotContain("11시")
     }
 
     @Test
-    @Disabled("External API test")
-    fun parseScheduleTime2() {
+    fun `parseScheduleTime guess evening`() {
         val service = makeService()
         val response = service.parseScheduleTime(
             ScheduleTimeParsingRequest(
@@ -44,13 +44,13 @@ class ScheduleTimeParsingServiceTest {
         )
         Assertions.assertThat(response.result).isTrue()
         Assertions.assertThat(response.hasTime).isTrue()
-        Assertions.assertThat(response.dateTime).isEqualTo("2025-02-28T17:00:00")
+        Assertions.assertThat(response.startDateTime).isEqualTo("2025-02-28T17:00:00")
+        Assertions.assertThat(response.endDateTime).isEqualTo("2025-02-28T17:00:00")
         Assertions.assertThat(response.content).doesNotContain("다섯시")
     }
 
     @Test
-    @Disabled("External API test")
-    fun parseScheduleTime3() {
+    fun `parseScheduleTime guess AM`() {
         val response = service.parseScheduleTime(
             ScheduleTimeParsingRequest(
                 date = LocalDate.of(2025, 2, 28),
@@ -59,13 +59,13 @@ class ScheduleTimeParsingServiceTest {
         )
         Assertions.assertThat(response.result).isTrue()
         Assertions.assertThat(response.hasTime).isTrue()
-        Assertions.assertThat(response.dateTime).isEqualTo("2025-02-28T11:30:00")
+        Assertions.assertThat(response.startDateTime).isEqualTo("2025-02-28T11:30:00")
+        Assertions.assertThat(response.endDateTime).isEqualTo("2025-02-28T11:30:00")
         Assertions.assertThat(response.content).doesNotContain("11:30")
     }
 
     @Test
-    @Disabled("External API test")
-    fun parseScheduleTime4() {
+    fun `parseScheduleTime does not have time info`() {
         val response = service.parseScheduleTime(
             ScheduleTimeParsingRequest(
                 date = LocalDate.of(2025, 2, 28),
@@ -74,13 +74,13 @@ class ScheduleTimeParsingServiceTest {
         )
         Assertions.assertThat(response.result).isTrue()
         Assertions.assertThat(response.hasTime).isFalse()
-        Assertions.assertThat(response.dateTime).isNull()
+        Assertions.assertThat(response.startDateTime).isNull()
+        Assertions.assertThat(response.endDateTime).isNull()
         Assertions.assertThat(response.content).isEqualTo("오사카 여행")
     }
 
     @Test
-    @Disabled("External API test")
-    fun parseScheduleTime5() {
+    fun `parseScheduleTime range`() {
         val response = service.parseScheduleTime(
             ScheduleTimeParsingRequest(
                 date = LocalDate.of(2025, 2, 28),
@@ -88,9 +88,41 @@ class ScheduleTimeParsingServiceTest {
             )
         )
         Assertions.assertThat(response.result).isTrue()
+        Assertions.assertThat(response.hasTime).isTrue()
+        Assertions.assertThat(response.startDateTime).isEqualTo("2025-02-28T14:00:00")
+        Assertions.assertThat(response.endDateTime).isEqualTo("2025-02-28T16:00:00")
+        Assertions.assertThat(response.content).doesNotContain("2시")
+        Assertions.assertThat(response.content).doesNotContain("4시")
+    }
+
+    @Test
+    fun `parseScheduleTime guess early morning`() {
+        val response = service.parseScheduleTime(
+            ScheduleTimeParsingRequest(
+                date = LocalDate.of(2025, 2, 28),
+                content = "등산 6시 출발"
+            )
+        )
+        Assertions.assertThat(response.result).isTrue()
+        Assertions.assertThat(response.hasTime).isTrue()
+        Assertions.assertThat(response.startDateTime).isEqualTo("2025-02-28T06:00:00")
+        Assertions.assertThat(response.endDateTime).isEqualTo("2025-02-28T06:00:00")
+        Assertions.assertThat(response.content).doesNotContain("5시")
+    }
+
+    @Test
+    fun `parseScheduleTime have too many time`() {
+        val response = service.parseScheduleTime(
+            ScheduleTimeParsingRequest(
+                date = LocalDate.of(2025, 2, 28),
+                content = "3시 4시 5시중에 대충 밥 먹자"
+            )
+        )
+        Assertions.assertThat(response.result).isFalse()
         Assertions.assertThat(response.hasTime).isFalse()
-        Assertions.assertThat(response.dateTime).isNull()
-        Assertions.assertThat(response.content).isEqualTo("2시")
+        Assertions.assertThat(response.startDateTime).isNull()
+        Assertions.assertThat(response.endDateTime).isNull()
+        Assertions.assertThat(response.content).isNull()
     }
 
     private fun makeService(): ScheduleTimeParsingService {

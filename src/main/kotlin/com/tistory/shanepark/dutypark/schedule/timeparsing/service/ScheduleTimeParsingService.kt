@@ -48,18 +48,22 @@ class ScheduleTimeParsingService(
               Task: Extract time from the text and return a JSON response.
  
                  - Identify time and convert it to ISO 8601 (YYYY-MM-DDTHH:MM:SS).
+                 - If a time range is mentioned (e.g., "2시~4시"), assign the first time to `startDateTime` and the second time to `endDateTime`.
+                 - If only one time is mentioned, set both `startDateTime` and `endDateTime` to the same value.
                  - Remove the identified time from the text. The remaining text becomes `content`.
+                 - if AM/PM is not specified, assume based on the content.
                  - If no time is found, return:
-                   { "result": true, "hasTime": false}
-                 - If multiple time exists, return:
+                   { "result": true, "hasTime": false }
+                 - If more than two time exist, return:
                    { "result": false }
- 
+    
                  Respond in JSON format only, with the following fields:
                  - result
                  - hasTime
-                 - dateTime
+                 - startDateTime
+                 - endDateTime
                  - content
- 
+     
                  No explanations.
  
                  ===

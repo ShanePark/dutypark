@@ -13,7 +13,10 @@ data class ScheduleTimeParsingTask(
         if (schedule.id != scheduleId) {
             throw IllegalArgumentException("Schedule ID does not match: ${schedule.id} != $scheduleId")
         }
-        return schedule.lastModifiedDate.isAfter(requestDateTime)
+        return schedule.lastModifiedDate
+            .minusSeconds(1)
+            .isAfter(requestDateTime)
     }
+
 }
 

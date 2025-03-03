@@ -64,4 +64,8 @@ class Schedule(
         return startDateTime.hour != 0 || startDateTime.minute != 0
     }
 
+    fun content(): String {
+        return contentWithoutTime.ifBlank { content }
+    }
+
 }

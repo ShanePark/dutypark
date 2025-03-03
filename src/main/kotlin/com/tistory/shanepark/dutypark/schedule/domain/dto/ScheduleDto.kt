@@ -32,7 +32,7 @@ data class ScheduleDto(
         fun ofSimple(member: Member, schedule: Schedule): ScheduleDto {
             return ScheduleDto(
                 id = schedule.id,
-                content = schedule.content,
+                content = schedule.content(),
                 position = schedule.position,
                 year = schedule.startDateTime.year,
                 month = schedule.startDateTime.monthValue,
@@ -57,7 +57,7 @@ data class ScheduleDto(
             return validDays.map {
                 ScheduleDto(
                     id = schedule.id,
-                    content = schedule.content,
+                    content = schedule.content(),
                     description = schedule.description,
                     position = schedule.position,
                     year = it.year,
