@@ -127,6 +127,7 @@
 
     .modal-dialog.modal-lg input,
     .modal-dialog.modal-lg button,
+    .modal-dialog.modal-lg .form-control,
     .modal-dialog.modal-lg {
         font-size: 1em;
     }

@@ -413,8 +413,9 @@
                 <textarea class="form-control" placeholder="(선택사항) 일정 상세정보를 입력하세요." rows="4"
                           v-model="editingSchedule.description"></textarea>
                 <label>시작일
-                  <input type="date" class="form-control" v-model="editingSchedule.startDate" readonly/>
+                  <input type="date" class="form-control" v-model="editingSchedule.startDate" readonly hidden />
                 </label>
+                <p class="form-control bg-light" v-text="editingSchedule.startDate" readonly=""></p>
                 <label>시작시간 (선택사항)
                   <input type="time" class="form-control" v-model="editingSchedule.startTime"/>
                 </label>
@@ -496,8 +497,9 @@
                             v-model="createSchedule.description"></textarea>
                 </label>
                 <label>시작일
-                  <input type="date" class="form-control" v-model="createSchedule.startDate" readonly/>
+                  <input type="date" class="form-control" v-model="createSchedule.startDate" readonly hidden/>
                 </label>
+                <p class="form-control bg-light" v-text="createSchedule.startDate" readonly></p>
                 <label>시작시간 (선택사항)
                   <input type="time" class="form-control" v-model="createSchedule.startTime"/>
                 </label>

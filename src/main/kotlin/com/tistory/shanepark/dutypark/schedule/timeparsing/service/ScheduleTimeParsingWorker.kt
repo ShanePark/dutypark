@@ -54,7 +54,7 @@ class ScheduleTimeParsingWorker(
             schedule.startDateTime = parsedStart
             schedule.endDateTime = parsedEnd
             schedule.contentWithoutTime = response.content ?: ""
-            
+
             // Do not use JPA dirty checking since it will be working on another thread.
             scheduleRepository.save(schedule)
         } catch (e: DateTimeParseException) {
