@@ -9,12 +9,13 @@
   </a>
 </div>
 <div class="mobile-footer row text-align-center fs-1">
-  <a href="/" class="link col-3">
+  <a href="/" class="link col-3" data-link="/">
     <i class="bi bi-house-door"></i>
     <br/>
     <span>홈</span>
   </a>
-  <a th:if="${loginMember != null}" th:href="@{/duty/{name}(name=${loginMember.id})}" class="link col-3">
+  <a th:if="${loginMember != null}" th:href="@{/duty/{name}(name=${loginMember.id})}" class="link col-3"
+     data-link="/duty">
     <i class="bi bi-calendar2-week"></i>
     <br/>
     <span>내 시간표</span>
@@ -24,14 +25,33 @@
     <br/>
     <span>내 시간표</span>
   </a>
-  <a href="/member/d-day" class="link col-3">
+  <a href="/member/d-day" class="link col-3" data-link="member/d-day">
     <i class="bi bi-calendar-check"></i>
     <br/>
     <span>디데이</span>
   </a>
-  <a href="/member" class="link col-3">
+  <a href="/member" class="link col-3" data-link="/member">
     <i class="bi bi-person"></i>
     <br/>
     <span>내 정보</span>
   </a>
 </div>
+
+<script>
+    const currentPath = window.location.pathname;
+    const loginMemberId = parseInt("[[${loginMember?.id}]]");
+    switch (currentPath) {
+        case '/':
+            document.querySelector('.mobile-footer .link[data-link="/"]').classList.add('active');
+            break;
+        case '/member':
+            document.querySelector('.mobile-footer .link[data-link="/member"]').classList.add('active');
+            break;
+        case '/member/d-day':
+            document.querySelector('.mobile-footer .link[data-link="member/d-day"]').classList.add('active');
+            break;
+        case '/duty/' + loginMemberId:
+            document.querySelector('.mobile-footer .link[data-link="/duty"]').classList.add('active');
+            break;
+    }
+</script>

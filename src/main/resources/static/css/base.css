@@ -812,3 +812,7 @@ input[readonly], textarea[readonly] {
     background-color: rgba(255, 255, 255, 0.2);
     border-radius: 10px;
 }
+
+.mobile-footer .link.active {
+    background-color: rgba(255, 255, 255, 0.2);
+}
