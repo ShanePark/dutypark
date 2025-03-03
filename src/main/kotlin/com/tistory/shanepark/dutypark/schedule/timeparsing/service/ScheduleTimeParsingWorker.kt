@@ -42,7 +42,14 @@ class ScheduleTimeParsingWorker(
             ),
             content = schedule.content
         )
-        val response = scheduleTimeParsingService.parseScheduleTime(request)
+
+        val response: ScheduleTimeParsingResponse
+        try {
+            response = scheduleTimeParsingService.parseScheduleTime(request)
+        } catch (e: Exception) {
+            log.error("OpenAI API error", e)
+            return
+        }
 
         if (responseFail(response, schedule)) return
         if (haveNoTimeInfo(response, schedule)) return
