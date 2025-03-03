@@ -26,7 +26,7 @@ class Schedule(
     var endDateTime: LocalDateTime,
 
     @Column(name = "position", nullable = false)
-    var position: Int,
+    var position: Int = -1,
 
     @Column(name = "visibility", nullable = false)
     @Enumerated(EnumType.STRING)

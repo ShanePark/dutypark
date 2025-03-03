@@ -13,9 +13,6 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeParseException
 
-/**
- * Do not use @Transaction dirty checking since it will be working on another thread.
- */
 @Service
 class ScheduleTimeParsingWorker(
     private val scheduleTimeParsingService: ScheduleTimeParsingService,
@@ -57,6 +54,8 @@ class ScheduleTimeParsingWorker(
             schedule.startDateTime = parsedStart
             schedule.endDateTime = parsedEnd
             schedule.contentWithoutTime = response.content ?: ""
+            
+            // Do not use JPA dirty checking since it will be working on another thread.
             scheduleRepository.save(schedule)
         } catch (e: DateTimeParseException) {
             log.warn("Failed to parse dateTime: $response")

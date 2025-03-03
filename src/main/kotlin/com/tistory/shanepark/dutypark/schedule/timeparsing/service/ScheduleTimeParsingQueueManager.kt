@@ -103,4 +103,8 @@ class ScheduleTimeParsingQueueManager(
         }
     }
 
+    fun queueSize(): Int {
+        return queue.size
+    }
+
 }
