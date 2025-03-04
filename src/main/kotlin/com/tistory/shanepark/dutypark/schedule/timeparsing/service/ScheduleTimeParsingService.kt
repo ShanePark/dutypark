@@ -51,10 +51,11 @@ class ScheduleTimeParsingService(
                  - If a time range is mentioned (e.g., "2시~4시"), assign the first time to `startDateTime` and the second time to `endDateTime`.
                  - If only one time is mentioned, set both `startDateTime` and `endDateTime` to the same value.
                  - Remove the identified time from the text. The remaining text becomes `content`.
-                 - if AM/PM is not specified, assume based on the content.
+                 - If AM/PM is not specified, assume it based on the content, but do not assume a specific hour or minute.                 
                  - If no time is found, return:
                    { "result": true, "hasTime": false }
-                 - If more than two time exist, return:
+                 - If "오전" or "오후" appears without an accompanying number, do not treat it as a valid time. Return `{ "result": true, "hasTime": false }`.
+                 - If there are two or more separate, distinct times (not a range), return:
                    { "result": false }
     
                  Respond in JSON format only, with the following fields:
