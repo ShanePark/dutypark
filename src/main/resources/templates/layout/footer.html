@@ -28,28 +28,29 @@
 </div>
 
 <script>
-  const currentPath = window.location.pathname;
-  const loginMemberId = parseInt("[[${loginMember?.id}]]");
-  switch (currentPath) {
-    case '/':
-      document.querySelector('.footer-dock .link[data-link="/"]').classList.add('active');
-      break;
-    case '/member':
-      document.querySelector('.footer-dock .link[data-link="/member"]').classList.add('active');
-      break;
-    case '/member/d-day':
-      document.querySelector('.footer-dock .link[data-link="member/d-day"]').classList.add('active');
-      break;
-    case '/duty/' + loginMemberId:
-      document.querySelector('.footer-dock .link[data-link="/duty"]').classList.add('active');
-      break;
-  }
-  // footer-dock a on click event intercept
-  document.querySelector('.footer-dock').addEventListener('click', function (event) {
-    if (event.target.tagName === 'A') {
-      event.preventDefault();
-      event.target.classList.add('active');
-      window.location.href = event.target.getAttribute('href');
+    const currentPath = window.location.pathname;
+    const loginMemberId = parseInt("[[${loginMember?.id}]]");
+    switch (currentPath) {
+        case '/':
+            document.querySelector('.footer-dock .link[data-link="/"]').classList.add('active');
+            break;
+        case '/member':
+            document.querySelector('.footer-dock .link[data-link="/member"]').classList.add('active');
+            break;
+        case '/member/d-day':
+            document.querySelector('.footer-dock .link[data-link="member/d-day"]').classList.add('active');
+            break;
+        case '/duty/' + loginMemberId:
+            document.querySelector('.footer-dock .link[data-link="/duty"]').classList.add('active');
+            break;
     }
-  });
+
+    document.querySelector('.footer-dock').addEventListener('click', function (event) {
+        const target = event.target.closest('a.link');
+        if (target) {
+            target.classList.add('active');
+            event.preventDefault();
+            window.location.href = target.getAttribute('href');
+        }
+    });
 </script>

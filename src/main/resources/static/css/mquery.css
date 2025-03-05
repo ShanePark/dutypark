@@ -89,20 +89,6 @@
         right: 15px;
     }
 
-    .navbar-collapse {
-        position: absolute;
-        font-size: 1.5em;
-        top: 0;
-        right: 0;
-        text-align: right;
-        padding-right: 15px;
-        padding-bottom: 15px;
-        width: 30%;
-        background: rgba(var(--bs-dark-rgb), var(--bs-bg-opacity));
-        opacity: 0.9;
-        z-index: 1;
-    }
-
     .navbar .navbar-toggler, .navbar .navbar-brand {
         font-size: 1.5em;
     }
@@ -197,4 +183,9 @@
         font-size: 1em;
     }
 
+    #member-search-modal {
+        font-size: 2em;
+    }
+
 }
+
