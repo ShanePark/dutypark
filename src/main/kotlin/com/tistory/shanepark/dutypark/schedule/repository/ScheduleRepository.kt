@@ -15,21 +15,33 @@ import java.util.*
 interface ScheduleRepository : JpaRepository<Schedule, UUID> {
 
     @Query(
-        "SELECT distinct s" +
-                " FROM Schedule s" +
-                " JOIN FETCH s.member m" +
-                " LEFT JOIN FETCH s.tags t" +
-                " LEFT JOIN FETCH t.member tm" +
-                " WHERE (m = :member or tm = :member)" +
-                " AND s.content LIKE %:content%" +
-                " AND s.visibility IN (:visibility)" +
-                " ORDER BY s.startDateTime DESC"
+        value = """
+        SELECT DISTINCT s
+        FROM Schedule s
+        JOIN FETCH s.member m
+        LEFT JOIN FETCH s.tags t
+        LEFT JOIN FETCH t.member tm
+        WHERE (m = :member OR tm = :member)
+        AND s.content LIKE %:content%
+        AND s.visibility IN (:visibility)
+        ORDER BY s.startDateTime DESC
+    """,
+        countQuery = """
+        SELECT COUNT(DISTINCT s)
+        FROM Schedule s
+        JOIN s.member m
+        LEFT JOIN s.tags t
+        LEFT JOIN t.member tm
+        WHERE (m = :member OR tm = :member)
+        AND s.content LIKE %:content%
+        AND s.visibility IN (:visibility)
+    """
     )
     fun findByMemberAndContentContainingAndVisibilityIn(
         member: Member,
         content: String,
         visibility: Collection<Visibility>,
-        pageable: Pageable,
+        pageable: Pageable
     ): Page<Schedule>
 
     @Query(

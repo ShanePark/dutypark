@@ -25,7 +25,6 @@ class AdminAuthFilter : Filter {
             log.info("$loginMember is not admin.")
             response.sendError(HttpServletResponse.SC_FORBIDDEN)
         }
-        response.sendRedirect("/auth/login")
     }
 
 

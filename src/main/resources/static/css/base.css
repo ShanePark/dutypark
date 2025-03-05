@@ -2,31 +2,31 @@
     --hover-background-color: #f8f9fa;
 }
 
-#header {
-    position: fixed;
-    width: 100%;
-    top: 0;
-    height: 6vh;
-    z-index: 1000;
+#header div.header {
+    margin: 0 auto;
+    max-width: 64rem;
 }
 
 #body {
     max-width: 64rem;
     margin: 0 auto;
-    padding: calc(6vh + 1rem) 10px 6vh 10px;
+    padding: 1rem 1rem 12vh 1rem;
 }
 
 #footer {
     position: fixed;
     bottom: 0;
-    height: 6vh;
-    padding-top: 1rem;
-    text-align: right;
+    height: 12vh;
+    padding-top: 0;
     background-color: rgb(33, 37, 41);
     color: white;
     font-size: 1.4em;
     width: 100%;
-    margin: 0;
+}
+
+#footer .footer-dock {
+    max-width: 64rem;
+    margin: 0 auto;
 }
 
 @font-face {
@@ -98,7 +98,7 @@ body a:hover {
 .day-grid .DAY {
     border: 1px solid black;
     word-break: break-all;
-    min-height: 6vw;
+    min-height: 10vw;
     padding: 0 0 5px;
 }
 
@@ -330,11 +330,8 @@ a.homeButton:hover {
 }
 
 .d-day-list .d-day-item {
-    background-color: mintcream;
     height: 90%;
     max-height: 120px;
-    margin: 5px;
-    padding: 10px;
 }
 
 .d-day-list .d-day-item.selected {
@@ -553,8 +550,9 @@ a.homeButton:hover {
 
 .navbar .nav-right {
     color: white;
-    margin-right: 20px;
-    display: flex;
+    position: fixed;
+    top: 20px;
+    right: 20px;
 }
 
 .nav-item {
@@ -563,21 +561,6 @@ a.homeButton:hover {
 
 .navbar-brand {
     margin-left: 1em;
-}
-
-.member-hover-menu {
-    display: none;
-    position: absolute;
-    text-align: right;
-    padding: 10px;
-    top: 70%;
-    right: 5px;
-    background: #333;
-    border-radius: 5px;
-}
-
-.member-hover:hover .member-hover-menu {
-    display: block;
 }
 
 .privacy-config .btn.selected {
@@ -796,23 +779,18 @@ input[readonly], textarea[readonly] {
     cursor: grab;
 }
 
-.mobile-footer {
-    display: none;
-}
-
-.mobile-footer .link {
+.footer-dock .link {
     position: relative;
     display: inline-block;
     padding-top: 1rem;
-    transition: transform 0.2s ease-out, background-color 0.3s ease-out;
+    padding-bottom: 1rem;
 }
 
-.mobile-footer .link:active {
-    transform: scale(1.1);
+.footer-dock .link.active {
     background-color: rgba(255, 255, 255, 0.2);
-    border-radius: 10px;
 }
 
-.mobile-footer .link.active {
-    background-color: rgba(255, 255, 255, 0.2);
+.member-vue td {
+    padding-top: 1em;
+    padding-bottom: 1em;
 }

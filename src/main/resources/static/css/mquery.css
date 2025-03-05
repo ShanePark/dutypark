@@ -1,17 +1,7 @@
 /* mobile */
 @media (max-width: 991px) {
-
-    #header {
-        height: 6vh;
-    }
-
-    #body {
-        padding: calc(6vh + 0.5rem) 10px 12vh 10px;
-    }
-
-    #footer {
-        height: 12vh;
-        padding-top: 0;
+    .footer-dock {
+        font-size: calc(1.375rem + 1.5vw);
     }
 
     .calendar {
@@ -109,11 +99,8 @@
         padding-bottom: 15px;
         width: 30%;
         background: rgba(var(--bs-dark-rgb), var(--bs-bg-opacity));
-        opacity: 0.95;
-    }
-
-    .member-hover {
-        display: none;
+        opacity: 0.9;
+        z-index: 1;
     }
 
     .navbar .navbar-toggler, .navbar .navbar-brand {
@@ -198,15 +185,7 @@
         font-size: 2em;
     }
 
-    .pc-footer {
-        display: none;
-    }
-
-    .mobile-footer {
-        display: flex;
-    }
-
-    .mobile-footer i {
+    .footer-dock i {
         font-size: 1.5em;
     }
 

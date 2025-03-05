@@ -6,6 +6,7 @@ import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingTask
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
+import org.springframework.core.env.Environment
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime
 import java.util.*
@@ -18,6 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 class ScheduleTimeParsingQueueManager(
     private val worker: ScheduleTimeParsingWorker,
     private val scheduleRepository: ScheduleRepository,
+    private val environment: Environment,
 ) {
     private val log = LoggerFactory.getLogger(ScheduleTimeParsingQueueManager::class.java)
     private val executorService = Executors.newSingleThreadExecutor()
@@ -34,12 +36,19 @@ class ScheduleTimeParsingQueueManager(
     fun init() {
         val allWaitJobs = scheduleRepository.findAllByParsingTimeStatus(WAIT)
         allWaitJobs.forEach { schedule -> addTask(schedule) }
-        log.info("${allWaitJobs.size} schedules are added to the queue.")
+        if (allWaitJobs.isNotEmpty())
+            log.info("${allWaitJobs.size} pending schedules are added to the queue.")
     }
 
     fun addTask(schedule: Schedule) {
-        if (schedule.parsingTimeStatus != WAIT)
+        if (schedule.parsingTimeStatus != WAIT) return
+
+        val activeProfile = environment.activeProfiles[0]
+        if (activeProfile != "op") {
+            log.info("do not add AI task as it's no op profile")
             return
+        }
+
         queue.add(ScheduleTimeParsingTask(schedule.id))
         startWorkIfNeeded()
     }

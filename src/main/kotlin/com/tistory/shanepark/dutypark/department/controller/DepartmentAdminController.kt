@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.department.controller
 
+import com.tistory.shanepark.dutypark.common.domain.dto.PageResponse
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardDepartment
 import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentCreateDto
 import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentDto
@@ -15,7 +16,6 @@ import com.tistory.shanepark.dutypark.duty.batch.service.DutyBatchService
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import jakarta.validation.Valid
 import org.springframework.context.ApplicationContext
-import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
 import org.springframework.http.ResponseEntity
@@ -33,8 +33,9 @@ class DepartmentAdminController(
 ) {
 
     @GetMapping
-    fun findAll(@PageableDefault(page = 0, size = 10) page: Pageable): Page<SimpleDepartmentDto> {
-        return departmentService.findAllWithMemberCount(page)
+    fun findAll(@PageableDefault(page = 0, size = 10) page: Pageable): PageResponse<SimpleDepartmentDto> {
+        val result = departmentService.findAllWithMemberCount(page)
+        return PageResponse(result)
     }
 
     @GetMapping("/{id}")

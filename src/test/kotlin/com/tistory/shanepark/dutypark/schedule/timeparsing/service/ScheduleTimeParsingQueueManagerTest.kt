@@ -16,6 +16,8 @@ import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+import org.springframework.core.env.Environment
 import java.time.LocalDateTime
 
 @ExtendWith(MockitoExtension::class)
@@ -27,12 +29,20 @@ class ScheduleTimeParsingQueueManagerTest {
     @Mock
     lateinit var scheduleRepository: ScheduleRepository
 
+    @Mock
+    lateinit var environment: Environment
+
     @InjectMocks
     lateinit var queueManager: ScheduleTimeParsingQueueManager
 
     @BeforeEach
     fun setUp() {
-        queueManager = ScheduleTimeParsingQueueManager(worker, scheduleRepository)
+        queueManager = ScheduleTimeParsingQueueManager(
+            worker = worker,
+            scheduleRepository = scheduleRepository,
+            environment = environment
+        )
+        whenever(environment.activeProfiles).thenReturn(arrayOf("op"))
     }
 
     @Test

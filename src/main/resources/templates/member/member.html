@@ -2,7 +2,7 @@
         integrity="sha384-l+xbElFSnPZ2rOaPrU//2FF5B4LB8FiX5q4fXYTlfcG4PGpMkE1vcL7kNXI6Cci0"
         crossorigin="anonymous"></script>
 
-<div class="mt-4 member-vue" v-cloak>
+<div class="member-vue" v-cloak>
   <div class="card shadow-sm">
     <div class="card-header text-center bg-primary text-white">
       <h1 class="mb-0">내 정보</h1>
@@ -98,8 +98,12 @@
             <button th:if="${member.hasPassword}" class="btn btn-outline-info btn-sm" @click="changePassword">
               비밀번호 변경
             </button>
-            <a class="btn btn-outline-warning  btn-sm" href="/logout">로그아웃</a>
             <button class="btn btn-outline-danger btn-sm" @click="deleteAccount">회원 탈퇴</button>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" class="gap2">
+            <a class="btn btn-outline-warning w-100" href="/logout">로그아웃</a>
           </td>
         </tr>
         </tbody>
@@ -109,164 +113,164 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const testKey = '962c00be36be55bd0c0b55478cc25149';
-        const opKey = 'fe206dfae05cfafc94806ad67abbcfc1';
-        const curUrl = window.location.href;
-        const curKey = curUrl.includes('localhost') ? testKey : opKey;
-        Kakao.init(curKey);
-        Kakao.isInitialized();
+  document.addEventListener('DOMContentLoaded', function () {
+    const testKey = '962c00be36be55bd0c0b55478cc25149';
+    const opKey = 'fe206dfae05cfafc94806ad67abbcfc1';
+    const curUrl = window.location.href;
+    const curKey = curUrl.includes('localhost') ? testKey : opKey;
+    Kakao.init(curKey);
+    Kakao.isInitialized();
 
-        const app = new Vue({
-            el: '.member-vue',
-            data: {
-                tokens: []
+    const app = new Vue({
+      el: '.member-vue',
+      data: {
+        tokens: []
+      },
+      mounted() {
+        this.load();
+      }, methods: {
+        load: function () {
+          $.ajax({
+            url: '/api/refresh-tokens',
+            type: 'GET',
+            success: function (refreshTokens) {
+              app.tokens = refreshTokens;
             },
-            mounted() {
-                this.load();
-            }, methods: {
-                load: function () {
-                    $.ajax({
-                        url: '/api/refresh-tokens',
-                        type: 'GET',
-                        success: function (refreshTokens) {
-                            app.tokens = refreshTokens;
-                        },
-                        error: function (error) {
-                            console.log(error);
-                        }
-                    })
-                },
-                deleteToken: function (tokenId) {
-                    Swal.fire({
-                        title: '정말 로그아웃 하시겠습니까?',
-                        text: "해당 기기에서 로그아웃 됩니다.",
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#d33',
-                        cancelButtonColor: '#999',
-                        confirmButtonText: '로그아웃',
-                        cancelButtonText: '취소'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            $.ajax({
-                                url: '/api/refresh-tokens/' + tokenId,
-                                type: 'DELETE',
-                                success: function () {
-                                    app.load();
-                                },
-                                error: function (error) {
-                                    console.log(error);
-                                }
-                            })
-                        }
-                    })
-                },
-                changePassword: function () {
-                    Swal.fire({
-                        title: '비밀번호 변경',
-                        html: '<input id="swal-input1" class="swal2-input" placeholder="현재 비밀번호" type="password">' +
-                            '<input id="swal-input2" class="swal2-input" placeholder="변경할 비밀번호" type="password">' +
-                            '<input id="swal-input3" class="swal2-input" placeholder="변경할 비밀번호 확인" type="password">',
-                        focusConfirm: false,
-                        showCancelButton: true,
-                        confirmButtonText: '변경',
-                        cancelButtonText: '취소',
-                        preConfirm: () => {
-                            const currentPassword = Swal.getPopup().querySelector('#swal-input1').value
-                            const newPassword = Swal.getPopup().querySelector('#swal-input2').value
-                            const newPasswordConfirm = Swal.getPopup().querySelector('#swal-input3').value
-                            if (!currentPassword || !newPassword || !newPasswordConfirm) {
-                                Swal.showValidationMessage(`비밀번호를 입력해주세요.`)
-                                return false
-                            }
-                            if (newPassword !== newPasswordConfirm) {
-                                Swal.showValidationMessage(`비밀번호가 일치하지 않습니다.`)
-                                return false
-                            }
-                            if (currentPassword === newPassword) {
-                                Swal.showValidationMessage(`현재 비밀번호와 동일합니다.`)
-                                return false
-                            }
-                            return {currentPassword: currentPassword, newPassword: newPassword}
-                        }
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            const memberId = parseInt("[[${member.id}]]");
-                            result.value.memberId = memberId;
-
-                            $.ajax({
-                                url: '/api/auth/password',
-                                type: 'PUT',
-                                data: JSON.stringify(result.value),
-                                contentType: 'application/json',
-                                success: function () {
-                                    Swal.fire({
-                                        title: '비밀번호가 변경되었습니다. 다시 로그인 해주세요.',
-                                        icon: 'success',
-                                        confirmButtonText: '확인',
-                                    }).then((result) => {
-                                        location.href = '/logout';
-                                    });
-                                },
-                                error: function (error) {
-                                    Swal.fire({
-                                        title: '비밀번호 변경에 실패하였습니다.',
-                                        text: error.responseJSON.message,
-                                        icon: 'error',
-                                        confirmButtonText: '확인',
-                                    })
-                                }
-                            })
-                        }
-                    })
-                }, deleteAccount() {
-                    Swal.fire({
-                        title: '회원 탈퇴',
-                        text: '회원 탈퇴는 관리자에게 문의해주세요.',
-                        icon: 'alert',
-                        confirmButtonText: '확인',
-                    })
-                }, ssoNaver() {
-                    Swal.fire({
-                        title: '네이버 연동',
-                        text: '네이버 연동은 아직 준비중입니다.',
-                        icon: 'info',
-                        confirmButtonText: '확인',
-                    })
-                }, removeSsoKakao() {
-                    // if the member's login method is only kakao, then if the member removes the kakao login, the member will not be able to log in.
-                    Swal.fire({
-                        title: '카카오 연동 해제',
-                        text: '카카오 연동 해제를 위해서는 다른 로그인 방법을 추가해주세요.',
-                        icon: 'info',
-                        confirmButtonText: '확인',
-                    })
-                }, ssoKakao() {
-                    Kakao.Auth.authorize({
-                        redirectUri: window.location.origin + '/api/auth/Oauth2ClientCallback/kakao',
-                        state: JSON.stringify({
-                                login: true,
-                                referer: window.location.href
-                            }
-                        ),
-                    });
-                }
-            }, filters: {
-                formatDate: function (value) {
-                    if (value && value.length > 10) {
-                        return value.substring(0, 10);
-                    }
-                },
-                formatDateTime: function (value) {
-                    if (value && value.length > 19) {
-                        return value.substring(0, 19);
-                    }
-                },
-                fromNow: function (value) {
-                    return dayjs(value).fromNow();
-                }
+            error: function (error) {
+              console.log(error);
             }
-        });
-    })
+          })
+        },
+        deleteToken: function (tokenId) {
+          Swal.fire({
+            title: '정말 로그아웃 하시겠습니까?',
+            text: "해당 기기에서 로그아웃 됩니다.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#999',
+            confirmButtonText: '로그아웃',
+            cancelButtonText: '취소'
+          }).then((result) => {
+            if (result.isConfirmed) {
+              $.ajax({
+                url: '/api/refresh-tokens/' + tokenId,
+                type: 'DELETE',
+                success: function () {
+                  app.load();
+                },
+                error: function (error) {
+                  console.log(error);
+                }
+              })
+            }
+          })
+        },
+        changePassword: function () {
+          Swal.fire({
+            title: '비밀번호 변경',
+            html: '<input id="swal-input1" class="swal2-input" placeholder="현재 비밀번호" type="password">' +
+              '<input id="swal-input2" class="swal2-input" placeholder="변경할 비밀번호" type="password">' +
+              '<input id="swal-input3" class="swal2-input" placeholder="변경할 비밀번호 확인" type="password">',
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: '변경',
+            cancelButtonText: '취소',
+            preConfirm: () => {
+              const currentPassword = Swal.getPopup().querySelector('#swal-input1').value
+              const newPassword = Swal.getPopup().querySelector('#swal-input2').value
+              const newPasswordConfirm = Swal.getPopup().querySelector('#swal-input3').value
+              if (!currentPassword || !newPassword || !newPasswordConfirm) {
+                Swal.showValidationMessage(`비밀번호를 입력해주세요.`)
+                return false
+              }
+              if (newPassword !== newPasswordConfirm) {
+                Swal.showValidationMessage(`비밀번호가 일치하지 않습니다.`)
+                return false
+              }
+              if (currentPassword === newPassword) {
+                Swal.showValidationMessage(`현재 비밀번호와 동일합니다.`)
+                return false
+              }
+              return {currentPassword: currentPassword, newPassword: newPassword}
+            }
+          }).then((result) => {
+            if (result.isConfirmed) {
+              const memberId = parseInt("[[${member.id}]]");
+              result.value.memberId = memberId;
+
+              $.ajax({
+                url: '/api/auth/password',
+                type: 'PUT',
+                data: JSON.stringify(result.value),
+                contentType: 'application/json',
+                success: function () {
+                  Swal.fire({
+                    title: '비밀번호가 변경되었습니다. 다시 로그인 해주세요.',
+                    icon: 'success',
+                    confirmButtonText: '확인',
+                  }).then((result) => {
+                    location.href = '/logout';
+                  });
+                },
+                error: function (error) {
+                  Swal.fire({
+                    title: '비밀번호 변경에 실패하였습니다.',
+                    text: error.responseJSON.message,
+                    icon: 'error',
+                    confirmButtonText: '확인',
+                  })
+                }
+              })
+            }
+          })
+        }, deleteAccount() {
+          Swal.fire({
+            title: '회원 탈퇴',
+            text: '회원 탈퇴는 관리자에게 문의해주세요.',
+            icon: 'alert',
+            confirmButtonText: '확인',
+          })
+        }, ssoNaver() {
+          Swal.fire({
+            title: '네이버 연동',
+            text: '네이버 연동은 아직 준비중입니다.',
+            icon: 'info',
+            confirmButtonText: '확인',
+          })
+        }, removeSsoKakao() {
+          // if the member's login method is only kakao, then if the member removes the kakao login, the member will not be able to log in.
+          Swal.fire({
+            title: '카카오 연동 해제',
+            text: '카카오 연동 해제를 위해서는 다른 로그인 방법을 추가해주세요.',
+            icon: 'info',
+            confirmButtonText: '확인',
+          })
+        }, ssoKakao() {
+          Kakao.Auth.authorize({
+            redirectUri: window.location.origin + '/api/auth/Oauth2ClientCallback/kakao',
+            state: JSON.stringify({
+                login: true,
+                referer: window.location.href
+              }
+            ),
+          });
+        }
+      }, filters: {
+        formatDate: function (value) {
+          if (value && value.length > 10) {
+            return value.substring(0, 10);
+          }
+        },
+        formatDateTime: function (value) {
+          if (value && value.length > 19) {
+            return value.substring(0, 19);
+          }
+        },
+        fromNow: function (value) {
+          return dayjs(value).fromNow();
+        }
+      }
+    });
+  })
 </script>

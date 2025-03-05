@@ -1,10 +1,10 @@
 package com.tistory.shanepark.dutypark.admin.controller
 
+import com.tistory.shanepark.dutypark.common.domain.dto.PageResponse
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.security.domain.dto.RefreshTokenDto
-import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.data.web.PageableDefault
@@ -31,8 +31,8 @@ class AdminController(
         @SortDefault(sort = ["name"], direction = Sort.Direction.ASC)
         page: Pageable,
         @RequestParam(required = false, defaultValue = "") name: String,
-    ): Page<MemberDto> {
-        return memberService.searchMembers(page, name)
+    ): PageResponse<MemberDto> {
+        return PageResponse(memberService.searchMembers(page, name))
     }
 
     @GetMapping("/members-all")
