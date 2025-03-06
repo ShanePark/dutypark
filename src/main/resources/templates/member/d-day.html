@@ -1,4 +1,8 @@
-<div class="vue-dday" v-cloak v-show="isLoaded">
+<div class="vue-dday card" v-cloak v-show="isLoaded">
+  <div class="card-header text-center bg-secondary text-white fw-bold">
+    디데이
+  </div>
+
   <div class="d-day-list">
     <div v-if="dDays.length == 0" class="empty card shadow-sm border-0 p-4 text-center">
       <div class="empty-icon mb-3">
@@ -60,189 +64,189 @@
 </div>
 
 <script>
-  $(function () {
-    const body = $('#body');
+    $(function () {
+        const body = $('#body');
 
-    const app = new Vue({
-      el: '.vue-dday',
-      data: {
-        dDays: [],
-        isLoaded: false,
-      },
-      mounted() {
-        this.load();
-      }, methods: {
-        load: function () {
-          $.ajax({
-            url: '/api/dday',
-            type: 'GET',
-            success: function (response) {
-              app.dDays = response;
-              for (const dDay of app.dDays) {
-                dDay.editMode = false;
-                if (dDay.calc === 0) {
-                  dDay.dDayText = 'D-Day';
-                } else if (dDay.calc < 0) {
-                  dDay.dDayText = 'D+' + -dDay.calc;
-                } else {
-                  dDay.dDayText = 'D-' + dDay.calc;
-                }
-              }
-              app.isLoaded = true;
+        const app = new Vue({
+            el: '.vue-dday',
+            data: {
+                dDays: [],
+                isLoaded: false,
             },
-            error: function (error) {
-              Swal.fire({
-                title: '실패',
-                text: '디데이 목록을 불러오는데 실패하였습니다.',
-                icon: 'error',
-                confirmButtonText: '확인'
-              })
-            }
-          })
-        },
-        add: function () {
-          let modal = $('.add_modal').clone();
-
-          const tzOffset = (new Date()).getTimezoneOffset() * 60000; //offset in milliseconds
-          modal.find('input[name="date"]').val((new Date(Date.now() - tzOffset)).toISOString().slice(0, 10));
-          modal.attr('hidden', false)
-
-          Swal.fire({
-            title: '디데이 추가',
-            html: modal,
-            cancelButtonText: '닫기',
-            confirmButtonText: '추가',
-            showCancelButton: true,
-            preConfirm: () => {
-              const title = Swal.getPopup().querySelector('input[name="title"]').value
-              const date = Swal.getPopup().querySelector('input[name="date"]').value
-              const isPrivate = Swal.getPopup().querySelector('input[name="isPrivate"]').checked
-              if (!title || !date) {
-                Swal.showValidationMessage(`모든 항목을 입력해주세요.`)
-              }
-              return {title: title, date: date, isPrivate: isPrivate}
-            }
-          }).then((result) => {
-            if (result.isConfirmed) {
-              body.waitMe();
-              $.ajax({
-                url: '/api/dday',
-                type: 'POST',
-                data: JSON.stringify(result.value),
-                contentType: 'application/json',
-                success: function (response) {
-                  Swal.fire({
-                    title: '성공',
-                    text: '디데이가 추가되었습니다.',
-                    icon: 'success',
-                    confirmButtonText: '확인'
-                  })
-                  app.load();
+            mounted() {
+                this.load();
+            }, methods: {
+                load: function () {
+                    $.ajax({
+                        url: '/api/dday',
+                        type: 'GET',
+                        success: function (response) {
+                            app.dDays = response;
+                            for (const dDay of app.dDays) {
+                                dDay.editMode = false;
+                                if (dDay.calc === 0) {
+                                    dDay.dDayText = 'D-Day';
+                                } else if (dDay.calc < 0) {
+                                    dDay.dDayText = 'D+' + -dDay.calc;
+                                } else {
+                                    dDay.dDayText = 'D-' + dDay.calc;
+                                }
+                            }
+                            app.isLoaded = true;
+                        },
+                        error: function (error) {
+                            Swal.fire({
+                                title: '실패',
+                                text: '디데이 목록을 불러오는데 실패하였습니다.',
+                                icon: 'error',
+                                confirmButtonText: '확인'
+                            })
+                        }
+                    })
                 },
-                error: function (error) {
-                  Swal.fire({
-                    title: '실패',
-                    html: '디데이 추가에 실패하였습니다. <br/>에러메시지: ' + error.responseJSON.errors[0].defaultMessage,
-                    icon: 'error',
-                    confirmButtonText: '확인'
-                  })
-                }, complete: function () {
-                  body.waitMe('hide');
+                add: function () {
+                    let modal = $('.add_modal').clone();
+
+                    const tzOffset = (new Date()).getTimezoneOffset() * 60000; //offset in milliseconds
+                    modal.find('input[name="date"]').val((new Date(Date.now() - tzOffset)).toISOString().slice(0, 10));
+                    modal.attr('hidden', false)
+
+                    Swal.fire({
+                        title: '디데이 추가',
+                        html: modal,
+                        cancelButtonText: '닫기',
+                        confirmButtonText: '추가',
+                        showCancelButton: true,
+                        preConfirm: () => {
+                            const title = Swal.getPopup().querySelector('input[name="title"]').value
+                            const date = Swal.getPopup().querySelector('input[name="date"]').value
+                            const isPrivate = Swal.getPopup().querySelector('input[name="isPrivate"]').checked
+                            if (!title || !date) {
+                                Swal.showValidationMessage(`모든 항목을 입력해주세요.`)
+                            }
+                            return {title: title, date: date, isPrivate: isPrivate}
+                        }
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            body.waitMe();
+                            $.ajax({
+                                url: '/api/dday',
+                                type: 'POST',
+                                data: JSON.stringify(result.value),
+                                contentType: 'application/json',
+                                success: function (response) {
+                                    Swal.fire({
+                                        title: '성공',
+                                        text: '디데이가 추가되었습니다.',
+                                        icon: 'success',
+                                        confirmButtonText: '확인'
+                                    })
+                                    app.load();
+                                },
+                                error: function (error) {
+                                    Swal.fire({
+                                        title: '실패',
+                                        html: '디데이 추가에 실패하였습니다. <br/>에러메시지: ' + error.responseJSON.errors[0].defaultMessage,
+                                        icon: 'error',
+                                        confirmButtonText: '확인'
+                                    })
+                                }, complete: function () {
+                                    body.waitMe('hide');
+                                }
+                            })
+                        }
+                    })
+                },
+                saveEdit: function (event) {
+                    const target = event.target;
+                    const item = target.closest('.d-day-item');
+                    const dDay = {
+                        id: item.attributes['data-id'].value,
+                        title: item.querySelector('input[name="title"]').value,
+                        date: item.querySelector('input[name="date"]').value,
+                        isPrivate: item.querySelector('input[name="isPrivate"]').checked
+                    }
+                    body.waitMe();
+                    $.ajax({
+                        url: '/api/dday/' + dDay.id,
+                        type: 'PUT',
+                        data: JSON.stringify(dDay),
+                        contentType: 'application/json',
+                        success: function (response) {
+                            app.load();
+                        },
+                        error: function (error) {
+                            Swal.fire({
+                                title: '실패',
+                                html: '디데이 수정에 실패하였습니다.<br/>에러메시지: ' + error.responseJSON.errors[0].defaultMessage,
+                                icon: 'error',
+                                confirmButtonText: '확인'
+                            })
+                        }, complete: function () {
+                            body.waitMe('hide');
+                        }
+                    })
+                },
+                editMode: function (dDay) {
+                    for (const dDay of app.dDays) {
+                        if (dDay.editMode) {
+                            app.cancelEdit(dDay);
+                            break;
+                        }
+                    }
+
+                    dDay.editMode = true;
+                    // when editMode is changed, vue doesn't update the dom
+                    // So, need to update the dom by changing the title
+                    const title = dDay.title;
+                    dDay.title = '';
+                    dDay.title = title;
+                },
+                cancelEdit: function (dDay) {
+                    dDay.editMode = false;
+                    const title = dDay.title;
+                    dDay.title = '';
+                    dDay.title = title;
+                },
+                remove: function (dDay) {
+                    Swal.fire({
+                        title: '디데이 삭제',
+                        text: '[' + dDay.title + '] ' + rulChecker(dDay.title) + ' 정말로 삭제하시겠습니까?',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: '삭제',
+                        cancelButtonText: '취소'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            body.waitMe();
+                            $.ajax({
+                                url: '/api/dday/' + dDay.id,
+                                type: 'DELETE',
+                                success: function (response) {
+                                    Swal.fire({
+                                        title: '성공',
+                                        text: '디데이가 삭제되었습니다.',
+                                        icon: 'success',
+                                        confirmButtonText: '확인'
+                                    })
+                                    app.load();
+                                },
+                                error: function (error) {
+                                    Swal.fire({
+                                        title: '실패',
+                                        text: '디데이 삭제에 실패하였습니다.',
+                                        icon: 'error',
+                                        confirmButtonText: '확인'
+                                    })
+                                },
+                                complete: function () {
+                                    body.waitMe('hide');
+                                }
+                            })
+                        }
+                    })
                 }
-              })
             }
-          })
-        },
-        saveEdit: function (event) {
-          const target = event.target;
-          const item = target.closest('.d-day-item');
-          const dDay = {
-            id: item.attributes['data-id'].value,
-            title: item.querySelector('input[name="title"]').value,
-            date: item.querySelector('input[name="date"]').value,
-            isPrivate: item.querySelector('input[name="isPrivate"]').checked
-          }
-          body.waitMe();
-          $.ajax({
-            url: '/api/dday/' + dDay.id,
-            type: 'PUT',
-            data: JSON.stringify(dDay),
-            contentType: 'application/json',
-            success: function (response) {
-              app.load();
-            },
-            error: function (error) {
-              Swal.fire({
-                title: '실패',
-                html: '디데이 수정에 실패하였습니다.<br/>에러메시지: ' + error.responseJSON.errors[0].defaultMessage,
-                icon: 'error',
-                confirmButtonText: '확인'
-              })
-            }, complete: function () {
-              body.waitMe('hide');
-            }
-          })
-        },
-        editMode: function (dDay) {
-          for (const dDay of app.dDays) {
-            if (dDay.editMode) {
-              app.cancelEdit(dDay);
-              break;
-            }
-          }
-
-          dDay.editMode = true;
-          // when editMode is changed, vue doesn't update the dom
-          // So, need to update the dom by changing the title
-          const title = dDay.title;
-          dDay.title = '';
-          dDay.title = title;
-        },
-        cancelEdit: function (dDay) {
-          dDay.editMode = false;
-          const title = dDay.title;
-          dDay.title = '';
-          dDay.title = title;
-        },
-        remove: function (dDay) {
-          Swal.fire({
-            title: '디데이 삭제',
-            text: '[' + dDay.title + '] ' + rulChecker(dDay.title) + ' 정말로 삭제하시겠습니까?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: '삭제',
-            cancelButtonText: '취소'
-          }).then((result) => {
-            if (result.isConfirmed) {
-              body.waitMe();
-              $.ajax({
-                url: '/api/dday/' + dDay.id,
-                type: 'DELETE',
-                success: function (response) {
-                  Swal.fire({
-                    title: '성공',
-                    text: '디데이가 삭제되었습니다.',
-                    icon: 'success',
-                    confirmButtonText: '확인'
-                  })
-                  app.load();
-                },
-                error: function (error) {
-                  Swal.fire({
-                    title: '실패',
-                    text: '디데이 삭제에 실패하였습니다.',
-                    icon: 'error',
-                    confirmButtonText: '확인'
-                  })
-                },
-                complete: function () {
-                  body.waitMe('hide');
-                }
-              })
-            }
-          })
-        }
-      }
-    });
-  })
+        });
+    })
 </script>

@@ -2,6 +2,10 @@
     --hover-background-color: #f8f9fa;
 }
 
+html {
+    overflow-y: scroll;
+}
+
 #header div.header {
     margin: 0 auto;
     max-width: 64rem;
@@ -99,7 +103,7 @@ body a:hover {
 .day-grid .DAY {
     border: 1px solid black;
     word-break: break-all;
-    min-height: 10vw;
+    min-height: 9vw;
     padding: 0 0 5px;
 }
 
@@ -428,6 +432,7 @@ a.homeButton:hover {
 }
 
 .schedules .schedule .schedule-content {
+    line-height: 1.5;
     margin: 0;
     padding: 0;
 }
