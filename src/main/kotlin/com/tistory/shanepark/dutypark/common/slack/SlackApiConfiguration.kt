@@ -6,6 +6,7 @@ import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifierSender
 import net.gpedro.integrations.slack.SlackApi
 import net.gpedro.integrations.slack.SlackMessage
 import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -19,7 +20,7 @@ class SlackApiConfiguration(
     val slackToken: String
 ) {
 
-    private val log: Logger = org.slf4j.LoggerFactory.getLogger(this.javaClass)
+    private val log: Logger = LoggerFactory.getLogger(this.javaClass)
 
     @Bean("slackTaskExecutor")
     fun threadPoolTaskExecutor(): TaskExecutor {

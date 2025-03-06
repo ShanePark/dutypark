@@ -6,6 +6,7 @@ import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
@@ -18,7 +19,7 @@ class DutyViewController(
     val memberService: MemberService,
     val friendService: FriendService,
 ) : ViewController() {
-    val log: Logger = org.slf4j.LoggerFactory.getLogger(this.javaClass)
+    val log: Logger = LoggerFactory.getLogger(this.javaClass)
 
     @GetMapping("/duty/{id}")
     fun retrieveMemberDuty(

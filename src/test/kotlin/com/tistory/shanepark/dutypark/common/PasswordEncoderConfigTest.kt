@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.security.crypto.password.PasswordEncoder
 
@@ -12,7 +13,7 @@ internal class PasswordEncoderConfigTest : DutyparkIntegrationTest() {
     @Autowired
     lateinit var passwordEncoder: PasswordEncoder
 
-    val log: Logger = org.slf4j.LoggerFactory.getLogger(this.javaClass)
+    val log: Logger = LoggerFactory.getLogger(this.javaClass)
     val pass = "1234"
 
     @Test

@@ -11,6 +11,7 @@ import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationContext
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
@@ -23,7 +24,7 @@ class DutyBatchController(
     private val memberService: MemberService,
     private val applicationContext: ApplicationContext,
 ) {
-    val log: Logger = org.slf4j.LoggerFactory.getLogger(DutyBatchController::class.java)
+    val log: Logger = LoggerFactory.getLogger(DutyBatchController::class.java)
 
     @GetMapping("/templates")
     fun getTemplates(
@@ -48,6 +49,7 @@ class DutyBatchController(
 
         val dutyBatchService = applicationContext.getBean(dutyBatchTemplate.batchServiceClass) as DutyBatchService
         return try {
+            log.info("batch duty upload by $loginMember for member $memberId. year=$year, month=$month")
             dutyBatchService.batchUploadMember(memberId = memberId, file = file, yearMonth = YearMonth.of(year, month))
         } catch (e: DutyBatchException) {
             DutyBatchResult.fail(e.batchErrorMessage)

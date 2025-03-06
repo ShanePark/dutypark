@@ -9,6 +9,7 @@ import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.RefreshTokenDto
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
@@ -19,7 +20,7 @@ class RefreshTokenService(
     private val refreshTokenRepository: RefreshTokenRepository,
     private val jwtConfig: JwtConfig,
 ) {
-    private val log: Logger = org.slf4j.LoggerFactory.getLogger(this.javaClass)
+    private val log: Logger = LoggerFactory.getLogger(this.javaClass)
 
     @Scheduled(cron = "0 0 0 * * *")
     fun revokeExpiredRefreshTokens() {
@@ -39,7 +40,7 @@ class RefreshTokenService(
     fun deleteRefreshToken(loginMember: LoginMember, id: Long) {
         val refreshToken = refreshTokenRepository.findById(id).orElseThrow()
         if (!loginMember.isAdmin && refreshToken.member.id != loginMember.id) {
-            log.warn("No authority to delete refresh token. loginMemberId:${loginMember.id}, refreshTokenId:$id")
+            log.warn("No authority to delete refresh token. loginMemberId:$loginMember, refreshTokenId:$id")
             throw DutyparkAuthException("No authority to delete refresh token.")
         }
         refreshTokenRepository.delete(refreshToken)

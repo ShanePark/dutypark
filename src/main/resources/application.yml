@@ -51,7 +51,7 @@ management:
         include: "health, metrics, prometheus, shutdown"
   endpoint:
     shutdown:
-      enabled: true
+      access: unrestricted
 
 jwt:
   secret: "WvQiOAms2XFyW/UnmfO/9xL24ch4IlfUikP9QohMuso=" # Change it on production
@@ -70,6 +70,7 @@ dutypark:
     minimum-interval: 60
   data-go-kr:
     service-key: "DECODED_SERVICE_KEY_HERE"
+  log.path: "/tmp/logs"
 
 oauth:
   kakao:

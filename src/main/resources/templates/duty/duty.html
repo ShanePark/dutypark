@@ -7,8 +7,8 @@
 <div class="duty-vue" v-cloak th:if="${visible}">
   <div class="todo-container" v-if="isMyCalendar">
     <div class="d-flex">
-      <div id="add-todo-btn" v-on:click="addTodoModal()">
-        <span>할일 + <small v-if="todos.length>0" v-text="'(' + todos.length + ')'"></small></span>
+      <div id="add-todo-btn" class="m-0 cursor-pointer fs-2" v-on:click="addTodoModal()">
+        <i class="bi bi-journal-plus"></i><small class="ms-2" v-if="todos.length>0" v-text="todos.length"></small>
       </div>
       <div class="d-flex flex-row" id="todo-list-container">
         <div class="d-flex flex-row" id="todo-list">
@@ -22,7 +22,7 @@
       </div>
     </div>
   </div>
-  <div th:if="${member.department}" class="calendar" th:attr="data-member_id=${member.id}">
+  <div th:if="${member.department}" class="calendar mt-3" th:attr="data-member_id=${member.id}">
     <div class="month-control row">
       <div class="month-control-left col-md-3">
         <button class="today-button info" v-on:click="today()"><span>Today</span><i
@@ -121,11 +121,6 @@
                 class="edit-btn btn btn-warning"
                 v-on:click="batchEditMode=true;">편집모드
         </button>
-        <button v-if="isMyCalendar"
-                class="btn btn-outline-dark"
-                v-on:click="privacyPopup()"
-                v-text="'공개대상:' + privacyLabel"
-        ></button>
       </div>
     </div>
     <div class="day-of-the-week row-7">
@@ -205,35 +200,6 @@
   </div>
   <div th:if="!${member.department}" class="no-department p-5">
     <h3>어느 부서에도 소속되어 있지 않습니다.</h3>
-  </div>
-
-  <div id="privacy-config-modal" class="modal fade" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">시간표 공개 대상 설정</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <p>내 시간표를 공개할 범위를 설정하세요.</p>
-          <p>선택시 변경사항이 즉시 저장됩니다.</p>
-          <div class="privacy-config btn-group" role="group" aria-label="Privacy setting">
-            <button type="button" class="btn btn-success" :class="{'selected': calendarVisibility=='PUBLIC'}"
-                    data-privacy="PUBLIC" v-on:click="setPrivacy">누구나
-            </button>
-            <button type="button" class="btn btn-warning" :class="{'selected': calendarVisibility=='FRIENDS'}"
-                    data-privacy="FRIENDS" v-on:click="setPrivacy">친구만
-            </button>
-            <button type="button" class="btn btn-danger" :class="{'selected': calendarVisibility=='PRIVATE'}"
-                    data-privacy="PRIVATE" v-on:click="setPrivacy">비공개
-            </button>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
-        </div>
-      </div>
-    </div>
   </div>
 
   <div id="todo-details-modal" class="modal fade" tabindex="-1" aria-hidden="true">
@@ -790,14 +756,6 @@
                         return (index) => {
                             return this.schedulesByDays[index] && this.schedulesByDays[index].length > 0;
                         }
-                    },
-                    privacyLabel() {
-                        return {
-                            PUBLIC: '누구나',
-                            FRIENDS: '친구만',
-                            FAMILY: '가족에게만',
-                            PRIVATE: '비공개',
-                        }[this.calendarVisibility];
                     },
                     startPage() {
                         const currentPage = this.searchResults.pageable.pageNumber + 1;
@@ -1403,35 +1361,6 @@
                         });
                     }
                     ,
-                    privacyPopup() {
-                        $('#privacy-config-modal').modal('show');
-                    }
-                    ,
-                    setPrivacy(event) {
-                        document.querySelector('.privacy-config .btn.selected').classList.remove('selected');
-                        const privacy = event.target.getAttribute('data-privacy');
-
-                        fetch(`/api/members/${memberId}/visibility`, {
-                            method: 'PUT',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                visibility: privacy
-                            })
-                        }).then(response => {
-                            if (!response.ok) {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: '공개 대상 설정 변경에 실패했습니다.',
-                                    showConfirmButton: false,
-                                    timer: sweetAlTimer
-                                });
-                                return;
-                            }
-                            app.calendarVisibility = privacy;
-                        });
-                    },
                     addTodoModal() {
                         const modal = document.getElementById('add-todo-modal');
                         modal.querySelector('.todo-title').value = '';

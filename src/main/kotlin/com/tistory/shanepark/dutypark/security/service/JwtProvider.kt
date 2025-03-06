@@ -9,6 +9,8 @@ import io.jsonwebtoken.*
 import io.jsonwebtoken.io.Decoders
 import io.jsonwebtoken.security.Keys
 import io.jsonwebtoken.security.SecurityException
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.security.Key
 import java.util.*
@@ -20,7 +22,7 @@ class JwtProvider(
 ) {
     private val key: Key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtConfig.secret))
     private val tokenValidityInMilliseconds: Long = 1000L * jwtConfig.tokenValidityInSeconds
-    private val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(JwtProvider::class.java)
+    private val log: Logger = LoggerFactory.getLogger(JwtProvider::class.java)
 
     fun createToken(member: Member): String {
 

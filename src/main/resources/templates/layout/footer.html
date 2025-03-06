@@ -21,36 +21,36 @@
     <span>디데이</span>
   </a>
   <a href="/member" class="link col-3" data-link="/member">
-    <i class="bi bi-person"></i>
+    <i class="bi bi-gear-fill"></i>
     <br/>
-    <span>내 정보</span>
+    <span>설정</span>
   </a>
 </div>
 
 <script>
-    const currentPath = window.location.pathname;
-    const loginMemberId = parseInt("[[${loginMember?.id}]]");
-    switch (currentPath) {
-        case '/':
-            document.querySelector('.footer-dock .link[data-link="/"]').classList.add('active');
-            break;
-        case '/member':
-            document.querySelector('.footer-dock .link[data-link="/member"]').classList.add('active');
-            break;
-        case '/member/d-day':
-            document.querySelector('.footer-dock .link[data-link="member/d-day"]').classList.add('active');
-            break;
-        case '/duty/' + loginMemberId:
-            document.querySelector('.footer-dock .link[data-link="/duty"]').classList.add('active');
-            break;
-    }
+  const currentPath = window.location.pathname;
+  const loginMemberId = parseInt("[[${loginMember?.id}]]");
+  switch (currentPath) {
+    case '/':
+      document.querySelector('.footer-dock .link[data-link="/"]').classList.add('active');
+      break;
+    case '/member':
+      document.querySelector('.footer-dock .link[data-link="/member"]').classList.add('active');
+      break;
+    case '/member/d-day':
+      document.querySelector('.footer-dock .link[data-link="member/d-day"]').classList.add('active');
+      break;
+    case '/duty/' + loginMemberId:
+      document.querySelector('.footer-dock .link[data-link="/duty"]').classList.add('active');
+      break;
+  }
 
-    document.querySelector('.footer-dock').addEventListener('click', function (event) {
-        const target = event.target.closest('a.link');
-        if (target) {
-            target.classList.add('active');
-            event.preventDefault();
-            window.location.href = target.getAttribute('href');
-        }
-    });
+  document.querySelector('.footer-dock').addEventListener('click', function (event) {
+    const target = event.target.closest('a.link');
+    if (target) {
+      target.classList.add('active');
+      event.preventDefault();
+      window.location.href = target.getAttribute('href');
+    }
+  });
 </script>

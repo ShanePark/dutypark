@@ -1,163 +1,149 @@
 <h1>Active Refresh Tokens</h1>
 <div class="refresh-tokens" v-cloak>
-    <div v-for="member in members">
-        <table class="table table-striped">
-            <colgroup>
-                <col style="width: 60px;">
-                <col style="width: 150px;">
-                <col style="width: 150px;">
-                <col style="width: 200px;">
-                <col style="width: 120px;">
-                <col style="width: 150px;">
-            </colgroup>
-            <thead>
-            <tr>
-                <th class="p-3" colspan="4" style="text-align: center; font-size:1.3em;">
-                    {{ member.name }}
-                </th>
-                <th colspan="1">
-                    <button class="btn btn-outline-warning btn-sm" @click="changePassword(member)">Change Password
-                    </button>
-                </th>
-            </tr>
-            <tr>
-                <th></th>
-                <th>Last active</th>
-                <th>Ip</th>
-                <th>Device</th>
-                <th>Browser</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr v-for="(token, index) in member.tokens">
-                <td>{{ index+1 }}</td>
-                <td>{{ token.lastUsed | fromNow }}</td>
-                <td>{{ token.remoteAddr}}</td>
-                <td>{{ token.userAgent ? token.userAgent.device : '' }}</td>
-                <td>{{ token.userAgent ? token.userAgent.browser : '' }}</td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
+  <div v-for="member in members">
+    <table class="table table-striped">
+      <colgroup>
+        <col style="width: 60px;">
+        <col style="width: 150px;">
+        <col style="width: 150px;">
+        <col style="width: 200px;">
+        <col style="width: 120px;">
+        <col style="width: 150px;">
+      </colgroup>
+      <thead>
+      <tr>
+        <th class="p-3" colspan="4" style="text-align: center; font-size:1.3em;">
+          {{ member.name }}
+        </th>
+        <th colspan="1">
+          <button class="btn btn-outline-warning btn-sm" @click="changePassword(member)">Change Password
+          </button>
+        </th>
+      </tr>
+      <tr>
+        <th></th>
+        <th>Last active</th>
+        <th>Ip</th>
+        <th>Device</th>
+        <th>Browser</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr v-for="(token, index) in member.tokens">
+        <td>{{ index+1 }}</td>
+        <td>{{ token.lastUsed | fromNow }}</td>
+        <td>{{ token.remoteAddr}}</td>
+        <td>{{ token.userAgent ? token.userAgent.device : '' }}</td>
+        <td>{{ token.userAgent ? token.userAgent.browser : '' }}</td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <script>
-    $(function () {
-        const app = new Vue({
-            el: '.refresh-tokens',
-            data: {
-                members: []
+  $(function () {
+    const app = new Vue({
+      el: '.refresh-tokens',
+      data: {
+        members: []
+      },
+      async mounted() {
+        await this.load();
+      }, methods: {
+        load: async function () {
+          await $.ajax({
+            url: '/admin/api/members-all',
+            type: 'GET',
+            success: function (members) {
+              members.forEach(member => {
+                member.tokens = [];
+                app.members.push(member);
+              });
             },
-            async mounted() {
-                await this.load();
-            }, methods: {
-                load: async function () {
-                    await $.ajax({
-                        url: '/admin/api/members-all',
-                        type: 'GET',
-                        success: function (members) {
-                            members.forEach(member => {
-                                member.tokens = [];
-                                app.members.push(member);
-                            });
-                        },
-                    })
+          })
 
-                    await $.ajax({
-                        url: '/admin/api/refresh-tokens',
-                        type: 'GET',
-                        success: function (refreshTokens) {
-                            const map = new Map();
-                            for (const refreshToken of refreshTokens) {
-                                if (map.has(refreshToken.memberId)) {
-                                    map.get(refreshToken.memberId).push(refreshToken);
-                                } else {
-                                    map.set(refreshToken.memberId, [refreshToken]);
-                                }
-                            }
-                            map.forEach((value, key) => {
-                                const member = app.members.find(member => member.id === value[0].memberId);
-                                member.tokens = value;
-                            });
-                            // sort members by last active
-                            app.members.sort((a, b) => {
-                                if (a.tokens.length === 0) {
-                                    return 1;
-                                } else if (b.tokens.length === 0) {
-                                    return -1;
-                                } else {
-                                    return dayjs(b.tokens[0].lastUsed).diff(dayjs(a.tokens[0].lastUsed));
-                                }
-                            });
-                        },
-                        error: function (error) {
-                            console.log(error);
-                        }
-                    })
-                },
-                changePassword: function (member) {
-                    Swal.fire({
-                        title: 'Change ' + member.name + '\'s password',
-                        html: '<input id="swal-input1" class="swal2-input" placeholder="New Password" type="password">' +
-                            '<input id="swal-input2" class="swal2-input" placeholder="Confirm Password" type="password">',
-                        focusConfirm: false,
-                        preConfirm: () => {
-                            const newPassword = Swal.getPopup().querySelector('#swal-input1').value;
-                            const confirmPassword = Swal.getPopup().querySelector('#swal-input2').value;
-                            if (!newPassword || !confirmPassword) {
-                                Swal.showValidationMessage(`Please enter new password and confirm password`);
-                                return false;
-                            } else if (newPassword !== confirmPassword) {
-                                Swal.showValidationMessage(`Passwords do not match`);
-                                return false;
-                            }
-                            return {
-                                memberId: member.id,
-                                newPassword: newPassword,
-                            }
-                        }
-                    }).then((result) => {
-                        if (!result.isConfirmed) {
-                            return;
-                        }
-                        $.ajax({
-                            url: '/api/auth/password',
-                            type: 'PUT',
-                            data: JSON.stringify(result.value),
-                            contentType: 'application/json',
-                            success: function () {
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Password changed successfully',
-                                    showConfirmButton: false,
-                                    timer: 1500
-                                })
-                            },
-                            error: function (error) {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Oops...',
-                                    text: error.responseJSON.message
-                                })
-                            }
-                        })
-                    })
+          await $.ajax({
+            url: '/admin/api/refresh-tokens',
+            type: 'GET',
+            success: function (refreshTokens) {
+              const map = new Map();
+              for (const refreshToken of refreshTokens) {
+                if (map.has(refreshToken.memberId)) {
+                  map.get(refreshToken.memberId).push(refreshToken);
+                } else {
+                  map.set(refreshToken.memberId, [refreshToken]);
                 }
-            }, filters: {
-                formatDate: function (value) {
-                    if (value && value.length > 10) {
-                        return value.substring(0, 10);
-                    }
-                },
-                formatDateTime: function (value) {
-                    if (value && value.length > 19) {
-                        return value.substring(0, 19);
-                    }
-                },
-                fromNow: function (value) {
-                    return dayjs(value).fromNow();
+              }
+              map.forEach((value, key) => {
+                const member = app.members.find(member => member.id === value[0].memberId);
+                member.tokens = value;
+              });
+              // sort members by last active
+              app.members.sort((a, b) => {
+                if (a.tokens.length === 0) {
+                  return 1;
+                } else if (b.tokens.length === 0) {
+                  return -1;
+                } else {
+                  return dayjs(b.tokens[0].lastUsed).diff(dayjs(a.tokens[0].lastUsed));
                 }
+              });
+            },
+            error: function (error) {
+              console.log(error);
             }
-        });
+          })
+        },
+        changePassword: function (member) {
+          Swal.fire({
+            title: 'Change ' + member.name + '\'s password',
+            html: '<input id="swal-input1" class="swal2-input" placeholder="New Password" type="password">' +
+              '<input id="swal-input2" class="swal2-input" placeholder="Confirm Password" type="password">',
+            focusConfirm: false,
+            preConfirm: () => {
+              const newPassword = Swal.getPopup().querySelector('#swal-input1').value;
+              const confirmPassword = Swal.getPopup().querySelector('#swal-input2').value;
+              if (!newPassword || !confirmPassword) {
+                Swal.showValidationMessage(`Please enter new password and confirm password`);
+                return false;
+              } else if (newPassword !== confirmPassword) {
+                Swal.showValidationMessage(`Passwords do not match`);
+                return false;
+              }
+              return {
+                memberId: member.id,
+                newPassword: newPassword,
+              }
+            }
+          }).then((result) => {
+            if (!result.isConfirmed) {
+              return;
+            }
+            $.ajax({
+              url: '/api/auth/password',
+              type: 'PUT',
+              data: JSON.stringify(result.value),
+              contentType: 'application/json',
+              success: function () {
+                Swal.fire({
+                  icon: 'success',
+                  title: 'Password changed successfully',
+                  showConfirmButton: false,
+                  timer: 1500
+                })
+              },
+              error: function (error) {
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Oops...',
+                  text: error.responseJSON.message
+                })
+              }
+            })
+          })
+        }
+      }
     });
+  });
 </script>

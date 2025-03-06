@@ -12,4 +12,9 @@ data class LoginMember(
         const val ATTR_NAME: String = "loginMember"
     }
 
+    override fun toString(): String {
+        return "${name}(${id})"
+    }
+
+
 }

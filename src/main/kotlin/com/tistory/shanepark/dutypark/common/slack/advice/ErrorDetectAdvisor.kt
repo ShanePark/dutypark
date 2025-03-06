@@ -8,6 +8,7 @@ import net.gpedro.integrations.slack.SlackMessage
 import org.apache.catalina.connector.ClientAbortException
 import org.apache.coyote.CloseNowException
 import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.web.HttpRequestMethodNotSupportedException
 import org.springframework.web.bind.annotation.ControllerAdvice
@@ -21,7 +22,7 @@ import java.util.*
 class ErrorDetectAdvisor(
     private val slackNotifier: SlackNotifier,
 ) {
-    val log: Logger = org.slf4j.LoggerFactory.getLogger(this.javaClass)
+    val log: Logger = LoggerFactory.getLogger(this.javaClass)
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException::class)
     @ResponseBody

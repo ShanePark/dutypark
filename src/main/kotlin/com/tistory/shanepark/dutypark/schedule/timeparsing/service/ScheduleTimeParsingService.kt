@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingRequest
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingResponse
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.model.ChatModel
 import org.springframework.stereotype.Service
@@ -14,7 +16,7 @@ class ScheduleTimeParsingService(
     private val objectMapper: ObjectMapper,
 ) {
     private val chatClient = ChatClient.builder(chatModel).build()
-    private val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(ScheduleTimeParsingService::class.java)
+    private val log: Logger = LoggerFactory.getLogger(ScheduleTimeParsingService::class.java)
 
     fun parseScheduleTime(request: ScheduleTimeParsingRequest): ScheduleTimeParsingResponse {
         val prompt = generatePrompt(request)

@@ -6,6 +6,7 @@ import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import jakarta.servlet.http.Cookie
 import org.junit.jupiter.api.Test
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.http.MediaType
@@ -23,7 +24,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
     @Autowired
     lateinit var jwtConfig: JwtConfig
 
-    private val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(AuthViewControllerTest::class.java)
+    private val log: org.slf4j.Logger = LoggerFactory.getLogger(AuthViewControllerTest::class.java)
     private val testPass = TestData.testPass
 
     @Test

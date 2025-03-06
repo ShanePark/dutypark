@@ -7,6 +7,7 @@ import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.PasswordChangeDto
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import jakarta.servlet.http.HttpServletRequest
+import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
@@ -16,7 +17,7 @@ import org.springframework.web.bind.annotation.*
 class AuthController(
     private val authService: AuthService,
 ) {
-    private val log = org.slf4j.LoggerFactory.getLogger(AuthController::class.java)
+    private val log = LoggerFactory.getLogger(AuthController::class.java)
 
     @PostMapping("login")
     fun login(

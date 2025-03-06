@@ -8,6 +8,7 @@ import com.tistory.shanepark.dutypark.duty.service.DutyService
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import java.time.YearMonth
@@ -17,7 +18,7 @@ import java.time.YearMonth
 class DutyController(
     private val dutyService: DutyService,
 ) {
-    val log: Logger = org.slf4j.LoggerFactory.getLogger(DutyController::class.java)
+    val log: Logger = LoggerFactory.getLogger(DutyController::class.java)
 
     @GetMapping
     fun getDuties(
@@ -40,6 +41,7 @@ class DutyController(
     ): ResponseEntity<Boolean> {
         checkAuthentication(loginMember, dutyUpdateDto.memberId)
         dutyService.update(dutyUpdateDto)
+        log.info("$loginMember update duty: $dutyUpdateDto")
         return ResponseEntity.ok(true)
     }
 
@@ -50,6 +52,7 @@ class DutyController(
     ): ResponseEntity<Boolean> {
         checkAuthentication(loginMember, dutyBatchUpdateDto.memberId)
         dutyService.update(dutyBatchUpdateDto)
+        log.info("$loginMember update duty batch: $dutyBatchUpdateDto")
         return ResponseEntity.ok(true)
     }
 

@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.department.controller
 
 import com.tistory.shanepark.dutypark.common.domain.dto.PageResponse
+import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardDepartment
 import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentCreateDto
 import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentDto
@@ -13,8 +14,12 @@ import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTeamResult
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.duty.batch.exceptions.DutyBatchException
 import com.tistory.shanepark.dutypark.duty.batch.service.DutyBatchService
+import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import jakarta.validation.Valid
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationContext
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
@@ -31,6 +36,8 @@ class DepartmentAdminController(
     private val departmentRepository: DepartmentRepository,
     private val applicationContext: ApplicationContext,
 ) {
+
+    val log: Logger = LoggerFactory.getLogger(DepartmentAdminController::class.java)
 
     @GetMapping
     fun findAll(@PageableDefault(page = 0, size = 10) page: Pageable): PageResponse<SimpleDepartmentDto> {
@@ -90,22 +97,27 @@ class DepartmentAdminController(
 
     @PostMapping("/{id}/duty")
     fun uploadBatchTemplate(
+        @Login loginMember: LoginMember,
         @PathVariable id: Long,
         @RequestParam(name = "file") file: MultipartFile,
         @RequestParam(name = "year") year: Int,
         @RequestParam(name = "month") month: Int
     ): DutyBatchTeamResult {
+        if (!loginMember.isAdmin) {
+            throw DutyparkAuthException("$loginMember is not admin")
+        }
         val department = departmentRepository.findById(id).orElseThrow()
         val batchTemplate = department.dutyBatchTemplate ?: throw IllegalArgumentException("templateName is required")
         val dutyBatchService = applicationContext.getBean(batchTemplate.batchServiceClass) as DutyBatchService
-        try {
-            return dutyBatchService.batchUploadDepartment(
+        return try {
+            log.info("batch duty upload by $loginMember for department ${department.name}(${department.id}) year=$year, month=$month")
+            dutyBatchService.batchUploadDepartment(
                 departmentId = id,
                 file = file,
                 yearMonth = YearMonth.of(year, month)
             )
         } catch (e: DutyBatchException) {
-            return DutyBatchTeamResult.fail(e.message ?: "알 수 없는 원인으로 시간표 업로드 실패.")
+            DutyBatchTeamResult.fail(e.message ?: "알 수 없는 원인으로 시간표 업로드 실패.")
         }
     }
 

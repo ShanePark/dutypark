@@ -7,6 +7,8 @@ import com.tistory.shanepark.dutypark.member.domain.entity.DDayEvent
 import com.tistory.shanepark.dutypark.member.repository.DDayRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
@@ -18,7 +20,7 @@ class DDayService(
     private val dDayRepository: DDayRepository
 ) {
 
-    val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(this.javaClass)
+    val log: Logger = LoggerFactory.getLogger(this.javaClass)
 
     fun createDDay(loginMember: LoginMember, dDaySaveDto: DDaySaveDto): DDayEvent {
         val member = memberRepository.findById(loginMember.id).orElseThrow()

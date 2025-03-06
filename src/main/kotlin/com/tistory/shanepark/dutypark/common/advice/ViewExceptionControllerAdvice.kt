@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.common.advice
 
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import jakarta.servlet.http.HttpServletRequest
+import org.slf4j.LoggerFactory
 import org.springframework.core.Ordered
 import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Controller
@@ -13,7 +14,7 @@ import java.net.URLEncoder
 @ControllerAdvice(annotations = [Controller::class])
 @Order(Ordered.HIGHEST_PRECEDENCE)
 class ViewExceptionControllerAdvice {
-    val log: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger(this.javaClass)
+    val log: org.slf4j.Logger = LoggerFactory.getLogger(this.javaClass)
 
     @ExceptionHandler
     fun notAuthorizedHandler(e: DutyparkAuthException, request: HttpServletRequest): ModelAndView {

@@ -12,6 +12,7 @@ import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.schedule.timeparsing.service.ScheduleTimeParsingQueueManager
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -26,7 +27,7 @@ class ScheduleService(
     private val friendService: FriendService,
     private val scheduleTimeParsingQueueManager: ScheduleTimeParsingQueueManager,
 ) {
-    private val log = org.slf4j.LoggerFactory.getLogger(this.javaClass)
+    private val log = LoggerFactory.getLogger(this.javaClass)
 
     @Transactional(readOnly = true)
     fun findSchedulesByYearAndMonth(
