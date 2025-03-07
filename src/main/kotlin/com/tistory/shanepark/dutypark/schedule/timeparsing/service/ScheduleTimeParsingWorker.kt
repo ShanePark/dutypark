@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.schedule.timeparsing.service
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus.*
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
@@ -18,7 +19,7 @@ class ScheduleTimeParsingWorker(
     private val scheduleTimeParsingService: ScheduleTimeParsingService,
     private val scheduleRepository: ScheduleRepository,
 ) {
-    private val log: Logger = LoggerFactory.getLogger(ScheduleTimeParsingWorker::class.java)
+    private val log = logger()
 
     fun run(task: ScheduleTimeParsingTask) {
         val scheduleOption = scheduleRepository.findById(task.scheduleId)

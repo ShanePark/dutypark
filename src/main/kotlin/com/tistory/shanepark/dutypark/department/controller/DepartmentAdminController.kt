@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.department.controller
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.domain.dto.PageResponse
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardDepartment
@@ -37,7 +38,7 @@ class DepartmentAdminController(
     private val applicationContext: ApplicationContext,
 ) {
 
-    val log: Logger = LoggerFactory.getLogger(DepartmentAdminController::class.java)
+    private val log = logger()
 
     @GetMapping
     fun findAll(@PageableDefault(page = 0, size = 10) page: Pageable): PageResponse<SimpleDepartmentDto> {

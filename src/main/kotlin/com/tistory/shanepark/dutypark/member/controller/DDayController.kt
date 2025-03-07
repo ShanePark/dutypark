@@ -6,7 +6,6 @@ import com.tistory.shanepark.dutypark.member.domain.dto.DDaySaveDto
 import com.tistory.shanepark.dutypark.member.service.DDayService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import jakarta.validation.Valid
-import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -16,7 +15,6 @@ import org.springframework.web.bind.annotation.*
 class DDayController(
     private val dDayService: DDayService
 ) {
-    private val log = LoggerFactory.getLogger(this.javaClass)
 
     @PostMapping
     @SlackNotification

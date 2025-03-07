@@ -9,33 +9,59 @@
     </div>
     <div class="card-body">
       <table class="table table-bordered table-responsive">
+        <colgroup>
+          <col style="width: 20%;">
+          <col style="width: 80%;">
+        </colgroup>
         <tbody>
         <tr>
-          <th class="bg-light"><label for="name" class="col-form-label">이름</label></th>
+          <th><label for="name" class="col-form-label">이름</label></th>
           <td>
             <input type="text" readonly class="form-control-plaintext" id="name" th:value="*{member.name}">
           </td>
         </tr>
         <tr>
-          <th class="bg-light"><label for="department" class="col-form-label">소속</label></th>
+          <th><label for="department" class="col-form-label">소속</label></th>
           <td>
             <input type="text" readonly class="form-control-plaintext" id="department"
                    th:value="${member.department} ?: '-'">
           </td>
         </tr>
         <tr th:if="${member.email}">
-          <th class="bg-light"><label for="email" class="col-form-label">이메일</label></th>
+          <th><label for="email" class="col-form-label">이메일</label></th>
           <td>
             <input type="text" readonly class="form-control-plaintext" id="email" th:value="${member.email} ?: '-'">
           </td>
         </tr>
         <tr>
-          <th class="bg-light">시간표 공개 대상</th>
+          <th>시간표 공개</th>
           <td>
             <button class="btn btn-outline-dark"
                     v-on:click="privacyPopup()"
                     v-text="'공개대상:' + privacyLabel"
             ></button>
+          </td>
+        </tr>
+        <tr>
+          <th>관리 권한 위임</th>
+          <td>
+            <div class="d-flex row">
+              <label>
+                <select id="add-manager" class="fs-2 m-1 border p-3 bg-light" v-on:change="assignManager">
+                  <option class="fs-4">관리자 추가</option>
+                  <option class="fs-4" v-for="member in familyMembers" :value="member.id" v-if="!isManager(member)">
+                    {{ member.name }}
+                  </option>
+                </select>
+              </label>
+              <div v-for="manager in managers" class="align-items-center d-flex col-4">
+                <button class="btn bg-light border rounded-3 m-1"
+                        v-on:click="unAssignManager(manager)">
+                  <span v-text="manager.name"></span>
+                  <i class="bi bi-trash-fill"></i>
+                </button>
+              </div>
+            </div>
           </td>
         </tr>
         <tr>
@@ -168,11 +194,15 @@
       el: '.member-vue',
       data: {
         tokens: [],
+        familyMembers: [],
+        managers: [],
         calendarVisibility: "[[${member.calendarVisibility}]]",
-      },
+      }, // end data
       mounted() {
-        this.load();
-      },
+        this.loadRefreshTokens();
+        this.loadFamilyMembers();
+        this.loadManagers();
+      }, // end mounted
       computed: {
         privacyLabel() {
           return {
@@ -182,8 +212,14 @@
             PRIVATE: '비공개',
           }[this.calendarVisibility];
         },
-      }, methods: {
-        load() {
+        isManager() {
+          return (member) => {
+            return this.managers.some(manager => manager.id === member.id);
+          }
+        }
+      }, // end computed
+      methods: {
+        loadRefreshTokens() {
           $.ajax({
             url: '/api/refresh-tokens',
             type: 'GET',
@@ -194,6 +230,36 @@
               console.log(error);
             }
           })
+        },
+        loadFamilyMembers() {
+          fetch('/api/members/family')
+            .then(response => {
+              if (!response.ok) {
+                throw new Error('가족 목록을 불러오는 데 실패했습니다.');
+              }
+              return response.json();
+            })
+            .then(data => {
+              app.familyMembers = data;
+            })
+            .catch(error => {
+              console.error('Error:', error);
+            });
+        },
+        loadManagers() {
+          fetch('/api/members/managers')
+            .then(response => {
+              if (!response.ok) {
+                throw new Error('가족 목록을 불러오는 데 실패했습니다.');
+              }
+              return response.json();
+            })
+            .then(data => {
+              app.managers = data;
+            })
+            .catch(error => {
+              console.error('Error:', error);
+            });
         },
         deleteToken(tokenId) {
           Swal.fire({
@@ -333,7 +399,58 @@
             app.calendarVisibility = privacy;
           });
         },
-      },
+        assignManager(event) {
+          const memberId = event.target.value;
+          fetch(`/api/members/manager/${memberId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+          }).then(response => {
+            if (!response.ok) {
+              Swal.fire({
+                icon: 'error',
+                title: '관리자 추가에 실패했습니다.',
+                showConfirmButton: false,
+                timer: sweetAlTimer
+              });
+              return;
+            }
+            app.loadManagers();
+          });
+        },
+        unAssignManager(manager) {
+          Swal.fire({
+            title: '관리자 해제',
+            text: `정말 ${manager.name} 님의 관리자 권한을 해제하시겠습니까?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: '해제',
+            cancelButtonText: '취소'
+          }).then((result) => {
+            if (!result.isConfirmed) {
+              return;
+            }
+            fetch(`/api/members/manager/${manager.id}`, {
+              method: 'DELETE',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+            }).then(response => {
+              if (!response.ok) {
+                Swal.fire({
+                  icon: 'error',
+                  title: '관리자 해제에 실패했습니다.',
+                  showConfirmButton: false,
+                  timer: sweetAlTimer
+                });
+                return;
+              }
+              app.loadManagers();
+            });
+          });
+        }
+      }, // end methods
     });
   })
 </script>

@@ -1,9 +1,8 @@
 package com.tistory.shanepark.dutypark.holiday.service.holidayAPI
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.datagokr.DataGoKrApi
 import com.tistory.shanepark.dutypark.holiday.domain.HolidayDto
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.util.StopWatch
@@ -21,8 +20,7 @@ import javax.xml.parsers.DocumentBuilderFactory
 class HolidayAPIDataGoKr(
     private val dataGoKrApi: DataGoKrApi,
 ) : HolidayAPI {
-
-    private val log: Logger = LoggerFactory.getLogger(this::class.java)
+    private val log = logger()
 
     @Value("\${dutypark.data-go-kr.service-key}")
     private lateinit var serviceKey: String

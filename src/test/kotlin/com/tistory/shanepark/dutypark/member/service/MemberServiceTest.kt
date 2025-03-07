@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
+import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberSsoRegister
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
@@ -8,6 +9,7 @@ import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
@@ -44,6 +46,8 @@ class MemberServiceTest : DutyparkIntegrationTest() {
         assertThat(search(page, "han").content.map { it.id }).containsExactly(member1.id)
     }
 
+    private fun search(page: PageRequest, name: String) = memberService.searchMembers(page, name)
+
     @Test
     fun `update calendar visibility`() {
         // Given
@@ -73,5 +77,73 @@ class MemberServiceTest : DutyparkIntegrationTest() {
         assertThat(member.kakaoId).isEqualTo("kakao_id")
     }
 
-    private fun search(page: PageRequest, name: String) = memberService.searchMembers(page, name)
+    @Test
+    fun `assign manager success`() {
+        // Given
+        val manager = memberRepository.save(Member("shane", "shane_email", "pass"))
+        val managed = memberRepository.save(Member("jenny", "jenny_email", "pass"))
+
+        // When
+        memberService.assignManager(manager.id!!, managed.id!!)
+
+        // Then
+        assertThat(memberService.isManager(manager = manager, target = managed)).isTrue
+    }
+
+    @Test
+    fun `assign manager fail if already manager`() {
+        // Given
+        val manager = memberRepository.save(Member("shane", "shane_email", "pass"))
+        val managed = memberRepository.save(Member("jenny", "jenny_email", "pass"))
+        memberService.assignManager(manager.id!!, managed.id!!)
+
+        // Then
+        assertThrows<IllegalArgumentException> {
+            memberService.assignManager(manager.id!!, managed.id!!)
+        }
+    }
+
+    @Test
+    fun `unassign manager success`() {
+        // Given
+        val manager = memberRepository.save(Member("shane", "shane_email", "pass"))
+        val managed = memberRepository.save(Member("jenny", "jenny_email", "pass"))
+        memberService.assignManager(manager.id!!, managed.id!!)
+
+        // When
+        memberService.unassignManager(manager.id!!, managed.id!!)
+
+        // Then
+        assertThat(memberService.isManager(manager = manager, target = managed)).isFalse
+    }
+
+    @Test
+    fun `unassign manager fail if not manager`() {
+        // Given
+        val manager = memberRepository.save(Member("shane", "shane_email", "pass"))
+        val managed = memberRepository.save(Member("jenny", "jenny_email", "pass"))
+        memberService.assignManager(managerId = manager.id!!, managedId = managed.id!!)
+        memberService.unassignManager(managerId = manager.id!!, managedId = managed.id!!)
+
+        // Then
+        assertThrows<IllegalArgumentException> {
+            memberService.unassignManager(manager.id!!, managed.id!!)
+        }
+
+    }
+
+    @Test
+    fun `find All managers`() {
+        // Given
+        val manager = memberRepository.save(Member("shane", "shane_email", "pass"))
+        val managed1 = memberRepository.save(Member("jenny", "jenny_email", "pass"))
+        val managed2 = memberRepository.save(Member("john", "john_email", "pass"))
+        memberService.assignManager(managerId = manager.id!!, managedId = managed1.id!!)
+        memberService.assignManager(managerId = manager.id!!, managedId = managed2.id!!)
+
+        // Then
+        assertThat(memberService.findAllManagers(loginMember(managed1))).containsExactly(MemberDto.of(manager))
+        assertThat(memberService.findAllManagers(loginMember(managed2))).containsExactly(MemberDto.of(manager))
+    }
+
 }

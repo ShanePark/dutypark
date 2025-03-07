@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.security.filters
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import jakarta.servlet.Filter
 import jakarta.servlet.FilterChain
 import jakarta.servlet.ServletRequest
@@ -11,7 +12,7 @@ import org.slf4j.LoggerFactory
 class ActuatorFilter(
     private val whiteIpList: List<String>
 ) : Filter {
-    private val log: Logger = LoggerFactory.getLogger(ActuatorFilter::class.java)
+    private val log = logger()
 
     override fun doFilter(req: ServletRequest, resp: ServletResponse, chain: FilterChain) {
         val remoteAddr = req.remoteAddr

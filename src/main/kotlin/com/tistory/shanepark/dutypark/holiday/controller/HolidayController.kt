@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.holiday.controller
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.holiday.domain.HolidayDto
 import com.tistory.shanepark.dutypark.holiday.service.HolidayService
@@ -16,7 +17,7 @@ import java.time.YearMonth
 class HolidayController(
     private val holidayService: HolidayService
 ) {
-    val log: Logger = LoggerFactory.getLogger(this::class.java)
+    private val log = logger()
 
     @GetMapping
     @Cacheable("holidays")

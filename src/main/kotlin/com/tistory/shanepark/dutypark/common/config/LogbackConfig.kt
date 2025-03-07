@@ -12,13 +12,15 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Configuration
 
+inline fun <reified T> T.logger(): Logger = LoggerFactory.getLogger(T::class.java)
+
 @Configuration
 class LogbackConfig {
 
     @Value("\${dutypark.log.path}")
     private lateinit var logPath: String
 
-    val log: Logger = LoggerFactory.getLogger(LogbackConfig::class.java)
+    private val log = logger()
 
     @PostConstruct
     fun configureLogging() {

@@ -1,12 +1,11 @@
 package com.tistory.shanepark.dutypark.holiday.service
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.holiday.domain.Holiday
 import com.tistory.shanepark.dutypark.holiday.domain.HolidayDto
 import com.tistory.shanepark.dutypark.holiday.repository.HolidayRepository
 import com.tistory.shanepark.dutypark.holiday.service.holidayAPI.HolidayAPI
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.stereotype.Service
@@ -25,8 +24,7 @@ class HolidayService(
 
     private val holidayMap: MutableMap<Int, List<HolidayDto>> = ConcurrentHashMap()
     private val locks: ConcurrentHashMap<Int, ReentrantLock> = ConcurrentHashMap()
-
-    val log: Logger = LoggerFactory.getLogger(this::class.java)
+    private val log = logger()
 
     fun findHolidays(calendarView: CalendarView): Array<List<HolidayDto>> {
         val answer = Array<List<HolidayDto>>(calendarView.size) { emptyList() }

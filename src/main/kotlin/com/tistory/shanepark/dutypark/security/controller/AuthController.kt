@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.security.controller
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
@@ -17,7 +18,7 @@ import org.springframework.web.bind.annotation.*
 class AuthController(
     private val authService: AuthService,
 ) {
-    private val log = LoggerFactory.getLogger(AuthController::class.java)
+    private val log = logger()
 
     @PostMapping("login")
     fun login(

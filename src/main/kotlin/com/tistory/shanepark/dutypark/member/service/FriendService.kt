@@ -258,4 +258,14 @@ class FriendService(
         }
     }
 
+    @Transactional(readOnly = true)
+    fun findAllFamilyMembers(id: Long): List<MemberDto> {
+        val member = memberRepository.findById(id).orElseThrow()
+        return friendRelationRepository.findAllByMember(member)
+            .filter { it.isFamily }
+            .map { it.friend }
+            .sortedBy { it.name }
+            .map { MemberDto.of(it) }
+    }
+
 }

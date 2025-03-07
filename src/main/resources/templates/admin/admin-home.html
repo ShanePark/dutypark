@@ -1,43 +1,41 @@
-<h1>Active Refresh Tokens</h1>
-<div class="refresh-tokens" v-cloak>
-  <div v-for="member in members">
-    <table class="table table-striped">
-      <colgroup>
-        <col style="width: 60px;">
-        <col style="width: 150px;">
-        <col style="width: 150px;">
-        <col style="width: 200px;">
-        <col style="width: 120px;">
-        <col style="width: 150px;">
-      </colgroup>
-      <thead>
-      <tr>
-        <th class="p-3" colspan="4" style="text-align: center; font-size:1.3em;">
-          {{ member.name }}
-        </th>
-        <th colspan="1">
-          <button class="btn btn-outline-warning btn-sm" @click="changePassword(member)">Change Password
-          </button>
-        </th>
-      </tr>
-      <tr>
-        <th></th>
-        <th>Last active</th>
-        <th>Ip</th>
-        <th>Device</th>
-        <th>Browser</th>
-      </tr>
-      </thead>
-      <tbody>
-      <tr v-for="(token, index) in member.tokens">
-        <td>{{ index+1 }}</td>
-        <td>{{ token.lastUsed | fromNow }}</td>
-        <td>{{ token.remoteAddr}}</td>
-        <td>{{ token.userAgent ? token.userAgent.device : '' }}</td>
-        <td>{{ token.userAgent ? token.userAgent.browser : '' }}</td>
-      </tr>
-      </tbody>
-    </table>
+<div class="refresh-tokens card" v-cloak>
+  <div class="card-header text-center bg-secondary text-white fw-bold">
+    회원 관리
+  </div>
+  <div class="p-2">
+    <div v-for="member in members">
+      <table class="table table-striped">
+        <thead>
+        <tr>
+          <td colspan="5" class="p-3">
+            <div class="d-flex justify-content-between">
+            <span>
+              {{ member.name }}
+            </span>
+              <button class="btn btn-outline-warning btn-sm" @click="changePassword(member)">Change Password
+              </button>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <th></th>
+          <th>Last active</th>
+          <th>Ip</th>
+          <th>Device</th>
+          <th>Browser</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr v-for="(token, index) in member.tokens">
+          <td>{{ index+1 }}</td>
+          <td>{{ token.lastUsed | fromNow }}</td>
+          <td>{{ token.remoteAddr}}</td>
+          <td>{{ token.userAgent ? token.userAgent.device : '' }}</td>
+          <td>{{ token.userAgent ? token.userAgent.browser : '' }}</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 

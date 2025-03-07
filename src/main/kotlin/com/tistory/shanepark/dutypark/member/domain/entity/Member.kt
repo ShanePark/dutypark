@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.member.domain.entity
 
-import com.fasterxml.jackson.annotation.JsonIgnore
 import com.tistory.shanepark.dutypark.department.domain.entity.Department
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import jakarta.persistence.*
@@ -24,7 +23,6 @@ class Member(
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")
-    @field:JsonIgnore
     var department: Department? = null
 
     @Column(nullable = false, name = "calendar_visibility")

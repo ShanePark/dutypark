@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.todo.service
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -16,6 +17,7 @@ class TodoService(
     private val memberRepository: MemberRepository,
     private val todoRepository: TodoRepository
 ) {
+    private val log = logger()
 
     @Transactional(readOnly = true)
     fun todoList(loginMember: LoginMember): List<TodoResponse> {
@@ -66,8 +68,9 @@ class TodoService(
         todoRepository.delete(todo)
     }
 
-    private fun verifyOwnership(todo: Todo, member: Member) {
-        if (todo.member.id != member.id) {
+    private fun verifyOwnership(todoEntity: Todo, member: Member) {
+        if (todoEntity.member.id != member.id) {
+            log.warn("$member tried to access todo ${todoEntity.id} which is not his")
             throw IllegalArgumentException("Todo is not yours")
         }
     }

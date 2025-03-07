@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.schedule.service
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -27,7 +28,7 @@ class ScheduleService(
     private val friendService: FriendService,
     private val scheduleTimeParsingQueueManager: ScheduleTimeParsingQueueManager,
 ) {
-    private val log = LoggerFactory.getLogger(this.javaClass)
+    private val log = logger()
 
     @Transactional(readOnly = true)
     fun findSchedulesByYearAndMonth(
@@ -183,6 +184,8 @@ class ScheduleService(
         schedule: Schedule,
     ) {
         if (schedule.member.id == loginMember.id) return
+
+        // TODO: department Manager can not edit schedule
         if (isDepartmentManager(schedule, loginMember)) return
 
         throw DutyparkAuthException("login member doesn't have permission to update schedule")

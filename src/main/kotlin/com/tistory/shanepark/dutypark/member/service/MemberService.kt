@@ -4,8 +4,11 @@ import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberCreateDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.member.domain.entity.MemberManager
+import com.tistory.shanepark.dutypark.member.domain.enums.ManagerRole
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
+import com.tistory.shanepark.dutypark.member.repository.MemberManagerRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -21,6 +24,7 @@ class MemberService(
     private val memberRepository: MemberRepository,
     private val passwordEncoder: PasswordEncoder,
     private val memberSsoRegisterRepository: MemberSsoRegisterRepository,
+    private val memberManagerRepository: MemberManagerRepository,
 ) {
 
     @Transactional(readOnly = true)
@@ -87,6 +91,42 @@ class MemberService(
     fun getDutyBatchTemplate(memberId: Long): DutyBatchTemplate? {
         val member = memberRepository.findById(memberId).orElseThrow()
         return member.department?.dutyBatchTemplate
+    }
+
+    fun assignManager(managerId: Long, managedId: Long) {
+        val manager = memberRepository.findById(managerId).orElseThrow()
+        val managed = memberRepository.findById(managedId).orElseThrow()
+
+        if (isManager(manager, managed)) {
+            throw IllegalArgumentException("Already assigned as manager, managerId: $managerId, managedId: $managedId")
+        }
+
+        val entity = MemberManager(manager = manager, managed = managed, role = ManagerRole.MANAGER)
+        memberManagerRepository.save(entity)
+    }
+
+    fun unassignManager(managerId: Long, managedId: Long) {
+        val manager = memberRepository.findById(managerId).orElseThrow()
+        val managed = memberRepository.findById(managedId).orElseThrow()
+        if (!isManager(manager, managed)) {
+            throw IllegalArgumentException("Not assigned as manager, managerId: $managerId, managedId: $managedId")
+        }
+        memberManagerRepository.findAllByManagerAndManaged(manager = manager, managed = managed)
+            .forEach { memberManagerRepository.delete(it) }
+    }
+
+    fun isManager(manager: Member, target: Member): Boolean {
+        return memberManagerRepository.findAllByManagerAndManaged(manager, target).isNotEmpty()
+    }
+
+    private fun findAllManagers(member: Member): List<Member> {
+        return memberManagerRepository.findAllByManaged(member)
+            .map { it.manager }
+    }
+
+    fun findAllManagers(loginMember: LoginMember): List<MemberDto> {
+        val member = memberRepository.findById(loginMember.id).orElseThrow()
+        return findAllManagers(member).map { MemberDto.of(it) }
     }
 
 }

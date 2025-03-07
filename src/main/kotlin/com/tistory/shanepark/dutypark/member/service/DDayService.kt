@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.member.service
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.member.domain.dto.DDayDto
 import com.tistory.shanepark.dutypark.member.domain.dto.DDaySaveDto
@@ -20,7 +21,7 @@ class DDayService(
     private val dDayRepository: DDayRepository
 ) {
 
-    val log: Logger = LoggerFactory.getLogger(this.javaClass)
+    private val log = logger()
 
     fun createDDay(loginMember: LoginMember, dDaySaveDto: DDaySaveDto): DDayEvent {
         val member = memberRepository.findById(loginMember.id).orElseThrow()

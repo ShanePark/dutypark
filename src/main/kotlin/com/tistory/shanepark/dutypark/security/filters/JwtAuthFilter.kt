@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.security.filters
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
@@ -24,7 +25,7 @@ class JwtAuthFilter(
     private val jwtConfig: JwtConfig,
     private val isSecure: Boolean
 ) : Filter {
-    private val log: Logger = LoggerFactory.getLogger(JwtAuthFilter::class.java)
+    private val log = logger()
 
     override fun doFilter(req: ServletRequest, resp: ServletResponse, chain: FilterChain) {
 

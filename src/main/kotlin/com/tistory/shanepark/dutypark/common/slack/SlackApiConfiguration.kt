@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.common.slack
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifier
 import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifierLogger
 import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifierSender
@@ -20,7 +21,7 @@ class SlackApiConfiguration(
     val slackToken: String
 ) {
 
-    private val log: Logger = LoggerFactory.getLogger(this.javaClass)
+    private val log = logger()
 
     @Bean("slackTaskExecutor")
     fun threadPoolTaskExecutor(): TaskExecutor {

@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.schedule.timeparsing.service
 
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingRequest
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingResponse
 import org.slf4j.Logger
@@ -16,7 +17,7 @@ class ScheduleTimeParsingService(
     private val objectMapper: ObjectMapper,
 ) {
     private val chatClient = ChatClient.builder(chatModel).build()
-    private val log: Logger = LoggerFactory.getLogger(ScheduleTimeParsingService::class.java)
+    private val log = logger()
 
     fun parseScheduleTime(request: ScheduleTimeParsingRequest): ScheduleTimeParsingResponse {
         val prompt = generatePrompt(request)

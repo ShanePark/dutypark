@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.common.slack.advice
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifier
 import jakarta.servlet.http.HttpServletRequest
 import net.gpedro.integrations.slack.SlackAttachment
@@ -22,7 +23,7 @@ import java.util.*
 class ErrorDetectAdvisor(
     private val slackNotifier: SlackNotifier,
 ) {
-    val log: Logger = LoggerFactory.getLogger(this.javaClass)
+    private val log = logger()
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException::class)
     @ResponseBody

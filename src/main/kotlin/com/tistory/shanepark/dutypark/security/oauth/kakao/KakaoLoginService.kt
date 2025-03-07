@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.security.oauth.kakao
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberSsoRegister
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -26,7 +27,7 @@ class KakaoLoginService(
     private val MemberSsoRegisterRepository: MemberSsoRegisterRepository,
     @Value("\${oauth.kakao.rest-api-key}") private val restApiKey: String
 ) {
-    val log: Logger = LoggerFactory.getLogger(KakaoLoginService::class.java)
+    private val log = logger()
 
     fun login(req: HttpServletRequest, code: String, redirectUrl: String, referer: String): ResponseEntity<Any> {
         val kakaoId = getKakaoId(redirectUrl, code)

@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.common
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
+import com.tistory.shanepark.dutypark.common.config.logger
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.slf4j.Logger
@@ -13,7 +14,7 @@ internal class PasswordEncoderConfigTest : DutyparkIntegrationTest() {
     @Autowired
     lateinit var passwordEncoder: PasswordEncoder
 
-    val log: Logger = LoggerFactory.getLogger(this.javaClass)
+    private val log = logger()
     val pass = "1234"
 
     @Test

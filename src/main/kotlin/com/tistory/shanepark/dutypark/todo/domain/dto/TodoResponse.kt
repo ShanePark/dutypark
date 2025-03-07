@@ -12,13 +12,13 @@ data class TodoResponse(
 ) {
 
     companion object {
-        fun from(todo: Todo): TodoResponse {
+        fun from(todoEntity: Todo): TodoResponse {
             return TodoResponse(
-                id = todo.id.toString(),
-                title = todo.title,
-                content = todo.content,
-                position = todo.position,
-                createdDate = todo.createdDate
+                id = todoEntity.id.toString(),
+                title = todoEntity.title,
+                content = todoEntity.content,
+                position = todoEntity.position,
+                createdDate = todoEntity.createdDate
             )
         }
     }
