@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.security.service
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
@@ -34,7 +35,7 @@ class AuthService(
     private val jwtConfig: JwtConfig,
     @Value("\${server.ssl.enabled}") private val isSecure: Boolean
 ) {
-    val log: Logger = LoggerFactory.getLogger(AuthService::class.java)
+    private val log = logger()
 
     fun getLoginCookieHeaders(login: LoginDto, req: HttpServletRequest, referer: String): HttpHeaders {
         val member = memberRepository.findByEmail(login.email).orElseThrow {

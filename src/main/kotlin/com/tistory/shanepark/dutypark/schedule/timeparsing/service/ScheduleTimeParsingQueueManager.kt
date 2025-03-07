@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.schedule.timeparsing.service
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus.WAIT
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
@@ -21,7 +22,7 @@ class ScheduleTimeParsingQueueManager(
     private val scheduleRepository: ScheduleRepository,
     private val environment: Environment,
 ) {
-    private val log = LoggerFactory.getLogger(ScheduleTimeParsingQueueManager::class.java)
+    private val log = logger()
     private val executorService = Executors.newSingleThreadExecutor()
     private val queue = ConcurrentLinkedQueue<ScheduleTimeParsingTask>()
     private val isRunning = AtomicBoolean(false)

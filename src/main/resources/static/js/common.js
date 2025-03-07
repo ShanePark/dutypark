@@ -1,5 +1,6 @@
-const isEndsWithLastConsonantLetter = function (text) {
+const sweetAlTimer = 1500;
 
+const isEndsWithLastConsonantLetter = function (text) {
   const strGa = 44032; // 가
   const strHih = 55203; // 힣
   const lastStrCode = text.charCodeAt(text.length - 1);

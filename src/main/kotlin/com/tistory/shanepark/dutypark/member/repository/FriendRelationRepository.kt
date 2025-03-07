@@ -12,7 +12,6 @@ interface FriendRelationRepository : JpaRepository<FriendRelation, Long> {
 
     fun findByMemberAndFriend(member: Member, friend: Member): FriendRelation?
     fun findAllByMemberAndFriendIn(member: Member, friends: List<Member>): List<FriendRelation>
-
     fun deleteByMemberAndFriend(member: Member, friend: Member)
 
 }

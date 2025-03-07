@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.duty.controller
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyBatchUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
@@ -18,7 +19,7 @@ import java.time.YearMonth
 class DutyController(
     private val dutyService: DutyService,
 ) {
-    val log: Logger = LoggerFactory.getLogger(DutyController::class.java)
+    private val log = logger()
 
     @GetMapping
     fun getDuties(

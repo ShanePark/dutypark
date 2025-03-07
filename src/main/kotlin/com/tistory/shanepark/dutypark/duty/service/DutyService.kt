@@ -12,6 +12,7 @@ import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
+import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -23,7 +24,8 @@ class DutyService(
     private val dutyRepository: DutyRepository,
     private val dutyTypeRepository: DutyTypeRepository,
     private val memberRepository: MemberRepository,
-    private val friendService: FriendService
+    private val friendService: FriendService,
+    private val memberService: MemberService,
 ) {
 
     @Transactional(readOnly = true)
@@ -46,7 +48,7 @@ class DutyService(
 
         if (duty == null) {
             if (dutyType != null) {
-                save(
+                dutyRepository.save(
                     Duty(
                         member = member,
                         dutyDate = YearMonth.of(dutyUpdateDto.year, dutyUpdateDto.month).atDay(dutyUpdateDto.day),
@@ -91,21 +93,12 @@ class DutyService(
         dutyRepository.saveAll(duties)
     }
 
-    fun save(duty: Duty): Duty {
-        return dutyRepository.save(duty)
-    }
-
-    fun canEdit(
-        loginMember: LoginMember, memberId: Long
-    ): Boolean {
+    fun canEdit(loginMember: LoginMember, memberId: Long): Boolean {
         val member = memberRepository.findMemberWithDepartment(memberId).orElseThrow()
-        if (member.id == loginMember.id) {
-            return true
-        }
-        if (member.department?.manager?.id == loginMember.id) {
-            return true
-        }
-        return false
+
+        return member.isEquals(loginMember)
+                || member.isDepartmentManager(isManager = loginMember)
+                || memberService.isManager(isManager = loginMember, target = member)
     }
 
     @Transactional(readOnly = true)

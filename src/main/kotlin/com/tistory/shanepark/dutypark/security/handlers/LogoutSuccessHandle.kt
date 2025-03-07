@@ -6,8 +6,6 @@ import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.springframework.security.core.Authentication
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler
 import org.springframework.stereotype.Component
@@ -17,8 +15,6 @@ class LogoutSuccessHandle(
     private val refreshTokenRepository: RefreshTokenRepository,
     private val jwtConfig: JwtConfig,
 ) : LogoutSuccessHandler {
-    val log: Logger = LoggerFactory.getLogger(LogoutSuccessHandle::class.java)
-
     override fun onLogoutSuccess(
         request: HttpServletRequest,
         response: HttpServletResponse,

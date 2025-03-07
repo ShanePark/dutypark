@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.security.filters
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import jakarta.servlet.Filter
 import jakarta.servlet.FilterChain
@@ -11,7 +12,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 class AdminAuthFilter : Filter {
-    private val log: Logger = LoggerFactory.getLogger(AdminAuthFilter::class.java)
+    private val log = logger()
 
     override fun doFilter(req: ServletRequest, resp: ServletResponse, chain: FilterChain) {
         val request = req as HttpServletRequest

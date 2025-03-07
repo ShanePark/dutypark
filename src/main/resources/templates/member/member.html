@@ -9,33 +9,61 @@
     </div>
     <div class="card-body">
       <table class="table table-bordered table-responsive">
+        <colgroup>
+          <col style="width: 20%;">
+          <col style="width: 80%;">
+        </colgroup>
         <tbody>
         <tr>
-          <th class="bg-light"><label for="name" class="col-form-label">이름</label></th>
+          <th><label for="name" class="col-form-label">이름</label></th>
           <td>
             <input type="text" readonly class="form-control-plaintext" id="name" th:value="*{member.name}">
           </td>
         </tr>
         <tr>
-          <th class="bg-light"><label for="department" class="col-form-label">소속</label></th>
+          <th><label for="department" class="col-form-label">소속</label></th>
           <td>
             <input type="text" readonly class="form-control-plaintext" id="department"
                    th:value="${member.department} ?: '-'">
           </td>
         </tr>
         <tr th:if="${member.email}">
-          <th class="bg-light"><label for="email" class="col-form-label">이메일</label></th>
+          <th><label for="email" class="col-form-label">이메일</label></th>
           <td>
             <input type="text" readonly class="form-control-plaintext" id="email" th:value="${member.email} ?: '-'">
           </td>
         </tr>
         <tr>
-          <th class="bg-light">시간표 공개 대상</th>
+          <th>시간표 공개</th>
           <td>
             <button class="btn btn-outline-dark"
                     v-on:click="privacyPopup()"
                     v-text="'공개대상:' + privacyLabel"
             ></button>
+          </td>
+        </tr>
+        <tr>
+          <th>관리 권한 위임</th>
+          <td>
+            <div class="d-flex row">
+              <label>
+                <select id="add-manager" class="f3-2 m-1 border p-3 bg-light" v-on:change="assignManager">
+                  <option class="fs-4">관리자 추가</option>
+                  <option class="fs-4" v-for="member in familyMembers" :value="member.id" v-if="!isManager(member)">
+                    {{ member.name }}
+                  </option>
+                </select>
+                <i class="bi bi-info-circle-fill text-secondary"></i>
+                <span class="text-secondary">가족만 관리자로 추가할 수 있어요</span>
+              </label>
+              <div v-for="manager in managers" class="align-items-center d-flex col-4">
+                <button class="btn bg-light border rounded-3 m-1"
+                        v-on:click="unAssignManager(manager)">
+                  <span v-text="manager.name"></span>
+                  <i class="bi bi-trash-fill"></i>
+                </button>
+              </div>
+            </div>
           </td>
         </tr>
         <tr>
@@ -154,186 +182,277 @@
 
 
 <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const testKey = '962c00be36be55bd0c0b55478cc25149';
-    const opKey = 'fe206dfae05cfafc94806ad67abbcfc1';
-    const curUrl = window.location.href;
-    const curKey = curUrl.includes('localhost') ? testKey : opKey;
-    Kakao.init(curKey);
-    Kakao.isInitialized();
+    document.addEventListener('DOMContentLoaded', function () {
+        const testKey = '962c00be36be55bd0c0b55478cc25149';
+        const opKey = 'fe206dfae05cfafc94806ad67abbcfc1';
+        const curUrl = window.location.href;
+        const curKey = curUrl.includes('localhost') ? testKey : opKey;
+        Kakao.init(curKey);
+        Kakao.isInitialized();
 
-    const memberId = parseInt("[[${member.id}]]");
+        const memberId = parseInt("[[${member.id}]]");
 
-    const app = new Vue({
-      el: '.member-vue',
-      data: {
-        tokens: [],
-        calendarVisibility: "[[${member.calendarVisibility}]]",
-      },
-      mounted() {
-        this.load();
-      },
-      computed: {
-        privacyLabel() {
-          return {
-            PUBLIC: '누구나',
-            FRIENDS: '친구만',
-            FAMILY: '가족에게만',
-            PRIVATE: '비공개',
-          }[this.calendarVisibility];
-        },
-      }, methods: {
-        load() {
-          $.ajax({
-            url: '/api/refresh-tokens',
-            type: 'GET',
-            success: function (refreshTokens) {
-              app.tokens = refreshTokens;
-            },
-            error: function (error) {
-              console.log(error);
-            }
-          })
-        },
-        deleteToken(tokenId) {
-          Swal.fire({
-            title: '정말 로그아웃 하시겠습니까?',
-            text: "해당 기기에서 로그아웃 됩니다.",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#999',
-            confirmButtonText: '로그아웃',
-            cancelButtonText: '취소'
-          }).then((result) => {
-            if (result.isConfirmed) {
-              $.ajax({
-                url: '/api/refresh-tokens/' + tokenId,
-                type: 'DELETE',
-                success: function () {
-                  app.load();
+        const app = new Vue({
+            el: '.member-vue',
+            data: {
+                tokens: [],
+                familyMembers: [],
+                managers: [],
+                calendarVisibility: "[[${member.calendarVisibility}]]",
+            }, // end data
+            mounted() {
+                this.loadRefreshTokens();
+                this.loadFamilyMembers();
+                this.loadManagers();
+            }, // end mounted
+            computed: {
+                privacyLabel() {
+                    return {
+                        PUBLIC: '누구나',
+                        FRIENDS: '친구만',
+                        FAMILY: '가족에게만',
+                        PRIVATE: '비공개',
+                    }[this.calendarVisibility];
                 },
-                error: function (error) {
-                  console.log(error);
+                isManager() {
+                    return (member) => {
+                        return this.managers.some(manager => manager.id === member.id);
+                    }
                 }
-              })
-            }
-          })
-        },
-        changePassword() {
-          Swal.fire({
-            title: '비밀번호 변경',
-            html: '<input id="swal-input1" class="swal2-input" placeholder="현재 비밀번호" type="password">' +
-              '<input id="swal-input2" class="swal2-input" placeholder="변경할 비밀번호" type="password">' +
-              '<input id="swal-input3" class="swal2-input" placeholder="변경할 비밀번호 확인" type="password">',
-            focusConfirm: false,
-            showCancelButton: true,
-            confirmButtonText: '변경',
-            cancelButtonText: '취소',
-            preConfirm: () => {
-              const currentPassword = Swal.getPopup().querySelector('#swal-input1').value
-              const newPassword = Swal.getPopup().querySelector('#swal-input2').value
-              const newPasswordConfirm = Swal.getPopup().querySelector('#swal-input3').value
-              if (!currentPassword || !newPassword || !newPasswordConfirm) {
-                Swal.showValidationMessage(`비밀번호를 입력해주세요.`)
-                return false
-              }
-              if (newPassword !== newPasswordConfirm) {
-                Swal.showValidationMessage(`비밀번호가 일치하지 않습니다.`)
-                return false
-              }
-              if (currentPassword === newPassword) {
-                Swal.showValidationMessage(`현재 비밀번호와 동일합니다.`)
-                return false
-              }
-              return {currentPassword: currentPassword, newPassword: newPassword}
-            }
-          }).then((result) => {
-            if (result.isConfirmed) {
-              const memberId = parseInt("[[${member.id}]]");
-              result.value.memberId = memberId;
-
-              $.ajax({
-                url: '/api/auth/password',
-                type: 'PUT',
-                data: JSON.stringify(result.value),
-                contentType: 'application/json',
-                success: function () {
-                  Swal.fire({
-                    title: '비밀번호가 변경되었습니다. 다시 로그인 해주세요.',
-                    icon: 'success',
-                    confirmButtonText: '확인',
-                  }).then((result) => {
-                    location.href = '/logout';
-                  });
+            }, // end computed
+            methods: {
+                loadRefreshTokens() {
+                    $.ajax({
+                        url: '/api/refresh-tokens',
+                        type: 'GET',
+                        success: function (refreshTokens) {
+                            app.tokens = refreshTokens;
+                        },
+                        error: function (error) {
+                            console.log(error);
+                        }
+                    })
                 },
-                error: function (error) {
-                  Swal.fire({
-                    title: '비밀번호 변경에 실패하였습니다.',
-                    text: error.responseJSON.message,
-                    icon: 'error',
-                    confirmButtonText: '확인',
-                  })
-                }
-              })
-            }
-          })
-        },
-        deleteAccount() {
-          Swal.fire({
-            title: '회원 탈퇴',
-            text: '회원 탈퇴는 관리자에게 문의해주세요.',
-            icon: 'alert',
-            confirmButtonText: '확인',
-          })
-        },
-        ssoNaver() {
-          Swal.fire({
-            title: '네이버 연동',
-            text: '네이버 연동은 아직 준비중입니다.',
-            icon: 'info',
-            confirmButtonText: '확인',
-          })
-        },
-        ssoKakao() {
-          Kakao.Auth.authorize({
-            redirectUri: window.location.origin + '/api/auth/Oauth2ClientCallback/kakao',
-            state: JSON.stringify({
-                login: true,
-                referer: window.location.href
-              }
-            ),
-          });
-        },
-        privacyPopup() {
-          $('#privacy-config-modal').modal('show');
-        },
-        setPrivacy(event) {
-          document.querySelector('.privacy-config .btn.selected').classList.remove('selected');
-          const privacy = event.target.getAttribute('data-privacy');
+                loadFamilyMembers() {
+                    fetch('/api/members/family')
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('가족 목록을 불러오는 데 실패했습니다.');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            app.familyMembers = data;
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                        });
+                },
+                loadManagers() {
+                    fetch('/api/members/managers')
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('가족 목록을 불러오는 데 실패했습니다.');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            app.managers = data;
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                        });
+                },
+                deleteToken(tokenId) {
+                    Swal.fire({
+                        title: '정말 로그아웃 하시겠습니까?',
+                        text: "해당 기기에서 로그아웃 됩니다.",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#999',
+                        confirmButtonText: '로그아웃',
+                        cancelButtonText: '취소'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $.ajax({
+                                url: '/api/refresh-tokens/' + tokenId,
+                                type: 'DELETE',
+                                success: function () {
+                                    app.load();
+                                },
+                                error: function (error) {
+                                    console.log(error);
+                                }
+                            })
+                        }
+                    })
+                },
+                changePassword() {
+                    Swal.fire({
+                        title: '비밀번호 변경',
+                        html: '<input id="swal-input1" class="swal2-input" placeholder="현재 비밀번호" type="password">' +
+                            '<input id="swal-input2" class="swal2-input" placeholder="변경할 비밀번호" type="password">' +
+                            '<input id="swal-input3" class="swal2-input" placeholder="변경할 비밀번호 확인" type="password">',
+                        focusConfirm: false,
+                        showCancelButton: true,
+                        confirmButtonText: '변경',
+                        cancelButtonText: '취소',
+                        preConfirm: () => {
+                            const currentPassword = Swal.getPopup().querySelector('#swal-input1').value
+                            const newPassword = Swal.getPopup().querySelector('#swal-input2').value
+                            const newPasswordConfirm = Swal.getPopup().querySelector('#swal-input3').value
+                            if (!currentPassword || !newPassword || !newPasswordConfirm) {
+                                Swal.showValidationMessage(`비밀번호를 입력해주세요.`)
+                                return false
+                            }
+                            if (newPassword !== newPasswordConfirm) {
+                                Swal.showValidationMessage(`비밀번호가 일치하지 않습니다.`)
+                                return false
+                            }
+                            if (currentPassword === newPassword) {
+                                Swal.showValidationMessage(`현재 비밀번호와 동일합니다.`)
+                                return false
+                            }
+                            return {currentPassword: currentPassword, newPassword: newPassword}
+                        }
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            const memberId = parseInt("[[${member.id}]]");
+                            result.value.memberId = memberId;
 
-          fetch(`/api/members/${memberId}/visibility`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              visibility: privacy
-            })
-          }).then(response => {
-            if (!response.ok) {
-              Swal.fire({
-                icon: 'error',
-                title: '공개 대상 설정 변경에 실패했습니다.',
-                showConfirmButton: false,
-                timer: sweetAlTimer
-              });
-              return;
-            }
-            app.calendarVisibility = privacy;
-          });
-        },
-      },
-    });
-  })
+                            $.ajax({
+                                url: '/api/auth/password',
+                                type: 'PUT',
+                                data: JSON.stringify(result.value),
+                                contentType: 'application/json',
+                                success: function () {
+                                    Swal.fire({
+                                        title: '비밀번호가 변경되었습니다. 다시 로그인 해주세요.',
+                                        icon: 'success',
+                                        confirmButtonText: '확인',
+                                    }).then((result) => {
+                                        location.href = '/logout';
+                                    });
+                                },
+                                error: function (error) {
+                                    Swal.fire({
+                                        title: '비밀번호 변경에 실패하였습니다.',
+                                        text: error.responseJSON.message,
+                                        icon: 'error',
+                                        confirmButtonText: '확인',
+                                    })
+                                }
+                            })
+                        }
+                    })
+                },
+                deleteAccount() {
+                    Swal.fire({
+                        title: '회원 탈퇴',
+                        text: '회원 탈퇴는 관리자에게 문의해주세요.',
+                        icon: 'alert',
+                        confirmButtonText: '확인',
+                    })
+                },
+                ssoNaver() {
+                    Swal.fire({
+                        title: '네이버 연동',
+                        text: '네이버 연동은 아직 준비중입니다.',
+                        icon: 'info',
+                        confirmButtonText: '확인',
+                    })
+                },
+                ssoKakao() {
+                    Kakao.Auth.authorize({
+                        redirectUri: window.location.origin + '/api/auth/Oauth2ClientCallback/kakao',
+                        state: JSON.stringify({
+                                login: true,
+                                referer: window.location.href
+                            }
+                        ),
+                    });
+                },
+                privacyPopup() {
+                    $('#privacy-config-modal').modal('show');
+                },
+                setPrivacy(event) {
+                    document.querySelector('.privacy-config .btn.selected').classList.remove('selected');
+                    const privacy = event.target.getAttribute('data-privacy');
+
+                    fetch(`/api/members/${memberId}/visibility`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            visibility: privacy
+                        })
+                    }).then(response => {
+                        if (!response.ok) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: '공개 대상 설정 변경에 실패했습니다.',
+                                showConfirmButton: false,
+                                timer: sweetAlTimer
+                            });
+                            return;
+                        }
+                        app.calendarVisibility = privacy;
+                    });
+                },
+                assignManager(event) {
+                    const memberId = event.target.value;
+                    fetch(`/api/members/manager/${memberId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                    }).then(response => {
+                        if (!response.ok) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: '관리자 추가에 실패했습니다.',
+                                showConfirmButton: false,
+                                timer: sweetAlTimer
+                            });
+                            return;
+                        }
+                        app.loadManagers();
+                    });
+                },
+                unAssignManager(manager) {
+                    Swal.fire({
+                        title: '관리자 해제',
+                        text: `정말 ${manager.name} 님의 관리자 권한을 해제하시겠습니까?`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: '해제',
+                        cancelButtonText: '취소'
+                    }).then((result) => {
+                        if (!result.isConfirmed) {
+                            return;
+                        }
+                        fetch(`/api/members/manager/${manager.id}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                        }).then(response => {
+                            if (!response.ok) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '관리자 해제에 실패했습니다.',
+                                    showConfirmButton: false,
+                                    timer: sweetAlTimer
+                                });
+                                return;
+                            }
+                            app.loadManagers();
+                        });
+                    });
+                }
+            }, // end methods
+        });
+    })
 </script>

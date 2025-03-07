@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.member.service
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -8,8 +9,6 @@ import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.RefreshTokenDto
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
@@ -20,7 +19,7 @@ class RefreshTokenService(
     private val refreshTokenRepository: RefreshTokenRepository,
     private val jwtConfig: JwtConfig,
 ) {
-    private val log: Logger = LoggerFactory.getLogger(this.javaClass)
+    private val log = logger()
 
     @Scheduled(cron = "0 0 0 * * *")
     fun revokeExpiredRefreshTokens() {

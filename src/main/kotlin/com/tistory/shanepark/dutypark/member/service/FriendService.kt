@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional
 class FriendService(
     private val friendRelationRepository: FriendRelationRepository,
     private val friendRequestRepository: FriendRequestRepository,
+    private val memberService: MemberService,
     private val memberRepository: MemberRepository
 ) {
 
@@ -200,9 +201,9 @@ class FriendService(
         val loginMember = memberRepository.findById(login.id).orElseThrow()
         if (login.id == targetMember.id)
             return true
-        if (!scheduleVisibilityCheck && (login.departmentId == targetMember.department?.id))
+        if (!scheduleVisibilityCheck && isSameDepartment(login, targetMember))
             return true
-        if (targetMember.department?.manager?.id == login.id)
+        if (memberService.isManager(login, targetMember))
             return true
         return when (targetMember.calendarVisibility) {
             Visibility.PUBLIC -> true
@@ -211,6 +212,11 @@ class FriendService(
             Visibility.PRIVATE -> false
         }
     }
+
+    private fun isSameDepartment(
+        login: LoginMember,
+        targetMember: Member
+    ) = (login.departmentId == targetMember.department?.id)
 
     @Transactional(readOnly = true)
     fun availableScheduleVisibilities(loginMember: LoginMember?, member: Member): Set<Visibility> {
@@ -256,6 +262,16 @@ class FriendService(
                 it.pinOrder = index.toLong() + 1
             }
         }
+    }
+
+    @Transactional(readOnly = true)
+    fun findAllFamilyMembers(id: Long): List<MemberDto> {
+        val member = memberRepository.findById(id).orElseThrow()
+        return friendRelationRepository.findAllByMember(member)
+            .filter { it.isFamily }
+            .map { it.friend }
+            .sortedBy { it.name }
+            .map { MemberDto.of(it) }
     }
 
 }

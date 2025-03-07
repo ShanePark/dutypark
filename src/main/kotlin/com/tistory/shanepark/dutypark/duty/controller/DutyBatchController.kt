@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.duty.controller
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchResult
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
@@ -24,7 +25,7 @@ class DutyBatchController(
     private val memberService: MemberService,
     private val applicationContext: ApplicationContext,
 ) {
-    val log: Logger = LoggerFactory.getLogger(DutyBatchController::class.java)
+    private val log = logger()
 
     @GetMapping("/templates")
     fun getTemplates(

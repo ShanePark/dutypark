@@ -9,7 +9,6 @@ data class MemberDto(
     val email: String? = null,
     val departmentId: Long? = null,
     val department: String? = null,
-    val managerId: Long? = null,
     val calendarVisibility: Visibility,
     val kakaoId: String?,
     val hasPassword: Boolean = false
@@ -22,7 +21,6 @@ data class MemberDto(
                 email = member.email,
                 departmentId = member.department?.id,
                 department = member.department?.name,
-                managerId = member.department?.manager?.id,
                 calendarVisibility = member.calendarVisibility,
                 kakaoId = member.kakaoId,
                 hasPassword = member.password != null

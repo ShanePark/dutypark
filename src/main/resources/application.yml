@@ -67,7 +67,6 @@ dutypark:
     - "0:0:0:0:0:0:0:1"
   slack:
     token: "SLACK_TOKEN_HERE"
-    minimum-interval: 60
   data-go-kr:
     service-key: "DECODED_SERVICE_KEY_HERE"
   log.path: "/tmp/logs"
