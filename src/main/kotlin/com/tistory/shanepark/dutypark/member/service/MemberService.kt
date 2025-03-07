@@ -115,6 +115,11 @@ class MemberService(
             .forEach { memberManagerRepository.delete(it) }
     }
 
+    fun isManager(isManager: LoginMember, target: Member): Boolean {
+        val member = memberRepository.findById(isManager.id).orElseThrow()
+        return isManager(member, target)
+    }
+
     fun isManager(manager: Member, target: Member): Boolean {
         return memberManagerRepository.findAllByManagerAndManaged(manager, target).isNotEmpty()
     }
@@ -127,6 +132,11 @@ class MemberService(
     fun findAllManagers(loginMember: LoginMember): List<MemberDto> {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
         return findAllManagers(member).map { MemberDto.of(it) }
+    }
+
+    fun isManager(isManager: LoginMember, targetMemberId: Long): Boolean {
+        val target = memberRepository.findById(targetMemberId).orElseThrow()
+        return isManager(isManager = isManager, target = target)
     }
 
 }

@@ -58,4 +58,12 @@ class MemberController(
         return memberService.findAllManagers(loginMember)
     }
 
+    @GetMapping("/{memberId}/canManage")
+    fun amIManager(
+        @Login loginMember: LoginMember,
+        @PathVariable memberId: Long,
+    ): Boolean {
+        return memberService.isManager(isManager = loginMember, targetMemberId = memberId)
+    }
+
 }

@@ -6,6 +6,7 @@ import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
+import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
@@ -13,7 +14,6 @@ import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.schedule.timeparsing.service.ScheduleTimeParsingQueueManager
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -26,6 +26,7 @@ class ScheduleService(
     private val scheduleRepository: ScheduleRepository,
     private val memberRepository: MemberRepository,
     private val friendService: FriendService,
+    private val memberService: MemberService,
     private val scheduleTimeParsingQueueManager: ScheduleTimeParsingQueueManager,
 ) {
     private val log = logger()
@@ -81,7 +82,7 @@ class ScheduleService(
 
     fun createSchedule(loginMember: LoginMember, scheduleUpdateDto: ScheduleUpdateDto): Schedule {
         val scheduleMember = memberRepository.findById(scheduleUpdateDto.memberId).orElseThrow()
-        checkScheduleCreateAuthority(loginMember, scheduleMember)
+        checkScheduleAuthority(loginMember, scheduleMember)
 
         val startDateTime = scheduleUpdateDto.startDateTime
         val position = findNextPosition(scheduleMember, startDateTime)
@@ -108,7 +109,7 @@ class ScheduleService(
 
     fun updateSchedule(loginMember: LoginMember, id: UUID, scheduleUpdateDto: ScheduleUpdateDto): Schedule {
         val schedule = scheduleRepository.findById(id).orElseThrow()
-        checkScheduleUpdateAuthority(schedule = schedule, loginMember = loginMember)
+        checkScheduleAuthority(schedule = schedule, loginMember = loginMember)
 
         schedule.startDateTime = scheduleUpdateDto.startDateTime
         schedule.endDateTime = scheduleUpdateDto.endDateTime
@@ -131,15 +132,15 @@ class ScheduleService(
             throw IllegalArgumentException("Schedule must have same date")
         }
 
-        checkScheduleUpdateAuthority(schedule = schedule1, loginMember = loginMember)
-        checkScheduleUpdateAuthority(schedule = schedule2, loginMember = loginMember)
+        checkScheduleAuthority(schedule = schedule1, loginMember = loginMember)
+        checkScheduleAuthority(schedule = schedule2, loginMember = loginMember)
 
         schedule1.position = schedule2.position.also { schedule2.position = schedule1.position }
     }
 
     fun deleteSchedule(loginMember: LoginMember, id: UUID) {
         val schedule = scheduleRepository.findById(id).orElseThrow()
-        checkScheduleUpdateAuthority(schedule = schedule, loginMember = loginMember)
+        checkScheduleAuthority(schedule = schedule, loginMember = loginMember)
 
         scheduleRepository.delete(schedule)
     }
@@ -149,7 +150,7 @@ class ScheduleService(
         val friend = memberRepository.findById(friendId).orElseThrow()
         val login = memberRepository.findById(loginMember.id).orElseThrow()
 
-        checkScheduleUpdateAuthority(schedule = schedule, loginMember = loginMember)
+        checkScheduleAuthority(schedule = schedule, loginMember = loginMember)
 
         if (!friendService.isFriend(login, friend)) {
             throw DutyparkAuthException("$friend is not friend of $loginMember")
@@ -161,7 +162,7 @@ class ScheduleService(
     fun untagFriend(loginMember: LoginMember, scheduleId: UUID, memberId: Long) {
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow()
         val member = memberRepository.findById(memberId).orElseThrow()
-        checkScheduleUpdateAuthority(schedule = schedule, loginMember = loginMember)
+        checkScheduleAuthority(schedule = schedule, loginMember = loginMember)
 
         schedule.removeTag(member)
     }
@@ -172,28 +173,15 @@ class ScheduleService(
         schedule.removeTag(member)
     }
 
-    private fun checkScheduleCreateAuthority(loginMember: LoginMember, scheduleMember: Member) {
-        if (loginMember.id == scheduleMember.id) return
-        if (scheduleMember.department?.manager?.id == loginMember.id) return
+    private fun checkScheduleAuthority(loginMember: LoginMember, scheduleMember: Member) {
+        if (scheduleMember.isEquals(loginMember = loginMember)) return
+        if (memberService.isManager(isManager = loginMember, target = scheduleMember)) return
 
-        throw DutyparkAuthException("login member doesn't have permission to create the schedule")
+        throw DutyparkAuthException("login member doesn't have permission to create or edit the schedule")
     }
 
-    private fun checkScheduleUpdateAuthority(
-        loginMember: LoginMember,
-        schedule: Schedule,
-    ) {
-        if (schedule.member.id == loginMember.id) return
-
-        // TODO: department Manager can not edit schedule
-        if (isDepartmentManager(schedule, loginMember)) return
-
-        throw DutyparkAuthException("login member doesn't have permission to update schedule")
+    private fun checkScheduleAuthority(loginMember: LoginMember, schedule: Schedule) {
+        checkScheduleAuthority(loginMember, schedule.member)
     }
-
-    private fun isDepartmentManager(
-        schedule: Schedule,
-        loginMember: LoginMember
-    ) = schedule.member.department?.manager?.id == loginMember.id
 
 }

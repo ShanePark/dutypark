@@ -528,7 +528,6 @@
         const memberId = parseInt("[[${member.id}]]");
         const departmentId = parseInt("[[${member.departmentId}]]");
         const loginMemberId = parseInt("[[${loginMember?.id}]]");
-        const managerId = parseInt("[[${member.managerId}]]");
         const isMyCalendar = loginMemberId === memberId;
 
         const visible = "[[${visible}]]" === 'true';
@@ -541,6 +540,7 @@
                     year: parseInt("[[${year}]]"),
                     month: parseInt("[[${month}]]"),
                     searchDay: parseInt("[[${day}]]"),
+                    amIManager: false,
                     duties: [],
                     schedulesByDays: [],
                     holidaysByDays: [],
@@ -599,6 +599,7 @@
                     this.loadHolidays(this.year, this.month);
                     this.loadFriends();
                     this.loadDDays();
+                    this.checkAmIManager();
                     if (isMyCalendar) {
                         this.loadTodos();
                     }
@@ -638,7 +639,7 @@
                         }
                     },
                     canEdit() {
-                        return loginMemberId === memberId || loginMemberId === managerId;
+                        return isMyCalendar || this.amIManager
                     },
                     isMyCalendar() {
                         return loginMemberId === memberId;
@@ -1718,8 +1719,25 @@
                             return false;
                         }
                         return true;
-                    }
-                }
+                    },
+                    checkAmIManager() {
+                        fetch(`/api/members/${memberId}/canManage`)
+                            .then(response => {
+                                if (!response.ok) {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: '관리자 권한 확인에 실패했습니다.',
+                                        showConfirmButton: false,
+                                        timer: sweetAlTimer
+                                    });
+                                    return;
+                                }
+                                return response.json();
+                            }).then(data => {
+                            app.amIManager = data;
+                        });
+                    },
+                } // end methods
             }
         )
     })

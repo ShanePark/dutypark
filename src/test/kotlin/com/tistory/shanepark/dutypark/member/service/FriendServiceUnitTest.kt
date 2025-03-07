@@ -27,6 +27,9 @@ class FriendServiceUnitTest {
     @Mock
     private lateinit var memberRepository: MemberRepository
 
+    @Mock
+    private lateinit var memberService: MemberService
+
     private lateinit var friendService: FriendService
 
     @BeforeEach
@@ -34,7 +37,8 @@ class FriendServiceUnitTest {
         friendService = FriendService(
             friendRelationRepository = friendRelationRepository,
             friendRequestRepository = friendRequestRepository,
-            memberRepository = memberRepository
+            memberRepository = memberRepository,
+            memberService = memberService,
         )
     }
 
