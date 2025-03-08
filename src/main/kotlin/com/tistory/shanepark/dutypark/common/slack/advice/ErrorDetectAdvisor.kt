@@ -8,8 +8,6 @@ import net.gpedro.integrations.slack.SlackField
 import net.gpedro.integrations.slack.SlackMessage
 import org.apache.catalina.connector.ClientAbortException
 import org.apache.coyote.CloseNowException
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.web.HttpRequestMethodNotSupportedException
 import org.springframework.web.bind.annotation.ControllerAdvice
@@ -30,7 +28,7 @@ class ErrorDetectAdvisor(
     fun handleMethodNotSupported(
         req: HttpServletRequest,
         e: HttpRequestMethodNotSupportedException
-    ): ResponseEntity<Any> {
+    ): ResponseEntity<Void> {
         val requestURI = req.requestURI
         if (!requestURI.equals("/")) {
             log.info("MethodNotSupportedException ${e.message}, requestURI: $requestURI")

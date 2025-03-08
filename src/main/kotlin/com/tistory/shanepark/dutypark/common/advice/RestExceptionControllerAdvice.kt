@@ -17,13 +17,13 @@ class RestExceptionControllerAdvice {
 
     @ResponseBody
     @ExceptionHandler
-    fun notAuthorizedHandler(e: DutyparkAuthException): ResponseEntity<Any> {
+    fun notAuthorizedHandler(e: DutyparkAuthException): ResponseEntity<DutyParkErrorResponse> {
         return ResponseEntity.status(e.errorCode)
             .body(DutyParkErrorResponse.of(e))
     }
 
     @ExceptionHandler
-    fun noSuchElementHandler(e: NoSuchElementException): ResponseEntity<Any> {
+    fun noSuchElementHandler(e: NoSuchElementException): ResponseEntity<Void> {
         log.warn("no such element: ${e.message}")
         return ResponseEntity.status(404).build()
     }

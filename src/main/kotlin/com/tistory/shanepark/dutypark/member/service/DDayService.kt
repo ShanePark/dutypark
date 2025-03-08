@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.member.service
 
-import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.member.domain.dto.DDayDto
 import com.tistory.shanepark.dutypark.member.domain.dto.DDaySaveDto
@@ -8,8 +7,6 @@ import com.tistory.shanepark.dutypark.member.domain.entity.DDayEvent
 import com.tistory.shanepark.dutypark.member.repository.DDayRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
@@ -21,9 +18,7 @@ class DDayService(
     private val dDayRepository: DDayRepository
 ) {
 
-    private val log = logger()
-
-    fun createDDay(loginMember: LoginMember, dDaySaveDto: DDaySaveDto): DDayEvent {
+    fun createDDay(loginMember: LoginMember, dDaySaveDto: DDaySaveDto): DDayDto {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
 
         val dDayEvent = DDayEvent(
@@ -32,7 +27,8 @@ class DDayService(
             date = dDaySaveDto.date,
             isPrivate = dDaySaveDto.isPrivate,
         )
-        return dDayRepository.save(dDayEvent)
+        dDayRepository.save(dDayEvent)
+        return DDayDto.of(dDayEvent)
     }
 
     @Transactional(readOnly = true)

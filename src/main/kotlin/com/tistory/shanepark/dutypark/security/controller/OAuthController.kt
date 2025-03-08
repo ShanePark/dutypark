@@ -28,7 +28,7 @@ class OAuthController(
         @RequestParam(value = "state") stateString: String,
         httpServletRequest: HttpServletRequest,
         @Login(required = false) loginMember: LoginMember?
-    ): ResponseEntity<Any> {
+    ): ResponseEntity<Void> {
         val state = objectMapper.readValue(stateString, Map::class.java)
         val referer = (state["referer"] as String?) ?: "/"
 
@@ -61,7 +61,7 @@ class OAuthController(
         @RequestParam(value = "username") username: String,
         @RequestParam(value = "term_agree") termAgree: Boolean,
         httpServletRequest: HttpServletRequest
-    ): ResponseEntity<Any> {
+    ): ResponseEntity<Void> {
         if (!termAgree) {
             return ResponseEntity.badRequest().build()
         }

@@ -7,7 +7,7 @@ data class DutyParkErrorResponse(
     val message: String,
 ) {
     companion object {
-        fun of(e: DutyparkAuthException): Any? {
+        fun of(e: DutyparkAuthException): DutyParkErrorResponse {
             return DutyParkErrorResponse(
                 errorCode = e.errorCode,
                 message = e.message ?: "Unknown Error"

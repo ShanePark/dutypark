@@ -4,8 +4,6 @@ import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeCreateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeUpdateDto
 import com.tistory.shanepark.dutypark.duty.service.DutyTypeService
 import jakarta.validation.Valid
-import org.springframework.http.HttpStatus
-import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 @RestController
@@ -15,27 +13,23 @@ class DutyTypeController(
 ) {
 
     @PostMapping
-    fun addDutyType(@RequestBody @Valid dutyTypeCreateDto: DutyTypeCreateDto): ResponseEntity<Any> {
+    fun addDutyType(@RequestBody @Valid dutyTypeCreateDto: DutyTypeCreateDto) {
         dutyTypeService.addDutyType(dutyTypeCreateDto)
-        return ResponseEntity.status(HttpStatus.CREATED).build()
     }
 
     @PatchMapping
-    fun updateDutyType(@RequestBody @Valid dutyTypeUpdateDto: DutyTypeUpdateDto): ResponseEntity<Any> {
+    fun updateDutyType(@RequestBody @Valid dutyTypeUpdateDto: DutyTypeUpdateDto) {
         dutyTypeService.update(dutyTypeUpdateDto)
-        return ResponseEntity.status(HttpStatus.OK).build()
     }
 
     @PatchMapping("/swap-position")
-    fun swapDutyTypePosition(@RequestParam id1: Long, @RequestParam id2: Long): ResponseEntity<Any> {
+    fun swapDutyTypePosition(@RequestParam id1: Long, @RequestParam id2: Long) {
         dutyTypeService.swapDutyTypePosition(id1, id2)
-        return ResponseEntity.ok().build()
     }
 
     @DeleteMapping("/{id}")
-    fun delete(@PathVariable id: Long): ResponseEntity<Any> {
+    fun delete(@PathVariable id: Long) {
         dutyTypeService.delete(id)
-        return ResponseEntity.status(HttpStatus.OK).build()
     }
 
 }

@@ -10,7 +10,6 @@ import com.tistory.shanepark.dutypark.schedule.service.ScheduleService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
-import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.*
 import java.time.YearMonth
@@ -51,10 +50,8 @@ class ScheduleController(
     fun createSchedule(
         @RequestBody @Validated scheduleUpdateDto: ScheduleUpdateDto,
         @Login loginMember: LoginMember
-    ): ResponseEntity<Any> {
+    ) {
         scheduleService.createSchedule(loginMember, scheduleUpdateDto)
-
-        return ResponseEntity.ok().build()
     }
 
     @PutMapping("/{id}")
@@ -63,9 +60,8 @@ class ScheduleController(
         scheduleUpdateDto: ScheduleUpdateDto,
         @Login loginMember: LoginMember,
         @PathVariable id: UUID
-    ): ResponseEntity<Any> {
+    ) {
         scheduleService.updateSchedule(loginMember, id, scheduleUpdateDto)
-        return ResponseEntity.ok().build()
     }
 
     @PatchMapping("/{id1}/position")
@@ -73,9 +69,8 @@ class ScheduleController(
         @PathVariable id1: UUID,
         @RequestParam id2: UUID,
         @Login loginMember: LoginMember,
-    ): ResponseEntity<Any> {
+    ) {
         scheduleService.swapSchedulePosition(loginMember, id1, id2)
-        return ResponseEntity.ok().build()
     }
 
     @DeleteMapping("/{id}")

@@ -8,7 +8,6 @@ import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.PasswordChangeDto
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import jakarta.servlet.http.HttpServletRequest
-import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
@@ -27,7 +26,7 @@ class AuthController(
         req: HttpServletRequest,
         @RequestParam(name = "referer", required = false) urlReferer: String?,
         @SessionAttribute(name = "referer", required = false) referer: String?
-    ): ResponseEntity<Any> {
+    ): ResponseEntity<String> {
         var refererValue = urlReferer ?: referer ?: "/"
         if (refererValue.contains("/login")) {
             refererValue = "/"

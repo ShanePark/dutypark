@@ -19,8 +19,6 @@ import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import jakarta.validation.Valid
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationContext
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
@@ -82,18 +80,16 @@ class DepartmentAdminController(
     fun changeManager(
         @PathVariable id: Long,
         @RequestParam memberId: Long?
-    ): ResponseEntity<Any> {
+    ) {
         departmentService.changeManager(departmentId = id, memberId = memberId)
-        return ResponseEntity.ok().build()
     }
 
     @PatchMapping("/{id}/batch-template")
     fun updateBatchTemplate(
         @PathVariable id: Long,
         @RequestParam(name = "templateName", required = false) dutyBatchTemplate: DutyBatchTemplate?
-    ): ResponseEntity<Any> {
+    ) {
         departmentService.updateBatchTemplate(id, dutyBatchTemplate)
-        return ResponseEntity.ok().build()
     }
 
     @PostMapping("/{id}/duty")
@@ -127,27 +123,24 @@ class DepartmentAdminController(
         @PathVariable id: Long,
         @RequestParam color: String,
         @RequestParam name: String,
-    ): ResponseEntity<Any> {
+    ) {
         departmentService.updateDefaultDuty(id, name, color)
-        return ResponseEntity.ok().build()
     }
 
     @PostMapping("/{id}/members")
     fun addMember(
         @PathVariable id: Long,
         @RequestParam memberId: Long
-    ): ResponseEntity<Any> {
+    ) {
         departmentService.addMemberToDepartment(departmentId = id, memberId = memberId)
-        return ResponseEntity.ok().build()
     }
 
     @DeleteMapping("/{id}/members")
     fun removeMember(
         @PathVariable id: Long,
         @RequestParam memberId: Long
-    ): ResponseEntity<Any> {
+    ) {
         departmentService.removeMemberFromDepartment(id, memberId)
-        return ResponseEntity.ok().build()
     }
 
 }

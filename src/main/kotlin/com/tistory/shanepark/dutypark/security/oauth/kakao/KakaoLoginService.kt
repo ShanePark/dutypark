@@ -8,8 +8,6 @@ import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterReposit
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import jakarta.servlet.http.HttpServletRequest
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -29,7 +27,7 @@ class KakaoLoginService(
 ) {
     private val log = logger()
 
-    fun login(req: HttpServletRequest, code: String, redirectUrl: String, referer: String): ResponseEntity<Any> {
+    fun login(req: HttpServletRequest, code: String, redirectUrl: String, referer: String): ResponseEntity<Void> {
         val kakaoId = getKakaoId(redirectUrl, code)
 
         val member = memberRepository.findMemberByKakaoId(kakaoId)

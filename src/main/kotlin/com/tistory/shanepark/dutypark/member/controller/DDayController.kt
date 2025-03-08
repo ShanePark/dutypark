@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.member.controller
 
 import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
+import com.tistory.shanepark.dutypark.member.domain.dto.DDayDto
 import com.tistory.shanepark.dutypark.member.domain.dto.DDaySaveDto
 import com.tistory.shanepark.dutypark.member.service.DDayService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -21,33 +22,21 @@ class DDayController(
     fun createDDay(
         @Login member: LoginMember,
         @Valid @RequestBody dDaySaveDto: DDaySaveDto
-    ): ResponseEntity<Any> {
-        val createDDay = dDayService.createDDay(member, dDaySaveDto)
-
-        return ResponseEntity
-            .status(HttpStatus.CREATED)
-            .body(createDDay)
+    ): DDayDto {
+        return dDayService.createDDay(member, dDaySaveDto)
     }
 
     @GetMapping
-    fun findDDays(@Login login: LoginMember): ResponseEntity<Any> {
-        val findDDays = dDayService.findDDays(login, login.id)
-
-        return ResponseEntity
-            .status(HttpStatus.OK)
-            .body(findDDays)
+    fun findDDays(@Login login: LoginMember): List<DDayDto> {
+        return dDayService.findDDays(login, login.id)
     }
 
     @GetMapping("/{id}")
     fun findDDaysByMemberId(
         @Login(required = false) member: LoginMember?,
         @PathVariable id: Long
-    ): ResponseEntity<Any> {
-        val findDDay = dDayService.findDDays(member, id)
-
-        return ResponseEntity
-            .status(HttpStatus.OK)
-            .body(findDDay)
+    ): List<DDayDto> {
+        return dDayService.findDDays(member, id)
     }
 
 
@@ -55,12 +44,8 @@ class DDayController(
     fun deleteDDay(
         @Login member: LoginMember,
         @PathVariable id: Long
-    ): ResponseEntity<Any> {
+    ) {
         dDayService.deleteDDay(member, id)
-
-        return ResponseEntity
-            .status(HttpStatus.NO_CONTENT)
-            .build()
     }
 
     @PutMapping("/{id}")
@@ -68,8 +53,8 @@ class DDayController(
         @Login member: LoginMember,
         @PathVariable id: Long,
         @Valid @RequestBody dDaySaveDto: DDaySaveDto
-    ): ResponseEntity<Any> {
-        val updateDDay = dDayService.updateDDay(
+    ): ResponseEntity<Void> {
+        dDayService.updateDDay(
             loginMember = member,
             id = id,
             title = dDaySaveDto.title,
@@ -78,7 +63,7 @@ class DDayController(
         )
         return ResponseEntity
             .status(HttpStatus.OK)
-            .body(updateDDay)
+            .build()
     }
 
 }
