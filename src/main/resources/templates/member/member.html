@@ -279,7 +279,7 @@
                                 url: '/api/refresh-tokens/' + tokenId,
                                 type: 'DELETE',
                                 success: function () {
-                                    app.load();
+                                    app.loadRefreshTokens();
                                 },
                                 error: function (error) {
                                     console.log(error);
