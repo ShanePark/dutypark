@@ -3,10 +3,7 @@
 }
 
 html {
-    /*
-    Never make it scroll otherwise mobile Safari will throw errors
-    */
-    overflow-y: auto;
+    overflow-y: visible; /* Never make it scroll or auto, otherwise mobile Safari will throw `this page was reloaded...`*/
 }
 
 #header div.header {
@@ -17,7 +14,7 @@ html {
 #body {
     max-width: 64rem;
     margin: 0 auto;
-    padding: 1rem 1rem 12vh 1rem;
+    padding: 1rem 1rem calc(1rem + 12vh) 1rem;
 }
 
 #footer {
