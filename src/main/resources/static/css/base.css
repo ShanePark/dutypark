@@ -3,7 +3,10 @@
 }
 
 html {
-    overflow-y: scroll;
+    /*
+    Never make it scroll otherwise mobile Safari will throw errors
+    */
+    overflow-y: auto;
 }
 
 #header div.header {
