@@ -193,7 +193,21 @@
           <div class="d-day_content col-8">
             <p class="m-1 text-muted" v-if="!dDay.editMode">{{dDay.date}}</p>
             <p v-if="!dDay.editMode">{{dDay.title}}</p>
+            <div class="position-absolute top-0 mt-1 end-0 me-3 fs-2">
+              <button v-if="!dDay.editMode" v-on:click="createOrUpdateDday(dDay)" class="btn btn-outline-primary">
+                <i class="bi bi-pencil-square"></i></button>
+              <button v-if="!dDay.editMode" v-on:click="removeDday(dDay)" class="btn btn-outline-danger">
+                <i class="bi bi-trash"></i></button>
+            </div>
           </div>
+        </div>
+      </div>
+      <div class="col-6">
+        <div
+            class="d-day-item card shadow-sm p-4 m-1 rounded-4 text-align-center bg-primary cursor-pointer text-white fs-2"
+            v-on:click="createOrUpdateDday()"
+        >
+          <i class="bi bi-plus-circle"></i><span>디데이 추가</span>
         </div>
       </div>
     </div>
@@ -207,7 +221,8 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="todo-details-title">할일 상세</h5>
-          <button type="button" class="btn-close position-absolute end-0 me-3" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close position-absolute end-0 me-3" data-bs-dismiss="modal"
+                  aria-label="Close"></button>
         </div>
         <div class="modal-body">
           <div class="modal-body">
@@ -246,7 +261,8 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="addModalLabel">할일 추가</h5>
-          <button type="button" class="btn-close position-absolute end-0 me-3" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close position-absolute end-0 me-3" data-bs-dismiss="modal"
+                  aria-label="Close"></button>
         </div>
         <div class="modal-body">
           <label class="form-control fs-3 mb-2">할일 제목
@@ -460,6 +476,20 @@
           </div>
         </div>
         <div class="modal-footer">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="add_dday_modal" hidden>
+    <p>중요한 이벤트들을 추가해서 (남은/지난) 일수를 확인하세요</p>
+    <input type="text" class="swal2-input w-75" placeholder="기념일 제목" name="title" maxlength="30">
+    <input type="date" class="swal2-input w-75" placeholder="기념일 날짜" name="date">
+    <div class="mt-2">
+      <div class="pretty p-switch p-fill">
+        <input type="checkbox" name="isPrivate"/>
+        <div class="state p-success">
+          <label>비공개</label>
         </div>
       </div>
     </div>
@@ -842,7 +872,7 @@
           }
           ,
           dDayToggle(dDay) {
-            if (app.selectedDday == dDay) {
+            if (app.selectedDday === dDay) {
               app.selectedDday = null;
               localStorage.removeItem('selectedDday_' + memberId);
             } else {
@@ -1608,6 +1638,110 @@
               app.amIManager = data;
             });
           },
+          createOrUpdateDday(dDay) {
+            let modal = $('#add_dday_modal').clone();
+
+            const tzOffset = (new Date()).getTimezoneOffset() * 60000; //offset in milliseconds
+            modal.find('input[name="date"]').val((new Date(Date.now() - tzOffset)).toISOString().slice(0, 10));
+            modal.attr('hidden', false)
+
+            let title = '디데이 추가'
+            if (dDay) {
+              modal.find('input[name="title"]').val(dDay.title);
+              modal.find('input[name="date"]').val(dDay.date);
+              modal.find('input[name="isPrivate"]').prop('checked', dDay.isPrivate);
+              title = '디데이 수정';
+            }
+
+            Swal.fire({
+              title: title,
+              html: modal,
+              cancelButtonText: '닫기',
+              confirmButtonText: '저장',
+              showCancelButton: true,
+              preConfirm: () => {
+                const title = Swal.getPopup().querySelector('input[name="title"]').value
+                const date = Swal.getPopup().querySelector('input[name="date"]').value
+                const isPrivate = Swal.getPopup().querySelector('input[name="isPrivate"]').checked
+                if (!title || !date) {
+                  Swal.showValidationMessage(`모든 항목을 입력해주세요.`)
+                }
+                return {
+                  id: dDay ? dDay.id : null,
+                  title: title,
+                  date: date,
+                  isPrivate: isPrivate
+                }
+              }
+            }).then((result) => {
+              if (result.isConfirmed) {
+                modal.waitMe();
+                $.ajax({
+                  url: '/api/dday',
+                  type: 'POST',
+                  data: JSON.stringify(result.value),
+                  contentType: 'application/json',
+                  success: function (response) {
+                    Swal.fire({
+                      title: '성공',
+                      text: '디데이가 저장되었습니다.',
+                      icon: 'success',
+                      confirmButtonText: '확인'
+                    })
+                    app.loadDDays();
+                  },
+                  error: function (error) {
+                    Swal.fire({
+                      title: '실패',
+                      html: '디데이 저장에 실패하였습니다. <br/>에러메시지: ' + error.responseJSON.errors[0].defaultMessage,
+                      icon: 'error',
+                      confirmButtonText: '확인'
+                    })
+                  }, complete: function () {
+                    modal.waitMe('hide');
+                  }
+                })
+              }
+            })
+          },
+          removeDday: function (dDay) {
+            Swal.fire({
+              title: '디데이 삭제',
+              text: '[' + dDay.title + '] ' + rulChecker(dDay.title) + ' 정말로 삭제하시겠습니까?',
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonText: '삭제',
+              cancelButtonText: '취소'
+            }).then((result) => {
+              if (result.isConfirmed) {
+                $('#body').waitMe();
+                $.ajax({
+                  url: '/api/dday/' + dDay.id,
+                  type: 'DELETE',
+                  success: function (response) {
+                    Swal.fire({
+                      title: '성공',
+                      text: '디데이가 삭제되었습니다.',
+                      icon: 'success',
+                      confirmButtonText: '확인'
+                    })
+                    app.loadDDays();
+                  },
+                  error: function (error) {
+                    Swal.fire({
+                      title: '실패',
+                      text: '디데이 삭제에 실패하였습니다.',
+                      icon: 'error',
+                      confirmButtonText: '확인'
+                    })
+                  },
+                  complete: function () {
+                    $('#body').waitMe('hide');
+                  }
+                })
+              }
+            })
+          }
         } // end methods
       }
     )

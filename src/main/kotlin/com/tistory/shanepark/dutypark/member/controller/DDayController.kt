@@ -7,8 +7,6 @@ import com.tistory.shanepark.dutypark.member.domain.dto.DDaySaveDto
 import com.tistory.shanepark.dutypark.member.service.DDayService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import jakarta.validation.Valid
-import org.springframework.http.HttpStatus
-import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 @RestController
@@ -19,17 +17,21 @@ class DDayController(
 
     @PostMapping
     @SlackNotification
-    fun createDDay(
+    fun saveDday(
         @Login member: LoginMember,
         @Valid @RequestBody dDaySaveDto: DDaySaveDto
     ): DDayDto {
-        return dDayService.createDDay(member, dDaySaveDto)
+        if (dDaySaveDto.id == null) {
+            return dDayService.createDDay(member, dDaySaveDto)
+        }
+        return dDayService.updateDDay(loginMember = member, dDaySaveDto = dDaySaveDto)
     }
 
     @GetMapping
     fun findDDays(@Login login: LoginMember): List<DDayDto> {
         return dDayService.findDDays(login, login.id)
     }
+
 
     @GetMapping("/{id}")
     fun findDDaysByMemberId(
@@ -39,31 +41,12 @@ class DDayController(
         return dDayService.findDDays(member, id)
     }
 
-
     @DeleteMapping("/{id}")
     fun deleteDDay(
         @Login member: LoginMember,
         @PathVariable id: Long
     ) {
         dDayService.deleteDDay(member, id)
-    }
-
-    @PutMapping("/{id}")
-    fun updateDDay(
-        @Login member: LoginMember,
-        @PathVariable id: Long,
-        @Valid @RequestBody dDaySaveDto: DDaySaveDto
-    ): ResponseEntity<Void> {
-        dDayService.updateDDay(
-            loginMember = member,
-            id = id,
-            title = dDaySaveDto.title,
-            date = dDaySaveDto.date,
-            isPrivate = dDaySaveDto.isPrivate
-        )
-        return ResponseEntity
-            .status(HttpStatus.OK)
-            .build()
     }
 
 }

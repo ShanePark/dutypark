@@ -29,9 +29,9 @@ class MemberViewController(
         return layout(model, "member/member")
     }
 
-    @GetMapping("/member/d-day")
-    fun dDayPage(@Login loginMember: LoginMember, model: Model): String {
-        return layout(model, "member/d-day")
+    @GetMapping("/team")
+    fun myTeamPage(model: Model): String {
+        return layout(menu = "team/myteam", model = model)
     }
 
 }

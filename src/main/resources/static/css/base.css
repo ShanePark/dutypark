@@ -344,11 +344,6 @@ a.homeButton:hover {
     filter: brightness(90%);
 }
 
-.d-day-list .d-day-item:hover {
-    cursor: pointer;
-    filter: brightness(90%);
-}
-
 .d-day-list .d-day-private {
     background-color: mistyrose;
 }

@@ -122,7 +122,7 @@
     }
 
     .d-day-list .d-day-item {
-        max-height: 150px;
+        height: 150px;
     }
 
     #detail-view-modal .schedules {
