@@ -6,7 +6,6 @@ import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus.WA
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingTask
 import jakarta.annotation.PostConstruct
-import org.slf4j.LoggerFactory
 import org.springframework.core.env.Environment
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime

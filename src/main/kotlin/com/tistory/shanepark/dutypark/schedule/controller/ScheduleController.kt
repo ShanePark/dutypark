@@ -3,8 +3,8 @@ package com.tistory.shanepark.dutypark.schedule.controller
 import com.tistory.shanepark.dutypark.common.domain.dto.PageResponse
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
+import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSaveDto
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSearchResult
-import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
 import com.tistory.shanepark.dutypark.schedule.service.ScheduleSearchService
 import com.tistory.shanepark.dutypark.schedule.service.ScheduleService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -47,21 +47,15 @@ class ScheduleController(
     }
 
     @PostMapping
-    fun createSchedule(
-        @RequestBody @Validated scheduleUpdateDto: ScheduleUpdateDto,
+    fun saveSchedule(
+        @RequestBody @Validated scheduleSaveDto: ScheduleSaveDto,
         @Login loginMember: LoginMember
     ) {
-        scheduleService.createSchedule(loginMember, scheduleUpdateDto)
-    }
-
-    @PutMapping("/{id}")
-    fun updateSchedule(
-        @RequestBody @Validated
-        scheduleUpdateDto: ScheduleUpdateDto,
-        @Login loginMember: LoginMember,
-        @PathVariable id: UUID
-    ) {
-        scheduleService.updateSchedule(loginMember, id, scheduleUpdateDto)
+        if (scheduleSaveDto.id == null) {
+            scheduleService.createSchedule(loginMember, scheduleSaveDto)
+            return
+        }
+        scheduleService.updateSchedule(loginMember, scheduleSaveDto)
     }
 
     @PatchMapping("/{id1}/position")

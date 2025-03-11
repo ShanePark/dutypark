@@ -8,7 +8,7 @@ import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
-import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
+import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSaveDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
@@ -80,23 +80,23 @@ class ScheduleService(
         return array
     }
 
-    fun createSchedule(loginMember: LoginMember, scheduleUpdateDto: ScheduleUpdateDto): Schedule {
-        val scheduleMember = memberRepository.findById(scheduleUpdateDto.memberId).orElseThrow()
+    fun createSchedule(loginMember: LoginMember, scheduleSaveDto: ScheduleSaveDto): Schedule {
+        val scheduleMember = memberRepository.findById(scheduleSaveDto.memberId).orElseThrow()
         checkScheduleAuthority(loginMember, scheduleMember)
 
-        val startDateTime = scheduleUpdateDto.startDateTime
+        val startDateTime = scheduleSaveDto.startDateTime
         val position = findNextPosition(scheduleMember, startDateTime)
         val schedule = Schedule(
             member = scheduleMember,
-            content = scheduleUpdateDto.content,
-            description = scheduleUpdateDto.description,
+            content = scheduleSaveDto.content,
+            description = scheduleSaveDto.description,
             startDateTime = startDateTime,
-            endDateTime = scheduleUpdateDto.endDateTime,
+            endDateTime = scheduleSaveDto.endDateTime,
             position = position,
-            visibility = scheduleUpdateDto.visibility
+            visibility = scheduleSaveDto.visibility
         )
 
-        log.info("create schedule: $scheduleUpdateDto")
+        log.info("create schedule: $scheduleSaveDto")
         scheduleRepository.save(schedule)
         scheduleTimeParsingQueueManager.addTask(schedule)
         return schedule
@@ -107,18 +107,21 @@ class ScheduleService(
         startDateTime: LocalDateTime
     ) = scheduleRepository.findMaxPosition(member, startDateTime) + 1
 
-    fun updateSchedule(loginMember: LoginMember, id: UUID, scheduleUpdateDto: ScheduleUpdateDto): Schedule {
-        val schedule = scheduleRepository.findById(id).orElseThrow()
+    fun updateSchedule(loginMember: LoginMember, scheduleSaveDto: ScheduleSaveDto): Schedule {
+        if (scheduleSaveDto.id == null)
+            throw IllegalArgumentException("Schedule id must not be null to update")
+
+        val schedule = scheduleRepository.findById(scheduleSaveDto.id).orElseThrow()
         checkScheduleAuthority(schedule = schedule, loginMember = loginMember)
 
-        schedule.startDateTime = scheduleUpdateDto.startDateTime
-        schedule.endDateTime = scheduleUpdateDto.endDateTime
-        schedule.content = scheduleUpdateDto.content
-        schedule.description = scheduleUpdateDto.description
-        schedule.visibility = scheduleUpdateDto.visibility
+        schedule.startDateTime = scheduleSaveDto.startDateTime
+        schedule.endDateTime = scheduleSaveDto.endDateTime
+        schedule.content = scheduleSaveDto.content
+        schedule.description = scheduleSaveDto.description
+        schedule.visibility = scheduleSaveDto.visibility
         schedule.parsingTimeStatus = ParsingTimeStatus.WAIT
 
-        log.info("update schedule: $scheduleUpdateDto")
+        log.info("update schedule: $scheduleSaveDto")
         scheduleRepository.save(schedule)
         scheduleTimeParsingQueueManager.addTask(schedule)
         return schedule

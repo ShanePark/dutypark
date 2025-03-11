@@ -6,7 +6,7 @@ import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
-import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
+import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSaveDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import org.assertj.core.api.Assertions.assertThat
@@ -29,20 +29,20 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
     fun `Create schedule success test`() {
         // given
         val member = TestData.member
-        val scheduleUpdateDto1 = ScheduleUpdateDto(
+        val scheduleSaveDto1 = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule1",
             description = "description1",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
             endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
         )
-        val scheduleUpdateDto2 = ScheduleUpdateDto(
+        val scheduleSaveDto2 = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule2",
             startDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
             endDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
         )
-        val scheduleUpdateDto3 = ScheduleUpdateDto(
+        val scheduleSaveDto3 = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule3",
             startDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
@@ -51,9 +51,9 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
         // When
         val loginMember = loginMember(member)
-        val createSchedule1 = scheduleService.createSchedule(loginMember, scheduleUpdateDto1)
-        val createSchedule2 = scheduleService.createSchedule(loginMember, scheduleUpdateDto2)
-        val createSchedule3 = scheduleService.createSchedule(loginMember, scheduleUpdateDto3)
+        val createSchedule1 = scheduleService.createSchedule(loginMember, scheduleSaveDto1)
+        val createSchedule2 = scheduleService.createSchedule(loginMember, scheduleSaveDto2)
+        val createSchedule3 = scheduleService.createSchedule(loginMember, scheduleSaveDto3)
 
         // Then
         assertThat(createSchedule1).isNotNull
@@ -61,10 +61,10 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         assertThat(id).isNotNull
         val findSchedule = scheduleRepository.findById(id).orElseThrow()
         assertThat(findSchedule).isNotNull
-        assertThat(findSchedule.content).isEqualTo(scheduleUpdateDto1.content)
-        assertThat(findSchedule.description).isEqualTo(scheduleUpdateDto1.description)
-        assertThat(findSchedule.startDateTime).isEqualTo(scheduleUpdateDto1.startDateTime)
-        assertThat(findSchedule.endDateTime).isEqualTo(scheduleUpdateDto1.endDateTime)
+        assertThat(findSchedule.content).isEqualTo(scheduleSaveDto1.content)
+        assertThat(findSchedule.description).isEqualTo(scheduleSaveDto1.description)
+        assertThat(findSchedule.startDateTime).isEqualTo(scheduleSaveDto1.startDateTime)
+        assertThat(findSchedule.endDateTime).isEqualTo(scheduleSaveDto1.endDateTime)
         assertThat(findSchedule.position).isEqualTo(0)
 
         assertThat(createSchedule2).isNotNull
@@ -77,7 +77,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         // given
         val member = TestData.member
         val otherMember = TestData.member2
-        val scheduleUpdateDto = ScheduleUpdateDto(
+        val scheduleSaveDto = ScheduleSaveDto(
             memberId = otherMember.id!!,
             content = "schedule1",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
@@ -89,7 +89,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
         // Then
         assertThrows<DutyparkAuthException> {
-            scheduleService.createSchedule(loginMember, scheduleUpdateDto)
+            scheduleService.createSchedule(loginMember, scheduleSaveDto)
         }
     }
 
@@ -109,7 +109,8 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         assertThat(schedule.id).isNotNull
 
         // When
-        val scheduleUpdateDto = ScheduleUpdateDto(
+        val scheduleSaveDto = ScheduleSaveDto(
+            id = schedule.id,
             memberId = member.id!!,
             content = "schedule2",
             description = "description2",
@@ -117,14 +118,14 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
             endDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
         )
         val loginMember = loginMember(member)
-        val updatedSchedule = scheduleService.updateSchedule(loginMember, schedule.id, scheduleUpdateDto)
+        val updatedSchedule = scheduleService.updateSchedule(loginMember, scheduleSaveDto)
 
         // Then
         assertThat(updatedSchedule).isNotNull
-        assertThat(updatedSchedule.content).isEqualTo(scheduleUpdateDto.content)
-        assertThat(updatedSchedule.description).isEqualTo(scheduleUpdateDto.description)
-        assertThat(updatedSchedule.startDateTime).isEqualTo(scheduleUpdateDto.startDateTime)
-        assertThat(updatedSchedule.endDateTime).isEqualTo(scheduleUpdateDto.endDateTime)
+        assertThat(updatedSchedule.content).isEqualTo(scheduleSaveDto.content)
+        assertThat(updatedSchedule.description).isEqualTo(scheduleSaveDto.description)
+        assertThat(updatedSchedule.startDateTime).isEqualTo(scheduleSaveDto.startDateTime)
+        assertThat(updatedSchedule.endDateTime).isEqualTo(scheduleSaveDto.endDateTime)
         assertThat(updatedSchedule.position).isEqualTo(0)
     }
 
@@ -144,7 +145,8 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         assertThat(schedule.id).isNotNull
 
         // When
-        val scheduleUpdateDto = ScheduleUpdateDto(
+        val scheduleSaveDto = ScheduleSaveDto(
+            id = schedule.id,
             memberId = member.id!!,
             content = "schedule2",
             startDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
@@ -154,7 +156,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
         // Then
         assertThrows<DutyparkAuthException> {
-            scheduleService.updateSchedule(loginMember, schedule.id, scheduleUpdateDto)
+            scheduleService.updateSchedule(loginMember, scheduleSaveDto)
         }
     }
 
@@ -348,19 +350,19 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
     fun `update Schedule Position test`() {
         // Given
         val member = TestData.member
-        val scheduleUpdateDto1 = ScheduleUpdateDto(
+        val scheduleSaveDto1 = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule1",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
             endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
         )
-        val scheduleUpdateDto2 = ScheduleUpdateDto(
+        val scheduleSaveDto2 = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule2",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
             endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
         )
-        val scheduleUpdateDto3 = ScheduleUpdateDto(
+        val scheduleSaveDto3 = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule3",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
@@ -368,9 +370,9 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         )
 
         val loginMember = loginMember(member)
-        val schedule1 = scheduleService.createSchedule(loginMember, scheduleUpdateDto1)
-        val schedule2 = scheduleService.createSchedule(loginMember, scheduleUpdateDto2)
-        val schedule3 = scheduleService.createSchedule(loginMember, scheduleUpdateDto3)
+        val schedule1 = scheduleService.createSchedule(loginMember, scheduleSaveDto1)
+        val schedule2 = scheduleService.createSchedule(loginMember, scheduleSaveDto2)
+        val schedule3 = scheduleService.createSchedule(loginMember, scheduleSaveDto3)
         assertThat(schedule1.position).isEqualTo(0)
         assertThat(schedule2.position).isEqualTo(1)
         assertThat(schedule3.position).isEqualTo(2)
@@ -393,19 +395,19 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
     fun `Different start date can't update schedule position`() {
         // Given
         val member = TestData.member
-        val scheduleUpdateDto1 = ScheduleUpdateDto(
+        val scheduleSaveDto1 = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule1",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
             endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
         )
-        val scheduleUpdateDto2 = ScheduleUpdateDto(
+        val scheduleSaveDto2 = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule2",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
             endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
         )
-        val scheduleUpdateDto3 = ScheduleUpdateDto(
+        val scheduleSaveDto3 = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule3",
             startDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
@@ -413,9 +415,9 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         )
 
         val loginMember = loginMember(member)
-        val schedule1 = scheduleService.createSchedule(loginMember, scheduleUpdateDto1)
-        val schedule2 = scheduleService.createSchedule(loginMember, scheduleUpdateDto2)
-        val schedule3 = scheduleService.createSchedule(loginMember, scheduleUpdateDto3)
+        val schedule1 = scheduleService.createSchedule(loginMember, scheduleSaveDto1)
+        val schedule2 = scheduleService.createSchedule(loginMember, scheduleSaveDto2)
+        val schedule3 = scheduleService.createSchedule(loginMember, scheduleSaveDto3)
 
         scheduleService.swapSchedulePosition(loginMember, schedule1.id, schedule2.id)
         // Then
@@ -429,13 +431,13 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         // Given
         val member = TestData.member
         val otherMember = TestData.member2
-        val scheduleUpdateDto1 = ScheduleUpdateDto(
+        val scheduleSaveDto1 = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule1",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
             endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
         )
-        val scheduleUpdateDto2 = ScheduleUpdateDto(
+        val scheduleSaveDto2 = ScheduleSaveDto(
             memberId = otherMember.id!!,
             content = "schedule2",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
@@ -443,8 +445,8 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         )
 
         val loginMember = loginMember(member)
-        val schedule1 = scheduleService.createSchedule(loginMember, scheduleUpdateDto1)
-        val schedule2 = scheduleService.createSchedule(loginMember(otherMember), scheduleUpdateDto2)
+        val schedule1 = scheduleService.createSchedule(loginMember, scheduleSaveDto1)
+        val schedule2 = scheduleService.createSchedule(loginMember(otherMember), scheduleSaveDto2)
 
         // Then
         assertThrows<DutyparkAuthException> {
@@ -457,7 +459,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         // Given
         val member = TestData.member
         val friend = TestData.member2
-        val scheduleUpdateDto = ScheduleUpdateDto(
+        val scheduleSaveDto = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule1",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
@@ -465,7 +467,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         )
         val loginMember = loginMember(member)
 
-        val schedule = scheduleService.createSchedule(loginMember, scheduleUpdateDto)
+        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
         makeThemFriend(member, friend)
 
         // When
@@ -482,7 +484,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         // Given
         val member = TestData.member
         val friend = TestData.member2
-        val scheduleUpdateDto = ScheduleUpdateDto(
+        val scheduleSaveDto = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule1",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
@@ -491,7 +493,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
         // When
         val loginMember = loginMember(member)
-        val schedule = scheduleService.createSchedule(loginMember, scheduleUpdateDto)
+        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
 
 
         // Then
@@ -505,7 +507,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         // Given
         val member = TestData.member
         val friend = TestData.member2
-        val scheduleUpdateDto = ScheduleUpdateDto(
+        val scheduleSaveDto = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule1",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
@@ -513,7 +515,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         )
         val loginMember = loginMember(member)
 
-        val schedule = scheduleService.createSchedule(loginMember, scheduleUpdateDto)
+        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
         makeThemFriend(member, friend)
         scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
 
@@ -530,7 +532,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         // Given
         val member = TestData.member
         val friend = TestData.member2
-        val scheduleUpdateDto = ScheduleUpdateDto(
+        val scheduleSaveDto = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule1",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
@@ -538,7 +540,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         )
         val loginMember = loginMember(member)
 
-        val schedule = scheduleService.createSchedule(loginMember, scheduleUpdateDto)
+        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
         makeThemFriend(member, friend)
         scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
 
@@ -555,7 +557,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         // Given
         val member = TestData.member
         val friend = TestData.member2
-        val scheduleUpdateDto = ScheduleUpdateDto(
+        val scheduleSaveDto = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule1",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
@@ -563,7 +565,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         )
         val loginMember = loginMember(member)
 
-        val schedule = scheduleService.createSchedule(loginMember, scheduleUpdateDto)
+        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
         makeThemFriend(member, friend)
 
         scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
@@ -584,7 +586,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         // Given
         val member = TestData.member
         val friend = TestData.member2
-        val scheduleUpdateDto = ScheduleUpdateDto(
+        val scheduleSaveDto = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule1",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
@@ -592,7 +594,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         )
         val loginMember = loginMember(member)
 
-        val schedule = scheduleService.createSchedule(loginMember, scheduleUpdateDto)
+        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
         makeThemFriend(member, friend)
 
         // When
@@ -609,7 +611,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         // Given
         val owner = TestData.member
         val taggedPerson = TestData.member2
-        val scheduleUpdateDto = ScheduleUpdateDto(
+        val scheduleSaveDto = ScheduleSaveDto(
             memberId = owner.id!!,
             content = "schedule1",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
@@ -617,7 +619,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         )
         val loginMember = loginMember(owner)
 
-        val schedule = scheduleService.createSchedule(loginMember, scheduleUpdateDto)
+        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
         makeThemFriend(owner, taggedPerson)
 
         scheduleService.tagFriend(loginMember, schedule.id, taggedPerson.id!!)
@@ -649,13 +651,13 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         // Given
         val member1 = TestData.member
         val member2 = TestData.member2
-        val updateDto1 = ScheduleUpdateDto(
+        val updateDto1 = ScheduleSaveDto(
             memberId = member1.id!!,
             content = "member1Schedule",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
             endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
         )
-        val updateDto2 = ScheduleUpdateDto(
+        val updateDto2 = ScheduleSaveDto(
             memberId = member2.id!!,
             content = "member2Schedule",
             startDateTime = LocalDateTime.of(2023, 4, 10, 1, 0),
@@ -705,7 +707,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
         val dayOfMonth = 10
         val own1 = scheduleService.createSchedule(
-            loginMember, ScheduleUpdateDto(
+            loginMember, ScheduleSaveDto(
                 memberId = member1.id!!,
                 content = "own1Schedule",
                 startDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 0, 0),
@@ -713,7 +715,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
             )
         )
         val tagged = scheduleService.createSchedule(
-            loginMember2, ScheduleUpdateDto(
+            loginMember2, ScheduleSaveDto(
                 memberId = member2.id!!,
                 content = "member2Schedule",
                 startDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
@@ -721,7 +723,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
             )
         )
         val own2 = scheduleService.createSchedule(
-            loginMember, ScheduleUpdateDto(
+            loginMember, ScheduleSaveDto(
                 memberId = member1.id!!,
                 content = "own2Schedule",
                 startDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 2, 0),
@@ -768,7 +770,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
         val dayOfMonth = 10
         val tagged = scheduleService.createSchedule(
-            loginMember2, ScheduleUpdateDto(
+            loginMember2, ScheduleSaveDto(
                 memberId = member2.id!!,
                 content = "member2Schedule",
                 startDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
@@ -799,7 +801,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
         val dayOfMonth = 10
         scheduleService.createSchedule(
-            loginMember2, ScheduleUpdateDto(
+            loginMember2, ScheduleSaveDto(
                 memberId = member2.id!!,
                 content = "member2Schedule",
                 startDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
@@ -808,7 +810,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
             )
         )
         scheduleService.createSchedule(
-            loginMember2, ScheduleUpdateDto(
+            loginMember2, ScheduleSaveDto(
                 memberId = member2.id!!,
                 content = "member2Schedule2",
                 startDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
@@ -896,7 +898,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
     fun `create schedule with private visibility`() {
         // Given
         val member = TestData.member
-        val scheduleUpdateDto = ScheduleUpdateDto(
+        val scheduleSaveDto = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule1",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
@@ -906,7 +908,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
         // When
         val loginMember = loginMember(member)
-        val schedule = scheduleService.createSchedule(loginMember, scheduleUpdateDto)
+        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
 
         // Then
         assertThat(schedule.visibility).isEqualTo(Visibility.PRIVATE)
@@ -916,7 +918,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
     fun `create schedule with public visibility`() {
         // Given
         val member = TestData.member
-        val scheduleUpdateDto = ScheduleUpdateDto(
+        val scheduleSaveDto = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule1",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
@@ -926,7 +928,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
         // When
         val loginMember = loginMember(member)
-        val schedule = scheduleService.createSchedule(loginMember, scheduleUpdateDto)
+        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
 
         // Then
         assertThat(schedule.visibility).isEqualTo(Visibility.PUBLIC)
@@ -936,7 +938,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
     fun `update schedule's visibility`() {
         // Given
         val member = TestData.member
-        val scheduleUpdateDto = ScheduleUpdateDto(
+        val scheduleSaveDto = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule1",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
@@ -945,14 +947,13 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         )
 
         val loginMember = loginMember(member)
-        val schedule = scheduleService.createSchedule(loginMember, scheduleUpdateDto)
+        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
         assertThat(schedule.visibility).isEqualTo(Visibility.PRIVATE)
 
         // When
         val updatedSchedule = scheduleService.updateSchedule(
             loginMember,
-            schedule.id,
-            scheduleUpdateDto.copy(visibility = Visibility.PUBLIC)
+            scheduleSaveDto.copy(visibility = Visibility.PUBLIC, id = schedule.id)
         )
 
         // Then
@@ -1084,7 +1085,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
     private fun makeSchedule(target: Member, visibility: Visibility, dateTime: LocalDateTime): Schedule {
         return scheduleService.createSchedule(
-            loginMember(target), ScheduleUpdateDto(
+            loginMember(target), ScheduleSaveDto(
                 memberId = target.id!!,
                 content = "private",
                 startDateTime = dateTime,

@@ -2,7 +2,7 @@ package com.tistory.shanepark.dutypark.schedule.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
-import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
+import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSaveDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.assertj.core.api.Assertions.assertThat
@@ -99,7 +99,7 @@ class ScheduleSearchServiceDBImplTest : DutyparkIntegrationTest() {
     ): Schedule {
         return scheduleService.createSchedule(
             loginMember,
-            ScheduleUpdateDto(
+            ScheduleSaveDto(
                 memberId = loginMember.id,
                 content = title,
                 visibility = Visibility.FRIENDS,
