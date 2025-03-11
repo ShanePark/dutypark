@@ -5,8 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingRequest
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingResponse
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.model.ChatModel
 import org.springframework.stereotype.Service
@@ -54,7 +52,7 @@ class ScheduleTimeParsingService(
                  - If a time range is mentioned (e.g., "2시~4시"), assign the first time to `startDateTime` and the second time to `endDateTime`.
                  - If only one time is mentioned, set both `startDateTime` and `endDateTime` to the same value.
                  - Remove the identified time from the text. The remaining text becomes `content`.
-                 - If AM/PM is not specified, assume it based on the content, but do not assume a specific hour or minute.                 
+                 - If AM/PM is not specified, infer based on context (e.g., common schedules for activities like "진료", "회의", "수업" usually occur during the day).                 
                  - If no time is found, return:
                    { "result": true, "hasTime": false }
                  - If "오전" or "오후" appears without an accompanying number, do not treat it as a valid time. Return `{ "result": true, "hasTime": false }`.

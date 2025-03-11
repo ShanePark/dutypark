@@ -10,12 +10,52 @@ import org.springframework.ai.openai.OpenAiChatOptions
 import org.springframework.ai.openai.api.OpenAiApi
 import java.time.LocalDate
 
-
 @Disabled("External API test")
 class ScheduleTimeParsingServiceTest {
 
     private val apiKey = "PUT_KEY_HERE_for_external_integration_test"
     val service = makeService()
+
+    private fun makeService(): ScheduleTimeParsingService {
+        val openapi = OpenAiApi
+            .builder()
+            .apiKey(apiKey)
+            .baseUrl("https://generativelanguage.googleapis.com/v1beta/openai/")
+            .completionsPath("/chat/completions")
+            .build()
+
+        val chatOption = OpenAiChatOptions
+            .builder()
+            .model("gemini-2.0-flash-lite")
+            .temperature(0.0)
+            .build()
+
+        val chatModel = OpenAiChatModel
+            .builder()
+            .openAiApi(openapi)
+            .defaultOptions(chatOption)
+            .build()
+
+        val service = ScheduleTimeParsingService(
+            chatModel = chatModel,
+            objectMapper = jsr310ObjectMapper()
+        )
+        return service
+    }
+
+    @Test
+    fun `parseScheduleTime guess afternoon without mention`() {
+        val response = service.parseScheduleTime(
+            ScheduleTimeParsingRequest(
+                date = LocalDate.of(2025, 2, 28),
+                content = "2:50 산본제일 진료"
+            )
+        )
+
+        Assertions.assertThat(response.result).isTrue()
+        Assertions.assertThat(response.hasTime).isTrue()
+        Assertions.assertThat(response.startDateTime).isEqualTo("2025-02-28T14:50:00")
+    }
 
     @Test
     fun `parseScheduleTime guess night`() {
@@ -123,33 +163,6 @@ class ScheduleTimeParsingServiceTest {
         Assertions.assertThat(response.startDateTime).isNull()
         Assertions.assertThat(response.endDateTime).isNull()
         Assertions.assertThat(response.content).isNull()
-    }
-
-    private fun makeService(): ScheduleTimeParsingService {
-        val openapi = OpenAiApi
-            .builder()
-            .apiKey(apiKey)
-            .baseUrl("https://generativelanguage.googleapis.com/v1beta/openai/")
-            .completionsPath("/chat/completions")
-            .build()
-
-        val chatOption = OpenAiChatOptions
-            .builder()
-            .model("gemini-2.0-flash-lite")
-            .temperature(0.0)
-            .build()
-
-        val chatModel = OpenAiChatModel
-            .builder()
-            .openAiApi(openapi)
-            .defaultOptions(chatOption)
-            .build()
-
-        val service = ScheduleTimeParsingService(
-            chatModel = chatModel,
-            objectMapper = jsr310ObjectMapper()
-        )
-        return service
     }
 
     @Test
@@ -331,6 +344,5 @@ class ScheduleTimeParsingServiceTest {
 
         Assertions.assertThat(response.result).isFalse()
     }
-
 
 }
