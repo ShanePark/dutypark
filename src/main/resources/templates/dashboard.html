@@ -201,8 +201,8 @@
                 </ul>
               </div>
             </div>
-            <p class="mt-2 text-muted">
-              <i class="bi bi-person-badge me-1"></i> 근무: {{ friend.duty.dutyType }}
+            <p v-if="friend.duty" class="mt-2 text-muted">
+              <i class="bi bi-person-badge me-1"></i> 근무: {{ friend.duty?.dutyType }}
             </p>
             <div class="mt-2">
               <template v-if="friend.schedules && friend.schedules.length">
