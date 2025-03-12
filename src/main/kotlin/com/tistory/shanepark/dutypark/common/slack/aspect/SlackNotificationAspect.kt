@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.common.slack.aspect
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifier
 import net.gpedro.integrations.slack.SlackAttachment
 import net.gpedro.integrations.slack.SlackField
@@ -19,36 +20,45 @@ class SlackNotificationAspect(
     @Qualifier("slackTaskExecutor")
     private val taskExecutor: TaskExecutor,
 ) {
+    val log = logger()
+
     @Around("@annotation(com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification)")
     fun slackNotification(proceedingJoinPoint: ProceedingJoinPoint): Any? {
-        val arguments = (proceedingJoinPoint.signature as MethodSignature).method.parameters
-            .map { it.name }
-            .zip(proceedingJoinPoint.args)
-            .joinToString { "${it.first} : ${it.second}" }
+        return try {
+            val result = proceedingJoinPoint.proceed()
 
-        val slackAttachment = SlackAttachment()
-        slackAttachment.setFallback("Post")
-        slackAttachment.setColor("good")
-        slackAttachment.setTitle("Data save detected")
+            val arguments = (proceedingJoinPoint.signature as MethodSignature).method.parameters
+                .map { it.name }
+                .zip(proceedingJoinPoint.args)
+                .joinToString { "${it.first} : ${it.second}" }
 
-        slackAttachment.setFields(
-            listOf(
-                SlackField().setTitle("Arguments").setValue(arguments),
-                SlackField().setTitle("method").setValue(proceedingJoinPoint.signature.name),
+            val slackAttachment = SlackAttachment()
+            slackAttachment.setFallback("Post")
+            slackAttachment.setColor("good")
+            slackAttachment.setTitle("Data save detected")
+
+            slackAttachment.setFields(
+                listOf(
+                    SlackField().setTitle("Arguments").setValue(arguments),
+                    SlackField().setTitle("method").setValue(proceedingJoinPoint.signature.name),
+                )
             )
-        )
 
-        val slackMessage = SlackMessage()
-        slackMessage.setAttachments(listOf(slackAttachment))
-        slackMessage.setIcon(":floppy_disk:")
-        slackMessage.setText("Post Request")
-        slackMessage.setUsername("DutyPark")
+            val slackMessage = SlackMessage()
+            slackMessage.setAttachments(listOf(slackAttachment))
+            slackMessage.setIcon(":floppy_disk:")
+            slackMessage.setText("Post Request")
+            slackMessage.setUsername("DutyPark")
 
-        taskExecutor.execute {
-            slackNotifier.call(slackMessage)
+            taskExecutor.execute {
+                slackNotifier.call(slackMessage)
+            }
+
+            result
+        } catch (ex: Exception) {
+            log.warn("Does not send slack notification as exception occurred [{}]", ex.message)
+            throw ex
         }
-
-        return proceedingJoinPoint.proceed()
     }
 
 }
