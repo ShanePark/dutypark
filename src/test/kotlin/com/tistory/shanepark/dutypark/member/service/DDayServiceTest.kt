@@ -40,7 +40,7 @@ class DDayServiceTest : DutyparkIntegrationTest() {
     fun `Create fail if login Member has Problem`() {
         assertThrows<NoSuchElementException> {
             dDayService.createDDay(
-                loginMember = LoginMember(id = -1, email = "", name = "", 0, "dept", isAdmin = false),
+                loginMember = LoginMember(id = -1, email = "", name = "", "dept", isAdmin = false),
                 dDaySaveDto = DDaySaveDto(
                     title = "test",
                     date = LocalDate.now().plusDays(3),
@@ -163,12 +163,15 @@ class DDayServiceTest : DutyparkIntegrationTest() {
                 isPrivate = false
             )
         )
-        dDayService.updateDDay(
-            loginMember = loginMember,
-            id = createDDay.id!!,
+        val updateDDayDto = DDaySaveDto(
+            id = createDDay.id,
             title = "test2",
             date = LocalDate.now().plusDays(5),
             isPrivate = true
+        )
+        dDayService.updateDDay(
+            loginMember = loginMember,
+            dDaySaveDto = updateDDayDto
         )
 
         val updateDDay = dDayService.findDDay(loginMember, createDDay.id!!)
@@ -191,34 +194,18 @@ class DDayServiceTest : DutyparkIntegrationTest() {
                 isPrivate = false
             )
         )
+        val updateDDayDto = DDaySaveDto(
+            id = createDDay.id,
+            title = "test2",
+            date = LocalDate.now().plusDays(5),
+            isPrivate = true
+        )
         assertThrows<DutyparkAuthException> {
             dDayService.updateDDay(
                 loginMember = loginMember2,
-                id = createDDay.id!!,
-                title = "test2",
-                date = LocalDate.now().plusDays(5),
-                isPrivate = true
+                dDaySaveDto = updateDDayDto
             )
         }
-    }
-
-    @Test
-    fun updatePrivacy() {
-        val member = TestData.member
-        val loginMember = loginMember(member)
-        val createDDay = dDayService.createDDay(
-            loginMember = loginMember,
-            dDaySaveDto = DDaySaveDto(
-                title = "test",
-                date = LocalDate.now().plusDays(3),
-                isPrivate = false
-            )
-        )
-        dDayService.updatePrivacy(loginMember, createDDay.id!!, true)
-        val updateDDay = dDayService.findDDay(loginMember, createDDay.id!!)
-        assertThat(updateDDay.isPrivate).isEqualTo(true)
-        assertThat(updateDDay.title).isEqualTo("test")
-        assertThat(updateDDay.date).isEqualTo(LocalDate.now().plusDays(3))
     }
 
     @Test

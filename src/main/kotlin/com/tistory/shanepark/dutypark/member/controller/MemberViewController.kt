@@ -18,7 +18,6 @@ class MemberViewController(
         @Login(required = false) loginMember: LoginMember?,
         model: Model
     ): String {
-        model.addAttribute("member", loginMember)
         return layout(model, "dashboard")
     }
 
@@ -29,9 +28,13 @@ class MemberViewController(
         return layout(model, "member/member")
     }
 
-    @GetMapping("/member/d-day")
-    fun dDayPage(@Login loginMember: LoginMember, model: Model): String {
-        return layout(model, "member/d-day")
+    @GetMapping("/team")
+    fun myTeamPage(
+        @Login loginMember: LoginMember,
+        model: Model
+    ): String {
+        model.addAttribute("login", loginMember)
+        return layout(menu = "team/myteam", model = model)
     }
 
 }

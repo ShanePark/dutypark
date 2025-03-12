@@ -118,7 +118,6 @@ class DutyparkIntegrationTest {
             id = member.id!!,
             email = member.email,
             name = member.name,
-            departmentId = member.department?.id,
             department = member.department?.name,
             isAdmin = false
         )

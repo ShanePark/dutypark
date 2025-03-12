@@ -9,7 +9,6 @@ import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.time.LocalDate
 
 @Service
 @Transactional
@@ -49,18 +48,14 @@ class DDayService(
             .map { DDayDto.of(it) }
     }
 
-    fun updateDDay(loginMember: LoginMember, id: Long, title: String, date: LocalDate, isPrivate: Boolean) {
+    fun updateDDay(loginMember: LoginMember, dDaySaveDto: DDaySaveDto): DDayDto {
+        val id = dDaySaveDto.id ?: throw IllegalArgumentException("DDay ID must not be null")
         val dDayEvent = dDayRepository.findById(id).orElseThrow()
         authenticationCheck(dDayEvent, loginMember)
-        dDayEvent.title = title
-        dDayEvent.date = date
-        dDayEvent.isPrivate = isPrivate
-    }
-
-    fun updatePrivacy(loginMember: LoginMember, id: Long, isPrivate: Boolean) {
-        val dDayEvent = dDayRepository.findById(id).orElseThrow()
-        authenticationCheck(dDayEvent, loginMember)
-        dDayEvent.isPrivate = isPrivate
+        dDayEvent.title = dDaySaveDto.title
+        dDayEvent.date = dDaySaveDto.date
+        dDayEvent.isPrivate = dDaySaveDto.isPrivate
+        return DDayDto.of(dDayEvent)
     }
 
     fun deleteDDay(loginMember: LoginMember, id: Long) {

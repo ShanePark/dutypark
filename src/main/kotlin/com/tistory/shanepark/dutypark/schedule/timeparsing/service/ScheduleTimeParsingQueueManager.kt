@@ -6,7 +6,6 @@ import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus.WA
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingTask
 import jakarta.annotation.PostConstruct
-import org.slf4j.LoggerFactory
 import org.springframework.core.env.Environment
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime
@@ -32,23 +31,26 @@ class ScheduleTimeParsingQueueManager(
 
     private val rpmLimit = 30
     private val rpdLimit = 1500
+    private var doTask = true
 
     @PostConstruct
     fun init() {
+        val activeProfile = environment.activeProfiles[0]
+        if (activeProfile != "op") {
+            log.info("do not add AI task as it's not op profile")
+            doTask = false
+            return;
+        }
+
         val allWaitJobs = scheduleRepository.findAllByParsingTimeStatus(WAIT)
         allWaitJobs.forEach { schedule -> addTask(schedule) }
         if (allWaitJobs.isNotEmpty())
             log.info("${allWaitJobs.size} pending schedules are added to the queue.")
+
     }
 
     fun addTask(schedule: Schedule) {
-        if (schedule.parsingTimeStatus != WAIT) return
-
-        val activeProfile = environment.activeProfiles[0]
-        if (activeProfile != "op") {
-            log.info("do not add AI task as it's no op profile")
-            return
-        }
+        if (schedule.parsingTimeStatus != WAIT || !doTask) return
 
         queue.add(ScheduleTimeParsingTask(schedule.id))
         startWorkIfNeeded()

@@ -5,10 +5,10 @@ import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeDto
 
 data class DashboardDepartment(
     val department: DepartmentDto?,
-    val groups: List<DashboardDutyType>,
+    val groups: List<DutyByShift>,
 )
 
-data class DashboardDutyType(
+data class DutyByShift(
     val dutyType: DutyTypeDto,
     val members: List<DashboardSimpleMember>
 )

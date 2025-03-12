@@ -4,7 +4,6 @@ data class LoginMember(
     val id: Long,
     val email: String? = null,
     val name: String,
-    val departmentId: Long? = null,
     val department: String? = null,
     var isAdmin: Boolean = false
 ) {

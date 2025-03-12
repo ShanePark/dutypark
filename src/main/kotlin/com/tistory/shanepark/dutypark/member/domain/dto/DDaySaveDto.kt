@@ -7,6 +7,7 @@ import java.time.LocalDate
 
 @Validated
 data class DDaySaveDto(
+    var id: Long? = null,
     @field:NotBlank
     @field:Size(min = 1, max = 30, message = "D-DAY 제목은 1자 이상 30자 이하로 입력해주세요.")
     val title: String,

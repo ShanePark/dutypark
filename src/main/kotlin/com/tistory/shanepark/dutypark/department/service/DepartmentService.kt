@@ -1,11 +1,10 @@
 package com.tistory.shanepark.dutypark.department.service
 
+import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardDepartment
-import com.tistory.shanepark.dutypark.dashboard.domain.DashboardDutyType
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardSimpleMember
-import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentCreateDto
-import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentDto
-import com.tistory.shanepark.dutypark.department.domain.dto.SimpleDepartmentDto
+import com.tistory.shanepark.dutypark.dashboard.domain.DutyByShift
+import com.tistory.shanepark.dutypark.department.domain.dto.*
 import com.tistory.shanepark.dutypark.department.domain.entity.Department
 import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
@@ -13,11 +12,13 @@ import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
+import java.time.YearMonth
 
 @Service
 @Transactional
@@ -124,9 +125,23 @@ class DepartmentService(
 
     fun dashboardDepartment(departmentId: Long): DashboardDepartment {
         val department = departmentRepository.findById(departmentId).orElseThrow()
+
+        return DashboardDepartment(
+            department = DepartmentDto.ofSimple(department),
+            groups = loadShift(department = department, localDate = LocalDate.now())
+        )
+    }
+
+    fun loadShift(loginMember: LoginMember, localDate: LocalDate): List<DutyByShift> {
+        val member = memberRepository.findById(loginMember.id).orElseThrow()
+        val department = member.department ?: return emptyList()
+        return loadShift(department = department, localDate = localDate)
+    }
+
+    private fun loadShift(department: Department, localDate: LocalDate): List<DutyByShift> {
         val departmentMembers = memberRepository.findMembersByDepartment(department)
 
-        val dutyMemberMap = dutyRepository.findByDutyDateAndMemberIn(LocalDate.now(), departmentMembers)
+        val dutyMemberMap = dutyRepository.findByDutyDateAndMemberIn(localDate, departmentMembers)
             .associateBy({ it }, { it.member })
         val offMembers = departmentMembers.filterNot { m -> dutyMemberMap.containsValue(m) }
 
@@ -140,12 +155,33 @@ class DepartmentService(
                 val members = sourceMembers
                     .map { member -> DashboardSimpleMember(member.id, member.name) }
                     .sortedBy { it.name }
-                DashboardDutyType(dutyTypeDto, members)
+                DutyByShift(dutyTypeDto, members)
             }
+        return dutyTypeMembers
+    }
 
-        return DashboardDepartment(
-            department = DepartmentDto.ofSimple(department),
-            groups = dutyTypeMembers
+    fun myTeamSummary(loginMember: LoginMember, yearMonth: YearMonth): MyTeamSummary {
+        val member = memberRepository.findById(loginMember.id).orElseThrow()
+        val department = member.department ?: return MyTeamSummary(yearMonth = yearMonth)
+        val departmentDto = DepartmentDto.ofSimple(department)
+        val calendarView = CalendarView(yearMonth)
+
+        var cur = calendarView.rangeFrom
+        val days = mutableListOf<TeamDay>()
+        while (cur <= calendarView.rangeEnd) {
+            val teamDay = TeamDay(
+                year = cur.year,
+                month = cur.monthValue,
+                day = cur.dayOfMonth
+            )
+            days.add(teamDay)
+            cur = cur.plusDays(1)
+        }
+
+        return MyTeamSummary(
+            yearMonth = yearMonth,
+            department = departmentDto,
+            teamDays = days
         )
     }
 

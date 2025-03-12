@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.schedule.controller
 
 import com.tistory.shanepark.dutypark.RestDocsTest
-import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleUpdateDto
+import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSaveDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import jakarta.servlet.http.Cookie
@@ -27,7 +27,7 @@ class ScheduleControllerTest : RestDocsTest() {
         val member = TestData.member
 
         val jwt = getJwt(member)
-        val updateScheduleDto = ScheduleUpdateDto(
+        val updateScheduleDto = ScheduleSaveDto(
             memberId = member.id!!,
             content = "test",
             startDateTime = LocalDateTime.now(),
@@ -64,7 +64,7 @@ class ScheduleControllerTest : RestDocsTest() {
     @Test
     fun `createScheduleTest unauthorized`() {
         // Given
-        val updateScheduleDto = ScheduleUpdateDto(
+        val updateScheduleDto = ScheduleSaveDto(
             memberId = 1234,
             content = "test",
             startDateTime = LocalDateTime.now(),
@@ -105,7 +105,8 @@ class ScheduleControllerTest : RestDocsTest() {
         )
 
         val jwt = getJwt(member)
-        val updateScheduleDto = ScheduleUpdateDto(
+        val updateScheduleDto = ScheduleSaveDto(
+            id = oldSchedule.id,
             memberId = member.id!!,
             content = "test2",
             startDateTime = LocalDateTime.now().plusHours(2),
@@ -115,7 +116,7 @@ class ScheduleControllerTest : RestDocsTest() {
 
         // Then
         mockMvc.perform(
-            put("/api/schedules/{id}", oldSchedule.id)
+            post("/api/schedules")
                 .accept("application/json")
                 .contentType("application/json")
                 .content(json)
@@ -126,6 +127,7 @@ class ScheduleControllerTest : RestDocsTest() {
                 document(
                     "schedules/update",
                     requestFields(
+                        fieldWithPath("id").description("Schedule id"),
                         fieldWithPath("memberId").description("Member Id"),
                         fieldWithPath("content").description("Schedule Content"),
                         fieldWithPath("description").description("Schedule Description"),

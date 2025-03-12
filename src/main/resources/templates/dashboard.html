@@ -1,4 +1,4 @@
-<div class="dashboard-intro" th:if="${member == null}">
+<div class="dashboard-intro" th:if="${loginMember == null}">
   <section class="py-5">
     <div class="row justify-content-center">
       <div class="col-12 col-md-10 col-lg-8">
@@ -90,7 +90,6 @@
            v-text="departmentInfo.department.name"></div>
       <div class="p-4">
         <template v-for="group in departmentInfo.groups"
-                  class="mb-1"
                   v-if="group.members.length>0">
           <div
               :class="{'duty-type border rounded p-0 mb-4 overflow-hidden': true, 'border-dark border-2': group.dutyType.name === myInfo.duty.dutyType}"
@@ -104,7 +103,7 @@
             <div class="m-0 row p-3">
               <div v-for="member in group.members" :key="member.id" class="col-3"
                    @click.prevent="moveTo(member.id)">
-                <div class="member-card p-3 border rounded shadow-sm text-center cursor-pointer">
+                <div class="member-card p-3 border rounded shadow-sm text-center cursor-pointer fs-3">
                   <i class="bi bi-person-fill mb-2"></i>
                   <span v-text="member.name"></span>
                 </div>
@@ -327,7 +326,7 @@
   const app = new Vue({
     el: "#app",
     data: {
-      memberId: parseInt("[[${member?.id}]]"),
+      memberId: parseInt("[[${loginMember?.id}]]"),
       today: new Date().toLocaleDateString("ko-KR", {
         year: "numeric", month: "long", day: "numeric", weekday: "long"
       }),

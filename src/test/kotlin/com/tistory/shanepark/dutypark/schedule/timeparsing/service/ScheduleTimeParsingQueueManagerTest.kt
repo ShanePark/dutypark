@@ -42,7 +42,6 @@ class ScheduleTimeParsingQueueManagerTest {
             scheduleRepository = scheduleRepository,
             environment = environment
         )
-        whenever(environment.activeProfiles).thenReturn(arrayOf("op"))
     }
 
     @Test
@@ -52,6 +51,7 @@ class ScheduleTimeParsingQueueManagerTest {
             makeSchedule(),
             makeSchedule(),
         )
+        whenever(environment.activeProfiles).thenReturn(arrayOf("op"))
         `when`(scheduleRepository.findAllByParsingTimeStatus(WAIT)).thenReturn(schedules)
 
         // When
