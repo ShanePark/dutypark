@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.member.service
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
 import com.tistory.shanepark.dutypark.member.domain.dto.DDayDto
 import com.tistory.shanepark.dutypark.member.domain.dto.DDaySaveDto
@@ -16,6 +17,7 @@ class DDayService(
     private val memberRepository: MemberRepository,
     private val dDayRepository: DDayRepository
 ) {
+    val log = logger()
 
     fun createDDay(loginMember: LoginMember, dDaySaveDto: DDaySaveDto): DDayDto {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
@@ -69,6 +71,7 @@ class DDayService(
         loginMember: LoginMember?
     ) {
         if (dDayEvent.member.id != loginMember?.id) {
+            log.warn("login member and d-day event member does not match: login:${loginMember?.id}, dDayEvent:${dDayEvent.id}")
             throw DutyparkAuthException("Can't access other member's d-day event")
         }
     }
