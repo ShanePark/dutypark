@@ -214,11 +214,13 @@ h1 a.move:hover {
     color: blue;
 }
 
+.my-team .today,
 .day-grid .today,
 .day-grid .searchDay {
-    border: 3px solid red;
+    border: 3px solid red !important;
 }
 
+.my-team .today .day,
 .day-grid .today .day {
     text-decoration: underline;
     text-underline-offset: 0.2em;
@@ -404,7 +406,6 @@ a.homeButton:hover {
 }
 
 #detail-view-modal .schedules .schedule {
-    font-size: 1.2em;
     border-radius: 15px;
     padding: 10px 20px;
     margin: 10px;
@@ -729,10 +730,6 @@ input[readonly], textarea[readonly] {
     margin-top: 10px;
 }
 
-.schedule .schedule-description {
-    font-size: 0.8em;
-}
-
 .DAY .schedule .schedule-description {
     display: none;
 }
@@ -741,11 +738,6 @@ input[readonly], textarea[readonly] {
     border: none;
     background-color: lightskyblue;
 }
-
-.dashboard .duty-type div {
-    padding: 0.2rem;
-}
-
 
 .cursor-pointer {
     cursor: pointer;
@@ -791,4 +783,9 @@ input[readonly], textarea[readonly] {
 .member-vue td {
     padding-top: 1em;
     padding-bottom: 1em;
+}
+
+.row-cols-7 > * {
+    flex: 0 0 auto;
+    width: 14.28571428571429%;
 }

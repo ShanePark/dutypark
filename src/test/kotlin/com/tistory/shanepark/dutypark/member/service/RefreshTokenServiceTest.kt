@@ -31,7 +31,6 @@ class RefreshTokenServiceTest : DutyparkIntegrationTest() {
             id = member.id!!,
             email = "",
             name = "",
-            departmentId = null,
             department = "",
             isAdmin = false,
         )
@@ -49,7 +48,6 @@ class RefreshTokenServiceTest : DutyparkIntegrationTest() {
             id = member.id!! + 1,
             email = "",
             name = "",
-            departmentId = null,
             department = "",
             isAdmin = true,
         )
@@ -66,7 +64,6 @@ class RefreshTokenServiceTest : DutyparkIntegrationTest() {
             id = member.id!! + 1,
             email = "",
             name = "",
-            departmentId = null,
             department = "",
             isAdmin = false,
         )

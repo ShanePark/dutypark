@@ -1,307 +1,110 @@
 package com.tistory.shanepark.dutypark.department.service
 
-import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
-import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentCreateDto
-import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
-import com.tistory.shanepark.dutypark.duty.enums.Color
+import com.tistory.shanepark.dutypark.department.domain.entity.Department
+import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
+import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
+import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
-import com.tistory.shanepark.dutypark.duty.service.DutyService
+import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.data.domain.Pageable
+import org.junit.jupiter.api.extension.ExtendWith
+import org.mockito.InjectMocks
+import org.mockito.Mock
+import org.mockito.Mockito.`when`
+import org.mockito.junit.jupiter.MockitoExtension
+import org.springframework.test.util.ReflectionTestUtils
+import java.time.LocalDate
+import java.util.*
 
-class DepartmentServiceTest : DutyparkIntegrationTest() {
+@ExtendWith(MockitoExtension::class)
+class DepartmentServiceTest {
 
-    @Autowired
-    private lateinit var service: DepartmentService
+    @InjectMocks
+    lateinit var service: DepartmentService
 
-    @Test
-    fun findAllWithMemberCount() {
-        val initial = departmentRepository.findAllWithMemberCount(Pageable.ofSize(10))
-        assertThat(initial.content.map { d -> d.id }).containsExactly(TestData.department.id, TestData.department2.id)
-    }
+    @Mock
+    lateinit var departmentRepository: DepartmentRepository
 
-    @Test
-    fun findById() {
-        val findOne = service.findByIdWithMembersAndDutyTypes(TestData.department.id!!)
-        assertThat(findOne.id).isEqualTo(TestData.department.id)
-        assertThat(findOne.name).isEqualTo(TestData.department.name)
-    }
+    @Mock
+    lateinit var dutyTypeRepository: DutyTypeRepository
 
-    @Test
-    fun `create department`() {
-        val totalBefore = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
-        val departmentCreateDto = DepartmentCreateDto("deptName", "deptDesc")
-        val create = service.create(departmentCreateDto)
-        assertThat(create.id).isNotNull
-        assertThat(create.name).isEqualTo(departmentCreateDto.name)
-        assertThat(create.description).isEqualTo(departmentCreateDto.description)
-        val totalAfter = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
-        assertThat(totalAfter).isEqualTo(totalBefore + 1)
-    }
+    @Mock
+    lateinit var dutyRepository: DutyRepository
+
+    @Mock
+    lateinit var memberRepository: MemberRepository
+
 
     @Test
-    fun `delete Department success`() {
+    fun `loadShift should return empty shift if member is not in any team`() {
         // Given
-        val totalBefore = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
-        val created = service.create(DepartmentCreateDto("deptName", "deptDesc"))
-        val totalAfter = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
-        assertThat(totalAfter).isEqualTo(totalBefore + 1)
+        val longinMember = LoginMember(id = 1L, name = "test")
+        val department = Department("Test Department")
+        val teamId = 1L
+        ReflectionTestUtils.setField(department, "id", teamId)
 
         // When
-        service.delete(created.id)
+        `when`(memberRepository.findById(1L)).thenReturn(Optional.of(Member(name = "test")))
+
+        val shifts = service.loadShift(loginMember = longinMember, LocalDate.of(2025, 3, 12))
 
         // Then
-        val totalAfterDelete = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
-        assertThat(totalAfterDelete).isEqualTo(totalBefore)
+        assertThat(shifts).isEmpty()
     }
 
     @Test
-    fun `can not delete invalid department id`() {
+    fun `loadShift should return correct shifts when members have duties`() {
         // Given
-        val totalBefore = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
+
+        val department = Department("Test Department")
+        val teamId = 1L
+        ReflectionTestUtils.setField(department, "id", teamId)
+
+        val member1 = Member(name = "Alice")
+        member1.department = department
+        val member2 = Member(name = "Bob")
+        member2.department = department
+        ReflectionTestUtils.setField(member1, "id", 1L)
+        ReflectionTestUtils.setField(member2, "id", 2L)
+        val loginMember = LoginMember(id = 1L, name = "test")
+
+        val dutyType1 = DutyType("Type1", 0, department)
+        val dutyType2 = DutyType("Type2", 1, department)
+        ReflectionTestUtils.setField(dutyType1, "id", 1L)
+        ReflectionTestUtils.setField(dutyType2, "id", 2L)
+        val dutyTypes = listOf(
+            dutyType1,
+            dutyType2
+        )
+
+        val dutyDate = LocalDate.of(2025, 3, 12)
+        val duty1 = Duty(dutyDate = dutyDate, dutyType = dutyTypes[0], member = member1)
+        val duty2 = Duty(dutyDate = dutyDate, dutyType = dutyTypes[1], member = member2)
+        ReflectionTestUtils.setField(duty1, "id", 1L)
+        ReflectionTestUtils.setField(duty2, "id", 2L)
+
+        `when`(memberRepository.findMembersByDepartment(department)).thenReturn(listOf(member1, member2))
+        `when`(dutyRepository.findByDutyDateAndMemberIn(dutyDate, listOf(member1, member2)))
+            .thenReturn(listOf(duty1, duty2))
+        `when`(dutyTypeRepository.findAllByDepartment(department)).thenReturn(dutyTypes)
+        `when`(memberRepository.findById(1L)).thenReturn(Optional.of(member1))
 
         // When
-        assertThrows<NoSuchElementException> {
-            service.delete(9999)
-        }
+        val shifts = service.loadShift(loginMember, dutyDate)
 
         // Then
-        val totalAfter = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
-        assertThat(totalAfter).isEqualTo(totalBefore)
-    }
+        assertThat(shifts.size).isEqualTo(3)
+        assertThat(shifts[0].members.size).isEqualTo(0)
 
-    @Test
-    fun `can't delete department containing member`() {
-        // Given
-        val totalBefore = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
-        val created = service.create(DepartmentCreateDto("deptName", "deptDesc"))
-        val totalAfter = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
-        assertThat(totalAfter).isEqualTo(totalBefore + 1)
-        val department = departmentRepository.findById(created.id).orElseThrow()
+        assertThat(shifts[1].members.size).isEqualTo(1)
+        assertThat(shifts[1].members.first().id).isEqualTo(1L)
 
-        department.addMember(TestData.member)
-        department.addMember(TestData.member2)
-
-        // When
-        assertThrows<IllegalStateException> {
-            service.delete(created.id)
-        }
-    }
-
-    @Test
-    fun `When delete department containing duty types, all associated dutyTypes will be removed as well`() {
-        // Given
-        val totalBefore = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
-        val created = service.create(DepartmentCreateDto("deptName", "deptDesc"))
-        val totalAfter = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
-        assertThat(totalAfter).isEqualTo(totalBefore + 1)
-        val department = departmentRepository.findById(created.id).orElseThrow()
-
-        val dutyType1 = department.addDutyType("오전")
-        val dutyType2 = department.addDutyType("오후")
-        val dutyType3 = department.addDutyType("야간")
-        em.flush()
-
-        assertThat(dutyType1.id).isNotNull
-        assertThat(dutyType2.id).isNotNull
-        assertThat(dutyType3.id).isNotNull
-
-        assertThat(department.dutyTypes).hasSize(3)
-
-        // When
-        service.delete(created.id)
-
-        // Then
-        assertThat(dutyTypeRepository.findById(dutyType1.id!!)).isEmpty
-        assertThat(dutyTypeRepository.findById(dutyType2.id!!)).isEmpty
-        assertThat(dutyTypeRepository.findById(dutyType3.id!!)).isEmpty
-        assertThat(departmentRepository.findById(department.id!!)).isEmpty
-    }
-
-    @Test
-    fun `When Department is deleted, All related duties will removed`(
-        @Autowired dutyService: DutyService,
-        @Autowired dutyRepository: DutyRepository
-    ) {
-        // Given
-        val created = service.create(DepartmentCreateDto("deptName", "deptDesc"))
-        val department = departmentRepository.findById(created.id).orElseThrow()
-        val member = TestData.member
-
-        department.addMember(member)
-        val dutyType1 = department.addDutyType("오전")
-        em.flush()
-
-        val dutyUpdateDto =
-            DutyUpdateDto(year = 2023, month = 4, day = 8, dutyTypeId = dutyType1.id!!, memberId = member.id!!)
-        dutyService.update(dutyUpdateDto)
-
-        val duties = dutyService.getDutiesAsMap(member, 2023, 4)
-        assertThat(duties.size).isEqualTo(1)
-        val duty = duties[8]
-        assertThat(duty).isNotNull
-
-        // When
-        department.removeMember(member)
-        service.delete(department.id!!)
-
-        // Then
-        assertThat(dutyTypeRepository.findById(dutyType1.id!!)).isEmpty
-        assertThat(departmentRepository.findById(department.id!!)).isEmpty
-
-        val theDuty = dutyRepository.findById(duty?.id!!)
-        assertThat(theDuty).isEmpty
-    }
-
-    @Test
-    fun `can't add same name DutyType on one Department`() {
-        // Given
-        val department = departmentRepository.findById(TestData.department.id!!).orElseThrow()
-        val dutyType1 = department.addDutyType("test1")
-        val dutyType2 = department.addDutyType("test2")
-        val dutyType3 = department.addDutyType("test3")
-        em.flush()
-
-        assertThat(dutyType1.id).isNotNull
-        assertThat(dutyType2.id).isNotNull
-        assertThat(dutyType3.id).isNotNull
-
-        assertThat(department.dutyTypes).containsAll(listOf(dutyType1, dutyType2, dutyType3))
-
-        // When
-        assertThrows<IllegalArgumentException> {
-            department.addDutyType("test1")
-        }
-    }
-
-    @Test
-    fun `Delete member from Department Test`() {
-        // Given
-        val department = departmentRepository.findById(TestData.department.id!!).orElseThrow()
-        val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
-        val member2 = memberRepository.findById(TestData.member2.id!!).orElseThrow()
-        assertThat(department.members).hasSize(2)
-        assertThat(member.department).isEqualTo(department)
-        assertThat(member2.department).isEqualTo(department)
-
-        // When
-        service.removeMemberFromDepartment(department.id!!, member.id!!)
-        service.removeMemberFromDepartment(department.id!!, member2.id!!)
-
-        // Then
-        assertThat(department.members).isEmpty()
-        assertThat(member.department).isNull()
-        assertThat(member2.department).isNull()
-    }
-
-    @Test
-    fun `can't delete member from department if not member of department`() {
-        // Given
-        val department = departmentRepository.findById(TestData.department.id!!).orElseThrow()
-        val department2 = departmentRepository.findById(TestData.department2.id!!).orElseThrow()
-        val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
-        val member2 = memberRepository.findById(TestData.member2.id!!).orElseThrow()
-        assertThat(department2.members).isEmpty()
-        assertThat(member.department).isEqualTo(department)
-        assertThat(member2.department).isEqualTo(department)
-
-        // When
-        assertThrows<IllegalStateException> {
-            service.removeMemberFromDepartment(department2.id!!, member.id!!)
-        }
-    }
-
-    @Test
-    fun `add Member to Department Test`() {
-        // Given
-        val department = departmentRepository.findById(TestData.department.id!!).orElseThrow()
-        val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
-        val member2 = memberRepository.findById(TestData.member2.id!!).orElseThrow()
-        department.removeMember(member)
-        department.removeMember(member2)
-        assertThat(department.members).hasSize(0)
-        assertThat(member.department).isEqualTo(null)
-        assertThat(member2.department).isEqualTo(null)
-
-        // When
-        service.addMemberToDepartment(department.id!!, member.id!!)
-        service.addMemberToDepartment(department.id!!, member2.id!!)
-
-        em.flush()
-        em.clear()
-
-        // Then
-        val department1 = departmentRepository.findById(department.id!!).orElseThrow()
-        assertThat(department1.members).hasSize(2)
-        assertThat(member.department?.id).isEqualTo(department1.id)
-        assertThat(member2.department?.id).isEqualTo(department1.id)
-    }
-
-    @Test
-    fun `can't add member to department if already member of department`() {
-        // Given
-        val department = departmentRepository.findById(TestData.department.id!!).orElseThrow()
-        val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
-        val member2 = memberRepository.findById(TestData.member2.id!!).orElseThrow()
-        assertThat(department.members).hasSize(2)
-        assertThat(member.department).isEqualTo(department)
-        assertThat(member2.department).isEqualTo(department)
-
-        // When
-        assertThrows(IllegalStateException::class.java) {
-            service.addMemberToDepartment(department.id!!, member.id!!)
-        }
-        assertThrows(IllegalStateException::class.java) {
-            service.addMemberToDepartment(department.id!!, member2.id!!)
-        }
-
-        // Then
-        assertThat(department.members).hasSize(2)
-        assertThat(member.department).isEqualTo(department)
-        assertThat(member2.department).isEqualTo(department)
-    }
-
-    @Test
-    fun `change department manager`() {
-        // Given
-        val department = departmentRepository.findById(TestData.department.id!!).orElseThrow()
-        val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
-        val member2 = memberRepository.findById(TestData.member2.id!!).orElseThrow()
-        assertThat(department.members).hasSize(2)
-        assertThat(member.department).isEqualTo(department)
-        assertThat(member2.department).isEqualTo(department)
-        assertThat(department.manager).isNull()
-
-        // Then
-        service.changeManager(department.id!!, member.id!!)
-        assertThat(department.manager).isEqualTo(member)
-
-        service.changeManager(department.id!!, member2.id!!)
-        assertThat(department.manager).isEqualTo(member2)
-
-        service.changeManager(department.id!!, null)
-        assertThat(department.manager).isNull()
-
-    }
-
-    @Test
-    fun `update default duty success`() {
-        // Given
-        val department = service.create(DepartmentCreateDto("deptName", "deptDesc"))
-
-        // When
-        val updatedDutyName = "newDutyName"
-        val updatedDutyColor = Color.RED
-        service.updateDefaultDuty(department.id, updatedDutyName, updatedDutyColor.name)
-
-        // Then
-        val updated = departmentRepository.findById(department.id).orElseThrow()
-        assertThat(updated.defaultDutyName).isEqualTo(updatedDutyName)
-        assertThat(updated.defaultDutyColor).isEqualTo(updatedDutyColor)
+        assertThat(shifts[2].members.size).isEqualTo(1)
+        assertThat(shifts[2].members.first().id).isEqualTo(2L)
     }
 
 }

@@ -213,7 +213,10 @@
     </div>
   </div>
   <div th:if="!${member.department}" class="no-department p-5">
-    <h3>어느 부서에도 소속되어 있지 않습니다.</h3>
+    <div class="justify-content-center align-items-center p-5">
+      <p class="fs-3 fw-bold ms-2 text-align-center"><i class="bi bi-person-circle fs-1 me-3"></i>어느 팀에도 속해있지 않습니다.</p>
+      <p class="fs-3 fw-bold ms-2 text-align-center">팀 관리자에게 가입을 요청해주세요.</p>
+    </div>
   </div>
 
   <div id="todo-details-modal" class="modal fade" tabindex="-1" aria-hidden="true">

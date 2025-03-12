@@ -201,7 +201,7 @@ class FriendService(
         val loginMember = memberRepository.findById(login.id).orElseThrow()
         if (login.id == targetMember.id)
             return true
-        if (!scheduleVisibilityCheck && isSameDepartment(login, targetMember))
+        if (!scheduleVisibilityCheck && isSameDepartment(loginMember, targetMember))
             return true
         if (memberService.isManager(login, targetMember))
             return true
@@ -214,9 +214,11 @@ class FriendService(
     }
 
     private fun isSameDepartment(
-        login: LoginMember,
+        loginMember: Member,
         targetMember: Member
-    ) = (login.departmentId == targetMember.department?.id)
+    ): Boolean {
+        return loginMember.department == targetMember.department
+    }
 
     @Transactional(readOnly = true)
     fun availableScheduleVisibilities(loginMember: LoginMember?, member: Member): Set<Visibility> {

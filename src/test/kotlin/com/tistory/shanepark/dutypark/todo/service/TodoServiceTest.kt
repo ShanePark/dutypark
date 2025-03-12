@@ -19,7 +19,7 @@ class TodoServiceTest {
     private lateinit var memberRepository: MemberRepository
     private lateinit var todoRepository: TodoRepository
 
-    private val loginMember = LoginMember(1, "", "", 0, "", false)
+    private val loginMember = LoginMember(1, "", "",  "", false)
     private val member = Member(name = "", password = "")
 
     @BeforeEach

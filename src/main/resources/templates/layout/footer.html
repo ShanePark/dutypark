@@ -5,7 +5,7 @@
     <span>홈</span>
   </a>
   <a th:if="${loginMember != null}" th:href="@{/duty/{name}(name=${loginMember.id})}" class="link col-3"
-     data-link="/duty">
+     th:data-link="|/duty/${loginMember.id}|">
     <i class="bi bi-calendar2-week"></i>
     <br/>
     <span>내 시간표</span>
@@ -15,7 +15,7 @@
     <br/>
     <span>내 시간표</span>
   </a>
-  <a href="/team" class="link col-3" data-link="member/d-day">
+  <a href="/team" class="link col-3" data-link="/team">
     <i class="bi bi-person-vcard"></i>
     <br/>
     <span>우리팀</span>
@@ -29,20 +29,9 @@
 
 <script>
   const currentPath = window.location.pathname;
-  const loginMemberId = parseInt("[[${loginMember?.id}]]");
-  switch (currentPath) {
-    case '/':
-      document.querySelector('.footer-dock .link[data-link="/"]').classList.add('active');
-      break;
-    case '/member':
-      document.querySelector('.footer-dock .link[data-link="/member"]').classList.add('active');
-      break;
-    case '/member/d-day':
-      document.querySelector('.footer-dock .link[data-link="member/d-day"]').classList.add('active');
-      break;
-    case '/duty/' + loginMemberId:
-      document.querySelector('.footer-dock .link[data-link="/duty"]').classList.add('active');
-      break;
+  const linkElement = document.querySelector(`.footer-dock .link[data-link="${currentPath}"]`);
+  if (linkElement) {
+    linkElement.classList.add('active');
   }
 
   document.querySelector('.footer-dock').addEventListener('click', function (event) {
