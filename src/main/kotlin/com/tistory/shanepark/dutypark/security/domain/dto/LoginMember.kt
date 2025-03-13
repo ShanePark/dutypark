@@ -4,7 +4,7 @@ data class LoginMember(
     val id: Long,
     val email: String? = null,
     val name: String,
-    val department: String? = null,
+    val team: String? = null,
     var isAdmin: Boolean = false
 ) {
     companion object {

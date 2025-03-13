@@ -93,7 +93,7 @@
     </div>
     <div class="duty-table-header">
       <div class="duty-types d-flex">
-        <div class="duty-type d-flex" v-for="type in department.dutyTypes">
+        <div class="duty-type d-flex" v-for="type in team.dutyTypes">
           <div :class="['indicator', 'BACKGROUND-' + type.color]">
             <span v-text="type.name"></span>
           </div>
@@ -107,7 +107,7 @@
                 class="edit-btn btn btn-warning"
                 v-on:click="showBatchUpdate">한번에 수정
         </button>
-        <button v-if="canEdit && batchEditMode && department.dutyBatchTemplate"
+        <button v-if="canEdit && batchEditMode && team.dutyBatchTemplate"
                 class="btn btn-info"
                 v-on:click="uploadBatchFile"
         >시간표 파일 업로드
@@ -168,7 +168,7 @@
             </div>
           </div>
           <div v-if="batchEditMode" class="duty row">
-            <button v-for="type in department.dutyTypes"
+            <button v-for="type in team.dutyTypes"
                     class="duty-type btn btn-sm btn-outline-dark"
                     v-text="type.name.length > 3 ? type.name.substring(0, 3) : type.name"
                     :class="dutyTypeClasses(type, duty)"
@@ -362,7 +362,7 @@
         <div class="modal-body p-1">
           <div class="dutyTypes px-4 py-2">
             <form>
-              <div v-for="type in department.dutyTypes" class="pretty p-round p-pulse">
+              <div v-for="type in team.dutyTypes" class="pretty p-round p-pulse">
                 <input type="radio" name="dutyType"
                        :checked="isDutyType(detailView.duty, type)"
                        v-on:click="changeDutyTypeWithPopup(detailView.duty, type)"
@@ -496,7 +496,7 @@
 <script>
   $(function () {
     const memberId = parseInt("[[${member.id}]]");
-    const departmentId = parseInt("[[${member.departmentId}]]");
+    const teamId = parseInt("[[${member.teamId}]]");
     const loginMemberId = parseInt("[[${loginMember?.id}]]");
     const isMyCalendar = loginMemberId === memberId;
 
@@ -515,7 +515,7 @@
           duties: [],
           schedulesByDays: [],
           holidaysByDays: [],
-          department: {},
+          team: {},
           hasTeam: false,
           dDays: [],
           selectedDday: null,
@@ -551,13 +551,13 @@
           todos: [],
           editTodoMode: false,
           dDaysPromise: null,
-          departmentPromise: null,
+          teamPromise: null,
           searchQuery: '',
           searchResults: [],
         }, mounted() {
-          if (departmentId) {
+          if (teamId) {
             this.hasTeam = true;
-            this.loadDepartment();
+            this.loadTeam();
             this.loadDuties(this.year, this.month);
           }
           this.loadCalendar(this.year, this.month);
@@ -660,7 +660,7 @@
                   if (tags.find(tag => tag.id === friend.id)) {
                     return '';
                   }
-                  return `<option data-id="${friend.id}">[${friend.department}] ${friend.name}</option>`;
+                  return `<option data-id="${friend.id}">[${friend.team}] ${friend.name}</option>`;
                 }).join('')}
                                       </select>
                                       </span>`;
@@ -817,7 +817,7 @@
               },
               success: (data) => {
                 this.duties = data;
-                this.departmentPromise.then(() => {
+                this.teamPromise.then(() => {
                   this.setDutyCounts();
                 });
                 this.dDaysPromise.then(() => {
@@ -828,21 +828,21 @@
           },
           setDutyCounts() {
             let offCnt = new Date(app.year, app.month, 0).getDate();
-            this.department.dutyTypes.forEach(dutyType => {
+            this.team.dutyTypes.forEach(dutyType => {
               this.$set(dutyType, 'cnt', 0);
             });
             this.duties.forEach(duty => {
               if (duty.month !== this.month) {
                 return;
               }
-              this.department.dutyTypes.forEach(dutyType => {
+              this.team.dutyTypes.forEach(dutyType => {
                 if (dutyType.id && dutyType.name === duty.dutyType) {
                   this.$set(dutyType, 'cnt', dutyType.cnt + 1);
                   offCnt--;
                 }
               });
             });
-            this.department.dutyTypes.forEach(dutyType => {
+            this.team.dutyTypes.forEach(dutyType => {
               if (!dutyType.id) {
                 this.$set(dutyType, 'cnt', offCnt);
               }
@@ -912,12 +912,12 @@
             })
           }
           ,
-          loadDepartment() {
-            this.departmentPromise = new Promise((resolve) => {
-              fetch(`/api/departments/${departmentId}`)
+          loadTeam() {
+            this.teamPromise = new Promise((resolve) => {
+              fetch(`/api/teams/${teamId}`)
                 .then(response => response.json())
                 .then(data => {
-                  this.department = data;
+                  this.team = data;
                   resolve();
                 })
             });
@@ -1162,8 +1162,8 @@
           }
           ,
           dutyTypeClasses(type, duty) {
-            const departmentLength = app.department.dutyTypes.length;
-            const colClass = (departmentLength === 2 || departmentLength === 4) ? 'col-md-6' : 'col-md-4';
+            const teamLength = app.team.dutyTypes.length;
+            const colClass = (teamLength === 2 || teamLength === 4) ? 'col-md-6' : 'col-md-4';
             return {
               ['BACKGROUND-' + type.color]: true,
               selected: type.id === duty.dutyTypeId,
@@ -1459,7 +1459,7 @@
                               <p>현재 월의 모든 날짜가 선택한 듀티로 설정됩니다.</p>
                               <p class="bg-warning">클릭시 바로 변경됩니다.</p>
                               <div>
-                                  ${app.department.dutyTypes.map(type => `
+                                  ${app.team.dutyTypes.map(type => `
                                       <button class="btn duty-type BACKGROUND-${type.color}" data-id="${type.id}">
                                           ${type.name}
                                       </button>
@@ -1506,7 +1506,7 @@
             });
           },
           async uploadBatchFile() {
-            const fileExtensions = app.department.dutyBatchTemplate.fileExtensions;
+            const fileExtensions = app.team.dutyBatchTemplate.fileExtensions;
             const {value: file} = await Swal.fire({
               title: "시간표 파일 업로드",
               input: "file",

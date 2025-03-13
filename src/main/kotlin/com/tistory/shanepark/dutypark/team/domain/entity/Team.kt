@@ -1,4 +1,4 @@
-package com.tistory.shanepark.dutypark.department.domain.entity
+package com.tistory.shanepark.dutypark.team.domain.entity
 
 import com.tistory.shanepark.dutypark.common.domain.entity.BaseTimeEntity
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
@@ -8,7 +8,8 @@ import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import jakarta.persistence.*
 
 @Entity
-class Department(
+@Table(name = "team")
+class Team(
     @Column(unique = true)
     var name: String,
 ) : BaseTimeEntity() {
@@ -30,10 +31,10 @@ class Department(
     @Column(nullable = false, name = "default_duty_name")
     var defaultDutyName: String = "OFF"
 
-    @OneToMany(mappedBy = "department", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+    @OneToMany(mappedBy = "team", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
     val dutyTypes: MutableList<DutyType> = mutableListOf()
 
-    @OneToMany(mappedBy = "department", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "team", fetch = FetchType.LAZY)
     val members: MutableList<Member> = mutableListOf()
 
     @Enumerated(EnumType.STRING)
@@ -42,12 +43,12 @@ class Department(
 
     fun addMember(member: Member) {
         members.add(member)
-        member.department = this
+        member.team = this
     }
 
     fun removeMember(member: Member) {
         members.remove(member)
-        member.department = null
+        member.team = null
     }
 
     fun addDutyType(dutyName: String, dutyColor: Color? = null): DutyType {

@@ -1,8 +1,6 @@
 package com.tistory.shanepark.dutypark
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.tistory.shanepark.dutypark.department.domain.entity.Department
-import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberCreateDto
@@ -14,6 +12,8 @@ import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.service.JwtProvider
+import com.tistory.shanepark.dutypark.team.domain.entity.Team
+import com.tistory.shanepark.dutypark.team.repository.TeamRepository
 import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
@@ -25,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional
 class DutyparkIntegrationTest {
 
     @Autowired
-    lateinit var departmentRepository: DepartmentRepository
+    lateinit var teamRepository: TeamRepository
 
     @Autowired
     lateinit var memberRepository: MemberRepository
@@ -49,23 +49,23 @@ class DutyparkIntegrationTest {
 
     @BeforeEach
     fun init() {
-        initTestDepartment()
+        initTestTeam()
         initDutyTypes()
         initTestMember()
         em.flush()
         em.clear()
     }
 
-    private fun initTestDepartment() {
-        TestData.department = departmentRepository.save(Department("testDept1"))
-        TestData.department2 = departmentRepository.save(Department("testDept2"))
+    private fun initTestTeam() {
+        TestData.team = teamRepository.save(Team("testTeam1"))
+        TestData.team2 = teamRepository.save(Team("testTeam2"))
     }
 
     private fun initDutyTypes() {
         TestData.dutyTypes.clear()
-        TestData.dutyTypes.add(dutyTypeRepository.save(DutyType("오전", 0, TestData.department)))
-        TestData.dutyTypes.add(dutyTypeRepository.save(DutyType("오후", 1, TestData.department)))
-        TestData.dutyTypes.add(dutyTypeRepository.save(DutyType("야간", 2, TestData.department)))
+        TestData.dutyTypes.add(dutyTypeRepository.save(DutyType("오전", 0, TestData.team)))
+        TestData.dutyTypes.add(dutyTypeRepository.save(DutyType("오후", 1, TestData.team)))
+        TestData.dutyTypes.add(dutyTypeRepository.save(DutyType("야간", 2, TestData.team)))
     }
 
     private fun initTestMember() {
@@ -76,7 +76,7 @@ class DutyparkIntegrationTest {
                 password = TestData.testPass,
             )
             val saved = memberService.createMember(memberCreateDto)
-            TestData.department.addMember(saved)
+            TestData.team.addMember(saved)
             memberRepository.save(saved)
             if (i == 1) {
                 TestData.member = saved
@@ -98,8 +98,8 @@ class DutyparkIntegrationTest {
     }
 
     class TestData {
-        var department = Department("dummy")
-        var department2 = Department("dummy")
+        var team = Team("dummy")
+        var team2 = Team("dummy")
         val testPass = "1234"
 
         var member: Member = Member("", "", "")
@@ -118,7 +118,7 @@ class DutyparkIntegrationTest {
             id = member.id!!,
             email = member.email,
             name = member.name,
-            department = member.department?.name,
+            team = member.team?.name,
             isAdmin = false
         )
     }

@@ -3,7 +3,7 @@ package com.tistory.shanepark.dutypark.dashboard.service
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardFriendDetail
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardFriendInfo
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardMyDetail
-import com.tistory.shanepark.dutypark.department.service.DepartmentService
+import com.tistory.shanepark.dutypark.team.service.TeamService
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendRequestDto
@@ -27,11 +27,11 @@ class DashboardService(
     private val scheduleRepository: ScheduleRepository,
     private val friendRelationRepository: FriendRelationRepository,
     private val friendService: FriendService,
-    private val departmentService: DepartmentService,
+    private val teamService: TeamService,
 ) {
 
     fun my(loginMember: LoginMember): DashboardMyDetail {
-        val member = memberRepository.findMemberWithDepartment(loginMember.id).orElseThrow()
+        val member = memberRepository.findMemberWithTeam(loginMember.id).orElseThrow()
         return DashboardMyDetail(
             member = MemberDto.of(member),
             duty = todayDuty(member),
@@ -45,20 +45,20 @@ class DashboardService(
     }
 
     private fun todayDuty(member: Member): DutyDto? {
-        val department = member.department ?: return null
+        val team = member.team ?: return null
         val today = LocalDate.now()
         val duty = dutyRepository.findByMemberAndDutyDate(member, today)
         return duty?.let(::DutyDto) ?: DutyDto(
             year = today.year,
             month = today.monthValue,
             day = today.dayOfMonth,
-            dutyType = department.defaultDutyName,
-            dutyColor = department.defaultDutyColor.toString()
+            dutyType = team.defaultDutyName,
+            dutyColor = team.defaultDutyColor.toString()
         )
     }
 
     fun friend(loginMember: LoginMember): DashboardFriendInfo {
-        val member = memberRepository.findMemberWithDepartment(loginMember.id).orElseThrow()
+        val member = memberRepository.findMemberWithTeam(loginMember.id).orElseThrow()
         val friends = friendRelationRepository.findAllByMember(member)
             .map {
                 DashboardFriendDetail(

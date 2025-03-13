@@ -105,10 +105,10 @@
     computed: {},
     methods: {
       loadMyTeam() {
-        fetch('/api/departments/my?year=' + this.year + '&month=' + this.month)
+        fetch('/api/teams/my?year=' + this.year + '&month=' + this.month)
           .then(response => response.json())
           .then(data => {
-            app.team = data.department;
+            app.team = data.team;
             app.teamDays = data.teamDays;
           })
           .catch(error => {
@@ -128,7 +128,7 @@
           teamDay.day === this.today.day;
       },
       loadShift() {
-        fetch(`/api/departments/shift?year=${this.selDay.year}&month=${this.selDay.month}&day=${this.selDay.day}`)
+        fetch(`/api/teams/shift?year=${this.selDay.year}&month=${this.selDay.month}&day=${this.selDay.day}`)
           .then(response => response.json())
           .then(data => {
             app.shift = data;

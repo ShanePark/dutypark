@@ -21,10 +21,10 @@
           </td>
         </tr>
         <tr>
-          <th><label for="department" class="col-form-label">소속</label></th>
+          <th><label for="team" class="col-form-label">소속</label></th>
           <td>
-            <input type="text" readonly class="form-control-plaintext" id="department"
-                   th:value="${member.department} ?: '-'">
+            <input type="text" readonly class="form-control-plaintext" id="team"
+                   th:value="${member.team} ?: '-'">
           </td>
         </tr>
         <tr th:if="${member.email}">

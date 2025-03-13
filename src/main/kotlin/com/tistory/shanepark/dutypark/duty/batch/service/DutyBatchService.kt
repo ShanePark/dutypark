@@ -7,5 +7,5 @@ import java.time.YearMonth
 
 interface DutyBatchService {
     fun batchUploadMember(file: MultipartFile, memberId: Long, yearMonth: YearMonth): DutyBatchResult
-    fun batchUploadDepartment(file: MultipartFile, departmentId: Long, yearMonth: YearMonth): DutyBatchTeamResult
+    fun batchUploadTeam(file: MultipartFile, teamId: Long, yearMonth: YearMonth): DutyBatchTeamResult
 }

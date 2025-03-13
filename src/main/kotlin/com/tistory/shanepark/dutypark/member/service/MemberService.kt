@@ -30,7 +30,7 @@ class MemberService(
     @Transactional(readOnly = true)
     fun findAll(): MutableList<MemberDto> {
         return memberRepository.findAll()
-            .sortedWith(compareBy({ it.department?.name }, { it.name }))
+            .sortedWith(compareBy({ it.team?.name }, { it.name }))
             .map { MemberDto.of(it) }
             .toMutableList()
     }
@@ -90,7 +90,7 @@ class MemberService(
 
     fun getDutyBatchTemplate(memberId: Long): DutyBatchTemplate? {
         val member = memberRepository.findById(memberId).orElseThrow()
-        return member.department?.dutyBatchTemplate
+        return member.team?.dutyBatchTemplate
     }
 
     fun assignManager(managerId: Long, managedId: Long) {

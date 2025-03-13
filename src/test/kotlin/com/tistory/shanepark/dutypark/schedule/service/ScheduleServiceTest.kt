@@ -427,7 +427,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `can't change schedule position if not owner or department manager`() {
+    fun `can't change schedule position if not owner or team manager`() {
         // Given
         val member = TestData.member
         val otherMember = TestData.member2
@@ -832,14 +832,14 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `if not friend and calendar visibility is only for friends, can not get schedules even if they are in same department`() {
+    fun `if not friend and calendar visibility is only for friends, can not get schedules even if they are in same team`() {
         // Given
         val target = TestData.member
         updateVisibility(target, Visibility.FRIENDS)
         val login = TestData.member2
 
-        target.department = TestData.department
-        login.department = TestData.department
+        target.team = TestData.team
+        login.team = TestData.team
 
         memberRepository.save(target)
         memberRepository.save(login)

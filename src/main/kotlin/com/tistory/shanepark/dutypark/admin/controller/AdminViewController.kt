@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.common.controller.ViewController
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 
 @Controller
@@ -15,14 +16,15 @@ class AdminViewController : ViewController() {
         return layout(model, "admin/admin-home")
     }
 
-    @GetMapping("/department")
-    fun department(model: Model): String {
-        return layout(model, "admin/department/department-list")
+    @GetMapping("/team")
+    fun team(model: Model): String {
+        return layout(model, "admin/team/team-list")
     }
 
-    @GetMapping("/department/{id}")
-    fun departmentDetail(model: Model): String {
-        return layout(model, "admin/department/department-detail")
+    @GetMapping("/team/{id}")
+    fun teamDetail(model: Model, @PathVariable id: Long): String {
+        model.addAttribute("teamId", id)
+        return layout(model, "admin/team/team-detail")
     }
 
 }

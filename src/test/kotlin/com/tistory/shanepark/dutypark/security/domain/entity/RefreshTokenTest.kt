@@ -1,6 +1,6 @@
 package com.tistory.shanepark.dutypark.security.domain.entity
 
-import com.tistory.shanepark.dutypark.department.domain.entity.Department
+import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.Test
@@ -8,11 +8,11 @@ import java.time.LocalDateTime
 
 class RefreshTokenTest {
 
-    private val dept = Department("testDept")
+    private val team = Team("testTeam")
     private val member = Member(name = "", email = "", password = "")
 
     init {
-        member.department = dept
+        member.team = team
     }
 
     @Test

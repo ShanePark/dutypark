@@ -31,7 +31,7 @@ class FriendService(
     fun findAllFriends(loginMember: LoginMember): List<MemberDto> {
         val member = loginMemberToMember(loginMember)
         return friendRelationRepository.findAllByMember(member)
-            .sortedWith(compareBy({ it.friend.department?.name }, { it.friend.name }))
+            .sortedWith(compareBy({ it.friend.team?.name }, { it.friend.name }))
             .map { it.friend }
             .map { MemberDto.of(it) }
     }
@@ -201,7 +201,7 @@ class FriendService(
         val loginMember = memberRepository.findById(login.id).orElseThrow()
         if (login.id == targetMember.id)
             return true
-        if (!scheduleVisibilityCheck && isSameDepartment(loginMember, targetMember))
+        if (!scheduleVisibilityCheck && isSameTeam(loginMember, targetMember))
             return true
         if (memberService.isManager(login, targetMember))
             return true
@@ -213,11 +213,11 @@ class FriendService(
         }
     }
 
-    private fun isSameDepartment(
+    private fun isSameTeam(
         loginMember: Member,
         targetMember: Member
     ): Boolean {
-        return loginMember.department == targetMember.department
+        return loginMember.team == targetMember.team
     }
 
     @Transactional(readOnly = true)

@@ -1,7 +1,5 @@
 package com.tistory.shanepark.dutypark.duty.batch.service
 
-import com.tistory.shanepark.dutypark.department.domain.entity.Department
-import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.duty.batch.SungsimCakeParser
 import com.tistory.shanepark.dutypark.duty.batch.domain.BatchParseResult
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchResult
@@ -16,6 +14,8 @@ import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.team.domain.entity.Team
+import com.tistory.shanepark.dutypark.team.repository.TeamRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.multipart.MultipartFile
@@ -28,7 +28,7 @@ import java.time.YearMonth
 class DutyBatchSungsimService(
     private val sungsimCakeParser: SungsimCakeParser,
     private val memberRepository: MemberRepository,
-    private val departmentRepository: DepartmentRepository,
+    private val teamRepository: TeamRepository,
     private val dutyRepository: DutyRepository,
     private val dutyTypeRepository: DutyTypeRepository
 ) : DutyBatchService {
@@ -38,8 +38,8 @@ class DutyBatchSungsimService(
         file.inputStream.use { input ->
             val batchParseResult = sungsimCakeParser.parseDayOff(yearMonth, input)
             val member = memberRepository.findById(memberId).orElseThrow()
-            val department =
-                member.department ?: throw IllegalArgumentException("Member has no department: id=$memberId")
+            val team =
+                member.team ?: throw IllegalArgumentException("Member has no team: id=$memberId")
 
             val validName = batchParseResult.findValidNames(member.name)
             if (validName.isEmpty())
@@ -48,7 +48,7 @@ class DutyBatchSungsimService(
                 throw MultipleNameFoundException(validName)
 
             val nameOnXlsx = validName.first()
-            val dutyType = findOnlyDutyType(department)
+            val dutyType = findOnlyDutyType(team)
             val workDays = batchParseResult.getWorkDays(nameOnXlsx)
 
             saveBatchDuty(
@@ -67,36 +67,36 @@ class DutyBatchSungsimService(
         }
     }
 
-    override fun batchUploadDepartment(
+    override fun batchUploadTeam(
         file: MultipartFile,
-        departmentId: Long,
+        teamId: Long,
         yearMonth: YearMonth
     ): DutyBatchTeamResult {
         DutyBatchTemplate.SUNGSIM_CAKE.checkSupportedFile(file)
-        val department = departmentRepository.findById(departmentId).orElseThrow()
-        val dutyType = findOnlyDutyType(department)
+        val team = teamRepository.findById(teamId).orElseThrow()
+        val dutyType = findOnlyDutyType(team)
 
         file.inputStream.use { input ->
-            return batchUploadDepartment(
+            return batchUploadTeam(
                 input = input,
                 yearMonth = yearMonth,
-                department = department,
+                team = team,
                 dutyType = dutyType
             )
         }
     }
 
-    private fun batchUploadDepartment(
+    private fun batchUploadTeam(
         input: InputStream,
         yearMonth: YearMonth,
-        department: Department,
+        team: Team,
         dutyType: DutyType
     ): DutyBatchTeamResult {
         val batchParseResult = sungsimCakeParser.parseDayOff(yearMonth, input)
-        findNonMembersAndCreate(batchParseResult, department)
+        findNonMembersAndCreate(batchParseResult, team)
 
         val dutyBatchResults: MutableList<Pair<String, DutyBatchResult>> = mutableListOf()
-        department.members.forEach {
+        team.members.forEach {
             val validNames = batchParseResult.findValidNames(it.name)
             if (validNames.size > 1) {
                 dutyBatchResults.add(
@@ -148,15 +148,15 @@ class DutyBatchSungsimService(
         )
     }
 
-    private fun findNonMembersAndCreate(batchParseResult: BatchParseResult, department: Department) {
+    private fun findNonMembersAndCreate(batchParseResult: BatchParseResult, team: Team) {
         val namesOnXlsx = batchParseResult.getNames().toMutableSet()
-        department.members.map { batchParseResult.findValidNames(it.name) }.flatten().forEach { name ->
+        team.members.map { batchParseResult.findValidNames(it.name) }.flatten().forEach { name ->
             namesOnXlsx.remove(name)
         }
 
         namesOnXlsx.forEach {
             val member = Member(name = it)
-            department.addMember(member)
+            team.addMember(member)
             memberRepository.save(member)
         }
     }
@@ -178,8 +178,8 @@ class DutyBatchSungsimService(
         dutyRepository.saveAll(duties)
     }
 
-    private fun findOnlyDutyType(department: Department): DutyType {
-        val dutyTypes = dutyTypeRepository.findAllByDepartment(department)
+    private fun findOnlyDutyType(team: Team): DutyType {
+        val dutyTypes = dutyTypeRepository.findAllByTeam(team)
         if (dutyTypes.size != 1) {
             throw DutyTypeNotSingleException(dutyTypes)
         }

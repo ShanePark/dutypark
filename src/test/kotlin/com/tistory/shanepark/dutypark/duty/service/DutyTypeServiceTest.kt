@@ -22,51 +22,51 @@ class DutyTypeServiceTest : DutyparkIntegrationTest() {
     @Test
     fun `Create duty Type success`() {
         // Given
-        val dutyTypeSize = departmentRepository.findById(TestData.department.id!!).orElseThrow().dutyTypes.size
+        val dutyTypeSize = teamRepository.findById(TestData.team.id!!).orElseThrow().dutyTypes.size
 
         // When
-        val dutyTypeCreateDto = DutyTypeCreateDto(TestData.department.id!!, "dutyType", Color.BLUE)
+        val dutyTypeCreateDto = DutyTypeCreateDto(TestData.team.id!!, "dutyType", Color.BLUE)
         val created = dutyTypeService.addDutyType(dutyTypeCreateDto)
 
         // Then
-        val department = departmentRepository.findById(TestData.department.id!!).orElseThrow()
+        val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
         assertThat(created).isNotNull
-        assertThat(department.dutyTypes).hasSize(dutyTypeSize + 1)
-        assertThat(created.department).isEqualTo(department)
+        assertThat(team.dutyTypes).hasSize(dutyTypeSize + 1)
+        assertThat(created.team).isEqualTo(team)
     }
 
     @Test
-    fun `can't create same duty type name in same department`() {
+    fun `can't create same duty type name in same team`() {
         // Given
-        val dutyTypeCreateDto = DutyTypeCreateDto(TestData.department.id!!, "dutyType", Color.BLUE)
+        val dutyTypeCreateDto = DutyTypeCreateDto(TestData.team.id!!, "dutyType", Color.BLUE)
         val created = dutyTypeService.addDutyType(dutyTypeCreateDto)
-        val dutyTypeCreateDto2 = DutyTypeCreateDto(TestData.department.id!!, "dutyType2", Color.BLUE)
+        val dutyTypeCreateDto2 = DutyTypeCreateDto(TestData.team.id!!, "dutyType2", Color.BLUE)
         val created2 = dutyTypeService.addDutyType(dutyTypeCreateDto2)
 
         assertThat(created).isNotNull
         assertThat(created2).isNotNull
 
-        val department = departmentRepository.findById(TestData.department.id!!).orElseThrow()
-        assertThat(department.dutyTypes)
+        val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
+        assertThat(team.dutyTypes)
             .containsAll(
                 listOf(created, created2)
             )
 
         // When
         assertThrows<IllegalArgumentException> {
-            dutyTypeService.addDutyType(DutyTypeCreateDto(TestData.department.id!!, "dutyType", Color.BLUE))
+            dutyTypeService.addDutyType(DutyTypeCreateDto(TestData.team.id!!, "dutyType", Color.BLUE))
         }
         assertThrows<IllegalArgumentException> {
-            dutyTypeService.addDutyType(DutyTypeCreateDto(TestData.department.id!!, "dutyType2", Color.BLUE))
+            dutyTypeService.addDutyType(DutyTypeCreateDto(TestData.team.id!!, "dutyType2", Color.BLUE))
         }
     }
 
     @Test
     fun `update duty-type success`() {
         // Given
-        val dutyTypeCreateDto = DutyTypeCreateDto(TestData.department.id!!, "dutyType", Color.BLUE)
+        val dutyTypeCreateDto = DutyTypeCreateDto(TestData.team.id!!, "dutyType", Color.BLUE)
         val created = dutyTypeService.addDutyType(dutyTypeCreateDto)
-        val dutyTypeSize = departmentRepository.findById(TestData.department.id!!).orElseThrow().dutyTypes
+        val dutyTypeSize = teamRepository.findById(TestData.team.id!!).orElseThrow().dutyTypes
         em.flush()
 
         // When
@@ -80,18 +80,18 @@ class DutyTypeServiceTest : DutyparkIntegrationTest() {
 
         assertThat(dutyType.id).isEqualTo(created.id)
         assertThat(
-            departmentRepository.findById(TestData.department.id!!).orElseThrow().dutyTypes
+            teamRepository.findById(TestData.team.id!!).orElseThrow().dutyTypes
         ).hasSize(dutyTypeSize.size)
         assertThat(dutyType.name).isEqualTo(dutyTypeUpdateDto.name)
         assertThat(dutyType.color).isEqualTo(dutyTypeUpdateDto.color)
     }
 
     @Test
-    fun `update duty type fails if same name already exist in the department`() {
+    fun `update duty type fails if same name already exist in the team`() {
         // Given
-        val dutyTypeCreateDto = DutyTypeCreateDto(TestData.department.id!!, "dutyType", Color.BLUE)
+        val dutyTypeCreateDto = DutyTypeCreateDto(TestData.team.id!!, "dutyType", Color.BLUE)
         val created = dutyTypeService.addDutyType(dutyTypeCreateDto)
-        val dutyTypeCreateDto2 = DutyTypeCreateDto(TestData.department.id!!, "dutyType2", Color.BLUE)
+        val dutyTypeCreateDto2 = DutyTypeCreateDto(TestData.team.id!!, "dutyType2", Color.BLUE)
         val created2 = dutyTypeService.addDutyType(dutyTypeCreateDto2)
         em.flush()
 

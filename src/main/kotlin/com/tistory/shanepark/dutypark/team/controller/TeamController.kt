@@ -1,8 +1,8 @@
-package com.tistory.shanepark.dutypark.department.controller
+package com.tistory.shanepark.dutypark.team.controller
 
-import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentDto
-import com.tistory.shanepark.dutypark.department.domain.dto.MyTeamSummary
-import com.tistory.shanepark.dutypark.department.service.DepartmentService
+import com.tistory.shanepark.dutypark.team.domain.dto.TeamDto
+import com.tistory.shanepark.dutypark.team.domain.dto.MyTeamSummary
+import com.tistory.shanepark.dutypark.team.service.TeamService
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyByShift
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -11,14 +11,14 @@ import java.time.LocalDate
 import java.time.YearMonth
 
 @RestController
-@RequestMapping("/api/departments")
-class DepartmentController(
-    private val departmentService: DepartmentService,
+@RequestMapping("/api/teams")
+class TeamController(
+    private val teamService: TeamService,
 ) {
 
     @GetMapping("/{id}")
-    fun findById(@PathVariable id: Long): DepartmentDto {
-        return departmentService.findByIdWithDutyTypes(id)
+    fun findById(@PathVariable id: Long): TeamDto {
+        return teamService.findByIdWithDutyTypes(id)
     }
 
     @GetMapping("/my")
@@ -27,7 +27,7 @@ class DepartmentController(
         @RequestParam year: Int,
         @RequestParam month: Int,
     ): MyTeamSummary {
-        return departmentService.myTeamSummary(
+        return teamService.myTeamSummary(
             loginMember = loginMember,
             yearMonth = YearMonth.of(year, month),
         )
@@ -40,7 +40,7 @@ class DepartmentController(
         @RequestParam month: Int,
         @RequestParam day: Int,
     ): List<DutyByShift> {
-        return departmentService.loadShift(loginMember = loginMember, localDate = LocalDate.of(year, month, day))
+        return teamService.loadShift(loginMember = loginMember, localDate = LocalDate.of(year, month, day))
     }
 
 }

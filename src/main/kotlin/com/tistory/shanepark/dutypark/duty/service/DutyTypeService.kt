@@ -1,11 +1,11 @@
 package com.tistory.shanepark.dutypark.duty.service
 
-import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeCreateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
+import com.tistory.shanepark.dutypark.team.repository.TeamRepository
 import jakarta.persistence.EntityManager
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional
 class DutyTypeService(
     private val dutyTypeRepository: DutyTypeRepository,
     private val dutyRepository: DutyRepository,
-    private val departmentRepository: DepartmentRepository,
+    private val teamRepository: TeamRepository,
     private val entityMapper: EntityManager,
 ) {
 
@@ -31,15 +31,15 @@ class DutyTypeService(
     }
 
     fun addDutyType(dutyTypeCreateDto: DutyTypeCreateDto): DutyType {
-        val department = departmentRepository.findByIdWithDutyTypes(dutyTypeCreateDto.departmentId).orElseThrow()
-        return department.addDutyType(dutyTypeCreateDto.name, dutyTypeCreateDto.color)
+        val team = teamRepository.findByIdWithDutyTypes(dutyTypeCreateDto.teamId).orElseThrow()
+        return team.addDutyType(dutyTypeCreateDto.name, dutyTypeCreateDto.color)
     }
 
     fun update(dutyTypeUpdateDto: DutyTypeUpdateDto): DutyType {
         val dutyType = dutyTypeRepository.findById(dutyTypeUpdateDto.id).orElseThrow()
-        val department = departmentRepository.findByIdWithDutyTypes(dutyType.department.id!!).orElseThrow()
+        val team = teamRepository.findByIdWithDutyTypes(dutyType.team.id!!).orElseThrow()
 
-        department.dutyTypes
+        team.dutyTypes
             .filter { it.id != dutyType.id }
             .forEach {
                 if (it.name == dutyTypeUpdateDto.name) {

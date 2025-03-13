@@ -94,20 +94,20 @@ class DutyService(
     }
 
     fun canEdit(loginMember: LoginMember, memberId: Long): Boolean {
-        val member = memberRepository.findMemberWithDepartment(memberId).orElseThrow()
+        val member = memberRepository.findMemberWithTeam(memberId).orElseThrow()
 
         return member.isEquals(loginMember)
-                || member.isDepartmentManager(isManager = loginMember)
+                || member.isTeamManager(isManager = loginMember)
                 || memberService.isManager(isManager = loginMember, target = member)
     }
 
     @Transactional(readOnly = true)
     fun getDuties(memberId: Long, yearMonth: YearMonth, loginMember: LoginMember?): List<DutyDto> {
-        val member = memberRepository.findMemberWithDepartment(memberId).orElseThrow()
+        val member = memberRepository.findMemberWithTeam(memberId).orElseThrow()
         friendService.checkVisibility(loginMember, member)
 
-        val department = member.department ?: return emptyList()
-        val defaultDutyColor = department.defaultDutyColor
+        val team = member.team ?: return emptyList()
+        val defaultDutyColor = team.defaultDutyColor
         val calendarView = CalendarView(yearMonth)
         val dutyMap = getDutiesAsMap(member, calendarView.rangeFromDate, calendarView.rangeUntilDate)
 

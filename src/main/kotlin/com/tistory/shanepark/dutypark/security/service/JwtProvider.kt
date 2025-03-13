@@ -10,8 +10,6 @@ import io.jsonwebtoken.*
 import io.jsonwebtoken.io.Decoders
 import io.jsonwebtoken.security.Keys
 import io.jsonwebtoken.security.SecurityException
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.security.Key
 import java.util.*
@@ -29,13 +27,12 @@ class JwtProvider(
 
         val validity = Date(Date().time + tokenValidityInMilliseconds)
 
-        val department = member.department
+        val team = member.team
         return Jwts.builder()
             .setSubject(member.id.toString())
             .claim("email", member.email)
             .claim("name", member.name)
-            .claim("departmentId", department?.id)
-            .claim("departmentName", department?.name)
+            .claim("teamName", team?.name)
             .signWith(key, SignatureAlgorithm.HS256)
             .setExpiration(validity)
             .compact()
@@ -55,7 +52,7 @@ class JwtProvider(
             id = claims.subject.toLong(),
             email = email,
             name = claims["name"] as String,
-            department = claims["departmentName"] as String?,
+            team = claims["teamName"] as String?,
             isAdmin = dutyparkProperties.adminEmails.contains(email),
         )
         return loginMember

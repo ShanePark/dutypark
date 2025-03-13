@@ -1,6 +1,6 @@
-<div class="departments" v-cloak>
-    <h2>Departments</h2>
-    <button class="btn btn-primary" v-on:click="add()">New Department</button>
+<div class="teams" v-cloak>
+    <h2>Teams</h2>
+    <button class="btn btn-primary" v-on:click="add()">New Team</button>
     <table class="table table-striped mt-2">
         <thead>
         <colgroup>
@@ -15,12 +15,12 @@
         </tr>
         </thead>
         <tbody>
-        <tr v-for="department in departments">
+        <tr v-for="team in teams">
             <td>
-                <a :href="'/admin/department/' + department.id">{{ department.name }}</a>
+                <a :href="'/admin/team/' + team.id">{{ team.name }}</a>
             </td>
-            <td>{{ department.memberCount }}</td>
-            <td>{{ department.description }}</td>
+            <td>{{ team.memberCount }}</td>
+            <td>{{ team.description }}</td>
         </tr>
         </tbody>
     </table>
@@ -33,7 +33,7 @@
             <label for="name">Name</label>
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <input type="text" maxlength="20" minlength="2" class="form-control" id="name" name="name"
-                       placeholder="Department name"
+                       placeholder="Team name"
                        style="flex-grow: 1; margin-right: 10px;">
                 <button type="button" class="btn btn-primary checker">Check</button>
             </div>
@@ -49,9 +49,9 @@
 <script>
     $(function () {
         const app = new Vue({
-            el: '.departments',
+            el: '.teams',
             data: {
-                departments: []
+                teams: []
             },
             mounted() {
                 this.load();
@@ -59,10 +59,10 @@
             methods: {
                 load: function () {
                     $.ajax({
-                        url: '/admin/api/departments',
+                        url: '/admin/api/teams',
                         type: 'GET',
                         success: function (response) {
-                            app.departments = response.content;
+                            app.teams = response.content;
                         },
                         error: function (error) {
                             console.log(error);
@@ -74,7 +74,7 @@
                     modal.attr('hidden', false);
 
                     Swal.fire({
-                        title: 'Add Department',
+                        title: 'Add Team',
                         html: modal,
                         cancelButtonText: 'Cancel',
                         showCancelButton: true,
@@ -96,7 +96,7 @@
                         if (result.isConfirmed) {
                             const {name, description} = result.value;
                             $.ajax({
-                                url: '/admin/api/departments',
+                                url: '/admin/api/teams',
                                 type: 'POST',
                                 data: JSON.stringify({name, description}),
                                 contentType: 'application/json',
@@ -120,7 +120,7 @@
         $(document).on('click', '.checker', function () {
             const name = $(this).parent().find('input[name="name"]').val();
             $.ajax({
-                url: '/admin/api/departments/check',
+                url: '/admin/api/teams/check',
                 type: 'POST',
                 data: JSON.stringify({name}),
                 contentType: 'application/json',

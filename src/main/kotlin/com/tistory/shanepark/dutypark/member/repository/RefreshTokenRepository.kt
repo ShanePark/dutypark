@@ -9,7 +9,7 @@ import java.time.LocalDateTime
 
 interface RefreshTokenRepository : JpaRepository<RefreshToken, Long> {
 
-    @EntityGraph(attributePaths = ["member", "member.department"])
+    @EntityGraph(attributePaths = ["member", "member.team"])
     fun findByToken(token: String): RefreshToken?
 
     @Query("select r from RefreshToken r join fetch r.member order by r.lastUsed desc")

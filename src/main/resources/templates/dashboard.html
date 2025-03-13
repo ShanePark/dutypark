@@ -199,7 +199,7 @@
             <a class="d-block w-100" href="/admin">회원관리 <i class="bi bi-gear-wide-connected"></i></a>
           </div>
           <div class="rounded cursor-pointer shadow-sm col-6 p-3 border">
-            <a class="d-block w-100" href="/admin/department">부서관리 <i class="bi bi-gear-wide-connected"></i></a>
+            <a class="d-block w-100" href="/admin/team">팀 관리 <i class="bi bi-gear-wide-connected"></i></a>
           </div>
         </div>
       </div>
@@ -218,7 +218,7 @@
 
       <div class="modal-body">
         <div class="input-group mb-3">
-          <input type="text" class="form-control" placeholder="이름 또는 부서 검색"
+          <input type="text" class="form-control" placeholder="이름 또는 팀 검색"
                  aria-label="Search" aria-describedby="search-button"
                  v-model="keyword" v-on:keyup.enter="search">
           <button class="btn btn-outline-secondary" type="button" id="search-button" v-on:click="search">
@@ -237,7 +237,7 @@
             <thead class="table-light">
             <tr>
               <th scope="col">#</th>
-              <th scope="col">부서</th>
+              <th scope="col">팀</th>
               <th scope="col">이름</th>
               <th scope="col" class="text-center">요청</th>
             </tr>
@@ -245,7 +245,7 @@
             <tbody>
             <tr v-for="(member, index) in searchResult">
               <td>{{ (page - 1) * pageSize + index + 1 }}</td>
-              <td>{{ member.department }}</td>
+              <td>{{ member.team }}</td>
               <td>{{ member.name }}</td>
               <td class="text-center">
                 <button class="btn btn-outline-success btn-sm" v-on:click="requestFriend(member)">
