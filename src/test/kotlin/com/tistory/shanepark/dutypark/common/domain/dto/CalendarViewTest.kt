@@ -61,17 +61,23 @@ class CalendarViewTest {
     }
 
     @Test
-    fun `get days returns calendar view days`() {
+    fun `get calendar days days returns calendar view days`() {
         // Given
         val calendarView = CalendarView(YearMonth.of(2025, Month.MARCH))
 
         // When
-        val days = calendarView.getRangeDate().toList()
+        val calendarDays = calendarView.getCalendarDays()
 
         // Then
-        assertThat(days).hasSize(42)
-        assertThat(days[0]).isEqualTo(LocalDate.of(2025, Month.FEBRUARY, 23))
-        assertThat(days[41]).isEqualTo(LocalDate.of(2025, Month.APRIL, 5))
+        assertThat(calendarDays).hasSize(42)
+        var cur = LocalDate.of(2025, 2, 23)
+        for (i in 0..41) {
+            val calendarDay = calendarDays[i]
+            assertThat(calendarDay.year).isEqualTo(cur.year)
+            assertThat(calendarDay.month).isEqualTo(cur.monthValue)
+            assertThat(calendarDay.day).isEqualTo(cur.dayOfMonth)
+            cur = cur.plusDays(1)
+        }
     }
 
 }

@@ -1,25 +1,24 @@
-<div id="sso-signup">
-  <h1>회원 가입</h1>
-  <form class="form-group" method="post" action="/api/auth/sso/signup">
-    <input type="hidden" name="uuid" v-model="uuid">
-    <div class="row g-3 align-items-center m-3">
-      <div class="col-auto">
-        <label for="username" class="col-form-label">이름</label>
-      </div>
-      <div class="col-auto">
-        <input type="text" id="username" name="username" class="form-control" aria-describedby="name_helper"
-               maxlength="10"
-               v-model="username" :class="{'border-red': username.length==0}">
-      </div>
-      <div class="col-auto">
-        <span id="name_helper" class="form-text">
+<div id="sso-signup" class="card shadow-sm">
+  <div class="card-header text-center bg-secondary text-white fw-bold">
+    회원 가입
+  </div>
+  <div class="p-4">
+    <form method="post" action="/api/auth/sso/signup">
+      <input type="hidden" name="uuid" v-model="uuid">
+
+      <div class="mb-3">
+        <label for="username" class="form-label me-3 fs-2">이름</label>
+        <input class="fs-2" type="text" id="username" name="username" aria-describedby="name_helper" maxlength="10"
+               v-model="username"
+               :class="{'border-red': username.length == 0}">
+        <div id="name_helper" class="form-text">
           본 서비스에서 사용할 이름을 입력해주세요. 실명 또는 닉네임을 사용할 수 있으며, 나중에 변경할 수 있습니다.
-        </span>
+        </div>
       </div>
-    </div>
-    <div id="term" style="max-height: 20em; overflow: scroll">
-      <h3>이용약관</h3>
-      <pre>
+
+      <div id="term" class="border rounded p-3 bg-light mb-5" style="max-height: 50vh; overflow-y: auto;">
+        <h1>이용약관</h1>
+        <pre class="text-break" style="white-space: pre-wrap;">
     1. 서론
     본 약관은 [Dutypark] (이하 "서비스")의 이용 조건 및 절차, 이용자와 서비스 제공자 간의 권리, 의무, 책임사항 및 기타 필요한 사항을 규정함을 목적으로 합니다.
 
@@ -65,31 +64,32 @@
     10. 분쟁 해결
     서비스 제공자와 이용자는 서비스 이용과 관련하여 발생한 분쟁을 원만하게 해결하기 위하여 필요한 모든 노력을 합니다.
     불구하고 분쟁이 해결되지 않을 경우, [서비스 제공자 소재지 법원]을 합의 관할 법원으로 합니다.
-    </pre>
-    </div>
-    <div class="form-check">
-      <input id="agree" class="form-check-input" type="checkbox" v-model="termsAgreed" name="term_agree">
-      <label class="form-check-label" for="agree">
-        이용약관에 동의합니다.
-      </label>
-    </div>
-    <button type="submit" class="btn btn-primary" :disabled="!canSubmit">회원 가입</button>
-  </form>
+        </pre>
+      </div>
+
+      <div class="form-check mb-3">
+        <input id="agree" class="form-check-input" type="checkbox" v-model="termsAgreed" name="term_agree">
+        <label class="form-check-label" for="agree">이용약관에 동의합니다.</label>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100 fs-1" :disabled="!canSubmit">회원 가입</button>
+    </form>
+  </div>
 </div>
 
 <script>
-    const uuid = "[[${uuid}]]"
-    const app = new Vue({
-        el: '#sso-signup',
-        data: {
-            uuid: uuid,
-            termsAgreed: false,
-            username: '',
-        },
-        computed: {
-            canSubmit() {
-                return this.termsAgreed && this.username.length > 0
-            }
-        },
-    })
+  const uuid = "[[${uuid}]]";
+  const app = new Vue({
+    el: '#sso-signup',
+    data: {
+      uuid: uuid,
+      termsAgreed: false,
+      username: '',
+    },
+    computed: {
+      canSubmit() {
+        return this.termsAgreed && this.username.length > 0;
+      }
+    },
+  });
 </script>

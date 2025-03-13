@@ -1,9 +1,9 @@
 <div id="app" class="card p-0 rounded shadow-sm my-team">
   <div v-if="!team">
-    <div class="card-header bg-secondary text-white fw-bold mb-1 fs-2">내 팀</div>
-    <div class="justify-content-center align-items-center p-5">
-      <p class="fs-3 fw-bold ms-2 text-align-center"><i class="bi bi-person-circle fs-1 me-3"></i>어느 팀에도 속해있지 않습니다.</p>
-      <p class="fs-3 fw-bold ms-2 text-align-center">팀 관리자에게 가입을 요청해주세요.</p>
+    <div class="card-header bg-secondary text-white fw-bold mb-1 fs-2 text-center">내 팀</div>
+    <div class="justify-content-center align-items-center p-5 text-muted fw-bold text-align-center">
+      <p class="fs-1 ms-2"><i class="bi bi-building-fill-slash"></i> 어느 팀에도 속해있지 않습니다.</p>
+      <p class="fs-1 ms-2">팀 관리자에게 가입을 요청해주세요.</p>
     </div>
   </div>
   <template v-if="team">
@@ -71,104 +71,104 @@
 </div>
 
 <script>
-    const today = new Date();
-    const app = new Vue({
-        el: '#app',
-        data: {
-            loginMemberId: parseInt("[[${loginMember?.id}]]"),
-            today: {
-                year: today.getFullYear(),
-                month: today.getMonth() + 1,
-                day: today.getDate()
-            },
-            selDay: {
-                year: today.getFullYear(),
-                month: today.getMonth() + 1,
-                day: today.getDate()
-            },
-            year: today.getFullYear(),
-            month: today.getMonth() + 1,
-            day: today.getDate(),
-            teamDays: [],
-            weekDays: ['일', '월', '화', '수', '목', '금', '토'],
-            team: {
-                name: ''
-            },
-            shift: [],
-            myDuty: [],
-        },
-        mounted() {
-            this.loadMyTeam();
-            this.loadShift();
-            this.loadMyDuty();
-        },
-        computed: {},
-        methods: {
-            loadMyTeam() {
-                fetch('/api/departments/my?year=' + this.year + '&month=' + this.month)
-                    .then(response => response.json())
-                    .then(data => {
-                        app.team = data.department;
-                        app.teamDays = data.teamDays;
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                    });
-            },
-            addMonth(month) {
-                const newDate = new Date(app.year, app.month - 1 + month);
-                app.year = newDate.getFullYear();
-                app.month = newDate.getMonth() + 1;
-                app.loadMyTeam();
-                app.loadMyDuty();
-            },
-            isToday(teamDay) {
-                return teamDay.year === this.today.year &&
-                    teamDay.month === this.today.month &&
-                    teamDay.day === this.today.day;
-            },
-            loadShift() {
-                fetch(`/api/departments/shift?year=${this.selDay.year}&month=${this.selDay.month}&day=${this.selDay.day}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        app.shift = data;
-                        app.shift.forEach(group => {
-                            group.isMyGroup = group.members.some(member => member.id === app.loginMemberId);
-                        });
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                    });
-            },
-            selectDay(teamDay) {
-                app.selDay = teamDay;
-                app.loadShift();
-            },
-            isSelectedDay(teamDay) {
-                return teamDay.year === this.selDay.year &&
-                    teamDay.month === this.selDay.month &&
-                    teamDay.day === this.selDay.day;
-            },
-            moveTo(id) {
-                location.href = "/duty/" + id;
-            },
-            goToToday() {
-                this.year = this.today.year;
-                this.month = this.today.month;
-                this.selDay = {...this.today};
-                this.loadMyTeam();
-                this.loadShift();
-            },
-            loadMyDuty() {
-                fetch(`/api/duty?year=${this.year}&month=${this.month}&memberId=${this.loginMemberId}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        app.myDuty = data;
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                    });
-            },
-        },
-    });
+  const today = new Date();
+  const app = new Vue({
+    el: '#app',
+    data: {
+      loginMemberId: parseInt("[[${loginMember?.id}]]"),
+      today: {
+        year: today.getFullYear(),
+        month: today.getMonth() + 1,
+        day: today.getDate()
+      },
+      selDay: {
+        year: today.getFullYear(),
+        month: today.getMonth() + 1,
+        day: today.getDate()
+      },
+      year: today.getFullYear(),
+      month: today.getMonth() + 1,
+      day: today.getDate(),
+      teamDays: [],
+      weekDays: ['일', '월', '화', '수', '목', '금', '토'],
+      team: {
+        name: ''
+      },
+      shift: [],
+      myDuty: [],
+    },
+    mounted() {
+      this.loadMyTeam();
+      this.loadShift();
+      this.loadMyDuty();
+    },
+    computed: {},
+    methods: {
+      loadMyTeam() {
+        fetch('/api/departments/my?year=' + this.year + '&month=' + this.month)
+          .then(response => response.json())
+          .then(data => {
+            app.team = data.department;
+            app.teamDays = data.teamDays;
+          })
+          .catch(error => {
+            console.error('Error:', error);
+          });
+      },
+      addMonth(month) {
+        const newDate = new Date(app.year, app.month - 1 + month);
+        app.year = newDate.getFullYear();
+        app.month = newDate.getMonth() + 1;
+        app.loadMyTeam();
+        app.loadMyDuty();
+      },
+      isToday(teamDay) {
+        return teamDay.year === this.today.year &&
+          teamDay.month === this.today.month &&
+          teamDay.day === this.today.day;
+      },
+      loadShift() {
+        fetch(`/api/departments/shift?year=${this.selDay.year}&month=${this.selDay.month}&day=${this.selDay.day}`)
+          .then(response => response.json())
+          .then(data => {
+            app.shift = data;
+            app.shift.forEach(group => {
+              group.isMyGroup = group.members.some(member => member.id === app.loginMemberId);
+            });
+          })
+          .catch(error => {
+            console.error('Error:', error);
+          });
+      },
+      selectDay(teamDay) {
+        app.selDay = teamDay;
+        app.loadShift();
+      },
+      isSelectedDay(teamDay) {
+        return teamDay.year === this.selDay.year &&
+          teamDay.month === this.selDay.month &&
+          teamDay.day === this.selDay.day;
+      },
+      moveTo(id) {
+        location.href = "/duty/" + id;
+      },
+      goToToday() {
+        this.year = this.today.year;
+        this.month = this.today.month;
+        this.selDay = {...this.today};
+        this.loadMyTeam();
+        this.loadShift();
+      },
+      loadMyDuty() {
+        fetch(`/api/duty?year=${this.year}&month=${this.month}&memberId=${this.loginMemberId}`)
+          .then(response => response.json())
+          .then(data => {
+            app.myDuty = data;
+          })
+          .catch(error => {
+            console.error('Error:', error);
+          });
+      },
+    },
+  });
 </script>

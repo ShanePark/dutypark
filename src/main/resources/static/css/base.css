@@ -540,10 +540,6 @@ a.homeButton:hover {
     line-height: 1.5;
 }
 
-#detail-view-modal .modal-header .current-date-label {
-    font-size: 1.3em;
-}
-
 .schedules .schedule small {
     font-size: 0.75em;
 }

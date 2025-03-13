@@ -5,6 +5,8 @@ import java.time.LocalDateTime
 import java.time.YearMonth
 
 class CalendarView(yearMonth: YearMonth) {
+    constructor(year: Int, month: Int) : this(YearMonth.of(year, month))
+
     val prevMonth: YearMonth = yearMonth.minusMonths(1)
     val paddingBefore = yearMonth.atDay(1).dayOfWeek.value % 7
 
@@ -61,8 +63,10 @@ class CalendarView(yearMonth: YearMonth) {
             .takeWhile { it <= rangeUntilDate }
     }
 
-    fun getDays(): List<LocalDate> {
-        return getRangeDate().toList()
+    fun getCalendarDays(): List<CalendarDay> {
+        return getRangeDate()
+            .map { CalendarDay(year = it.year, month = it.monthValue, day = it.dayOfMonth) }
+            .toList()
     }
 
 }
