@@ -1,6 +1,6 @@
 package com.tistory.shanepark.dutypark.duty.domain.entity
 
-import com.tistory.shanepark.dutypark.department.domain.entity.Department
+import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import com.tistory.shanepark.dutypark.duty.enums.Color
 import jakarta.persistence.*
 
@@ -11,8 +11,8 @@ class DutyType(
     var position: Int,
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "department_id")
-    val department: Department,
+    @JoinColumn(name = "team_id")
+    val team: Team,
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

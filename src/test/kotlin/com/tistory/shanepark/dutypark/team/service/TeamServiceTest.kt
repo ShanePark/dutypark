@@ -1,7 +1,7 @@
-package com.tistory.shanepark.dutypark.department.service
+package com.tistory.shanepark.dutypark.team.service
 
-import com.tistory.shanepark.dutypark.department.domain.entity.Department
-import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
+import com.tistory.shanepark.dutypark.team.domain.entity.Team
+import com.tistory.shanepark.dutypark.team.repository.TeamRepository
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
@@ -21,13 +21,13 @@ import java.time.LocalDate
 import java.util.*
 
 @ExtendWith(MockitoExtension::class)
-class DepartmentServiceTest {
+class TeamServiceTest {
 
     @InjectMocks
-    lateinit var service: DepartmentService
+    lateinit var service: TeamService
 
     @Mock
-    lateinit var departmentRepository: DepartmentRepository
+    lateinit var teamRepository: TeamRepository
 
     @Mock
     lateinit var dutyTypeRepository: DutyTypeRepository
@@ -43,9 +43,9 @@ class DepartmentServiceTest {
     fun `loadShift should return empty shift if member is not in any team`() {
         // Given
         val longinMember = LoginMember(id = 1L, name = "test")
-        val department = Department("Test Department")
+        val team = Team("Test Team")
         val teamId = 1L
-        ReflectionTestUtils.setField(department, "id", teamId)
+        ReflectionTestUtils.setField(team, "id", teamId)
 
         // When
         `when`(memberRepository.findById(1L)).thenReturn(Optional.of(Member(name = "test")))
@@ -60,20 +60,20 @@ class DepartmentServiceTest {
     fun `loadShift should return correct shifts when members have duties`() {
         // Given
 
-        val department = Department("Test Department")
+        val team = Team("Test Team")
         val teamId = 1L
-        ReflectionTestUtils.setField(department, "id", teamId)
+        ReflectionTestUtils.setField(team, "id", teamId)
 
         val member1 = Member(name = "Alice")
-        member1.department = department
+        member1.team = team
         val member2 = Member(name = "Bob")
-        member2.department = department
+        member2.team = team
         ReflectionTestUtils.setField(member1, "id", 1L)
         ReflectionTestUtils.setField(member2, "id", 2L)
         val loginMember = LoginMember(id = 1L, name = "test")
 
-        val dutyType1 = DutyType("Type1", 0, department)
-        val dutyType2 = DutyType("Type2", 1, department)
+        val dutyType1 = DutyType("Type1", 0, team)
+        val dutyType2 = DutyType("Type2", 1, team)
         ReflectionTestUtils.setField(dutyType1, "id", 1L)
         ReflectionTestUtils.setField(dutyType2, "id", 2L)
         val dutyTypes = listOf(
@@ -87,10 +87,10 @@ class DepartmentServiceTest {
         ReflectionTestUtils.setField(duty1, "id", 1L)
         ReflectionTestUtils.setField(duty2, "id", 2L)
 
-        `when`(memberRepository.findMembersByDepartment(department)).thenReturn(listOf(member1, member2))
+        `when`(memberRepository.findMembersByTeam(team)).thenReturn(listOf(member1, member2))
         `when`(dutyRepository.findByDutyDateAndMemberIn(dutyDate, listOf(member1, member2)))
             .thenReturn(listOf(duty1, duty2))
-        `when`(dutyTypeRepository.findAllByDepartment(department)).thenReturn(dutyTypes)
+        `when`(dutyTypeRepository.findAllByTeam(team)).thenReturn(dutyTypes)
         `when`(memberRepository.findById(1L)).thenReturn(Optional.of(member1))
 
         // When

@@ -84,43 +84,6 @@
     </div>
   </div>
 
-  <div class="mb-4 team-section">
-    <div v-if="departmentInfo.department" class="bg-white rounded shadow-sm border">
-      <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white"
-           v-text="departmentInfo.department.name"></div>
-      <div class="p-4">
-        <template v-for="group in departmentInfo.groups"
-                  v-if="group.members.length>0">
-          <div
-              :class="{'duty-type border rounded p-0 mb-4 overflow-hidden': true, 'border-dark border-2': group.dutyType.name === myInfo.duty.dutyType}"
-              v-if="group.members.length > 0">
-            <div
-                :class="['BACKGROUND-' + group.dutyType.color, 'p-3', 'd-flex', 'justify-content-between', 'align-items-center']">
-              <span class="fw-bolder fs-3" v-text="group.dutyType.name"></span>
-              <span class="badge bg-light text-dark fs-3">{{ group.members.length }}</span>
-            </div>
-
-            <div class="m-0 row p-3">
-              <div v-for="member in group.members" :key="member.id" class="col-3"
-                   @click.prevent="moveTo(member.id)">
-                <div class="member-card p-3 border rounded shadow-sm text-center cursor-pointer fs-3">
-                  <i class="bi bi-person-fill mb-2"></i>
-                  <span v-text="member.name"></span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </template>
-      </div>
-    </div>
-    <div v-if="!departmentInfo.department" class="bg-white rounded shadow-sm border">
-      <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white">소속 없음</div>
-      <div class="p-4">
-        <p class="text-muted">소속된 그룹이 없습니다. 부서의 관리자에게 등록을 요청하세요.</p>
-      </div>
-    </div>
-  </div>
-
   <div class="mb-4 friend-request-section"
        v-if="friendInfo.pendingRequestsTo.length || friendInfo.pendingRequestsFrom.length">
     <div class="bg-white rounded shadow-sm border">
@@ -233,10 +196,10 @@
       <div class="p-4 fs-4">
         <div class="d-flex gap-3 text-align-center fs-3">
           <div class="rounded cursor-pointer shadow-sm col-6 p-3 border">
-            <a class="d-block w-100" href="/admin">접속관리 <i class="bi bi-gear-wide-connected"></i></a>
+            <a class="d-block w-100" href="/admin">회원관리 <i class="bi bi-gear-wide-connected"></i></a>
           </div>
           <div class="rounded cursor-pointer shadow-sm col-6 p-3 border">
-            <a class="d-block w-100" href="/admin/department">부서관리 <i class="bi bi-gear-wide-connected"></i></a>
+            <a class="d-block w-100" href="/admin/team">팀 관리 <i class="bi bi-gear-wide-connected"></i></a>
           </div>
         </div>
       </div>
@@ -255,7 +218,7 @@
 
       <div class="modal-body">
         <div class="input-group mb-3">
-          <input type="text" class="form-control" placeholder="이름 또는 부서 검색"
+          <input type="text" class="form-control" placeholder="이름 또는 팀 검색"
                  aria-label="Search" aria-describedby="search-button"
                  v-model="keyword" v-on:keyup.enter="search">
           <button class="btn btn-outline-secondary" type="button" id="search-button" v-on:click="search">
@@ -274,7 +237,7 @@
             <thead class="table-light">
             <tr>
               <th scope="col">#</th>
-              <th scope="col">부서</th>
+              <th scope="col">팀</th>
               <th scope="col">이름</th>
               <th scope="col" class="text-center">요청</th>
             </tr>
@@ -282,7 +245,7 @@
             <tbody>
             <tr v-for="(member, index) in searchResult">
               <td>{{ (page - 1) * pageSize + index + 1 }}</td>
-              <td>{{ member.department }}</td>
+              <td>{{ member.team }}</td>
               <td>{{ member.name }}</td>
               <td class="text-center">
                 <button class="btn btn-outline-success btn-sm" v-on:click="requestFriend(member)">
@@ -338,10 +301,6 @@
         },
         schedules: [],
       },
-      departmentInfo: {
-        department: {},
-        groups: [],
-      },
       friendInfo: {
         friends: [],
         pendingRequestsTo: [],
@@ -353,7 +312,6 @@
       if (!this.memberId)
         return;
       this.loadMy();
-      this.loadTeamMembers();
       this.loadFriendInfo()
     },
     computed: {},
@@ -363,13 +321,6 @@
           .then(res => res.json())
           .then(data => {
             this.myInfo = data;
-          });
-      },
-      loadTeamMembers() {
-        fetch("/api/dashboard/department")
-          .then(res => res.json())
-          .then(data => {
-            app.departmentInfo = data;
           });
       },
       loadFriendInfo() {

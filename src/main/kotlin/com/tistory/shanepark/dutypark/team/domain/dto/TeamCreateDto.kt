@@ -1,9 +1,9 @@
-package com.tistory.shanepark.dutypark.department.domain.dto
+package com.tistory.shanepark.dutypark.team.domain.dto
 
 import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.Size
 
-data class DepartmentCreateDto(
+data class TeamCreateDto(
     @field:Size(min = 2, max = 20)
     @field:NotEmpty
     val name: String,

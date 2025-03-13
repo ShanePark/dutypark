@@ -46,8 +46,8 @@ class ScheduleService(
         val lengthOfMonth = calendarView.lengthOfMonth
 
         val array = Array<List<ScheduleDto>>(paddingBefore + lengthOfMonth + calendarView.paddingAfter) { emptyList() }
-        val start = calendarView.rangeFrom
-        val end = calendarView.rangeEnd
+        val start = calendarView.rangeFromDateTime
+        val end = calendarView.rangeUntilDateTime
 
         val availableVisibilities = friendService.availableScheduleVisibilities(loginMember, member)
 

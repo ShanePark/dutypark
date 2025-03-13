@@ -31,7 +31,7 @@ class RefreshTokenServiceTest : DutyparkIntegrationTest() {
             id = member.id!!,
             email = "",
             name = "",
-            department = "",
+            team = "",
             isAdmin = false,
         )
         refreshTokenService.deleteRefreshToken(loginMember, token.id!!)
@@ -48,7 +48,7 @@ class RefreshTokenServiceTest : DutyparkIntegrationTest() {
             id = member.id!! + 1,
             email = "",
             name = "",
-            department = "",
+            team = "",
             isAdmin = true,
         )
         refreshTokenService.deleteRefreshToken(loginMember, token.id!!)
@@ -64,7 +64,7 @@ class RefreshTokenServiceTest : DutyparkIntegrationTest() {
             id = member.id!! + 1,
             email = "",
             name = "",
-            department = "",
+            team = "",
             isAdmin = false,
         )
 

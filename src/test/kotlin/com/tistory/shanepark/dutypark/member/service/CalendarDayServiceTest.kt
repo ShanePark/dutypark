@@ -12,7 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import java.time.LocalDate
 
 
-class DDayServiceTest : DutyparkIntegrationTest() {
+class CalendarDayServiceTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var dDayService: DDayService
@@ -40,7 +40,7 @@ class DDayServiceTest : DutyparkIntegrationTest() {
     fun `Create fail if login Member has Problem`() {
         assertThrows<NoSuchElementException> {
             dDayService.createDDay(
-                loginMember = LoginMember(id = -1, email = "", name = "", "dept", isAdmin = false),
+                loginMember = LoginMember(id = -1, email = "", name = "", "team", isAdmin = false),
                 dDaySaveDto = DDaySaveDto(
                     title = "test",
                     date = LocalDate.now().plusDays(3),

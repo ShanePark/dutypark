@@ -328,13 +328,13 @@ class FriendServiceTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `check visibility can't pass if the setting is private and login is not his manager and they are not in same department`() {
+    fun `check visibility can't pass if the setting is private and login is not his manager and they are not in same team`() {
         val loginMember = loginMember(TestData.member)
         val targetMember = TestData.member2
         targetMember.calendarVisibility = Visibility.PRIVATE
 
-        TestData.member.department = TestData.department
-        targetMember.department = TestData.department2
+        TestData.member.team = TestData.team
+        targetMember.team = TestData.team2
         memberRepository.save(TestData.member)
         memberRepository.save(targetMember)
 
@@ -351,9 +351,9 @@ class FriendServiceTest : DutyparkIntegrationTest() {
         val targetMember = TestData.member2
 
         // When
-        TestData.department.manager = viewer
-        departmentRepository.save(TestData.department)
-        targetMember.department = TestData.department
+        TestData.team.manager = viewer
+        teamRepository.save(TestData.team)
+        targetMember.team = TestData.team
         memberRepository.save(targetMember)
 
         // Then no exception

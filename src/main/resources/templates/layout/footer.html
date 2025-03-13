@@ -8,17 +8,17 @@
      th:data-link="|/duty/${loginMember.id}|">
     <i class="bi bi-calendar2-week"></i>
     <br/>
-    <span>내 시간표</span>
+    <span>내 달력</span>
   </a>
   <a th:if="${loginMember == null}" th:href="@{/auth/login}" class="link col-3">
     <i class="bi bi-calendar2-week"></i>
     <br/>
-    <span>내 시간표</span>
+    <span>내 달력</span>
   </a>
   <a href="/team" class="link col-3" data-link="/team">
     <i class="bi bi-person-vcard"></i>
     <br/>
-    <span>우리팀</span>
+    <span>내 팀</span>
   </a>
   <a href="/member" class="link col-3" data-link="/member">
     <i class="bi bi-gear-fill"></i>

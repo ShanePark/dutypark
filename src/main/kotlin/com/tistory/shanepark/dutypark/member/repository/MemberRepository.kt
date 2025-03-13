@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.member.repository
 
-import com.tistory.shanepark.dutypark.department.domain.entity.Department
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.EntityGraph
@@ -11,22 +11,22 @@ import java.util.*
 
 interface MemberRepository : JpaRepository<Member, Long> {
 
-    @EntityGraph(attributePaths = ["department", "department.dutyTypes"])
+    @EntityGraph(attributePaths = ["team", "team.dutyTypes"])
     fun findMemberByName(name: String): Member?
 
-    @EntityGraph(attributePaths = ["department"])
+    @EntityGraph(attributePaths = ["team"])
     override fun findAll(): MutableList<Member>
 
-    @EntityGraph(attributePaths = ["department"])
+    @EntityGraph(attributePaths = ["team"])
     fun findByEmail(email: String?): Optional<Member>
 
-    @EntityGraph(attributePaths = ["department"])
+    @EntityGraph(attributePaths = ["team"])
     fun findMembersByNameContainingIgnoreCase(name: String, pageable: Pageable): Page<Member>
 
-    @Query("select m from Member m left join fetch m.department d  where m.id = :memberId")
-    fun findMemberWithDepartment(memberId: Long): Optional<Member>
+    @Query("select m from Member m left join fetch m.team d  where m.id = :memberId")
+    fun findMemberWithTeam(memberId: Long): Optional<Member>
 
-    @EntityGraph(attributePaths = ["department"])
+    @EntityGraph(attributePaths = ["team"])
     fun findMembersByNameContainingIgnoreCaseAndIdNotIn(
         name: String,
         excludeIds: List<Long?>,
@@ -34,5 +34,5 @@ interface MemberRepository : JpaRepository<Member, Long> {
     ): Page<Member>
 
     fun findMemberByKakaoId(kakaoId: String): Member?
-    fun findMembersByDepartment(department: Department): List<Member>
+    fun findMembersByTeam(team: Team): List<Member>
 }

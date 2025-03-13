@@ -1,13 +1,13 @@
-package com.tistory.shanepark.dutypark.department.domain.dto
+package com.tistory.shanepark.dutypark.team.domain.dto
 
-import com.tistory.shanepark.dutypark.department.domain.entity.Department
+import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 
-data class DepartmentDto(
+data class TeamDto(
     val id: Long,
     val name: String,
     val description: String?,
@@ -20,7 +20,7 @@ data class DepartmentDto(
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is DepartmentDto) return false
+        if (other !is TeamDto) return false
         if (this.id != other.id) return false
         return true
     }
@@ -30,11 +30,11 @@ data class DepartmentDto(
     }
 
     companion object {
-        fun ofSimple(department: Department): DepartmentDto {
-            return of(department, mutableListOf(), mutableListOf())
+        fun ofSimple(team: Team): TeamDto {
+            return of(team, mutableListOf(), mutableListOf())
         }
 
-        fun of(department: Department, members: List<Member>, dutyTypes: List<DutyType>): DepartmentDto {
+        fun of(team: Team, members: List<Member>, dutyTypes: List<DutyType>): TeamDto {
             val sortedTypes = dutyTypes.sortedBy { it.position }
                 .map {
                     DutyTypeDto(
@@ -47,22 +47,22 @@ data class DepartmentDto(
             sortedTypes.add(
                 0,
                 DutyTypeDto(
-                    name = department.defaultDutyName,
+                    name = team.defaultDutyName,
                     position = -1,
-                    color = department.defaultDutyColor.toString()
+                    color = team.defaultDutyColor.toString()
                 )
             )
 
-            return DepartmentDto(
-                id = department.id!!,
-                name = department.name,
-                description = department.description,
+            return TeamDto(
+                id = team.id!!,
+                name = team.name,
+                description = team.description,
                 dutyTypes = sortedTypes,
                 members = members.map { MemberDto.ofSimple(it) },
-                createdDate = department.createdDate.toString(),
-                lastModifiedDate = department.lastModifiedDate.toString(),
-                manager = department.manager?.name,
-                dutyBatchTemplate = department.dutyBatchTemplate?.let { DutyBatchTemplateDto(it) }
+                createdDate = team.createdDate.toString(),
+                lastModifiedDate = team.lastModifiedDate.toString(),
+                manager = team.manager?.name,
+                dutyBatchTemplate = team.dutyBatchTemplate?.let { DutyBatchTemplateDto(it) }
             )
         }
     }

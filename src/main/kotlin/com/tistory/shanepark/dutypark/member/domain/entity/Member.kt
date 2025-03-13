@@ -1,6 +1,6 @@
 package com.tistory.shanepark.dutypark.member.domain.entity
 
-import com.tistory.shanepark.dutypark.department.domain.entity.Department
+import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import jakarta.persistence.*
@@ -23,8 +23,8 @@ class Member(
 
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "department_id")
-    var department: Department? = null
+    @JoinColumn(name = "team_id")
+    var team: Team? = null
 
     @Column(nullable = false, name = "calendar_visibility")
     @Enumerated(EnumType.STRING)
@@ -37,8 +37,8 @@ class Member(
         return "Member(name='$name', email='$email', id=$id)"
     }
 
-    fun isDepartmentManager(isManager: LoginMember): Boolean {
-        return this.department?.manager?.id == isManager.id
+    fun isTeamManager(isManager: LoginMember): Boolean {
+        return this.team?.manager?.id == isManager.id
     }
 
     fun isEquals(loginMember: LoginMember): Boolean {

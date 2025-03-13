@@ -1,16 +1,8 @@
-package com.tistory.shanepark.dutypark.department.controller
+package com.tistory.shanepark.dutypark.team.controller
 
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.domain.dto.PageResponse
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
-import com.tistory.shanepark.dutypark.dashboard.domain.DashboardDepartment
-import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentCreateDto
-import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentDto
-import com.tistory.shanepark.dutypark.department.domain.dto.SimpleDepartmentDto
-import com.tistory.shanepark.dutypark.department.domain.enums.DepartmentNameCheckResult
-import com.tistory.shanepark.dutypark.department.domain.enums.DepartmentNameCheckResult.*
-import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
-import com.tistory.shanepark.dutypark.department.service.DepartmentService
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTeamResult
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.duty.batch.exceptions.DutyBatchException
@@ -18,62 +10,63 @@ import com.tistory.shanepark.dutypark.duty.batch.service.DutyBatchService
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.team.domain.dto.SimpleTeamDto
+import com.tistory.shanepark.dutypark.team.domain.dto.TeamCreateDto
+import com.tistory.shanepark.dutypark.team.domain.dto.TeamDto
+import com.tistory.shanepark.dutypark.team.domain.enums.TeamNameCheckResult
+import com.tistory.shanepark.dutypark.team.domain.enums.TeamNameCheckResult.*
+import com.tistory.shanepark.dutypark.team.repository.TeamRepository
+import com.tistory.shanepark.dutypark.team.service.TeamService
 import jakarta.validation.Valid
 import org.springframework.context.ApplicationContext
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
-import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
 import java.time.YearMonth
 
 @RestController
-@RequestMapping("/admin/api/departments")
-class DepartmentAdminController(
-    val departmentService: DepartmentService,
+@RequestMapping("/admin/api/teams")
+class TeamAdminController(
+    val teamService: TeamService,
     val memberRepository: MemberRepository,
-    private val departmentRepository: DepartmentRepository,
+    private val teamRepository: TeamRepository,
     private val applicationContext: ApplicationContext,
 ) {
 
     private val log = logger()
 
     @GetMapping
-    fun findAll(@PageableDefault(page = 0, size = 10) page: Pageable): PageResponse<SimpleDepartmentDto> {
-        val result = departmentService.findAllWithMemberCount(page)
+    fun findAll(@PageableDefault(page = 0, size = 10) page: Pageable): PageResponse<SimpleTeamDto> {
+        val result = teamService.findAllWithMemberCount(page)
         return PageResponse(result)
     }
 
     @GetMapping("/{id}")
-    fun findById(@PathVariable id: Long): DashboardDepartment {
-        val info = departmentService.findByIdWithMembersAndDutyTypes(id)
-        val dashboard = departmentService.dashboardDepartment(id)
-        return DashboardDepartment(
-            department = info,
-            groups = dashboard.groups
-        )
+    fun findById(@PathVariable id: Long): TeamDto {
+        return teamService.findByIdWithMembersAndDutyTypes(id)
     }
 
     @PostMapping
-    fun create(@RequestBody @Valid departmentCreateDto: DepartmentCreateDto): DepartmentDto {
-        return departmentService.create(departmentCreateDto)
+    fun create(@RequestBody @Valid teamCreateDto: TeamCreateDto): TeamDto {
+        return teamService.create(teamCreateDto)
     }
 
     @PostMapping("/check")
-    fun nameCheck(@RequestBody payload: Map<String, String>): DepartmentNameCheckResult {
+    fun nameCheck(@RequestBody payload: Map<String, String>): TeamNameCheckResult {
         val name = payload["name"] ?: ""
         if (name.length < 2)
             return TOO_SHORT
         if (name.length > 20)
             return TOO_LONG
-        if (departmentService.isDuplicated(name))
+        if (teamService.isDuplicated(name))
             return DUPLICATED
         return OK
     }
 
     @DeleteMapping("/{id}")
     fun delete(@PathVariable id: Long) {
-        departmentService.delete(id)
+        teamService.delete(id)
     }
 
     @PutMapping("/{id}/manager")
@@ -81,7 +74,7 @@ class DepartmentAdminController(
         @PathVariable id: Long,
         @RequestParam memberId: Long?
     ) {
-        departmentService.changeManager(departmentId = id, memberId = memberId)
+        teamService.changeManager(teamId = id, memberId = memberId)
     }
 
     @PatchMapping("/{id}/batch-template")
@@ -89,7 +82,7 @@ class DepartmentAdminController(
         @PathVariable id: Long,
         @RequestParam(name = "templateName", required = false) dutyBatchTemplate: DutyBatchTemplate?
     ) {
-        departmentService.updateBatchTemplate(id, dutyBatchTemplate)
+        teamService.updateBatchTemplate(id, dutyBatchTemplate)
     }
 
     @PostMapping("/{id}/duty")
@@ -103,13 +96,13 @@ class DepartmentAdminController(
         if (!loginMember.isAdmin) {
             throw DutyparkAuthException("$loginMember is not admin")
         }
-        val department = departmentRepository.findById(id).orElseThrow()
-        val batchTemplate = department.dutyBatchTemplate ?: throw IllegalArgumentException("templateName is required")
+        val team = teamRepository.findById(id).orElseThrow()
+        val batchTemplate = team.dutyBatchTemplate ?: throw IllegalArgumentException("templateName is required")
         val dutyBatchService = applicationContext.getBean(batchTemplate.batchServiceClass) as DutyBatchService
         return try {
-            log.info("batch duty upload by $loginMember for department ${department.name}(${department.id}) year=$year, month=$month")
-            dutyBatchService.batchUploadDepartment(
-                departmentId = id,
+            log.info("batch duty upload by $loginMember for team ${team.name}(${team.id}) year=$year, month=$month")
+            dutyBatchService.batchUploadTeam(
+                teamId = id,
                 file = file,
                 yearMonth = YearMonth.of(year, month)
             )
@@ -124,7 +117,7 @@ class DepartmentAdminController(
         @RequestParam color: String,
         @RequestParam name: String,
     ) {
-        departmentService.updateDefaultDuty(id, name, color)
+        teamService.updateDefaultDuty(id, name, color)
     }
 
     @PostMapping("/{id}/members")
@@ -132,7 +125,7 @@ class DepartmentAdminController(
         @PathVariable id: Long,
         @RequestParam memberId: Long
     ) {
-        departmentService.addMemberToDepartment(departmentId = id, memberId = memberId)
+        teamService.addMemberToTeam(teamId = id, memberId = memberId)
     }
 
     @DeleteMapping("/{id}/members")
@@ -140,7 +133,7 @@ class DepartmentAdminController(
         @PathVariable id: Long,
         @RequestParam memberId: Long
     ) {
-        departmentService.removeMemberFromDepartment(id, memberId)
+        teamService.removeMemberFromTeam(id, memberId)
     }
 
 }
