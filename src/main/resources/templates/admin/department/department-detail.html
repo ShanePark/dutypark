@@ -749,13 +749,22 @@
 
               const startDate = data.startDate;
               const endDate = data.endDate;
-              const dutySummary = data.dutyBatchResult
+              const successSummary = data.dutyBatchResult
                 .sort((a, b) => b.second.workingDays - a.second.workingDays)
+                .filter(emp => emp.second.result)
                 .map(emp => `${emp.first}: ${emp.second.workingDays}일`)
                 .join(", ");
+              const failSummary = data.dutyBatchResult
+                .filter(emp => !emp.second.result)
+                .map(emp => `${emp.first}: ${emp.second.errorMessage}`)
+                .join("<br/>");
+              let html = `<strong>${startDate} ~ ${endDate}</strong><br/>근무 시간표가 등록되었습니다. 각 직원의 해당 기간 총 근무일은 아래와 같습니다.<br><br>${successSummary}`;
+              if (failSummary) {
+                html += `<br><br><h3>업로드 실패</h3>${failSummary}`;
+              }
               Swal.fire({
-                title: '업로드 성공!',
-                html: `<strong>${startDate} ~ ${endDate}</strong><br/>근무 시간표가 등록되었습니다. 각 직원의 해당 기간 총 근무일은 아래와 같습니다.<br><br>${dutySummary}`,
+                title: failSummary ? '업로드 부분 실패' : '업로드 성공!',
+                html: html,
                 icon: 'success',
                 confirmButtonText: '확인',
                 confirmButtonColor: '#3085d6',
