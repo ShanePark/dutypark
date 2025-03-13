@@ -156,16 +156,14 @@ class DepartmentService(
         val departmentDto = DepartmentDto.ofSimple(department)
         val calendarView = CalendarView(yearMonth)
 
-        var cur = calendarView.rangeFrom
         val days = mutableListOf<TeamDay>()
-        while (cur <= calendarView.rangeEnd) {
+        for (cur in calendarView.getRangeDate()) {
             val teamDay = TeamDay(
                 year = cur.year,
                 month = cur.monthValue,
                 day = cur.dayOfMonth
             )
             days.add(teamDay)
-            cur = cur.plusDays(1)
         }
 
         return MyTeamSummary(

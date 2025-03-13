@@ -154,8 +154,8 @@ class DepartmentServiceIntegrationTest : DutyparkIntegrationTest() {
         assertThat(dutyTypeRepository.findById(dutyType1.id!!)).isEmpty
         assertThat(departmentRepository.findById(department.id!!)).isEmpty
 
-        val theDuty = dutyRepository.findById(duty?.id!!)
-        assertThat(theDuty).isEmpty
+        val theDuty = dutyRepository.findByMemberAndDutyDate(member = member, dutyDate = LocalDate.of(2023, 4, 8))
+        assertThat(theDuty).isNull()
     }
 
     @Test
@@ -304,7 +304,6 @@ class DepartmentServiceIntegrationTest : DutyparkIntegrationTest() {
         assertThat(updated.defaultDutyName).isEqualTo(updatedDutyName)
         assertThat(updated.defaultDutyColor).isEqualTo(updatedDutyColor)
     }
-
 
 
 }

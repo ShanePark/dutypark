@@ -6,7 +6,6 @@ import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
-import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -16,6 +15,7 @@ import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDate
 import java.time.YearMonth
 
 @Service
@@ -105,43 +105,37 @@ class DutyService(
     fun getDuties(memberId: Long, yearMonth: YearMonth, loginMember: LoginMember?): List<DutyDto> {
         val member = memberRepository.findMemberWithDepartment(memberId).orElseThrow()
         friendService.checkVisibility(loginMember, member)
+
         val department = member.department ?: return emptyList()
         val defaultDutyColor = department.defaultDutyColor
+        val calendarView = CalendarView(yearMonth)
+        val dutyMap = getDutiesAsMap(member, calendarView.rangeFromDate, calendarView.rangeUntilDate)
 
         val answer = mutableListOf<DutyDto>()
-        val calendarView = CalendarView(yearMonth)
-
-        val dutiesLastMonth = findDutyByMonthAndYear(
-            member,
-            calendarView.prevMonth.year,
-            calendarView.prevMonth.monthValue
-        ).associateBy { it.dutyDate.dayOfMonth }
-        for (i in 1..calendarView.paddingBefore) {
-            val day = calendarView.prevMonth.atEndOfMonth().dayOfMonth - (calendarView.paddingBefore - i)
-            val duty = dutiesLastMonth[day]
-            addDutyDto(calendarView.prevMonth, day, duty, answer, defaultDutyColor)
+        for (cur in calendarView.getRangeDate()) {
+            val duty = dutyMap.getOrDefault(
+                LocalDate.of(cur.year, cur.monthValue, cur.dayOfMonth), DutyDto(
+                    year = cur.year,
+                    month = cur.monthValue,
+                    day = cur.dayOfMonth,
+                    dutyColor = defaultDutyColor.name
+                )
+            )
+            answer.add(duty)
         }
-
-        val dutiesOfMonth =
-            findDutyByMonthAndYear(member, yearMonth.year, yearMonth.month.value)
-                .associateBy { it.dutyDate.dayOfMonth }
-        val lengthOfMonth = yearMonth.lengthOfMonth()
-        for (i in 1..lengthOfMonth) {
-            val duty = dutiesOfMonth[i]
-            addDutyDto(yearMonth, i, duty, answer, defaultDutyColor)
-        }
-
-        val dutiesNextMonth = findDutyByMonthAndYear(
-            member,
-            calendarView.nextMonth.year,
-            calendarView.nextMonth.monthValue
-        ).associateBy { it.dutyDate.dayOfMonth }
-        for (i in 1..calendarView.paddingAfter) {
-            val duty = dutiesNextMonth[i]
-            addDutyDto(calendarView.nextMonth, i, duty, answer, defaultDutyColor)
-        }
-
         return answer
+    }
+
+    private fun getDutiesAsMap(member: Member, from: LocalDate, until: LocalDate): Map<LocalDate, DutyDto> {
+        return dutyRepository.findAllByMemberAndDutyDateBetween(
+            member, from, until
+        )
+            .map { d -> DutyDto(d) }
+            .associateBy { d ->
+                LocalDate.of(
+                    d.year, d.month, d.day
+                )
+            }
     }
 
     private fun findDutyByMonthAndYear(
@@ -152,23 +146,6 @@ class DutyService(
         val from = YearMonth.of(year, month).atDay(1)
         val to = YearMonth.of(year, month).atEndOfMonth()
         return dutyRepository.findAllByMemberAndDutyDateBetween(member, from, to)
-    }
-
-    private fun addDutyDto(
-        yearMonth: YearMonth,
-        day: Int,
-        duty: Duty?,
-        list: MutableList<DutyDto>,
-        defaultDutyColor: Color
-    ) {
-        val dutyDto = DutyDto(
-            year = yearMonth.year,
-            month = yearMonth.month.value,
-            day = day,
-            dutyType = duty?.dutyType?.name,
-            dutyColor = duty?.dutyType?.color?.name ?: defaultDutyColor.name
-        )
-        list.add(dutyDto)
     }
 
 }

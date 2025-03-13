@@ -15,15 +15,17 @@ class CalendarView(yearMonth: YearMonth) {
     val paddingAfter = 7 - (yearMonth.atDay(lengthOfMonth).dayOfWeek.value % 7 + 1)
 
     val size = paddingBefore + lengthOfMonth + paddingAfter
-    val rangeFrom: LocalDateTime = calcRangeProm()
-    val rangeEnd: LocalDateTime = calcRangeEnd()
 
-    private fun calcRangeProm(): LocalDateTime {
+    val rangeFromDate: LocalDate = calcRangeFrom()
+    val rangeFromDateTime: LocalDateTime = rangeFromDate.atStartOfDay()
+    val rangeUntilDateTime: LocalDateTime = calcRangeEnd()
+    val rangeUntilDate: LocalDate = rangeUntilDateTime.toLocalDate()
+
+    private fun calcRangeFrom(): LocalDate {
         if (paddingBefore == 0) {
-            return LocalDate.of(currentMonth.year, currentMonth.monthValue, 1).atStartOfDay()
+            return LocalDate.of(currentMonth.year, currentMonth.monthValue, 1)
         }
         return LocalDate.of(prevMonth.year, prevMonth.monthValue, prevMonth.lengthOfMonth() - paddingBefore + 1)
-            .atStartOfDay()
     }
 
     private fun calcRangeEnd(): LocalDateTime {
@@ -34,15 +36,11 @@ class CalendarView(yearMonth: YearMonth) {
     }
 
     fun getRangeYears(): Set<Int> {
-        val set = HashSet<Int>()
-        set.add(prevMonth.year)
-        set.add(currentMonth.year)
-        set.add(nextMonth.year)
-        return set
+        return setOf(prevMonth.year, currentMonth.year, nextMonth.year)
     }
 
     fun isInRange(holidayDate: LocalDate): Boolean {
-        return !holidayDate.isBefore(rangeFrom.toLocalDate()) && !holidayDate.isAfter(rangeEnd.toLocalDate())
+        return !holidayDate.isBefore(rangeFromDate) && !holidayDate.isAfter(rangeUntilDate)
     }
 
     fun getIndex(target: LocalDate): Int {
@@ -50,12 +48,21 @@ class CalendarView(yearMonth: YearMonth) {
             return -1
         }
         if (target.month == prevMonth.month) {
-            return target.dayOfMonth - rangeFrom.dayOfMonth
+            return target.dayOfMonth - rangeFromDateTime.dayOfMonth
         }
         if (target.month == currentMonth.month) {
             return paddingBefore + (target.dayOfMonth - 1)
         }
         return paddingBefore + lengthOfMonth + target.dayOfMonth - 1
+    }
+
+    fun getRangeDate(): Sequence<LocalDate> {
+        return generateSequence(rangeFromDate) { it.plusDays(1) }
+            .takeWhile { it <= rangeUntilDate }
+    }
+
+    fun getDays(): List<LocalDate> {
+        return getRangeDate().toList()
     }
 
 }

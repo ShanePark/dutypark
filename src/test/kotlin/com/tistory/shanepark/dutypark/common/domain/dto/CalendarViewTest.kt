@@ -17,8 +17,8 @@ class CalendarViewTest {
         assertThat(calendarView.nextMonth).isEqualTo(YearMonth.of(2023, 2))
         assertThat(calendarView.paddingAfter).isEqualTo(4)
         assertThat(calendarView.size).isEqualTo(35)
-        assertThat(calendarView.rangeFrom).isEqualTo("2023-01-01T00:00")
-        assertThat(calendarView.rangeEnd).isEqualTo("2023-02-04T23:59:59")
+        assertThat(calendarView.rangeFromDateTime).isEqualTo("2023-01-01T00:00")
+        assertThat(calendarView.rangeUntilDateTime).isEqualTo("2023-02-04T23:59:59")
     }
 
     @Test
@@ -31,12 +31,12 @@ class CalendarViewTest {
         assertThat(calendarView.nextMonth).isEqualTo(YearMonth.of(2023, 10))
         assertThat(calendarView.paddingAfter).isEqualTo(0)
         assertThat(calendarView.size).isEqualTo(35)
-        assertThat(calendarView.rangeFrom).isEqualTo("2023-08-27T00:00")
-        assertThat(calendarView.rangeEnd).isEqualTo("2023-09-30T23:59:59")
+        assertThat(calendarView.rangeFromDateTime).isEqualTo("2023-08-27T00:00")
+        assertThat(calendarView.rangeUntilDateTime).isEqualTo("2023-09-30T23:59:59")
     }
 
     @Test
-    fun `isInRangeTest`() {
+    fun `is in range`() {
         val calendarView = CalendarView(YearMonth.of(2023, Month.APRIL))
         assertThat(calendarView.isInRange(LocalDate.of(2023, Month.MARCH, 25))).isFalse
         assertThat(calendarView.isInRange(LocalDate.of(2023, Month.MARCH, 26))).isTrue
@@ -48,7 +48,7 @@ class CalendarViewTest {
     }
 
     @Test
-    fun `getIndexTest`() {
+    fun `get index`() {
         val calendarView = CalendarView(YearMonth.of(2023, Month.APRIL))
         assertThat(calendarView.getIndex(LocalDate.of(2023, Month.MARCH, 25))).isEqualTo(-1)
         assertThat(calendarView.getIndex(LocalDate.of(2023, Month.MARCH, 26))).isEqualTo(0)
@@ -58,6 +58,20 @@ class CalendarViewTest {
         }
         assertThat(calendarView.getIndex(LocalDate.of(2023, Month.MAY, 6))).isEqualTo(41)
         assertThat(calendarView.getIndex(LocalDate.of(2023, Month.MAY, 7))).isEqualTo(-1)
+    }
+
+    @Test
+    fun `get days returns calendar view days`() {
+        // Given
+        val calendarView = CalendarView(YearMonth.of(2025, Month.MARCH))
+
+        // When
+        val days = calendarView.getRangeDate().toList()
+
+        // Then
+        assertThat(days).hasSize(42)
+        assertThat(days[0]).isEqualTo(LocalDate.of(2025, Month.FEBRUARY, 23))
+        assertThat(days[41]).isEqualTo(LocalDate.of(2025, Month.APRIL, 5))
     }
 
 }

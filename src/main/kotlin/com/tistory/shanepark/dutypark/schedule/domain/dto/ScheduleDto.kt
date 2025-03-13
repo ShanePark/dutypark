@@ -76,17 +76,15 @@ data class ScheduleDto(
         }
 
         private fun validDays(
-            startDate: LocalDate,
-            endDate: LocalDate,
-            calendarView: CalendarView,
+            startDate: LocalDate, endDate: LocalDate, calendarView: CalendarView,
         ): MutableList<LocalDate> {
-            val rangeFrom = calendarView.rangeFrom.toLocalDate()
+            val rangeFrom = calendarView.rangeFromDate
             var current = startDate
             if (current.isBefore(rangeFrom))
                 current = rangeFrom
 
             val daysInRange = mutableListOf<LocalDate>()
-            while (validDate(current, endDate, calendarView.rangeEnd.toLocalDate())) {
+            while (validDate(current, endDate, calendarView.rangeUntilDate)) {
                 daysInRange.add(current)
                 current = current.plusDays(1)
             }

@@ -1,13 +1,26 @@
 package com.tistory.shanepark.dutypark.common.controller
 
-import org.springframework.stereotype.Controller
+import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RestController
+import java.time.LocalDate
+import java.time.YearMonth
 
-@Controller
+@RestController
+@RequestMapping("/api")
 class CommonController {
 
-    @GetMapping("/docs")
-    fun docs(): String {
-        return "forward:/docs/index.html"
+    @GetMapping("/calendar")
+    @Cacheable(value = ["calendar"], key = "#year + '-' + #month")
+    fun loadCalendar(
+        @RequestParam year: Int,
+        @RequestParam month: Int
+    ): List<LocalDate> {
+        val yearMonth = YearMonth.of(year, month)
+        return CalendarView(yearMonth).getDays()
     }
+
 }
