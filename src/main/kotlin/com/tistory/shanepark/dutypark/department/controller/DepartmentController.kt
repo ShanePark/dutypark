@@ -1,9 +1,9 @@
 package com.tistory.shanepark.dutypark.department.controller
 
-import com.tistory.shanepark.dutypark.dashboard.domain.DutyByShift
 import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentDto
 import com.tistory.shanepark.dutypark.department.domain.dto.MyTeamSummary
 import com.tistory.shanepark.dutypark.department.service.DepartmentService
+import com.tistory.shanepark.dutypark.duty.domain.dto.DutyByShift
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.web.bind.annotation.*

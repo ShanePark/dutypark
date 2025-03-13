@@ -1,16 +1,15 @@
 package com.tistory.shanepark.dutypark.department.service
 
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
-import com.tistory.shanepark.dutypark.dashboard.domain.DashboardDepartment
-import com.tistory.shanepark.dutypark.dashboard.domain.DashboardSimpleMember
-import com.tistory.shanepark.dutypark.dashboard.domain.DutyByShift
 import com.tistory.shanepark.dutypark.department.domain.dto.*
 import com.tistory.shanepark.dutypark.department.domain.entity.Department
 import com.tistory.shanepark.dutypark.department.repository.DepartmentRepository
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
+import com.tistory.shanepark.dutypark.duty.domain.dto.DutyByShift
 import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
+import com.tistory.shanepark.dutypark.member.domain.dto.SimpleMemberDto
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.data.domain.Page
@@ -123,15 +122,6 @@ class DepartmentService(
         department.dutyBatchTemplate = dutyBatchTemplate
     }
 
-    fun dashboardDepartment(departmentId: Long): DashboardDepartment {
-        val department = departmentRepository.findById(departmentId).orElseThrow()
-
-        return DashboardDepartment(
-            department = DepartmentDto.ofSimple(department),
-            groups = loadShift(department = department, localDate = LocalDate.now())
-        )
-    }
-
     fun loadShift(loginMember: LoginMember, localDate: LocalDate): List<DutyByShift> {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
         val department = member.department ?: return emptyList()
@@ -153,7 +143,7 @@ class DepartmentService(
                     dutyMemberMap.filter { (duty, _) -> duty.dutyType.id == id }.values
                 } ?: offMembers
                 val members = sourceMembers
-                    .map { member -> DashboardSimpleMember(member.id, member.name) }
+                    .map { member -> SimpleMemberDto(member.id, member.name) }
                     .sortedBy { it.name }
                 DutyByShift(dutyTypeDto, members)
             }

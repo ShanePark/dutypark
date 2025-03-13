@@ -3,7 +3,6 @@ package com.tistory.shanepark.dutypark.department.controller
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.domain.dto.PageResponse
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
-import com.tistory.shanepark.dutypark.dashboard.domain.DashboardDepartment
 import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentCreateDto
 import com.tistory.shanepark.dutypark.department.domain.dto.DepartmentDto
 import com.tistory.shanepark.dutypark.department.domain.dto.SimpleDepartmentDto
@@ -22,7 +21,6 @@ import jakarta.validation.Valid
 import org.springframework.context.ApplicationContext
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
-import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
 import java.time.YearMonth
@@ -45,13 +43,8 @@ class DepartmentAdminController(
     }
 
     @GetMapping("/{id}")
-    fun findById(@PathVariable id: Long): DashboardDepartment {
-        val info = departmentService.findByIdWithMembersAndDutyTypes(id)
-        val dashboard = departmentService.dashboardDepartment(id)
-        return DashboardDepartment(
-            department = info,
-            groups = dashboard.groups
-        )
+    fun findById(@PathVariable id: Long): DepartmentDto {
+        return departmentService.findByIdWithMembersAndDutyTypes(id)
     }
 
     @PostMapping

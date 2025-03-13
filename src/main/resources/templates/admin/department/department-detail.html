@@ -60,29 +60,6 @@
   </div>
 
   <div class="card shadow-sm mb-4">
-    <div class="card-header bg-success text-white">
-      <h5 class="mb-0"><i class="bi bi-calendar-check"></i> 오늘의 근무 현황</h5>
-    </div>
-    <div class="card-body">
-      <div class="row">
-        <div class="col-md-6 mb-3" v-for="group in groups" :key="group.dutyType.id">
-          <div class="card border-0 shadow-sm">
-            <div class="card-header bg-light">
-              <h6 class="mb-0 text-dark">{{ group.dutyType.name }}</h6>
-            </div>
-            <ul class="list-group list-group-flush">
-              <li v-for="member in group.members" :key="member.id" class="list-group-item">
-                <a :href="'/duty/' + member.id">{{ member.name }}</a>
-              </li>
-              <li v-if="group.members.length === 0" class="list-group-item text-muted">없음</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card shadow-sm mb-4">
     <div class="card-header bg-secondary text-white d-flex justify-content-between">
       <h5 class="mb-0">Members</h5>
       <button class="btn btn-light" v-on:click="memberSearchModal()"><i class="bi bi-person-plus"></i> Add</button>
@@ -251,469 +228,467 @@
 </div>
 
 <script>
-    const departmentId = window.location.pathname.split('/').pop();
+  const departmentId = window.location.pathname.split('/').pop();
 
-    const memberSearchModal = new Vue({
-        el: '#member-search-modal',
-        data: {
-            keyword: '',
-            searchResult: [],
-            page: 1,
-            totalPage: 0,
-            pageSize: 5,
-            totalElements: 0,
-            mode: 'memberSearch',
-        },
-        methods: {
-            prevPage: function () {
-                if (this.page > 1) {
-                    this.page--;
-                    this.search();
-                }
-            },
-            nextPage: function () {
-                if (this.page < this.totalPage) {
-                    this.page++;
-                    this.search();
-                }
-            },
-            goToPage: function (page) {
-                this.page = page;
-                this.search();
-            },
-            resetForMemberSearch: function () {
-                this.reset();
-                this.mode = 'memberSearch';
-            },
-            resetForManagerSearch: function () {
-                this.reset();
-                this.mode = 'managerSearch';
-            },
-            reset: function () {
-                this.keyword = '';
-                this.searchResult = [];
-                this.page = 1;
-                this.totalPage = 0;
-                this.pageSize = 5;
-                this.totalElements = 0;
-                this.search();
-            },
-            search: function () {
-                $.ajax({
-                    url: '/admin/api/members',
-                    type: 'GET',
-                    data: {
-                        name: this.keyword,
-                        page: this.page - 1,
-                        size: this.pageSize
-                    },
-                    success: function (response) {
-                        memberSearchModal.searchResult = response.content;
-                        memberSearchModal.totalPage = response.totalPages;
-                        memberSearchModal.totalElements = response.totalElements;
-                    },
-                    error: function (error) {
-                        console.log(error);
-                    }
-                })
-            },
-            action: function (member) {
-                if (this.mode === 'memberSearch') {
-                    this.addMember(member.id);
-                    return;
-                }
-                if (this.mode === 'managerSearch') {
-                    this.changeManager(member.id, member.name);
-                    return;
-                }
-                throw new Error('Invalid mode');
-            },
-            changeManager: function (memberId, memberName) {
-                let confirmText = 'Are you sure to assign [' + memberName + '] as the manager of this department?';
-                if (!memberId) {
-                    confirmText = 'Are you sure to remove the manager of this department?';
-                }
-                Swal.fire({
-                    title: 'Are you sure?',
-                    text: confirmText,
-                    icon: 'success',
-                    showCancelButton: true,
-                    confirmButtonColor: '#3085d6',
-                    confirmButtonText: 'Yes, change it!'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            url: '/admin/api/departments/' + departmentId + '/manager',
-                            type: 'PUT',
-                            data: {
-                                memberId: memberId
-                            },
-                            success: function (response) {
-                                app.load();
-                                $('#member-search-modal').modal('hide');
-                            },
-                            error: function (error) {
-                                console.log(error);
-                            }
-                        })
-                    }
-                });
-            },
-            addMember: function (memberId) {
-                Swal.fire({
-                    title: 'Are you sure?',
-                    text: 'Are you sure you want to add this member to this department?',
-                    icon: 'success',
-                    showCancelButton: true,
-                    confirmButtonColor: '#3085d6',
-                    cancelButtonColor: '#d33',
-                    confirmButtonText: 'Yes, add it!'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            url: '/admin/api/departments/' + departmentId + '/members',
-                            type: 'POST',
-                            data: {
-                                memberId: memberId
-                            },
-                            success: function (response) {
-                                app.load();
-                                $('#member-search-modal').modal('hide');
-                            },
-                            error: function (error) {
-                                console.log(error);
-                            }
-                        })
-                    }
-                });
-            }
+  const memberSearchModal = new Vue({
+    el: '#member-search-modal',
+    data: {
+      keyword: '',
+      searchResult: [],
+      page: 1,
+      totalPage: 0,
+      pageSize: 5,
+      totalElements: 0,
+      mode: 'memberSearch',
+    },
+    methods: {
+      prevPage: function () {
+        if (this.page > 1) {
+          this.page--;
+          this.search();
         }
-    })
+      },
+      nextPage: function () {
+        if (this.page < this.totalPage) {
+          this.page++;
+          this.search();
+        }
+      },
+      goToPage: function (page) {
+        this.page = page;
+        this.search();
+      },
+      resetForMemberSearch: function () {
+        this.reset();
+        this.mode = 'memberSearch';
+      },
+      resetForManagerSearch: function () {
+        this.reset();
+        this.mode = 'managerSearch';
+      },
+      reset: function () {
+        this.keyword = '';
+        this.searchResult = [];
+        this.page = 1;
+        this.totalPage = 0;
+        this.pageSize = 5;
+        this.totalElements = 0;
+        this.search();
+      },
+      search: function () {
+        $.ajax({
+          url: '/admin/api/members',
+          type: 'GET',
+          data: {
+            name: this.keyword,
+            page: this.page - 1,
+            size: this.pageSize
+          },
+          success: function (response) {
+            memberSearchModal.searchResult = response.content;
+            memberSearchModal.totalPage = response.totalPages;
+            memberSearchModal.totalElements = response.totalElements;
+          },
+          error: function (error) {
+            console.log(error);
+          }
+        })
+      },
+      action: function (member) {
+        if (this.mode === 'memberSearch') {
+          this.addMember(member.id);
+          return;
+        }
+        if (this.mode === 'managerSearch') {
+          this.changeManager(member.id, member.name);
+          return;
+        }
+        throw new Error('Invalid mode');
+      },
+      changeManager: function (memberId, memberName) {
+        let confirmText = 'Are you sure to assign [' + memberName + '] as the manager of this department?';
+        if (!memberId) {
+          confirmText = 'Are you sure to remove the manager of this department?';
+        }
+        Swal.fire({
+          title: 'Are you sure?',
+          text: confirmText,
+          icon: 'success',
+          showCancelButton: true,
+          confirmButtonColor: '#3085d6',
+          confirmButtonText: 'Yes, change it!'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            $.ajax({
+              url: '/admin/api/departments/' + departmentId + '/manager',
+              type: 'PUT',
+              data: {
+                memberId: memberId
+              },
+              success: function (response) {
+                app.load();
+                $('#member-search-modal').modal('hide');
+              },
+              error: function (error) {
+                console.log(error);
+              }
+            })
+          }
+        });
+      },
+      addMember: function (memberId) {
+        Swal.fire({
+          title: 'Are you sure?',
+          text: 'Are you sure you want to add this member to this department?',
+          icon: 'success',
+          showCancelButton: true,
+          confirmButtonColor: '#3085d6',
+          cancelButtonColor: '#d33',
+          confirmButtonText: 'Yes, add it!'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            $.ajax({
+              url: '/admin/api/departments/' + departmentId + '/members',
+              type: 'POST',
+              data: {
+                memberId: memberId
+              },
+              success: function (response) {
+                app.load();
+                $('#member-search-modal').modal('hide');
+              },
+              error: function (error) {
+                console.log(error);
+              }
+            })
+          }
+        });
+      }
+    }
+  })
 
-    const app = new Vue({
-        el: '.department-detail',
-        data: {
-            department: {},
-            memberSearchKeyword: '',
-            memberSearchResult: [],
-            dutyBatchTemplates: [],
-            groups: [],
-        },
-        mounted() {
-            this.load();
-            this.loadDutyBatchTemplates();
-        },
-        computed: {
-            hasMember: function () {
-                return this.department.members && this.department.members.length > 0;
-            },
-            hasDutyType: function () {
-                return this.department.dutyTypes && this.department.dutyTypes.length > 0;
+  const app = new Vue({
+    el: '.department-detail',
+    data: {
+      department: {},
+      memberSearchKeyword: '',
+      memberSearchResult: [],
+      dutyBatchTemplates: [],
+    },
+    mounted() {
+      this.load();
+      this.loadDutyBatchTemplates();
+    },
+    computed: {
+      hasMember: function () {
+        return this.department.members && this.department.members.length > 0;
+      },
+      hasDutyType: function () {
+        return this.department.dutyTypes && this.department.dutyTypes.length > 0;
+      }
+    },
+    methods: {
+      load: function () {
+        $.ajax({
+          url: '/admin/api/departments/' + departmentId,
+          type: 'GET',
+          success: function (response) {
+            app.department = response;
+          },
+          error: function (error) {
+            console.log(error);
+          }
+        })
+      },
+      loadDutyBatchTemplates: function () {
+        $.ajax({
+          url: '/api/duty_batch/templates',
+          type: 'GET',
+          success: function (response) {
+            app.dutyBatchTemplates = response;
+          },
+          error: function (error) {
+            console.log(error);
+          }
+        })
+      },
+      remove: function () {
+        Swal.fire({
+          title: 'Delete department',
+          text: 'Are you sure you want to delete this department?',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Delete',
+          confirmButtonColor: '#d33',
+          cancelButtonText: 'Cancel'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            $.ajax({
+              url: '/admin/api/departments/' + app.department.id,
+              type: 'DELETE',
+              success: function (response) {
+                window.location.href = '/admin/department';
+              },
+              error: function (error) {
+                Swal.fire({
+                  title: 'Error',
+                  text: 'Failed to delete department',
+                  icon: 'error',
+                  confirmButtonText: 'OK',
+                  confirmButtonColor: '#3085d6',
+                })
+              }
+            })
+          }
+        });
+      },
+      updateDutyType: function (element) {
+        const dutyType = element.closest('.duty-type');
+        const dutyTypeName = dutyType.querySelector('.duty-type-name').textContent;
+        const dutyTypeColor = dutyType.querySelector('.duty-type-color').getAttribute('data-color');
+        const dutyTypeId = dutyType.attributes['id']?.value;
+
+        const modal = document.querySelector('#duty-type-modal').cloneNode(true);
+        let nameInput = modal.querySelector('input[name="name"]');
+        nameInput.setAttribute('value', dutyTypeName);
+
+        modal.querySelectorAll('option').forEach(option => {
+          if (option.value === dutyTypeColor) {
+            option.setAttribute('selected', 'selected');
+          }
+        });
+
+        Swal.fire({
+          title: 'Update Duty Type',
+          html: modal.innerHTML,
+          focusConfirm: false,
+          preConfirm: () => {
+            let swalPopup = document.querySelector('.swal2-popup');
+            const name = swalPopup.querySelector('input[name="name"]').value
+            const color = swalPopup.querySelector('select[name="color"]').value
+            if (!name) {
+              Swal.showValidationMessage(`Name is required`)
             }
-        },
-        methods: {
-            load: function () {
-                $.ajax({
-                    url: '/admin/api/departments/' + departmentId,
-                    type: 'GET',
-                    success: function (response) {
-                        app.department = response.department;
-                        app.groups = response.groups;
-                    },
-                    error: function (error) {
-                        console.log(error);
-                    }
-                })
-            },
-            loadDutyBatchTemplates: function () {
-                $.ajax({
-                    url: '/api/duty_batch/templates',
-                    type: 'GET',
-                    success: function (response) {
-                        app.dutyBatchTemplates = response;
-                    },
-                    error: function (error) {
-                        console.log(error);
-                    }
-                })
-            },
-            remove: function () {
+            if (app.department.dutyTypes.some(dutyType => dutyType.name === name && dutyType.id != dutyTypeId)) {
+              Swal.showValidationMessage(`Duty type with name ${name} already exists`)
+            }
+            return [name, color]
+          },
+          showCancelButton: true,
+          confirmButtonText: 'Update',
+          confirmButtonColor: '#29945A',
+        }).then((result) => {
+          if (result.isConfirmed) {
+            if (!dutyTypeId) {
+              app.updateDefaultDuty(result.value[0], result.value[1]);
+              return;
+            }
+            $.ajax({
+              url: '/admin/api/duty-types',
+              type: 'PATCH',
+              data: JSON.stringify({
+                id: dutyTypeId,
+                name: result.value[0],
+                color: result.value[1]
+              }),
+              contentType: 'application/json',
+              success: function (response) {
+                app.load();
+              },
+              error: function (error) {
                 Swal.fire({
-                    title: 'Delete department',
-                    text: 'Are you sure you want to delete this department?',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: 'Delete',
-                    confirmButtonColor: '#d33',
-                    cancelButtonText: 'Cancel'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            url: '/admin/api/departments/' + app.department.id,
-                            type: 'DELETE',
-                            success: function (response) {
-                                window.location.href = '/admin/department';
-                            },
-                            error: function (error) {
-                                Swal.fire({
-                                    title: 'Error',
-                                    text: 'Failed to delete department',
-                                    icon: 'error',
-                                    confirmButtonText: 'OK',
-                                    confirmButtonColor: '#3085d6',
-                                })
-                            }
-                        })
-                    }
-                });
-            },
-            updateDutyType: function (element) {
-                const dutyType = element.closest('.duty-type');
-                const dutyTypeName = dutyType.querySelector('.duty-type-name').textContent;
-                const dutyTypeColor = dutyType.querySelector('.duty-type-color').getAttribute('data-color');
-                const dutyTypeId = dutyType.attributes['id']?.value;
-
-                const modal = document.querySelector('#duty-type-modal').cloneNode(true);
-                let nameInput = modal.querySelector('input[name="name"]');
-                nameInput.setAttribute('value', dutyTypeName);
-
-                modal.querySelectorAll('option').forEach(option => {
-                    if (option.value === dutyTypeColor) {
-                        option.setAttribute('selected', 'selected');
-                    }
-                });
-
-                Swal.fire({
-                    title: 'Update Duty Type',
-                    html: modal.innerHTML,
-                    focusConfirm: false,
-                    preConfirm: () => {
-                        let swalPopup = document.querySelector('.swal2-popup');
-                        const name = swalPopup.querySelector('input[name="name"]').value
-                        const color = swalPopup.querySelector('select[name="color"]').value
-                        if (!name) {
-                            Swal.showValidationMessage(`Name is required`)
-                        }
-                        if (app.department.dutyTypes.some(dutyType => dutyType.name === name && dutyType.id != dutyTypeId)) {
-                            Swal.showValidationMessage(`Duty type with name ${name} already exists`)
-                        }
-                        return [name, color]
-                    },
-                    showCancelButton: true,
-                    confirmButtonText: 'Update',
-                    confirmButtonColor: '#29945A',
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        if (!dutyTypeId) {
-                            app.updateDefaultDuty(result.value[0], result.value[1]);
-                            return;
-                        }
-                        $.ajax({
-                            url: '/admin/api/duty-types',
-                            type: 'PATCH',
-                            data: JSON.stringify({
-                                id: dutyTypeId,
-                                name: result.value[0],
-                                color: result.value[1]
-                            }),
-                            contentType: 'application/json',
-                            success: function (response) {
-                                app.load();
-                            },
-                            error: function (error) {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Oops...',
-                                    text: 'Failed to add duty type'
-                                })
-                            }
-                        })
-                    }
-                });
-            },
-            addDutyType: function () {
-                Swal.fire({
-                    title: 'Add Duty Type',
-                    html: $('#duty-type-modal').clone().html(),
-                    focusConfirm: false,
-                    preConfirm: () => {
-                        let swalPopup = document.querySelector('.swal2-popup');
-                        const name = swalPopup.querySelector('input[name="name"]').value
-                        const color = swalPopup.querySelector('select[name="color"]').value
-                        if (!name) {
-                            Swal.showValidationMessage(`Name is required`)
-                        }
-                        if (app.department.dutyTypes.some(dutyType => dutyType.name === name)) {
-                            Swal.showValidationMessage(`Duty type with name ${name} already exists`)
-                        }
-                        return [name, color]
-                    },
-                    showCancelButton: true,
-                    confirmButtonText: 'Add',
-                    confirmButtonColor: '#3085d6',
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            url: '/admin/api/duty-types',
-                            type: 'POST',
-                            data: JSON.stringify({
-                                departmentId: app.department.id,
-                                name: result.value[0],
-                                color: result.value[1]
-                            }),
-                            contentType: 'application/json',
-                            success: function (response) {
-                                app.load();
-                            },
-                            error: function (error) {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Oops...',
-                                    text: 'Failed to add duty type'
-                                })
-                            }
-                        })
-                    }
-                });
-            },
-            swapPosition: function (index1, index2) {
-                const dutyType1 = app.department.dutyTypes[index1];
-                const dutyType2 = app.department.dutyTypes[index2];
-                $.ajax({
-                    url: '/admin/api/duty-types/swap-position?id1=' + dutyType1.id + '&id2=' + dutyType2.id,
-                    type: 'PATCH',
-                    success: function (response) {
-                        app.load();
-                    },
-                    error: function (error) {
-                        Swal.fire({
-                            title: 'Error',
-                            text: 'Failed to swap duty types',
-                            icon: 'error',
-                            confirmButtonText: 'OK',
-                            confirmButtonColor: '#3085d6',
-                        })
-                    }
+                  icon: 'error',
+                  title: 'Oops...',
+                  text: 'Failed to add duty type'
                 })
-            },
-            removeDutyType: function (dutyType) {
+              }
+            })
+          }
+        });
+      },
+      addDutyType: function () {
+        Swal.fire({
+          title: 'Add Duty Type',
+          html: $('#duty-type-modal').clone().html(),
+          focusConfirm: false,
+          preConfirm: () => {
+            let swalPopup = document.querySelector('.swal2-popup');
+            const name = swalPopup.querySelector('input[name="name"]').value
+            const color = swalPopup.querySelector('select[name="color"]').value
+            if (!name) {
+              Swal.showValidationMessage(`Name is required`)
+            }
+            if (app.department.dutyTypes.some(dutyType => dutyType.name === name)) {
+              Swal.showValidationMessage(`Duty type with name ${name} already exists`)
+            }
+            return [name, color]
+          },
+          showCancelButton: true,
+          confirmButtonText: 'Add',
+          confirmButtonColor: '#3085d6',
+        }).then((result) => {
+          if (result.isConfirmed) {
+            $.ajax({
+              url: '/admin/api/duty-types',
+              type: 'POST',
+              data: JSON.stringify({
+                departmentId: app.department.id,
+                name: result.value[0],
+                color: result.value[1]
+              }),
+              contentType: 'application/json',
+              success: function (response) {
+                app.load();
+              },
+              error: function (error) {
                 Swal.fire({
-                    title: 'Delete duty type',
-                    text: 'Are you sure you want to delete duty type [ ' + dutyType.name + ' ] ?',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: 'Delete',
-                    confirmButtonColor: '#d33',
-                    cancelButtonText: 'Cancel'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            url: '/admin/api/duty-types/' + dutyType.id,
-                            type: 'DELETE',
-                            success: function (response) {
-                                app.load();
-                            },
-                            error: function (error) {
-                                Swal.fire({
-                                    title: 'Error',
-                                    text: 'Failed to delete duty type',
-                                    icon: 'error',
-                                    confirmButtonText: 'OK',
-                                    confirmButtonColor: '#3085d6',
-                                })
-                            }
-                        })
-                    }
+                  icon: 'error',
+                  title: 'Oops...',
+                  text: 'Failed to add duty type'
                 })
-            },
-            memberSearchModal: function () {
-                memberSearchModal.resetForMemberSearch();
-                $('#member-search-modal').modal('show');
-            },
-            managerSearchModal: function () {
-                memberSearchModal.resetForManagerSearch();
-                $('#member-search-modal').modal('show');
-            },
-            removeMember: function (memberId) {
+              }
+            })
+          }
+        });
+      },
+      swapPosition: function (index1, index2) {
+        const dutyType1 = app.department.dutyTypes[index1];
+        const dutyType2 = app.department.dutyTypes[index2];
+        $.ajax({
+          url: '/admin/api/duty-types/swap-position?id1=' + dutyType1.id + '&id2=' + dutyType2.id,
+          type: 'PATCH',
+          success: function (response) {
+            app.load();
+          },
+          error: function (error) {
+            Swal.fire({
+              title: 'Error',
+              text: 'Failed to swap duty types',
+              icon: 'error',
+              confirmButtonText: 'OK',
+              confirmButtonColor: '#3085d6',
+            })
+          }
+        })
+      },
+      removeDutyType: function (dutyType) {
+        Swal.fire({
+          title: 'Delete duty type',
+          text: 'Are you sure you want to delete duty type [ ' + dutyType.name + ' ] ?',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Delete',
+          confirmButtonColor: '#d33',
+          cancelButtonText: 'Cancel'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            $.ajax({
+              url: '/admin/api/duty-types/' + dutyType.id,
+              type: 'DELETE',
+              success: function (response) {
+                app.load();
+              },
+              error: function (error) {
                 Swal.fire({
-                    title: 'Delete member',
-                    text: 'Are you sure you want to delete this member from department?',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: 'Delete',
-                    confirmButtonColor: '#d33',
-                    cancelButtonText: 'Cancel'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            url: '/admin/api/departments/' + app.department.id + '/members',
-                            data: {
-                                memberId: memberId
-                            },
-                            type: 'DELETE',
-                            success: function (response) {
-                                app.load();
-                            },
-                            error: function (error) {
-                                Swal.fire({
-                                    title: 'Error',
-                                    text: 'Failed to delete member',
-                                    icon: 'error',
-                                    confirmButtonText: 'OK',
-                                    confirmButtonColor: '#3085d6',
-                                })
-                            }
-                        })
-                    }
+                  title: 'Error',
+                  text: 'Failed to delete duty type',
+                  icon: 'error',
+                  confirmButtonText: 'OK',
+                  confirmButtonColor: '#3085d6',
                 })
-            }, updateDefaultDuty(name, color) {
-                const departmentId = app.department.id;
-                $.ajax({
-                    url: '/admin/api/departments/' + departmentId + '/default-duty',
-                    type: 'PATCH',
-                    data: {
-                        name: name,
-                        color: color,
-                    },
-                    success: function () {
-                        app.load();
-                    }, error: function (error) {
-                        Swal.fire({
-                            title: 'Error',
-                            text: 'Failed to change off color',
-                            icon: 'error',
-                            confirmButtonText: 'OK',
-                            confirmButtonColor: '#3085d6',
-                        });
-                    }
-                })
-            }, updateBatchTemplate(templateName) {
-                const departmentId = app.department.id;
-                $.ajax({
-                    url: '/admin/api/departments/' + departmentId + '/batch-template',
-                    type: 'PATCH',
-                    data: {
-                        templateName: templateName,
-                    },
-                    success: function () {
-                        app.load();
-                    }, error: function (error) {
-                        Swal.fire({
-                            title: 'Error',
-                            text: 'Failed to change batch template',
-                            icon: 'error',
-                            confirmButtonText: 'OK',
-                            confirmButtonColor: '#3085d6',
-                        });
-                    }
-                })
-            }, batchDuty() {
-                const today = new Date();
-                const year = today.getFullYear();
-                const month = today.getMonth() + 1;
+              }
+            })
+          }
+        })
+      },
+      memberSearchModal: function () {
+        memberSearchModal.resetForMemberSearch();
+        $('#member-search-modal').modal('show');
+      },
+      managerSearchModal: function () {
+        memberSearchModal.resetForManagerSearch();
+        $('#member-search-modal').modal('show');
+      },
+      removeMember: function (memberId) {
+        Swal.fire({
+          title: 'Delete member',
+          text: 'Are you sure you want to delete this member from department?',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Delete',
+          confirmButtonColor: '#d33',
+          cancelButtonText: 'Cancel'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            $.ajax({
+              url: '/admin/api/departments/' + app.department.id + '/members',
+              data: {
+                memberId: memberId
+              },
+              type: 'DELETE',
+              success: function (response) {
+                app.load();
+              },
+              error: function (error) {
                 Swal.fire({
-                    title: '근무표 업로드',
-                    html: `
+                  title: 'Error',
+                  text: 'Failed to delete member',
+                  icon: 'error',
+                  confirmButtonText: 'OK',
+                  confirmButtonColor: '#3085d6',
+                })
+              }
+            })
+          }
+        })
+      }, updateDefaultDuty(name, color) {
+        const departmentId = app.department.id;
+        $.ajax({
+          url: '/admin/api/departments/' + departmentId + '/default-duty',
+          type: 'PATCH',
+          data: {
+            name: name,
+            color: color,
+          },
+          success: function () {
+            app.load();
+          }, error: function (error) {
+            Swal.fire({
+              title: 'Error',
+              text: 'Failed to change off color',
+              icon: 'error',
+              confirmButtonText: 'OK',
+              confirmButtonColor: '#3085d6',
+            });
+          }
+        })
+      }, updateBatchTemplate(templateName) {
+        const departmentId = app.department.id;
+        $.ajax({
+          url: '/admin/api/departments/' + departmentId + '/batch-template',
+          type: 'PATCH',
+          data: {
+            templateName: templateName,
+          },
+          success: function () {
+            app.load();
+          }, error: function (error) {
+            Swal.fire({
+              title: 'Error',
+              text: 'Failed to change batch template',
+              icon: 'error',
+              confirmButtonText: 'OK',
+              confirmButtonColor: '#3085d6',
+            });
+          }
+        })
+      }, batchDuty() {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = today.getMonth() + 1;
+        Swal.fire({
+          title: '근무표 업로드',
+          html: `
     <div class="mb-3">
         <label for="batchFile" class="form-label">근무표 파일 업로드 (.xlsx)</label>
         <input type="file" id="batchFile" class="form-control" accept=".xlsx">
@@ -729,74 +704,74 @@
         </div>
     </div>
 `,
-                    focusConfirm: false,
-                    showCancelButton: true,
-                    confirmButtonText: 'Upload',
-                    confirmButtonColor: '#3085d6',
-                    preConfirm: () => {
-                        const file = document.getElementById('batchFile').files[0];
-                        const year = document.getElementById('batchYear').value;
-                        const month = document.getElementById('batchMonth').value;
-                        if (!file || !year || !month) {
-                            Swal.showValidationMessage('파일 및 연도, 월을 입력해주세요');
-                        }
-                        return {file, year, month};
-                    }
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        const formData = new FormData();
-                        formData.append('file', result.value.file);
-                        formData.append('year', result.value.year);
-                        formData.append('month', result.value.month);
-
-                        Swal.fire({
-                            title: '업로드 중...',
-                            text: '파일을 처리하고 있습니다. 잠시만 기다려주세요.',
-                            allowOutsideClick: false,
-                            didOpen: () => {
-                                Swal.showLoading();
-                            }
-                        });
-
-                        fetch(`/admin/api/departments/${app.department.id}/duty`, {
-                            method: 'POST',
-                            body: formData
-                        }).then(response => {
-                            if (!response.ok) {
-                                throw new Error('시간표 업로드 실패');
-                            }
-                            return response.json();
-                        }).then(data => {
-                            if (!data.result) {
-                                throw new Error(data.errorMessage);
-                            }
-                            app.load();
-
-                            const startDate = data.startDate;
-                            const endDate = data.endDate;
-                            const dutySummary = data.dutyBatchResult
-                                .sort((a, b) => b.second.workingDays - a.second.workingDays)
-                                .map(emp => `${emp.first}: ${emp.second.workingDays}일`)
-                                .join(", ");
-                            Swal.fire({
-                                title: '업로드 성공!',
-                                html: `<strong>${startDate} ~ ${endDate}</strong><br/>근무 시간표가 등록되었습니다. 각 직원의 해당 기간 총 근무일은 아래와 같습니다.<br><br>${dutySummary}`,
-                                icon: 'success',
-                                confirmButtonText: '확인',
-                                confirmButtonColor: '#3085d6',
-                            });
-                        }).catch(error => {
-                            Swal.fire({
-                                title: '시간표 등록 실패',
-                                text: error.message,
-                                icon: 'error',
-                                confirmButtonText: 'OK',
-                                confirmButtonColor: '#3085d6',
-                            });
-                        });
-                    }
-                });
+          focusConfirm: false,
+          showCancelButton: true,
+          confirmButtonText: 'Upload',
+          confirmButtonColor: '#3085d6',
+          preConfirm: () => {
+            const file = document.getElementById('batchFile').files[0];
+            const year = document.getElementById('batchYear').value;
+            const month = document.getElementById('batchMonth').value;
+            if (!file || !year || !month) {
+              Swal.showValidationMessage('파일 및 연도, 월을 입력해주세요');
             }
-        }
-    });
+            return {file, year, month};
+          }
+        }).then((result) => {
+          if (result.isConfirmed) {
+            const formData = new FormData();
+            formData.append('file', result.value.file);
+            formData.append('year', result.value.year);
+            formData.append('month', result.value.month);
+
+            Swal.fire({
+              title: '업로드 중...',
+              text: '파일을 처리하고 있습니다. 잠시만 기다려주세요.',
+              allowOutsideClick: false,
+              didOpen: () => {
+                Swal.showLoading();
+              }
+            });
+
+            fetch(`/admin/api/departments/${app.department.id}/duty`, {
+              method: 'POST',
+              body: formData
+            }).then(response => {
+              if (!response.ok) {
+                throw new Error('시간표 업로드 실패');
+              }
+              return response.json();
+            }).then(data => {
+              if (!data.result) {
+                throw new Error(data.errorMessage);
+              }
+              app.load();
+
+              const startDate = data.startDate;
+              const endDate = data.endDate;
+              const dutySummary = data.dutyBatchResult
+                .sort((a, b) => b.second.workingDays - a.second.workingDays)
+                .map(emp => `${emp.first}: ${emp.second.workingDays}일`)
+                .join(", ");
+              Swal.fire({
+                title: '업로드 성공!',
+                html: `<strong>${startDate} ~ ${endDate}</strong><br/>근무 시간표가 등록되었습니다. 각 직원의 해당 기간 총 근무일은 아래와 같습니다.<br><br>${dutySummary}`,
+                icon: 'success',
+                confirmButtonText: '확인',
+                confirmButtonColor: '#3085d6',
+              });
+            }).catch(error => {
+              Swal.fire({
+                title: '시간표 등록 실패',
+                text: error.message,
+                icon: 'error',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#3085d6',
+              });
+            });
+          }
+        });
+      }
+    }
+  });
 </script>

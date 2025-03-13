@@ -214,7 +214,14 @@ h1 a.move:hover {
     color: blue;
 }
 
-.my-team .today,
+.my-team .today {
+    border: 3px dashed red !important;
+}
+
+.my-team .selected {
+    border: 3px solid red !important;
+}
+
 .day-grid .today,
 .day-grid .searchDay {
     border: 3px solid red !important;

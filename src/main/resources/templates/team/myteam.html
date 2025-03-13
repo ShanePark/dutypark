@@ -18,14 +18,14 @@
     <!--  Calendar-->
     <div class="row row-cols-7 fw-bold mx-0 fs-2">
       <div v-for="(day, index) in weekDays"
-           class="col border border-2 text-center"
+           class="col border border-dark border-2 text-center"
            :class="{ red: index === 0, blue: index === 6 }"
            v-text="day">
       </div>
       <div v-for="(teamDay, index) in teamDays"
            @click="selectDay(teamDay)"
-           class="col small p-2 border cursor-pointer hover-bg-light"
-           :class="['BACKGROUND-' + myDuty[index]?.dutyColor, {'today': isToday(teamDay), 'border-dark border-3': isSelectedDay(teamDay) }]"
+           class="col small p-2 border border-dark cursor-pointer hover-bg-light"
+           :class="['BACKGROUND-' + myDuty[index]?.dutyColor, {'today': isToday(teamDay), 'selected': isSelectedDay(teamDay) }]"
       >
         <div :class=" {'red': index%7==0, 'blue': index%7==6, 'opacity-50': teamDay.month!=month }">
           <div class="fw-bold day">{{teamDay.day}}

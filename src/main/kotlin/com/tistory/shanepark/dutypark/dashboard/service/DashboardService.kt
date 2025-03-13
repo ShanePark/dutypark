@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.dashboard.service
 
-import com.tistory.shanepark.dutypark.dashboard.domain.DashboardDepartment
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardFriendDetail
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardFriendInfo
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardMyDetail
@@ -56,12 +55,6 @@ class DashboardService(
             dutyType = department.defaultDutyName,
             dutyColor = department.defaultDutyColor.toString()
         )
-    }
-
-    fun department(loginMember: LoginMember): DashboardDepartment {
-        val member = memberRepository.findMemberWithDepartment(loginMember.id).orElseThrow()
-        val departmentId = member.department?.id ?: return DashboardDepartment(department = null, groups = emptyList())
-        return departmentService.dashboardDepartment(departmentId)
     }
 
     fun friend(loginMember: LoginMember): DashboardFriendInfo {
