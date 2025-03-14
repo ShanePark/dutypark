@@ -10,7 +10,7 @@ class Duty(
     val dutyDate: LocalDate,
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "duty_type_id")
+    @JoinColumn(name = "duty_type_id", nullable = false)
     var dutyType: DutyType,
 
     @ManyToOne(fetch = FetchType.LAZY)

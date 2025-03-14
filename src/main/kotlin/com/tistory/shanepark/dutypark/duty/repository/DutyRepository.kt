@@ -16,10 +16,6 @@ interface DutyRepository : JpaRepository<Duty, Long> {
 
     fun findByMemberAndDutyDate(member: Member, dutyDate: LocalDate): Duty?
 
-    @Modifying
-    @Query("update Duty d set d.dutyType = null where d.dutyType = :dutyType")
-    fun setDutyTypeNullIfDutyTypeIs(dutyType: DutyType)
-
     fun deleteDutiesByMemberAndDutyDateBetween(member: Member, start: LocalDate, end: LocalDate)
 
     fun findByDutyDateAndMemberIn(dutyDate: LocalDate, members: List<Member>): List<Duty>

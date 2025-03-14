@@ -103,7 +103,7 @@ class DutyTypeServiceTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `When DutyType is deleted, All related duties have null dutyType`() {
+    fun `When DutyType is deleted, All related duties will be deleted`() {
         // Given
         val dutyType = TestData.dutyTypes[0]
         val member = TestData.member
@@ -131,12 +131,12 @@ class DutyTypeServiceTest : DutyparkIntegrationTest() {
         assertThat(dutyTypeRepository.findById(dutyType.id!!)).isNotNull
 
         // When
-        dutyTypeService.delete(dutyType)
+        dutyTypeService.delete(dutyType.id!!)
 
         // Then
         assertThat(dutyTypeRepository.findById(dutyType.id!!)).isEmpty
-        assertThat(dutyRepository.findById(duty1.id!!).get().dutyType).isNull()
-        assertThat(dutyRepository.findById(duty2.id!!).get().dutyType).isNull()
+        assertThat(dutyRepository.findById(duty1.id!!)).isEmpty
+        assertThat(dutyRepository.findById(duty2.id!!)).isEmpty
     }
 
     @Test

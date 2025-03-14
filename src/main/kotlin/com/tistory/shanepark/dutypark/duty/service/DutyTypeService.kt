@@ -3,10 +3,8 @@ package com.tistory.shanepark.dutypark.duty.service
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeCreateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
-import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.team.repository.TeamRepository
-import jakarta.persistence.EntityManager
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -14,19 +12,11 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional
 class DutyTypeService(
     private val dutyTypeRepository: DutyTypeRepository,
-    private val dutyRepository: DutyRepository,
     private val teamRepository: TeamRepository,
-    private val entityMapper: EntityManager,
 ) {
 
-    fun delete(id: Long) {
-        val dutyType = dutyTypeRepository.findById(id).orElseThrow()
-        delete(dutyType)
-    }
-
-    fun delete(dutyType: DutyType) {
-        dutyRepository.setDutyTypeNullIfDutyTypeIs(dutyType)
-        entityMapper.clear()
+    fun delete(dutyTypeId: Long) {
+        val dutyType = dutyTypeRepository.findById(dutyTypeId).orElseThrow()
         dutyTypeRepository.delete(dutyType)
     }
 

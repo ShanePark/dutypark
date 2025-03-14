@@ -48,10 +48,17 @@ class ErrorDetectAdvisor(
         slackAttachment.setTitleLink(req.contextPath)
         slackAttachment.setText(e.stackTraceToString())
         slackAttachment.setColor("danger")
+
+        val parameters = req.parameterMap.map { (key, value) -> "$key: ${value.joinToString(",")}" }
+        val body: String =
+            if (req.contentLength > 500) "" else req.reader.lines().reduce { acc, line -> "$acc\n$line" }.orElse("")
+
         slackAttachment.setFields(
             listOf(
                 SlackField().setTitle("Request URL").setValue(req.requestURL.toString()),
                 SlackField().setTitle("Request Method").setValue(req.method),
+                SlackField().setTitle("Request Parameters").setValue(parameters.joinToString("\n")),
+                SlackField().setTitle("Request Body").setValue(body),
                 SlackField().setTitle("Request Time").setValue(Date().toString()),
                 SlackField().setTitle("Request IP").setValue(req.remoteAddr),
                 SlackField().setTitle("Request User-Agent").setValue(req.getHeader("User-Agent")),

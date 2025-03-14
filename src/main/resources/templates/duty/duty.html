@@ -193,7 +193,7 @@
           <div class="d-day_content col-8">
             <p class="m-1 text-muted">{{dDay.date}}</p>
             <p>{{dDay.title}}</p>
-            <div v-if="isMyCalendar" class="position-absolute top-0 mt-1 end-0 me-3 fs-2">
+            <div @click.stop v-if="isMyCalendar" class="position-absolute top-0 mt-1 end-0 me-3 fs-2">
               <button v-on:click="createOrUpdateDday(dDay)" class="btn btn-outline-primary">
                 <i class="bi bi-pencil-square"></i></button>
               <button v-on:click="removeDday(dDay)" class="btn btn-outline-danger">
