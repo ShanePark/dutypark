@@ -9,7 +9,7 @@ data class DutyTypeDto(
     val color: String?,
 ) {
     constructor(dutyType: DutyType) : this(
-        dutyType.id!!,
+        dutyType.id,
         dutyType.name,
         dutyType.position,
         dutyType.color?.name

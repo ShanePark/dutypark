@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.*
+import org.springframework.test.util.ReflectionTestUtils
 import java.util.*
 
 class TodoServiceTest {
@@ -19,7 +20,7 @@ class TodoServiceTest {
     private lateinit var memberRepository: MemberRepository
     private lateinit var todoRepository: TodoRepository
 
-    private val loginMember = LoginMember(1, "", "",  "", false)
+    private val loginMember = LoginMember(1, "", "", "", false)
     private val member = Member(name = "", password = "")
 
     @BeforeEach
@@ -166,7 +167,7 @@ class TodoServiceTest {
 
     private fun otherMember(): Member {
         val member = Member(name = "", password = "")
-        member.id = 2
+        ReflectionTestUtils.setField(member, "id", 2L)
         return member
     }
 

@@ -17,6 +17,7 @@ class DutyType(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
+        protected set
 
     @Enumerated(value = EnumType.STRING)
     var color: Color? = null

@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.team.service
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyByShift
@@ -27,6 +28,7 @@ class TeamService(
     private val dutyRepository: DutyRepository,
     private val memberRepository: MemberRepository
 ) {
+    val log = logger()
 
     @Transactional(readOnly = true)
     fun findAllWithMemberCount(pageable: Pageable): Page<SimpleTeamDto> {
@@ -99,12 +101,40 @@ class TeamService(
         team.removeMember(member)
     }
 
-    fun changeManager(teamId: Long, memberId: Long?) {
+    fun changeTeamAdmin(teamId: Long, memberId: Long?) {
         val team = teamRepository.findById(teamId).orElseThrow()
         val member = memberId?.let { memberRepository.findById(memberId).orElseThrow() }
 
-        team.changeManager(member)
+        team.changeAdmin(member)
         teamRepository.save(team)
+    }
+
+    fun addTeamManager(teamId: Long, memberId: Long) {
+        val team = teamRepository.findById(teamId).orElseThrow()
+        val member = memberRepository.findById(memberId).orElseThrow()
+
+        if (member.team != team) {
+            throw IllegalStateException("Member does not belong to team")
+        }
+        if (team.isManager(memberId)) {
+            log.info("Already a team manager, team: $team, member: $member")
+            return
+        }
+        team.addManager(member)
+    }
+
+    fun removeTeamManager(teamId: Long, memberId: Long) {
+        val team = teamRepository.findById(teamId).orElseThrow()
+        val member = memberRepository.findById(memberId).orElseThrow()
+
+        if (member.team != team) {
+            throw IllegalStateException("Member does not belong to team")
+        }
+        if (!team.isManager(memberId)) {
+            log.info("Already not a team manager, team: $team, member: $member")
+            return
+        }
+        team.removeManager(member)
     }
 
     fun updateDefaultDuty(teamId: Long, newDutyName: String?, newDutyColor: String?) {

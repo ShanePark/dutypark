@@ -102,7 +102,7 @@ class DutyBatchSungsimService(
                 dutyBatchResults.add(
                     Pair(
                         it.name,
-                        DutyBatchResult.fail(MultipleNameFoundException::class.simpleName!!)
+                        DutyBatchResult.fail(MultipleNameFoundException::class.simpleName)
                     )
                 )
                 return@forEach
@@ -112,7 +112,7 @@ class DutyBatchSungsimService(
                 dutyBatchResults.add(
                     Pair(
                         it.name,
-                        DutyBatchResult.fail(NameNotFoundException::class.simpleName!!)
+                        DutyBatchResult.fail(NameNotFoundException::class.simpleName)
                     )
                 )
                 return@forEach

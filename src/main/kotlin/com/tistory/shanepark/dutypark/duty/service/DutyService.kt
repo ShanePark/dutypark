@@ -97,7 +97,7 @@ class DutyService(
         val member = memberRepository.findMemberWithTeam(memberId).orElseThrow()
 
         return member.isEquals(loginMember)
-                || member.isTeamManager(isManager = loginMember)
+                || memberService.canManageTeam(loginMember = loginMember, team = member.team)
                 || memberService.isManager(isManager = loginMember, target = member)
     }
 

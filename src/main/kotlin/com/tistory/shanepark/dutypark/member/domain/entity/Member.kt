@@ -1,8 +1,8 @@
 package com.tistory.shanepark.dutypark.member.domain.entity
 
-import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import jakarta.persistence.*
 
 @Entity
@@ -20,7 +20,7 @@ class Member(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
-
+        protected set
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "team_id")
@@ -35,10 +35,6 @@ class Member(
 
     override fun toString(): String {
         return "Member(name='$name', email='$email', id=$id)"
-    }
-
-    fun isTeamManager(isManager: LoginMember): Boolean {
-        return this.team?.manager?.id == isManager.id
     }
 
     fun isEquals(loginMember: LoginMember): Boolean {

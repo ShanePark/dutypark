@@ -27,7 +27,8 @@ class DutyTypeService(
 
     fun update(dutyTypeUpdateDto: DutyTypeUpdateDto): DutyType {
         val dutyType = dutyTypeRepository.findById(dutyTypeUpdateDto.id).orElseThrow()
-        val team = teamRepository.findByIdWithDutyTypes(dutyType.team.id!!).orElseThrow()
+        val teamId = dutyType.team.id ?: throw IllegalArgumentException("DutyType has no team")
+        val team = teamRepository.findByIdWithDutyTypes(teamId).orElseThrow()
 
         team.dutyTypes
             .filter { it.id != dutyType.id }

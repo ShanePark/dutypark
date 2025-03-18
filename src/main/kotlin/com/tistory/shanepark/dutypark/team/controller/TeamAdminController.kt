@@ -74,7 +74,7 @@ class TeamAdminController(
         @PathVariable id: Long,
         @RequestParam memberId: Long?
     ) {
-        teamService.changeManager(teamId = id, memberId = memberId)
+        teamService.changeTeamAdmin(teamId = id, memberId = memberId)
     }
 
     @PatchMapping("/{id}/batch-template")

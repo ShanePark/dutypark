@@ -1,7 +1,5 @@
 package com.tistory.shanepark.dutypark.team.service
 
-import com.tistory.shanepark.dutypark.team.domain.entity.Team
-import com.tistory.shanepark.dutypark.team.repository.TeamRepository
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
@@ -9,6 +7,8 @@ import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.team.domain.entity.Team
+import com.tistory.shanepark.dutypark.team.repository.TeamRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith

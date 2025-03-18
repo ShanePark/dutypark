@@ -1,11 +1,11 @@
 package com.tistory.shanepark.dutypark.team.domain.dto
 
-import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.team.domain.entity.Team
 
 data class TeamDto(
     val id: Long,
@@ -15,7 +15,7 @@ data class TeamDto(
     val members: List<MemberDto>,
     val createdDate: String,
     val lastModifiedDate: String,
-    val manager: String?,
+    val admin: String?,
     val dutyBatchTemplate: DutyBatchTemplateDto?
 ) {
     override fun equals(other: Any?): Boolean {
@@ -54,14 +54,14 @@ data class TeamDto(
             )
 
             return TeamDto(
-                id = team.id!!,
+                id = team.id ?: -1L,
                 name = team.name,
                 description = team.description,
                 dutyTypes = sortedTypes,
                 members = members.map { MemberDto.ofSimple(it) },
                 createdDate = team.createdDate.toString(),
                 lastModifiedDate = team.lastModifiedDate.toString(),
-                manager = team.manager?.name,
+                admin = team.admin?.name,
                 dutyBatchTemplate = team.dutyBatchTemplate?.let { DutyBatchTemplateDto(it) }
             )
         }

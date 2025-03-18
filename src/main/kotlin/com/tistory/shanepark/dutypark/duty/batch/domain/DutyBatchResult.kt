@@ -4,7 +4,7 @@ import java.time.LocalDate
 
 data class DutyBatchResult(
     val result: Boolean,
-    val errorMessage: String = "",
+    val errorMessage: String? = null,
     val startDate: LocalDate? = null,
     val endDate: LocalDate? = null,
     val workingDays: Int = 0,
@@ -21,7 +21,7 @@ data class DutyBatchResult(
             )
         }
 
-        fun fail(errorMessage: String): DutyBatchResult {
+        fun fail(errorMessage: String?): DutyBatchResult {
             return DutyBatchResult(result = false, errorMessage = errorMessage)
         }
     }

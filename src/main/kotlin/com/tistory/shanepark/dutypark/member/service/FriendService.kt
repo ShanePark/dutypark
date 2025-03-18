@@ -36,10 +36,12 @@ class FriendService(
             .map { MemberDto.of(it) }
     }
 
+    @Transactional(readOnly = true)
     fun getPendingRequestsTo(member: Member): List<FriendRequest> {
         return friendRequestRepository.findAllByToMemberAndStatus(member, PENDING)
     }
 
+    @Transactional(readOnly = true)
     fun getPendingRequestsFrom(member: Member): List<FriendRequest> {
         return friendRequestRepository.findAllByFromMemberAndStatus(member, PENDING)
     }
@@ -189,11 +191,13 @@ class FriendService(
         return memberRepository.findById(login.id).orElseThrow()
     }
 
+    @Transactional(readOnly = true)
     fun checkVisibility(login: LoginMember?, target: Member, scheduleVisibilityCheck: Boolean = false) {
         if (!isVisible(login, target.id, scheduleVisibilityCheck = scheduleVisibilityCheck))
             throw DutyparkAuthException("${target.name} Calendar is not visible to ${login?.name}")
     }
 
+    @Transactional(readOnly = true)
     fun isVisible(login: LoginMember?, targetId: Long?, scheduleVisibilityCheck: Boolean = false): Boolean {
         val targetMember = memberRepository.findById(targetId!!).orElseThrow()
         login ?: return targetMember.calendarVisibility == Visibility.PUBLIC

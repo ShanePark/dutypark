@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.whenever
+import org.springframework.test.util.ReflectionTestUtils
 import java.util.*
 
 @ExtendWith(MockitoExtension::class)
@@ -46,12 +47,12 @@ class FriendServiceUnitTest {
     fun updateFriendsPin() {
         // Given
         val member = Member(name = "test")
-        member.id = 0L
+        ReflectionTestUtils.setField(member, "id", 0L)
 
         val friendIds = listOf(1L, 2L, 3L)
         val dummyFriends = friendIds.map { id ->
             Member(name = "friend$id").let {
-                it.id = id
+                ReflectionTestUtils.setField(it, "id", id)
                 it
             }
         }.toList()
@@ -84,12 +85,12 @@ class FriendServiceUnitTest {
     fun `update friends pin does not update NullPinOrder`() {
         // Given
         val member = Member(name = "test")
-        member.id = 0L
+        ReflectionTestUtils.setField(member, "id", 0L)
 
         val friendIds = listOf(1L, 2L, 3L)
         val dummyFriends = friendIds.map { id ->
             Member(name = "friend$id").let {
-                it.id = id
+                ReflectionTestUtils.setField(it, "id", id)
                 it
             }
         }.toList()

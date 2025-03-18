@@ -29,9 +29,9 @@
           <td>{{ team.lastModifiedDate }}</td>
         </tr>
         <tr>
-          <th scope="row">Manager</th>
+          <th scope="row">Admin</th>
           <td class="text-primary fw-bold cursor-pointer" v-on:click="managerSearchModal()">
-            {{ team.manager ? team.manager : 'N/A' }}
+            {{ team.admin ? team.admin : 'N/A' }}
           </td>
         </tr>
         <tr>
@@ -81,7 +81,7 @@
           <td>{{ member.email }}</td>
           <td>
             <button class="btn btn-danger btn-sm" v-on:click="removeMember(member.id)">
-              <i class="bi bi-trash"></i> 제외
+              <i class="bi bi-trash"></i> 팀에서 제외
             </button>
           </td>
         </tr>

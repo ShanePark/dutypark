@@ -1,11 +1,11 @@
 package com.tistory.shanepark.dutypark.team.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
-import com.tistory.shanepark.dutypark.team.domain.dto.TeamCreateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.service.DutyService
+import com.tistory.shanepark.dutypark.team.domain.dto.TeamCreateDto
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -267,7 +267,7 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `change team manager`() {
+    fun `change team admin`() {
         // Given
         val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
         val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
@@ -275,17 +275,17 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
         assertThat(team.members).hasSize(2)
         assertThat(member.team).isEqualTo(team)
         assertThat(member2.team).isEqualTo(team)
-        assertThat(team.manager).isNull()
+        assertThat(team.admin).isNull()
 
         // Then
-        service.changeManager(team.id!!, member.id!!)
-        assertThat(team.manager).isEqualTo(member)
+        service.changeTeamAdmin(team.id!!, member.id!!)
+        assertThat(team.admin).isEqualTo(member)
 
-        service.changeManager(team.id!!, member2.id!!)
-        assertThat(team.manager).isEqualTo(member2)
+        service.changeTeamAdmin(team.id!!, member2.id!!)
+        assertThat(team.admin).isEqualTo(member2)
 
-        service.changeManager(team.id!!, null)
-        assertThat(team.manager).isNull()
+        service.changeTeamAdmin(team.id!!, null)
+        assertThat(team.admin).isNull()
 
     }
 
@@ -303,6 +303,88 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
         val updated = teamRepository.findById(team.id).orElseThrow()
         assertThat(updated.defaultDutyName).isEqualTo(updatedDutyName)
         assertThat(updated.defaultDutyColor).isEqualTo(updatedDutyColor)
+    }
+
+
+    @Test
+    fun `addTeamManager success`() {
+        // Given
+        val member = TestData.member
+
+        // When
+        service.addTeamManager(teamId = TestData.team.id!!, memberId = member.id!!)
+
+        // Then
+        val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
+        assertThat(team.managers.any { it.member.id == member.id }).isTrue()
+    }
+
+    @Test
+    fun `can not be another team's manager`() {
+        // Given
+        val member = TestData.member
+
+        // Then
+        assertThrows<IllegalStateException> {
+            service.addTeamManager(teamId = TestData.team2.id!!, memberId = member.id!!)
+        }
+    }
+
+    @Test
+    fun `nothing happens when add a team manager who is already a manager`() {
+        // Given
+        val member = TestData.member
+        val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
+
+        // When
+        service.addTeamManager(teamId = TestData.team.id!!, memberId = member.id!!)
+        assertThat(team.managers.any { it.member.id == member.id }).isTrue()
+
+        // Then
+        service.addTeamManager(teamId = TestData.team.id!!, memberId = member.id!!)
+        assertThat(team.managers.any { it.member.id == member.id }).isTrue()
+    }
+
+    @Test
+    fun `remove team manager success`() {
+        // Given
+        val member = TestData.member
+        service.addTeamManager(teamId = TestData.team.id!!, memberId = member.id!!)
+        var team = teamRepository.findById(TestData.team.id!!).orElseThrow()
+        assertThat(team.managers.any { it.member.id == member.id }).isTrue()
+
+        // When
+        service.removeTeamManager(teamId = TestData.team.id!!, memberId = member.id!!)
+
+        // Then
+        team = teamRepository.findById(TestData.team.id!!).orElseThrow()
+        assertThat(team.managers.any { it.member.id == member.id }).isFalse()
+    }
+
+    @Test
+    fun `nothing happens when trying to remove a member from manager who is not actually a manager`() {
+        // Given
+        val member = TestData.member
+        val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
+        assertThat(team.managers.any { it.member.id == member.id }).isFalse()
+
+        // When
+        service.removeTeamManager(teamId = TestData.team.id!!, memberId = member.id!!)
+
+        // Then
+        val team2 = teamRepository.findById(TestData.team.id!!).orElseThrow()
+        assertThat(team2.managers.any { it.member.id == member.id }).isFalse()
+    }
+
+    @Test
+    fun `exception is thrown when trying to remove from manager who is actually not in the team`() {
+        // Given
+        val member = TestData.member
+
+        // When
+        assertThrows<IllegalStateException> {
+            service.removeTeamManager(teamId = TestData.team2.id!!, memberId = member.id!!)
+        }
     }
 
 

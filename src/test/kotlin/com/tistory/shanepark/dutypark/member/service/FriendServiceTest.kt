@@ -351,7 +351,7 @@ class FriendServiceTest : DutyparkIntegrationTest() {
         val targetMember = TestData.member2
 
         // When
-        TestData.team.manager = viewer
+        TestData.team.admin = viewer
         teamRepository.save(TestData.team)
         targetMember.team = TestData.team
         memberRepository.save(targetMember)

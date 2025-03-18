@@ -427,7 +427,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `can't change schedule position if not owner or team manager`() {
+    fun `can't change schedule position if not owner`() {
         // Given
         val member = TestData.member
         val otherMember = TestData.member2

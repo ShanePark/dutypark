@@ -29,5 +29,6 @@ class Duty(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
+        protected set
 
 }

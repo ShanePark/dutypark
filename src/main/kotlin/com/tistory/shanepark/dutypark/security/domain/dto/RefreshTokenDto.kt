@@ -20,7 +20,7 @@ data class RefreshTokenDto(
         fun of(refreshToken: RefreshToken): RefreshTokenDto {
             return RefreshTokenDto(
                 memberName = refreshToken.member.name,
-                memberId = refreshToken.member.id!!,
+                memberId = refreshToken.member.id ?: -1L,
                 validUntil = refreshToken.validUntil,
                 lastUsed = refreshToken.lastUsed,
                 remoteAddr = refreshToken.remoteAddr,
