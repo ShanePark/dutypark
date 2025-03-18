@@ -223,18 +223,18 @@ class FriendService(
     @Transactional(readOnly = true)
     fun availableScheduleVisibilities(loginMember: LoginMember?, member: Member): Set<Visibility> {
         if (loginMember == null)
-            return setOf(Visibility.PUBLIC)
+            return Visibility.publicOnly()
         if (loginMember.id == member.id) {
-            return Visibility.entries.toSet()
+            return Visibility.all();
         }
         val login = loginMemberToMember(loginMember)
         if (isFamily(member1 = login, member2 = member)) {
-            return setOf(Visibility.PUBLIC, Visibility.FRIENDS, Visibility.FAMILY)
+            return Visibility.family()
         }
         if (isFriend(login, member)) {
-            return setOf(Visibility.PUBLIC, Visibility.FRIENDS)
+            return Visibility.friends()
         }
-        return setOf(Visibility.PUBLIC)
+        return Visibility.publicOnly()
     }
 
     fun pinFriend(loginMember: LoginMember, friendId: Long) {

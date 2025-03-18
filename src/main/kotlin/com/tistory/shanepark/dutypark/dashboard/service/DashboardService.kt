@@ -3,12 +3,12 @@ package com.tistory.shanepark.dutypark.dashboard.service
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardFriendDetail
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardFriendInfo
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardMyDetail
-import com.tistory.shanepark.dutypark.team.service.TeamService
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendRequestDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
@@ -27,7 +27,6 @@ class DashboardService(
     private val scheduleRepository: ScheduleRepository,
     private val friendRelationRepository: FriendRelationRepository,
     private val friendService: FriendService,
-    private val teamService: TeamService,
 ) {
 
     fun my(loginMember: LoginMember): DashboardMyDetail {
@@ -40,8 +39,15 @@ class DashboardService(
     }
 
     private fun todaySchedules(member: Member): List<ScheduleDto> {
-        return scheduleRepository.findTodaySchedulesByMember(member)
-            .map { schedule -> ScheduleDto.ofSimple(member, schedule) }
+        val personal = scheduleRepository.findTodaySchedulesByMember(member)
+        val today = LocalDate.now();
+        val tagged = scheduleRepository.findTaggedSchedulesOfRange(
+            member = member,
+            start = today.atStartOfDay(),
+            end = today.atTime(23, 59, 59),
+            visibilities = Visibility.all()
+        )
+        return personal.plus(tagged).map { schedule -> ScheduleDto.ofSimple(member, schedule) }
     }
 
     private fun todayDuty(member: Member): DutyDto? {
