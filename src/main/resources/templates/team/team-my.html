@@ -8,11 +8,15 @@
   </div>
   <template v-if="team">
     <div class="card-header text-center bg-secondary text-white fw-bold mb-1 fs-2" v-text="team.name"></div>
+    <!--    upper buttons-->
     <div class="d-flex justify-content-between align-items-center mb-3 p-1">
-      <button v-on:click="addMonth(-1)" class="fs-2 btn btn-outline-dark">&lt;</button>
+      <button v-on:click="goToToday" class="fs-2 btn btn-outline-primary me-2">오늘</button>
+      <button v-on:click="addMonth(-1)" class="fs-2 btn btn-outline-dark px-5">&lt;</button>
       <h2 class="fs-2 fw-bold mb-0 text-center flex-grow-1" v-text="year + '년 '+ month +'월'"></h2>
-      <button v-on:click="addMonth(1)" class="fs-2 btn btn-outline-dark">&gt;</button>
-      <button v-on:click="goToToday" class="fs-2 btn btn-outline-primary ms-2">오늘</button>
+      <button v-on:click="addMonth(1)" class="fs-2 btn btn-outline-dark px-5">&gt;</button>
+      <a :href="'/team/manage/'+team.id" v-if="isTeamManager" class="btn btn-outline-dark fs-2 ms-2">
+        <i class="bi bi-gear-fill"></i> 팀 관리
+      </a>
     </div>
 
     <!--  Calendar-->
@@ -96,6 +100,7 @@
       },
       shift: [],
       myDuty: [],
+      isTeamManager: false,
     },
     mounted() {
       this.loadMyTeam();
@@ -110,6 +115,7 @@
           .then(data => {
             app.team = data.team;
             app.teamDays = data.teamDays;
+            app.isTeamManager = data.isTeamManager;
           })
           .catch(error => {
             console.error('Error:', error);

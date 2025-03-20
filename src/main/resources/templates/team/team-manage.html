@@ -1,87 +1,93 @@
-<div class="team-detail mt-4" v-cloak>
-  <div class="d-flex justify-content-between mb-3">
-    <a class="btn btn-dark" th:href="@{/admin/team}"><i class="bi bi-arrow-left"></i> Back to List</a>
-    <button class="btn btn-danger" v-on:click="remove()" :disabled="hasMember"><i class="bi bi-trash"></i> Delete
+<div id="app" class="card p-0 rounded shadow-sm fs-2" v-cloak>
+  <div class="card-header bg-secondary text-white fw-bold m-1 text-center">
+    {{ team.name }} 관리
+    <button v-if="isAdmin && teamLoaded && !hasMember"
+            @click="removeTeam()"
+            class="btn btn-danger">
+      팀 삭제
     </button>
   </div>
-
-  <div class="card shadow-sm mb-4">
-    <div class="card-header bg-primary text-white">
-      <h5 class="mb-0">team Details</h5>
-    </div>
-    <div class="card-body">
-      <table class="table table-hover table-bordered">
-        <tbody>
-        <tr>
-          <th scope="row">Name</th>
-          <td>{{ team.name }}</td>
-        </tr>
-        <tr>
-          <th scope="row">Description</th>
-          <td>{{ team.description }}</td>
-        </tr>
-        <tr>
-          <th scope="row">Created At</th>
-          <td>{{ team.createdDate }}</td>
-        </tr>
-        <tr>
-          <th scope="row">Updated At</th>
-          <td>{{ team.lastModifiedDate }}</td>
-        </tr>
-        <tr>
-          <th scope="row">Admin</th>
-          <td class="text-primary fw-bold cursor-pointer" v-on:click="managerSearchModal()">
-            {{ team.admin ? team.admin : 'N/A' }}
-          </td>
-        </tr>
-        <tr>
-          <th scope="row">Batch Template</th>
-          <td>
-            <select class="form-select" v-on:change="updateBatchTemplate($event.target.value)">
-              <option value="">없음</option>
-              <option v-for="template in dutyBatchTemplates"
-                      v-bind:value="template.name"
-                      v-text="template.label"
-                      :selected="template?.name === team?.dutyBatchTemplate?.name"
-              >
-              </option>
-            </select>
-          </td>
-        </tr>
-        <tr v-if="team.dutyBatchTemplate">
-          <th>근무표 업로드</th>
-          <td>
-            <button class="btn btn-primary" v-on:click="batchDuty()">등록</button>
-          </td>
-        </tr>
-        </tbody>
-      </table>
-    </div>
+  <div class="card-body">
+    <table class="table table-hover table-bordered">
+      <tbody>
+      <tr>
+        <th scope="row">팀 설명</th>
+        <td>{{ team.description }}</td>
+      </tr>
+      <tr v-if="isAdmin">
+        <th scope="row">팀 대표</th>
+        <td class="fw-bold">{{ team.adminName ? team.adminName : 'N/A' }}
+          <button
+              v-if="team.adminId && loginId !== team.adminId"
+              class="btn btn-outline-danger fs-2" @click="changeAdmin()">
+            <i class="bi bi-trash"></i> 대표 취소
+          </button>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">근무 반입 양식</th>
+        <td>
+          <select class="form-select fs-2" v-on:change="updateBatchTemplate($event.target.value)">
+            <option value="">없음</option>
+            <option v-for="template in dutyBatchTemplates"
+                    v-bind:value="template.name"
+                    v-text="template.label"
+                    :selected="template?.name === team?.dutyBatchTemplate?.name"
+            >
+            </option>
+          </select>
+        </td>
+      </tr>
+      <tr v-if="team.dutyBatchTemplate">
+        <th>근무표 업로드</th>
+        <td>
+          <button class="btn btn-primary fs-2" v-on:click="batchDuty()">등록</button>
+        </td>
+      </tr>
+      </tbody>
+    </table>
   </div>
 
-  <div class="card shadow-sm mb-4">
-    <div class="card-header bg-secondary text-white d-flex justify-content-between">
-      <h5 class="mb-0">Members</h5>
-      <button class="btn btn-light" v-on:click="memberSearchModal()"><i class="bi bi-person-plus"></i> Add</button>
-    </div>
+  <div class="card-body">
+    <button class="btn btn-outline-primary fs-2" v-on:click="memberSearchModal()"><i class="bi bi-person-plus"></i> 멤버
+      추가
+    </button>
     <div class="card-body">
       <table class="table table-hover table-striped" v-if="hasMember">
         <thead class="table-dark">
-        <tr>
+        <tr class="text-align-center">
           <th scope="col">#</th>
-          <th scope="col">Name</th>
-          <th scope="col">Email</th>
-          <th scope="col">Actions</th>
+          <th scope="col">이름</th>
+          <th scope="col">매니저</th>
+          <th scope="col">도구</th>
         </tr>
         </thead>
         <tbody>
-        <tr v-for="(member, index) in team.members">
+        <tr class="text-align-center" v-for="(member, index) in team.members">
           <td>{{ index+1 }}</td>
           <td>{{ member.name }}</td>
-          <td>{{ member.email }}</td>
+          <td v-if="!isAdmin">
+            <i v-if="member.isManager"
+               class="bi bi-check-circle"></i>
+          </td>
+          <td v-if="isAdmin">
+            <i v-if="!member.isManager"
+               @click="assignManager(member)"
+               class="bi bi-plus-circle cursor-pointer text-success"></i>
+            <button v-if="member.isManager && !member.isAdmin"
+                    @click="unAssignManager(member)"
+                    class="fs-2 btn btn-outline-warning">관리 권한 취소
+            </button>
+            <button v-if="isAdmin && member.isManager && !member.isAdmin"
+                    @click="changeAdmin(member)"
+                    class="fs-2 btn btn-outline-primary"
+            >대표 위임
+            </button>
+            <span v-if="member.isAdmin">-</span>
+          </td>
           <td>
-            <button class="btn btn-danger btn-sm" v-on:click="removeMember(member.id)">
-              <i class="bi bi-trash"></i> 팀에서 제외
+            <button class="fs-2 btn btn-danger btn-sm" v-on:click="removeMember(member.id)">
+              <i class="bi bi-trash"></i>탈퇴
             </button>
           </td>
         </tr>
@@ -92,18 +98,18 @@
   </div>
 
   <div class="card shadow-sm">
-    <div class="card-header bg-info text-white d-flex justify-content-between">
-      <h5 class="mb-0">Duty Types</h5>
-      <button class="btn btn-light" v-on:click="addDutyType()"><i class="bi bi-plus-lg"></i> Add</button>
+    <div class="card-header bg-secondary text-white d-flex justify-content-between">
+      <h5 class="mb-0 fs-2">근무 유형</h5>
+      <button class="btn btn-light fs-2" v-on:click="addDutyType()"><i class="bi bi-plus-lg"></i> 추가</button>
     </div>
     <div class="card-body">
       <table class="table table-hover table-striped" v-if="hasDutyType">
         <thead class="table-dark">
         <tr>
           <th scope="col">#</th>
-          <th scope="col">Name</th>
-          <th scope="col">Color</th>
-          <th scope="col">Actions</th>
+          <th scope="col">근무명</th>
+          <th scope="col">색상</th>
+          <th scope="col">도구</th>
         </tr>
         </thead>
         <tbody>
@@ -113,18 +119,20 @@
           <td><span :class="['badge', 'rounded-pill', 'duty-type-color' ,'border', 'BACKGROUND-' + dutyType.color]"
                     :data-color="dutyType.color">&nbsp;&nbsp;</span>
           <td>
-            <button class="btn btn-primary btn-sm" v-on:click="updateDutyType($event.target)">
-              <i class="bi bi-pencil"></i> Edit
+            <button class="fs-2 btn btn-primary btn-sm" v-on:click="updateDutyType($event.target)">
+              <i class="bi bi-pencil"></i> 수정
             </button>
-            <button class="btn btn-secondary btn-sm" :disabled="index==0 || index == (team.dutyTypes.length - 1)"
+            <button class="fs-2 btn btn-secondary btn-sm" :disabled="index==0 || index == (team.dutyTypes.length - 1)"
                     v-on:click="swapPosition(index, index + 1)">
               <i class="bi bi-arrow-down"></i>
             </button>
-            <button class="btn btn-secondary btn-sm" :disabled="index <= 1" v-on:click="swapPosition(index, index - 1)">
+            <button class="fs-2 btn btn-secondary btn-sm" :disabled="index <= 1"
+                    v-on:click="swapPosition(index, index - 1)">
               <i class="bi bi-arrow-up"></i>
             </button>
-            <button class="btn btn-danger btn-sm" :disabled="!dutyType.id" v-on:click.stop="removeDutyType(dutyType)">
-              <i class="bi bi-trash"></i> Delete
+            <button class="fs-2 btn btn-danger btn-sm" :disabled="!dutyType.id"
+                    v-on:click.stop="removeDutyType(dutyType)">
+              <i class="bi bi-trash"></i> 삭제
             </button>
           </td>
         </tr>
@@ -135,20 +143,19 @@
   </div>
 </div>
 
-
 <!-- Modals -->
 <div id="member-search-modal" class="modal fade" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" v-text="mode=='memberSearch' ? 'Add Member' : 'Change Manager'"></h5>
+        <h5 class="fs-2 modal-title" v-text="mode=='memberSearch' ? '멤버 추가' : '대표 변경'"></h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <div class="input-group mb-3">
           <input type="text" class="form-control" placeholder="Search" aria-label="Search"
                  aria-describedby="button-addon2" v-model="keyword" v-on:keyup.enter="search">
-          <button class="btn btn-outline-secondary" type="button" id="button-addon2" v-on:click="search">Search
+          <button class="btn btn-outline-secondary" type="button" id="button-addon2" v-on:click="search">검색
           </button>
         </div>
         <table class="table table-striped" v-if="searchResult.length > 0">
@@ -161,10 +168,9 @@
           <thead>
           <tr>
             <th scope="col"></th>
-            <th scope="col">Name</th>
-            <th scope="col">Email</th>
-            <th scope="col">team</th>
-            <th scope="col"></th>
+            <th scope="col">이름</th>
+            <th scope="col">이메일</th>
+            <th scope="col">추가</th>
           </tr>
           </thead>
           <tbody>
@@ -172,11 +178,10 @@
             <td>{{(page-1) * pageSize + index + 1}}</td>
             <td>{{ member.name }}</td>
             <td>{{ member.email }}</td>
-            <td>{{ member.team }}</td>
             <td>
               <button class="btn btn-primary"
                       v-on:click="action(member)"
-                      v-bind:disabled="mode=='memberSearch' && member.team">Select
+                      v-bind:disabled="mode=='memberSearch' && member.team">추가
               </button>
             </td>
           </tr>
@@ -205,9 +210,6 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button v-if="mode=='managerSearch'" v-on:click="changeManager(null)" type="button" class="btn btn-warning">
-          Reset
-        </button>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
       </div>
     </div>
@@ -228,7 +230,7 @@
 </div>
 
 <script>
-  const teamID = parseInt("[[${teamId}]]");
+  const teamId = parseInt("[[${teamId}]]");
 
   const memberSearchModal = new Vue({
     el: '#member-search-modal',
@@ -262,10 +264,6 @@
         this.reset();
         this.mode = 'memberSearch';
       },
-      resetForManagerSearch: function () {
-        this.reset();
-        this.mode = 'managerSearch';
-      },
       reset: function () {
         this.keyword = '';
         this.searchResult = [];
@@ -277,10 +275,10 @@
       },
       search: function () {
         $.ajax({
-          url: '/admin/api/members',
+          url: '/api/teams/manage/members',
           type: 'GET',
           data: {
-            name: this.keyword,
+            keyword: this.keyword,
             page: this.page - 1,
             size: this.pageSize
           },
@@ -299,56 +297,22 @@
           this.addMember(member.id);
           return;
         }
-        if (this.mode === 'managerSearch') {
-          this.changeManager(member.id, member.name);
-          return;
-        }
         throw new Error('Invalid mode');
-      },
-      changeManager: function (memberId, memberName) {
-        let confirmText = 'Are you sure to assign [' + memberName + '] as the manager of this team?';
-        if (!memberId) {
-          confirmText = 'Are you sure to remove the manager of this team?';
-        }
-        Swal.fire({
-          title: 'Are you sure?',
-          text: confirmText,
-          icon: 'success',
-          showCancelButton: true,
-          confirmButtonColor: '#3085d6',
-          confirmButtonText: 'Yes, change it!'
-        }).then((result) => {
-          if (result.isConfirmed) {
-            $.ajax({
-              url: '/admin/api/teams/' + teamID + '/manager',
-              type: 'PUT',
-              data: {
-                memberId: memberId
-              },
-              success: function (response) {
-                app.load();
-                $('#member-search-modal').modal('hide');
-              },
-              error: function (error) {
-                console.log(error);
-              }
-            })
-          }
-        });
       },
       addMember: function (memberId) {
         Swal.fire({
-          title: 'Are you sure?',
-          text: 'Are you sure you want to add this member to this team?',
+          title: '멤버 추가 확인',
+          text: '해당 멤버를 팀에 추가하시겠습니까?',
           icon: 'success',
           showCancelButton: true,
           confirmButtonColor: '#3085d6',
           cancelButtonColor: '#d33',
-          confirmButtonText: 'Yes, add it!'
+          confirmButtonText: '추가',
+          cancelButtonText: '취소'
         }).then((result) => {
           if (result.isConfirmed) {
             $.ajax({
-              url: '/admin/api/teams/' + teamID + '/members',
+              url: '/api/teams/manage/' + teamId + '/members',
               type: 'POST',
               data: {
                 memberId: memberId
@@ -368,12 +332,18 @@
   })
 
   const app = new Vue({
-    el: '.team-detail',
+    el: '#app',
     data: {
-      team: {},
+      loginId: parseInt("[[${loginMember.id}]]"),
+      team: {
+        adminId: '',
+      },
+      teamLoaded: false,
+      teamId: teamId,
       memberSearchKeyword: '',
       memberSearchResult: [],
       dutyBatchTemplates: [],
+      isAdmin: false,
     },
     mounted() {
       this.load();
@@ -390,10 +360,12 @@
     methods: {
       load: function () {
         $.ajax({
-          url: '/admin/api/teams/' + teamID,
+          url: '/api/teams/manage/' + teamId,
           type: 'GET',
           success: function (response) {
             app.team = response;
+            app.isAdmin = "[[${loginMember.isAdmin}]]" === 'true' || (app.team.adminId === app.loginId);
+            app.teamLoaded = true;
           },
           error: function (error) {
             console.log(error);
@@ -411,36 +383,6 @@
             console.log(error);
           }
         })
-      },
-      remove: function () {
-        Swal.fire({
-          title: 'Delete team',
-          text: 'Are you sure you want to delete this team?',
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonText: 'Delete',
-          confirmButtonColor: '#d33',
-          cancelButtonText: 'Cancel'
-        }).then((result) => {
-          if (result.isConfirmed) {
-            $.ajax({
-              url: '/admin/api/teams/' + app.team.id,
-              type: 'DELETE',
-              success: function (response) {
-                window.location.href = '/admin/team';
-              },
-              error: function (error) {
-                Swal.fire({
-                  title: 'Error',
-                  text: 'Failed to delete team',
-                  icon: 'error',
-                  confirmButtonText: 'OK',
-                  confirmButtonColor: '#3085d6',
-                })
-              }
-            })
-          }
-        });
       },
       updateDutyType: function (element) {
         const dutyType = element.closest('.duty-type');
@@ -484,7 +426,7 @@
               return;
             }
             $.ajax({
-              url: '/admin/api/duty-types',
+              url: `/api/teams/manage/${teamId}/duty-types`,
               type: 'PATCH',
               data: JSON.stringify({
                 id: dutyTypeId,
@@ -508,7 +450,7 @@
       },
       addDutyType: function () {
         Swal.fire({
-          title: 'Add Duty Type',
+          title: '근무 유형 추가',
           html: $('#duty-type-modal').clone().html(),
           focusConfirm: false,
           preConfirm: () => {
@@ -524,12 +466,13 @@
             return [name, color]
           },
           showCancelButton: true,
-          confirmButtonText: 'Add',
+          confirmButtonText: '추가',
           confirmButtonColor: '#3085d6',
+          cancelButtonText: '취소'
         }).then((result) => {
           if (result.isConfirmed) {
             $.ajax({
-              url: '/admin/api/duty-types',
+              url: `/api/teams/manage/${teamId}/duty-types`,
               type: 'POST',
               data: JSON.stringify({
                 teamId: app.team.id,
@@ -555,7 +498,7 @@
         const dutyType1 = app.team.dutyTypes[index1];
         const dutyType2 = app.team.dutyTypes[index2];
         $.ajax({
-          url: '/admin/api/duty-types/swap-position?id1=' + dutyType1.id + '&id2=' + dutyType2.id,
+          url: `/api/teams/manage/${teamId}/duty-types/swap-position?id1=${dutyType1.id}&id2=${dutyType2.id}`,
           type: 'PATCH',
           success: function (response) {
             app.load();
@@ -573,17 +516,17 @@
       },
       removeDutyType: function (dutyType) {
         Swal.fire({
-          title: 'Delete duty type',
-          text: 'Are you sure you want to delete duty type [ ' + dutyType.name + ' ] ?',
+          title: '근무 유형 삭제',
+          html: `다음의 근무 유형을 삭제하시겠습니까? [ ${dutyType.name} ] ? <br/>삭제는 되돌릴 수 없으며 해당 유형으로 표시된 근무는 모두 제거됩니다. `,
           icon: 'warning',
           showCancelButton: true,
-          confirmButtonText: 'Delete',
+          confirmButtonText: '삭제',
           confirmButtonColor: '#d33',
-          cancelButtonText: 'Cancel'
+          cancelButtonText: '취소'
         }).then((result) => {
           if (result.isConfirmed) {
             $.ajax({
-              url: '/admin/api/duty-types/' + dutyType.id,
+              url: `/api/teams/manage/${teamId}/duty-types/${dutyType.id}`,
               type: 'DELETE',
               success: function (response) {
                 app.load();
@@ -605,23 +548,19 @@
         memberSearchModal.resetForMemberSearch();
         $('#member-search-modal').modal('show');
       },
-      managerSearchModal: function () {
-        memberSearchModal.resetForManagerSearch();
-        $('#member-search-modal').modal('show');
-      },
       removeMember: function (memberId) {
         Swal.fire({
-          title: 'Delete member',
-          text: 'Are you sure you want to delete this member from team?',
+          title: '팀에서 제외',
+          text: '정말로 해당 멤버를 팀에서 제외하시겠습니까?',
           icon: 'warning',
           showCancelButton: true,
-          confirmButtonText: 'Delete',
+          confirmButtonText: '제거',
           confirmButtonColor: '#d33',
-          cancelButtonText: 'Cancel'
+          cancelButtonText: '취소'
         }).then((result) => {
           if (result.isConfirmed) {
             $.ajax({
-              url: '/admin/api/teams/' + app.team.id + '/members',
+              url: '/api/teams/manage/' + app.team.id + '/members',
               data: {
                 memberId: memberId
               },
@@ -644,7 +583,7 @@
       }, updateDefaultDuty(name, color) {
         const teamId = app.team.id;
         $.ajax({
-          url: '/admin/api/teams/' + teamId + '/default-duty',
+          url: '/api/teams/manage/' + teamId + '/default-duty',
           type: 'PATCH',
           data: {
             name: name,
@@ -665,7 +604,7 @@
       }, updateBatchTemplate(templateName) {
         const teamId = app.team.id;
         $.ajax({
-          url: '/admin/api/teams/' + teamId + '/batch-template',
+          url: '/api/teams/manage/' + teamId + '/batch-template',
           type: 'PATCH',
           data: {
             templateName: templateName,
@@ -689,25 +628,26 @@
         Swal.fire({
           title: '근무표 업로드',
           html: `
-    <div class="mb-3">
+    <div class="mb-3 fs-2">
         <label for="batchFile" class="form-label">근무표 파일 업로드 (.xlsx)</label>
-        <input type="file" id="batchFile" class="form-control" accept=".xlsx">
+        <input type="file" id="batchFile" class="form-control fs-2" accept=".xlsx">
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 fs-2">
         <div class="flex-grow-1">
             <label for="batchYear" class="form-label">연도</label>
-            <input type="number" id="batchYear" class="form-control" value="${year}" min="${year}" max="${year + 1}">
+            <input type="number" id="batchYear" class="form-control fs-2" value="${year}" min="${year}" max="${year + 1}">
         </div>
         <div class="flex-grow-1">
             <label for="batchMonth" class="form-label">월</label>
-            <input type="number" id="batchMonth" class="form-control" value="${month}" min="1" max="12">
+            <input type="number" id="batchMonth" class="form-control fs-2" value="${month}" min="1" max="12">
         </div>
     </div>
 `,
           focusConfirm: false,
           showCancelButton: true,
-          confirmButtonText: 'Upload',
+          confirmButtonText: '업로드',
           confirmButtonColor: '#3085d6',
+          cancelButtonText: '취소',
           preConfirm: () => {
             const file = document.getElementById('batchFile').files[0];
             const year = document.getElementById('batchYear').value;
@@ -733,7 +673,7 @@
               }
             });
 
-            fetch(`/admin/api/teams/${app.team.id}/duty`, {
+            fetch(`/api/teams/manage/${app.team.id}/duty`, {
               method: 'POST',
               body: formData
             }).then(response => {
@@ -781,6 +721,124 @@
           }
         });
       }
+      ,
+      assignManager(member) {
+        Swal.fire({
+          title: '매니저 권한 부여',
+          text: `정말로 [${member.name}] 님에게 매니저 권한을 부여하시겠습니까?`,
+          icon: 'success',
+          showCancelButton: true,
+          confirmButtonText: '예',
+          confirmButtonColor: '#3085d6',
+          cancelButtonText: '취소'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            $.ajax({
+              url: `/api/teams/manage/${teamId}/manager`,
+              data: {
+                memberId: member.id
+              },
+              type: 'POST',
+              success: function (response) {
+                app.load();
+              },
+              error: function (error) {
+                console.log(error);
+              }
+            })
+          }
+        });
+      },
+      unAssignManager(member) {
+        Swal.fire({
+          title: '매니저 권한 취소',
+          text: `정말로 [${member.name}] 님의 매니저 권한을 취소하시겠습니까?`,
+          icon: 'success',
+          showCancelButton: true,
+          confirmButtonText: '예',
+          confirmButtonColor: '#3085d6',
+          cancelButtonText: '취소'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            $.ajax({
+              url: `/api/teams/manage/${teamId}/manager`,
+              data: {
+                memberId: member.id
+              },
+              type: 'DELETE',
+              success: function (response) {
+                app.load();
+              },
+              error: function (error) {
+                console.log(error);
+              }
+            })
+          }
+        });
+      },
+      changeAdmin: function (member) {
+        let confirmText = '팀의 대표를 초기화 하시겠습니까?';
+        if (member) {
+          confirmText = `정말 [${member.name}] 님을 대표로 변경하시겠습니까?<br/> 다시 대표 권한을 획득하려면 [${member.name}] 님에게 요청해야합니다.`;
+        }
+        Swal.fire({
+          title: '대표 변경 변경 확인',
+          html: confirmText,
+          icon: 'success',
+          showCancelButton: true,
+          confirmButtonColor: '#3085d6',
+          confirmButtonText: '네',
+          cancelButtonText: '취소'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            $.ajax({
+              url: '/api/teams/manage/' + teamId + '/admin',
+              type: 'PUT',
+              data: {
+                memberId: member?.id
+              },
+              success: function (response) {
+                app.load();
+                $('#member-search-modal').modal('hide');
+              },
+              error: function (error) {
+                console.log(error);
+              }
+            })
+          }
+        });
+      },
+      removeTeam: function () {
+        Swal.fire({
+          title: '팀 삭제',
+          text: '정말로 이 팀을 삭제하겠습니까?',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Delete',
+          confirmButtonColor: '#d33',
+          cancelButtonText: 'Cancel'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            $.ajax({
+              url: '/admin/api/teams/' + app.team.id,
+              type: 'DELETE',
+              success: function (response) {
+                window.location.href = '/admin/team';
+              },
+              error: function (error) {
+                Swal.fire({
+                  title: 'Error',
+                  text: 'Failed to delete team',
+                  icon: 'error',
+                  confirmButtonText: 'OK',
+                  confirmButtonColor: '#3085d6',
+                })
+              }
+            })
+          }
+        });
+      },
+      // end method
     }
   });
 </script>

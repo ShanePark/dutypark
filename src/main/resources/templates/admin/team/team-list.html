@@ -17,7 +17,7 @@
         <tbody>
         <tr v-for="team in teams">
             <td>
-                <a :href="'/admin/team/' + team.id">{{ team.name }}</a>
+                <a :href="'/team/manage/' + team.id">{{ team.name }}</a>
             </td>
             <td>{{ team.memberCount }}</td>
             <td>{{ team.description }}</td>

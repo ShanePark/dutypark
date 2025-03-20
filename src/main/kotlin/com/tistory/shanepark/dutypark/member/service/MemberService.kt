@@ -76,10 +76,10 @@ class MemberService(
     }
 
     @Transactional(readOnly = true)
-    fun searchMembers(
-        page: Pageable, name: String
+    fun searchMembersToInviteTeam(
+        page: Pageable, keyword: String
     ): Page<MemberDto> {
-        memberRepository.findMembersByNameContainingIgnoreCase(name, page).let { it ->
+        memberRepository.findMembersByNameContainingIgnoreCaseAndTeamIsNull(keyword, page).let { it ->
             return it.map { MemberDto.of(it) }
         }
     }

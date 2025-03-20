@@ -28,13 +28,4 @@ class MemberViewController(
         return layout(model, "member/member")
     }
 
-    @GetMapping("/team")
-    fun myTeamPage(
-        @Login loginMember: LoginMember,
-        model: Model
-    ): String {
-        model.addAttribute("login", loginMember)
-        return layout(menu = "team/myteam", model = model)
-    }
-
 }

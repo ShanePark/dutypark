@@ -72,12 +72,21 @@ class Team(
         this.admin = member
     }
 
-    fun isManager(loginMember: LoginMember): Boolean {
-        return isManager(loginMember.id)
+    fun isManager(login: LoginMember): Boolean {
+        return isManager(login.id)
     }
 
-    fun isManager(memberId: Long): Boolean {
-        return managers.any { it.member.id == memberId }
+    fun isManager(memberId: Long?): Boolean {
+        if (memberId == null)
+            return false
+        return isAdmin(memberId) || managers.any { it.member.id == memberId }
+    }
+
+    fun isAdmin(memberId: Long?): Boolean {
+        if (memberId == null)
+            return false
+        val adminId = admin?.id ?: return false
+        return adminId == memberId
     }
 
     fun addManager(member: Member) {
