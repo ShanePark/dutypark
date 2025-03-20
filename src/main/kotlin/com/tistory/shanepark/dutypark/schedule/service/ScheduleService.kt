@@ -52,7 +52,7 @@ class ScheduleService(
         val availableVisibilities = friendService.availableScheduleVisibilities(loginMember, member)
 
         val userSchedules =
-            scheduleRepository.findSchedulesOfMonth(member, start, end, visibilities = availableVisibilities)
+            scheduleRepository.findSchedulesOfMemberRangeIn(member, start, end, visibilities = availableVisibilities)
                 .map { ScheduleDto.of(calendarView, it, isTagged = false) }
 
         val taggedSchedules =
