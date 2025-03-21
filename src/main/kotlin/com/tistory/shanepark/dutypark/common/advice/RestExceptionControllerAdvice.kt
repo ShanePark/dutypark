@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.common.advice
 
 import com.tistory.shanepark.dutypark.common.domain.dto.DutyParkErrorResponse
-import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
+import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import org.hibernate.query.sqm.tree.SqmNode.log
 import org.springframework.core.Ordered
 import org.springframework.core.annotation.Order
@@ -17,7 +17,7 @@ class RestExceptionControllerAdvice {
 
     @ResponseBody
     @ExceptionHandler
-    fun notAuthorizedHandler(e: DutyparkAuthException): ResponseEntity<DutyParkErrorResponse> {
+    fun notAuthorizedHandler(e: AuthException): ResponseEntity<DutyParkErrorResponse> {
         return ResponseEntity.status(e.errorCode)
             .body(DutyParkErrorResponse.of(e))
     }

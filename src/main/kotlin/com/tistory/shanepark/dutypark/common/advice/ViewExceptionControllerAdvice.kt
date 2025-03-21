@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.common.advice
 
 import com.tistory.shanepark.dutypark.common.config.logger
-import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
+import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.core.Ordered
 import org.springframework.core.annotation.Order
@@ -17,7 +17,7 @@ class ViewExceptionControllerAdvice {
     private val log = logger()
 
     @ExceptionHandler
-    fun notAuthorizedHandler(e: DutyparkAuthException, request: HttpServletRequest): ModelAndView {
+    fun notAuthorizedHandler(e: AuthException, request: HttpServletRequest): ModelAndView {
         val redirectUrl = "redirect:/auth/login?referer=" + URLEncoder.encode(request.requestURI, "UTF-8")
         return ModelAndView(redirectUrl)
     }

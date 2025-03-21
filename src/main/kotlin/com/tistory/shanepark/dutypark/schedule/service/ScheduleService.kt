@@ -2,7 +2,7 @@ package com.tistory.shanepark.dutypark.schedule.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
-import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
+import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
@@ -44,8 +44,8 @@ class ScheduleService(
 
         val paddingBefore = calendarView.paddingBefore
         val lengthOfMonth = calendarView.lengthOfMonth
+        val array = calendarView.makeCalendarArray<ScheduleDto>()
 
-        val array = Array<List<ScheduleDto>>(paddingBefore + lengthOfMonth + calendarView.paddingAfter) { emptyList() }
         val start = calendarView.rangeFromDateTime
         val end = calendarView.rangeUntilDateTime
 
@@ -156,7 +156,7 @@ class ScheduleService(
         checkScheduleAuthority(schedule = schedule, loginMember = loginMember)
 
         if (!friendService.isFriend(login, friend)) {
-            throw DutyparkAuthException("$friend is not friend of $loginMember")
+            throw AuthException("$friend is not friend of $loginMember")
         }
 
         schedule.addTag(friend)
@@ -180,7 +180,7 @@ class ScheduleService(
         if (scheduleMember.isEquals(loginMember = loginMember)) return
         if (memberService.isManager(isManager = loginMember, target = scheduleMember)) return
 
-        throw DutyparkAuthException("login member doesn't have permission to create or edit the schedule")
+        throw AuthException("login member doesn't have permission to create or edit the schedule")
     }
 
     private fun checkScheduleAuthority(loginMember: LoginMember, schedule: Schedule) {

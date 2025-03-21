@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.team.domain.dto
 
+import com.tistory.shanepark.dutypark.common.exceptions.InvalidScheduleTimeRangeExeption
 import jakarta.validation.constraints.NotBlank
 import org.hibernate.validator.constraints.Length
 import java.time.LocalDateTime
@@ -20,7 +21,9 @@ data class TeamScheduleSaveDto(
 ) {
 
     init {
-        require(!startDateTime.isAfter(endDateTime)) { "StartDateTime must not be after EndDateTime" }
+        if (startDateTime.isAfter(endDateTime)) {
+            throw InvalidScheduleTimeRangeExeption()
+        }
     }
 
 }

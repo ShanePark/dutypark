@@ -2,7 +2,7 @@ package com.tistory.shanepark.dutypark.schedule.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
-import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
+import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
@@ -88,7 +88,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         val loginMember = loginMember(member)
 
         // Then
-        assertThrows<DutyparkAuthException> {
+        assertThrows<AuthException> {
             scheduleService.createSchedule(loginMember, scheduleSaveDto)
         }
     }
@@ -155,7 +155,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         val loginMember = loginMember(member)
 
         // Then
-        assertThrows<DutyparkAuthException> {
+        assertThrows<AuthException> {
             scheduleService.updateSchedule(loginMember, scheduleSaveDto)
         }
     }
@@ -204,7 +204,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         val loginMember = loginMember(member)
 
         // Then
-        assertThrows<DutyparkAuthException> {
+        assertThrows<AuthException> {
             scheduleService.deleteSchedule(loginMember, schedule.id)
         }
     }
@@ -449,7 +449,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         val schedule2 = scheduleService.createSchedule(loginMember(otherMember), scheduleSaveDto2)
 
         // Then
-        assertThrows<DutyparkAuthException> {
+        assertThrows<AuthException> {
             scheduleService.swapSchedulePosition(loginMember, schedule1.id, schedule2.id)
         }
     }
@@ -497,7 +497,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
 
         // Then
-        assertThrows<DutyparkAuthException> {
+        assertThrows<AuthException> {
             scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
         }
     }
@@ -845,7 +845,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         memberRepository.save(login)
 
         // Then
-        assertThrows<DutyparkAuthException> {
+        assertThrows<AuthException> {
             scheduleService.findSchedulesByYearAndMonth(loginMember(login), target.id!!, YearMonth.of(2023, 4))
         }
     }
@@ -876,7 +876,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         makeThemFriend(target, login)
 
         // Then
-        assertThrows<DutyparkAuthException> {
+        assertThrows<AuthException> {
             scheduleService.findSchedulesByYearAndMonth(loginMember(login), target.id!!, YearMonth.of(2023, 4))
         }
     }

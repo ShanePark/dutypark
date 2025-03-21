@@ -1,6 +1,6 @@
 package com.tistory.shanepark.dutypark.security.config
 
-import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
+import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.core.MethodParameter
@@ -34,7 +34,7 @@ class LoginMemberArgumentResolver : HandlerMethodArgumentResolver {
     ) {
         val required = parameter.getParameterAnnotation(Login::class.java)?.required ?: true
         if (loginMember == null && required) {
-            throw DutyparkAuthException("login is required")
+            throw AuthException("login is required")
         }
     }
 

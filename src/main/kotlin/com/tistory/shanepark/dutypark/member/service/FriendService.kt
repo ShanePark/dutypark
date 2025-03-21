@@ -1,6 +1,6 @@
 package com.tistory.shanepark.dutypark.member.service
 
-import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
+import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
@@ -194,7 +194,7 @@ class FriendService(
     @Transactional(readOnly = true)
     fun checkVisibility(login: LoginMember?, target: Member, scheduleVisibilityCheck: Boolean = false) {
         if (!isVisible(login, target.id, scheduleVisibilityCheck = scheduleVisibilityCheck))
-            throw DutyparkAuthException("${target.name} Calendar is not visible to ${login?.name}")
+            throw AuthException("${target.name} Calendar is not visible to ${login?.name}")
     }
 
     @Transactional(readOnly = true)

@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
-import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
+import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.dto.DDaySaveDto
 import com.tistory.shanepark.dutypark.member.repository.DDayRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -92,7 +92,7 @@ class CalendarDayServiceTest : DutyparkIntegrationTest() {
                 isPrivate = true
             )
         )
-        assertThrows<DutyparkAuthException> {
+        assertThrows<AuthException> {
             dDayService.findDDay(loginMember2, createDDay.id!!)
         }
     }
@@ -200,7 +200,7 @@ class CalendarDayServiceTest : DutyparkIntegrationTest() {
             date = LocalDate.now().plusDays(5),
             isPrivate = true
         )
-        assertThrows<DutyparkAuthException> {
+        assertThrows<AuthException> {
             dDayService.updateDDay(
                 loginMember = loginMember2,
                 dDaySaveDto = updateDDayDto
@@ -239,7 +239,7 @@ class CalendarDayServiceTest : DutyparkIntegrationTest() {
                 isPrivate = false
             )
         )
-        assertThrows<DutyparkAuthException> {
+        assertThrows<AuthException> {
             dDayService.deleteDDay(loginMember2, createDDay.id!!)
         }
     }

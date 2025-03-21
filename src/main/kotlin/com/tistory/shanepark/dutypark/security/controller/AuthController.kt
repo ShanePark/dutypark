@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.security.controller
 
 import com.tistory.shanepark.dutypark.common.config.logger
-import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
+import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -34,7 +34,7 @@ class AuthController(
         return try {
             val headers = authService.getLoginCookieHeaders(login = loginDto, req = req, referer = refererValue)
             ResponseEntity.ok().headers(headers).body(refererValue)
-        } catch (e: DutyparkAuthException) {
+        } catch (e: AuthException) {
             ResponseEntity.status(401).body(e.message)
         }
     }
@@ -46,7 +46,7 @@ class AuthController(
         @RequestBody(required = true) param: PasswordChangeDto
     ): ResponseEntity<String> {
         if (loginMember.id != param.memberId && !loginMember.isAdmin) {
-            throw DutyparkAuthException("You are not authorized to change this password")
+            throw AuthException("You are not authorized to change this password")
         }
         authService.changePassword(param, loginMember.isAdmin)
         return ResponseEntity.ok().body("Password Changed")

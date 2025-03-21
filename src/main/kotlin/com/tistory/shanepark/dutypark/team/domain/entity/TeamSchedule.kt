@@ -36,7 +36,7 @@ class TeamSchedule(
     var endDateTime: LocalDateTime,
 
     @Column(name = "position", nullable = false)
-    var position: Int = -1,
+    var position: Int,
 
     ) : EntityBase() {
 

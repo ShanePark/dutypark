@@ -69,4 +69,14 @@ class CalendarView(yearMonth: YearMonth) {
             .toList()
     }
 
+    fun validDays(startDate: LocalDate, endDate: LocalDate): List<LocalDate> {
+        return getRangeDate()
+            .filter { !it.isBefore(startDate) && !it.isAfter(endDate) }
+            .toList()
+    }
+
+    fun <T> makeCalendarArray(): Array<List<T>> {
+        return Array(size) { emptyList() }
+    }
+
 }

@@ -6,7 +6,6 @@ import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto.Companion.ofSi
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 import java.util.*
@@ -45,56 +44,31 @@ data class ScheduleDto(
         }
 
         fun of(calendarView: CalendarView, schedule: Schedule, isTagged: Boolean = false): List<ScheduleDto> {
-            val startDateTime = schedule.startDateTime
-            val startDate = startDateTime.toLocalDate()
-            val endDateTime = schedule.endDateTime
-            val endDate = endDateTime.toLocalDate()
-
+            val startDate = schedule.startDateTime.toLocalDate()
+            val endDate = schedule.endDateTime.toLocalDate()
             val totalDays = ChronoUnit.DAYS.between(startDate, endDate).toInt() + 1
-            val validDays = validDays(startDate, endDate, calendarView)
             val tags = schedule.tags.map { t -> ofSimple(t.member) }
 
-            return validDays.map {
-                ScheduleDto(
-                    id = schedule.id,
-                    content = schedule.content(),
-                    description = schedule.description,
-                    position = schedule.position,
-                    year = it.year,
-                    month = it.monthValue,
-                    dayOfMonth = it.dayOfMonth,
-                    daysFromStart = ChronoUnit.DAYS.between(startDate, it).toInt() + 1,
-                    totalDays = totalDays,
-                    startDateTime = startDateTime,
-                    endDateTime = endDateTime,
-                    isTagged = isTagged,
-                    owner = schedule.member.name,
-                    tags = tags,
-                    visibility = schedule.visibility
-                )
-            }
+            return calendarView.validDays(startDate = startDate, endDate = endDate)
+                .map {
+                    ScheduleDto(
+                        id = schedule.id,
+                        content = schedule.content(),
+                        description = schedule.description,
+                        position = schedule.position,
+                        year = it.year,
+                        month = it.monthValue,
+                        dayOfMonth = it.dayOfMonth,
+                        daysFromStart = ChronoUnit.DAYS.between(startDate, it).toInt() + 1,
+                        totalDays = totalDays,
+                        startDateTime = schedule.startDateTime,
+                        endDateTime = schedule.endDateTime,
+                        isTagged = isTagged,
+                        owner = schedule.member.name,
+                        tags = tags,
+                        visibility = schedule.visibility
+                    )
+                }
         }
-
-        private fun validDays(
-            startDate: LocalDate, endDate: LocalDate, calendarView: CalendarView,
-        ): MutableList<LocalDate> {
-            val rangeFrom = calendarView.rangeFromDate
-            var current = startDate
-            if (current.isBefore(rangeFrom))
-                current = rangeFrom
-
-            val daysInRange = mutableListOf<LocalDate>()
-            while (validDate(current, endDate, calendarView.rangeUntilDate)) {
-                daysInRange.add(current)
-                current = current.plusDays(1)
-            }
-            return daysInRange
-        }
-
-        private fun validDate(
-            current: LocalDate,
-            endDate: LocalDate,
-            limitRangeUntil: LocalDate,
-        ) = !current.isAfter(endDate) && !current.isAfter(limitRangeUntil)
     }
 }

@@ -2,7 +2,7 @@ package com.tistory.shanepark.dutypark.team.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
-import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
+import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyByShift
 import com.tistory.shanepark.dutypark.duty.enums.Color
@@ -210,7 +210,7 @@ class TeamService(
             return
         val team = teamRepository.findById(teamId).orElseThrow()
         if (!team.isManager(login)) {
-            throw DutyparkAuthException("Member is not a team manager")
+            throw AuthException("Member is not a team manager")
         }
     }
 
@@ -219,7 +219,7 @@ class TeamService(
             return
         val team = teamRepository.findById(teamId).orElseThrow()
         if (!team.isAdmin(login.id)) {
-            throw DutyparkAuthException("Member is not a team admin")
+            throw AuthException("Member is not a team admin")
         }
 
     }
