@@ -224,4 +224,14 @@ class TeamService(
 
     }
 
+    fun checkCanRead(login: LoginMember, teamId: Long) {
+        if (login.isAdmin)
+            return
+        val team = teamRepository.findById(teamId).orElseThrow()
+        val member = memberRepository.findById(login.id).orElseThrow()
+        if (member.team != team) {
+            throw AuthException("Member is not a team member, team: $team, member: $member")
+        }
+    }
+
 }

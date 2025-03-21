@@ -46,7 +46,7 @@ class TeamScheduleServiceTest {
         // Given
         val loginMember = LoginMember(id = 1L, name = "Test Author")
         val author = Member("Test Author")
-        val team = Team("Team A")
+        val team = makeTeam()
 
         val dateTime = LocalDateTime.of(2025, 3, 21, 0, 0)
         val saveDto = TeamScheduleSaveDto(
@@ -96,7 +96,7 @@ class TeamScheduleServiceTest {
         // Given
         val loginMember = LoginMember(id = 1L, name = "Author")
         val author = Member("Author")
-        val team = Team("Team B")
+        val team = makeTeam("Team B")
 
         val dateTime = LocalDateTime.of(2025, 3, 22, 10, 0)
         val saveDto = TeamScheduleSaveDto(
@@ -146,7 +146,7 @@ class TeamScheduleServiceTest {
         val author = Member("Editor")
 
         val originalMember = Member("Original")
-        val team = Team("Team A")
+        val team = makeTeam()
 
         val oldSchedule = TeamSchedule(
             team = team,
@@ -182,6 +182,12 @@ class TeamScheduleServiceTest {
         assertThat(oldSchedule.startDateTime).isEqualTo(updatedStart)
         assertThat(oldSchedule.endDateTime).isEqualTo(updatedEnd)
         assertThat(oldSchedule.updateMember).isEqualTo(author)
+    }
+
+    private fun makeTeam(name: String = "Team A"): Team {
+        val team = Team(name)
+        ReflectionTestUtils.setField(team, "id", 1L)
+        return team
     }
 
     @Test
@@ -221,7 +227,7 @@ class TeamScheduleServiceTest {
     @Test
     fun `findTeamSchedules should return schedules within calendar range`() {
         // Given
-        val team = Team("Team C")
+        val team = makeTeam("Team C")
         val teamId = 1L
         ReflectionTestUtils.setField(team, "id", teamId)
         val calendarView = CalendarView(2025, 3)
@@ -268,7 +274,7 @@ class TeamScheduleServiceTest {
     @Test
     fun `multi-day schedules should spread correctly across the calendar view`() {
         // Given
-        val team = Team("Team Multi")
+        val team = makeTeam("Team Multi")
         val teamId = 2L
         ReflectionTestUtils.setField(team, "id", teamId)
         val calendarView = CalendarView(2025, 3)
@@ -317,7 +323,7 @@ class TeamScheduleServiceTest {
     @Test
     fun `schedules from previous month overlapping with calendar view padding should appear correctly`() {
         // Given
-        val team = Team("Team Padding")
+        val team = makeTeam("Team Padding")
         val teamId = 3L
         ReflectionTestUtils.setField(team, "id", teamId)
         val calendarView = CalendarView(2025, 3)
@@ -359,7 +365,7 @@ class TeamScheduleServiceTest {
         end: LocalDateTime = LocalDateTime.now()
     ): TeamSchedule {
         return TeamSchedule(
-            team = Team("Test Team"),
+            team = makeTeam("Test Team"),
             createMember = Member("Tester"),
             content = "test",
             startDateTime = start,

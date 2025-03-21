@@ -19,8 +19,8 @@ class TeamScheduleService(
     private val teamRepository: TeamRepository,
     private val memberRepository: MemberRepository,
 ) {
-    fun create(loginMember: LoginMember, saveDto: TeamScheduleSaveDto): TeamScheduleDto {
-        val author = memberRepository.findById(loginMember.id).orElseThrow()
+    fun create(login: LoginMember, saveDto: TeamScheduleSaveDto): TeamScheduleDto {
+        val author = memberRepository.findById(login.id).orElseThrow()
         val team = teamRepository.findById(saveDto.teamId).orElseThrow()
         val startDate = saveDto.startDateTime.toLocalDate()
         val sameDateStartSchedules = teamScheduleRepository.findTeamSchedulesOfTeamRangeIn(
@@ -69,14 +69,21 @@ class TeamScheduleService(
         return array
     }
 
-    fun update(loginMember: LoginMember, saveDto: TeamScheduleSaveDto) {
-        val author = memberRepository.findById(loginMember.id).orElseThrow()
-        val schedule = teamScheduleRepository.findById(saveDto.id!!).orElseThrow()
-        schedule.update(saveDto = saveDto, updateMember = author)
+    @Transactional(readOnly = true)
+    fun findById(id: UUID): TeamScheduleDto {
+        val schedule = teamScheduleRepository.findById(id).orElseThrow()
+        return TeamScheduleDto.ofSimple(schedule)
     }
 
-    fun delete(teamScheduleId: UUID) {
-        val teamSchedule = teamScheduleRepository.findById(teamScheduleId).orElseThrow()
+    fun update(login: LoginMember, saveDto: TeamScheduleSaveDto): TeamScheduleDto {
+        val author = memberRepository.findById(login.id).orElseThrow()
+        val schedule = teamScheduleRepository.findById(saveDto.id!!).orElseThrow()
+        schedule.update(saveDto = saveDto, updateMember = author)
+        return TeamScheduleDto.ofSimple(schedule)
+    }
+
+    fun delete(id: UUID) {
+        val teamSchedule = teamScheduleRepository.findById(id).orElseThrow()
         teamScheduleRepository.delete(teamSchedule)
     }
 

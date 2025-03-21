@@ -54,3 +54,33 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 });
+
+formatDate = function (year, month, day) {
+  month = month < 10 ? '0' + month : month;
+  day = day < 10 ? '0' + day : day;
+  return year + '-' + month + '-' + day;
+}
+
+const schedule_content_max_length = 30;
+
+function isValidContent(content) {
+  if (!content) {
+    Swal.fire({
+      icon: 'error',
+      title: '내용을 입력해주세요.',
+      showConfirmButton: false,
+      timer: sweetAlTimer
+    });
+    return false;
+  }
+  if (content.length > schedule_content_max_length) {
+    Swal.fire({
+      icon: 'error',
+      title: schedule_content_max_length + '자 이내로 입력해주세요.',
+      showConfirmButton: false,
+      timer: sweetAlTimer
+    });
+    return false;
+  }
+  return true;
+}

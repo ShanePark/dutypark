@@ -34,17 +34,52 @@
         <div :class=" {'red': index%7==0, 'blue': index%7==6, 'opacity-50': teamDay.month!=month }">
           <div class="fw-bold day">{{teamDay.day}}
           </div>
-          <!--        This is for when the Team Schedule feature is added-->
-          <!--        <div v-if="index%3==0" class="small text-truncate">회의</div>-->
+          <div v-for="schedule in teamSchedules[index]" class="small text-truncate text-muted">
+            <span v-text="schedule.content"></span>
+            <small v-if="schedule.totalDays > 1">({{schedule.daysFromStart}}/{{schedule.totalDays}})</small>
+          </div>
         </div>
       </div>
     </div>
     <!-- End Calendar-->
 
+    <!-- Team Schedule -->
+    <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
+      <div class="fs-2 fw-bold">
+        {{ selDay.year }}년 {{ selDay.month }}월 {{ selDay.day }}일
+      </div>
+      <button class="btn btn-outline-success fs-3" @click="newScheduleForm()" v-if="isTeamManager">
+        <i class="bi bi-calendar-plus"></i> 팀 일정 추가
+      </button>
+    </div>
+
+    <div class="card p-3 mb-4 fs-2" v-if="teamSchedules[selDay.index]?.length">
+      <div v-for="schedule in teamSchedules[selDay.index]" :key="schedule.id" class="border-bottom py-3">
+        <div class="d-flex justify-content-between align-items-start">
+          <div class="flex-grow-1">
+            <div class="fw-bold mb-1">
+              {{ schedule.content }}
+              <small>(by: <strong>{{ schedule.createMember }}</strong>)</small>
+            </div>
+            <div class="mb-1 text-muted" v-if="schedule.description">{{ schedule.description }}</div>
+            <div class="small text-muted">
+            </div>
+          </div>
+          <div class="ms-3" v-if="isTeamManager">
+            <button class="btn btn-sm btn-outline-primary me-1 fs-2" @click="editSchedule(schedule)">
+              <i class="bi bi-pencil-square"></i> 수정
+            </button>
+            <button class="btn btn-sm btn-outline-danger fs-2" @click="deleteSchedule(schedule.id)">
+              <i class="bi bi-trash"></i> 삭제
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!--    End Team Schedule -->
+
     <!--  shift-->
     <div class="mt-2 p-3" v-if="shift.length > 0">
-      <h2 class="fs-3 mb-0 text-right flex-grow-1 mb-2"
-          v-text="selDay.year + '년 '+ selDay.month +'월 ' + selDay.day + '일'"></h2>
       <template v-for="group in shift"
                 v-if="group.members.length>0">
         <div
@@ -72,6 +107,43 @@
     </div>
     <!--  End Shift-->
   </template>
+
+  <!-- Schedule Modal -->
+  <div class="modal fade" id="scheduleModal" tabindex="-1" aria-labelledby="scheduleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg fs-2">
+      <div class="modal-content p-3">
+        <div class="modal-header">
+          <h5 class="modal-title fs-2" id="scheduleModalLabel">팀 일정 저장</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">제목(필수)</label>
+            <input v-model="scheduleForm.content" type="text" class="form-control" maxlength="30" required/>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">상세(옵션)</label>
+            <textarea v-model="scheduleForm.description" class="form-control" rows="4" maxlength="4096"></textarea>
+          </div>
+          <div class="row">
+            <div class="col">
+              <label class="form-label">시작일</label>
+              <input v-model="scheduleForm.startDate" type="date" class="form-control" readonly/>
+            </div>
+            <div class="col">
+              <label class="form-label">종료일</label>
+              <input v-model="scheduleForm.endDate" type="date" class="form-control"/>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary fs-2" @click="saveSchedule">저장</button>
+          <button class="btn btn-secondary fs-2" data-bs-dismiss="modal">닫기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- End Schedule Modal -->
 </div>
 
 <script>
@@ -88,7 +160,8 @@
       selDay: {
         year: today.getFullYear(),
         month: today.getMonth() + 1,
-        day: today.getDate()
+        day: today.getDate(),
+        index: -99,
       },
       year: today.getFullYear(),
       month: today.getMonth() + 1,
@@ -100,7 +173,14 @@
       },
       shift: [],
       myDuty: [],
+      teamSchedules: [],
       isTeamManager: false,
+      scheduleForm: {
+        content: '',
+        description: '',
+        startDate: '',
+        endDate: '',
+      },
     },
     mounted() {
       this.loadMyTeam();
@@ -108,6 +188,11 @@
       this.loadMyDuty();
     },
     computed: {},
+    watch: {
+      'selDay': function () {
+        app.findSelDayIndex();
+      }
+    },
     methods: {
       loadMyTeam() {
         fetch('/api/teams/my?year=' + this.year + '&month=' + this.month)
@@ -116,6 +201,8 @@
             app.team = data.team;
             app.teamDays = data.teamDays;
             app.isTeamManager = data.isTeamManager;
+            app.loadTeamSchedules(app.team.id);
+            app.findSelDayIndex();
           })
           .catch(error => {
             console.error('Error:', error);
@@ -174,6 +261,107 @@
           .catch(error => {
             console.error('Error:', error);
           });
+      },
+      saveSchedule() {
+        const form = app.scheduleForm
+        if (!isValidContent(form.content)) {
+          return;
+        }
+
+        const payload = {
+          teamId: this.team.id,
+          id: form.id,
+          content: form.content,
+          description: form.description,
+          startDateTime: form.startDate + 'T00:00:00',
+          endDateTime: form.endDate + 'T00:00:00',
+        };
+
+        fetch('/api/teams/schedules', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        }).then(res => {
+          if (!res.ok) throw new Error('일정 저장 실패');
+          return res.json();
+        }).then(data => {
+          app.loadTeamSchedules(app.team.id);
+          const modal = bootstrap.Modal.getInstance(document.getElementById('scheduleModal'));
+          modal.hide();
+        }).catch(err => {
+          console.error(err);
+          alert('일정 저장 실패');
+        });
+      },
+      resetScheduleForm() {
+        const selDate = formatDate(app.selDay.year, app.selDay.month, app.selDay.day);
+        console.log(selDate);
+        app.scheduleForm = {
+          id: null,
+          content: '',
+          description: '',
+          startDate: selDate,
+          endDate: selDate,
+        };
+      },
+      newScheduleForm() {
+        app.resetScheduleForm();
+        const modal = new bootstrap.Modal(document.getElementById('scheduleModal'));
+        modal.show();
+      },
+      loadTeamSchedules(teamId) {
+        fetch(`/api/teams/schedules?year=${this.selDay.year}&month=${this.selDay.month}&teamId=${teamId}`)
+          .then(response => response.json())
+          .then(data => {
+            app.teamSchedules = data;
+          })
+          .catch(error => {
+            console.error('Error:', error);
+          });
+      },
+      findSelDayIndex() {
+        const index = this.teamDays.findIndex(day => {
+          return day.year === this.selDay.year &&
+            day.month === this.selDay.month &&
+            day.day === this.selDay.day;
+        });
+        this.selDay.index = index;
+      },
+      editSchedule(schedule) {
+        this.scheduleForm = {
+          id: schedule.id,
+          content: schedule.content,
+          description: schedule.description,
+          startDate: schedule.startDateTime.slice(0, 10),
+          endDate: schedule.endDateTime.slice(0, 10),
+        };
+        const modal = new bootstrap.Modal(document.getElementById('scheduleModal'));
+        modal.show();
+      },
+      deleteSchedule(id) {
+        Swal.fire({
+          title: '정말 삭제하시겠습니까?',
+          text: "삭제된 일정은 복구할 수 없습니다.",
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#d33',
+          confirmButtonText: '삭제',
+          cancelButtonText: '취소',
+        }).then((result) => {
+          if (result.isConfirmed) {
+            fetch(`/api/teams/schedules/${id}`, {
+              method: 'DELETE'
+            }).then(res => {
+              if (!res.ok) throw new Error('삭제 실패');
+              this.loadTeamSchedules(this.team.id);
+            }).catch(err => {
+              console.error(err);
+              alert('삭제 중 오류가 발생했습니다.');
+            });
+          }
+        });
       },
     },
   });

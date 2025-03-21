@@ -8,6 +8,7 @@ import java.util.*
 
 data class TeamScheduleDto(
     val id: UUID,
+    val teamId: Long,
     val content: String,
     val description: String,
     val position: Int,
@@ -25,6 +26,7 @@ data class TeamScheduleDto(
         fun ofSimple(schedule: TeamSchedule): TeamScheduleDto {
             return TeamScheduleDto(
                 id = schedule.id,
+                teamId = schedule.team.id ?: throw IllegalStateException("Team ID is null"),
                 content = schedule.content,
                 description = schedule.description,
                 position = schedule.position,
@@ -46,6 +48,7 @@ data class TeamScheduleDto(
             return calendar.validDays(startDate, endDate).map {
                 TeamScheduleDto(
                     id = schedule.id,
+                    teamId = schedule.team.id ?: throw IllegalStateException("Team ID is null"),
                     content = schedule.content,
                     description = schedule.description,
                     position = schedule.position,
