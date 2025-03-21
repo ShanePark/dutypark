@@ -2,13 +2,16 @@ package com.tistory.shanepark.dutypark.common.advice
 
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.member.domain.annotation.Login
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.core.Ordered
 import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Controller
+import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
-import org.springframework.web.servlet.ModelAndView
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import java.net.URLEncoder
 
 @ControllerAdvice(annotations = [Controller::class])
@@ -16,22 +19,44 @@ import java.net.URLEncoder
 class ViewExceptionControllerAdvice {
     private val log = logger()
 
-    @ExceptionHandler
-    fun notAuthorizedHandler(e: AuthException, request: HttpServletRequest): ModelAndView {
-        val redirectUrl = "redirect:/auth/login?referer=" + URLEncoder.encode(request.requestURI, "UTF-8")
-        return ModelAndView(redirectUrl)
+    @ExceptionHandler(AuthException::class)
+    fun notAuthorizedHandler(
+        e: AuthException,
+        @Login(required = false) login: LoginMember?,
+        request: HttpServletRequest, model: Model
+    ): String {
+        if (login == null) {
+            return "redirect:${"/auth/login?referer=" + URLEncoder.encode(request.requestURI, "UTF-8")}"
+        }
+        log.warn("not authorized $login (ip:${request.remoteAddr}) tried to access [${request.requestURI}]")
+        return errorPage(
+            model = model,
+            errorCode = 401,
+            e = e,
+            message = "접근 권한이 없습니다.",
+        )
     }
 
-    @ExceptionHandler(java.util.NoSuchElementException::class)
-    fun noSuchElementHandler(e: NoSuchElementException): String {
-        log.info("no such element: ${e.message}")
-        return "error/404"
+    @ExceptionHandler(NoSuchElementException::class)
+    fun noSuchElementHandler(e: NoSuchElementException, model: Model): String {
+        return errorPage(model = model, errorCode = 404, e = e, message = "존재하지 않는 페이지입니다.")
     }
 
-    @ExceptionHandler(IllegalArgumentException::class)
-    fun illegalArgumentExceptionHandler(e: IllegalArgumentException): String {
-        log.info("illegal argument: ${e.message}")
-        return "error/400"
+    @ExceptionHandler(IllegalArgumentException::class, MethodArgumentTypeMismatchException::class)
+    fun illegalArgumentExceptionHandler(e: Exception, model: Model): String {
+        return errorPage(model = model, errorCode = 400, e = e, message = "잘못된 요청입니다.")
+    }
+
+    fun errorPage(
+        model: Model,
+        errorCode: Int,
+        e: Exception,
+        message: String? = null,
+    ): String {
+        log.warn("error: ${e.javaClass.name}, message:${e.message}")
+        model.addAttribute("errorMessage", message ?: e.message)
+        model.addAttribute("errorCode", errorCode)
+        return "error/error"
     }
 
 }

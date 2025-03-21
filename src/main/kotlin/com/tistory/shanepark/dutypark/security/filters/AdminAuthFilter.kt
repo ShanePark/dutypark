@@ -8,8 +8,6 @@ import jakarta.servlet.ServletRequest
 import jakarta.servlet.ServletResponse
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
 class AdminAuthFilter : Filter {
     private val log = logger()
@@ -24,8 +22,9 @@ class AdminAuthFilter : Filter {
                 return chain.doFilter(request, response)
             }
             log.info("$loginMember is not admin.")
-            response.sendError(HttpServletResponse.SC_FORBIDDEN)
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED)
         }
+        log.info("LoginMember null try to access admin page. ip: ${request.remoteAddr}")
     }
 
 

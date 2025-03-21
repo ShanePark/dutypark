@@ -61,8 +61,9 @@ class TeamManageDutyTypeController(
         @PathVariable id: Long
     ) {
         checkCanManage(login = loginMember, teamId = teamId)
+        val dutyType = dutyTypeService.findById(id)
         dutyTypeService.delete(id)
-        log.info("DutyType $id deleted by $loginMember")
+        log.info("DutyType $dutyType deleted by $loginMember")
     }
 
     private fun checkCanManage(login: LoginMember, teamId: Long) {

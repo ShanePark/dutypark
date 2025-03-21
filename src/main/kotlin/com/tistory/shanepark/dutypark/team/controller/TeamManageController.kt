@@ -49,6 +49,7 @@ class TeamManageController(
     ) {
         checkCanManage(login = loginMember, teamId = teamId)
         teamService.changeTeamAdmin(teamId = teamId, memberId = memberId)
+        log.info("Team $teamId admin changed to $memberId by $loginMember")
     }
 
     @PatchMapping("/{teamId}/batch-template")
@@ -59,6 +60,7 @@ class TeamManageController(
     ) {
         checkCanManage(login = loginMember, teamId = teamId)
         teamService.updateBatchTemplate(teamId, dutyBatchTemplate)
+        log.info("DutyBatchTemplate $dutyBatchTemplate updated by $loginMember")
     }
 
     @PostMapping("/{teamId}/duty")
@@ -103,7 +105,9 @@ class TeamManageController(
         @RequestParam memberId: Long
     ) {
         checkCanManage(login = loginMember, teamId = teamId)
+        val member = memberService.findById(memberId)
         teamService.addMemberToTeam(teamId = teamId, memberId = memberId)
+        log.info("Member $member added to team $teamId by $loginMember")
     }
 
     @DeleteMapping("/{teamId}/members")
@@ -113,7 +117,9 @@ class TeamManageController(
         @RequestParam memberId: Long
     ) {
         checkCanManage(login = loginMember, teamId = teamId)
+        val member = memberService.findById(memberId)
         teamService.removeMemberFromTeam(teamId, memberId)
+        log.info("Member $member removed from team $teamId by $loginMember")
     }
 
     @GetMapping("/members")
@@ -133,7 +139,9 @@ class TeamManageController(
         @RequestParam memberId: Long
     ) {
         checkCanAdmin(login = loginMember, teamId = teamId)
+        val member = memberService.findById(memberId)
         teamService.addTeamManager(teamId = teamId, memberId = memberId)
+        log.info("Member $member added as manager to team $teamId by $loginMember")
     }
 
     @DeleteMapping("/{teamId}/manager")
@@ -143,7 +151,9 @@ class TeamManageController(
         @RequestParam memberId: Long
     ) {
         checkCanAdmin(login = loginMember, teamId = teamId)
+        val member = memberService.findById(memberId)
         teamService.removeTeamManager(teamId = teamId, memberId = memberId)
+        log.info("Member $member removed as manager from team $teamId by $loginMember")
     }
 
     private fun checkCanManage(login: LoginMember, teamId: Long) {

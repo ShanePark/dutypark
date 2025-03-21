@@ -206,18 +206,18 @@ class TeamService(
     }
 
     fun checkCanManage(login: LoginMember, teamId: Long) {
+        val team = teamRepository.findById(teamId).orElseThrow()
         if (login.isAdmin)
             return
-        val team = teamRepository.findById(teamId).orElseThrow()
         if (!team.isManager(login)) {
             throw AuthException("Member is not a team manager")
         }
     }
 
     fun checkCanAdmin(login: LoginMember, teamId: Long) {
+        val team = teamRepository.findById(teamId).orElseThrow()
         if (login.isAdmin)
             return
-        val team = teamRepository.findById(teamId).orElseThrow()
         if (!team.isAdmin(login.id)) {
             throw AuthException("Member is not a team admin")
         }
@@ -225,9 +225,9 @@ class TeamService(
     }
 
     fun checkCanRead(login: LoginMember, teamId: Long) {
+        val team = teamRepository.findById(teamId).orElseThrow()
         if (login.isAdmin)
             return
-        val team = teamRepository.findById(teamId).orElseThrow()
         val member = memberRepository.findById(login.id).orElseThrow()
         if (member.team != team) {
             throw AuthException("Member is not a team member, team: $team, member: $member")
