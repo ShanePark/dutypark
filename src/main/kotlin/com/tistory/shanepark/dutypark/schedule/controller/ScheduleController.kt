@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.schedule.controller
 
 import com.tistory.shanepark.dutypark.common.domain.dto.PageResponse
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
+import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSaveDto
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSearchResult
@@ -20,6 +21,7 @@ import java.util.*
 class ScheduleController(
     private val scheduleService: ScheduleService,
     private val scheduleSearchService: ScheduleSearchService,
+    private val friendService: FriendService,
 ) {
 
     @GetMapping
@@ -29,6 +31,9 @@ class ScheduleController(
         @RequestParam year: Int,
         @RequestParam month: Int
     ): Array<List<ScheduleDto>> {
+        if (!friendService.isVisible(login = loginMember, targetId = memberId, scheduleVisibilityCheck = true)) {
+            return emptyArray()
+        }
         return scheduleService.findSchedulesByYearAndMonth(
             loginMember = loginMember,
             memberId,

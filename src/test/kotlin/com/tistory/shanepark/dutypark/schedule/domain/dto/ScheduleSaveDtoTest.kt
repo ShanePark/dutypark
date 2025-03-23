@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.schedule.domain.dto
 
+import com.tistory.shanepark.dutypark.common.exceptions.InvalidScheduleTimeRangeExeption
 import jakarta.validation.Validation
 import jakarta.validation.Validator
 import org.assertj.core.api.Assertions.assertThat
@@ -7,7 +8,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
 
-class scheduleSaveDtoTest {
+class ScheduleSaveDtoTest {
 
     private val validator: Validator = Validation.buildDefaultValidatorFactory().validator
 
@@ -59,7 +60,7 @@ class scheduleSaveDtoTest {
 
     @Test
     fun `validation fail if startDateTime is after EndDateTime`() {
-        Assertions.assertThrows(IllegalArgumentException::class.java) {
+        Assertions.assertThrows(InvalidScheduleTimeRangeExeption::class.java) {
             ScheduleSaveDto(
                 memberId = 1,
                 content = "schedule1",

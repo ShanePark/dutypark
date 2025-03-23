@@ -535,7 +535,7 @@
           monthSelector: {
             year: parseInt("[[${year}]]"),
           },
-          schedule_content_max_length: 30,
+          schedule_content_max_length: schedule_content_max_length,
           createSchedule: {
             id: '',
             content: '',
@@ -1050,7 +1050,7 @@
           }
           ,
           saveSchedule() {
-            if (!app.isValidContent(app.createSchedule.content)) {
+            if (!isValidContent(app.createSchedule.content)) {
               return;
             }
             if (!app.isValidDateTime(app.createSchedule.startDateTime, app.createSchedule.endDateTime)) {
@@ -1586,27 +1586,6 @@
             app.month = startDateTime.getMonth() + 1;
             app.searchDay = startDateTime.getDate();
             $('#search-result-modal').modal('hide');
-          },
-          isValidContent(content) {
-            if (!content) {
-              Swal.fire({
-                icon: 'error',
-                title: '내용을 입력해주세요.',
-                showConfirmButton: false,
-                timer: sweetAlTimer
-              });
-              return false;
-            }
-            if (content.length > app.schedule_content_max_length) {
-              Swal.fire({
-                icon: 'error',
-                title: app.schedule_content_max_length + '자 이내로 입력해주세요.',
-                showConfirmButton: false,
-                timer: sweetAlTimer
-              });
-              return false;
-            }
-            return true;
           },
           alertTodoTitle() {
             Swal.fire({

@@ -5,6 +5,7 @@ import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import jakarta.persistence.*
 
 @Entity
@@ -21,8 +22,11 @@ class Team(
     var description: String = ""
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "manager_id")
-    var manager: Member? = null
+    @JoinColumn(name = "admin_id")
+    var admin: Member? = null
+
+    @OneToMany(mappedBy = "team", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+    val managers: MutableList<TeamManager> = mutableListOf()
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, name = "default_duty_color")
@@ -64,8 +68,46 @@ class Team(
         return dutyType
     }
 
-    fun changeManager(member: Member?) {
-        this.manager = member
+    fun changeAdmin(member: Member?) {
+        this.admin = member
     }
+
+    fun isManager(login: LoginMember): Boolean {
+        return isManager(login.id)
+    }
+
+    fun isManager(memberId: Long?): Boolean {
+        if (memberId == null)
+            return false
+        return isAdmin(memberId) || managers.any { it.member.id == memberId }
+    }
+
+    fun isAdmin(memberId: Long?): Boolean {
+        if (memberId == null)
+            return false
+        val adminId = admin?.id ?: return false
+        return adminId == memberId
+    }
+
+    fun addManager(member: Member) {
+        if (member.team != this)
+            throw IllegalArgumentException("Member does not belong to this team")
+        if (isManager(member.id ?: -1))
+            throw IllegalArgumentException("Member is already a manager")
+        this.managers.add(TeamManager(team = this, member = member))
+    }
+
+    fun removeManager(member: Member) {
+        if (member.team != this)
+            throw IllegalArgumentException("Member does not belong to this team")
+        if (!isManager(member.id ?: -1))
+            throw IllegalArgumentException("Member is not a manager")
+        this.managers.removeIf { it.member == member }
+    }
+
+    override fun toString(): String {
+        return "Team(name='$name', id=$id)"
+    }
+
 
 }

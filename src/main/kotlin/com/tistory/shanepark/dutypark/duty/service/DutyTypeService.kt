@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.duty.service
 
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeCreateDto
+import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
@@ -15,6 +16,11 @@ class DutyTypeService(
     private val teamRepository: TeamRepository,
 ) {
 
+    fun findById(id: Long): DutyTypeDto {
+        val dutyType = dutyTypeRepository.findById(id).orElseThrow()
+        return DutyTypeDto(dutyType)
+    }
+
     fun delete(dutyTypeId: Long) {
         val dutyType = dutyTypeRepository.findById(dutyTypeId).orElseThrow()
         dutyTypeRepository.delete(dutyType)
@@ -27,7 +33,8 @@ class DutyTypeService(
 
     fun update(dutyTypeUpdateDto: DutyTypeUpdateDto): DutyType {
         val dutyType = dutyTypeRepository.findById(dutyTypeUpdateDto.id).orElseThrow()
-        val team = teamRepository.findByIdWithDutyTypes(dutyType.team.id!!).orElseThrow()
+        val teamId = dutyType.team.id ?: throw IllegalArgumentException("DutyType has no team")
+        val team = teamRepository.findByIdWithDutyTypes(teamId).orElseThrow()
 
         team.dutyTypes
             .filter { it.id != dutyType.id }

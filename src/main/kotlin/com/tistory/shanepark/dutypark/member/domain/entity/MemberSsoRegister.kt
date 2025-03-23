@@ -23,6 +23,7 @@ class MemberSsoRegister(
     @Column(name = "id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
+        protected set
 
     @Column(name = "uuid", unique = true)
     val uuid: String = UUID.randomUUID().toString()

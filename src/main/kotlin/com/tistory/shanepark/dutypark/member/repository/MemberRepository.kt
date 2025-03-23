@@ -21,7 +21,7 @@ interface MemberRepository : JpaRepository<Member, Long> {
     fun findByEmail(email: String?): Optional<Member>
 
     @EntityGraph(attributePaths = ["team"])
-    fun findMembersByNameContainingIgnoreCase(name: String, pageable: Pageable): Page<Member>
+    fun findMembersByNameContainingIgnoreCaseAndTeamIsNull(name: String, pageable: Pageable): Page<Member>
 
     @Query("select m from Member m left join fetch m.team d  where m.id = :memberId")
     fun findMemberWithTeam(memberId: Long): Optional<Member>

@@ -30,6 +30,7 @@ class RefreshToken(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
+        protected set
 
     @Column(name = "refresh_token", nullable = false)
     val token: String = UUID.randomUUID().toString()

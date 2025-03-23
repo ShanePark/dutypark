@@ -2,7 +2,7 @@ package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 
-import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
+import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
@@ -68,7 +68,7 @@ class RefreshTokenServiceTest : DutyparkIntegrationTest() {
             isAdmin = false,
         )
 
-        assertThrows<DutyparkAuthException> {
+        assertThrows<AuthException> {
             refreshTokenService.deleteRefreshToken(loginMember, token.id!!)
         }
     }

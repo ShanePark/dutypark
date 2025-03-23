@@ -16,7 +16,6 @@ class DDayController(
 ) {
 
     @PostMapping
-    @SlackNotification
     fun saveDday(
         @Login member: LoginMember,
         @Valid @RequestBody dDaySaveDto: DDaySaveDto

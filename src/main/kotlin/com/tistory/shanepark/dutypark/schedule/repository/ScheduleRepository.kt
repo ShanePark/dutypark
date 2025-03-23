@@ -51,15 +51,10 @@ interface ScheduleRepository : JpaRepository<Schedule, UUID> {
                 " LEFT JOIN FETCH s.tags t" +
                 " LEFT JOIN FETCH t.member tm" +
                 " WHERE m = :member " +
-                " AND (" +
-                "(s.startDateTime < :start AND s.endDateTime BETWEEN :start AND :end) OR " +
-                "(s.startDateTime BETWEEN :start AND :end) OR " +
-                "(s.startDateTime BETWEEN :start AND :end AND s.endDateTime > :end) OR " +
-                "(s.startDateTime < :start AND s.endDateTime > :end)" +
-                ")" +
+                " AND s.startDateTime <= :end AND s.endDateTime >= :start" +
                 " AND s.visibility IN (:visibilities)"
     )
-    fun findSchedulesOfMonth(
+    fun findSchedulesOfMemberRangeIn(
         member: Member,
         start: LocalDateTime,
         end: LocalDateTime,

@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.duty.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
-import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
+import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyBatchUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
@@ -242,7 +242,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
         memberRepository.save(member2)
 
         // Then
-        assertThrows<DutyparkAuthException> {
+        assertThrows<AuthException> {
             dutyService.getDuties(member.id!!, YearMonth.of(2023, 4), loginMember(member2))
         }
     }
@@ -298,7 +298,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
         updateVisibility(target, Visibility.PRIVATE)
 
         // Then
-        assertThrows<DutyparkAuthException> {
+        assertThrows<AuthException> {
             dutyService.getDuties(target.id!!, YearMonth.of(2023, 4), loginMember(login))
         }
     }

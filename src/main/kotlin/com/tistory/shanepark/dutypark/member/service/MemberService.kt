@@ -12,6 +12,7 @@ import com.tistory.shanepark.dutypark.member.repository.MemberManagerRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -75,10 +76,10 @@ class MemberService(
     }
 
     @Transactional(readOnly = true)
-    fun searchMembers(
-        page: Pageable, name: String
+    fun searchMembersToInviteTeam(
+        page: Pageable, keyword: String
     ): Page<MemberDto> {
-        memberRepository.findMembersByNameContainingIgnoreCase(name, page).let { it ->
+        memberRepository.findMembersByNameContainingIgnoreCaseAndTeamIsNull(keyword, page).let { it ->
             return it.map { MemberDto.of(it) }
         }
     }
@@ -113,6 +114,20 @@ class MemberService(
         }
         memberManagerRepository.findAllByManagerAndManaged(manager = manager, managed = managed)
             .forEach { memberManagerRepository.delete(it) }
+    }
+
+    fun canManageTeam(loginMember: LoginMember, team: Team?): Boolean {
+        if (team == null) {
+            return false
+        }
+        if (isTeamAdmin(loginMember = loginMember, team = team)) {
+            return true
+        }
+        return team.isManager(loginMember)
+    }
+
+    private fun isTeamAdmin(loginMember: LoginMember, team: Team): Boolean {
+        return team.admin?.id == loginMember.id
     }
 
     fun isManager(isManager: LoginMember, target: Member): Boolean {

@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.security.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
-import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
+import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
 import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
@@ -14,8 +14,6 @@ import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpHeaders.USER_AGENT
@@ -40,12 +38,12 @@ class AuthService(
     fun getLoginCookieHeaders(login: LoginDto, req: HttpServletRequest, referer: String): HttpHeaders {
         val member = memberRepository.findByEmail(login.email).orElseThrow {
             log.info("Login failed. email not exist:${login.email}")
-            DutyparkAuthException()
+            AuthException()
         }
 
         if (!passwordEncoder.matches(login.password, member.password)) {
             log.info("Login failed. password not match:${login.email}")
-            throw DutyparkAuthException()
+            throw AuthException()
         }
 
         return getLoginCookieHeaders(
@@ -64,7 +62,7 @@ class AuthService(
     ): HttpHeaders {
         val member = memberRepository.findById(memberId!!).orElseThrow {
             log.info("Login failed. member not exist:${memberId}")
-            throw DutyparkAuthException()
+            throw AuthException()
         }
 
         val jwt = jwtProvider.createToken(member)
@@ -117,7 +115,7 @@ class AuthService(
         if (validateToken(token) == TokenStatus.VALID) {
             return jwtProvider.parseToken(token)
         }
-        throw DutyparkAuthException()
+        throw AuthException()
     }
 
     fun tokenRefresh(refreshToken: String, request: HttpServletRequest, response: HttpServletResponse): String? {
@@ -146,14 +144,14 @@ class AuthService(
     fun changePassword(param: PasswordChangeDto, byAdmin: Boolean = false) {
         val member = memberRepository.findById(param.memberId).orElseThrow {
             log.info("change password failed. member not exist:${param.memberId}")
-            throw DutyparkAuthException("존재하지 않는 회원입니다.")
+            throw AuthException("존재하지 않는 회원입니다.")
         }
 
         if (!byAdmin) {
             val passwordMatch = passwordEncoder.matches(param.currentPassword, member.password)
             if (!passwordMatch) {
                 log.info("change password failed. password not match:${param.memberId}")
-                throw DutyparkAuthException("비밀번호가 일치하지 않습니다.")
+                throw AuthException("비밀번호가 일치하지 않습니다.")
             }
         }
 

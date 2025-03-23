@@ -1,6 +1,6 @@
 package com.tistory.shanepark.dutypark.member.service
 
-import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
+import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
@@ -36,10 +36,12 @@ class FriendService(
             .map { MemberDto.of(it) }
     }
 
+    @Transactional(readOnly = true)
     fun getPendingRequestsTo(member: Member): List<FriendRequest> {
         return friendRequestRepository.findAllByToMemberAndStatus(member, PENDING)
     }
 
+    @Transactional(readOnly = true)
     fun getPendingRequestsFrom(member: Member): List<FriendRequest> {
         return friendRequestRepository.findAllByFromMemberAndStatus(member, PENDING)
     }
@@ -189,11 +191,13 @@ class FriendService(
         return memberRepository.findById(login.id).orElseThrow()
     }
 
+    @Transactional(readOnly = true)
     fun checkVisibility(login: LoginMember?, target: Member, scheduleVisibilityCheck: Boolean = false) {
         if (!isVisible(login, target.id, scheduleVisibilityCheck = scheduleVisibilityCheck))
-            throw DutyparkAuthException("${target.name} Calendar is not visible to ${login?.name}")
+            throw AuthException("${target.name} Calendar is not visible to ${login?.name}")
     }
 
+    @Transactional(readOnly = true)
     fun isVisible(login: LoginMember?, targetId: Long?, scheduleVisibilityCheck: Boolean = false): Boolean {
         val targetMember = memberRepository.findById(targetId!!).orElseThrow()
         login ?: return targetMember.calendarVisibility == Visibility.PUBLIC
@@ -223,18 +227,18 @@ class FriendService(
     @Transactional(readOnly = true)
     fun availableScheduleVisibilities(loginMember: LoginMember?, member: Member): Set<Visibility> {
         if (loginMember == null)
-            return setOf(Visibility.PUBLIC)
+            return Visibility.publicOnly()
         if (loginMember.id == member.id) {
-            return Visibility.entries.toSet()
+            return Visibility.all();
         }
         val login = loginMemberToMember(loginMember)
         if (isFamily(member1 = login, member2 = member)) {
-            return setOf(Visibility.PUBLIC, Visibility.FRIENDS, Visibility.FAMILY)
+            return Visibility.family()
         }
         if (isFriend(login, member)) {
-            return setOf(Visibility.PUBLIC, Visibility.FRIENDS)
+            return Visibility.friends()
         }
-        return setOf(Visibility.PUBLIC)
+        return Visibility.publicOnly()
     }
 
     fun pinFriend(loginMember: LoginMember, friendId: Long) {

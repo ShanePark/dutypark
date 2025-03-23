@@ -36,7 +36,7 @@ class MemberServiceTest : DutyparkIntegrationTest() {
         // When
         val sort = Sort.by("name").ascending()
         val page = PageRequest.of(0, 10, sort)
-        val searchAll = memberService.searchMembers(page, "")
+        val searchAll = memberService.searchMembersToInviteTeam(page, "")
 
         // Then
         assertThat(searchAll.totalElements).isEqualTo(12)
@@ -46,7 +46,7 @@ class MemberServiceTest : DutyparkIntegrationTest() {
         assertThat(search(page, "han").content.map { it.id }).containsExactly(member1.id)
     }
 
-    private fun search(page: PageRequest, name: String) = memberService.searchMembers(page, name)
+    private fun search(page: PageRequest, name: String) = memberService.searchMembersToInviteTeam(page, name)
 
     @Test
     fun `update calendar visibility`() {

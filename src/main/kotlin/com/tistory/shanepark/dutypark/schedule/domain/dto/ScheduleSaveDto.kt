@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.schedule.domain.dto
 
+import com.tistory.shanepark.dutypark.common.exceptions.InvalidScheduleTimeRangeExeption
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import jakarta.validation.constraints.NotBlank
 import org.hibernate.validator.constraints.Length
@@ -22,7 +23,9 @@ data class ScheduleSaveDto(
 ) {
 
     init {
-        require(!startDateTime.isAfter(endDateTime)) { "StartDateTime must not be after EndDateTime" }
+        if (startDateTime.isAfter(endDateTime)) {
+            throw InvalidScheduleTimeRangeExeption()
+        }
     }
 
 }

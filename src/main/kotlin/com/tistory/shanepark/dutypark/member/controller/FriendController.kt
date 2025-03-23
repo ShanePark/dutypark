@@ -36,7 +36,6 @@ class FriendController(
     }
 
     @PostMapping("request/send/{toMemberId}")
-    @SlackNotification
     fun sendFriendRequest(
         @Login loginMember: LoginMember,
         @PathVariable toMemberId: Long
@@ -53,7 +52,6 @@ class FriendController(
     }
 
     @PostMapping("request/accept/{fromMemberId}")
-    @SlackNotification
     fun acceptFriendRequest(
         @Login loginMember: LoginMember,
         @PathVariable fromMemberId: Long

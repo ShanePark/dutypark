@@ -1,21 +1,21 @@
 package com.tistory.shanepark.dutypark.team.domain.dto
 
-import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
-import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.team.domain.entity.Team
 
 data class TeamDto(
     val id: Long,
     val name: String,
     val description: String?,
     val dutyTypes: List<DutyTypeDto>,
-    val members: List<MemberDto>,
+    val members: List<TeamMemberDto>,
     val createdDate: String,
     val lastModifiedDate: String,
-    val manager: String?,
+    val adminId: Long?,
+    val adminName: String?,
     val dutyBatchTemplate: DutyBatchTemplateDto?
 ) {
     override fun equals(other: Any?): Boolean {
@@ -54,14 +54,15 @@ data class TeamDto(
             )
 
             return TeamDto(
-                id = team.id!!,
+                id = team.id ?: -1L,
                 name = team.name,
                 description = team.description,
                 dutyTypes = sortedTypes,
-                members = members.map { MemberDto.ofSimple(it) },
+                members = members.map { TeamMemberDto.of(team, it) },
                 createdDate = team.createdDate.toString(),
                 lastModifiedDate = team.lastModifiedDate.toString(),
-                manager = team.manager?.name,
+                adminName = team.admin?.name,
+                adminId = team.admin?.id,
                 dutyBatchTemplate = team.dutyBatchTemplate?.let { DutyBatchTemplateDto(it) }
             )
         }

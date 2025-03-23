@@ -4,7 +4,7 @@ import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 
 data class MemberDto(
-    val id: Long,
+    val id: Long?,
     val name: String,
     val email: String? = null,
     val teamId: Long? = null,
@@ -29,7 +29,7 @@ data class MemberDto(
 
         fun ofSimple(member: Member): MemberDto {
             return MemberDto(
-                id = member.id!!,
+                id = member.id,
                 name = member.name,
                 email = member.email,
                 calendarVisibility = member.calendarVisibility,

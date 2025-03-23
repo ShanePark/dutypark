@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
-import com.tistory.shanepark.dutypark.common.exceptions.DutyparkAuthException
+import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
@@ -40,7 +40,7 @@ class RefreshTokenService(
         val refreshToken = refreshTokenRepository.findById(id).orElseThrow()
         if (!loginMember.isAdmin && refreshToken.member.id != loginMember.id) {
             log.warn("No authority to delete refresh token. loginMemberId:$loginMember, refreshTokenId:$id")
-            throw DutyparkAuthException("No authority to delete refresh token.")
+            throw AuthException("No authority to delete refresh token.")
         }
         refreshTokenRepository.delete(refreshToken)
     }

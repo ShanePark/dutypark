@@ -1,0 +1,368 @@
+<div id="app" class="card p-0 rounded shadow-sm my-team">
+  <div v-if="!team">
+    <div class="card-header bg-secondary text-white fw-bold mb-1 fs-2 text-center">내 팀</div>
+    <div class="justify-content-center align-items-center p-5 text-muted fw-bold text-align-center">
+      <p class="fs-1 ms-2"><i class="bi bi-building-fill-slash"></i> 어느 팀에도 속해있지 않습니다.</p>
+      <p class="fs-1 ms-2">팀 관리자에게 가입을 요청해주세요.</p>
+    </div>
+  </div>
+  <template v-if="team">
+    <div class="card-header text-center bg-secondary text-white fw-bold mb-1 fs-2" v-text="team.name"></div>
+    <!--    upper buttons-->
+    <div class="d-flex justify-content-between align-items-center mb-3 p-1">
+      <button v-on:click="goToToday" class="fs-2 btn btn-outline-primary me-2">오늘</button>
+      <button v-on:click="addMonth(-1)" class="fs-2 btn btn-outline-dark px-5">&lt;</button>
+      <h2 class="fs-2 fw-bold mb-0 text-center flex-grow-1" v-text="year + '년 '+ month +'월'"></h2>
+      <button v-on:click="addMonth(1)" class="fs-2 btn btn-outline-dark px-5">&gt;</button>
+      <a :href="'/team/manage/'+team.id" v-if="isTeamManager" class="btn btn-outline-dark fs-2 ms-2">
+        <i class="bi bi-gear-fill"></i> 팀 관리
+      </a>
+    </div>
+
+    <!--  Calendar-->
+    <div class="row row-cols-7 fw-bold mx-0 fs-2">
+      <div v-for="(day, index) in weekDays"
+           class="col border border-dark border-2 text-center"
+           :class="{ red: index === 0, blue: index === 6 }"
+           v-text="day">
+      </div>
+      <div v-for="(teamDay, index) in teamDays"
+           @click="selectDay(teamDay)"
+           class="col small p-2 border border-dark cursor-pointer hover-bg-light"
+           :class="['BACKGROUND-' + myDuty[index]?.dutyColor, {'today': isToday(teamDay), 'selected': isSelectedDay(teamDay) }]"
+      >
+        <div :class=" {'red': index%7==0, 'blue': index%7==6, 'opacity-50': teamDay.month!=month }">
+          <div class="fw-bold day">{{teamDay.day}}
+          </div>
+          <div v-for="schedule in teamSchedules[index]" class="small text-truncate text-muted">
+            <span v-text="schedule.content"></span>
+            <small v-if="schedule.totalDays > 1">({{schedule.daysFromStart}}/{{schedule.totalDays}})</small>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- End Calendar-->
+
+    <!-- Team Schedule -->
+    <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
+      <div class="fs-2 fw-bold">
+        {{ selDay.year }}년 {{ selDay.month }}월 {{ selDay.day }}일
+      </div>
+      <button class="btn btn-outline-success fs-3" @click="newScheduleForm()" v-if="isTeamManager">
+        <i class="bi bi-calendar-plus"></i> 팀 일정 추가
+      </button>
+    </div>
+
+    <div class="card p-3 mb-4 fs-2" v-if="teamSchedules[selDay.index]?.length">
+      <div v-for="schedule in teamSchedules[selDay.index]" :key="schedule.id" class="border-bottom py-3">
+        <div class="d-flex justify-content-between align-items-start">
+          <div class="flex-grow-1">
+            <div class="fw-bold mb-1">
+              {{ schedule.content }}
+              <small>(by: <strong>{{ schedule.createMember }}</strong>)</small>
+            </div>
+            <div class="mb-1 text-muted" v-if="schedule.description">{{ schedule.description }}</div>
+            <div class="small text-muted">
+            </div>
+          </div>
+          <div class="ms-3" v-if="isTeamManager">
+            <button class="btn btn-sm btn-outline-primary me-1 fs-2" @click="editSchedule(schedule)">
+              <i class="bi bi-pencil-square"></i> 수정
+            </button>
+            <button class="btn btn-sm btn-outline-danger fs-2" @click="deleteSchedule(schedule.id)">
+              <i class="bi bi-trash"></i> 삭제
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!--    End Team Schedule -->
+
+    <!--  shift-->
+    <div class="mt-2 p-3" v-if="shift.length > 0">
+      <template v-for="group in shift"
+                v-if="group.members.length>0">
+        <div
+            :class="{'duty-type border rounded p-0 mb-4 overflow-hidden': true, 'border-dark border-2': group.isMyGroup}"
+            v-if="group.members.length > 0">
+          <div
+              :class="['BACKGROUND-' + group.dutyType.color, 'p-3', 'd-flex', 'justify-content-between', 'align-items-center']">
+            <span class="fw-bolder fs-3" v-text="group.dutyType.name"></span>
+            <span class="badge bg-light text-dark fs-3">{{ group.members.length }}</span>
+          </div>
+          <div class="m-0 row p-3">
+            <div v-for="member in group.members" :key="member.id" class="col-3"
+                 @click.prevent="moveTo(member.id)">
+              <div
+                  class="member-card p-3 border rounded shadow-sm text-center cursor-pointer fs-3"
+                  :class="{'border-dark border-3': member.id === loginMemberId}"
+              >
+                <i class="bi bi-person-fill mb-2"></i>
+                <span v-text="member.name"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+    <!--  End Shift-->
+  </template>
+
+  <!-- Schedule Modal -->
+  <div class="modal fade" id="scheduleModal" tabindex="-1" aria-labelledby="scheduleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg fs-2">
+      <div class="modal-content p-3">
+        <div class="modal-header">
+          <h5 class="modal-title fs-2" id="scheduleModalLabel">팀 일정 저장</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">제목(필수)</label>
+            <input v-model="scheduleForm.content" type="text" class="form-control" maxlength="30" required/>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">상세(옵션)</label>
+            <textarea v-model="scheduleForm.description" class="form-control" rows="4" maxlength="4096"></textarea>
+          </div>
+          <div class="row">
+            <div class="col">
+              <label class="form-label">시작일</label>
+              <input v-model="scheduleForm.startDate" type="date" class="form-control" readonly/>
+            </div>
+            <div class="col">
+              <label class="form-label">종료일</label>
+              <input v-model="scheduleForm.endDate" type="date" class="form-control"/>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary fs-2" @click="saveSchedule">저장</button>
+          <button class="btn btn-secondary fs-2" data-bs-dismiss="modal">닫기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- End Schedule Modal -->
+</div>
+
+<script>
+  const today = new Date();
+  const app = new Vue({
+    el: '#app',
+    data: {
+      loginMemberId: parseInt("[[${loginMember?.id}]]"),
+      today: {
+        year: today.getFullYear(),
+        month: today.getMonth() + 1,
+        day: today.getDate()
+      },
+      selDay: {
+        year: today.getFullYear(),
+        month: today.getMonth() + 1,
+        day: today.getDate(),
+        index: -99,
+      },
+      year: today.getFullYear(),
+      month: today.getMonth() + 1,
+      day: today.getDate(),
+      teamDays: [],
+      weekDays: ['일', '월', '화', '수', '목', '금', '토'],
+      team: {
+        name: ''
+      },
+      shift: [],
+      myDuty: [],
+      teamSchedules: [],
+      isTeamManager: false,
+      scheduleForm: {
+        content: '',
+        description: '',
+        startDate: '',
+        endDate: '',
+      },
+    },
+    mounted() {
+      this.loadMyTeam();
+      this.loadShift();
+      this.loadMyDuty();
+    },
+    computed: {},
+    watch: {
+      'selDay': function () {
+        app.findSelDayIndex();
+      }
+    },
+    methods: {
+      loadMyTeam() {
+        fetch('/api/teams/my?year=' + this.year + '&month=' + this.month)
+          .then(response => response.json())
+          .then(data => {
+            app.team = data.team;
+            app.teamDays = data.teamDays;
+            app.isTeamManager = data.isTeamManager;
+            app.loadTeamSchedules(app.team.id);
+            app.findSelDayIndex();
+          })
+          .catch(error => {
+            console.error('Error:', error);
+          });
+      },
+      addMonth(month) {
+        const newDate = new Date(app.year, app.month - 1 + month);
+        app.year = newDate.getFullYear();
+        app.month = newDate.getMonth() + 1;
+        app.loadMyTeam();
+        app.loadMyDuty();
+      },
+      isToday(teamDay) {
+        return teamDay.year === this.today.year &&
+          teamDay.month === this.today.month &&
+          teamDay.day === this.today.day;
+      },
+      loadShift() {
+        fetch(`/api/teams/shift?year=${this.selDay.year}&month=${this.selDay.month}&day=${this.selDay.day}`)
+          .then(response => response.json())
+          .then(data => {
+            app.shift = data;
+            app.shift.forEach(group => {
+              group.isMyGroup = group.members.some(member => member.id === app.loginMemberId);
+            });
+          })
+          .catch(error => {
+            console.error('Error:', error);
+          });
+      },
+      selectDay(teamDay) {
+        app.selDay = teamDay;
+        app.loadShift();
+      },
+      isSelectedDay(teamDay) {
+        return teamDay.year === this.selDay.year &&
+          teamDay.month === this.selDay.month &&
+          teamDay.day === this.selDay.day;
+      },
+      moveTo(id) {
+        location.href = "/duty/" + id;
+      },
+      goToToday() {
+        this.year = this.today.year;
+        this.month = this.today.month;
+        this.selDay = {...this.today};
+        this.loadMyTeam();
+        this.loadShift();
+      },
+      loadMyDuty() {
+        fetch(`/api/duty?year=${this.year}&month=${this.month}&memberId=${this.loginMemberId}`)
+          .then(response => response.json())
+          .then(data => {
+            app.myDuty = data;
+          })
+          .catch(error => {
+            console.error('Error:', error);
+          });
+      },
+      saveSchedule() {
+        const form = app.scheduleForm
+        if (!isValidContent(form.content)) {
+          return;
+        }
+
+        const payload = {
+          teamId: this.team.id,
+          id: form.id,
+          content: form.content,
+          description: form.description,
+          startDateTime: form.startDate + 'T00:00:00',
+          endDateTime: form.endDate + 'T00:00:00',
+        };
+
+        fetch('/api/teams/schedules', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        }).then(res => {
+          if (!res.ok) throw new Error('일정 저장 실패');
+          return res.json();
+        }).then(data => {
+          app.loadTeamSchedules(app.team.id);
+          const modal = bootstrap.Modal.getInstance(document.getElementById('scheduleModal'));
+          modal.hide();
+        }).catch(err => {
+          console.error(err);
+          alert('일정 저장 실패');
+        });
+      },
+      resetScheduleForm() {
+        const selDate = formatDate(app.selDay.year, app.selDay.month, app.selDay.day);
+        console.log(selDate);
+        app.scheduleForm = {
+          id: null,
+          content: '',
+          description: '',
+          startDate: selDate,
+          endDate: selDate,
+        };
+      },
+      newScheduleForm() {
+        app.resetScheduleForm();
+        const modal = new bootstrap.Modal(document.getElementById('scheduleModal'));
+        modal.show();
+      },
+      loadTeamSchedules(teamId) {
+        fetch(`/api/teams/schedules?year=${this.selDay.year}&month=${this.selDay.month}&teamId=${teamId}`)
+          .then(response => response.json())
+          .then(data => {
+            app.teamSchedules = data;
+          })
+          .catch(error => {
+            console.error('Error:', error);
+          });
+      },
+      findSelDayIndex() {
+        const index = this.teamDays.findIndex(day => {
+          return day.year === this.selDay.year &&
+            day.month === this.selDay.month &&
+            day.day === this.selDay.day;
+        });
+        this.selDay.index = index;
+      },
+      editSchedule(schedule) {
+        this.scheduleForm = {
+          id: schedule.id,
+          content: schedule.content,
+          description: schedule.description,
+          startDate: schedule.startDateTime.slice(0, 10),
+          endDate: schedule.endDateTime.slice(0, 10),
+        };
+        const modal = new bootstrap.Modal(document.getElementById('scheduleModal'));
+        modal.show();
+      },
+      deleteSchedule(id) {
+        Swal.fire({
+          title: '정말 삭제하시겠습니까?',
+          text: "삭제된 일정은 복구할 수 없습니다.",
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#d33',
+          confirmButtonText: '삭제',
+          cancelButtonText: '취소',
+        }).then((result) => {
+          if (result.isConfirmed) {
+            fetch(`/api/teams/schedules/${id}`, {
+              method: 'DELETE'
+            }).then(res => {
+              if (!res.ok) throw new Error('삭제 실패');
+              this.loadTeamSchedules(this.team.id);
+            }).catch(err => {
+              console.error(err);
+              alert('삭제 중 오류가 발생했습니다.');
+            });
+          }
+        });
+      },
+    },
+  });
+</script>

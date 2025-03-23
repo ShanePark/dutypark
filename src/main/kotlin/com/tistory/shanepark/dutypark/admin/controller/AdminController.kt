@@ -25,16 +25,6 @@ class AdminController(
         return refreshTokenService.findAllWithMemberOrderByLastUsedDesc()
     }
 
-    @GetMapping("/members")
-    fun members(
-        @PageableDefault(page = 0, size = 10)
-        @SortDefault(sort = ["name"], direction = Sort.Direction.ASC)
-        page: Pageable,
-        @RequestParam(required = false, defaultValue = "") name: String,
-    ): PageResponse<MemberDto> {
-        return PageResponse(memberService.searchMembers(page, name))
-    }
-
     @GetMapping("/members-all")
     fun findAllMembers(): List<MemberDto> {
         return memberService.findAll()

@@ -19,6 +19,7 @@ class FriendRelation(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
+        protected set
 
     @Column(name = "is_family")
     var isFamily: Boolean = false
