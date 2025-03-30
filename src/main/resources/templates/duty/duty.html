@@ -751,6 +751,7 @@
                         this.loadDuties();
                         this.loadSchedule();
                         this.loadHolidays();
+                        this.loadDDays();
                         const currentUrl = new URL(window.location.href);
                         currentUrl.searchParams.set('year', app.year);
                         currentUrl.searchParams.set('month', app.month);
