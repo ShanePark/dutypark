@@ -1752,15 +1752,19 @@
     event.stopPropagation();
     const clickedElement = event.target;
     const content = clickedElement.getAttribute('data-content');
-    const description = clickedElement.getAttribute('data-description');
+    const description = clickedElement.getAttribute('data-description').replaceAll('\n', '<br/>');
     Swal.fire({
       title: content,
-      text: description,
+      html: description,
       showCloseButton: true,
       showCancelButton: false,
       focusConfirm: false,
       confirmButtonText: '확인',
       confirmButtonColor: '#3085d6',
+      customClass: {
+        title: 'text-align-left',
+        htmlContainer: 'text-align-left'
+      }
     });
   }
 
