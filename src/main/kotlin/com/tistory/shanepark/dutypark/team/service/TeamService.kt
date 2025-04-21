@@ -19,7 +19,6 @@ import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
-import java.time.YearMonth
 
 @Service
 @Transactional
@@ -181,14 +180,14 @@ class TeamService(
         return dutyTypeMembers
     }
 
-    fun myTeamSummary(loginMember: LoginMember, yearMonth: YearMonth): MyTeamSummary {
+    fun myTeamSummary(loginMember: LoginMember, year: Int, month: Int): MyTeamSummary {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
-        val team = member.team ?: return MyTeamSummary(yearMonth = yearMonth)
+        val team = member.team ?: return MyTeamSummary(year = year, month = month)
         val teamDto = TeamDto.ofSimple(team)
-        val calendarView = CalendarView(yearMonth)
+        val calendarView = CalendarView(year = year, month = month)
 
         val days = mutableListOf<TeamDay>()
-        for (cur in calendarView.getRangeDate()) {
+        for (cur in calendarView.dates) {
             val teamDay = TeamDay(
                 year = cur.year,
                 month = cur.monthValue,
@@ -198,7 +197,8 @@ class TeamService(
         }
 
         return MyTeamSummary(
-            yearMonth = yearMonth,
+            year = year,
+            month = month,
             team = teamDto,
             teamDays = days,
             isTeamManager = team.isManager(login = loginMember)

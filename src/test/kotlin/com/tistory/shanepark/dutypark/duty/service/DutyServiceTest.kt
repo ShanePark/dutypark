@@ -13,7 +13,6 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
-import java.time.YearMonth
 
 internal class DutyServiceTest : DutyparkIntegrationTest() {
 
@@ -192,7 +191,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
         )
 
         // When
-        val duties = dutyService.getDuties(member.id!!, YearMonth.of(2023, 4), loginMember(member))
+        val duties = dutyService.getDuties(member.id!!, 2023, 4, loginMember(member))
 
         // Then
         assertThat(duties).hasSize(42)
@@ -243,7 +242,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
 
         // Then
         assertThrows<AuthException> {
-            dutyService.getDuties(member.id!!, YearMonth.of(2023, 4), loginMember(member2))
+            dutyService.getDuties(member.id!!, 2023, 4, loginMember(member2))
         }
     }
 
@@ -278,7 +277,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
         friendService.acceptFriendRequest(loginMember(target), login.id!!)
 
         // When
-        val duties = dutyService.getDuties(target.id!!, YearMonth.of(2023, 4), loginMember(login))
+        val duties = dutyService.getDuties(target.id!!, 2023, 4, loginMember(login))
 
         // Then
         assertThat(duties).hasSize(42)
@@ -299,7 +298,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
 
         // Then
         assertThrows<AuthException> {
-            dutyService.getDuties(target.id!!, YearMonth.of(2023, 4), loginMember(login))
+            dutyService.getDuties(target.id!!, 2023, 4, loginMember(login))
         }
     }
 
@@ -317,7 +316,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
         updateVisibility(target, Visibility.PRIVATE)
 
         // Then does not throw exception
-        dutyService.getDuties(target.id!!, YearMonth.of(2023, 4), loginMember(login))
+        dutyService.getDuties(target.id!!, 2023, 4, loginMember(login))
     }
 
     @Test

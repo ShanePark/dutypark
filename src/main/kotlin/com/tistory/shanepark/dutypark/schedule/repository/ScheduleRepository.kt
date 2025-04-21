@@ -73,12 +73,8 @@ interface ScheduleRepository : JpaRepository<Schedule, UUID> {
                 " JOIN FETCH s.member m" +
                 " JOIN FETCH s.tags t" +
                 " JOIN FETCH t.member tm" +
-                " WHERE tm = :member AND (" +
-                "(s.startDateTime < :start AND s.endDateTime BETWEEN :start AND :end) OR " +
-                "(s.startDateTime BETWEEN :start AND :end) OR " +
-                "(s.startDateTime BETWEEN :start AND :end AND s.endDateTime > :end) OR " +
-                "(s.startDateTime < :start AND s.endDateTime > :end)" +
-                ")" +
+                " WHERE tm = :member " +
+                "AND (s.startDateTime <= :end AND s.endDateTime >= :start)" +
                 "AND s.visibility IN (:visibilities)"
     )
     fun findTaggedSchedulesOfRange(

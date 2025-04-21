@@ -4,73 +4,38 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
 
-class CalendarView(yearMonth: YearMonth) {
-    constructor(year: Int, month: Int) : this(YearMonth.of(year, month))
+class CalendarView(val year: Int, val month: Int) {
+    val yearMonth: YearMonth = YearMonth.of(year, month)
 
-    val prevMonth: YearMonth = yearMonth.minusMonths(1)
-    val paddingBefore = yearMonth.atDay(1).dayOfWeek.value % 7
+    private val paddingBefore: Int = yearMonth.atDay(1).dayOfWeek.value % 7
+    private val paddingAfter: Int = 7 - (yearMonth.atEndOfMonth().dayOfWeek.value % 7 + 1)
+    val size: Int = paddingBefore + yearMonth.lengthOfMonth() + paddingAfter
 
-    val currentMonth: YearMonth = yearMonth
-    val lengthOfMonth = yearMonth.lengthOfMonth()
+    val startDate: LocalDate = yearMonth.atDay(1).minusDays(paddingBefore.toLong())
+    val endDate: LocalDate = yearMonth.atEndOfMonth().plusDays(paddingAfter.toLong())
 
-    val nextMonth: YearMonth = yearMonth.plusMonths(1)
-    val paddingAfter = 7 - (yearMonth.atDay(lengthOfMonth).dayOfWeek.value % 7 + 1)
+    val rangeFromDateTime: LocalDateTime = startDate.atStartOfDay()
+    val rangeUntilDateTime: LocalDateTime = endDate.atTime(23, 59, 59)
 
-    val size = paddingBefore + lengthOfMonth + paddingAfter
+    val dates: List<LocalDate> by lazy {
+        (0 until size).map { startDate.plusDays(it.toLong()) }
+    }
 
-    val rangeFromDate: LocalDate = calcRangeFrom()
-    val rangeFromDateTime: LocalDateTime = rangeFromDate.atStartOfDay()
-    val rangeUntilDateTime: LocalDateTime = calcRangeEnd()
-    val rangeUntilDate: LocalDate = rangeUntilDateTime.toLocalDate()
+    fun isInRange(date: LocalDate): Boolean {
+        return !date.isBefore(startDate) && !date.isAfter(endDate)
+    }
 
-    private fun calcRangeFrom(): LocalDate {
-        if (paddingBefore == 0) {
-            return LocalDate.of(currentMonth.year, currentMonth.monthValue, 1)
+    fun getIndex(date: LocalDate): Int {
+        dates.forEachIndexed { index, d ->
+            if (d == date) {
+                return index
+            }
         }
-        return LocalDate.of(prevMonth.year, prevMonth.monthValue, prevMonth.lengthOfMonth() - paddingBefore + 1)
-    }
-
-    private fun calcRangeEnd(): LocalDateTime {
-        if (paddingAfter == 0) {
-            return LocalDate.of(currentMonth.year, currentMonth.monthValue, lengthOfMonth).atTime(23, 59, 59)
-        }
-        return LocalDate.of(nextMonth.year, nextMonth.monthValue, paddingAfter).atTime(23, 59, 59)
-    }
-
-    fun getRangeYears(): Set<Int> {
-        return setOf(prevMonth.year, currentMonth.year, nextMonth.year)
-    }
-
-    fun isInRange(holidayDate: LocalDate): Boolean {
-        return !holidayDate.isBefore(rangeFromDate) && !holidayDate.isAfter(rangeUntilDate)
-    }
-
-    fun getIndex(target: LocalDate): Int {
-        if (!isInRange(target)) {
-            return -1
-        }
-        if (target.month == prevMonth.month) {
-            return target.dayOfMonth - rangeFromDateTime.dayOfMonth
-        }
-        if (target.month == currentMonth.month) {
-            return paddingBefore + (target.dayOfMonth - 1)
-        }
-        return paddingBefore + lengthOfMonth + target.dayOfMonth - 1
-    }
-
-    fun getRangeDate(): Sequence<LocalDate> {
-        return generateSequence(rangeFromDate) { it.plusDays(1) }
-            .takeWhile { it <= rangeUntilDate }
-    }
-
-    fun getCalendarDays(): List<CalendarDay> {
-        return getRangeDate()
-            .map { CalendarDay(year = it.year, month = it.monthValue, day = it.dayOfMonth) }
-            .toList()
+        throw IndexOutOfBoundsException("Date $date not found in calendar view")
     }
 
     fun validDays(startDate: LocalDate, endDate: LocalDate): List<LocalDate> {
-        return getRangeDate()
+        return dates
             .filter { !it.isBefore(startDate) && !it.isAfter(endDate) }
             .toList()
     }
@@ -78,5 +43,10 @@ class CalendarView(yearMonth: YearMonth) {
     fun <T> makeCalendarArray(): Array<List<T>> {
         return Array(size) { emptyList() }
     }
+
+    override fun toString(): String {
+        return "CalendarView(year=$year, month=$month)"
+    }
+
 
 }

@@ -237,20 +237,18 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         scheduleRepository.saveAll(listOf(schedule1, schedule2, schedule3))
 
         // When
-        val yearMonth = YearMonth.of(2023, 4)
         val result =
-            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member), member.id!!, yearMonth)
+            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member), member.id!!, 2023, 4)
 
         // Then
-        val calendarView = CalendarView(yearMonth)
+        val calendarView = CalendarView(2023, 4)
         assertThat(result).hasSize(calendarView.size)
-        val paddingBefore = calendarView.paddingBefore
-        assertThat(result[paddingBefore + 9 - 1]).hasSize(0)
-        assertThat(result[paddingBefore + 10 - 1]).hasSize(3)
-        assertThat(result[paddingBefore + 11 - 1]).hasSize(2)
-        assertThat(result[paddingBefore + 12 - 1]).hasSize(2)
+        assertThat(result[6 + 9 - 1]).hasSize(0)
+        assertThat(result[6 + 10 - 1]).hasSize(3)
+        assertThat(result[6 + 11 - 1]).hasSize(2)
+        assertThat(result[6 + 12 - 1]).hasSize(2)
 
-        val schedules = result[paddingBefore + 12 - 1]
+        val schedules = result[6 + 12 - 1]
         assertThat(schedules[0].position).isLessThan(schedules[1].position)
 
     }
@@ -276,14 +274,13 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         scheduleRepository.saveAll(listOf(schedule1, schedule2))
 
         // When
-        val yearMonth = YearMonth.of(2023, 4)
         val result =
-            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member), member.id!!, yearMonth)
+            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member), member.id!!, 2023, 4)
 
         // Then
-        val calendarView = CalendarView(yearMonth)
+        val calendarView = CalendarView(2023, 4)
         assertThat(result).hasSize(calendarView.size)
-        val paddingBefore = calendarView.paddingBefore
+        val paddingBefore = 6
 
         val lastDayOfMarch = result[paddingBefore - 1]
         assertThat(lastDayOfMarch).hasSize(1)
@@ -309,7 +306,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
             assertThat(result[paddingBefore + i - 1]).isEmpty()
         }
 
-        val mayFirst = result[calendarView.paddingBefore + calendarView.lengthOfMonth]
+        val mayFirst = result[paddingBefore + calendarView.yearMonth.lengthOfMonth()]
         assertThat(mayFirst).isEmpty()
     }
 
@@ -317,6 +314,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
     fun `find Schedules Over year`() {
         // given
         val yearMonth = YearMonth.of(2023, 12)
+        val paddingBefore = 5
 
         val member = TestData.member
         val schedule1 = Schedule(
@@ -337,13 +335,13 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
         // When
         val result =
-            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member), member.id!!, yearMonth)
+            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member), member.id!!, 2023, 12)
 
         // Then
-        val calendarView = CalendarView(yearMonth)
+        val calendarView = CalendarView(2023, 12)
         assertThat(result).hasSize(calendarView.size)
-        assertThat(result[calendarView.paddingBefore - 1 + 31][0].content).isEqualTo("schedule1")
-        assertThat(result[calendarView.paddingBefore - 1 + 31 + 1][0].content).isEqualTo("schedule2")
+        assertThat(result[paddingBefore - 1 + 31][0].content).isEqualTo("schedule1")
+        assertThat(result[paddingBefore - 1 + 31 + 1][0].content).isEqualTo("schedule2")
     }
 
     @Test
@@ -625,21 +623,17 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         scheduleService.tagFriend(loginMember, schedule.id, taggedPerson.id!!)
 
         // When
-        val yearMonth = YearMonth.of(2023, 4)
         val taggedPersonSchedules =
-            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(owner), taggedPerson.id!!, yearMonth)
+            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(owner), taggedPerson.id!!, 2023, 4)
         val ownerSchedules =
-            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(owner), owner.id!!, yearMonth)
+            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(owner), owner.id!!, 2023, 4)
 
         // Then
-        val calendarView = CalendarView(yearMonth)
-        val paddingBefore = calendarView.paddingBefore
-
-        val scheduleForOwner = ownerSchedules[paddingBefore + 10 - 1]
+        val scheduleForOwner = ownerSchedules[15]
         assertThat(scheduleForOwner).hasSize(1)
         assertThat(scheduleForOwner[0].isTagged).isFalse
 
-        val scheduleForTaggedPerson = taggedPersonSchedules[paddingBefore + 10 - 1]
+        val scheduleForTaggedPerson = taggedPersonSchedules[15]
         assertThat(scheduleForTaggedPerson).hasSize(1)
         assertThat(scheduleForTaggedPerson[0].isTagged).isTrue
 
@@ -675,14 +669,11 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         scheduleService.tagFriend(loginMember2, member2Schedule.id, member1.id!!)
 
         // When
-        val yearMonth = YearMonth.of(2023, 4)
         val ownerSchedules =
-            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member1), member1.id!!, yearMonth)
+            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member1), member1.id!!, 2023, 4)
 
         // Then
-        val calendarView = CalendarView(yearMonth)
-
-        val scheduleForOwner = ownerSchedules[calendarView.paddingBefore + 10 - 1]
+        val scheduleForOwner = ownerSchedules[15]
         assertThat(scheduleForOwner).hasSize(2)
 
         val member1ScheduleDto = scheduleForOwner[0]
@@ -735,14 +726,11 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         scheduleService.tagFriend(loginMember2, tagged.id, member1.id!!)
 
         // When
-        val yearMonth = YearMonth.of(2023, 4)
         val ownerSchedules =
-            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member1), member1.id!!, yearMonth)
+            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member1), member1.id!!, 2023, 4)
 
         // Then
-        val calendarView = CalendarView(yearMonth)
-
-        val scheduleForOwner = ownerSchedules[calendarView.paddingBefore + dayOfMonth - 1]
+        val scheduleForOwner = ownerSchedules[6 + dayOfMonth - 1]
         assertThat(scheduleForOwner).hasSize(3)
         val own1Index = findIndex(scheduleForOwner, own1.id)
         val own2Index = findIndex(scheduleForOwner, own2.id)
@@ -782,13 +770,11 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
         // When
         scheduleService.tagFriend(loginMember2, tagged.id, member1.id!!)
-        val yearMonth = YearMonth.of(2023, 4)
         val ownerSchedules =
-            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member1), member1.id!!, yearMonth)
+            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member1), member1.id!!, 2023, 4)
 
         // Then
-        val calendarView = CalendarView(yearMonth)
-        val schedules = ownerSchedules[calendarView.paddingBefore + dayOfMonth - 1]
+        val schedules = ownerSchedules[6 + dayOfMonth - 1]
         assertThat(schedules).isNotEmpty
     }
 
@@ -820,14 +806,10 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         )
         makeThemFriend(member1, member2)
 
-        // When
-        val yearMonth = YearMonth.of(2023, 4)
-
         // Then
         val schedules =
-            scheduleService.findSchedulesByYearAndMonth(loginMember(member1), member2.id!!, yearMonth)
-        val calendarView = CalendarView(yearMonth)
-        val scheduleOfDay = schedules[calendarView.paddingBefore + dayOfMonth - 1]
+            scheduleService.findSchedulesByYearAndMonth(loginMember(member1), member2.id!!, 2023, 4)
+        val scheduleOfDay = schedules[6 + dayOfMonth - 1]
         assertThat(scheduleOfDay).hasSize(1)
     }
 
@@ -846,7 +828,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
         // Then
         assertThrows<AuthException> {
-            scheduleService.findSchedulesByYearAndMonth(loginMember(login), target.id!!, YearMonth.of(2023, 4))
+            scheduleService.findSchedulesByYearAndMonth(loginMember(login), target.id!!, 2023, 4)
         }
     }
 
@@ -861,7 +843,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         makeThemFriend(target, member2)
 
         // When
-        val result = scheduleService.findSchedulesByYearAndMonth(loginMember(login), target.id!!, YearMonth.of(2023, 4))
+        val result = scheduleService.findSchedulesByYearAndMonth(loginMember(login), target.id!!, 2023, 4)
 
         // Then
         assertThat(result).isNotEmpty
@@ -877,7 +859,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
         // Then
         assertThrows<AuthException> {
-            scheduleService.findSchedulesByYearAndMonth(loginMember(login), target.id!!, YearMonth.of(2023, 4))
+            scheduleService.findSchedulesByYearAndMonth(loginMember(login), target.id!!, 2023, 4)
         }
     }
 
@@ -888,7 +870,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         updateVisibility(target, Visibility.PUBLIC)
 
         // When
-        val result = scheduleService.findSchedulesByYearAndMonth(null, target.id!!, YearMonth.of(2023, 4))
+        val result = scheduleService.findSchedulesByYearAndMonth(null, target.id!!, 2023, 4)
 
         // Then
         assertThat(result).isNotEmpty
@@ -972,11 +954,11 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         val public = makeSchedule(target, Visibility.PUBLIC, dateTime)
 
         // When
-        val result = scheduleService.findSchedulesByYearAndMonth(null, target.id!!, YearMonth.of(2024, 3))
+        val result = scheduleService.findSchedulesByYearAndMonth(null, target.id!!, 2024, 3)
 
         // Then
-        val calendarView = CalendarView(YearMonth.of(2024, 3))
-        val index = calendarView.getIndex(target = dateTime.toLocalDate())
+        val calendarView = CalendarView(2024, 3)
+        val index = calendarView.getIndex(date = dateTime.toLocalDate())
         val schedulesIds = result[index].map { it.id }.toList()
         assertThat(schedulesIds).contains(public.id)
         assertThat(schedulesIds).doesNotContain(friends.id)
@@ -999,11 +981,11 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
         // When
         val result =
-            scheduleService.findSchedulesByYearAndMonth(loginMember(friend), target.id!!, YearMonth.of(2024, 3))
+            scheduleService.findSchedulesByYearAndMonth(loginMember(friend), target.id!!, 2024, 3)
 
         // Then
-        val calendarView = CalendarView(YearMonth.of(2024, 3))
-        val index = calendarView.getIndex(target = dateTime.toLocalDate())
+        val calendarView = CalendarView(2024, 3)
+        val index = calendarView.getIndex(date = dateTime.toLocalDate())
         val schedulesIds = result[index].map { it.id }.toList()
         assertThat(schedulesIds).contains(public.id)
         assertThat(schedulesIds).contains(friends.id)
@@ -1023,11 +1005,11 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
 
         // When
         val result =
-            scheduleService.findSchedulesByYearAndMonth(loginMember(target), target.id!!, YearMonth.of(2024, 3))
+            scheduleService.findSchedulesByYearAndMonth(loginMember(target), target.id!!, 2024, 3)
 
         // Then
-        val calendarView = CalendarView(YearMonth.of(2024, 3))
-        val index = calendarView.getIndex(target = dateTime.toLocalDate())
+        val calendarView = CalendarView(2024, 3)
+        val index = calendarView.getIndex(date = dateTime.toLocalDate())
         val schedulesIds = result[index].map { it.id }.toList()
         assertThat(schedulesIds).contains(public.id)
         assertThat(schedulesIds).contains(friends.id)
@@ -1048,13 +1030,13 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         scheduleService.tagFriend(loginMember(friend), friendsSchedule.id, target.id!!)
 
         // When
-        val notLoginResult = scheduleService.findSchedulesByYearAndMonth(null, target.id!!, YearMonth.of(2024, 3))
+        val notLoginResult = scheduleService.findSchedulesByYearAndMonth(null, target.id!!, 2024, 3)
         val friendResult =
-            scheduleService.findSchedulesByYearAndMonth(loginMember(friend), target.id!!, YearMonth.of(2024, 3))
+            scheduleService.findSchedulesByYearAndMonth(loginMember(friend), target.id!!, 2024, 3)
 
         // Then
-        val calendarView = CalendarView(YearMonth.of(2024, 3))
-        val index = calendarView.getIndex(target = dateTime.toLocalDate())
+        val calendarView = CalendarView(2024, 3)
+        val index = calendarView.getIndex(date = dateTime.toLocalDate())
 
         assertThat(notLoginResult[index].map { it.id }.toList()).doesNotContain(friendsSchedule.id)
         assertThat(friendResult[index].map { it.id }.toList()).contains(friendsSchedule.id)
@@ -1074,11 +1056,11 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         scheduleService.tagFriend(loginMember(friend), publicSchedule.id, target.id!!)
 
         // When
-        val notLoginResult = scheduleService.findSchedulesByYearAndMonth(null, target.id!!, YearMonth.of(2024, 3))
+        val notLoginResult = scheduleService.findSchedulesByYearAndMonth(null, target.id!!, 2024, 3)
 
         // Then
-        val calendarView = CalendarView(YearMonth.of(2024, 3))
-        val index = calendarView.getIndex(target = dateTime.toLocalDate())
+        val calendarView = CalendarView(2024, 3)
+        val index = calendarView.getIndex(date = dateTime.toLocalDate())
 
         assertThat(notLoginResult[index].map { it.id }.toList()).contains(publicSchedule.id)
     }

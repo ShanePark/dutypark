@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.schedule.domain.dto
 
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.team.domain.entity.TeamSchedule
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 import java.util.*
@@ -22,6 +23,8 @@ data class TeamScheduleDto(
     val createMember: String,
     val updateMember: String,
 ) {
+    val curDate: LocalDate = LocalDate.of(year, month, dayOfMonth)
+
     companion object {
         fun ofSimple(schedule: TeamSchedule): TeamScheduleDto {
             return TeamScheduleDto(

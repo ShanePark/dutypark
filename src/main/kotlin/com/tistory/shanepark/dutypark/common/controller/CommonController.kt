@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.common.controller
 
-import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarDay
+import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import org.springframework.cache.annotation.Cacheable
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -18,7 +18,8 @@ class CommonController {
         @RequestParam year: Int,
         @RequestParam month: Int
     ): List<CalendarDay> {
-        return CalendarView(year = year, month = month).getCalendarDays()
+        val calendarView = CalendarView(year = year, month = month)
+        return CalendarDay.of(calendarView)
     }
 
 }

@@ -10,7 +10,6 @@ import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
-import java.time.YearMonth
 
 @RestController
 @RequestMapping("/api/duty")
@@ -29,7 +28,8 @@ class DutyController(
         return dutyService.getDuties(
             loginMember = loginMember,
             memberId = memberId,
-            yearMonth = YearMonth.of(year, month)
+            year = year,
+            month = month
         )
     }
 

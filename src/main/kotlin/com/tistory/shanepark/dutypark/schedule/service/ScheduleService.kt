@@ -17,7 +17,6 @@ import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
-import java.time.YearMonth
 import java.util.*
 
 @Service
@@ -35,15 +34,14 @@ class ScheduleService(
     fun findSchedulesByYearAndMonth(
         loginMember: LoginMember?,
         memberId: Long,
-        yearMonth: YearMonth
+        year: Int,
+        month: Int,
     ): Array<List<ScheduleDto>> {
         val member = memberRepository.findById(memberId).orElseThrow()
         friendService.checkVisibility(loginMember, member, scheduleVisibilityCheck = true)
 
-        val calendarView = CalendarView(yearMonth)
+        val calendarView = CalendarView(year = year, month = month)
 
-        val paddingBefore = calendarView.paddingBefore
-        val lengthOfMonth = calendarView.lengthOfMonth
         val array = calendarView.makeCalendarArray<ScheduleDto>()
 
         val start = calendarView.rangeFromDateTime
@@ -63,17 +61,9 @@ class ScheduleService(
             .flatten()
             .sortedWith(compareBy({ it.isTagged }, { it.position }, { it.startDateTime.toLocalDate() }))
             .forEach { scheduleDto ->
-                var dayIndex = paddingBefore + scheduleDto.dayOfMonth - 1
-                val isPreviousMonth =
-                    scheduleDto.year * 12 + scheduleDto.month < yearMonth.year * 12 + yearMonth.monthValue
-                if (isPreviousMonth) {
-                    dayIndex -= calendarView.prevMonth.lengthOfMonth()
-                }
-                val isNextMonth = scheduleDto.year * 12 + scheduleDto.month > yearMonth.year * 12 + yearMonth.monthValue
-                if (isNextMonth) {
-                    dayIndex += lengthOfMonth
-                }
-
+                if (!calendarView.isInRange(scheduleDto.curDate))
+                    return@forEach
+                val dayIndex = calendarView.getIndex(scheduleDto.curDate)
                 array[dayIndex] = array[dayIndex] + scheduleDto
             }
 

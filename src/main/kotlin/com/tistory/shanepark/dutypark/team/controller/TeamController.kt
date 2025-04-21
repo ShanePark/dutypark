@@ -29,7 +29,8 @@ class TeamController(
     ): MyTeamSummary {
         return teamService.myTeamSummary(
             loginMember = loginMember,
-            yearMonth = YearMonth.of(year, month),
+            year = year,
+            month = month
         )
     }
 

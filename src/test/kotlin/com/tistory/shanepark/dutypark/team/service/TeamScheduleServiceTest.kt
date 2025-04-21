@@ -346,10 +346,11 @@ class TeamScheduleServiceTest {
         val result = teamScheduleService.findTeamSchedules(teamId, calendarView)
 
         // Then
-        val indexOf20250223 = LocalDate.of(2025, 2, 23)
-        assertThat(result[calendarView.getIndex(indexOf20250223)]).hasSize(1)
+        val date = LocalDate.of(2025, 2, 23)
+        val index = calendarView.getIndex(date)
+        assertThat(result[index]).hasSize(1)
         // Event : 2025-02-20 ~ 2025-02-25. 2025-02-23 is 4 days from start.
-        val first = result[calendarView.getIndex(indexOf20250223)][0]
+        val first = result[index][0]
         assertThat(first.id).isEqualTo(schedule.id)
         assertThat(first.startDateTime).isEqualTo(schedule.startDateTime)
         assertThat(first.endDateTime).isEqualTo(schedule.endDateTime)

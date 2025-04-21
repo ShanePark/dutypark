@@ -13,7 +13,6 @@ import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.*
-import java.time.YearMonth
 import java.util.*
 
 @RestController
@@ -36,8 +35,8 @@ class ScheduleController(
         }
         return scheduleService.findSchedulesByYearAndMonth(
             loginMember = loginMember,
-            memberId,
-            YearMonth.of(year, month)
+            memberId = memberId,
+            year = year, month = month
         )
     }
 

@@ -6,7 +6,6 @@ import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
-import java.time.YearMonth
 
 class ScheduleDtoTest {
     val member = Member(name = "name", email = "email", password = "pass")
@@ -21,8 +20,7 @@ class ScheduleDtoTest {
             Schedule(member = member, content = "content", startDateTime = from, endDateTime = end, position = 1)
 
         // When
-        val yearMonth = YearMonth.of(2021, 1)
-        val calendarView = CalendarView(yearMonth)
+        val calendarView = CalendarView(2021, 1)
         val list = ScheduleDto.of(calendarView, schedule)
 
         // Then
@@ -53,8 +51,7 @@ class ScheduleDtoTest {
             Schedule(member = member, content = "content", startDateTime = from, endDateTime = end, position = 1)
 
         // When
-        val yearMonth = YearMonth.of(2021, 1)
-        val calendarView = CalendarView(yearMonth)
+        val calendarView = CalendarView(2021, 1)
         val list = ScheduleDto.of(calendarView, schedule)
 
         // Then
@@ -86,8 +83,7 @@ class ScheduleDtoTest {
             Schedule(member = member, content = "content", startDateTime = day, endDateTime = day, position = 1)
 
         // When
-        val yearMonth = YearMonth.of(2023, 3)
-        val calendarView = CalendarView(yearMonth)
+        val calendarView = CalendarView(2023, 3)
         val list = ScheduleDto.of(calendarView, schedule)
         assertThat(list).isEmpty()
     }
@@ -100,8 +96,7 @@ class ScheduleDtoTest {
             Schedule(member = member, content = "content", startDateTime = day, endDateTime = day, position = 1)
 
         // When
-        val yearMonth = YearMonth.of(2023, 4)
-        val calendarView = CalendarView(yearMonth)
+        val calendarView = CalendarView(2023, 4)
         val list = ScheduleDto.of(calendarView, schedule)
         assertThat(list.size).isEqualTo(1)
         assertThat(list[0].dayOfMonth).isEqualTo(17)
@@ -117,8 +112,7 @@ class ScheduleDtoTest {
         val schedule =
             Schedule(member = member, content = "content", startDateTime = start, endDateTime = end, position = 0)
 
-        val yearMonth = YearMonth.of(2023, 7)
-        val calendarView = CalendarView(yearMonth)
+        val calendarView = CalendarView(2023, 7)
         val list = ScheduleDto.of(calendarView, schedule)
 
         assertThat(list.size).isEqualTo(4)
