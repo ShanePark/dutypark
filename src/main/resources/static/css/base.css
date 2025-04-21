@@ -406,12 +406,6 @@ a.homeButton:hover {
     font-size: 1em;
 }
 
-#detail-view-modal .schedules {
-    max-height: 650px;
-    overflow-y: scroll;
-    scroll-behavior: smooth;
-}
-
 #detail-view-modal .schedules .schedule {
     border-radius: 15px;
     padding: 10px 20px;
@@ -791,4 +785,9 @@ input[readonly], textarea[readonly] {
 .row-cols-7 > * {
     flex: 0 0 auto;
     width: 14.28571428571429%;
+}
+
+.modal-body {
+    max-height: 650px;
+    overflow-y: scroll;
 }

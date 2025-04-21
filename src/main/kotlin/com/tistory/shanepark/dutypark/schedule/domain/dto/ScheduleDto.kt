@@ -6,6 +6,7 @@ import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto.Companion.ofSi
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 import java.util.*
@@ -18,7 +19,7 @@ data class ScheduleDto(
     val year: Int,
     val month: Int,
     val dayOfMonth: Int,
-    val daysFromStart: Int? = null,
+    val daysFromStart: Int = 0,
     val totalDays: Int? = null,
     val startDateTime: LocalDateTime,
     val endDateTime: LocalDateTime,
@@ -27,6 +28,8 @@ data class ScheduleDto(
     val tags: List<MemberDto> = listOf(),
     val visibility: Visibility? = null,
 ) {
+    val curDate: LocalDate = LocalDate.of(year, month, dayOfMonth)
+
     companion object {
         fun ofSimple(member: Member, schedule: Schedule): ScheduleDto {
             return ScheduleDto(

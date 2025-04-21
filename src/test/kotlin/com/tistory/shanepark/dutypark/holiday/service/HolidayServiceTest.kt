@@ -14,7 +14,6 @@ import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import java.time.LocalDate
-import java.time.YearMonth
 
 @ExtendWith(MockitoExtension::class)
 class HolidayServiceTest {
@@ -31,8 +30,7 @@ class HolidayServiceTest {
     @Test
     fun `findHolidaysTest-loadFromMemory`() {
         // Given
-        val yearMonth = YearMonth.of(2023, 5)
-        val calendarView = CalendarView(yearMonth)
+        val calendarView = CalendarView(2023, 5)
         HolidayService::class.java.getDeclaredField("holidayMap").apply {
             isAccessible = true
             set(holidayService, mutableMapOf(2023 to holiday2023Dto()))
@@ -48,8 +46,7 @@ class HolidayServiceTest {
     @Test
     fun `findHolidaysTest-loadFromDB`() {
         // Given
-        val yearMonth = YearMonth.of(2023, 5)
-        val calendarView = CalendarView(yearMonth)
+        val calendarView = CalendarView(2023, 5)
 
         // When
         `when`(holidayRepository.findAllByLocalDateBetween(any(), any()))
@@ -63,8 +60,7 @@ class HolidayServiceTest {
     @Test
     fun `findHolidaysTest-loadFromAPI`() {
         // Given
-        val yearMonth = YearMonth.of(2023, 5)
-        val calendarView = CalendarView(yearMonth)
+        val calendarView = CalendarView(2023, 5)
 
         // When
         `when`(holidayRepository.findAllByLocalDateBetween(any(), any())).thenReturn(listOf())
@@ -78,7 +74,7 @@ class HolidayServiceTest {
     @Test
     fun `test december 2023`() {
         // Given
-        val calendarView = CalendarView(YearMonth.of(2023, 12))
+        val calendarView = CalendarView(2023, 12)
 
         // When
         `when`(holidayRepository.findAllByLocalDateBetween(any(), any())).thenReturn(listOf())
@@ -90,7 +86,7 @@ class HolidayServiceTest {
             print("result[$i]: ${result[i]}  ")
             if (i % 7 == 6) println()
         }
-        assert2023DecemberResult(result);
+        assert2023DecemberResult(result)
     }
 
     private fun assert2023MayResult(result: Array<List<HolidayDto>>) {

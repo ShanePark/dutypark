@@ -55,15 +55,10 @@ class TeamScheduleService(
             .flatten()
             .sortedWith(compareBy({ it.position }, { it.startDateTime }))
             .forEach {
-                var dayIndex = calendarView.paddingBefore + it.dayOfMonth - 1
-                val isPreviousMonth = it.month == calendarView.prevMonth.monthValue
-                if (isPreviousMonth) {
-                    dayIndex -= calendarView.prevMonth.lengthOfMonth()
+                if (!calendarView.isInRange(it.curDate)) {
+                    return@forEach
                 }
-                val isNextMonth = it.month == calendarView.nextMonth.monthValue
-                if (isNextMonth) {
-                    dayIndex += calendarView.lengthOfMonth
-                }
+                val dayIndex = calendarView.getIndex(date = it.curDate)
                 array[dayIndex] = array[dayIndex] + it
             }
         return array

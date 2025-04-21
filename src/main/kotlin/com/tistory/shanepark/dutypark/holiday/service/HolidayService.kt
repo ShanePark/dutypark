@@ -27,8 +27,8 @@ class HolidayService(
     private val log = logger()
 
     fun findHolidays(calendarView: CalendarView): Array<List<HolidayDto>> {
-        val answer = Array<List<HolidayDto>>(calendarView.size) { emptyList() }
-        val years: Set<Int> = calendarView.getRangeYears()
+        val answer = calendarView.makeCalendarArray<HolidayDto>()
+        val years: Set<Int> = setOf(calendarView.startDate.year, calendarView.endDate.year)
         val holidaysInRange: List<HolidayDto> = holidaysInRangeFromMemory(years)
 
         for (holiday in holidaysInRange) {
@@ -63,7 +63,7 @@ class HolidayService(
     private fun holidaysFromDatabase(year: Int): List<HolidayDto> {
         val start = LocalDate.of(year, 1, 1)
         val end = LocalDate.of(year, 12, 31)
-        var holidaysOfYear = holidayRepository.findAllByLocalDateBetween(start, end)
+        val holidaysOfYear = holidayRepository.findAllByLocalDateBetween(start, end)
         if (holidaysOfYear.isEmpty()) {
             return loadAndSaveHolidaysFromAPI(year)
         }

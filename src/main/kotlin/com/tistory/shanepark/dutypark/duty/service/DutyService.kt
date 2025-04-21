@@ -102,17 +102,17 @@ class DutyService(
     }
 
     @Transactional(readOnly = true)
-    fun getDuties(memberId: Long, yearMonth: YearMonth, loginMember: LoginMember?): List<DutyDto> {
+    fun getDuties(memberId: Long, year: Int, month: Int, loginMember: LoginMember?): List<DutyDto> {
         val member = memberRepository.findMemberWithTeam(memberId).orElseThrow()
         friendService.checkVisibility(loginMember, member)
 
         val team = member.team ?: return emptyList()
         val defaultDutyColor = team.defaultDutyColor
-        val calendarView = CalendarView(yearMonth)
-        val dutyMap = getDutiesAsMap(member, calendarView.rangeFromDate, calendarView.rangeUntilDate)
+        val calendarView = CalendarView(year = year, month = month)
+        val dutyMap = getDutiesAsMap(member, calendarView.startDate, calendarView.endDate)
 
         val answer = mutableListOf<DutyDto>()
-        for (cur in calendarView.getRangeDate()) {
+        for (cur in calendarView.dates) {
             val duty = dutyMap.getOrDefault(
                 LocalDate.of(cur.year, cur.monthValue, cur.dayOfMonth), DutyDto(
                     year = cur.year,
