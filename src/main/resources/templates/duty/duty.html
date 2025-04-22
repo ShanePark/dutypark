@@ -74,7 +74,7 @@
       </div>
       <div class="month-control-right col-md-3 p-0 position-relative">
         <div class="search-bar d-flex align-items-center" v-if="isMyCalendar">
-          <form @submit.prevent="search()">
+          <form class="search-form" @submit.prevent="search()">
             <div class="d-flex w-100">
               <label>
                 <input type="text" class="form-control" placeholder="검색" v-model="searchQuery">
@@ -290,33 +290,42 @@
     <div class="modal-dialog modal-dialog-centered modal-xl">
       <div class="modal-content">
         <div class="modal-header">
-          <span class="fs-2"><b v-text="searchQuery"></b> 검색 결과</span>
+          <span class="fs-2">검색 결과</span>
           <button type="button" data-bs-dismiss="modal" aria-label="Close" class="btn-close"></button>
         </div>
         <div class="modal-body">
           <table class="table table-striped">
+            <colgroup>
+              <col style="width: 10%;">
+              <col style="width: 65%;">
+              <col style="width: 10%;">
+              <col style="width: 15%;">
+            </colgroup>
             <thead>
             <tr>
-              <th scope="col">#</th>
+              <th scope="col" class="text-align-center">#</th>
               <th scope="col">내용</th>
-              <th scope="col">작성자</th>
-              <th scope="col">시작일</th>
-              <th scope="col">종료일</th>
+              <th scope="col" class="text-align-center">태그됨</th>
+              <th scope="col" class="text-align-center">날짜</th>
             </tr>
             </thead>
             <tbody>
             <tr class="search-result-row" v-for="(item, index) in searchResults.content" :key="index"
                 v-on:click="moveToSearch(item)">
-              <th scope="row">{{ index + 1 + (searchResults.pageable.pageNumber * searchResults.pageable.pageSize) }}
+              <th scope="row" class="text-align-center">{{ index + 1 + (searchResults.pageable.pageNumber *
+                searchResults.pageable.pageSize) }}
               </th>
               <td>{{ item.content }}</td>
-              <td>{{ item.author }}</td>
-              <td>{{ formattedDateYMD(item.startDateTime) }}</td>
-              <td>{{ formattedDateYMD(item.endDateTime) }}</td>
+              <td class="text-align-center">
+                <i v-if="item.isTagged" class="bi bi-check"></i>
+              </td>
+              <td class="text-align-center">{{ formattedDateYMD(item.startDateTime) }}</td>
             </tr>
             </tbody>
           </table>
-          <nav v-if="searchResults.totalPages > 1">
+        </div>
+        <div class="modal-footer">
+          <nav class="" v-if="searchResults.totalPages > 1">
             <ul class="pagination justify-content-center">
               <li class="page-item" :class="{ disabled: searchResults.first }">
                 <button class="page-link" @click="search(searchResults.pageable.pageNumber - 1)">이전</button>
@@ -345,7 +354,16 @@
               </li>
             </ul>
           </nav>
-
+          <form class="search-form mb-3" @submit.prevent="search()">
+            <div class="d-flex w-100">
+              <label>
+                <input type="text" class="form-control" placeholder="검색" v-model="searchQuery">
+              </label>
+              <button class="btn btn-outline-dark" type="submit">
+                <i class="bi bi-search"></i>
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
