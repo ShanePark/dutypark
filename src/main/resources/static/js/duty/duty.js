@@ -275,8 +275,7 @@ function loadApp(memberId, teamId, loginMemberId, year, month, searchDay) {
               this.friends = await response.json();
             });
         },
-        addTag(scheduleId, event) {
-          const friendId = event.target.value;
+        addTag(scheduleId, friendId) {
           fetch(`/api/schedules/${scheduleId}/tags/${friendId}`, {
             method: 'POST',
           }).then(response => {

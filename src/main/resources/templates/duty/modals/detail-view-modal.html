@@ -42,7 +42,7 @@
                 <hr/>
                 <div v-html="replaceLineBreaks(schedule.description)"></div>
               </div>
-              <div class="schedule-tags">
+              <div class="schedule-tags fs-4">
                 <span
                     v-for="tag in schedule.tags"
                     v-if="tag.id !== memberId"
@@ -54,22 +54,23 @@
                     v-if="schedule.isTagged"
                     :class="'schedule-tag tagged-' + schedule.isTagged"
                 >{{ schedule.owner }}</span>
-                <span
+                <div
                     v-if="!schedule.isTagged && friends.length > 0"
                     class="schedule-tag schedule-tag-add"
                 >
-                  <select @change="addTag(schedule.id, $event)">
-                    <option>태그</option>
-                    <option
-                        v-for="friend in friends"
-                        v-if="!schedule.tags.find(tag => tag.id === friend.id)"
-                        :key="friend.id"
-                        :value="friend.id"
-                    >
-                      [{{ friend.team }}] {{ friend.name }}
-                    </option>
-                  </select>
-                </span>
+                  <div class="btn-group dropup">
+                    <span class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                      <i class="bi bi-person-plus-fill"></i> 태그
+                    </span>
+                    <ul class="dropdown-menu">
+                      <li v-for="friend in friends"
+                          v-if="!schedule.tags.find(tag => tag.id === friend.id)"
+                          @click="addTag(schedule.id, friend.id)">
+                        <a class="dropdown-item" href="#">[{{ friend.team }}] {{ friend.name }}</a>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
               </div>
             </div>
             <div class="buttons mt-3">

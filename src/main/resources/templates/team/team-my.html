@@ -94,7 +94,7 @@
             <div v-for="member in group.members" :key="member.id" class="col-3"
                  @click.prevent="moveTo(member.id)">
               <div
-                  class="member-card p-3 border rounded shadow-sm text-center cursor-pointer fs-3"
+                  class="member-card p-2 border rounded shadow-sm text-center cursor-pointer fs-3"
                   :class="{'border-dark border-3': member.id === loginMemberId}"
               >
                 <i class="bi bi-person-fill mb-2"></i>
