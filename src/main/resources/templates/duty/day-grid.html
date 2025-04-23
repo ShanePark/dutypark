@@ -1,0 +1,47 @@
+<div class="day-grid row-7" :class="{'editable': canEdit}">
+  <div class="DAY"
+       v-for="({calendarDay, duty}, index) in calendarWithDuties"
+       :id="formattedDate(calendarDay.year, calendarDay.month, calendarDay.day)"
+       :class="{
+          ['BACKGROUND-' + duty.dutyColor]: duty.dutyColor,
+          'month-prev': (calendarDay.month < month),
+          'month-next': (calendarDay.month > month),
+          'today': isToday(calendarDay),
+          'searchDay' : isSearchDay(calendarDay),
+          'holiday': isHoliday(index),
+          'has-schedule': hasSchedule(index),
+        }"
+       v-on:click="viewDayDetail(calendarDay, duty, index)">
+    <div class="date container">
+      <div class="day-header text-align-left ps-2 position-relative">
+        <span class="day" v-text="(calendarDay.month==month?'':calendarDay.month +'/ ')+ calendarDay.day"></span>
+        <div class="position-absolute" style="right:10px;top:0">
+          <span v-if="selectedDday" v-text="calcDday(calendarDay)" class="d-day-count"></span>
+        </div>
+      </div>
+      <div v-if="!batchEditMode" class="schedules">
+        <div v-if="holidaysByDays[index]"
+             class="holiday-info"
+             v-for="holiday in holidaysByDays[index]">
+                            <span :class="holiday.isHoliday ? 'holiday' : 'not-holiday'"
+                                  v-text="holiday.dateName">
+
+                            </span>
+        </div>
+        <div class="d-day-schedules"></div>
+        <div class="schedule" v-for="schedule in schedulesByDays[index]" v-html="printSchedule(schedule)">
+        </div>
+      </div>
+      <div v-if="batchEditMode" class="duty row">
+        <button v-for="type in team.dutyTypes"
+                class="duty-type btn btn-sm btn-outline-dark"
+                v-text="type.name.length > 3 ? type.name.substring(0, 3) : type.name"
+                :class="dutyTypeClasses(type, duty)"
+                :disabled="(duty?.dutyType == type.name) || (!duty?.dutyType && !type.id)"
+                v-on:click="changeDutyType(duty, type)"
+        >
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,31 @@
+<div class="d-day-list mt-2 row">
+  <div v-for="(dDay, index) in dDays" class="col-6">
+    <div class="d-day-item card row shadow-sm p-2 m-1 rounded-4"
+         v-on:click="dDayToggle(dDay)"
+         :data-id="dDay.id"
+         :class="{'d-day-private': dDay.isPrivate, 'selected': dDay == selectedDday}"
+    >
+      <div class="d-day_day col-4 m-auto">
+        <span>{{dDay.dDayText}}</span>
+      </div>
+      <div class="d-day_content col-8">
+        <p class="m-1 text-muted">{{dDay.date}}</p>
+        <p>{{dDay.title}}</p>
+        <div @click.stop v-if="isMyCalendar" class="position-absolute top-0 mt-1 end-0 me-3 fs-2">
+          <button v-on:click="createOrUpdateDday(dDay)" class="btn btn-outline-primary">
+            <i class="bi bi-pencil-square"></i></button>
+          <button v-on:click="removeDday(dDay)" class="btn btn-outline-danger">
+            <i class="bi bi-trash"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6" v-if="isMyCalendar">
+    <div
+        class="d-day-item card shadow-sm align-items-center justify-content-center m-1 rounded-4 text-align-center bg-primary cursor-pointer text-white fs-2"
+        v-on:click="createOrUpdateDday()"
+    >
+      <i class="bi bi-plus-circle"></i><span>디데이 추가</span>
+    </div>
+  </div>
+</div>
