@@ -66,22 +66,6 @@ function loadApp(memberId, teamId, loginMemberId, year, month, searchDay) {
         if (this.isMyCalendar) {
           this.loadTodos();
         }
-
-        document.addEventListener('change', function (event) {
-          if (event.target && event.target.matches('.schedule-tag-add select')) {
-            const selectedOption = event.target.options[event.target.selectedIndex];
-            const scheduleId = event.target.closest('.schedule').id.replace('schedule-', '');
-            const friendId = selectedOption.getAttribute('data-id');
-            app.addTag(scheduleId, friendId);
-          }
-        });
-        document.addEventListener('click', function (event) {
-          if (event.target && event.target.matches('#detail-view-modal .schedule-tag.tagged-false')) {
-            const scheduleId = event.target.closest('.schedule').id.replace('schedule-', '');
-            const friendId = event.target.getAttribute('data-id');
-            app.untag(scheduleId, friendId);
-          }
-        });
         this.initSortable();
       }, computed: {
         ...dDayComputes,
@@ -291,7 +275,8 @@ function loadApp(memberId, teamId, loginMemberId, year, month, searchDay) {
               this.friends = await response.json();
             });
         },
-        addTag(scheduleId, friendId) {
+        addTag(scheduleId, event) {
+          const friendId = event.target.value;
           fetch(`/api/schedules/${scheduleId}/tags/${friendId}`, {
             method: 'POST',
           }).then(response => {
@@ -308,11 +293,11 @@ function loadApp(memberId, teamId, loginMemberId, year, month, searchDay) {
           });
         }
         ,
-        untag(scheduleId, friendId) {
+        untag(schedule, friendId) {
           if (!this.isMyCalendar) {
             return;
           }
-          fetch(`/api/schedules/${scheduleId}/tags/${friendId}`, {
+          fetch(`/api/schedules/${schedule.id}/tags/${friendId}`, {
             method: 'DELETE',
           }).then(response => {
             if (!response.ok) {

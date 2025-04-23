@@ -29,7 +29,32 @@
                             </span>
         </div>
         <div class="d-day-schedules"></div>
-        <div class="schedule" v-for="schedule in schedulesByDays[index]" v-html="printSchedule(schedule)">
+        <div class="schedule" v-for="schedule in schedulesByDays[index]" :key="schedule.id">
+          <p class="schedule-content">
+            <i v-if="schedule.visibility === 'PRIVATE'" class="bi bi-lock-fill"></i>
+            {{ schedule.content }}
+            <template v-if="schedule.totalDays > 1">
+              [{{ schedule.daysFromStart }}/{{ schedule.totalDays }}]
+            </template>
+            <i v-if="schedule.description"
+               class="has-description bi bi-chat-left-text cursor-pointer"
+               @click.stop="showDescription(schedule)"
+            ></i>
+            <small>{{ printScheduleTime(schedule) }}</small>
+          </p>
+
+          <div class="schedule-tags">
+            <span
+                v-for="tag in schedule.tags"
+                v-if="tag.id !== memberId"
+                :key="tag.id"
+                :class="'schedule-tag tagged-' + schedule.isTagged"
+            >{{ tag.name }}</span>
+            <span
+                v-if="schedule.isTagged"
+                :class="'schedule-tag tagged-' + schedule.isTagged"
+            >{{ schedule.owner }}</span>
+          </div>
         </div>
       </div>
       <div v-if="batchEditMode" class="duty row">

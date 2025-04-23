@@ -44,7 +44,7 @@ const vueFilters = {
       return dayjs(value).fromNow();
     }
     return value;
-  }
+  },
 };
 
 document.addEventListener("DOMContentLoaded", function () {

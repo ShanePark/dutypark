@@ -175,5 +175,13 @@ const detailViewMethods = {
       showConfirmButton: false,
       timer: sweetAlTimer / 3,
     });
-  },
+  }
+  ,
+  replaceLineBreaks(text) {
+    if (text) {
+      return text.replace(/\n/g, '<br>');
+    }
+    return '';
+  }
+  ,
 }

@@ -16,54 +16,6 @@ const dDayComputes = {
     }
   }
   ,
-  printSchedule() {
-    const app = this;
-    return (schedule) => {
-      let content = schedule.content.replace(/\n/g, '<br>');
-      if (schedule.totalDays > 1) {
-        content += '[' + schedule.daysFromStart + '/' + schedule.totalDays + '] ';
-      }
-      const tags = []
-      schedule.tags.forEach(tag => {
-        if (tag.id !== app.memberId) {
-          tags.push({
-            name: tag.name,
-            id: tag.id,
-          });
-        }
-      });
-      if (schedule.isTagged) {
-        tags.push({name: schedule.owner});
-      }
-      let scheduleElement = `<p class="schedule-content">${schedule.visibility === 'PRIVATE' ? '<i class="bi bi-lock-fill"></i>' : ''} ${content} ${schedule.description ? '<i class="has-description bi bi-chat-left-text cursor-pointer" onClick="showDescription(event);" data-content="' + content + '" data-description="' + schedule.description + '"></i>' : ''}<small>${app.printScheduleTime(schedule)}</small></p>`;
-      if (schedule.description) {
-        scheduleElement += '<div class="schedule-description"><hr>' + schedule.description.replace(/\n/g, '<br>') + '</div>';
-      }
-      let tagElements = ''
-      if (tags.length > 0) {
-        tagElements += tags.map(tag => {
-          return `<span class="schedule-tag tagged-${schedule.isTagged}" data-id="${tag.id}" >${tag.name} </span>`;
-        }).join('');
-      }
-      if (!schedule.isTagged && app.friends.length > 0) {
-        let tagFriendAria = `
-                                      <span class="schedule-tag schedule-tag-add">
-                                        <select>
-                                        <option>태그</option>
-                                        ${app.friends.map(friend => {
-          if (tags.find(tag => tag.id === friend.id)) {
-            return '';
-          }
-          return `<option data-id="${friend.id}">[${friend.team}] ${friend.name}</option>`;
-        }).join('')}
-                                      </select>
-                                      </span>`;
-        tagElements += tagFriendAria;
-      }
-      return scheduleElement + `<div class="schedule-tags">${tagElements}</div>`;
-    }
-  }
-  ,
   printScheduleTime() {
     const app = this;
     return (schedule) => {
@@ -184,27 +136,21 @@ const dayGridMethods = {
       return this.schedulesByDays[index] && this.schedulesByDays[index].length > 0;
     }
   },
+  showDescription(schedule) {
+    const description = schedule.description.replace(/\n/g, '<br>');
+    Swal.fire({
+      title: schedule.content,
+      html: description,
+      showCloseButton: true,
+      showCancelButton: false,
+      focusConfirm: false,
+      confirmButtonText: '확인',
+      confirmButtonColor: '#3085d6',
+      customClass: {
+        title: 'text-align-left',
+        htmlContainer: 'text-align-left'
+      }
+    });
+  }
 }
 // ======== END METHODS =========
-
-
-// ======== EVENT HANDLER =========
-function showDescription(event) {
-  event.stopPropagation();
-  const clickedElement = event.target;
-  const content = clickedElement.getAttribute('data-content');
-  const description = clickedElement.getAttribute('data-description').replaceAll('\n', '<br/>');
-  Swal.fire({
-    title: content,
-    html: description,
-    showCloseButton: true,
-    showCancelButton: false,
-    focusConfirm: false,
-    confirmButtonText: '확인',
-    confirmButtonColor: '#3085d6',
-    customClass: {
-      title: 'text-align-left',
-      htmlContainer: 'text-align-left'
-    }
-  });
-}
