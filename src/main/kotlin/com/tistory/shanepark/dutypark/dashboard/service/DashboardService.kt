@@ -47,7 +47,8 @@ class DashboardService(
             end = today.atTime(23, 59, 59),
             visibilities = Visibility.all()
         )
-        return personal.plus(tagged).map { schedule -> ScheduleDto.ofSimple(member, schedule) }
+        return personal.plus(tagged)
+            .map { schedule -> ScheduleDto.ofSimple(member, schedule, today) }
     }
 
     private fun todayDuty(member: Member): DutyDto? {
