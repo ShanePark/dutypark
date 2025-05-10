@@ -245,7 +245,7 @@ class FriendService(
         val login = loginMemberToMember(loginMember)
         val friend = memberRepository.findById(friendId).orElseThrow()
         friendRelationRepository.findByMemberAndFriend(member = login, friend = friend)?.let {
-            it.pinOrder = -System.currentTimeMillis()
+            it.pinOrder = System.currentTimeMillis()
         } ?: throw IllegalArgumentException("Not friend")
     }
 

@@ -1,0 +1,17 @@
+<div class="todo-container" v-if="isMyCalendar">
+  <div class="d-flex">
+    <div id="add-todo-btn" class="m-0 cursor-pointer fs-2" v-on:click="addTodoModal()">
+      <i class="bi bi-journal-plus"></i><small class="ms-2" v-if="todos.length>0" v-text="todos.length"></small>
+    </div>
+    <div class="d-flex flex-row" id="todo-list-container">
+      <div class="d-flex flex-row" id="todo-list">
+        <div v-for="todo in todos" class="todo-item" :data-id="todo.id">
+          <div class="handle">
+            <i class="bi bi-list"></i>
+          </div>
+          <strong class="todo-text" v-text="todo.title" v-on:click="showTodoDetails(todo)"></strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

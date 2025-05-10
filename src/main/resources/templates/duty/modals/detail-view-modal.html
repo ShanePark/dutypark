@@ -1,0 +1,174 @@
+<div id="detail-view-modal" class="modal fade" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content card" v-if="detailView">
+      <div class="card-header modal-header text-center py-4 px-4">
+        <p class="current-date-label fs-1"
+           v-text="detailView?.year + '년 ' + detailView?.month + '월 ' + detailView?.day + '일'"></p>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-1">
+        <div class="dutyTypes px-4 py-2">
+          <form>
+            <div v-for="type in team.dutyTypes" class="pretty p-round p-pulse">
+              <input type="radio" name="dutyType"
+                     :checked="isDutyType(detailView.duty, type)"
+                     v-on:click="changeDutyTypeWithPopup(detailView.duty, type)"
+              />
+              <div class="state p-primary">
+                <label v-text="type.name"></label>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="schedules mb-3">
+          <div class="schedule card shadow"
+               v-if="!isCreateScheduleMode"
+               :class="['visibility-' + schedule.visibility]"
+               v-for="(schedule, s_index) in schedulesByDays[detailView.index]"
+               :id="'schedule-' + schedule.id">
+            <div class="schedule-body">
+              <p class="schedule-content">
+                <i v-if="schedule.visibility === 'PRIVATE'" class="bi bi-lock-fill"></i>
+                {{ schedule.content }}
+                <template v-if="schedule.totalDays > 1">
+                  [{{ schedule.daysFromStart }}/{{ schedule.totalDays }}]
+                </template>
+                <i v-if="schedule.description"
+                   class="has-description bi bi-chat-left-text cursor-pointer"
+                   @click.stop="showDescription(schedule)"
+                ></i>
+              </p>
+              <div v-if="schedule.description" class="schedule-description">
+                <hr/>
+                <div v-html="replaceLineBreaks(schedule.description)"></div>
+              </div>
+              <div class="schedule-tags fs-4">
+                <span
+                    v-for="tag in schedule.tags"
+                    v-if="tag.id !== memberId"
+                    :key="tag.id"
+                    :class="'schedule-tag tagged-' + schedule.isTagged"
+                    @click="untag(schedule, tag.id)"
+                >{{ tag.name }}</span>
+                <span
+                    v-if="schedule.isTagged"
+                    :class="'schedule-tag tagged-' + schedule.isTagged"
+                >{{ schedule.owner }}</span>
+                <div
+                    v-if="!schedule.isTagged && friends.length > 0"
+                    class="schedule-tag schedule-tag-add"
+                >
+                  <div class="btn-group dropup">
+                    <span class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                      <i class="bi bi-person-plus-fill"></i> 태그
+                    </span>
+                    <ul class="dropdown-menu">
+                      <li v-for="friend in friends"
+                          v-if="!schedule.tags.find(tag => tag.id === friend.id)"
+                          @click="addTag(schedule.id, friend.id)">
+                        <a class="dropdown-item" href="#">[{{ friend.team }}] {{ friend.name }}</a>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="buttons mt-3">
+              <template v-if="schedule.isTagged && isMyCalendar">
+                <button class="btn btn-danger" v-on:click="untagSelf(schedule)">태그제거</button>
+              </template>
+              <template v-else>
+                <template
+                    v-if="schedulesByDays[detailView.index].length > detailView.scheduleStartDiffCount + 1 && dutyAndDateTimeSame(detailView, schedule.startDateTime)">
+                  <button
+                      :disabled="s_index == schedulesByDays[detailView.index].length -1 || schedulesByDays[detailView.index][s_index+1].isTagged"
+                      v-on:click="swapSchedule(schedule, schedulesByDays[detailView.index][s_index+1])"
+                      class="btn btn-secondary"
+                  >
+                    <i class="bi bi-arrow-down-square"></i>
+                  </button>
+                  <button :disabled="s_index <= detailView.scheduleStartDiffCount"
+                          v-on:click="swapSchedule(schedule, schedulesByDays[detailView.index][s_index-1])"
+                          class="btn btn-secondary">
+                    <i class="bi bi-arrow-up-square"></i>
+                  </button>
+                </template>
+                <button class="btn btn-info" v-on:click="scheduleEditMode(schedule)">수정</button>
+                <button class="btn btn-danger" v-on:click="deleteSchedule(schedule)">삭제</button>
+              </template>
+            </div>
+          </div>
+          <div id="schedule-create-or-edit" class="schedule card shadow" v-if="isCreateScheduleMode">
+            <div class="schedule-edit">
+              <label>일정 제목<span class="content-length ms-2"
+                                v-text="createSchedule.content.length + ' / ' + schedule_content_max_length"></span>
+                <small class="help-note">달력에 표시되는 제목이에요 <i class="bi bi-info-circle-fill"></i></small>
+                <input class="form-control border-dark" placeholder="일정 제목을 입력하세요."
+                       :maxlength="schedule_content_max_length"
+                       v-model="createSchedule.content"/>
+              </label>
+              <label>일정 상세 (선택사항)<small class="help-note">달력에 표시되지 않고 클릭했을때만 보여져요 <i
+                  class="bi bi-info-circle-fill"></i></small>
+                <textarea class="form-control" placeholder="일정 상세정보를 입력하세요." rows="4"
+                          v-model="createSchedule.description"></textarea>
+              </label>
+              <label>시작일
+                <input v-show="createSchedule.id" type="date" class="form-control"
+                       v-model="createSchedule.startDate"/>
+              </label>
+              <p v-show="!createSchedule.id" class="form-control bg-light" v-text="createSchedule.startDate"
+                 readonly></p>
+              <label>시작시간 (선택사항)
+                <input type="time" class="form-control" v-model="createSchedule.startTime"/>
+              </label>
+              <label>종료일시 (선택사항)
+                <input type="datetime-local" class="form-control" v-model="createSchedule.endDateTime"
+                       :min="createSchedule.startDateTime"/>
+              </label>
+              <label>공개설정</label>
+              <div class="schedule-visibility">
+                <div class="pretty p-default p-curve">
+                  <input type="radio" value="PUBLIC" v-model="createSchedule.visibility"/>
+                  <div class="state p-success-o">
+                    <label>전체</label>
+                  </div>
+                </div>
+
+                <div class="pretty p-default p-curve">
+                  <input type="radio" value="FRIENDS" v-model="createSchedule.visibility"/>
+                  <div class="state p-info-o">
+                    <label>친구</label>
+                  </div>
+                </div>
+
+                <div class="pretty p-default p-curve">
+                  <input type="radio" value="FAMILY" v-model="createSchedule.visibility"/>
+                  <div class="state p-warning-o">
+                    <label>가족</label>
+                  </div>
+                </div>
+
+                <div class="pretty p-default p-curve">
+                  <input type="radio" value="PRIVATE" v-model="createSchedule.visibility"/>
+                  <div class="state p-danger-o">
+                    <label>비공개</label>
+                  </div>
+                </div>
+              </div>
+              <div class="buttons mt-3">
+                <button id="add-btn" class="btn btn-success" v-on:click="saveSchedule">저장</button>
+                <button class="btn btn-secondary" v-on:click="cancelCreateSchedule">취소</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="schedule-add-button card shadow" v-if="!isCreateScheduleMode">
+          <button class="btn btn-success py-4" v-on:click="scheduleCreateMode()">일정 추가</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+      </div>
+    </div>
+  </div>
+</div>
+

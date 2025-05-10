@@ -1,0 +1,38 @@
+<div
+    class="modal fade"
+    id="add-todo-modal"
+    tabindex="-1"
+    aria-hidden="true"
+>
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addModalLabel">할일 추가</h5>
+        <button type="button" class="btn-close position-absolute end-0 me-3" data-bs-dismiss="modal"
+                aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-control fs-3 mb-2">할일 제목
+          <input
+              type="text"
+              class="form-control todo-title"
+              name="title"
+              placeholder="할일 제목을 입력하세요."
+          />
+        </label>
+        <label class="form-control fs-3">할일 상세(선택 사항)
+          <textarea
+              class="form-control todo-content"
+              name="content"
+              rows="4"
+              placeholder="해당 할일에 대한 상세 설명을 입력하세요"
+          ></textarea>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-success" v-on:click="addTodo()">저장</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+      </div>
+    </div>
+  </div>
+</div>

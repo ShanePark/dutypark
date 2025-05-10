@@ -197,5 +197,21 @@
         max-height: 1000px;
     }
 
+    .fs-3 { /* desktop fs1 */
+        font-size: calc(1.375rem + 1.5vw) !important
+    }
+
+    .fs-4 { /* desktop fs2 */
+        font-size: calc(1.325rem + .9vw) !important;
+    }
+
+    .fs-5 { /* desktop fs3 */
+        font-size: calc(1.325rem + .9vw) !important
+    }
+
+    .fs-6 { /* desktop fs4 */
+        font-size: calc(1.275rem + .3vw) !important
+    }
+
 }
 

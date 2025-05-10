@@ -14,27 +14,31 @@ import java.util.*
 data class ScheduleDto(
     val id: UUID,
     val content: String,
-    val description: String = "",
+    val description: String,
     val position: Int,
     val year: Int,
     val month: Int,
     val dayOfMonth: Int,
-    val daysFromStart: Int = 0,
-    val totalDays: Int? = null,
     val startDateTime: LocalDateTime,
     val endDateTime: LocalDateTime,
     val isTagged: Boolean,
     val owner: String,
     val tags: List<MemberDto> = listOf(),
     val visibility: Visibility? = null,
+    val dateToCompare: LocalDate,
 ) {
+    val startDate: LocalDate = startDateTime.toLocalDate()
+    val daysFromStart = ChronoUnit.DAYS.between(startDate, dateToCompare).toInt() + 1
+    val endDate: LocalDate = endDateTime.toLocalDate()
     val curDate: LocalDate = LocalDate.of(year, month, dayOfMonth)
+    val totalDays = ChronoUnit.DAYS.between(startDate, endDate).toInt() + 1
 
     companion object {
-        fun ofSimple(member: Member, schedule: Schedule): ScheduleDto {
+        fun ofSimple(member: Member, schedule: Schedule, dateToCompare: LocalDate): ScheduleDto {
             return ScheduleDto(
                 id = schedule.id,
                 content = schedule.content(),
+                description = schedule.description,
                 position = schedule.position,
                 year = schedule.startDateTime.year,
                 month = schedule.startDateTime.monthValue,
@@ -43,13 +47,13 @@ data class ScheduleDto(
                 endDateTime = schedule.endDateTime,
                 isTagged = schedule.member.id != member.id,
                 owner = schedule.member.name,
+                dateToCompare = dateToCompare,
             )
         }
 
         fun of(calendarView: CalendarView, schedule: Schedule, isTagged: Boolean = false): List<ScheduleDto> {
             val startDate = schedule.startDateTime.toLocalDate()
             val endDate = schedule.endDateTime.toLocalDate()
-            val totalDays = ChronoUnit.DAYS.between(startDate, endDate).toInt() + 1
             val tags = schedule.tags.map { t -> ofSimple(t.member) }
 
             return calendarView.validDays(startDate = startDate, endDate = endDate)
@@ -62,14 +66,13 @@ data class ScheduleDto(
                         year = it.year,
                         month = it.monthValue,
                         dayOfMonth = it.dayOfMonth,
-                        daysFromStart = ChronoUnit.DAYS.between(startDate, it).toInt() + 1,
-                        totalDays = totalDays,
                         startDateTime = schedule.startDateTime,
                         endDateTime = schedule.endDateTime,
                         isTagged = isTagged,
                         owner = schedule.member.name,
                         tags = tags,
-                        visibility = schedule.visibility
+                        visibility = schedule.visibility,
+                        dateToCompare = it,
                     )
                 }
         }
