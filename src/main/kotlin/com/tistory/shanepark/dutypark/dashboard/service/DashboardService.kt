@@ -8,7 +8,6 @@ import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendRequestDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
-import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
@@ -34,18 +33,25 @@ class DashboardService(
         return DashboardMyDetail(
             member = MemberDto.of(member),
             duty = todayDuty(member),
-            schedules = todaySchedules(member),
+            schedules = todaySchedules(loginMember = loginMember, member = member),
         )
     }
 
-    private fun todaySchedules(member: Member): List<ScheduleDto> {
-        val personal = scheduleRepository.findTodaySchedulesByMember(member)
-        val today = LocalDate.now();
+    private fun todaySchedules(loginMember: LoginMember, member: Member): List<ScheduleDto> {
+        val today = LocalDate.now()
+        val visibilities = friendService.availableScheduleVisibilities(loginMember = loginMember, member = member)
+
+        val personal = scheduleRepository.findSchedulesOfMemberRangeIn(
+            member = member,
+            start = today.atStartOfDay(),
+            end = today.atTime(23, 59, 59),
+            visibilities = visibilities
+        )
         val tagged = scheduleRepository.findTaggedSchedulesOfRange(
             member = member,
             start = today.atStartOfDay(),
             end = today.atTime(23, 59, 59),
-            visibilities = Visibility.all()
+            visibilities = visibilities
         )
         return personal.plus(tagged)
             .map { schedule -> ScheduleDto.ofSimple(member, schedule, today) }
@@ -71,7 +77,7 @@ class DashboardService(
                 DashboardFriendDetail(
                     member = MemberDto.of(it.friend),
                     duty = todayDuty(it.friend),
-                    schedules = todaySchedules(it.friend),
+                    schedules = todaySchedules(loginMember = loginMember, member = it.friend),
                     isFamily = it.isFamily,
                     pinOrder = it.pinOrder
                 )
