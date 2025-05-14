@@ -59,7 +59,7 @@
           <th scope="col">#</th>
           <th scope="col">이름</th>
           <th scope="col">매니저</th>
-          <th scope="col">도구</th>
+          <th class="text-align-center" scope="col">도구</th>
         </tr>
         </thead>
         <tbody>
@@ -109,7 +109,7 @@
           <th scope="col">#</th>
           <th scope="col">근무명</th>
           <th scope="col">색상</th>
-          <th scope="col">도구</th>
+          <th class="text-align-center" scope="col">도구</th>
         </tr>
         </thead>
         <tbody>
@@ -118,17 +118,18 @@
           <td class="fw-bold duty-type-name">{{ dutyType.name }}</td>
           <td><span :class="['badge', 'rounded-pill', 'duty-type-color' ,'border', 'BACKGROUND-' + dutyType.color]"
                     :data-color="dutyType.color">&nbsp;&nbsp;</span>
-          <td>
-            <button class="fs-2 btn btn-primary btn-sm" v-on:click="updateDutyType($event.target)">
-              <i class="bi bi-pencil"></i> 수정
-            </button>
-            <button class="fs-2 btn btn-secondary btn-sm" :disabled="index==0 || index == (team.dutyTypes.length - 1)"
+          <td class="text-align-right">
+            <button v-if="dutyType.id" class="fs-2 btn btn-secondary btn-sm"
+                    :disabled="index==0 || index == (team.dutyTypes.length - 1)"
                     v-on:click="swapPosition(index, index + 1)">
               <i class="bi bi-arrow-down"></i>
             </button>
-            <button class="fs-2 btn btn-secondary btn-sm" :disabled="index <= 1"
+            <button v-if="dutyType.id" class="fs-2 btn btn-secondary btn-sm" :disabled="index <= 1"
                     v-on:click="swapPosition(index, index - 1)">
               <i class="bi bi-arrow-up"></i>
+            </button>
+            <button class="fs-2 btn btn-primary btn-sm" v-on:click="updateDutyType($event.target)">
+              <i class="bi bi-pencil"></i> 수정
             </button>
             <button class="fs-2 btn btn-danger btn-sm" :disabled="!dutyType.id"
                     v-on:click.stop="removeDutyType(dutyType)">
@@ -217,6 +218,7 @@
 </div>
 
 <div id="duty-type-modal" hidden>
+  <p>해당 근무유형의 명칭 및 색상을 선택해주세요.</p>
   <input class="swal2-input" placeholder="Name" name="name" maxlength="10">
   <select class="swal2-input" name="color">
     <option value="RED">Red</option>
@@ -391,6 +393,9 @@
         const dutyTypeId = dutyType.attributes['id']?.value;
 
         const modal = document.querySelector('#duty-type-modal').cloneNode(true);
+        if(!dutyTypeId){
+          modal.querySelector('p').insertAdjacentHTML('afterend', '<p>현재 선택한 근무 유형은 <b>근무가 없음</b> 용도로 사용합니다.</p>');
+        }
         let nameInput = modal.querySelector('input[name="name"]');
         nameInput.setAttribute('value', dutyTypeName);
 
@@ -401,7 +406,7 @@
         });
 
         Swal.fire({
-          title: 'Update Duty Type',
+          title: '근무 유형 수정',
           html: modal.innerHTML,
           focusConfirm: false,
           preConfirm: () => {
@@ -417,8 +422,9 @@
             return [name, color]
           },
           showCancelButton: true,
-          confirmButtonText: 'Update',
+          confirmButtonText: '저장',
           confirmButtonColor: '#29945A',
+          cancelButtonText: '취소'
         }).then((result) => {
           if (result.isConfirmed) {
             if (!dutyTypeId) {
@@ -517,7 +523,7 @@
       removeDutyType: function (dutyType) {
         Swal.fire({
           title: '근무 유형 삭제',
-          html: `다음의 근무 유형을 삭제하시겠습니까? [ ${dutyType.name} ] ? <br/>삭제는 되돌릴 수 없으며 해당 유형으로 표시된 근무는 모두 제거됩니다. `,
+          html: `[ ${dutyType.name} ] 근무 유형을 삭제하시겠습니까?  <br/>삭제는 되돌릴 수 없으며 해당 유형으로 표시된 근무는 모두 제거됩니다. `,
           icon: 'warning',
           showCancelButton: true,
           confirmButtonText: '삭제',
