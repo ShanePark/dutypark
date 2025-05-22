@@ -21,6 +21,9 @@
           </form>
         </div>
         <div class="schedules mb-3">
+          <div v-if="!isCreateScheduleMode && schedulesByDays[detailView.index]?.length === 0" class="text-align-center m-5 p-5">
+            <p class="text-center text-muted fs-3">등록된 일정이 없습니다</p>
+          </div>
           <div class="schedule card shadow"
                v-if="!isCreateScheduleMode"
                :class="['visibility-' + schedule.visibility]"
@@ -58,7 +61,7 @@
                     v-if="!schedule.isTagged && friends.length > 0"
                     class="schedule-tag schedule-tag-add"
                 >
-                  <div class="btn-group dropup">
+                  <div class="btn-group dropstart">
                     <span class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                       <i class="bi bi-person-plus-fill"></i> 태그
                     </span>
@@ -162,11 +165,11 @@
             </div>
           </div>
         </div>
-        <div class="schedule-add-button card shadow" v-if="!isCreateScheduleMode">
-          <button class="btn btn-success py-4" v-on:click="scheduleCreateMode()">일정 추가</button>
-        </div>
       </div>
       <div class="modal-footer">
+        <div class="schedule-add-button card shadow w-100" v-if="!isCreateScheduleMode">
+          <button class="btn btn-success py-4" v-on:click="scheduleCreateMode()">일정 추가</button>
+        </div>
       </div>
     </div>
   </div>
