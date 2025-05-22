@@ -787,5 +787,6 @@ input[readonly], textarea[readonly] {
 
 .modal-body {
     max-height: 650px;
+    min-height: 350px;
     overflow-y: scroll;
 }
