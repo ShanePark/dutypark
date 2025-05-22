@@ -86,6 +86,19 @@ const dDayMethods = {
           date: date,
           isPrivate: isPrivate
         }
+      },
+      didOpen: () => {
+        const dateInput = Swal.getPopup().querySelector('input[name="date"]');
+        Swal.getPopup().querySelectorAll('.add-days-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const addDays = parseInt(btn.dataset.days);
+            if (dateInput.value) {
+              const currentDate = new Date(dateInput.value);
+              currentDate.setDate(currentDate.getDate() + addDays);
+              dateInput.value = currentDate.toISOString().slice(0, 10);
+            }
+          });
+        });
       }
     }).then((result) => {
       if (result.isConfirmed) {
