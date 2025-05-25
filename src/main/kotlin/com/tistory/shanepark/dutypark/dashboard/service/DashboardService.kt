@@ -48,7 +48,7 @@ class DashboardService(
             visibilities = visibilities
         )
         val tagged = scheduleRepository.findTaggedSchedulesOfRange(
-            member = member,
+            taggedMember = member,
             start = today.atStartOfDay(),
             end = today.atTime(23, 59, 59),
             visibilities = visibilities

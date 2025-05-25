@@ -21,7 +21,8 @@
           </form>
         </div>
         <div class="schedules mb-3">
-          <div v-if="!isCreateScheduleMode && schedulesByDays[detailView.index]?.length === 0" class="text-align-center m-5 p-5">
+          <div v-if="!isCreateScheduleMode && schedulesByDays[detailView.index]?.length === 0"
+               class="text-align-center m-5 p-5">
             <p class="text-center text-muted fs-3">등록된 일정이 없습니다</p>
           </div>
           <div class="schedule card shadow"
@@ -50,12 +51,12 @@
                     v-for="tag in schedule.tags"
                     v-if="tag.id !== memberId"
                     :key="tag.id"
-                    :class="'schedule-tag tagged-' + schedule.isTagged"
+                    class="schedule-tag"
                     @click="untag(schedule, tag.id)"
                 >{{ tag.name }}</span>
                 <span
                     v-if="schedule.isTagged"
-                    :class="'schedule-tag tagged-' + schedule.isTagged"
+                    class="schedule-tag tagged-true"
                 >{{ schedule.owner }}</span>
                 <div
                     v-if="!schedule.isTagged && friends.length > 0"

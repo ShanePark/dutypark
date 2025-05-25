@@ -406,6 +406,10 @@ a.homeButton:hover {
     font-size: 1em;
 }
 
+#detail-view-modal .schedules {
+    min-height: 350px;
+}
+
 #detail-view-modal .schedules .schedule {
     border-radius: 15px;
     padding: 10px 20px;
@@ -499,7 +503,7 @@ a.homeButton:hover {
     top: 0;
 }
 
-.schedule-tag.tagged-false::before {
+.schedule-tag::before {
     content: '\F4DA';
 }
 
@@ -787,6 +791,5 @@ input[readonly], textarea[readonly] {
 
 .modal-body {
     max-height: 650px;
-    min-height: 350px;
     overflow-y: scroll;
 }

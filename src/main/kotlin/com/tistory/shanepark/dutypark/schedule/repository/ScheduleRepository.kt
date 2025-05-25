@@ -68,16 +68,25 @@ interface ScheduleRepository : JpaRepository<Schedule, UUID> {
     fun findMaxPosition(member: Member, startDateTime: LocalDateTime): Int
 
     @Query(
-        "SELECT s FROM Schedule s" +
-                " JOIN FETCH s.member m" +
-                " JOIN FETCH s.tags t" +
-                " JOIN FETCH t.member tm" +
-                " WHERE tm = :member " +
-                "AND (s.startDateTime <= :end AND s.endDateTime >= :start)" +
-                "AND s.visibility IN (:visibilities)"
+        """
+    SELECT DISTINCT s
+    FROM Schedule s
+    JOIN FETCH s.member m
+    LEFT JOIN FETCH s.tags t
+    LEFT JOIN FETCH t.member tm
+    WHERE s IN (
+        SELECT s2
+        FROM Schedule s2
+        JOIN s2.tags t2
+        WHERE t2.member = :taggedMember
+        AND s2.startDateTime <= :end
+        AND s2.endDateTime >= :start
+        AND s2.visibility IN :visibilities
+    )   
+    """
     )
     fun findTaggedSchedulesOfRange(
-        member: Member,
+        taggedMember: Member,
         start: LocalDateTime,
         end: LocalDateTime,
         visibilities: Collection<Visibility>
