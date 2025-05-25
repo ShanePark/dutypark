@@ -49,11 +49,10 @@
                 v-if="tag.id !== memberId"
                 :key="tag.id"
                 class="schedule-tag tagged-false"
-            >{{ tag.name }}</span>
-            <span
-                v-if="schedule.isTagged"
-                class="schedule-tag tagged-true"
-            >{{ schedule.owner }}</span>
+            >{{ tag.name }}</span><span
+              v-if="schedule.isTagged"
+              class="schedule-tag tagged-true"
+          >{{ schedule.owner }}</span>
           </div>
         </div>
       </div>

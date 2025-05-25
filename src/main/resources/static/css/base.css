@@ -467,7 +467,7 @@ a.homeButton:hover {
     font-size: 0.8em;
     padding: 0 0.2em;
     border-radius: 15px;
-    margin: 0.05em;
+    margin: 0 0.025em;
     border: 1px solid black;
     background-color: floralwhite;
     width: fit-content;
@@ -498,6 +498,7 @@ a.homeButton:hover {
 
 .schedule-tag.tagged-true::before {
     font-family: unset;
+    font-size: 0.6em;
     margin-right: 0.1em;
     content: 'by';
     top: 0;
