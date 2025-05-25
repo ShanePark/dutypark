@@ -503,7 +503,7 @@ a.homeButton:hover {
     top: 0;
 }
 
-.schedule-tag.tagged-false::before {
+.schedule-tag::before {
     content: '\F4DA';
 }
 

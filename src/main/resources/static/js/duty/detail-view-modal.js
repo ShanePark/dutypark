@@ -129,7 +129,8 @@ const detailViewMethods = {
     }
     const scheduleId = schedule.id;
     const scheduleElement = document.getElementById('schedule-' + scheduleId);
-    const scheduleBy = scheduleElement.querySelector('.schedule-tags').querySelector('.schedule-tag').innerText;
+    const scheduleBy = scheduleElement.querySelector('.schedule-tags')
+        .querySelector('.schedule-tag.tagged-true').innerText;
 
     Swal.fire({
       title: '정말로 태그를 제거하시겠습니까?',
