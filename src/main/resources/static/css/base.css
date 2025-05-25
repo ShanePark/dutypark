@@ -464,10 +464,10 @@ a.homeButton:hover {
 }
 
 .schedule-tag {
-    font-size: 0.7em;
-    padding: 0 0.5em;
+    font-size: 0.8em;
+    padding: 0 0.2em;
     border-radius: 15px;
-    margin: 0.1em;
+    margin: 0.05em;
     border: 1px solid black;
     background-color: floralwhite;
     width: fit-content;

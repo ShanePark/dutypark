@@ -213,5 +213,21 @@
         font-size: calc(1.275rem + .3vw) !important
     }
 
+    .schedule-tag {
+        font-size: 0.65em;
+    }
+
+    #detail-view-modal .schedule-tag {
+        font-size: 1em;
+    }
+
+    .schedule-tag li {
+        font-size: 1.5em;
+    }
+
+    .schedule-tag ul.dropdown-menu {
+        max-height: 280px;
+    }
+
 }
 
