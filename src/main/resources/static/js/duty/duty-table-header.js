@@ -111,4 +111,7 @@ const dutyTableHeaderMethods = {
       app.loadDuties();
     });
   },
+  showOtherDuties() {
+    $('#show-other-duties-modal').modal('show');
+  }
 }

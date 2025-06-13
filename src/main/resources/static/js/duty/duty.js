@@ -51,6 +51,9 @@ function loadApp(memberId, teamId, loginMemberId, year, month, searchDay) {
         loadDutyPromise: null,
         searchQuery: '',
         searchResults: [],
+        MAX_OTHER_DUTIES: 3,
+        otherDutiesSelected: [],
+        otherDuties: [],
       }, mounted() {
         if (teamId) {
           this.hasTeam = true;
@@ -118,6 +121,7 @@ function loadApp(memberId, teamId, loginMemberId, year, month, searchDay) {
         ...detailViewMethods,
         ...dDayMethods,
         ...formatMethods,
+        ...otherDutiesMethods,
         updateStartDateTime() {
           app.createSchedule.startDateTime = app.createSchedule.startDate + 'T' + app.createSchedule.startTime;
           if (
@@ -156,6 +160,7 @@ function loadApp(memberId, teamId, loginMemberId, year, month, searchDay) {
               }
             })
           });
+          this.loadOtherDuties();
         },
         setDutyCounts() {
           let offCnt = new Date(app.year, app.month, 0).getDate();

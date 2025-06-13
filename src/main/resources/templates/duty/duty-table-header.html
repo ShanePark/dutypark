@@ -24,6 +24,7 @@
             class="edit-btn btn btn-success"
             v-on:click="batchEditMode=false;">편집완료
     </button>
+    <button class="btn btn-outline-primary" @click="showOtherDuties()">함께보기</button>
     <button v-if="canEdit && !batchEditMode"
             class="edit-btn btn btn-warning"
             v-on:click="batchEditMode=true;">편집모드

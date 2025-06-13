@@ -5,6 +5,7 @@ import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyBatchUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
+import com.tistory.shanepark.dutypark.duty.domain.dto.OtherDutyResponse
 import com.tistory.shanepark.dutypark.duty.service.DutyService
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -28,6 +29,21 @@ class DutyController(
         return dutyService.getDuties(
             loginMember = loginMember,
             memberId = memberId,
+            year = year,
+            month = month
+        )
+    }
+
+    @GetMapping("/others")
+    fun getOthersDuties(
+        @Login loginMember: LoginMember,
+        @RequestParam year: Int,
+        @RequestParam month: Int,
+        @RequestParam memberIds: List<Long>,
+    ): List<OtherDutyResponse> {
+        return dutyService.getOtherDuties(
+            loginMember = loginMember,
+            memberIds = memberIds,
             year = year,
             month = month
         )
