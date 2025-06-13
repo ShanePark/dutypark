@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.member.controller
 import com.tistory.shanepark.dutypark.common.domain.dto.PageResponse
 import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
+import com.tistory.shanepark.dutypark.member.domain.dto.FriendDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -20,7 +21,7 @@ class FriendController(
     @GetMapping
     fun getFriends(
         @Login loginMember: LoginMember
-    ): List<MemberDto> {
+    ): List<FriendDto> {
         return friendService.findAllFriends(loginMember)
     }
 
@@ -31,7 +32,7 @@ class FriendController(
         @SortDefault(sort = ["name"], direction = Sort.Direction.ASC)
         page: Pageable,
         @RequestParam(required = false, defaultValue = "") keyword: String,
-    ): PageResponse<MemberDto> {
+    ): PageResponse<FriendDto> {
         return PageResponse(friendService.searchPossibleFriends(loginMember, keyword, page))
     }
 

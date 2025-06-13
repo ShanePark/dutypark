@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.member.domain.dto.FriendDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
@@ -28,12 +29,12 @@ class FriendService(
 ) {
 
     @Transactional(readOnly = true)
-    fun findAllFriends(loginMember: LoginMember): List<MemberDto> {
+    fun findAllFriends(loginMember: LoginMember): List<FriendDto> {
         val member = loginMemberToMember(loginMember)
         return friendRelationRepository.findAllByMember(member)
             .sortedWith(compareBy({ it.friend.team?.name }, { it.friend.name }))
             .map { it.friend }
-            .map { MemberDto.of(it) }
+            .map { FriendDto.of(it) }
     }
 
     @Transactional(readOnly = true)
@@ -176,7 +177,7 @@ class FriendService(
     }
 
     @Transactional(readOnly = true)
-    fun searchPossibleFriends(login: LoginMember, keyword: String, page: Pageable): Page<MemberDto> {
+    fun searchPossibleFriends(login: LoginMember, keyword: String, page: Pageable): Page<FriendDto> {
         val member = loginMemberToMember(login)
 
         val friends = findAllFriends(login).map { it.id }
@@ -184,7 +185,7 @@ class FriendService(
         val excludeIds = friends + pendingRequestsFrom + member.id
 
         return memberRepository.findMembersByNameContainingIgnoreCaseAndIdNotIn(keyword, excludeIds, page)
-            .map { MemberDto.of(it) }
+            .map { FriendDto.of(it) }
     }
 
     private fun loginMemberToMember(login: LoginMember): Member {
@@ -271,13 +272,13 @@ class FriendService(
     }
 
     @Transactional(readOnly = true)
-    fun findAllFamilyMembers(id: Long): List<MemberDto> {
+    fun findAllFamilyMembers(id: Long): List<FriendDto> {
         val member = memberRepository.findById(id).orElseThrow()
         return friendRelationRepository.findAllByMember(member)
             .filter { it.isFamily }
             .map { it.friend }
             .sortedBy { it.name }
-            .map { MemberDto.of(it) }
+            .map { FriendDto.of(it) }
     }
 
 }
