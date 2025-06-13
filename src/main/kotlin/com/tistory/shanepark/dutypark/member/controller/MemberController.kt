@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.member.controller
 
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
+import com.tistory.shanepark.dutypark.member.domain.dto.FriendDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.dto.VisibilityUpdateRequest
 import com.tistory.shanepark.dutypark.member.service.FriendService
@@ -47,7 +48,7 @@ class MemberController(
     @GetMapping("/family")
     fun getFamilyMembers(
         @Login loginMember: LoginMember,
-    ): List<MemberDto> {
+    ): List<FriendDto> {
         return friendService.findAllFamilyMembers(loginMember.id)
     }
 

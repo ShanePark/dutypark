@@ -145,6 +145,10 @@ body a:hover {
     background-color: lightgrey !important;
 }
 
+.BACKGROUND-WHITE {
+    background-color: white !important;
+}
+
 .day-grid .month-prev, .day-grid .month-next {
     background-color: #fff;
 }
@@ -793,4 +797,8 @@ input[readonly], textarea[readonly] {
 .modal-body {
     max-height: 650px;
     overflow-y: scroll;
+}
+
+.other-duties .other-duty {
+    border-style: solid;
 }

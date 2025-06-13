@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyBatchUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
+import com.tistory.shanepark.dutypark.duty.domain.dto.OtherDutyResponse
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
@@ -146,6 +147,23 @@ class DutyService(
         val from = YearMonth.of(year, month).atDay(1)
         val to = YearMonth.of(year, month).atEndOfMonth()
         return dutyRepository.findAllByMemberAndDutyDateBetween(member, from, to)
+    }
+
+    fun getOtherDuties(
+        loginMember: LoginMember,
+        memberIds: List<Long>,
+        year: Int, month: Int
+    ): List<OtherDutyResponse> {
+        return memberIds.map { id ->
+            val member = memberRepository.findById(id).orElseThrow()
+            val team = member.team ?: throw IllegalArgumentException("Member with id $id does not belong to any team")
+            val duties = getDuties(memberId = id, year = year, month = month, loginMember = loginMember).map {
+                if (it.dutyType.isNullOrBlank()) {
+                    it.copy(dutyType = team.defaultDutyName, dutyColor = team.defaultDutyColor.name)
+                } else it
+            }
+            OtherDutyResponse(name = member.name, duties = duties)
+        }.toList()
     }
 
 }

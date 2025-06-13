@@ -5,6 +5,7 @@ import com.tistory.shanepark.dutypark.dashboard.domain.DashboardFriendInfo
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardMyDetail
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
+import com.tistory.shanepark.dutypark.member.domain.dto.FriendDto
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendRequestDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -75,7 +76,7 @@ class DashboardService(
         val friends = friendRelationRepository.findAllByMember(member)
             .map {
                 DashboardFriendDetail(
-                    member = MemberDto.of(it.friend),
+                    member = FriendDto.of(it.friend),
                     duty = todayDuty(it.friend),
                     schedules = todaySchedules(loginMember = loginMember, member = it.friend),
                     isFamily = it.isFamily,
