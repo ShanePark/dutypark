@@ -10,6 +10,12 @@
     </div>
   </div>
   <div v-if="hasTeam" class="buttons">
+    <button v-if="isMyCalendar" class="btn btn-outline-primary" @click="showOtherDuties()">함께보기</button>
+    <button v-if="!isMyCalendar"
+            class="btn"
+            :class="{'btn-primary': showMyDuties, 'btn-outline-primary':!showMyDuties}"
+            @click="toggleMyDuties()">함께보기
+    </button>
     <button v-if="canEdit && batchEditMode"
             class="edit-btn btn btn-warning"
             v-on:click="showBatchUpdate">한번에 수정
@@ -19,12 +25,10 @@
             v-on:click="uploadBatchFile"
     >시간표 파일 업로드
     </button>
-
     <button v-if="canEdit && batchEditMode"
             class="edit-btn btn btn-success"
             v-on:click="batchEditMode=false;">편집완료
     </button>
-    <button class="btn btn-outline-primary" @click="showOtherDuties()">함께보기</button>
     <button v-if="canEdit && !batchEditMode"
             class="edit-btn btn btn-warning"
             v-on:click="batchEditMode=true;">편집모드

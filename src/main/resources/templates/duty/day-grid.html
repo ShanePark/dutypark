@@ -28,8 +28,8 @@
              style="width: fit-content; margin-left: auto; margin-right: auto;">
 
           <span class="d-inline-flex align-items-baseline">
-            <span class="fw-bold me-1">{{ other.name }}</span>
-            <small v-if="other.duties[index].dutyType" class="fs-6">({{ other.duties[index].dutyType }})</small>
+            <span class="fw-bold">{{ other.name }}</span>
+            <small v-if="other.duties[index].dutyType">:{{ sliceText(other.duties[index].dutyType, 4) }}</small>
           </span>
         </div>
       </div>

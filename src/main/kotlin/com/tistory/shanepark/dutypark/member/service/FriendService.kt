@@ -2,7 +2,6 @@ package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendDto
-import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -32,7 +31,7 @@ class FriendService(
     fun findAllFriends(loginMember: LoginMember): List<FriendDto> {
         val member = loginMemberToMember(loginMember)
         return friendRelationRepository.findAllByMember(member)
-            .sortedWith(compareBy({ it.friend.team?.name }, { it.friend.name }))
+            .sortedWith(compareBy({ it.pinOrder ?: Long.MAX_VALUE }, { it.friend.name }))
             .map { it.friend }
             .map { FriendDto.of(it) }
     }
