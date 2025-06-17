@@ -5,16 +5,24 @@ import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyBatchUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
+import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
+import com.tistory.shanepark.dutypark.holiday.domain.Holiday
+import com.tistory.shanepark.dutypark.holiday.repository.HolidayRepository
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.service.FriendService
+import com.tistory.shanepark.dutypark.team.domain.enums.WorkType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
+import java.time.LocalDate
 
 internal class DutyServiceTest : DutyparkIntegrationTest() {
+
+    @Autowired
+    private lateinit var holidayRepository: HolidayRepository
 
     @Autowired
     lateinit var dutyService: DutyService
@@ -40,11 +48,11 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
             )
         )
 
-        val dutyDto = dutyService.getDutiesAsMap(member, 2022, 10)[10]
+        val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2022, 10, loginMember(member))
+        val dutyDto = duties.filter { it.day == 10 }[0]
+
         assertThat(dutyDto).isNotNull
-        dutyDto?.let {
-            assert(it.dutyType == dutyTypes[0].name)
-        }
+        assert(dutyDto.dutyType == dutyTypes[0].name)
 
     }
 
@@ -72,9 +80,9 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
             )
         )
 
-        dutyService.getDutiesAsMap(member, 2022, 10)[10]?.let {
-            assert(it.dutyType == dutyTypes[1].name)
-        }
+        val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2022, 10, loginMember(member))
+        val dutyDto = duties.filter { it.day == 10 }[0]
+        assert(dutyDto.dutyType == dutyTypes[1].name)
 
     }
 
@@ -101,7 +109,9 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
                 memberId = member.id!!,
             )
         )
-        assertThat(dutyService.getDutiesAsMap(member, 2022, 10)[10]).isNull()
+        val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2022, 10, loginMember(member))
+        val dutyDto = duties.filter { it.day == 10 }[0]
+        assertThat(dutyDto.dutyType).isNull()
     }
 
     @Test
@@ -130,9 +140,9 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
             )
         }
 
-        dutyService.getDutiesAsMap(member, 2022, 10)[10]?.let {
-            assert(it.dutyType == dutyTypes[0].name)
-        }
+        val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2022, 10, loginMember(member))
+        val dutyDto = duties.filter { it.day == 10 }[0]
+        assert(dutyDto.dutyType == dutyTypes[0].name)
     }
 
     @Test
@@ -161,9 +171,9 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
             )
         }
 
-        dutyService.getDutiesAsMap(member, 2022, 10)[10]?.let {
-            assert(it.dutyType == dutyTypes[0].name)
-        }
+        val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2022, 10, loginMember(member))
+        val dutyDto = duties.filter { it.day == 10 }[0]
+        assert(dutyDto.dutyType == dutyTypes[0].name)
     }
 
     @Test
@@ -191,7 +201,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
         )
 
         // When
-        val duties = dutyService.getDuties(member.id!!, 2023, 4, loginMember(member))
+        val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2023, 4, loginMember(member))
 
         // Then
         assertThat(duties).hasSize(42)
@@ -242,7 +252,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
 
         // Then
         assertThrows<AuthException> {
-            dutyService.getDuties(member.id!!, 2023, 4, loginMember(member2))
+            dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2023, 4, loginMember(member2))
         }
     }
 
@@ -277,7 +287,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
         friendService.acceptFriendRequest(loginMember(target), login.id!!)
 
         // When
-        val duties = dutyService.getDuties(target.id!!, 2023, 4, loginMember(login))
+        val duties = dutyService.getDutiesAndInitLazyIfNeeded(target.id!!, 2023, 4, loginMember(login))
 
         // Then
         assertThat(duties).hasSize(42)
@@ -298,7 +308,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
 
         // Then
         assertThrows<AuthException> {
-            dutyService.getDuties(target.id!!, 2023, 4, loginMember(login))
+            dutyService.getDutiesAndInitLazyIfNeeded(target.id!!, 2023, 4, loginMember(login))
         }
     }
 
@@ -316,7 +326,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
         updateVisibility(target, Visibility.PRIVATE)
 
         // Then does not throw exception
-        dutyService.getDuties(target.id!!, 2023, 4, loginMember(login))
+        dutyService.getDutiesAndInitLazyIfNeeded(target.id!!, 2023, 4, loginMember(login))
     }
 
     @Test
@@ -336,9 +346,8 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
         )
 
         // Then
-        val duties = dutyService.getDutiesAsMap(member, 2025, 1)
-        assertThat(duties).hasSize(31)
-        assertThat(duties.filter { it.value?.dutyType == dutyTypes[1].name }).hasSize(31)
+        val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2025, 1, loginMember(member))
+        assertThat(duties.filter { it.dutyType == dutyTypes[1].name }).hasSize(31)
     }
 
     @Test
@@ -367,8 +376,8 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
         )
 
         // Then
-        val duties = dutyService.getDutiesAsMap(member, 2025, 1)
-        assertThat(duties).isEmpty()
+        val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2025, 1, loginMember(member))
+        assertThat(duties.filter { it.dutyType != null }).isEmpty()
     }
 
     @Test
@@ -397,9 +406,42 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
         )
 
         // Then
-        val duties = dutyService.getDutiesAsMap(member, 2025, 1)
-        assertThat(duties).hasSize(31)
-        assertThat(duties.filter { it.value?.dutyType == dutyTypes[1].name }).hasSize(31)
+        val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2025, 1, loginMember(member))
+        assertThat(duties.filter { it.dutyType == dutyTypes[1].name }).hasSize(31)
+    }
+
+    @Test
+    fun `init weekdays duties if workType is weekday`() {
+        // Given
+        val member = TestData.member
+        val team = member.team ?: throw NoSuchElementException("Team not found for member")
+        team.workType = WorkType.WEEKDAY
+        val dutyName = "근무"
+        team.addDutyType(dutyName = dutyName, dutyColor = Color.BLUE)
+        teamRepository.save(team)
+
+        val holidays = listOf(
+            Holiday("신정", true, LocalDate.of(2025, 1, 1)),
+            Holiday("임시공휴일", true, LocalDate.of(2025, 1, 27)),
+            Holiday("설날", true, LocalDate.of(2025, 1, 28)),
+            Holiday("설날", true, LocalDate.of(2025, 1, 29)),
+            Holiday("설날", true, LocalDate.of(2025, 1, 30))
+        )
+        holidayRepository.saveAll(holidays)
+
+        // When
+        val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2025, 1, loginMember(member))
+
+        // Then
+        assertThat(duties.filter { it.dutyType == dutyName }).hasSize(20)
+        for (duty in duties) {
+            val date = LocalDate.of(duty.year, duty.month, duty.day)
+            if (date.dayOfWeek.value > 5 || holidays.any { it.localDate == date }) {
+                assertThat(duty.dutyType).isNull()
+                continue
+            }
+            assertThat(duty.dutyType).isEqualTo(dutyName)
+        }
     }
 
 }

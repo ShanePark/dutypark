@@ -9,14 +9,18 @@ import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
+import com.tistory.shanepark.dutypark.holiday.domain.HolidayDto
+import com.tistory.shanepark.dutypark.holiday.service.HolidayService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.team.domain.enums.WorkType
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
+import java.time.LocalDate.of
 import java.time.YearMonth
 
 @Service
@@ -27,14 +31,8 @@ class DutyService(
     private val memberRepository: MemberRepository,
     private val friendService: FriendService,
     private val memberService: MemberService,
+    private val holidayService: HolidayService,
 ) {
-
-    @Transactional(readOnly = true)
-    fun getDutiesAsMap(member: Member, year: Int, month: Int): Map<Int, DutyDto?> {
-        return findDutyByMonthAndYear(member, year, month)
-            .associate { it.dutyDate.dayOfMonth to DutyDto(it) }
-    }
-
     fun update(dutyUpdateDto: DutyUpdateDto) {
         val member = memberRepository.findById(dutyUpdateDto.memberId).orElseThrow()
 
@@ -102,20 +100,32 @@ class DutyService(
                 || memberService.isManager(isManager = loginMember, target = member)
     }
 
-    @Transactional(readOnly = true)
-    fun getDuties(memberId: Long, year: Int, month: Int, loginMember: LoginMember?): List<DutyDto> {
+    @Transactional(readOnly = false)
+    fun getDutiesAndInitLazyIfNeeded(memberId: Long, year: Int, month: Int, loginMember: LoginMember?): List<DutyDto> {
         val member = memberRepository.findMemberWithTeam(memberId).orElseThrow()
         friendService.checkVisibility(loginMember, member)
 
         val team = member.team ?: return emptyList()
         val defaultDutyColor = team.defaultDutyColor
         val calendarView = CalendarView(year = year, month = month)
-        val dutyMap = getDutiesAsMap(member, calendarView.startDate, calendarView.endDate)
+        var duties = dutyRepository.findAllByMemberAndDutyDateBetween(
+            member = member,
+            calendarView.startDate,
+            calendarView.endDate
+        )
+        if (shouldLazyInitDuty(member, duties)) {
+            duties = lazyInitDuty(member = member, calendarView = calendarView, duties = duties)
+        }
+
+        val dutyMap = duties.map { d -> DutyDto(d) }
+            .associateBy { d ->
+                of(d.year, d.month, d.day)
+            }
 
         val answer = mutableListOf<DutyDto>()
         for (cur in calendarView.dates) {
             val duty = dutyMap.getOrDefault(
-                LocalDate.of(cur.year, cur.monthValue, cur.dayOfMonth), DutyDto(
+                of(cur.year, cur.monthValue, cur.dayOfMonth), DutyDto(
                     year = cur.year,
                     month = cur.monthValue,
                     day = cur.dayOfMonth,
@@ -127,16 +137,71 @@ class DutyService(
         return answer
     }
 
-    private fun getDutiesAsMap(member: Member, from: LocalDate, until: LocalDate): Map<LocalDate, DutyDto> {
-        return dutyRepository.findAllByMemberAndDutyDateBetween(
-            member, from, until
-        )
-            .map { d -> DutyDto(d) }
-            .associateBy { d ->
-                LocalDate.of(
-                    d.year, d.month, d.day
-                )
+    private fun shouldLazyInitDuty(
+        member: Member,
+        duties: List<Duty>,
+    ): Boolean {
+        val team = member.team ?: return false
+        val workType = team.workType
+        if (workType != WorkType.WEEKDAY) {
+            return false
+        }
+        val startWeekAndEndWeekAllWork = 10
+        return duties.size <= startWeekAndEndWeekAllWork
+    }
+
+    private fun lazyInitDuty(
+        member: Member,
+        calendarView: CalendarView,
+        duties: List<Duty>
+    ): List<Duty> {
+        val team = member.team ?: throw IllegalArgumentException("Member ${member.id} does not belong to any team")
+        val dutyTypes = team.dutyTypes
+        if (dutyTypes.isEmpty()) {
+            throw IllegalArgumentException("Team ${team.id} does not have any duty types defined")
+        }
+        val dutyType = dutyTypes.first()
+        return when (team.workType) {
+            WorkType.WEEKDAY -> initWeekDayDuties(member, dutyType, calendarView, duties)
+            WorkType.FLEXIBLE -> throw IllegalArgumentException("Cannot lazy init flexible duties")
+            else -> {
+                duties
             }
+        }
+    }
+
+    private fun initWeekDayDuties(
+        member: Member,
+        dutyType: DutyType,
+        calendarView: CalendarView,
+        dutiesBefore: List<Duty>
+    ): List<Duty> {
+        val duties = mutableListOf<Duty>()
+        var current = calendarView.startDate
+        val holidays = holidayService.findHolidays(calendarView)
+        val dutiesBeforeMap = dutiesBefore.associateBy { it.dutyDate }
+        while (current <= calendarView.endDate) {
+            if (isWeekDaysAndNotHoliday(current = current, calendarView = calendarView, holidays = holidays)) {
+                val existing = dutiesBeforeMap[current]
+                val duty = existing ?: Duty(member = member, dutyDate = current, dutyType = dutyType)
+                duties.add(duty)
+            }
+            current = current.plusDays(1)
+        }
+        return dutyRepository.saveAll(duties)
+    }
+
+    private fun isWeekDaysAndNotHoliday(
+        current: LocalDate,
+        calendarView: CalendarView,
+        holidays: Array<List<HolidayDto>>
+    ): Boolean {
+        if (current.dayOfWeek.value > 5) return false
+        val index = calendarView.getIndex(current)
+        holidays[index].forEach {
+            if (it.isHoliday) return false
+        }
+        return true
     }
 
     private fun findDutyByMonthAndYear(
@@ -157,11 +222,12 @@ class DutyService(
         return memberIds.map { id ->
             val member = memberRepository.findById(id).orElseThrow()
             val team = member.team ?: throw IllegalArgumentException("Member with id $id does not belong to any team")
-            val duties = getDuties(memberId = id, year = year, month = month, loginMember = loginMember).map {
-                if (it.dutyType.isNullOrBlank()) {
-                    it.copy(dutyType = team.defaultDutyName, dutyColor = team.defaultDutyColor.name)
-                } else it
-            }
+            val duties =
+                getDutiesAndInitLazyIfNeeded(memberId = id, year = year, month = month, loginMember = loginMember).map {
+                    if (it.dutyType.isNullOrBlank()) {
+                        it.copy(dutyType = team.defaultDutyName, dutyColor = team.defaultDutyColor.name)
+                    } else it
+                }
             OtherDutyResponse(name = member.name, duties = duties)
         }.toList()
     }

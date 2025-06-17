@@ -141,10 +141,10 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
             DutyUpdateDto(year = 2023, month = 4, day = 8, dutyTypeId = dutyType1.id!!, memberId = member.id!!)
         dutyService.update(dutyUpdateDto)
 
-        val duties = dutyService.getDutiesAsMap(member, 2023, 4)
-        assertThat(duties.size).isEqualTo(1)
-        val duty = duties[8]
-        assertThat(duty).isNotNull
+        val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2023, 4, loginMember(member))
+        assertThat(duties.filter { it.dutyType != null }).hasSize(1)
+        val apr8 = duties.first { it.year == 2023 && it.month == 4 && it.day == 8 }
+        assertThat(apr8.dutyType).isNotNull
 
         // When
         team.removeMember(member)
