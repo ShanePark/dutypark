@@ -42,6 +42,7 @@ class Team(
     var workType: WorkType = WorkType.FLEXIBLE
 
     @OneToMany(mappedBy = "team", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+    @OrderBy("position ASC")
     val dutyTypes: MutableList<DutyType> = mutableListOf()
 
     @OneToMany(mappedBy = "team", fetch = FetchType.LAZY)

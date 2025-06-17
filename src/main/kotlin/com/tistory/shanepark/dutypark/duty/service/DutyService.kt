@@ -146,6 +146,10 @@ class DutyService(
         if (workType != WorkType.WEEKDAY) {
             return false
         }
+        val dutyTypes = team.dutyTypes
+        if (dutyTypes.isEmpty() || dutyTypes.size > 1) {
+            return false
+        }
         val startWeekAndEndWeekAllWork = 10
         return duties.size <= startWeekAndEndWeekAllWork
     }
@@ -157,8 +161,8 @@ class DutyService(
     ): List<Duty> {
         val team = member.team ?: throw IllegalArgumentException("Member ${member.id} does not belong to any team")
         val dutyTypes = team.dutyTypes
-        if (dutyTypes.isEmpty()) {
-            throw IllegalArgumentException("Team ${team.id} does not have any duty types defined")
+        if (dutyTypes.isEmpty() || dutyTypes.size > 1) {
+            throw IllegalArgumentException("Team ${team.id} must have exactly one duty type for lazy initialization")
         }
         val dutyType = dutyTypes.first()
         return when (team.workType) {
