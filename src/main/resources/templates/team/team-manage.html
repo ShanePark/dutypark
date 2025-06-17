@@ -1,6 +1,7 @@
 <div id="app" class="card p-0 rounded shadow-sm fs-2" v-cloak>
   <div class="card-header bg-secondary text-white fw-bold m-1 text-center">
     {{ team.name }} 관리
+    <a v-if="isAppAdmin" class="btn btn-primary" href="/admin/team">팀 목록</a>
     <button v-if="isAdmin && teamLoaded && !hasMember"
             @click="removeTeam()"
             class="btn btn-danger">
@@ -366,7 +367,8 @@
           type: 'GET',
           success: function (response) {
             app.team = response;
-            app.isAdmin = "[[${loginMember.isAdmin}]]" === 'true' || (app.team.adminId === app.loginId);
+            app.isAppAdmin = "[[${loginMember.isAdmin}]]" === 'true';
+            app.isAdmin = app.isAppAdmin || (app.team.adminId === app.loginId);
             app.teamLoaded = true;
           },
           error: function (error) {
@@ -393,7 +395,7 @@
         const dutyTypeId = dutyType.attributes['id']?.value;
 
         const modal = document.querySelector('#duty-type-modal').cloneNode(true);
-        if(!dutyTypeId){
+        if (!dutyTypeId) {
           modal.querySelector('p').insertAdjacentHTML('afterend', '<p>현재 선택한 근무 유형은 <b>근무가 없음</b> 용도로 사용합니다.</p>');
         }
         let nameInput = modal.querySelector('input[name="name"]');

@@ -31,8 +31,8 @@ class TeamService(
     val log = logger()
 
     @Transactional(readOnly = true)
-    fun findAllWithMemberCount(pageable: Pageable): Page<SimpleTeamDto> {
-        return teamRepository.findAllWithMemberCount(pageable)
+    fun findAllWithMemberCount(pageable: Pageable, keyword: String = ""): Page<SimpleTeamDto> {
+        return teamRepository.findAllWithMemberCount(pageable = pageable, keyword = keyword)
     }
 
     @Transactional(readOnly = true)

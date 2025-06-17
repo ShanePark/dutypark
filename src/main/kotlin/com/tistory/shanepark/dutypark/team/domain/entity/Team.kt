@@ -30,7 +30,7 @@ class Team(
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, name = "default_duty_color")
-    var defaultDutyColor: Color = Color.GREY
+    var defaultDutyColor: Color = Color.RED
 
     @Column(nullable = false, name = "default_duty_name")
     var defaultDutyName: String = "OFF"

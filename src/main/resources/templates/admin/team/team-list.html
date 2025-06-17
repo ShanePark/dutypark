@@ -1,141 +1,186 @@
 <div class="teams" v-cloak>
-    <h2>Teams</h2>
-    <button class="btn btn-primary" v-on:click="add()">New Team</button>
-    <table class="table table-striped mt-2">
-        <thead>
-        <colgroup>
-            <col style="width: 20%">
-            <col style="width: 10%">
-            <col style="width: 70%">
-        </colgroup>
-        <tr>
-            <th scope="col">Name</th>
-            <th scope="col">Members</th>
-            <th scope="col">Description</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr v-for="team in teams">
-            <td>
-                <a :href="'/team/manage/' + team.id">{{ team.name }}</a>
-            </td>
-            <td>{{ team.memberCount }}</td>
-            <td>{{ team.description }}</td>
-        </tr>
-        </tbody>
-    </table>
+  <h2>Teams</h2>
+  <p class="text-secondary"><span v-if="keyword">[<b>{{keyword}}</b>] 검색 결과 </span>총 {{ totalElements }}개의 팀이 있습니다.</p>
+  <table class="table table-striped mt-2">
+    <thead>
+    <colgroup>
+      <col style="width: 5%">
+      <col style="width: 15%">
+      <col style="width: 10%">
+      <col style="width: 70%">
+    </colgroup>
+    <tr>
+      <th scope="col"></th>
+      <th scope="col">Name</th>
+      <th scope="col">Members</th>
+      <th scope="col">Description</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="hover-bg-light cursor-pointer"
+        v-for="(team, i) in teams"
+        @click="manageTeam(team.id)"
+    >
+      <td class="text-align-center">{{page * 10 + i + 1}}</td>
+      <td>{{ team.name }}</td>
+      <td>{{ team.memberCount }}</td>
+      <td>{{ team.description }}</td>
+    </tr>
+    </tbody>
+  </table>
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <button class="btn btn-primary" @click="add()">New Team</button>
+    <div class="input-group w-50">
+      <input type="text" class="form-control" placeholder="Search teams..." v-model="keyword" @keyup.enter="load(0)">
+      <button class="btn btn-outline-secondary" type="button" @click="load(0)">Search</button>
+    </div>
+  </div>
+
+  <nav>
+    <ul class="pagination justify-content-center">
+      <li class="page-item" :class="{ disabled: page === 0 }">
+        <a class="page-link" href="#" @click.prevent="load(page - 1)">Previous</a>
+      </li>
+      <li class="page-item"
+          v-for="p in totalPages"
+          :class="{ active: p - 1 === page }"
+          :key="p">
+        <a class="page-link" href="#" @click.prevent="load(p - 1)">{{ p }}</a>
+      </li>
+      <li class="page-item" :class="{ disabled: page === totalPages - 1 }">
+        <a class="page-link" href="#" @click.prevent="load(page + 1)">Next</a>
+      </li>
+    </ul>
+  </nav>
 </div>
 
 <!-- Modal -->
 <form class="add_modal" hidden>
+  <div class="form-group">
     <div class="form-group">
-        <div class="form-group">
-            <label for="name">Name</label>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <input type="text" maxlength="20" minlength="2" class="form-control" id="name" name="name"
-                       placeholder="Team name"
-                       style="flex-grow: 1; margin-right: 10px;">
-                <button type="button" class="btn btn-primary checker">Check</button>
-            </div>
-        </div>
-        <div class="form-group mt-2">
-            <label for="description">Description</label><br/>
-            <input type="text" class="form-control" id="description" name="description" placeholder="description"
-                   maxlength="50">
-        </div>
+      <label for="name">Name</label>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <input type="text" maxlength="20" minlength="2" class="form-control" id="name" name="name"
+               placeholder="Team name"
+               style="flex-grow: 1; margin-right: 10px;">
+        <button type="button" class="btn btn-primary checker">Check</button>
+      </div>
     </div>
+    <div class="form-group mt-2">
+      <label for="description">Description</label><br/>
+      <input type="text" class="form-control" id="description" name="description" placeholder="description"
+             maxlength="50">
+    </div>
+  </div>
 </form>
 
 <script>
-    $(function () {
-        const app = new Vue({
-            el: '.teams',
-            data: {
-                teams: []
+  $(function () {
+    const app = new Vue({
+      el: '.teams',
+      data: {
+        teams: [],
+        page: 0,
+        size: 10,
+        totalPages: 0,
+        totalElements: 0,
+        keyword: '',
+      },
+      mounted() {
+        this.load(0);
+      },
+      methods: {
+        load: function (pageNum) {
+          const params = new URLSearchParams();
+          params.append('page', pageNum);
+          params.append('size', this.size);
+          params.append('keyword', this.keyword);
+          $.ajax({
+            url: `/admin/api/teams?${params.toString()}`,
+            type: 'GET',
+            success: function (response) {
+              app.teams = response.content;
+              app.page = response.pageable.pageNumber;
+              app.totalPages = response.totalPages;
+              app.totalElements = response.totalElements;
             },
-            mounted() {
-                this.load();
-            },
-            methods: {
-                load: function () {
-                    $.ajax({
-                        url: '/admin/api/teams',
-                        type: 'GET',
-                        success: function (response) {
-                            app.teams = response.content;
-                        },
-                        error: function (error) {
-                            console.log(error);
-                        }
-                    })
-                },
-                add: function () {
-                    const modal = $('.add_modal').clone();
-                    modal.attr('hidden', false);
-
-                    Swal.fire({
-                        title: 'Add Team',
-                        html: modal,
-                        cancelButtonText: 'Cancel',
-                        showCancelButton: true,
-                        confirmButtonText: 'Add',
-                        didOpen: () => {
-                            Swal.getConfirmButton().setAttribute('disabled', true);
-                            Swal.getPopup().querySelector('input[name="name"]').addEventListener('input', () => {
-                                Swal.getConfirmButton().setAttribute('disabled', true);
-                            });
-                        },
-                        preConfirm: () => {
-                            const name = Swal.getPopup().querySelector('input[name="name"]').value
-                            const description = Swal.getPopup().querySelector('input[name="description"]').value
-                            if (!name || !description)
-                                Swal.showValidationMessage(`Please enter name and description`);
-                            return {name, description}
-                        },
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            const {name, description} = result.value;
-                            $.ajax({
-                                url: '/admin/api/teams',
-                                type: 'POST',
-                                data: JSON.stringify({name, description}),
-                                contentType: 'application/json',
-                                success: function (response) {
-                                    app.load();
-                                },
-                                error: function (error) {
-                                    Swal.fire({
-                                        icon: 'error',
-                                        title: '등록 실패.',
-                                        text: error.responseJSON.errors[0].defaultMessage.toString()
-                                    })
-                                }
-                            })
-                        }
-                    })
-                },
+            error: function (error) {
+              console.log(error);
             }
-        });
+          })
+        },
+        add: function () {
+          const modal = $('.add_modal').clone();
+          modal.attr('hidden', false);
 
-        $(document).on('click', '.checker', function () {
-            const name = $(this).parent().find('input[name="name"]').val();
-            $.ajax({
-                url: '/admin/api/teams/check',
+          Swal.fire({
+            title: 'Add Team',
+            html: modal,
+            cancelButtonText: 'Cancel',
+            showCancelButton: true,
+            confirmButtonText: 'Add',
+            didOpen: () => {
+              Swal.getConfirmButton().setAttribute('disabled', true);
+              Swal.getPopup().querySelector('input[name="name"]').addEventListener('input', () => {
+                Swal.getConfirmButton().setAttribute('disabled', true);
+              });
+            },
+            preConfirm: () => {
+              const name = Swal.getPopup().querySelector('input[name="name"]').value
+              const description = Swal.getPopup().querySelector('input[name="description"]').value
+              if (!name || !description)
+                Swal.showValidationMessage(`Please enter name and description`);
+              return {name, description}
+            },
+          }).then((result) => {
+            if (result.isConfirmed) {
+              const {name, description} = result.value;
+              $.ajax({
+                url: '/admin/api/teams',
                 type: 'POST',
-                data: JSON.stringify({name}),
+                data: JSON.stringify({name, description}),
                 contentType: 'application/json',
-                success: function (response) {
-                    if (response != "OK") {
-                        Swal.showValidationMessage(response);
-                        return;
-                    }
-                    Swal.resetValidationMessage();
-                    Swal.getConfirmButton().disabled = false;
+                success: function (team) {
+                  const teamId = team.id;
+                  window.location.href = `/team/manage/${teamId}`;
                 },
                 error: function (error) {
-                    console.log(error);
+                  Swal.fire({
+                    icon: 'error',
+                    title: '등록 실패.',
+                    text: error.responseJSON.errors[0].defaultMessage.toString()
+                  })
                 }
-            })
-        });
-    })
+              })
+            }
+          })
+        },
+        manageTeam: function (teamId) {
+          window.location.href = `/team/manage/${teamId}`;
+        }
+      }
+    });
+
+    $(document).on('click', '.checker', function () {
+      const name = this.parentElement.querySelector('input[name="name"]').value;
+      $.ajax({
+        url: '/admin/api/teams/check',
+        type: 'POST',
+        data: JSON.stringify({name}),
+        contentType: 'application/json',
+        success: function (response) {
+          Swal.resetValidationMessage();
+          if (response !== "OK") {
+            Swal.showValidationMessage(response);
+            return;
+          }
+          Swal.getConfirmButton().disabled = false;
+        },
+        error: function (error) {
+          console.log(error);
+        }
+      })
+    });
+  })
 </script>
