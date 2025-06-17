@@ -13,6 +13,7 @@ import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.dto.*
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
+import com.tistory.shanepark.dutypark.team.domain.enums.WorkType
 import com.tistory.shanepark.dutypark.team.repository.TeamRepository
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -31,8 +32,8 @@ class TeamService(
     val log = logger()
 
     @Transactional(readOnly = true)
-    fun findAllWithMemberCount(pageable: Pageable): Page<SimpleTeamDto> {
-        return teamRepository.findAllWithMemberCount(pageable)
+    fun findAllWithMemberCount(pageable: Pageable, keyword: String = ""): Page<SimpleTeamDto> {
+        return teamRepository.findAllWithMemberCount(pageable = pageable, keyword = keyword)
     }
 
     @Transactional(readOnly = true)
@@ -232,6 +233,11 @@ class TeamService(
         if (member.team != team) {
             throw AuthException("Member is not a team member, team: $team, member: $member")
         }
+    }
+
+    fun updateWorkType(teamId: Long, workType: WorkType) {
+        val team = teamRepository.findById(teamId).orElseThrow()
+        team.workType = workType
     }
 
 }

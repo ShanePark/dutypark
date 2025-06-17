@@ -26,7 +26,7 @@ class DutyController(
         @RequestParam month: Int,
         @RequestParam memberId: Long,
     ): List<DutyDto> {
-        return dutyService.getDuties(
+        return dutyService.getDutiesAndInitLazyIfNeeded(
             loginMember = loginMember,
             memberId = memberId,
             year = year,

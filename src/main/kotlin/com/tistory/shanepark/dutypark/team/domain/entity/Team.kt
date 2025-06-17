@@ -6,6 +6,7 @@ import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.team.domain.enums.WorkType
 import jakarta.persistence.*
 
 @Entity
@@ -14,6 +15,7 @@ class Team(
     @Column(unique = true)
     var name: String,
 ) : BaseTimeEntity() {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
@@ -30,10 +32,14 @@ class Team(
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, name = "default_duty_color")
-    var defaultDutyColor: Color = Color.GREY
+    var defaultDutyColor: Color = Color.RED
 
     @Column(nullable = false, name = "default_duty_name")
     var defaultDutyName: String = "OFF"
+
+    @Column(nullable = false, name = "work_type")
+    @Enumerated(EnumType.STRING)
+    var workType: WorkType = WorkType.FLEXIBLE
 
     @OneToMany(mappedBy = "team", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
     val dutyTypes: MutableList<DutyType> = mutableListOf()

@@ -12,8 +12,20 @@ interface TeamRepository : JpaRepository<Team, Long> {
 
     override fun findById(id: Long): Optional<Team>
 
-    @Query("select new com.tistory.shanepark.dutypark.team.domain.dto.SimpleTeamDto(t.id, t.name, t.description, count(m)) from Team t left join t.members m group by t")
-    fun findAllWithMemberCount(pageable: Pageable): Page<SimpleTeamDto>
+    @Query(
+        value = """
+        select new com.tistory.shanepark.dutypark.team.domain.dto.SimpleTeamDto(t.id, t.name, t.description, count(m))
+        from Team t left join t.members m
+        where t.name like %:keyword% or t.description like %:keyword%
+        group by t
+        """,
+        countQuery = """
+        select count(t)
+        from Team t
+        where t.name like %:keyword% or t.description like %:keyword%
+        """
+    )
+    fun findAllWithMemberCount(pageable: Pageable, keyword: String = ""): Page<SimpleTeamDto>
 
     fun findByName(name: String): Team?
 

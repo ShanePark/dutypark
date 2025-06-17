@@ -8,10 +8,8 @@ import com.tistory.shanepark.dutypark.team.domain.dto.TeamCreateDto
 import com.tistory.shanepark.dutypark.team.domain.dto.TeamDto
 import com.tistory.shanepark.dutypark.team.domain.enums.TeamNameCheckResult
 import com.tistory.shanepark.dutypark.team.domain.enums.TeamNameCheckResult.*
-import com.tistory.shanepark.dutypark.team.repository.TeamRepository
 import com.tistory.shanepark.dutypark.team.service.TeamService
 import jakarta.validation.Valid
-import org.springframework.context.ApplicationContext
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
 import org.springframework.web.bind.annotation.*
@@ -26,8 +24,11 @@ class TeamAdminController(
     private val log = logger()
 
     @GetMapping
-    fun findAll(@PageableDefault(page = 0, size = 10) page: Pageable): PageResponse<SimpleTeamDto> {
-        val result = teamService.findAllWithMemberCount(page)
+    fun findAll(
+        @PageableDefault(page = 0, size = 10) page: Pageable,
+        @RequestParam(required = false, defaultValue = "") keyword: String,
+    ): PageResponse<SimpleTeamDto> {
+        val result = teamService.findAllWithMemberCount(pageable = page, keyword = keyword)
         return PageResponse(result)
     }
 
