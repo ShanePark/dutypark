@@ -377,7 +377,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
 
         // Then
         val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2025, 1, loginMember(member))
-        assertThat(duties.filter { it.dutyType != null }).isEmpty()
+        assertThat(duties.filter { !it.isOff }).isEmpty()
     }
 
     @Test
