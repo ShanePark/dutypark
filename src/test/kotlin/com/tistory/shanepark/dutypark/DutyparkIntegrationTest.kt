@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
+import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberCreateDto
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
@@ -63,9 +64,9 @@ class DutyparkIntegrationTest {
 
     private fun initDutyTypes() {
         TestData.dutyTypes.clear()
-        TestData.dutyTypes.add(dutyTypeRepository.save(DutyType("오전", 0, TestData.team)))
-        TestData.dutyTypes.add(dutyTypeRepository.save(DutyType("오후", 1, TestData.team)))
-        TestData.dutyTypes.add(dutyTypeRepository.save(DutyType("야간", 2, TestData.team)))
+        TestData.dutyTypes.add(dutyTypeRepository.save(DutyType("오전", 0, TestData.team, Color.GREEN)))
+        TestData.dutyTypes.add(dutyTypeRepository.save(DutyType("오후", 1, TestData.team, Color.BLUE)))
+        TestData.dutyTypes.add(dutyTypeRepository.save(DutyType("야간", 2, TestData.team, Color.RED)))
     }
 
     private fun initTestMember() {

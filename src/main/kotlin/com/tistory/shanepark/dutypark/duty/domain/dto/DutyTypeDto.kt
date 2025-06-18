@@ -12,6 +12,6 @@ data class DutyTypeDto(
         dutyType.id,
         dutyType.name,
         dutyType.position,
-        dutyType.color?.name
+        dutyType.color.name
     )
 }

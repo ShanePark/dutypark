@@ -17,11 +17,19 @@ data class DutyDto(
         month = duty.dutyDate.monthValue,
         day = duty.dutyDate.dayOfMonth,
         dutyType = duty.dutyType?.name,
-        dutyColor = duty.dutyType?.color?.name,
+        dutyColor = dutyColor(duty),
         isOff = duty.dutyType == null
     )
 
     companion object {
+        private fun dutyColor(duty: Duty): String? {
+            val dutyType = duty.dutyType
+            if (dutyType == null) {
+                return duty.member.team?.defaultDutyColor?.name
+            }
+            return dutyType.color.name
+        }
+
         fun offDuty(date: LocalDate, team: Team): DutyDto {
             return DutyDto(
                 year = date.year,

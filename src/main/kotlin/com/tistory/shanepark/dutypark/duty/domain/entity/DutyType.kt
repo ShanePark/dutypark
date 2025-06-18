@@ -13,14 +13,14 @@ class DutyType(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "team_id")
     val team: Team,
+
+    @Enumerated(value = EnumType.STRING)
+    var color: Color
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
         protected set
-
-    @Enumerated(value = EnumType.STRING)
-    var color: Color? = null
 
     @OneToMany(mappedBy = "dutyType", cascade = [CascadeType.ALL], orphanRemoval = true)
     var duties: MutableList<Duty> = mutableListOf()

@@ -1,7 +1,5 @@
 package com.tistory.shanepark.dutypark.duty.service
 
-import com.tistory.shanepark.dutypark.team.domain.entity.Team
-import com.tistory.shanepark.dutypark.team.repository.TeamRepository
 import com.tistory.shanepark.dutypark.duty.batch.SungsimCakeParser
 import com.tistory.shanepark.dutypark.duty.batch.domain.BatchParseResult
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchResult
@@ -12,10 +10,13 @@ import com.tistory.shanepark.dutypark.duty.batch.exceptions.NotSupportedFileExce
 import com.tistory.shanepark.dutypark.duty.batch.service.DutyBatchSungsimService
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
+import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.team.domain.entity.Team
+import com.tistory.shanepark.dutypark.team.repository.TeamRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -173,7 +174,7 @@ class DutyBatchSungsimServiceTest {
         val team = Team("dummy")
         val member = createDummyMember("John", team)
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
-        val dutyType = DutyType(name = "dummy", position = 0, team = team)
+        val dutyType = DutyType(name = "dummy", position = 0, team = team, Color.RED)
         whenever(dutyTypeRepository.findAllByTeam(team)).thenReturn(listOf(dutyType))
 
         // When
@@ -228,8 +229,8 @@ class DutyBatchSungsimServiceTest {
         val team = Team("dummy")
         whenever(teamRepository.findById(1L)).thenReturn(Optional.of(team))
         // dutyTypeRepository 가 여러 개의 DutyType 을 반환하면 예외 발생
-        val dutyType1 = DutyType(name = "dummy1", position = 0, team = team)
-        val dutyType2 = DutyType(name = "dummy2", position = 1, team = team)
+        val dutyType1 = DutyType(name = "dummy1", position = 0, team = team, Color.GREEN)
+        val dutyType2 = DutyType(name = "dummy2", position = 1, team = team, Color.BLUE)
         whenever(dutyTypeRepository.findAllByTeam(team)).thenReturn(listOf(dutyType1, dutyType2))
 
         assertThrows<DutyTypeNotSingleException> {
@@ -264,7 +265,7 @@ class DutyBatchSungsimServiceTest {
         team.members.add(alice)
         whenever(teamRepository.findById(1L)).thenReturn(Optional.of(team))
 
-        val dutyType = DutyType(name = "dummyDuty", position = 0, team = team)
+        val dutyType = DutyType(name = "dummyDuty", position = 0, team = team, Color.RED)
         whenever(dutyTypeRepository.findAllByTeam(team)).thenReturn(listOf(dutyType))
 
         val result = dutyBatchService.batchUploadTeam(file, 1L, yearMonth)
@@ -314,7 +315,7 @@ class DutyBatchSungsimServiceTest {
         team.members.add(charlie)
         whenever(teamRepository.findById(1L)).thenReturn(Optional.of(team))
 
-        val dutyType = DutyType(name = "dummyDuty", position = 0, team = team)
+        val dutyType = DutyType(name = "dummyDuty", position = 0, team = team, Color.RED)
         whenever(dutyTypeRepository.findAllByTeam(team)).thenReturn(listOf(dutyType))
 
         val result = dutyBatchService.batchUploadTeam(file, 1L, yearMonth)
@@ -347,7 +348,7 @@ class DutyBatchSungsimServiceTest {
         team.members.add(dana)
         whenever(teamRepository.findById(1L)).thenReturn(Optional.of(team))
 
-        val dutyType = DutyType(name = "dummyDuty", position = 0, team = team)
+        val dutyType = DutyType(name = "dummyDuty", position = 0, team = team, Color.RED)
         whenever(dutyTypeRepository.findAllByTeam(team)).thenReturn(listOf(dutyType))
 
         val result = dutyBatchService.batchUploadTeam(file, 1L, yearMonth)

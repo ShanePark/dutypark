@@ -62,15 +62,14 @@ class Team(
         member.team = null
     }
 
-    fun addDutyType(dutyName: String, dutyColor: Color? = null): DutyType {
+    fun addDutyType(dutyName: String, dutyColor: Color): DutyType {
         if (dutyTypes.any { it.name == dutyName }) {
             throw IllegalArgumentException("DutyType already exists")
         }
 
         val maxPosition = dutyTypes.maxOfOrNull { it.position } ?: -1
 
-        val dutyType = DutyType(dutyName, maxPosition + 1, this)
-        dutyColor?.let { dutyType.color = it }
+        val dutyType = DutyType(dutyName, maxPosition + 1, team = this, dutyColor)
         dutyTypes.add(dutyType)
         return dutyType
     }
