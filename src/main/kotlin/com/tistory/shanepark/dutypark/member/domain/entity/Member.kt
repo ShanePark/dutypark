@@ -34,7 +34,7 @@ class Member(
     var kakaoId: String? = null
 
     override fun toString(): String {
-        return "Member(name='$name', email='$email', id=$id)"
+        return "Member(name='$name', id=$id)"
     }
 
     fun isEquals(loginMember: LoginMember): Boolean {

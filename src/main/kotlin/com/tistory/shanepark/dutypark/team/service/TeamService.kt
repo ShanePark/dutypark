@@ -171,7 +171,7 @@ class TeamService(
             .dutyTypes
             .map { dutyTypeDto ->
                 val sourceMembers = dutyTypeDto.id?.let { id ->
-                    dutyMemberMap.filter { (duty, _) -> duty.dutyType.id == id }.values
+                    dutyMemberMap.filter { (duty, _) -> duty.dutyType?.id == id }.values
                 } ?: offMembers
                 val members = sourceMembers
                     .map { member -> SimpleMemberDto(member.id, member.name) }

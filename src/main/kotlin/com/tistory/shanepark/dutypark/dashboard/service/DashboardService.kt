@@ -67,7 +67,8 @@ class DashboardService(
             month = today.monthValue,
             day = today.dayOfMonth,
             dutyType = team.defaultDutyName,
-            dutyColor = team.defaultDutyColor.toString()
+            dutyColor = team.defaultDutyColor.toString(),
+            isOff = true
         )
     }
 

@@ -10,14 +10,13 @@ class Duty(
     val dutyDate: LocalDate,
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "duty_type_id", nullable = false)
-    var dutyType: DutyType,
+    @JoinColumn(name = "duty_type_id")
+    var dutyType: DutyType?,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
     val member: Member,
 ) {
-
     constructor(
         dutyYear: Int,
         dutyMonth: Int,
