@@ -332,7 +332,7 @@ function loadApp(memberId, teamId, loginMemberId, year, month, searchDay) {
                     }
                 },
                 checkAmIManager() {
-                    if (!app.loginMemberId)
+                    if (!this.loginMemberId)
                         return;
                     fetch(`/api/members/${memberId}/canManage`)
                         .then(response => {

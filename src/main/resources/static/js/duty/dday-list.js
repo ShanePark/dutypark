@@ -20,9 +20,11 @@ const dDayMethods = {
                         dDay.dDayText = 'D-' + dDay.calc;
                     }
                 }
-                this.loadDutyPromise.then(() => {
-                    this.checkDDays();
-                });
+                if (this.hasTeam) {
+                    this.loadDutyPromise.then(() => {
+                        this.checkDDays();
+                    });
+                }
             }
         })
     }

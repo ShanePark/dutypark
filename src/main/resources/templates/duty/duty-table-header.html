@@ -11,7 +11,7 @@
   </div>
   <div v-if="hasTeam" class="buttons">
     <button v-if="isMyCalendar" class="btn btn-outline-primary" @click="showOtherDuties()">함께보기</button>
-    <button v-if="!isMyCalendar"
+    <button v-if="!isMyCalendar && loginMemberId"
             class="btn"
             :class="{'btn-primary': showMyDuties, 'btn-outline-primary':!showMyDuties}"
             @click="toggleMyDuties()">함께보기
