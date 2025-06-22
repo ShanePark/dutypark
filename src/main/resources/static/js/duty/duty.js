@@ -332,6 +332,8 @@ function loadApp(memberId, teamId, loginMemberId, year, month, searchDay) {
                     }
                 },
                 checkAmIManager() {
+                    if (!app.loginMemberId)
+                        return;
                     fetch(`/api/members/${memberId}/canManage`)
                         .then(response => {
                             if (!response.ok) {
