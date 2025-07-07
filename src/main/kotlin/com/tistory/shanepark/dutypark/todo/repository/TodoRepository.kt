@@ -10,11 +10,11 @@ import java.util.*
 interface TodoRepository : JpaRepository<Todo, UUID> {
 
     @Query(
-        "SELECT COALESCE(MAX(t.position), 0) " +
+        "SELECT COALESCE(MIN(t.position), 0) " +
                 "FROM Todo t " +
                 "WHERE t.member = :member"
     )
-    fun findMaxPositionByMember(@Param("member") member: Member): Int
+    fun findMinPositionByMember(@Param("member") member: Member): Int
 
     fun findAllByMemberOrderByPosition(member: Member): List<Todo>
 

@@ -28,9 +28,9 @@ class TodoService(
 
     fun addTodo(loginMember: LoginMember, title: String, content: String): TodoResponse {
         val member = findMember(loginMember)
-        val todoLastPosition = todoRepository.findMaxPositionByMember(member)
+        val todoLastPosition = todoRepository.findMinPositionByMember(member)
 
-        val todo = Todo(member = member, title = title, content = content, position = todoLastPosition + 1)
+        val todo = Todo(member = member, title = title, content = content, position = todoLastPosition - 1)
         todoRepository.save(todo)
 
         return TodoResponse.from(todo)

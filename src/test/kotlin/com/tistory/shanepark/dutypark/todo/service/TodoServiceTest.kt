@@ -34,7 +34,7 @@ class TodoServiceTest {
     fun `addTodo should save and return TodoResponse`() {
         // Given
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
-        `when`(todoRepository.findMaxPositionByMember(member)).thenReturn(0)
+        `when`(todoRepository.findMinPositionByMember(member)).thenReturn(0)
 
         val todo = Todo(member, "title", "content", 1)
         `when`(todoRepository.save(any(Todo::class.java))).thenReturn(todo)
