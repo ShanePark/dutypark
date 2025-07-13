@@ -15,7 +15,7 @@
             <div class="card h-100 border-1 shadow-sm hover-shadow-sm transition rounded-3">
               <div class="card-body d-flex align-items-center gap-3">
                 <input type="checkbox" class="form-check-input mt-0" :id="'friend-' + friend.id"
-                       :disabled="otherDutiesSelected.length == MAX_OTHER_DUTIES && !otherDutiesSelected.includes(friend)"
+                       :disabled="otherDutiesSelected.length == MAX_OTHER_DUTIES && !otherDutiesSelected.includes(friend.id)"
                        @change="toggleFriendDuty(friend.id, $event)"/>
                 <label :for="'friend-' + friend.id" class="form-check-label fw-semibold ms-2 mb-0">
                   {{ friend.name }} <small class="text-muted">({{ friend.team }})</small>
