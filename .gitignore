@@ -49,3 +49,6 @@ dutypark_monitoring/grafana
 
 ### Kotlin
 .kotlin
+
+### Claude Code
+.claude/**
