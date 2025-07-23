@@ -11,8 +11,8 @@
           시간표를 함께 띄울 친구들을 <strong class="text-dark">최대 <span v-text="MAX_OTHER_DUTIES"></span>명</strong> 선택하세요.
         </p>
         <div class="row row-cols-1 row-cols-md-2 g-3 fs-3">
-          <label class="col" v-for="friend in friends" :key="friend.id" v-if="friend.teamId">
-            <div class="card h-100 border-1 shadow-sm hover-shadow-sm transition rounded-3">
+          <label class="col friend-selector" v-for="friend in friends" :key="friend.id" v-if="friend.teamId">
+            <div class="card h-100 border-1 shadow-sm hover-shadow-sm transition rounded-3 friend-card">
               <div class="card-body d-flex align-items-center gap-3">
                 <input type="checkbox" class="form-check-input mt-0" :id="'friend-' + friend.id"
                        :disabled="otherDutiesSelected.length == MAX_OTHER_DUTIES && !otherDutiesSelected.includes(friend.id)"

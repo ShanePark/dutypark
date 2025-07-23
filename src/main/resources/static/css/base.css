@@ -802,3 +802,17 @@ input[readonly], textarea[readonly] {
 .other-duties .other-duty {
     border-style: solid;
 }
+
+.friend-selector {
+    cursor: pointer;
+}
+
+.friend-card,
+.friend-card * {
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.friend-card:hover {
+    background-color: #e2e8f0;
+}
