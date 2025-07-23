@@ -69,7 +69,7 @@
                       <li v-for="friend in friends"
                           v-if="!schedule.tags.find(tag => tag.id === friend.id)"
                           @click="addTag(schedule.id, friend.id)">
-                        <a class="dropdown-item" href="#">[{{ friend.team }}] {{ friend.name }}</a>
+                        <a class="dropdown-item" href="javascript:void(0)">[{{ friend.team }}] {{ friend.name }}</a>
                       </li>
                     </ul>
                   </div>
