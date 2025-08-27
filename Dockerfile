@@ -1,26 +1,4 @@
-# Multi-stage build
-FROM eclipse-temurin:21-jdk-alpine AS builder
-
-# Set working directory
-WORKDIR /app
-
-# Copy gradle wrapper and build files
-COPY gradle/ gradle/
-COPY gradlew .
-COPY build.gradle.kts .
-COPY settings.gradle.kts .
-
-# Download dependencies (for better caching)
-RUN ./gradlew dependencies --no-daemon
-
-# Copy source code
-COPY src/ src/
-COPY dutypark_secret/ dutypark_secret/
-
-# Build the application (skip asciidoctor and tests)
-RUN ./gradlew build --no-daemon -x test -x asciidoctor
-
-# Runtime stage
+# Runtime only
 FROM eclipse-temurin:21-jre-alpine
 
 # Add non-root user
@@ -33,8 +11,8 @@ WORKDIR /app
 # Create logs directory
 RUN mkdir -p /dutypark/logs && chown dutypark:dutypark /dutypark/logs
 
-# Copy the built jar from builder stage
-COPY --from=builder /app/build/libs/*.jar app.jar
+# Copy the built jar from local build
+COPY build/libs/*.jar app.jar
 
 # Change ownership
 RUN chown dutypark:dutypark /app/app.jar

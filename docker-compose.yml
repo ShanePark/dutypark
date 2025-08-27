@@ -53,8 +53,8 @@ services:
       - ./dutypark_conf/${NGINX_CONF_NAME:-nginx.conf}:/tmp/nginx.template:ro
       # SSL certificate volumes - ensure Let's Encrypt certificates are obtained first
       # Run: sudo certbot certonly --standalone -d ${DOMAIN_NAME} before deploying
-      - /etc/letsencrypt/live/${DOMAIN_NAME}:/etc/nginx/ssl:ro
-      - /etc/letsencrypt/archive/${DOMAIN_NAME}:/etc/nginx/ssl-archive:ro
+      - /etc/letsencrypt/live/${DOMAIN_NAME}:/etc/letsencrypt/live/${DOMAIN_NAME}:ro
+      - /etc/letsencrypt/archive/${DOMAIN_NAME}:/etc/letsencrypt/archive/${DOMAIN_NAME}:ro
     command: /bin/sh -c "envsubst '$$DOMAIN_NAME' < /tmp/nginx.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
     depends_on:
       - app
