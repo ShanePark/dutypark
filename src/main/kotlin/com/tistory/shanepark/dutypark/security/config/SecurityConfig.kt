@@ -5,6 +5,7 @@ import com.tistory.shanepark.dutypark.security.filters.JwtAuthFilter
 import com.tistory.shanepark.dutypark.security.handlers.LogoutSuccessHandle
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import jakarta.servlet.Filter
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -18,11 +19,12 @@ import org.springframework.web.filter.ForwardedHeaderFilter
 class SecurityConfig(
     private val logoutHandler: LogoutSuccessHandle,
     private val authService: AuthService,
-    private val jwtConfig: JwtConfig
+    private val jwtConfig: JwtConfig,
+    @param:Value("\${dutypark.ssl.enabled}") private val isSecure: Boolean
 ) {
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
-        val jwtAuthFilter = JwtAuthFilter(authService, jwtConfig)
+        val jwtAuthFilter = JwtAuthFilter(authService, jwtConfig, isSecure = isSecure)
         http.addFilterBefore(jwtAuthFilter, AuthorizationFilter::class.java)
 
         return http

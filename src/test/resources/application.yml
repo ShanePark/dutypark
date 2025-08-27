@@ -37,6 +37,7 @@ dutypark:
   data-go-kr:
     service-key: "DECODED_SERVICE_KEY_HERE"
   log.path: "/dutypark/logs"
+  ssl.enabled: false
 
 server:
   ssl:

@@ -35,7 +35,13 @@ abstract class RestDocsTest : DutyparkIntegrationTest() {
     fun setUp(webApplicationContext: WebApplicationContext, restDocumentation: RestDocumentationContextProvider) {
         this.mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
             .apply<DefaultMockMvcBuilder>(MockMvcRestDocumentation.documentationConfiguration(restDocumentation))
-            .addFilters<DefaultMockMvcBuilder>(JwtAuthFilter(authService = authService, jwtConfig = jwtConfig))
+            .addFilters<DefaultMockMvcBuilder>(
+                JwtAuthFilter(
+                    authService = authService,
+                    jwtConfig = jwtConfig,
+                    isSecure = false
+                )
+            )
             .build()
     }
 
