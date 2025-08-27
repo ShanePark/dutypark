@@ -60,7 +60,7 @@ dutypark:
   data-go-kr:
     service-key: "${DATA_GO_KR_SERVICE_KEY:DECODED_SERVICE_KEY_HERE}"
   log.path: "/dutypark/logs"
-  ssl.enabled: "${SERVER_SSL_ENABLED:false}"
+  ssl.enabled: "${COOKIE_SSL_ENABLED:false}"
 
 oauth:
   kakao:

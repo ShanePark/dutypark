@@ -4,7 +4,7 @@ services:
     container_name: dutypark-dev-db
     restart: unless-stopped
     ports:
-      - "3306:3306"
+      - "3307:3306"
     environment:
       MYSQL_ROOT_PASSWORD: ROOT_PASSWORD_HERE
       MYSQL_DATABASE: dutypark

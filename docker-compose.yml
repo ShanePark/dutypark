@@ -34,7 +34,7 @@ services:
       DATA_GO_KR_SERVICE_KEY: ${DATA_GO_KR_SERVICE_KEY}
       KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
-      SERVER_SSL_ENABLED: ${SERVER_SSL_ENABLED}
+      COOKIE_SSL_ENABLED: ${COOKIE_SSL_ENABLED}
     networks:
       - dutypark-network
     volumes:
