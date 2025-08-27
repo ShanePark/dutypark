@@ -58,5 +58,3 @@ dutypark_monitoring/grafana
 
 db_data
 app_logs
-prometheus_data
-grafana_data

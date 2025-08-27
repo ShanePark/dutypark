@@ -12,6 +12,7 @@ import org.springframework.core.Ordered
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.access.intercept.AuthorizationFilter
+import org.springframework.web.filter.ForwardedHeaderFilter
 
 @Configuration
 class SecurityConfig(
@@ -38,6 +39,14 @@ class SecurityConfig(
         filterRegBean.addUrlPatterns("/admin/*")
         filterRegBean.addUrlPatterns("/docs/*")
         filterRegBean.order = Ordered.LOWEST_PRECEDENCE
+        return filterRegBean
+    }
+
+    @Bean
+    fun forwardedHeaderFilter(): FilterRegistrationBean<ForwardedHeaderFilter> {
+        val filterRegBean = FilterRegistrationBean<ForwardedHeaderFilter>()
+        filterRegBean.filter = ForwardedHeaderFilter()
+        filterRegBean.order = Ordered.HIGHEST_PRECEDENCE
         return filterRegBean
     }
 
