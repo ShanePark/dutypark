@@ -33,11 +33,9 @@ abstract class RestDocsTest : DutyparkIntegrationTest() {
 
     @BeforeEach
     fun setUp(webApplicationContext: WebApplicationContext, restDocumentation: RestDocumentationContextProvider) {
-        val jwtAuthFilter: JwtAuthFilter =
-            JwtAuthFilter(authService = authService, jwtConfig = jwtConfig, isSecure = false)
         this.mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
             .apply<DefaultMockMvcBuilder>(MockMvcRestDocumentation.documentationConfiguration(restDocumentation))
-            .addFilters<DefaultMockMvcBuilder>(jwtAuthFilter)
+            .addFilters<DefaultMockMvcBuilder>(JwtAuthFilter(authService = authService, jwtConfig = jwtConfig))
             .build()
     }
 

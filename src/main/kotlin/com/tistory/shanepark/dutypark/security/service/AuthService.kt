@@ -31,7 +31,7 @@ class AuthService(
     private val refreshTokenService: RefreshTokenService,
     private val jwtProvider: JwtProvider,
     private val jwtConfig: JwtConfig,
-    @Value("\${server.ssl.enabled}") private val isSecure: Boolean
+    @param:Value("\${dutypark.ssl.enabled}") private val isSecure: Boolean
 ) {
     private val log = logger()
 

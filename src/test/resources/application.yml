@@ -36,7 +36,7 @@ dutypark:
     - "admin@email.com"
   data-go-kr:
     service-key: "DECODED_SERVICE_KEY_HERE"
-  log.path: "/tmp/logs"
+  log.path: "/dutypark/logs"
 
 server:
   ssl:

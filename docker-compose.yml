@@ -1,0 +1,66 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: dutypark-db
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: dutypark
+      MYSQL_USER: dutypark
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_INITDB_SKIP_TZINFO: 1
+    volumes:
+      - ./dutypark_conf/my.cnf:/etc/mysql/my.cnf:ro
+      - ./db_data:/var/lib/mysql
+    networks:
+      - dutypark-network
+
+  app:
+    build: .
+    container_name: dutypark-app
+    restart: unless-stopped
+    depends_on:
+      - mysql
+    environment:
+      SPRING_PROFILES_ACTIVE: op
+      DB_URL: jdbc:mysql://mysql:3306/dutypark
+      DB_USERNAME: dutypark
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      SLACK_TOKEN: ${SLACK_TOKEN}
+      DATA_GO_KR_SERVICE_KEY: ${DATA_GO_KR_SERVICE_KEY}
+      KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      SERVER_SSL_ENABLED: ${SERVER_SSL_ENABLED}
+    networks:
+      - dutypark-network
+    volumes:
+      - ./app_logs:/dutypark/logs
+
+  nginx:
+    image: nginx:alpine
+    container_name: dutypark-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN_NAME=${DOMAIN_NAME}
+    volumes:
+      - ./dutypark_conf/${NGINX_CONF_NAME:-nginx.conf}:/tmp/nginx.template:ro
+      # SSL certificate volumes - ensure Let's Encrypt certificates are obtained first
+      # Run: sudo certbot certonly --standalone -d ${DOMAIN_NAME} before deploying
+      - /etc/letsencrypt/live/${DOMAIN_NAME}:/etc/nginx/ssl:ro
+      - /etc/letsencrypt/archive/${DOMAIN_NAME}:/etc/nginx/ssl-archive:ro
+    command: /bin/sh -c "envsubst '$$DOMAIN_NAME' < /tmp/nginx.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
+    depends_on:
+      - app
+    networks:
+      - dutypark-network
+
+networks:
+  dutypark-network:
+    driver: bridge

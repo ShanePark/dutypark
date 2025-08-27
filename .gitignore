@@ -52,3 +52,11 @@ dutypark_monitoring/grafana
 
 ### Claude Code
 .claude/**
+
+### Environment Variables
+.env
+
+db_data
+app_logs
+prometheus_data
+grafana_data

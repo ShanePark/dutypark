@@ -35,8 +35,8 @@ class ScheduleTimeParsingQueueManager(
 
     @PostConstruct
     fun init() {
-        val activeProfile = environment.activeProfiles[0]
-        if (activeProfile != "op") {
+        val activeProfiles = environment.activeProfiles
+        if (activeProfiles.isEmpty() || activeProfiles[0] != "op") {
             log.info("do not add AI task as it's not op profile")
             doTask = false
             return;

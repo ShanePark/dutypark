@@ -5,9 +5,9 @@ spring:
       enabled: true
       paths: /**
   datasource:
-    url: jdbc:mysql://localhost:3306/dutypark
-    username: dutypark
-    password: PASSWORD_HERE
+    url: ${DB_URL:jdbc:mysql://localhost:3306/dutypark}
+    username: ${DB_USERNAME:dutypark}
+    password: ${DB_PASSWORD:PASSWORD_HERE}
     hikari:
       maximum-pool-size: 5
   jpa:
@@ -23,7 +23,7 @@ spring:
       enabled: false
   ai:
     openai:
-      api-key: "GEMINI_API_KEY_HERE"
+      api-key: "${GEMINI_API_KEY:GEMINI_API_KEY_HERE}"
       chat:
         base-url: "https://generativelanguage.googleapis.com/v1beta/openai/"
         options:
@@ -32,17 +32,10 @@ spring:
         completions-path: "/chat/completions"
 
 server:
-  port: 443
-  ssl:
-    key-store: "KEY_STORE_PATH_HERE"
-    key-store-password: "KEY_PASSWORD_HERE"
-    key-store-type: PKCS12
-    enabled: true
+  port: 8080
   tomcat:
     mbeanregistry:
       enabled: true
-  http2:
-    enabled: true
 
 management:
   endpoints:
@@ -54,26 +47,24 @@ management:
       access: unrestricted
 
 jwt:
-  secret: "WvQiOAms2XFyW/UnmfO/9xL24ch4IlfUikP9QohMuso=" # Change it on production
+  secret: "${JWT_SECRET:WvQiOAms2XFyW/UnmfO/9xL24ch4IlfUikP9QohMuso=}"
   token-validity-in-seconds: 1800 # 30 minutes
   refresh-token-validity-in-days: 7 # 7 days
   cookie_name: "SESSION"
 
 dutypark:
   adminEmails:
-    - ADMIN@EMAIL.HERE
-  whiteIpList: # for actuator
-    - "127.0.0.1"
-    - "0:0:0:0:0:0:0:1"
+    - ${ADMIN_EMAIL:ADMIN@EMAIL.HERE}
   slack:
-    token: "SLACK_TOKEN_HERE"
+    token: "${SLACK_TOKEN:SLACK_TOKEN_HERE}"
   data-go-kr:
-    service-key: "DECODED_SERVICE_KEY_HERE"
-  log.path: "/tmp/logs"
+    service-key: "${DATA_GO_KR_SERVICE_KEY:DECODED_SERVICE_KEY_HERE}"
+  log.path: "/dutypark/logs"
+  ssl.enabled: "${SERVER_SSL_ENABLED:false}"
 
 oauth:
   kakao:
-    rest-api-key: "KAKAO_REST_API_KEY_HERE"
+    rest-api-key: "${KAKAO_REST_API_KEY:KAKAO_REST_API_KEY_HERE}"
 
 decorator:
   datasource:
