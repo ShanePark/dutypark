@@ -25,7 +25,7 @@ class HolidayAPIDataGoKrTest {
     fun getHolidayInfoTest(@Mock dataGoKrApi: DataGoKrApi) {
         `when`(dataGoKrApi.getHolidays(any(), any())).thenReturn(API_RESPONSE_2023)
 
-        val holidayAPIDataGoKr = HolidayAPIDataGoKr(dataGoKrApi)
+        val holidayAPIDataGoKr = HolidayAPIDataGoKr(dataGoKrApi, "DUMMY_SERVICE_KEY")
         HolidayAPIDataGoKr::class.java.getDeclaredField("serviceKey").apply {
             isAccessible = true
             set(holidayAPIDataGoKr, "SERVICE_KEY_HERE")
@@ -41,7 +41,7 @@ class HolidayAPIDataGoKrTest {
 
     @Test
     fun parseTest(@Mock dataGoKrApi: DataGoKrApi) {
-        val holidayAPIDataGoKr = HolidayAPIDataGoKr(dataGoKrApi)
+        val holidayAPIDataGoKr = HolidayAPIDataGoKr(dataGoKrApi, "DUMMY_SERVICE_KEY")
         val result = holidayAPIDataGoKr.parse(API_RESPONSE_2023)
         Assertions.assertThat(result).hasSize(holiday2023.size)
         IntStream.range(0, holiday2023.size).forEach { i ->

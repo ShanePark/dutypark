@@ -23,7 +23,7 @@ class KakaoLoginService(
     private val memberRepository: MemberRepository,
     private val authService: AuthService,
     private val MemberSsoRegisterRepository: MemberSsoRegisterRepository,
-    @Value("\${oauth.kakao.rest-api-key}") private val restApiKey: String
+    @param:Value("\${oauth.kakao.rest-api-key}") private val restApiKey: String
 ) {
     private val log = logger()
 

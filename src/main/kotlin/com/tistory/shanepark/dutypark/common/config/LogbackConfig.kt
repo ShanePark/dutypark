@@ -15,11 +15,9 @@ import org.springframework.context.annotation.Configuration
 inline fun <reified T> T.logger(): Logger = LoggerFactory.getLogger(T::class.java)
 
 @Configuration
-class LogbackConfig {
-
-    @Value("\${dutypark.log.path}")
-    private lateinit var logPath: String
-
+class LogbackConfig(
+    @param:Value("\${dutypark.log.path}") private val logPath: String
+) {
     private val log = logger()
 
     @PostConstruct

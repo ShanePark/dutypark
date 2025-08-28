@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 class ScheduleTimeParsingQueueManager(
     private val worker: ScheduleTimeParsingWorker,
     private val scheduleRepository: ScheduleRepository,
-    @Value("\${spring.ai.openai.api-key}") private val geminiApiKey: String
+    @param:Value("\${spring.ai.openai.api-key}") private val geminiApiKey: String
 ) {
     private val log = logger()
     private val executorService = Executors.newSingleThreadExecutor()

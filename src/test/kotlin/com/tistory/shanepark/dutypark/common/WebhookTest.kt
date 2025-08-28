@@ -9,10 +9,9 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Value
 
 @Disabled("token is required")
-class WebhookTest : DutyparkIntegrationTest() {
-
-    @Value("\${dutypark.slack.token}")
-    lateinit var token: String
+class WebhookTest(
+    @param:Value("\${dutypark.slack.token}") val token: String
+) : DutyparkIntegrationTest() {
 
     @Test
     @DisplayName("Slack Webhook Test")
