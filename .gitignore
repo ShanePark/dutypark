@@ -56,5 +56,7 @@ dutypark_monitoring/grafana
 ### Environment Variables
 .env
 
-db_data
-app_logs
+db_data/*
+!db_data/.gitkeep
+app_logs/*
+!app_logs/.gitkeep
