@@ -10,14 +10,11 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
-import org.springframework.core.env.Environment
 import java.time.LocalDateTime
 
 @ExtendWith(MockitoExtension::class)
@@ -29,10 +26,6 @@ class ScheduleTimeParsingQueueManagerTest {
     @Mock
     lateinit var scheduleRepository: ScheduleRepository
 
-    @Mock
-    lateinit var environment: Environment
-
-    @InjectMocks
     lateinit var queueManager: ScheduleTimeParsingQueueManager
 
     @BeforeEach
@@ -40,7 +33,7 @@ class ScheduleTimeParsingQueueManagerTest {
         queueManager = ScheduleTimeParsingQueueManager(
             worker = worker,
             scheduleRepository = scheduleRepository,
-            environment = environment
+            geminiApiKey = "GEMINI_KEY",
         )
     }
 
@@ -51,7 +44,6 @@ class ScheduleTimeParsingQueueManagerTest {
             makeSchedule(),
             makeSchedule(),
         )
-        whenever(environment.activeProfiles).thenReturn(arrayOf("op"))
         `when`(scheduleRepository.findAllByParsingTimeStatus(WAIT)).thenReturn(schedules)
 
         // When

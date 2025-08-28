@@ -27,8 +27,7 @@ class SecurityConfig(
     private val log = logger()
 
     init {
-        log.info("jwtConfig: $jwtConfig")
-        log.info("isSecure: $isSecure")
+        log.info("Init SecurityConfig. isSecure: $isSecure, jwtConfig: $jwtConfig")
     }
 
     @Bean

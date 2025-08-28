@@ -6,8 +6,6 @@ import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifierLogger
 import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifierSender
 import net.gpedro.integrations.slack.SlackApi
 import net.gpedro.integrations.slack.SlackMessage
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -33,22 +31,18 @@ class SlackApiConfiguration(
     }
 
     @Bean
-    @Profile("op")
-    fun slackNotifierProd(): SlackNotifier {
+    fun slackNotifier(): SlackNotifier {
+        if (slackToken.isBlank()) {
+            log.info("Slack token is blank. Slack Notifier Logger registered instead.")
+            return SlackNotifierLogger()
+        }
         log.info("Slack API registered. slackToken = ${slackToken}")
         val slackApi = SlackApi("https://hooks.slack.com/services/$slackToken")
         return SlackNotifierSender(slackApi)
     }
 
     @Bean
-    @Profile("dev")
-    fun slackNotifierDev(): SlackNotifier {
-        log.info("Slack Notifier Logger registered.")
-        return SlackNotifierLogger()
-    }
-
-    @Bean
-    @Profile("!op && !dev")
+    @Profile("test")
     fun dummySlackNotifier(): SlackNotifier {
         log.info("Dummy Slack Notifier registered.")
         return object : SlackNotifier {
