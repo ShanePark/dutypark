@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.security.config
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.security.filters.AdminAuthFilter
 import com.tistory.shanepark.dutypark.security.filters.JwtAuthFilter
 import com.tistory.shanepark.dutypark.security.handlers.LogoutSuccessHandle
@@ -22,6 +23,14 @@ class SecurityConfig(
     private val jwtConfig: JwtConfig,
     @param:Value("\${dutypark.ssl.enabled}") private val isSecure: Boolean
 ) {
+
+    private val log = logger()
+
+    init {
+        log.info("jwtConfig: $jwtConfig")
+        log.info("isSecure: $isSecure")
+    }
+
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
         val jwtAuthFilter = JwtAuthFilter(authService, jwtConfig, isSecure = isSecure)
