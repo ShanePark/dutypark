@@ -1,0 +1,5 @@
+db_data/
+app_logs/
+*.log
+.git/
+README.md
