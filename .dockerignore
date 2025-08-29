@@ -1,5 +1,3 @@
-db_data/
-app_logs/
-*.log
+data/
 .git/
 README.md
