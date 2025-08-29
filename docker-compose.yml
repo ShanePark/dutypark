@@ -6,6 +6,7 @@ services:
     ports:
       - "3306:3306"
     environment:
+      TZ: ${TZ:-Asia/Seoul}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: dutypark
       MYSQL_USER: dutypark
@@ -24,6 +25,7 @@ services:
     depends_on:
       - mysql
     environment:
+      TZ: ${TZ:-Asia/Seoul}
       SPRING_PROFILES_ACTIVE: op
       DB_URL: jdbc:mysql://mysql:3306/dutypark
       DB_USERNAME: dutypark
@@ -48,7 +50,8 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      - DOMAIN_NAME=${DOMAIN_NAME}
+      TZ: ${TZ:-Asia/Seoul}
+      DOMAIN_NAME: ${DOMAIN_NAME}
     volumes:
       - ./data/${NGINX_CONF_NAME:-nginx.conf}:/tmp/nginx.template:ro
       # SSL certificate volumes - ensure Let's Encrypt certificates are obtained first
