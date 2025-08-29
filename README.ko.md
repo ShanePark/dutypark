@@ -30,41 +30,58 @@
 
 ------
 
-## 🛠️ 개발 환경
+## 🛠️ 빠른 시작
 
-### 1. 요구 사항
+### 사전 요구사항
+- Docker & Docker Compose
+- (선택사항) 운영환경용 도메인 및 SSL 인증서
 
-- JDK 21 이상
-- MySQL (또는 Docker 기반 DB)
-- Gradle 8 이상
+### 개발 환경 설정
 
-### 2. 데이터베이스 설정 (Docker)
+1. **프로젝트 클론 및 설정**
+   ```bash
+   git clone https://github.com/ShanePark/dutypark.git
+   cd dutypark
+   cp .env.sample .env
+   ```
 
+2. **환경변수 편집**
+   ```bash
+   # .env 파일을 설정에 맞게 편집
+   MYSQL_ROOT_PASSWORD=안전한_패스워드
+   MYSQL_PASSWORD=데이터베이스_패스워드
+   JWT_SECRET=base64_인코딩된_JWT_시크릿
+   # ... 필요에 따라 다른 변수들도 설정
+   ```
+
+3. **Docker Compose로 실행**
+   ```bash
+   # 로컬 개발용 (HTTP만 사용)
+   NGINX_CONF_NAME=nginx.local.conf docker compose up -d
+   
+   # 운영환경용 (HTTPS, SSL 사용)
+   docker compose up -d
+   ```
+
+4. **애플리케이션 접속**
+   - 로컬: http://localhost
+   - 운영: https://your-domain.com
+
+### 개발용 데이터베이스만 사용
+앱은 로컬에서 실행하고 데이터베이스만 Docker를 사용하려면:
 ```bash
-cd dutypark_db
-docker compose up -d
+cd dutypark_dev_db
+docker compose up -d  # MySQL이 3307 포트에서 실행됨
 ```
 
-DB 계정 정보는 `src/main/resources/application-dev.yml`에 입력
+### 운영 배포
+1. Let's Encrypt로 SSL 인증서 설정
+2. `.env`를 운영환경 값으로 설정
+3. `docker compose up -d` 실행
 
-### 3. 환경 설정
-
-- 로컬 개발용 SSL 비활성화:
-
-```yaml
-server.ssl.enabled: false
-server.port: 8080
-```
-
-- (선택) `application-*.yml`에 Slack 웹훅 및 공휴일 API 키 추가 가능
-
-### 4. 빌드 및 실행
-
-```bash
-./gradlew build
-java -jar build/libs/dutypark-0.0.1-SNAPSHOT.jar \
-  --spring.profiles.active=prod
-```
+### 모니터링 (선택사항)
+- **Prometheus**: 내부 메트릭 수집
+- **Grafana**: http://localhost:3000 에서 접속 가능 (admin/admin)
 
 ------
 
