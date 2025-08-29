@@ -12,8 +12,8 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_INITDB_SKIP_TZINFO: 1
     volumes:
-      - ./dutypark_conf/my.cnf:/etc/mysql/my.cnf:ro
-      - ./db_data:/var/lib/mysql
+      - ./data/my.cnf:/etc/mysql/my.cnf:ro
+      - ./data/db:/var/lib/mysql
     networks:
       - dutypark-network
 
@@ -38,7 +38,7 @@ services:
     networks:
       - dutypark-network
     volumes:
-      - ./app_logs:/dutypark/logs
+      - ./data/logs:/dutypark/logs
 
   nginx:
     image: nginx:alpine
@@ -50,7 +50,7 @@ services:
     environment:
       - DOMAIN_NAME=${DOMAIN_NAME}
     volumes:
-      - ./dutypark_conf/${NGINX_CONF_NAME:-nginx.conf}:/tmp/nginx.template:ro
+      - ./data/${NGINX_CONF_NAME:-nginx.conf}:/tmp/nginx.template:ro
       # SSL certificate volumes - ensure Let's Encrypt certificates are obtained first
       # Run: sudo certbot certonly --standalone -d ${DOMAIN_NAME} before deploying
       - /etc/letsencrypt/live/${DOMAIN_NAME}:/etc/letsencrypt/live/${DOMAIN_NAME}:ro
