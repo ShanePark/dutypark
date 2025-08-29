@@ -1,0 +1,92 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: dutypark-db
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      TZ: ${TZ:-Asia/Seoul}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: dutypark
+      MYSQL_USER: dutypark
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_INITDB_SKIP_TZINFO: 1
+    volumes:
+      - ./data/my.cnf:/etc/mysql/my.cnf:ro
+      - ./data/db:/var/lib/mysql
+    networks:
+      - dutypark-network
+
+  app:
+    build: .
+    container_name: dutypark-app
+    restart: unless-stopped
+    depends_on:
+      - mysql
+    environment:
+      TZ: ${TZ:-Asia/Seoul}
+      SPRING_PROFILES_ACTIVE: op
+      DB_URL: jdbc:mysql://mysql:3306/dutypark
+      DB_USERNAME: dutypark
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      SLACK_TOKEN: ${SLACK_TOKEN}
+      DATA_GO_KR_SERVICE_KEY: ${DATA_GO_KR_SERVICE_KEY}
+      KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      COOKIE_SSL_ENABLED: ${COOKIE_SSL_ENABLED}
+    networks:
+      - dutypark-network
+    volumes:
+      - ./data/logs:/dutypark/logs
+
+  nginx:
+    image: nginx:alpine
+    container_name: dutypark-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      TZ: ${TZ:-Asia/Seoul}
+      DOMAIN_NAME: ${DOMAIN_NAME}
+    volumes:
+      - ./data/${NGINX_CONF_NAME:-nginx.conf}:/tmp/nginx.template:ro
+      # SSL certificate volumes - ensure Let's Encrypt certificates are obtained first
+      # Run: sudo certbot certonly --standalone -d ${DOMAIN_NAME} before deploying
+      - /etc/letsencrypt/live/${DOMAIN_NAME}:/etc/letsencrypt/live/${DOMAIN_NAME}:ro
+      - /etc/letsencrypt/archive/${DOMAIN_NAME}:/etc/letsencrypt/archive/${DOMAIN_NAME}:ro
+    command: /bin/sh -c "envsubst '$$DOMAIN_NAME' < /tmp/nginx.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
+    depends_on:
+      - app
+    networks:
+      - dutypark-network
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./data/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    restart: unless-stopped
+    networks:
+      - dutypark-network
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data/grafana:/var/lib/grafana
+    restart: unless-stopped
+    networks:
+      - dutypark-network
+
+networks:
+  dutypark-network:
+    driver: bridge

@@ -18,9 +18,9 @@ internal class IpAccessFilterTest {
         assertThat(ipAccessFilter.isValidRequest("http://localhost:8080/")).isTrue
         assertThat(ipAccessFilter.isValidRequest("http://localhost:8080")).isTrue
         assertThat(ipAccessFilter.isValidRequest("https://localhost:8080")).isTrue
-        assertThat(ipAccessFilter.isValidRequest("http://dutypark.o-r.kr")).isTrue
-        assertThat(ipAccessFilter.isValidRequest("https://dutypark.o-r.kr")).isTrue
-        assertThat(ipAccessFilter.isValidRequest("https://dutypark.o-r.kr/")).isTrue
+        assertThat(ipAccessFilter.isValidRequest("http://dutypark.kr")).isTrue
+        assertThat(ipAccessFilter.isValidRequest("https://dutypark.kr")).isTrue
+        assertThat(ipAccessFilter.isValidRequest("https://dutypark.kr/")).isTrue
     }
 
 }

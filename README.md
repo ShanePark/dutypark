@@ -31,40 +31,58 @@ personal events, tasks, D-Day countdowns, then share or collaborate in a snap.
 
 ---
 
-## 🛠️ DEV
+## 🛠️ Quick Start
 
-1. **Requirements**
+### Prerequisites
+- Docker & Docker Compose
+- (Optional) Domain name with SSL certificate for production
 
-    * JDK 21+
-    * MySQL (or Docker)
-    * Gradle 8+
+### Development Setup
 
-2. **Database Setup (Docker)**
-
+1. **Clone & Configure**
    ```bash
-   cd dutypark_db
+   git clone https://github.com/ShanePark/dutypark.git
+   cd dutypark
+   cp .env.sample .env
+   ```
+
+2. **Edit Environment Variables**
+   ```bash
+   # Edit .env file with your configuration
+   MYSQL_ROOT_PASSWORD=your_secure_password
+   MYSQL_PASSWORD=your_db_password
+   JWT_SECRET=your_base64_jwt_secret
+   # ... configure other variables as needed
+   ```
+
+3. **Run with Docker Compose**
+   ```bash
+   # For local development (HTTP only)
+   NGINX_CONF_NAME=nginx.local.conf docker compose up -d
+   
+   # For production (HTTPS with SSL)
    docker compose up -d
    ```
 
-   Update `src/main/resources/application-dev.yml` with your DB credentials.
+4. **Access the Application**
+   - Local: http://localhost
+   - Production: https://your-domain.com
 
-3. **Configuration**
+### Development Database Only
+If you prefer to run the app locally and only use Docker for the database:
+```bash
+cd dutypark_dev_db
+docker compose up -d  # MySQL on port 3307
+```
 
-    * Disable SSL for local dev:
+### Production Deployment
+1. Set up SSL certificates with Let's Encrypt
+2. Configure `.env` with production values
+3. Run `docker compose up -d`
 
-      ```yaml
-      server.ssl.enabled: false
-      server.port: 8080
-      ```
-    * (Optional) Add Slack webhook & holiday API keys in `application-*.yml`.
-
-4. **Build & Run**
-
-   ```bash
-   ./gradlew build
-   java -jar build/libs/dutypark-0.0.1-SNAPSHOT.jar \
-     --spring.profiles.active=prod
-   ```
+### Monitoring (Optional)
+- **Prometheus**: Internal metrics collection
+- **Grafana**: Available at http://localhost:3000 (admin/admin)
 
 ---
 

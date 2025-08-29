@@ -5,5 +5,4 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 @ConfigurationProperties(prefix = "dutypark")
 data class DutyparkProperties(
     val adminEmails: List<String> = emptyList(),
-    val whiteIpList: List<String> = emptyList()
 )

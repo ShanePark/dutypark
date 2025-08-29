@@ -18,7 +18,7 @@ import org.springframework.web.context.WebApplicationContext
 @ExtendWith(RestDocumentationExtension::class)
 @AutoConfigureRestDocs(
     uriScheme = "https",
-    uriHost = "dutypark.o-r.kr",
+    uriHost = "dutypark.kr",
     uriPort = 443,
 )
 abstract class RestDocsTest : DutyparkIntegrationTest() {
@@ -33,11 +33,15 @@ abstract class RestDocsTest : DutyparkIntegrationTest() {
 
     @BeforeEach
     fun setUp(webApplicationContext: WebApplicationContext, restDocumentation: RestDocumentationContextProvider) {
-        val jwtAuthFilter: JwtAuthFilter =
-            JwtAuthFilter(authService = authService, jwtConfig = jwtConfig, isSecure = false)
         this.mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
             .apply<DefaultMockMvcBuilder>(MockMvcRestDocumentation.documentationConfiguration(restDocumentation))
-            .addFilters<DefaultMockMvcBuilder>(jwtAuthFilter)
+            .addFilters<DefaultMockMvcBuilder>(
+                JwtAuthFilter(
+                    authService = authService,
+                    jwtConfig = jwtConfig,
+                    isSecure = false
+                )
+            )
             .build()
     }
 

@@ -19,11 +19,9 @@ import javax.xml.parsers.DocumentBuilderFactory
 @Service
 class HolidayAPIDataGoKr(
     private val dataGoKrApi: DataGoKrApi,
+    @param:Value("\${dutypark.data-go-kr.service-key}") private val serviceKey: String,
 ) : HolidayAPI {
     private val log = logger()
-
-    @Value("\${dutypark.data-go-kr.service-key}")
-    private lateinit var serviceKey: String
 
     override fun requestHolidays(year: Int): List<HolidayDto> {
         log.info("Requesting holidays from DataGoKr API... year:{}", year)

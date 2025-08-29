@@ -6,7 +6,7 @@ import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus.WA
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingTask
 import jakarta.annotation.PostConstruct
-import org.springframework.core.env.Environment
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime
 import java.util.*
@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 class ScheduleTimeParsingQueueManager(
     private val worker: ScheduleTimeParsingWorker,
     private val scheduleRepository: ScheduleRepository,
-    private val environment: Environment,
+    @param:Value("\${spring.ai.openai.api-key}") private val geminiApiKey: String
 ) {
     private val log = logger()
     private val executorService = Executors.newSingleThreadExecutor()
@@ -35,11 +35,11 @@ class ScheduleTimeParsingQueueManager(
 
     @PostConstruct
     fun init() {
-        val activeProfile = environment.activeProfiles[0]
-        if (activeProfile != "op") {
-            log.info("do not add AI task as it's not op profile")
+        log.info("GeminiKey: $geminiApiKey")
+        if (geminiApiKey.isBlank() || geminiApiKey == "EMPTY") {
+            log.info("do not add AI task as Gemini API key is not configured")
             doTask = false
-            return;
+            return
         }
 
         val allWaitJobs = scheduleRepository.findAllByParsingTimeStatus(WAIT)

@@ -2,9 +2,9 @@ name: Dutypark CI/CD
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "stage" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "stage" ]
 
 permissions:
   contents: read
@@ -18,9 +18,7 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.PAT_TOKEN }}
-      - name: Copy secret files
-        run: |
-          cp dutypark_secret/application-op.yml src/main/resources/
+          fetch-depth: 0
       - name: Set up JDK 21
         uses: actions/setup-java@v3
         with:
@@ -38,7 +36,7 @@ jobs:
 
   deploy:
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/stage')
     runs-on: ubuntu-latest
     steps:
       - name: Download artifact
@@ -54,14 +52,11 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_IP }} >> ~/.ssh/known_hosts
       - name: SCP transfer with temporary filename
-        run: scp -P ${{ secrets.SSH_PORT }} *.jar ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }}:/shane/download.jar
+        run: scp -P ${{ secrets.SSH_PORT }} *.jar ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }}:/dutypark/download.jar
       - name: Execute remote commands
         run: |
           ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} << 'EOF'
-            curl -X POST --max-time 30 https://dutypark.o-r.kr/actuator/shutdown || true
-            sleep 10
-            sudo ps -ef | grep dutypark | grep -v grep | awk '{print $2}' | xargs -r sudo kill -9
-            sudo fuser -k 443/tcp || true
-            mv /shane/download.jar /shane/dutypark.jar
-            sudo nohup java -jar /shane/dutypark.jar --spring.profiles.active=op > /shane/nohup.log 2>&1 &
+            mv /dutypark/download.jar /dutypark/build/libs/dutypark.jar
+            docker compose -f /dutypark/docker-compose.yml build app
+            docker compose -f /dutypark/docker-compose.yml up -d app
           EOF
