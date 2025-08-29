@@ -17,7 +17,7 @@ import org.springframework.scheduling.annotation.EnableScheduling
 @EnableScheduling
 @EnableCaching
 @ConfigurationPropertiesScan
-@PropertySource("classpath:git.properties")
+@PropertySource("classpath:git.properties", ignoreResourceNotFound = true)
 class DutyparkApplication
 
 fun main(args: Array<String>) {

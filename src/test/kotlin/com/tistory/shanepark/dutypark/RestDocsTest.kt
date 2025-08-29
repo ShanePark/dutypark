@@ -18,7 +18,7 @@ import org.springframework.web.context.WebApplicationContext
 @ExtendWith(RestDocumentationExtension::class)
 @AutoConfigureRestDocs(
     uriScheme = "https",
-    uriHost = "dutypark.o-r.kr",
+    uriHost = "dutypark.kr",
     uriPort = 443,
 )
 abstract class RestDocsTest : DutyparkIntegrationTest() {
