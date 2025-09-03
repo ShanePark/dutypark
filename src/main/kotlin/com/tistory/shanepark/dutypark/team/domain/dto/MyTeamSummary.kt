@@ -1,7 +1,5 @@
 package com.tistory.shanepark.dutypark.team.domain.dto
 
-import java.time.YearMonth
-
 data class MyTeamSummary(
     val year: Int,
     val month: Int,
