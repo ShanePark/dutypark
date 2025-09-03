@@ -42,11 +42,11 @@ class MemberService(
         return MemberDto.of(member)
     }
 
-    fun createMember(memberCreteDto: MemberCreateDto): Member {
-        val password = passwordEncoder.encode(memberCreteDto.password)
+    fun createMember(memberCreateDto: MemberCreateDto): Member {
+        val password = passwordEncoder.encode(memberCreateDto.password)
         val member = Member(
-            email = memberCreteDto.email,
-            name = memberCreteDto.name,
+            email = memberCreateDto.email,
+            name = memberCreateDto.name,
             password = password
         )
         return memberRepository.save(member)
