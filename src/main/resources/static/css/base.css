@@ -300,6 +300,19 @@ a.homeButton:hover {
     text-align: right;
 }
 
+.month-control-right .with-person-icon {
+    padding-left: 2.5rem;
+}
+
+.month-control-right .search-person-icon {
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    pointer-events: none;
+    z-index: 10;
+}
+
 .link {
     color: unset;
 }

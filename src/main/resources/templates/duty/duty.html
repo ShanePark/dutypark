@@ -42,10 +42,11 @@
     const memberId = parseInt("[[${member.id}]]");
     const teamId = parseInt("[[${member.teamId}]]");
     const loginMemberId = parseInt("[[${loginMember?.id}]]");
+    const memberName = "[[${member.name}]]";
     const year = parseInt("[[${year}]]");
     const month = parseInt("[[${month}]]");
     const searchDay = parseInt("[[${day}]]");
-    loadApp(memberId, teamId, loginMemberId, year, month, searchDay);
+    loadApp(memberId, teamId, loginMemberId, memberName, year, month, searchDay);
   }
 
 </script>
