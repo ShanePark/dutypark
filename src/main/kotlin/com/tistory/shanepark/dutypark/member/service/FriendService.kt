@@ -228,7 +228,7 @@ class FriendService(
     fun availableScheduleVisibilities(loginMember: LoginMember?, member: Member): Set<Visibility> {
         if (loginMember == null)
             return Visibility.publicOnly()
-        if (loginMember.id == member.id) {
+        if (loginMember.id == member.id || memberService.isManager(loginMember, member)) {
             return Visibility.all();
         }
         val login = loginMemberToMember(loginMember)
