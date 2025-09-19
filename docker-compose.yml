@@ -26,7 +26,6 @@ services:
       - mysql
     environment:
       TZ: ${TZ:-Asia/Seoul}
-      SPRING_PROFILES_ACTIVE: op
       DB_URL: jdbc:mysql://mysql:3306/dutypark
       DB_USERNAME: dutypark
       DB_PASSWORD: ${MYSQL_PASSWORD}

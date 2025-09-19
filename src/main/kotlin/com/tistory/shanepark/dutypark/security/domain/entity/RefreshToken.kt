@@ -46,8 +46,8 @@ class RefreshToken(
         return this.validUntil.isAfter(LocalDateTime.now())
     }
 
-    fun slideValidUntil(remoteAddr: String?, userAgent: String?) {
-        validUntil = LocalDateTime.now().plusWeeks(1)
+    fun slideValidUntil(remoteAddr: String?, userAgent: String?, validityDays: Long) {
+        validUntil = LocalDateTime.now().plusDays(validityDays)
         this.lastUsed = LocalDateTime.now()
         this.remoteAddr = remoteAddr
         this.userAgent = userAgent

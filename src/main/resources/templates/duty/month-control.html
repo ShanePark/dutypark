@@ -46,19 +46,20 @@
     </a>
   </div>
   <div class="month-control-right col-md-3 p-0 position-relative">
-    <div class="search-bar d-flex align-items-center" v-if="isMyCalendar">
+    <div class="search-bar d-flex align-items-center" v-if="canSearch">
       <form class="search-form" @submit.prevent="search()">
         <div class="d-flex w-100">
-          <label>
-            <input type="text" class="form-control" placeholder="검색" v-model="searchQuery">
-          </label>
+          <div class="position-relative flex-grow-1">
+            <input type="text" class="form-control" :class="{'with-person-icon': !isMyCalendar}" :placeholder="searchPlaceholder" v-model="searchQuery">
+            <i v-if="!isMyCalendar" class="bi bi-person-fill position-absolute search-person-icon"></i>
+          </div>
           <button class="btn btn-outline-dark" type="submit">
             <i class="bi bi-search"></i>
           </button>
         </div>
       </form>
     </div>
-    <div class="info member-info position-absolute end-0" v-if="!isMyCalendar">
+    <div class="info member-info position-absolute end-0" v-if="!canSearch">
       <i class="bi bi-person-fill"></i>
       <span th:text="${member.name}"></span>
     </div>

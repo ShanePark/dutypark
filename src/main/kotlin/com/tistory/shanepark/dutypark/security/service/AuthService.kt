@@ -136,7 +136,7 @@ class AuthService(
     ) {
         val remoteAddr: String? = request.remoteAddr
         val userAgent: String? = request.getHeader(USER_AGENT)
-        refreshToken.slideValidUntil(remoteAddr, userAgent)
+        refreshToken.slideValidUntil(remoteAddr, userAgent, jwtConfig.refreshTokenValidityInDays)
         val cookie: Cookie = refreshToken.createCookie()
         response.addCookie(cookie)
     }

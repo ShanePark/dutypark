@@ -18,7 +18,7 @@ class RefreshTokenTest {
     @Test
     fun `slideValidUntil update its remote Addr`() {
         val refreshToken = RefreshToken(member, LocalDateTime.now().plusDays(1), "", "agent")
-        refreshToken.slideValidUntil("127.0.0.1", "agent")
+        refreshToken.slideValidUntil("127.0.0.1", "agent", 7)
 
         Assertions.assertThat(refreshToken.remoteAddr).isEqualTo("127.0.0.1")
     }
@@ -27,7 +27,7 @@ class RefreshTokenTest {
     fun `slideValidUntil extends validUntil`() {
         val validUntil = LocalDateTime.now().plusDays(1)
         val refreshToken = RefreshToken(member, validUntil, "", "agent")
-        refreshToken.slideValidUntil("", "agent")
+        refreshToken.slideValidUntil("", "agent", 7)
 
         Assertions.assertThat(refreshToken.validUntil).isAfter(validUntil)
     }
@@ -35,7 +35,7 @@ class RefreshTokenTest {
     @Test
     fun `slideValidUntil updates userAgent`() {
         val refreshToken = RefreshToken(member, LocalDateTime.now().plusDays(1), "", "agent")
-        refreshToken.slideValidUntil("", "agent2")
+        refreshToken.slideValidUntil("", "agent2", 7)
 
         Assertions.assertThat(refreshToken.userAgent).isEqualTo("agent2")
     }
