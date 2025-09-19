@@ -7,8 +7,6 @@ import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingRequest
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingResponse
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingTask
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -20,6 +18,7 @@ class ScheduleTimeParsingWorker(
     private val scheduleRepository: ScheduleRepository,
 ) {
     private val log = logger()
+    private val timePattern = Regex("""\d+|한|두|세|네|다섯|여섯|일곱|여덟|아홉|열|열한|열두""")
 
     fun run(task: ScheduleTimeParsingTask) {
         val scheduleOption = scheduleRepository.findById(task.scheduleId)
@@ -34,6 +33,7 @@ class ScheduleTimeParsingWorker(
         }
 
         if (alreadyHaveTimeInfo(schedule)) return
+        if (noTimeRelatedText(schedule)) return
 
         val request = ScheduleTimeParsingRequest(
             date = LocalDate.of(
@@ -103,6 +103,16 @@ class ScheduleTimeParsingWorker(
             return true
         }
         return false
+    }
+
+    private fun noTimeRelatedText(schedule: Schedule): Boolean {
+        if (timePattern.containsMatchIn(schedule.content)) {
+            return false
+        }
+
+        schedule.parsingTimeStatus = NO_TIME_INFO
+        scheduleRepository.save(schedule)
+        return true
     }
 
 }

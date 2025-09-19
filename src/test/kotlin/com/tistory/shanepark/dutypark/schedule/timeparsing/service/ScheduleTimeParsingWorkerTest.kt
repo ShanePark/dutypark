@@ -30,10 +30,10 @@ class ScheduleTimeParsingWorkerTest {
     @InjectMocks
     lateinit var worker: ScheduleTimeParsingWorker
 
-    private fun createSchedule(): Schedule {
+    private fun createSchedule(content: String = "3시 회의"): Schedule {
         val randomDay = LocalDateTime.of(2025, 3, 3, 0, 0, 0, 0)
         val member = Member("")
-        val schedule = Schedule(member = member, content = "", startDateTime = randomDay, endDateTime = randomDay)
+        val schedule = Schedule(member = member, content = content, startDateTime = randomDay, endDateTime = randomDay)
         return schedule
     }
 
@@ -175,6 +175,91 @@ class ScheduleTimeParsingWorkerTest {
         // Then
         assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.FAILED)
         verify(scheduleRepository).save(schedule)
+    }
+
+    @Test
+    fun `if content has no time-related text, status changes to NO_TIME_INFO`() {
+        // Given
+        val schedule = createSchedule(content = "점심 먹기")
+        val task = ScheduleTimeParsingTask(scheduleId = schedule.id)
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
+
+        // When
+        worker.run(task)
+
+        // Then
+        assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.NO_TIME_INFO)
+        verify(scheduleRepository).save(schedule)
+        verify(scheduleTimeParsingService, never()).parseScheduleTime(anyOrNull())
+    }
+
+    @Test
+    fun `if content has Arabic numbers, parsing should proceed`() {
+        // Given
+        val schedule = createSchedule(content = "3시 회의")
+        val task = ScheduleTimeParsingTask(scheduleId = schedule.id)
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
+
+        val response = ScheduleTimeParsingResponse(
+            result = true,
+            hasTime = true,
+            startDateTime = "2023-03-01T15:00:00",
+            endDateTime = "2023-03-01T15:00:00",
+            content = "회의"
+        )
+        `when`(scheduleTimeParsingService.parseScheduleTime(anyOrNull())).thenReturn(response)
+
+        // When
+        worker.run(task)
+
+        // Then
+        verify(scheduleTimeParsingService).parseScheduleTime(anyOrNull())
+        assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.PARSED)
+    }
+
+    @Test
+    fun `if content has Korean numbers, parsing should proceed`() {
+        // Given
+        val schedule = createSchedule(content = "세시 회의")
+        val task = ScheduleTimeParsingTask(scheduleId = schedule.id)
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
+
+        val response = ScheduleTimeParsingResponse(
+            result = true,
+            hasTime = true,
+            startDateTime = "2023-03-01T15:00:00",
+            endDateTime = "2023-03-01T15:00:00",
+            content = "회의"
+        )
+        `when`(scheduleTimeParsingService.parseScheduleTime(anyOrNull())).thenReturn(response)
+
+        // When
+        worker.run(task)
+
+        // Then
+        verify(scheduleTimeParsingService).parseScheduleTime(anyOrNull())
+        assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.PARSED)
+    }
+
+    @Test
+    fun `if content has mixed numbers and non-time text, parsing should proceed`() {
+        // Given
+        val schedule = createSchedule(content = "5일 여행 계획")
+        val task = ScheduleTimeParsingTask(scheduleId = schedule.id)
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
+
+        val response = ScheduleTimeParsingResponse(
+            result = true,
+            hasTime = false
+        )
+        `when`(scheduleTimeParsingService.parseScheduleTime(anyOrNull())).thenReturn(response)
+
+        // When
+        worker.run(task)
+
+        // Then
+        verify(scheduleTimeParsingService).parseScheduleTime(anyOrNull())
+        assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.NO_TIME_INFO)
     }
 
 }
