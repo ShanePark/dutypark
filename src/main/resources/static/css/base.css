@@ -125,33 +125,72 @@ body a:hover {
 .color-picker-container {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 15px;
     margin-top: 10px;
 }
 
 .color-picker-container label {
     font-weight: bold;
     font-size: 0.9em;
+    margin-bottom: 5px;
+}
+
+.color-picker-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .color-picker {
-    width: 50px;
-    height: 50px;
-    border: none;
+    width: 100%;
+    max-width: 300px;
     border-radius: 8px;
-    cursor: pointer;
-    outline: none;
 }
 
-.color-picker::-webkit-color-swatch {
-    border: none;
-    border-radius: 6px;
+.pickr {
+    position: relative;
 }
 
-.color-picker::-webkit-color-swatch-wrapper {
-    border: none;
-    border-radius: 6px;
-    padding: 0;
+.pickr .pcr-app {
+    position: static !important;
+    display: block !important;
+    visibility: visible !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    margin-top: 5px;
+}
+
+.pickr .pcr-button {
+    display: none !important;
+}
+
+.swal2-popup .pickr .pcr-app {
+    width: 100% !important;
+    max-width: 280px !important;
+    font-size: 0.85em;
+    margin: 0 auto;
+}
+
+.swal2-popup .color-picker-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.swal2-popup .color-picker {
+    width: 100%;
+    max-width: 280px;
+}
+
+/* Monolith theme specific adjustments */
+.swal2-popup .pickr .pcr-app.monolith {
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.swal2-popup .pickr .pcr-app.monolith .pcr-selection {
+    height: 160px !important;
 }
 
 .color-preview-container {
@@ -401,6 +440,10 @@ a.homeButton:hover {
 
 .hidden {
     display: none;
+}
+
+.swal2-html-container {
+    overflow-x: hidden;
 }
 
 .swal2-html-container form {
