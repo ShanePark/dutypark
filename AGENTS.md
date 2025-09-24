@@ -164,3 +164,11 @@ cp .env.sample .env
 - Multi-service setup: app, database, nginx, prometheus, grafana
 - SSL certificate integration with Let's Encrypt
 - Health checks and restart policies configured
+
+## CRITICAL: Git Commit Policy
+**NEVER commit changes automatically or proactively.**
+- Only commit when the user explicitly asks for a commit with clear instructions like "커밋해줘", "commit this", "create a commit", etc.
+- Do not commit after completing tasks, even if the work is finished
+- Do not suggest committing unless specifically asked
+- Let the user decide when and what to commit
+- This rule is ABSOLUTE and must NEVER be violated
