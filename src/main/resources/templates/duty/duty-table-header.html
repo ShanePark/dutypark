@@ -1,7 +1,7 @@
 <div class="duty-table-header">
   <div class="duty-types d-flex">
     <div class="duty-type d-flex" v-for="type in team.dutyTypes">
-      <div :class="['indicator', 'BACKGROUND-' + type.color]">
+      <div class="indicator" :style="{'background-color': type.color}">
         <span v-text="type.name"></span>
       </div>
       <div class="duty-type-count">

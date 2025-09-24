@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.duty.domain.dto
 
-import com.tistory.shanepark.dutypark.duty.enums.Color
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 
 data class DutyTypeUpdateDto(
@@ -9,5 +9,6 @@ data class DutyTypeUpdateDto(
     @field:Size(min = 1, max = 12)
     @field:NotBlank
     val name: String,
-    val color: Color,
+    @field:Pattern(regexp = "^#[0-9a-fA-F]{6}$", message = "올바른 색상 형식이 아닙니다.")
+    val color: String,
 )

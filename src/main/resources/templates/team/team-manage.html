@@ -128,7 +128,8 @@
         <tr v-for="(dutyType,index) in team.dutyTypes" v-bind:id="dutyType.id" class="duty-type">
           <td>{{ index+1 }}</td>
           <td class="fw-bold duty-type-name">{{ dutyType.name }}</td>
-          <td><span :class="['badge', 'rounded-pill', 'duty-type-color' ,'border', 'BACKGROUND-' + dutyType.color]"
+          <td><span class="badge rounded-pill duty-type-color border"
+                    :style="{'background-color': dutyType.color}"
                     :data-color="dutyType.color">&nbsp;&nbsp;</span>
           <td class="text-align-right">
             <button v-if="dutyType.id" class="fs-2 btn btn-secondary btn-sm"
@@ -232,15 +233,16 @@
 <div id="duty-type-modal" hidden>
   <p>해당 근무유형의 명칭 및 색상을 선택해주세요.</p>
   <input class="swal2-input" placeholder="Name" name="name" maxlength="10">
-  <select class="swal2-input" name="color">
-    <option value="RED">Red</option>
-    <option value="BLUE">Blue</option>
-    <option value="WHITE">White</option>
-    <option value="GREEN">Green</option>
-    <option value="YELLOW">Yellow</option>
-    <option value="PURPLE">Purple</option>
-    <option value="GREY">Grey</option>
-  </select>
+  <div class="color-picker-container">
+    <label>색상 선택:</label>
+    <input type="color" class="swal2-input color-picker" name="color" value="#ffb3ba">
+    <div class="color-preview-container">
+      <span>미리보기: </span>
+      <div class="indicator color-preview" style="background-color: #ffb3ba; display: inline-block; padding: 4px 8px; border: 2px solid #eaeaea; margin-left: 10px;">
+        <span>OFF</span>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -412,20 +414,30 @@
         let nameInput = modal.querySelector('input[name="name"]');
         nameInput.setAttribute('value', dutyTypeName);
 
-        modal.querySelectorAll('option').forEach(option => {
-          if (option.value === dutyTypeColor) {
-            option.setAttribute('selected', 'selected');
-          }
-        });
+        // Set color picker value
+        let colorInput = modal.querySelector('input[name="color"]');
+        colorInput.setAttribute('value', dutyTypeColor || '#ffb3ba');
+
+        // Set preview color
+        let colorPreview = modal.querySelector('.color-preview');
+        colorPreview.style.backgroundColor = dutyTypeColor || '#ffb3ba';
 
         Swal.fire({
           title: '근무 유형 수정',
           html: modal.innerHTML,
           focusConfirm: false,
+          didOpen: () => {
+            // Add color picker event listener
+            const colorPicker = document.querySelector('.swal2-popup input[name="color"]');
+            const preview = document.querySelector('.swal2-popup .color-preview');
+            colorPicker.addEventListener('input', (e) => {
+              preview.style.backgroundColor = e.target.value;
+            });
+          },
           preConfirm: () => {
             let swalPopup = document.querySelector('.swal2-popup');
             const name = swalPopup.querySelector('input[name="name"]').value
-            const color = swalPopup.querySelector('select[name="color"]').value
+            const color = swalPopup.querySelector('input[name="color"]').value
             if (!name) {
               Swal.showValidationMessage(`Name is required`)
             }
@@ -472,10 +484,18 @@
           title: '근무 유형 추가',
           html: $('#duty-type-modal').clone().html(),
           focusConfirm: false,
+          didOpen: () => {
+            // Add color picker event listener
+            const colorPicker = document.querySelector('.swal2-popup input[name="color"]');
+            const preview = document.querySelector('.swal2-popup .color-preview');
+            colorPicker.addEventListener('input', (e) => {
+              preview.style.backgroundColor = e.target.value;
+            });
+          },
           preConfirm: () => {
             let swalPopup = document.querySelector('.swal2-popup');
             const name = swalPopup.querySelector('input[name="name"]').value
-            const color = swalPopup.querySelector('select[name="color"]').value
+            const color = swalPopup.querySelector('input[name="color"]').value
             if (!name) {
               Swal.showValidationMessage(`Name is required`)
             }

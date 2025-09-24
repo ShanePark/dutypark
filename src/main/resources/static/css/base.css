@@ -121,32 +121,53 @@ body a:hover {
     filter: opacity(0.8);
 }
 
-.BACKGROUND-RED {
-    background-color: lightpink !important;
+/* Color picker styles */
+.color-picker-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
 }
 
-.BACKGROUND-BLUE {
-    background-color: aliceblue !important;
+.color-picker-container label {
+    font-weight: bold;
+    font-size: 0.9em;
 }
 
-.BACKGROUND-PURPLE {
-    background-color: mediumpurple !important;
+.color-picker {
+    width: 50px;
+    height: 50px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    outline: none;
 }
 
-.BACKGROUND-GREEN {
-    background-color: palegreen !important;
+.color-picker::-webkit-color-swatch {
+    border: none;
+    border-radius: 6px;
 }
 
-.BACKGROUND-YELLOW {
-    background-color: wheat !important;
+.color-picker::-webkit-color-swatch-wrapper {
+    border: none;
+    border-radius: 6px;
+    padding: 0;
 }
 
-.BACKGROUND-GREY {
-    background-color: lightgrey !important;
+.color-preview-container {
+    display: flex;
+    align-items: center;
+    margin-top: 5px;
 }
 
-.BACKGROUND-WHITE {
-    background-color: white !important;
+.color-preview {
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.color-preview span {
+    color: rgba(0, 0, 0, 0.7);
 }
 
 .day-grid .month-prev, .day-grid .month-next {

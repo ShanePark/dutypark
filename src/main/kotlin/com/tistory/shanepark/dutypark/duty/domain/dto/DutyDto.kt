@@ -25,9 +25,9 @@ data class DutyDto(
         private fun dutyColor(duty: Duty): String? {
             val dutyType = duty.dutyType
             if (dutyType == null) {
-                return duty.member.team?.defaultDutyColor?.name
+                return duty.member.team?.defaultDutyColor
             }
-            return dutyType.color.name
+            return dutyType.color
         }
 
         fun offDuty(date: LocalDate, team: Team): DutyDto {
@@ -36,7 +36,7 @@ data class DutyDto(
                 month = date.monthValue,
                 day = date.dayOfMonth,
                 dutyType = team.defaultDutyName,
-                dutyColor = team.defaultDutyColor.name,
+                dutyColor = team.defaultDutyColor,
                 isOff = true
             )
         }

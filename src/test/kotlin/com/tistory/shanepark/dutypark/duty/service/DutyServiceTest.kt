@@ -5,7 +5,6 @@ import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyBatchUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
-import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.holiday.domain.Holiday
 import com.tistory.shanepark.dutypark.holiday.repository.HolidayRepository
@@ -417,7 +416,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
         val team = member.team ?: throw NoSuchElementException("Team not found for member")
         team.workType = WorkType.WEEKDAY
         val dutyName = "근무"
-        team.addDutyType(dutyName = dutyName, dutyColor = Color.BLUE)
+        team.addDutyType(dutyName = dutyName, dutyColor = "#f0f8ff")
         teamRepository.save(team)
 
         val holidays = listOf(

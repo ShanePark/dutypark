@@ -2,7 +2,6 @@ package com.tistory.shanepark.dutypark.team.service
 
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
-import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -73,8 +72,8 @@ class TeamServiceTest {
         ReflectionTestUtils.setField(member2, "id", 2L)
         val loginMember = LoginMember(id = 1L, name = "test")
 
-        val dutyType1 = DutyType("Type1", 0, team, Color.RED)
-        val dutyType2 = DutyType("Type2", 1, team, Color.BLUE)
+        val dutyType1 = DutyType("Type1", 0, team, "#ffb3ba")
+        val dutyType2 = DutyType("Type2", 1, team, "#f0f8ff")
         ReflectionTestUtils.setField(dutyType1, "id", 1L)
         ReflectionTestUtils.setField(dutyType2, "id", 2L)
         val dutyTypes = listOf(

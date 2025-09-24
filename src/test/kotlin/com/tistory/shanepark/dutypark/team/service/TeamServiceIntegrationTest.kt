@@ -2,7 +2,6 @@ package com.tistory.shanepark.dutypark.team.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
-import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.service.DutyService
 import com.tistory.shanepark.dutypark.team.domain.dto.TeamCreateDto
@@ -102,9 +101,9 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
         assertThat(totalAfter).isEqualTo(totalBefore + 1)
         val team = teamRepository.findById(created.id).orElseThrow()
 
-        val dutyType1 = team.addDutyType("오전", Color.RED)
-        val dutyType2 = team.addDutyType("오후", Color.GREEN)
-        val dutyType3 = team.addDutyType("야간", Color.BLUE)
+        val dutyType1 = team.addDutyType("오전", "#ffb3ba")
+        val dutyType2 = team.addDutyType("오후", "#98fb98")
+        val dutyType3 = team.addDutyType("야간", "#f0f8ff")
         em.flush()
 
         assertThat(dutyType1.id).isNotNull
@@ -134,7 +133,7 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
         val member = TestData.member
 
         team.addMember(member)
-        val dutyType1 = team.addDutyType("오전", Color.RED)
+        val dutyType1 = team.addDutyType("오전", "#ffb3ba")
         em.flush()
 
         val dutyUpdateDto =
@@ -162,9 +161,9 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
     fun `can't add same name DutyType on one Team`() {
         // Given
         val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
-        val dutyType1 = team.addDutyType("test1", Color.RED)
-        val dutyType2 = team.addDutyType("test2", Color.GREEN)
-        val dutyType3 = team.addDutyType("test3", Color.BLUE)
+        val dutyType1 = team.addDutyType("test1", "#ffb3ba")
+        val dutyType2 = team.addDutyType("test2", "#98fb98")
+        val dutyType3 = team.addDutyType("test3", "#f0f8ff")
         em.flush()
 
         assertThat(dutyType1.id).isNotNull
@@ -175,7 +174,7 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
 
         // When
         assertThrows<IllegalArgumentException> {
-            team.addDutyType("test1", Color.YELLOW)
+            team.addDutyType("test1", "#f5deb3")
         }
     }
 
@@ -296,8 +295,8 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
 
         // When
         val updatedDutyName = "newDutyName"
-        val updatedDutyColor = Color.RED
-        service.updateDefaultDuty(team.id, updatedDutyName, updatedDutyColor.name)
+        val updatedDutyColor = "#ffb3ba"
+        service.updateDefaultDuty(team.id, updatedDutyName, updatedDutyColor)
 
         // Then
         val updated = teamRepository.findById(team.id).orElseThrow()

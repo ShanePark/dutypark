@@ -61,7 +61,7 @@
           <div class="d-flex align-items-center mb-3">
             <h5 class="mb-0 me-2"><i class="bi bi-person-badge me-2"></i>근무</h5>
             <div class="duty-type">
-              <div v-if="myInfo.duty" :class="['BACKGROUND-' + myInfo.duty.dutyColor]">
+              <div v-if="myInfo.duty" :style="{'background-color': myInfo.duty.dutyColor}">
                 <span v-text="myInfo.duty.dutyType"></span>
               </div>
               <div v-if="!myInfo.duty">

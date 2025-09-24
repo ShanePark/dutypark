@@ -5,7 +5,6 @@ import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyByShift
-import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.domain.dto.SimpleMemberDto
@@ -141,7 +140,7 @@ class TeamService(
     fun updateDefaultDuty(teamId: Long, newDutyName: String?, newDutyColor: String?) {
         val team = teamRepository.findById(teamId).orElseThrow()
         if (newDutyColor != null) {
-            team.defaultDutyColor = Color.valueOf(newDutyColor)
+            team.defaultDutyColor = newDutyColor
         }
         if (newDutyName != null) {
             team.defaultDutyName = newDutyName
