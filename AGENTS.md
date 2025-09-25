@@ -127,6 +127,20 @@ cp .env.sample .env
 - Thymeleaf templates in `src/main/resources/templates/`
 - Vue.js components embedded in templates
 - Bootstrap for responsive design
+- **Mobile-first approach**: This project prioritizes mobile usability over desktop experience
+
+### CSS and Styling Guidelines
+- **Always prefer Bootstrap utility classes over inline styles**
+- Use Bootstrap spacing classes: `m-*`, `p-*`, `mt-*`, `mb-*`, `mx-*`, `my-*`, etc.
+- Use Bootstrap display classes: `d-flex`, `d-block`, `d-none`, etc.
+- Use Bootstrap positioning: `justify-content-*`, `align-items-*`, `text-center`, etc.
+- Use Bootstrap sizing: `w-*`, `h-*`, `gap-*`, etc.
+- Only use inline styles for dynamic values (colors, measurements from variables)
+- Examples:
+  - ❌ `style="margin-top: 10px; display: flex;"`
+  - ✅ `class="mt-2 d-flex"`
+  - ❌ `style="padding: 8px 16px; border: 1px solid #eee;"`
+  - ✅ `class="px-3 py-2 border"`
 
 ## Testing
 

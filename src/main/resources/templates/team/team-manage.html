@@ -238,10 +238,10 @@
       <div class="color-picker" id="color-picker"></div>
       <input type="hidden" name="color" value="#ffb3ba">
     </div>
-    <div class="color-preview-container">
+    <div class="color-preview-container d-flex justify-content-center align-items-center gap-2 mt-2">
       <span>미리보기: </span>
-      <div class="indicator color-preview"
-           style="background-color: #ffb3ba; display: inline-block; padding: 4px 8px; border: 2px solid #eaeaea; margin-left: 10px;">
+      <div class="indicator color-preview px-2 py-1 border rounded"
+           style="background-color: #ffb3ba;">
         <span>-</span>
       </div>
     </div>
@@ -440,7 +440,12 @@
                     title: '근무 유형 수정',
                     html: modal.innerHTML,
                     focusConfirm: false,
-                    width: '400px',
+                    width: '95%',
+                    customClass: {
+                        popup: 'mobile-optimized-modal',
+                        title: 'mobile-title',
+                        htmlContainer: 'mobile-content'
+                    },
                     didOpen: () => {
                         // Initialize Pickr color picker (always open)
                         const pickr = Pickr.create({
@@ -526,7 +531,12 @@
                     title: '근무 유형 추가',
                     html: $('#duty-type-modal').clone().html(),
                     focusConfirm: false,
-                    width: '400px',
+                    width: '95%',
+                    customClass: {
+                        popup: 'mobile-optimized-modal',
+                        title: 'mobile-title',
+                        htmlContainer: 'mobile-content'
+                    },
                     didOpen: () => {
                         // Initialize Pickr color picker (always open)
                         const pickr = Pickr.create({

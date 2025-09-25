@@ -197,6 +197,7 @@ body a:hover {
     display: flex;
     align-items: center;
     margin-top: 5px;
+    font-size: 1.5em;
 }
 
 .color-preview {
@@ -444,6 +445,38 @@ a.homeButton:hover {
 
 .swal2-html-container {
     overflow-x: hidden;
+}
+
+/* Desktop SweetAlert modal optimizations */
+.mobile-optimized-modal {
+    font-size: 16px !important;
+    max-width: 450px !important;
+}
+
+.mobile-optimized-modal .mobile-title {
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    margin-bottom: 15px !important;
+}
+
+.mobile-optimized-modal .mobile-content {
+    font-size: 16px !important;
+    line-height: 1.5 !important;
+}
+
+.mobile-optimized-modal .swal2-input {
+    font-size: 16px !important;
+    padding: 12px !important;
+    border-radius: 8px !important;
+    border: 2px solid #e9ecef !important;
+}
+
+.mobile-optimized-modal .swal2-confirm,
+.mobile-optimized-modal .swal2-cancel {
+    font-size: 16px !important;
+    padding: 12px 24px !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
 }
 
 .swal2-html-container form {
