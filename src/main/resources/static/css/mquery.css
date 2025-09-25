@@ -229,5 +229,32 @@
         max-height: 280px;
     }
 
+    /* Mobile optimized SweetAlert modals */
+    .mobile-optimized-modal {
+        font-size: 2em !important;
+        width: 95% !important;
+        max-width: none !important;
+        margin: 0 auto !important;
+    }
+
+    .mobile-optimized-modal .mobile-title {
+        font-size: 1.2em !important;
+    }
+
+    .mobile-optimized-modal .mobile-content {
+        font-size: 1em !important;
+    }
+
+    .mobile-optimized-modal .swal2-input {
+        font-size: 1em !important;
+        padding: 14px !important;
+    }
+
+    .mobile-optimized-modal .swal2-confirm,
+    .mobile-optimized-modal .swal2-cancel {
+        font-size: 1em !important;
+        padding: 14px 28px !important;
+    }
+
 }
 

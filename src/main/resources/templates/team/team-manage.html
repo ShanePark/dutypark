@@ -128,7 +128,8 @@
         <tr v-for="(dutyType,index) in team.dutyTypes" v-bind:id="dutyType.id" class="duty-type">
           <td>{{ index+1 }}</td>
           <td class="fw-bold duty-type-name">{{ dutyType.name }}</td>
-          <td><span :class="['badge', 'rounded-pill', 'duty-type-color' ,'border', 'BACKGROUND-' + dutyType.color]"
+          <td><span class="badge rounded-pill duty-type-color border"
+                    :style="{'background-color': dutyType.color}"
                     :data-color="dutyType.color">&nbsp;&nbsp;</span>
           <td class="text-align-right">
             <button v-if="dutyType.id" class="fs-2 btn btn-secondary btn-sm"
@@ -231,450 +232,549 @@
 
 <div id="duty-type-modal" hidden>
   <p>해당 근무유형의 명칭 및 색상을 선택해주세요.</p>
-  <input class="swal2-input" placeholder="Name" name="name" maxlength="10">
-  <select class="swal2-input" name="color">
-    <option value="RED">Red</option>
-    <option value="BLUE">Blue</option>
-    <option value="WHITE">White</option>
-    <option value="GREEN">Green</option>
-    <option value="YELLOW">Yellow</option>
-    <option value="PURPLE">Purple</option>
-    <option value="GREY">Grey</option>
-  </select>
+  <input class="swal2-input" placeholder="근무유형" name="name" maxlength="10">
+  <div class="color-picker-container">
+    <div class="color-picker-wrapper">
+      <div class="color-picker" id="color-picker"></div>
+      <input type="hidden" name="color" value="#ffb3ba">
+    </div>
+    <div class="color-preview-container d-flex justify-content-center align-items-center gap-2 mt-2">
+      <span>미리보기: </span>
+      <div class="indicator color-preview px-2 py-1 border rounded"
+           style="background-color: #ffb3ba;">
+        <span>-</span>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
-  const teamId = parseInt("[[${teamId}]]");
+    const teamId = parseInt("[[${teamId}]]");
 
-  const memberSearchModal = new Vue({
-    el: '#member-search-modal',
-    data: {
-      keyword: '',
-      searchResult: [],
-      page: 1,
-      totalPage: 0,
-      pageSize: 5,
-      totalElements: 0,
-      mode: 'memberSearch',
-    },
-    methods: {
-      prevPage: function () {
-        if (this.page > 1) {
-          this.page--;
-          this.search();
-        }
-      },
-      nextPage: function () {
-        if (this.page < this.totalPage) {
-          this.page++;
-          this.search();
-        }
-      },
-      goToPage: function (page) {
-        this.page = page;
-        this.search();
-      },
-      resetForMemberSearch: function () {
-        this.reset();
-        this.mode = 'memberSearch';
-      },
-      reset: function () {
-        this.keyword = '';
-        this.searchResult = [];
-        this.page = 1;
-        this.totalPage = 0;
-        this.pageSize = 5;
-        this.totalElements = 0;
-        this.search();
-      },
-      search: function () {
-        $.ajax({
-          url: '/api/teams/manage/members',
-          type: 'GET',
-          data: {
-            keyword: this.keyword,
-            page: this.page - 1,
-            size: this.pageSize
-          },
-          success: function (response) {
-            memberSearchModal.searchResult = response.content;
-            memberSearchModal.totalPage = response.totalPages;
-            memberSearchModal.totalElements = response.totalElements;
-          },
-          error: function (error) {
-            console.log(error);
-          }
-        })
-      },
-      action: function (member) {
-        if (this.mode === 'memberSearch') {
-          this.addMember(member.id);
-          return;
-        }
-        throw new Error('Invalid mode');
-      },
-      addMember: function (memberId) {
-        Swal.fire({
-          title: '멤버 추가 확인',
-          text: '해당 멤버를 팀에 추가하시겠습니까?',
-          icon: 'success',
-          showCancelButton: true,
-          confirmButtonColor: '#3085d6',
-          cancelButtonColor: '#d33',
-          confirmButtonText: '추가',
-          cancelButtonText: '취소'
-        }).then((result) => {
-          if (result.isConfirmed) {
-            $.ajax({
-              url: '/api/teams/manage/' + teamId + '/members',
-              type: 'POST',
-              data: {
-                memberId: memberId
-              },
-              success: function (response) {
-                app.load();
-                $('#member-search-modal').modal('hide');
-              },
-              error: function (error) {
-                console.log(error);
-              }
-            })
-          }
+    // Add name input listener for preview text update
+    function addNameInputListener() {
+        const nameInput = document.querySelector('.swal2-popup input[name="name"]');
+        const previewText = document.querySelector('.swal2-popup .color-preview span');
+        nameInput.addEventListener('input', function () {
+            previewText.textContent = this.value || '-';
         });
-      }
     }
-  })
 
-  const app = new Vue({
-    el: '#app',
-    data: {
-      loginId: parseInt("[[${loginMember.id}]]"),
-      team: {
-        adminId: '',
-      },
-      teamLoaded: false,
-      teamId: teamId,
-      memberSearchKeyword: '',
-      memberSearchResult: [],
-      dutyBatchTemplates: [],
-      isAdmin: false,
-      isAppAdmin: "[[${loginMember.isAdmin}]]" === 'true',
-    },
-    mounted() {
-      this.load();
-      this.loadDutyBatchTemplates();
-    },
-    computed: {
-      hasMember: function () {
-        return this.team.members && this.team.members.length > 0;
-      },
-      hasDutyType: function () {
-        return this.team.dutyTypes && this.team.dutyTypes.length > 0;
-      }
-    },
-    methods: {
-      load: function () {
-        $.ajax({
-          url: '/api/teams/manage/' + teamId,
-          type: 'GET',
-          success: function (response) {
-            app.team = response;
-            app.isAdmin = app.isAppAdmin || (app.team.adminId === app.loginId);
-            app.teamLoaded = true;
-          },
-          error: function (error) {
-            console.log(error);
-          }
-        })
-      },
-      loadDutyBatchTemplates: function () {
-        $.ajax({
-          url: '/api/duty_batch/templates',
-          type: 'GET',
-          success: function (response) {
-            app.dutyBatchTemplates = response;
-          },
-          error: function (error) {
-            console.log(error);
-          }
-        })
-      },
-      updateDutyType: function (element) {
-        const dutyType = element.closest('.duty-type');
-        const dutyTypeName = dutyType.querySelector('.duty-type-name').textContent;
-        const dutyTypeColor = dutyType.querySelector('.duty-type-color').getAttribute('data-color');
-        const dutyTypeId = dutyType.attributes['id']?.value;
-
-        const modal = document.querySelector('#duty-type-modal').cloneNode(true);
-        if (!dutyTypeId) {
-          modal.querySelector('p').insertAdjacentHTML('afterend', '<p>현재 선택한 근무 유형은 <b>근무가 없음</b> 용도로 사용합니다.</p>');
+    const memberSearchModal = new Vue({
+        el: '#member-search-modal',
+        data: {
+            keyword: '',
+            searchResult: [],
+            page: 1,
+            totalPage: 0,
+            pageSize: 5,
+            totalElements: 0,
+            mode: 'memberSearch',
+        },
+        methods: {
+            prevPage: function () {
+                if (this.page > 1) {
+                    this.page--;
+                    this.search();
+                }
+            },
+            nextPage: function () {
+                if (this.page < this.totalPage) {
+                    this.page++;
+                    this.search();
+                }
+            },
+            goToPage: function (page) {
+                this.page = page;
+                this.search();
+            },
+            resetForMemberSearch: function () {
+                this.reset();
+                this.mode = 'memberSearch';
+            },
+            reset: function () {
+                this.keyword = '';
+                this.searchResult = [];
+                this.page = 1;
+                this.totalPage = 0;
+                this.pageSize = 5;
+                this.totalElements = 0;
+                this.search();
+            },
+            search: function () {
+                $.ajax({
+                    url: '/api/teams/manage/members',
+                    type: 'GET',
+                    data: {
+                        keyword: this.keyword,
+                        page: this.page - 1,
+                        size: this.pageSize
+                    },
+                    success: function (response) {
+                        memberSearchModal.searchResult = response.content;
+                        memberSearchModal.totalPage = response.totalPages;
+                        memberSearchModal.totalElements = response.totalElements;
+                    },
+                    error: function (error) {
+                        console.log(error);
+                    }
+                })
+            },
+            action: function (member) {
+                if (this.mode === 'memberSearch') {
+                    this.addMember(member.id);
+                    return;
+                }
+                throw new Error('Invalid mode');
+            },
+            addMember: function (memberId) {
+                Swal.fire({
+                    title: '멤버 추가 확인',
+                    text: '해당 멤버를 팀에 추가하시겠습니까?',
+                    icon: 'success',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: '추가',
+                    cancelButtonText: '취소'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: '/api/teams/manage/' + teamId + '/members',
+                            type: 'POST',
+                            data: {
+                                memberId: memberId
+                            },
+                            success: function (response) {
+                                app.load();
+                                $('#member-search-modal').modal('hide');
+                            },
+                            error: function (error) {
+                                console.log(error);
+                            }
+                        })
+                    }
+                });
+            }
         }
-        let nameInput = modal.querySelector('input[name="name"]');
-        nameInput.setAttribute('value', dutyTypeName);
+    })
 
-        modal.querySelectorAll('option').forEach(option => {
-          if (option.value === dutyTypeColor) {
-            option.setAttribute('selected', 'selected');
-          }
-        });
+    const app = new Vue({
+        el: '#app',
+        data: {
+            loginId: parseInt("[[${loginMember.id}]]"),
+            team: {
+                adminId: '',
+            },
+            teamLoaded: false,
+            teamId: teamId,
+            memberSearchKeyword: '',
+            memberSearchResult: [],
+            dutyBatchTemplates: [],
+            isAdmin: false,
+            isAppAdmin: "[[${loginMember.isAdmin}]]" === 'true',
+        },
+        mounted() {
+            this.load();
+            this.loadDutyBatchTemplates();
+        },
+        computed: {
+            hasMember: function () {
+                return this.team.members && this.team.members.length > 0;
+            },
+            hasDutyType: function () {
+                return this.team.dutyTypes && this.team.dutyTypes.length > 0;
+            }
+        },
+        methods: {
+            load: function () {
+                $.ajax({
+                    url: '/api/teams/manage/' + teamId,
+                    type: 'GET',
+                    success: function (response) {
+                        app.team = response;
+                        app.isAdmin = app.isAppAdmin || (app.team.adminId === app.loginId);
+                        app.teamLoaded = true;
+                    },
+                    error: function (error) {
+                        console.log(error);
+                    }
+                })
+            },
+            loadDutyBatchTemplates: function () {
+                $.ajax({
+                    url: '/api/duty_batch/templates',
+                    type: 'GET',
+                    success: function (response) {
+                        app.dutyBatchTemplates = response;
+                    },
+                    error: function (error) {
+                        console.log(error);
+                    }
+                })
+            },
+            updateDutyType: function (element) {
+                const dutyType = element.closest('.duty-type');
+                const dutyTypeName = dutyType.querySelector('.duty-type-name').textContent;
+                const dutyTypeColor = dutyType.querySelector('.duty-type-color').getAttribute('data-color');
+                const dutyTypeId = dutyType.attributes['id']?.value;
 
-        Swal.fire({
-          title: '근무 유형 수정',
-          html: modal.innerHTML,
-          focusConfirm: false,
-          preConfirm: () => {
-            let swalPopup = document.querySelector('.swal2-popup');
-            const name = swalPopup.querySelector('input[name="name"]').value
-            const color = swalPopup.querySelector('select[name="color"]').value
-            if (!name) {
-              Swal.showValidationMessage(`Name is required`)
-            }
-            if (app.team.dutyTypes.some(dutyType => dutyType.name === name && dutyType.id != dutyTypeId)) {
-              Swal.showValidationMessage(`Duty type with name ${name} already exists`)
-            }
-            return [name, color]
-          },
-          showCancelButton: true,
-          confirmButtonText: '저장',
-          confirmButtonColor: '#29945A',
-          cancelButtonText: '취소'
-        }).then((result) => {
-          if (result.isConfirmed) {
-            if (!dutyTypeId) {
-              app.updateDefaultDuty(result.value[0], result.value[1]);
-              return;
-            }
-            $.ajax({
-              url: `/api/teams/manage/${teamId}/duty-types`,
-              type: 'PATCH',
-              data: JSON.stringify({
-                id: dutyTypeId,
-                name: result.value[0],
-                color: result.value[1]
-              }),
-              contentType: 'application/json',
-              success: function (response) {
-                app.load();
-              },
-              error: function (error) {
+                const modal = document.querySelector('#duty-type-modal').cloneNode(true);
+                if (!dutyTypeId) {
+                    modal.querySelector('p').insertAdjacentHTML('afterend', '<div class="alert alert-info alert-dismissible" style="border-radius: 12px; border: none; background-color: #e3f2fd; color: #0277bd; margin: 15px 0; padding: 12px 16px; font-size: 14px;"><i class="bi bi-info-circle me-2"></i>현재 선택한 근무 유형은 <b>휴무일</b>에 해당합니다.</div>');
+                }
+                let nameInput = modal.querySelector('input[name="name"]');
+                nameInput.setAttribute('value', dutyTypeName);
+                const previewText = modal.querySelector('.color-preview span');
+                previewText.textContent = dutyTypeName || '근무명 입력';
+
+                // Set color picker value
+                let colorInput = modal.querySelector('input[name="color"]');
+                colorInput.setAttribute('value', dutyTypeColor || '#ffb3ba');
+
+                // Set preview color
+                let colorPreview = modal.querySelector('.color-preview');
+                colorPreview.style.backgroundColor = dutyTypeColor || '#ffb3ba';
+
                 Swal.fire({
-                  icon: 'error',
-                  title: 'Oops...',
-                  text: 'Failed to add duty type'
+                    title: '근무 유형 수정',
+                    html: modal.innerHTML,
+                    focusConfirm: false,
+                    width: '95%',
+                    customClass: {
+                        popup: 'mobile-optimized-modal',
+                        title: 'mobile-title',
+                        htmlContainer: 'mobile-content'
+                    },
+                    didOpen: () => {
+                        // Initialize Pickr color picker (always open)
+                        const pickr = Pickr.create({
+                            el: '.swal2-popup .color-picker',
+                            theme: 'monolith',
+                            default: dutyTypeColor || '#ffb3ba',
+                            inline: true,
+                            showAlways: true,
+                            components: {
+                                preview: true,
+                                opacity: false,
+                                hue: true,
+                                interaction: {
+                                    hex: true,
+                                    rgba: false,
+                                    hsla: false,
+                                    hsva: false,
+                                    cmyk: false,
+                                    input: true,
+                                    clear: false,
+                                    save: false
+                                }
+                            }
+                        });
+
+                        const hiddenInput = document.querySelector('.swal2-popup input[name="color"]');
+                        const preview = document.querySelector('.swal2-popup .color-preview');
+
+                        pickr.on('change', (color) => {
+                            const hexColor = color.toHEXA().toString();
+                            hiddenInput.value = hexColor;
+                            preview.style.backgroundColor = hexColor;
+                        });
+                        addNameInputListener();
+                    },
+                    preConfirm: () => {
+                        let swalPopup = document.querySelector('.swal2-popup');
+                        const name = swalPopup.querySelector('input[name="name"]').value
+                        const color = swalPopup.querySelector('input[name="color"]').value
+                        if (!name) {
+                            Swal.showValidationMessage(`Name is required`)
+                        }
+                        if (app.team.dutyTypes.some(dutyType => dutyType.name === name && dutyType.id != dutyTypeId)) {
+                            Swal.showValidationMessage(`Duty type with name ${name} already exists`)
+                        }
+                        return [name, color]
+                    },
+                    showCancelButton: true,
+                    confirmButtonText: '저장',
+                    confirmButtonColor: '#29945A',
+                    cancelButtonText: '취소'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        if (!dutyTypeId) {
+                            app.updateDefaultDuty(result.value[0], result.value[1]);
+                            return;
+                        }
+                        $.ajax({
+                            url: `/api/teams/manage/${teamId}/duty-types`,
+                            type: 'PATCH',
+                            data: JSON.stringify({
+                                id: dutyTypeId,
+                                name: result.value[0],
+                                color: result.value[1]
+                            }),
+                            contentType: 'application/json',
+                            success: function (response) {
+                                app.load();
+                            },
+                            error: function (error) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Oops...',
+                                    text: 'Failed to add duty type'
+                                })
+                            }
+                        })
+                    }
+                });
+            },
+            addDutyType: function () {
+                Swal.fire({
+                    title: '근무 유형 추가',
+                    html: $('#duty-type-modal').clone().html(),
+                    focusConfirm: false,
+                    width: '95%',
+                    customClass: {
+                        popup: 'mobile-optimized-modal',
+                        title: 'mobile-title',
+                        htmlContainer: 'mobile-content'
+                    },
+                    didOpen: () => {
+                        // Initialize Pickr color picker (always open)
+                        const pickr = Pickr.create({
+                            el: '.swal2-popup .color-picker',
+                            theme: 'monolith',
+                            default: '#ffb3ba',
+                            inline: true,
+                            showAlways: true,
+                            components: {
+                                preview: true,
+                                opacity: false,
+                                hue: true,
+                                interaction: {
+                                    hex: true,
+                                    rgba: false,
+                                    hsla: false,
+                                    hsva: false,
+                                    cmyk: false,
+                                    input: true,
+                                    clear: false,
+                                    save: false
+                                }
+                            }
+                        });
+
+                        const hiddenInput = document.querySelector('.swal2-popup input[name="color"]');
+                        const preview = document.querySelector('.swal2-popup .color-preview');
+
+                        pickr.on('change', (color) => {
+                            const hexColor = color.toHEXA().toString();
+                            hiddenInput.value = hexColor;
+                            preview.style.backgroundColor = hexColor;
+                        });
+                        addNameInputListener();
+                    },
+                    preConfirm: () => {
+                        let swalPopup = document.querySelector('.swal2-popup');
+                        const name = swalPopup.querySelector('input[name="name"]').value
+                        const color = swalPopup.querySelector('input[name="color"]').value
+                        if (!name) {
+                            Swal.showValidationMessage(`Name is required`)
+                        }
+                        if (app.team.dutyTypes.some(dutyType => dutyType.name === name)) {
+                            Swal.showValidationMessage(`Duty type with name ${name} already exists`)
+                        }
+                        return [name, color]
+                    },
+                    showCancelButton: true,
+                    confirmButtonText: '추가',
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonText: '취소'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: `/api/teams/manage/${teamId}/duty-types`,
+                            type: 'POST',
+                            data: JSON.stringify({
+                                teamId: app.team.id,
+                                name: result.value[0],
+                                color: result.value[1]
+                            }),
+                            contentType: 'application/json',
+                            success: function (response) {
+                                app.load();
+                            },
+                            error: function (error) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Oops...',
+                                    text: 'Failed to add duty type'
+                                })
+                            }
+                        })
+                    }
+                });
+            },
+            swapPosition: function (index1, index2) {
+                const dutyType1 = app.team.dutyTypes[index1];
+                const dutyType2 = app.team.dutyTypes[index2];
+                $.ajax({
+                    url: `/api/teams/manage/${teamId}/duty-types/swap-position?id1=${dutyType1.id}&id2=${dutyType2.id}`,
+                    type: 'PATCH',
+                    success: function (response) {
+                        app.load();
+                    },
+                    error: function (error) {
+                        Swal.fire({
+                            title: 'Error',
+                            text: 'Failed to swap duty types',
+                            icon: 'error',
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#3085d6',
+                        })
+                    }
                 })
-              }
-            })
-          }
-        });
-      },
-      addDutyType: function () {
-        Swal.fire({
-          title: '근무 유형 추가',
-          html: $('#duty-type-modal').clone().html(),
-          focusConfirm: false,
-          preConfirm: () => {
-            let swalPopup = document.querySelector('.swal2-popup');
-            const name = swalPopup.querySelector('input[name="name"]').value
-            const color = swalPopup.querySelector('select[name="color"]').value
-            if (!name) {
-              Swal.showValidationMessage(`Name is required`)
+            },
+            removeDutyType: function (dutyType) {
+                Swal.fire({
+                    title: '근무 유형 삭제',
+                    html: `[ ${dutyType.name} ] 근무 유형을 삭제하시겠습니까?  <br/>삭제는 되돌릴 수 없으며 해당 유형으로 표시된 근무는 모두 제거됩니다. `,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: '삭제',
+                    confirmButtonColor: '#d33',
+                    cancelButtonText: '취소'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: `/api/teams/manage/${teamId}/duty-types/${dutyType.id}`,
+                            type: 'DELETE',
+                            success: function (response) {
+                                app.load();
+                            },
+                            error: function (error) {
+                                Swal.fire({
+                                    title: 'Error',
+                                    text: 'Failed to delete duty type',
+                                    icon: 'error',
+                                    confirmButtonText: 'OK',
+                                    confirmButtonColor: '#3085d6',
+                                })
+                            }
+                        })
+                    }
+                })
+            },
+            memberSearchModal: function () {
+                memberSearchModal.resetForMemberSearch();
+                $('#member-search-modal').modal('show');
+            },
+            removeMember: function (memberId) {
+                Swal.fire({
+                    title: '팀에서 제외',
+                    text: '정말로 해당 멤버를 팀에서 제외하시겠습니까?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: '제거',
+                    confirmButtonColor: '#d33',
+                    cancelButtonText: '취소'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: '/api/teams/manage/' + app.team.id + '/members',
+                            data: {
+                                memberId: memberId
+                            },
+                            type: 'DELETE',
+                            success: function (response) {
+                                app.load();
+                            },
+                            error: function (error) {
+                                Swal.fire({
+                                    title: 'Error',
+                                    text: 'Failed to delete member',
+                                    icon: 'error',
+                                    confirmButtonText: 'OK',
+                                    confirmButtonColor: '#3085d6',
+                                })
+                            }
+                        })
+                    }
+                })
+            }, updateDefaultDuty(name, color) {
+                const teamId = app.team.id;
+                $.ajax({
+                    url: '/api/teams/manage/' + teamId + '/default-duty',
+                    type: 'PATCH',
+                    data: {
+                        name: name,
+                        color: color,
+                    },
+                    success: function () {
+                        app.load();
+                    }, error: function (error) {
+                        Swal.fire({
+                            title: 'Error',
+                            text: 'Failed to change off color',
+                            icon: 'error',
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#3085d6',
+                        });
+                    }
+                })
+            }, updateBatchTemplate(templateName) {
+                const teamId = app.team.id;
+                $.ajax({
+                    url: '/api/teams/manage/' + teamId + '/batch-template',
+                    type: 'PATCH',
+                    data: {
+                        templateName: templateName,
+                    },
+                    success: function () {
+                        app.load();
+                    }, error: function (error) {
+                        Swal.fire({
+                            title: 'Error',
+                            text: 'Failed to change batch template',
+                            icon: 'error',
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#3085d6',
+                        });
+                    }
+                })
+            }, updateWorkType(workType) {
+                const teamId = app.team.id;
+                $.ajax({
+                    url: '/api/teams/manage/' + teamId + '/work-type',
+                    type: 'PATCH',
+                    data: {
+                        workType: workType,
+                    },
+                    success: function () {
+                        app.load();
+                        Swal.fire({
+                            title: '근무 형태 변경',
+                            text: '근무 형태가 성공적으로 변경되었습니다.',
+                            icon: 'success',
+                            confirmButtonText: '확인',
+                            confirmButtonColor: '#3085d6',
+                        });
+                    }, error: function (error) {
+                        Swal.fire({
+                            title: 'Error',
+                            text: 'Failed to change work type',
+                            icon: 'error',
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#3085d6',
+                        });
+                    }
+                })
             }
-            if (app.team.dutyTypes.some(dutyType => dutyType.name === name)) {
-              Swal.showValidationMessage(`Duty type with name ${name} already exists`)
-            }
-            return [name, color]
-          },
-          showCancelButton: true,
-          confirmButtonText: '추가',
-          confirmButtonColor: '#3085d6',
-          cancelButtonText: '취소'
-        }).then((result) => {
-          if (result.isConfirmed) {
-            $.ajax({
-              url: `/api/teams/manage/${teamId}/duty-types`,
-              type: 'POST',
-              data: JSON.stringify({
-                teamId: app.team.id,
-                name: result.value[0],
-                color: result.value[1]
-              }),
-              contentType: 'application/json',
-              success: function (response) {
-                app.load();
-              },
-              error: function (error) {
+            , batchDuty() {
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = today.getMonth() + 1;
                 Swal.fire({
-                  icon: 'error',
-                  title: 'Oops...',
-                  text: 'Failed to add duty type'
-                })
-              }
-            })
-          }
-        });
-      },
-      swapPosition: function (index1, index2) {
-        const dutyType1 = app.team.dutyTypes[index1];
-        const dutyType2 = app.team.dutyTypes[index2];
-        $.ajax({
-          url: `/api/teams/manage/${teamId}/duty-types/swap-position?id1=${dutyType1.id}&id2=${dutyType2.id}`,
-          type: 'PATCH',
-          success: function (response) {
-            app.load();
-          },
-          error: function (error) {
-            Swal.fire({
-              title: 'Error',
-              text: 'Failed to swap duty types',
-              icon: 'error',
-              confirmButtonText: 'OK',
-              confirmButtonColor: '#3085d6',
-            })
-          }
-        })
-      },
-      removeDutyType: function (dutyType) {
-        Swal.fire({
-          title: '근무 유형 삭제',
-          html: `[ ${dutyType.name} ] 근무 유형을 삭제하시겠습니까?  <br/>삭제는 되돌릴 수 없으며 해당 유형으로 표시된 근무는 모두 제거됩니다. `,
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonText: '삭제',
-          confirmButtonColor: '#d33',
-          cancelButtonText: '취소'
-        }).then((result) => {
-          if (result.isConfirmed) {
-            $.ajax({
-              url: `/api/teams/manage/${teamId}/duty-types/${dutyType.id}`,
-              type: 'DELETE',
-              success: function (response) {
-                app.load();
-              },
-              error: function (error) {
-                Swal.fire({
-                  title: 'Error',
-                  text: 'Failed to delete duty type',
-                  icon: 'error',
-                  confirmButtonText: 'OK',
-                  confirmButtonColor: '#3085d6',
-                })
-              }
-            })
-          }
-        })
-      },
-      memberSearchModal: function () {
-        memberSearchModal.resetForMemberSearch();
-        $('#member-search-modal').modal('show');
-      },
-      removeMember: function (memberId) {
-        Swal.fire({
-          title: '팀에서 제외',
-          text: '정말로 해당 멤버를 팀에서 제외하시겠습니까?',
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonText: '제거',
-          confirmButtonColor: '#d33',
-          cancelButtonText: '취소'
-        }).then((result) => {
-          if (result.isConfirmed) {
-            $.ajax({
-              url: '/api/teams/manage/' + app.team.id + '/members',
-              data: {
-                memberId: memberId
-              },
-              type: 'DELETE',
-              success: function (response) {
-                app.load();
-              },
-              error: function (error) {
-                Swal.fire({
-                  title: 'Error',
-                  text: 'Failed to delete member',
-                  icon: 'error',
-                  confirmButtonText: 'OK',
-                  confirmButtonColor: '#3085d6',
-                })
-              }
-            })
-          }
-        })
-      }, updateDefaultDuty(name, color) {
-        const teamId = app.team.id;
-        $.ajax({
-          url: '/api/teams/manage/' + teamId + '/default-duty',
-          type: 'PATCH',
-          data: {
-            name: name,
-            color: color,
-          },
-          success: function () {
-            app.load();
-          }, error: function (error) {
-            Swal.fire({
-              title: 'Error',
-              text: 'Failed to change off color',
-              icon: 'error',
-              confirmButtonText: 'OK',
-              confirmButtonColor: '#3085d6',
-            });
-          }
-        })
-      }, updateBatchTemplate(templateName) {
-        const teamId = app.team.id;
-        $.ajax({
-          url: '/api/teams/manage/' + teamId + '/batch-template',
-          type: 'PATCH',
-          data: {
-            templateName: templateName,
-          },
-          success: function () {
-            app.load();
-          }, error: function (error) {
-            Swal.fire({
-              title: 'Error',
-              text: 'Failed to change batch template',
-              icon: 'error',
-              confirmButtonText: 'OK',
-              confirmButtonColor: '#3085d6',
-            });
-          }
-        })
-      }, updateWorkType(workType) {
-        const teamId = app.team.id;
-        $.ajax({
-          url: '/api/teams/manage/' + teamId + '/work-type',
-          type: 'PATCH',
-          data: {
-            workType: workType,
-          },
-          success: function () {
-            app.load();
-            Swal.fire({
-              title: '근무 형태 변경',
-              text: '근무 형태가 성공적으로 변경되었습니다.',
-              icon: 'success',
-              confirmButtonText: '확인',
-              confirmButtonColor: '#3085d6',
-            });
-          }, error: function (error) {
-            Swal.fire({
-              title: 'Error',
-              text: 'Failed to change work type',
-              icon: 'error',
-              confirmButtonText: 'OK',
-              confirmButtonColor: '#3085d6',
-            });
-          }
-        })
-      }
-      , batchDuty() {
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = today.getMonth() + 1;
-        Swal.fire({
-          title: '근무표 업로드',
-          html: `
+                    title: '근무표 업로드',
+                    html: `
     <div class="mb-3 fs-2">
         <label for="batchFile" class="form-label">근무표 파일 업로드 (.xlsx)</label>
         <input type="file" id="batchFile" class="form-control fs-2" accept=".xlsx">
@@ -690,202 +790,202 @@
         </div>
     </div>
 `,
-          focusConfirm: false,
-          showCancelButton: true,
-          confirmButtonText: '업로드',
-          confirmButtonColor: '#3085d6',
-          cancelButtonText: '취소',
-          preConfirm: () => {
-            const file = document.getElementById('batchFile').files[0];
-            const year = document.getElementById('batchYear').value;
-            const month = document.getElementById('batchMonth').value;
-            if (!file || !year || !month) {
-              Swal.showValidationMessage('파일 및 연도, 월을 입력해주세요');
+                    focusConfirm: false,
+                    showCancelButton: true,
+                    confirmButtonText: '업로드',
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonText: '취소',
+                    preConfirm: () => {
+                        const file = document.getElementById('batchFile').files[0];
+                        const year = document.getElementById('batchYear').value;
+                        const month = document.getElementById('batchMonth').value;
+                        if (!file || !year || !month) {
+                            Swal.showValidationMessage('파일 및 연도, 월을 입력해주세요');
+                        }
+                        return {file, year, month};
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const formData = new FormData();
+                        formData.append('file', result.value.file);
+                        formData.append('year', result.value.year);
+                        formData.append('month', result.value.month);
+
+                        Swal.fire({
+                            title: '업로드 중...',
+                            text: '파일을 처리하고 있습니다. 잠시만 기다려주세요.',
+                            allowOutsideClick: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+
+                        fetch(`/api/teams/manage/${app.team.id}/duty`, {
+                            method: 'POST',
+                            body: formData
+                        }).then(response => {
+                            if (!response.ok) {
+                                throw new Error('시간표 업로드 실패');
+                            }
+                            return response.json();
+                        }).then(data => {
+                            if (!data.result) {
+                                throw new Error(data.errorMessage);
+                            }
+                            app.load();
+
+                            const startDate = data.startDate;
+                            const endDate = data.endDate;
+                            const successSummary = data.dutyBatchResult
+                                .sort((a, b) => b.second.workingDays - a.second.workingDays)
+                                .filter(emp => emp.second.result)
+                                .map(emp => `${emp.first}: ${emp.second.workingDays}일`)
+                                .join(", ");
+                            const failSummary = data.dutyBatchResult
+                                .filter(emp => !emp.second.result)
+                                .map(emp => `${emp.first}: ${emp.second.errorMessage}`)
+                                .join("<br/>");
+                            let html = `<strong>${startDate} ~ ${endDate}</strong><br/>근무 시간표가 등록되었습니다. 각 직원의 해당 기간 총 근무일은 아래와 같습니다.<br><br>${successSummary}`;
+                            if (failSummary) {
+                                html += `<br><br><h3>업로드 실패</h3>${failSummary}`;
+                            }
+                            Swal.fire({
+                                title: failSummary ? '업로드 부분 실패' : '업로드 성공!',
+                                html: html,
+                                icon: 'success',
+                                confirmButtonText: '확인',
+                                confirmButtonColor: '#3085d6',
+                            });
+                        }).catch(error => {
+                            Swal.fire({
+                                title: '시간표 등록 실패',
+                                text: error.message,
+                                icon: 'error',
+                                confirmButtonText: 'OK',
+                                confirmButtonColor: '#3085d6',
+                            });
+                        });
+                    }
+                });
             }
-            return {file, year, month};
-          }
-        }).then((result) => {
-          if (result.isConfirmed) {
-            const formData = new FormData();
-            formData.append('file', result.value.file);
-            formData.append('year', result.value.year);
-            formData.append('month', result.value.month);
-
-            Swal.fire({
-              title: '업로드 중...',
-              text: '파일을 처리하고 있습니다. 잠시만 기다려주세요.',
-              allowOutsideClick: false,
-              didOpen: () => {
-                Swal.showLoading();
-              }
-            });
-
-            fetch(`/api/teams/manage/${app.team.id}/duty`, {
-              method: 'POST',
-              body: formData
-            }).then(response => {
-              if (!response.ok) {
-                throw new Error('시간표 업로드 실패');
-              }
-              return response.json();
-            }).then(data => {
-              if (!data.result) {
-                throw new Error(data.errorMessage);
-              }
-              app.load();
-
-              const startDate = data.startDate;
-              const endDate = data.endDate;
-              const successSummary = data.dutyBatchResult
-                .sort((a, b) => b.second.workingDays - a.second.workingDays)
-                .filter(emp => emp.second.result)
-                .map(emp => `${emp.first}: ${emp.second.workingDays}일`)
-                .join(", ");
-              const failSummary = data.dutyBatchResult
-                .filter(emp => !emp.second.result)
-                .map(emp => `${emp.first}: ${emp.second.errorMessage}`)
-                .join("<br/>");
-              let html = `<strong>${startDate} ~ ${endDate}</strong><br/>근무 시간표가 등록되었습니다. 각 직원의 해당 기간 총 근무일은 아래와 같습니다.<br><br>${successSummary}`;
-              if (failSummary) {
-                html += `<br><br><h3>업로드 실패</h3>${failSummary}`;
-              }
-              Swal.fire({
-                title: failSummary ? '업로드 부분 실패' : '업로드 성공!',
-                html: html,
-                icon: 'success',
-                confirmButtonText: '확인',
-                confirmButtonColor: '#3085d6',
-              });
-            }).catch(error => {
-              Swal.fire({
-                title: '시간표 등록 실패',
-                text: error.message,
-                icon: 'error',
-                confirmButtonText: 'OK',
-                confirmButtonColor: '#3085d6',
-              });
-            });
-          }
-        });
-      }
-      ,
-      assignManager(member) {
-        Swal.fire({
-          title: '매니저 권한 부여',
-          text: `정말로 [${member.name}] 님에게 매니저 권한을 부여하시겠습니까?`,
-          icon: 'success',
-          showCancelButton: true,
-          confirmButtonText: '예',
-          confirmButtonColor: '#3085d6',
-          cancelButtonText: '취소'
-        }).then((result) => {
-          if (result.isConfirmed) {
-            $.ajax({
-              url: `/api/teams/manage/${teamId}/manager`,
-              data: {
-                memberId: member.id
-              },
-              type: 'POST',
-              success: function (response) {
-                app.load();
-              },
-              error: function (error) {
-                console.log(error);
-              }
-            })
-          }
-        });
-      },
-      unAssignManager(member) {
-        Swal.fire({
-          title: '매니저 권한 취소',
-          text: `정말로 [${member.name}] 님의 매니저 권한을 취소하시겠습니까?`,
-          icon: 'success',
-          showCancelButton: true,
-          confirmButtonText: '예',
-          confirmButtonColor: '#3085d6',
-          cancelButtonText: '취소'
-        }).then((result) => {
-          if (result.isConfirmed) {
-            $.ajax({
-              url: `/api/teams/manage/${teamId}/manager`,
-              data: {
-                memberId: member.id
-              },
-              type: 'DELETE',
-              success: function (response) {
-                app.load();
-              },
-              error: function (error) {
-                console.log(error);
-              }
-            })
-          }
-        });
-      },
-      changeAdmin: function (member) {
-        let confirmText = '팀의 대표를 초기화 하시겠습니까?';
-        if (member) {
-          confirmText = `정말 [${member.name}] 님을 대표로 변경하시겠습니까?<br/> 다시 대표 권한을 획득하려면 [${member.name}] 님에게 요청해야합니다.`;
-        }
-        Swal.fire({
-          title: '대표 변경 변경 확인',
-          html: confirmText,
-          icon: 'success',
-          showCancelButton: true,
-          confirmButtonColor: '#3085d6',
-          confirmButtonText: '네',
-          cancelButtonText: '취소'
-        }).then((result) => {
-          if (result.isConfirmed) {
-            $.ajax({
-              url: '/api/teams/manage/' + teamId + '/admin',
-              type: 'PUT',
-              data: {
-                memberId: member?.id
-              },
-              success: function (response) {
-                app.load();
-                $('#member-search-modal').modal('hide');
-              },
-              error: function (error) {
-                console.log(error);
-              }
-            })
-          }
-        });
-      },
-      removeTeam: function () {
-        Swal.fire({
-          title: '팀 삭제',
-          text: '정말로 이 팀을 삭제하겠습니까?',
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonText: 'Delete',
-          confirmButtonColor: '#d33',
-          cancelButtonText: 'Cancel'
-        }).then((result) => {
-          if (result.isConfirmed) {
-            $.ajax({
-              url: '/admin/api/teams/' + app.team.id,
-              type: 'DELETE',
-              success: function (response) {
-                window.location.href = '/admin/team';
-              },
-              error: function (error) {
+            ,
+            assignManager(member) {
                 Swal.fire({
-                  title: 'Error',
-                  text: 'Failed to delete team',
-                  icon: 'error',
-                  confirmButtonText: 'OK',
-                  confirmButtonColor: '#3085d6',
-                })
-              }
-            })
-          }
-        });
-      },
-      // end method
-    }
-  });
+                    title: '매니저 권한 부여',
+                    text: `정말로 [${member.name}] 님에게 매니저 권한을 부여하시겠습니까?`,
+                    icon: 'success',
+                    showCancelButton: true,
+                    confirmButtonText: '예',
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonText: '취소'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: `/api/teams/manage/${teamId}/manager`,
+                            data: {
+                                memberId: member.id
+                            },
+                            type: 'POST',
+                            success: function (response) {
+                                app.load();
+                            },
+                            error: function (error) {
+                                console.log(error);
+                            }
+                        })
+                    }
+                });
+            },
+            unAssignManager(member) {
+                Swal.fire({
+                    title: '매니저 권한 취소',
+                    text: `정말로 [${member.name}] 님의 매니저 권한을 취소하시겠습니까?`,
+                    icon: 'success',
+                    showCancelButton: true,
+                    confirmButtonText: '예',
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonText: '취소'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: `/api/teams/manage/${teamId}/manager`,
+                            data: {
+                                memberId: member.id
+                            },
+                            type: 'DELETE',
+                            success: function (response) {
+                                app.load();
+                            },
+                            error: function (error) {
+                                console.log(error);
+                            }
+                        })
+                    }
+                });
+            },
+            changeAdmin: function (member) {
+                let confirmText = '팀의 대표를 초기화 하시겠습니까?';
+                if (member) {
+                    confirmText = `정말 [${member.name}] 님을 대표로 변경하시겠습니까?<br/> 다시 대표 권한을 획득하려면 [${member.name}] 님에게 요청해야합니다.`;
+                }
+                Swal.fire({
+                    title: '대표 변경 변경 확인',
+                    html: confirmText,
+                    icon: 'success',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    confirmButtonText: '네',
+                    cancelButtonText: '취소'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: '/api/teams/manage/' + teamId + '/admin',
+                            type: 'PUT',
+                            data: {
+                                memberId: member?.id
+                            },
+                            success: function (response) {
+                                app.load();
+                                $('#member-search-modal').modal('hide');
+                            },
+                            error: function (error) {
+                                console.log(error);
+                            }
+                        })
+                    }
+                });
+            },
+            removeTeam: function () {
+                Swal.fire({
+                    title: '팀 삭제',
+                    text: '정말로 이 팀을 삭제하겠습니까?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Delete',
+                    confirmButtonColor: '#d33',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: '/admin/api/teams/' + app.team.id,
+                            type: 'DELETE',
+                            success: function (response) {
+                                window.location.href = '/admin/team';
+                            },
+                            error: function (error) {
+                                Swal.fire({
+                                    title: 'Error',
+                                    text: 'Failed to delete team',
+                                    icon: 'error',
+                                    confirmButtonText: 'OK',
+                                    confirmButtonColor: '#3085d6',
+                                })
+                            }
+                        })
+                    }
+                });
+            },
+            // end method
+        }
+    });
 </script>

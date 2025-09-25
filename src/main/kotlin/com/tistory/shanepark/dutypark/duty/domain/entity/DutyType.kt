@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.duty.domain.entity
 
-import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import jakarta.persistence.*
 
@@ -14,8 +13,8 @@ class DutyType(
     @JoinColumn(name = "team_id")
     val team: Team,
 
-    @Enumerated(value = EnumType.STRING)
-    var color: Color
+    @Column(length = 7)
+    var color: String
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -3,7 +3,6 @@ package com.tistory.shanepark.dutypark.team.domain.entity
 import com.tistory.shanepark.dutypark.common.domain.entity.BaseTimeEntity
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
-import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.enums.WorkType
@@ -30,9 +29,8 @@ class Team(
     @OneToMany(mappedBy = "team", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
     val managers: MutableList<TeamManager> = mutableListOf()
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, name = "default_duty_color")
-    var defaultDutyColor: Color = Color.RED
+    @Column(nullable = false, length = 7)
+    var defaultDutyColor: String = "#ffb3ba"
 
     @Column(nullable = false, name = "default_duty_name")
     var defaultDutyName: String = "OFF"
@@ -62,7 +60,7 @@ class Team(
         member.team = null
     }
 
-    fun addDutyType(dutyName: String, dutyColor: Color): DutyType {
+    fun addDutyType(dutyName: String, dutyColor: String): DutyType {
         if (dutyTypes.any { it.name == dutyName }) {
             throw IllegalArgumentException("DutyType already exists")
         }

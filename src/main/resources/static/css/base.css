@@ -121,32 +121,93 @@ body a:hover {
     filter: opacity(0.8);
 }
 
-.BACKGROUND-RED {
-    background-color: lightpink !important;
+/* Color picker styles */
+.color-picker-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 10px;
 }
 
-.BACKGROUND-BLUE {
-    background-color: aliceblue !important;
+.color-picker-container label {
+    font-weight: bold;
+    font-size: 0.9em;
+    margin-bottom: 5px;
 }
 
-.BACKGROUND-PURPLE {
-    background-color: mediumpurple !important;
+.color-picker-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
-.BACKGROUND-GREEN {
-    background-color: palegreen !important;
+.color-picker {
+    width: 100%;
+    max-width: 300px;
+    border-radius: 8px;
 }
 
-.BACKGROUND-YELLOW {
-    background-color: wheat !important;
+.pickr {
+    position: relative;
 }
 
-.BACKGROUND-GREY {
-    background-color: lightgrey !important;
+.pickr .pcr-app {
+    position: static !important;
+    display: block !important;
+    visibility: visible !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    margin-top: 5px;
 }
 
-.BACKGROUND-WHITE {
-    background-color: white !important;
+.pickr .pcr-button {
+    display: none !important;
+}
+
+.swal2-popup .pickr .pcr-app {
+    width: 100% !important;
+    max-width: 280px !important;
+    font-size: 0.85em;
+    margin: 0 auto;
+}
+
+.swal2-popup .color-picker-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.swal2-popup .color-picker {
+    width: 100%;
+    max-width: 280px;
+}
+
+/* Monolith theme specific adjustments */
+.swal2-popup .pickr .pcr-app.monolith {
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.swal2-popup .pickr .pcr-app.monolith .pcr-selection {
+    height: 160px !important;
+}
+
+.color-preview-container {
+    display: flex;
+    align-items: center;
+    margin-top: 5px;
+    font-size: 1.5em;
+}
+
+.color-preview {
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.color-preview span {
+    color: rgba(0, 0, 0, 0.7);
 }
 
 .day-grid .month-prev, .day-grid .month-next {
@@ -380,6 +441,42 @@ a.homeButton:hover {
 
 .hidden {
     display: none;
+}
+
+.swal2-html-container {
+    overflow-x: hidden;
+}
+
+/* Desktop SweetAlert modal optimizations */
+.mobile-optimized-modal {
+    font-size: 16px !important;
+    max-width: 450px !important;
+}
+
+.mobile-optimized-modal .mobile-title {
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    margin-bottom: 15px !important;
+}
+
+.mobile-optimized-modal .mobile-content {
+    font-size: 16px !important;
+    line-height: 1.5 !important;
+}
+
+.mobile-optimized-modal .swal2-input {
+    font-size: 16px !important;
+    padding: 12px !important;
+    border-radius: 8px !important;
+    border: 2px solid #e9ecef !important;
+}
+
+.mobile-optimized-modal .swal2-confirm,
+.mobile-optimized-modal .swal2-cancel {
+    font-size: 16px !important;
+    padding: 12px 24px !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
 }
 
 .swal2-html-container form {

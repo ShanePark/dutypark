@@ -4,7 +4,6 @@ import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeCreateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
-import com.tistory.shanepark.dutypark.duty.enums.Color
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -25,7 +24,7 @@ class DutyTypeServiceTest : DutyparkIntegrationTest() {
         val dutyTypeSize = teamRepository.findById(TestData.team.id!!).orElseThrow().dutyTypes.size
 
         // When
-        val dutyTypeCreateDto = DutyTypeCreateDto(TestData.team.id!!, "dutyType", Color.BLUE)
+        val dutyTypeCreateDto = DutyTypeCreateDto(TestData.team.id!!, "dutyType", "#f0f8ff")
         val created = dutyTypeService.addDutyType(dutyTypeCreateDto)
 
         // Then
@@ -38,9 +37,9 @@ class DutyTypeServiceTest : DutyparkIntegrationTest() {
     @Test
     fun `can't create same duty type name in same team`() {
         // Given
-        val dutyTypeCreateDto = DutyTypeCreateDto(TestData.team.id!!, "dutyType", Color.BLUE)
+        val dutyTypeCreateDto = DutyTypeCreateDto(TestData.team.id!!, "dutyType", "#f0f8ff")
         val created = dutyTypeService.addDutyType(dutyTypeCreateDto)
-        val dutyTypeCreateDto2 = DutyTypeCreateDto(TestData.team.id!!, "dutyType2", Color.BLUE)
+        val dutyTypeCreateDto2 = DutyTypeCreateDto(TestData.team.id!!, "dutyType2", "#f0f8ff")
         val created2 = dutyTypeService.addDutyType(dutyTypeCreateDto2)
 
         assertThat(created).isNotNull
@@ -54,23 +53,23 @@ class DutyTypeServiceTest : DutyparkIntegrationTest() {
 
         // When
         assertThrows<IllegalArgumentException> {
-            dutyTypeService.addDutyType(DutyTypeCreateDto(TestData.team.id!!, "dutyType", Color.BLUE))
+            dutyTypeService.addDutyType(DutyTypeCreateDto(TestData.team.id!!, "dutyType", "#f0f8ff"))
         }
         assertThrows<IllegalArgumentException> {
-            dutyTypeService.addDutyType(DutyTypeCreateDto(TestData.team.id!!, "dutyType2", Color.BLUE))
+            dutyTypeService.addDutyType(DutyTypeCreateDto(TestData.team.id!!, "dutyType2", "#f0f8ff"))
         }
     }
 
     @Test
     fun `update duty-type success`() {
         // Given
-        val dutyTypeCreateDto = DutyTypeCreateDto(TestData.team.id!!, "dutyType", Color.BLUE)
+        val dutyTypeCreateDto = DutyTypeCreateDto(TestData.team.id!!, "dutyType", "#f0f8ff")
         val created = dutyTypeService.addDutyType(dutyTypeCreateDto)
         val dutyTypeSize = teamRepository.findById(TestData.team.id!!).orElseThrow().dutyTypes
         em.flush()
 
         // When
-        val dutyTypeUpdateDto = DutyTypeUpdateDto(created.id!!, "changedName", Color.BLUE)
+        val dutyTypeUpdateDto = DutyTypeUpdateDto(created.id!!, "changedName", "#f0f8ff")
         dutyTypeService.update(dutyTypeUpdateDto)
         em.flush()
         em.clear()
@@ -89,14 +88,14 @@ class DutyTypeServiceTest : DutyparkIntegrationTest() {
     @Test
     fun `update duty type fails if same name already exist in the team`() {
         // Given
-        val dutyTypeCreateDto = DutyTypeCreateDto(TestData.team.id!!, "dutyType", Color.BLUE)
+        val dutyTypeCreateDto = DutyTypeCreateDto(TestData.team.id!!, "dutyType", "#f0f8ff")
         val created = dutyTypeService.addDutyType(dutyTypeCreateDto)
-        val dutyTypeCreateDto2 = DutyTypeCreateDto(TestData.team.id!!, "dutyType2", Color.BLUE)
+        val dutyTypeCreateDto2 = DutyTypeCreateDto(TestData.team.id!!, "dutyType2", "#f0f8ff")
         val created2 = dutyTypeService.addDutyType(dutyTypeCreateDto2)
         em.flush()
 
         // Then
-        val dutyTypeUpdateDto = DutyTypeUpdateDto(created.id!!, created2.name, Color.BLUE)
+        val dutyTypeUpdateDto = DutyTypeUpdateDto(created.id!!, created2.name, "#f0f8ff")
         assertThrows<IllegalArgumentException> {
             dutyTypeService.update(dutyTypeUpdateDto)
         }

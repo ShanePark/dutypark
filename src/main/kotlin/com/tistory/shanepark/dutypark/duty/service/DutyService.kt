@@ -190,7 +190,7 @@ class DutyService(
             val duties =
                 getDutiesAndInitLazyIfNeeded(memberId = id, year = year, month = month, loginMember = loginMember).map {
                     if (it.dutyType.isNullOrBlank()) {
-                        it.copy(dutyType = team.defaultDutyName, dutyColor = team.defaultDutyColor.name)
+                        it.copy(dutyType = team.defaultDutyName, dutyColor = team.defaultDutyColor)
                     } else it
                 }
             OtherDutyResponse(name = member.name, duties = duties)
