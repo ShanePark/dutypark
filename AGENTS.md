@@ -171,4 +171,5 @@ cp .env.sample .env
 - Do not commit after completing tasks, even if the work is finished
 - Do not suggest committing unless specifically asked
 - Let the user decide when and what to commit
+- **When creating commit messages, analyze only the actual code changes since the last commit, not the conversation history.** The commit message should reflect the final code state and changes, not the iterative development process discussed in chat.
 - This rule is ABSOLUTE and must NEVER be violated
