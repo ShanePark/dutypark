@@ -50,7 +50,8 @@
   <div class="my-section">
     <div class="bg-white rounded shadow-sm border">
       <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white cursor-pointer"
-           @click="moveTo()" v-text="myInfo.member.name">
+           @click="moveTo()">
+        {{ myInfo.member.name || '로딩중...' }}
       </div>
       <div class="p-4 row">
         <div class="col-6">
@@ -59,8 +60,13 @@
             {{ today }}
           </h5>
           <div class="d-flex align-items-center mb-3">
-            <h5 class="mb-0 me-2"><i class="bi bi-person-badge me-2"></i>근무</h5>
-            <div class="duty-type">
+            <h5 class="mb-0 me-2"><i class="bi bi-person-badge me-2"></i>근무:</h5>
+            <template v-if="myInfoLoading">
+              <div class="spinner-border spinner-border-sm text-secondary" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </template>
+            <div v-else class="duty-type">
               <div v-if="myInfo.duty" :style="{'background-color': myInfo.duty.dutyColor}">
                 <span v-text="myInfo.duty.dutyType"></span>
               </div>
@@ -72,7 +78,14 @@
         </div>
         <div class="col-6 border-start">
           <h5 class="mb-1"><i class="bi bi-calendar-event me-2"></i>오늘 일정</h5>
-          <ul class="list-unstyled">
+          <template v-if="myInfoLoading">
+            <div class="text-center py-3">
+              <div class="spinner-border spinner-border-sm text-secondary" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </div>
+          </template>
+          <ul v-else class="list-unstyled">
             <li v-for="schedule in myInfo.schedules" :key="schedule.id" class="py-1 border-bottom last:border-0">
               <span>{{ printSchedule(schedule) }}</span>
               <span class="text-secondary ms-2">{{ printScheduleTime(schedule.startDateTime) }}</span>
@@ -122,11 +135,18 @@
     </div>
   </div>
 
-  <div class="mb-4 friend-section" v-if="friendInfoInitialized">
+  <div class="mb-4 friend-section">
     <div class="bg-white rounded shadow-sm border">
       <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white">친구 목록</div>
       <div class="p-4">
-        <div class="d-flex flex-wrap gap-3 friend-list">
+        <template v-if="friendInfoLoading">
+          <div class="text-center py-5">
+            <div class="spinner-border text-secondary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+        </template>
+        <div v-else class="d-flex flex-wrap gap-3 friend-list">
           <div v-for="friend in friendInfo.friends" :key="friend.member.id"
                :data-member_id="friend.member.id"
                class="p-4 border rounded mb-2 cursor-pointer hover-bg-light shadow-sm position-relative"
@@ -187,6 +207,7 @@
             <span class="fw-bold text-white">친구 추가</span>
           </div>
         </div>
+        </template>
       </div>
     </div>
   </div>
@@ -302,11 +323,13 @@
                 },
                 schedules: [],
             },
+            myInfoLoading: false,
             friendInfo: {
                 friends: [],
                 pendingRequestsTo: [],
                 pendingRequestsFrom: [],
             },
+            friendInfoLoading: false,
             friendInfoInitialized: false,
             isFriendSortableInit: false
         },
@@ -319,13 +342,18 @@
         computed: {},
         methods: {
             loadMy() {
+                this.myInfoLoading = true;
                 fetch("/api/dashboard/my")
                     .then(res => res.json())
                     .then(data => {
                         this.myInfo = data;
+                    })
+                    .finally(() => {
+                        this.myInfoLoading = false;
                     });
             },
             loadFriendInfo() {
+                this.friendInfoLoading = true;
                 fetch("/api/dashboard/friends")
                     .then(res => res.json())
                     .then(data => {
@@ -335,6 +363,7 @@
                         console.error('친구 정보를 불러오는 중 오류가 발생했습니다.', error);
                     })
                     .finally(() => {
+                        this.friendInfoLoading = false;
                         this.friendInfoInitialized = true;
                         this.$nextTick(() => {
                             if (!this.isFriendSortableInit) {

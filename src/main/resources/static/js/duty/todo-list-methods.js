@@ -28,6 +28,7 @@ const todoListMethods = {
   }
   ,
   loadTodos() {
+    this.todosLoading = true;
     Promise.all([
       fetch('/api/todos'),
       fetch('/api/todos/completed')
@@ -54,6 +55,9 @@ const todoListMethods = {
       })
       .catch(() => {
         // Error already handled with alert.
+      })
+      .finally(() => {
+        this.todosLoading = false;
       });
   }
   ,

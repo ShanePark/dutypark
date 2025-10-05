@@ -50,6 +50,7 @@ function loadApp(memberId, teamId, loginMemberId, memberName, year, month, searc
         friends: [],
         todos: [],
         completedTodos: [],
+        todosLoading: false,
         editTodoMode: false,
         selectedTodoStatus: 'ACTIVE',
         todoOverviewFilters: {
