@@ -5,7 +5,14 @@
         <small>Todo</small><i class="bi bi-journal-plus ms-2"></i>
       </div>
       <div class="d-flex flex-row flex-grow-1" id="todo-list-container">
-        <template v-if="todos.length > 0">
+        <template v-if="todosLoading">
+          <div class="todo-empty-inline">
+            <div class="spinner-border spinner-border-sm text-secondary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+        </template>
+        <template v-else-if="todos.length > 0">
           <div class="d-flex flex-row" id="todo-list">
             <div v-for="todo in todos" :key="todo.id" class="todo-item" :data-id="todo.id">
               <div class="handle">

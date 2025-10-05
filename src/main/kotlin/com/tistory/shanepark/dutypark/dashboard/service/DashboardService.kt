@@ -61,15 +61,16 @@ class DashboardService(
     private fun todayDuty(member: Member): DutyDto? {
         val team = member.team ?: return null
         val today = LocalDate.now()
-        val duty = dutyRepository.findByMemberAndDutyDate(member, today)
-        return duty?.let(::DutyDto) ?: DutyDto(
-            year = today.year,
-            month = today.monthValue,
-            day = today.dayOfMonth,
-            dutyType = team.defaultDutyName,
-            dutyColor = team.defaultDutyColor.toString(),
-            isOff = true
-        )
+        return dutyRepository.findByMemberAndDutyDate(member, today)
+            ?.takeIf { it.dutyType != null }?.let(::DutyDto)
+            ?: DutyDto(
+                year = today.year,
+                month = today.monthValue,
+                day = today.dayOfMonth,
+                dutyType = team.defaultDutyName,
+                dutyColor = team.defaultDutyColor,
+                isOff = true
+            )
     }
 
     fun friend(loginMember: LoginMember): DashboardFriendInfo {
