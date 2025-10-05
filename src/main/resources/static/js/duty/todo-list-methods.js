@@ -49,14 +49,13 @@ const todoListMethods = {
       .then(([activeTodos, completedTodos]) => {
         this.todos = activeTodos;
         this.completedTodos = completedTodos;
+        this.todosLoading = false;
         this.$nextTick(() => {
           this.initSortable();
         });
       })
       .catch(() => {
         // Error already handled with alert.
-      })
-      .finally(() => {
         this.todosLoading = false;
       });
   }
