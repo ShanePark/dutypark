@@ -267,6 +267,55 @@
         }
     }
 
+    // Initialize duty type modal with color picker
+    function initDutyTypeModal(defaultColor) {
+        // Prevent auto-focus on mobile
+        const nameInput = document.querySelector('.swal2-popup input[name="name"]');
+        if (nameInput) {
+            nameInput.blur();
+            nameInput.setAttribute('readonly', 'readonly');
+            setTimeout(() => {
+                nameInput.removeAttribute('readonly');
+            }, 300);
+        }
+
+        // Initialize Pickr color picker (always open)
+        const pickr = Pickr.create({
+            el: '.swal2-popup .color-picker',
+            theme: 'monolith',
+            default: defaultColor || '#ffb3ba',
+            inline: true,
+            showAlways: true,
+            components: {
+                preview: true,
+                opacity: false,
+                hue: true,
+                interaction: {
+                    hex: true,
+                    rgba: false,
+                    hsla: false,
+                    hsva: false,
+                    cmyk: false,
+                    input: true,
+                    save: false
+                }
+            }
+        });
+
+        pickr.on('change', (color) => {
+            const hexColor = color.toHEXA().toString();
+            const colorInput = document.querySelector('.swal2-popup input[name="color"]');
+            const colorPreview = document.querySelector('.swal2-popup .color-preview');
+            colorInput.value = hexColor;
+            colorPreview.style.backgroundColor = hexColor;
+        });
+
+        releaseSwalTouchLock();
+        addNameInputListener();
+
+        return pickr;
+    }
+
     const memberSearchModal = new Vue({
         el: '#member-search-modal',
         data: {
@@ -454,41 +503,7 @@
                         htmlContainer: 'mobile-content'
                     },
                     didOpen: () => {
-                        // Initialize Pickr color picker (always open)
-                        const pickr = Pickr.create({
-                            el: '.swal2-popup .color-picker',
-                            theme: 'monolith',
-                            default: dutyTypeColor || '#ffb3ba',
-                            inline: true,
-                            showAlways: true,
-                            components: {
-                                preview: true,
-                                opacity: false,
-                                hue: true,
-                                interaction: {
-                                    hex: true,
-                                    rgba: false,
-                                    hsla: false,
-                                    hsva: false,
-                                    cmyk: false,
-                                    input: true,
-                                    clear: false,
-                                    save: false
-                                }
-                            }
-                        });
-
-                        releaseSwalTouchLock();
-
-                        const hiddenInput = document.querySelector('.swal2-popup input[name="color"]');
-                        const preview = document.querySelector('.swal2-popup .color-preview');
-
-                        pickr.on('change', (color) => {
-                            const hexColor = color.toHEXA().toString();
-                            hiddenInput.value = hexColor;
-                            preview.style.backgroundColor = hexColor;
-                        });
-                        addNameInputListener();
+                        initDutyTypeModal(dutyTypeColor || '#ffb3ba');
                     },
                     preConfirm: () => {
                         let swalPopup = document.querySelector('.swal2-popup');
@@ -547,41 +562,7 @@
                         htmlContainer: 'mobile-content'
                     },
                     didOpen: () => {
-                        // Initialize Pickr color picker (always open)
-                        const pickr = Pickr.create({
-                            el: '.swal2-popup .color-picker',
-                            theme: 'monolith',
-                            default: '#ffb3ba',
-                            inline: true,
-                            showAlways: true,
-                            components: {
-                                preview: true,
-                                opacity: false,
-                                hue: true,
-                                interaction: {
-                                    hex: true,
-                                    rgba: false,
-                                    hsla: false,
-                                    hsva: false,
-                                    cmyk: false,
-                                    input: true,
-                                    clear: false,
-                                    save: false
-                                }
-                            }
-                        });
-
-                        releaseSwalTouchLock();
-
-                        const hiddenInput = document.querySelector('.swal2-popup input[name="color"]');
-                        const preview = document.querySelector('.swal2-popup .color-preview');
-
-                        pickr.on('change', (color) => {
-                            const hexColor = color.toHEXA().toString();
-                            hiddenInput.value = hexColor;
-                            preview.style.backgroundColor = hexColor;
-                        });
-                        addNameInputListener();
+                        initDutyTypeModal('#ffb3ba');
                     },
                     preConfirm: () => {
                         let swalPopup = document.querySelector('.swal2-popup');
