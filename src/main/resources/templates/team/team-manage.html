@@ -260,6 +260,13 @@
         });
     }
 
+    function releaseSwalTouchLock() {
+        const container = document.querySelector('.swal2-container');
+        if (container) {
+            container.ontouchmove = null;
+        }
+    }
+
     const memberSearchModal = new Vue({
         el: '#member-search-modal',
         data: {
@@ -471,6 +478,8 @@
                             }
                         });
 
+                        releaseSwalTouchLock();
+
                         const hiddenInput = document.querySelector('.swal2-popup input[name="color"]');
                         const preview = document.querySelector('.swal2-popup .color-preview');
 
@@ -561,6 +570,8 @@
                                 }
                             }
                         });
+
+                        releaseSwalTouchLock();
 
                         const hiddenInput = document.querySelector('.swal2-popup input[name="color"]');
                         const preview = document.querySelector('.swal2-popup .color-preview');

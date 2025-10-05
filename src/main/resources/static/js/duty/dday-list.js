@@ -20,28 +20,13 @@ const dDayMethods = {
                         dDay.dDayText = 'D-' + dDay.calc;
                     }
                 }
-                if (this.hasTeam) {
-                    this.loadDutyPromise.then(() => {
-                        this.checkDDays();
-                    });
-                }
+            },
+            complete: () => {
+                this.dDaysReady = true;
             }
         })
     }
     ,
-    checkDDays() {
-        const app = this;
-        $('.d-day-schedules').html('');
-        for (const dDay of app.dDays) {
-            const dayElement = document.getElementById(dDay.date);
-            if (dayElement) {
-                let scheduleElement = document.createElement('div');
-                scheduleElement.classList.add('schedule', 'd-day-schedule');
-                scheduleElement.innerHTML = '<i class="bi bi-calendar-check"></i> ' + dDay.title;
-                dayElement.querySelector('.d-day-schedules').prepend(scheduleElement);
-            }
-        }
-    },
     dDayToggle(dDay) {
         const app = this;
         if (app.selectedDday === dDay) {

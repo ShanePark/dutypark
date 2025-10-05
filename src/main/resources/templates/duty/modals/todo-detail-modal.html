@@ -1,5 +1,5 @@
 <div id="todo-details-modal" class="modal fade" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="todo-details-title">할일 상세</h5>
@@ -15,18 +15,32 @@
           </div>
           <div class="input-group">
             <span class="input-group-text" id="todo-content-input">내용</span>
-            <textarea rows="4" class="todo-content form-control" aria-label="content"
+            <textarea rows="8" class="todo-content form-control" aria-label="content"
                       aria-labelledby="todo-content-input"
-                      :readonly="!editTodoMode"></textarea>
+                      :readonly="!editTodoMode"
+                      style="resize: vertical;"></textarea>
           </div>
         </div>
-        <div class="text-right">
-          <p class="text-muted todo-date"></p>
-          <button type="button" class="btn btn-info btn-sm" v-on:click="editTodoMode=true" v-if="!editTodoMode">수정
-          </button>
-          <button type="button" class="btn btn-success btn-sm" v-on:click="updateTodo()" v-if="editTodoMode">저장
-          </button>
-          <button type="button" class="btn btn-danger btn-sm" v-on:click="deleteTodo()">삭제</button>
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mt-3 gap-2">
+          <div>
+            <span class="badge bg-success me-2" v-if="selectedTodoStatus === 'COMPLETED'">완료</span>
+            <p class="text-muted todo-date mb-0 small"></p>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-info btn-sm" v-on:click="editTodoMode=true"
+                    v-if="!editTodoMode">수정
+            </button>
+            <button type="button" class="btn btn-success btn-sm" v-on:click="updateTodo()"
+                    v-if="editTodoMode">저장
+            </button>
+            <button type="button" class="btn btn-outline-success btn-sm" v-on:click="completeTodo()"
+                    v-if="selectedTodoStatus === 'ACTIVE'">완료 처리
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm" v-on:click="reopenTodo()"
+                    v-if="selectedTodoStatus === 'COMPLETED'">재오픈
+            </button>
+            <button type="button" class="btn btn-danger btn-sm" v-on:click="deleteTodo()">삭제</button>
+          </div>
         </div>
       </div>
     </div>

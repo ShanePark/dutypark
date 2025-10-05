@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.todo.domain.entity.Todo
+import com.tistory.shanepark.dutypark.todo.domain.entity.TodoStatus
 import com.tistory.shanepark.dutypark.todo.repository.TodoRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -34,7 +35,7 @@ class TodoServiceTest {
     fun `addTodo should save and return TodoResponse`() {
         // Given
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
-        `when`(todoRepository.findMinPositionByMember(member)).thenReturn(0)
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.ACTIVE)).thenReturn(0)
 
         val todo = Todo(member, "title", "content", 1)
         `when`(todoRepository.save(any(Todo::class.java))).thenReturn(todo)
@@ -125,7 +126,7 @@ class TodoServiceTest {
                     .id
             )
         ).thenReturn(Optional.of(member))
-        `when`(todoRepository.findAllByMemberOrderByPosition(member)).thenReturn(
+        `when`(todoRepository.findAllByMemberAndStatusOrderByPosition(member, TodoStatus.ACTIVE)).thenReturn(
             listOf(
                 Todo(member, "title1", "content1", 1),
                 Todo(member, "title2", "content2", 2)
@@ -163,6 +164,49 @@ class TodoServiceTest {
         // Verify
         verify(todoRepository, times(1)).findAllById(reverse)
         verifyNoMoreInteractions(todoRepository)
+    }
+
+    @Test
+    fun `completedTodoList should return completed todos`() {
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        val completedTodo = Todo(member, "title", "content", null, TodoStatus.COMPLETED)
+        `when`(
+            todoRepository.findAllByMemberAndStatusOrderByCompletedDateDesc(member, TodoStatus.COMPLETED)
+        ).thenReturn(listOf(completedTodo))
+
+        val response = todoService.completedTodoList(loginMember)
+
+        assertEquals(1, response.size)
+        assertEquals(TodoStatus.COMPLETED, response.first().status)
+    }
+
+    @Test
+    fun `completeTodo should mark todo as completed`() {
+        val todoId = UUID.randomUUID()
+        val todo = Todo(member, "title", "content", 1)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+
+        val response = todoService.completeTodo(loginMember, todoId)
+
+        assertEquals(TodoStatus.COMPLETED, response.status)
+    }
+
+    @Test
+    fun `reopenTodo should mark todo as active`() {
+        val todoId = UUID.randomUUID()
+        val todo = Todo(member, "title", "content", null)
+        todo.markCompleted()
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.ACTIVE)).thenReturn(0)
+
+        val response = todoService.reopenTodo(loginMember, todoId)
+
+        assertEquals(TodoStatus.ACTIVE, response.status)
+        assertEquals(null, response.completedDate)
     }
 
     private fun otherMember(): Member {

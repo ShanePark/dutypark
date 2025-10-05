@@ -40,7 +40,15 @@
 
                             </span>
         </div>
-        <div class="d-day-schedules"></div>
+        <div class="d-day-schedules">
+          <div
+              class="schedule d-day-schedule"
+              v-for="dDay in dDaySchedules(calendarDay)"
+              :key="'dday-' + dDay.id"
+          >
+            <i class="bi bi-calendar-check"></i> {{ dDay.title }}
+          </div>
+        </div>
         <div class="schedule" v-for="schedule in schedulesByDays[index]" :key="schedule.id">
           <p class="schedule-content">
             <i v-if="schedule.visibility === 'PRIVATE'" class="bi bi-lock-fill"></i>

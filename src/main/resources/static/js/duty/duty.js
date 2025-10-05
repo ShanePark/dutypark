@@ -19,6 +19,7 @@ function loadApp(memberId, teamId, loginMemberId, memberName, year, month, searc
         hasTeam: false,
         dDays: [],
         selectedDday: null,
+        dDaysReady: false,
         detailView: {
           duty: {
             'dutyColor': '',
@@ -48,7 +49,13 @@ function loadApp(memberId, teamId, loginMemberId, memberName, year, month, searc
         },
         friends: [],
         todos: [],
+        completedTodos: [],
         editTodoMode: false,
+        selectedTodoStatus: 'ACTIVE',
+        todoOverviewFilters: {
+          active: true,
+          completed: true,
+        },
         loadDutyPromise: null,
         searchQuery: '',
         searchResults: [],
@@ -75,6 +82,18 @@ function loadApp(memberId, teamId, loginMemberId, memberName, year, month, searc
       }, computed: {
         ...dDayComputes,
         ...searchResultComputes,
+        filteredOverviewTodos: {
+          get() {
+            const items = [];
+            if (this.todoOverviewFilters.active) {
+              items.push(...this.todos);
+            }
+            if (this.todoOverviewFilters.completed) {
+              items.push(...this.completedTodos);
+            }
+            return items;
+          }
+        },
         currentCalendar: {
           get() {
             const day = this.searchDay || -1;
@@ -334,7 +353,11 @@ function loadApp(memberId, teamId, loginMemberId, memberName, year, month, searc
         initSortable() {
           let todoListElement = document.getElementById('todo-list');
           if (todoListElement) {
-            const sortable = new Sortable(todoListElement, {
+            const existingSortable = Sortable.get(todoListElement);
+            if (existingSortable) {
+              return;
+            }
+            new Sortable(todoListElement, {
               animation: 150,
               draggable: ".todo-item",
               handle: '.handle',

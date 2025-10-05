@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.todo.controller
 
 import com.tistory.shanepark.dutypark.RestDocsTest
 import com.tistory.shanepark.dutypark.todo.domain.entity.Todo
+import com.tistory.shanepark.dutypark.todo.domain.entity.TodoStatus
 import com.tistory.shanepark.dutypark.todo.repository.TodoRepository
 import jakarta.servlet.http.Cookie
 import org.junit.jupiter.api.Test
@@ -59,7 +60,9 @@ class TodoControllerTest : RestDocsTest() {
                         fieldWithPath("[].title").description("Todo Title"),
                         fieldWithPath("[].content").description("Todo Content"),
                         fieldWithPath("[].position").description("Todo Position"),
-                        fieldWithPath("[].createdDate").description("createdDate")
+                        fieldWithPath("[].status").description("Todo Status"),
+                        fieldWithPath("[].createdDate").description("createdDate"),
+                        fieldWithPath("[].completedDate").description("completedDate")
                     )
                 )
             )
@@ -97,7 +100,9 @@ class TodoControllerTest : RestDocsTest() {
                         fieldWithPath("title").description("Todo Title"),
                         fieldWithPath("content").description("Todo Content"),
                         fieldWithPath("position").description("Todo Position"),
-                        fieldWithPath("createdDate").description("createdDate")
+                        fieldWithPath("status").description("Todo Status"),
+                        fieldWithPath("createdDate").description("createdDate"),
+                        fieldWithPath("completedDate").description("completedDate")
                     )
                 )
             )
@@ -148,7 +153,9 @@ class TodoControllerTest : RestDocsTest() {
                         fieldWithPath("title").description("Updated Todo Title"),
                         fieldWithPath("content").description("Updated Todo Content"),
                         fieldWithPath("position").description("Todo Position"),
-                        fieldWithPath("createdDate").description("createdDate")
+                        fieldWithPath("status").description("Todo Status"),
+                        fieldWithPath("createdDate").description("createdDate"),
+                        fieldWithPath("completedDate").description("completedDate")
                     )
                 )
             )
@@ -227,6 +234,122 @@ class TodoControllerTest : RestDocsTest() {
                     "todos/update-position",
                     requestFields(
                         fieldWithPath("[]").description("Todo ID List")
+                    )
+                )
+            )
+    }
+
+    @Test
+    fun `completedTodoList test`() {
+        val completed = Todo(
+            member = TestData.member,
+            title = "Todo Completed",
+            content = "Content Completed",
+            position = null,
+            status = TodoStatus.COMPLETED
+        )
+        completed.markCompleted()
+        todoRepository.save(completed)
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/todos/completed")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].status").value("COMPLETED"))
+            .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "todos/get-completed-list",
+                    responseFields(
+                        fieldWithPath("[].id").description("Todo ID"),
+                        fieldWithPath("[].title").description("Todo Title"),
+                        fieldWithPath("[].content").description("Todo Content"),
+                        fieldWithPath("[].position").description("Todo Position"),
+                        fieldWithPath("[].status").description("Todo Status"),
+                        fieldWithPath("[].createdDate").description("createdDate"),
+                        fieldWithPath("[].completedDate").description("completedDate")
+                    )
+                )
+            )
+    }
+
+    @Test
+    fun `completeTodo test`() {
+        val saved = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Todo",
+                content = "Content",
+                position = 1
+            )
+        )
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.patch("/api/todos/{id}/complete", saved.id)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("COMPLETED"))
+            .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "todos/complete",
+                    pathParameters(
+                        parameterWithName("id").description("Todo ID")
+                    ),
+                    responseFields(
+                        fieldWithPath("id").description("Todo ID"),
+                        fieldWithPath("title").description("Todo Title"),
+                        fieldWithPath("content").description("Todo Content"),
+                        fieldWithPath("position").description("Todo Position"),
+                        fieldWithPath("status").description("Todo Status"),
+                        fieldWithPath("createdDate").description("createdDate"),
+                        fieldWithPath("completedDate").description("completedDate")
+                    )
+                )
+            )
+    }
+
+    @Test
+    fun `reopenTodo test`() {
+        val saved = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Todo",
+                content = "Content",
+                position = null,
+                status = TodoStatus.COMPLETED
+            ).apply { markCompleted() }
+        )
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.patch("/api/todos/{id}/reopen", saved.id)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("ACTIVE"))
+            .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "todos/reopen",
+                    pathParameters(
+                        parameterWithName("id").description("Todo ID")
+                    ),
+                    responseFields(
+                        fieldWithPath("id").description("Todo ID"),
+                        fieldWithPath("title").description("Todo Title"),
+                        fieldWithPath("content").description("Todo Content"),
+                        fieldWithPath("position").description("Todo Position"),
+                        fieldWithPath("status").description("Todo Status"),
+                        fieldWithPath("createdDate").description("createdDate"),
+                        fieldWithPath("completedDate").description("completedDate")
                     )
                 )
             )

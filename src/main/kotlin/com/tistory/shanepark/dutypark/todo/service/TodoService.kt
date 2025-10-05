@@ -6,6 +6,7 @@ import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.todo.domain.dto.TodoResponse
 import com.tistory.shanepark.dutypark.todo.domain.entity.Todo
+import com.tistory.shanepark.dutypark.todo.domain.entity.TodoStatus
 import com.tistory.shanepark.dutypark.todo.repository.TodoRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -22,15 +23,29 @@ class TodoService(
     @Transactional(readOnly = true)
     fun todoList(loginMember: LoginMember): List<TodoResponse> {
         val member = findMember(loginMember)
-        return todoRepository.findAllByMemberOrderByPosition(member)
+        return todoRepository.findAllByMemberAndStatusOrderByPosition(member, TodoStatus.ACTIVE)
+            .map { TodoResponse.from(it) }
+    }
+
+    @Transactional(readOnly = true)
+    fun completedTodoList(loginMember: LoginMember): List<TodoResponse> {
+        val member = findMember(loginMember)
+        return todoRepository.findAllByMemberAndStatusOrderByCompletedDateDesc(member, TodoStatus.COMPLETED)
             .map { TodoResponse.from(it) }
     }
 
     fun addTodo(loginMember: LoginMember, title: String, content: String): TodoResponse {
         val member = findMember(loginMember)
-        val todoLastPosition = todoRepository.findMinPositionByMember(member)
+        val todoLastPosition = todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.ACTIVE)
 
-        val todo = Todo(member = member, title = title, content = content, position = todoLastPosition - 1)
+        val todo = Todo(
+            member = member,
+            title = title,
+            content = content,
+            position = todoLastPosition - 1,
+            status = TodoStatus.ACTIVE,
+            completedDate = null
+        )
         todoRepository.save(todo)
 
         return TodoResponse.from(todo)
@@ -56,6 +71,9 @@ class TodoService(
 
         todos.forEachIndexed { index, todo ->
             verifyOwnership(todo, member)
+            if (todo.status != TodoStatus.ACTIVE) {
+                throw IllegalArgumentException("Cannot reorder non-active todo")
+            }
             todo.position = index
         }
     }
@@ -66,6 +84,37 @@ class TodoService(
         verifyOwnership(todo, member)
 
         todoRepository.delete(todo)
+    }
+
+    fun completeTodo(loginMember: LoginMember, id: UUID): TodoResponse {
+        val member = findMember(loginMember)
+
+        val todo = todoRepository.findById(id)
+            .orElseThrow { IllegalArgumentException("Todo not found") }
+
+        verifyOwnership(todo, member)
+
+        if (todo.status == TodoStatus.ACTIVE) {
+            todo.markCompleted()
+        }
+
+        return TodoResponse.from(todo)
+    }
+
+    fun reopenTodo(loginMember: LoginMember, id: UUID): TodoResponse {
+        val member = findMember(loginMember)
+
+        val todo = todoRepository.findById(id)
+            .orElseThrow { IllegalArgumentException("Todo not found") }
+
+        verifyOwnership(todo, member)
+
+        if (todo.status == TodoStatus.COMPLETED) {
+            val todoLastPosition = todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.ACTIVE)
+            todo.markActive(todoLastPosition - 1)
+        }
+
+        return TodoResponse.from(todo)
     }
 
     private fun verifyOwnership(todoEntity: Todo, member: Member) {

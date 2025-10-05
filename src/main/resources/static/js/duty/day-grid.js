@@ -7,6 +7,26 @@ const dDayComputes = {
     }));
   }
   ,
+  dDaySchedulesByDate() {
+    const grouped = {};
+    for (const dDay of this.dDays) {
+      if (!grouped[dDay.date]) {
+        grouped[dDay.date] = [];
+      }
+      grouped[dDay.date].push(dDay);
+    }
+    return grouped;
+  }
+  ,
+  dDaySchedules() {
+    const app = this;
+    return (calendarDay) => {
+      const dateKey = app.formattedDate(calendarDay.year, calendarDay.month, calendarDay.day);
+      const schedules = app.dDaySchedulesByDate[dateKey];
+      return schedules ? schedules : [];
+    }
+  }
+  ,
   calcDday() {
     const app = this;
     return (calendarDay) => {

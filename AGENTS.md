@@ -179,7 +179,7 @@ cp .env.sample .env
 - SSL certificate integration with Let's Encrypt
 - Health checks and restart policies configured
 
-## CRITICAL: Git Commit Policy
+## Git Commit Policy & Convention
 **NEVER commit changes automatically or proactively.**
 - Only commit when the user explicitly asks for a commit with clear instructions like "커밋해줘", "commit this", "create a commit", etc.
 - Do not commit after completing tasks, even if the work is finished
@@ -187,3 +187,8 @@ cp .env.sample .env
 - Let the user decide when and what to commit
 - **When creating commit messages, analyze only the actual code changes since the last commit, not the conversation history.** The commit message should reflect the final code state and changes, not the iterative development process discussed in chat.
 - This rule is ABSOLUTE and must NEVER be violated
+- **Format:** `type: summary`
+  - `type` must be lowercase and chosen from the observed set `{feat, fix, chore, refactor}`. Use `chore` (not `chores`) for maintenance work. Prefer `docs`, `test`, `build`, or `ci` when more specific categories apply.
+  - `summary` is a concise, imperative English description (e.g., `fix: ensure duty modal opens on mobile`). Avoid sentence casing, trailing periods, or mixed languages.
+- **Body:** add a blank line after the summary if more context is required. Wrap at ~72 chars per line. Mention issue IDs only when relevant.
+- **Verification:** always run `git log --oneline -10` before committing to confirm the new message aligns with recent history. Reword (`git commit --amend`) if it deviates.

@@ -419,14 +419,26 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
         team.addDutyType(dutyName = dutyName, dutyColor = "#f0f8ff")
         teamRepository.save(team)
 
-        val holidays = listOf(
+        // Populate holidays for the entire year to prevent external API calls
+        val holidays2024 = generateSequence(LocalDate.of(2024, 1, 1)) { it.plusDays(1) }
+            .takeWhile { it.year == 2024 }
+            .filter { it.dayOfWeek.value <= 5 }
+            .map { Holiday("weekday", false, it) }
+            .toList()
+        val holidays2025 = generateSequence(LocalDate.of(2025, 1, 1)) { it.plusDays(1) }
+            .takeWhile { it.year == 2025 }
+            .filter { it.dayOfWeek.value <= 5 }
+            .map { Holiday("weekday", false, it) }
+            .toList()
+
+        val actualHolidays = listOf(
             Holiday("신정", true, LocalDate.of(2025, 1, 1)),
             Holiday("임시공휴일", true, LocalDate.of(2025, 1, 27)),
             Holiday("설날", true, LocalDate.of(2025, 1, 28)),
             Holiday("설날", true, LocalDate.of(2025, 1, 29)),
             Holiday("설날", true, LocalDate.of(2025, 1, 30))
         )
-        holidayRepository.saveAll(holidays)
+        holidayRepository.saveAll(holidays2024 + holidays2025 + actualHolidays)
 
         // When
         val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2025, 1, loginMember(member))
@@ -435,7 +447,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
         assertThat(duties.filter { it.dutyType == dutyName }).hasSize(20)
         for (duty in duties) {
             val date = LocalDate.of(duty.year, duty.month, duty.day)
-            if (date.dayOfWeek.value > 5 || holidays.any { it.localDate == date }) {
+            if (date.dayOfWeek.value > 5 || actualHolidays.any { it.localDate == date }) {
                 assertThat(duty.dutyType).isNull()
                 continue
             }

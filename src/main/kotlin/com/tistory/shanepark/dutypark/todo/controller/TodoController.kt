@@ -22,6 +22,13 @@ class TodoController(
         return todoService.todoList(loginMember)
     }
 
+    @GetMapping("/completed")
+    fun completedTodoList(
+        @Login loginMember: LoginMember
+    ): List<TodoResponse> {
+        return todoService.completedTodoList(loginMember)
+    }
+
     @PostMapping
     fun addTodo(
         @Login loginMember: LoginMember,
@@ -45,6 +52,22 @@ class TodoController(
         @RequestBody ids: List<UUID>
     ) {
         todoService.updatePosition(loginMember, ids)
+    }
+
+    @PatchMapping("/{id}/complete")
+    fun completeTodo(
+        @Login loginMember: LoginMember,
+        @PathVariable id: UUID,
+    ): TodoResponse {
+        return todoService.completeTodo(loginMember, id)
+    }
+
+    @PatchMapping("/{id}/reopen")
+    fun reopenTodo(
+        @Login loginMember: LoginMember,
+        @PathVariable id: UUID,
+    ): TodoResponse {
+        return todoService.reopenTodo(loginMember, id)
     }
 
     @DeleteMapping("/{id}")
