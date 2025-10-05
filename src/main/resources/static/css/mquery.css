@@ -141,8 +141,7 @@
         font-size: 1.5rem;
     }
 
-    #add-todo-modal h5,
-    #todo-details-modal h5 {
+    .modal h5 {
         font-size: 2em;
     }
 

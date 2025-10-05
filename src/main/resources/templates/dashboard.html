@@ -85,7 +85,7 @@
   </div>
 
   <div class="mb-4 friend-request-section"
-       v-if="friendInfo.pendingRequestsTo.length || friendInfo.pendingRequestsFrom.length">
+       v-if="friendInfoInitialized && (friendInfo.pendingRequestsTo.length || friendInfo.pendingRequestsFrom.length)">
     <div class="bg-white rounded shadow-sm border">
       <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white">친구 요청 관리</div>
       <div class="p-4">
@@ -122,7 +122,7 @@
     </div>
   </div>
 
-  <div class="mb-4 friend-section">
+  <div class="mb-4 friend-section" v-if="friendInfoInitialized">
     <div class="bg-white rounded shadow-sm border">
       <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white">친구 목록</div>
       <div class="p-4">
@@ -181,6 +181,7 @@
           </div>
           <div class="p-4 border rounded mb-2 cursor-pointer bg-primary shadow-sm text-center"
                style="width: calc(50% - 12px);"
+               v-if="friendInfoInitialized"
                @click="openSearchModal">
             <i class="bi bi-person-plus-fill fs-4 d-block mb-2 text-white"></i>
             <span class="fw-bold text-white">친구 추가</span>
@@ -190,7 +191,7 @@
     </div>
   </div>
 
-  <div th:if="${loginMember?.isAdmin}" class="mb-4 friend-section">
+  <div th:if="${loginMember?.isAdmin}" class="mb-4 friend-section" v-if="friendInfoInitialized">
     <div class="bg-white rounded shadow-sm border">
       <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white">관리자</div>
       <div class="p-4 fs-3">
@@ -306,6 +307,7 @@
                 pendingRequestsTo: [],
                 pendingRequestsFrom: [],
             },
+            friendInfoInitialized: false,
             isFriendSortableInit: false
         },
         mounted() {
@@ -327,25 +329,34 @@
                 fetch("/api/dashboard/friends")
                     .then(res => res.json())
                     .then(data => {
-                        app.friendInfo = data;
-                        if (!app.isFriendSortableInit) {
-                            app.initFriendSortable();
-                            app.isFriendSortableInit = true;
-                        }
+                        this.friendInfo = data;
+                    })
+                    .catch(error => {
+                        console.error('친구 정보를 불러오는 중 오류가 발생했습니다.', error);
+                    })
+                    .finally(() => {
+                        this.friendInfoInitialized = true;
+                        this.$nextTick(() => {
+                            if (!this.isFriendSortableInit) {
+                                this.isFriendSortableInit = this.initFriendSortable();
+                            }
+                        });
                     });
             },
             initFriendSortable() {
                 const friendList = document.querySelector('.friend-list');
-                if (friendList) {
-                    const sortable = new Sortable(friendList, {
-                        animation: 150,
-                        draggable: '.pinned_friend',
-                        handle: '.handle',
-                        onEnd: (evt) => {
-                            app.updateFriendsPin();
-                        }
-                    })
+                if (!friendList) {
+                    return false;
                 }
+                new Sortable(friendList, {
+                    animation: 150,
+                    draggable: '.pinned_friend',
+                    handle: '.handle',
+                    onEnd: () => {
+                        app.updateFriendsPin();
+                    }
+                });
+                return true;
             },
             updateFriendsPin() {
                 const friendIds = [...document.querySelectorAll('.pinned_friend')]

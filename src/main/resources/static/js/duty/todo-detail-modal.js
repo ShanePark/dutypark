@@ -40,31 +40,109 @@ const todoDetailMethods = {
       $('#todo-details-modal').modal('hide');
     });
   },
+  completeTodo() {
+    const app = this;
+    const modal = document.getElementById("todo-details-modal");
+    const todoId = modal.getAttribute('data-id');
+
+    fetch(`/api/todos/${todoId}/complete`, {
+      method: 'PATCH',
+    }).then(response => {
+      if (!response.ok) {
+        Swal.fire({
+          icon: 'error',
+          title: '할 일 완료 처리에 실패했습니다.',
+          showConfirmButton: false,
+          timer: sweetAlTimer
+        });
+        return null;
+      }
+      return response.json();
+    }).then(data => {
+      if (!data) {
+        return;
+      }
+      Swal.fire({
+        icon: 'success',
+        title: '할 일이 완료되었습니다.',
+        showConfirmButton: false,
+        timer: sweetAlTimer
+      });
+      app.selectedTodoStatus = data.status;
+      app.loadTodos();
+      $('#todo-details-modal').modal('hide');
+    });
+  },
+  reopenTodo() {
+    const app = this;
+    const modal = document.getElementById("todo-details-modal");
+    const todoId = modal.getAttribute('data-id');
+
+    fetch(`/api/todos/${todoId}/reopen`, {
+      method: 'PATCH',
+    }).then(response => {
+      if (!response.ok) {
+        Swal.fire({
+          icon: 'error',
+          title: '할 일 진행중 변경에 실패했습니다.',
+          showConfirmButton: false,
+          timer: sweetAlTimer
+        });
+        return null;
+      }
+      return response.json();
+    }).then(data => {
+      if (!data) {
+        return;
+      }
+      Swal.fire({
+        icon: 'success',
+        title: '할 일이 진행중으로 변경되었습니다.',
+        showConfirmButton: false,
+        timer: sweetAlTimer
+      });
+      app.selectedTodoStatus = data.status;
+      app.loadTodos();
+      $('#todo-details-modal').modal('hide');
+    });
+  },
   deleteTodo() {
     const app = this;
     const modal = document.getElementById("todo-details-modal");
     const todoId = modal.getAttribute('data-id');
 
-    fetch(`/api/todos/${todoId}`, {
-      method: 'DELETE',
-    }).then(response => {
-      if (!response.ok) {
+    Swal.fire({
+      icon: 'warning',
+      title: '할 일을 삭제할까요?',
+      showCancelButton: true,
+      confirmButtonText: '삭제',
+      cancelButtonText: '취소',
+      confirmButtonColor: '#dc3545'
+    }).then(result => {
+      if (!result.isConfirmed) {
+        return;
+      }
+      fetch(`/api/todos/${todoId}`, {
+        method: 'DELETE',
+      }).then(response => {
+        if (!response.ok) {
+          Swal.fire({
+            icon: 'error',
+            title: '할 일 삭제에 실패했습니다.',
+            showConfirmButton: false,
+            timer: sweetAlTimer
+          });
+          return;
+        }
         Swal.fire({
-          icon: 'error',
-          title: '할 일 삭제에 실패했습니다.',
+          icon: 'success',
+          title: '할 일이 삭제되었습니다.',
           showConfirmButton: false,
           timer: sweetAlTimer
         });
-        return;
-      }
-      Swal.fire({
-        icon: 'success',
-        title: '할 일이 삭제되었습니다.',
-        showConfirmButton: false,
-        timer: sweetAlTimer
+        app.loadTodos();
+        $('#todo-details-modal').modal('hide');
       });
-      app.loadTodos();
-      $('#todo-details-modal').modal('hide');
     });
   },
 }

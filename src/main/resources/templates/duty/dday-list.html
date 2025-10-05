@@ -20,9 +20,9 @@
       </div>
     </div>
   </div>
-  <div class="col-6" v-if="isMyCalendar">
+  <div class="col-6" v-if="isMyCalendar && dDaysReady">
     <div
-        class="d-day-item card shadow-sm align-items-center justify-content-center m-1 rounded-4 text-align-center bg-primary cursor-pointer text-white fs-2"
+        class="d-day-item card shadow-sm align-items-center justify-content-center m-1 rounded-4 text-align-center bg-primary cursor-pointer text-white fs-3"
         v-on:click="createOrUpdateDday()"
     >
       <i class="bi bi-plus-circle"></i><span>디데이 추가</span>
