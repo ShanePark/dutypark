@@ -49,20 +49,23 @@ const todoListMethods = {
       .then(([activeTodos, completedTodos]) => {
         this.todos = activeTodos;
         this.completedTodos = completedTodos;
+        this.todosLoading = false;
         this.$nextTick(() => {
           this.initSortable();
+          this.initOverviewSortable();
         });
       })
       .catch(() => {
         // Error already handled with alert.
-      })
-      .finally(() => {
         this.todosLoading = false;
       });
   }
   ,
   openTodoOverview() {
     $('#todo-overview-modal').modal('show');
+    this.$nextTick(() => {
+      this.initOverviewSortable();
+    });
   }
   ,
   formatDateTime(dateString) {
@@ -99,6 +102,9 @@ const todoListMethods = {
     if (type === 'completed') {
       this.todoOverviewFilters.completed = !this.todoOverviewFilters.completed;
     }
+    this.$nextTick(() => {
+      this.initOverviewSortable();
+    });
   }
   ,
   reopenTodoFromOverview(todo) {
@@ -184,8 +190,82 @@ const todoListMethods = {
   ,
   updatePosition() {
     const todoListElement = document.getElementById('todo-list');
+    if (!todoListElement) {
+      return;
+    }
     const todoItems = todoListElement.querySelectorAll('.todo-item');
-    const todoIds = Array.from(todoItems).map(todo => todo.getAttribute('data-id'));
+    const todoIds = Array.from(todoItems)
+      .map(todo => todo.getAttribute('data-id'))
+      .filter(Boolean);
+    if (todoIds.length === 0) {
+      return;
+    }
+    this.reorderTodosByIds(todoIds);
+    this.saveTodoOrder(todoIds);
+    this.$nextTick(() => {
+      this.initOverviewSortable();
+    });
+  }
+  ,
+  initOverviewSortable() {
+    const overviewList = document.getElementById('todo-overview-list');
+    if (!overviewList) {
+      return;
+    }
+    const existingSortable = Sortable.get(overviewList);
+    if (existingSortable) {
+      existingSortable.option('handle', '.handle');
+      existingSortable.option('draggable', '.todo-overview-item-active');
+      existingSortable.option('animation', 150);
+      existingSortable.option('onEnd', () => {
+        this.updateOverviewPosition();
+      });
+      return;
+    }
+    new Sortable(overviewList, {
+      animation: 150,
+      draggable: '.todo-overview-item-active',
+      handle: '.handle',
+      onEnd: () => {
+        this.updateOverviewPosition();
+      },
+    });
+  }
+  ,
+  updateOverviewPosition() {
+    const overviewList = document.getElementById('todo-overview-list');
+    if (!overviewList) {
+      return;
+    }
+    const activeItems = overviewList.querySelectorAll('.todo-overview-item-active');
+    const todoIds = Array.from(activeItems)
+      .map(item => item.getAttribute('data-id'))
+      .filter(Boolean);
+    if (todoIds.length === 0) {
+      return;
+    }
+    this.reorderTodosByIds(todoIds);
+    this.saveTodoOrder(todoIds);
+    this.$nextTick(() => {
+      this.initSortable();
+      this.initOverviewSortable();
+    });
+  }
+  ,
+  reorderTodosByIds(todoIds) {
+    const todoMap = new Map(this.todos.map(todo => [todo.id, todo]));
+    const idSet = new Set(todoIds);
+    const reordered = todoIds
+      .map(id => todoMap.get(id))
+      .filter(Boolean);
+    const remaining = this.todos.filter(todo => !idSet.has(todo.id));
+    this.todos = [...reordered, ...remaining];
+  }
+  ,
+  saveTodoOrder(todoIds) {
+    if (!todoIds || todoIds.length === 0) {
+      return;
+    }
     fetch('/api/todos/position', {
       method: 'PATCH',
       headers: {

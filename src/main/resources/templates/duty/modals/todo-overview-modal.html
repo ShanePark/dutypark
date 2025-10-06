@@ -34,25 +34,37 @@
             </button>
           </div>
         </div>
-        <div v-if="filteredOverviewTodos.length > 0" class="list-group overflow-auto fs-3" style="max-height: 60vh;">
-          <div class="list-group-item todo-overview-item" v-for="todo in filteredOverviewTodos" :key="todo.id"
-               :class="{ 'completed': todo.status === 'COMPLETED' }">
-            <div class="row align-items-start g-3 flex-lg-nowrap">
-              <div class="col-8">
+        <div v-if="filteredOverviewTodos.length > 0" class="list-group overflow-auto fs-3" id="todo-overview-list"
+             style="max-height: 60vh;">
+          <div class="list-group-item todo-overview-item d-flex align-items-start gap-3"
+               v-for="todo in filteredOverviewTodos"
+               :key="todo.id"
+               :data-id="todo.id"
+               :class="{
+                 'completed': todo.status === 'COMPLETED',
+                 'todo-overview-item-active': todo.status === 'ACTIVE',
+                 'todo-overview-item-completed': todo.status === 'COMPLETED'
+               }">
+            <div v-if="todo.status === 'ACTIVE'"
+                 class="handle d-flex align-items-center justify-content-center flex-shrink-0">
+              <i class="bi bi-list"></i>
+            </div>
+            <div class="row align-items-start g-3 flex-lg-nowrap flex-grow-1 w-100">
+              <div class="col-lg-8 col-12">
                 <div class="fw-semibold" v-text="todo.title"></div>
                 <p class="mb-0 text-muted small" v-if="todo.content" v-text="sliceText(todo.content, 80)"></p>
               </div>
-              <div class="col-4">
-                <div class="todo-overview-meta d-flex flex-column align-items-end gap-2 text-muted small">
-                  <div class="d-flex align-items-center gap-1 justify-content-end">
+              <div class="col-lg-4 col-12">
+                <div class="todo-overview-meta d-flex flex-column align-items-lg-end align-items-start gap-2 text-muted small">
+                  <div class="d-flex align-items-center gap-1 justify-content-lg-end">
                     <i class="bi bi-pencil-square"></i>
                     <span :title="formatFullDateTime(todo.createdDate)">{{ formatSimpleDate(todo.createdDate) }}</span>
                   </div>
-                  <div class="d-flex align-items-center gap-1 justify-content-end" v-if="todo.completedDate">
+                  <div class="d-flex align-items-center gap-1 justify-content-lg-end" v-if="todo.completedDate">
                     <i class="bi bi-check-circle-fill"></i>
                     <span :title="formatFullDateTime(todo.completedDate)">{{ formatSimpleDate(todo.completedDate) }}</span>
                   </div>
-                  <div class="d-flex flex-wrap flex-lg-nowrap gap-2 justify-content-end">
+                  <div class="d-flex flex-wrap flex-lg-nowrap gap-2 justify-content-lg-end">
                     <button type="button" class="btn btn-outline-success btn-sm d-flex align-items-center gap-1"
                             v-if="todo.status === 'ACTIVE'"
                             v-on:click="completeTodoFromOverview(todo)">
