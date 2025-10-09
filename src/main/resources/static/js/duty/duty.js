@@ -55,7 +55,7 @@ function loadApp(memberId, teamId, loginMemberId, memberName, year, month, searc
         selectedTodoStatus: 'ACTIVE',
         todoOverviewFilters: {
           active: true,
-          completed: true,
+          completed: false,
         },
         loadDutyPromise: null,
         searchQuery: '',
