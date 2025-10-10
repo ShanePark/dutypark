@@ -1,5 +1,3 @@
-# CLAUDE.md
-
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
@@ -7,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Dutypark is a Spring Boot web application built with Kotlin for duty and schedule management. It features a Vue.js frontend with Thymeleaf templates, MySQL database, and Docker-based deployment with monitoring stack.
 
 **Tech Stack:**
+
 - Backend: Kotlin + Spring Boot 3.4.3, Spring Data JPA, Spring Security  
 - Frontend: Thymeleaf templates, Vue.js, Bootstrap
 - Database: MySQL 8.0 with Flyway migrations
