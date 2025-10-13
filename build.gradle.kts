@@ -2,8 +2,8 @@ plugins {
     kotlin("jvm") version "2.1.10"
     kotlin("plugin.spring") version "2.1.10"
     kotlin("plugin.jpa") version "2.1.10"
+    id("org.springframework.boot") version "3.5.6"
     id("io.spring.dependency-management") version "1.1.7"
-    id("org.springframework.boot") version "3.4.3"
     id("org.asciidoctor.jvm.convert") version "3.3.2"
     id("com.gorylenko.gradle-git-properties") version "2.4.1"
 }
@@ -21,7 +21,7 @@ repositories {
     mavenCentral()
 }
 
-extra["springAiVersion"] = "1.0.0-M6"
+extra["springAiVersion"] = "1.0.3"
 
 val asciidoctorExt: Configuration by configurations.creating
 dependencies {
@@ -39,7 +39,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     runtimeOnly("io.netty:netty-resolver-dns-native-macos:4.1.93.Final:osx-aarch_64")
-    implementation("org.springframework.ai:spring-ai-openai-spring-boot-starter")
+    implementation("org.springframework.ai:spring-ai-starter-model-openai")
 
     // Monitoring
     implementation("io.micrometer:micrometer-registry-prometheus")
@@ -67,9 +67,9 @@ dependencies {
     implementation("org.apache.poi:poi-ooxml:5.4.0")
 
     // JWT
-    implementation("io.jsonwebtoken:jjwt-api:0.11.5")
-    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
-    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
+    implementation("io.jsonwebtoken:jjwt-api:0.12.6")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
 }
 
 dependencyManagement {

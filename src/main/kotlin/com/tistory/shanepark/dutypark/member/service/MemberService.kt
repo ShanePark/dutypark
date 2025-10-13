@@ -29,11 +29,10 @@ class MemberService(
 ) {
 
     @Transactional(readOnly = true)
-    fun findAll(): MutableList<MemberDto> {
+    fun findAll(): List<MemberDto> {
         return memberRepository.findAll()
             .sortedWith(compareBy({ it.team?.name }, { it.name }))
             .map { MemberDto.of(it) }
-            .toMutableList()
     }
 
     @Transactional(readOnly = true)

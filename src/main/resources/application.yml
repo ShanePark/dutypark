@@ -41,10 +41,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: "health, metrics, prometheus, shutdown"
-  endpoint:
-    shutdown:
-      access: unrestricted
+        include: "health, metrics, prometheus"
 
 jwt:
   secret: "${JWT_SECRET:WvQiOAms2XFyW/UnmfO/9xL24ch4IlfUikP9QohMuso=}"

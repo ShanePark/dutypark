@@ -16,7 +16,7 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseCookie
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher
+import org.springframework.util.AntPathMatcher
 
 class JwtAuthFilter(
     private val authService: AuthService,
@@ -24,6 +24,7 @@ class JwtAuthFilter(
     private val isSecure: Boolean
 ) : Filter {
     private val log = logger()
+    private val antPathMatcher = AntPathMatcher()
 
     override fun doFilter(req: ServletRequest, resp: ServletResponse, chain: FilterChain) {
 
@@ -64,20 +65,21 @@ class JwtAuthFilter(
         chain.doFilter(req, response)
     }
 
-    private val skipMatchers = listOf(
-        AntPathRequestMatcher("/css/**"),
-        AntPathRequestMatcher("/js/**"),
-        AntPathRequestMatcher("/fonts/**"),
-        AntPathRequestMatcher("/lib/**"),
-        AntPathRequestMatcher("/favicon**"),
-        AntPathRequestMatcher("/*.ico"),
-        AntPathRequestMatcher("/error"),
-        AntPathRequestMatcher("/login"),
-        AntPathRequestMatcher("/android-chrome-**")
+    private val skipPatterns = listOf(
+        "/css/**",
+        "/js/**",
+        "/fonts/**",
+        "/lib/**",
+        "/favicon**",
+        "/*.ico",
+        "/error",
+        "/login",
+        "/android-chrome-**"
     )
 
     private fun shouldSkipTheFilter(request: HttpServletRequest): Boolean {
-        return skipMatchers.any { matcher -> matcher.matches(request) }
+        val path = request.requestURI
+        return skipPatterns.any { pattern -> antPathMatcher.match(pattern, path) }
     }
 
     private fun removeCookie(name: String, response: HttpServletResponse) {
@@ -94,6 +96,7 @@ class JwtAuthFilter(
             .httpOnly(true)
             .path("/")
             .secure(isSecure)
+            .sameSite("Lax")
             .maxAge(jwtConfig.tokenValidityInSeconds)
             .build()
         response.addHeader(HttpHeaders.SET_COOKIE, sessionCookie.toString())

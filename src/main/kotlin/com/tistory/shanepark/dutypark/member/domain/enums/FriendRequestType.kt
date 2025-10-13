@@ -1,4 +1,4 @@
-package com.tistory.shanepark.dutypark.member.enums
+package com.tistory.shanepark.dutypark.member.domain.enums
 
 enum class FriendRequestType {
     FRIEND_REQUEST,
