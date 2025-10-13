@@ -11,15 +11,15 @@ import io.jsonwebtoken.io.Decoders
 import io.jsonwebtoken.security.Keys
 import io.jsonwebtoken.security.SecurityException
 import org.springframework.stereotype.Component
-import java.security.Key
 import java.util.*
+import javax.crypto.SecretKey
 
 @Component
 class JwtProvider(
     private val dutyparkProperties: DutyparkProperties,
     jwtConfig: JwtConfig,
 ) {
-    private val key: Key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtConfig.secret))
+    private val key: SecretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtConfig.secret))
     private val tokenValidityInMilliseconds: Long = 1000L * jwtConfig.tokenValidityInSeconds
     private val log = logger()
 
@@ -29,22 +29,22 @@ class JwtProvider(
 
         val team = member.team
         return Jwts.builder()
-            .setSubject(member.id.toString())
+            .subject(member.id.toString())
             .claim("email", member.email)
             .claim("name", member.name)
             .claim("teamName", team?.name)
-            .signWith(key, SignatureAlgorithm.HS256)
-            .setExpiration(validity)
+            .signWith(key)
+            .expiration(validity)
             .compact()
     }
 
     fun parseToken(token: String): LoginMember {
         val claims = Jwts
-            .parserBuilder()
-            .setSigningKey(key)
+            .parser()
+            .verifyWith(key)
             .build()
-            .parseClaimsJws(token)
-            .body
+            .parseSignedClaims(token)
+            .payload
 
         val email = claims["email"] as String?
 
@@ -60,7 +60,7 @@ class JwtProvider(
 
     fun validateToken(token: String?): TokenStatus {
         try {
-            Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token)
+            Jwts.parser().verifyWith(key).build().parseSignedClaims(token)
         } catch (e: Exception) {
             when (e) {
                 is SecurityException -> {

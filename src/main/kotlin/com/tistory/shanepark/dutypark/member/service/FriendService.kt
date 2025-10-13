@@ -7,8 +7,8 @@ import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus.PENDING
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus.REJECTED
+import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestType
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
-import com.tistory.shanepark.dutypark.member.enums.FriendRequestType
 import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository

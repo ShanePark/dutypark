@@ -2,7 +2,7 @@ package com.tistory.shanepark.dutypark.member.domain.entity
 
 import com.tistory.shanepark.dutypark.common.domain.entity.BaseTimeEntity
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus
-import com.tistory.shanepark.dutypark.member.enums.FriendRequestType
+import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestType
 import jakarta.persistence.*
 
 @Entity
