@@ -22,9 +22,9 @@
             </div>
           </div>
         </template>
-        <div class="todo-empty-inline" v-else>
+        <div class="todo-empty-inline cursor-pointer" v-else v-on:click="addTodoModal()">
           <i class="bi bi-clipboard-check"></i>
-          <span class="text-muted">표시할 할 일이 없습니다. 할 일을 추가해 보세요!</span>
+          <span class="text-muted">등록된 할 일이 없습니다. 할 일을 추가해 보세요!</span>
         </div>
       </div>
     </div>
