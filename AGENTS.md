@@ -141,6 +141,22 @@ cp .env.sample .env
   - ❌ `style="padding: 8px 16px; border: 1px solid #eee;"`
   - ✅ `class="px-3 py-2 border"`
 
+### Code Comments Policy
+- **Minimize comments - prefer self-documenting code**
+- Only add comments when:
+  - The code logic is genuinely complex and cannot be simplified
+  - Preventing bugs or explaining non-obvious behavior
+  - Documenting workarounds for external library issues
+  - Explaining "why" when the reason is not obvious from the code itself
+- Do NOT add comments that:
+  - Simply restate what the code does
+  - Explain obvious variable names or simple logic
+  - Add noise without providing value
+- Examples:
+  - ❌ `// Check if the selected type is already the current duty type`
+  - ✅ No comment needed - use clear variable names like `isAlreadySelected`
+  - ✅ `// Workaround: Vue reactivity doesn't track closure dependencies properly`
+
 ## Testing
 
 ### Test Structure
