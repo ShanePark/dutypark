@@ -169,6 +169,13 @@ const detailViewMethods = {
   }
   ,
   changeDutyTypeWithPopup(duty, type) {
+    if (duty?.dutyType && duty.dutyType === type.name) {
+      return;
+    }
+    if (!duty?.dutyType && !type.id) {
+      return;
+    }
+
     this.changeDutyType(duty, type);
     Swal.fire({
       icon: 'success',
