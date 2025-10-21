@@ -1,5 +1,14 @@
 # Issue 212 – Schedule Attachment Feature Specification
 
+## Development Workflow
+- **Work on ONE checklist item at a time** - never attempt multiple checklist items simultaneously.
+- Break each checklist item into smaller, manageable todos (typically 3-5 todos per checklist item).
+- Keep individual todos small to prevent work from going off track.
+- Complete all todos for the current checklist item before moving to the next.
+- **After completing all todos for a checklist item, STOP and present the code for user review.**
+- **NEVER commit automatically** - wait for explicit user instruction like "commit this" or "커밋해줘".
+- Only move to the next checklist item after user confirms the current work and explicitly requests commit.
+
 ## Goals
 - Allow users to attach multiple files to a schedule while reusing the same infrastructure for future domains (profile image, team cover, todo attachments).
 - Persist attachments on local storage with configurable limits, blacklist, and thumbnail support.
@@ -197,7 +206,7 @@ DTO fields (draft):
 - [x] Implement `AttachmentRepository` and multi-context lookup query methods; cover with Spring Data JPA slice tests ensuring no N+1.
 - [x] Build blacklist/size validation service that reads from configuration; write unit tests covering acceptance/rejection cases.
 - [x] Implement storage path resolver & file system service handling write/delete/move with rollback on failure; cover via temporary filesystem tests.
-- [ ] Create image-only `ThumbnailService` (`ThumbnailGenerator` + implementation) with unit tests ensuring 200x200 constraint and graceful failure logging.
+- [x] Create image-only `ThumbnailService` (`ThumbnailGenerator` + implementation) with unit tests ensuring 200x200 constraint and graceful failure logging.
 - [ ] Develop `AttachmentUploadSessionService` and `AttachmentService` (create, finalize, reorder, delete) using TDD-focused service tests mocking storage/thumbnail components.
 - [ ] Wire permission checks through a dedicated evaluator; write unit tests ensuring context delegation and session ownership enforcement.
 - [ ] Expose REST controllers (`AttachmentSessionController`, `AttachmentController`) with MockMvc tests for upload, finalize, reorder, list, download, delete, thumbnail endpoints including error cases.
