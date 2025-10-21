@@ -190,7 +190,7 @@ DTO fields (draft):
 ## Implementation Plan
 
 ### Backend (TDD Sequence)
-- [ ] Introduce `dutypark.storage` configuration properties with validation and unit tests for property binding/defaults.
+- [x] Introduce `dutypark.storage` configuration properties with validation and unit tests for property binding/defaults.
 - [ ] Add Flyway migrations creating `attachment` and `attachment_upload_session` tables plus indexes; cover with migration smoke test using the existing in-memory database profile.
 - [ ] Define domain types (`Attachment`, `AttachmentUploadSession`, `AttachmentContextType`, DTO mappers) with Kotlin data/Entity classes and unit tests for mapping.
 - [ ] Implement `AttachmentRepository` and multi-context lookup query methods; cover with Spring Data JPA slice tests ensuring no N+1.
