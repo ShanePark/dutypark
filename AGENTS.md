@@ -177,6 +177,20 @@ cp .env.sample .env
 ./gradlew test jacocoTestReport
 ```
 
+## Collaboration Preferences
+- Always confirm requirements with short, numbered questions when clarification is needed; the user prefers replying by number.
+- Follow a TDD workflow and tackle work in small, sequential steps—complete backend tasks before moving on to frontend pieces for cross-cutting features.
+- When introducing configurable behaviors (file storage paths, limits, blacklists), surface them through `application.yml` properties with sensible defaults.
+- Prefer writing plans and specs in `issue-*.md` files before coding; keep them updated as decisions evolve.
+
+### Task Execution Guidelines
+- **Work on ONE checklist item at a time** - never attempt multiple checklist items simultaneously.
+- Break each checklist item into smaller, manageable todos (typically 3-5 todos per checklist item).
+- Keep individual todos small to prevent work from going off track.
+- Complete all todos for the current checklist item before moving to the next.
+- After completing all todos for a checklist item, present the code for user review before proceeding.
+- Only move to the next checklist item after user confirms the current work and approves commit.
+
 ## Configuration
 
 ### Environment Variables (see .env.sample)
