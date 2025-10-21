@@ -188,8 +188,9 @@ cp .env.sample .env
 - Break each checklist item into smaller, manageable todos (typically 3-5 todos per checklist item).
 - Keep individual todos small to prevent work from going off track.
 - Complete all todos for the current checklist item before moving to the next.
-- After completing all todos for a checklist item, present the code for user review before proceeding.
-- Only move to the next checklist item after user confirms the current work and approves commit.
+- **After completing all todos for a checklist item, STOP and present the code for user review.**
+- **NEVER commit automatically** - wait for explicit user instruction like "commit this".
+- Only move to the next checklist item after user confirms the current work and explicitly requests commit.
 
 ## Configuration
 

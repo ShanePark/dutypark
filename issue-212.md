@@ -50,10 +50,10 @@ Attachment
 - thumbnailFilename: String? (null if none)
 - thumbnailContentType: String?
 - thumbnailSize: Long?
-- extraAttributes: JSON? (nullable; placeholder for domain-specific metadata)
 - orderIndex: Int (0-based order per context; append new files to the end)
 - createdBy: Long (member ID)
-- createdAt: Instant
+- createdDate: LocalDateTime (inherited from EntityBase)
+- modifiedDate: LocalDateTime (inherited from EntityBase)
 
 AttachmentUploadSession
 -----------------------
@@ -62,13 +62,14 @@ AttachmentUploadSession
 - targetContextId: String? (e.g., existing schedule ID when editing)
 - ownerId: Long (member initiating upload)
 - expiresAt: Instant (cleanup job target)
-- createdAt: Instant
+- createdDate: LocalDateTime (inherited from EntityBase)
+- modifiedDate: LocalDateTime (inherited from EntityBase)
 ```
 
 Notes:
 - `contextId` stored as `String` lets us support UUID-based IDs in future domains without schema changes.
 - Prior to finalization, attachments keep `contextId = null` and `uploadSessionId = sessionId`. Once finalized, `uploadSessionId` becomes null and `contextId` is set to the owning entity ID.
-- `extraAttributes` is optional but keeps the table extensible (e.g., storing image dimensions later).
+- Both entities inherit from `EntityBase`, providing UUID primary key with ULID generation, and automatic `createdDate`/`modifiedDate` audit fields.
 - Add composite index `(contextType, contextId)` to enable efficient bulk fetches `WHERE context_type = ? AND context_id IN (...)`, plus an index on `uploadSessionId` for fast session lookups.
 
 ## Data Access Strategy
@@ -191,7 +192,7 @@ DTO fields (draft):
 
 ### Backend (TDD Sequence)
 - [x] Introduce `dutypark.storage` configuration properties with validation and unit tests for property binding/defaults.
-- [ ] Add Flyway migrations creating `attachment` and `attachment_upload_session` tables plus indexes; cover with migration smoke test using the existing in-memory database profile.
+- [x] Add Flyway migrations creating `attachment` and `attachment_upload_session` tables plus indexes; cover with migration smoke test using the existing in-memory database profile.
 - [ ] Define domain types (`Attachment`, `AttachmentUploadSession`, `AttachmentContextType`, DTO mappers) with Kotlin data/Entity classes and unit tests for mapping.
 - [ ] Implement `AttachmentRepository` and multi-context lookup query methods; cover with Spring Data JPA slice tests ensuring no N+1.
 - [ ] Build blacklist/size validation service that reads from configuration; write unit tests covering acceptance/rejection cases.
