@@ -1,6 +1,6 @@
 package com.tistory.shanepark.dutypark.attachment.service
 
-import com.tistory.shanepark.dutypark.attachment.domain.AttachmentContextType
+import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.common.config.StorageProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach

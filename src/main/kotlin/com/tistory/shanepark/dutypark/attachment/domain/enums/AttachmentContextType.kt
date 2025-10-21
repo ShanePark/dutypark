@@ -1,4 +1,4 @@
-package com.tistory.shanepark.dutypark.attachment.domain
+package com.tistory.shanepark.dutypark.attachment.domain.enums
 
 enum class AttachmentContextType {
     SCHEDULE,

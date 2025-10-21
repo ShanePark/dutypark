@@ -1,7 +1,8 @@
 package com.tistory.shanepark.dutypark.attachment.service
 
-import com.tistory.shanepark.dutypark.attachment.domain.Attachment
-import com.tistory.shanepark.dutypark.attachment.domain.AttachmentContextType
+import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
+import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
+import com.tistory.shanepark.dutypark.attachment.domain.enums.ThumbnailStatus
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -40,7 +41,13 @@ class AttachmentServiceTest {
         fakeFileSpy = FakeFileSpy()
         fileSystemService = TestFileSystemService(fakeFileSpy)
         fakeThumbnailSpy = FakeThumbnailSpy()
-        thumbnailService = TestThumbnailService(fakeThumbnailSpy, storageProperties)
+        thumbnailService = TestThumbnailService(
+            fakeThumbnailSpy,
+            storageProperties,
+            attachmentRepository,
+            pathResolver,
+            fileSystemService
+        )
         service = AttachmentService(
             attachmentRepository,
             validationService,
@@ -84,7 +91,7 @@ class AttachmentServiceTest {
     }
 
     @Test
-    fun `uploadFile should generate thumbnail for image files`() {
+    fun `uploadFile should set thumbnail status to PENDING for image files`() {
         val sessionId = UUID.randomUUID()
         val file = MockMultipartFile(
             "file",
@@ -103,13 +110,11 @@ class AttachmentServiceTest {
             createdBy = 1L
         )
 
-        assertThat(result.thumbnailFilename).isNotNull
-        assertThat(result.thumbnailContentType).isEqualTo("image/png")
-        assertThat(fakeThumbnailSpy.generateCalls).isEqualTo(1)
+        assertThat(result.thumbnailStatus).isIn(ThumbnailStatus.PENDING, ThumbnailStatus.COMPLETED)
     }
 
     @Test
-    fun `uploadFile should not generate thumbnail for non-image files`() {
+    fun `uploadFile should set thumbnail status to NONE for non-image files`() {
         val sessionId = UUID.randomUUID()
         val file = MockMultipartFile(
             "file",
@@ -127,9 +132,7 @@ class AttachmentServiceTest {
             createdBy = 1L
         )
 
-        assertThat(result.thumbnailFilename).isNull()
-        assertThat(result.thumbnailContentType).isNull()
-        assertThat(fakeThumbnailSpy.generateCalls).isEqualTo(0)
+        assertThat(result.thumbnailStatus).isEqualTo(ThumbnailStatus.NONE)
     }
 
     @Test
@@ -243,8 +246,17 @@ class AttachmentServiceTest {
 
     class TestThumbnailService(
         private val spy: FakeThumbnailSpy,
-        storageProperties: com.tistory.shanepark.dutypark.common.config.StorageProperties
-    ) : ThumbnailService(emptyList(), storageProperties) {
+        storageProperties: com.tistory.shanepark.dutypark.common.config.StorageProperties,
+        attachmentRepository: AttachmentRepository,
+        pathResolver: StoragePathResolver,
+        fileSystemService: FileSystemService
+    ) : ThumbnailService(
+        emptyList(),
+        storageProperties,
+        attachmentRepository,
+        pathResolver,
+        fileSystemService
+    ) {
         override fun canGenerateThumbnail(contentType: String): Boolean {
             return spy.canGenerateResult
         }

@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.attachment.dto
 
-import com.tistory.shanepark.dutypark.attachment.domain.AttachmentContextType
-import com.tistory.shanepark.dutypark.attachment.domain.AttachmentUploadSession
+import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
+import com.tistory.shanepark.dutypark.attachment.domain.entity.AttachmentUploadSession
 import java.time.Instant
 import java.util.UUID
 

@@ -1,5 +1,7 @@
-package com.tistory.shanepark.dutypark.attachment.domain
+package com.tistory.shanepark.dutypark.attachment.domain.entity
 
+import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
+import com.tistory.shanepark.dutypark.attachment.domain.enums.ThumbnailStatus
 import com.tistory.shanepark.dutypark.common.domain.entity.EntityBase
 import jakarta.persistence.*
 import java.util.UUID
@@ -46,6 +48,10 @@ class Attachment(
 
     @Column(name = "thumbnail_size")
     var thumbnailSize: Long? = null,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "thumbnail_status", nullable = false, length = 20)
+    var thumbnailStatus: ThumbnailStatus = ThumbnailStatus.NONE,
 
     @Column(name = "order_index", nullable = false)
     var orderIndex: Int = 0,

@@ -1,7 +1,8 @@
 package com.tistory.shanepark.dutypark.attachment.service
 
-import com.tistory.shanepark.dutypark.attachment.domain.Attachment
-import com.tistory.shanepark.dutypark.attachment.domain.AttachmentContextType
+import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
+import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
+import com.tistory.shanepark.dutypark.attachment.domain.enums.ThumbnailStatus
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.common.config.logger
 import org.springframework.stereotype.Service
@@ -52,14 +53,21 @@ class AttachmentService(
             )
 
             if (thumbnailService.canGenerateThumbnail(attachment.contentType)) {
-                generateThumbnailForAttachment(temporaryFilePath, attachment)
+                attachment.thumbnailStatus = ThumbnailStatus.PENDING
             }
 
             val savedAttachment = attachmentRepository.save(attachment)
 
+            if (attachment.thumbnailStatus == ThumbnailStatus.PENDING) {
+                thumbnailService.generateThumbnailAsync(savedAttachment.id, temporaryFilePath)
+            }
+
             log.info(
                 "File uploaded successfully: sessionId={}, filename={}, size={}, orderIndex={}",
-                sessionId, originalFilename, file.size, nextOrderIndex
+                sessionId,
+                originalFilename,
+                file.size,
+                nextOrderIndex
             )
 
             return savedAttachment
@@ -77,20 +85,6 @@ class AttachmentService(
             "$uuid.$extension"
         } else {
             uuid.toString()
-        }
-    }
-
-    private fun generateThumbnailForAttachment(filePath: java.nio.file.Path, attachment: Attachment) {
-        val thumbnailPath = pathResolver.resolveThumbnailPath(filePath, attachment.storedFilename)
-
-        val success = thumbnailService.generateThumbnail(filePath, thumbnailPath, attachment.contentType)
-
-        if (success && fileSystemService.fileExists(thumbnailPath)) {
-            attachment.thumbnailFilename = thumbnailPath.fileName.toString()
-            attachment.thumbnailContentType = "image/png"
-            attachment.thumbnailSize = thumbnailPath.toFile().length()
-
-            log.info("Thumbnail generated for attachment: {}", attachment.storedFilename)
         }
     }
 }

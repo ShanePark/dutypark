@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.attachment.repository
 
-import com.tistory.shanepark.dutypark.attachment.domain.Attachment
-import com.tistory.shanepark.dutypark.attachment.domain.AttachmentContextType
+import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
+import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import org.springframework.data.jpa.repository.JpaRepository
 import java.util.UUID
 

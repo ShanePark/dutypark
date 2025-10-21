@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.attachment.dto
 
-import com.tistory.shanepark.dutypark.attachment.domain.Attachment
-import com.tistory.shanepark.dutypark.attachment.domain.AttachmentContextType
+import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
+import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.util.UUID
