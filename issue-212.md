@@ -163,7 +163,7 @@ DTO fields (draft):
 1. Front-end requests a session before the schedule is saved. When editing an existing schedule, the session request includes `targetContextId` so the backend can verify write permission.
 2. Files upload individually with the session ID. Server validates blacklist & size, writes to `_tmp`, creates `Attachment` with `uploadSessionId=sessionId` and `contextId=null`.
 3. When the schedule is persisted or updated, the client submits the session ID along with the final `orderedAttachmentIds` (existing + new IDs). Backend binds new attachments to the schedule, moves files into the permanent directory, and updates `orderIndex` to match the provided order; any attachments omitted from the list keep their relative order but are appended after the listed ones.
-4. Existing attachments are deleted by calling `DELETE /api/attachments/{id}` per file; they do not flow through sessions.
+4. Existing attachments are deleted by calling `DELETE /api/attachments/{id}` per file; they do not flow through ses sions.
 5. If the user cancels, an asynchronous cleanup job removes expired sessions and their files.
 
 ## Thumbnail Generation
