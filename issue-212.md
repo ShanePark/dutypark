@@ -193,8 +193,8 @@ DTO fields (draft):
 ### Backend (TDD Sequence)
 - [x] Introduce `dutypark.storage` configuration properties with validation and unit tests for property binding/defaults.
 - [x] Add Flyway migrations creating `attachment` and `attachment_upload_session` tables plus indexes; cover with migration smoke test using the existing in-memory database profile.
-- [ ] Define domain types (`Attachment`, `AttachmentUploadSession`, `AttachmentContextType`, DTO mappers) with Kotlin data/Entity classes and unit tests for mapping.
-- [ ] Implement `AttachmentRepository` and multi-context lookup query methods; cover with Spring Data JPA slice tests ensuring no N+1.
+- [x] Define domain types (`Attachment`, `AttachmentUploadSession`, `AttachmentContextType`, DTO mappers) with Kotlin data/Entity classes and unit tests for mapping.
+- [x] Implement `AttachmentRepository` and multi-context lookup query methods; cover with Spring Data JPA slice tests ensuring no N+1.
 - [ ] Build blacklist/size validation service that reads from configuration; write unit tests covering acceptance/rejection cases.
 - [ ] Implement storage path resolver & file system service handling write/delete/move with rollback on failure; cover via temporary filesystem tests.
 - [ ] Create image-only `ThumbnailService` (`ThumbnailGenerator` + implementation) with unit tests ensuring 200x200 constraint and graceful failure logging.
