@@ -63,4 +63,23 @@ class StoragePropertiesTest {
         assertThat(storageProperties.thumbnail.maxSide).isEqualTo(200)
         assertThat(storageProperties.sessionExpirationHours).isEqualTo(24)
     }
+
+    @Test
+    fun `should allow empty blacklist`() {
+        val properties = mapOf(
+            "dutypark.storage.root" to "storage",
+            "dutypark.storage.max-file-size" to "50MB",
+            "dutypark.storage.thumbnail.max-side" to "200",
+            "dutypark.storage.session-expiration-hours" to "24"
+        )
+
+        val source: ConfigurationPropertySource = MapConfigurationPropertySource(properties)
+        val binder = Binder(source)
+        val bound = binder.bind("dutypark.storage", Bindable.of(StorageProperties::class.java))
+
+        assertThat(bound.isBound).isTrue()
+        val storageProperties = bound.get()
+
+        assertThat(storageProperties.blacklistExt).isEmpty()
+    }
 }

@@ -194,4 +194,25 @@ class AttachmentValidationServiceTest {
             .isInstanceOf(AttachmentExtensionBlockedException::class.java)
             .hasMessageContaining("ExE")
     }
+
+    @Test
+    fun `should accept all files when blacklist is empty`() {
+        val emptyBlacklistProperties = StorageProperties(
+            root = "storage",
+            maxFileSize = DataSize.ofMegabytes(50),
+            blacklistExt = emptyList(),
+            thumbnail = StorageProperties.ThumbnailProperties(maxSide = 200),
+            sessionExpirationHours = 24
+        )
+        val permissiveService = AttachmentValidationService(emptyBlacklistProperties)
+
+        val exeFile = MockMultipartFile(
+            "file",
+            "program.exe",
+            "application/octet-stream",
+            ByteArray(1024)
+        )
+
+        permissiveService.validateFile(exeFile)
+    }
 }

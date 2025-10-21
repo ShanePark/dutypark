@@ -14,8 +14,7 @@ data class StorageProperties(
     @field:NotNull
     val maxFileSize: DataSize,
 
-    @field:NotEmpty
-    val blacklistExt: List<String>,
+    val blacklistExt: List<String> = emptyList(),
 
     val thumbnail: ThumbnailProperties,
 
