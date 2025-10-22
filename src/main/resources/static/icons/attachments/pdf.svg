@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="PDF icon">
+  <rect x="8" y="6" width="48" height="52" rx="6" ry="6" fill="#f8d7da" stroke="#dc3545" stroke-width="2"/>
+  <path d="M22 44l20-24" stroke="#dc3545" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M28 20h12l6 8v20H28z" fill="none" stroke="#dc3545" stroke-width="3"/>
+</svg>

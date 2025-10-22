@@ -401,16 +401,18 @@ DTO fields (draft):
 - [x] Update REST Docs snippets for all new endpoints; ensure asciidoctor build passes.
 
 ### Frontend (After Backend Completion)
-- [ ] **Attachment asset groundwork**
-  - [ ] Add Uppy CSS/JS includes (DragDrop, Dashboard, XHRUpload) to the shared layout so the widgets are usable inside the duty modal.
-  - [ ] Create `src/main/resources/static/icons/attachments/` with SVG thumbnails for pdf, doc, sheet, slide, zip, audio, video, and a generic fallback.
-  - [ ] Introduce attachment-specific CSS classes (using Bootstrap utilities where possible) to size previews, progress bars, and the file grid responsively.
-  - [ ] Centralize max-size/blocked-extension messages in `common.js` (or a new config module) for reuse across upload/validation flows.
-- [ ] **Attachment session helpers**
-  - [ ] Add `static/js/attachments/api.js` exporting createSession, upload, finalize, delete, list, and reorder helpers that wrap the REST contract.
-  - [ ] Implement a lightweight store/adapter that normalizes `AttachmentDto` into `{ id, name, size, contentType, thumbnailUrl, downloadUrl, isImage }`.
-  - [ ] Surface SweetAlert-based error handling for size/blacklist responses so the UI can present immediate feedback.
-  - [ ] Ensure the helpers expose promise-based hooks for progress updates so Uppy can reflect server responses.
+- [x] **Attachment asset groundwork**
+  - [x] Add Uppy CSS/JS includes (DragDrop, Dashboard, XHRUpload) to the shared layout so the widgets are usable inside the duty modal.
+  - [x] Create `src/main/resources/static/icons/attachments/` with SVG thumbnails for pdf, doc, sheet, slide, zip, audio, video, and a generic fallback.
+  - [x] Introduce attachment-specific CSS classes (using Bootstrap utilities where possible) to size previews, progress bars, and the file grid responsively.
+  - [x] Centralize max-size/blocked-extension messages in `common.js` (or a new config module) for reuse across upload/validation flows.
+  - **Briefing:** Layout loads the bundled Uppy assets from `static/lib/uppy-5.1.7/` (see `templates/layout/include.html:17`). Attachment styling lives in `static/css/attachments.css`, while SVG fallbacks are under `static/icons/attachments/`. Validation defaults are exposed via `window.AttachmentValidation` in `static/js/common.js`.
+- [x] **Attachment session helpers**
+  - [x] Add fetch-based helper functions (collocated with existing duty scripts) for createSession, upload, finalize, delete, list, and reorder calls.
+  - [x] Implement a lightweight adapter that normalizes `AttachmentDto` into `{ id, name, size, contentType, thumbnailUrl, downloadUrl, isImage }`.
+  - [x] Surface SweetAlert-based error handling for size/blacklist responses so the UI can present immediate feedback.
+  - [x] Ensure the helpers expose promise-based hooks for progress updates so Uppy can reflect server responses.
+  - **Briefing:** Attachment lifecycle helpers are defined inside `static/js/duty/detail-view-modal.js` (top of file). Reuse `normalizeAttachmentDto`, `createAttachmentSession`, `uploadAttachment`, etc., and tap into validation via `validateAttachment`. Progress callbacks use the `buildUploadProgressPayload` payload shape.
 - [ ] **Schedule create modal uploader**
   - [ ] Instantiate an Uppy instance when `scheduleCreateMode` starts, wiring Drag&Drop + file input button inside the modal after the visibility controls.
   - [ ] Render a list of pending/completed files with image previews (using `URL.createObjectURL`) or SVG icons before the backend thumbnail exists.
