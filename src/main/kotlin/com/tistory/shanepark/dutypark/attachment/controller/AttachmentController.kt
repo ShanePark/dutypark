@@ -34,15 +34,6 @@ class AttachmentController(
         return AttachmentDto.from(attachment)
     }
 
-    @PostMapping("/sessions/{sessionId}/finalize")
-    fun finalizeSession(
-        @Login loginMember: LoginMember,
-        @PathVariable sessionId: UUID,
-        @RequestBody request: FinalizeSessionRequest
-    ) {
-        attachmentService.finalizeSession(loginMember, sessionId, request)
-    }
-
     @PostMapping("/reorder")
     fun reorderAttachments(
         @Login loginMember: LoginMember,

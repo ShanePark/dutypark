@@ -4,6 +4,8 @@ import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextT
 import com.tistory.shanepark.dutypark.attachment.domain.enums.ThumbnailStatus
 import com.tistory.shanepark.dutypark.common.domain.entity.EntityBase
 import jakarta.persistence.*
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import java.util.UUID
 
 @Entity
@@ -23,6 +25,7 @@ class Attachment(
     var contextId: String? = null,
 
     @Column(name = "upload_session_id", columnDefinition = "char(36)")
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     var uploadSessionId: UUID? = null,
 
     @Column(name = "original_filename", nullable = false, length = 255)

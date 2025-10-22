@@ -1,10 +1,10 @@
 package com.tistory.shanepark.dutypark.common.config
 
-import org.springframework.boot.context.properties.ConfigurationProperties
-import org.springframework.util.unit.DataSize
 import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Positive
+import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.util.unit.DataSize
 
 @ConfigurationProperties(prefix = "dutypark.storage")
 data class StorageProperties(

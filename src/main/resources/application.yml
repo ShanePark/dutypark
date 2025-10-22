@@ -66,11 +66,11 @@ dutypark:
     root: /dutypark/storage
     max-file-size: 50MB
     blacklist-ext:
-      - exe
-      - bat
-      - cmd
-      - sh
-      - js
+     - exe
+     - bat
+     - cmd
+     - sh
+     - js
     thumbnail:
       max-side: 200
     session-expiration-hours: 24

@@ -97,6 +97,12 @@ class ScheduleService(
         log.info("create schedule: $scheduleSaveDto")
         scheduleRepository.save(schedule)
         scheduleTimeParsingQueueManager.addTask(schedule)
+
+        scheduleSaveDto.attachmentSessionId?.let { sessionId ->
+            log.info("Finalizing attachment session: $sessionId for schedule: ${schedule.id}")
+            attachmentService.finalizeSessionForSchedule(loginMember, sessionId, schedule.id.toString())
+        }
+
         return schedule
     }
 

@@ -302,6 +302,14 @@ class AttachmentService(
         return attachments.map { AttachmentDto.from(it) }
     }
 
+    fun finalizeSessionForSchedule(loginMember: LoginMember, sessionId: UUID, scheduleId: String) {
+        val request = FinalizeSessionRequest(
+            contextId = scheduleId,
+            orderedAttachmentIds = emptyList()
+        )
+        finalizeSession(loginMember, sessionId, request)
+    }
+
     private fun generateStoredFilename(originalFilename: String): String {
         val extension = originalFilename.substringAfterLast('.', "")
         val uuid = UUID.randomUUID()

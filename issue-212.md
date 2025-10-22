@@ -413,16 +413,16 @@ DTO fields (draft):
   - [x] Surface SweetAlert-based error handling for size/blacklist responses so the UI can present immediate feedback.
   - [x] Ensure the helpers expose promise-based hooks for progress updates so Uppy can reflect server responses.
   - **Briefing:** Attachment lifecycle helpers are defined inside `static/js/duty/detail-view-modal.js` (top of file). Reuse `normalizeAttachmentDto`, `createAttachmentSession`, `uploadAttachment`, etc., and tap into validation via `validateAttachment`. Progress callbacks use the `buildUploadProgressPayload` payload shape.
-- [ ] **Schedule create modal uploader**
-  - [ ] Instantiate an Uppy instance when `scheduleCreateMode` starts, wiring Drag&Drop + file input button inside the modal after the visibility controls.
-  - [ ] Render a list of pending/completed files with image previews (using `URL.createObjectURL`) or SVG icons before the backend thumbnail exists.
-  - [ ] Show per-file progress bars while uploads are in-flight and allow cancel/removal before save.
-  - [ ] Prevent duplicate uploads by checking Uppy state against already attached file names and size limits.
-- [ ] **Save/finalize pipeline**
-  - [ ] Request an upload session on modal entry (reusing existing session when editing) and tear it down on cancel.
-  - [ ] Update `saveSchedule` to send `orderedAttachmentIds` along with schedule data, then call `POST /api/attachments/sessions/{id}/finalize`.
-  - [ ] Handle optimistic UI while schedule persists (disable buttons, show waitMe overlay) and roll back Uppy state on failure.
-  - [ ] Append any post-save attachments from the finalize response into local state so the calendar refresh matches backend order.
+- [x] **Schedule create modal uploader**
+  - [x] Instantiate an Uppy instance when `scheduleCreateMode` starts, wiring Drag&Drop + file input button inside the modal after the visibility controls.
+  - [x] Render a list of pending/completed files with image previews (using `URL.createObjectURL`) or SVG icons before the backend thumbnail exists.
+  - [x] Show per-file progress bars while uploads are in-flight and allow cancel/removal before save.
+  - [x] Prevent duplicate uploads by checking Uppy state against already attached file names and size limits.
+- [x] **Save/finalize pipeline**
+  - [x] Request an upload session on modal entry (reusing existing session when editing) and tear it down on cancel.
+  - [x] Update `saveSchedule` to send `orderedAttachmentIds` along with schedule data, then call `POST /api/attachments/sessions/{id}/finalize`.
+  - [x] Handle optimistic UI while schedule persists (disable buttons, show waitMe overlay) and roll back Uppy state on failure.
+  - [x] Append any post-save attachments from the finalize response into local state so the calendar refresh matches backend order.
 - [ ] **Editing existing schedules**
   - [ ] Hydrate existing attachments into the uploader when `scheduleEditMode` toggles, preserving order and ownership metadata.
   - [ ] Allow users to delete finalized attachments (`DELETE /api/attachments/{id}`) and immediately reflect removals in both UI and local state.
@@ -438,3 +438,20 @@ DTO fields (draft):
   - [ ] Display image thumbnails (`thumbnailUrl`) or SVG icons with filename, size, and a download button linking to `/api/attachments/{id}/download`.
   - [ ] Provide remove buttons (X) for each attachment when in create/edit mode that sync with the Uppy/attachment store.
   - [ ] Add responsive tweaks so thumbnails wrap cleanly on mobile (e.g., `row-cols-3 row-cols-sm-4`), matching the project's mobile-first styling.
+
+## Known Issues & Future Work
+
+### Thumbnail Generation Timing Issue
+- **Problem:** Thumbnails are not being generated during attachment upload. Analysis suggests this is due to entity persistence timing:
+  - Thumbnail generation uses `REQUIRES_NEW` transaction propagation
+  - When thumbnail service tries to read the attachment entity, it may not be committed yet
+  - The current transaction hasn't been flushed when thumbnail generation starts
+- **Root Cause Hypothesis:**
+  - `AttachmentService.uploadFile` saves the attachment entity
+  - Immediately calls `thumbnailService.generateThumbnail` with `REQUIRES_NEW`
+  - New transaction can't see uncommitted attachment entity from parent transaction
+- **Proposed Solutions:**
+  1. Generate thumbnails asynchronously after transaction commit (using `@TransactionalEventListener` with `AFTER_COMMIT`)
+  2. Remove `REQUIRES_NEW` propagation and handle thumbnail failures without rolling back attachment save
+  3. Flush entity manager before thumbnail generation to ensure visibility
+- **Impact:** Attachments upload successfully but thumbnails are missing; functionality is not broken but UX is degraded for image files

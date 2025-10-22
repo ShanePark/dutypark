@@ -158,6 +158,44 @@
                   </div>
                 </div>
               </div>
+
+              <!-- Attachment Uploader -->
+              <div class="mb-3">
+                <label>첨부파일 (선택사항)</label>
+                <div id="schedule-attachment-uploader" class="mt-2"></div>
+
+                <!-- Attachment Gallery -->
+                <div class="attachment-gallery mt-2" v-if="createSchedule.uploadedAttachments.length > 0">
+                  <div class="attachment-tile" v-for="attachment in createSchedule.uploadedAttachments" :key="attachment.id">
+                    <div class="attachment-thumb">
+                      <img v-if="attachment.isImage && attachment.thumbnailUrl"
+                           :src="attachment.thumbnailUrl"
+                           :alt="attachment.name"
+                           class="w-100 h-100" style="object-fit: cover;">
+                      <img v-else-if="attachment.isImage"
+                           :src="attachment.previewUrl"
+                           :alt="attachment.name"
+                           class="w-100 h-100" style="object-fit: cover;">
+                      <div v-else class="d-flex align-items-center justify-content-center h-100">
+                        <i class="bi bi-file-earmark text-muted" style="font-size: 2rem;"></i>
+                      </div>
+                    </div>
+                    <div class="attachment-meta">
+                      <div class="attachment-name" :title="attachment.name">{{ attachment.name }}</div>
+                      <div class="attachment-size">{{ formatBytes(attachment.size) }}</div>
+                      <div class="attachment-progress" v-if="createSchedule.attachmentProgress[attachment.id] !== undefined && createSchedule.attachmentProgress[attachment.id] < 100">
+                        <div class="progress" style="height: 4px;">
+                          <div class="progress-bar" :style="{width: createSchedule.attachmentProgress[attachment.id] + '%'}"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <button type="button" class="attachment-remove btn btn-sm btn-danger" @click="removeAttachment(attachment.id)">
+                      <i class="bi bi-x"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <div class="buttons mt-3">
                 <button id="add-btn" class="btn btn-success" v-on:click="saveSchedule">저장</button>
                 <button class="btn btn-secondary" v-on:click="cancelCreateSchedule">취소</button>

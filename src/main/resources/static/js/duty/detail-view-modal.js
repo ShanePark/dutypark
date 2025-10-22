@@ -125,17 +125,62 @@ const handleAttachmentXhrError = (xhr, file) => {
   return new Error(message);
 };
 
+const createAttachmentSession = async (targetContextId = null) => {
+  const response = await fetch('/api/attachments/sessions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      contextType: ATTACHMENT_CONTEXT_TYPE,
+      targetContextId: targetContextId
+    })
+  });
+  if (!response.ok) {
+    await handleAttachmentResponseError(response, '업로드 세션 생성에 실패했습니다.');
+  }
+  return await response.json();
+};
+
+const finalizeAttachmentSession = async (sessionId, contextId, orderedAttachmentIds = []) => {
+  const response = await fetch(`/api/attachments/sessions/${sessionId}/finalize`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      contextId: contextId,
+      orderedAttachmentIds: orderedAttachmentIds
+    })
+  });
+  if (!response.ok) {
+    await handleAttachmentResponseError(response, '첨부파일 저장에 실패했습니다.');
+  }
+};
+
+const deleteAttachment = async (attachmentId) => {
+  const response = await fetch(`/api/attachments/${attachmentId}`, {
+    method: 'DELETE'
+  });
+  if (!response.ok) {
+    await handleAttachmentResponseError(response, '첨부파일 삭제에 실패했습니다.');
+  }
+};
+
 const detailViewMethods = {
-  scheduleCreateMode() {
+  async scheduleCreateMode() {
     this.resetCreateSchedule();
     this.isCreateScheduleMode = true;
+    await this.$nextTick();
+    await this.initializeAttachmentUploader();
   }
   ,
   cancelCreateSchedule() {
+    this.cleanupAttachmentUploader();
     this.isCreateScheduleMode = false;
   }
   ,
-  saveSchedule() {
+  async saveSchedule() {
     const app = this;
     if (!isValidContent(app.createSchedule.content)) {
       return;
@@ -145,34 +190,45 @@ const detailViewMethods = {
     }
     const addArea = $('#schedule-create-or-edit');
     addArea.waitMe();
-    $.ajax({
-      url: '/api/schedules',
-      type: 'POST',
-      data: JSON.stringify({
-        id: app.createSchedule.id,
-        memberId: app.memberId,
-        content: app.createSchedule.content,
-        description: app.createSchedule.description,
-        startDateTime: toLocalISOString(new Date(app.createSchedule.startDateTime)),
-        endDateTime: toLocalISOString(new Date(app.createSchedule.endDateTime)),
-        visibility: app.createSchedule.visibility,
-      }),
-      contentType: 'application/json',
-      success: (data) => {
-        app.loadSchedule();
-        app.isCreateScheduleMode = false;
-      },
-      error: (data) => {
-        Swal.fire({
-          icon: 'error',
-          title: '저장에 실패했습니다.',
-          showConfirmButton: false,
-          timer: sweetAlTimer
-        });
-      }, complete: () => {
-        addArea.waitMe('hide');
+
+    try {
+      const response = await fetch('/api/schedules', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          id: app.createSchedule.id,
+          memberId: app.memberId,
+          content: app.createSchedule.content,
+          description: app.createSchedule.description,
+          startDateTime: toLocalISOString(new Date(app.createSchedule.startDateTime)),
+          endDateTime: toLocalISOString(new Date(app.createSchedule.endDateTime)),
+          visibility: app.createSchedule.visibility,
+          attachmentSessionId: app.createSchedule.attachmentSessionId,
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Schedule save failed');
       }
-    })
+
+      await response.json();
+
+      app.cleanupAttachmentUploader();
+      app.loadSchedule();
+      app.isCreateScheduleMode = false;
+    } catch (error) {
+      console.error('Failed to save schedule:', error);
+      Swal.fire({
+        icon: 'error',
+        title: '저장에 실패했습니다.',
+        showConfirmButton: false,
+        timer: sweetAlTimer
+      });
+    } finally {
+      addArea.waitMe('hide');
+    }
   }
   ,
   scheduleEditMode(schedule) {
@@ -442,6 +498,168 @@ const detailViewMethods = {
       return text.replace(/\n/g, '<br>');
     }
     return '';
+  }
+  ,
+  async initializeAttachmentUploader() {
+    const app = this;
+
+    if (app.uppyInstance) {
+      try {
+        app.uppyInstance.cancelAll();
+        const Dashboard = app.uppyInstance.getPlugin('Dashboard');
+        if (Dashboard) {
+          app.uppyInstance.removePlugin(Dashboard);
+        }
+      } catch (e) {
+        console.warn('Error cleaning up previous Uppy instance:', e);
+      }
+      app.uppyInstance = null;
+    }
+
+    try {
+      const sessionResponse = await createAttachmentSession();
+      app.createSchedule.attachmentSessionId = sessionResponse.sessionId;
+
+      const { Uppy, Dashboard, XHRUpload } = await import('/lib/uppy-5.1.7/uppy.min.mjs');
+
+      app.uppyInstance = new Uppy({
+        restrictions: {
+          maxFileSize: attachmentValidationConfig.maxFileSizeBytes,
+          allowedFileTypes: null,
+        },
+        autoProceed: false,
+      })
+        .use(Dashboard, {
+          inline: true,
+          target: '#schedule-attachment-uploader',
+          height: 250,
+          proudlyDisplayPoweredByUppy: false,
+          locale: {
+            strings: {
+              dropPasteFiles: '파일을 드래그하거나 %{browse}하세요',
+              browse: '선택',
+            }
+          }
+        })
+        .use(XHRUpload, {
+          endpoint: '/api/attachments',
+          fieldName: 'file',
+          formData: true,
+          bundle: false,
+          headers: {},
+          getResponseData(responseText, response) {
+            const text = typeof responseText === 'string' ? responseText : (responseText.responseText || responseText.response);
+            console.log('Server response text:', text);
+            try {
+              return JSON.parse(text);
+            } catch (e) {
+              console.error('Failed to parse JSON response:', text);
+              throw new Error(`Invalid JSON response: ${text ? text.substring(0, 100) : 'empty'}`);
+            }
+          },
+        });
+
+      app.uppyInstance.on('file-added', (file) => {
+        const validation = validateAttachmentFile(file.data);
+        if (!validation.valid) {
+          app.uppyInstance.removeFile(file.id);
+          showAttachmentAlert(validation.message);
+          return;
+        }
+
+        app.uppyInstance.setFileMeta(file.id, {
+          sessionId: app.createSchedule.attachmentSessionId
+        });
+      });
+
+      app.uppyInstance.on('upload-progress', (file, progress) => {
+        if (app.createSchedule.attachmentProgress[file.id] === undefined) {
+          app.$set(app.createSchedule.attachmentProgress, file.id, 0);
+        }
+        const percentage = Math.round((progress.bytesUploaded / progress.bytesTotal) * 100);
+        app.$set(app.createSchedule.attachmentProgress, file.id, percentage);
+      });
+
+      app.uppyInstance.on('upload-success', (file, response) => {
+        const attachmentDto = response.body;
+        const normalized = normalizeAttachmentDto(attachmentDto);
+
+        if (file.data.type.startsWith('image/')) {
+          normalized.previewUrl = URL.createObjectURL(file.data);
+        }
+
+        app.createSchedule.uploadedAttachments.push(normalized);
+        app.$delete(app.createSchedule.attachmentProgress, file.id);
+      });
+
+      app.uppyInstance.on('upload-error', (file, error, response) => {
+        console.error('Upload error:', error, response);
+        app.$delete(app.createSchedule.attachmentProgress, file.id);
+        if (response && response.body) {
+          handleAttachmentXhrError({ status: response.status, response: response.body }, file.data);
+        } else {
+          showAttachmentAlert('파일 업로드에 실패했습니다.');
+        }
+      });
+
+    } catch (error) {
+      console.error('Failed to initialize attachment uploader:', error);
+      showAttachmentAlert('첨부파일 업로드 기능을 초기화하지 못했습니다.');
+    }
+  }
+  ,
+  async removeAttachment(attachmentId) {
+    const app = this;
+    const index = app.createSchedule.uploadedAttachments.findIndex(a => a.id === attachmentId);
+    if (index === -1) return;
+
+    const attachment = app.createSchedule.uploadedAttachments[index];
+
+    try {
+      await deleteAttachment(attachmentId);
+      app.createSchedule.uploadedAttachments.splice(index, 1);
+
+      if (attachment.previewUrl) {
+        URL.revokeObjectURL(attachment.previewUrl);
+      }
+    } catch (error) {
+      console.error('Failed to remove attachment:', error);
+    }
+  }
+  ,
+  cleanupAttachmentUploader() {
+    const app = this;
+
+    if (app.uppyInstance) {
+      try {
+        app.uppyInstance.cancelAll();
+        const Dashboard = app.uppyInstance.getPlugin('Dashboard');
+        if (Dashboard) {
+          app.uppyInstance.removePlugin(Dashboard);
+        }
+      } catch (e) {
+        console.warn('Error cleaning up Uppy instance:', e);
+      }
+      app.uppyInstance = null;
+    }
+
+    app.createSchedule.uploadedAttachments.forEach(attachment => {
+      if (attachment.previewUrl) {
+        URL.revokeObjectURL(attachment.previewUrl);
+      }
+    });
+
+    app.createSchedule.uploadedAttachments = [];
+    app.createSchedule.attachmentProgress = {};
+    app.createSchedule.attachmentSessionId = null;
+  }
+  ,
+  formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   }
   ,
 }
