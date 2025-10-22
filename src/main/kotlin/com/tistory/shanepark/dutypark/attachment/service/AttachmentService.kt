@@ -173,12 +173,20 @@ class AttachmentService(
             throw IllegalStateException("Context ID mismatch: expected ${session.targetContextId}, got ${request.contextId}")
         }
 
-        val attachments = attachmentRepository.findAllByUploadSessionId(sessionId)
-        if (attachments.isEmpty()) {
+        val allAttachments = attachmentRepository.findAllByUploadSessionId(sessionId)
+        if (allAttachments.isEmpty()) {
             sessionService.deleteSession(sessionId)
             log.info("Finalized empty session: sessionId={}", sessionId)
             return
         }
+
+        val orderedIds = request.orderedAttachmentIds
+        val attachmentsToKeep = if (orderedIds.isEmpty()) {
+            allAttachments
+        } else {
+            allAttachments.filter { it.id in orderedIds }
+        }
+        val attachmentsToDelete = allAttachments.filter { it.id !in orderedIds && orderedIds.isNotEmpty() }
 
         val tempDir = pathResolver.resolveTemporaryDirectory(sessionId)
         val finalDir = pathResolver.resolveContextDirectory(session.contextType, request.contextId)
@@ -186,7 +194,7 @@ class AttachmentService(
         Files.createDirectories(finalDir)
 
         try {
-            attachments.forEach { attachment ->
+            attachmentsToKeep.forEach { attachment ->
                 val tempFilePath = tempDir.resolve(attachment.storedFilename)
                 val finalFilePath = finalDir.resolve(attachment.storedFilename)
 
@@ -220,18 +228,33 @@ class AttachmentService(
                 attachment.storagePath = finalDir.toString()
             }
 
-            val orderedIds = request.orderedAttachmentIds
             orderedIds.forEachIndexed { index, attachmentId ->
-                val attachment = attachments.find { it.id == attachmentId }
+                val attachment = attachmentsToKeep.find { it.id == attachmentId }
                 attachment?.orderIndex = index
             }
 
-            val unorderedAttachments = attachments.filter { it.id !in orderedIds }
-            unorderedAttachments.forEachIndexed { index, attachment ->
+            val unorderedKeptAttachments = attachmentsToKeep.filter { it.id !in orderedIds }
+            unorderedKeptAttachments.forEachIndexed { index, attachment ->
                 attachment.orderIndex = orderedIds.size + index
             }
 
-            attachmentRepository.saveAll(attachments)
+            attachmentRepository.saveAll(attachmentsToKeep)
+
+            attachmentsToDelete.forEach { attachment ->
+                log.info("Deleting attachment excluded from orderedIds: id={}, filename={}", attachment.id, attachment.originalFilename)
+                val tempFilePath = tempDir.resolve(attachment.storedFilename)
+                if (Files.exists(tempFilePath)) {
+                    Files.delete(tempFilePath)
+                }
+                val thumbnailFilename = attachment.thumbnailFilename
+                if (thumbnailFilename != null) {
+                    val tempThumbnailPath = tempDir.resolve(thumbnailFilename)
+                    if (Files.exists(tempThumbnailPath)) {
+                        Files.delete(tempThumbnailPath)
+                    }
+                }
+                attachmentRepository.delete(attachment)
+            }
 
             if (Files.exists(tempDir)) {
                 fileSystemService.deleteDirectory(tempDir)
@@ -240,10 +263,11 @@ class AttachmentService(
             sessionService.deleteSession(sessionId)
 
             log.info(
-                "Finalized session: sessionId={}, contextId={}, attachmentCount={}",
+                "Finalized session: sessionId={}, contextId={}, attachmentCount={}, deletedCount={}",
                 sessionId,
                 request.contextId,
-                attachments.size
+                attachmentsToKeep.size,
+                attachmentsToDelete.size
             )
         } catch (e: Exception) {
             log.error("Failed to finalize session: sessionId={}, error={}", sessionId, e.message, e)
@@ -319,17 +343,19 @@ class AttachmentService(
         val session = sessionService.findById(sessionId)
             ?: throw IllegalArgumentException("Upload session not found: $sessionId")
 
-        val existingAttachments = if (session.targetContextId != null) {
-            attachmentRepository.findAllByContextTypeAndContextId(session.contextType, scheduleId)
-        } else {
-            emptyList()
-        }
+        val existingAttachments = attachmentRepository.findAllByContextTypeAndContextId(session.contextType, scheduleId)
+        val sessionAttachments = attachmentRepository.findAllByUploadSessionId(sessionId)
 
-        val request = FinalizeSessionRequest(
-            contextId = scheduleId,
-            orderedAttachmentIds = orderedAttachmentIds
-        )
-        finalizeSession(loginMember, sessionId, request)
+        if (sessionAttachments.isNotEmpty()) {
+            val request = FinalizeSessionRequest(
+                contextId = scheduleId,
+                orderedAttachmentIds = orderedAttachmentIds
+            )
+            finalizeSession(loginMember, sessionId, request)
+        } else {
+            sessionService.deleteSession(sessionId)
+            log.info("Skipped finalizing empty session: sessionId={}", sessionId)
+        }
 
         val attachmentsToDelete = existingAttachments.filter { it.id !in orderedAttachmentIds }
         attachmentsToDelete.forEach { attachment ->

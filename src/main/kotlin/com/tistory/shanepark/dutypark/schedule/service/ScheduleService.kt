@@ -113,7 +113,6 @@ class ScheduleService(
         scheduleTimeParsingQueueManager.addTask(schedule)
 
         scheduleSaveDto.attachmentSessionId?.let { sessionId ->
-            log.info("Finalizing attachment session: $sessionId for schedule: ${schedule.id}")
             attachmentService.finalizeSessionForSchedule(
                 loginMember,
                 sessionId,
@@ -152,7 +151,6 @@ class ScheduleService(
         val orderedIds = scheduleSaveDto.orderedAttachmentIds
 
         if (scheduleSaveDto.attachmentSessionId != null) {
-            log.info("Finalizing attachment session: ${scheduleSaveDto.attachmentSessionId} for schedule: $scheduleId")
             attachmentService.finalizeSessionForSchedule(
                 loginMember,
                 scheduleSaveDto.attachmentSessionId,

@@ -195,6 +195,60 @@ class AttachmentServiceTest {
         assertThat(attachment3.orderIndex).isEqualTo(2)
     }
 
+    @Test
+    fun `finalizeSessionForSchedule should remove attachments missing from ordered ids when session is empty`() {
+        val sessionId = UUID.randomUUID()
+        val scheduleId = UUID.randomUUID().toString()
+        val session = AttachmentUploadSession(
+            contextType = AttachmentContextType.SCHEDULE,
+            targetContextId = null,
+            ownerId = loginMember.id,
+            expiresAt = clock.instant().plusSeconds(3600)
+        )
+        org.mockito.kotlin.whenever(sessionService.findById(sessionId)).thenReturn(session)
+
+        val storagePath = pathResolver.resolveContextDirectory(AttachmentContextType.SCHEDULE, scheduleId).toString()
+        val kept = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = scheduleId,
+                uploadSessionId = null,
+                originalFilename = "keep.txt",
+                storedFilename = "keep.txt",
+                contentType = "text/plain",
+                size = 10,
+                storagePath = storagePath,
+                orderIndex = 0,
+                createdBy = loginMember.id
+            )
+        )
+        val removed = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = scheduleId,
+                uploadSessionId = null,
+                originalFilename = "remove.txt",
+                storedFilename = "remove.txt",
+                contentType = "text/plain",
+                size = 10,
+                storagePath = storagePath,
+                orderIndex = 1,
+                createdBy = loginMember.id
+            )
+        )
+
+        service.finalizeSessionForSchedule(
+            loginMember = loginMember,
+            sessionId = sessionId,
+            scheduleId = scheduleId,
+            orderedAttachmentIds = listOf(kept.id!!)
+        )
+
+        assertThat(attachmentRepository.findById(kept.id!!)).isPresent
+        assertThat(attachmentRepository.findById(removed.id!!)).isEmpty
+        org.mockito.kotlin.verify(sessionService).deleteSession(sessionId)
+    }
+
     class FakeAttachmentRepository : AttachmentRepository {
         val savedAttachments = mutableListOf<Attachment>()
         val attachments = mutableMapOf<UUID, Attachment>()

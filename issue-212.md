@@ -432,20 +432,4 @@ DTO fields (draft):
 
 ## Known Issues & Future Work
 
-### Thumbnail Generation Timing Issue (RESOLVED)
-- **Problem:** Thumbnails were not being generated during attachment upload due to transaction timing issues.
-- **Root Cause:**
-  - `AttachmentService.uploadFile` saved the attachment entity
-  - Immediately called `thumbnailService.generateThumbnailAsync` with `REQUIRES_NEW` propagation
-  - New transaction couldn't see uncommitted attachment entity from parent transaction
-- **Solution Implemented:**
-  - Introduced `AttachmentUploadedEvent` domain event
-  - `AttachmentService` publishes event after saving attachment
-  - `ThumbnailService` handles event with `@TransactionalEventListener(phase = AFTER_COMMIT)`
-  - Removed `REQUIRES_NEW` propagation, using standard `@Transactional`
-  - Thumbnail generation now starts asynchronously after parent transaction commits
-- **Benefits:**
-  - Clean separation of concerns (event-driven architecture)
-  - Guaranteed entity visibility when thumbnail generation starts
-  - Thumbnail failures don't affect attachment upload transaction
-  - Easy to extend for other post-upload processing in the future
+- [ ] 스케쥴 생성 및 파일 업로드 후, '수정'에서 파일을 모두 제거해도 해당 파일이 있던 폴더가 그대로 남아있음. 그러면, 문제는 해당 스케쥴을 제거할 때인데, 스케쥴제거할때 원래 첨부파일이 있으면 있었던 폴더도 제거하는데 이 경우 첨부파일이 없기 때문에 남아있는 폴더를 지우지를않음.
