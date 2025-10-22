@@ -23,6 +23,8 @@ import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.*
 import org.springframework.restdocs.payload.JsonFieldType
 import org.springframework.restdocs.payload.PayloadDocumentation.*
 import org.springframework.restdocs.request.RequestDocumentation.*
+import org.springframework.http.HttpHeaders
+import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
@@ -345,5 +347,205 @@ class AttachmentControllerTest : RestDocsTest() {
 
         assertThat(reordered2.orderIndex).isEqualTo(0)
         assertThat(reordered1.orderIndex).isEqualTo(1)
+    }
+
+    @Test
+    fun `finalize session successfully`() {
+        val member = TestData.member
+        val jwt = getJwt(member)
+
+        val schedule = scheduleRepository.save(
+            Schedule(
+                member = member,
+                content = "Test schedule",
+                startDateTime = LocalDateTime.now(),
+                endDateTime = LocalDateTime.now().plusHours(1)
+            )
+        )
+
+        val session = sessionRepository.save(
+            AttachmentUploadSession(
+                contextType = AttachmentContextType.SCHEDULE,
+                targetContextId = schedule.id.toString(),
+                ownerId = member.id!!,
+                expiresAt = clock.instant().plusSeconds(86400)
+            )
+        )
+
+        val tempDir = pathResolver.resolveTemporaryDirectory(session.id!!)
+        Files.createDirectories(tempDir)
+        Files.write(tempDir.resolve("uuid1.txt"), "test content 1".toByteArray())
+        Files.write(tempDir.resolve("uuid2.txt"), "test content 2".toByteArray())
+
+        val attachment1 = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = null,
+                uploadSessionId = session.id,
+                originalFilename = "file1.txt",
+                storedFilename = "uuid1.txt",
+                contentType = "text/plain",
+                size = 14,
+                storagePath = tempDir.toString(),
+                createdBy = member.id!!,
+                orderIndex = 0
+            )
+        )
+
+        val attachment2 = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = null,
+                uploadSessionId = session.id,
+                originalFilename = "file2.txt",
+                storedFilename = "uuid2.txt",
+                contentType = "text/plain",
+                size = 14,
+                storagePath = tempDir.toString(),
+                createdBy = member.id!!,
+                orderIndex = 1
+            )
+        )
+
+        val request = FinalizeSessionRequest(
+            contextId = schedule.id.toString(),
+            orderedAttachmentIds = listOf(attachment1.id, attachment2.id)
+        )
+        val json = objectMapper.writeValueAsString(request)
+
+        mockMvc.perform(
+            post("/api/attachments/sessions/{sessionId}/finalize", session.id)
+                .accept("application/json")
+                .contentType("application/json")
+                .content(json)
+                .cookie(Cookie(jwtConfig.cookieName, jwt))
+        ).andExpect(status().isOk)
+            .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "attachments/sessions/finalize",
+                    pathParameters(
+                        parameterWithName("sessionId").description("Upload session ID to finalize")
+                    ),
+                    requestFields(
+                        fieldWithPath("contextId").type(JsonFieldType.STRING).description("Target context ID (e.g., schedule ID)"),
+                        fieldWithPath("orderedAttachmentIds").type(JsonFieldType.ARRAY).description("Ordered list of attachment IDs to bind to the context")
+                    )
+                )
+            )
+
+        val finalized1 = attachmentRepository.findById(attachment1.id).get()
+        val finalized2 = attachmentRepository.findById(attachment2.id).get()
+
+        assertThat(finalized1.contextId).isEqualTo(schedule.id.toString())
+        assertThat(finalized1.uploadSessionId).isNull()
+        assertThat(finalized2.contextId).isEqualTo(schedule.id.toString())
+        assertThat(finalized2.uploadSessionId).isNull()
+    }
+
+    @Test
+    fun `download attachment successfully`() {
+        val member = TestData.member
+        val jwt = getJwt(member)
+
+        val schedule = scheduleRepository.save(
+            Schedule(
+                member = member,
+                content = "Test schedule",
+                startDateTime = LocalDateTime.now(),
+                endDateTime = LocalDateTime.now().plusHours(1)
+            )
+        )
+
+        val contextDir = pathResolver.resolveContextDirectory(AttachmentContextType.SCHEDULE, schedule.id.toString())
+        Files.createDirectories(contextDir)
+        val testContent = "Hello, this is a test file content!"
+        Files.write(contextDir.resolve("stored-uuid.txt"), testContent.toByteArray())
+
+        val attachment = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = schedule.id.toString(),
+                uploadSessionId = null,
+                originalFilename = "test-document.txt",
+                storedFilename = "stored-uuid.txt",
+                contentType = "text/plain",
+                size = testContent.length.toLong(),
+                storagePath = contextDir.toString(),
+                createdBy = member.id!!,
+                orderIndex = 0
+            )
+        )
+
+        mockMvc.perform(
+            get("/api/attachments/{id}/download", attachment.id)
+                .cookie(Cookie(jwtConfig.cookieName, jwt))
+        ).andExpect(status().isOk)
+            .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"test-document.txt\""))
+            .andExpect(content().contentType(MediaType.TEXT_PLAIN))
+            .andExpect(content().string(testContent))
+            .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "attachments/download",
+                    pathParameters(
+                        parameterWithName("id").description("Attachment ID to download")
+                    )
+                )
+            )
+    }
+
+    @Test
+    fun `get thumbnail successfully`() {
+        val member = TestData.member
+        val jwt = getJwt(member)
+
+        val schedule = scheduleRepository.save(
+            Schedule(
+                member = member,
+                content = "Test schedule",
+                startDateTime = LocalDateTime.now(),
+                endDateTime = LocalDateTime.now().plusHours(1)
+            )
+        )
+
+        val contextDir = pathResolver.resolveContextDirectory(AttachmentContextType.SCHEDULE, schedule.id.toString())
+        Files.createDirectories(contextDir)
+        val thumbnailContent = "fake-png-data".toByteArray()
+        Files.write(contextDir.resolve("thumb-uuid.png"), thumbnailContent)
+
+        val attachment = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = schedule.id.toString(),
+                uploadSessionId = null,
+                originalFilename = "image.jpg",
+                storedFilename = "stored-uuid.jpg",
+                contentType = "image/jpeg",
+                size = 50000,
+                storagePath = contextDir.toString(),
+                thumbnailFilename = "thumb-uuid.png",
+                thumbnailContentType = "image/png",
+                thumbnailSize = thumbnailContent.size.toLong(),
+                createdBy = member.id!!,
+                orderIndex = 0
+            )
+        )
+
+        mockMvc.perform(
+            get("/api/attachments/{id}/thumbnail", attachment.id)
+                .cookie(Cookie(jwtConfig.cookieName, jwt))
+        ).andExpect(status().isOk)
+            .andExpect(content().contentType(MediaType.IMAGE_PNG))
+            .andExpect(content().bytes(thumbnailContent))
+            .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "attachments/thumbnail",
+                    pathParameters(
+                        parameterWithName("id").description("Attachment ID to retrieve thumbnail for")
+                    )
+                )
+            )
     }
 }

@@ -73,4 +73,42 @@ operation::todos/update-position[]
 
 operation::todos/delete[]
 
+== Attachments
+
+=== Create Session
+
+operation::attachments/sessions/create[]
+
+==== Create Session [Unauthorized]
+
+operation::attachments/sessions/create-unauthorized[]
+
+=== Upload File
+
+operation::attachments/upload[]
+
+=== Finalize Session
+
+operation::attachments/sessions/finalize[]
+
+=== List Attachments
+
+operation::attachments/list[]
+
+=== Reorder Attachments
+
+operation::attachments/reorder[]
+
+=== Download Attachment
+
+operation::attachments/download[]
+
+=== Get Thumbnail
+
+operation::attachments/thumbnail[]
+
+=== Delete Attachment
+
+operation::attachments/delete[]
+
 
