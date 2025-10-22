@@ -114,7 +114,12 @@ class ScheduleService(
 
         scheduleSaveDto.attachmentSessionId?.let { sessionId ->
             log.info("Finalizing attachment session: $sessionId for schedule: ${schedule.id}")
-            attachmentService.finalizeSessionForSchedule(loginMember, sessionId, schedule.id.toString())
+            attachmentService.finalizeSessionForSchedule(
+                loginMember,
+                sessionId,
+                schedule.id.toString(),
+                scheduleSaveDto.orderedAttachmentIds
+            )
         }
 
         return schedule
@@ -142,6 +147,28 @@ class ScheduleService(
         log.info("update schedule: $scheduleSaveDto")
         scheduleRepository.save(schedule)
         scheduleTimeParsingQueueManager.addTask(schedule)
+
+        val scheduleId = schedule.id.toString()
+        val orderedIds = scheduleSaveDto.orderedAttachmentIds
+
+        if (scheduleSaveDto.attachmentSessionId != null) {
+            log.info("Finalizing attachment session: ${scheduleSaveDto.attachmentSessionId} for schedule: $scheduleId")
+            attachmentService.finalizeSessionForSchedule(
+                loginMember,
+                scheduleSaveDto.attachmentSessionId,
+                scheduleId,
+                orderedIds
+            )
+        } else if (orderedIds.isNotEmpty()) {
+            log.info("Cleaning up attachments for schedule: $scheduleId with orderedIds: $orderedIds")
+            val existingAttachments = attachmentRepository.findAllByContextTypeAndContextId(SCHEDULE, scheduleId)
+            val attachmentsToDelete = existingAttachments.filter { it.id !in orderedIds }
+            attachmentsToDelete.forEach { attachment ->
+                log.info("Deleting unlisted attachment: id={}, filename={}", attachment.id, attachment.originalFilename)
+                attachmentService.deleteAttachment(attachment)
+            }
+        }
+
         return schedule
     }
 

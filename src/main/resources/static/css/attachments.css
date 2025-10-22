@@ -5,6 +5,7 @@
 }
 
 .attachment-tile {
+  position: relative;
   flex: 0 1 120px;
   max-width: 140px;
 }
@@ -59,4 +60,13 @@
   position: absolute;
   top: 0.35rem;
   right: 0.35rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 1rem;
+  line-height: 1;
+  z-index: 10;
+  opacity: 0.9;
+}
+
+.attachment-remove:hover {
+  opacity: 1;
 }

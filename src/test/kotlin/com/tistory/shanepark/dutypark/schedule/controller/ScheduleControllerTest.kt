@@ -55,7 +55,10 @@ class ScheduleControllerTest : RestDocsTest() {
                         fieldWithPath("description").description("Schedule Description"),
                         fieldWithPath("startDateTime").description("Schedule Start DateTime"),
                         fieldWithPath("endDateTime").description("Schedule End DateTime"),
-                        fieldWithPath("visibility").description("Schedule Visibility")
+                        fieldWithPath("visibility").description("Schedule Visibility"),
+                        fieldWithPath("id").description("Schedule Id (optional, for update)").type("UUID").optional(),
+                        fieldWithPath("attachmentSessionId").description("Attachment Session Id (optional)").type("UUID").optional(),
+                        fieldWithPath("orderedAttachmentIds").description("Ordered Attachment Ids (optional)").type("Array").optional()
                     )
                 )
             )
@@ -134,7 +137,9 @@ class ScheduleControllerTest : RestDocsTest() {
                         fieldWithPath("description").description("Schedule Description"),
                         fieldWithPath("startDateTime").description("Schedule Start DateTime"),
                         fieldWithPath("endDateTime").description("Schedule End DateTime"),
-                        fieldWithPath("visibility").description("Schedule Visibility")
+                        fieldWithPath("visibility").description("Schedule Visibility"),
+                        fieldWithPath("attachmentSessionId").description("Attachment Session Id (optional)").type("UUID").optional(),
+                        fieldWithPath("orderedAttachmentIds").description("Ordered Attachment Ids (optional)").type("Array").optional()
                     )
                 )
             )

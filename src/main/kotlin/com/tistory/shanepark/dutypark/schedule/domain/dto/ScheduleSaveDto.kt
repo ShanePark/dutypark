@@ -21,6 +21,7 @@ data class ScheduleSaveDto(
     val startDateTime: LocalDateTime,
     val endDateTime: LocalDateTime,
     val attachmentSessionId: UUID? = null,
+    val orderedAttachmentIds: List<UUID> = emptyList(),
 ) {
 
     init {

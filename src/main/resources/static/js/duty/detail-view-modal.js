@@ -192,6 +192,8 @@ const detailViewMethods = {
     addArea.waitMe();
 
     try {
+      const orderedAttachmentIds = app.createSchedule.uploadedAttachments.map(a => a.id);
+
       const response = await fetch('/api/schedules', {
         method: 'POST',
         headers: {
@@ -206,6 +208,7 @@ const detailViewMethods = {
           endDateTime: toLocalISOString(new Date(app.createSchedule.endDateTime)),
           visibility: app.createSchedule.visibility,
           attachmentSessionId: app.createSchedule.attachmentSessionId,
+          orderedAttachmentIds: orderedAttachmentIds,
         })
       });
 
@@ -231,8 +234,8 @@ const detailViewMethods = {
     }
   }
   ,
-  scheduleEditMode(schedule) {
-    this.scheduleCreateMode();
+  async scheduleEditMode(schedule) {
+    await this.scheduleCreateMode();
     this.createSchedule.id = schedule.id;
     this.createSchedule.content = schedule.content;
     this.createSchedule.description = schedule.description;
@@ -241,6 +244,22 @@ const detailViewMethods = {
     this.createSchedule.startTime = schedule.startDateTime.split('T')[1];
     this.createSchedule.endDateTime = schedule.endDateTime;
     this.createSchedule.visibility = schedule.visibility;
+
+    if (schedule.attachments && schedule.attachments.length > 0) {
+      this.createSchedule.uploadedAttachments = schedule.attachments.map(att => ({
+        id: att.id,
+        name: att.originalFilename,
+        contentType: att.contentType,
+        size: att.size,
+        thumbnailUrl: att.thumbnailUrl,
+        downloadUrl: `/api/attachments/${att.id}/download`,
+        isImage: att.contentType ? att.contentType.startsWith('image/') : false,
+        hasThumbnail: att.hasThumbnail,
+        orderIndex: att.orderIndex,
+        createdAt: att.createdAt,
+        createdBy: att.createdBy,
+      }));
+    }
   }
   ,
   swapSchedule(schedule1, schedule2) {
@@ -517,7 +536,8 @@ const detailViewMethods = {
     }
 
     try {
-      const sessionResponse = await createAttachmentSession();
+      const targetContextId = app.createSchedule.id ? app.createSchedule.id.toString() : null;
+      const sessionResponse = await createAttachmentSession(targetContextId);
       app.createSchedule.attachmentSessionId = sessionResponse.sessionId;
 
       const { Uppy, Dashboard, XHRUpload } = await import('/lib/uppy-5.1.7/uppy.min.mjs');
@@ -608,22 +628,16 @@ const detailViewMethods = {
     }
   }
   ,
-  async removeAttachment(attachmentId) {
+  removeAttachment(attachmentId) {
     const app = this;
     const index = app.createSchedule.uploadedAttachments.findIndex(a => a.id === attachmentId);
     if (index === -1) return;
 
     const attachment = app.createSchedule.uploadedAttachments[index];
+    app.createSchedule.uploadedAttachments.splice(index, 1);
 
-    try {
-      await deleteAttachment(attachmentId);
-      app.createSchedule.uploadedAttachments.splice(index, 1);
-
-      if (attachment.previewUrl) {
-        URL.revokeObjectURL(attachment.previewUrl);
-      }
-    } catch (error) {
-      console.error('Failed to remove attachment:', error);
+    if (attachment.previewUrl) {
+      URL.revokeObjectURL(attachment.previewUrl);
     }
   }
   ,

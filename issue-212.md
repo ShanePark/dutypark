@@ -414,11 +414,11 @@ DTO fields (draft):
   - [x] Update `saveSchedule` to send `orderedAttachmentIds` along with schedule data, then call `POST /api/attachments/sessions/{id}/finalize`.
   - [x] Handle optimistic UI while schedule persists (disable buttons, show waitMe overlay) and roll back Uppy state on failure.
   - [x] Append any post-save attachments from the finalize response into local state so the calendar refresh matches backend order.
-- [ ] **Editing existing schedules**
-  - [ ] Hydrate existing attachments into the uploader when `scheduleEditMode` toggles, preserving order and ownership metadata.
-  - [ ] Allow users to delete finalized attachments (`DELETE /api/attachments/{id}`) and immediately reflect removals in both UI and local state.
-  - [ ] Support adding new files to the same Uppy queue during edit sessions and track combined ordering.
-  - [ ] Reconcile reordered attachments by calling `/api/attachments/reorder` when users drag to rearrange finalized items.
+- [x] **Editing existing schedules**
+  - [x] Hydrate existing attachments into the uploader when `scheduleEditMode` toggles, preserving order and ownership metadata.
+  - [x] Allow users to delete finalized attachments by removing from UI; actual deletion happens on save to support undo before commit.
+  - [x] Support adding new files to the same Uppy queue during edit sessions and track combined ordering.
+  - [x] Backend automatically cleans up attachments not included in `orderedAttachmentIds` when finalizing session.
 - [ ] **Calendar attachment indicators**
   - [ ] Extend `loadSchedule` response handling so each schedule in `schedulesByDays` includes an `attachments` array.
   - [ ] Show a paperclip icon (e.g., `bi bi-paperclip`) next to the description icon when attachments exist; clicking should open the enriched detail view.

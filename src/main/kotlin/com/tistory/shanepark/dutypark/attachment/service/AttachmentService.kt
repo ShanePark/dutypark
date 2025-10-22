@@ -310,12 +310,32 @@ class AttachmentService(
         return attachments.map { AttachmentDto.from(it) }
     }
 
-    fun finalizeSessionForSchedule(loginMember: LoginMember, sessionId: UUID, scheduleId: String) {
+    fun finalizeSessionForSchedule(
+        loginMember: LoginMember,
+        sessionId: UUID,
+        scheduleId: String,
+        orderedAttachmentIds: List<UUID>
+    ) {
+        val session = sessionService.findById(sessionId)
+            ?: throw IllegalArgumentException("Upload session not found: $sessionId")
+
+        val existingAttachments = if (session.targetContextId != null) {
+            attachmentRepository.findAllByContextTypeAndContextId(session.contextType, scheduleId)
+        } else {
+            emptyList()
+        }
+
         val request = FinalizeSessionRequest(
             contextId = scheduleId,
-            orderedAttachmentIds = emptyList()
+            orderedAttachmentIds = orderedAttachmentIds
         )
         finalizeSession(loginMember, sessionId, request)
+
+        val attachmentsToDelete = existingAttachments.filter { it.id !in orderedAttachmentIds }
+        attachmentsToDelete.forEach { attachment ->
+            log.info("Deleting unlisted attachment: id={}, filename={}", attachment.id, attachment.originalFilename)
+            deleteAttachment(attachment)
+        }
     }
 
     private fun generateStoredFilename(originalFilename: String): String {
