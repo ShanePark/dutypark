@@ -228,6 +228,13 @@ class AttachmentServiceTest {
                 .sortedBy { it.orderIndex }
         }
 
+        override fun findAllByContextTypeAndContextId(
+            contextType: AttachmentContextType,
+            contextId: String
+        ): List<Attachment> {
+            return attachments.values.filter { it.contextType == contextType && it.contextId == contextId }
+        }
+
         override fun findById(id: UUID): Optional<Attachment> {
             return Optional.ofNullable(attachments[id])
         }

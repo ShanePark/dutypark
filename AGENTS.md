@@ -164,6 +164,15 @@ cp .env.sample .env
 - Integration tests: Full application context testing
 - Controller tests: MockMvc-based API testing
 - Spring REST Docs: API documentation generation
+- Prefer @Transactional for automatic DB rollback
+
+### Testing Best Practices
+
+#### What to Test
+- **Security**: Unauthorized access, wrong user ownership, input sanitization
+- **Edge cases**: Empty lists, null values, special characters, boundary conditions
+- **Performance**: N+1 queries, transaction boundaries, resource cleanup
+- **Errors**: Missing resources, permission failures, file system issues
 
 ### Running Specific Tests
 ```bash
@@ -172,6 +181,9 @@ cp .env.sample .env
 
 # Run tests with pattern
 ./gradlew test --tests "*ServiceTest"
+
+# Run with clean build
+./gradlew clean test --tests "*ControllerTest"
 
 # Test with coverage
 ./gradlew test jacocoTestReport

@@ -17,5 +17,10 @@ interface AttachmentRepository : JpaRepository<Attachment, UUID> {
         contextId: String
     ): List<Attachment>
 
+    fun findAllByContextTypeAndContextId(
+        contextType: AttachmentContextType,
+        contextId: String
+    ): List<Attachment>
+
     fun findAllByUploadSessionId(uploadSessionId: UUID): List<Attachment>
 }

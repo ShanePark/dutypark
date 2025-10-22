@@ -20,6 +20,10 @@ class StoragePathResolver(
         return Paths.get(storageProperties.root, contextType.name, contextId)
     }
 
+    fun resolveContextDirectory(contextType: AttachmentContextType, contextId: String): Path {
+        return resolvePermanentDirectory(contextType, contextId)
+    }
+
     fun resolveTemporaryFilePath(sessionId: UUID, storedFilename: String): Path {
         return resolveTemporaryDirectory(sessionId).resolve(storedFilename)
     }

@@ -38,7 +38,7 @@ class Attachment(
     val size: Long,
 
     @Column(name = "storage_path", nullable = false, length = 500)
-    val storagePath: String,
+    var storagePath: String,
 
     @Column(name = "thumbnail_filename", length = 255)
     var thumbnailFilename: String? = null,
