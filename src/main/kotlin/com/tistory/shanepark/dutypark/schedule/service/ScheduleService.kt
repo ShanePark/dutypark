@@ -1,12 +1,16 @@
 package com.tistory.shanepark.dutypark.schedule.service
 
+import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType.SCHEDULE
+import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
+import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
+import com.tistory.shanepark.dutypark.attachment.service.FileSystemService
+import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
-import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSaveDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
@@ -25,8 +29,12 @@ class ScheduleService(
     private val scheduleRepository: ScheduleRepository,
     private val memberRepository: MemberRepository,
     private val friendService: FriendService,
-    private val memberService: MemberService,
     private val scheduleTimeParsingQueueManager: ScheduleTimeParsingQueueManager,
+    private val schedulePermissionService: SchedulePermissionService,
+    private val attachmentRepository: AttachmentRepository,
+    private val attachmentService: AttachmentService,
+    private val fileSystemService: FileSystemService,
+    private val pathResolver: StoragePathResolver,
 ) {
     private val log = logger()
 
@@ -72,7 +80,7 @@ class ScheduleService(
 
     fun createSchedule(loginMember: LoginMember, scheduleSaveDto: ScheduleSaveDto): Schedule {
         val scheduleMember = memberRepository.findById(scheduleSaveDto.memberId).orElseThrow()
-        checkScheduleWriteAuthority(loginMember, scheduleMember)
+        schedulePermissionService.checkScheduleWriteAuthority(loginMember, scheduleMember)
 
         val startDateTime = scheduleSaveDto.startDateTime
         val position = findNextPosition(scheduleMember, startDateTime)
@@ -102,7 +110,7 @@ class ScheduleService(
             throw IllegalArgumentException("Schedule id must not be null to update")
 
         val schedule = scheduleRepository.findById(scheduleSaveDto.id).orElseThrow()
-        checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
+        schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
 
         schedule.startDateTime = scheduleSaveDto.startDateTime
         schedule.endDateTime = scheduleSaveDto.endDateTime
@@ -125,15 +133,25 @@ class ScheduleService(
             throw IllegalArgumentException("Schedule must have same date")
         }
 
-        checkScheduleWriteAuthority(schedule = schedule1, loginMember = loginMember)
-        checkScheduleWriteAuthority(schedule = schedule2, loginMember = loginMember)
+        schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule1, loginMember = loginMember)
+        schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule2, loginMember = loginMember)
 
         schedule1.position = schedule2.position.also { schedule2.position = schedule1.position }
     }
 
     fun deleteSchedule(loginMember: LoginMember, id: UUID) {
         val schedule = scheduleRepository.findById(id).orElseThrow()
-        checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
+        schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
+
+        val contextId = id.toString()
+        val attachments = attachmentRepository.findAllByContextTypeAndContextId(SCHEDULE, contextId)
+
+        attachments.forEach(attachmentService::deleteAttachment)
+
+        if (attachments.isNotEmpty()) {
+            val contextDir = pathResolver.resolveContextDirectory(SCHEDULE, contextId)
+            fileSystemService.deleteDirectory(contextDir)
+        }
 
         scheduleRepository.delete(schedule)
     }
@@ -143,7 +161,7 @@ class ScheduleService(
         val friend = memberRepository.findById(friendId).orElseThrow()
         val login = memberRepository.findById(loginMember.id).orElseThrow()
 
-        checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
+        schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
 
         if (!friendService.isFriend(login, friend)) {
             throw AuthException("$friend is not friend of $loginMember")
@@ -155,7 +173,7 @@ class ScheduleService(
     fun untagFriend(loginMember: LoginMember, scheduleId: UUID, memberId: Long) {
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow()
         val member = memberRepository.findById(memberId).orElseThrow()
-        checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
+        schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
 
         schedule.removeTag(member)
     }
@@ -164,32 +182,6 @@ class ScheduleService(
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow()
         val member = memberRepository.findById(loginMember.id).orElseThrow()
         schedule.removeTag(member)
-    }
-
-    private fun checkScheduleWriteAuthority(loginMember: LoginMember, scheduleMember: Member) {
-        if (scheduleMember.isEquals(loginMember = loginMember)) return
-        if (memberService.isManager(isManager = loginMember, target = scheduleMember)) return
-
-        throw AuthException("login member doesn't have permission to create or edit the schedule")
-    }
-
-    private fun checkScheduleWriteAuthority(loginMember: LoginMember, schedule: Schedule) {
-        checkScheduleWriteAuthority(loginMember, schedule.member)
-    }
-
-    fun checkScheduleWriteAuthority(loginMember: LoginMember, scheduleId: UUID) {
-        val schedule = scheduleRepository.findById(scheduleId).orElseThrow()
-        checkScheduleWriteAuthority(loginMember, schedule.member)
-    }
-
-    fun checkScheduleReadAuthority(loginMember: LoginMember?, scheduleId: UUID) {
-        val schedule = scheduleRepository.findById(scheduleId).orElseThrow()
-        friendService.checkVisibility(loginMember, schedule.member, scheduleVisibilityCheck = true)
-
-        val availableVisibilities = friendService.availableScheduleVisibilities(loginMember, schedule.member)
-        if (schedule.visibility !in availableVisibilities) {
-            throw AuthException("Schedule visibility ${schedule.visibility} is not accessible")
-        }
     }
 
 }

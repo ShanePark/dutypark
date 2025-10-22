@@ -124,13 +124,16 @@ class AttachmentService(
             permissionEvaluator.checkWritePermission(loginMember, attachment)
         }
 
+        deleteAttachment(attachment)
+    }
+
+    fun deleteAttachment(attachment: Attachment) {
         val filePath = pathResolver.resolveFilePath(
             attachment.contextType,
             attachment.contextId,
             attachment.uploadSessionId,
             attachment.storedFilename
         )
-
         fileSystemService.deleteFile(filePath)
 
         val thumbnailFilename = attachment.thumbnailFilename
@@ -145,8 +148,7 @@ class AttachmentService(
         }
 
         attachmentRepository.delete(attachment)
-
-        log.info("Deleted attachment: id={}, filename={}", attachmentId, attachment.originalFilename)
+        log.info("Deleted attachment: id={}, filename={}", attachment.id, attachment.originalFilename)
     }
 
     fun finalizeSession(
@@ -184,14 +186,24 @@ class AttachmentService(
                     throw IOException("Source file not found: ${attachment.storedFilename}")
                 }
 
-                Files.move(tempFilePath, finalFilePath, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+                Files.move(
+                    tempFilePath,
+                    finalFilePath,
+                    StandardCopyOption.ATOMIC_MOVE,
+                    StandardCopyOption.REPLACE_EXISTING
+                )
 
                 val thumbnailFilename = attachment.thumbnailFilename
                 if (thumbnailFilename != null) {
                     val tempThumbnailPath = tempDir.resolve(thumbnailFilename)
                     val finalThumbnailPath = finalDir.resolve(thumbnailFilename)
                     if (Files.exists(tempThumbnailPath)) {
-                        Files.move(tempThumbnailPath, finalThumbnailPath, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+                        Files.move(
+                            tempThumbnailPath,
+                            finalThumbnailPath,
+                            StandardCopyOption.ATOMIC_MOVE,
+                            StandardCopyOption.REPLACE_EXISTING
+                        )
                     }
                 }
 
@@ -219,7 +231,12 @@ class AttachmentService(
 
             sessionService.deleteSession(sessionId)
 
-            log.info("Finalized session: sessionId={}, contextId={}, attachmentCount={}", sessionId, request.contextId, attachments.size)
+            log.info(
+                "Finalized session: sessionId={}, contextId={}, attachmentCount={}",
+                sessionId,
+                request.contextId,
+                attachments.size
+            )
         } catch (e: Exception) {
             log.error("Failed to finalize session: sessionId={}, error={}", sessionId, e.message, e)
             throw IllegalStateException("Failed to finalize session", e)
@@ -236,7 +253,11 @@ class AttachmentService(
         )
 
         if (attachments.isEmpty()) {
-            log.warn("No attachments found for reordering: contextType={}, contextId={}", request.contextType, request.contextId)
+            log.warn(
+                "No attachments found for reordering: contextType={}, contextId={}",
+                request.contextType,
+                request.contextId
+            )
             return
         }
 
@@ -268,7 +289,8 @@ class AttachmentService(
         contextType: AttachmentContextType,
         contextId: String
     ): List<AttachmentDto> {
-        val attachments = attachmentRepository.findAllByContextTypeAndContextIdOrderByOrderIndexAsc(contextType, contextId)
+        val attachments =
+            attachmentRepository.findAllByContextTypeAndContextIdOrderByOrderIndexAsc(contextType, contextId)
 
         if (attachments.isEmpty()) {
             return emptyList()

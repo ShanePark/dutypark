@@ -4,14 +4,14 @@ import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
 import com.tistory.shanepark.dutypark.attachment.domain.entity.AttachmentUploadSession
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
-import com.tistory.shanepark.dutypark.schedule.service.ScheduleService
+import com.tistory.shanepark.dutypark.schedule.service.SchedulePermissionService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.stereotype.Component
 import java.util.*
 
 @Component
 class AttachmentPermissionEvaluator(
-    private val scheduleService: ScheduleService
+    private val schedulePermissionService: SchedulePermissionService
 ) {
     fun checkReadPermission(loginMember: LoginMember?, attachment: Attachment) {
         when (attachment.contextType) {
@@ -69,11 +69,11 @@ class AttachmentPermissionEvaluator(
     }
 
     private fun checkScheduleReadPermissionById(loginMember: LoginMember?, scheduleId: UUID) {
-        scheduleService.checkScheduleReadAuthority(loginMember, scheduleId)
+        schedulePermissionService.checkScheduleReadAuthority(loginMember, scheduleId)
     }
 
     private fun checkScheduleWritePermissionById(loginMember: LoginMember, scheduleId: UUID) {
-        scheduleService.checkScheduleWriteAuthority(loginMember, scheduleId)
+        schedulePermissionService.checkScheduleWriteAuthority(loginMember, scheduleId)
     }
 
 }

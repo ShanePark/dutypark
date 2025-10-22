@@ -4,7 +4,7 @@ import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
 import com.tistory.shanepark.dutypark.attachment.domain.entity.AttachmentUploadSession
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
-import com.tistory.shanepark.dutypark.schedule.service.ScheduleService
+import com.tistory.shanepark.dutypark.schedule.service.SchedulePermissionService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
@@ -16,15 +16,15 @@ import java.util.*
 class AttachmentPermissionEvaluatorTest {
 
     private lateinit var evaluator: AttachmentPermissionEvaluator
-    private lateinit var scheduleService: ScheduleService
+    private lateinit var schedulePermissionService: SchedulePermissionService
 
     private val loginMember = LoginMember(id = 1L, name = "user1")
     private val otherMember = LoginMember(id = 2L, name = "user2")
 
     @BeforeEach
     fun setUp() {
-        scheduleService = mock()
-        evaluator = AttachmentPermissionEvaluator(scheduleService)
+        schedulePermissionService = mock()
+        evaluator = AttachmentPermissionEvaluator(schedulePermissionService)
     }
 
     @Test
@@ -33,7 +33,7 @@ class AttachmentPermissionEvaluatorTest {
 
         evaluator.checkReadPermission(loginMember, attachment)
 
-        org.mockito.kotlin.verify(scheduleService).checkScheduleReadAuthority(
+        org.mockito.kotlin.verify(schedulePermissionService).checkScheduleReadAuthority(
             org.mockito.kotlin.eq(loginMember),
             org.mockito.kotlin.any()
         )
