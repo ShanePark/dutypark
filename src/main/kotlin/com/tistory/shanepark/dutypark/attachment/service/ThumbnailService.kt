@@ -1,13 +1,15 @@
 package com.tistory.shanepark.dutypark.attachment.service
 
 import com.tistory.shanepark.dutypark.attachment.domain.enums.ThumbnailStatus
+import com.tistory.shanepark.dutypark.attachment.domain.event.AttachmentUploadedEvent
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.common.config.StorageProperties
 import com.tistory.shanepark.dutypark.common.config.logger
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.event.TransactionPhase
+import org.springframework.transaction.event.TransactionalEventListener
 import java.nio.file.Path
 import java.util.*
 
@@ -25,8 +27,13 @@ class ThumbnailService(
         return thumbnailGenerators.any { it.canGenerate(contentType) }
     }
 
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Async("thumbnailExecutor")
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    fun handleAttachmentUploaded(event: AttachmentUploadedEvent) {
+        generateThumbnailAsync(event.attachmentId, event.filePath)
+    }
+
+    @Transactional
     fun generateThumbnailAsync(attachmentId: UUID, filePath: Path) {
         try {
             val attachment = attachmentRepository.findById(attachmentId).orElse(null)

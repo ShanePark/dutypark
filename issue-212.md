@@ -210,23 +210,14 @@ DTO fields (draft):
 
 ---
 
-#### 3. Finalize Session
-**Endpoint:** `POST /api/attachments/sessions/{sessionId}/finalize`
+#### 3. Finalize Session (Internal Use Only)
+**Note:** Session finalization is handled internally by `ScheduleService` when saving schedules. There is no public API endpoint for this operation.
 
-**Request:**
-```json
-{
-  "contextId": "12345",
-  "orderedAttachmentIds": [
-    "660e8400-e29b-41d4-a716-446655440001",
-    "770e8400-e29b-41d4-a716-446655440002"
-  ]
-}
-```
-
-**Response:** `204 No Content`
-
-**Usage:** Call this after saving the schedule. Files move from temporary storage to permanent location. The order in `orderedAttachmentIds` determines display order.
+**Internal Flow:**
+- When `ScheduleController.saveSchedule` receives `attachmentSessionId`, it passes it to `ScheduleService`
+- `ScheduleService` creates/updates the schedule, then calls `AttachmentService.finalizeSessionForSchedule`
+- Files move from temporary storage (`_tmp/{sessionId}/`) to permanent location (`SCHEDULE/{scheduleId}/`)
+- Attachment entities are updated with `contextId` and `uploadSessionId` is cleared
 
 ---
 
@@ -441,17 +432,20 @@ DTO fields (draft):
 
 ## Known Issues & Future Work
 
-### Thumbnail Generation Timing Issue
-- **Problem:** Thumbnails are not being generated during attachment upload. Analysis suggests this is due to entity persistence timing:
-  - Thumbnail generation uses `REQUIRES_NEW` transaction propagation
-  - When thumbnail service tries to read the attachment entity, it may not be committed yet
-  - The current transaction hasn't been flushed when thumbnail generation starts
-- **Root Cause Hypothesis:**
-  - `AttachmentService.uploadFile` saves the attachment entity
-  - Immediately calls `thumbnailService.generateThumbnail` with `REQUIRES_NEW`
-  - New transaction can't see uncommitted attachment entity from parent transaction
-- **Proposed Solutions:**
-  1. Generate thumbnails asynchronously after transaction commit (using `@TransactionalEventListener` with `AFTER_COMMIT`)
-  2. Remove `REQUIRES_NEW` propagation and handle thumbnail failures without rolling back attachment save
-  3. Flush entity manager before thumbnail generation to ensure visibility
-- **Impact:** Attachments upload successfully but thumbnails are missing; functionality is not broken but UX is degraded for image files
+### Thumbnail Generation Timing Issue (RESOLVED)
+- **Problem:** Thumbnails were not being generated during attachment upload due to transaction timing issues.
+- **Root Cause:**
+  - `AttachmentService.uploadFile` saved the attachment entity
+  - Immediately called `thumbnailService.generateThumbnailAsync` with `REQUIRES_NEW` propagation
+  - New transaction couldn't see uncommitted attachment entity from parent transaction
+- **Solution Implemented:**
+  - Introduced `AttachmentUploadedEvent` domain event
+  - `AttachmentService` publishes event after saving attachment
+  - `ThumbnailService` handles event with `@TransactionalEventListener(phase = AFTER_COMMIT)`
+  - Removed `REQUIRES_NEW` propagation, using standard `@Transactional`
+  - Thumbnail generation now starts asynchronously after parent transaction commits
+- **Benefits:**
+  - Clean separation of concerns (event-driven architecture)
+  - Guaranteed entity visibility when thumbnail generation starts
+  - Thumbnail failures don't affect attachment upload transaction
+  - Easy to extend for other post-upload processing in the future

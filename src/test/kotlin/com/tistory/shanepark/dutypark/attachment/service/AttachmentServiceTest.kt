@@ -9,6 +9,7 @@ import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.mock.web.MockMultipartFile
 import java.nio.file.Files
 import java.nio.file.Path
@@ -59,6 +60,7 @@ class AttachmentServiceTest {
         )
         permissionEvaluator = org.mockito.kotlin.mock()
         sessionService = org.mockito.kotlin.mock()
+        val eventPublisher = org.mockito.kotlin.mock<ApplicationEventPublisher>()
         service = AttachmentService(
             attachmentRepository,
             validationService,
@@ -66,7 +68,8 @@ class AttachmentServiceTest {
             fileSystemService,
             thumbnailService,
             permissionEvaluator,
-            sessionService
+            sessionService,
+            eventPublisher
         )
     }
 

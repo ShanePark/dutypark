@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.attachment.service
 import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.attachment.domain.enums.ThumbnailStatus
+import com.tistory.shanepark.dutypark.attachment.domain.event.AttachmentUploadedEvent
 import com.tistory.shanepark.dutypark.attachment.dto.AttachmentDto
 import com.tistory.shanepark.dutypark.attachment.dto.FinalizeSessionRequest
 import com.tistory.shanepark.dutypark.attachment.dto.ReorderAttachmentsRequest
@@ -10,6 +11,7 @@ import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.multipart.MultipartFile
@@ -27,7 +29,8 @@ class AttachmentService(
     private val fileSystemService: FileSystemService,
     private val thumbnailService: ThumbnailService,
     private val permissionEvaluator: AttachmentPermissionEvaluator,
-    private val sessionService: AttachmentUploadSessionService
+    private val sessionService: AttachmentUploadSessionService,
+    private val eventPublisher: ApplicationEventPublisher
 ) {
     private val log = logger()
 
@@ -73,7 +76,12 @@ class AttachmentService(
             val savedAttachment = attachmentRepository.save(attachment)
 
             if (attachment.thumbnailStatus == ThumbnailStatus.PENDING) {
-                thumbnailService.generateThumbnailAsync(savedAttachment.id, temporaryFilePath)
+                eventPublisher.publishEvent(
+                    AttachmentUploadedEvent(
+                        attachmentId = savedAttachment.id,
+                        filePath = temporaryFilePath
+                    )
+                )
             }
 
             log.info(
