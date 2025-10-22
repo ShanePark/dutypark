@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.attachment.service
 import com.tistory.shanepark.dutypark.attachment.domain.entity.AttachmentUploadSession
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentUploadSessionRepository
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.stereotype.Service
 import java.time.Clock
 import java.util.*
@@ -10,12 +11,13 @@ import java.util.*
 @Service
 class AttachmentUploadSessionService(
     private val sessionRepository: AttachmentUploadSessionRepository,
+    private val permissionEvaluator: AttachmentPermissionEvaluator,
     private val clock: Clock
 ) {
 
     fun createSession(
+        loginMember: LoginMember,
         contextType: AttachmentContextType,
-        ownerId: Long,
         targetContextId: String?
     ): AttachmentUploadSession {
         val now = clock.instant()
@@ -24,9 +26,11 @@ class AttachmentUploadSessionService(
         val session = AttachmentUploadSession(
             contextType = contextType,
             targetContextId = targetContextId,
-            ownerId = ownerId,
+            ownerId = loginMember.id,
             expiresAt = expiresAt
         )
+
+        permissionEvaluator.checkSessionWritePermission(loginMember, session)
 
         return sessionRepository.save(session)
     }

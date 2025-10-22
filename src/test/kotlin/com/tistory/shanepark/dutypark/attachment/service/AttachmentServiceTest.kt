@@ -1,15 +1,20 @@
 package com.tistory.shanepark.dutypark.attachment.service
 
 import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
+import com.tistory.shanepark.dutypark.attachment.domain.entity.AttachmentUploadSession
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.attachment.domain.enums.ThumbnailStatus
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.mock.web.MockMultipartFile
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
 import java.util.*
 
 class AttachmentServiceTest {
@@ -22,8 +27,12 @@ class AttachmentServiceTest {
     private lateinit var fakeFileSpy: FakeFileSpy
     private lateinit var thumbnailService: ThumbnailService
     private lateinit var fakeThumbnailSpy: FakeThumbnailSpy
+    private lateinit var permissionEvaluator: AttachmentPermissionEvaluator
+    private lateinit var sessionService: AttachmentUploadSessionService
     private lateinit var tempDir: Path
     private lateinit var storageProperties: com.tistory.shanepark.dutypark.common.config.StorageProperties
+    private val loginMember = LoginMember(id = 1L, name = "testuser")
+    private val clock = Clock.fixed(Instant.parse("2025-10-22T01:00:00Z"), ZoneId.systemDefault())
 
     @BeforeEach
     fun setUp() {
@@ -48,31 +57,41 @@ class AttachmentServiceTest {
             pathResolver,
             fileSystemService
         )
+        permissionEvaluator = org.mockito.kotlin.mock()
+        sessionService = org.mockito.kotlin.mock()
         service = AttachmentService(
             attachmentRepository,
             validationService,
             pathResolver,
             fileSystemService,
-            thumbnailService
+            thumbnailService,
+            permissionEvaluator,
+            sessionService
         )
     }
 
     @Test
     fun `uploadFile should save attachment with generated filename`() {
         val sessionId = UUID.randomUUID()
+        val session = AttachmentUploadSession(
+            contextType = AttachmentContextType.SCHEDULE,
+            targetContextId = null,
+            ownerId = loginMember.id,
+            expiresAt = Instant.now().plusSeconds(3600)
+        )
+        org.mockito.kotlin.whenever(sessionService.findById(sessionId)).thenReturn(session)
+
         val file = MockMultipartFile(
             "file",
             "test.png",
             "image/png",
             "test content".toByteArray()
         )
-        val createdBy = 42L
 
         val result = service.uploadFile(
+            loginMember = loginMember,
             sessionId = sessionId,
-            file = file,
-            contextType = AttachmentContextType.SCHEDULE,
-            createdBy = createdBy
+            file = file
         )
 
         assertThat(result.id).isNotNull
@@ -84,7 +103,7 @@ class AttachmentServiceTest {
         assertThat(result.size).isEqualTo(12L)
         assertThat(result.storedFilename).isNotEqualTo("test.png")
         assertThat(result.storedFilename).endsWith(".png")
-        assertThat(result.createdBy).isEqualTo(createdBy)
+        assertThat(result.createdBy).isEqualTo(loginMember.id)
         assertThat(result.orderIndex).isEqualTo(0)
         assertThat(attachmentRepository.savedAttachments).hasSize(1)
         assertThat(fakeFileSpy.writtenFiles).hasSize(1)
@@ -93,6 +112,14 @@ class AttachmentServiceTest {
     @Test
     fun `uploadFile should set thumbnail status to PENDING for image files`() {
         val sessionId = UUID.randomUUID()
+        val session = AttachmentUploadSession(
+            contextType = AttachmentContextType.SCHEDULE,
+            targetContextId = null,
+            ownerId = loginMember.id,
+            expiresAt = Instant.now().plusSeconds(3600)
+        )
+        org.mockito.kotlin.whenever(sessionService.findById(sessionId)).thenReturn(session)
+
         val file = MockMultipartFile(
             "file",
             "image.jpg",
@@ -104,10 +131,9 @@ class AttachmentServiceTest {
         fakeThumbnailSpy.generateResult = true
 
         val result = service.uploadFile(
+            loginMember = loginMember,
             sessionId = sessionId,
-            file = file,
-            contextType = AttachmentContextType.SCHEDULE,
-            createdBy = 1L
+            file = file
         )
 
         assertThat(result.thumbnailStatus).isIn(ThumbnailStatus.PENDING, ThumbnailStatus.COMPLETED)
@@ -116,6 +142,14 @@ class AttachmentServiceTest {
     @Test
     fun `uploadFile should set thumbnail status to NONE for non-image files`() {
         val sessionId = UUID.randomUUID()
+        val session = AttachmentUploadSession(
+            contextType = AttachmentContextType.SCHEDULE,
+            targetContextId = null,
+            ownerId = loginMember.id,
+            expiresAt = Instant.now().plusSeconds(3600)
+        )
+        org.mockito.kotlin.whenever(sessionService.findById(sessionId)).thenReturn(session)
+
         val file = MockMultipartFile(
             "file",
             "document.pdf",
@@ -126,10 +160,9 @@ class AttachmentServiceTest {
         fakeThumbnailSpy.canGenerateResult = false
 
         val result = service.uploadFile(
+            loginMember = loginMember,
             sessionId = sessionId,
-            file = file,
-            contextType = AttachmentContextType.SCHEDULE,
-            createdBy = 1L
+            file = file
         )
 
         assertThat(result.thumbnailStatus).isEqualTo(ThumbnailStatus.NONE)
@@ -138,14 +171,21 @@ class AttachmentServiceTest {
     @Test
     fun `uploadFile should set orderIndex based on existing attachments in session`() {
         val sessionId = UUID.randomUUID()
+        val session = AttachmentUploadSession(
+            contextType = AttachmentContextType.SCHEDULE,
+            targetContextId = null,
+            ownerId = loginMember.id,
+            expiresAt = Instant.now().plusSeconds(3600)
+        )
+        org.mockito.kotlin.whenever(sessionService.findById(sessionId)).thenReturn(session)
 
         val file1 = MockMultipartFile("file", "file1.txt", "text/plain", "content1".toByteArray())
         val file2 = MockMultipartFile("file", "file2.txt", "text/plain", "content2".toByteArray())
         val file3 = MockMultipartFile("file", "file3.txt", "text/plain", "content3".toByteArray())
 
-        val attachment1 = service.uploadFile(sessionId, file1, AttachmentContextType.SCHEDULE, 1L)
-        val attachment2 = service.uploadFile(sessionId, file2, AttachmentContextType.SCHEDULE, 1L)
-        val attachment3 = service.uploadFile(sessionId, file3, AttachmentContextType.SCHEDULE, 1L)
+        val attachment1 = service.uploadFile(loginMember, sessionId, file1)
+        val attachment2 = service.uploadFile(loginMember, sessionId, file2)
+        val attachment3 = service.uploadFile(loginMember, sessionId, file3)
 
         assertThat(attachment1.orderIndex).isEqualTo(0)
         assertThat(attachment2.orderIndex).isEqualTo(1)

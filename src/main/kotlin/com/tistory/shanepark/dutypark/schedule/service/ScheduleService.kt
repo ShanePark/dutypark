@@ -72,7 +72,7 @@ class ScheduleService(
 
     fun createSchedule(loginMember: LoginMember, scheduleSaveDto: ScheduleSaveDto): Schedule {
         val scheduleMember = memberRepository.findById(scheduleSaveDto.memberId).orElseThrow()
-        checkScheduleAuthority(loginMember, scheduleMember)
+        checkScheduleWriteAuthority(loginMember, scheduleMember)
 
         val startDateTime = scheduleSaveDto.startDateTime
         val position = findNextPosition(scheduleMember, startDateTime)
@@ -102,7 +102,7 @@ class ScheduleService(
             throw IllegalArgumentException("Schedule id must not be null to update")
 
         val schedule = scheduleRepository.findById(scheduleSaveDto.id).orElseThrow()
-        checkScheduleAuthority(schedule = schedule, loginMember = loginMember)
+        checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
 
         schedule.startDateTime = scheduleSaveDto.startDateTime
         schedule.endDateTime = scheduleSaveDto.endDateTime
@@ -125,15 +125,15 @@ class ScheduleService(
             throw IllegalArgumentException("Schedule must have same date")
         }
 
-        checkScheduleAuthority(schedule = schedule1, loginMember = loginMember)
-        checkScheduleAuthority(schedule = schedule2, loginMember = loginMember)
+        checkScheduleWriteAuthority(schedule = schedule1, loginMember = loginMember)
+        checkScheduleWriteAuthority(schedule = schedule2, loginMember = loginMember)
 
         schedule1.position = schedule2.position.also { schedule2.position = schedule1.position }
     }
 
     fun deleteSchedule(loginMember: LoginMember, id: UUID) {
         val schedule = scheduleRepository.findById(id).orElseThrow()
-        checkScheduleAuthority(schedule = schedule, loginMember = loginMember)
+        checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
 
         scheduleRepository.delete(schedule)
     }
@@ -143,7 +143,7 @@ class ScheduleService(
         val friend = memberRepository.findById(friendId).orElseThrow()
         val login = memberRepository.findById(loginMember.id).orElseThrow()
 
-        checkScheduleAuthority(schedule = schedule, loginMember = loginMember)
+        checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
 
         if (!friendService.isFriend(login, friend)) {
             throw AuthException("$friend is not friend of $loginMember")
@@ -155,7 +155,7 @@ class ScheduleService(
     fun untagFriend(loginMember: LoginMember, scheduleId: UUID, memberId: Long) {
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow()
         val member = memberRepository.findById(memberId).orElseThrow()
-        checkScheduleAuthority(schedule = schedule, loginMember = loginMember)
+        checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
 
         schedule.removeTag(member)
     }
@@ -166,15 +166,30 @@ class ScheduleService(
         schedule.removeTag(member)
     }
 
-    private fun checkScheduleAuthority(loginMember: LoginMember, scheduleMember: Member) {
+    private fun checkScheduleWriteAuthority(loginMember: LoginMember, scheduleMember: Member) {
         if (scheduleMember.isEquals(loginMember = loginMember)) return
         if (memberService.isManager(isManager = loginMember, target = scheduleMember)) return
 
         throw AuthException("login member doesn't have permission to create or edit the schedule")
     }
 
-    private fun checkScheduleAuthority(loginMember: LoginMember, schedule: Schedule) {
-        checkScheduleAuthority(loginMember, schedule.member)
+    private fun checkScheduleWriteAuthority(loginMember: LoginMember, schedule: Schedule) {
+        checkScheduleWriteAuthority(loginMember, schedule.member)
+    }
+
+    fun checkScheduleWriteAuthority(loginMember: LoginMember, scheduleId: UUID) {
+        val schedule = scheduleRepository.findById(scheduleId).orElseThrow()
+        checkScheduleWriteAuthority(loginMember, schedule.member)
+    }
+
+    fun checkScheduleReadAuthority(loginMember: LoginMember?, scheduleId: UUID) {
+        val schedule = scheduleRepository.findById(scheduleId).orElseThrow()
+        friendService.checkVisibility(loginMember, schedule.member, scheduleVisibilityCheck = true)
+
+        val availableVisibilities = friendService.availableScheduleVisibilities(loginMember, schedule.member)
+        if (schedule.visibility !in availableVisibilities) {
+            throw AuthException("Schedule visibility ${schedule.visibility} is not accessible")
+        }
     }
 
 }

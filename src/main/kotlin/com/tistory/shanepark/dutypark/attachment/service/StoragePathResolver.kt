@@ -32,9 +32,39 @@ class StoragePathResolver(
         return resolvePermanentDirectory(contextType, contextId).resolve(storedFilename)
     }
 
+    fun resolveFilePath(
+        contextType: AttachmentContextType,
+        contextId: String?,
+        uploadSessionId: UUID?,
+        storedFilename: String
+    ): Path {
+        return if (contextId != null) {
+            resolvePermanentFilePath(contextType, contextId, storedFilename)
+        } else if (uploadSessionId != null) {
+            resolveTemporaryFilePath(uploadSessionId, storedFilename)
+        } else {
+            throw IllegalStateException("Either contextId or uploadSessionId must be set")
+        }
+    }
+
     fun resolveThumbnailPath(filePath: Path, storedFilename: String): Path {
         val thumbnailFilename = generateThumbnailFilename(storedFilename)
         return filePath.parent.resolve(thumbnailFilename)
+    }
+
+    fun resolveThumbnailPath(
+        contextType: AttachmentContextType,
+        contextId: String?,
+        uploadSessionId: UUID?,
+        thumbnailFilename: String
+    ): Path {
+        return if (contextId != null) {
+            resolvePermanentDirectory(contextType, contextId).resolve(thumbnailFilename)
+        } else if (uploadSessionId != null) {
+            resolveTemporaryDirectory(uploadSessionId).resolve(thumbnailFilename)
+        } else {
+            throw IllegalStateException("Either contextId or uploadSessionId must be set")
+        }
     }
 
     private fun generateThumbnailFilename(storedFilename: String): String {

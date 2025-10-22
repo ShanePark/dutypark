@@ -208,7 +208,7 @@ DTO fields (draft):
 - [x] Implement storage path resolver & file system service handling write/delete/move with rollback on failure; cover via temporary filesystem tests.
 - [x] Create image-only `ThumbnailService` (`ThumbnailGenerator` + implementation) with unit tests ensuring 200x200 constraint and graceful failure logging.
 - [x] Develop `AttachmentUploadSessionService` and `AttachmentService` (create, finalize, reorder, delete) using TDD-focused service tests mocking storage/thumbnail components.
-- [ ] Wire permission checks through a dedicated evaluator; write unit tests ensuring context delegation and session ownership enforcement.
+- [x] Wire permission checks through a dedicated evaluator; write unit tests ensuring context delegation and session ownership enforcement.
 - [ ] Expose REST controllers (`AttachmentSessionController`, `AttachmentController`) with MockMvc tests for upload, finalize, reorder, list, download, delete, thumbnail endpoints including error cases.
 - [ ] Integrate schedule deletion cascade through domain service/event listener; add integration test ensuring files removed from disk and DB.
 - [ ] Implement scheduled cleanup job with clock injection; write integration test asserting expired sessions/attachments removed.

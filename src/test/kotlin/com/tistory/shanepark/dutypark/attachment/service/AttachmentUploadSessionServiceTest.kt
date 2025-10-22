@@ -3,9 +3,11 @@ package com.tistory.shanepark.dutypark.attachment.service
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.attachment.domain.entity.AttachmentUploadSession
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentUploadSessionRepository
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.mock
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -15,26 +17,28 @@ class AttachmentUploadSessionServiceTest {
 
     private lateinit var service: AttachmentUploadSessionService
     private lateinit var sessionRepository: FakeAttachmentUploadSessionRepository
+    private lateinit var permissionEvaluator: AttachmentPermissionEvaluator
     private lateinit var clock: Clock
+    private val loginMember = LoginMember(id = 42L, name = "testuser")
 
     @BeforeEach
     fun setUp() {
         sessionRepository = FakeAttachmentUploadSessionRepository()
+        permissionEvaluator = mock()
         clock = Clock.fixed(Instant.parse("2025-03-10T12:00:00Z"), ZoneId.of("UTC"))
-        service = AttachmentUploadSessionService(sessionRepository, clock)
+        service = AttachmentUploadSessionService(sessionRepository, permissionEvaluator, clock)
     }
 
     @Test
     fun `createSession should create new session with 24 hour expiration`() {
-        val ownerId = 42L
         val contextType = AttachmentContextType.SCHEDULE
         val expectedExpiration = Instant.parse("2025-03-11T12:00:00Z")
 
-        val result = service.createSession(contextType, ownerId, null)
+        val result = service.createSession(loginMember, contextType, null)
 
         assertThat(result.id).isNotNull
         assertThat(result.contextType).isEqualTo(contextType)
-        assertThat(result.ownerId).isEqualTo(ownerId)
+        assertThat(result.ownerId).isEqualTo(loginMember.id)
         assertThat(result.targetContextId).isNull()
         assertThat(result.expiresAt).isEqualTo(expectedExpiration)
         assertThat(sessionRepository.savedSessions).hasSize(1)
@@ -42,18 +46,17 @@ class AttachmentUploadSessionServiceTest {
 
     @Test
     fun `createSession should preserve targetContextId when provided`() {
-        val ownerId = 42L
         val contextType = AttachmentContextType.SCHEDULE
         val targetContextId = "schedule-123"
 
-        val result = service.createSession(contextType, ownerId, targetContextId)
+        val result = service.createSession(loginMember, contextType, targetContextId)
 
         assertThat(result.targetContextId).isEqualTo(targetContextId)
     }
 
     @Test
     fun `findById should return session when exists`() {
-        val session = service.createSession(AttachmentContextType.SCHEDULE, 42L, null)
+        val session = service.createSession(loginMember, AttachmentContextType.SCHEDULE, null)
 
         val result = service.findById(session.id!!)
 
@@ -72,7 +75,7 @@ class AttachmentUploadSessionServiceTest {
 
     @Test
     fun `deleteSession should delete session by id`() {
-        val session = service.createSession(AttachmentContextType.SCHEDULE, 42L, null)
+        val session = service.createSession(loginMember, AttachmentContextType.SCHEDULE, null)
         val sessionId = session.id!!
 
         service.deleteSession(sessionId)
