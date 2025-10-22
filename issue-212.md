@@ -211,8 +211,11 @@ DTO fields (draft):
 - [x] Wire permission checks through a dedicated evaluator; write unit tests ensuring context delegation and session ownership enforcement.
 - [x] Expose REST controllers (`AttachmentSessionController`, `AttachmentController`) with MockMvc tests for upload, finalize, reorder, list, download, delete, thumbnail endpoints including error cases.
 - [x] Integrate schedule deletion cascade through domain service/event listener; add integration test ensuring files removed from disk and DB.
-- [ ] Implement scheduled cleanup job with clock injection; write integration test asserting expired sessions/attachments removed.
-- [ ] Update REST Docs snippets for all new endpoints; ensure asciidoctor build passes.
+- [x] Implement scheduled cleanup job with clock injection; write integration test asserting expired sessions/attachments removed.
+    - Run the sweep daily at 02:00 server time using a scheduled service that reads `Instant.now(clock)`.
+    - Remove expired upload sessions (`expiresAt < now`) by deleting their attachments via `AttachmentService.deleteAttachment` so both DB rows and files disappear, then prune the `_tmp` directory.
+    - Integration test should create expired + active fixtures, execute the cleanup, and assert database state and filesystem directories/files reflect the deletions.
+- [x] Update REST Docs snippets for all new endpoints; ensure asciidoctor build passes.
 
 ### Frontend (After Backend Completion)
 - [ ] Add storage config to environment layer (API base paths, size limit messaging).
