@@ -4,6 +4,10 @@ spring:
     chain.strategy.content:
       enabled: true
       paths: /**
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
   datasource:
     url: ${DB_URL:jdbc:mysql://localhost:3306/dutypark}
     username: ${DB_USERNAME:dutypark}

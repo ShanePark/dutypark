@@ -152,12 +152,195 @@ DTO fields (draft):
 }
 ```
 
+## Frontend API Reference
+
+### Available Endpoints
+
+#### 1. Create Upload Session
+**Endpoint:** `POST /api/attachments/sessions`
+
+**Request:**
+```json
+{
+  "contextType": "SCHEDULE",
+  "targetContextId": "12345"  // optional, required when editing existing schedule
+}
+```
+
+**Response:**
+```json
+{
+  "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+  "expiresAt": "2025-10-23T02:00:00Z",
+  "contextType": "SCHEDULE"
+}
+```
+
+**Usage:** Call this before uploading files. When editing an existing schedule, include `targetContextId` to verify write permission.
+
+---
+
+#### 2. Upload File
+**Endpoint:** `POST /api/attachments`
+
+**Request:** `multipart/form-data`
+- `sessionId`: UUID (required)
+- `file`: File (required)
+
+**Response:**
+```json
+{
+  "id": "660e8400-e29b-41d4-a716-446655440001",
+  "contextType": "SCHEDULE",
+  "contextId": null,
+  "originalFilename": "meeting-notes.pdf",
+  "contentType": "application/pdf",
+  "size": 473829,
+  "hasThumbnail": false,
+  "thumbnailUrl": null,
+  "orderIndex": 0,
+  "createdAt": "2025-10-22T12:34:56+09:00",
+  "createdBy": 42
+}
+```
+
+**Errors:**
+- `413 Payload Too Large`: File exceeds max size (50MB)
+- `400 Bad Request`: Blacklisted extension (.exe, .bat, .cmd, .sh, .js)
+
+---
+
+#### 3. Finalize Session
+**Endpoint:** `POST /api/attachments/sessions/{sessionId}/finalize`
+
+**Request:**
+```json
+{
+  "contextId": "12345",
+  "orderedAttachmentIds": [
+    "660e8400-e29b-41d4-a716-446655440001",
+    "770e8400-e29b-41d4-a716-446655440002"
+  ]
+}
+```
+
+**Response:** `204 No Content`
+
+**Usage:** Call this after saving the schedule. Files move from temporary storage to permanent location. The order in `orderedAttachmentIds` determines display order.
+
+---
+
+#### 4. List Attachments
+**Endpoint:** `GET /api/attachments?contextType=SCHEDULE&contextId=12345`
+
+**Response:**
+```json
+[
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440001",
+    "contextType": "SCHEDULE",
+    "contextId": "12345",
+    "originalFilename": "photo.jpg",
+    "contentType": "image/jpeg",
+    "size": 245760,
+    "hasThumbnail": true,
+    "thumbnailUrl": "/api/attachments/660e8400-e29b-41d4-a716-446655440001/thumbnail",
+    "orderIndex": 0,
+    "createdAt": "2025-10-22T12:34:56+09:00",
+    "createdBy": 42
+  }
+]
+```
+
+---
+
+#### 5. Download File
+**Endpoint:** `GET /api/attachments/{id}/download`
+
+**Response:** Binary file stream with proper `Content-Disposition` header
+
+**Usage:** Use this URL directly in `<a>` tags for download links.
+
+---
+
+#### 6. Get Thumbnail
+**Endpoint:** `GET /api/attachments/{id}/thumbnail`
+
+**Response:** PNG image (200x200 max, aspect ratio preserved)
+
+**Usage:** Use this URL directly in `<img>` tags. Returns `404` if no thumbnail exists.
+
+---
+
+#### 7. Delete Attachment
+**Endpoint:** `DELETE /api/attachments/{id}`
+
+**Response:** `204 No Content`
+
+**Usage:** Call this to remove individual attachments. Works for both temporary (session-based) and finalized attachments.
+
+---
+
+#### 8. Reorder Attachments
+**Endpoint:** `POST /api/attachments/reorder`
+
+**Request:**
+```json
+{
+  "contextType": "SCHEDULE",
+  "contextId": "12345",
+  "orderedAttachmentIds": [
+    "770e8400-e29b-41d4-a716-446655440002",
+    "660e8400-e29b-41d4-a716-446655440001"
+  ]
+}
+```
+
+**Response:** `204 No Content`
+
+**Usage:** Call this after drag-and-drop or manual reordering. Only works on finalized attachments.
+
+---
+
+### Context Types
+- `SCHEDULE` - Schedule attachments (current implementation)
+- `PROFILE` - User profile images (future)
+- `TEAM` - Team cover images (future)
+- `TODO` - Todo attachments (future)
+
+### Configuration Values
+- **Max file size:** 50 MB
+- **Blacklisted extensions:** `.exe`, `.bat`, `.cmd`, `.sh`, `.js`
+- **Thumbnail size:** 200x200px (max side, aspect ratio preserved)
+- **Thumbnail format:** PNG only
+- **Session expiry:** 24 hours
+
+### Common Upload Flow
+
+**Creating new schedule:**
+1. `POST /api/attachments/sessions` → get `sessionId`
+2. `POST /api/attachments` (repeat for each file) → collect attachment IDs
+3. Save schedule form → get `scheduleId`
+4. `POST /api/attachments/sessions/{sessionId}/finalize` with `scheduleId` and ordered IDs
+
+**Editing existing schedule:**
+1. `POST /api/attachments/sessions` with `targetContextId=scheduleId`
+2. `POST /api/attachments` (repeat for new files)
+3. `DELETE /api/attachments/{id}` (for removed files)
+4. `POST /api/attachments/sessions/{sessionId}/finalize` with all attachment IDs (existing + new)
+
+**Reordering after finalization:**
+1. User drags attachments in UI
+2. `POST /api/attachments/reorder` with new order
+
+---
+
 ## Error Handling
 - Blocked extensions return HTTP 400 with error code `ATTACHMENT_EXTENSION_BLOCKED`.
 - Files exceeding `max-file-size` return HTTP 413 with code `ATTACHMENT_TOO_LARGE`.
 - Requests referencing unknown attachments return HTTP 404.
 - Permission failures (download/delete/finalize) return HTTP 403.
-- Finalizing a session with a `contextId` that differs from the session’s `targetContextId` returns HTTP 409 with code `ATTACHMENT_FINALIZE_MISMATCH`.
+- Finalizing a session with a `contextId` that differs from the session's `targetContextId` returns HTTP 409 with code `ATTACHMENT_FINALIZE_MISMATCH`.
 
 ## Upload Workflow
 1. Front-end requests a session before the schedule is saved. When editing an existing schedule, the session request includes `targetContextId` so the backend can verify write permission.
@@ -218,11 +401,38 @@ DTO fields (draft):
 - [x] Update REST Docs snippets for all new endpoints; ensure asciidoctor build passes.
 
 ### Frontend (After Backend Completion)
-- [ ] Add storage config to environment layer (API base paths, size limit messaging).
-- [ ] Implement attachment API client functions (create session, upload, finalize, reorder, delete, download URL helpers).
-- [ ] Extend schedule create/edit Vue store to manage upload sessions and maintain ordered attachment lists.
-- [ ] Update form components to support multi-file upload with progress, blacklist/size error surfacing, and single-file delete.
-- [ ] Render thumbnails/icons within schedule views and modals; ensure 200px constraints and fallback icons for non-image types.
-- [ ] Add attachment ordering UI (drag/drop or control buttons) propagating `orderedAttachmentIds` to finalize/reorder calls.
-- [ ] Cover new logic with unit tests (Vue component tests, store tests) and, if applicable, Cypress/e2e scenario for create/edit with attachments.
-- [ ] Update user-facing documentation/help text explaining attachment support and limits.
+- [ ] **Attachment asset groundwork**
+  - [ ] Add Uppy CSS/JS includes (DragDrop, Dashboard, XHRUpload) to the shared layout so the widgets are usable inside the duty modal.
+  - [ ] Create `src/main/resources/static/icons/attachments/` with SVG thumbnails for pdf, doc, sheet, slide, zip, audio, video, and a generic fallback.
+  - [ ] Introduce attachment-specific CSS classes (using Bootstrap utilities where possible) to size previews, progress bars, and the file grid responsively.
+  - [ ] Centralize max-size/blocked-extension messages in `common.js` (or a new config module) for reuse across upload/validation flows.
+- [ ] **Attachment session helpers**
+  - [ ] Add `static/js/attachments/api.js` exporting createSession, upload, finalize, delete, list, and reorder helpers that wrap the REST contract.
+  - [ ] Implement a lightweight store/adapter that normalizes `AttachmentDto` into `{ id, name, size, contentType, thumbnailUrl, downloadUrl, isImage }`.
+  - [ ] Surface SweetAlert-based error handling for size/blacklist responses so the UI can present immediate feedback.
+  - [ ] Ensure the helpers expose promise-based hooks for progress updates so Uppy can reflect server responses.
+- [ ] **Schedule create modal uploader**
+  - [ ] Instantiate an Uppy instance when `scheduleCreateMode` starts, wiring Drag&Drop + file input button inside the modal after the visibility controls.
+  - [ ] Render a list of pending/completed files with image previews (using `URL.createObjectURL`) or SVG icons before the backend thumbnail exists.
+  - [ ] Show per-file progress bars while uploads are in-flight and allow cancel/removal before save.
+  - [ ] Prevent duplicate uploads by checking Uppy state against already attached file names and size limits.
+- [ ] **Save/finalize pipeline**
+  - [ ] Request an upload session on modal entry (reusing existing session when editing) and tear it down on cancel.
+  - [ ] Update `saveSchedule` to send `orderedAttachmentIds` along with schedule data, then call `POST /api/attachments/sessions/{id}/finalize`.
+  - [ ] Handle optimistic UI while schedule persists (disable buttons, show waitMe overlay) and roll back Uppy state on failure.
+  - [ ] Append any post-save attachments from the finalize response into local state so the calendar refresh matches backend order.
+- [ ] **Editing existing schedules**
+  - [ ] Hydrate existing attachments into the uploader when `scheduleEditMode` toggles, preserving order and ownership metadata.
+  - [ ] Allow users to delete finalized attachments (`DELETE /api/attachments/{id}`) and immediately reflect removals in both UI and local state.
+  - [ ] Support adding new files to the same Uppy queue during edit sessions and track combined ordering.
+  - [ ] Reconcile reordered attachments by calling `/api/attachments/reorder` when users drag to rearrange finalized items.
+- [ ] **Calendar attachment indicators**
+  - [ ] Extend `loadSchedule` response handling so each schedule in `schedulesByDays` includes an `attachments` array.
+  - [ ] Show a paperclip icon (e.g., `bi bi-paperclip`) next to the description icon when attachments exist; clicking should open the enriched detail view.
+  - [ ] Update `showDescription(schedule)` to render both description text and attachment thumbnails/download links in the SweetAlert dialog.
+  - [ ] Ensure accessibility text (sr-only labels) communicates attachment counts for screen readers.
+- [ ] **Detail modal attachment panel**
+  - [ ] Insert an attachment gallery section in `detail-view-modal.html` after the description block, using Bootstrap grid utilities for layout.
+  - [ ] Display image thumbnails (`thumbnailUrl`) or SVG icons with filename, size, and a download button linking to `/api/attachments/{id}/download`.
+  - [ ] Provide remove buttons (X) for each attachment when in create/edit mode that sync with the Uppy/attachment store.
+  - [ ] Add responsive tweaks so thumbnails wrap cleanly on mobile (e.g., `row-cols-3 row-cols-sm-4`), matching the project's mobile-first styling.
