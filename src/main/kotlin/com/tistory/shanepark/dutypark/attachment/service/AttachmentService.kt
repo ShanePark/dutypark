@@ -362,6 +362,14 @@ class AttachmentService(
             log.info("Deleting unlisted attachment: id={}, filename={}", attachment.id, attachment.originalFilename)
             deleteAttachment(attachment)
         }
+
+        val remainingAttachments =
+            attachmentRepository.findAllByContextTypeAndContextId(session.contextType, scheduleId)
+        if (remainingAttachments.isEmpty()) {
+            val contextDir = pathResolver.resolveContextDirectory(session.contextType, scheduleId)
+            fileSystemService.deleteDirectory(contextDir)
+            log.info("Deleted empty attachment directory: contextType={}, contextId={}", session.contextType, scheduleId)
+        }
     }
 
     private fun generateStoredFilename(originalFilename: String): String {

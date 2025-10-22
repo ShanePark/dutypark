@@ -429,7 +429,10 @@ DTO fields (draft):
   - [x] Display image thumbnails (`thumbnailUrl`) or SVG icons with filename, size, and a download button linking to `/api/attachments/{id}/download`.
   - [x] Provide remove buttons (X) for each attachment when in create/edit mode that sync with the Uppy/attachment store.
   - [x] Add responsive tweaks so thumbnails wrap cleanly on mobile (e.g., `row-cols-3 row-cols-sm-4`), matching the project's mobile-first styling.
+- [ ] 첨부파일이 이미지가 아닐 경우(썸네일이 없음) 에는 '다운로드' 버튼이지만, 이미지의 경우에는 크게보기 혹은 자세히 보기 버튼처럼 되어 있어서, 클릭 할 경우 이미지를 꽉 찬 화면으로 볼 수 있게 (뷰어처럼) 제공.
 
 ## Known Issues & Future Work
 
-- [ ] 스케쥴 생성 및 파일 업로드 후, '수정'에서 파일을 모두 제거해도 해당 파일이 있던 폴더가 그대로 남아있음. 그러면, 문제는 해당 스케쥴을 제거할 때인데, 스케쥴제거할때 원래 첨부파일이 있으면 있었던 폴더도 제거하는데 이 경우 첨부파일이 없기 때문에 남아있는 폴더를 지우지를않음.
+- [x] 스케쥴 생성 및 파일 업로드 후, '수정'에서 파일을 모두 제거해도 해당 파일이 있던 폴더가 그대로 남아있음. 그러면, 문제는 해당 스케쥴을 제거할 때인데, 스케쥴제거할때 원래 첨부파일이 있으면 있었던 폴더도 제거하는데 이 경우 첨부파일이 없기 때문에 남아있는 폴더를 지우지를않음.
+- [ ] 파일 업로드가 일어나지 않을 때도 굳이 스케쥴 만들때마다 바로바로 세션 생성하는건 낭비같음. 파일 업로드 안하는게 대부분일 텐데 필요할 때 세션생성하는게 좋을듯 어차피 금방 만드는데.
+- [ ] 스케쥴 생성 혹은 수정 중 취소 버튼을 눌렀다면, 해당 세션에서 업로드 중이던 파일들은 쓰지 않겠다는 건데, 이 경우 자동으로 세션 파이널라이즈가 필요함.

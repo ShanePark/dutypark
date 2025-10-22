@@ -241,12 +241,52 @@ class AttachmentServiceTest {
             loginMember = loginMember,
             sessionId = sessionId,
             scheduleId = scheduleId,
-            orderedAttachmentIds = listOf(kept.id!!)
+            orderedAttachmentIds = listOf(kept.id)
         )
 
-        assertThat(attachmentRepository.findById(kept.id!!)).isPresent
-        assertThat(attachmentRepository.findById(removed.id!!)).isEmpty
+        assertThat(attachmentRepository.findById(kept.id)).isPresent
+        assertThat(attachmentRepository.findById(removed.id)).isEmpty
         org.mockito.kotlin.verify(sessionService).deleteSession(sessionId)
+    }
+
+    @Test
+    fun `finalizeSessionForSchedule should delete storage directory when all attachments removed`() {
+        val sessionId = UUID.randomUUID()
+        val scheduleId = UUID.randomUUID().toString()
+        val session = AttachmentUploadSession(
+            contextType = AttachmentContextType.SCHEDULE,
+            targetContextId = null,
+            ownerId = loginMember.id,
+            expiresAt = clock.instant().plusSeconds(3600)
+        )
+        org.mockito.kotlin.whenever(sessionService.findById(sessionId)).thenReturn(session)
+
+        val storageDir = pathResolver.resolveContextDirectory(AttachmentContextType.SCHEDULE, scheduleId)
+        Files.createDirectories(storageDir)
+
+        attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = scheduleId,
+                uploadSessionId = null,
+                originalFilename = "remove.txt",
+                storedFilename = "remove.txt",
+                contentType = "text/plain",
+                size = 10,
+                storagePath = storageDir.toString(),
+                orderIndex = 0,
+                createdBy = loginMember.id
+            )
+        )
+
+        service.finalizeSessionForSchedule(
+            loginMember = loginMember,
+            sessionId = sessionId,
+            scheduleId = scheduleId,
+            orderedAttachmentIds = emptyList()
+        )
+
+        assertThat(Files.exists(storageDir)).isFalse()
     }
 
     class FakeAttachmentRepository : AttachmentRepository {
@@ -254,12 +294,9 @@ class AttachmentServiceTest {
         val attachments = mutableMapOf<UUID, Attachment>()
 
         override fun <S : Attachment> save(entity: S): S {
-            val attachmentId = entity.id ?: UUID.randomUUID()
+            val attachmentId = entity.id
             val field = Attachment::class.java.superclass.getDeclaredField("id")
             field.isAccessible = true
-            if (entity.id == null) {
-                field.set(entity, attachmentId)
-            }
             attachments[attachmentId] = entity
             savedAttachments.add(entity)
             return entity
@@ -303,32 +340,74 @@ class AttachmentServiceTest {
         }
 
         override fun findAll(): MutableList<Attachment> = attachments.values.toMutableList()
-        override fun findAllById(ids: MutableIterable<UUID>): MutableList<Attachment> = throw UnsupportedOperationException()
+        override fun findAllById(ids: MutableIterable<UUID>): MutableList<Attachment> =
+            throw UnsupportedOperationException()
+
         override fun count(): Long = attachments.size.toLong()
-        override fun deleteById(id: UUID) { attachments.remove(id) }
-        override fun delete(entity: Attachment) { attachments.remove(entity.id) }
-        override fun deleteAllById(ids: MutableIterable<UUID>) { ids.forEach { attachments.remove(it) } }
-        override fun deleteAll(entities: MutableIterable<Attachment>) { entities.forEach { attachments.remove(it.id) } }
-        override fun deleteAll() { attachments.clear() }
+        override fun deleteById(id: UUID) {
+            attachments.remove(id)
+        }
+
+        override fun delete(entity: Attachment) {
+            attachments.remove(entity.id)
+        }
+
+        override fun deleteAllById(ids: MutableIterable<UUID>) {
+            ids.forEach { attachments.remove(it) }
+        }
+
+        override fun deleteAll(entities: MutableIterable<Attachment>) {
+            entities.forEach { attachments.remove(it.id) }
+        }
+
+        override fun deleteAll() {
+            attachments.clear()
+        }
+
         override fun existsById(id: UUID): Boolean = attachments.containsKey(id)
         override fun flush() {}
         override fun <S : Attachment> saveAndFlush(entity: S): S = throw UnsupportedOperationException()
-        override fun <S : Attachment> saveAllAndFlush(entities: MutableIterable<S>): MutableList<S> = throw UnsupportedOperationException()
+        override fun <S : Attachment> saveAllAndFlush(entities: MutableIterable<S>): MutableList<S> =
+            throw UnsupportedOperationException()
+
         override fun deleteAllInBatch(entities: MutableIterable<Attachment>) = throw UnsupportedOperationException()
         override fun deleteAllByIdInBatch(ids: MutableIterable<UUID>) = throw UnsupportedOperationException()
         override fun deleteAllInBatch() = throw UnsupportedOperationException()
         override fun getOne(id: UUID): Attachment = throw UnsupportedOperationException()
         override fun getById(id: UUID): Attachment = throw UnsupportedOperationException()
         override fun getReferenceById(id: UUID): Attachment = throw UnsupportedOperationException()
-        override fun <S : Attachment> findAll(example: org.springframework.data.domain.Example<S>): MutableList<S> = throw UnsupportedOperationException()
-        override fun <S : Attachment> findAll(example: org.springframework.data.domain.Example<S>, sort: org.springframework.data.domain.Sort): MutableList<S> = throw UnsupportedOperationException()
-        override fun <S : Attachment> findAll(example: org.springframework.data.domain.Example<S>, pageable: org.springframework.data.domain.Pageable): org.springframework.data.domain.Page<S> = throw UnsupportedOperationException()
-        override fun <S : Attachment> count(example: org.springframework.data.domain.Example<S>): Long = throw UnsupportedOperationException()
-        override fun <S : Attachment> exists(example: org.springframework.data.domain.Example<S>): Boolean = throw UnsupportedOperationException()
-        override fun <S : Attachment, R : Any?> findBy(example: org.springframework.data.domain.Example<S>, queryFunction: java.util.function.Function<org.springframework.data.repository.query.FluentQuery.FetchableFluentQuery<S>, R>): R = throw UnsupportedOperationException()
-        override fun findAll(sort: org.springframework.data.domain.Sort): MutableList<Attachment> = throw UnsupportedOperationException()
-        override fun findAll(pageable: org.springframework.data.domain.Pageable): org.springframework.data.domain.Page<Attachment> = throw UnsupportedOperationException()
-        override fun <S : Attachment> findOne(example: org.springframework.data.domain.Example<S>): Optional<S> = throw UnsupportedOperationException()
+        override fun <S : Attachment> findAll(example: org.springframework.data.domain.Example<S>): MutableList<S> =
+            throw UnsupportedOperationException()
+
+        override fun <S : Attachment> findAll(
+            example: org.springframework.data.domain.Example<S>,
+            sort: org.springframework.data.domain.Sort
+        ): MutableList<S> = throw UnsupportedOperationException()
+
+        override fun <S : Attachment> findAll(
+            example: org.springframework.data.domain.Example<S>,
+            pageable: org.springframework.data.domain.Pageable
+        ): org.springframework.data.domain.Page<S> = throw UnsupportedOperationException()
+
+        override fun <S : Attachment> count(example: org.springframework.data.domain.Example<S>): Long =
+            throw UnsupportedOperationException()
+
+        override fun <S : Attachment> exists(example: org.springframework.data.domain.Example<S>): Boolean =
+            throw UnsupportedOperationException()
+
+        override fun <S : Attachment, R : Any?> findBy(
+            example: org.springframework.data.domain.Example<S>,
+            queryFunction: java.util.function.Function<org.springframework.data.repository.query.FluentQuery.FetchableFluentQuery<S>, R>
+        ): R = throw UnsupportedOperationException()
+
+        override fun findAll(sort: org.springframework.data.domain.Sort): MutableList<Attachment> =
+            throw UnsupportedOperationException()
+
+        override fun findAll(pageable: org.springframework.data.domain.Pageable): org.springframework.data.domain.Page<Attachment> =
+            throw UnsupportedOperationException()
+
+        override fun <S : Attachment> findOne(example: org.springframework.data.domain.Example<S>): Optional<S> =
+            throw UnsupportedOperationException()
     }
 
     class FakeFileSpy {

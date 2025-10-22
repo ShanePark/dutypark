@@ -193,10 +193,8 @@ class ScheduleService(
 
         attachments.forEach(attachmentService::deleteAttachment)
 
-        if (attachments.isNotEmpty()) {
-            val contextDir = pathResolver.resolveContextDirectory(SCHEDULE, contextId)
-            fileSystemService.deleteDirectory(contextDir)
-        }
+        val contextDir = pathResolver.resolveContextDirectory(SCHEDULE, contextId)
+        fileSystemService.deleteDirectory(contextDir)
 
         scheduleRepository.delete(schedule)
     }
