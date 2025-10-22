@@ -1065,6 +1065,44 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         assertThat(notLoginResult[index].map { it.id }.toList()).contains(publicSchedule.id)
     }
 
+    @Test
+    fun `schedules should include attachments information`() {
+        // Given
+        val member = TestData.member
+        val dateTime = LocalDateTime.of(2024, 3, 10, 0, 0)
+
+        val scheduleWithoutAttachment = scheduleService.createSchedule(
+            loginMember(member), ScheduleSaveDto(
+                memberId = member.id!!,
+                content = "schedule without attachment",
+                startDateTime = dateTime,
+                endDateTime = dateTime,
+            )
+        )
+
+        val scheduleWithAttachment = scheduleService.createSchedule(
+            loginMember(member), ScheduleSaveDto(
+                memberId = member.id!!,
+                content = "schedule with attachment",
+                startDateTime = dateTime,
+                endDateTime = dateTime,
+            )
+        )
+
+        // When
+        val result = scheduleService.findSchedulesByYearAndMonth(loginMember(member), member.id!!, 2024, 3)
+
+        // Then
+        val calendarView = CalendarView(2024, 3)
+        val index = calendarView.getIndex(date = dateTime.toLocalDate())
+        val schedules = result[index]
+
+        assertThat(schedules).hasSize(2)
+        schedules.forEach { schedule ->
+            assertThat(schedule.attachments).isNotNull
+        }
+    }
+
     private fun makeSchedule(target: Member, visibility: Visibility, dateTime: LocalDateTime): Schedule {
         return scheduleService.createSchedule(
             loginMember(target), ScheduleSaveDto(

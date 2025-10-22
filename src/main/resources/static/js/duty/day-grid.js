@@ -157,9 +157,61 @@ const dayGridMethods = {
     },
     showDescription(schedule) {
         const description = schedule.description.replace(/\n/g, '<br>');
+
+        let html = `<div>${description}</div>`;
+
+        if (schedule.attachments && schedule.attachments.length > 0) {
+            html += `
+                <hr class="my-3">
+                <div class="fw-bold mb-2">
+                    <i class="bi bi-paperclip"></i> 첨부파일 (${schedule.attachments.length})
+                </div>
+                <div class="row row-cols-2 row-cols-sm-3 g-2">
+            `;
+
+            schedule.attachments.forEach(attachment => {
+                const formatBytes = (bytes) => {
+                    if (bytes === 0) return '0 Bytes';
+                    const k = 1024;
+                    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                    const i = Math.floor(Math.log(bytes) / Math.log(k));
+                    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+                };
+
+                const thumbnailHtml = attachment.hasThumbnail
+                    ? `<img src="${attachment.thumbnailUrl}" alt="${attachment.originalFilename}" class="w-100 h-100" style="object-fit: cover;">`
+                    : `<div class="d-flex align-items-center justify-content-center h-100 bg-light">
+                         <i class="bi bi-file-earmark text-muted" style="font-size: 2rem;"></i>
+                       </div>`;
+
+                html += `
+                    <div class="col">
+                        <div class="card h-100">
+                            <div class="position-relative" style="padding-top: 100%; overflow: hidden;">
+                                ${thumbnailHtml}
+                            </div>
+                            <div class="card-body p-2">
+                                <div class="small text-truncate" title="${attachment.originalFilename}">
+                                    ${attachment.originalFilename}
+                                </div>
+                                <div class="small text-muted">${formatBytes(attachment.size)}</div>
+                                <a href="/api/attachments/${attachment.id}/download"
+                                   class="btn btn-sm btn-outline-primary w-100 mt-1"
+                                   download>
+                                    <i class="bi bi-download"></i> 다운로드
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+        }
+
         Swal.fire({
             title: schedule.content,
-            html: description,
+            html: html,
             showCloseButton: true,
             showCancelButton: false,
             focusConfirm: false,
@@ -168,7 +220,8 @@ const dayGridMethods = {
             customClass: {
                 title: 'text-align-left',
                 htmlContainer: 'text-align-left'
-            }
+            },
+            width: schedule.attachments && schedule.attachments.length > 0 ? '600px' : undefined
         });
     }
 }

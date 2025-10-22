@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.schedule.domain.dto
 
+import com.tistory.shanepark.dutypark.attachment.dto.AttachmentDto
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto.Companion.ofSimple
@@ -26,6 +27,7 @@ data class ScheduleDto(
     val tags: List<MemberDto> = listOf(),
     val visibility: Visibility? = null,
     val dateToCompare: LocalDate,
+    val attachments: List<AttachmentDto> = listOf(),
 ) {
     val startDate: LocalDate = startDateTime.toLocalDate()
     val daysFromStart = ChronoUnit.DAYS.between(startDate, dateToCompare).toInt() + 1

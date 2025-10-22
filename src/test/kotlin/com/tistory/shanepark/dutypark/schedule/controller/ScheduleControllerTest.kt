@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.*
 import org.springframework.restdocs.payload.PayloadDocumentation.*
+import org.springframework.restdocs.payload.ResponseFieldsSnippet
 import org.springframework.restdocs.request.RequestDocumentation.*
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -224,6 +225,35 @@ class ScheduleControllerTest : RestDocsTest() {
         em.clear()
 
         assertThat(scheduleRepository.findById(oldSchedule.id)).isEmpty
+    }
+
+    @Test
+    fun `getSchedules returns schedules with attachments field`() {
+        // Given
+        val member = TestData.member
+        val dateTime = LocalDateTime.of(2024, 3, 10, 0, 0)
+        scheduleRepository.save(
+            Schedule(
+                member = member,
+                content = "test schedule",
+                startDateTime = dateTime,
+                endDateTime = dateTime,
+                position = 0
+            )
+        )
+
+        val jwt = getJwt(member)
+
+        // When & Then
+        mockMvc.perform(
+            get("/api/schedules")
+                .param("memberId", member.id.toString())
+                .param("year", "2024")
+                .param("month", "3")
+                .accept("application/json")
+                .cookie(Cookie(jwtConfig.cookieName, jwt))
+        ).andExpect(status().isOk)
+            .andDo(MockMvcResultHandlers.print())
     }
 
 }

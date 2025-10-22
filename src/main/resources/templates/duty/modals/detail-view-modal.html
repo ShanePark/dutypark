@@ -46,6 +46,42 @@
                 <hr/>
                 <div v-html="replaceLineBreaks(schedule.description)"></div>
               </div>
+
+              <!-- Attachment Gallery (Read-only) -->
+              <div v-if="schedule.attachments && schedule.attachments.length > 0" class="schedule-attachments mt-3">
+                <hr/>
+                <div class="fw-bold mb-2">
+                  <i class="bi bi-paperclip"></i> 첨부파일 ({{ schedule.attachments.length }})
+                </div>
+                <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 g-2">
+                  <div v-for="attachment in schedule.attachments" :key="attachment.id" class="col">
+                    <div class="card h-100">
+                      <div class="position-relative" style="padding-top: 100%; overflow: hidden;">
+                        <img v-if="attachment.hasThumbnail"
+                             :src="attachment.thumbnailUrl"
+                             :alt="attachment.originalFilename"
+                             class="position-absolute top-0 start-0 w-100 h-100"
+                             style="object-fit: cover;">
+                        <div v-else class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-light">
+                          <i class="bi bi-file-earmark text-muted" style="font-size: 2rem;"></i>
+                        </div>
+                      </div>
+                      <div class="card-body p-2">
+                        <div class="small text-truncate" :title="attachment.originalFilename">
+                          {{ attachment.originalFilename }}
+                        </div>
+                        <div class="small text-muted">{{ formatBytes(attachment.size) }}</div>
+                        <a :href="attachment.downloadUrl"
+                           class="btn btn-sm btn-outline-primary w-100 mt-1"
+                           download>
+                          <i class="bi bi-download"></i> 다운로드
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div class="schedule-tags fs-4">
                 <span
                     v-for="tag in schedule.tags"

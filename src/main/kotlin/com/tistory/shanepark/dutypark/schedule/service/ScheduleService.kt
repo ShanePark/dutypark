@@ -65,8 +65,22 @@ class ScheduleService(
             scheduleRepository.findTaggedSchedulesOfRange(member, start, end, visibilities = availableVisibilities)
                 .map { ScheduleDto.of(calendarView, it, isTagged = true) }
 
-        userSchedules.plus(taggedSchedules)
-            .flatten()
+        val allScheduleDtos = userSchedules.plus(taggedSchedules).flatten()
+
+        val scheduleIds = allScheduleDtos.map { it.id.toString() }.distinct()
+        val attachmentsByScheduleId = if (scheduleIds.isNotEmpty()) {
+            attachmentRepository.findAllByContextTypeAndContextIdIn(SCHEDULE, scheduleIds)
+                .map { com.tistory.shanepark.dutypark.attachment.dto.AttachmentDto.from(it) }
+                .groupBy { it.contextId }
+        } else {
+            emptyMap()
+        }
+
+        allScheduleDtos
+            .map { dto ->
+                val attachments = attachmentsByScheduleId[dto.id.toString()] ?: emptyList()
+                dto.copy(attachments = attachments)
+            }
             .sortedWith(compareBy({ it.isTagged }, { it.position }, { it.startDateTime.toLocalDate() }))
             .forEach { scheduleDto ->
                 if (!calendarView.isInRange(scheduleDto.curDate))

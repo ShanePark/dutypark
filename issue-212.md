@@ -424,11 +424,11 @@ DTO fields (draft):
   - [ ] Show a paperclip icon (e.g., `bi bi-paperclip`) next to the description icon when attachments exist; clicking should open the enriched detail view.
   - [ ] Update `showDescription(schedule)` to render both description text and attachment thumbnails/download links in the SweetAlert dialog.
   - [ ] Ensure accessibility text (sr-only labels) communicates attachment counts for screen readers.
-- [ ] **Detail modal attachment panel**
-  - [ ] Insert an attachment gallery section in `detail-view-modal.html` after the description block, using Bootstrap grid utilities for layout.
-  - [ ] Display image thumbnails (`thumbnailUrl`) or SVG icons with filename, size, and a download button linking to `/api/attachments/{id}/download`.
-  - [ ] Provide remove buttons (X) for each attachment when in create/edit mode that sync with the Uppy/attachment store.
-  - [ ] Add responsive tweaks so thumbnails wrap cleanly on mobile (e.g., `row-cols-3 row-cols-sm-4`), matching the project's mobile-first styling.
+- [x] **Detail modal attachment panel**
+  - [x] Insert an attachment gallery section in `detail-view-modal.html` after the description block, using Bootstrap grid utilities for layout.
+  - [x] Display image thumbnails (`thumbnailUrl`) or SVG icons with filename, size, and a download button linking to `/api/attachments/{id}/download`.
+  - [x] Provide remove buttons (X) for each attachment when in create/edit mode that sync with the Uppy/attachment store.
+  - [x] Add responsive tweaks so thumbnails wrap cleanly on mobile (e.g., `row-cols-3 row-cols-sm-4`), matching the project's mobile-first styling.
 
 ## Known Issues & Future Work
 
