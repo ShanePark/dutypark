@@ -334,6 +334,55 @@ class AttachmentService(
         return attachments.map { AttachmentDto.from(it) }
     }
 
+    fun discardSession(
+        loginMember: LoginMember,
+        sessionId: UUID
+    ) {
+        val session = sessionService.findById(sessionId)
+            ?: throw IllegalArgumentException("Upload session not found: $sessionId")
+
+        permissionEvaluator.checkSessionOwnership(loginMember, session)
+
+        val sessionAttachments = attachmentRepository.findAllByUploadSessionId(sessionId)
+
+        sessionAttachments.forEach { attachment ->
+            val filePath = pathResolver.resolveFilePath(
+                attachment.contextType,
+                attachment.contextId,
+                attachment.uploadSessionId,
+                attachment.storedFilename
+            )
+            fileSystemService.deleteFile(filePath)
+
+            val thumbnailFilename = attachment.thumbnailFilename
+            if (thumbnailFilename != null) {
+                val thumbnailPath = pathResolver.resolveThumbnailPath(
+                    attachment.contextType,
+                    attachment.contextId,
+                    attachment.uploadSessionId,
+                    thumbnailFilename
+                )
+                fileSystemService.deleteFile(thumbnailPath)
+            }
+
+            attachmentRepository.delete(attachment)
+            log.info("Deleted session attachment: id={}, filename={}", attachment.id, attachment.originalFilename)
+        }
+
+        val tempDir = pathResolver.resolveTemporaryDirectory(sessionId)
+        if (Files.exists(tempDir)) {
+            fileSystemService.deleteDirectory(tempDir)
+        }
+
+        sessionService.deleteSession(sessionId)
+
+        log.info(
+            "Discarded session: sessionId={}, deletedAttachmentCount={}",
+            sessionId,
+            sessionAttachments.size
+        )
+    }
+
     fun finalizeSessionForSchedule(
         loginMember: LoginMember,
         sessionId: UUID,

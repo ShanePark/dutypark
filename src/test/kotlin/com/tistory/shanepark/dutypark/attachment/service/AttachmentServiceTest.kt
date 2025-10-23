@@ -289,6 +289,65 @@ class AttachmentServiceTest {
         assertThat(Files.exists(storageDir)).isFalse()
     }
 
+    @Test
+    fun `discardSession should delete all session attachments and temporary directory`() {
+        val sessionId = UUID.randomUUID()
+        val session = AttachmentUploadSession(
+            contextType = AttachmentContextType.SCHEDULE,
+            targetContextId = null,
+            ownerId = loginMember.id,
+            expiresAt = clock.instant().plusSeconds(3600)
+        )
+        org.mockito.kotlin.whenever(sessionService.findById(sessionId)).thenReturn(session)
+
+        val tempDir = pathResolver.resolveTemporaryDirectory(sessionId)
+        Files.createDirectories(tempDir)
+
+        val attachment1 = Attachment(
+            contextType = AttachmentContextType.SCHEDULE,
+            contextId = null,
+            uploadSessionId = sessionId,
+            originalFilename = "file1.txt",
+            storedFilename = "stored1.txt",
+            contentType = "text/plain",
+            size = 100,
+            storagePath = tempDir.toString(),
+            orderIndex = 0,
+            createdBy = loginMember.id
+        )
+        val attachment2 = Attachment(
+            contextType = AttachmentContextType.SCHEDULE,
+            contextId = null,
+            uploadSessionId = sessionId,
+            originalFilename = "file2.png",
+            storedFilename = "stored2.png",
+            contentType = "image/png",
+            size = 200,
+            storagePath = tempDir.toString(),
+            orderIndex = 1,
+            createdBy = loginMember.id,
+            thumbnailStatus = ThumbnailStatus.COMPLETED,
+            thumbnailFilename = "thumb2.png",
+            thumbnailContentType = "image/png"
+        )
+
+        Files.write(tempDir.resolve("stored1.txt"), "content1".toByteArray())
+        Files.write(tempDir.resolve("stored2.png"), "content2".toByteArray())
+        Files.write(tempDir.resolve("thumb2.png"), "thumbnail2".toByteArray())
+
+        attachmentRepository.save(attachment1)
+        attachmentRepository.save(attachment2)
+
+        assertThat(Files.exists(tempDir)).isTrue()
+        assertThat(attachmentRepository.count()).isEqualTo(2)
+
+        service.discardSession(loginMember, sessionId)
+
+        assertThat(attachmentRepository.count()).isEqualTo(0)
+        assertThat(Files.exists(tempDir)).isFalse()
+        org.mockito.kotlin.verify(sessionService).deleteSession(sessionId)
+    }
+
     class FakeAttachmentRepository : AttachmentRepository {
         val savedAttachments = mutableListOf<Attachment>()
         val attachments = mutableMapOf<UUID, Attachment>()

@@ -83,6 +83,7 @@ function loadApp(memberId, teamId, loginMemberId, memberName, year, month, searc
           this.loadTodos();
         }
         this.initSortable();
+        this.setupModalCloseHandler();
       }, computed: {
         ...dDayComputes,
         ...searchResultComputes,
@@ -398,6 +399,24 @@ function loadApp(memberId, teamId, loginMemberId, memberName, year, month, searc
             return str;
           }
           return str.slice(0, maxlength);
+        },
+        setupModalCloseHandler() {
+          const modal = document.getElementById('detail-view-modal');
+          if (modal) {
+            $(modal).on('hidden.bs.modal', async () => {
+              if (this.isCreateScheduleMode && this.createSchedule.attachmentSessionId) {
+                try {
+                  await fetch(`/api/attachments/sessions/${this.createSchedule.attachmentSessionId}`, {
+                    method: 'DELETE'
+                  });
+                } catch (error) {
+                  console.warn('Failed to discard attachment session on modal close:', error);
+                }
+                this.cleanupAttachmentUploader();
+                this.isCreateScheduleMode = false;
+              }
+            });
+          }
         }
       } // end methods
     }
