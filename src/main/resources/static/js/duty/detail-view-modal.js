@@ -276,15 +276,13 @@ const detailViewMethods = {
     await this.initializeAttachmentUploader();
   }
   ,
-  async cancelCreateSchedule() {
+  cancelCreateSchedule() {
     if (this.createSchedule.attachmentSessionId) {
-      try {
-        await fetch(`/api/attachments/sessions/${this.createSchedule.attachmentSessionId}`, {
-          method: 'DELETE'
-        });
-      } catch (error) {
+      fetch(`/api/attachments/sessions/${this.createSchedule.attachmentSessionId}`, {
+        method: 'DELETE'
+      }).catch(error => {
         console.warn('Failed to cleanup attachment session:', error);
-      }
+      });
     }
     this.cleanupAttachmentUploader();
     this.isCreateScheduleMode = false;
