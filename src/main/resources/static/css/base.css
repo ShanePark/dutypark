@@ -1165,10 +1165,27 @@ input[readonly], textarea[readonly] {
     opacity: 1;
 }
 
+.attachment-download {
+    top: 0.35rem;
+    right: 0.35rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 1rem;
+    line-height: 1;
+    z-index: 10;
+    opacity: 0.7;
+    background-color: rgba(0, 0, 0, 0.6);
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.attachment-download:hover {
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
 .attachment-viewer-popup {
     max-width: min(1000px, 90vw);
-    background-color: #000;
-    padding: 1rem;
+    padding: 0;
 }
 
 .attachment-viewer-title {
@@ -1178,6 +1195,7 @@ input[readonly], textarea[readonly] {
 
 .attachment-viewer-html {
     padding: 0;
+    margin: 0;
 }
 
 .attachment-viewer-img {
@@ -1196,4 +1214,15 @@ input[readonly], textarea[readonly] {
     justify-content: center;
     max-height: 80vh;
     overflow: auto;
+}
+
+.attachment-hover-overlay {
+    opacity: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.attachment-thumbnail-clickable:hover .attachment-hover-overlay {
+    opacity: 1;
 }

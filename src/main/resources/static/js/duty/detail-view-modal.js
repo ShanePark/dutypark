@@ -853,13 +853,10 @@ const detailViewMethods = {
     }
 
     return Swal.fire({
-      title: fileName,
       html: `<div class="attachment-viewer-body"><img src="${imageSource}" alt="${escapeHtml(fileName)}" class="attachment-viewer-img"></div>`,
       showConfirmButton: false,
       showCloseButton: true,
       focusConfirm: false,
-      width: '90%',
-      padding: '1rem',
       background: '#000',
       customClass: {
         popup: 'attachment-viewer-popup',

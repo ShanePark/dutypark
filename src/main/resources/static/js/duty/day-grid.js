@@ -187,47 +187,40 @@ const dayGridMethods = {
         const iconClass = typeof app.attachmentIconClass === 'function'
           ? app.attachmentIconClass(attachment)
           : 'bi-file-earmark';
-        const thumbnailHtml = attachment.hasThumbnail
-          ? `<img src="${attachment.thumbnailUrl}" alt="${attachment.originalFilename}" class="w-100 h-100" style="object-fit: cover;">`
-          : `<div class="d-flex align-items-center justify-content-center h-100 p-3">
+        const thumbnailContent = attachment.hasThumbnail
+          ? `<div class="position-absolute top-0 start-0 w-100 h-100 attachment-thumbnail-clickable"
+                  data-attachment-id="${attachment.id}"
+                  style="cursor: pointer;">
+              <img src="${attachment.thumbnailUrl}"
+                   alt="${attachment.originalFilename}"
+                   class="w-100 h-100"
+                   style="object-fit: cover;">
+              <div class="attachment-hover-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center">
+                <i class="bi bi-search text-white" style="font-size: 2rem;"></i>
+              </div>
+            </div>`
+          : `<div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center p-3">
                          <i class="bi ${iconClass} text-muted display-4 lh-1"></i>
                        </div>`;
         const downloadUrl = `/api/attachments/${attachment.id}/download`;
-        const actionButtons = attachment.hasThumbnail
-          ? `
-                        <div class="d-grid gap-2 mt-2">
-                            <button type="button"
-                                    class="btn btn-sm btn-primary attachment-viewer-btn"
-                                    data-attachment-id="${attachment.id}">
-                                <i class="bi bi-arrows-fullscreen"></i> 크게보기
-                            </button>
-                            <a href="${downloadUrl}"
-                               class="btn btn-sm btn-outline-secondary w-100"
-                               download>
-                                <i class="bi bi-download"></i> 다운로드
-                            </a>
-                        </div>
-                      `
-          : `
-                        <a href="${downloadUrl}"
-                           class="btn btn-sm btn-outline-primary w-100 mt-1"
-                           download>
-                            <i class="bi bi-download"></i> 다운로드
-                        </a>
-                      `;
 
         html += `
                     <div class="col">
-                        <div class="card h-100">
-                            <div class="position-relative overflow-hidden">
-                                ${thumbnailHtml}
+                        <div class="card h-100 position-relative">
+                            <a href="${downloadUrl}"
+                               class="attachment-download position-absolute btn btn-sm"
+                               download
+                               title="다운로드">
+                                <i class="bi bi-download text-white"></i>
+                            </a>
+                            <div class="position-relative overflow-hidden" style="padding-top: 100%;">
+                                ${thumbnailContent}
                             </div>
                             <div class="card-body p-2">
                                 <div class="small text-truncate" title="${attachment.originalFilename}">
                                     ${attachment.originalFilename}
                                 </div>
                                 <div class="small text-muted">${formatBytes(attachment.size)}</div>
-                                ${actionButtons}
                             </div>
                         </div>
                     </div>
@@ -255,9 +248,9 @@ const dayGridMethods = {
         if (!container) {
           return;
         }
-        container.querySelectorAll('.attachment-viewer-btn').forEach((button) => {
-          button.addEventListener('click', () => {
-            const attachmentId = button.getAttribute('data-attachment-id');
+        container.querySelectorAll('.attachment-thumbnail-clickable').forEach((thumbnail) => {
+          thumbnail.addEventListener('click', () => {
+            const attachmentId = thumbnail.getAttribute('data-attachment-id');
             const targetAttachment = schedule.attachments.find(att => String(att.id) === attachmentId);
             if (targetAttachment) {
               app.openAttachmentViewer(targetAttachment, {
