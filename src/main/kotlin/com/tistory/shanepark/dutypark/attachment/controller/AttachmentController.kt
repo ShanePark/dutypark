@@ -45,7 +45,8 @@ class AttachmentController(
     @GetMapping("/{id}/download")
     fun downloadAttachment(
         @Login(required = false) loginMember: LoginMember?,
-        @PathVariable id: UUID
+        @PathVariable id: UUID,
+        @RequestParam(required = false, defaultValue = "false") inline: Boolean
     ): ResponseEntity<Resource> {
         val attachment = attachmentService.findById(loginMember, id)
             ?: return ResponseEntity.notFound().build()
@@ -64,9 +65,15 @@ class AttachmentController(
 
         val sanitizedFilename = sanitizeFilename(attachment.originalFilename)
 
+        val contentDispositionValue = if (inline) {
+            "inline; filename=\"$sanitizedFilename\""
+        } else {
+            "attachment; filename=\"$sanitizedFilename\""
+        }
+
         return ResponseEntity.ok()
             .contentType(MediaType.parseMediaType(attachment.contentType))
-            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"$sanitizedFilename\"")
+            .header(HttpHeaders.CONTENT_DISPOSITION, contentDispositionValue)
             .body(resource)
     }
 

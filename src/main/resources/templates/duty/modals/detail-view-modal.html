@@ -37,10 +37,6 @@
                 <template v-if="schedule.totalDays > 1">
                   [{{ schedule.daysFromStart }}/{{ schedule.totalDays }}]
                 </template>
-                <i v-if="schedule.description"
-                   class="has-description bi bi-chat-left-text cursor-pointer"
-                   @click.stop="showDescription(schedule)"
-                ></i>
               </p>
               <div v-if="schedule.description" class="schedule-description">
                 <hr/>
@@ -71,7 +67,20 @@
                           {{ attachment.originalFilename }}
                         </div>
                         <div class="small text-muted">{{ formatBytes(attachment.size) }}</div>
-                        <a :href="attachment.downloadUrl"
+                        <button v-if="attachment.hasThumbnail"
+                                type="button"
+                                class="btn btn-sm btn-primary w-100 mt-1"
+                                @click="openAttachmentViewer(attachment)">
+                          <i class="bi bi-arrows-fullscreen"></i> 크게보기
+                        </button>
+                        <a v-if="attachment.hasThumbnail"
+                           :href="attachment.downloadUrl || ('/api/attachments/' + attachment.id + '/download')"
+                           class="btn btn-sm btn-outline-secondary w-100 mt-2"
+                           download>
+                          <i class="bi bi-download"></i> 다운로드
+                        </a>
+                        <a v-else
+                           :href="attachment.downloadUrl || ('/api/attachments/' + attachment.id + '/download')"
                            class="btn btn-sm btn-outline-primary w-100 mt-1"
                            download>
                           <i class="bi bi-download"></i> 다운로드
@@ -248,4 +257,3 @@
     </div>
   </div>
 </div>
-

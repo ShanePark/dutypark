@@ -341,7 +341,7 @@ const detailViewMethods = {
     const scheduleId = schedule.id;
     const scheduleElement = document.getElementById('schedule-' + scheduleId);
     const scheduleBy = scheduleElement.querySelector('.schedule-tags')
-        .querySelector('.schedule-tag.tagged-true').innerText;
+      .querySelector('.schedule-tag.tagged-true').innerText;
 
     Swal.fire({
       title: '정말로 태그를 제거하시겠습니까?',
@@ -545,7 +545,7 @@ const detailViewMethods = {
     }
 
     try {
-      const { Uppy, Dashboard, XHRUpload } = await import('/lib/uppy-5.1.7/uppy.min.mjs');
+      const {Uppy, Dashboard, XHRUpload} = await import('/lib/uppy-5.1.7/uppy.min.mjs');
 
       app.uppyInstance = new Uppy({
         restrictions: {
@@ -643,7 +643,7 @@ const detailViewMethods = {
         console.error('Upload error:', error, response);
         app.$delete(app.createSchedule.attachmentProgress, file.id);
         if (response && response.body) {
-          handleAttachmentXhrError({ status: response.status, response: response.body }, file.data);
+          handleAttachmentXhrError({status: response.status, response: response.body}, file.data);
         } else {
           showAttachmentAlert('파일 업로드에 실패했습니다.');
         }
@@ -694,6 +694,76 @@ const detailViewMethods = {
     app.createSchedule.attachmentProgress = {};
     app.createSchedule.attachmentSessionId = null;
     app.createSchedule.sessionCreationPromise = null;
+  }
+  ,
+  openAttachmentViewer(attachment = null, options = {}) {
+    if (!attachment) {
+      return;
+    }
+
+    const {onClose} = options;
+    const fileName = attachment.originalFilename || attachment.name || '이미지';
+    const escapeHtml = (value) => value
+      ? value.replace(/[&<>"']/g, (char) => {
+        switch (char) {
+          case '&':
+            return '&amp;';
+          case '<':
+            return '&lt;';
+          case '>':
+            return '&gt;';
+          case '"':
+            return '&quot;';
+          case '\'':
+            return '&#39;';
+          default:
+            return char;
+        }
+      })
+      : '';
+
+    let imageSource = attachment.previewUrl;
+    if (!imageSource) {
+      const baseDownloadUrl = attachment.downloadUrl || (attachment.id ? `/api/attachments/${attachment.id}/download` : null);
+      if (baseDownloadUrl) {
+        imageSource = `${baseDownloadUrl}?inline=true`;
+      }
+    }
+    if (!imageSource && attachment.thumbnailUrl) {
+      imageSource = attachment.thumbnailUrl;
+    }
+
+    if (!imageSource) {
+      Swal.fire({
+        icon: 'error',
+        title: '이미지를 불러오지 못했습니다.',
+        showConfirmButton: false,
+        timer: sweetAlTimer
+      });
+      return;
+    }
+
+    return Swal.fire({
+      title: fileName,
+      html: `<div class="attachment-viewer-body"><img src="${imageSource}" alt="${escapeHtml(fileName)}" class="attachment-viewer-img"></div>`,
+      showConfirmButton: false,
+      showCloseButton: true,
+      focusConfirm: false,
+      width: '90%',
+      padding: '1rem',
+      background: '#000',
+      customClass: {
+        popup: 'attachment-viewer-popup',
+        title: 'attachment-viewer-title',
+        htmlContainer: 'attachment-viewer-html',
+        closeButton: 'attachment-viewer-close'
+      }
+    }).then((result) => {
+      if (typeof onClose === 'function') {
+        onClose(result);
+      }
+      return result;
+    });
   }
   ,
   formatBytes(bytes) {

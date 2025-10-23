@@ -1091,3 +1091,109 @@ input[readonly], textarea[readonly] {
 .friend-card:hover {
     background-color: #e2e8f0;
 }
+
+.attachment-gallery {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.attachment-tile {
+    position: relative;
+    flex: 0 1 120px;
+    max-width: 140px;
+}
+
+.attachment-thumb {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 0.75rem;
+    background-color: #f8f9fa;
+    border: 1px dashed #dee2e6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.attachment-thumb img,
+.attachment-thumb svg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.attachment-thumb svg {
+    padding: 1rem;
+    box-sizing: border-box;
+    fill: #6c757d;
+}
+
+.attachment-meta {
+    margin-top: 0.5rem;
+}
+
+.attachment-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.attachment-size {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.attachment-progress {
+    height: 4px;
+}
+
+.attachment-remove {
+    position: absolute;
+    top: 0.35rem;
+    right: 0.35rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 1rem;
+    line-height: 1;
+    z-index: 10;
+    opacity: 0.9;
+}
+
+.attachment-remove:hover {
+    opacity: 1;
+}
+
+.attachment-viewer-popup {
+    max-width: min(1000px, 90vw);
+    background-color: #000;
+    padding: 1rem;
+}
+
+.attachment-viewer-title {
+    color: #f8f9fa;
+    text-align: left;
+}
+
+.attachment-viewer-html {
+    padding: 0;
+}
+
+.attachment-viewer-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 0.5rem;
+}
+
+.attachment-viewer-close {
+    color: #f8f9fa;
+}
+
+.attachment-viewer-body {
+    display: flex;
+    justify-content: center;
+    max-height: 80vh;
+    overflow: auto;
+}
