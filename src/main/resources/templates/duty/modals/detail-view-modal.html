@@ -20,7 +20,7 @@
             </div>
           </form>
         </div>
-        <div class="schedules mb-3">
+        <div class="schedules">
           <div v-if="!isCreateScheduleMode && schedulesByDays[detailView.index]?.length === 0"
                class="text-align-center m-5 p-5">
             <p class="text-center text-muted fs-3">등록된 일정이 없습니다</p>
@@ -67,11 +67,13 @@
                                :alt="attachment.originalFilename"
                                class="w-100 h-100"
                                style="object-fit: cover;">
-                          <div class="attachment-hover-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center">
+                          <div
+                              class="attachment-hover-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center">
                             <i class="bi bi-search text-white" style="font-size: 2rem;"></i>
                           </div>
                         </div>
-                        <div v-else class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center">
+                        <div v-else
+                             class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center">
                           <i :class="['bi', attachmentIconClass(attachment), 'text-muted', 'display-4', 'lh-1']"></i>
                         </div>
                       </div>
@@ -150,62 +152,77 @@
                        :maxlength="schedule_content_max_length"
                        v-model="createSchedule.content"/>
               </label>
-              <label>일정 상세 (선택사항)<small class="help-note">달력에 표시되지 않고 클릭했을때만 보여져요 <i
+              <label>일정 상세<small class="help-note">달력에 표시되지 않고 클릭했을때만 보여져요 <i
                   class="bi bi-info-circle-fill"></i></small>
-                <textarea class="form-control" placeholder="일정 상세정보를 입력하세요." rows="3"
+                <textarea class="form-control" placeholder="일정 상세정보를 입력하세요.(선택 사항)" rows="3"
                           v-model="createSchedule.description"></textarea>
               </label>
-              <label>시작일
-                <input v-show="createSchedule.id" type="date" class="form-control"
-                       v-model="createSchedule.startDate"/>
-              </label>
-              <p v-show="!createSchedule.id" class="form-control bg-light" v-text="createSchedule.startDate"
-                 readonly></p>
-              <label>시작시간 (선택사항)
-                <input type="time" class="form-control" v-model="createSchedule.startTime"/>
-              </label>
-              <label>종료일시 (선택사항)
-                <input type="datetime-local" class="form-control" v-model="createSchedule.endDateTime"
-                       :min="createSchedule.startDateTime"/>
-              </label>
-              <label>공개설정</label>
-              <div class="schedule-visibility">
-                <div class="pretty p-default p-curve">
-                  <input type="radio" value="PUBLIC" v-model="createSchedule.visibility"/>
-                  <div class="state p-success-o">
-                    <label>전체</label>
+              <div class="row g-3">
+                <div class="col-12 col-md-6">
+                  <div class="schedule-field-row d-flex flex-wrap align-items-center gap-2">
+                    <label class="schedule-field-label mb-0 text-nowrap">시작일</label>
+                    <div class="schedule-field-control flex-grow-1">
+                      <input v-show="createSchedule.id" type="date" class="form-control"
+                             v-model="createSchedule.startDate"/>
+                      <p v-show="!createSchedule.id" class="form-control bg-light mb-0"
+                         v-text="createSchedule.startDate"></p>
+                    </div>
                   </div>
                 </div>
-
-                <div class="pretty p-default p-curve">
-                  <input type="radio" value="FRIENDS" v-model="createSchedule.visibility"/>
-                  <div class="state p-info-o">
-                    <label>친구</label>
+                <div class="col-12 col-md-6">
+                  <div class="schedule-field-row d-flex flex-wrap align-items-center gap-2">
+                    <label class="schedule-field-label mb-0 text-nowrap">시작시간</label>
+                    <div class="schedule-field-control flex-grow-1">
+                      <input type="time" class="form-control" v-model="createSchedule.startTime"/>
+                    </div>
                   </div>
                 </div>
-
-                <div class="pretty p-default p-curve">
-                  <input type="radio" value="FAMILY" v-model="createSchedule.visibility"/>
-                  <div class="state p-warning-o">
-                    <label>가족</label>
-                  </div>
+              </div>
+              <div class="schedule-field-row d-flex flex-wrap align-items-center gap-2">
+                <label class="schedule-field-label mb-0 text-nowrap">종료일시</label>
+                <div class="schedule-field-control flex-grow-1">
+                  <input type="datetime-local" class="form-control" v-model="createSchedule.endDateTime"
+                         :min="createSchedule.startDateTime"/>
                 </div>
+              </div>
+              <div class="schedule-field-row d-flex flex-wrap align-items-center gap-2">
+                <label class="schedule-field-label mb-0 text-nowrap">공개설정</label>
+                <div class="schedule-field-control schedule-visibility d-flex flex-wrap gap-2">
+                  <div class="pretty p-default p-curve">
+                    <input type="radio" value="PUBLIC" v-model="createSchedule.visibility"/>
+                    <div class="state p-success-o">
+                      <label>전체</label>
+                    </div>
+                  </div>
 
-                <div class="pretty p-default p-curve">
-                  <input type="radio" value="PRIVATE" v-model="createSchedule.visibility"/>
-                  <div class="state p-danger-o">
-                    <label>비공개</label>
+                  <div class="pretty p-default p-curve">
+                    <input type="radio" value="FRIENDS" v-model="createSchedule.visibility"/>
+                    <div class="state p-info-o">
+                      <label>친구</label>
+                    </div>
+                  </div>
+
+                  <div class="pretty p-default p-curve">
+                    <input type="radio" value="FAMILY" v-model="createSchedule.visibility"/>
+                    <div class="state p-warning-o">
+                      <label>가족</label>
+                    </div>
+                  </div>
+
+                  <div class="pretty p-default p-curve">
+                    <input type="radio" value="PRIVATE" v-model="createSchedule.visibility"/>
+                    <div class="state p-danger-o">
+                      <label>비공개</label>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <!-- Attachment Uploader -->
-              <div class="mb-3">
-                <label>첨부파일 (선택사항)</label>
-
-                <!-- Attachment Gallery -->
-                <div class="attachment-gallery mt-2">
-                  <div class="attachment-tile" v-for="attachment in createSchedule.uploadedAttachments" :key="attachment.id">
+              <div class="schedule-field-row d-flex flex-wrap align-items-start gap-3 mt-3">
+                <label class="schedule-field-label mb-0 text-nowrap pt-2">첨부파일</label>
+                <div class="schedule-field-control attachment-gallery">
+                  <div class="attachment-tile" v-for="attachment in createSchedule.uploadedAttachments"
+                       :key="attachment.id">
                     <div class="attachment-thumb">
                       <img v-if="attachment.isImage && attachment.thumbnailUrl"
                            :src="attachment.thumbnailUrl"
@@ -222,21 +239,26 @@
                     <div class="attachment-meta">
                       <div class="attachment-name" :title="attachment.name">{{ attachment.name }}</div>
                       <div class="attachment-size">{{ formatBytes(attachment.size) }}</div>
-                      <div class="attachment-progress" v-if="createSchedule.attachmentProgress[attachment.id] !== undefined && createSchedule.attachmentProgress[attachment.id] < 100">
+                      <div class="attachment-progress"
+                           v-if="createSchedule.attachmentProgress[attachment.id] !== undefined && createSchedule.attachmentProgress[attachment.id] < 100">
                         <div class="progress" style="height: 4px;">
-                          <div class="progress-bar" :style="{width: createSchedule.attachmentProgress[attachment.id] + '%'}"></div>
+                          <div class="progress-bar"
+                               :style="{width: createSchedule.attachmentProgress[attachment.id] + '%'}"></div>
                         </div>
                       </div>
                     </div>
-                    <button type="button" class="attachment-remove btn btn-sm btn-danger" @click="removeAttachment(attachment.id)">
+                    <button type="button" class="attachment-remove btn btn-sm btn-danger"
+                            @click="removeAttachment(attachment.id)">
                       <i class="bi bi-x"></i>
                     </button>
                   </div>
 
                   <!-- File picker button -->
                   <div class="attachment-tile attachment-add-button">
-                    <input type="file" id="schedule-attachment-input" multiple style="display: none;" />
-                    <label for="schedule-attachment-input" class="attachment-thumb d-flex align-items-center justify-content-center h-100 m-0" style="cursor: pointer;">
+                    <input type="file" id="schedule-attachment-input" multiple style="display: none;"/>
+                    <label for="schedule-attachment-input"
+                           class="attachment-thumb d-flex align-items-center justify-content-center h-100 m-0"
+                           style="cursor: pointer;">
                       <i class="bi bi-plus-circle text-muted" style="font-size: 3rem;"></i>
                     </label>
                   </div>
@@ -266,8 +288,7 @@
                   <span>경과 {{ formatDuration(attachmentUploadSummary.elapsedSeconds) }}</span>
                 </div>
               </div>
-
-              <div class="buttons mt-3">
+              <div class="buttons">
                 <button
                     id="add-btn"
                     class="btn btn-success"

@@ -557,6 +557,31 @@ a.homeButton:hover {
     font-size: 1em;
 }
 
+.schedule-edit .schedule-field-row {
+    margin-bottom: 0;
+}
+
+.schedule-edit .schedule-field-label {
+    flex: 0 0 6.25rem;
+    font-weight: 500;
+}
+
+.schedule-edit .schedule-field-control {
+    flex: 1 1 0;
+    min-width: 0;
+    width: 100%;
+}
+
+.schedule-edit .schedule-field-control .form-control {
+    margin-bottom: 0;
+}
+
+@media (max-width: 576px) {
+    .schedule-edit .schedule-field-label {
+        width: 100%;
+    }
+}
+
 .schedule-tags {
     text-align: right;
 }
