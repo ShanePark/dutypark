@@ -1087,6 +1087,7 @@ input[readonly], textarea[readonly] {
     flex: 0 0 120px;
     width: 120px;
     height: 120px;
+    margin-bottom: 3rem;
 }
 
 .attachment-thumb {

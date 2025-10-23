@@ -243,8 +243,42 @@
                 </div>
               </div>
 
+              <div v-if="attachmentUploadSummary" class="alert alert-info d-flex align-items-center gap-3 mb-0">
+                <div class="d-flex align-items-center">
+                  <div class="spinner-border spinner-border-sm me-2" role="status">
+                    <span class="visually-hidden">업로드 중</span>
+                  </div>
+                  <span class="fw-semibold">파일 업로드 중</span>
+                </div>
+                <div class="flex-grow-1 small text-muted">
+                  <span>{{ attachmentUploadSummary.activeUploads }}개 파일</span>
+                  <span class="mx-1">|</span>
+                  <span>{{ formatBytes(attachmentUploadSummary.uploadedBytes) }} / {{ formatBytes(attachmentUploadSummary.totalBytes) }}</span>
+                  <span class="mx-1">|</span>
+                  <span>{{ attachmentUploadSummary.progressPercent }}%</span>
+                  <span class="mx-1">|</span>
+                  <span v-if="attachmentUploadSummary.speedBytesPerSec > 0">{{ formatBytes(attachmentUploadSummary.speedBytesPerSec) }}/s</span>
+                  <span v-else>속도 계산 중</span>
+                  <span class="mx-1">|</span>
+                  <span v-if="attachmentUploadSummary.remainingSeconds !== null">남음 {{ formatDuration(attachmentUploadSummary.remainingSeconds) }}</span>
+                  <span v-else>남은 시간 계산 중</span>
+                  <span class="mx-1">|</span>
+                  <span>경과 {{ formatDuration(attachmentUploadSummary.elapsedSeconds) }}</span>
+                </div>
+              </div>
+
               <div class="buttons mt-3">
-                <button id="add-btn" class="btn btn-success" v-on:click="saveSchedule">저장</button>
+                <button
+                    id="add-btn"
+                    class="btn btn-success"
+                    :disabled="isAttachmentUploading"
+                    :title="isAttachmentUploading ? '파일 업로드가 완료되면 저장할 수 있습니다.' : null"
+                    v-on:click="saveSchedule">
+                  <span v-if="isAttachmentUploading" class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">업로드 중</span>
+                  </span>
+                  <span>저장</span>
+                </button>
                 <button class="btn btn-secondary" v-on:click="cancelCreateSchedule">취소</button>
               </div>
             </div>

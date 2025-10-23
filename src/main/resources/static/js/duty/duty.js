@@ -50,6 +50,8 @@ function loadApp(memberId, teamId, loginMemberId, memberName, year, month, searc
           sessionCreationPromise: null,
           uploadedAttachments: [],
           attachmentProgress: {},
+          attachmentUploadMeta: {},
+          attachmentUploadTicker: 0,
         },
         friends: [],
         todos: [],
@@ -109,6 +111,48 @@ function loadApp(memberId, teamId, loginMemberId, memberName, year, month, searc
         combinedYearMonth: {
           get() {
             return `${this.year}-${this.month.toString().padStart(2, '0')}`;
+          }
+        },
+        isAttachmentUploading: {
+          get() {
+            return Object.keys(this.createSchedule.attachmentUploadMeta || {}).length > 0;
+          }
+        },
+        attachmentUploadSummary: {
+          get() {
+            const ticker = this.createSchedule.attachmentUploadTicker;
+            const uploads = Object.values(this.createSchedule.attachmentUploadMeta || {});
+            if (uploads.length === 0) {
+              return null;
+            }
+            const totalBytes = uploads.reduce((sum, meta) => sum + (meta.bytesTotal || 0), 0);
+            const uploadedBytes = uploads.reduce((sum, meta) => sum + (meta.bytesUploaded || 0), 0);
+            const startedAt = uploads.reduce((earliest, meta) => {
+              if (!meta.startedAt) {
+                return earliest;
+              }
+              if (earliest === null) {
+                return meta.startedAt;
+              }
+              return Math.min(earliest, meta.startedAt);
+            }, null);
+            const now = ticker || Date.now();
+            const elapsedMs = startedAt ? Math.max(now - startedAt, 0) : 0;
+            const elapsedSeconds = elapsedMs / 1000;
+            const progress = totalBytes > 0 ? Math.min(uploadedBytes / totalBytes, 1) : 0;
+            const speed = elapsedSeconds > 0 ? uploadedBytes / elapsedSeconds : 0;
+            const remainingBytes = Math.max(totalBytes - uploadedBytes, 0);
+            const remainingSeconds = speed > 0 ? remainingBytes / speed : null;
+            return {
+              totalBytes,
+              uploadedBytes,
+              remainingBytes,
+              elapsedSeconds,
+              remainingSeconds,
+              speedBytesPerSec: speed,
+              progressPercent: Math.min(Math.round(progress * 100), 100),
+              activeUploads: uploads.length,
+            };
           }
         },
         canSearch: {
@@ -249,19 +293,25 @@ function loadApp(memberId, teamId, loginMemberId, memberName, year, month, searc
             })
         },
         resetCreateSchedule() {
+          const defaultDateTime = app.formattedDateTime(app.detailView);
+          app.stopAttachmentUploadTicker();
           app.createSchedule = {
+            id: '',
             content: '',
             description: '',
-            startDateTime: app.formattedDateTime(app.detailView),
+            startDateTime: defaultDateTime,
             startDate: app.formattedDate(app.detailView.year, app.detailView.month, app.detailView.day),
             startTime: '00:00',
-            endDateTime: app.formattedDateTime(app.detailView),
+            startDateTimeOld: defaultDateTime,
+            endDateTime: defaultDateTime,
             visibility: 'FAMILY',
             attachmentSessionId: null,
             sessionCreationPromise: null,
             uploadedAttachments: [],
             attachmentProgress: {},
-          }
+            attachmentUploadMeta: {},
+            attachmentUploadTicker: 0,
+          };
         }
         ,
         changeDutyType(duty, type) {

@@ -292,6 +292,16 @@ const detailViewMethods = {
   ,
   async saveSchedule() {
     const app = this;
+    if (app.isAttachmentUploading) {
+      Swal.fire({
+        icon: 'info',
+        title: '파일 업로드가 진행 중입니다.',
+        text: '업로드가 완료될 때까지 기다려주세요.',
+        showConfirmButton: false,
+        timer: sweetAlTimer
+      });
+      return;
+    }
     if (!isValidContent(app.createSchedule.content)) {
       return;
     }
@@ -701,23 +711,37 @@ const detailViewMethods = {
       };
 
       app.uppyInstance.on('file-added', (file) => {
-        const validation = validateAttachmentFile(file.data);
+        const fileData = file?.data;
+        const validation = validateAttachmentFile(fileData);
         if (!validation.valid) {
           app.uppyInstance.removeFile(file.id);
           showAttachmentAlert(validation.message);
           return;
         }
 
+        const mimeType = fileData?.type || '';
+        const isImage = mimeType.startsWith('image/');
+        const now = Date.now();
+        const wasIdle = Object.keys(app.createSchedule.attachmentUploadMeta || {}).length === 0;
         const tempAttachment = {
           id: file.id,
-          name: file.data.name,
-          contentType: file.data.type,
-          size: file.data.size,
-          isImage: file.data.type.startsWith('image/'),
-          previewUrl: file.data.type.startsWith('image/') ? URL.createObjectURL(file.data) : null,
+          name: fileData?.name,
+          contentType: mimeType,
+          size: fileData?.size || 0,
+          isImage: isImage,
+          previewUrl: isImage ? URL.createObjectURL(fileData) : null,
         };
         app.createSchedule.uploadedAttachments.push(tempAttachment);
         app.$set(app.createSchedule.attachmentProgress, file.id, 0);
+        app.$set(app.createSchedule.attachmentUploadMeta, file.id, {
+          bytesUploaded: 0,
+          bytesTotal: fileData?.size || 0,
+          startedAt: now,
+          lastUpdatedAt: now,
+        });
+        if (wasIdle) {
+          app.startAttachmentUploadTicker();
+        }
       });
 
       app.uppyInstance.addPreProcessor(async (fileIDs) => {
@@ -737,6 +761,9 @@ const detailViewMethods = {
               app.uppyInstance.removeFile(fileId);
             }
             app.$delete(app.createSchedule.attachmentProgress, fileId);
+            if (app.createSchedule.attachmentUploadMeta && app.createSchedule.attachmentUploadMeta[fileId]) {
+              app.$delete(app.createSchedule.attachmentUploadMeta, fileId);
+            }
             const index = app.createSchedule.uploadedAttachments.findIndex(a => a.id === fileId);
             if (index !== -1) {
               const attachment = app.createSchedule.uploadedAttachments[index];
@@ -746,6 +773,9 @@ const detailViewMethods = {
               app.createSchedule.uploadedAttachments.splice(index, 1);
             }
           });
+          if (Object.keys(app.createSchedule.attachmentUploadMeta || {}).length === 0) {
+            app.stopAttachmentUploadTicker();
+          }
           throw new Error(ATTACHMENT_SESSION_ERROR);
         }
 
@@ -762,23 +792,40 @@ const detailViewMethods = {
       });
 
       app.uppyInstance.on('upload-progress', (file, progress) => {
-        const percentage = Math.round((progress.bytesUploaded / progress.bytesTotal) * 100);
+        const bytesUploaded = progress.bytesUploaded || 0;
+        const totalFromEvent = progress.bytesTotal;
+        const fallbackTotal = file?.data?.size || 0;
+        const bytesTotal = typeof totalFromEvent === 'number' && totalFromEvent > 0 ? totalFromEvent : fallbackTotal;
+        const percentage = bytesTotal > 0 ? Math.round((bytesUploaded / bytesTotal) * 100) : 0;
         app.$set(app.createSchedule.attachmentProgress, file.id, percentage);
+        const meta = app.createSchedule.attachmentUploadMeta ? app.createSchedule.attachmentUploadMeta[file.id] : null;
+        if (meta) {
+          meta.bytesUploaded = bytesUploaded;
+          meta.bytesTotal = bytesTotal;
+          meta.lastUpdatedAt = Date.now();
+        }
       });
 
       app.uppyInstance.on('upload-success', (file, response) => {
         const attachmentDto = response.body;
         const normalized = normalizeAttachmentDto(attachmentDto);
+        const fileType = file?.data?.type || '';
 
         const index = app.createSchedule.uploadedAttachments.findIndex(a => a.id === file.id);
         if (index !== -1) {
           const oldPreviewUrl = app.createSchedule.uploadedAttachments[index].previewUrl;
-          if (file.data.type.startsWith('image/') && !normalized.previewUrl) {
+          if (fileType.startsWith('image/') && !normalized.previewUrl) {
             normalized.previewUrl = oldPreviewUrl;
           }
           app.$set(app.createSchedule.uploadedAttachments, index, normalized);
         }
         app.$delete(app.createSchedule.attachmentProgress, file.id);
+        if (app.createSchedule.attachmentUploadMeta && app.createSchedule.attachmentUploadMeta[file.id]) {
+          app.$delete(app.createSchedule.attachmentUploadMeta, file.id);
+        }
+        if (Object.keys(app.createSchedule.attachmentUploadMeta || {}).length === 0) {
+          app.stopAttachmentUploadTicker();
+        }
       });
 
       app.uppyInstance.on('upload-error', (file, error, response) => {
@@ -795,8 +842,14 @@ const detailViewMethods = {
           app.createSchedule.uploadedAttachments.splice(index, 1);
         }
         app.$delete(app.createSchedule.attachmentProgress, file.id);
+        if (app.createSchedule.attachmentUploadMeta && app.createSchedule.attachmentUploadMeta[file.id]) {
+          app.$delete(app.createSchedule.attachmentUploadMeta, file.id);
+        }
+        if (Object.keys(app.createSchedule.attachmentUploadMeta || {}).length === 0) {
+          app.stopAttachmentUploadTicker();
+        }
         if (response && response.body) {
-          handleAttachmentXhrError({status: response.status, response: response.body}, file.data);
+          handleAttachmentXhrError({status: response.status, response: response.body}, file?.data);
         } else {
           showAttachmentAlert('파일 업로드에 실패했습니다.');
         }
@@ -842,6 +895,25 @@ const detailViewMethods = {
     if (attachment.previewUrl) {
       URL.revokeObjectURL(attachment.previewUrl);
     }
+    if (app.createSchedule.attachmentProgress && app.createSchedule.attachmentProgress[attachmentId] !== undefined) {
+      app.$delete(app.createSchedule.attachmentProgress, attachmentId);
+    }
+    if (app.createSchedule.attachmentUploadMeta && app.createSchedule.attachmentUploadMeta[attachmentId]) {
+      app.$delete(app.createSchedule.attachmentUploadMeta, attachmentId);
+    }
+    if (Object.keys(app.createSchedule.attachmentUploadMeta || {}).length === 0) {
+      app.stopAttachmentUploadTicker();
+    }
+    if (app.uppyInstance) {
+      const uploadingFile = app.uppyInstance.getFile(attachmentId);
+      if (uploadingFile) {
+        try {
+          app.uppyInstance.removeFile(attachmentId);
+        } catch (error) {
+          console.warn('Failed to remove file from uploader:', error);
+        }
+      }
+    }
   }
   ,
   cleanupAttachmentUploader() {
@@ -872,8 +944,11 @@ const detailViewMethods = {
 
     app.createSchedule.uploadedAttachments = [];
     app.createSchedule.attachmentProgress = {};
+    app.createSchedule.attachmentUploadMeta = {};
+    app.createSchedule.attachmentUploadTicker = 0;
     app.createSchedule.attachmentSessionId = null;
     app.createSchedule.sessionCreationPromise = null;
+    app.stopAttachmentUploadTicker();
   }
   ,
   openAttachmentViewer(attachment = null, options = {}) {
@@ -994,12 +1069,44 @@ const detailViewMethods = {
     return 'bi-file-earmark';
   }
   ,
+  startAttachmentUploadTicker() {
+    if (this.attachmentUploadTickerInterval) {
+      return;
+    }
+    this.attachmentUploadTickerInterval = window.setInterval(() => {
+      this.createSchedule.attachmentUploadTicker = Date.now();
+    }, 500);
+    this.createSchedule.attachmentUploadTicker = Date.now();
+  }
+  ,
+  stopAttachmentUploadTicker() {
+    if (this.attachmentUploadTickerInterval) {
+      clearInterval(this.attachmentUploadTickerInterval);
+      this.attachmentUploadTickerInterval = null;
+    }
+    this.createSchedule.attachmentUploadTicker = 0;
+  }
+  ,
   formatBytes(bytes) {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  }
+  ,
+  formatDuration(seconds) {
+    if (seconds === null || seconds === undefined || Number.isNaN(seconds) || !Number.isFinite(seconds)) {
+      return '계산 중';
+    }
+    const totalSeconds = Math.max(Math.floor(seconds), 0);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
   ,
 }
