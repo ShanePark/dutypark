@@ -1,5 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Presentation icon">
-  <rect x="8" y="10" width="48" height="36" rx="4" ry="4" fill="#ffe5d0" stroke="#fd7e14" stroke-width="2"/>
-  <rect x="18" y="20" width="28" height="16" rx="2" ry="2" fill="none" stroke="#fd7e14" stroke-width="3"/>
-  <path d="M20 54l6-8M44 54l-6-8" stroke="#fd7e14" stroke-width="3" stroke-linecap="round"/>
-</svg>

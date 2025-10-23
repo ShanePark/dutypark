@@ -184,10 +184,13 @@ const dayGridMethods = {
           return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
         };
 
+        const iconClass = typeof app.attachmentIconClass === 'function'
+          ? app.attachmentIconClass(attachment)
+          : 'bi-file-earmark';
         const thumbnailHtml = attachment.hasThumbnail
           ? `<img src="${attachment.thumbnailUrl}" alt="${attachment.originalFilename}" class="w-100 h-100" style="object-fit: cover;">`
-          : `<div class="d-flex align-items-center justify-content-center h-100 bg-light">
-                         <i class="bi bi-file-earmark text-muted" style="font-size: 2rem;"></i>
+          : `<div class="d-flex align-items-center justify-content-center h-100 p-3">
+                         <i class="bi ${iconClass} text-muted display-4 lh-1"></i>
                        </div>`;
         const downloadUrl = `/api/attachments/${attachment.id}/download`;
         const actionButtons = attachment.hasThumbnail
@@ -216,7 +219,7 @@ const dayGridMethods = {
         html += `
                     <div class="col">
                         <div class="card h-100">
-                            <div class="position-relative" style="padding-top: 100%; overflow: hidden;">
+                            <div class="position-relative overflow-hidden">
                                 ${thumbnailHtml}
                             </div>
                             <div class="card-body p-2">

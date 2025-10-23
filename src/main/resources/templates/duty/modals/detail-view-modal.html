@@ -1,7 +1,7 @@
 <div id="detail-view-modal" class="modal fade" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content card" v-if="detailView">
-      <div class="card-header modal-header text-center py-4 px-4">
+      <div class="card-header modal-header text-center py-3 px-4">
         <p class="current-date-label fs-1"
            v-text="detailView?.year + '년 ' + detailView?.month + '월 ' + detailView?.day + '일'"></p>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -52,14 +52,14 @@
                 <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 g-2">
                   <div v-for="attachment in schedule.attachments" :key="attachment.id" class="col">
                     <div class="card h-100">
-                      <div class="position-relative" style="padding-top: 100%; overflow: hidden;">
+                      <div class="position-relative overflow-hidden" style="padding-top: 100%;">
                         <img v-if="attachment.hasThumbnail"
                              :src="attachment.thumbnailUrl"
                              :alt="attachment.originalFilename"
                              class="position-absolute top-0 start-0 w-100 h-100"
                              style="object-fit: cover;">
-                        <div v-else class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-light">
-                          <i class="bi bi-file-earmark text-muted" style="font-size: 2rem;"></i>
+                        <div v-else class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center">
+                          <i :class="['bi', attachmentIconClass(attachment), 'text-muted', 'display-4', 'lh-1']"></i>
                         </div>
                       </div>
                       <div class="card-body p-2">
@@ -222,7 +222,7 @@
                            :alt="attachment.name"
                            class="w-100 h-100" style="object-fit: cover;">
                       <div v-else class="d-flex align-items-center justify-content-center h-100">
-                        <i class="bi bi-file-earmark text-muted" style="font-size: 2rem;"></i>
+                        <i :class="['bi', attachmentIconClass(attachment), 'text-muted', 'display-4', 'lh-1']"></i>
                       </div>
                     </div>
                     <div class="attachment-meta">

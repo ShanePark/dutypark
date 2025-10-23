@@ -1,5 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Spreadsheet icon">
-  <rect x="8" y="6" width="48" height="52" rx="6" ry="6" fill="#d1e7dd" stroke="#198754" stroke-width="2"/>
-  <path d="M20 22h24M20 30h24M20 38h24M20 46h24" stroke="#198754" stroke-width="2" stroke-linecap="round"/>
-  <path d="M28 18v32M36 18v32" stroke="#198754" stroke-width="2" stroke-linecap="round"/>
-</svg>
