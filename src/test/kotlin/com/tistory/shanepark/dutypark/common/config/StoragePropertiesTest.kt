@@ -45,7 +45,6 @@ class StoragePropertiesTest {
             "dutypark.storage.blacklist-ext[1]" to "bat",
             "dutypark.storage.blacklist-ext[2]" to "cmd",
             "dutypark.storage.blacklist-ext[3]" to "sh",
-            "dutypark.storage.blacklist-ext[4]" to "js",
             "dutypark.storage.thumbnail.max-side" to "200",
             "dutypark.storage.session-expiration-hours" to "24"
         )

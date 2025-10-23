@@ -46,7 +46,6 @@ dutypark:
       - bat
       - cmd
       - sh
-      - js
     thumbnail:
       max-side: 200
     session-expiration-hours: 24

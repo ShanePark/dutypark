@@ -3,7 +3,6 @@ const sweetAlTimer = 1500;
 const attachmentValidation = Object.freeze({
   maxFileSizeBytes: 50 * 1024 * 1024,
   maxFileSizeLabel: '50MB',
-  blockedExtensions: ['exe', 'bat', 'cmd', 'sh', 'js'],
   tooLargeMessage(filename) {
     return `${filename} 파일은 ${this.maxFileSizeLabel}를 초과합니다.`;
   },

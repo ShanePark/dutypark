@@ -3,7 +3,6 @@ const ATTACHMENT_CONTEXT_TYPE = 'SCHEDULE';
 const attachmentValidationConfig = window.AttachmentValidation || {
   maxFileSizeBytes: 50 * 1024 * 1024,
   maxFileSizeLabel: '50MB',
-  blockedExtensions: [],
   tooLargeMessage(filename) {
     return `${filename} 파일은 업로드할 수 없습니다.`;
   },
@@ -153,13 +152,6 @@ const validateAttachmentFile = (file) => {
     return {
       valid: false,
       message: attachmentValidationConfig.tooLargeMessage(file.name)
-    };
-  }
-  const extension = getFileExtension(file.name);
-  if (extension && attachmentValidationConfig.blockedExtensions.includes(extension)) {
-    return {
-      valid: false,
-      message: attachmentValidationConfig.blockedExtensionMessage(file.name)
     };
   }
   return {valid: true};
@@ -665,7 +657,7 @@ const detailViewMethods = {
           maxFileSize: attachmentValidationConfig.maxFileSizeBytes,
           allowedFileTypes: null,
         },
-        autoProceed: false,
+        autoProceed: true,
       })
         .use(XHRUpload, {
           endpoint: '/api/attachments',
@@ -685,39 +677,36 @@ const detailViewMethods = {
           },
         });
 
-      app.uppyInstance.on('file-added', async (file) => {
+      const ATTACHMENT_SESSION_ERROR = 'ATTACHMENT_SESSION_CREATION_FAILED';
+
+      const ensureAttachmentSession = async () => {
+        if (app.createSchedule.attachmentSessionId) {
+          return app.createSchedule.attachmentSessionId;
+        }
+        if (!app.createSchedule.sessionCreationPromise) {
+          app.createSchedule.sessionCreationPromise = (async () => {
+            const sessionResponse = await createAttachmentSession(null);
+            app.createSchedule.attachmentSessionId = sessionResponse.sessionId;
+            return sessionResponse.sessionId;
+          })();
+        }
+        try {
+          const sessionId = await app.createSchedule.sessionCreationPromise;
+          app.createSchedule.sessionCreationPromise = null;
+          return sessionId;
+        } catch (error) {
+          app.createSchedule.sessionCreationPromise = null;
+          throw error;
+        }
+      };
+
+      app.uppyInstance.on('file-added', (file) => {
         const validation = validateAttachmentFile(file.data);
         if (!validation.valid) {
           app.uppyInstance.removeFile(file.id);
           showAttachmentAlert(validation.message);
           return;
         }
-
-        if (!app.createSchedule.attachmentSessionId) {
-          if (!app.createSchedule.sessionCreationPromise) {
-            app.createSchedule.sessionCreationPromise = (async () => {
-              try {
-                const sessionResponse = await createAttachmentSession(null);
-                app.createSchedule.attachmentSessionId = sessionResponse.sessionId;
-              } catch (error) {
-                console.error('Failed to create attachment session:', error);
-                throw error;
-              }
-            })();
-          }
-
-          try {
-            await app.createSchedule.sessionCreationPromise;
-          } catch (error) {
-            app.uppyInstance.removeFile(file.id);
-            showAttachmentAlert('파일 업로드 세션 생성에 실패했습니다.');
-            return;
-          }
-        }
-
-        app.uppyInstance.setFileMeta(file.id, {
-          sessionId: app.createSchedule.attachmentSessionId
-        });
 
         const tempAttachment = {
           id: file.id,
@@ -729,9 +718,46 @@ const detailViewMethods = {
         };
         app.createSchedule.uploadedAttachments.push(tempAttachment);
         app.$set(app.createSchedule.attachmentProgress, file.id, 0);
+      });
 
-        app.uppyInstance.upload().catch(error => {
-          console.error('Upload failed:', error);
+      app.uppyInstance.addPreProcessor(async (fileIDs) => {
+        if (!fileIDs || fileIDs.length === 0) {
+          return;
+        }
+
+        let sessionId;
+        try {
+          sessionId = await ensureAttachmentSession();
+        } catch (error) {
+          console.error('Failed to ensure attachment session before upload:', error);
+          showAttachmentAlert('파일 업로드 세션 생성에 실패했습니다.');
+          fileIDs.forEach((fileId) => {
+            const file = app.uppyInstance.getFile(fileId);
+            if (file) {
+              app.uppyInstance.removeFile(fileId);
+            }
+            app.$delete(app.createSchedule.attachmentProgress, fileId);
+            const index = app.createSchedule.uploadedAttachments.findIndex(a => a.id === fileId);
+            if (index !== -1) {
+              const attachment = app.createSchedule.uploadedAttachments[index];
+              if (attachment.previewUrl) {
+                URL.revokeObjectURL(attachment.previewUrl);
+              }
+              app.createSchedule.uploadedAttachments.splice(index, 1);
+            }
+          });
+          throw new Error(ATTACHMENT_SESSION_ERROR);
+        }
+
+        fileIDs.forEach((fileId) => {
+          const file = app.uppyInstance.getFile(fileId);
+          if (!file) {
+            return;
+          }
+          app.uppyInstance.setFileMeta(fileId, {
+            ...file.meta,
+            sessionId: String(sessionId),
+          });
         });
       });
 
@@ -756,6 +782,9 @@ const detailViewMethods = {
       });
 
       app.uppyInstance.on('upload-error', (file, error, response) => {
+        if (error?.message === ATTACHMENT_SESSION_ERROR) {
+          return;
+        }
         console.error('Upload error:', error, response);
         const index = app.createSchedule.uploadedAttachments.findIndex(a => a.id === file.id);
         if (index !== -1) {
