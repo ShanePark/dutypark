@@ -22,7 +22,7 @@ Dutypark is a Spring Boot web application built with Kotlin for duty and schedul
 # Build the application
 ./gradlew build
 
-# Run application locally  
+# Run application locally
 ./gradlew bootRun
 
 # Run tests
@@ -34,6 +34,11 @@ Dutypark is a Spring Boot web application built with Kotlin for duty and schedul
 # Generate Spring REST Docs
 ./gradlew asciidoctor
 ```
+
+**Build Guidelines:**
+- **Frontend-only changes** (JS/HTML/CSS files in `src/main/resources/static/` or `templates/`): No gradle build required. Changes are served directly by Spring Boot DevTools or after application restart.
+- **Backend changes** (Kotlin/Java code, dependencies, configuration): Run `./gradlew build` to compile and package.
+- **Testing**: Use `./gradlew test` for backend tests. Frontend changes can be verified directly in the browser.
 
 ### Docker Development
 ```bash

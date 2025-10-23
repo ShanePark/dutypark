@@ -47,6 +47,7 @@ function loadApp(memberId, teamId, loginMemberId, memberName, year, month, searc
           endDateTime: '',
           visibility: 'FAMILY',
           attachmentSessionId: null,
+          sessionCreationPromise: null,
           uploadedAttachments: [],
           attachmentProgress: {},
         },
@@ -257,6 +258,7 @@ function loadApp(memberId, teamId, loginMemberId, memberName, year, month, searc
             endDateTime: app.formattedDateTime(app.detailView),
             visibility: 'FAMILY',
             attachmentSessionId: null,
+            sessionCreationPromise: null,
             uploadedAttachments: [],
             attachmentProgress: {},
           }

@@ -545,10 +545,6 @@ const detailViewMethods = {
     }
 
     try {
-      const targetContextId = app.createSchedule.id ? app.createSchedule.id.toString() : null;
-      const sessionResponse = await createAttachmentSession(targetContextId);
-      app.createSchedule.attachmentSessionId = sessionResponse.sessionId;
-
       const { Uppy, Dashboard, XHRUpload } = await import('/lib/uppy-5.1.7/uppy.min.mjs');
 
       app.uppyInstance = new Uppy({
@@ -588,12 +584,34 @@ const detailViewMethods = {
           },
         });
 
-      app.uppyInstance.on('file-added', (file) => {
+      app.uppyInstance.on('file-added', async (file) => {
         const validation = validateAttachmentFile(file.data);
         if (!validation.valid) {
           app.uppyInstance.removeFile(file.id);
           showAttachmentAlert(validation.message);
           return;
+        }
+
+        if (!app.createSchedule.attachmentSessionId) {
+          if (!app.createSchedule.sessionCreationPromise) {
+            app.createSchedule.sessionCreationPromise = (async () => {
+              try {
+                const sessionResponse = await createAttachmentSession(null);
+                app.createSchedule.attachmentSessionId = sessionResponse.sessionId;
+              } catch (error) {
+                console.error('Failed to create attachment session:', error);
+                throw error;
+              }
+            })();
+          }
+
+          try {
+            await app.createSchedule.sessionCreationPromise;
+          } catch (error) {
+            app.uppyInstance.removeFile(file.id);
+            showAttachmentAlert('파일 업로드 세션 생성에 실패했습니다.');
+            return;
+          }
         }
 
         app.uppyInstance.setFileMeta(file.id, {
@@ -675,6 +693,7 @@ const detailViewMethods = {
     app.createSchedule.uploadedAttachments = [];
     app.createSchedule.attachmentProgress = {};
     app.createSchedule.attachmentSessionId = null;
+    app.createSchedule.sessionCreationPromise = null;
   }
   ,
   formatBytes(bytes) {
