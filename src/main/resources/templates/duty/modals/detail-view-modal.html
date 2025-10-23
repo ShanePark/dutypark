@@ -2,12 +2,12 @@
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content card" v-if="detailView">
       <div class="card-header modal-header text-center py-3 px-4">
-        <p class="current-date-label fs-1"
+        <p class="current-date-label fs-3 mb-0"
            v-text="detailView?.year + '년 ' + detailView?.month + '월 ' + detailView?.day + '일'"></p>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body p-1">
-        <div class="dutyTypes px-4 py-2">
+        <div v-if="!isCreateScheduleMode" class="dutyTypes px-4 py-2">
           <form>
             <div v-for="type in team.dutyTypes" class="pretty p-round p-pulse">
               <input type="radio" name="dutyType"
@@ -152,7 +152,7 @@
               </label>
               <label>일정 상세 (선택사항)<small class="help-note">달력에 표시되지 않고 클릭했을때만 보여져요 <i
                   class="bi bi-info-circle-fill"></i></small>
-                <textarea class="form-control" placeholder="일정 상세정보를 입력하세요." rows="4"
+                <textarea class="form-control" placeholder="일정 상세정보를 입력하세요." rows="3"
                           v-model="createSchedule.description"></textarea>
               </label>
               <label>시작일
@@ -202,10 +202,9 @@
               <!-- Attachment Uploader -->
               <div class="mb-3">
                 <label>첨부파일 (선택사항)</label>
-                <div id="schedule-attachment-uploader" class="mt-2"></div>
 
                 <!-- Attachment Gallery -->
-                <div class="attachment-gallery mt-2" v-if="createSchedule.uploadedAttachments.length > 0">
+                <div class="attachment-gallery mt-2">
                   <div class="attachment-tile" v-for="attachment in createSchedule.uploadedAttachments" :key="attachment.id">
                     <div class="attachment-thumb">
                       <img v-if="attachment.isImage && attachment.thumbnailUrl"
@@ -232,6 +231,14 @@
                     <button type="button" class="attachment-remove btn btn-sm btn-danger" @click="removeAttachment(attachment.id)">
                       <i class="bi bi-x"></i>
                     </button>
+                  </div>
+
+                  <!-- File picker button -->
+                  <div class="attachment-tile attachment-add-button">
+                    <input type="file" id="schedule-attachment-input" multiple style="display: none;" />
+                    <label for="schedule-attachment-input" class="attachment-thumb d-flex align-items-center justify-content-center h-100 m-0" style="cursor: pointer;">
+                      <i class="bi bi-plus-circle text-muted" style="font-size: 3rem;"></i>
+                    </label>
                   </div>
                 </div>
               </div>

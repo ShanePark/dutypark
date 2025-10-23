@@ -643,18 +643,22 @@ const detailViewMethods = {
     if (app.uppyInstance) {
       try {
         app.uppyInstance.cancelAll();
-        const Dashboard = app.uppyInstance.getPlugin('Dashboard');
-        if (Dashboard) {
-          app.uppyInstance.removePlugin(Dashboard);
-        }
       } catch (e) {
         console.warn('Error cleaning up previous Uppy instance:', e);
       }
       app.uppyInstance = null;
     }
 
+    if (app.fileInputListener) {
+      const fileInput = document.getElementById('schedule-attachment-input');
+      if (fileInput) {
+        fileInput.removeEventListener('change', app.fileInputListener);
+      }
+      app.fileInputListener = null;
+    }
+
     try {
-      const {Uppy, Dashboard, XHRUpload} = await import('/lib/uppy-5.1.7/uppy.min.mjs');
+      const {Uppy, XHRUpload} = await import('/lib/uppy-5.1.7/uppy.min.mjs');
 
       app.uppyInstance = new Uppy({
         restrictions: {
@@ -663,18 +667,6 @@ const detailViewMethods = {
         },
         autoProceed: false,
       })
-        .use(Dashboard, {
-          inline: true,
-          target: '#schedule-attachment-uploader',
-          height: 250,
-          proudlyDisplayPoweredByUppy: false,
-          locale: {
-            strings: {
-              dropPasteFiles: '파일을 드래그하거나 %{browse}하세요',
-              browse: '선택',
-            }
-          }
-        })
         .use(XHRUpload, {
           endpoint: '/api/attachments',
           fieldName: 'file',
@@ -726,12 +718,24 @@ const detailViewMethods = {
         app.uppyInstance.setFileMeta(file.id, {
           sessionId: app.createSchedule.attachmentSessionId
         });
+
+        const tempAttachment = {
+          id: file.id,
+          name: file.data.name,
+          contentType: file.data.type,
+          size: file.data.size,
+          isImage: file.data.type.startsWith('image/'),
+          previewUrl: file.data.type.startsWith('image/') ? URL.createObjectURL(file.data) : null,
+        };
+        app.createSchedule.uploadedAttachments.push(tempAttachment);
+        app.$set(app.createSchedule.attachmentProgress, file.id, 0);
+
+        app.uppyInstance.upload().catch(error => {
+          console.error('Upload failed:', error);
+        });
       });
 
       app.uppyInstance.on('upload-progress', (file, progress) => {
-        if (app.createSchedule.attachmentProgress[file.id] === undefined) {
-          app.$set(app.createSchedule.attachmentProgress, file.id, 0);
-        }
         const percentage = Math.round((progress.bytesUploaded / progress.bytesTotal) * 100);
         app.$set(app.createSchedule.attachmentProgress, file.id, percentage);
       });
@@ -740,16 +744,27 @@ const detailViewMethods = {
         const attachmentDto = response.body;
         const normalized = normalizeAttachmentDto(attachmentDto);
 
-        if (file.data.type.startsWith('image/')) {
-          normalized.previewUrl = URL.createObjectURL(file.data);
+        const index = app.createSchedule.uploadedAttachments.findIndex(a => a.id === file.id);
+        if (index !== -1) {
+          const oldPreviewUrl = app.createSchedule.uploadedAttachments[index].previewUrl;
+          if (file.data.type.startsWith('image/') && !normalized.previewUrl) {
+            normalized.previewUrl = oldPreviewUrl;
+          }
+          app.$set(app.createSchedule.uploadedAttachments, index, normalized);
         }
-
-        app.createSchedule.uploadedAttachments.push(normalized);
         app.$delete(app.createSchedule.attachmentProgress, file.id);
       });
 
       app.uppyInstance.on('upload-error', (file, error, response) => {
         console.error('Upload error:', error, response);
+        const index = app.createSchedule.uploadedAttachments.findIndex(a => a.id === file.id);
+        if (index !== -1) {
+          const attachment = app.createSchedule.uploadedAttachments[index];
+          if (attachment.previewUrl) {
+            URL.revokeObjectURL(attachment.previewUrl);
+          }
+          app.createSchedule.uploadedAttachments.splice(index, 1);
+        }
         app.$delete(app.createSchedule.attachmentProgress, file.id);
         if (response && response.body) {
           handleAttachmentXhrError({status: response.status, response: response.body}, file.data);
@@ -757,6 +772,29 @@ const detailViewMethods = {
           showAttachmentAlert('파일 업로드에 실패했습니다.');
         }
       });
+
+      app.fileInputListener = (event) => {
+        const files = Array.from(event.target.files);
+        files.forEach(file => {
+          try {
+            app.uppyInstance.addFile({
+              name: file.name,
+              type: file.type,
+              data: file,
+            });
+          } catch (err) {
+            console.error('Failed to add file:', err);
+            showAttachmentAlert(`파일 추가에 실패했습니다: ${file.name}`);
+          }
+        });
+        event.target.value = '';
+      };
+
+      await app.$nextTick();
+      const fileInput = document.getElementById('schedule-attachment-input');
+      if (fileInput) {
+        fileInput.addEventListener('change', app.fileInputListener);
+      }
 
     } catch (error) {
       console.error('Failed to initialize attachment uploader:', error);
@@ -783,14 +821,18 @@ const detailViewMethods = {
     if (app.uppyInstance) {
       try {
         app.uppyInstance.cancelAll();
-        const Dashboard = app.uppyInstance.getPlugin('Dashboard');
-        if (Dashboard) {
-          app.uppyInstance.removePlugin(Dashboard);
-        }
       } catch (e) {
         console.warn('Error cleaning up Uppy instance:', e);
       }
       app.uppyInstance = null;
+    }
+
+    if (app.fileInputListener) {
+      const fileInput = document.getElementById('schedule-attachment-input');
+      if (fileInput) {
+        fileInput.removeEventListener('change', app.fileInputListener);
+      }
+      app.fileInputListener = null;
     }
 
     app.createSchedule.uploadedAttachments.forEach(attachment => {

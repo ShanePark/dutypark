@@ -530,22 +530,6 @@ a.homeButton:hover {
     margin: 10px;
 }
 
-#detail-view-modal .schedules .schedule.visibility-PUBLIC {
-    background-color: honeydew;
-}
-
-#detail-view-modal .schedules .schedule.visibility-FRIENDS {
-    background-color: aliceblue;
-}
-
-#detail-view-modal .schedules .schedule.visibility-FAMILY {
-    background-color: moccasin;
-}
-
-#detail-view-modal .schedules .schedule.visibility-PRIVATE {
-    background-color: mistyrose;
-}
-
 .schedules .schedule .schedule-content {
     line-height: 1.5;
     margin: 0;
@@ -1100,8 +1084,9 @@ input[readonly], textarea[readonly] {
 
 .attachment-tile {
     position: relative;
-    flex: 0 1 120px;
-    max-width: 140px;
+    flex: 0 0 120px;
+    width: 120px;
+    height: 120px;
 }
 
 .attachment-thumb {
