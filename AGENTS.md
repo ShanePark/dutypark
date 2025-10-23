@@ -22,7 +22,7 @@ Dutypark is a Spring Boot web application built with Kotlin for duty and schedul
 # Build the application
 ./gradlew build
 
-# Run application locally  
+# Run application locally
 ./gradlew bootRun
 
 # Run tests
@@ -34,6 +34,11 @@ Dutypark is a Spring Boot web application built with Kotlin for duty and schedul
 # Generate Spring REST Docs
 ./gradlew asciidoctor
 ```
+
+**Build Guidelines:**
+- **Frontend-only changes** (JS/HTML/CSS files in `src/main/resources/static/` or `templates/`): No gradle build required. Changes are served directly by Spring Boot DevTools or after application restart.
+- **Backend changes** (Kotlin/Java code, dependencies, configuration): Run `./gradlew build` to compile and package.
+- **Testing**: Use `./gradlew test` for backend tests. Frontend changes can be verified directly in the browser.
 
 ### Docker Development
 ```bash
@@ -164,6 +169,15 @@ cp .env.sample .env
 - Integration tests: Full application context testing
 - Controller tests: MockMvc-based API testing
 - Spring REST Docs: API documentation generation
+- Prefer @Transactional for automatic DB rollback
+
+### Testing Best Practices
+
+#### What to Test
+- **Security**: Unauthorized access, wrong user ownership, input sanitization
+- **Edge cases**: Empty lists, null values, special characters, boundary conditions
+- **Performance**: N+1 queries, transaction boundaries, resource cleanup
+- **Errors**: Missing resources, permission failures, file system issues
 
 ### Running Specific Tests
 ```bash
@@ -173,9 +187,27 @@ cp .env.sample .env
 # Run tests with pattern
 ./gradlew test --tests "*ServiceTest"
 
+# Run with clean build
+./gradlew clean test --tests "*ControllerTest"
+
 # Test with coverage
 ./gradlew test jacocoTestReport
 ```
+
+## Collaboration Preferences
+- Always confirm requirements with short, numbered questions when clarification is needed; the user prefers replying by number.
+- Follow a TDD workflow and tackle work in small, sequential steps—complete backend tasks before moving on to frontend pieces for cross-cutting features.
+- When introducing configurable behaviors (file storage paths, limits, blacklists), surface them through `application.yml` properties with sensible defaults.
+- Prefer writing plans and specs in `issue-*.md` files before coding; keep them updated as decisions evolve.
+
+### Task Execution Guidelines
+- **Work on ONE checklist item at a time** - never attempt multiple checklist items simultaneously.
+- Break each checklist item into smaller, manageable todos (typically 3-5 todos per checklist item).
+- Keep individual todos small to prevent work from going off track.
+- Complete all todos for the current checklist item before moving to the next.
+- **After completing all todos for a checklist item, STOP and present the code for user review.**
+- **NEVER commit automatically** - wait for explicit user instruction like "commit this".
+- Only move to the next checklist item after user confirms the current work and explicitly requests commit.
 
 ## Configuration
 

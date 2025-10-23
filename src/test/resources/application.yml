@@ -38,6 +38,17 @@ dutypark:
     service-key: "DECODED_SERVICE_KEY_HERE"
   log.path: "/dutypark/logs"
   ssl.enabled: false
+  storage:
+    root: "/tmp/dutypark-test-storage"
+    max-file-size: 50MB
+    blacklist-ext:
+      - exe
+      - bat
+      - cmd
+      - sh
+    thumbnail:
+      max-side: 200
+    session-expiration-hours: 24
 
 server:
   ssl:

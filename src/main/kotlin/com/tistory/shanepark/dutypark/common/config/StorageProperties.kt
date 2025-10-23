@@ -1,0 +1,28 @@
+package com.tistory.shanepark.dutypark.common.config
+
+import jakarta.validation.constraints.NotEmpty
+import jakarta.validation.constraints.NotNull
+import jakarta.validation.constraints.Positive
+import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.util.unit.DataSize
+
+@ConfigurationProperties(prefix = "dutypark.storage")
+data class StorageProperties(
+    @field:NotEmpty
+    val root: String,
+
+    @field:NotNull
+    val maxFileSize: DataSize,
+
+    val blacklistExt: List<String> = emptyList(),
+
+    val thumbnail: ThumbnailProperties,
+
+    @field:Positive
+    val sessionExpirationHours: Long
+) {
+    data class ThumbnailProperties(
+        @field:Positive
+        val maxSide: Int
+    )
+}

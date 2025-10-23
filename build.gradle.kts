@@ -65,6 +65,10 @@ dependencies {
     implementation("com.github.f4b6a3:ulid-creator:5.1.0")
     implementation("org.apache.poi:poi:5.4.0")
     implementation("org.apache.poi:poi-ooxml:5.4.0")
+    implementation("net.coobird:thumbnailator:0.4.20")
+    implementation("com.twelvemonkeys.imageio:imageio-jpeg:3.12.0")
+    implementation("com.twelvemonkeys.imageio:imageio-webp:3.12.0")
+    implementation("com.twelvemonkeys.imageio:imageio-core:3.12.0")
 
     // JWT
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")

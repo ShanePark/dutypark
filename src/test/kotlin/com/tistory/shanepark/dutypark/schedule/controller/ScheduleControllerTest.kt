@@ -1,6 +1,9 @@
 package com.tistory.shanepark.dutypark.schedule.controller
 
 import com.tistory.shanepark.dutypark.RestDocsTest
+import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
+import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
+import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSaveDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
@@ -20,6 +23,9 @@ class ScheduleControllerTest : RestDocsTest() {
 
     @Autowired
     lateinit var scheduleRepository: ScheduleRepository
+
+    @Autowired
+    lateinit var attachmentRepository: AttachmentRepository
 
     @Test
     fun `createSchedule test`() {
@@ -54,7 +60,12 @@ class ScheduleControllerTest : RestDocsTest() {
                         fieldWithPath("description").description("Schedule Description"),
                         fieldWithPath("startDateTime").description("Schedule Start DateTime"),
                         fieldWithPath("endDateTime").description("Schedule End DateTime"),
-                        fieldWithPath("visibility").description("Schedule Visibility")
+                        fieldWithPath("visibility").description("Schedule Visibility"),
+                        fieldWithPath("id").description("Schedule Id (optional, for update)").type("UUID").optional(),
+                        fieldWithPath("attachmentSessionId").description("Attachment Session Id (optional)")
+                            .type("UUID").optional(),
+                        fieldWithPath("orderedAttachmentIds").description("Ordered Attachment Ids (optional)")
+                            .type("Array").optional()
                     )
                 )
             )
@@ -133,7 +144,11 @@ class ScheduleControllerTest : RestDocsTest() {
                         fieldWithPath("description").description("Schedule Description"),
                         fieldWithPath("startDateTime").description("Schedule Start DateTime"),
                         fieldWithPath("endDateTime").description("Schedule End DateTime"),
-                        fieldWithPath("visibility").description("Schedule Visibility")
+                        fieldWithPath("visibility").description("Schedule Visibility"),
+                        fieldWithPath("attachmentSessionId").description("Attachment Session Id (optional)")
+                            .type("UUID").optional(),
+                        fieldWithPath("orderedAttachmentIds").description("Ordered Attachment Ids (optional)")
+                            .type("Array").optional()
                     )
                 )
             )
@@ -224,6 +239,113 @@ class ScheduleControllerTest : RestDocsTest() {
         em.clear()
 
         assertThat(scheduleRepository.findById(oldSchedule.id)).isEmpty
+    }
+
+    @Test
+    fun `getSchedules returns schedules with attachments field`() {
+        // Given
+        val member = TestData.member
+        val dateTime = LocalDateTime.of(2024, 3, 10, 0, 0)
+        scheduleRepository.save(
+            Schedule(
+                member = member,
+                content = "test schedule",
+                startDateTime = dateTime,
+                endDateTime = dateTime,
+                position = 0
+            )
+        )
+
+        val jwt = getJwt(member)
+
+        // When & Then
+        mockMvc.perform(
+            get("/api/schedules")
+                .param("memberId", member.id.toString())
+                .param("year", "2024")
+                .param("month", "3")
+                .accept("application/json")
+                .cookie(Cookie(jwtConfig.cookieName, jwt))
+        ).andExpect(status().isOk)
+            .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
+    fun `update schedule should delete attachments not in orderedAttachmentIds`() {
+        // Given
+        val member = TestData.member
+        val schedule = scheduleRepository.save(
+            Schedule(
+                member = member,
+                content = "test with attachments",
+                startDateTime = LocalDateTime.now(),
+                endDateTime = LocalDateTime.now().plusHours(1),
+                position = 0
+            )
+        )
+
+        val attachment1 = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = schedule.id.toString(),
+                originalFilename = "test1.jpg",
+                storedFilename = "stored1.jpg",
+                contentType = "image/jpeg",
+                size = 1000L,
+                storagePath = "/test/path",
+                createdBy = member.id!!,
+                orderIndex = 0
+            )
+        )
+
+        val attachment2 = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = schedule.id.toString(),
+                originalFilename = "test2.jpg",
+                storedFilename = "stored2.jpg",
+                contentType = "image/jpeg",
+                size = 2000L,
+                storagePath = "/test/path",
+                createdBy = member.id!!,
+                orderIndex = 1
+            )
+        )
+
+        em.flush()
+        em.clear()
+
+        val jwt = getJwt(member)
+        val updateScheduleDto = ScheduleSaveDto(
+            id = schedule.id,
+            memberId = member.id!!,
+            content = "updated content",
+            startDateTime = LocalDateTime.now().plusHours(2),
+            endDateTime = LocalDateTime.now().plusHours(3),
+            orderedAttachmentIds = listOf(attachment1.id)
+        )
+        val json = objectMapper.writeValueAsString(updateScheduleDto)
+
+        // When
+        mockMvc.perform(
+            post("/api/schedules")
+                .accept("application/json")
+                .contentType("application/json")
+                .content(json)
+                .cookie(Cookie(jwtConfig.cookieName, jwt))
+        ).andExpect(status().isOk)
+
+        em.flush()
+        em.clear()
+
+        // Then
+        val attachments = attachmentRepository.findAllByContextTypeAndContextId(
+            AttachmentContextType.SCHEDULE,
+            schedule.id.toString()
+        )
+        assertThat(attachments).hasSize(1)
+        assertThat(attachments[0].id).isEqualTo(attachment1.id)
+        assertThat(attachmentRepository.findById(attachment2.id)).isEmpty
     }
 
 }

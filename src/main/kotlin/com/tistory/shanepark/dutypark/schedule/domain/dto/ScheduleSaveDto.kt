@@ -20,6 +20,8 @@ data class ScheduleSaveDto(
     val visibility: Visibility = Visibility.FRIENDS,
     val startDateTime: LocalDateTime,
     val endDateTime: LocalDateTime,
+    val attachmentSessionId: UUID? = null,
+    val orderedAttachmentIds: List<UUID> = emptyList(),
 ) {
 
     init {

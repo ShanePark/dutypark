@@ -1,13 +1,13 @@
 <div id="detail-view-modal" class="modal fade" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content card" v-if="detailView">
-      <div class="card-header modal-header text-center py-4 px-4">
-        <p class="current-date-label fs-1"
+      <div class="card-header modal-header text-center py-3 px-4">
+        <p class="current-date-label fs-3 mb-0"
            v-text="detailView?.year + '년 ' + detailView?.month + '월 ' + detailView?.day + '일'"></p>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body p-1">
-        <div class="dutyTypes px-4 py-2">
+        <div v-if="!isCreateScheduleMode" class="dutyTypes px-4 py-2">
           <form>
             <div v-for="type in team.dutyTypes" class="pretty p-round p-pulse">
               <input type="radio" name="dutyType"
@@ -37,15 +37,55 @@
                 <template v-if="schedule.totalDays > 1">
                   [{{ schedule.daysFromStart }}/{{ schedule.totalDays }}]
                 </template>
-                <i v-if="schedule.description"
-                   class="has-description bi bi-chat-left-text cursor-pointer"
-                   @click.stop="showDescription(schedule)"
-                ></i>
               </p>
               <div v-if="schedule.description" class="schedule-description">
                 <hr/>
                 <div v-html="replaceLineBreaks(schedule.description)"></div>
               </div>
+
+              <!-- Attachment Gallery (Read-only) -->
+              <div v-if="schedule.attachments && schedule.attachments.length > 0" class="schedule-attachments mt-3">
+                <hr/>
+                <div class="fw-bold mb-2">
+                  <i class="bi bi-paperclip"></i> 첨부파일 ({{ schedule.attachments.length }})
+                </div>
+                <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 g-2">
+                  <div v-for="attachment in schedule.attachments" :key="attachment.id" class="col">
+                    <div class="card h-100 position-relative">
+                      <a :href="attachment.downloadUrl || ('/api/attachments/' + attachment.id + '/download')"
+                         class="attachment-download position-absolute btn btn-sm"
+                         download
+                         title="다운로드">
+                        <i class="bi bi-download text-white"></i>
+                      </a>
+                      <div class="position-relative overflow-hidden" style="padding-top: 100%;">
+                        <div v-if="attachment.hasThumbnail"
+                             class="position-absolute top-0 start-0 w-100 h-100 attachment-thumbnail-clickable"
+                             style="cursor: pointer;"
+                             @click="openAttachmentViewer(attachment)">
+                          <img :src="attachment.thumbnailUrl"
+                               :alt="attachment.originalFilename"
+                               class="w-100 h-100"
+                               style="object-fit: cover;">
+                          <div class="attachment-hover-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center">
+                            <i class="bi bi-search text-white" style="font-size: 2rem;"></i>
+                          </div>
+                        </div>
+                        <div v-else class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center">
+                          <i :class="['bi', attachmentIconClass(attachment), 'text-muted', 'display-4', 'lh-1']"></i>
+                        </div>
+                      </div>
+                      <div class="card-body p-2">
+                        <div class="small text-truncate" :title="attachment.originalFilename">
+                          {{ attachment.originalFilename }}
+                        </div>
+                        <div class="small text-muted">{{ formatBytes(attachment.size) }}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div class="schedule-tags fs-4">
                 <span
                     v-for="tag in schedule.tags"
@@ -112,7 +152,7 @@
               </label>
               <label>일정 상세 (선택사항)<small class="help-note">달력에 표시되지 않고 클릭했을때만 보여져요 <i
                   class="bi bi-info-circle-fill"></i></small>
-                <textarea class="form-control" placeholder="일정 상세정보를 입력하세요." rows="4"
+                <textarea class="form-control" placeholder="일정 상세정보를 입력하세요." rows="3"
                           v-model="createSchedule.description"></textarea>
               </label>
               <label>시작일
@@ -158,8 +198,87 @@
                   </div>
                 </div>
               </div>
+
+              <!-- Attachment Uploader -->
+              <div class="mb-3">
+                <label>첨부파일 (선택사항)</label>
+
+                <!-- Attachment Gallery -->
+                <div class="attachment-gallery mt-2">
+                  <div class="attachment-tile" v-for="attachment in createSchedule.uploadedAttachments" :key="attachment.id">
+                    <div class="attachment-thumb">
+                      <img v-if="attachment.isImage && attachment.thumbnailUrl"
+                           :src="attachment.thumbnailUrl"
+                           :alt="attachment.name"
+                           class="w-100 h-100" style="object-fit: cover;">
+                      <img v-else-if="attachment.isImage"
+                           :src="attachment.previewUrl"
+                           :alt="attachment.name"
+                           class="w-100 h-100" style="object-fit: cover;">
+                      <div v-else class="d-flex align-items-center justify-content-center h-100">
+                        <i :class="['bi', attachmentIconClass(attachment), 'text-muted', 'display-4', 'lh-1']"></i>
+                      </div>
+                    </div>
+                    <div class="attachment-meta">
+                      <div class="attachment-name" :title="attachment.name">{{ attachment.name }}</div>
+                      <div class="attachment-size">{{ formatBytes(attachment.size) }}</div>
+                      <div class="attachment-progress" v-if="createSchedule.attachmentProgress[attachment.id] !== undefined && createSchedule.attachmentProgress[attachment.id] < 100">
+                        <div class="progress" style="height: 4px;">
+                          <div class="progress-bar" :style="{width: createSchedule.attachmentProgress[attachment.id] + '%'}"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <button type="button" class="attachment-remove btn btn-sm btn-danger" @click="removeAttachment(attachment.id)">
+                      <i class="bi bi-x"></i>
+                    </button>
+                  </div>
+
+                  <!-- File picker button -->
+                  <div class="attachment-tile attachment-add-button">
+                    <input type="file" id="schedule-attachment-input" multiple style="display: none;" />
+                    <label for="schedule-attachment-input" class="attachment-thumb d-flex align-items-center justify-content-center h-100 m-0" style="cursor: pointer;">
+                      <i class="bi bi-plus-circle text-muted" style="font-size: 3rem;"></i>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="attachmentUploadSummary" class="alert alert-info d-flex align-items-center gap-3 mb-0">
+                <div class="d-flex align-items-center">
+                  <div class="spinner-border spinner-border-sm me-2" role="status">
+                    <span class="visually-hidden">업로드 중</span>
+                  </div>
+                  <span class="fw-semibold">파일 업로드 중</span>
+                </div>
+                <div class="flex-grow-1 small text-muted">
+                  <span>{{ attachmentUploadSummary.activeUploads }}개 파일</span>
+                  <span class="mx-1">|</span>
+                  <span>{{ formatBytes(attachmentUploadSummary.uploadedBytes) }} / {{ formatBytes(attachmentUploadSummary.totalBytes) }}</span>
+                  <span class="mx-1">|</span>
+                  <span>{{ attachmentUploadSummary.progressPercent }}%</span>
+                  <span class="mx-1">|</span>
+                  <span v-if="attachmentUploadSummary.speedBytesPerSec > 0">{{ formatBytes(attachmentUploadSummary.speedBytesPerSec) }}/s</span>
+                  <span v-else>속도 계산 중</span>
+                  <span class="mx-1">|</span>
+                  <span v-if="attachmentUploadSummary.remainingSeconds !== null">남음 {{ formatDuration(attachmentUploadSummary.remainingSeconds) }}</span>
+                  <span v-else>남은 시간 계산 중</span>
+                  <span class="mx-1">|</span>
+                  <span>경과 {{ formatDuration(attachmentUploadSummary.elapsedSeconds) }}</span>
+                </div>
+              </div>
+
               <div class="buttons mt-3">
-                <button id="add-btn" class="btn btn-success" v-on:click="saveSchedule">저장</button>
+                <button
+                    id="add-btn"
+                    class="btn btn-success"
+                    :disabled="isAttachmentUploading"
+                    :title="isAttachmentUploading ? '파일 업로드가 완료되면 저장할 수 있습니다.' : null"
+                    v-on:click="saveSchedule">
+                  <span v-if="isAttachmentUploading" class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">업로드 중</span>
+                  </span>
+                  <span>저장</span>
+                </button>
                 <button class="btn btn-secondary" v-on:click="cancelCreateSchedule">취소</button>
               </div>
             </div>
@@ -174,4 +293,3 @@
     </div>
   </div>
 </div>
-

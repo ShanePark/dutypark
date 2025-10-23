@@ -40,6 +40,7 @@ services:
       - dutypark-network
     volumes:
       - ./data/logs:/dutypark/logs
+      - ./data/storage:/dutypark/storage
 
   nginx:
     image: nginx:alpine

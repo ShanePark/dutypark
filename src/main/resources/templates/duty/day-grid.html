@@ -56,7 +56,7 @@
             <template v-if="schedule.totalDays > 1">
               [{{ schedule.daysFromStart }}/{{ schedule.totalDays }}]
             </template>
-            <i v-if="schedule.description"
+            <i v-if="schedule.description || (schedule.attachments && schedule.attachments.length > 0)"
                class="has-description bi bi-chat-left-text cursor-pointer"
                @click.stop="showDescription(schedule)"
             ></i>

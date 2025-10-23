@@ -530,22 +530,6 @@ a.homeButton:hover {
     margin: 10px;
 }
 
-#detail-view-modal .schedules .schedule.visibility-PUBLIC {
-    background-color: honeydew;
-}
-
-#detail-view-modal .schedules .schedule.visibility-FRIENDS {
-    background-color: aliceblue;
-}
-
-#detail-view-modal .schedules .schedule.visibility-FAMILY {
-    background-color: moccasin;
-}
-
-#detail-view-modal .schedules .schedule.visibility-PRIVATE {
-    background-color: mistyrose;
-}
-
 .schedules .schedule .schedule-content {
     line-height: 1.5;
     margin: 0;
@@ -1070,7 +1054,7 @@ input[readonly], textarea[readonly] {
 }
 
 .modal-body {
-    max-height: 650px;
+    max-height: 580px;
     overflow-y: scroll;
 }
 
@@ -1090,4 +1074,141 @@ input[readonly], textarea[readonly] {
 
 .friend-card:hover {
     background-color: #e2e8f0;
+}
+
+.attachment-gallery {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.attachment-tile {
+    position: relative;
+    flex: 0 0 120px;
+    width: 120px;
+    height: 120px;
+    margin-bottom: 3rem;
+}
+
+.attachment-thumb {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 0.75rem;
+    background-color: #f8f9fa;
+    border: 1px dashed #dee2e6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.attachment-thumb img,
+.attachment-thumb svg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.attachment-thumb svg {
+    padding: 1rem;
+    box-sizing: border-box;
+    fill: #6c757d;
+}
+
+.attachment-meta {
+    margin-top: 0.5rem;
+}
+
+.attachment-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.attachment-size {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.attachment-progress {
+    height: 4px;
+}
+
+.attachment-remove {
+    position: absolute;
+    top: 0.35rem;
+    right: 0.35rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 1rem;
+    line-height: 1;
+    z-index: 10;
+    opacity: 0.9;
+}
+
+.attachment-remove:hover {
+    opacity: 1;
+}
+
+.attachment-download {
+    top: 0.35rem;
+    right: 0.35rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 1rem;
+    line-height: 1;
+    z-index: 10;
+    opacity: 0.7;
+    background-color: rgba(0, 0, 0, 0.6);
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.attachment-download:hover {
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+.attachment-viewer-popup {
+    max-width: min(1000px, 90vw);
+    padding: 0;
+}
+
+.attachment-viewer-title {
+    color: #f8f9fa;
+    text-align: left;
+}
+
+.attachment-viewer-html {
+    padding: 0;
+    margin: 0;
+}
+
+.attachment-viewer-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 0.5rem;
+}
+
+.attachment-viewer-close {
+    color: #f8f9fa;
+}
+
+.attachment-viewer-body {
+    display: flex;
+    justify-content: center;
+    max-height: 80vh;
+    overflow: auto;
+}
+
+.attachment-hover-overlay {
+    opacity: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.attachment-thumbnail-clickable:hover .attachment-hover-overlay {
+    opacity: 1;
 }

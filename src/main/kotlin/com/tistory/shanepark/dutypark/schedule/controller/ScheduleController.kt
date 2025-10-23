@@ -54,12 +54,13 @@ class ScheduleController(
     fun saveSchedule(
         @RequestBody @Validated scheduleSaveDto: ScheduleSaveDto,
         @Login loginMember: LoginMember
-    ) {
-        if (scheduleSaveDto.id == null) {
+    ): Map<String, Any> {
+        val schedule = if (scheduleSaveDto.id == null) {
             scheduleService.createSchedule(loginMember, scheduleSaveDto)
-            return
+        } else {
+            scheduleService.updateSchedule(loginMember, scheduleSaveDto)
         }
-        scheduleService.updateSchedule(loginMember, scheduleSaveDto)
+        return mapOf("id" to schedule.id)
     }
 
     @PatchMapping("/{id1}/position")
