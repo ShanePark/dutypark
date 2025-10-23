@@ -1,18 +1,5 @@
 const sweetAlTimer = 1500;
 
-const attachmentValidation = Object.freeze({
-  maxFileSizeBytes: 50 * 1024 * 1024,
-  maxFileSizeLabel: '50MB',
-  tooLargeMessage(filename) {
-    return `${filename} 파일은 ${this.maxFileSizeLabel}를 초과합니다.`;
-  },
-  blockedExtensionMessage(filename) {
-    return `${filename} 파일은 업로드할 수 없는 확장자입니다.`;
-  }
-});
-
-window.AttachmentValidation = attachmentValidation;
-
 const isEndsWithLastConsonantLetter = function (text) {
   const strGa = 44032; // 가
   const strHih = 55203; // 힣

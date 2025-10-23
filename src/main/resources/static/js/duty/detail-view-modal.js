@@ -4,10 +4,13 @@ const attachmentValidationConfig = window.AttachmentValidation || {
   maxFileSizeBytes: 50 * 1024 * 1024,
   maxFileSizeLabel: '50MB',
   tooLargeMessage(filename) {
-    return `${filename} 파일은 업로드할 수 없습니다.`;
+    const prefix = filename ? `${filename} 파일은` : '파일이';
+    const label = this.maxFileSizeLabel ? `(${this.maxFileSizeLabel})` : '';
+    return `${prefix} 허용 용량${label}을 초과해 업로드할 수 없습니다.`;
   },
   blockedExtensionMessage(filename) {
-    return `${filename} 파일은 업로드할 수 없습니다.`;
+    const target = filename ? `${filename} 파일은` : '이 파일은';
+    return `${target} 업로드할 수 없는 확장자입니다.`;
   }
 };
 
@@ -161,8 +164,8 @@ const showAttachmentAlert = (message) => {
   Swal.fire({
     icon: 'error',
     title: message,
-    showConfirmButton: false,
-    timer: sweetAlTimer
+    showConfirmButton: true,
+    confirmButtonText: '확인'
   });
 };
 
@@ -185,20 +188,26 @@ const handleAttachmentResponseError = async (response, fallbackMessage, options 
   const {fileName} = options;
   let message = fallbackMessage;
   if (response) {
-    if (response.status === 413 && fileName) {
-      message = attachmentValidationConfig.tooLargeMessage(fileName);
-    } else {
-      let body = null;
-      try {
-        body = await response.clone().json();
-      } catch (e) {
-        body = null;
+    let body = null;
+    try {
+      body = await response.clone().json();
+    } catch (e) {
+      body = null;
+    }
+    if (response.status === 413) {
+      if (body?.message) {
+        message = body.message;
+      } else {
+        message = attachmentValidationConfig.tooLargeMessage(fileName);
       }
-      if (response.status === 400 && body?.code === 'ATTACHMENT_EXTENSION_BLOCKED' && fileName) {
+    } else if (response.status === 400 && body?.code === 'ATTACHMENT_EXTENSION_BLOCKED') {
+      if (fileName) {
         message = attachmentValidationConfig.blockedExtensionMessage(fileName);
       } else if (body?.message) {
         message = body.message;
       }
+    } else if (body?.message) {
+      message = body.message;
     }
   }
   showAttachmentAlert(message);
@@ -211,8 +220,8 @@ const handleAttachmentXhrError = (xhr, file) => {
     showAttachmentAlert('네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
     return new Error('Network error during attachment upload');
   }
-  if (xhr.status === 413 && fileName) {
-    const message = attachmentValidationConfig.tooLargeMessage(fileName);
+  if (xhr.status === 413) {
+    const message = xhr.response?.message || attachmentValidationConfig.tooLargeMessage(fileName);
     showAttachmentAlert(message);
     return new Error(message);
   }
@@ -742,6 +751,18 @@ const detailViewMethods = {
         }
       });
 
+      app.uppyInstance.on('restriction-failed', (file, error) => {
+        if (file && app.uppyInstance.getFile(file.id)) {
+          app.uppyInstance.removeFile(file.id);
+        }
+        if (error && (error.isRestriction || /maximum allowed size/i.test(error.message || ''))) {
+          showAttachmentAlert(attachmentValidationConfig.tooLargeMessage(file?.name));
+        } else {
+          showAttachmentAlert('파일 추가에 실패했습니다.');
+        }
+        console.warn('Attachment restriction failed:', error);
+      });
+
       app.uppyInstance.addPreProcessor(async (fileIDs) => {
         if (!fileIDs || fileIDs.length === 0) {
           return;
@@ -864,7 +885,11 @@ const detailViewMethods = {
             });
           } catch (err) {
             console.error('Failed to add file:', err);
-            showAttachmentAlert(`파일 추가에 실패했습니다: ${file.name}`);
+            if (err && (err.isRestriction || /maximum allowed size/i.test(err.message || ''))) {
+              showAttachmentAlert(attachmentValidationConfig.tooLargeMessage(file.name));
+            } else {
+              showAttachmentAlert(`파일 추가에 실패했습니다: ${file.name}`);
+            }
           }
         });
         event.target.value = '';

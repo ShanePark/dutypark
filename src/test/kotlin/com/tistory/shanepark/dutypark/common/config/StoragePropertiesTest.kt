@@ -58,7 +58,7 @@ class StoragePropertiesTest {
 
         assertThat(storageProperties.root).isEqualTo("/dutypark/storage")
         assertThat(storageProperties.maxFileSize).isEqualTo(DataSize.ofMegabytes(50))
-        assertThat(storageProperties.blacklistExt).containsExactly("exe", "bat", "cmd", "sh", "js")
+        assertThat(storageProperties.blacklistExt).containsExactly("exe", "bat", "cmd", "sh")
         assertThat(storageProperties.thumbnail.maxSide).isEqualTo(200)
         assertThat(storageProperties.sessionExpirationHours).isEqualTo(24)
     }
