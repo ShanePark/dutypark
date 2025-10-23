@@ -47,7 +47,6 @@ services:
     container_name: dutypark-nginx
     restart: unless-stopped
     ports:
-      - "80:80"
       - "443:443"
     environment:
       TZ: ${TZ:-Asia/Seoul}
