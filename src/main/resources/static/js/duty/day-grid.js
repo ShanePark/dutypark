@@ -156,13 +156,18 @@ const dayGridMethods = {
         return schedules && schedules.length > 0;
     },
     showDescription(schedule) {
-        const description = schedule.description.replace(/\n/g, '<br>');
+        let html = '';
 
-        let html = `<div>${description}</div>`;
+        if (schedule.description) {
+            const description = schedule.description.replace(/\n/g, '<br>');
+            html = `<div>${description}</div>`;
+        }
 
         if (schedule.attachments && schedule.attachments.length > 0) {
+            if (schedule.description) {
+                html += `<hr class="my-3">`;
+            }
             html += `
-                <hr class="my-3">
                 <div class="fw-bold mb-2">
                     <i class="bi bi-paperclip"></i> 첨부파일 (${schedule.attachments.length})
                 </div>
