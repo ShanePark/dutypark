@@ -59,6 +59,8 @@ function loadApp(memberId, teamId, loginMemberId, memberName, year, month, searc
         todosLoading: false,
         editTodoMode: false,
         selectedTodoStatus: 'ACTIVE',
+        originalTodoTitle: '',
+        originalTodoContent: '',
         todoOverviewFilters: {
           active: true,
           completed: false,

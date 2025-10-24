@@ -25,6 +25,8 @@ const todoListMethods = {
     modal.setAttribute('data-id', todo.id);
     this.selectedTodoStatus = todo.status;
     this.editTodoMode = false;
+    this.originalTodoTitle = todo.title;
+    this.originalTodoContent = todo.content;
   }
   ,
   loadTodos() {
@@ -122,7 +124,7 @@ const todoListMethods = {
       }
       Swal.fire({
         icon: 'success',
-        title: '할 일이 진행중으로 변경되었습니다.',
+        title: '할 일이 재오픈 되었습니다.',
         showConfirmButton: false,
         timer: sweetAlTimer
       });

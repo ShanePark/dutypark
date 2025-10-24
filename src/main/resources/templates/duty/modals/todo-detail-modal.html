@@ -27,19 +27,24 @@
             <p class="text-muted todo-date mb-0 small"></p>
           </div>
           <div class="d-flex flex-wrap gap-2">
-            <button type="button" class="btn btn-info btn-sm" v-on:click="editTodoMode=true"
+            <button type="button" class="btn btn-info btn-sm" v-on:click="enterEditMode()"
                     v-if="!editTodoMode">수정
             </button>
             <button type="button" class="btn btn-success btn-sm" v-on:click="updateTodo()"
                     v-if="editTodoMode">저장
             </button>
+            <button type="button" class="btn btn-secondary btn-sm" v-on:click="cancelEdit()"
+                    v-if="editTodoMode">취소
+            </button>
             <button type="button" class="btn btn-outline-success btn-sm" v-on:click="completeTodo()"
-                    v-if="selectedTodoStatus === 'ACTIVE'">완료 처리
+                    v-if="selectedTodoStatus === 'ACTIVE' && !editTodoMode">완료 처리
             </button>
             <button type="button" class="btn btn-outline-primary btn-sm" v-on:click="reopenTodo()"
-                    v-if="selectedTodoStatus === 'COMPLETED'">재오픈
+                    v-if="selectedTodoStatus === 'COMPLETED' && !editTodoMode">재오픈
             </button>
-            <button type="button" class="btn btn-danger btn-sm" v-on:click="deleteTodo()">삭제</button>
+            <button type="button" class="btn btn-danger btn-sm" v-on:click="deleteTodo()"
+                    v-if="!editTodoMode">삭제
+            </button>
           </div>
         </div>
       </div>
