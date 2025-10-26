@@ -14,6 +14,7 @@ import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import com.tistory.shanepark.dutypark.team.domain.enums.WorkType
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -42,6 +43,11 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
 
     @SpyBean
     lateinit var holidayServiceSpy: HolidayService
+
+    @AfterEach
+    fun clearHolidayCache() {
+        holidayServiceSpy.resetHolidayInfo()
+    }
 
     @Test
     @DisplayName("create new duty")
