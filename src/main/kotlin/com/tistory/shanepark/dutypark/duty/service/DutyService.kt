@@ -147,26 +147,28 @@ class DutyService(
         member: Member,
         dutyTypeRegularWork: DutyType,
         calendarView: CalendarView,
-        dutiesBefore: List<Duty>
+        existingDuties: List<Duty>
     ): List<Duty> {
-        val dutiesBeforeMap = dutiesBefore.associateBy { it.dutyDate }
-        val duties = generateSequence(calendarView.startDate) { it.plusDays(1) }
-            .takeWhile { it <= calendarView.endDate }
-            .map { date ->
-                dutiesBeforeMap[date] ?: Duty(
-                    member = member,
-                    dutyDate = date,
-                    dutyType = if (isWeekDaysAndNotHoliday(date, calendarView)) dutyTypeRegularWork else null
-                )
-            }.toList()
+        val existingDutiesByDate = existingDuties.associateBy { it.dutyDate }
+        val holidayLookup = holidayService.findHolidays(calendarView)
+            .asSequence()
+            .flatMap { it.asSequence() }
+            .filter { it.isHoliday }
+            .map { it.localDate }
+            .toSet()
+        val duties = calendarView.dates.map { date ->
+            existingDutiesByDate[date] ?: Duty(
+                member = member,
+                dutyDate = date,
+                dutyType = if (isWeekDaysAndNotHoliday(date, holidayLookup)) dutyTypeRegularWork else null
+            )
+        }
         return dutyRepository.saveAll(duties)
     }
 
-    private fun isWeekDaysAndNotHoliday(date: LocalDate, calendarView: CalendarView): Boolean {
+    private fun isWeekDaysAndNotHoliday(date: LocalDate, holidayLookup: Set<LocalDate>): Boolean {
         if (date.dayOfWeek == SATURDAY || date.dayOfWeek == SUNDAY) return false
-        val index = calendarView.getIndex(date)
-        val holidays = holidayService.findHolidays(calendarView)
-        return holidays[index].all { !it.isHoliday }
+        return !holidayLookup.contains(date)
     }
 
     private fun findDutyByMonthAndYear(

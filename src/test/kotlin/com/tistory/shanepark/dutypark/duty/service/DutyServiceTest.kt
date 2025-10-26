@@ -8,15 +8,23 @@ import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.holiday.domain.Holiday
 import com.tistory.shanepark.dutypark.holiday.repository.HolidayRepository
+import com.tistory.shanepark.dutypark.holiday.service.HolidayService
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.service.FriendService
+import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import com.tistory.shanepark.dutypark.team.domain.enums.WorkType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.mockito.Mockito.reset
+import org.mockito.Mockito.times
+import org.mockito.Mockito.verify
+import org.mockito.kotlin.any
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.mock.mockito.SpyBean
 import java.time.LocalDate
+import java.util.UUID
 
 internal class DutyServiceTest : DutyparkIntegrationTest() {
 
@@ -31,6 +39,9 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var friendService: FriendService
+
+    @SpyBean
+    lateinit var holidayServiceSpy: HolidayService
 
     @Test
     @DisplayName("create new duty")
@@ -453,6 +464,32 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
             }
             assertThat(duty.dutyType).isEqualTo(dutyName)
         }
+    }
+
+    @Test
+    fun `lazy init requests holiday data only once per calendar view`() {
+        // Given
+        val member = TestData.member
+        val weekdayTeam =
+            teamRepository.save(Team("weekday-team-${UUID.randomUUID()}").apply { workType = WorkType.WEEKDAY })
+        weekdayTeam.addDutyType(dutyName = "근무", dutyColor = "#123456")
+        weekdayTeam.addMember(member)
+        memberRepository.save(member)
+        teamRepository.save(weekdayTeam)
+
+        holidayRepository.saveAll(
+            listOf(
+                Holiday("dummy1", false, LocalDate.of(2024, 12, 31)),
+                Holiday("dummy2", false, LocalDate.of(2025, 1, 1))
+            )
+        )
+        reset(holidayServiceSpy)
+
+        // When
+        dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2025, 1, loginMember(member))
+
+        // Then
+        verify(holidayServiceSpy, times(1)).findHolidays(any())
     }
 
 }
