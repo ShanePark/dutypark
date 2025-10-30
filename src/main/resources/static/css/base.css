@@ -866,6 +866,12 @@ a.homeButton:hover {
     color: #555;
 }
 
+.todo-overview-content {
+    white-space: pre-line;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
 .todo-overview-btn {
     border: 1px solid #d0d7e2;
     background-color: #ffffff;
