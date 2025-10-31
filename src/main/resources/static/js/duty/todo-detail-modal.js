@@ -42,6 +42,12 @@ const todoDetailMethods = {
                 });
                 return;
             }
+            Swal.fire({
+                icon: 'success',
+                title: '저장되었습니다.',
+                showConfirmButton: false,
+                timer: sweetAlTimer
+            });
             app.editTodoMode = false;
             app.loadTodos();
         });

@@ -26,7 +26,16 @@
             <span class="badge bg-success me-2" v-if="selectedTodoStatus === 'COMPLETED'">완료</span>
             <p class="text-muted todo-date mb-0 small"></p>
           </div>
-          <div class="d-flex flex-wrap gap-2">
+          <div class="d-flex flex-wrap gap-2 align-items-center">
+            <div class="pretty p-svg p-plain" v-if="!editTodoMode"
+                 v-on:click.prevent="selectedTodoStatus === 'ACTIVE' ? completeTodo() : reopenTodo()"
+                 style="cursor: pointer;">
+              <input type="checkbox" :checked="selectedTodoStatus === 'COMPLETED'"/>
+              <div class="state">
+                <img class="svg" src="/svg/task.svg">
+                <label>완료</label>
+              </div>
+            </div>
             <button type="button" class="btn btn-info btn-sm" v-on:click="enterEditMode()"
                     v-if="!editTodoMode">수정
             </button>
@@ -35,12 +44,6 @@
             </button>
             <button type="button" class="btn btn-secondary btn-sm" v-on:click="cancelEdit()"
                     v-if="editTodoMode">취소
-            </button>
-            <button type="button" class="btn btn-outline-success btn-sm" v-on:click="completeTodo()"
-                    v-if="selectedTodoStatus === 'ACTIVE' && !editTodoMode">완료 처리
-            </button>
-            <button type="button" class="btn btn-outline-primary btn-sm" v-on:click="reopenTodo()"
-                    v-if="selectedTodoStatus === 'COMPLETED' && !editTodoMode">재오픈
             </button>
             <button type="button" class="btn btn-danger btn-sm" v-on:click="deleteTodo()"
                     v-if="!editTodoMode">삭제
