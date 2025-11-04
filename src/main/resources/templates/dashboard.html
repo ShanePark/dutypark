@@ -184,8 +184,10 @@
                 </ul>
               </div>
             </div>
-            <p v-if="friend.duty" class="mt-2 text-muted">
-              <i class="bi bi-person-badge me-1"></i> 근무: {{ friend.duty?.dutyType }}
+            <p class="mt-2 text-muted">
+              <i class="bi bi-person-badge me-1"></i> 근무:
+              <span class="ms-1" v-if="friend.duty">{{ friend.duty?.dutyType }}</span>
+              <span class="ms-1 text-muted" v-else>-</span>
             </p>
             <div class="mt-2">
               <template v-if="friend.schedules && friend.schedules.length">
@@ -331,7 +333,7 @@
             },
             friendInfoLoading: false,
             friendInfoInitialized: false,
-            isFriendSortableInit: false
+            friendSortable: null
         },
         mounted() {
             if (!this.memberId)
@@ -366,18 +368,23 @@
                         this.friendInfoLoading = false;
                         this.friendInfoInitialized = true;
                         this.$nextTick(() => {
-                            if (!this.isFriendSortableInit) {
-                                this.isFriendSortableInit = this.initFriendSortable();
-                            }
+                            this.initFriendSortable();
                         });
                     });
             },
             initFriendSortable() {
                 const friendList = document.querySelector('.friend-list');
                 if (!friendList) {
+                    if (this.friendSortable) {
+                        this.friendSortable.destroy();
+                        this.friendSortable = null;
+                    }
                     return false;
                 }
-                new Sortable(friendList, {
+                if (this.friendSortable) {
+                    this.friendSortable.destroy();
+                }
+                this.friendSortable = new Sortable(friendList, {
                     animation: 150,
                     draggable: '.pinned_friend',
                     handle: '.handle',
@@ -390,6 +397,10 @@
             updateFriendsPin() {
                 const friendIds = [...document.querySelectorAll('.pinned_friend')]
                     .map(el => Number(el.getAttribute('data-member_id')));
+                this.applyFriendOrder(friendIds);
+                this.$nextTick(() => {
+                    this.initFriendSortable();
+                });
                 fetch('/api/friends/pin/order', {
                     method: 'PATCH',
                     headers: {
@@ -398,13 +409,23 @@
                     body: JSON.stringify(friendIds)
                 }).then(function (response) {
                     if (response.ok) {
-                        app.loadFriendInfo();
                         return;
                     }
                     throw new Error('친구 순서 변경 실패');
                 }).catch(function (error) {
                     alert('친구 순서 변경 실패');
+                    app.loadFriendInfo();
                 });
+            },
+            applyFriendOrder(friendIds) {
+                if (!friendIds.length) {
+                    return;
+                }
+                const friendMap = new Map(this.friendInfo.friends.map(friend => [friend.member.id, friend]));
+                const pinnedSet = new Set(friendIds);
+                const pinnedFriends = friendIds.map(id => friendMap.get(id)).filter(Boolean);
+                const unpinnedFriends = this.friendInfo.friends.filter(friend => !pinnedSet.has(friend.member.id));
+                this.friendInfo.friends = [...pinnedFriends, ...unpinnedFriends];
             },
             moveTo(id) {
                 if (!id) id = app.myInfo.member.id;
@@ -537,12 +558,20 @@
                 })
             },
             pinFriend: function (member) {
+                const friend = this.friendInfo.friends.find(friend => friend.member.id === member.id);
+                if (!friend) {
+                    return;
+                }
                 const url = '/api/friends/pin/' + member.id;
                 fetch(url, {
                     method: 'PATCH',
                 }).then(function (response) {
                     if (response.ok) {
-                        app.loadFriendInfo();
+                        friend.pinOrder = app.getNextPinOrder();
+                        app.sortFriendsByPinOrder();
+                        app.$nextTick(() => {
+                            app.initFriendSortable();
+                        });
                         return;
                     }
                     throw new Error('친구 고정 실패');
@@ -551,18 +580,50 @@
                 })
             },
             unpinFriend: function (member) {
+                const friend = this.friendInfo.friends.find(friend => friend.member.id === member.id);
+                if (!friend) {
+                    return;
+                }
                 const url = '/api/friends/unpin/' + member.id;
                 fetch(url, {
                     method: 'PATCH',
                 }).then(function (response) {
                     if (response.ok) {
-                        app.loadFriendInfo();
+                        friend.pinOrder = null;
+                        app.sortFriendsByPinOrder();
+                        app.$nextTick(() => {
+                            app.initFriendSortable();
+                        });
                         return;
                     }
                     throw new Error('친구 고정 해제 실패');
                 }).catch(function (error) {
                     alert('친구 고정 해제 실패');
                 })
+            },
+            getNextPinOrder() {
+                const orders = this.friendInfo.friends
+                    .map(friend => Number(friend.pinOrder))
+                    .filter(order => !Number.isNaN(order) && order > 0);
+                if (!orders.length) {
+                    return 1;
+                }
+                return Math.max(...orders) + 1;
+            },
+            sortFriendsByPinOrder() {
+                this.friendInfo.friends.sort((a, b) => {
+                    const aPinned = a.pinOrder ? 0 : 1;
+                    const bPinned = b.pinOrder ? 0 : 1;
+                    if (aPinned !== bPinned) {
+                        return aPinned - bPinned;
+                    }
+                    if (a.pinOrder && b.pinOrder) {
+                        const aOrder = Number(a.pinOrder) || 0;
+                        const bOrder = Number(b.pinOrder) || 0;
+                        return aOrder - bOrder;
+                    }
+                    return 0;
+                });
             },
         }
     });
