@@ -149,56 +149,58 @@
         <div v-else class="d-flex flex-wrap gap-3 friend-list">
           <div v-for="friend in friendInfo.friends" :key="friend.member.id"
                :data-member_id="friend.member.id"
-               class="p-4 border rounded mb-2 cursor-pointer hover-bg-light shadow-sm position-relative"
+               class="friend-card p-4 border rounded mb-2 cursor-pointer hover-bg-light shadow-sm d-flex flex-column"
                :class="{'pinned_friend': friend.pinOrder}"
                style="width: calc(50% - 12px);"
                @click="moveTo(friend.member.id)">
-            <div class="position-absolute end-0 bottom-0 p-3" v-if="friend.pinOrder" @Click.stop>
+            <div class="friend-card-body flex-grow-1">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="fw-bold">
+                  <i class="bi bi-person-circle" v-if="!friend.isFamily"></i>
+                  <i class="bi bi-house-heart-fill" v-if="friend.isFamily"></i>
+                  {{ friend.member.name }}
+                </div>
+                <div class="btn-group" @click.stop>
+                  <i v-if="friend.pinOrder" class="bi fs-3 bi-star-fill" @click.stop="unpinFriend(friend.member)"></i>
+                  <i v-if="!friend.pinOrder" class="bi fs-3 bi-star" @click.stop="pinFriend(friend.member)"></i>
+                  <button type="button" class="ms-3 btn btn-lg btn-outline-secondary dropdown-toggle"
+                          data-bs-toggle="dropdown"
+                          aria-expanded="false">관리
+                  </button>
+                  <ul class="dropdown-menu">
+                    <template v-if="!friend.isFamily">
+                      <li><a class="dropdown-item cursor-pointer blue" @click.stop="addFamily(friend.member)"
+                      ><i class="bi bi-house-heart-fill"></i> 가족 등록</a></li>
+                      <li>
+                        <hr class="dropdown-divider">
+                      </li>
+                    </template>
+                    <li><a class="dropdown-item cursor-pointer red" @click.stop="unfriend(friend.member)"><i
+                        class="bi bi-trash-fill"></i> 친구 삭제</a></li>
+                  </ul>
+                </div>
+              </div>
+              <p class="mt-2 text-muted">
+                <i class="bi bi-person-badge me-1"></i> 근무:
+                <span class="ms-1" v-if="friend.duty">{{ friend.duty?.dutyType }}</span>
+                <span class="ms-1 text-muted" v-else>-</span>
+              </p>
+              <div class="mt-2">
+                <template v-if="friend.schedules && friend.schedules.length">
+                  <ul class="list-unstyled">
+                    <li v-for="schedule in friend.schedules" :key="schedule.id"
+                        class="text-sm py-1 border-bottom last:border-0">
+                      <span>{{ printSchedule(schedule) }}</span>
+                      <span class="text-secondary ms-2">{{ printScheduleTime(schedule.startDateTime) }}</span>
+                    </li>
+                  </ul>
+                </template>
+              </div>
+            </div>
+            <div class="friend-handle-wrapper d-flex justify-content-end" v-if="friend.pinOrder" @click.stop>
               <div class="handle bg-light rounded-4 border px-2 pt-2 pb-1 shadow-sm">
                 <i class="bi bi-arrows-move"></i>
               </div>
-            </div>
-            <div class="d-flex justify-content-between align-items-center">
-              <div class="fw-bold">
-                <i class="bi bi-person-circle" v-if="!friend.isFamily"></i>
-                <i class="bi bi-house-heart-fill" v-if="friend.isFamily"></i>
-                {{ friend.member.name }}
-              </div>
-              <div class="btn-group" @click.stop>
-                <i v-if="friend.pinOrder" class="bi fs-3 bi-star-fill" @click.stop="unpinFriend(friend.member)"></i>
-                <i v-if="!friend.pinOrder" class="bi fs-3 bi-star" @click.stop="pinFriend(friend.member)"></i>
-                <button type="button" class="ms-3 btn btn-lg btn-outline-secondary dropdown-toggle"
-                        data-bs-toggle="dropdown"
-                        aria-expanded="false">관리
-                </button>
-                <ul class="dropdown-menu">
-                  <template v-if="!friend.isFamily">
-                    <li><a class="dropdown-item cursor-pointer blue" @click.stop="addFamily(friend.member)"
-                    ><i class="bi bi-house-heart-fill"></i> 가족 등록</a></li>
-                    <li>
-                      <hr class="dropdown-divider">
-                    </li>
-                  </template>
-                  <li><a class="dropdown-item cursor-pointer red" @click.stop="unfriend(friend.member)"><i
-                      class="bi bi-trash-fill"></i> 친구 삭제</a></li>
-                </ul>
-              </div>
-            </div>
-            <p class="mt-2 text-muted">
-              <i class="bi bi-person-badge me-1"></i> 근무:
-              <span class="ms-1" v-if="friend.duty">{{ friend.duty?.dutyType }}</span>
-              <span class="ms-1 text-muted" v-else>-</span>
-            </p>
-            <div class="mt-2">
-              <template v-if="friend.schedules && friend.schedules.length">
-                <ul class="list-unstyled">
-                  <li v-for="schedule in friend.schedules" :key="schedule.id"
-                      class="text-sm py-1 border-bottom last:border-0">
-                    <span>{{ printSchedule(schedule) }}</span>
-                    <span class="text-secondary ms-2">{{ printScheduleTime(schedule.startDateTime) }}</span>
-                  </li>
-                </ul>
-              </template>
             </div>
           </div>
           <div class="p-4 border rounded mb-2 cursor-pointer bg-primary shadow-sm text-center"
@@ -310,400 +312,410 @@
 </div>
 
 <script>
-    const app = new Vue({
-        el: "#app",
-        data: {
-            memberId: parseInt("[[${loginMember?.id}]]"),
-            today: new Date().toLocaleDateString("ko-KR", {
-                year: "numeric", month: "long", day: "numeric", weekday: "long"
-            }),
-            myInfo: {
-                member: {},
-                duty: {
-                    dutyType: "",
-                    dutyColor: "",
-                },
-                schedules: [],
-            },
-            myInfoLoading: false,
-            friendInfo: {
-                friends: [],
-                pendingRequestsTo: [],
-                pendingRequestsFrom: [],
-            },
-            friendInfoLoading: false,
-            friendInfoInitialized: false,
-            friendSortable: null
+  const app = new Vue({
+    el: "#app",
+    data: {
+      memberId: parseInt("[[${loginMember?.id}]]"),
+      today: new Date().toLocaleDateString("ko-KR", {
+        year: "numeric", month: "long", day: "numeric", weekday: "long"
+      }),
+      myInfo: {
+        member: {},
+        duty: {
+          dutyType: "",
+          dutyColor: "",
         },
-        mounted() {
-            if (!this.memberId)
+        schedules: [],
+      },
+      myInfoLoading: false,
+      friendInfo: {
+        friends: [],
+        pendingRequestsTo: [],
+        pendingRequestsFrom: [],
+      },
+      friendInfoLoading: false,
+      friendInfoInitialized: false,
+      friendSortable: null
+    },
+    mounted() {
+      if (!this.memberId)
+        return;
+      this.loadMy();
+      this.loadFriendInfo()
+    },
+    computed: {},
+    methods: {
+      loadMy() {
+        this.myInfoLoading = true;
+        fetch("/api/dashboard/my")
+          .then(res => res.json())
+          .then(data => {
+            this.myInfo = data;
+          })
+          .finally(() => {
+            this.myInfoLoading = false;
+          });
+      },
+      loadFriendInfo() {
+        this.friendInfoLoading = true;
+        fetch("/api/dashboard/friends")
+          .then(res => res.json())
+          .then(data => {
+            this.friendInfo = data;
+          })
+          .catch(error => {
+            console.error('친구 정보를 불러오는 중 오류가 발생했습니다.', error);
+          })
+          .finally(() => {
+            this.friendInfoLoading = false;
+            this.friendInfoInitialized = true;
+            this.$nextTick(() => {
+              this.initFriendSortable();
+            });
+          });
+      },
+      initFriendSortable() {
+        const friendList = document.querySelector('.friend-list');
+        if (!friendList) {
+          if (this.friendSortable) {
+            this.friendSortable.destroy();
+            this.friendSortable = null;
+          }
+          return false;
+        }
+        if (this.friendSortable) {
+          this.friendSortable.destroy();
+        }
+        const friendSection = friendList.closest('.friend-section');
+        this.friendSortable = new Sortable(friendList, {
+          animation: 150,
+          draggable: '.pinned_friend',
+          handle: '.handle',
+          ghostClass: 'sortable-ghost',
+          fallbackClass: 'sortable-fallback',
+          fallbackOnBody: true,
+          forceFallback: true,
+          chosenClass: 'sortable-chosen',
+          onStart: () => {
+            friendSection?.classList.add('friend-section-sorting');
+          },
+          onEnd: () => {
+            friendSection?.classList.remove('friend-section-sorting');
+            app.updateFriendsPin();
+          }
+        });
+        return true;
+      },
+      updateFriendsPin() {
+        const friendIds = [...document.querySelectorAll('.pinned_friend')]
+          .map(el => Number(el.getAttribute('data-member_id')));
+        this.applyFriendOrder(friendIds);
+        this.$nextTick(() => {
+          this.initFriendSortable();
+        });
+        fetch('/api/friends/pin/order', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json;charset=utf-8'
+          },
+          body: JSON.stringify(friendIds)
+        }).then(function (response) {
+          if (response.ok) {
+            return;
+          }
+          throw new Error('친구 순서 변경 실패');
+        }).catch(function (error) {
+          alert('친구 순서 변경 실패');
+          app.loadFriendInfo();
+        });
+      },
+      applyFriendOrder(friendIds) {
+        if (!friendIds.length) {
+          return;
+        }
+        const friendMap = new Map(this.friendInfo.friends.map(friend => [friend.member.id, friend]));
+        const pinnedSet = new Set(friendIds);
+        const pinnedFriends = friendIds.map(id => friendMap.get(id)).filter(Boolean);
+        const unpinnedFriends = this.friendInfo.friends.filter(friend => !pinnedSet.has(friend.member.id));
+        this.friendInfo.friends = [...pinnedFriends, ...unpinnedFriends];
+      },
+      moveTo(id) {
+        if (!id) id = app.myInfo.member.id;
+        location.href = "/duty/" + id;
+      },
+      printSchedule: function (schedule) {
+        let text = schedule.content;
+        if (schedule.totalDays > 1) {
+          text = `${text} [${schedule.daysFromStart}/${schedule.totalDays}]`;
+        }
+        if (schedule.isTagged) {
+          text = `${text} (by ${schedule.owner})`;
+        }
+        return text;
+      },
+      printScheduleTime(startDateTime) {
+        let date = new Date(startDateTime);
+        if (date.toLocaleDateString() !== new Date().toLocaleDateString()) {
+          return "";
+        }
+
+        if (date.getHours() === 0 && date.getMinutes() === 0) {
+          return "";
+        }
+
+        return date.toLocaleTimeString("ko-KR", {
+          hour: "2-digit", minute: "2-digit"
+        });
+      },
+      unfriend(member) {
+        Swal.fire({
+          title: '친구 삭제',
+          text: `정말로 [${member.name}]님을 친구목록에서 삭제하시겠습니까?`,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#d33',
+          confirmButtonText: '삭제',
+          cancelButtonText: '취소'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            fetch('/api/friends/' + member.id, {
+              method: 'DELETE'
+            }).then(function (response) {
+              if (response.ok) {
+                app.loadFriendInfo();
                 return;
-            this.loadMy();
-            this.loadFriendInfo()
-        },
-        computed: {},
-        methods: {
-            loadMy() {
-                this.myInfoLoading = true;
-                fetch("/api/dashboard/my")
-                    .then(res => res.json())
-                    .then(data => {
-                        this.myInfo = data;
-                    })
-                    .finally(() => {
-                        this.myInfoLoading = false;
-                    });
-            },
-            loadFriendInfo() {
-                this.friendInfoLoading = true;
-                fetch("/api/dashboard/friends")
-                    .then(res => res.json())
-                    .then(data => {
-                        this.friendInfo = data;
-                    })
-                    .catch(error => {
-                        console.error('친구 정보를 불러오는 중 오류가 발생했습니다.', error);
-                    })
-                    .finally(() => {
-                        this.friendInfoLoading = false;
-                        this.friendInfoInitialized = true;
-                        this.$nextTick(() => {
-                            this.initFriendSortable();
-                        });
-                    });
-            },
-            initFriendSortable() {
-                const friendList = document.querySelector('.friend-list');
-                if (!friendList) {
-                    if (this.friendSortable) {
-                        this.friendSortable.destroy();
-                        this.friendSortable = null;
-                    }
-                    return false;
-                }
-                if (this.friendSortable) {
-                    this.friendSortable.destroy();
-                }
-                this.friendSortable = new Sortable(friendList, {
-                    animation: 150,
-                    draggable: '.pinned_friend',
-                    handle: '.handle',
-                    onEnd: () => {
-                        app.updateFriendsPin();
-                    }
-                });
-                return true;
-            },
-            updateFriendsPin() {
-                const friendIds = [...document.querySelectorAll('.pinned_friend')]
-                    .map(el => Number(el.getAttribute('data-member_id')));
-                this.applyFriendOrder(friendIds);
-                this.$nextTick(() => {
-                    this.initFriendSortable();
-                });
-                fetch('/api/friends/pin/order', {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json;charset=utf-8'
-                    },
-                    body: JSON.stringify(friendIds)
-                }).then(function (response) {
-                    if (response.ok) {
-                        return;
-                    }
-                    throw new Error('친구 순서 변경 실패');
-                }).catch(function (error) {
-                    alert('친구 순서 변경 실패');
-                    app.loadFriendInfo();
-                });
-            },
-            applyFriendOrder(friendIds) {
-                if (!friendIds.length) {
-                    return;
-                }
-                const friendMap = new Map(this.friendInfo.friends.map(friend => [friend.member.id, friend]));
-                const pinnedSet = new Set(friendIds);
-                const pinnedFriends = friendIds.map(id => friendMap.get(id)).filter(Boolean);
-                const unpinnedFriends = this.friendInfo.friends.filter(friend => !pinnedSet.has(friend.member.id));
-                this.friendInfo.friends = [...pinnedFriends, ...unpinnedFriends];
-            },
-            moveTo(id) {
-                if (!id) id = app.myInfo.member.id;
-                location.href = "/duty/" + id;
-            },
-            printSchedule: function (schedule) {
-                let text = schedule.content;
-                if (schedule.totalDays > 1) {
-                    text = `${text} [${schedule.daysFromStart}/${schedule.totalDays}]`;
-                }
-                if (schedule.isTagged) {
-                    text = `${text} (by ${schedule.owner})`;
-                }
-                return text;
-            },
-            printScheduleTime(startDateTime) {
-                let date = new Date(startDateTime);
-                if (date.toLocaleDateString() !== new Date().toLocaleDateString()) {
-                    return "";
-                }
-
-                if (date.getHours() === 0 && date.getMinutes() === 0) {
-                    return "";
-                }
-
-                return date.toLocaleTimeString("ko-KR", {
-                    hour: "2-digit", minute: "2-digit"
-                });
-            },
-            unfriend(member) {
-                Swal.fire({
-                    title: '친구 삭제',
-                    text: `정말로 [${member.name}]님을 친구목록에서 삭제하시겠습니까?`,
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#d33',
-                    confirmButtonText: '삭제',
-                    cancelButtonText: '취소'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        fetch('/api/friends/' + member.id, {
-                            method: 'DELETE'
-                        }).then(function (response) {
-                            if (response.ok) {
-                                app.loadFriendInfo();
-                                return;
-                            }
-                            throw new Error('친구 삭제 실패');
-                        }).catch(function (error) {
-                            alert('친구 삭제 실패');
-                        })
-                    }
-                })
-            },
-            addFamily(member) {
-                if (app.friendInfo.pendingRequestsFrom.filter(req => req.toMember.id === member.id).length > 0) {
-                    Swal.fire({
-                        title: '가족 등록 실패',
-                        text: '이미 가족 요청을 보낸 상태입니다.',
-                        icon: 'warning',
-                        confirmButtonText: '확인'
-                    });
-                    return;
-                }
-                Swal.fire({
-                    title: '가족 등록',
-                    text: `정말로 [${member.name}]님을 가족으로 등록하시겠습니까?`,
-                    icon: 'info',
-                    showCancelButton: true,
-                    confirmButtonColor: '#3085d6',
-                    confirmButtonText: '가족 요청',
-                    cancelButtonText: '취소'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        fetch('/api/friends/family/' + member.id, {
-                            method: 'PUT'
-                        }).then(function (response) {
-                            if (response.ok) {
-                                app.loadFriendInfo();
-                                return;
-                            }
-                            throw new Error('가족 요청 실패');
-                        }).catch(function (error) {
-                            alert('가족 요청 실패');
-                        })
-                    }
-                })
-            },
-            openSearchModal() {
-                searchModal.openModal();
-            },
-            acceptFriendRequest(req) {
-                fetch('/api/friends/request/accept/' + req.fromMember.id, {
-                    method: 'POST'
-                }).then(function (response) {
-                    if (response.ok) {
-                        app.loadFriendInfo();
-                        return;
-                    }
-                    throw new Error('친구요청 수락 실패');
-                }).catch(function (error) {
-                    alert('친구요청 수락 실패');
-                })
-            },
-            rejectFriendRequest(req) {
-                fetch('/api/friends/request/reject/' + req.fromMember.id, {
-                    method: 'POST'
-                }).then(function (response) {
-                    if (response.ok) {
-                        app.loadFriendInfo();
-                        return;
-                    }
-                    throw new Error('친구요청 거절 실패');
-                }).catch(function (error) {
-                    alert('친구요청 거절 실패');
-                })
-            },
-            cancelRequest(req) {
-                fetch('/api/friends/request/cancel/' + req.toMember.id, {
-                    method: 'DELETE'
-                }).then(function (response) {
-                    if (response.ok) {
-                        app.loadFriendInfo();
-                        return;
-                    }
-                    throw new Error('친구요청 취소 실패');
-                }).catch(function (error) {
-                    console.log(error);
-                    alert('친구요청 취소 실패');
-                })
-            },
-            pinFriend: function (member) {
-                const friend = this.friendInfo.friends.find(friend => friend.member.id === member.id);
-                if (!friend) {
-                    return;
-                }
-                const url = '/api/friends/pin/' + member.id;
-                fetch(url, {
-                    method: 'PATCH',
-                }).then(function (response) {
-                    if (response.ok) {
-                        friend.pinOrder = app.getNextPinOrder();
-                        app.sortFriendsByPinOrder();
-                        app.$nextTick(() => {
-                            app.initFriendSortable();
-                        });
-                        return;
-                    }
-                    throw new Error('친구 고정 실패');
-                }).catch(function (error) {
-                    alert('친구 고정 실패');
-                })
-            },
-            unpinFriend: function (member) {
-                const friend = this.friendInfo.friends.find(friend => friend.member.id === member.id);
-                if (!friend) {
-                    return;
-                }
-                const url = '/api/friends/unpin/' + member.id;
-                fetch(url, {
-                    method: 'PATCH',
-                }).then(function (response) {
-                    if (response.ok) {
-                        friend.pinOrder = null;
-                        app.sortFriendsByPinOrder();
-                        app.$nextTick(() => {
-                            app.initFriendSortable();
-                        });
-                        return;
-                    }
-                    throw new Error('친구 고정 해제 실패');
-                }).catch(function (error) {
-                    alert('친구 고정 해제 실패');
-                })
-            },
-            getNextPinOrder() {
-                const orders = this.friendInfo.friends
-                    .map(friend => Number(friend.pinOrder))
-                    .filter(order => !Number.isNaN(order) && order > 0);
-                if (!orders.length) {
-                    return 1;
-                }
-                return Math.max(...orders) + 1;
-            },
-            sortFriendsByPinOrder() {
-                this.friendInfo.friends.sort((a, b) => {
-                    const aPinned = a.pinOrder ? 0 : 1;
-                    const bPinned = b.pinOrder ? 0 : 1;
-                    if (aPinned !== bPinned) {
-                        return aPinned - bPinned;
-                    }
-                    if (a.pinOrder && b.pinOrder) {
-                        const aOrder = Number(a.pinOrder) || 0;
-                        const bOrder = Number(b.pinOrder) || 0;
-                        return aOrder - bOrder;
-                    }
-                    return 0;
-                });
-            },
+              }
+              throw new Error('친구 삭제 실패');
+            }).catch(function (error) {
+              alert('친구 삭제 실패');
+            })
+          }
+        })
+      },
+      addFamily(member) {
+        if (app.friendInfo.pendingRequestsFrom.filter(req => req.toMember.id === member.id).length > 0) {
+          Swal.fire({
+            title: '가족 등록 실패',
+            text: '이미 가족 요청을 보낸 상태입니다.',
+            icon: 'warning',
+            confirmButtonText: '확인'
+          });
+          return;
         }
-    });
-
-    const searchModal = new Vue({
-        el: '#member-search-modal',
-        data: {
-            keyword: '',
-            searchResult: [],
-            page: 1,
-            totalPage: 0,
-            pageSize: 5,
-            totalElements: 0,
-            friendInfo: {},
-        },
-        methods: {
-            openModal() {
-                $('#member-search-modal').modal('show');
-                this.reset();
-            },
-            prevPage: function () {
-                if (this.page > 1) {
-                    this.page--;
-                    this.search();
-                }
-            },
-            nextPage: function () {
-                if (this.page < this.totalPage) {
-                    this.page++;
-                    this.search();
-                }
-            },
-            goToPage: function (page) {
-                this.page = page;
-                this.search();
-            },
-            reset: function () {
-                this.keyword = '';
-                this.searchResult = [];
-                this.page = 1;
-                this.totalPage = 0;
-                this.pageSize = 5;
-                this.totalElements = 0;
-                this.search();
-            },
-            search: function () {
-                $.ajax({
-                    url: '/api/friends/search',
-                    type: 'GET',
-                    data: {
-                        keyword: this.keyword,
-                        page: this.page - 1,
-                        size: this.pageSize
-                    },
-                    success: function (response) {
-                        searchModal.searchResult = response.content;
-                        searchModal.totalPage = response.totalPages;
-                        searchModal.totalElements = response.totalElements;
-                    },
-                    error: function (error) {
-                        console.log(error);
-                    }
-                })
-            },
-            requestFriend: function (member) {
-                const url = '/api/friends/request/send/' + member.id;
-                fetch(url, {
-                    method: 'POST',
-                }).then(function (response) {
-                    if (response.ok) {
-                        app.loadFriendInfo();
-                        searchModal.search();
-                        return;
-                    }
-                    throw new Error('친구요청 실패');
-                }).catch(function (error) {
-                    alert('친구요청 실패');
-                })
-            },
+        Swal.fire({
+          title: '가족 등록',
+          text: `정말로 [${member.name}]님을 가족으로 등록하시겠습니까?`,
+          icon: 'info',
+          showCancelButton: true,
+          confirmButtonColor: '#3085d6',
+          confirmButtonText: '가족 요청',
+          cancelButtonText: '취소'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            fetch('/api/friends/family/' + member.id, {
+              method: 'PUT'
+            }).then(function (response) {
+              if (response.ok) {
+                app.loadFriendInfo();
+                return;
+              }
+              throw new Error('가족 요청 실패');
+            }).catch(function (error) {
+              alert('가족 요청 실패');
+            })
+          }
+        })
+      },
+      openSearchModal() {
+        searchModal.openModal();
+      },
+      acceptFriendRequest(req) {
+        fetch('/api/friends/request/accept/' + req.fromMember.id, {
+          method: 'POST'
+        }).then(function (response) {
+          if (response.ok) {
+            app.loadFriendInfo();
+            return;
+          }
+          throw new Error('친구요청 수락 실패');
+        }).catch(function (error) {
+          alert('친구요청 수락 실패');
+        })
+      },
+      rejectFriendRequest(req) {
+        fetch('/api/friends/request/reject/' + req.fromMember.id, {
+          method: 'POST'
+        }).then(function (response) {
+          if (response.ok) {
+            app.loadFriendInfo();
+            return;
+          }
+          throw new Error('친구요청 거절 실패');
+        }).catch(function (error) {
+          alert('친구요청 거절 실패');
+        })
+      },
+      cancelRequest(req) {
+        fetch('/api/friends/request/cancel/' + req.toMember.id, {
+          method: 'DELETE'
+        }).then(function (response) {
+          if (response.ok) {
+            app.loadFriendInfo();
+            return;
+          }
+          throw new Error('친구요청 취소 실패');
+        }).catch(function (error) {
+          console.log(error);
+          alert('친구요청 취소 실패');
+        })
+      },
+      pinFriend: function (member) {
+        const friend = this.friendInfo.friends.find(friend => friend.member.id === member.id);
+        if (!friend) {
+          return;
         }
-    });
+        const url = '/api/friends/pin/' + member.id;
+        fetch(url, {
+          method: 'PATCH',
+        }).then(function (response) {
+          if (response.ok) {
+            friend.pinOrder = app.getNextPinOrder();
+            app.sortFriendsByPinOrder();
+            app.$nextTick(() => {
+              app.initFriendSortable();
+            });
+            return;
+          }
+          throw new Error('친구 고정 실패');
+        }).catch(function (error) {
+          alert('친구 고정 실패');
+        })
+      },
+      unpinFriend: function (member) {
+        const friend = this.friendInfo.friends.find(friend => friend.member.id === member.id);
+        if (!friend) {
+          return;
+        }
+        const url = '/api/friends/unpin/' + member.id;
+        fetch(url, {
+          method: 'PATCH',
+        }).then(function (response) {
+          if (response.ok) {
+            friend.pinOrder = null;
+            app.sortFriendsByPinOrder();
+            app.$nextTick(() => {
+              app.initFriendSortable();
+            });
+            return;
+          }
+          throw new Error('친구 고정 해제 실패');
+        }).catch(function (error) {
+          alert('친구 고정 해제 실패');
+        })
+      },
+      getNextPinOrder() {
+        const orders = this.friendInfo.friends
+          .map(friend => Number(friend.pinOrder))
+          .filter(order => !Number.isNaN(order) && order > 0);
+        if (!orders.length) {
+          return 1;
+        }
+        return Math.max(...orders) + 1;
+      },
+      sortFriendsByPinOrder() {
+        this.friendInfo.friends.sort((a, b) => {
+          const aPinned = a.pinOrder ? 0 : 1;
+          const bPinned = b.pinOrder ? 0 : 1;
+          if (aPinned !== bPinned) {
+            return aPinned - bPinned;
+          }
+          if (a.pinOrder && b.pinOrder) {
+            const aOrder = Number(a.pinOrder) || 0;
+            const bOrder = Number(b.pinOrder) || 0;
+            return aOrder - bOrder;
+          }
+          return 0;
+        });
+      },
+    }
+  });
+
+  const searchModal = new Vue({
+    el: '#member-search-modal',
+    data: {
+      keyword: '',
+      searchResult: [],
+      page: 1,
+      totalPage: 0,
+      pageSize: 5,
+      totalElements: 0,
+      friendInfo: {},
+    },
+    methods: {
+      openModal() {
+        $('#member-search-modal').modal('show');
+        this.reset();
+      },
+      prevPage: function () {
+        if (this.page > 1) {
+          this.page--;
+          this.search();
+        }
+      },
+      nextPage: function () {
+        if (this.page < this.totalPage) {
+          this.page++;
+          this.search();
+        }
+      },
+      goToPage: function (page) {
+        this.page = page;
+        this.search();
+      },
+      reset: function () {
+        this.keyword = '';
+        this.searchResult = [];
+        this.page = 1;
+        this.totalPage = 0;
+        this.pageSize = 5;
+        this.totalElements = 0;
+        this.search();
+      },
+      search: function () {
+        $.ajax({
+          url: '/api/friends/search',
+          type: 'GET',
+          data: {
+            keyword: this.keyword,
+            page: this.page - 1,
+            size: this.pageSize
+          },
+          success: function (response) {
+            searchModal.searchResult = response.content;
+            searchModal.totalPage = response.totalPages;
+            searchModal.totalElements = response.totalElements;
+          },
+          error: function (error) {
+            console.log(error);
+          }
+        })
+      },
+      requestFriend: function (member) {
+        const url = '/api/friends/request/send/' + member.id;
+        fetch(url, {
+          method: 'POST',
+        }).then(function (response) {
+          if (response.ok) {
+            app.loadFriendInfo();
+            searchModal.search();
+            return;
+          }
+          throw new Error('친구요청 실패');
+        }).catch(function (error) {
+          alert('친구요청 실패');
+        })
+      },
+    }
+  });
 
 </script>

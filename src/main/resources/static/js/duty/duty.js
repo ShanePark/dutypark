@@ -423,6 +423,11 @@ function loadApp(memberId, teamId, loginMemberId, memberName, year, month, searc
               animation: 150,
               draggable: ".todo-item",
               handle: '.handle',
+              ghostClass: 'sortable-ghost',
+              fallbackClass: 'sortable-fallback',
+              chosenClass: 'sortable-chosen',
+              fallbackOnBody: true,
+              forceFallback: true,
               onEnd: (evt) => {
                 app.updatePosition();
               },

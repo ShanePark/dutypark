@@ -576,12 +576,6 @@ a.homeButton:hover {
     margin-bottom: 0;
 }
 
-@media (max-width: 576px) {
-    .schedule-edit .schedule-field-label {
-        width: 100%;
-    }
-}
-
 .schedule-tags {
     text-align: right;
 }
@@ -768,10 +762,6 @@ a.homeButton:hover {
 .todo-text {
     margin-left: 0.5rem;
     margin-right: 0.5rem;
-}
-
-.todo-item.dragging {
-    opacity: 0.5;
 }
 
 .todo-overview-item.completed {
@@ -1031,8 +1021,85 @@ input[readonly], textarea[readonly] {
     color: orangered;
 }
 
+.friend-section .friend-card {
+    min-height: 11rem;
+    position: relative;
+    overflow: hidden;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.friend-section .friend-card-body {
+    flex: 1 1 auto;
+}
+
+.friend-section .friend-handle-wrapper {
+    margin-top: auto;
+}
+
+.friend-section.friend-section-sorting .friend-card.hover-bg-light:hover {
+    background-color: inherit;
+    box-shadow: none;
+}
+
 .friend-section .handle {
     cursor: grab;
+}
+
+.friend-section .handle:active {
+    cursor: grabbing;
+}
+
+.sortable-ghost,
+.sortable-fallback {
+    opacity: 1;
+    outline: 2px solid var(--bs-primary);
+    outline-offset: -2px;
+    box-shadow: 0 12px 24px rgba(13, 110, 253, 0.3);
+    background-color: #f8fbff;
+    border-radius: 0.5rem;
+}
+
+.sortable-fallback {
+    position: fixed !important;
+    z-index: 1060;
+    opacity: 0.9 !important;
+}
+
+.sortable-fallback::after {
+    content: none;
+}
+
+.sortable-chosen {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.15);
+}
+
+.sortable-ghost::after {
+    content: none;
+}
+
+.sortable-chosen:not(.sortable-fallback)::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 2px solid var(--bs-primary);
+    background-image: radial-gradient(circle, rgba(13, 110, 253, 0.35) 25%, transparent 26%),
+    radial-gradient(circle, rgba(13, 110, 253, 0.15) 25%, transparent 26%);
+    background-size: 14px 14px, 14px 14px;
+    background-position: 0 0, 7px 7px;
+    animation: sortable-dots 0.9s linear infinite;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+@keyframes sortable-dots {
+    from {
+        background-position: 0 0, 7px 7px;
+    }
+    to {
+        background-position: 14px 14px, 21px 21px;
+    }
 }
 
 .footer-dock .link {
@@ -1101,10 +1168,6 @@ input[readonly], textarea[readonly] {
 .friend-card * {
     cursor: pointer;
     transition: background-color 0.2s ease-in-out;
-}
-
-.friend-card:hover {
-    background-color: #e2e8f0;
 }
 
 .attachment-gallery {
