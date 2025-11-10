@@ -80,8 +80,8 @@
         <button v-for="type in team.dutyTypes"
                 class="duty-type btn btn-sm btn-outline-dark"
                 v-text="type.name.length > 3 ? type.name.substring(0, 3) : type.name"
-                :class="dutyTypeClasses(type, duty)"
-                :disabled="(duty?.dutyType == type.name) || (!duty?.dutyType && !type.id)"
+                :class="[dutyTypeClasses(type, duty), {'pressed': (duty?.dutyType == type.name) || (!duty?.dutyType && !type.id)}]"
+                :style="{'background-color': type.color}"
                 v-on:click="changeDutyType(duty, type)"
         >
         </button>

@@ -494,9 +494,23 @@ a.homeButton:hover {
     height: 2em;
 }
 
-.duty .duty-type button {
-    width: 100%;
+.duty button.duty-type {
     margin-bottom: 0.5em;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+}
+
+.duty button.duty-type:hover:not(.pressed) {
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+    transform: translateY(-1px);
+}
+
+.duty button.duty-type.pressed {
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+    transform: translateY(2px);
+    opacity: 0.25;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 .duty_type-list .duty-type:hover {

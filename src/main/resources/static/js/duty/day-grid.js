@@ -135,7 +135,6 @@ const dayGridMethods = {
     const teamLength = this.team.dutyTypes.length;
     const colClass = (teamLength === 2 || teamLength === 4) ? 'col-md-6' : 'col-md-4';
     return {
-      ['BACKGROUND-' + type.color]: true,
       selected: type.id === duty.dutyTypeId,
       [colClass]: true,
     };

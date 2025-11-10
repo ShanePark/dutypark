@@ -9,7 +9,7 @@ const dutyTableHeaderMethods = {
                               <p class="bg-warning">클릭시 바로 변경됩니다.</p>
                               <div>
                                   ${app.team.dutyTypes.map(type => `
-                                      <button class="btn duty-type BACKGROUND-${type.color}" data-id="${type.id}">
+                                      <button class="btn duty-type" style="background-color: ${type.color}" data-id="${type.id}">
                                           ${type.name}
                                       </button>
                                   `).join('')}
