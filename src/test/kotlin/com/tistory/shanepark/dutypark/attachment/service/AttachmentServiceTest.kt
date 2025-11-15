@@ -196,7 +196,7 @@ class AttachmentServiceTest {
     }
 
     @Test
-    fun `finalizeSessionForSchedule should remove attachments missing from ordered ids when session is empty`() {
+    fun `synchronizeContextAttachments should remove attachments missing from ordered ids when session is empty`() {
         val sessionId = UUID.randomUUID()
         val scheduleId = UUID.randomUUID().toString()
         val session = AttachmentUploadSession(
@@ -237,10 +237,11 @@ class AttachmentServiceTest {
             )
         )
 
-        service.finalizeSessionForSchedule(
+        service.synchronizeContextAttachments(
             loginMember = loginMember,
-            sessionId = sessionId,
-            scheduleId = scheduleId,
+            contextType = AttachmentContextType.SCHEDULE,
+            contextId = scheduleId,
+            attachmentSessionId = sessionId,
             orderedAttachmentIds = listOf(kept.id)
         )
 
@@ -250,7 +251,7 @@ class AttachmentServiceTest {
     }
 
     @Test
-    fun `finalizeSessionForSchedule should delete storage directory when all attachments removed`() {
+    fun `synchronizeContextAttachments should delete storage directory when all attachments removed`() {
         val sessionId = UUID.randomUUID()
         val scheduleId = UUID.randomUUID().toString()
         val session = AttachmentUploadSession(
@@ -279,10 +280,11 @@ class AttachmentServiceTest {
             )
         )
 
-        service.finalizeSessionForSchedule(
+        service.synchronizeContextAttachments(
             loginMember = loginMember,
-            sessionId = sessionId,
-            scheduleId = scheduleId,
+            contextType = AttachmentContextType.SCHEDULE,
+            contextId = scheduleId,
+            attachmentSessionId = sessionId,
             orderedAttachmentIds = emptyList()
         )
 

@@ -1,8 +1,6 @@
 package com.tistory.shanepark.dutypark.todo.service
 
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
-import com.tistory.shanepark.dutypark.attachment.dto.FinalizeSessionRequest
-import com.tistory.shanepark.dutypark.attachment.dto.ReorderAttachmentsRequest
 import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -59,9 +57,10 @@ class TodoService(
         )
         todoRepository.save(todo)
 
-        handleAttachmentsAfterChange(
+        attachmentService.synchronizeContextAttachments(
             loginMember = loginMember,
-            todoId = todo.id.toString(),
+            contextType = AttachmentContextType.TODO,
+            contextId = todo.id.toString(),
             attachmentSessionId = attachmentSessionId,
             orderedAttachmentIds = orderedAttachmentIds
         )
@@ -86,9 +85,10 @@ class TodoService(
 
         todo.update(title, content)
 
-        handleAttachmentsAfterChange(
+        attachmentService.synchronizeContextAttachments(
             loginMember = loginMember,
-            todoId = todo.id.toString(),
+            contextType = AttachmentContextType.TODO,
+            contextId = todo.id.toString(),
             attachmentSessionId = attachmentSessionId,
             orderedAttachmentIds = orderedAttachmentIds
         )
@@ -160,32 +160,6 @@ class TodoService(
         if (todoEntity.member.id != member.id) {
             log.warn("$member tried to access todo ${todoEntity.id} which is not his")
             throw IllegalArgumentException("Todo is not yours")
-        }
-    }
-
-    private fun handleAttachmentsAfterChange(
-        loginMember: LoginMember,
-        todoId: String,
-        attachmentSessionId: UUID?,
-        orderedAttachmentIds: List<UUID>
-    ) {
-        when {
-            attachmentSessionId != null -> {
-                val request = FinalizeSessionRequest(
-                    contextId = todoId,
-                    orderedAttachmentIds = orderedAttachmentIds
-                )
-                attachmentService.finalizeSession(loginMember, attachmentSessionId, request)
-            }
-
-            orderedAttachmentIds.isNotEmpty() -> {
-                val reorderRequest = ReorderAttachmentsRequest(
-                    contextType = AttachmentContextType.TODO,
-                    contextId = todoId,
-                    orderedAttachmentIds = orderedAttachmentIds
-                )
-                attachmentService.reorderAttachments(loginMember, reorderRequest)
-            }
         }
     }
 

@@ -112,14 +112,13 @@ class ScheduleService(
         scheduleRepository.save(schedule)
         scheduleTimeParsingQueueManager.addTask(schedule)
 
-        scheduleSaveDto.attachmentSessionId?.let { sessionId ->
-            attachmentService.finalizeSessionForSchedule(
-                loginMember,
-                sessionId,
-                schedule.id.toString(),
-                scheduleSaveDto.orderedAttachmentIds
-            )
-        }
+        attachmentService.synchronizeContextAttachments(
+            loginMember = loginMember,
+            contextType = SCHEDULE,
+            contextId = schedule.id.toString(),
+            attachmentSessionId = scheduleSaveDto.attachmentSessionId,
+            orderedAttachmentIds = scheduleSaveDto.orderedAttachmentIds
+        )
 
         return schedule
     }
@@ -150,22 +149,13 @@ class ScheduleService(
         val scheduleId = schedule.id.toString()
         val orderedIds = scheduleSaveDto.orderedAttachmentIds
 
-        if (scheduleSaveDto.attachmentSessionId != null) {
-            attachmentService.finalizeSessionForSchedule(
-                loginMember,
-                scheduleSaveDto.attachmentSessionId,
-                scheduleId,
-                orderedIds
-            )
-        } else if (orderedIds.isNotEmpty()) {
-            log.info("Cleaning up attachments for schedule: $scheduleId with orderedIds: $orderedIds")
-            val existingAttachments = attachmentRepository.findAllByContextTypeAndContextId(SCHEDULE, scheduleId)
-            val attachmentsToDelete = existingAttachments.filter { it.id !in orderedIds }
-            attachmentsToDelete.forEach { attachment ->
-                log.info("Deleting unlisted attachment: id={}, filename={}", attachment.id, attachment.originalFilename)
-                attachmentService.deleteAttachment(attachment)
-            }
-        }
+        attachmentService.synchronizeContextAttachments(
+            loginMember = loginMember,
+            contextType = SCHEDULE,
+            contextId = scheduleId,
+            attachmentSessionId = scheduleSaveDto.attachmentSessionId,
+            orderedAttachmentIds = orderedIds
+        )
 
         return schedule
     }

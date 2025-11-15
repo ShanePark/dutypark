@@ -2,8 +2,6 @@ package com.tistory.shanepark.dutypark.todo.service
 
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.attachment.dto.AttachmentDto
-import com.tistory.shanepark.dutypark.attachment.dto.FinalizeSessionRequest
-import com.tistory.shanepark.dutypark.attachment.dto.ReorderAttachmentsRequest
 import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -234,11 +232,13 @@ class TodoServiceTest {
 
         todoService.addTodo(loginMember, "title", "content", sessionId, orderedAttachmentIds)
 
-        val expectedRequest = FinalizeSessionRequest(
+        verify(attachmentService, times(1)).synchronizeContextAttachments(
+            loginMember = loginMember,
+            contextType = AttachmentContextType.TODO,
             contextId = todoId.toString(),
+            attachmentSessionId = sessionId,
             orderedAttachmentIds = orderedAttachmentIds
         )
-        verify(attachmentService, times(1)).finalizeSession(loginMember, sessionId, expectedRequest)
     }
 
     @Test
@@ -253,12 +253,13 @@ class TodoServiceTest {
 
         todoService.editTodo(loginMember, todoId, "new title", "new content", null, orderedAttachmentIds)
 
-        val expectedRequest = ReorderAttachmentsRequest(
+        verify(attachmentService, times(1)).synchronizeContextAttachments(
+            loginMember = loginMember,
             contextType = AttachmentContextType.TODO,
             contextId = todoId.toString(),
+            attachmentSessionId = null,
             orderedAttachmentIds = orderedAttachmentIds
         )
-        verify(attachmentService, times(1)).reorderAttachments(loginMember, expectedRequest)
     }
 
     @Test
