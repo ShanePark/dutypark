@@ -453,6 +453,10 @@ const todoDetailMethods = {
     return todoAttachmentHelpers.formatBytes(bytes);
   }
   ,
+  todoDetailAttachmentDownloadUrl(attachment) {
+    return todoAttachmentHelpers.resolveDownloadUrl(attachment);
+  }
+  ,
   updateTodo() {
     const app = this;
     const modal = document.getElementById("todo-details-modal");

@@ -34,6 +34,14 @@
           </label>
           <div class="attachment-gallery">
             <div class="attachment-tile" v-for="attachment in newTodo.uploadedAttachments" :key="attachment.id">
+              <a
+                  v-if="todoAddAttachmentDownloadUrl(attachment)"
+                  :href="todoAddAttachmentDownloadUrl(attachment)"
+                  class="attachment-download attachment-download-start position-absolute btn btn-sm"
+                  download
+                  title="다운로드">
+                <i class="bi bi-download text-white"></i>
+              </a>
               <div
                   class="attachment-thumb"
                   :class="{'attachment-thumbnail-clickable': attachment.isImage}"

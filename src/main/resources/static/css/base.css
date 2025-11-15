@@ -1282,6 +1282,11 @@ input[readonly], textarea[readonly] {
     background-color: rgba(0, 0, 0, 0.8);
 }
 
+.attachment-download-start {
+    right: auto;
+    left: 0.35rem;
+}
+
 .attachment-viewer-popup {
     max-width: min(1000px, 90vw);
     padding: 0;

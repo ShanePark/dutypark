@@ -153,14 +153,30 @@ const todoAttachmentHelpers = window.todoAttachmentHelpers || (() => {
     })
     : '';
 
+  const resolveDownloadUrl = (attachment, options = {}) => {
+    if (!attachment) {
+      return null;
+    }
+    const baseUrl = attachment.downloadUrl || (attachment.id ? `/api/attachments/${attachment.id}/download` : null);
+    if (!baseUrl) {
+      return null;
+    }
+    const {inline = false} = options;
+    if (!inline) {
+      return baseUrl;
+    }
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    return `${baseUrl}${separator}inline=true`;
+  };
+
   const openViewer = (attachment) => {
     if (!attachment) return;
     const fileName = attachment.originalFilename || attachment.name || '이미지';
     let imageSource = attachment.previewUrl;
     if (!imageSource) {
-      const baseDownloadUrl = attachment.downloadUrl || (attachment.id ? `/api/attachments/${attachment.id}/download` : null);
+      const baseDownloadUrl = resolveDownloadUrl(attachment, {inline: true});
       if (baseDownloadUrl) {
-        imageSource = `${baseDownloadUrl}?inline=true`;
+        imageSource = baseDownloadUrl;
       }
     }
     if (!imageSource && attachment.thumbnailUrl) {
@@ -268,6 +284,7 @@ const todoAttachmentHelpers = window.todoAttachmentHelpers || (() => {
     handleXhrError,
     formatBytes,
     openViewer,
+    resolveDownloadUrl,
     createSession,
     deleteSession,
     listAttachments
@@ -684,6 +701,10 @@ const todoAddMethods = {
   ,
   todoAddFormatBytes(bytes) {
     return todoAttachmentHelpers.formatBytes(bytes);
+  }
+  ,
+  todoAddAttachmentDownloadUrl(attachment) {
+    return todoAttachmentHelpers.resolveDownloadUrl(attachment);
   }
   ,
   async addTodo() {
