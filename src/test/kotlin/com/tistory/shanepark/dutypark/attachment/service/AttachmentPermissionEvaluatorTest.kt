@@ -4,12 +4,18 @@ import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
 import com.tistory.shanepark.dutypark.attachment.domain.entity.AttachmentUploadSession
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.schedule.service.SchedulePermissionService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.todo.domain.entity.Todo
+import com.tistory.shanepark.dutypark.todo.repository.TodoRepository
+import org.assertj.core.api.Assertions.assertThatCode
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
+import org.springframework.test.util.ReflectionTestUtils
 import java.time.Instant
 import java.util.*
 
@@ -17,6 +23,7 @@ class AttachmentPermissionEvaluatorTest {
 
     private lateinit var evaluator: AttachmentPermissionEvaluator
     private lateinit var schedulePermissionService: SchedulePermissionService
+    private lateinit var todoRepository: TodoRepository
 
     private val loginMember = LoginMember(id = 1L, name = "user1")
     private val otherMember = LoginMember(id = 2L, name = "user2")
@@ -24,7 +31,8 @@ class AttachmentPermissionEvaluatorTest {
     @BeforeEach
     fun setUp() {
         schedulePermissionService = mock()
-        evaluator = AttachmentPermissionEvaluator(schedulePermissionService)
+        todoRepository = mock()
+        evaluator = AttachmentPermissionEvaluator(schedulePermissionService, todoRepository)
     }
 
     @Test
@@ -80,16 +88,6 @@ class AttachmentPermissionEvaluatorTest {
     }
 
     @Test
-    fun `checkReadPermission throws UnsupportedOperationException for TODO context`() {
-        val attachment = createAttachment(contextType = AttachmentContextType.TODO, contextId = "1")
-
-        assertThatThrownBy {
-            evaluator.checkReadPermission(loginMember, attachment)
-        }.isInstanceOf(UnsupportedOperationException::class.java)
-            .hasMessageContaining("TODO not yet implemented")
-    }
-
-    @Test
     fun `checkWritePermission throws UnsupportedOperationException for PROFILE context`() {
         val attachment = createAttachment(contextType = AttachmentContextType.PROFILE, contextId = "1")
 
@@ -107,16 +105,6 @@ class AttachmentPermissionEvaluatorTest {
             evaluator.checkWritePermission(loginMember, attachment)
         }.isInstanceOf(UnsupportedOperationException::class.java)
             .hasMessageContaining("TEAM not yet implemented")
-    }
-
-    @Test
-    fun `checkWritePermission throws UnsupportedOperationException for TODO context`() {
-        val attachment = createAttachment(contextType = AttachmentContextType.TODO, contextId = "1")
-
-        assertThatThrownBy {
-            evaluator.checkWritePermission(loginMember, attachment)
-        }.isInstanceOf(UnsupportedOperationException::class.java)
-            .hasMessageContaining("TODO not yet implemented")
     }
 
     @Test
@@ -182,17 +170,116 @@ class AttachmentPermissionEvaluatorTest {
     }
 
     @Test
-    fun `checkSessionWritePermission throws UnsupportedOperationException for TODO context with targetContextId`() {
+    fun `checkReadPermission succeeds for TODO context when owner`() {
+        val todoId = UUID.randomUUID()
+        val attachment = createAttachment(contextType = AttachmentContextType.TODO, contextId = todoId.toString())
+        val todo = createTodo(createMember(loginMember.id), todoId)
+
+        whenever(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+
+        assertThatCode {
+            evaluator.checkReadPermission(loginMember, attachment)
+        }.doesNotThrowAnyException()
+    }
+
+    @Test
+    fun `checkReadPermission throws AuthException for TODO context when not owner`() {
+        val todoId = UUID.randomUUID()
+        val attachment = createAttachment(contextType = AttachmentContextType.TODO, contextId = todoId.toString())
+        val todo = createTodo(createMember(otherMember.id), todoId)
+
+        whenever(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+
+        assertThatThrownBy {
+            evaluator.checkReadPermission(loginMember, attachment)
+        }.isInstanceOf(AuthException::class.java)
+            .hasMessageContaining("does not belong to user")
+    }
+
+    @Test
+    fun `checkReadPermission throws AuthException when login is null for TODO context`() {
+        val todoId = UUID.randomUUID()
+        val attachment = createAttachment(contextType = AttachmentContextType.TODO, contextId = todoId.toString())
+
+        assertThatThrownBy {
+            evaluator.checkReadPermission(null, attachment)
+        }.isInstanceOf(AuthException::class.java)
+            .hasMessageContaining("Login required")
+    }
+
+    @Test
+    fun `checkReadPermission throws IllegalArgumentException when TODO not found`() {
+        val todoId = UUID.randomUUID()
+        val attachment = createAttachment(contextType = AttachmentContextType.TODO, contextId = todoId.toString())
+
+        whenever(todoRepository.findById(todoId)).thenReturn(Optional.empty())
+
+        assertThatThrownBy {
+            evaluator.checkReadPermission(loginMember, attachment)
+        }.isInstanceOf(IllegalArgumentException::class.java)
+            .hasMessageContaining("Todo not found")
+    }
+
+    @Test
+    fun `checkWritePermission succeeds for TODO context when owner`() {
+        val todoId = UUID.randomUUID()
+        val attachment = createAttachment(contextType = AttachmentContextType.TODO, contextId = todoId.toString())
+        val todo = createTodo(createMember(loginMember.id), todoId)
+
+        whenever(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+
+        assertThatCode {
+            evaluator.checkWritePermission(loginMember, attachment)
+        }.doesNotThrowAnyException()
+    }
+
+    @Test
+    fun `checkWritePermission throws AuthException for TODO context when not owner`() {
+        val todoId = UUID.randomUUID()
+        val attachment = createAttachment(contextType = AttachmentContextType.TODO, contextId = todoId.toString())
+        val todo = createTodo(createMember(otherMember.id), todoId)
+
+        whenever(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+
+        assertThatThrownBy {
+            evaluator.checkWritePermission(loginMember, attachment)
+        }.isInstanceOf(AuthException::class.java)
+            .hasMessageContaining("does not belong to user")
+    }
+
+    @Test
+    fun `checkSessionWritePermission succeeds for TODO context when owner`() {
+        val todoId = UUID.randomUUID()
         val session = createSession(
             ownerId = loginMember.id,
             contextType = AttachmentContextType.TODO,
-            targetContextId = "1"
+            targetContextId = todoId.toString()
         )
+        val todo = createTodo(createMember(loginMember.id), todoId)
+
+        whenever(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+
+        assertThatCode {
+            evaluator.checkSessionWritePermission(loginMember, session)
+        }.doesNotThrowAnyException()
+    }
+
+    @Test
+    fun `checkSessionWritePermission throws AuthException for TODO context when todo belongs to someone else`() {
+        val todoId = UUID.randomUUID()
+        val session = createSession(
+            ownerId = loginMember.id,
+            contextType = AttachmentContextType.TODO,
+            targetContextId = todoId.toString()
+        )
+        val todo = createTodo(createMember(otherMember.id), todoId)
+
+        whenever(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
 
         assertThatThrownBy {
             evaluator.checkSessionWritePermission(loginMember, session)
-        }.isInstanceOf(UnsupportedOperationException::class.java)
-            .hasMessageContaining("TODO not yet implemented")
+        }.isInstanceOf(AuthException::class.java)
+            .hasMessageContaining("does not belong to user")
     }
 
     private fun createAttachment(
@@ -225,5 +312,22 @@ class AttachmentPermissionEvaluatorTest {
             ownerId = ownerId,
             expiresAt = Instant.now().plusSeconds(3600)
         )
+    }
+
+    private fun createMember(id: Long): Member {
+        val member = Member(name = "user$id", password = "password")
+        ReflectionTestUtils.setField(member, "id", id)
+        return member
+    }
+
+    private fun createTodo(member: Member, todoId: UUID): Todo {
+        val todo = Todo(
+            member = member,
+            title = "Test Todo",
+            content = "Test Content",
+            position = 1
+        )
+        ReflectionTestUtils.setField(todo, "id", todoId)
+        return todo
     }
 }

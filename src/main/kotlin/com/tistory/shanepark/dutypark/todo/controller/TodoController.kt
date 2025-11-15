@@ -34,7 +34,13 @@ class TodoController(
         @Login loginMember: LoginMember,
         @RequestBody @Validated todoRequest: TodoRequest
     ): TodoResponse {
-        return todoService.addTodo(loginMember, todoRequest.title, todoRequest.content)
+        return todoService.addTodo(
+            loginMember = loginMember,
+            title = todoRequest.title,
+            content = todoRequest.content,
+            attachmentSessionId = todoRequest.attachmentSessionId,
+            orderedAttachmentIds = todoRequest.orderedAttachmentIds
+        )
     }
 
     @PutMapping("/{id}")
@@ -43,7 +49,14 @@ class TodoController(
         @PathVariable id: UUID,
         @RequestBody @Validated todoRequest: TodoRequest
     ): TodoResponse {
-        return todoService.editTodo(loginMember, id, todoRequest.title, todoRequest.content)
+        return todoService.editTodo(
+            loginMember = loginMember,
+            id = id,
+            title = todoRequest.title,
+            content = todoRequest.content,
+            attachmentSessionId = todoRequest.attachmentSessionId,
+            orderedAttachmentIds = todoRequest.orderedAttachmentIds
+        )
     }
 
     @PatchMapping("/position")

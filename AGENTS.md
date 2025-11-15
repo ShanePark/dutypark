@@ -127,6 +127,7 @@ cd dutypark_dev_db && docker compose up -d               # standalone MySQL on :
 
 - Work on **one checklist item at a time**; do not parallelize.
 - Break each checklist item into 3–5 small todos; finish all todos for the current item before moving on.
+- Follow a strict **RED → GREEN → REFACTOR** cadence for every feature or fix; do not jump phases or mix steps.
 - After finishing a checklist item, **stop and present the code for review**—do not continue until the user approves.
 - **Never commit automatically**; wait for explicit instructions like “commit this.”
 - Only start the next checklist item after user confirms the previous one and requests the commit (if any).

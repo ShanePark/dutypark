@@ -16,6 +16,7 @@ import org.springframework.restdocs.request.RequestDocumentation.pathParameters
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.util.UUID
 
 class TodoControllerTest : RestDocsTest() {
 
@@ -73,7 +74,9 @@ class TodoControllerTest : RestDocsTest() {
         val json = """
             {
                 "title": "New Todo",
-                "content": "New Content"
+                "content": "New Content",
+                "attachmentSessionId": null,
+                "orderedAttachmentIds": []
             }
         """.trimIndent()
 
@@ -93,7 +96,9 @@ class TodoControllerTest : RestDocsTest() {
                     "todos/create",
                     requestFields(
                         fieldWithPath("title").description("Todo Title"),
-                        fieldWithPath("content").description("Todo Content")
+                        fieldWithPath("content").description("Todo Content"),
+                        fieldWithPath("attachmentSessionId").optional().description("첨부 업로드 세션 ID"),
+                        fieldWithPath("orderedAttachmentIds").optional().description("저장 순서를 유지할 첨부 ID 배열")
                     ),
                     responseFields(
                         fieldWithPath("id").description("Todo ID"),
@@ -123,7 +128,9 @@ class TodoControllerTest : RestDocsTest() {
         val json = """
             {
                 "title": "Updated Todo",
-                "content": "Updated Content"
+                "content": "Updated Content",
+                "attachmentSessionId": null,
+                "orderedAttachmentIds": []
             }
         """.trimIndent()
 
@@ -146,7 +153,9 @@ class TodoControllerTest : RestDocsTest() {
                     ),
                     requestFields(
                         fieldWithPath("title").description("Todo Title"),
-                        fieldWithPath("content").description("Todo Content")
+                        fieldWithPath("content").description("Todo Content"),
+                        fieldWithPath("attachmentSessionId").optional().description("첨부 업로드 세션 ID"),
+                        fieldWithPath("orderedAttachmentIds").optional().description("저장 순서를 유지할 첨부 ID 배열")
                     ),
                     responseFields(
                         fieldWithPath("id").description("Todo ID"),

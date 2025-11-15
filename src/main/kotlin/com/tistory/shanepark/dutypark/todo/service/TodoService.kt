@@ -1,5 +1,9 @@
 package com.tistory.shanepark.dutypark.todo.service
 
+import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
+import com.tistory.shanepark.dutypark.attachment.dto.FinalizeSessionRequest
+import com.tistory.shanepark.dutypark.attachment.dto.ReorderAttachmentsRequest
+import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -16,7 +20,8 @@ import java.util.*
 @Transactional
 class TodoService(
     private val memberRepository: MemberRepository,
-    private val todoRepository: TodoRepository
+    private val todoRepository: TodoRepository,
+    private val attachmentService: AttachmentService
 ) {
     private val log = logger()
 
@@ -34,7 +39,13 @@ class TodoService(
             .map { TodoResponse.from(it) }
     }
 
-    fun addTodo(loginMember: LoginMember, title: String, content: String): TodoResponse {
+    fun addTodo(
+        loginMember: LoginMember,
+        title: String,
+        content: String,
+        attachmentSessionId: UUID? = null,
+        orderedAttachmentIds: List<UUID> = emptyList()
+    ): TodoResponse {
         val member = findMember(loginMember)
         val todoLastPosition = todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.ACTIVE)
 
@@ -48,10 +59,24 @@ class TodoService(
         )
         todoRepository.save(todo)
 
+        handleAttachmentsAfterChange(
+            loginMember = loginMember,
+            todoId = todo.id.toString(),
+            attachmentSessionId = attachmentSessionId,
+            orderedAttachmentIds = orderedAttachmentIds
+        )
+
         return TodoResponse.from(todo)
     }
 
-    fun editTodo(loginMember: LoginMember, id: UUID, title: String, content: String): TodoResponse {
+    fun editTodo(
+        loginMember: LoginMember,
+        id: UUID,
+        title: String,
+        content: String,
+        attachmentSessionId: UUID? = null,
+        orderedAttachmentIds: List<UUID> = emptyList()
+    ): TodoResponse {
         val member = findMember(loginMember)
 
         val todo = todoRepository.findById(id)
@@ -60,6 +85,14 @@ class TodoService(
         verifyOwnership(todo, member)
 
         todo.update(title, content)
+
+        handleAttachmentsAfterChange(
+            loginMember = loginMember,
+            todoId = todo.id.toString(),
+            attachmentSessionId = attachmentSessionId,
+            orderedAttachmentIds = orderedAttachmentIds
+        )
+
         return TodoResponse.from(todo)
     }
 
@@ -82,6 +115,12 @@ class TodoService(
         val member = findMember(loginMember)
         val todo = todoRepository.findById(id).orElseThrow { IllegalArgumentException("Todo not found") }
         verifyOwnership(todo, member)
+
+        val attachments =
+            attachmentService.listAttachments(loginMember, AttachmentContextType.TODO, id.toString())
+        attachments.forEach { attachmentDto ->
+            attachmentService.deleteAttachment(loginMember, attachmentDto.id)
+        }
 
         todoRepository.delete(todo)
     }
@@ -121,6 +160,32 @@ class TodoService(
         if (todoEntity.member.id != member.id) {
             log.warn("$member tried to access todo ${todoEntity.id} which is not his")
             throw IllegalArgumentException("Todo is not yours")
+        }
+    }
+
+    private fun handleAttachmentsAfterChange(
+        loginMember: LoginMember,
+        todoId: String,
+        attachmentSessionId: UUID?,
+        orderedAttachmentIds: List<UUID>
+    ) {
+        when {
+            attachmentSessionId != null -> {
+                val request = FinalizeSessionRequest(
+                    contextId = todoId,
+                    orderedAttachmentIds = orderedAttachmentIds
+                )
+                attachmentService.finalizeSession(loginMember, attachmentSessionId, request)
+            }
+
+            orderedAttachmentIds.isNotEmpty() -> {
+                val reorderRequest = ReorderAttachmentsRequest(
+                    contextType = AttachmentContextType.TODO,
+                    contextId = todoId,
+                    orderedAttachmentIds = orderedAttachmentIds
+                )
+                attachmentService.reorderAttachments(loginMember, reorderRequest)
+            }
         }
     }
 
