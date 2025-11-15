@@ -390,11 +390,11 @@ class AttachmentService(
         attachmentSessionId: UUID?,
         orderedAttachmentIds: List<UUID>
     ) {
-        if (attachmentSessionId == null && orderedAttachmentIds.isEmpty()) {
+        val existingAttachments = attachmentRepository.findAllByContextTypeAndContextId(contextType, contextId)
+
+        if (attachmentSessionId == null && orderedAttachmentIds.isEmpty() && existingAttachments.isEmpty()) {
             return
         }
-
-        val existingAttachments = attachmentRepository.findAllByContextTypeAndContextId(contextType, contextId)
 
         var finalizedSession = false
         if (attachmentSessionId != null) {
@@ -420,7 +420,8 @@ class AttachmentService(
             finalizedSession = true
         }
 
-        val shouldCleanupExisting = finalizedSession || orderedAttachmentIds.isNotEmpty()
+        val shouldCleanupExisting =
+            finalizedSession || orderedAttachmentIds.isNotEmpty() || existingAttachments.isNotEmpty()
         if (!shouldCleanupExisting) {
             return
         }

@@ -20,7 +20,7 @@
                       :readonly="!editTodoMode"
                       style="resize: vertical;"></textarea>
           </div>
-          <div class="mt-3 w-100">
+          <div class="mt-3 w-100" v-if="editTodoMode || selectedTodoAttachments.length > 0">
             <label class="form-label fw-bold">
               <i class="bi bi-paperclip"></i> 첨부파일
             </label>

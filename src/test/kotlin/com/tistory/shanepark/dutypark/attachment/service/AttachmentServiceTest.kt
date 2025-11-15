@@ -292,6 +292,39 @@ class AttachmentServiceTest {
     }
 
     @Test
+    fun `synchronizeContextAttachments should delete existing attachments when ordered ids are empty`() {
+        val scheduleId = UUID.randomUUID().toString()
+        val storageDir = pathResolver.resolveContextDirectory(AttachmentContextType.SCHEDULE, scheduleId)
+        Files.createDirectories(storageDir)
+
+        val attachment = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = scheduleId,
+                uploadSessionId = null,
+                originalFilename = "remove.txt",
+                storedFilename = "remove.txt",
+                contentType = "text/plain",
+                size = 10,
+                storagePath = storageDir.toString(),
+                orderIndex = 0,
+                createdBy = loginMember.id
+            )
+        )
+
+        service.synchronizeContextAttachments(
+            loginMember = loginMember,
+            contextType = AttachmentContextType.SCHEDULE,
+            contextId = scheduleId,
+            attachmentSessionId = null,
+            orderedAttachmentIds = emptyList()
+        )
+
+        assertThat(attachmentRepository.findById(attachment.id)).isEmpty
+        assertThat(Files.exists(storageDir)).isFalse()
+    }
+
+    @Test
     fun `discardSession should delete all session attachments and temporary directory`() {
         val sessionId = UUID.randomUUID()
         val session = AttachmentUploadSession(
