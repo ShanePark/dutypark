@@ -130,6 +130,7 @@ cd dutypark_dev_db && docker compose up -d               # standalone MySQL on :
 - After finishing a checklist item, **stop and present the code for review**—do not continue until the user approves.
 - **Never commit automatically**; wait for explicit instructions like “commit this.”
 - Only start the next checklist item after user confirms the previous one and requests the commit (if any).
+- **User Communication:** All agent responses to user messages must be written in Korean.
 
 ---
 
