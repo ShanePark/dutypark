@@ -1297,6 +1297,13 @@ input[readonly], textarea[readonly] {
     height: auto;
     display: block;
     border-radius: 0.5rem;
+    cursor: zoom-in;
+    transition: transform 0.3s ease;
+}
+
+.attachment-viewer-img.zoomed {
+    cursor: zoom-out;
+    transform: scale(2);
 }
 
 .attachment-viewer-close {

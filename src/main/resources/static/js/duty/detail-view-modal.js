@@ -1032,6 +1032,24 @@ const detailViewMethods = {
         title: 'attachment-viewer-title',
         htmlContainer: 'attachment-viewer-html',
         closeButton: 'attachment-viewer-close'
+      },
+      didOpen: () => {
+        const img = document.querySelector('.attachment-viewer-img');
+        if (img) {
+          img.addEventListener('click', (event) => {
+            const rect = img.getBoundingClientRect();
+            const x = ((event.clientX - rect.left) / rect.width) * 100;
+            const y = ((event.clientY - rect.top) / rect.height) * 100;
+
+            if (img.classList.contains('zoomed')) {
+              img.classList.remove('zoomed');
+              img.style.transformOrigin = '';
+            } else {
+              img.style.transformOrigin = `${x}% ${y}%`;
+              img.classList.add('zoomed');
+            }
+          });
+        }
       }
     }).then((result) => {
       if (typeof onClose === 'function') {
