@@ -1,256 +1,43 @@
 const ATTACHMENT_CONTEXT_TYPE = 'SCHEDULE';
 
-const attachmentValidationConfig = window.AttachmentValidation || {
-  maxFileSizeBytes: 50 * 1024 * 1024,
-  maxFileSizeLabel: '50MB',
-  tooLargeMessage(filename) {
-    const prefix = filename ? `${filename} 파일은` : '파일이';
-    const label = this.maxFileSizeLabel ? `(${this.maxFileSizeLabel})` : '';
-    return `${prefix} 허용 용량${label}을 초과해 업로드할 수 없습니다.`;
-  },
-  blockedExtensionMessage(filename) {
-    const target = filename ? `${filename} 파일은` : '이 파일은';
-    return `${target} 업로드할 수 없는 확장자입니다.`;
-  }
-};
+const attachmentHelpers = window.AttachmentHelpers;
+const attachmentValidationConfig = attachmentHelpers.validationConfig;
+const normalizeAttachmentDto = attachmentHelpers.normalizeAttachmentDto;
 
-const normalizeAttachmentDto = (dto) => ({
-  id: dto.id,
-  name: dto.originalFilename,
-  contentType: dto.contentType,
-  size: dto.size,
-  thumbnailUrl: dto.thumbnailUrl,
-  downloadUrl: `/api/attachments/${dto.id}/download`,
-  isImage: dto.contentType ? dto.contentType.startsWith('image/') : false,
-  hasThumbnail: dto.hasThumbnail,
-  orderIndex: dto.orderIndex,
-  createdAt: dto.createdAt,
-  createdBy: dto.createdBy,
+const validateAttachmentFile = (file) => attachmentHelpers.validateFile(file);
+
+const showAttachmentAlert = (message) => attachmentHelpers.showAlert(message, {
+  showConfirmButton: true,
+  confirmButtonText: '확인',
+  timer: null
 });
 
-const getFileExtension = (filename) => {
-  if (!filename || filename.indexOf('.') === -1) {
-    return '';
-  }
-  return filename.split('.').pop().toLowerCase();
-};
-
-const ATTACHMENT_ICON_BY_EXTENSION = {
-  pdf: 'bi-file-earmark-pdf',
-  doc: 'bi-file-earmark-word',
-  docx: 'bi-file-earmark-word',
-  docm: 'bi-file-earmark-word',
-  dot: 'bi-file-earmark-word',
-  dotx: 'bi-file-earmark-word',
-  xls: 'bi-file-earmark-spreadsheet',
-  xlsx: 'bi-file-earmark-spreadsheet',
-  xlsm: 'bi-file-earmark-spreadsheet',
-  xlsb: 'bi-file-earmark-spreadsheet',
-  csv: 'bi-file-earmark-spreadsheet',
-  tsv: 'bi-file-earmark-spreadsheet',
-  ppt: 'bi-file-earmark-ppt',
-  pptx: 'bi-file-earmark-ppt',
-  pptm: 'bi-file-earmark-ppt',
-  key: 'bi-file-earmark-ppt',
-  txt: 'bi-file-earmark-text',
-  md: 'bi-file-earmark-text',
-  rtf: 'bi-file-earmark-text',
-  log: 'bi-file-earmark-text',
-  ics: 'bi-file-earmark-text',
-  json: 'bi-file-earmark-code',
-  yml: 'bi-file-earmark-code',
-  yaml: 'bi-file-earmark-code',
-  html: 'bi-file-earmark-code',
-  htm: 'bi-file-earmark-code',
-  xml: 'bi-file-earmark-code',
-  js: 'bi-file-earmark-code',
-  jsx: 'bi-file-earmark-code',
-  ts: 'bi-file-earmark-code',
-  tsx: 'bi-file-earmark-code',
-  java: 'bi-file-earmark-code',
-  kt: 'bi-file-earmark-code',
-  kts: 'bi-file-earmark-code',
-  py: 'bi-file-earmark-code',
-  php: 'bi-file-earmark-code',
-  rb: 'bi-file-earmark-code',
-  go: 'bi-file-earmark-code',
-  rs: 'bi-file-earmark-code',
-  swift: 'bi-file-earmark-code',
-  sql: 'bi-file-earmark-code',
-  sh: 'bi-file-earmark-code',
-  bat: 'bi-file-earmark-code',
-  ps1: 'bi-file-earmark-code',
-  c: 'bi-file-earmark-code',
-  cpp: 'bi-file-earmark-code',
-  cs: 'bi-file-earmark-code',
-  mp3: 'bi-file-earmark-music',
-  wav: 'bi-file-earmark-music',
-  flac: 'bi-file-earmark-music',
-  ogg: 'bi-file-earmark-music',
-  aac: 'bi-file-earmark-music',
-  m4a: 'bi-file-earmark-music',
-  wma: 'bi-file-earmark-music',
-  mp4: 'bi-file-earmark-play',
-  m4v: 'bi-file-earmark-play',
-  mov: 'bi-file-earmark-play',
-  avi: 'bi-file-earmark-play',
-  mkv: 'bi-file-earmark-play',
-  webm: 'bi-file-earmark-play',
-  wmv: 'bi-file-earmark-play',
-  mpg: 'bi-file-earmark-play',
-  mpeg: 'bi-file-earmark-play',
-  gif: 'bi-file-earmark-image',
-  jpg: 'bi-file-earmark-image',
-  jpeg: 'bi-file-earmark-image',
-  png: 'bi-file-earmark-image',
-  bmp: 'bi-file-earmark-image',
-  svg: 'bi-file-earmark-image',
-  webp: 'bi-file-earmark-image',
-  heic: 'bi-file-earmark-image',
-  heif: 'bi-file-earmark-image',
-  psd: 'bi-file-earmark-image',
-  ai: 'bi-file-earmark-image',
-  eps: 'bi-file-earmark-image',
-  zip: 'bi-file-earmark-zip',
-  rar: 'bi-file-earmark-zip',
-  '7z': 'bi-file-earmark-zip',
-  gz: 'bi-file-earmark-zip',
-  tgz: 'bi-file-earmark-zip',
-  tar: 'bi-file-earmark-zip',
-  bz2: 'bi-file-earmark-zip',
-  xz: 'bi-file-earmark-zip',
-  iso: 'bi-file-earmark-binary',
-  dmg: 'bi-file-earmark-binary',
-  exe: 'bi-file-earmark-binary',
-  dll: 'bi-file-earmark-binary',
-  bin: 'bi-file-earmark-binary',
-  apk: 'bi-file-earmark-binary',
-  ipa: 'bi-file-earmark-binary',
-};
-
-const ATTACHMENT_ICON_BY_CONTENT_TYPE = {
-  'application/pdf': 'bi-file-earmark-pdf',
-  'application/msword': 'bi-file-earmark-word',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'bi-file-earmark-word',
-  'application/vnd.ms-excel': 'bi-file-earmark-spreadsheet',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'bi-file-earmark-spreadsheet',
-  'application/vnd.ms-powerpoint': 'bi-file-earmark-ppt',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'bi-file-earmark-ppt',
-  'text/plain': 'bi-file-earmark-text',
-  'text/markdown': 'bi-file-earmark-text',
-  'text/csv': 'bi-file-earmark-spreadsheet',
-  'application/json': 'bi-file-earmark-code',
-  'application/xml': 'bi-file-earmark-code',
-  'text/xml': 'bi-file-earmark-code',
-};
-
-const validateAttachmentFile = (file) => {
-  if (!file) {
-    return {
-      valid: false,
-      message: '업로드할 파일을 찾지 못했습니다.'
-    };
-  }
-  if (file.size > attachmentValidationConfig.maxFileSizeBytes) {
-    return {
-      valid: false,
-      message: attachmentValidationConfig.tooLargeMessage(file.name)
-    };
-  }
-  return {valid: true};
-};
-
-const showAttachmentAlert = (message) => {
-  Swal.fire({
-    icon: 'error',
-    title: message,
-    showConfirmButton: true,
-    confirmButtonText: '확인'
-  });
-};
-
-const buildUploadProgressPayload = (event) => {
-  if (!event || !event.lengthComputable) {
-    return {
-      bytesUploaded: event ? event.loaded : 0,
-      bytesTotal: event ? event.total : 0,
-      progress: 0
-    };
-  }
-  return {
-    bytesUploaded: event.loaded,
-    bytesTotal: event.total,
-    progress: event.total > 0 ? event.loaded / event.total : 0
-  };
-};
+const buildUploadProgressPayload = (event) => attachmentHelpers.buildUploadProgressPayload(event);
 
 const handleAttachmentResponseError = async (response, fallbackMessage, options = {}) => {
   const {fileName} = options;
-  let message = fallbackMessage;
-  if (response) {
-    let body = null;
-    try {
-      body = await response.clone().json();
-    } catch (e) {
-      body = null;
+  await attachmentHelpers.handleResponseError(response, fallbackMessage, {
+    fileName,
+    alertOptions: {
+      showConfirmButton: true,
+      confirmButtonText: '확인',
+      timer: null
     }
-    if (response.status === 413) {
-      if (body?.message) {
-        message = body.message;
-      } else {
-        message = attachmentValidationConfig.tooLargeMessage(fileName);
-      }
-    } else if (response.status === 400 && body?.code === 'ATTACHMENT_EXTENSION_BLOCKED') {
-      if (fileName) {
-        message = attachmentValidationConfig.blockedExtensionMessage(fileName);
-      } else if (body?.message) {
-        message = body.message;
-      }
-    } else if (body?.message) {
-      message = body.message;
-    }
-  }
-  showAttachmentAlert(message);
-  throw new Error(message);
-};
-
-const handleAttachmentXhrError = (xhr, file) => {
-  const fileName = file?.name;
-  if (xhr.status === 0) {
-    showAttachmentAlert('네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
-    return new Error('Network error during attachment upload');
-  }
-  if (xhr.status === 413) {
-    const message = xhr.response?.message || attachmentValidationConfig.tooLargeMessage(fileName);
-    showAttachmentAlert(message);
-    return new Error(message);
-  }
-  if (xhr.status === 400 && xhr.response?.code === 'ATTACHMENT_EXTENSION_BLOCKED' && fileName) {
-    const message = attachmentValidationConfig.blockedExtensionMessage(fileName);
-    showAttachmentAlert(message);
-    return new Error(message);
-  }
-  const message = xhr.response?.message || '파일 업로드에 실패했습니다.';
-  showAttachmentAlert(message);
-  return new Error(message);
-};
-
-const createAttachmentSession = async (targetContextId = null) => {
-  const response = await fetch('/api/attachments/sessions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      contextType: ATTACHMENT_CONTEXT_TYPE,
-      targetContextId: targetContextId
-    })
   });
-  if (!response.ok) {
-    await handleAttachmentResponseError(response, '업로드 세션 생성에 실패했습니다.');
-  }
-  return await response.json();
 };
+
+const handleAttachmentXhrError = (xhr, file) => attachmentHelpers.handleXhrError(xhr, file, {
+  alertOptions: {
+    showConfirmButton: true,
+    confirmButtonText: '확인',
+    timer: null
+  }
+});
+
+const createAttachmentSession = async (targetContextId = null) => attachmentHelpers.createSession({
+  contextType: ATTACHMENT_CONTEXT_TYPE,
+  targetContextId
+});
 
 const finalizeAttachmentSession = async (sessionId, contextId, orderedAttachmentIds = []) => {
   const response = await fetch(`/api/attachments/sessions/${sessionId}/finalize`, {
@@ -833,8 +620,16 @@ const detailViewMethods = {
         const index = app.createSchedule.uploadedAttachments.findIndex(a => a.id === file.id);
         if (index !== -1) {
           const oldPreviewUrl = app.createSchedule.uploadedAttachments[index].previewUrl;
-          if (fileType.startsWith('image/') && !normalized.previewUrl) {
-            normalized.previewUrl = oldPreviewUrl;
+          if (fileType.startsWith('image/')) {
+            const inlinePreviewUrl = attachmentHelpers.resolveDownloadUrl(normalized, {inline: true});
+            if (inlinePreviewUrl) {
+              normalized.previewUrl = inlinePreviewUrl;
+              if (oldPreviewUrl && oldPreviewUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(oldPreviewUrl);
+              }
+            } else if (!normalized.previewUrl) {
+              normalized.previewUrl = oldPreviewUrl;
+            }
           }
           app.$set(app.createSchedule.uploadedAttachments, index, normalized);
         }
@@ -978,136 +773,15 @@ const detailViewMethods = {
     if (!attachment) {
       return;
     }
-
     const {onClose} = options;
-    const fileName = attachment.originalFilename || attachment.name || '이미지';
-    const escapeHtml = (value) => value
-      ? value.replace(/[&<>"']/g, (char) => {
-        switch (char) {
-          case '&':
-            return '&amp;';
-          case '<':
-            return '&lt;';
-          case '>':
-            return '&gt;';
-          case '"':
-            return '&quot;';
-          case '\'':
-            return '&#39;';
-          default:
-            return char;
-        }
-      })
-      : '';
-
-    let imageSource = attachment.previewUrl;
-    if (!imageSource) {
-      const baseDownloadUrl = attachment.downloadUrl || (attachment.id ? `/api/attachments/${attachment.id}/download` : null);
-      if (baseDownloadUrl) {
-        imageSource = `${baseDownloadUrl}?inline=true`;
-      }
-    }
-    if (!imageSource && attachment.thumbnailUrl) {
-      imageSource = attachment.thumbnailUrl;
-    }
-
-    if (!imageSource) {
-      Swal.fire({
-        icon: 'error',
-        title: '이미지를 불러오지 못했습니다.',
-        showConfirmButton: false,
-        timer: sweetAlTimer
-      });
-      return;
-    }
-
-    return Swal.fire({
-      html: `<div class="attachment-viewer-body"><img src="${imageSource}" alt="${escapeHtml(fileName)}" class="attachment-viewer-img"></div>`,
-      showConfirmButton: false,
-      showCloseButton: true,
-      focusConfirm: false,
-      background: '#000',
-      customClass: {
-        popup: 'attachment-viewer-popup',
-        title: 'attachment-viewer-title',
-        htmlContainer: 'attachment-viewer-html',
-        closeButton: 'attachment-viewer-close'
-      },
-      didOpen: () => {
-        const img = document.querySelector('.attachment-viewer-img');
-        if (img) {
-          img.addEventListener('click', (event) => {
-            const rect = img.getBoundingClientRect();
-            const x = ((event.clientX - rect.left) / rect.width) * 100;
-            const y = ((event.clientY - rect.top) / rect.height) * 100;
-
-            if (img.classList.contains('zoomed')) {
-              img.classList.remove('zoomed');
-              img.style.transformOrigin = '';
-            } else {
-              img.style.transformOrigin = `${x}% ${y}%`;
-              img.classList.add('zoomed');
-            }
-          });
-        }
-      }
-    }).then((result) => {
-      if (typeof onClose === 'function') {
-        onClose(result);
-      }
-      return result;
+    return attachmentHelpers.openViewer(attachment, {
+      onClose,
+      missingMessage: '이미지를 불러오지 못했습니다.'
     });
   }
   ,
   attachmentIconClass(attachment) {
-    if (!attachment) {
-      return 'bi-file-earmark';
-    }
-    const filename = (attachment.originalFilename || attachment.name || '').toLowerCase();
-    const extension = getFileExtension(filename);
-    if (extension && ATTACHMENT_ICON_BY_EXTENSION[extension]) {
-      return ATTACHMENT_ICON_BY_EXTENSION[extension];
-    }
-    const contentType = (attachment.contentType || attachment.type || '').toLowerCase();
-    if (contentType) {
-      if (ATTACHMENT_ICON_BY_CONTENT_TYPE[contentType]) {
-        return ATTACHMENT_ICON_BY_CONTENT_TYPE[contentType];
-      }
-      if (contentType.startsWith('image/')) {
-        return 'bi-file-earmark-image';
-      }
-      if (contentType.startsWith('audio/')) {
-        return 'bi-file-earmark-music';
-      }
-      if (contentType.startsWith('video/')) {
-        return 'bi-file-earmark-play';
-      }
-      if (contentType.includes('zip') || contentType.includes('rar') || contentType.includes('compressed')) {
-        return 'bi-file-earmark-zip';
-      }
-      if (contentType.includes('pdf')) {
-        return 'bi-file-earmark-pdf';
-      }
-      if (contentType.includes('word')) {
-        return 'bi-file-earmark-word';
-      }
-      if (contentType.includes('excel') || contentType.includes('spreadsheet')) {
-        return 'bi-file-earmark-spreadsheet';
-      }
-      if (contentType.includes('presentation') || contentType.includes('powerpoint')) {
-        return 'bi-file-earmark-ppt';
-      }
-      if (contentType.startsWith('text/')) {
-        return 'bi-file-earmark-text';
-      }
-      if (contentType.includes('json') || contentType.includes('xml') || contentType.includes('javascript')) {
-        return 'bi-file-earmark-code';
-      }
-      if (contentType.includes('binary') || contentType.includes('octet-stream')) {
-        return 'bi-file-earmark-binary';
-      }
-    }
-    return 'bi-file-earmark';
+    return attachmentHelpers.attachmentIconClass(attachment);
   }
   ,
   startAttachmentUploadTicker() {
@@ -1129,11 +803,7 @@ const detailViewMethods = {
   }
   ,
   formatBytes(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    return attachmentHelpers.formatBytes(bytes);
   }
   ,
   formatDuration(seconds) {

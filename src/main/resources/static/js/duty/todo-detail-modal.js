@@ -251,8 +251,16 @@ const todoDetailMethods = {
         const index = state.uploadedAttachments.findIndex(a => a.id === file.id);
         if (index !== -1) {
           const oldPreviewUrl = state.uploadedAttachments[index].previewUrl;
-          if (fileType.startsWith('image/') && !normalized.previewUrl) {
-            normalized.previewUrl = oldPreviewUrl;
+          if (fileType.startsWith('image/')) {
+            const inlinePreviewUrl = todoAttachmentHelpers.resolveDownloadUrl(normalized, {inline: true});
+            if (inlinePreviewUrl) {
+              normalized.previewUrl = inlinePreviewUrl;
+              if (oldPreviewUrl && oldPreviewUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(oldPreviewUrl);
+              }
+            } else if (!normalized.previewUrl) {
+              normalized.previewUrl = oldPreviewUrl;
+            }
           }
           app.$set(state.uploadedAttachments, index, normalized);
         }

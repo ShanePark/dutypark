@@ -1,290 +1,31 @@
 const todoAttachmentHelpers = window.todoAttachmentHelpers || (() => {
-  const validationConfig = window.AttachmentValidation || {
-    maxFileSizeBytes: 50 * 1024 * 1024,
-    maxFileSizeLabel: '50MB',
-    tooLargeMessage(filename) {
-      const prefix = filename ? `${filename} 파일은` : '파일이';
-      const label = this.maxFileSizeLabel ? `(${this.maxFileSizeLabel})` : '';
-      return `${prefix} 허용 용량${label}을 초과해 업로드할 수 없습니다.`;
-    },
-    blockedExtensionMessage(filename) {
-      const target = filename ? `${filename} 파일은` : '이 파일은';
-      return `${target} 업로드할 수 없는 확장자입니다.`;
-    }
-  };
+  const base = window.AttachmentHelpers;
+  const showAlert = (message) => base.showAlert(message, {showConfirmButton: false, timer: 2500});
+  const handleXhrError = (xhr, file) => base.handleXhrError(xhr, file, {alertOptions: {showConfirmButton: false, timer: 2500}});
 
-  const normalizeAttachmentDto = (dto) => ({
-    id: dto.id,
-    name: dto.originalFilename,
-    originalFilename: dto.originalFilename,
-    contentType: dto.contentType,
-    size: dto.size,
-    thumbnailUrl: dto.thumbnailUrl,
-    downloadUrl: `/api/attachments/${dto.id}/download`,
-    isImage: dto.contentType ? dto.contentType.startsWith('image/') : false,
-    hasThumbnail: dto.hasThumbnail,
-    orderIndex: dto.orderIndex,
-    createdAt: dto.createdAt,
-    createdBy: dto.createdBy,
-    previewUrl: null,
+  const createSession = async (targetContextId = null) => base.createSession({
+    contextType: 'TODO',
+    targetContextId
   });
 
-  const getFileExtension = (filename) => {
-    if (!filename || filename.indexOf('.') === -1) {
-      return '';
-    }
-    return filename.split('.').pop().toLowerCase();
-  };
+  const deleteSession = async (sessionId) => base.deleteSession(sessionId);
 
-  const attachmentIconClass = (attachment) => {
-    if (!attachment) {
-      return 'bi-file-earmark';
-    }
-    const filename = (attachment.originalFilename || attachment.name || '').toLowerCase();
-    const ext = getFileExtension(filename);
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'heic', 'heif'].includes(ext)) {
-      return 'bi-file-earmark-image';
-    }
-    if (['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(ext)) {
-      return 'bi-file-earmark-play';
-    }
-    if (['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac'].includes(ext)) {
-      return 'bi-file-earmark-music';
-    }
-    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) {
-      return 'bi-file-earmark-zip';
-    }
-    if (ext === 'pdf') {
-      return 'bi-file-earmark-pdf';
-    }
-    if (['doc', 'docx'].includes(ext)) {
-      return 'bi-file-earmark-word';
-    }
-    if (['xls', 'xlsx', 'csv'].includes(ext)) {
-      return 'bi-file-earmark-spreadsheet';
-    }
-    if (['ppt', 'pptx'].includes(ext)) {
-      return 'bi-file-earmark-ppt';
-    }
-    if (['txt', 'md', 'log'].includes(ext)) {
-      return 'bi-file-earmark-text';
-    }
-    return 'bi-file-earmark';
-  };
-
-  const showAlert = (message) => {
-    Swal.fire({
-      icon: 'error',
-      title: message,
-      showConfirmButton: false,
-      timer: 2500
-    });
-  };
-
-  const validateFile = (file) => {
-    if (!file) {
-      return {valid: false, message: '업로드할 파일을 찾지 못했습니다.'};
-    }
-    if (file.size > validationConfig.maxFileSizeBytes) {
-      return {
-        valid: false,
-        message: validationConfig.tooLargeMessage(file.name)
-      };
-    }
-    return {valid: true};
-  };
-
-  const buildUploadProgressPayload = (event) => {
-    const payload = {
-      bytesUploaded: event.loaded || 0,
-      bytesTotal: event.total || 0,
-    };
-    payload.percentage = (event.lengthComputable && event.total > 0)
-      ? Math.round((event.loaded / event.total) * 100)
-      : 0;
-    return payload;
-  };
-
-  const handleXhrError = (xhr, file) => {
-    const fileName = file?.name;
-    if (xhr.status === 0) {
-      showAlert('네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
-      return new Error('Network error during attachment upload');
-    }
-    if (xhr.status === 413) {
-      const message = xhr.response?.message || validationConfig.tooLargeMessage(fileName);
-      showAlert(message);
-      return new Error(message);
-    }
-    if (xhr.status === 400 && xhr.response?.code === 'ATTACHMENT_EXTENSION_BLOCKED' && fileName) {
-      const message = validationConfig.blockedExtensionMessage(fileName);
-      showAlert(message);
-      return new Error(message);
-    }
-    const message = xhr.response?.message || '파일 업로드에 실패했습니다.';
-    showAlert(message);
-    return new Error(message);
-  };
-
-  const formatBytes = (bytes) => {
-    if (!bytes) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-  };
-
-  const escapeHtml = (value) => value
-    ? value.replace(/[&<>\"']/g, (char) => {
-      switch (char) {
-        case '&':
-          return '&amp;';
-        case '<':
-          return '&lt;';
-        case '>':
-          return '&gt;';
-        case '"':
-          return '&quot;';
-        case '\'':
-          return '&#39;';
-        default:
-          return char;
-      }
-    })
-    : '';
-
-  const resolveDownloadUrl = (attachment, options = {}) => {
-    if (!attachment) {
-      return null;
-    }
-    const baseUrl = attachment.downloadUrl || (attachment.id ? `/api/attachments/${attachment.id}/download` : null);
-    if (!baseUrl) {
-      return null;
-    }
-    const {inline = false} = options;
-    if (!inline) {
-      return baseUrl;
-    }
-    const separator = baseUrl.includes('?') ? '&' : '?';
-    return `${baseUrl}${separator}inline=true`;
-  };
-
-  const openViewer = (attachment) => {
-    if (!attachment) return;
-    const fileName = attachment.originalFilename || attachment.name || '이미지';
-    let imageSource = attachment.previewUrl;
-    if (!imageSource) {
-      const baseDownloadUrl = resolveDownloadUrl(attachment, {inline: true});
-      if (baseDownloadUrl) {
-        imageSource = baseDownloadUrl;
-      }
-    }
-    if (!imageSource && attachment.thumbnailUrl) {
-      imageSource = attachment.thumbnailUrl;
-    }
-    if (!imageSource) {
-      showAlert('이미지를 불러오지 못했습니다.');
-      return;
-    }
-    return Swal.fire({
-      html: `<div class="attachment-viewer-body"><img src="${imageSource}" alt="${escapeHtml(fileName)}" class="attachment-viewer-img"></div>`,
-      showConfirmButton: false,
-      showCloseButton: true,
-      background: '#000',
-      customClass: {
-        popup: 'attachment-viewer-popup',
-        title: 'attachment-viewer-title',
-        htmlContainer: 'attachment-viewer-html',
-        closeButton: 'attachment-viewer-close'
-      },
-      didOpen: () => {
-        const img = document.querySelector('.attachment-viewer-img');
-        if (img) {
-          img.addEventListener('click', (event) => {
-            const rect = img.getBoundingClientRect();
-            const x = ((event.clientX - rect.left) / rect.width) * 100;
-            const y = ((event.clientY - rect.top) / rect.height) * 100;
-
-            if (img.classList.contains('zoomed')) {
-              img.classList.remove('zoomed');
-              img.style.transformOrigin = '';
-            } else {
-              img.style.transformOrigin = `${x}% ${y}%`;
-              img.classList.add('zoomed');
-            }
-          });
-        }
-      }
-    });
-  };
-
-  const fetchJson = async (url, options, fallbackMessage) => {
-    const response = await fetch(url, options);
-    if (!response.ok) {
-      let message = fallbackMessage;
-      try {
-        const body = await response.json();
-        if (body?.message) {
-          message = body.message;
-        }
-      } catch {
-        // ignore
-      }
-      showAlert(message);
-      throw new Error(message);
-    }
-    return response.json();
-  };
-
-  const createSession = async (targetContextId = null) => {
-    return fetchJson('/api/attachments/sessions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        contextType: 'TODO',
-        targetContextId: targetContextId
-      })
-    }, '파일 업로드 세션 생성에 실패했습니다.');
-  };
-
-  const deleteSession = async (sessionId) => {
-    if (!sessionId) {
-      return;
-    }
-    try {
-      await fetch(`/api/attachments/sessions/${sessionId}`, {
-        method: 'DELETE'
-      });
-    } catch (error) {
-      console.warn('Failed to discard attachment session:', error);
-    }
-  };
-
-  const listAttachments = async (todoId) => {
-    const response = await fetch(`/api/attachments?contextType=TODO&contextId=${todoId}`, {
-      method: 'GET'
-    });
-    if (!response.ok) {
-      showAlert('첨부파일을 불러오지 못했습니다.');
-      return [];
-    }
-    const attachments = await response.json();
-    return attachments.map(normalizeAttachmentDto);
-  };
+  const listAttachments = async (todoId) => base.listAttachments({
+    contextType: 'TODO',
+    contextId: todoId
+  });
 
   return {
-    validationConfig,
-    normalizeAttachmentDto,
-    attachmentIconClass,
+    validationConfig: base.validationConfig,
+    normalizeAttachmentDto: base.normalizeAttachmentDto,
+    attachmentIconClass: base.attachmentIconClass,
     showAlert,
-    validateFile,
-    buildUploadProgressPayload,
+    validateFile: (file) => base.validateFile(file),
+    buildUploadProgressPayload: base.buildUploadProgressPayload,
     handleXhrError,
-    formatBytes,
-    openViewer,
-    resolveDownloadUrl,
+    formatBytes: base.formatBytes,
+    openViewer: (attachment) => base.openViewer(attachment, {missingMessage: '이미지를 불러오지 못했습니다.'}),
+    resolveDownloadUrl: base.resolveDownloadUrl,
     createSession,
     deleteSession,
     listAttachments
@@ -501,8 +242,16 @@ const todoAddMethods = {
         const index = state.uploadedAttachments.findIndex(a => a.id === file.id);
         if (index !== -1) {
           const oldPreviewUrl = state.uploadedAttachments[index].previewUrl;
-          if (fileType.startsWith('image/') && !normalized.previewUrl) {
-            normalized.previewUrl = oldPreviewUrl;
+          if (fileType.startsWith('image/')) {
+            const inlinePreviewUrl = todoAttachmentHelpers.resolveDownloadUrl(normalized, {inline: true});
+            if (inlinePreviewUrl) {
+              normalized.previewUrl = inlinePreviewUrl;
+              if (oldPreviewUrl && oldPreviewUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(oldPreviewUrl);
+              }
+            } else if (!normalized.previewUrl) {
+              normalized.previewUrl = oldPreviewUrl;
+            }
           }
           app.$set(state.uploadedAttachments, index, normalized);
         }
