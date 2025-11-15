@@ -6,28 +6,30 @@ import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextT
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.schedule.service.SchedulePermissionService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.todo.repository.TodoRepository
 import org.springframework.stereotype.Component
 import java.util.*
 
 @Component
 class AttachmentPermissionEvaluator(
-    private val schedulePermissionService: SchedulePermissionService
+    private val schedulePermissionService: SchedulePermissionService,
+    private val todoRepository: TodoRepository
 ) {
     fun checkReadPermission(loginMember: LoginMember?, attachment: Attachment) {
         when (attachment.contextType) {
             AttachmentContextType.SCHEDULE -> checkScheduleReadPermission(loginMember, attachment)
+            AttachmentContextType.TODO -> checkTodoPermission(loginMember, attachment)
             AttachmentContextType.PROFILE,
-            AttachmentContextType.TEAM,
-            AttachmentContextType.TODO -> throw UnsupportedOperationException("Context type ${attachment.contextType} not yet implemented")
+            AttachmentContextType.TEAM -> throw UnsupportedOperationException("Context type ${attachment.contextType} not yet implemented")
         }
     }
 
     fun checkWritePermission(loginMember: LoginMember, attachment: Attachment) {
         when (attachment.contextType) {
             AttachmentContextType.SCHEDULE -> checkScheduleWritePermission(loginMember, attachment)
+            AttachmentContextType.TODO -> checkTodoPermission(loginMember, attachment)
             AttachmentContextType.PROFILE,
-            AttachmentContextType.TEAM,
-            AttachmentContextType.TODO -> throw UnsupportedOperationException("Context type ${attachment.contextType} not yet implemented")
+            AttachmentContextType.TEAM -> throw UnsupportedOperationException("Context type ${attachment.contextType} not yet implemented")
         }
     }
 
@@ -46,10 +48,9 @@ class AttachmentPermissionEvaluator(
                     loginMember,
                     UUID.fromString(session.targetContextId)
                 )
-
+                AttachmentContextType.TODO -> checkTodoSessionPermission(loginMember, session)
                 AttachmentContextType.PROFILE,
-                AttachmentContextType.TEAM,
-                AttachmentContextType.TODO -> throw UnsupportedOperationException("Context type ${session.contextType} not yet implemented")
+                AttachmentContextType.TEAM -> throw UnsupportedOperationException("Context type ${session.contextType} not yet implemented")
             }
         }
     }
@@ -74,6 +75,32 @@ class AttachmentPermissionEvaluator(
 
     private fun checkScheduleWritePermissionById(loginMember: LoginMember, scheduleId: UUID) {
         schedulePermissionService.checkScheduleWriteAuthority(loginMember, scheduleId)
+    }
+
+    private fun checkTodoPermission(loginMember: LoginMember?, attachment: Attachment) {
+        val contextId = attachment.contextId
+            ?: throw IllegalStateException("Attachment ${attachment.id} has no contextId")
+
+        val todoId = UUID.fromString(contextId)
+        ensureTodoOwnership(loginMember, todoId)
+    }
+
+    private fun checkTodoSessionPermission(loginMember: LoginMember, session: AttachmentUploadSession) {
+        val targetContextId = session.targetContextId
+            ?: throw IllegalStateException("Session ${session.id} has no targetContextId for TODO context")
+
+        val todoId = UUID.fromString(targetContextId)
+        ensureTodoOwnership(loginMember, todoId)
+    }
+
+    private fun ensureTodoOwnership(loginMember: LoginMember?, todoId: UUID) {
+        val requester = loginMember ?: throw AuthException("Login required to access todo")
+        val todo = todoRepository.findById(todoId)
+            .orElseThrow { IllegalArgumentException("Todo not found") }
+
+        if (todo.member.id != requester.id) {
+            throw AuthException("Todo $todoId does not belong to user ${requester.id}")
+        }
     }
 
 }

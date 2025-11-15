@@ -383,27 +383,47 @@ class AttachmentService(
         )
     }
 
-    fun finalizeSessionForSchedule(
+    fun synchronizeContextAttachments(
         loginMember: LoginMember,
-        sessionId: UUID,
-        scheduleId: String,
+        contextType: AttachmentContextType,
+        contextId: String,
+        attachmentSessionId: UUID?,
         orderedAttachmentIds: List<UUID>
     ) {
-        val session = sessionService.findById(sessionId)
-            ?: throw IllegalArgumentException("Upload session not found: $sessionId")
+        val existingAttachments = attachmentRepository.findAllByContextTypeAndContextId(contextType, contextId)
 
-        val existingAttachments = attachmentRepository.findAllByContextTypeAndContextId(session.contextType, scheduleId)
-        val sessionAttachments = attachmentRepository.findAllByUploadSessionId(sessionId)
+        if (attachmentSessionId == null && orderedAttachmentIds.isEmpty() && existingAttachments.isEmpty()) {
+            return
+        }
 
-        if (sessionAttachments.isNotEmpty()) {
-            val request = FinalizeSessionRequest(
-                contextId = scheduleId,
-                orderedAttachmentIds = orderedAttachmentIds
-            )
-            finalizeSession(loginMember, sessionId, request)
-        } else {
-            sessionService.deleteSession(sessionId)
-            log.info("Skipped finalizing empty session: sessionId={}", sessionId)
+        var finalizedSession = false
+        if (attachmentSessionId != null) {
+            val session = sessionService.findById(attachmentSessionId)
+                ?: throw IllegalArgumentException("Upload session not found: $attachmentSessionId")
+
+            if (session.contextType != contextType) {
+                throw IllegalStateException("Session context mismatch: expected $contextType, got ${session.contextType}")
+            }
+
+            val sessionAttachments = attachmentRepository.findAllByUploadSessionId(attachmentSessionId)
+
+            if (sessionAttachments.isNotEmpty()) {
+                val request = FinalizeSessionRequest(
+                    contextId = contextId,
+                    orderedAttachmentIds = orderedAttachmentIds
+                )
+                finalizeSession(loginMember, attachmentSessionId, request)
+            } else {
+                sessionService.deleteSession(attachmentSessionId)
+                log.info("Skipped finalizing empty session: sessionId={}", attachmentSessionId)
+            }
+            finalizedSession = true
+        }
+
+        val shouldCleanupExisting =
+            finalizedSession || orderedAttachmentIds.isNotEmpty() || existingAttachments.isNotEmpty()
+        if (!shouldCleanupExisting) {
+            return
         }
 
         val attachmentsToDelete = existingAttachments.filter { it.id !in orderedAttachmentIds }
@@ -412,12 +432,21 @@ class AttachmentService(
             deleteAttachment(attachment)
         }
 
+        if (orderedAttachmentIds.isNotEmpty()) {
+            val reorderRequest = ReorderAttachmentsRequest(
+                contextType = contextType,
+                contextId = contextId,
+                orderedAttachmentIds = orderedAttachmentIds
+            )
+            reorderAttachments(loginMember, reorderRequest)
+        }
+
         val remainingAttachments =
-            attachmentRepository.findAllByContextTypeAndContextId(session.contextType, scheduleId)
+            attachmentRepository.findAllByContextTypeAndContextId(contextType, contextId)
         if (remainingAttachments.isEmpty()) {
-            val contextDir = pathResolver.resolveContextDirectory(session.contextType, scheduleId)
+            val contextDir = pathResolver.resolveContextDirectory(contextType, contextId)
             fileSystemService.deleteDirectory(contextDir)
-            log.info("Deleted empty attachment directory: contextType={}, contextId={}", session.contextType, scheduleId)
+            log.info("Deleted empty attachment directory: contextType={}, contextId={}", contextType, contextId)
         }
     }
 

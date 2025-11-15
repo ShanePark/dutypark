@@ -1208,6 +1208,7 @@ input[readonly], textarea[readonly] {
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    position: relative;
 }
 
 .attachment-thumb img,
@@ -1221,6 +1222,10 @@ input[readonly], textarea[readonly] {
     padding: 1rem;
     box-sizing: border-box;
     fill: #6c757d;
+}
+
+.attachment-thumbnail-clickable {
+    cursor: pointer;
 }
 
 .attachment-meta {
@@ -1275,6 +1280,11 @@ input[readonly], textarea[readonly] {
 .attachment-download:hover {
     opacity: 1;
     background-color: rgba(0, 0, 0, 0.8);
+}
+
+.attachment-download-start {
+    right: auto;
+    left: 0.35rem;
 }
 
 .attachment-viewer-popup {

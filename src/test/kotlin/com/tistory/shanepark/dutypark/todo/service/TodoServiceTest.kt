@@ -1,5 +1,8 @@
 package com.tistory.shanepark.dutypark.todo.service
 
+import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
+import com.tistory.shanepark.dutypark.attachment.dto.AttachmentDto
+import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -13,6 +16,8 @@ import org.junit.jupiter.api.assertThrows
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.*
 import org.springframework.test.util.ReflectionTestUtils
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.util.*
 
 class TodoServiceTest {
@@ -20,6 +25,7 @@ class TodoServiceTest {
     private lateinit var todoService: TodoService
     private lateinit var memberRepository: MemberRepository
     private lateinit var todoRepository: TodoRepository
+    private lateinit var attachmentService: AttachmentService
 
     private val loginMember = LoginMember(1, "", "", "", false)
     private val member = Member(name = "", password = "")
@@ -28,7 +34,8 @@ class TodoServiceTest {
     fun setUp() {
         memberRepository = mock(MemberRepository::class.java)
         todoRepository = mock(TodoRepository::class.java)
-        todoService = TodoService(memberRepository, todoRepository)
+        attachmentService = mock(AttachmentService::class.java)
+        todoService = TodoService(memberRepository, todoRepository, attachmentService)
     }
 
     @Test
@@ -209,10 +216,111 @@ class TodoServiceTest {
         assertEquals(null, response.completedDate)
     }
 
+    @Test
+    fun `addTodo should finalize attachment session when attachmentSessionId is provided`() {
+        val sessionId = UUID.randomUUID()
+        val orderedAttachmentIds = listOf(UUID.randomUUID(), UUID.randomUUID())
+        val todoId = UUID.randomUUID()
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.ACTIVE)).thenReturn(0)
+        `when`(todoRepository.save(any(Todo::class.java))).thenAnswer { invocation ->
+            val savedTodo = invocation.getArgument<Todo>(0)
+            ReflectionTestUtils.setField(savedTodo, "id", todoId)
+            savedTodo
+        }
+
+        todoService.addTodo(loginMember, "title", "content", sessionId, orderedAttachmentIds)
+
+        verify(attachmentService, times(1)).synchronizeContextAttachments(
+            loginMember = loginMember,
+            contextType = AttachmentContextType.TODO,
+            contextId = todoId.toString(),
+            attachmentSessionId = sessionId,
+            orderedAttachmentIds = orderedAttachmentIds
+        )
+    }
+
+    @Test
+    fun `editTodo should reorder attachments when only ordered ids are provided`() {
+        val todoId = UUID.randomUUID()
+        val todo = Todo(member, "old", "content", 1)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+        val orderedAttachmentIds = listOf(UUID.randomUUID(), UUID.randomUUID())
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+
+        todoService.editTodo(loginMember, todoId, "new title", "new content", null, orderedAttachmentIds)
+
+        verify(attachmentService, times(1)).synchronizeContextAttachments(
+            loginMember = loginMember,
+            contextType = AttachmentContextType.TODO,
+            contextId = todoId.toString(),
+            attachmentSessionId = null,
+            orderedAttachmentIds = orderedAttachmentIds
+        )
+    }
+
+    @Test
+    fun `deleteTodo should remove attachments before deleting entity`() {
+        val todoId = UUID.randomUUID()
+        val todo = Todo(member, "title", "content", 1)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+        val attachments = listOf(
+            createAttachmentDto(UUID.randomUUID()),
+            createAttachmentDto(UUID.randomUUID())
+        )
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(attachmentService.listAttachments(loginMember, AttachmentContextType.TODO, todoId.toString()))
+            .thenReturn(attachments)
+
+        todoService.deleteTodo(loginMember, todoId)
+
+        attachments.forEach { attachment ->
+            verify(attachmentService, times(1)).deleteAttachment(loginMember, attachment.id)
+        }
+        verify(todoRepository, times(1)).delete(todo)
+    }
+
+    @Test
+    fun `editTodo should not interact with attachments when user is not owner`() {
+        val todoId = UUID.randomUUID()
+        val otherMember = otherMember()
+        val todo = Todo(otherMember, "title", "content", 1)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+
+        assertThrows<IllegalArgumentException> {
+            todoService.editTodo(loginMember, todoId, "new title", "new content", UUID.randomUUID(), listOf(UUID.randomUUID()))
+        }
+        verifyNoInteractions(attachmentService)
+    }
+
     private fun otherMember(): Member {
         val member = Member(name = "", password = "")
         ReflectionTestUtils.setField(member, "id", 2L)
         return member
+    }
+
+    private fun createAttachmentDto(id: UUID): AttachmentDto {
+        return AttachmentDto(
+            id = id,
+            contextType = AttachmentContextType.TODO,
+            contextId = UUID.randomUUID().toString(),
+            originalFilename = "file_$id.jpg",
+            contentType = "image/jpeg",
+            size = 1024L,
+            hasThumbnail = false,
+            thumbnailUrl = null,
+            orderIndex = 0,
+            createdAt = ZonedDateTime.of(2024, 1, 1, 0, 0, 0, 0, ZoneId.systemDefault()),
+            createdBy = loginMember.id
+        )
     }
 
 }

@@ -28,10 +28,70 @@
               placeholder="해당 할일에 대한 상세 설명을 입력하세요"
           ></textarea>
         </label>
+        <div class="mt-3">
+          <label class="form-label fw-bold">
+            <i class="bi bi-paperclip"></i> 첨부파일 (선택 사항)
+          </label>
+          <div class="attachment-gallery">
+            <div class="attachment-tile" v-for="attachment in newTodo.uploadedAttachments" :key="attachment.id">
+              <a
+                  v-if="todoAddAttachmentDownloadUrl(attachment)"
+                  :href="todoAddAttachmentDownloadUrl(attachment)"
+                  class="attachment-download attachment-download-start position-absolute btn btn-sm"
+                  download
+                  title="다운로드">
+                <i class="bi bi-download text-white"></i>
+              </a>
+              <div
+                  class="attachment-thumb"
+                  :class="{'attachment-thumbnail-clickable': attachment.isImage}"
+                  @click="attachment.isImage && todoAddOpenAttachmentViewer(attachment)">
+                <template v-if="attachment.isImage && (attachment.thumbnailUrl || attachment.previewUrl)">
+                  <img
+                      :src="attachment.thumbnailUrl || attachment.previewUrl"
+                      :alt="attachment.name"
+                      class="w-100 h-100"
+                      style="object-fit: cover;">
+                  <div
+                      class="attachment-hover-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center">
+                    <i class="bi bi-search text-white" style="font-size: 2rem;"></i>
+                  </div>
+                </template>
+                <div v-else class="d-flex align-items-center justify-content-center h-100">
+                  <i :class="['bi', todoAddAttachmentIconClass(attachment), 'text-muted', 'display-4', 'lh-1']"></i>
+                </div>
+              </div>
+              <div class="attachment-meta">
+                <div class="attachment-name" :title="attachment.name">{{ attachment.name }}</div>
+                <div class="attachment-size">{{ todoAddFormatBytes(attachment.size) }}</div>
+                <div class="attachment-progress"
+                     v-if="newTodo.attachmentProgress[attachment.id] !== undefined && newTodo.attachmentProgress[attachment.id] < 100">
+                  <div class="progress" style="height: 4px;">
+                    <div class="progress-bar"
+                         :style="{width: newTodo.attachmentProgress[attachment.id] + '%'}"></div>
+                  </div>
+                </div>
+              </div>
+              <button type="button" class="attachment-remove btn btn-sm btn-danger"
+                      @click="todoAddRemoveAttachment(attachment.id)">
+                <i class="bi bi-x"></i>
+              </button>
+            </div>
+
+            <div class="attachment-tile attachment-add-button">
+              <input type="file" id="todo-add-attachment-input" multiple hidden>
+              <label for="todo-add-attachment-input"
+                     class="attachment-thumb d-flex align-items-center justify-content-center h-100 m-0"
+                     style="cursor: pointer;">
+                <i class="bi bi-plus-circle text-muted" style="font-size: 3rem;"></i>
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-success" v-on:click="addTodo()">저장</button>
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" v-on:click="cancelAddTodo()">취소</button>
       </div>
     </div>
   </div>
