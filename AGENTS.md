@@ -135,7 +135,19 @@ cd dutypark_dev_db && docker compose up -d               # standalone MySQL on :
 
 ---
 
-## 7. Git Commit Policy & Convention
+## 7. Git & GitHub Workflow
+
+### GitHub CLI Usage
+
+**Always use `gh` CLI for GitHub-related operations.**
+
+- Creating issues: `gh issue create --title "..." --body "..."`
+- Viewing issues: `gh issue view <number>`
+- Creating pull requests: `gh pr create --title "..." --body "..."`
+- Viewing pull requests: `gh pr view <number>`
+- All GitHub issue titles and descriptions **must be written in English only**.
+
+### Git Commit Policy & Convention
 
 **Absolutely do not commit unless the user explicitly asks.**
 
@@ -143,9 +155,10 @@ cd dutypark_dev_db && docker compose up -d               # standalone MySQL on :
 - When asked to commit:
   - Analyze only the code diff since the last commit; ignore conversation history.
   - Format: `type: summary`, where `type ∈ {feat, fix, chore, refactor}`.
-  - Summary must be concise, imperative, English, no trailing period, no mixed languages.
+  - Summary must be concise, imperative, **English only**, no trailing period, no mixed languages.
   - Optional body: blank line after summary, wrap at ~72 chars; mention issues only when relevant.
   - Run `git log --oneline -10` first to ensure message aligns with recent style; amend if needed.
+- **All commit messages must be written in English only**.
 
 ---
 
