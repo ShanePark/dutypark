@@ -53,11 +53,39 @@ function loadApp(memberId, teamId, loginMemberId, memberName, year, month, searc
           attachmentUploadMeta: {},
           attachmentUploadTicker: 0,
         },
+        newTodo: {
+          title: '',
+          content: '',
+          attachmentSessionId: null,
+          sessionCreationPromise: null,
+          uploadedAttachments: [],
+          attachmentProgress: {},
+          attachmentUploadMeta: {},
+          attachmentUploadTicker: 0,
+          uploadTickerInterval: null,
+        },
+        editTodo: {
+          id: '',
+          title: '',
+          content: '',
+          attachmentSessionId: null,
+          sessionCreationPromise: null,
+          uploadedAttachments: [],
+          attachmentProgress: {},
+          attachmentUploadMeta: {},
+          attachmentUploadTicker: 0,
+          uploadTickerInterval: null,
+        },
         friends: [],
+        todoAddUppyInstance: null,
+        todoAddFileInputListener: null,
+        todoDetailUppyInstance: null,
+        todoDetailFileInputListener: null,
         todos: [],
         completedTodos: [],
         todosLoading: false,
         editTodoMode: false,
+        selectedTodoAttachments: [],
         selectedTodoStatus: 'ACTIVE',
         originalTodoTitle: '',
         originalTodoContent: '',
@@ -82,13 +110,14 @@ function loadApp(memberId, teamId, loginMemberId, memberName, year, month, searc
         this.loadSchedule();
         this.loadHolidays();
         this.loadFriends();
-        this.loadDDays();
-        this.checkAmIManager();
-        if (this.isMyCalendar) {
-          this.loadTodos();
-        }
-        this.initSortable();
-        this.setupModalCloseHandler();
+       this.loadDDays();
+       this.checkAmIManager();
+       if (this.isMyCalendar) {
+         this.loadTodos();
+       }
+       this.initSortable();
+       this.setupModalCloseHandler();
+        this.setupTodoAttachmentHandlers();
       }, computed: {
         ...dDayComputes,
         ...searchResultComputes,
@@ -207,6 +236,20 @@ function loadApp(memberId, teamId, loginMemberId, memberName, year, month, searc
         ...dDayMethods,
         ...formatMethods,
         ...otherDutiesMethods,
+        setupTodoAttachmentHandlers() {
+          const addTodoModal = document.getElementById('add-todo-modal');
+          if (addTodoModal) {
+            addTodoModal.addEventListener('hidden.bs.modal', () => {
+              this.cancelAddTodo(true);
+            });
+          }
+          const todoDetailsModal = document.getElementById('todo-details-modal');
+          if (todoDetailsModal) {
+            todoDetailsModal.addEventListener('hidden.bs.modal', () => {
+              this.exitTodoDetailAttachments(true);
+            });
+          }
+        },
         updateStartDateTime() {
           app.createSchedule.startDateTime = app.createSchedule.startDate + 'T' + app.createSchedule.startTime;
           if (

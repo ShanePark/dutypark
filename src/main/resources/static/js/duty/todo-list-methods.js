@@ -1,9 +1,13 @@
 const todoListMethods = {
   addTodoModal() {
+    this.cancelAddTodo(true);
     const modal = document.getElementById('add-todo-modal');
     modal.querySelector('.todo-title').value = '';
     modal.querySelector('.todo-content').value = '';
     $('#add-todo-modal').modal('show');
+    this.$nextTick(() => {
+      this.todoAddInitializeAttachmentUploader();
+    });
   },
   showTodoDetails(todo) {
     const modal = document.getElementById("todo-details-modal");
@@ -27,6 +31,10 @@ const todoListMethods = {
     this.editTodoMode = false;
     this.originalTodoTitle = todo.title;
     this.originalTodoContent = todo.content;
+    this.loadTodoAttachments(todo.id);
+    this.editTodo.id = todo.id;
+    this.editTodo.title = todo.title;
+    this.editTodo.content = todo.content;
   }
   ,
   loadTodos() {
