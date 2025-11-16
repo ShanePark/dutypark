@@ -542,7 +542,9 @@ const detailViewMethods = {
         if (file && app.uppyInstance.getFile(file.id)) {
           app.uppyInstance.removeFile(file.id);
         }
-        if (error && (error.isRestriction || /maximum allowed size/i.test(error.message || ''))) {
+        if (error && /duplicate|already/i.test(error.message || '')) {
+          showAttachmentAlert(attachmentValidationConfig.duplicateFileMessage(file?.name));
+        } else if (error && (error.isRestriction || /maximum allowed size/i.test(error.message || ''))) {
           showAttachmentAlert(attachmentValidationConfig.tooLargeMessage(file?.name));
         } else {
           showAttachmentAlert('파일 추가에 실패했습니다.');

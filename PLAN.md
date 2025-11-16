@@ -7,5 +7,5 @@
 
 ### 2. Issues To Fix
 
-- [ ] When Uppy uploads a file with the same name twice it still shows the “file too large” warning—show a proper duplicate-file warning instead.
+- [x] When Uppy uploads a file with the same name twice it still shows the "file too large" warning—show a proper duplicate-file warning instead.
 - [x] Schedule attachments already expose a download button, but TODO attachments didn’t—feature parity restored.

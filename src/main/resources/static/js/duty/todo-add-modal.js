@@ -161,7 +161,9 @@ const todoAddMethods = {
             console.warn('Failed to add duplicate attachment:', duplicateError);
           }
         }
-        if (error && (error.isRestriction || /maximum allowed size/i.test(error.message || ''))) {
+        if (error && /duplicate|already/i.test(error.message || '')) {
+          todoAttachmentHelpers.showAlert(todoAttachmentHelpers.validationConfig.duplicateFileMessage(file?.name));
+        } else if (error && (error.isRestriction || /maximum allowed size/i.test(error.message || ''))) {
           todoAttachmentHelpers.showAlert(todoAttachmentHelpers.validationConfig.tooLargeMessage(file?.name));
         } else {
           todoAttachmentHelpers.showAlert('파일 추가에 실패했습니다.');
@@ -320,7 +322,9 @@ const todoAddMethods = {
             });
           } catch (err) {
             console.error('Failed to add file:', err);
-            if (err && (err.isRestriction || /maximum allowed size/i.test(err.message || ''))) {
+            if (err && /duplicate|already/i.test(err.message || '')) {
+              todoAttachmentHelpers.showAlert(todoAttachmentHelpers.validationConfig.duplicateFileMessage(file.name));
+            } else if (err && (err.isRestriction || /maximum allowed size/i.test(err.message || ''))) {
               todoAttachmentHelpers.showAlert(todoAttachmentHelpers.validationConfig.tooLargeMessage(file.name));
             } else {
               todoAttachmentHelpers.showAlert(`파일 추가에 실패했습니다: ${file.name}`);
