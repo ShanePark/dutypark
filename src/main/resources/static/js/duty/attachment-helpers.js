@@ -10,6 +10,10 @@ const AttachmentHelpers = window.AttachmentHelpers || (() => {
     blockedExtensionMessage(filename) {
       const target = filename ? `${filename} 파일은` : '이 파일은';
       return `${target} 업로드할 수 없는 확장자입니다.`;
+    },
+    duplicateFileMessage(filename) {
+      const target = filename ? `${filename} 파일은` : '이 파일은';
+      return `${target} 이미 추가되어 있습니다.`;
     }
   };
 
@@ -409,6 +413,337 @@ const AttachmentHelpers = window.AttachmentHelpers || (() => {
     return attachments.map(normalizeAttachmentDto);
   };
 
+  const createUppyUploader = async (config) => {
+    const {
+      state,
+      fileInputId,
+      createSessionFn,
+      showAlertFn,
+      handleXhrErrorFn,
+      normalizeDtoFn = normalizeAttachmentDto,
+      resolveDtoUrlFn = resolveDownloadUrl,
+      startTickerFn,
+      stopTickerFn,
+      validation = validationConfig,
+      vueApp = null,
+      useUniqueFileId = false,
+    } = config;
+
+    const {Uppy, XHRUpload} = await import('/lib/uppy-5.1.7/uppy.min.mjs');
+    const ATTACHMENT_SESSION_ERROR = 'ATTACHMENT_SESSION_CREATION_FAILED';
+
+    const ensureAttachmentSession = async () => {
+      if (state.attachmentSessionId) {
+        return state.attachmentSessionId;
+      }
+      if (!state.sessionCreationPromise) {
+        state.sessionCreationPromise = createSessionFn(null)
+          .then((session) => {
+            state.attachmentSessionId = session.sessionId;
+            return session.sessionId;
+          });
+      }
+      try {
+        const sessionId = await state.sessionCreationPromise;
+        state.sessionCreationPromise = null;
+        return sessionId;
+      } catch (error) {
+        state.sessionCreationPromise = null;
+        throw error;
+      }
+    };
+
+    const uppy = new Uppy({
+      restrictions: {
+        maxFileSize: validation.maxFileSizeBytes,
+        allowedFileTypes: null,
+      },
+      autoProceed: true,
+    }).use(XHRUpload, {
+      endpoint: '/api/attachments',
+      fieldName: 'file',
+      formData: true,
+      bundle: false,
+      headers: {},
+      getResponseData(responseText) {
+        const text = typeof responseText === 'string' ? responseText : (responseText.responseText || responseText.response);
+        try {
+          return JSON.parse(text);
+        } catch (e) {
+          console.error('Failed to parse JSON response:', text);
+          throw new Error(`Invalid JSON response: ${text ? text.substring(0, 100) : 'empty'}`);
+        }
+      },
+    });
+
+    uppy.on('file-added', (file) => {
+      const fileData = file?.data;
+      const fileValidation = validateFile(fileData, {validationConfig: validation});
+      if (!fileValidation.valid) {
+        uppy.removeFile(file.id);
+        showAlertFn(fileValidation.message);
+        return;
+      }
+
+      const fileType = fileData?.type || '';
+      const tempAttachment = {
+        id: file.id,
+        name: file.name,
+        originalFilename: file.name,
+        contentType: fileType,
+        size: fileData?.size || 0,
+        isImage: fileType.startsWith('image/'),
+        hasThumbnail: false,
+        previewUrl: fileType.startsWith('image/') ? URL.createObjectURL(fileData) : null,
+        downloadUrl: null,
+      };
+
+      const wasIdle = Object.keys(state.attachmentUploadMeta || {}).length === 0;
+      state.uploadedAttachments.push(tempAttachment);
+
+      if (vueApp && typeof vueApp.$set === 'function') {
+        vueApp.$set(state.attachmentProgress, file.id, 0);
+        vueApp.$set(state.attachmentUploadMeta, file.id, {
+          bytesUploaded: 0,
+          bytesTotal: fileData?.size || 0,
+          startedAt: Date.now(),
+          lastUpdatedAt: Date.now(),
+        });
+      } else {
+        state.attachmentProgress[file.id] = 0;
+        state.attachmentUploadMeta[file.id] = {
+          bytesUploaded: 0,
+          bytesTotal: fileData?.size || 0,
+          startedAt: Date.now(),
+          lastUpdatedAt: Date.now(),
+        };
+      }
+
+      if (wasIdle && startTickerFn) {
+        startTickerFn();
+      }
+    });
+
+    uppy.on('restriction-failed', (file, error) => {
+      if (error && /already been added/i.test((error.message || '').toLowerCase())) {
+        try {
+          uppy.addFile({
+            id: `${file.id}-${Date.now()}`,
+            name: file.name,
+            type: file.type,
+            data: file.data,
+            meta: {...(file.meta || {})},
+          });
+          return;
+        } catch (duplicateError) {
+          console.warn('Failed to add duplicate attachment:', duplicateError);
+        }
+      }
+      if (error && /duplicate|already/i.test(error.message || '')) {
+        showAlertFn(validation.duplicateFileMessage(file?.name));
+      } else if (error && (error.isRestriction || /maximum allowed size/i.test(error.message || ''))) {
+        showAlertFn(validation.tooLargeMessage(file?.name));
+      } else {
+        showAlertFn('파일 추가에 실패했습니다.');
+      }
+    });
+
+    uppy.addPreProcessor(async (fileIDs) => {
+      if (!fileIDs || fileIDs.length === 0) {
+        return;
+      }
+      let sessionId;
+      try {
+        sessionId = await ensureAttachmentSession();
+      } catch (error) {
+        console.error('Failed to ensure attachment session before upload:', error);
+        showAlertFn('파일 업로드 세션 생성에 실패했습니다.');
+        fileIDs.forEach((fileId) => {
+          const file = uppy.getFile(fileId);
+          if (file) {
+            uppy.removeFile(fileId);
+          }
+          if (vueApp && typeof vueApp.$delete === 'function') {
+            vueApp.$delete(state.attachmentProgress, fileId);
+            if (state.attachmentUploadMeta && state.attachmentUploadMeta[fileId]) {
+              vueApp.$delete(state.attachmentUploadMeta, fileId);
+            }
+          } else {
+            delete state.attachmentProgress[fileId];
+            if (state.attachmentUploadMeta && state.attachmentUploadMeta[fileId]) {
+              delete state.attachmentUploadMeta[fileId];
+            }
+          }
+          const index = state.uploadedAttachments.findIndex(a => a.id === fileId);
+          if (index !== -1) {
+            const attachment = state.uploadedAttachments[index];
+            if (attachment.previewUrl) {
+              URL.revokeObjectURL(attachment.previewUrl);
+            }
+            state.uploadedAttachments.splice(index, 1);
+          }
+        });
+        if (Object.keys(state.attachmentUploadMeta || {}).length === 0 && stopTickerFn) {
+          stopTickerFn();
+        }
+        throw new Error(ATTACHMENT_SESSION_ERROR);
+      }
+      fileIDs.forEach((fileId) => {
+        const file = uppy.getFile(fileId);
+        if (!file) {
+          return;
+        }
+        uppy.setFileMeta(fileId, {
+          ...file.meta,
+          sessionId: String(sessionId),
+        });
+      });
+    });
+
+    uppy.on('upload-progress', (file, progress) => {
+      const payload = buildUploadProgressPayload(progress);
+      if (vueApp && typeof vueApp.$set === 'function') {
+        vueApp.$set(state.attachmentProgress, file.id, payload.percentage);
+      } else {
+        state.attachmentProgress[file.id] = payload.percentage;
+      }
+      const meta = state.attachmentUploadMeta ? state.attachmentUploadMeta[file.id] : null;
+      if (meta) {
+        meta.bytesUploaded = payload.bytesUploaded;
+        meta.bytesTotal = payload.bytesTotal;
+        meta.lastUpdatedAt = Date.now();
+      }
+    });
+
+    uppy.on('upload-success', (file, response) => {
+      const attachmentDto = response.body;
+      const normalized = normalizeDtoFn(attachmentDto);
+      const fileType = file?.data?.type || '';
+      const index = state.uploadedAttachments.findIndex(a => a.id === file.id);
+      if (index !== -1) {
+        const oldPreviewUrl = state.uploadedAttachments[index].previewUrl;
+        if (fileType.startsWith('image/')) {
+          const inlinePreviewUrl = resolveDtoUrlFn(normalized, {inline: true});
+          if (inlinePreviewUrl) {
+            normalized.previewUrl = inlinePreviewUrl;
+            if (oldPreviewUrl && oldPreviewUrl.startsWith('blob:')) {
+              URL.revokeObjectURL(oldPreviewUrl);
+            }
+          } else if (!normalized.previewUrl) {
+            normalized.previewUrl = oldPreviewUrl;
+          }
+        }
+        if (vueApp && typeof vueApp.$set === 'function') {
+          vueApp.$set(state.uploadedAttachments, index, normalized);
+        } else {
+          state.uploadedAttachments[index] = normalized;
+        }
+      }
+      if (vueApp && typeof vueApp.$delete === 'function') {
+        vueApp.$delete(state.attachmentProgress, file.id);
+      } else {
+        delete state.attachmentProgress[file.id];
+      }
+      if (state.attachmentUploadMeta && state.attachmentUploadMeta[file.id]) {
+        if (vueApp && typeof vueApp.$delete === 'function') {
+          vueApp.$delete(state.attachmentUploadMeta, file.id);
+        } else {
+          delete state.attachmentUploadMeta[file.id];
+        }
+      }
+      if (Object.keys(state.attachmentUploadMeta || {}).length === 0 && stopTickerFn) {
+        stopTickerFn();
+      }
+    });
+
+    uppy.on('upload-error', (file, error, response) => {
+      if (error?.message === ATTACHMENT_SESSION_ERROR) {
+        return;
+      }
+      console.error('Upload error:', error, response);
+      const index = state.uploadedAttachments.findIndex(a => a.id === file.id);
+      if (index !== -1) {
+        const attachment = state.uploadedAttachments[index];
+        if (attachment.previewUrl) {
+          URL.revokeObjectURL(attachment.previewUrl);
+        }
+        state.uploadedAttachments.splice(index, 1);
+      }
+      if (vueApp && typeof vueApp.$delete === 'function') {
+        vueApp.$delete(state.attachmentProgress, file.id);
+      } else {
+        delete state.attachmentProgress[file.id];
+      }
+      if (state.attachmentUploadMeta && state.attachmentUploadMeta[file.id]) {
+        if (vueApp && typeof vueApp.$delete === 'function') {
+          vueApp.$delete(state.attachmentUploadMeta, file.id);
+        } else {
+          delete state.attachmentUploadMeta[file.id];
+        }
+      }
+      if (Object.keys(state.attachmentUploadMeta || {}).length === 0 && stopTickerFn) {
+        stopTickerFn();
+      }
+      if (response && response.body) {
+        handleXhrErrorFn({status: response.status, response: response.body}, file?.data);
+      } else {
+        showAlertFn('파일 업로드에 실패했습니다.');
+      }
+    });
+
+    const fileInputListener = (event) => {
+      const files = Array.from(event.target.files);
+      files.forEach(file => {
+        try {
+          const fileId = useUniqueFileId
+            ? `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2)}`
+            : undefined;
+          uppy.addFile({
+            id: fileId,
+            name: file.name,
+            type: file.type,
+            data: file,
+          });
+        } catch (err) {
+          console.error('Failed to add file:', err);
+          if (err && /duplicate|already/i.test(err.message || '')) {
+            showAlertFn(validation.duplicateFileMessage(file.name));
+          } else if (err && (err.isRestriction || /maximum allowed size/i.test(err.message || ''))) {
+            showAlertFn(validation.tooLargeMessage(file.name));
+          } else {
+            showAlertFn(`파일 추가에 실패했습니다: ${file.name}`);
+          }
+        }
+      });
+      event.target.value = '';
+    };
+
+    if (vueApp && vueApp.$nextTick) {
+      await vueApp.$nextTick();
+    }
+    const fileInput = document.getElementById(fileInputId);
+    if (fileInput) {
+      fileInput.addEventListener('change', fileInputListener);
+    }
+
+    return {
+      uppyInstance: uppy,
+      fileInputListener,
+      cleanup: () => {
+        if (uppy) {
+          try {
+            uppy.cancelAll();
+          } catch (e) {
+            console.warn('Error cleaning up Uppy instance:', e);
+          }
+        }
+        if (fileInput && fileInputListener) {
+          fileInput.removeEventListener('change', fileInputListener);
+        }
+      }
+    };
+  };
+
   return {
     validationConfig,
     normalizeAttachmentDto,
@@ -424,6 +759,7 @@ const AttachmentHelpers = window.AttachmentHelpers || (() => {
     createSession,
     deleteSession,
     listAttachments,
+    createUppyUploader,
   };
 })();
 
