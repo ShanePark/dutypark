@@ -1,68 +1,40 @@
-const ATTACHMENT_CONTEXT_TYPE = 'SCHEDULE';
+const scheduleAttachmentHelpers = (() => {
+  const base = window.AttachmentHelpers;
+  const alertOptions = {showConfirmButton: true, confirmButtonText: '확인', timer: null};
 
-const attachmentHelpers = window.AttachmentHelpers;
-const attachmentValidationConfig = attachmentHelpers.validationConfig;
-const normalizeAttachmentDto = attachmentHelpers.normalizeAttachmentDto;
+  const showAlert = (message) => base.showAlert(message, alertOptions);
 
-const validateAttachmentFile = (file) => attachmentHelpers.validateFile(file);
+  const handleResponseError = async (response, fallbackMessage, options = {}) => {
+    const {fileName} = options;
+    await base.handleResponseError(response, fallbackMessage, {
+      fileName,
+      alertOptions
+    });
+  };
 
-const showAttachmentAlert = (message) => attachmentHelpers.showAlert(message, {
-  showConfirmButton: true,
-  confirmButtonText: '확인',
-  timer: null
-});
+  const handleXhrError = (xhr, file) => base.handleXhrError(xhr, file, {alertOptions});
 
-const buildUploadProgressPayload = (event) => attachmentHelpers.buildUploadProgressPayload(event);
-
-const handleAttachmentResponseError = async (response, fallbackMessage, options = {}) => {
-  const {fileName} = options;
-  await attachmentHelpers.handleResponseError(response, fallbackMessage, {
-    fileName,
-    alertOptions: {
-      showConfirmButton: true,
-      confirmButtonText: '확인',
-      timer: null
-    }
+  const createSession = async (targetContextId = null) => base.createSession({
+    contextType: 'SCHEDULE',
+    targetContextId
   });
-};
 
-const handleAttachmentXhrError = (xhr, file) => attachmentHelpers.handleXhrError(xhr, file, {
-  alertOptions: {
-    showConfirmButton: true,
-    confirmButtonText: '확인',
-    timer: null
-  }
-});
-
-const createAttachmentSession = async (targetContextId = null) => attachmentHelpers.createSession({
-  contextType: ATTACHMENT_CONTEXT_TYPE,
-  targetContextId
-});
-
-const finalizeAttachmentSession = async (sessionId, contextId, orderedAttachmentIds = []) => {
-  const response = await fetch(`/api/attachments/sessions/${sessionId}/finalize`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      contextId: contextId,
-      orderedAttachmentIds: orderedAttachmentIds
-    })
-  });
-  if (!response.ok) {
-    await handleAttachmentResponseError(response, '첨부파일 저장에 실패했습니다.');
-  }
-};
-
-const deleteAttachment = async (attachmentId) => {
-  const response = await fetch(`/api/attachments/${attachmentId}`, {
-    method: 'DELETE'
-  });
-  if (!response.ok) {
-    await handleAttachmentResponseError(response, '첨부파일 삭제에 실패했습니다.');
-  }
-};
+  return {
+    validationConfig: base.validationConfig,
+    normalizeAttachmentDto: base.normalizeAttachmentDto,
+    validateFile: (file) => base.validateFile(file),
+    showAlert,
+    buildUploadProgressPayload: base.buildUploadProgressPayload,
+    handleResponseError,
+    handleXhrError,
+    resolveDownloadUrl: base.resolveDownloadUrl,
+    createSession,
+    createUppyUploader: base.createUppyUploader,
+    formatBytes: base.formatBytes,
+    openViewer: base.openViewer,
+    attachmentIconClass: base.attachmentIconClass,
+  };
+})();
 
 const detailViewMethods = {
   async scheduleCreateMode() {
@@ -301,131 +273,6 @@ const detailViewMethods = {
     });
   }
   ,
-  validateAttachment(file) {
-    const validation = validateAttachmentFile(file);
-    if (!validation.valid && validation.message) {
-      showAttachmentAlert(validation.message);
-    }
-    return validation;
-  }
-  ,
-  normalizeAttachment(dto) {
-    return normalizeAttachmentDto(dto);
-  }
-  ,
-  async createAttachmentSession(targetContextId = null) {
-    const payload = {
-      contextType: ATTACHMENT_CONTEXT_TYPE,
-    };
-    if (targetContextId) {
-      payload.targetContextId = targetContextId;
-    }
-    const response = await fetch('/api/attachments/sessions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
-    if (!response.ok) {
-      await handleAttachmentResponseError(response, '파일 업로드 세션 생성에 실패했습니다.');
-    }
-    return response.json();
-  }
-  ,
-  uploadAttachment(file, sessionId, options = {}) {
-    const {onProgress} = options;
-    const validation = validateAttachmentFile(file);
-    if (!validation.valid) {
-      return Promise.reject(new Error(validation.message || 'Invalid attachment file'));
-    }
-    if (!sessionId) {
-      const message = '파일 업로드 세션이 없습니다. 다시 시도해주세요.';
-      showAttachmentAlert(message);
-      return Promise.reject(new Error(message));
-    }
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/api/attachments');
-      xhr.responseType = 'json';
-      if (typeof onProgress === 'function') {
-        xhr.upload.addEventListener('progress', (event) => {
-          onProgress(buildUploadProgressPayload(event));
-        });
-      }
-      xhr.addEventListener('load', () => {
-        if (xhr.status >= 200 && xhr.status < 300 && xhr.response) {
-          resolve(normalizeAttachmentDto(xhr.response));
-          return;
-        }
-        reject(handleAttachmentXhrError(xhr, file));
-      });
-      xhr.addEventListener('error', () => {
-        reject(handleAttachmentXhrError(xhr, file));
-      });
-      xhr.addEventListener('abort', () => {
-        reject(new Error('Attachment upload aborted'));
-      });
-      const formData = new FormData();
-      formData.append('sessionId', sessionId);
-      formData.append('file', file);
-      xhr.send(formData);
-    });
-  }
-  ,
-  async finalizeAttachmentSession(sessionId, contextId, orderedAttachmentIds = []) {
-    const response = await fetch(`/api/attachments/sessions/${sessionId}/finalize`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        contextId: contextId,
-        orderedAttachmentIds: orderedAttachmentIds
-      })
-    });
-    if (!response.ok) {
-      await handleAttachmentResponseError(response, '첨부파일을 저장하는 데 실패했습니다.');
-    }
-  }
-  ,
-  async listAttachments(contextId) {
-    const response = await fetch(`/api/attachments?contextType=${ATTACHMENT_CONTEXT_TYPE}&contextId=${contextId}`, {
-      method: 'GET'
-    });
-    if (!response.ok) {
-      await handleAttachmentResponseError(response, '첨부파일 목록을 불러오지 못했습니다.');
-    }
-    const attachments = await response.json();
-    return attachments.map(normalizeAttachmentDto);
-  }
-  ,
-  async deleteAttachment(attachmentId) {
-    const response = await fetch(`/api/attachments/${attachmentId}`, {
-      method: 'DELETE'
-    });
-    if (!response.ok) {
-      await handleAttachmentResponseError(response, '첨부파일 삭제에 실패했습니다.');
-    }
-  }
-  ,
-  async reorderAttachments(contextId, orderedAttachmentIds) {
-    const response = await fetch('/api/attachments/reorder', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        contextType: ATTACHMENT_CONTEXT_TYPE,
-        contextId: contextId,
-        orderedAttachmentIds: orderedAttachmentIds
-      })
-    });
-    if (!response.ok) {
-      await handleAttachmentResponseError(response, '첨부파일 순서를 저장하는 데 실패했습니다.');
-    }
-  }
-  ,
   replaceLineBreaks(text) {
     if (text) {
       return text.replace(/\n/g, '<br>');
@@ -454,253 +301,26 @@ const detailViewMethods = {
     }
 
     try {
-      const {Uppy, XHRUpload} = await import('/lib/uppy-5.1.7/uppy.min.mjs');
-
-      app.uppyInstance = new Uppy({
-        restrictions: {
-          maxFileSize: attachmentValidationConfig.maxFileSizeBytes,
-          allowedFileTypes: null,
-        },
-        autoProceed: true,
-      })
-        .use(XHRUpload, {
-          endpoint: '/api/attachments',
-          fieldName: 'file',
-          formData: true,
-          bundle: false,
-          headers: {},
-          getResponseData(responseText, response) {
-            const text = typeof responseText === 'string' ? responseText : (responseText.responseText || responseText.response);
-            console.log('Server response text:', text);
-            try {
-              return JSON.parse(text);
-            } catch (e) {
-              console.error('Failed to parse JSON response:', text);
-              throw new Error(`Invalid JSON response: ${text ? text.substring(0, 100) : 'empty'}`);
-            }
-          },
-        });
-
-      const ATTACHMENT_SESSION_ERROR = 'ATTACHMENT_SESSION_CREATION_FAILED';
-
-      const ensureAttachmentSession = async () => {
-        if (app.createSchedule.attachmentSessionId) {
-          return app.createSchedule.attachmentSessionId;
-        }
-        if (!app.createSchedule.sessionCreationPromise) {
-          app.createSchedule.sessionCreationPromise = (async () => {
-            const sessionResponse = await createAttachmentSession(null);
-            app.createSchedule.attachmentSessionId = sessionResponse.sessionId;
-            return sessionResponse.sessionId;
-          })();
-        }
-        try {
-          const sessionId = await app.createSchedule.sessionCreationPromise;
-          app.createSchedule.sessionCreationPromise = null;
-          return sessionId;
-        } catch (error) {
-          app.createSchedule.sessionCreationPromise = null;
-          throw error;
-        }
-      };
-
-      app.uppyInstance.on('file-added', (file) => {
-        const fileData = file?.data;
-        const validation = validateAttachmentFile(fileData);
-        if (!validation.valid) {
-          app.uppyInstance.removeFile(file.id);
-          showAttachmentAlert(validation.message);
-          return;
-        }
-
-        const mimeType = fileData?.type || '';
-        const isImage = mimeType.startsWith('image/');
-        const now = Date.now();
-        const wasIdle = Object.keys(app.createSchedule.attachmentUploadMeta || {}).length === 0;
-        const tempAttachment = {
-          id: file.id,
-          name: fileData?.name,
-          contentType: mimeType,
-          size: fileData?.size || 0,
-          isImage: isImage,
-          previewUrl: isImage ? URL.createObjectURL(fileData) : null,
-        };
-        app.createSchedule.uploadedAttachments.push(tempAttachment);
-        app.$set(app.createSchedule.attachmentProgress, file.id, 0);
-        app.$set(app.createSchedule.attachmentUploadMeta, file.id, {
-          bytesUploaded: 0,
-          bytesTotal: fileData?.size || 0,
-          startedAt: now,
-          lastUpdatedAt: now,
-        });
-        if (wasIdle) {
-          app.startAttachmentUploadTicker();
-        }
+      const uploader = await scheduleAttachmentHelpers.createUppyUploader({
+        state: app.createSchedule,
+        fileInputId: 'schedule-attachment-input',
+        createSessionFn: scheduleAttachmentHelpers.createSession,
+        showAlertFn: scheduleAttachmentHelpers.showAlert,
+        handleXhrErrorFn: scheduleAttachmentHelpers.handleXhrError,
+        normalizeDtoFn: scheduleAttachmentHelpers.normalizeAttachmentDto,
+        resolveDtoUrlFn: scheduleAttachmentHelpers.resolveDownloadUrl,
+        startTickerFn: () => app.startAttachmentUploadTicker(),
+        stopTickerFn: () => app.stopAttachmentUploadTicker(),
+        validation: scheduleAttachmentHelpers.validationConfig,
+        vueApp: app,
+        useUniqueFileId: false,
       });
 
-      app.uppyInstance.on('restriction-failed', (file, error) => {
-        if (file && app.uppyInstance.getFile(file.id)) {
-          app.uppyInstance.removeFile(file.id);
-        }
-        if (error && /duplicate|already/i.test(error.message || '')) {
-          showAttachmentAlert(attachmentValidationConfig.duplicateFileMessage(file?.name));
-        } else if (error && (error.isRestriction || /maximum allowed size/i.test(error.message || ''))) {
-          showAttachmentAlert(attachmentValidationConfig.tooLargeMessage(file?.name));
-        } else {
-          showAttachmentAlert('파일 추가에 실패했습니다.');
-        }
-        console.warn('Attachment restriction failed:', error);
-      });
-
-      app.uppyInstance.addPreProcessor(async (fileIDs) => {
-        if (!fileIDs || fileIDs.length === 0) {
-          return;
-        }
-
-        let sessionId;
-        try {
-          sessionId = await ensureAttachmentSession();
-        } catch (error) {
-          console.error('Failed to ensure attachment session before upload:', error);
-          showAttachmentAlert('파일 업로드 세션 생성에 실패했습니다.');
-          fileIDs.forEach((fileId) => {
-            const file = app.uppyInstance.getFile(fileId);
-            if (file) {
-              app.uppyInstance.removeFile(fileId);
-            }
-            app.$delete(app.createSchedule.attachmentProgress, fileId);
-            if (app.createSchedule.attachmentUploadMeta && app.createSchedule.attachmentUploadMeta[fileId]) {
-              app.$delete(app.createSchedule.attachmentUploadMeta, fileId);
-            }
-            const index = app.createSchedule.uploadedAttachments.findIndex(a => a.id === fileId);
-            if (index !== -1) {
-              const attachment = app.createSchedule.uploadedAttachments[index];
-              if (attachment.previewUrl) {
-                URL.revokeObjectURL(attachment.previewUrl);
-              }
-              app.createSchedule.uploadedAttachments.splice(index, 1);
-            }
-          });
-          if (Object.keys(app.createSchedule.attachmentUploadMeta || {}).length === 0) {
-            app.stopAttachmentUploadTicker();
-          }
-          throw new Error(ATTACHMENT_SESSION_ERROR);
-        }
-
-        fileIDs.forEach((fileId) => {
-          const file = app.uppyInstance.getFile(fileId);
-          if (!file) {
-            return;
-          }
-          app.uppyInstance.setFileMeta(fileId, {
-            ...file.meta,
-            sessionId: String(sessionId),
-          });
-        });
-      });
-
-      app.uppyInstance.on('upload-progress', (file, progress) => {
-        const bytesUploaded = progress.bytesUploaded || 0;
-        const totalFromEvent = progress.bytesTotal;
-        const fallbackTotal = file?.data?.size || 0;
-        const bytesTotal = typeof totalFromEvent === 'number' && totalFromEvent > 0 ? totalFromEvent : fallbackTotal;
-        const percentage = bytesTotal > 0 ? Math.round((bytesUploaded / bytesTotal) * 100) : 0;
-        app.$set(app.createSchedule.attachmentProgress, file.id, percentage);
-        const meta = app.createSchedule.attachmentUploadMeta ? app.createSchedule.attachmentUploadMeta[file.id] : null;
-        if (meta) {
-          meta.bytesUploaded = bytesUploaded;
-          meta.bytesTotal = bytesTotal;
-          meta.lastUpdatedAt = Date.now();
-        }
-      });
-
-      app.uppyInstance.on('upload-success', (file, response) => {
-        const attachmentDto = response.body;
-        const normalized = normalizeAttachmentDto(attachmentDto);
-        const fileType = file?.data?.type || '';
-
-        const index = app.createSchedule.uploadedAttachments.findIndex(a => a.id === file.id);
-        if (index !== -1) {
-          const oldPreviewUrl = app.createSchedule.uploadedAttachments[index].previewUrl;
-          if (fileType.startsWith('image/')) {
-            const inlinePreviewUrl = attachmentHelpers.resolveDownloadUrl(normalized, {inline: true});
-            if (inlinePreviewUrl) {
-              normalized.previewUrl = inlinePreviewUrl;
-              if (oldPreviewUrl && oldPreviewUrl.startsWith('blob:')) {
-                URL.revokeObjectURL(oldPreviewUrl);
-              }
-            } else if (!normalized.previewUrl) {
-              normalized.previewUrl = oldPreviewUrl;
-            }
-          }
-          app.$set(app.createSchedule.uploadedAttachments, index, normalized);
-        }
-        app.$delete(app.createSchedule.attachmentProgress, file.id);
-        if (app.createSchedule.attachmentUploadMeta && app.createSchedule.attachmentUploadMeta[file.id]) {
-          app.$delete(app.createSchedule.attachmentUploadMeta, file.id);
-        }
-        if (Object.keys(app.createSchedule.attachmentUploadMeta || {}).length === 0) {
-          app.stopAttachmentUploadTicker();
-        }
-      });
-
-      app.uppyInstance.on('upload-error', (file, error, response) => {
-        if (error?.message === ATTACHMENT_SESSION_ERROR) {
-          return;
-        }
-        console.error('Upload error:', error, response);
-        const index = app.createSchedule.uploadedAttachments.findIndex(a => a.id === file.id);
-        if (index !== -1) {
-          const attachment = app.createSchedule.uploadedAttachments[index];
-          if (attachment.previewUrl) {
-            URL.revokeObjectURL(attachment.previewUrl);
-          }
-          app.createSchedule.uploadedAttachments.splice(index, 1);
-        }
-        app.$delete(app.createSchedule.attachmentProgress, file.id);
-        if (app.createSchedule.attachmentUploadMeta && app.createSchedule.attachmentUploadMeta[file.id]) {
-          app.$delete(app.createSchedule.attachmentUploadMeta, file.id);
-        }
-        if (Object.keys(app.createSchedule.attachmentUploadMeta || {}).length === 0) {
-          app.stopAttachmentUploadTicker();
-        }
-        if (response && response.body) {
-          handleAttachmentXhrError({status: response.status, response: response.body}, file?.data);
-        } else {
-          showAttachmentAlert('파일 업로드에 실패했습니다.');
-        }
-      });
-
-      app.fileInputListener = (event) => {
-        const files = Array.from(event.target.files);
-        files.forEach(file => {
-          try {
-            app.uppyInstance.addFile({
-              name: file.name,
-              type: file.type,
-              data: file,
-            });
-          } catch (err) {
-            console.error('Failed to add file:', err);
-            if (err && (err.isRestriction || /maximum allowed size/i.test(err.message || ''))) {
-              showAttachmentAlert(attachmentValidationConfig.tooLargeMessage(file.name));
-            } else {
-              showAttachmentAlert(`파일 추가에 실패했습니다: ${file.name}`);
-            }
-          }
-        });
-        event.target.value = '';
-      };
-
-      await app.$nextTick();
-      const fileInput = document.getElementById('schedule-attachment-input');
-      if (fileInput) {
-        fileInput.addEventListener('change', app.fileInputListener);
-      }
-
+      app.uppyInstance = uploader.uppyInstance;
+      app.fileInputListener = uploader.fileInputListener;
     } catch (error) {
       console.error('Failed to initialize attachment uploader:', error);
-      showAttachmentAlert('첨부파일 업로드 기능을 초기화하지 못했습니다.');
+      scheduleAttachmentHelpers.showAlert('첨부파일 업로드 기능을 초기화하지 못했습니다.');
     }
   }
   ,
@@ -776,14 +396,14 @@ const detailViewMethods = {
       return;
     }
     const {onClose} = options;
-    return attachmentHelpers.openViewer(attachment, {
+    return scheduleAttachmentHelpers.openViewer(attachment, {
       onClose,
       missingMessage: '이미지를 불러오지 못했습니다.'
     });
   }
   ,
   attachmentIconClass(attachment) {
-    return attachmentHelpers.attachmentIconClass(attachment);
+    return scheduleAttachmentHelpers.attachmentIconClass(attachment);
   }
   ,
   startAttachmentUploadTicker() {
@@ -805,7 +425,7 @@ const detailViewMethods = {
   }
   ,
   formatBytes(bytes) {
-    return attachmentHelpers.formatBytes(bytes);
+    return scheduleAttachmentHelpers.formatBytes(bytes);
   }
   ,
   formatDuration(seconds) {
