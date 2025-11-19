@@ -238,6 +238,11 @@ const todoDetailMethods = {
           showConfirmButton: false,
           timer: sweetAlTimer
         });
+        return null;
+      }
+      return response.json();
+    }).then(data => {
+      if (!data) {
         return;
       }
       Swal.fire({
@@ -246,6 +251,8 @@ const todoDetailMethods = {
         showConfirmButton: false,
         timer: sweetAlTimer
       });
+      app.editTodo.title = data.title;
+      app.editTodo.content = data.content;
       app.selectedTodoAttachments = app.editTodo.uploadedAttachments.map(attachment => ({...attachment}));
       app.exitTodoDetailAttachments(true);
       app.loadTodos();
