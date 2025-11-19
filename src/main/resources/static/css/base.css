@@ -1288,8 +1288,11 @@ input[readonly], textarea[readonly] {
 }
 
 .attachment-viewer-popup {
-    max-width: min(1000px, 90vw);
+    max-width: 95vw;
+    max-height: 80vh;
     padding: 0;
+    width: auto;
+    position: relative;
 }
 
 .attachment-viewer-title {
@@ -1303,7 +1306,9 @@ input[readonly], textarea[readonly] {
 }
 
 .attachment-viewer-img {
-    width: 100%;
+    max-width: calc(95vw - 24px);
+    max-height: calc(75vh - 24px);
+    width: auto;
     height: auto;
     display: block;
     border-radius: 0.5rem;
@@ -1317,14 +1322,45 @@ input[readonly], textarea[readonly] {
 }
 
 .attachment-viewer-close {
-    color: #f8f9fa;
+    position: absolute !important;
+    top: 8px !important;
+    right: 8px !important;
+    color: #000 !important;
+    background: rgba(192, 192, 192, 0.6) !important;
+    border: 2px solid #333 !important;
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50% !important;
+    font-size: 20px !important;
+    line-height: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+    font-weight: 300 !important;
+    padding: 0 !important;
+    z-index: 10 !important;
+}
+
+.attachment-viewer-close:hover {
+    transform: scale(1.15) rotate(90deg) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    background: rgba(100, 100, 100, 0.7) !important;
+}
+
+.attachment-viewer-close:active {
+    transform: scale(1.05) rotate(90deg) !important;
 }
 
 .attachment-viewer-body {
     display: flex;
     justify-content: center;
-    max-height: 80vh;
+    align-items: center;
+    max-height: 75vh;
+    max-width: 95vw;
     overflow: auto;
+    padding: 0;
 }
 
 .attachment-hover-overlay {
