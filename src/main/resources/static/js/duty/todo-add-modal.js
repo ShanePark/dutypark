@@ -30,6 +30,8 @@ const todoAttachmentHelpers = window.todoAttachmentHelpers || (() => {
     deleteSession,
     listAttachments,
     createUppyUploader: base.createUppyUploader,
+    setupDropZone: base.setupDropZone,
+    cleanupDropZone: base.cleanupDropZone,
   };
 })();
 window.todoAttachmentHelpers = todoAttachmentHelpers;
@@ -55,6 +57,11 @@ const todoAddMethods = {
       app.todoAddFileInputListener = null;
     }
 
+    if (app.todoAddDropZoneListeners) {
+      todoAttachmentHelpers.cleanupDropZone('label[for="todo-add-attachment-input"]', app.todoAddDropZoneListeners);
+      app.todoAddDropZoneListeners = null;
+    }
+
     try {
       const uploader = await todoAttachmentHelpers.createUppyUploader({
         state: app.newTodo,
@@ -73,6 +80,10 @@ const todoAddMethods = {
 
       app.todoAddUppyInstance = uploader.uppyInstance;
       app.todoAddFileInputListener = uploader.fileInputListener;
+
+      if (app.todoAddUppyInstance) {
+        app.todoAddDropZoneListeners = todoAttachmentHelpers.setupDropZone('label[for="todo-add-attachment-input"]', app.todoAddUppyInstance);
+      }
     } catch (error) {
       console.error('Failed to initialize attachment uploader:', error);
       todoAttachmentHelpers.showAlert('첨부파일 업로드 기능을 초기화하지 못했습니다.');
@@ -166,6 +177,10 @@ const todoAddMethods = {
         fileInput.removeEventListener('change', this.todoAddFileInputListener);
       }
       this.todoAddFileInputListener = null;
+    }
+    if (this.todoAddDropZoneListeners) {
+      todoAttachmentHelpers.cleanupDropZone('label[for="todo-add-attachment-input"]', this.todoAddDropZoneListeners);
+      this.todoAddDropZoneListeners = null;
     }
   }
   ,

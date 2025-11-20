@@ -15,6 +15,8 @@ import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.util.*
 
 @RestController
@@ -64,12 +66,14 @@ class AttachmentController(
         }
 
         val sanitizedFilename = sanitizeFilename(attachment.originalFilename)
+        val asciiFallbackFilename = sanitizedFilename.replace("[^\\x00-\\x7F]".toRegex(), "_")
+        val encodedFilename = URLEncoder.encode(sanitizedFilename, StandardCharsets.UTF_8)
+            .replace("+", "%20")
 
-        val contentDispositionValue = if (inline) {
-            "inline; filename=\"$sanitizedFilename\""
-        } else {
-            "attachment; filename=\"$sanitizedFilename\""
-        }
+        val dispositionType = if (inline) "inline" else "attachment"
+        val contentDispositionValue = "$dispositionType; " +
+            "filename=\"$asciiFallbackFilename\"; " +
+            "filename*=UTF-8''$encodedFilename"
 
         return ResponseEntity.ok()
             .contentType(MediaType.parseMediaType(attachment.contentType))

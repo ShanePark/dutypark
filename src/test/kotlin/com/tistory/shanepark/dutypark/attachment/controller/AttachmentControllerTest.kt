@@ -387,7 +387,7 @@ class AttachmentControllerTest : RestDocsTest() {
             get("/api/attachments/{id}/download", attachment.id)
                 .cookie(Cookie(jwtConfig.cookieName, jwt))
         ).andExpect(status().isOk)
-            .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"test-document.txt\""))
+            .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"test-document.txt\"; filename*=UTF-8''test-document.txt"))
             .andExpect(content().contentType(MediaType.TEXT_PLAIN))
             .andExpect(content().string(testContent))
             .andDo(MockMvcResultHandlers.print())

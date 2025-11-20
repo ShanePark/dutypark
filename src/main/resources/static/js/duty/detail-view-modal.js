@@ -33,6 +33,8 @@ const scheduleAttachmentHelpers = (() => {
     formatBytes: base.formatBytes,
     openViewer: base.openViewer,
     attachmentIconClass: base.attachmentIconClass,
+    setupDropZone: base.setupDropZone,
+    cleanupDropZone: base.cleanupDropZone,
   };
 })();
 
@@ -300,6 +302,11 @@ const detailViewMethods = {
       app.fileInputListener = null;
     }
 
+    if (app.dropZoneListeners) {
+      scheduleAttachmentHelpers.cleanupDropZone('label[for="schedule-attachment-input"]', app.dropZoneListeners);
+      app.dropZoneListeners = null;
+    }
+
     try {
       const uploader = await scheduleAttachmentHelpers.createUppyUploader({
         state: app.createSchedule,
@@ -318,6 +325,10 @@ const detailViewMethods = {
 
       app.uppyInstance = uploader.uppyInstance;
       app.fileInputListener = uploader.fileInputListener;
+
+      if (app.uppyInstance) {
+        app.dropZoneListeners = scheduleAttachmentHelpers.setupDropZone('label[for="schedule-attachment-input"]', app.uppyInstance);
+      }
     } catch (error) {
       console.error('Failed to initialize attachment uploader:', error);
       scheduleAttachmentHelpers.showAlert('첨부파일 업로드 기능을 초기화하지 못했습니다.');
@@ -374,6 +385,11 @@ const detailViewMethods = {
         fileInput.removeEventListener('change', app.fileInputListener);
       }
       app.fileInputListener = null;
+    }
+
+    if (app.dropZoneListeners) {
+      scheduleAttachmentHelpers.cleanupDropZone('label[for="schedule-attachment-input"]', app.dropZoneListeners);
+      app.dropZoneListeners = null;
     }
 
     app.createSchedule.uploadedAttachments.forEach(attachment => {

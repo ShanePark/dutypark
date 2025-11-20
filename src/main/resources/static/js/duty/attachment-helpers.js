@@ -744,6 +744,70 @@ const AttachmentHelpers = window.AttachmentHelpers || (() => {
     };
   };
 
+  const setupDropZone = (dropZoneSelector, uppyInstance) => {
+    if (!dropZoneSelector || !uppyInstance) {
+      return null;
+    }
+
+    const dropZone = document.querySelector(dropZoneSelector);
+    if (!dropZone) {
+      return null;
+    }
+
+    const listeners = {
+      dragover: (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.add('drag-over');
+      },
+      dragleave: (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('drag-over');
+      },
+      drop: (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('drag-over');
+
+        const files = Array.from(e.dataTransfer.files);
+        files.forEach(file => {
+          try {
+            uppyInstance.addFile({
+              name: file.name,
+              type: file.type,
+              data: file,
+            });
+          } catch (error) {
+            console.error('Failed to add file:', error);
+          }
+        });
+      }
+    };
+
+    dropZone.addEventListener('dragover', listeners.dragover);
+    dropZone.addEventListener('dragleave', listeners.dragleave);
+    dropZone.addEventListener('drop', listeners.drop);
+
+    return listeners;
+  };
+
+  const cleanupDropZone = (dropZoneSelector, listeners) => {
+    if (!dropZoneSelector || !listeners) {
+      return;
+    }
+
+    const dropZone = document.querySelector(dropZoneSelector);
+    if (!dropZone) {
+      return;
+    }
+
+    dropZone.removeEventListener('dragover', listeners.dragover);
+    dropZone.removeEventListener('dragleave', listeners.dragleave);
+    dropZone.removeEventListener('drop', listeners.drop);
+    dropZone.classList.remove('drag-over');
+  };
+
   return {
     validationConfig,
     normalizeAttachmentDto,
@@ -760,6 +824,8 @@ const AttachmentHelpers = window.AttachmentHelpers || (() => {
     deleteSession,
     listAttachments,
     createUppyUploader,
+    setupDropZone,
+    cleanupDropZone,
   };
 })();
 

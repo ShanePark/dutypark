@@ -56,9 +56,19 @@ cd dutypark_dev_db && docker compose up -d               # standalone MySQL on :
 
 ### Build Guidelines
 
-- **Frontend-only changes** (JS/HTML/CSS under `src/main/resources/static/` or `templates/`): no Gradle build is required; verify in-browser (Boot DevTools hot reload covers most cases).
-- **Backend changes** (Kotlin/Java, dependencies, configuration): run `./gradlew build` (or at least `./gradlew test`) to compile and catch regressions.
-- **API/testing work**: prefer `./gradlew test` for quick feedback; rerun `./gradlew asciidoctor` when controller contract changes impact docs.
+**IMPORTANT: DO NOT run `./gradlew build` or `./gradlew test` for frontend-only changes!**
+
+- **Frontend-only changes** (JS/HTML/CSS under `src/main/resources/static/` or `templates/`):
+  - **NO Gradle build required**
+  - Verify in-browser only (Boot DevTools hot reload covers most cases)
+  - Examples: Vue.js components, CSS styles, HTML templates, JavaScript modules
+  - Simply refresh the browser after changes
+- **Backend changes** (Kotlin/Java, dependencies, configuration):
+  - Run `./gradlew build` (or at least `./gradlew test`) to compile and catch regressions
+  - Examples: Controllers, Services, Repositories, Entity classes, configuration files
+- **API/testing work**:
+  - Prefer `./gradlew test` for quick feedback
+  - Rerun `./gradlew asciidoctor` when controller contract changes impact docs
 
 ### Configuration Essentials
 

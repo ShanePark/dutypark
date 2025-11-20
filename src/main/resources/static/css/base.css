@@ -1209,6 +1209,14 @@ input[readonly], textarea[readonly] {
     justify-content: center;
     overflow: hidden;
     position: relative;
+    transition: all 0.2s ease;
+}
+
+.attachment-thumb.drag-over {
+    background-color: #e7f3ff;
+    border-color: #0d6efd;
+    border-width: 2px;
+    transform: scale(1.05);
 }
 
 .attachment-thumb img,
