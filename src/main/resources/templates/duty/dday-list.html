@@ -1,31 +1,41 @@
-<div class="d-day-list mt-2 row">
-  <div v-for="(dDay, index) in dDays" class="col-6">
-    <div class="d-day-item card row shadow-sm p-2 m-1 rounded-4"
+<div class="d-day-list mt-2 flex flex-wrap">
+  <div v-for="(dDay, index) in dDays" class="w-1/2">
+    <div class="d-day-item card flex flex-wrap shadow-sm p-2 m-1 rounded-2xl"
          v-on:click="dDayToggle(dDay)"
          :data-id="dDay.id"
          :class="{'d-day-private': dDay.isPrivate, 'selected': dDay == selectedDday}"
     >
-      <div class="d-day_day col-4 m-auto">
+      <div class="d-day_day w-1/3 m-auto">
         <span>{{dDay.dDayText}}</span>
       </div>
-      <div class="d-day_content col-8">
-        <p class="m-1 text-muted">{{dDay.date}}</p>
+      <div class="d-day_content w-2/3">
+        <p class="m-1 text-gray-500">{{dDay.date}}</p>
         <p>{{dDay.title}}</p>
-        <div @click.stop v-if="isMyCalendar" class="position-absolute top-0 mt-1 end-0 me-3 fs-2">
-          <button v-on:click="createOrUpdateDday(dDay)" class="btn btn-outline-primary">
-            <i class="bi bi-pencil-square"></i></button>
-          <button v-on:click="removeDday(dDay)" class="btn btn-outline-danger">
-            <i class="bi bi-trash"></i></button>
+        <div @click.stop v-if="isMyCalendar" class="absolute top-0 mt-1 right-0 mr-3 text-3xl">
+          <button v-on:click="createOrUpdateDday(dDay)" class="px-4 py-2 rounded font-medium transition-colors border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M21.731 2.269a2.625 2.625 0 0 0-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 0 0 0-3.712ZM19.513 8.199l-3.712-3.712-8.4 8.4a5.25 5.25 0 0 0-1.32 2.214l-.8 2.685a.75.75 0 0 0 .933.933l2.685-.8a5.25 5.25 0 0 0 2.214-1.32l8.4-8.4Z" />
+              <path d="M5.25 5.25a3 3 0 0 0-3 3v10.5a3 3 0 0 0 3 3h10.5a3 3 0 0 0 3-3V13.5a.75.75 0 0 0-1.5 0v5.25a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5V8.25a1.5 1.5 0 0 1 1.5-1.5h5.25a.75.75 0 0 0 0-1.5H5.25Z" />
+            </svg>
+          </button>
+          <button v-on:click="removeDday(dDay)" class="px-4 py-2 rounded font-medium transition-colors border border-red-500 text-red-500 hover:bg-red-500 hover:text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+              <path fill-rule="evenodd" d="M16.5 4.478v.227a48.816 48.816 0 0 1 3.878.512.75.75 0 1 1-.256 1.478l-.209-.035-1.005 13.07a3 3 0 0 1-2.991 2.77H8.084a3 3 0 0 1-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 0 1-.256-1.478A48.567 48.567 0 0 1 7.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 0 1 3.369 0c1.603.051 2.815 1.387 2.815 2.951Zm-6.136-1.452a51.196 51.196 0 0 1 3.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 0 0-6 0v-.113c0-.794.609-1.428 1.364-1.452Zm-.355 5.945a.75.75 0 1 0-1.5.058l.347 9a.75.75 0 1 0 1.499-.058l-.346-9Zm5.48.058a.75.75 0 1 0-1.498-.058l-.347 9a.75.75 0 0 0 1.5.058l.345-9Z" clip-rule="evenodd" />
+            </svg>
+          </button>
         </div>
       </div>
     </div>
   </div>
-  <div class="col-6" v-if="isMyCalendar && dDaysReady">
+  <div class="w-1/2" v-if="isMyCalendar && dDaysReady">
     <div
-        class="d-day-item card shadow-sm align-items-center justify-content-center m-1 rounded-4 text-align-center bg-primary cursor-pointer text-white fs-3"
+        class="d-day-item card shadow-sm flex items-center justify-center m-1 rounded-2xl text-center bg-blue-500 cursor-pointer text-white text-xl"
         v-on:click="createOrUpdateDday()"
     >
-      <i class="bi bi-plus-circle"></i><span>디데이 추가</span>
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+        <path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25ZM12.75 9a.75.75 0 0 0-1.5 0v2.25H9a.75.75 0 0 0 0 1.5h2.25V15a.75.75 0 0 0 1.5 0v-2.25H15a.75.75 0 0 0 0-1.5h-2.25V9Z" clip-rule="evenodd" />
+      </svg>
+      <span>디데이 추가</span>
     </div>
   </div>
 </div>

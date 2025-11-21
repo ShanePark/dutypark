@@ -2,6 +2,51 @@
     --hover-background-color: #f8f9fa;
 }
 
+/* Dropdown styles (replacing Bootstrap) */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 1000;
+    display: none;
+    min-width: 10rem;
+    padding: 0.5rem 0;
+    margin: 0.125rem 0 0;
+    background-color: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 0.375rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.175);
+}
+
+.dropdown-menu.show {
+    display: block;
+}
+
+.dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    clear: both;
+    font-weight: 400;
+    color: #212529;
+    text-align: inherit;
+    text-decoration: none;
+    white-space: nowrap;
+    background-color: transparent;
+    border: 0;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    color: #1e2125;
+    background-color: #e9ecef;
+}
+
 html {
     overflow-y: visible; /* Never make it scroll or auto, otherwise mobile Safari will throw `this page was reloaded...`*/
 }
@@ -42,13 +87,6 @@ html {
     font-style: normal;
 }
 
-@font-face {
-    src: url('../lib/bootstrap/bootstrap-icons-1.11.0/fonts/bootstrap-icons.woff2') format('woff2');
-    font-display: swap;
-    font-family: 'Bootstrap Icons';
-    font-weight: normal;
-    font-style: normal;
-}
 
 [v-cloak] {
     display: none;
@@ -56,7 +94,6 @@ html {
 
 body {
     font-family: NexonMaplestory, sans-serif;
-    --bs-body-font-family: NexonMaplestory;
 }
 
 body a {
@@ -229,9 +266,6 @@ h1 a.move:hover {
     color: black;
 }
 
-.text-right {
-    text-align: right !important;
-}
 
 .btn-outline-dark.selected:disabled {
     border: 3px dotted red;
@@ -622,21 +656,20 @@ a.homeButton:hover {
 
 .schedule-tag::after,
 .schedule-tag::before {
-    font-family: 'Bootstrap Icons', serif;
     position: relative;
-    top: 3px;
-}
-
-.schedule-tag.tagged-true::before {
-    font-family: unset;
-    font-size: 0.6em;
-    margin-right: 0.1em;
-    content: 'by';
     top: 0;
 }
 
+.schedule-tag.tagged-true::before {
+    font-size: 0.6em;
+    margin-right: 0.1em;
+    content: 'by';
+}
+
 .schedule-tag::before {
-    content: '\F4DA';
+    content: '👤';
+    font-size: 0.8em;
+    margin-right: 0.1em;
 }
 
 #detail-view-modal .schedule-tag.tagged-false::before {
@@ -644,7 +677,9 @@ a.homeButton:hover {
 }
 
 #detail-view-modal .schedule-tag.tagged-false::after {
-    content: '\F622';
+    content: '▼';
+    font-size: 0.6em;
+    margin-left: 0.2em;
 }
 
 .schedule-tag.schedule-tag-add {
@@ -1066,9 +1101,9 @@ input[readonly], textarea[readonly] {
 .sortable-ghost,
 .sortable-fallback {
     opacity: 1;
-    outline: 2px solid var(--bs-primary);
+    outline: 2px solid #3b82f6;
     outline-offset: -2px;
-    box-shadow: 0 12px 24px rgba(13, 110, 253, 0.3);
+    box-shadow: 0 12px 24px rgba(59, 130, 246, 0.3);
     background-color: #f8fbff;
     border-radius: 0.5rem;
 }
@@ -1084,8 +1119,8 @@ input[readonly], textarea[readonly] {
 }
 
 .sortable-chosen {
-    border-color: var(--bs-primary);
-    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.15);
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
 }
 
 .sortable-ghost::after {
@@ -1097,9 +1132,9 @@ input[readonly], textarea[readonly] {
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    border: 2px solid var(--bs-primary);
-    background-image: radial-gradient(circle, rgba(13, 110, 253, 0.35) 25%, transparent 26%),
-    radial-gradient(circle, rgba(13, 110, 253, 0.15) 25%, transparent 26%);
+    border: 2px solid #3b82f6;
+    background-image: radial-gradient(circle, rgba(59, 130, 246, 0.35) 25%, transparent 26%),
+    radial-gradient(circle, rgba(59, 130, 246, 0.15) 25%, transparent 26%);
     background-size: 14px 14px, 14px 14px;
     background-position: 0 0, 7px 7px;
     animation: sortable-dots 0.9s linear infinite;

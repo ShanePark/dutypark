@@ -23,7 +23,7 @@ const searchResultComputes = {
 const searchResultMethods = {
   search(page = 0) {
     const app = this;
-    $('#search-result-modal').modal('show');
+    TwModal.show('search-result-modal');
     const query = app.searchQuery;
     fetch(`/api/schedules/${app.memberId}/search?q=${query}&page=${page}`)
       .then((response) => {
@@ -47,6 +47,6 @@ const searchResultMethods = {
     this.year = startDateTime.getFullYear();
     this.month = startDateTime.getMonth() + 1;
     this.searchDay = startDateTime.getDate();
-    $('#search-result-modal').modal('hide');
+    TwModal.hide('search-result-modal');
   },
 }

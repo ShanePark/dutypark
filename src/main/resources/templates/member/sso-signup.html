@@ -1,5 +1,5 @@
-<div id="sso-signup" class="card shadow-sm">
-  <div class="card-header text-center bg-secondary text-white fw-bold">
+<div id="sso-signup" class="bg-white rounded-lg shadow-sm">
+  <div class="px-4 py-3 text-center bg-gray-500 text-white font-bold rounded-t-lg">
     회원 가입
   </div>
   <div class="p-4">
@@ -7,18 +7,18 @@
       <input type="hidden" name="uuid" v-model="uuid">
 
       <div class="mb-3">
-        <label for="username" class="form-label me-3 fs-2">이름</label>
-        <input class="fs-2" type="text" id="username" name="username" aria-describedby="name_helper" maxlength="10"
+        <label for="username" class="block text-sm font-medium text-gray-700 mb-1 mr-3 text-xl">이름</label>
+        <input class="text-xl px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" type="text" id="username" name="username" aria-describedby="name_helper" maxlength="10"
                v-model="username"
-               :class="{'border-red': username.length == 0}">
-        <div id="name_helper" class="form-text">
+               :class="{'border-red-500': username.length == 0}">
+        <div id="name_helper" class="mt-1 text-sm text-gray-500">
           본 서비스에서 사용할 이름을 입력해주세요. 실명 또는 닉네임을 사용할 수 있으며, 나중에 변경할 수 있습니다.
         </div>
       </div>
 
-      <div id="term" class="border rounded p-3 bg-light mb-5" style="max-height: 50vh; overflow-y: auto;">
+      <div id="term" class="border rounded p-3 bg-gray-100 mb-5" style="max-height: 50vh; overflow-y: auto;">
         <h1>이용약관</h1>
-        <pre class="text-break" style="white-space: pre-wrap;">
+        <pre class="break-words" style="white-space: pre-wrap;">
     1. 서론
     본 약관은 [Dutypark] (이하 "서비스")의 이용 조건 및 절차, 이용자와 서비스 제공자 간의 권리, 의무, 책임사항 및 기타 필요한 사항을 규정함을 목적으로 합니다.
 
@@ -67,12 +67,12 @@
         </pre>
       </div>
 
-      <div class="form-check mb-3">
-        <input id="agree" class="form-check-input" type="checkbox" v-model="termsAgreed" name="term_agree">
-        <label class="form-check-label" for="agree">이용약관에 동의합니다.</label>
+      <div class="flex items-center mb-3">
+        <input id="agree" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" type="checkbox" v-model="termsAgreed" name="term_agree">
+        <label class="ml-2 text-sm text-gray-700" for="agree">이용약관에 동의합니다.</label>
       </div>
 
-      <button type="submit" class="btn btn-primary w-100 fs-1" :disabled="!canSubmit">회원 가입</button>
+      <button type="submit" class="w-full px-4 py-2 bg-blue-500 text-white rounded font-medium transition-colors hover:bg-blue-600 text-2xl disabled:opacity-50 disabled:cursor-not-allowed" :disabled="!canSubmit">회원 가입</button>
     </form>
   </div>
 </div>

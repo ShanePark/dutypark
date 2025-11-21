@@ -249,7 +249,7 @@ const todoAddMethods = {
         timer: sweetAlTimer
       });
       app.loadTodos();
-      $('#add-todo-modal').modal('hide');
+      TwModal.hide('add-todo-modal');
     });
   }
   ,
@@ -265,7 +265,7 @@ const todoAddMethods = {
       modal.querySelector('.todo-content').value = '';
     }
     if (!skipModalHide) {
-      $('#add-todo-modal').modal('hide');
+      TwModal.hide('add-todo-modal');
     }
   }
   ,

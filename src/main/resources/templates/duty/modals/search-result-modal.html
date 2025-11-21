@@ -1,11 +1,15 @@
-<div id="search-result-modal" class="modal fade fs-3" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-xl">
-    <div class="modal-content">
-      <div class="modal-header">
-        <span class="fs-2">검색 결과</span>
-        <button type="button" data-bs-dismiss="modal" aria-label="Close" class="btn-close"></button>
+<div id="search-result-modal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-black/50 text-2xl" data-tw-modal tabindex="-1" aria-hidden="true">
+  <div class="flex min-h-screen items-center relative mx-auto my-8 max-w-6xl">
+    <div class="relative bg-white rounded-lg shadow-xl w-full">
+      <div class="flex items-center justify-between p-4 border-b">
+        <span class="text-3xl">검색 결과</span>
+        <button type="button" data-tw-dismiss="modal" aria-label="Close" class="text-gray-400 hover:text-gray-600">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
-      <div class="modal-body">
+      <div class="p-4">
         <table class="table table-striped">
           <colgroup>
             <col style="width: 10%;">
@@ -15,30 +19,32 @@
           </colgroup>
           <thead>
           <tr>
-            <th scope="col" class="text-align-center">#</th>
+            <th scope="col" class="text-center">#</th>
             <th scope="col">내용</th>
-            <th scope="col" class="text-align-center">태그됨</th>
-            <th scope="col" class="text-align-center">날짜</th>
+            <th scope="col" class="text-center">태그됨</th>
+            <th scope="col" class="text-center">날짜</th>
           </tr>
           </thead>
           <tbody>
           <tr class="search-result-row" v-for="(item, index) in searchResults.content" :key="index"
               v-on:click="moveToSearch(item)">
-            <th scope="row" class="text-align-center">{{ index + 1 + (searchResults.pageable.pageNumber *
+            <th scope="row" class="text-center">{{ index + 1 + (searchResults.pageable.pageNumber *
               searchResults.pageable.pageSize) }}
             </th>
             <td>{{ item.content }}</td>
-            <td class="text-align-center">
-              <i v-if="item.isTagged" class="bi bi-check"></i>
+            <td class="text-center">
+              <svg v-if="item.isTagged" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" viewBox="0 0 24 24" fill="currentColor">
+                <path fill-rule="evenodd" d="M19.916 4.626a.75.75 0 01.208 1.04l-9 13.5a.75.75 0 01-1.154.114l-6-6a.75.75 0 011.06-1.06l5.353 5.353 8.493-12.739a.75.75 0 011.04-.208z" clip-rule="evenodd" />
+              </svg>
             </td>
-            <td class="text-align-center">{{ formattedDateYMD(item.startDateTime) }}</td>
+            <td class="text-center">{{ formattedDateYMD(item.startDateTime) }}</td>
           </tr>
           </tbody>
         </table>
       </div>
-      <div class="modal-footer">
+      <div class="flex items-center justify-end p-4 border-t gap-2 flex-col">
         <nav class="" v-if="searchResults.totalPages > 1">
-          <ul class="pagination justify-content-center">
+          <ul class="pagination justify-center flex flex-wrap">
             <li class="page-item" :class="{ disabled: searchResults.first }">
               <button class="page-link" @click="search(searchResults.pageable.pageNumber - 1)">이전</button>
             </li>
@@ -67,12 +73,14 @@
           </ul>
         </nav>
         <form class="search-form mb-3" @submit.prevent="search()">
-          <div class="d-flex w-100">
+          <div class="flex w-full">
             <label>
-              <input type="text" class="form-control" placeholder="검색" v-model="searchQuery">
+              <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="검색" v-model="searchQuery">
             </label>
-            <button class="btn btn-outline-dark" type="submit">
-              <i class="bi bi-search"></i>
+            <button class="px-4 py-2 rounded font-medium transition-colors border border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white" type="submit">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                <path fill-rule="evenodd" d="M10.5 3.75a6.75 6.75 0 100 13.5 6.75 6.75 0 000-13.5zM2.25 10.5a8.25 8.25 0 1114.59 5.28l4.69 4.69a.75.75 0 11-1.06 1.06l-4.69-4.69A8.25 8.25 0 012.25 10.5z" clip-rule="evenodd" />
+              </svg>
             </button>
           </div>
         </form>

@@ -1,37 +1,37 @@
-<div class="refresh-tokens card" v-cloak>
-  <div class="card-header text-center bg-secondary text-white fw-bold">
+<div class="refresh-tokens bg-white rounded-lg shadow" v-cloak>
+  <div class="px-4 py-3 text-center bg-gray-500 text-white font-bold rounded-t-lg">
     회원 관리
   </div>
   <div class="p-2">
     <div v-for="member in members">
-      <table class="table table-striped">
+      <table class="w-full border-collapse">
         <thead>
         <tr>
           <td colspan="5" class="p-3">
-            <div class="d-flex justify-content-between">
+            <div class="flex justify-between items-center">
             <span>
               {{ member.name }}
             </span>
-              <button class="btn btn-outline-warning btn-sm" @click="changePassword(member)">Change Password
+              <button class="px-2 py-1 border border-yellow-500 text-yellow-600 rounded text-sm hover:bg-yellow-500 hover:text-white transition-colors" @click="changePassword(member)">Change Password
               </button>
             </div>
           </td>
         </tr>
-        <tr>
-          <th></th>
-          <th>Last active</th>
-          <th>Ip</th>
-          <th>Device</th>
-          <th>Browser</th>
+        <tr class="bg-gray-100">
+          <th class="p-2 text-left"></th>
+          <th class="p-2 text-left">Last active</th>
+          <th class="p-2 text-left">Ip</th>
+          <th class="p-2 text-left">Device</th>
+          <th class="p-2 text-left">Browser</th>
         </tr>
         </thead>
         <tbody>
-        <tr v-for="(token, index) in member.tokens">
-          <td>{{ index+1 }}</td>
-          <td>{{ token.lastUsed | fromNow }}</td>
-          <td>{{ token.remoteAddr}}</td>
-          <td>{{ token.userAgent ? token.userAgent.device : '' }}</td>
-          <td>{{ token.userAgent ? token.userAgent.browser : '' }}</td>
+        <tr v-for="(token, index) in member.tokens" class="odd:bg-gray-50">
+          <td class="p-2">{{ index+1 }}</td>
+          <td class="p-2">{{ token.lastUsed | fromNow }}</td>
+          <td class="p-2">{{ token.remoteAddr}}</td>
+          <td class="p-2">{{ token.userAgent ? token.userAgent.device : '' }}</td>
+          <td class="p-2">{{ token.userAgent ? token.userAgent.browser : '' }}</td>
         </tr>
         </tbody>
       </table>

@@ -1,6 +1,6 @@
 <div class="duty-table-header">
-  <div class="duty-types d-flex">
-    <div class="duty-type d-flex" v-for="type in team.dutyTypes">
+  <div class="duty-types flex">
+    <div class="duty-type flex" v-for="type in team.dutyTypes">
       <div class="indicator" :style="{'background-color': type.color}">
         <span v-text="type.name"></span>
       </div>
@@ -10,27 +10,27 @@
     </div>
   </div>
   <div v-if="hasTeam" class="buttons">
-    <button v-if="isMyCalendar && !batchEditMode" class="btn btn-outline-primary" @click="showOtherDuties()">함께보기</button>
+    <button v-if="isMyCalendar && !batchEditMode" class="px-4 py-2 rounded font-medium transition-colors border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white" @click="showOtherDuties()">함께보기</button>
     <button v-if="!isMyCalendar && loginMemberId && !batchEditMode"
-            class="btn"
-            :class="{'btn-primary': showMyDuties, 'btn-outline-primary':!showMyDuties}"
+            class="px-4 py-2 rounded font-medium transition-colors"
+            :class="{'bg-blue-500 text-white hover:bg-blue-600': showMyDuties, 'border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white':!showMyDuties}"
             @click="toggleMyDuties()">함께보기
     </button>
     <button v-if="canEdit && batchEditMode"
-            class="edit-btn btn btn-warning"
+            class="edit-btn px-4 py-2 rounded font-medium transition-colors bg-yellow-500 text-white hover:bg-yellow-600"
             v-on:click="showBatchUpdate">한번에 수정
     </button>
     <button v-if="canEdit && batchEditMode && team.dutyBatchTemplate"
-            class="btn btn-info"
+            class="px-4 py-2 rounded font-medium transition-colors bg-cyan-500 text-white hover:bg-cyan-600"
             v-on:click="uploadBatchFile"
     >시간표 파일 업로드
     </button>
     <button v-if="canEdit && batchEditMode"
-            class="edit-btn btn btn-success"
+            class="edit-btn px-4 py-2 rounded font-medium transition-colors bg-green-500 text-white hover:bg-green-600"
             v-on:click="batchEditMode=false;">편집완료
     </button>
     <button v-if="canEdit && !batchEditMode"
-            class="edit-btn btn btn-warning"
+            class="edit-btn px-4 py-2 rounded font-medium transition-colors bg-yellow-500 text-white hover:bg-yellow-600"
             v-on:click="batchEditMode=true;">편집모드
     </button>
   </div>

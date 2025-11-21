@@ -4,7 +4,7 @@ const todoListMethods = {
     const modal = document.getElementById('add-todo-modal');
     modal.querySelector('.todo-title').value = '';
     modal.querySelector('.todo-content').value = '';
-    $('#add-todo-modal').modal('show');
+    TwModal.show('add-todo-modal');
     this.$nextTick(() => {
       this.todoAddInitializeAttachmentUploader();
     });
@@ -24,7 +24,7 @@ const todoListMethods = {
       completedSpan.textContent = `완료 ${todo.completedDate}`;
       dateElement.appendChild(completedSpan);
     }
-    $('#todo-details-modal').modal('show');
+    TwModal.show('todo-details-modal');
 
     modal.setAttribute('data-id', todo.id);
     this.selectedTodoStatus = todo.status;
@@ -72,7 +72,7 @@ const todoListMethods = {
   }
   ,
   openTodoOverview() {
-    $('#todo-overview-modal').modal('show');
+    TwModal.show('todo-overview-modal');
     this.$nextTick(() => {
       this.initOverviewSortable();
     });

@@ -1,38 +1,53 @@
 <div class="dashboard-intro" th:if="${loginMember == null}">
   <section class="py-5">
-    <div class="row justify-content-center">
-      <div class="col-12 col-md-10 col-lg-8">
-        <div class="card rounded-3 shadow p-4">
-          <div class="card-body text-center">
-            <h1 class="fw-bold display-5 mb-3">Dutypark</h1>
+    <div class="flex flex-wrap justify-center">
+      <div class="w-full md:w-5/6 lg:w-2/3 px-3">
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="p-4 text-center">
+            <h1 class="font-bold text-5xl mb-3">Dutypark</h1>
             <p class="mb-4">
-              Dutypark는 근무 관리, 시간표 등록, 일정 관리, 할일 관리 및 팀원들의 시간표 조회, 친구 및 가족의 일정 공유 등<br class="d-sm-none">
+              Dutypark는 근무 관리, 시간표 등록, 일정 관리, 할일 관리 및 팀원들의 시간표 조회, 친구 및 가족의 일정 공유 등<br class="sm:hidden">
               다양한 기능을 통해 여러분의 일상을 도와줍니다.
             </p>
-            <a href="/auth/login" class="btn btn-dark btn-lg rounded-pill shadow py-2 px-3 fs-3">
+            <a href="/auth/login" class="inline-block px-3 py-2 bg-gray-800 text-white hover:bg-gray-900 text-2xl rounded-full shadow font-medium transition-colors">
               로그인 / 회원가입
             </a>
           </div>
         </div>
 
-        <div class="card rounded-3 shadow p-4 mt-4">
-          <div class="card-body">
-            <h1 class="card-title mb-3">주요 기능</h1>
-            <ul class="list-group list-group-flush">
-              <li class="list-group-item border-0">
-                <i class="bi bi-calendar-check me-2"></i> 일정 관리 (등록, 검색, 공개 설정)
+        <div class="bg-white rounded-lg shadow p-4 mt-4">
+          <div class="p-4">
+            <h1 class="text-lg font-semibold mb-3">주요 기능</h1>
+            <ul class="divide-y divide-gray-200">
+              <li class="py-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-2" viewBox="0 0 24 24" fill="currentColor">
+                  <path fill-rule="evenodd" d="M6.75 2.25A.75.75 0 0 1 7.5 3v1.5h9V3A.75.75 0 0 1 18 3v1.5h.75a3 3 0 0 1 3 3v11.25a3 3 0 0 1-3 3H5.25a3 3 0 0 1-3-3V7.5a3 3 0 0 1 3-3H6V3a.75.75 0 0 1 .75-.75Zm13.5 9a1.5 1.5 0 0 0-1.5-1.5H5.25a1.5 1.5 0 0 0-1.5 1.5v7.5a1.5 1.5 0 0 0 1.5 1.5h13.5a1.5 1.5 0 0 0 1.5-1.5v-7.5Zm-7.06 2.78a.75.75 0 0 0-1.06-1.06l-2.25 2.25a.75.75 0 0 0 0 1.06l2.25 2.25a.75.75 0 1 0 1.06-1.06l-.97-.97h4.22a.75.75 0 0 0 0-1.5h-4.22l.97-.97Z" clip-rule="evenodd" />
+                </svg>
+                일정 관리 (등록, 검색, 공개 설정)
               </li>
-              <li class="list-group-item border-0">
-                <i class="bi bi-check2-square me-2"></i> 할일 관리로 까먹지 않는 일상
+              <li class="py-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-2" viewBox="0 0 24 24" fill="currentColor">
+                  <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clip-rule="evenodd" />
+                </svg>
+                할일 관리로 까먹지 않는 일상
               </li>
-              <li class="list-group-item border-0">
-                <i class="bi bi-person-lines-fill me-2"></i> 근무 관리 및 시간표 등록
+              <li class="py-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-2" viewBox="0 0 24 24" fill="currentColor">
+                  <path fill-rule="evenodd" d="M4.5 3.75a3 3 0 0 0-3 3v10.5a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3V6.75a3 3 0 0 0-3-3h-15Zm4.125 3a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Zm-3.873 8.703a4.126 4.126 0 0 1 7.746 0 .75.75 0 0 1-.351.92 7.47 7.47 0 0 1-3.522.877 7.47 7.47 0 0 1-3.522-.877.75.75 0 0 1-.351-.92ZM15 8.25a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 0-1.5H15ZM14.25 12a.75.75 0 0 1 .75-.75h3.75a.75.75 0 0 1 0 1.5H15a.75.75 0 0 1-.75-.75Zm.75 2.25a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 0-1.5H15Z" clip-rule="evenodd" />
+                </svg>
+                근무 관리 및 시간표 등록
               </li>
-              <li class="list-group-item border-0">
-                <i class="bi bi-people me-2"></i> 팀원들의 시간표와 일정 공유
+              <li class="py-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-2" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M4.5 6.375a4.125 4.125 0 1 1 8.25 0 4.125 4.125 0 0 1-8.25 0ZM14.25 8.625a3.375 3.375 0 1 1 6.75 0 3.375 3.375 0 0 1-6.75 0ZM1.5 19.125a7.125 7.125 0 0 1 14.25 0v.003l-.001.119a.75.75 0 0 1-.363.63 13.067 13.067 0 0 1-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 0 1-.364-.63l-.001-.122ZM17.25 19.128l-.001.144a2.25 2.25 0 0 1-.233.96 10.088 10.088 0 0 0 5.06-1.01.75.75 0 0 0 .42-.643 4.875 4.875 0 0 0-6.957-4.611 8.586 8.586 0 0 1 1.71 5.157v.003Z" />
+                </svg>
+                팀원들의 시간표와 일정 공유
               </li>
-              <li class="list-group-item border-0">
-                <i class="bi bi-heart me-2"></i> 친구 및 가족의 일정 조회와 태그 기능
+              <li class="py-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-2" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="m11.645 20.91-.007-.003-.022-.012a15.247 15.247 0 0 1-.383-.218 25.18 25.18 0 0 1-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0 1 12 5.052 5.5 5.5 0 0 1 16.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 0 1-4.244 3.17 15.247 15.247 0 0 1-.383.219l-.022.012-.007.004-.003.001a.752.752 0 0 1-.704 0l-.003-.001Z" />
+                </svg>
+                친구 및 가족의 일정 조회와 태그 기능
               </li>
             </ul>
             <p class="mt-4 mb-0">
@@ -49,21 +64,28 @@
 <div id="app" class="dashboard" v-if="memberId" v-cloak>
   <div class="my-section">
     <div class="bg-white rounded shadow-sm border">
-      <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white cursor-pointer"
+      <div class="bg-gray-500 text-center py-2 rounded-t font-bold uppercase text-white cursor-pointer"
            @click="moveTo()">
         {{ myInfo.member.name || '로딩중...' }}
       </div>
-      <div class="p-4 row">
-        <div class="col-6">
-          <h5 class="d-flex align-items-center mb-3">
-            <i class="bi bi-calendar-check me-2"></i>
+      <div class="p-4 flex flex-wrap">
+        <div class="w-1/2">
+          <h5 class="flex items-center mb-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
+              <path fill-rule="evenodd" d="M6.75 2.25A.75.75 0 0 1 7.5 3v1.5h9V3A.75.75 0 0 1 18 3v1.5h.75a3 3 0 0 1 3 3v11.25a3 3 0 0 1-3 3H5.25a3 3 0 0 1-3-3V7.5a3 3 0 0 1 3-3H6V3a.75.75 0 0 1 .75-.75Zm13.5 9a1.5 1.5 0 0 0-1.5-1.5H5.25a1.5 1.5 0 0 0-1.5 1.5v7.5a1.5 1.5 0 0 0 1.5 1.5h13.5a1.5 1.5 0 0 0 1.5-1.5v-7.5Zm-7.06 2.78a.75.75 0 0 0-1.06-1.06l-2.25 2.25a.75.75 0 0 0 0 1.06l2.25 2.25a.75.75 0 1 0 1.06-1.06l-.97-.97h4.22a.75.75 0 0 0 0-1.5h-4.22l.97-.97Z" clip-rule="evenodd" />
+            </svg>
             {{ today }}
           </h5>
-          <div class="d-flex align-items-center mb-3">
-            <h5 class="mb-0 me-2"><i class="bi bi-person-badge me-2"></i>근무:</h5>
+          <div class="flex items-center mb-3">
+            <h5 class="mb-0 mr-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-2" viewBox="0 0 24 24" fill="currentColor">
+                <path fill-rule="evenodd" d="M4.5 3.75a3 3 0 0 0-3 3v10.5a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3V6.75a3 3 0 0 0-3-3h-15Zm4.125 3a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Zm-3.873 8.703a4.126 4.126 0 0 1 7.746 0 .75.75 0 0 1-.351.92 7.47 7.47 0 0 1-3.522.877 7.47 7.47 0 0 1-3.522-.877.75.75 0 0 1-.351-.92ZM15 8.25a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 0-1.5H15ZM14.25 12a.75.75 0 0 1 .75-.75h3.75a.75.75 0 0 1 0 1.5H15a.75.75 0 0 1-.75-.75Zm.75 2.25a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 0-1.5H15Z" clip-rule="evenodd" />
+              </svg>
+              근무:
+            </h5>
             <template v-if="myInfoLoading">
-              <div class="spinner-border spinner-border-sm text-secondary" role="status">
-                <span class="visually-hidden">Loading...</span>
+              <div class="spinner-border spinner-border-sm text-gray-500" role="status">
+                <span class="sr-only">Loading...</span>
               </div>
             </template>
             <div v-else class="duty-type">
@@ -71,26 +93,32 @@
                 <span v-text="myInfo.duty.dutyType"></span>
               </div>
               <div v-if="!myInfo.duty">
-                <span class="text-muted">없음</span>
+                <span class="text-gray-500">없음</span>
               </div>
             </div>
           </div>
         </div>
-        <div class="col-6 border-start">
-          <h5 class="mb-1"><i class="bi bi-calendar-event me-2"></i>오늘 일정</h5>
+        <div class="w-1/2 border-l pl-4">
+          <h5 class="mb-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-2" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12.75 12.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM7.5 15.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5ZM8.25 17.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM9.75 15.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5ZM10.5 17.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12 15.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5ZM12.75 17.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM14.25 15.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5ZM15 17.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM16.5 15.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5ZM15 12.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM16.5 13.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z" />
+              <path fill-rule="evenodd" d="M6.75 2.25A.75.75 0 0 1 7.5 3v1.5h9V3A.75.75 0 0 1 18 3v1.5h.75a3 3 0 0 1 3 3v11.25a3 3 0 0 1-3 3H5.25a3 3 0 0 1-3-3V7.5a3 3 0 0 1 3-3H6V3a.75.75 0 0 1 .75-.75Zm13.5 9a1.5 1.5 0 0 0-1.5-1.5H5.25a1.5 1.5 0 0 0-1.5 1.5v7.5a1.5 1.5 0 0 0 1.5 1.5h13.5a1.5 1.5 0 0 0 1.5-1.5v-7.5Z" clip-rule="evenodd" />
+            </svg>
+            오늘 일정
+          </h5>
           <template v-if="myInfoLoading">
             <div class="text-center py-3">
-              <div class="spinner-border spinner-border-sm text-secondary" role="status">
-                <span class="visually-hidden">Loading...</span>
+              <div class="spinner-border spinner-border-sm text-gray-500" role="status">
+                <span class="sr-only">Loading...</span>
               </div>
             </div>
           </template>
-          <ul v-else class="list-unstyled">
-            <li v-for="schedule in myInfo.schedules" :key="schedule.id" class="py-1 border-bottom last:border-0">
+          <ul v-else class="list-none">
+            <li v-for="schedule in myInfo.schedules" :key="schedule.id" class="py-1 border-b last:border-0">
               <span>{{ printSchedule(schedule) }}</span>
-              <span class="text-secondary ms-2">{{ printScheduleTime(schedule.startDateTime) }}</span>
+              <span class="text-gray-500 ml-2">{{ printScheduleTime(schedule.startDateTime) }}</span>
             </li>
-            <li v-if="myInfo.schedules.length === 0" class="text-muted">오늘의 일정이 없습니다.</li>
+            <li v-if="myInfo.schedules.length === 0" class="text-gray-500">오늘의 일정이 없습니다.</li>
           </ul>
         </div>
       </div>
@@ -100,34 +128,44 @@
   <div class="mb-4 friend-request-section"
        v-if="friendInfoInitialized && (friendInfo.pendingRequestsTo.length || friendInfo.pendingRequestsFrom.length)">
     <div class="bg-white rounded shadow-sm border">
-      <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white">친구 요청 관리</div>
+      <div class="bg-gray-500 text-center py-2 rounded-t font-bold uppercase text-white">친구 요청 관리</div>
       <div class="p-4">
-        <div class="d-flex flex-wrap gap-3">
+        <div class="flex flex-wrap gap-3">
           <div v-for="req in friendInfo.pendingRequestsTo" :key="'to-' + req.fromMember.id"
                class="p-4 border rounded cursor-pointer shadow-sm"
                style="width: calc(50% - 12px); background-color: #e3f2fd;">
-            <div class="d-flex justify-content-between align-items-center">
-              <div class="fw-bold">
-                <i class="bi bi-house-add-fill" v-if="req.requestType === 'FAMILY_REQUEST'"></i>
-                <i class="bi bi-person-fill-add" v-if="req.requestType === 'FRIEND_REQUEST'"></i>
+            <div class="flex justify-between items-center">
+              <div class="font-bold">
+                <svg v-if="req.requestType === 'FAMILY_REQUEST'" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19.006 3.705a.75.75 0 1 0-.512-1.41L6 6.838V3a.75.75 0 0 0-.75-.75h-1.5A.75.75 0 0 0 3 3v4.93l-1.006.365a.75.75 0 0 0 .512 1.41l16.5-6Z" />
+                  <path fill-rule="evenodd" d="M3.019 11.114 18 5.667V9.56l4.5 1.639v10.051a.75.75 0 0 1-.75.75H2.25a.75.75 0 0 1-.75-.75V11.5a.75.75 0 0 1 .519-.713ZM5.25 11.5v8.25H9v-3.75c0-.414.336-.75.75-.75h4.5c.414 0 .75.336.75.75v3.75h3.75V11.5L12 8.5l-6.75 3Z" clip-rule="evenodd" />
+                </svg>
+                <svg v-if="req.requestType === 'FRIEND_REQUEST'" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M5.25 6.375a4.125 4.125 0 1 1 8.25 0 4.125 4.125 0 0 1-8.25 0ZM2.25 19.125a7.125 7.125 0 0 1 14.25 0v.003l-.001.119a.75.75 0 0 1-.363.63 13.067 13.067 0 0 1-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 0 1-.364-.63l-.001-.122ZM18.75 7.5a.75.75 0 0 0-1.5 0v2.25H15a.75.75 0 0 0 0 1.5h2.25v2.25a.75.75 0 0 0 1.5 0v-2.25H21a.75.75 0 0 0 0-1.5h-2.25V7.5Z" />
+                </svg>
                 {{ req.fromMember.name }}
               </div>
               <div>
-                <button class="btn btn-outline-success me-1" @click="acceptFriendRequest(req)">승인</button>
-                <button class="btn btn-outline-danger" @click="rejectFriendRequest(req)">거절</button>
+                <button class="px-2 py-1 rounded font-medium transition-colors border border-green-500 text-green-500 hover:bg-green-500 hover:text-white mr-1" @click="acceptFriendRequest(req)">승인</button>
+                <button class="px-2 py-1 rounded font-medium transition-colors border border-red-500 text-red-500 hover:bg-red-500 hover:text-white" @click="rejectFriendRequest(req)">거절</button>
               </div>
             </div>
           </div>
           <div v-for="req in friendInfo.pendingRequestsFrom" :key="'from-' + req.toMember.id"
                class="p-4 border rounded cursor-pointer shadow-sm"
                style="width: calc(50% - 12px); background-color: #fff3cd;">
-            <div class="d-flex justify-content-between align-items-center">
-              <div class="fw-bold">
-                <i class="bi bi-house-add-fill" v-if="req.requestType === 'FAMILY_REQUEST'"></i>
-                <i class="bi bi-person-fill-add" v-if="req.requestType === 'FRIEND_REQUEST'"></i>
+            <div class="flex justify-between items-center">
+              <div class="font-bold">
+                <svg v-if="req.requestType === 'FAMILY_REQUEST'" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19.006 3.705a.75.75 0 1 0-.512-1.41L6 6.838V3a.75.75 0 0 0-.75-.75h-1.5A.75.75 0 0 0 3 3v4.93l-1.006.365a.75.75 0 0 0 .512 1.41l16.5-6Z" />
+                  <path fill-rule="evenodd" d="M3.019 11.114 18 5.667V9.56l4.5 1.639v10.051a.75.75 0 0 1-.75.75H2.25a.75.75 0 0 1-.75-.75V11.5a.75.75 0 0 1 .519-.713ZM5.25 11.5v8.25H9v-3.75c0-.414.336-.75.75-.75h4.5c.414 0 .75.336.75.75v3.75h3.75V11.5L12 8.5l-6.75 3Z" clip-rule="evenodd" />
+                </svg>
+                <svg v-if="req.requestType === 'FRIEND_REQUEST'" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M5.25 6.375a4.125 4.125 0 1 1 8.25 0 4.125 4.125 0 0 1-8.25 0ZM2.25 19.125a7.125 7.125 0 0 1 14.25 0v.003l-.001.119a.75.75 0 0 1-.363.63 13.067 13.067 0 0 1-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 0 1-.364-.63l-.001-.122ZM18.75 7.5a.75.75 0 0 0-1.5 0v2.25H15a.75.75 0 0 0 0 1.5h2.25v2.25a.75.75 0 0 0 1.5 0v-2.25H21a.75.75 0 0 0 0-1.5h-2.25V7.5Z" />
+                </svg>
                 {{ req.toMember.name }}
               </div>
-              <button class="btn btn-outline-warning" @click="cancelRequest(req)">요청 취소</button>
+              <button class="px-2 py-1 rounded font-medium transition-colors border border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-white" @click="cancelRequest(req)">요청 취소</button>
             </div>
           </div>
         </div>
@@ -137,78 +175,99 @@
 
   <div class="mb-4 friend-section">
     <div class="bg-white rounded shadow-sm border">
-      <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white">친구 목록</div>
+      <div class="bg-gray-500 text-center py-2 rounded-t font-bold uppercase text-white">친구 목록</div>
       <div class="p-4">
         <template v-if="friendInfoLoading">
           <div class="text-center py-5">
-            <div class="spinner-border text-secondary" role="status">
-              <span class="visually-hidden">Loading...</span>
+            <div class="spinner-border text-gray-500" role="status">
+              <span class="sr-only">Loading...</span>
             </div>
           </div>
         </template>
-        <div v-else class="d-flex flex-wrap gap-3 friend-list">
+        <div v-else class="flex flex-wrap gap-3 friend-list">
           <div v-for="friend in friendInfo.friends" :key="friend.member.id"
                :data-member_id="friend.member.id"
-               class="friend-card p-4 border rounded mb-2 cursor-pointer hover-bg-light shadow-sm d-flex flex-column"
+               class="friend-card p-4 border rounded mb-2 cursor-pointer hover:bg-gray-50 shadow-sm flex flex-col"
                :class="{'pinned_friend': friend.pinOrder}"
                style="width: calc(50% - 12px);"
                @click="moveTo(friend.member.id)">
-            <div class="friend-card-body flex-grow-1">
-              <div class="d-flex justify-content-between align-items-center">
-                <div class="fw-bold">
-                  <i class="bi bi-person-circle" v-if="!friend.isFamily"></i>
-                  <i class="bi bi-house-heart-fill" v-if="friend.isFamily"></i>
+            <div class="friend-card-body flex-grow">
+              <div class="flex justify-between items-center">
+                <div class="font-bold">
+                  <svg v-if="!friend.isFamily" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" viewBox="0 0 24 24" fill="currentColor">
+                    <path fill-rule="evenodd" d="M18.685 19.097A9.723 9.723 0 0 0 21.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 0 0 3.065 7.097A9.716 9.716 0 0 0 12 21.75a9.716 9.716 0 0 0 6.685-2.653Zm-12.54-1.285A7.486 7.486 0 0 1 12 15a7.486 7.486 0 0 1 5.855 2.812A8.224 8.224 0 0 1 12 20.25a8.224 8.224 0 0 1-5.855-2.438ZM15.75 9a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" clip-rule="evenodd" />
+                  </svg>
+                  <svg v-if="friend.isFamily" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="m11.645 20.91-.007-.003-.022-.012a15.247 15.247 0 0 1-.383-.218 25.18 25.18 0 0 1-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0 1 12 5.052 5.5 5.5 0 0 1 16.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 0 1-4.244 3.17 15.247 15.247 0 0 1-.383.219l-.022.012-.007.004-.003.001a.752.752 0 0 1-.704 0l-.003-.001Z" />
+                  </svg>
                   {{ friend.member.name }}
                 </div>
                 <div class="btn-group" @click.stop>
-                  <i v-if="friend.pinOrder" class="bi fs-3 bi-star-fill" @click.stop="unpinFriend(friend.member)"></i>
-                  <i v-if="!friend.pinOrder" class="bi fs-3 bi-star" @click.stop="pinFriend(friend.member)"></i>
-                  <button type="button" class="ms-3 btn btn-lg btn-outline-secondary dropdown-toggle"
-                          data-bs-toggle="dropdown"
+                  <svg v-if="friend.pinOrder" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 cursor-pointer text-yellow-400" viewBox="0 0 24 24" fill="currentColor" @click.stop="unpinFriend(friend.member)">
+                    <path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clip-rule="evenodd" />
+                  </svg>
+                  <svg v-if="!friend.pinOrder" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 cursor-pointer text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" @click.stop="pinFriend(friend.member)">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
+                  </svg>
+                  <button type="button" class="ml-3 px-3 py-1 text-sm border border-gray-500 text-gray-500 hover:bg-gray-500 hover:text-white rounded font-medium transition-colors dropdown-toggle"
+                          data-tw-toggle="dropdown"
                           aria-expanded="false">관리
                   </button>
                   <ul class="dropdown-menu">
                     <template v-if="!friend.isFamily">
-                      <li><a class="dropdown-item cursor-pointer blue" @click.stop="addFamily(friend.member)"
-                      ><i class="bi bi-house-heart-fill"></i> 가족 등록</a></li>
+                      <li><a class="dropdown-item cursor-pointer blue" @click.stop="addFamily(friend.member)">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="m11.645 20.91-.007-.003-.022-.012a15.247 15.247 0 0 1-.383-.218 25.18 25.18 0 0 1-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0 1 12 5.052 5.5 5.5 0 0 1 16.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 0 1-4.244 3.17 15.247 15.247 0 0 1-.383.219l-.022.012-.007.004-.003.001a.752.752 0 0 1-.704 0l-.003-.001Z" />
+                        </svg>
+                        가족 등록</a></li>
                       <li>
                         <hr class="dropdown-divider">
                       </li>
                     </template>
-                    <li><a class="dropdown-item cursor-pointer red" @click.stop="unfriend(friend.member)"><i
-                        class="bi bi-trash-fill"></i> 친구 삭제</a></li>
+                    <li><a class="dropdown-item cursor-pointer red" @click.stop="unfriend(friend.member)">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" viewBox="0 0 24 24" fill="currentColor">
+                        <path fill-rule="evenodd" d="M16.5 4.478v.227a48.816 48.816 0 0 1 3.878.512.75.75 0 1 1-.256 1.478l-.209-.035-1.005 13.07a3 3 0 0 1-2.991 2.77H8.084a3 3 0 0 1-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 0 1-.256-1.478A48.567 48.567 0 0 1 7.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 0 1 3.369 0c1.603.051 2.815 1.387 2.815 2.951Zm-6.136-1.452a51.196 51.196 0 0 1 3.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 0 0-6 0v-.113c0-.794.609-1.428 1.364-1.452Zm-.355 5.945a.75.75 0 1 0-1.5.058l.347 9a.75.75 0 1 0 1.499-.058l-.346-9Zm5.48.058a.75.75 0 1 0-1.498-.058l-.347 9a.75.75 0 0 0 1.5.058l.345-9Z" clip-rule="evenodd" />
+                      </svg>
+                      친구 삭제</a></li>
                   </ul>
                 </div>
               </div>
-              <p class="mt-2 text-muted">
-                <i class="bi bi-person-badge me-1"></i> 근무:
-                <span class="ms-1" v-if="friend.duty">{{ friend.duty?.dutyType }}</span>
-                <span class="ms-1 text-muted" v-else>-</span>
+              <p class="mt-2 text-gray-500">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" viewBox="0 0 24 24" fill="currentColor">
+                  <path fill-rule="evenodd" d="M4.5 3.75a3 3 0 0 0-3 3v10.5a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3V6.75a3 3 0 0 0-3-3h-15Zm4.125 3a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Zm-3.873 8.703a4.126 4.126 0 0 1 7.746 0 .75.75 0 0 1-.351.92 7.47 7.47 0 0 1-3.522.877 7.47 7.47 0 0 1-3.522-.877.75.75 0 0 1-.351-.92ZM15 8.25a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 0-1.5H15ZM14.25 12a.75.75 0 0 1 .75-.75h3.75a.75.75 0 0 1 0 1.5H15a.75.75 0 0 1-.75-.75Zm.75 2.25a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 0-1.5H15Z" clip-rule="evenodd" />
+                </svg>
+                근무:
+                <span class="ml-1" v-if="friend.duty">{{ friend.duty?.dutyType }}</span>
+                <span class="ml-1 text-gray-500" v-else>-</span>
               </p>
               <div class="mt-2">
                 <template v-if="friend.schedules && friend.schedules.length">
-                  <ul class="list-unstyled">
+                  <ul class="list-none">
                     <li v-for="schedule in friend.schedules" :key="schedule.id"
-                        class="text-sm py-1 border-bottom last:border-0">
+                        class="text-sm py-1 border-b last:border-0">
                       <span>{{ printSchedule(schedule) }}</span>
-                      <span class="text-secondary ms-2">{{ printScheduleTime(schedule.startDateTime) }}</span>
+                      <span class="text-gray-500 ml-2">{{ printScheduleTime(schedule.startDateTime) }}</span>
                     </li>
                   </ul>
                 </template>
               </div>
             </div>
-            <div class="friend-handle-wrapper d-flex justify-content-end" v-if="friend.pinOrder" @click.stop>
-              <div class="handle bg-light rounded-4 border px-2 pt-2 pb-1 shadow-sm">
-                <i class="bi bi-arrows-move"></i>
+            <div class="friend-handle-wrapper flex justify-end" v-if="friend.pinOrder" @click.stop>
+              <div class="handle bg-gray-100 rounded-3xl border px-2 pt-2 pb-1 shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path fill-rule="evenodd" d="M3.97 3.97a.75.75 0 0 1 1.06 0l.97.97V3a.75.75 0 0 1 1.5 0v1.94l.97-.97a.75.75 0 0 1 1.06 1.06l-.97.97H10.5a.75.75 0 0 1 0 1.5H8.56l.97.97a.75.75 0 1 1-1.06 1.06l-.97-.97V10.5a.75.75 0 0 1-1.5 0V8.56l-.97.97a.75.75 0 1 1-1.06-1.06l.97-.97H3a.75.75 0 0 1 0-1.5h1.94l-.97-.97a.75.75 0 0 1 0-1.06ZM13.5 13.5a.75.75 0 0 1 .75-.75h6a.75.75 0 0 1 0 1.5h-6a.75.75 0 0 1-.75-.75Zm0 3a.75.75 0 0 1 .75-.75h6a.75.75 0 0 1 0 1.5h-6a.75.75 0 0 1-.75-.75Zm0 3a.75.75 0 0 1 .75-.75h6a.75.75 0 0 1 0 1.5h-6a.75.75 0 0 1-.75-.75Zm-4.5-3a.75.75 0 0 1 .75-.75h.008a.75.75 0 0 1 .75.75v.008a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v-.008Zm.75 2.25a.75.75 0 0 0-.75.75v.008c0 .414.336.75.75.75h.008a.75.75 0 0 0 .75-.75v-.008a.75.75 0 0 0-.75-.75H9.75Z" clip-rule="evenodd" />
+                </svg>
               </div>
             </div>
           </div>
-          <div class="p-4 border rounded mb-2 cursor-pointer bg-primary shadow-sm text-center d-flex flex-column align-items-center justify-content-center"
+          <div class="p-4 border rounded mb-2 cursor-pointer bg-blue-500 shadow-sm text-center flex flex-col items-center justify-center"
                style="width: calc(50% - 12px);"
                v-if="friendInfoInitialized"
                @click="openSearchModal">
-            <i class="bi bi-person-plus-fill fs-4 mb-2 text-white"></i>
-            <span class="fw-bold text-white">친구 추가</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-2 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M5.25 6.375a4.125 4.125 0 1 1 8.25 0 4.125 4.125 0 0 1-8.25 0ZM2.25 19.125a7.125 7.125 0 0 1 14.25 0v.003l-.001.119a.75.75 0 0 1-.363.63 13.067 13.067 0 0 1-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 0 1-.364-.63l-.001-.122ZM18.75 7.5a.75.75 0 0 0-1.5 0v2.25H15a.75.75 0 0 0 0 1.5h2.25v2.25a.75.75 0 0 0 1.5 0v-2.25H21a.75.75 0 0 0 0-1.5h-2.25V7.5Z" />
+            </svg>
+            <span class="font-bold text-white">친구 추가</span>
           </div>
         </div>
         </template>
@@ -218,14 +277,22 @@
 
   <div th:if="${loginMember?.isAdmin}" class="mb-4 friend-section" v-if="friendInfoInitialized">
     <div class="bg-white rounded shadow-sm border">
-      <div class="bg-secondary text-center py-2 rounded-top fw-bold text-uppercase text-white">관리자</div>
-      <div class="p-4 fs-3">
-        <div class="d-flex gap-3 text-align-center">
-          <div class="rounded cursor-pointer shadow-sm col-6 p-3 border">
-            <a class="d-block w-100" href="/admin">회원관리 <i class="bi bi-gear-wide-connected"></i></a>
+      <div class="bg-gray-500 text-center py-2 rounded-t font-bold uppercase text-white">관리자</div>
+      <div class="p-4 text-2xl">
+        <div class="flex gap-3 text-center">
+          <div class="rounded cursor-pointer shadow-sm w-1/2 p-3 border">
+            <a class="block w-full" href="/admin">회원관리
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" viewBox="0 0 24 24" fill="currentColor">
+                <path fill-rule="evenodd" d="M11.828 2.25c-.916 0-1.699.663-1.85 1.567l-.091.549a.798.798 0 0 1-.517.608 7.45 7.45 0 0 0-.478.198.798.798 0 0 1-.796-.064l-.453-.324a1.875 1.875 0 0 0-2.416.2l-.243.243a1.875 1.875 0 0 0-.2 2.416l.324.453a.798.798 0 0 1 .064.796 7.448 7.448 0 0 0-.198.478.798.798 0 0 1-.608.517l-.55.092a1.875 1.875 0 0 0-1.566 1.849v.344c0 .916.663 1.699 1.567 1.85l.549.091c.281.047.508.25.608.517.06.162.127.321.198.478a.798.798 0 0 1-.064.796l-.324.453a1.875 1.875 0 0 0 .2 2.416l.243.243c.648.648 1.67.733 2.416.2l.453-.324a.798.798 0 0 1 .796-.064c.157.071.316.137.478.198.267.1.47.327.517.608l.092.55c.15.903.932 1.566 1.849 1.566h.344c.916 0 1.699-.663 1.85-1.567l.091-.549a.798.798 0 0 1 .517-.608 7.52 7.52 0 0 0 .478-.198.798.798 0 0 1 .796.064l.453.324a1.875 1.875 0 0 0 2.416-.2l.243-.243c.648-.648.733-1.67.2-2.416l-.324-.453a.798.798 0 0 1-.064-.796c.071-.157.137-.316.198-.478.1-.267.327-.47.608-.517l.55-.091a1.875 1.875 0 0 0 1.566-1.85v-.344c0-.916-.663-1.699-1.567-1.85l-.549-.091a.798.798 0 0 1-.608-.517 7.507 7.507 0 0 0-.198-.478.798.798 0 0 1 .064-.796l.324-.453a1.875 1.875 0 0 0-.2-2.416l-.243-.243a1.875 1.875 0 0 0-2.416-.2l-.453.324a.798.798 0 0 1-.796.064 7.462 7.462 0 0 0-.478-.198.798.798 0 0 1-.517-.608l-.091-.55a1.875 1.875 0 0 0-1.85-1.566h-.344ZM12 15.75a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z" clip-rule="evenodd" />
+              </svg>
+            </a>
           </div>
-          <div class="rounded cursor-pointer shadow-sm col-6 p-3 border">
-            <a class="d-block w-100" href="/admin/team">팀 관리 <i class="bi bi-gear-wide-connected"></i></a>
+          <div class="rounded cursor-pointer shadow-sm w-1/2 p-3 border">
+            <a class="block w-full" href="/admin/team">팀 관리
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" viewBox="0 0 24 24" fill="currentColor">
+                <path fill-rule="evenodd" d="M11.828 2.25c-.916 0-1.699.663-1.85 1.567l-.091.549a.798.798 0 0 1-.517.608 7.45 7.45 0 0 0-.478.198.798.798 0 0 1-.796-.064l-.453-.324a1.875 1.875 0 0 0-2.416.2l-.243.243a1.875 1.875 0 0 0-.2 2.416l.324.453a.798.798 0 0 1 .064.796 7.448 7.448 0 0 0-.198.478.798.798 0 0 1-.608.517l-.55.092a1.875 1.875 0 0 0-1.566 1.849v.344c0 .916.663 1.699 1.567 1.85l.549.091c.281.047.508.25.608.517.06.162.127.321.198.478a.798.798 0 0 1-.064.796l-.324.453a1.875 1.875 0 0 0 .2 2.416l.243.243c.648.648 1.67.733 2.416.2l.453-.324a.798.798 0 0 1 .796-.064c.157.071.316.137.478.198.267.1.47.327.517.608l.092.55c.15.903.932 1.566 1.849 1.566h.344c.916 0 1.699-.663 1.85-1.567l.091-.549a.798.798 0 0 1 .517-.608 7.52 7.52 0 0 0 .478-.198.798.798 0 0 1 .796.064l.453.324a1.875 1.875 0 0 0 2.416-.2l.243-.243c.648-.648.733-1.67.2-2.416l-.324-.453a.798.798 0 0 1-.064-.796c.071-.157.137-.316.198-.478.1-.267.327-.47.608-.517l.55-.091a1.875 1.875 0 0 0 1.566-1.85v-.344c0-.916-.663-1.699-1.567-1.85l-.549-.091a.798.798 0 0 1-.608-.517 7.507 7.507 0 0 0-.198-.478.798.798 0 0 1 .064-.796l.324-.453a1.875 1.875 0 0 0-.2-2.416l-.243-.243a1.875 1.875 0 0 0-2.416-.2l-.453.324a.798.798 0 0 1-.796.064 7.462 7.462 0 0 0-.478-.198.798.798 0 0 1-.517-.608l-.091-.55a1.875 1.875 0 0 0-1.85-1.566h-.344ZM12 15.75a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z" clip-rule="evenodd" />
+              </svg>
+            </a>
           </div>
         </div>
       </div>
@@ -234,78 +301,84 @@
 
 </div> <!--END DASHBOARD-->
 
-<div id="member-search-modal" class="modal fade" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <p class="fs-2 modal-title">친구 추가</p>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<div id="member-search-modal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-black/50" data-tw-modal tabindex="-1" aria-hidden="true">
+  <div class="flex min-h-screen items-center relative mx-auto my-8 max-w-4xl">
+    <div class="relative bg-white rounded-lg shadow-xl w-full">
+      <div class="flex items-center justify-between p-4 border-b">
+        <p class="text-3xl">친구 추가</p>
+        <button type="button" class="text-gray-400 hover:text-gray-600" data-tw-dismiss="modal" aria-label="Close">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
 
-      <div class="modal-body">
-        <div class="input-group mb-3">
-          <input type="text" class="form-control" placeholder="이름 또는 팀 검색"
+      <div class="p-4">
+        <div class="flex mb-3">
+          <input type="text" class="flex-grow px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="이름 또는 팀 검색"
                  aria-label="Search" aria-describedby="search-button"
                  v-model="keyword" v-on:keyup.enter="search">
-          <button class="btn btn-outline-secondary" type="button" id="search-button" v-on:click="search">
+          <button class="px-4 py-2 border border-gray-500 text-gray-500 hover:bg-gray-500 hover:text-white rounded-r-md font-medium transition-colors" type="button" id="search-button" v-on:click="search">
             검색
           </button>
         </div>
 
         <div v-if="searchResult.length > 0">
-          <table class="table table-hover align-middle">
-            <colgroup>
-              <col style="width: 10%">
-              <col style="width: 35%">
-              <col style="width: 35%">
-              <col style="width: 20%">
-            </colgroup>
-            <thead class="table-light">
-            <tr>
-              <th scope="col">#</th>
-              <th scope="col">팀</th>
-              <th scope="col">이름</th>
-              <th scope="col" class="text-center">요청</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr v-for="(member, index) in searchResult">
-              <td>{{ (page - 1) * pageSize + index + 1 }}</td>
-              <td>{{ member.team }}</td>
-              <td>{{ member.name }}</td>
-              <td class="text-center">
-                <button class="btn btn-outline-success btn-sm" v-on:click="requestFriend(member)">
-                  친구 요청
-                </button>
-              </td>
-            </tr>
-            </tbody>
-          </table>
+          <div class="overflow-x-auto">
+            <table class="w-full border-collapse">
+              <colgroup>
+                <col style="width: 10%">
+                <col style="width: 35%">
+                <col style="width: 35%">
+                <col style="width: 20%">
+              </colgroup>
+              <thead class="bg-gray-100">
+              <tr>
+                <th class="border px-4 py-2">#</th>
+                <th class="border px-4 py-2">팀</th>
+                <th class="border px-4 py-2">이름</th>
+                <th class="border px-4 py-2 text-center">요청</th>
+              </tr>
+              </thead>
+              <tbody>
+              <tr v-for="(member, index) in searchResult" class="hover:bg-gray-100">
+                <td class="border px-4 py-2">{{ (page - 1) * pageSize + index + 1 }}</td>
+                <td class="border px-4 py-2">{{ member.team }}</td>
+                <td class="border px-4 py-2">{{ member.name }}</td>
+                <td class="border px-4 py-2 text-center">
+                  <button class="px-2 py-1 text-sm border border-green-500 text-green-500 hover:bg-green-500 hover:text-white rounded font-medium transition-colors" v-on:click="requestFriend(member)">
+                    친구 요청
+                  </button>
+                </td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
 
-          <nav class="d-flex justify-content-center mt-3">
-            <ul class="pagination pagination-sm">
-              <li class="page-item" :class="{ 'disabled': page == 1 }">
-                <button class="page-link" @click="prevPage" aria-label="Previous">
+          <nav class="flex justify-center mt-3">
+            <ul class="flex">
+              <li :class="{ 'opacity-50 cursor-not-allowed': page == 1 }">
+                <button class="px-3 py-1 border border-gray-300 rounded-l hover:bg-gray-100" @click="prevPage" aria-label="Previous">
                   &laquo;
                 </button>
               </li>
-              <li class="page-item" v-for="i in totalPage" :key="i" :class="{ 'active': i == page }">
-                <button class="page-link" @click="goToPage(i)">{{ i }}</button>
+              <li v-for="i in totalPage" :key="i">
+                <button class="px-3 py-1 border-t border-b border-gray-300 hover:bg-gray-100" :class="{ 'bg-blue-500 text-white': i == page }" @click="goToPage(i)">{{ i }}</button>
               </li>
-              <li class="page-item" :class="{ 'disabled': page == totalPage }">
-                <button class="page-link" @click="nextPage" aria-label="Next">
+              <li :class="{ 'opacity-50 cursor-not-allowed': page == totalPage }">
+                <button class="px-3 py-1 border border-gray-300 rounded-r hover:bg-gray-100" @click="nextPage" aria-label="Next">
                   &raquo;
                 </button>
               </li>
             </ul>
           </nav>
-          <p class="text-center text-muted mt-2">페이지 {{ page }} / {{ totalPage }} | 전체 결과: {{ totalElements }}</p>
+          <p class="text-center text-gray-500 mt-2">페이지 {{ page }} / {{ totalPage }} | 전체 결과: {{ totalElements }}</p>
         </div>
-        <p v-else class="text-center text-muted">검색 결과가 없습니다.</p>
+        <p v-else class="text-center text-gray-500">검색 결과가 없습니다.</p>
       </div>
 
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+      <div class="flex items-center justify-end p-4 border-t gap-2">
+        <button type="button" class="px-4 py-2 bg-gray-500 text-white hover:bg-gray-600 rounded font-medium transition-colors" data-tw-dismiss="modal">닫기</button>
       </div>
     </div>
   </div>
@@ -653,7 +726,7 @@
     },
     methods: {
       openModal() {
-        $('#member-search-modal').modal('show');
+        TwModal.show('member-search-modal');
         this.reset();
       },
       prevPage: function () {

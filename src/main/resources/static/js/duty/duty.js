@@ -261,9 +261,10 @@ function loadApp(memberId, teamId, loginMemberId, memberName, year, month, searc
           app.createSchedule.startDateTimeOld = app.createSchedule.startDateTime;
         },
         closeDropdown() {
-          const dropdownElement = document.querySelector('.dropdown-menu');
-          const dropdownInstance = new bootstrap.Dropdown(dropdownElement, {autoClose: true});
-          dropdownInstance.hide();
+          const dropdownElement = document.querySelector('.dropdown-menu.show');
+          if (dropdownElement) {
+            dropdownElement.classList.remove('show');
+          }
         },
         loadCalendar() {
           fetch(`/api/calendar?year=${this.year}&month=${this.month}`)

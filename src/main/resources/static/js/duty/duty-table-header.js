@@ -112,7 +112,7 @@ const dutyTableHeaderMethods = {
         });
     },
     showOtherDuties() {
-        $('#show-other-duties-modal').modal('show');
+        TwModal.show('show-other-duties-modal');
     },
     toggleMyDuties() {
         this.showMyDuties = !this.showMyDuties;

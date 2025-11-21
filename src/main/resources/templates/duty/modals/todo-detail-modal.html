@@ -1,31 +1,38 @@
-<div id="todo-details-modal" class="modal fade" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="todo-details-title">할일 상세</h5>
-        <button type="button" class="btn-close position-absolute end-0 me-3" data-bs-dismiss="modal"
-                aria-label="Close"></button>
+<div id="todo-details-modal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-black/50" data-tw-modal tabindex="-1" aria-hidden="true">
+  <div class="flex min-h-screen items-center relative mx-auto my-8 max-w-4xl">
+    <div class="relative bg-white rounded-lg shadow-xl w-full">
+      <div class="flex items-center justify-between p-4 border-b">
+        <h5 class="text-xl font-semibold" id="todo-details-title">할일 상세</h5>
+        <button type="button" class="text-gray-400 hover:text-gray-600 absolute right-0 mr-3" data-tw-dismiss="modal"
+                aria-label="Close">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
-      <div class="modal-body">
-        <div class="modal-body">
+      <div class="p-4">
+        <div class="p-4">
           <div class="input-group mb-2">
             <span class="input-group-text" id="todo-title-input">제목</span>
-            <input type="text" class="todo-title form-control" aria-labelledby="todo-title-input"
+            <input type="text" class="todo-title w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" aria-labelledby="todo-title-input"
                    aria-label="title" :readonly="!editTodoMode"/>
           </div>
           <div class="input-group">
             <span class="input-group-text" id="todo-content-input">내용</span>
-            <textarea rows="8" class="todo-content form-control" aria-label="content"
+            <textarea rows="8" class="todo-content w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" aria-label="content"
                       aria-labelledby="todo-content-input"
                       :readonly="!editTodoMode"
                       style="resize: vertical;"></textarea>
           </div>
-          <div class="mt-3 w-100" v-if="editTodoMode || selectedTodoAttachments.length > 0">
-            <label class="form-label fw-bold">
-              <i class="bi bi-paperclip"></i> 첨부파일
+          <div class="mt-3 w-full" v-if="editTodoMode || selectedTodoAttachments.length > 0">
+            <label class="block text-sm font-medium text-gray-700 mb-1 font-bold">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" viewBox="0 0 24 24" fill="currentColor">
+                <path fill-rule="evenodd" d="M18.97 3.659a2.25 2.25 0 00-3.182 0l-10.94 10.94a3.75 3.75 0 105.304 5.303l7.693-7.693a.75.75 0 011.06 1.06l-7.693 7.693a5.25 5.25 0 11-7.424-7.424l10.939-10.94a3.75 3.75 0 115.303 5.304L9.097 18.835l-.008.008-.007.007-.002.002-.003.002A2.25 2.25 0 015.91 15.66l7.81-7.81a.75.75 0 011.061 1.06l-7.81 7.81a.75.75 0 001.054 1.068L18.97 6.84a2.25 2.25 0 000-3.182z" clip-rule="evenodd" />
+              </svg>
+              첨부파일
             </label>
             <template v-if="!editTodoMode">
-                <div class="text-muted small" v-if="selectedTodoAttachments.length === 0">
+                <div class="text-gray-500 text-sm" v-if="selectedTodoAttachments.length === 0">
                   첨부된 파일이 없습니다.
                 </div>
                 <div class="attachment-gallery" v-else>
@@ -35,10 +42,12 @@
                     <a
                         v-if="todoDetailAttachmentDownloadUrl(attachment)"
                         :href="todoDetailAttachmentDownloadUrl(attachment)"
-                        class="attachment-download position-absolute btn btn-sm"
+                        class="attachment-download absolute px-2 py-1 rounded text-sm"
                         download
                         title="다운로드">
-                      <i class="bi bi-download text-white"></i>
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                        <path fill-rule="evenodd" d="M12 2.25a.75.75 0 01.75.75v11.69l3.22-3.22a.75.75 0 111.06 1.06l-4.5 4.5a.75.75 0 01-1.06 0l-4.5-4.5a.75.75 0 111.06-1.06l3.22 3.22V3a.75.75 0 01.75-.75zm-9 13.5a.75.75 0 01.75.75v2.25a1.5 1.5 0 001.5 1.5h13.5a1.5 1.5 0 001.5-1.5V16.5a.75.75 0 011.5 0v2.25a3 3 0 01-3 3H5.25a3 3 0 01-3-3V16.5a.75.75 0 01.75-.75z" clip-rule="evenodd" />
+                      </svg>
                     </a>
                     <div
                         class="attachment-thumb"
@@ -47,16 +56,18 @@
                       <template v-if="attachment.isImage && (attachment.thumbnailUrl || attachment.previewUrl)">
                         <img
                             :src="attachment.thumbnailUrl || attachment.previewUrl"
-                            class="w-100 h-100"
+                            class="w-full h-full"
                             style="object-fit: cover;"
                             :alt="attachment.name">
                         <div
-                            class="attachment-hover-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center">
-                          <i class="bi bi-search text-white" style="font-size: 2rem;"></i>
+                            class="attachment-hover-overlay absolute top-0 left-0 w-full h-full flex items-center justify-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10.5 3.75a6.75 6.75 0 100 13.5 6.75 6.75 0 000-13.5zM2.25 10.5a8.25 8.25 0 1114.59 5.28l4.69 4.69a.75.75 0 11-1.06 1.06l-4.69-4.69A8.25 8.25 0 012.25 10.5z" clip-rule="evenodd" />
+                          </svg>
                         </div>
                       </template>
-                      <div v-else class="d-flex align-items-center justify-content-center h-100">
-                        <i :class="['bi', todoDetailAttachmentIconClass(attachment), 'text-muted', 'display-4', 'lh-1']"></i>
+                      <div v-else class="flex items-center justify-center h-full">
+                        <i :class="['bi', todoDetailAttachmentIconClass(attachment), 'text-gray-500', 'display-4', 'lh-1']"></i>
                       </div>
                     </div>
                     <div class="attachment-meta">
@@ -78,16 +89,18 @@
                       <template v-if="attachment.isImage && (attachment.thumbnailUrl || attachment.previewUrl)">
                         <img
                             :src="attachment.thumbnailUrl || attachment.previewUrl"
-                            class="w-100 h-100"
+                            class="w-full h-full"
                             style="object-fit: cover;"
                             :alt="attachment.name">
                         <div
-                            class="attachment-hover-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center">
-                          <i class="bi bi-search text-white" style="font-size: 2rem;"></i>
+                            class="attachment-hover-overlay absolute top-0 left-0 w-full h-full flex items-center justify-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10.5 3.75a6.75 6.75 0 100 13.5 6.75 6.75 0 000-13.5zM2.25 10.5a8.25 8.25 0 1114.59 5.28l4.69 4.69a.75.75 0 11-1.06 1.06l-4.69-4.69A8.25 8.25 0 012.25 10.5z" clip-rule="evenodd" />
+                          </svg>
                         </div>
                       </template>
-                      <div v-else class="d-flex align-items-center justify-content-center h-100">
-                        <i :class="['bi', todoDetailAttachmentIconClass(attachment), 'text-muted', 'display-4', 'lh-1']"></i>
+                      <div v-else class="flex items-center justify-center h-full">
+                        <i :class="['bi', todoDetailAttachmentIconClass(attachment), 'text-gray-500', 'display-4', 'lh-1']"></i>
                       </div>
                     </div>
                     <div class="attachment-meta">
@@ -101,30 +114,34 @@
                       </div>
                     </div>
                   </div>
-                  <button type="button" class="attachment-remove btn btn-sm btn-danger"
+                  <button type="button" class="attachment-remove px-2 py-1 rounded text-sm bg-red-500 text-white hover:bg-red-600"
                           @click="todoDetailRemoveAttachment(attachment.id)">
-                    <i class="bi bi-x"></i>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                      <path fill-rule="evenodd" d="M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 01-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z" clip-rule="evenodd" />
+                    </svg>
                   </button>
                 </div>
                 <div class="attachment-tile attachment-add-button">
                   <input type="file" id="todo-detail-attachment-input" multiple hidden>
                   <label for="todo-detail-attachment-input"
-                         class="attachment-thumb d-flex flex-column align-items-center justify-content-center h-100 m-0"
+                         class="attachment-thumb flex flex-col items-center justify-center h-full m-0"
                          style="cursor: pointer;">
-                    <i class="bi bi-plus-circle text-muted" style="font-size: 3rem;"></i>
-                    <small class="text-muted mt-2" style="font-size: 0.75rem;">드래그 또는 클릭</small>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-500" viewBox="0 0 24 24" fill="currentColor">
+                      <path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 9a.75.75 0 00-1.5 0v2.25H9a.75.75 0 000 1.5h2.25V15a.75.75 0 001.5 0v-2.25H15a.75.75 0 000-1.5h-2.25V9z" clip-rule="evenodd" />
+                    </svg>
+                    <small class="text-gray-500 mt-2" style="font-size: 0.75rem;">드래그 또는 클릭</small>
                   </label>
                 </div>
               </div>
             </template>
           </div>
         </div>
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mt-3 gap-2">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mt-3 gap-2">
           <div>
-            <span class="badge bg-success me-2" v-if="selectedTodoStatus === 'COMPLETED'">완료</span>
-            <p class="text-muted todo-date mb-0 small"></p>
+            <span class="badge bg-green-500 mr-2 px-2 py-1 rounded text-white text-sm" v-if="selectedTodoStatus === 'COMPLETED'">완료</span>
+            <p class="text-gray-500 todo-date mb-0 text-sm"></p>
           </div>
-          <div class="d-flex flex-wrap gap-2 align-items-center">
+          <div class="flex flex-wrap gap-2 items-center">
             <div class="pretty p-svg p-plain" v-if="!editTodoMode"
                  v-on:click.prevent="selectedTodoStatus === 'ACTIVE' ? completeTodo() : reopenTodo()"
                  style="cursor: pointer;">
@@ -134,16 +151,16 @@
                 <label>완료</label>
               </div>
             </div>
-            <button type="button" class="btn btn-info btn-sm" v-on:click="enterEditMode()"
+            <button type="button" class="px-2 py-1 text-sm rounded font-medium transition-colors bg-cyan-500 text-white hover:bg-cyan-600" v-on:click="enterEditMode()"
                     v-if="!editTodoMode">수정
             </button>
-            <button type="button" class="btn btn-success btn-sm" v-on:click="updateTodo()"
+            <button type="button" class="px-2 py-1 text-sm rounded font-medium transition-colors bg-green-500 text-white hover:bg-green-600" v-on:click="updateTodo()"
                     v-if="editTodoMode">저장
             </button>
-            <button type="button" class="btn btn-secondary btn-sm" v-on:click="cancelEdit()"
+            <button type="button" class="px-2 py-1 text-sm rounded font-medium transition-colors bg-gray-500 text-white hover:bg-gray-600" v-on:click="cancelEdit()"
                     v-if="editTodoMode">취소
             </button>
-            <button type="button" class="btn btn-danger btn-sm" v-on:click="deleteTodo()"
+            <button type="button" class="px-2 py-1 text-sm rounded font-medium transition-colors bg-red-500 text-white hover:bg-red-600" v-on:click="deleteTodo()"
                     v-if="!editTodoMode">삭제
             </button>
           </div>

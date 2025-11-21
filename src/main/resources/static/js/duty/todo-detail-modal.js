@@ -37,7 +37,7 @@ const todoDetailMethods = {
       modal.querySelector('.todo-content').value = this.editTodo.content || this.originalTodoContent;
     }
     if (!skipModalHide) {
-      $('#todo-details-modal').modal('hide');
+      TwModal.hide('todo-details-modal');
     }
   }
   ,
@@ -303,7 +303,7 @@ const todoDetailMethods = {
       app.selectedTodoStatus = data.status;
       app.exitTodoDetailAttachments(true);
       app.loadTodos();
-      $('#todo-details-modal').modal('hide');
+      TwModal.hide('todo-details-modal');
     });
   }
   ,
@@ -338,7 +338,7 @@ const todoDetailMethods = {
       app.selectedTodoStatus = data.status;
       app.exitTodoDetailAttachments(true);
       app.loadTodos();
-      $('#todo-details-modal').modal('hide');
+      TwModal.hide('todo-details-modal');
     });
   }
   ,
@@ -378,7 +378,7 @@ const todoDetailMethods = {
         });
         app.exitTodoDetailAttachments(true);
         app.loadTodos();
-        $('#todo-details-modal').modal('hide');
+        TwModal.hide('todo-details-modal');
       });
     });
   }

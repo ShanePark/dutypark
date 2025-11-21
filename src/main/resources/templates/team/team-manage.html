@@ -1,34 +1,34 @@
-<div id="app" class="card p-0 rounded shadow-sm fs-2" v-cloak>
-  <div class="card-header bg-secondary text-white fw-bold m-1 text-center">
+<div id="app" class="bg-white rounded-lg shadow-sm p-0 text-lg" v-cloak>
+  <div class="px-4 py-3 bg-gray-500 text-white font-bold m-1 text-center rounded-t-lg">
     {{ team.name }} 관리
-    <a v-if="isAppAdmin" class="btn btn-primary" href="/admin/team">팀 목록</a>
+    <a v-if="isAppAdmin" class="ml-2 px-4 py-2 bg-blue-500 text-white rounded font-medium transition-colors hover:bg-blue-600" href="/admin/team">팀 목록</a>
     <button v-if="isAdmin && teamLoaded && !hasMember"
             @click="removeTeam()"
-            class="btn btn-danger">
+            class="ml-2 px-4 py-2 bg-red-500 text-white rounded font-medium transition-colors hover:bg-red-600">
       팀 삭제
     </button>
   </div>
-  <div class="card-body">
-    <table class="table table-hover table-bordered">
+  <div class="p-4">
+    <table class="w-full border-collapse border border-gray-300">
       <tbody>
-      <tr>
-        <th scope="row">팀 설명</th>
-        <td>{{ team.description }}</td>
+      <tr class="hover:bg-gray-100">
+        <th scope="row" class="border border-gray-300 p-2 bg-gray-50 text-left">팀 설명</th>
+        <td class="border border-gray-300 p-2">{{ team.description }}</td>
       </tr>
-      <tr v-if="isAdmin">
-        <th scope="row">팀 대표</th>
-        <td class="fw-bold">{{ team.adminName ? team.adminName : 'N/A' }}
+      <tr v-if="isAdmin" class="hover:bg-gray-100">
+        <th scope="row" class="border border-gray-300 p-2 bg-gray-50 text-left">팀 대표</th>
+        <td class="border border-gray-300 p-2 font-bold">{{ team.adminName ? team.adminName : 'N/A' }}
           <button
               v-if="team.adminId && loginId !== team.adminId"
-              class="btn btn-outline-danger fs-2" @click="changeAdmin()">
-            <i class="bi bi-trash"></i> 대표 취소
+              class="ml-2 px-2 py-1 border border-red-500 text-red-500 rounded text-lg hover:bg-red-500 hover:text-white transition-colors" @click="changeAdmin()">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M16.5 4.478v.227a48.816 48.816 0 013.878.512.75.75 0 11-.256 1.478l-.209-.035-1.005 13.07a3 3 0 01-2.991 2.77H8.084a3 3 0 01-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 01-.256-1.478A48.567 48.567 0 017.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 013.369 0c1.603.051 2.815 1.387 2.815 2.951zm-6.136-1.452a51.196 51.196 0 013.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 00-6 0v-.113c0-.794.609-1.428 1.364-1.452zm-.355 5.945a.75.75 0 10-1.5.058l.347 9a.75.75 0 101.499-.058l-.346-9zm5.48.058a.75.75 0 10-1.498-.058l-.347 9a.75.75 0 001.5.058l.345-9z" clip-rule="evenodd"/></svg> 대표 취소
           </button>
         </td>
       </tr>
-      <tr>
-        <th scope="row">근무 형태</th>
-        <td>
-          <select class="form-select fs-2" v-on:change="updateWorkType($event.target.value)">
+      <tr class="hover:bg-gray-100">
+        <th scope="row" class="border border-gray-300 p-2 bg-gray-50 text-left">근무 형태</th>
+        <td class="border border-gray-300 p-2">
+          <select class="w-full px-3 py-2 border border-gray-300 rounded-md text-lg" v-on:change="updateWorkType($event.target.value)">
             <option value="WEEKDAY" :selected="team.workType === 'WEEKDAY'">평일 근무</option>
             <option value="WEEKEND" :selected="team.workType === 'WEEKEND'">주말 근무</option>
             <option value="FIXED" :selected="team.workType === 'FIXED'">고정 근무</option>
@@ -36,10 +36,10 @@
           </select>
         </td>
       </tr>
-      <tr>
-        <th scope="row">근무 반입 양식</th>
-        <td>
-          <select class="form-select fs-2" v-on:change="updateBatchTemplate($event.target.value)">
+      <tr class="hover:bg-gray-100">
+        <th scope="row" class="border border-gray-300 p-2 bg-gray-50 text-left">근무 반입 양식</th>
+        <td class="border border-gray-300 p-2">
+          <select class="w-full px-3 py-2 border border-gray-300 rounded-md text-lg" v-on:change="updateBatchTemplate($event.target.value)">
             <option value="">없음</option>
             <option v-for="template in dutyBatchTemplates"
                     v-bind:value="template.name"
@@ -50,129 +50,134 @@
           </select>
         </td>
       </tr>
-      <tr v-if="team.dutyBatchTemplate">
-        <th>근무표 업로드</th>
-        <td>
-          <button class="btn btn-primary fs-2" v-on:click="batchDuty()">등록</button>
+      <tr v-if="team.dutyBatchTemplate" class="hover:bg-gray-100">
+        <th class="border border-gray-300 p-2 bg-gray-50 text-left">근무표 업로드</th>
+        <td class="border border-gray-300 p-2">
+          <button class="px-4 py-2 bg-blue-500 text-white rounded font-medium transition-colors hover:bg-blue-600 text-lg" v-on:click="batchDuty()">등록</button>
         </td>
       </tr>
       </tbody>
     </table>
   </div>
 
-  <div class="card-body">
-    <button class="btn btn-outline-primary fs-2" v-on:click="memberSearchModal()"><i class="bi bi-person-plus"></i> 멤버
-      추가
+  <div class="p-4">
+    <button class="px-4 py-2 border border-blue-500 text-blue-500 rounded text-lg hover:bg-blue-500 hover:text-white transition-colors" v-on:click="memberSearchModal()">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" viewBox="0 0 24 24" fill="currentColor"><path d="M6.25 6.375a4.125 4.125 0 118.25 0 4.125 4.125 0 01-8.25 0zM3.25 19.125a7.125 7.125 0 0114.25 0v.003l-.001.119a.75.75 0 01-.363.63 13.067 13.067 0 01-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 01-.364-.63l-.001-.122zM19.75 7.5a.75.75 0 00-1.5 0v2.25H16a.75.75 0 000 1.5h2.25v2.25a.75.75 0 001.5 0v-2.25H22a.75.75 0 000-1.5h-2.25V7.5z"/></svg> 멤버 추가
     </button>
-    <div class="card-body">
-      <table class="table table-hover table-striped" v-if="hasMember">
-        <thead class="table-dark">
-        <tr class="text-align-center">
-          <th scope="col">#</th>
-          <th scope="col">이름</th>
-          <th scope="col">매니저</th>
-          <th class="text-align-center" scope="col">도구</th>
+    <div class="p-4">
+      <table class="w-full border-collapse" v-if="hasMember">
+        <thead class="bg-gray-800 text-white">
+        <tr class="text-center">
+          <th scope="col" class="p-2">#</th>
+          <th scope="col" class="p-2">이름</th>
+          <th scope="col" class="p-2">매니저</th>
+          <th class="text-center p-2" scope="col">도구</th>
         </tr>
         </thead>
         <tbody>
-        <tr class="text-align-center" v-for="(member, index) in team.members">
-          <td>{{ index+1 }}</td>
-          <td>{{ member.name }}</td>
-          <td v-if="!isAdmin">
-            <i v-if="member.isManager"
-               class="bi bi-check-circle"></i>
+        <tr class="text-center odd:bg-gray-50 hover:bg-gray-100" v-for="(member, index) in team.members">
+          <td class="p-2">{{ index+1 }}</td>
+          <td class="p-2">{{ member.name }}</td>
+          <td v-if="!isAdmin" class="p-2">
+            <svg v-if="member.isManager" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline text-green-500" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd"/></svg>
           </td>
-          <td v-if="isAdmin">
-            <i v-if="!member.isManager"
+          <td v-if="isAdmin" class="p-2">
+            <svg v-if="!member.isManager"
                @click="assignManager(member)"
-               class="bi bi-plus-circle cursor-pointer text-success"></i>
+               xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline cursor-pointer text-green-500" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 9a.75.75 0 00-1.5 0v2.25H9a.75.75 0 000 1.5h2.25V15a.75.75 0 001.5 0v-2.25H15a.75.75 0 000-1.5h-2.25V9z" clip-rule="evenodd"/></svg>
             <button v-if="member.isManager && !member.isAdmin"
                     @click="unAssignManager(member)"
-                    class="fs-2 btn btn-outline-warning">관리 권한 취소
+                    class="text-lg px-2 py-1 border border-yellow-500 text-yellow-600 rounded hover:bg-yellow-500 hover:text-white transition-colors">관리 권한 취소
             </button>
             <button v-if="isAdmin && member.isManager && !member.isAdmin"
                     @click="changeAdmin(member)"
-                    class="fs-2 btn btn-outline-primary"
+                    class="text-lg px-2 py-1 border border-blue-500 text-blue-500 rounded hover:bg-blue-500 hover:text-white transition-colors"
             >대표 위임
             </button>
             <span v-if="member.isAdmin">-</span>
           </td>
-          <td>
-            <button class="fs-2 btn btn-danger btn-sm" v-on:click="removeMember(member.id)">
-              <i class="bi bi-trash"></i>탈퇴
+          <td class="p-2">
+            <button class="text-lg px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors" v-on:click="removeMember(member.id)">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M16.5 4.478v.227a48.816 48.816 0 013.878.512.75.75 0 11-.256 1.478l-.209-.035-1.005 13.07a3 3 0 01-2.991 2.77H8.084a3 3 0 01-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 01-.256-1.478A48.567 48.567 0 017.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 013.369 0c1.603.051 2.815 1.387 2.815 2.951zm-6.136-1.452a51.196 51.196 0 013.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 00-6 0v-.113c0-.794.609-1.428 1.364-1.452zm-.355 5.945a.75.75 0 10-1.5.058l.347 9a.75.75 0 101.499-.058l-.346-9zm5.48.058a.75.75 0 10-1.498-.058l-.347 9a.75.75 0 001.5.058l.345-9z" clip-rule="evenodd"/></svg>탈퇴
             </button>
           </td>
         </tr>
         </tbody>
       </table>
-      <p v-else class="text-muted">There is no member in this group</p>
+      <p v-else class="text-gray-500">There is no member in this group</p>
     </div>
   </div>
 
-  <div class="card shadow-sm">
-    <div class="card-header bg-secondary text-white d-flex justify-content-between">
-      <h5 class="mb-0 fs-2">근무 유형</h5>
-      <button class="btn btn-light fs-2" v-on:click="addDutyType()"><i class="bi bi-plus-lg"></i> 추가</button>
+  <div class="bg-white rounded-lg shadow-sm">
+    <div class="px-4 py-3 bg-gray-500 text-white flex justify-between items-center rounded-t-lg">
+      <h5 class="mb-0 text-lg font-bold">근무 유형</h5>
+      <button class="px-4 py-2 bg-gray-100 text-gray-800 rounded font-medium transition-colors hover:bg-gray-200 text-lg" v-on:click="addDutyType()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H4.5a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z" clip-rule="evenodd"/></svg> 추가
+      </button>
     </div>
-    <div class="card-body">
-      <table class="table table-hover table-striped" v-if="hasDutyType">
-        <thead class="table-dark">
+    <div class="p-4">
+      <table class="w-full border-collapse" v-if="hasDutyType">
+        <thead class="bg-gray-800 text-white">
         <tr>
-          <th scope="col">#</th>
-          <th scope="col">근무명</th>
-          <th scope="col">색상</th>
-          <th class="text-align-center" scope="col">도구</th>
+          <th scope="col" class="p-2">#</th>
+          <th scope="col" class="p-2">근무명</th>
+          <th scope="col" class="p-2">색상</th>
+          <th class="text-center p-2" scope="col">도구</th>
         </tr>
         </thead>
         <tbody>
-        <tr v-for="(dutyType,index) in team.dutyTypes" v-bind:id="dutyType.id" class="duty-type">
-          <td>{{ index+1 }}</td>
-          <td class="fw-bold duty-type-name">{{ dutyType.name }}</td>
-          <td><span class="badge rounded-pill duty-type-color border"
+        <tr v-for="(dutyType,index) in team.dutyTypes" v-bind:id="dutyType.id" class="duty-type odd:bg-gray-50 hover:bg-gray-100">
+          <td class="p-2">{{ index+1 }}</td>
+          <td class="p-2 font-bold duty-type-name">{{ dutyType.name }}</td>
+          <td class="p-2"><span class="inline-block rounded-full duty-type-color border px-2"
                     :style="{'background-color': dutyType.color}"
                     :data-color="dutyType.color">&nbsp;&nbsp;</span>
-          <td class="text-align-right">
-            <button v-if="dutyType.id" class="fs-2 btn btn-secondary btn-sm"
+          <td class="p-2 text-right">
+            <button v-if="dutyType.id" class="text-lg px-2 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     :disabled="index==0 || index == (team.dutyTypes.length - 1)"
                     v-on:click="swapPosition(index, index + 1)">
-              <i class="bi bi-arrow-down"></i>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M12 2.25a.75.75 0 01.75.75v16.19l6.22-6.22a.75.75 0 111.06 1.06l-7.5 7.5a.75.75 0 01-1.06 0l-7.5-7.5a.75.75 0 111.06-1.06l6.22 6.22V3a.75.75 0 01.75-.75z" clip-rule="evenodd"/></svg>
             </button>
-            <button v-if="dutyType.id" class="fs-2 btn btn-secondary btn-sm" :disabled="index <= 1"
+            <button v-if="dutyType.id" class="text-lg px-2 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" :disabled="index <= 1"
                     v-on:click="swapPosition(index, index - 1)">
-              <i class="bi bi-arrow-up"></i>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M12 21.75a.75.75 0 01-.75-.75V4.81l-6.22 6.22a.75.75 0 11-1.06-1.06l7.5-7.5a.75.75 0 011.06 0l7.5 7.5a.75.75 0 11-1.06 1.06l-6.22-6.22V21a.75.75 0 01-.75.75z" clip-rule="evenodd"/></svg>
             </button>
-            <button class="fs-2 btn btn-primary btn-sm" v-on:click="updateDutyType($event.target)">
-              <i class="bi bi-pencil"></i> 수정
+            <button class="text-lg px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors" v-on:click="updateDutyType($event.target)">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline" viewBox="0 0 24 24" fill="currentColor"><path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z"/></svg> 수정
             </button>
-            <button class="fs-2 btn btn-danger btn-sm" :disabled="!dutyType.id"
+            <button class="text-lg px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" :disabled="!dutyType.id"
                     v-on:click.stop="removeDutyType(dutyType)">
-              <i class="bi bi-trash"></i> 삭제
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M16.5 4.478v.227a48.816 48.816 0 013.878.512.75.75 0 11-.256 1.478l-.209-.035-1.005 13.07a3 3 0 01-2.991 2.77H8.084a3 3 0 01-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 01-.256-1.478A48.567 48.567 0 017.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 013.369 0c1.603.051 2.815 1.387 2.815 2.951zm-6.136-1.452a51.196 51.196 0 013.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 00-6 0v-.113c0-.794.609-1.428 1.364-1.452zm-.355 5.945a.75.75 0 10-1.5.058l.347 9a.75.75 0 101.499-.058l-.346-9zm5.48.058a.75.75 0 10-1.498-.058l-.347 9a.75.75 0 001.5.058l.345-9z" clip-rule="evenodd"/></svg> 삭제
             </button>
           </td>
         </tr>
         </tbody>
       </table>
-      <p v-else class="text-muted">There is no duty type in this group</p>
+      <p v-else class="text-gray-500">There is no duty type in this group</p>
     </div>
   </div>
 </div>
 
 <!-- Modals -->
-<div id="member-search-modal" class="modal fade" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="fs-2 modal-title" v-text="mode=='memberSearch' ? '멤버 추가' : '대표 변경'"></h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<div id="member-search-modal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-black/50" data-tw-modal tabindex="-1" aria-hidden="true">
+  <div class="flex min-h-screen items-center relative mx-auto my-8 max-w-4xl">
+    <div class="relative bg-white rounded-lg shadow-xl w-full">
+      <div class="flex items-center justify-between p-4 border-b">
+        <h5 class="text-lg" v-text="mode=='memberSearch' ? '멤버 추가' : '대표 변경'"></h5>
+        <button type="button" class="text-gray-400 hover:text-gray-600" data-tw-dismiss="modal" aria-label="Close">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
-      <div class="modal-body">
-        <div class="input-group mb-3">
-          <input type="text" class="form-control" placeholder="Search" aria-label="Search"
+      <div class="p-4">
+        <div class="flex mb-3">
+          <input type="text" class="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Search" aria-label="Search"
                  aria-describedby="button-addon2" v-model="keyword" v-on:keyup.enter="search">
-          <button class="btn btn-outline-secondary" type="button" id="button-addon2" v-on:click="search">검색
+          <button class="px-4 py-2 border border-gray-500 text-gray-500 rounded-r-md hover:bg-gray-500 hover:text-white transition-colors" type="button" id="button-addon2" v-on:click="search">검색
           </button>
         </div>
-        <table class="table table-striped" v-if="searchResult.length > 0">
+        <table class="w-full border-collapse" v-if="searchResult.length > 0">
           <colgroup>
             <col style="width: 10%">
             <col style="width: 30%">
@@ -181,19 +186,19 @@
           </colgroup>
           <thead>
           <tr>
-            <th scope="col"></th>
-            <th scope="col">이름</th>
-            <th scope="col">이메일</th>
-            <th scope="col">추가</th>
+            <th scope="col" class="p-2 text-left"></th>
+            <th scope="col" class="p-2 text-left">이름</th>
+            <th scope="col" class="p-2 text-left">이메일</th>
+            <th scope="col" class="p-2 text-left">추가</th>
           </tr>
           </thead>
           <tbody>
-          <tr v-for="(member, index) in searchResult">
-            <td>{{(page-1) * pageSize + index + 1}}</td>
-            <td>{{ member.name }}</td>
-            <td>{{ member.email }}</td>
-            <td>
-              <button class="btn btn-primary"
+          <tr v-for="(member, index) in searchResult" class="odd:bg-gray-50">
+            <td class="p-2">{{(page-1) * pageSize + index + 1}}</td>
+            <td class="p-2">{{ member.name }}</td>
+            <td class="p-2">{{ member.email }}</td>
+            <td class="p-2">
+              <button class="px-4 py-2 bg-blue-500 text-white rounded font-medium transition-colors hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
                       v-on:click="action(member)"
                       v-bind:disabled="mode=='memberSearch' && member.team">추가
               </button>
@@ -202,20 +207,20 @@
           </tbody>
         </table>
         <p v-else>There is no matching result</p>
-        <div class="page-info">
-          <p>Page {{ page }} of {{ totalPage }} | Total results: {{ totalElements }}</p>
+        <div class="page-info mt-4">
+          <p class="text-gray-600">Page {{ page }} of {{ totalPage }} | Total results: {{ totalElements }}</p>
           <nav aria-label="Page navigation">
-            <ul class="pagination">
-              <li class="page-item" :class="{ 'disabled': page == 1 }">
-                <button class="page-link" @click="prevPage" aria-label="Previous">
+            <ul class="flex justify-center gap-1 mt-2">
+              <li :class="{ 'opacity-50 cursor-not-allowed': page == 1 }">
+                <button class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition-colors" @click="prevPage" aria-label="Previous" :disabled="page == 1">
                   <span aria-hidden="true">&laquo;</span>
                 </button>
               </li>
-              <li class="page-item" :class="{ 'active': i == page }" v-for="i in totalPage" :key="i">
-                <button class="page-link" @click="goToPage(i)">{{ i }}</button>
+              <li v-for="i in totalPage" :key="i">
+                <button class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition-colors" :class="{ 'bg-blue-500 text-white border-blue-500': i == page }" @click="goToPage(i)">{{ i }}</button>
               </li>
-              <li class="page-item" :class="{ 'disabled': page == totalPage }">
-                <button class="page-link" @click="nextPage" aria-label="Next">
+              <li :class="{ 'opacity-50 cursor-not-allowed': page == totalPage }">
+                <button class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition-colors" @click="nextPage" aria-label="Next" :disabled="page == totalPage">
                   <span aria-hidden="true">&raquo;</span>
                 </button>
               </li>
@@ -223,8 +228,8 @@
           </nav>
         </div>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+      <div class="flex items-center justify-end p-4 border-t gap-2">
+        <button type="button" class="px-4 py-2 bg-gray-500 text-white rounded font-medium transition-colors hover:bg-gray-600" data-tw-dismiss="modal">닫기</button>
       </div>
     </div>
   </div>
@@ -238,7 +243,7 @@
       <div class="color-picker" id="color-picker"></div>
       <input type="hidden" name="color" value="#ffb3ba">
     </div>
-    <div class="color-preview-container d-flex justify-content-center align-items-center gap-2 mt-2">
+    <div class="color-preview-container flex justify-center items-center gap-2 mt-2">
       <span>미리보기: </span>
       <div class="indicator color-preview px-2 py-1 border rounded"
            style="background-color: #ffb3ba;">
@@ -403,7 +408,7 @@
                             },
                             success: function (response) {
                                 app.load();
-                                $('#member-search-modal').modal('hide');
+                                TwModal.hide('member-search-modal');
                             },
                             error: function (error) {
                                 console.log(error);
@@ -657,7 +662,7 @@
             },
             memberSearchModal: function () {
                 memberSearchModal.resetForMemberSearch();
-                $('#member-search-modal').modal('show');
+                TwModal.show('member-search-modal');
             },
             removeMember: function (memberId) {
                 Swal.fire({
@@ -938,7 +943,7 @@
                             },
                             success: function (response) {
                                 app.load();
-                                $('#member-search-modal').modal('hide');
+                                TwModal.hide('member-search-modal');
                             },
                             error: function (error) {
                                 console.log(error);

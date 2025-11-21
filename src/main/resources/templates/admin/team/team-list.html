@@ -1,7 +1,7 @@
 <div class="teams" v-cloak>
-  <h2>Teams</h2>
-  <p class="text-secondary"><span v-if="keyword">[<b>{{keyword}}</b>] 검색 결과 </span>총 {{ totalElements }}개의 팀이 있습니다.</p>
-  <table class="table table-striped mt-2">
+  <h2 class="text-2xl font-bold mb-2">Teams</h2>
+  <p class="text-gray-500"><span v-if="keyword">[<b>{{keyword}}</b>] 검색 결과 </span>총 {{ totalElements }}개의 팀이 있습니다.</p>
+  <table class="w-full border-collapse mt-2">
     <thead>
     <colgroup>
       <col style="width: 5%">
@@ -9,47 +9,44 @@
       <col style="width: 10%">
       <col style="width: 70%">
     </colgroup>
-    <tr>
-      <th scope="col"></th>
-      <th scope="col">Name</th>
-      <th scope="col">Members</th>
-      <th scope="col">Description</th>
+    <tr class="bg-gray-100">
+      <th scope="col" class="p-2 text-left"></th>
+      <th scope="col" class="p-2 text-left">Name</th>
+      <th scope="col" class="p-2 text-left">Members</th>
+      <th scope="col" class="p-2 text-left">Description</th>
     </tr>
     </thead>
     <tbody>
-    <tr class="hover-bg-light cursor-pointer"
+    <tr class="hover:bg-gray-100 cursor-pointer odd:bg-gray-50"
         v-for="(team, i) in teams"
         @click="manageTeam(team.id)"
     >
-      <td class="text-align-center">{{page * 10 + i + 1}}</td>
-      <td>{{ team.name }}</td>
-      <td>{{ team.memberCount }}</td>
-      <td>{{ team.description }}</td>
+      <td class="p-2 text-center">{{page * 10 + i + 1}}</td>
+      <td class="p-2">{{ team.name }}</td>
+      <td class="p-2">{{ team.memberCount }}</td>
+      <td class="p-2">{{ team.description }}</td>
     </tr>
     </tbody>
   </table>
 
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <button class="btn btn-primary" @click="add()">New Team</button>
-    <div class="input-group w-50">
-      <input type="text" class="form-control" placeholder="Search teams..." v-model="keyword" @keyup.enter="load(0)">
-      <button class="btn btn-outline-secondary" type="button" @click="load(0)">Search</button>
+  <div class="flex justify-between items-center mb-3 mt-4">
+    <button class="px-4 py-2 bg-blue-500 text-white rounded font-medium transition-colors hover:bg-blue-600" @click="add()">New Team</button>
+    <div class="flex w-1/2">
+      <input type="text" class="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Search teams..." v-model="keyword" @keyup.enter="load(0)">
+      <button class="px-4 py-2 border border-gray-500 text-gray-500 rounded-r-md hover:bg-gray-500 hover:text-white transition-colors" type="button" @click="load(0)">Search</button>
     </div>
   </div>
 
   <nav>
-    <ul class="pagination justify-content-center">
-      <li class="page-item" :class="{ disabled: page === 0 }">
-        <a class="page-link" href="#" @click.prevent="load(page - 1)">Previous</a>
+    <ul class="flex justify-center gap-1">
+      <li :class="{ 'opacity-50 cursor-not-allowed': page === 0 }">
+        <a class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition-colors inline-block" href="#" @click.prevent="load(page - 1)" :class="{ 'pointer-events-none': page === 0 }">Previous</a>
       </li>
-      <li class="page-item"
-          v-for="p in totalPages"
-          :class="{ active: p - 1 === page }"
-          :key="p">
-        <a class="page-link" href="#" @click.prevent="load(p - 1)">{{ p }}</a>
+      <li v-for="p in totalPages" :key="p">
+        <a class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition-colors inline-block" :class="{ 'bg-blue-500 text-white border-blue-500': p - 1 === page }" href="#" @click.prevent="load(p - 1)">{{ p }}</a>
       </li>
-      <li class="page-item" :class="{ disabled: page === totalPages - 1 }">
-        <a class="page-link" href="#" @click.prevent="load(page + 1)">Next</a>
+      <li :class="{ 'opacity-50 cursor-not-allowed': page === totalPages - 1 }">
+        <a class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition-colors inline-block" href="#" @click.prevent="load(page + 1)" :class="{ 'pointer-events-none': page === totalPages - 1 }">Next</a>
       </li>
     </ul>
   </nav>
@@ -57,18 +54,18 @@
 
 <!-- Modal -->
 <form class="add_modal" hidden>
-  <div class="form-group">
-    <div class="form-group">
-      <label for="name">Name</label>
-      <div class="d-flex justify-content-between align-items-center">
-        <input type="text" maxlength="20" minlength="2" class="form-control flex-grow-1 me-2" id="name" name="name"
+  <div class="mb-4">
+    <div class="mb-4">
+      <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+      <div class="flex justify-between items-center">
+        <input type="text" maxlength="20" minlength="2" class="flex-1 px-3 py-2 border border-gray-300 rounded-md mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500" id="name" name="name"
                placeholder="Team name">
-        <button type="button" class="btn btn-primary checker">Check</button>
+        <button type="button" class="px-4 py-2 bg-blue-500 text-white rounded font-medium transition-colors hover:bg-blue-600 checker">Check</button>
       </div>
     </div>
-    <div class="form-group mt-2">
-      <label for="description">Description</label><br/>
-      <input type="text" class="form-control" id="description" name="description" placeholder="description"
+    <div class="mt-2">
+      <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+      <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" id="description" name="description" placeholder="description"
              maxlength="50">
     </div>
   </div>

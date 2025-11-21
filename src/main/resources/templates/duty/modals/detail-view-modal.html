@@ -1,12 +1,16 @@
-<div id="detail-view-modal" class="modal fade" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content card" v-if="detailView">
-      <div class="card-header modal-header text-center py-3 px-4">
-        <p class="current-date-label fs-3 mb-0"
+<div id="detail-view-modal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-black/50" data-tw-modal tabindex="-1" aria-hidden="true">
+  <div class="flex min-h-screen items-center relative mx-auto my-8 max-w-4xl">
+    <div class="relative bg-white rounded-lg shadow-xl w-full" v-if="detailView">
+      <div class="flex items-center justify-between p-4 border-b text-center py-3 px-4">
+        <p class="text-2xl mb-0"
            v-text="detailView?.year + '년 ' + detailView?.month + '월 ' + detailView?.day + '일'"></p>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="text-gray-400 hover:text-gray-600" data-tw-dismiss="modal" aria-label="Close">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
-      <div class="modal-body p-1">
+      <div class="p-1">
         <div v-if="!isCreateScheduleMode" class="dutyTypes px-4 py-2">
           <form>
             <div v-for="type in team.dutyTypes" class="pretty p-round p-pulse">
@@ -22,8 +26,8 @@
         </div>
         <div class="schedules">
           <div v-if="!isCreateScheduleMode && schedulesByDays[detailView.index]?.length === 0"
-               class="text-align-center m-5 p-5">
-            <p class="text-center text-muted fs-3">등록된 일정이 없습니다</p>
+               class="text-center m-5 p-5">
+            <p class="text-center text-gray-500 text-2xl">등록된 일정이 없습니다</p>
           </div>
           <div class="schedule card shadow"
                v-if="!isCreateScheduleMode"
@@ -32,7 +36,9 @@
                :id="'schedule-' + schedule.id">
             <div class="schedule-body">
               <p class="schedule-content">
-                <i v-if="schedule.visibility === 'PRIVATE'" class="bi bi-lock-fill"></i>
+                <svg v-if="schedule.visibility === 'PRIVATE'" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline" viewBox="0 0 24 24" fill="currentColor">
+                  <path fill-rule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z" clip-rule="evenodd" />
+                </svg>
                 {{ schedule.content }}
                 <template v-if="schedule.totalDays > 1">
                   [{{ schedule.daysFromStart }}/{{ schedule.totalDays }}]
@@ -46,49 +52,56 @@
               <!-- Attachment Gallery (Read-only) -->
               <div v-if="schedule.attachments && schedule.attachments.length > 0" class="schedule-attachments mt-3">
                 <hr/>
-                <div class="fw-bold mb-2">
-                  <i class="bi bi-paperclip"></i> 첨부파일 ({{ schedule.attachments.length }})
+                <div class="font-bold mb-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" viewBox="0 0 24 24" fill="currentColor">
+                    <path fill-rule="evenodd" d="M18.97 3.659a2.25 2.25 0 00-3.182 0l-10.94 10.94a3.75 3.75 0 105.304 5.303l7.693-7.693a.75.75 0 011.06 1.06l-7.693 7.693a5.25 5.25 0 11-7.424-7.424l10.939-10.94a3.75 3.75 0 115.303 5.304L9.097 18.835l-.008.008-.007.007-.002.002-.003.002A2.25 2.25 0 015.91 15.66l7.81-7.81a.75.75 0 011.061 1.06l-7.81 7.81a.75.75 0 001.054 1.068L18.97 6.84a2.25 2.25 0 000-3.182z" clip-rule="evenodd" />
+                  </svg>
+                  첨부파일 ({{ schedule.attachments.length }})
                 </div>
-                <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 g-2">
-                  <div v-for="attachment in schedule.attachments" :key="attachment.id" class="col">
-                    <div class="card h-100 position-relative">
+                <div class="flex flex-wrap gap-2">
+                  <div v-for="attachment in schedule.attachments" :key="attachment.id" class="w-1/2 sm:w-1/3 md:w-1/4 p-1">
+                    <div class="card h-full relative">
                       <a :href="attachment.downloadUrl || ('/api/attachments/' + attachment.id + '/download')"
-                         class="attachment-download position-absolute btn btn-sm"
+                         class="attachment-download absolute px-2 py-1 rounded text-sm"
                          download
                          title="다운로드">
-                        <i class="bi bi-download text-white"></i>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                          <path fill-rule="evenodd" d="M12 2.25a.75.75 0 01.75.75v11.69l3.22-3.22a.75.75 0 111.06 1.06l-4.5 4.5a.75.75 0 01-1.06 0l-4.5-4.5a.75.75 0 111.06-1.06l3.22 3.22V3a.75.75 0 01.75-.75zm-9 13.5a.75.75 0 01.75.75v2.25a1.5 1.5 0 001.5 1.5h13.5a1.5 1.5 0 001.5-1.5V16.5a.75.75 0 011.5 0v2.25a3 3 0 01-3 3H5.25a3 3 0 01-3-3V16.5a.75.75 0 01.75-.75z" clip-rule="evenodd" />
+                        </svg>
                       </a>
-                      <div class="position-relative overflow-hidden" style="padding-top: 100%;">
+                      <div class="relative overflow-hidden" style="padding-top: 100%;">
                         <div v-if="attachment.hasThumbnail"
-                             class="position-absolute top-0 start-0 w-100 h-100 attachment-thumbnail-clickable"
+                             class="absolute top-0 left-0 w-full h-full attachment-thumbnail-clickable"
                              style="cursor: pointer;"
                              @click="openAttachmentViewer(attachment)">
                           <img :src="attachment.thumbnailUrl"
                                :alt="attachment.originalFilename"
-                               class="w-100 h-100"
+                               class="w-full h-full"
                                style="object-fit: cover;">
                           <div
-                              class="attachment-hover-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center">
-                            <i class="bi bi-search text-white" style="font-size: 2rem;"></i>
+                              class="attachment-hover-overlay absolute top-0 left-0 w-full h-full flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+                              <path fill-rule="evenodd" d="M10.5 3.75a6.75 6.75 0 100 13.5 6.75 6.75 0 000-13.5zM2.25 10.5a8.25 8.25 0 1114.59 5.28l4.69 4.69a.75.75 0 11-1.06 1.06l-4.69-4.69A8.25 8.25 0 012.25 10.5z" clip-rule="evenodd" />
+                            </svg>
                           </div>
                         </div>
                         <div v-else
-                             class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center">
-                          <i :class="['bi', attachmentIconClass(attachment), 'text-muted', 'display-4', 'lh-1']"></i>
+                             class="absolute top-0 left-0 w-full h-full flex items-center justify-center">
+                          <i :class="['bi', attachmentIconClass(attachment), 'text-gray-500', 'display-4', 'lh-1']"></i>
                         </div>
                       </div>
                       <div class="card-body p-2">
-                        <div class="small text-truncate" :title="attachment.originalFilename">
+                        <div class="text-sm truncate" :title="attachment.originalFilename">
                           {{ attachment.originalFilename }}
                         </div>
-                        <div class="small text-muted">{{ formatBytes(attachment.size) }}</div>
+                        <div class="text-sm text-gray-500">{{ formatBytes(attachment.size) }}</div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div class="schedule-tags fs-4">
+              <div class="schedule-tags text-xl">
                 <span
                     v-for="tag in schedule.tags"
                     v-if="tag.id !== memberId"
@@ -104,8 +117,11 @@
                     class="schedule-tag schedule-tag-add"
                 >
                   <div class="btn-group dropstart">
-                    <span class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                      <i class="bi bi-person-plus-fill"></i> 태그
+                    <span class="dropdown-toggle" data-tw-toggle="dropdown" aria-expanded="false">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M6.25 6.375a4.125 4.125 0 118.25 0 4.125 4.125 0 01-8.25 0zM3.25 19.125a7.125 7.125 0 0114.25 0v.003l-.001.119a.75.75 0 01-.363.63 13.067 13.067 0 01-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 01-.364-.63l-.001-.122zM19.75 7.5a.75.75 0 00-1.5 0v2.25H16a.75.75 0 000 1.5h2.25v2.25a.75.75 0 001.5 0v-2.25H22a.75.75 0 000-1.5h-2.25V7.5z" />
+                      </svg>
+                      태그
                     </span>
                     <ul class="dropdown-menu">
                       <li v-for="friend in friends"
@@ -120,7 +136,7 @@
             </div>
             <div class="buttons mt-3">
               <template v-if="schedule.isTagged && isMyCalendar">
-                <button class="btn btn-danger" v-on:click="untagSelf(schedule)">태그제거</button>
+                <button class="px-4 py-2 rounded font-medium transition-colors bg-red-500 text-white hover:bg-red-600" v-on:click="untagSelf(schedule)">태그제거</button>
               </template>
               <template v-else>
                 <template
@@ -128,66 +144,77 @@
                   <button
                       :disabled="s_index == schedulesByDays[detailView.index].length -1 || schedulesByDays[detailView.index][s_index+1].isTagged"
                       v-on:click="swapSchedule(schedule, schedulesByDays[detailView.index][s_index+1])"
-                      class="btn btn-secondary"
+                      class="px-4 py-2 rounded font-medium transition-colors bg-gray-500 text-white hover:bg-gray-600"
                   >
-                    <i class="bi bi-arrow-down-square"></i>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                      <path fill-rule="evenodd" d="M12 2.25a.75.75 0 01.75.75v16.19l6.22-6.22a.75.75 0 111.06 1.06l-7.5 7.5a.75.75 0 01-1.06 0l-7.5-7.5a.75.75 0 111.06-1.06l6.22 6.22V3a.75.75 0 01.75-.75z" clip-rule="evenodd" />
+                    </svg>
                   </button>
                   <button :disabled="s_index <= detailView.scheduleStartDiffCount"
                           v-on:click="swapSchedule(schedule, schedulesByDays[detailView.index][s_index-1])"
-                          class="btn btn-secondary">
-                    <i class="bi bi-arrow-up-square"></i>
+                          class="px-4 py-2 rounded font-medium transition-colors bg-gray-500 text-white hover:bg-gray-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                      <path fill-rule="evenodd" d="M11.47 2.47a.75.75 0 011.06 0l7.5 7.5a.75.75 0 11-1.06 1.06l-6.22-6.22V21a.75.75 0 01-1.5 0V4.81l-6.22 6.22a.75.75 0 11-1.06-1.06l7.5-7.5z" clip-rule="evenodd" />
+                    </svg>
                   </button>
                 </template>
-                <button class="btn btn-info" v-on:click="scheduleEditMode(schedule)">수정</button>
-                <button class="btn btn-danger" v-on:click="deleteSchedule(schedule)">삭제</button>
+                <button class="px-4 py-2 rounded font-medium transition-colors bg-cyan-500 text-white hover:bg-cyan-600" v-on:click="scheduleEditMode(schedule)">수정</button>
+                <button class="px-4 py-2 rounded font-medium transition-colors bg-red-500 text-white hover:bg-red-600" v-on:click="deleteSchedule(schedule)">삭제</button>
               </template>
             </div>
           </div>
           <div id="schedule-create-or-edit" class="schedule card shadow" v-if="isCreateScheduleMode">
             <div class="schedule-edit">
-              <label>일정 제목<span class="content-length ms-2"
+              <label>일정 제목<span class="content-length ml-2"
                                 v-text="createSchedule.content.length + ' / ' + schedule_content_max_length"></span>
-                <small class="help-note">달력에 표시되는 제목이에요 <i class="bi bi-info-circle-fill"></i></small>
-                <input class="form-control border-dark" placeholder="일정 제목을 입력하세요."
+                <small class="help-note">달력에 표시되는 제목이에요
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline" viewBox="0 0 24 24" fill="currentColor">
+                    <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm8.706-1.442c1.146-.573 2.437.463 2.126 1.706l-.709 2.836.042-.02a.75.75 0 01.67 1.34l-.04.022c-1.147.573-2.438-.463-2.127-1.706l.71-2.836-.042.02a.75.75 0 11-.671-1.34l.041-.022zM12 9a.75.75 0 100-1.5.75.75 0 000 1.5z" clip-rule="evenodd" />
+                  </svg>
+                </small>
+                <input class="w-full px-3 py-2 border border-gray-800 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="일정 제목을 입력하세요."
                        :maxlength="schedule_content_max_length"
                        v-model="createSchedule.content"/>
               </label>
-              <label>일정 상세<small class="help-note">달력에 표시되지 않고 클릭했을때만 보여져요 <i
-                  class="bi bi-info-circle-fill"></i></small>
-                <textarea class="form-control" placeholder="일정 상세정보를 입력하세요.(선택 사항)" rows="3"
+              <label>일정 상세<small class="help-note">달력에 표시되지 않고 클릭했을때만 보여져요
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline" viewBox="0 0 24 24" fill="currentColor">
+                    <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm8.706-1.442c1.146-.573 2.437.463 2.126 1.706l-.709 2.836.042-.02a.75.75 0 01.67 1.34l-.04.022c-1.147.573-2.438-.463-2.127-1.706l.71-2.836-.042.02a.75.75 0 11-.671-1.34l.041-.022zM12 9a.75.75 0 100-1.5.75.75 0 000 1.5z" clip-rule="evenodd" />
+                  </svg>
+                </small>
+                <textarea class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="일정 상세정보를 입력하세요.(선택 사항)" rows="3"
                           v-model="createSchedule.description"></textarea>
               </label>
-              <div class="row g-3">
-                <div class="col-12 col-md-6">
-                  <div class="schedule-field-row d-flex flex-wrap align-items-center gap-2">
-                    <label class="schedule-field-label mb-0 text-nowrap">시작일</label>
-                    <div class="schedule-field-control flex-grow-1">
-                      <input v-show="createSchedule.id" type="date" class="form-control"
+              <div class="flex flex-wrap gap-3">
+                <div class="w-full md:w-1/2">
+                  <div class="schedule-field-row flex flex-wrap items-center gap-2">
+                    <label class="schedule-field-label mb-0 whitespace-nowrap">시작일</label>
+                    <div class="schedule-field-control flex-grow">
+                      <input v-show="createSchedule.id" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                              v-model="createSchedule.startDate"/>
-                      <p v-show="!createSchedule.id" class="form-control bg-light mb-0"
+                      <p v-show="!createSchedule.id" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 mb-0"
                          v-text="createSchedule.startDate"></p>
                     </div>
                   </div>
                 </div>
-                <div class="col-12 col-md-6">
-                  <div class="schedule-field-row d-flex flex-wrap align-items-center gap-2">
-                    <label class="schedule-field-label mb-0 text-nowrap">시작시간</label>
-                    <div class="schedule-field-control flex-grow-1">
-                      <input type="time" class="form-control" v-model="createSchedule.startTime"/>
+                <div class="w-full md:w-1/2">
+                  <div class="schedule-field-row flex flex-wrap items-center gap-2">
+                    <label class="schedule-field-label mb-0 whitespace-nowrap">시작시간</label>
+                    <div class="schedule-field-control flex-grow">
+                      <input type="time" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" v-model="createSchedule.startTime"/>
                     </div>
                   </div>
                 </div>
               </div>
-              <div class="schedule-field-row d-flex flex-wrap align-items-center gap-2">
-                <label class="schedule-field-label mb-0 text-nowrap">종료일시</label>
-                <div class="schedule-field-control flex-grow-1">
-                  <input type="datetime-local" class="form-control" v-model="createSchedule.endDateTime"
+              <div class="schedule-field-row flex flex-wrap items-center gap-2">
+                <label class="schedule-field-label mb-0 whitespace-nowrap">종료일시</label>
+                <div class="schedule-field-control flex-grow">
+                  <input type="datetime-local" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" v-model="createSchedule.endDateTime"
                          :min="createSchedule.startDateTime"/>
                 </div>
               </div>
-              <div class="schedule-field-row d-flex flex-wrap align-items-center gap-2">
-                <label class="schedule-field-label mb-0 text-nowrap">공개설정</label>
-                <div class="schedule-field-control schedule-visibility d-flex flex-wrap gap-2">
+              <div class="schedule-field-row flex flex-wrap items-center gap-2">
+                <label class="schedule-field-label mb-0 whitespace-nowrap">공개설정</label>
+                <div class="schedule-field-control schedule-visibility flex flex-wrap gap-2">
                   <div class="pretty p-default p-curve">
                     <input type="radio" value="PUBLIC" v-model="createSchedule.visibility"/>
                     <div class="state p-success-o">
@@ -218,8 +245,8 @@
                 </div>
               </div>
 
-              <div class="schedule-field-row d-flex flex-wrap align-items-start gap-3 mt-3">
-                <label class="schedule-field-label mb-0 text-nowrap pt-2">첨부파일</label>
+              <div class="schedule-field-row flex flex-wrap items-start gap-3 mt-3">
+                <label class="schedule-field-label mb-0 whitespace-nowrap pt-2">첨부파일</label>
                 <div class="schedule-field-control attachment-gallery">
                   <div class="attachment-tile" v-for="attachment in createSchedule.uploadedAttachments"
                        :key="attachment.id">
@@ -227,13 +254,13 @@
                       <img v-if="attachment.isImage && attachment.thumbnailUrl"
                            :src="attachment.thumbnailUrl"
                            :alt="attachment.name"
-                           class="w-100 h-100" style="object-fit: cover;">
+                           class="w-full h-full" style="object-fit: cover;">
                       <img v-else-if="attachment.isImage"
                            :src="attachment.previewUrl"
                            :alt="attachment.name"
-                           class="w-100 h-100" style="object-fit: cover;">
-                      <div v-else class="d-flex align-items-center justify-content-center h-100">
-                        <i :class="['bi', attachmentIconClass(attachment), 'text-muted', 'display-4', 'lh-1']"></i>
+                           class="w-full h-full" style="object-fit: cover;">
+                      <div v-else class="flex items-center justify-center h-full">
+                        <i :class="['bi', attachmentIconClass(attachment), 'text-gray-500', 'display-4', 'lh-1']"></i>
                       </div>
                     </div>
                     <div class="attachment-meta">
@@ -247,9 +274,11 @@
                         </div>
                       </div>
                     </div>
-                    <button type="button" class="attachment-remove btn btn-sm btn-danger"
+                    <button type="button" class="attachment-remove px-2 py-1 rounded text-sm bg-red-500 text-white hover:bg-red-600"
                             @click="removeAttachment(attachment.id)">
-                      <i class="bi bi-x"></i>
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 01-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z" clip-rule="evenodd" />
+                      </svg>
                     </button>
                   </div>
 
@@ -257,23 +286,25 @@
                   <div class="attachment-tile attachment-add-button">
                     <input type="file" id="schedule-attachment-input" multiple style="display: none;"/>
                     <label for="schedule-attachment-input"
-                           class="attachment-thumb d-flex flex-column align-items-center justify-content-center h-100 m-0"
+                           class="attachment-thumb flex flex-col items-center justify-center h-full m-0"
                            style="cursor: pointer;">
-                      <i class="bi bi-plus-circle text-muted" style="font-size: 3rem;"></i>
-                      <small class="text-muted mt-2" style="font-size: 0.75rem;">드래그 또는 클릭</small>
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-500" viewBox="0 0 24 24" fill="currentColor">
+                        <path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 9a.75.75 0 00-1.5 0v2.25H9a.75.75 0 000 1.5h2.25V15a.75.75 0 001.5 0v-2.25H15a.75.75 0 000-1.5h-2.25V9z" clip-rule="evenodd" />
+                      </svg>
+                      <small class="text-gray-500 mt-2" style="font-size: 0.75rem;">드래그 또는 클릭</small>
                     </label>
                   </div>
                 </div>
               </div>
 
-              <div v-if="attachmentUploadSummary" class="alert alert-info d-flex align-items-center gap-3 mb-0">
-                <div class="d-flex align-items-center">
-                  <div class="spinner-border spinner-border-sm me-2" role="status">
-                    <span class="visually-hidden">업로드 중</span>
+              <div v-if="attachmentUploadSummary" class="alert alert-info flex items-center gap-3 mb-0">
+                <div class="flex items-center">
+                  <div class="spinner-border spinner-border-sm mr-2" role="status">
+                    <span class="sr-only">업로드 중</span>
                   </div>
-                  <span class="fw-semibold">파일 업로드 중</span>
+                  <span class="font-semibold">파일 업로드 중</span>
                 </div>
-                <div class="flex-grow-1 small text-muted">
+                <div class="flex-grow text-sm text-gray-500">
                   <span>{{ attachmentUploadSummary.activeUploads }}개 파일</span>
                   <span class="mx-1">|</span>
                   <span>{{ formatBytes(attachmentUploadSummary.uploadedBytes) }} / {{ formatBytes(attachmentUploadSummary.totalBytes) }}</span>
@@ -292,24 +323,24 @@
               <div class="buttons">
                 <button
                     id="add-btn"
-                    class="btn btn-success"
+                    class="px-4 py-2 rounded font-medium transition-colors bg-green-500 text-white hover:bg-green-600"
                     :disabled="isAttachmentUploading"
                     :title="isAttachmentUploading ? '파일 업로드가 완료되면 저장할 수 있습니다.' : null"
                     v-on:click="saveSchedule">
                   <span v-if="isAttachmentUploading" class="spinner-border spinner-border-sm" role="status">
-                    <span class="visually-hidden">업로드 중</span>
+                    <span class="sr-only">업로드 중</span>
                   </span>
                   <span>저장</span>
                 </button>
-                <button class="btn btn-secondary" v-on:click="cancelCreateSchedule">취소</button>
+                <button class="px-4 py-2 rounded font-medium transition-colors bg-gray-500 text-white hover:bg-gray-600" v-on:click="cancelCreateSchedule">취소</button>
               </div>
             </div>
           </div>
         </div>
       </div>
-      <div class="modal-footer">
-        <div class="schedule-add-button card shadow w-100" v-if="!isCreateScheduleMode">
-          <button class="btn btn-success py-4" v-on:click="scheduleCreateMode()">일정 추가</button>
+      <div class="flex items-center justify-end p-4 border-t gap-2">
+        <div class="schedule-add-button card shadow w-full" v-if="!isCreateScheduleMode">
+          <button class="px-4 py-2 rounded font-medium transition-colors bg-green-500 text-white hover:bg-green-600 py-4 w-full" v-on:click="scheduleCreateMode()">일정 추가</button>
         </div>
       </div>
     </div>

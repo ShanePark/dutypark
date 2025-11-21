@@ -114,7 +114,7 @@ const dayGridMethods = {
       return;
     }
     app.isCreateScheduleMode = false;
-    $('#detail-view-modal').modal('show');
+    TwModal.show('detail-view-modal');
     app.detailView = calendarDay;
     app.detailView.duty = duty;
     app.detailView.index = index;
