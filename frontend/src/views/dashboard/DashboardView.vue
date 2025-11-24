@@ -581,7 +581,7 @@ watch(
             </div>
 
             <!-- Right column: Today's schedules -->
-            <div class="md:border-l md:pl-6 border-gray-200">
+            <div class="border-t pt-4 mt-1 sm:border-t-0 sm:pt-0 sm:mt-0 sm:border-l sm:pl-6 border-gray-200">
               <div class="flex items-center gap-2 mb-2">
                 <ClipboardList class="w-5 h-5 text-gray-500" />
                 <span class="text-gray-700 font-medium">오늘 일정</span>
@@ -687,13 +687,13 @@ watch(
               <div class="w-8 h-8 border-3 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
             </div>
           </template>
-          <div v-else ref="friendListRef" class="flex flex-wrap gap-3">
+          <div v-else ref="friendListRef" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <!-- Friend Cards -->
             <div
               v-for="friend in sortedFriends"
               :key="friend.member.id ?? 'unknown'"
               :data-member-id="friend.member.id"
-              class="friend-card p-4 border-2 border-gray-200 rounded-lg cursor-pointer transition-all duration-200 shadow-sm hover:shadow-lg hover:scale-[1.02] hover:border-blue-300 hover:bg-blue-50 flex flex-col w-full md:w-[calc(50%-6px)]"
+              class="friend-card p-4 border-2 border-gray-200 rounded-lg cursor-pointer transition-all duration-200 shadow-sm hover:shadow-lg hover:scale-[1.02] hover:border-blue-300 hover:bg-blue-50 flex flex-col"
               :class="{
                 'pinned-friend bg-yellow-50': friend.pinOrder,
               }"
@@ -711,7 +711,7 @@ watch(
                     <!-- Pin/Unpin button -->
                     <button
                       v-if="friend.pinOrder"
-                      class="text-yellow-500 hover:text-yellow-600 transition"
+                      class="p-2 min-h-11 min-w-11 flex items-center justify-center text-yellow-500 hover:text-yellow-600 transition"
                       @click.stop="unpinFriend(friend.member)"
                       title="고정 해제"
                     >
@@ -719,7 +719,7 @@ watch(
                     </button>
                     <button
                       v-else
-                      class="text-gray-400 hover:text-yellow-500 transition"
+                      class="p-2 min-h-11 min-w-11 flex items-center justify-center text-gray-400 hover:text-yellow-500 transition"
                       @click.stop="pinFriend(friend.member)"
                       title="고정"
                     >
@@ -729,7 +729,7 @@ watch(
                     <!-- Dropdown toggle -->
                     <div v-if="friend.member.id" class="relative">
                       <button
-                        class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 transition flex items-center gap-1"
+                        class="px-3 py-2 min-h-11 text-sm border border-gray-300 rounded hover:bg-gray-100 transition flex items-center gap-1"
                         @click="toggleDropdown(friend.member.id, $event)"
                       >
                         관리
@@ -774,7 +774,7 @@ watch(
                     <li
                       v-for="schedule in friend.schedules"
                       :key="schedule.id"
-                      class="text-sm py-1 border-b border-gray-100 last:border-0 text-gray-600"
+                      class="text-sm sm:text-base py-1 border-b border-gray-100 last:border-0 text-gray-600"
                     >
                       <span>{{ printSchedule(schedule) }}</span>
                       <span class="text-gray-400 ml-2">{{ printScheduleTime(schedule.startDateTime) }}</span>
@@ -797,7 +797,7 @@ watch(
             <!-- Add Friend Card -->
             <div
               v-if="friendInfoInitialized"
-              class="group p-4 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer bg-blue-50 hover:bg-blue-400 hover:border-blue-400 hover:scale-[1.02] transition-all duration-200 flex flex-col items-center justify-center min-h-[120px] w-full md:w-[calc(50%-6px)]"
+              class="group p-4 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer bg-blue-50 hover:bg-blue-400 hover:border-blue-400 hover:scale-[1.02] transition-all duration-200 flex flex-col items-center justify-center min-h-[120px]"
               @click="openSearchModal"
             >
               <UserPlus class="w-8 h-8 text-blue-400 group-hover:text-white mb-2 transition-colors duration-200" />
@@ -812,8 +812,8 @@ watch(
     <!-- Guest Dashboard -->
     <template v-else>
       <!-- Hero Section -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center mb-6">
-        <h1 class="text-4xl font-bold text-gray-900 mb-4">Dutypark</h1>
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-8 text-center mb-6">
+        <h1 class="text-2xl sm:text-4xl font-bold text-gray-900 mb-4">Dutypark</h1>
         <p class="text-gray-600 mb-6 max-w-lg mx-auto">
           Dutypark는 근무 관리, 시간표 등록, 일정 관리, 할일 관리 및 팀원들의 시간표 조회, 친구 및 가족의 일정 공유 등 다양한 기능을 통해 여러분의 일상을 도와줍니다.
         </p>
@@ -826,7 +826,7 @@ watch(
       </div>
 
       <!-- Features Section -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-8">
         <h2 class="text-2xl font-bold text-gray-900 mb-6">주요 기능</h2>
         <ul class="space-y-4">
           <li v-for="feature in features" :key="feature.text" class="flex items-start gap-3">
@@ -856,9 +856,9 @@ watch(
         <div class="absolute inset-0 bg-black/50" @click="closeSearchModal"></div>
 
         <!-- Modal Content -->
-        <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden">
+        <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-2 sm:mx-4 max-h-[90vh] overflow-hidden">
           <!-- Header -->
-          <div class="flex items-center justify-between p-4 border-b border-gray-200">
+          <div class="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
             <h3 class="text-xl font-semibold text-gray-900">친구 추가</h3>
             <button
               class="text-gray-400 hover:text-gray-600 transition"
@@ -869,7 +869,7 @@ watch(
           </div>
 
           <!-- Body -->
-          <div class="p-4 overflow-y-auto max-h-[calc(90vh-140px)]">
+          <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(90vh-140px)]">
             <!-- Search Input -->
             <div class="flex gap-2 mb-4">
               <div class="flex-grow relative">
@@ -928,7 +928,7 @@ watch(
               <!-- Pagination -->
               <div v-if="searchTotalPage > 1" class="flex justify-center items-center gap-2 mt-4">
                 <button
-                  class="p-2 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  class="p-2 h-10 min-w-10 sm:h-8 sm:min-w-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
                   :disabled="searchPage === 0"
                   @click="prevPage"
                 >
@@ -937,7 +937,7 @@ watch(
 
                 <template v-for="i in searchTotalPage" :key="i">
                   <button
-                    class="w-8 h-8 rounded border transition"
+                    class="h-10 min-w-10 sm:h-8 sm:min-w-8 rounded border transition"
                     :class="(i - 1) === searchPage
                       ? 'bg-blue-600 text-white border-blue-600'
                       : 'border-gray-300 hover:bg-gray-100'"
@@ -948,7 +948,7 @@ watch(
                 </template>
 
                 <button
-                  class="p-2 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  class="p-2 h-10 min-w-10 sm:h-8 sm:min-w-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
                   :disabled="searchPage >= searchTotalPage - 1"
                   @click="nextPage"
                 >
@@ -966,7 +966,7 @@ watch(
           </div>
 
           <!-- Footer -->
-          <div class="flex justify-end p-4 border-t border-gray-200">
+          <div class="flex justify-end p-3 sm:p-4 border-t border-gray-200">
             <button
               class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
               @click="closeSearchModal"

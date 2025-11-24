@@ -541,7 +541,8 @@ onUnmounted(() => {
 
     <!-- Team Info Card -->
     <div class="bg-white border border-gray-200 rounded-b-lg overflow-hidden mb-4">
-      <table class="w-full">
+      <div class="overflow-x-auto">
+      <table class="w-full min-w-[300px]">
         <tbody class="divide-y divide-gray-200">
           <tr>
             <th class="px-4 py-3 text-left bg-gray-50 w-1/4 font-medium text-gray-700">
@@ -618,11 +619,12 @@ onUnmounted(() => {
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <!-- Members Section -->
     <div class="bg-white border border-gray-200 rounded-lg overflow-hidden mb-4">
-      <div class="bg-gray-600 text-white px-4 py-3 flex items-center justify-between">
+      <div class="bg-gray-600 text-white px-4 py-3 flex flex-wrap items-center justify-between gap-2">
         <h3 class="font-bold">팀 멤버</h3>
         <button
           @click="openMemberSearchModal"
@@ -633,7 +635,8 @@ onUnmounted(() => {
         </button>
       </div>
 
-      <div v-if="hasMember" class="overflow-x-auto">
+      <!-- Desktop Table View -->
+      <div v-if="hasMember" class="hidden sm:block overflow-x-auto">
         <table class="w-full">
           <thead class="bg-gray-800 text-white">
             <tr>
@@ -691,6 +694,56 @@ onUnmounted(() => {
           </tbody>
         </table>
       </div>
+
+      <!-- Mobile Card View -->
+      <div v-if="hasMember" class="sm:hidden divide-y divide-gray-200">
+        <div
+          v-for="(member, index) in team.members"
+          :key="member.id"
+          class="p-3 hover:bg-gray-50"
+        >
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-gray-500">{{ index + 1 }}</span>
+              <span class="font-medium text-gray-800">{{ member.name }}</span>
+              <Check v-if="member.isManager" class="w-4 h-4 text-green-500" />
+            </div>
+            <button
+              @click="removeMember(member.id)"
+              class="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition flex items-center gap-1"
+            >
+              <Trash2 class="w-3 h-3" />
+              탈퇴
+            </button>
+          </div>
+          <div v-if="isAdmin && !member.isAdmin" class="flex flex-wrap gap-1">
+            <button
+              v-if="!member.isManager"
+              @click="assignManager(member)"
+              class="px-2 py-1 text-xs border border-green-500 text-green-600 rounded hover:bg-green-50 transition flex items-center gap-1"
+            >
+              <Plus class="w-3 h-3" />
+              매니저 지정
+            </button>
+            <template v-else-if="member.isManager">
+              <button
+                @click="unAssignManager(member)"
+                class="px-2 py-1 text-xs border border-yellow-500 text-yellow-600 rounded hover:bg-yellow-50 transition flex items-center gap-1"
+              >
+                <ShieldOff class="w-3 h-3" />
+                권한 취소
+              </button>
+              <button
+                @click="changeAdmin(member)"
+                class="px-2 py-1 text-xs border border-blue-500 text-blue-500 rounded hover:bg-blue-50 transition flex items-center gap-1"
+              >
+                <Crown class="w-3 h-3" />
+                대표 위임
+              </button>
+            </template>
+          </div>
+        </div>
+      </div>
       <div v-else class="p-6 text-center text-gray-500">
         이 팀에 멤버가 없습니다.
       </div>
@@ -734,35 +787,35 @@ onUnmounted(() => {
                 ></span>
               </td>
               <td class="px-4 py-3">
-                <div class="flex items-center justify-center gap-1">
+                <div class="flex flex-wrap items-center justify-center gap-1">
                   <button
                     v-if="dutyType.id"
                     :disabled="index === 0 || index === team.dutyTypes.length - 1"
                     @click="swapPosition(index, index + 1)"
-                    class="p-1.5 border border-gray-300 rounded hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="p-1 sm:p-1.5 border border-gray-300 rounded hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <ArrowDown class="w-4 h-4" />
+                    <ArrowDown class="w-3 h-3 sm:w-4 sm:h-4" />
                   </button>
                   <button
                     v-if="dutyType.id"
                     :disabled="index <= 1"
                     @click="swapPosition(index, index - 1)"
-                    class="p-1.5 border border-gray-300 rounded hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="p-1 sm:p-1.5 border border-gray-300 rounded hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <ArrowUp class="w-4 h-4" />
+                    <ArrowUp class="w-3 h-3 sm:w-4 sm:h-4" />
                   </button>
                   <button
                     @click="openEditDutyTypeModal(dutyType)"
-                    class="p-1.5 border border-blue-500 text-blue-500 rounded hover:bg-blue-50 transition"
+                    class="p-1 sm:p-1.5 border border-blue-500 text-blue-500 rounded hover:bg-blue-50 transition"
                   >
-                    <Pencil class="w-4 h-4" />
+                    <Pencil class="w-3 h-3 sm:w-4 sm:h-4" />
                   </button>
                   <button
                     v-if="dutyType.id"
                     @click="removeDutyType(dutyType)"
-                    class="p-1.5 border border-red-500 text-red-500 rounded hover:bg-red-50 transition"
+                    class="p-1 sm:p-1.5 border border-red-500 text-red-500 rounded hover:bg-red-50 transition"
                   >
-                    <Trash2 class="w-4 h-4" />
+                    <Trash2 class="w-3 h-3 sm:w-4 sm:h-4" />
                   </button>
                 </div>
               </td>
@@ -864,11 +917,11 @@ onUnmounted(() => {
             <div class="text-sm text-gray-600 mb-2">
               Page {{ currentPage + 1 }} of {{ totalPages }} | Total: {{ totalElements }}
             </div>
-            <div class="flex items-center gap-1">
+            <div class="flex flex-wrap items-center gap-1">
               <button
                 @click="prevPage"
                 :disabled="currentPage === 0"
-                class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition disabled:opacity-50"
+                class="px-2 sm:px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition disabled:opacity-50"
               >
                 <ChevronLeft class="w-4 h-4" />
               </button>
@@ -876,7 +929,7 @@ onUnmounted(() => {
                 v-for="i in totalPages"
                 :key="i"
                 @click="goToPage(i - 1)"
-                class="px-3 py-1 border rounded transition"
+                class="px-2 sm:px-3 py-1 text-sm border rounded transition"
                 :class="i - 1 === currentPage ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-300 hover:bg-gray-100'"
               >
                 {{ i }}
@@ -884,7 +937,7 @@ onUnmounted(() => {
               <button
                 @click="nextPage"
                 :disabled="currentPage >= totalPages - 1"
-                class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition disabled:opacity-50"
+                class="px-2 sm:px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition disabled:opacity-50"
               >
                 <ChevronRight class="w-4 h-4" />
               </button>
@@ -1017,7 +1070,7 @@ onUnmounted(() => {
             />
           </div>
 
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">
                 연도

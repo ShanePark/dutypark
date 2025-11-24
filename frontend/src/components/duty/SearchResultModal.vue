@@ -80,22 +80,22 @@ function formatDateRange(start: string, end: string) {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="emit('close')"
     >
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4">
         <!-- Header -->
-        <div class="flex items-center justify-between p-4 border-b border-gray-200">
-          <div>
-            <h2 class="text-lg font-bold">검색 결과</h2>
-            <p class="text-sm text-gray-500">
+        <div class="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
+          <div class="min-w-0 flex-1 mr-2">
+            <h2 class="text-base sm:text-lg font-bold">검색 결과</h2>
+            <p class="text-sm text-gray-500 truncate">
               "{{ query }}" 검색 결과 {{ pageInfo.totalElements }}건
             </p>
           </div>
-          <button @click="emit('close')" class="p-1 hover:bg-gray-100 rounded-full transition">
-            <X class="w-5 h-5" />
+          <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition flex-shrink-0">
+            <X class="w-6 h-6" />
           </button>
         </div>
 
         <!-- Content -->
-        <div class="p-4 overflow-y-auto max-h-[calc(90vh-180px)]">
+        <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(90dvh-180px)] sm:max-h-[calc(90vh-180px)]">
           <div v-if="results.length === 0" class="text-center py-8 text-gray-400">
             검색 결과가 없습니다.
           </div>
@@ -135,21 +135,21 @@ function formatDateRange(start: string, end: string) {
         <!-- Pagination -->
         <div
           v-if="pageInfo.totalPages > 1"
-          class="p-4 border-t border-gray-200 flex items-center justify-center gap-1"
+          class="p-3 sm:p-4 border-t border-gray-200 flex items-center justify-center gap-0.5 sm:gap-1 overflow-x-auto"
         >
           <button
             @click="emit('changePage', currentPage - 2)"
             :disabled="currentPage === 1"
             class="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
-            <ChevronLeft class="w-4 h-4" />
+            <ChevronLeft class="w-5 h-5 sm:w-4 sm:h-4" />
           </button>
 
           <button
             v-for="page in pagesToShow"
             :key="page"
             @click="emit('changePage', page - 1)"
-            class="px-3 py-1 rounded transition"
+            class="px-2 sm:px-3 py-1 text-sm rounded transition"
             :class="
               page === currentPage
                 ? 'bg-blue-600 text-white'
@@ -164,7 +164,7 @@ function formatDateRange(start: string, end: string) {
             :disabled="currentPage === pageInfo.totalPages"
             class="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
-            <ChevronRight class="w-4 h-4" />
+            <ChevronRight class="w-5 h-5 sm:w-4 sm:h-4" />
           </button>
         </div>
       </div>

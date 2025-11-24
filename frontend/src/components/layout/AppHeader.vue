@@ -20,12 +20,12 @@ const handleLogout = async () => {
         <router-link to="/" class="text-xl font-bold text-gray-900">
           Dutypark
         </router-link>
-        <nav class="flex items-center gap-4">
+        <nav class="flex items-center gap-2 sm:gap-4">
           <template v-if="authStore.isLoggedIn">
-            <span class="text-sm text-gray-600">{{ authStore.user?.name }}</span>
+            <span class="text-xs sm:text-sm text-gray-600 max-w-[80px] sm:max-w-[120px] truncate">{{ authStore.user?.name }}</span>
             <button
               @click="handleLogout"
-              class="text-sm text-gray-500 hover:text-gray-700"
+              class="text-xs sm:text-sm text-gray-500 hover:text-gray-700 px-2 sm:px-3 py-2 rounded-md hover:bg-gray-100 transition-colors min-h-[44px] flex items-center"
             >
               로그아웃
             </button>
@@ -33,7 +33,7 @@ const handleLogout = async () => {
           <template v-else>
             <router-link
               to="/auth/login"
-              class="text-sm text-blue-600 hover:text-blue-800"
+              class="text-xs sm:text-sm text-blue-600 hover:text-blue-800 px-2 sm:px-3 py-2 rounded-md hover:bg-blue-50 transition-colors min-h-[44px] flex items-center"
             >
               로그인
             </router-link>

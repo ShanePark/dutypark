@@ -52,14 +52,14 @@ function handleKakaoLogin() {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+  <div class="min-h-screen flex items-center justify-center bg-gray-100 px-4 pb-safe pt-safe">
     <div class="w-full max-w-md">
       <!-- Login Card -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-        <h1 class="text-3xl font-bold text-gray-900 mb-6">로그인</h1>
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8">
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">로그인</h1>
         <hr class="mb-6">
 
-        <form @submit.prevent="handleLogin" class="space-y-4">
+        <form @submit.prevent="handleLogin" class="space-y-3 sm:space-y-4">
           <!-- Email Field -->
           <div>
             <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
@@ -78,9 +78,9 @@ function handleKakaoLogin() {
                 id="rememberMe"
                 v-model="rememberMe"
                 type="checkbox"
-                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
               />
-              <label for="rememberMe" class="ml-2 text-sm text-gray-600">
+              <label for="rememberMe" class="ml-2 text-sm text-gray-600 cursor-pointer">
                 아이디 저장
               </label>
             </div>

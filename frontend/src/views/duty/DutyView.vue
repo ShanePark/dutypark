@@ -1078,23 +1078,23 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
       <!-- Add Todo Button -->
       <button
         @click="isTodoAddModalOpen = true"
-        class="flex-shrink-0 w-24 bg-green-500 text-white rounded-l-lg flex items-center justify-center gap-1 border-r border-gray-300 hover:bg-green-600 transition"
+        class="flex-shrink-0 w-16 sm:w-24 min-h-[44px] bg-green-500 text-white rounded-l-lg flex items-center justify-center gap-1 border-r border-gray-300 hover:bg-green-600 transition"
       >
-        <span class="text-sm font-medium">Todo</span>
+        <span class="text-xs sm:text-sm font-medium">Todo</span>
         <Plus class="w-4 h-4" />
       </button>
 
       <!-- Todo Items -->
-      <div class="flex-1 overflow-x-auto py-2 px-2">
+      <div class="flex-1 min-w-0 overflow-x-auto py-2 px-2">
         <div class="flex gap-2">
           <div
             v-for="todo in todos"
             :key="todo.id"
             @click="openTodoDetail(todo)"
-            class="flex-shrink-0 flex items-center bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 cursor-pointer hover:bg-gray-100 transition"
+            class="flex-shrink-0 max-w-[150px] sm:max-w-[200px] flex items-center bg-gray-50 border border-gray-200 rounded-lg px-2 sm:px-3 py-2 min-h-[44px] cursor-pointer hover:bg-gray-100 transition"
           >
-            <span class="font-medium text-gray-800">{{ todo.title }}</span>
-            <FileText v-if="todo.content || todo.hasAttachments" class="w-4 h-4 text-gray-400 ml-1" />
+            <span class="font-medium text-gray-800 truncate">{{ todo.title }}</span>
+            <FileText v-if="todo.content || todo.hasAttachments" class="w-4 h-4 text-gray-400 ml-1 flex-shrink-0" />
           </div>
         </div>
       </div>
@@ -1102,7 +1102,7 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
       <!-- Todo Count Badge -->
       <button
         @click="isTodoOverviewModalOpen = true"
-        class="flex-shrink-0 px-4 py-2 flex items-center gap-2 text-gray-600 hover:bg-gray-50 rounded-r-lg transition border-l border-gray-200"
+        class="flex-shrink-0 px-2 sm:px-4 py-2 min-h-[44px] flex items-center gap-1 sm:gap-2 text-gray-600 hover:bg-gray-50 rounded-r-lg transition border-l border-gray-200"
       >
         <ClipboardList class="w-5 h-5" />
         <span class="hidden sm:inline">Todo List</span>
@@ -1113,42 +1113,46 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
     </div>
 
     <!-- Month Control -->
-    <div class="flex items-center justify-between gap-2 mb-4">
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-2 mb-4">
       <!-- Left: Member name (for friend's calendar) or Spacer -->
-      <div class="w-32">
+      <div class="hidden sm:block w-32">
         <h1 v-if="!isMyCalendar && memberName" class="text-lg font-bold text-gray-800 truncate">
           {{ memberName }}
         </h1>
       </div>
+      <!-- Mobile: Member name shown above navigation -->
+      <h1 v-if="!isMyCalendar && memberName" class="sm:hidden text-lg font-bold text-gray-800 truncate w-full text-center">
+        {{ memberName }}
+      </h1>
 
       <!-- Center: Year-Month Navigation -->
       <div class="flex items-center justify-center">
-        <button @click="prevMonth" class="p-2 hover:bg-gray-100 rounded-full transition">
+        <button @click="prevMonth" class="p-2 min-w-[44px] min-h-[44px] hover:bg-gray-100 rounded-full transition flex items-center justify-center">
           <ChevronLeft class="w-5 h-5" />
         </button>
         <button
           @click="isYearMonthPickerOpen = true"
-          class="px-3 py-1 text-lg font-semibold hover:bg-gray-100 rounded transition min-w-[120px]"
+          class="px-2 sm:px-3 py-1 text-base sm:text-lg font-semibold hover:bg-gray-100 rounded transition min-w-[100px] sm:min-w-[120px] min-h-[44px]"
         >
           {{ currentYear }}-{{ String(currentMonth).padStart(2, '0') }}
         </button>
-        <button @click="nextMonth" class="p-2 hover:bg-gray-100 rounded-full transition">
+        <button @click="nextMonth" class="p-2 min-w-[44px] min-h-[44px] hover:bg-gray-100 rounded-full transition flex items-center justify-center">
           <ChevronRight class="w-5 h-5" />
         </button>
       </div>
 
       <!-- Right: Search -->
-      <div class="flex items-center w-32 justify-end">
+      <div class="flex items-center w-full sm:w-32 justify-center sm:justify-end">
         <input
           v-model="searchQuery"
           type="text"
           placeholder="검색"
           @keyup.enter="handleSearch()"
-          class="px-3 py-1.5 border border-gray-300 rounded-l-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-24"
+          class="px-3 py-1.5 min-h-[44px] border border-gray-300 rounded-l-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-24 max-w-[200px]"
         />
         <button
           @click="handleSearch()"
-          class="px-3 py-1.5 bg-gray-800 text-white rounded-r-lg hover:bg-gray-700 transition"
+          class="px-3 py-1.5 min-h-[44px] min-w-[44px] bg-gray-800 text-white rounded-r-lg hover:bg-gray-700 transition flex items-center justify-center"
         >
           <Search class="w-4 h-4" />
         </button>
@@ -1157,15 +1161,15 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
 
     <!-- Duty Types & Buttons -->
     <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
-      <div class="flex items-center gap-4">
+      <div class="flex flex-wrap items-center gap-2 sm:gap-4">
         <template v-if="dutyTypes.length > 0">
           <div v-for="dutyType in dutyTypes" :key="dutyType.name" class="flex items-center gap-1">
             <span
               class="w-4 h-4 rounded border-2 border-gray-200"
               :style="{ backgroundColor: dutyType.color || '#6c757d' }"
             ></span>
-            <span class="text-sm text-gray-600">{{ dutyType.name }}</span>
-            <span class="text-sm font-bold text-gray-800">{{ dutyType.cnt }}</span>
+            <span class="text-xs sm:text-sm text-gray-600">{{ dutyType.name }}</span>
+            <span class="text-xs sm:text-sm font-bold text-gray-800">{{ dutyType.cnt }}</span>
           </div>
         </template>
         <span v-else-if="isLoadingDuties" class="text-sm text-gray-400">
@@ -1176,14 +1180,14 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
           근무 타입 정보 없음
         </span>
       </div>
-      <div class="flex gap-2">
+      <div class="flex flex-wrap gap-2">
         <button
           @click="isOtherDutiesModalOpen = true"
-          class="px-3 py-1.5 border rounded-lg text-sm hover:bg-gray-50 transition flex items-center gap-1"
+          class="px-2 sm:px-3 py-1.5 min-h-[44px] border rounded-lg text-xs sm:text-sm hover:bg-gray-50 transition flex items-center gap-1"
           :class="selectedFriendIds.length > 0 ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300'"
         >
           <Users class="w-4 h-4" />
-          함께보기
+          <span class="hidden xs:inline">함께보기</span>
           <span v-if="selectedFriendIds.length > 0" class="text-xs">
             ({{ selectedFriendIds.length }})
           </span>
@@ -1191,23 +1195,11 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
         <button
           v-if="isMyCalendar"
           @click="batchEditMode = !batchEditMode"
-          class="px-3 py-1.5 border rounded-lg text-sm transition"
+          class="px-2 sm:px-3 py-1.5 min-h-[44px] border rounded-lg text-xs sm:text-sm transition"
           :class="batchEditMode ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-300 hover:bg-gray-50'"
         >
           편집모드
         </button>
-      </div>
-    </div>
-
-    <!-- Pinned D-Day Display -->
-    <div v-if="pinnedDDay" class="mb-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <Star class="w-5 h-5 text-yellow-500 fill-yellow-500" />
-          <span class="font-bold text-blue-700">{{ pinnedDDay.dDayText }}</span>
-          <span class="text-gray-600">{{ pinnedDDay.title }}</span>
-        </div>
-        <span class="text-sm text-gray-500">{{ pinnedDDay.date }}</span>
       </div>
     </div>
 
@@ -1234,7 +1226,7 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
           v-for="(day, idx) in calendarDays"
           :key="idx"
           @click="handleDayClick(day, idx)"
-          class="min-h-[80px] sm:min-h-[100px] border-b border-r border-gray-200 p-1 transition relative"
+          class="min-h-[60px] sm:min-h-[80px] md:min-h-[100px] border-b border-r border-gray-200 p-0.5 sm:p-1 transition relative"
           :class="{
             'opacity-40 bg-gray-50': !day.isCurrentMonth,
             'ring-2 ring-red-500 ring-inset': day.isToday,
@@ -1319,13 +1311,13 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
     </div>
 
     <!-- D-Day List -->
-    <div class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+    <div class="bg-white rounded-lg border border-gray-200 p-3 sm:p-4 shadow-sm">
       <h3 class="text-sm font-medium text-gray-700 mb-3">D-Day</h3>
-      <div class="grid grid-cols-2 gap-3">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
         <div
           v-for="dday in dDays"
           :key="dday.id"
-          class="bg-gray-50 rounded-lg p-3 border border-gray-200 cursor-pointer hover:bg-gray-100 transition"
+          class="bg-gray-50 rounded-lg p-3 border border-gray-200 cursor-pointer hover:bg-gray-100 transition min-h-[44px]"
           :class="{ 'ring-2 ring-blue-500': pinnedDDay?.id === dday.id }"
           @click="togglePinnedDDay(dday)"
         >
@@ -1339,13 +1331,13 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
             <div v-if="isMyCalendar" class="flex gap-1">
               <button
                 @click.stop="openDDayModal(dday)"
-                class="text-gray-400 hover:text-gray-600 p-1"
+                class="text-gray-400 hover:text-gray-600 p-1.5 min-w-[44px] min-h-[44px] -m-1.5 flex items-center justify-center"
               >
                 <Pencil class="w-4 h-4" />
               </button>
               <button
                 @click.stop="deleteDDay(dday)"
-                class="text-gray-400 hover:text-red-600 p-1"
+                class="text-gray-400 hover:text-red-600 p-1.5 min-w-[44px] min-h-[44px] -m-1.5 flex items-center justify-center"
               >
                 <Trash2 class="w-4 h-4" />
               </button>
@@ -1362,7 +1354,7 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
         <div
           v-if="isMyCalendar"
           @click="openDDayModal()"
-          class="bg-gray-50 rounded-lg p-3 border-2 border-dashed border-gray-300 cursor-pointer hover:bg-blue-50 hover:border-blue-400 transition flex flex-col items-center justify-center min-h-[100px]"
+          class="bg-gray-50 rounded-lg p-3 border-2 border-dashed border-gray-300 cursor-pointer hover:bg-blue-50 hover:border-blue-400 transition flex flex-col items-center justify-center min-h-[80px] sm:min-h-[100px]"
         >
           <Plus class="w-6 h-6 text-gray-400 mb-1" />
           <span class="text-sm text-gray-500">디데이 추가</span>

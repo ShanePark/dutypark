@@ -334,22 +334,22 @@ onMounted(async () => {
           기본 정보
         </h2>
         <div class="space-y-4">
-          <div class="flex items-center py-3 border-b border-gray-100">
-            <div class="w-24 text-sm font-medium text-gray-500 flex items-center gap-2">
+          <div class="flex flex-col md:flex-row md:items-center py-3 border-b border-gray-100">
+            <div class="w-full md:w-24 text-sm font-medium text-gray-500 flex items-center gap-2 mb-1 md:mb-0">
               <User class="w-4 h-4" />
               이름
             </div>
             <div class="flex-1 text-gray-900">{{ memberInfo?.name }}</div>
           </div>
-          <div class="flex items-center py-3 border-b border-gray-100">
-            <div class="w-24 text-sm font-medium text-gray-500 flex items-center gap-2">
+          <div class="flex flex-col md:flex-row md:items-center py-3 border-b border-gray-100">
+            <div class="w-full md:w-24 text-sm font-medium text-gray-500 flex items-center gap-2 mb-1 md:mb-0">
               <Building2 class="w-4 h-4" />
               소속
             </div>
             <div class="flex-1 text-gray-900">{{ memberInfo?.team || '-' }}</div>
           </div>
-          <div v-if="memberInfo?.email" class="flex items-center py-3">
-            <div class="w-24 text-sm font-medium text-gray-500 flex items-center gap-2">
+          <div v-if="memberInfo?.email" class="flex flex-col md:flex-row md:items-center py-3">
+            <div class="w-full md:w-24 text-sm font-medium text-gray-500 flex items-center gap-2 mb-1 md:mb-0">
               <Mail class="w-4 h-4" />
               이메일
             </div>
@@ -364,14 +364,14 @@ onMounted(async () => {
           <Eye class="w-5 h-5 text-gray-500" />
           시간표 공개 설정
         </h2>
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <p class="text-gray-700">현재 공개 대상</p>
             <p class="text-sm text-gray-500 mt-1">내 시간표를 볼 수 있는 사람을 설정합니다</p>
           </div>
           <button
             @click="showVisibilityModal = true"
-            class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition flex items-center gap-2"
+            class="px-4 py-3 sm:py-2 min-h-11 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition flex items-center justify-center gap-2"
           >
             <span
               class="w-2 h-2 rounded-full"
@@ -406,7 +406,7 @@ onMounted(async () => {
               v-model="selectedManagerToAdd"
               @change="assignManager"
               :disabled="savingManager || availableFamilyMembers.length === 0"
-              class="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+              class="flex-1 px-3 py-3 sm:py-2 min-h-11 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
             >
               <option value="">관리자 추가</option>
               <option v-for="member in availableFamilyMembers" :key="member.id ?? 'none'" :value="member.id">
@@ -445,57 +445,109 @@ onMounted(async () => {
         <div v-if="tokensLoading" class="flex items-center justify-center py-8">
           <Loader2 class="w-6 h-6 animate-spin text-blue-500" />
         </div>
-        <div v-else class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="border-b border-gray-200">
-                <th class="text-left py-3 px-2 font-medium text-gray-500">접속 시간</th>
-                <th class="text-left py-3 px-2 font-medium text-gray-500">IP</th>
-                <th class="text-left py-3 px-2 font-medium text-gray-500">기기</th>
-                <th class="text-left py-3 px-2 font-medium text-gray-500">브라우저</th>
-                <th class="text-center py-3 px-2 font-medium text-gray-500">관리</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="token in tokens" :key="token.id" class="border-b border-gray-100 hover:bg-gray-50">
-                <td class="py-3 px-2 text-gray-700">{{ formatLastUsed(token.lastUsed) }}</td>
-                <td class="py-3 px-2 text-gray-700">{{ token.remoteAddr || '-' }}</td>
-                <td class="py-3 px-2">
-                  <span class="flex items-center gap-1 text-gray-700">
+        <div v-else>
+          <!-- Mobile Card Layout -->
+          <div class="sm:hidden space-y-3">
+            <div
+              v-for="token in tokens"
+              :key="token.id"
+              class="p-4 bg-gray-50 rounded-lg border border-gray-200"
+            >
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-sm font-medium text-gray-700">{{ formatLastUsed(token.lastUsed) }}</span>
+                <span
+                  v-if="token.isCurrentLogin"
+                  class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full"
+                >
+                  현재 접속
+                </span>
+                <button
+                  v-else
+                  @click="deleteToken(token.id)"
+                  class="px-3 py-2 min-h-11 text-xs font-medium text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-full transition"
+                >
+                  접속 종료
+                </button>
+              </div>
+              <div class="space-y-2 text-sm">
+                <div class="flex items-center gap-2 text-gray-600">
+                  <span class="w-16 text-gray-500">IP</span>
+                  <span>{{ token.remoteAddr || '-' }}</span>
+                </div>
+                <div class="flex items-center gap-2 text-gray-600">
+                  <span class="w-16 text-gray-500">기기</span>
+                  <span class="flex items-center gap-1">
                     <Monitor v-if="token.userAgent?.device === 'Other'" class="w-4 h-4 text-gray-400" />
                     <Smartphone v-else class="w-4 h-4 text-gray-400" />
                     {{ token.userAgent?.device || '-' }}
                   </span>
-                </td>
-                <td class="py-3 px-2">
-                  <span class="flex items-center gap-1 text-gray-700">
+                </div>
+                <div class="flex items-center gap-2 text-gray-600">
+                  <span class="w-16 text-gray-500">브라우저</span>
+                  <span class="flex items-center gap-1">
                     <Globe class="w-4 h-4 text-gray-400" />
                     {{ token.userAgent?.browser || '-' }}
                   </span>
-                </td>
-                <td class="py-3 px-2 text-center">
-                  <button
-                    v-if="!token.isCurrentLogin"
-                    @click="deleteToken(token.id)"
-                    class="px-3 py-1 text-xs font-medium text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-full transition"
-                  >
-                    접속 종료
-                  </button>
-                  <span
-                    v-else
-                    class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full"
-                  >
-                    현재 접속
-                  </span>
-                </td>
-              </tr>
-              <tr v-if="tokens.length === 0">
-                <td colspan="5" class="py-8 text-center text-gray-400">
-                  세션 정보가 없습니다
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                </div>
+              </div>
+            </div>
+            <div v-if="tokens.length === 0" class="py-8 text-center text-gray-400">
+              세션 정보가 없습니다
+            </div>
+          </div>
+          <!-- Desktop Table Layout -->
+          <div class="hidden sm:block overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-gray-200">
+                  <th class="text-left py-3 px-2 font-medium text-gray-500">접속 시간</th>
+                  <th class="text-left py-3 px-2 font-medium text-gray-500">IP</th>
+                  <th class="text-left py-3 px-2 font-medium text-gray-500">기기</th>
+                  <th class="text-left py-3 px-2 font-medium text-gray-500">브라우저</th>
+                  <th class="text-center py-3 px-2 font-medium text-gray-500">관리</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="token in tokens" :key="token.id" class="border-b border-gray-100 hover:bg-gray-50">
+                  <td class="py-3 px-2 text-gray-700">{{ formatLastUsed(token.lastUsed) }}</td>
+                  <td class="py-3 px-2 text-gray-700">{{ token.remoteAddr || '-' }}</td>
+                  <td class="py-3 px-2">
+                    <span class="flex items-center gap-1 text-gray-700">
+                      <Monitor v-if="token.userAgent?.device === 'Other'" class="w-4 h-4 text-gray-400" />
+                      <Smartphone v-else class="w-4 h-4 text-gray-400" />
+                      {{ token.userAgent?.device || '-' }}
+                    </span>
+                  </td>
+                  <td class="py-3 px-2">
+                    <span class="flex items-center gap-1 text-gray-700">
+                      <Globe class="w-4 h-4 text-gray-400" />
+                      {{ token.userAgent?.browser || '-' }}
+                    </span>
+                  </td>
+                  <td class="py-3 px-2 text-center">
+                    <button
+                      v-if="!token.isCurrentLogin"
+                      @click="deleteToken(token.id)"
+                      class="px-3 py-1 text-xs font-medium text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-full transition"
+                    >
+                      접속 종료
+                    </button>
+                    <span
+                      v-else
+                      class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full"
+                    >
+                      현재 접속
+                    </span>
+                  </td>
+                </tr>
+                <tr v-if="tokens.length === 0">
+                  <td colspan="5" class="py-8 text-center text-gray-400">
+                    세션 정보가 없습니다
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -528,7 +580,7 @@ onMounted(async () => {
               <button
                 v-else
                 @click="connectSso(sso.provider)"
-                class="px-4 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition"
+                class="px-4 py-2.5 sm:py-1.5 min-h-11 sm:min-h-0 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition"
               >
                 연동하기
               </button>
@@ -547,14 +599,14 @@ onMounted(async () => {
           <button
             v-if="memberInfo?.hasPassword"
             @click="openPasswordModal"
-            class="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition flex items-center gap-2"
+            class="px-4 py-3 sm:py-2 min-h-11 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition flex items-center gap-2"
           >
             <Lock class="w-4 h-4" />
             비밀번호 변경
           </button>
           <button
             @click="deleteAccount"
-            class="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition flex items-center gap-2"
+            class="px-4 py-3 sm:py-2 min-h-11 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition flex items-center gap-2"
           >
             <UserX class="w-4 h-4" />
             회원 탈퇴
@@ -563,10 +615,10 @@ onMounted(async () => {
       </section>
 
       <!-- Logout Section -->
-      <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
         <button
           @click="logout"
-          class="w-full px-4 py-3 text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-lg font-medium transition flex items-center justify-center gap-2"
+          class="w-full px-4 py-3 min-h-12 text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-lg font-medium transition flex items-center justify-center gap-2"
         >
           <LogOut class="w-5 h-5" />
           로그아웃
@@ -588,7 +640,7 @@ onMounted(async () => {
               <X class="w-5 h-5" />
             </button>
           </div>
-          <div class="p-4">
+          <div class="p-4 sm:p-6">
             <p class="text-gray-600 mb-4">내 달력을 공개할 범위를 설정하세요.</p>
             <p class="text-sm text-gray-500 mb-4">선택시 변경사항이 즉시 저장됩니다.</p>
             <div class="space-y-2">
@@ -597,7 +649,7 @@ onMounted(async () => {
                 :key="option.value"
                 @click="setVisibility(option.value)"
                 :disabled="savingVisibility"
-                class="w-full p-4 rounded-lg border-2 transition text-left disabled:opacity-50"
+                class="w-full p-4 min-h-16 rounded-lg border-2 transition text-left disabled:opacity-50"
                 :class="
                   calendarVisibility === option.value
                     ? 'border-blue-500 bg-blue-50'
@@ -620,10 +672,10 @@ onMounted(async () => {
               </button>
             </div>
           </div>
-          <div class="p-4 border-t border-gray-200">
+          <div class="p-4 sm:p-6 border-t border-gray-200">
             <button
               @click="showVisibilityModal = false"
-              class="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition"
+              class="w-full px-4 py-3 sm:py-2 min-h-11 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition"
             >
               닫기
             </button>
@@ -646,13 +698,13 @@ onMounted(async () => {
               <X class="w-5 h-5" />
             </button>
           </div>
-          <div class="p-4 space-y-4">
+          <div class="p-4 sm:p-6 space-y-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">현재 비밀번호</label>
               <input
                 v-model="passwordForm.currentPassword"
                 type="password"
-                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-3 sm:py-2 min-h-11 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 :class="passwordErrors.currentPassword ? 'border-red-500' : 'border-gray-300'"
                 placeholder="현재 비밀번호"
               />
@@ -665,7 +717,7 @@ onMounted(async () => {
               <input
                 v-model="passwordForm.newPassword"
                 type="password"
-                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-3 sm:py-2 min-h-11 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 :class="passwordErrors.newPassword ? 'border-red-500' : 'border-gray-300'"
                 placeholder="새 비밀번호 (8자 이상)"
               />
@@ -678,7 +730,7 @@ onMounted(async () => {
               <input
                 v-model="passwordForm.confirmPassword"
                 type="password"
-                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-3 sm:py-2 min-h-11 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 :class="passwordErrors.confirmPassword ? 'border-red-500' : 'border-gray-300'"
                 placeholder="새 비밀번호 확인"
               />
@@ -687,18 +739,18 @@ onMounted(async () => {
               </p>
             </div>
           </div>
-          <div class="p-4 border-t border-gray-200 flex gap-2">
+          <div class="p-4 sm:p-6 border-t border-gray-200 flex gap-2">
             <button
               @click="showPasswordModal = false"
               :disabled="changingPassword"
-              class="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition disabled:opacity-50"
+              class="flex-1 px-4 py-3 sm:py-2 min-h-11 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition disabled:opacity-50"
             >
               취소
             </button>
             <button
               @click="changePassword"
               :disabled="changingPassword"
-              class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-medium transition disabled:opacity-50 flex items-center justify-center gap-2"
+              class="flex-1 px-4 py-3 sm:py-2 min-h-11 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-medium transition disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Loader2 v-if="changingPassword" class="w-4 h-4 animate-spin" />
               {{ changingPassword ? '변경 중...' : '변경' }}

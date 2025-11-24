@@ -47,25 +47,25 @@ function handleToggle(friendId: number) {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="emit('close')"
     >
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-hidden">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-md max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4">
         <!-- Header -->
-        <div class="flex items-center justify-between p-4 border-b border-gray-200">
+        <div class="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
           <div class="flex items-center gap-2">
             <Users class="w-5 h-5 text-blue-600" />
-            <h2 class="text-lg font-bold">함께보기</h2>
+            <h2 class="text-base sm:text-lg font-bold">함께보기</h2>
           </div>
-          <button @click="emit('close')" class="p-1 hover:bg-gray-100 rounded-full transition">
-            <X class="w-5 h-5" />
+          <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition">
+            <X class="w-6 h-6" />
           </button>
         </div>
 
         <!-- Description -->
-        <div class="px-4 py-2 bg-blue-50 text-sm text-blue-700">
+        <div class="px-3 sm:px-4 py-2 bg-blue-50 text-xs sm:text-sm text-blue-700">
           친구의 근무표를 함께 볼 수 있습니다. (최대 {{ maxSelections }}명)
         </div>
 
         <!-- Content -->
-        <div class="p-4 overflow-y-auto max-h-[calc(90vh-180px)]">
+        <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(90dvh-180px)] sm:max-h-[calc(90vh-180px)]">
           <div v-if="friends.length === 0" class="text-center py-8 text-gray-400">
             친구 목록이 없습니다.
           </div>
@@ -116,14 +116,14 @@ function handleToggle(friendId: number) {
         </div>
 
         <!-- Footer -->
-        <div class="p-4 border-t border-gray-200">
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-500">
+        <div class="p-3 sm:p-4 border-t border-gray-200">
+          <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-between gap-2">
+            <span class="text-sm text-gray-500 text-center sm:text-left">
               {{ selectedFriendIds.length }} / {{ maxSelections }}명 선택됨
             </span>
             <button
               @click="emit('close')"
-              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
             >
               확인
             </button>

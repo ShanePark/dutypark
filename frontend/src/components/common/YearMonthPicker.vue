@@ -37,35 +37,35 @@ function handleGoToThisMonth() {
   <Teleport to="body">
     <div
       v-if="isOpen"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4"
       @click.self="emit('close')"
     >
-      <div class="bg-white rounded-xl shadow-xl w-full max-w-sm">
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-[95vw] sm:max-w-sm mx-2 sm:mx-4">
         <!-- Year Navigation -->
-        <div class="flex items-center justify-between p-4 border-b border-gray-200">
+        <div class="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
           <button
             @click="pickerYear--"
             class="p-2 hover:bg-gray-100 rounded-full transition"
           >
-            <ChevronLeft class="w-5 h-5" />
+            <ChevronLeft class="w-6 h-6 sm:w-5 sm:h-5" />
           </button>
           <span class="text-xl font-bold text-gray-900">{{ pickerYear }}년</span>
           <button
             @click="pickerYear++"
             class="p-2 hover:bg-gray-100 rounded-full transition"
           >
-            <ChevronRight class="w-5 h-5" />
+            <ChevronRight class="w-6 h-6 sm:w-5 sm:h-5" />
           </button>
         </div>
 
         <!-- Month Grid -->
-        <div class="p-4">
-          <div class="grid grid-cols-4 gap-2">
+        <div class="p-3 sm:p-4">
+          <div class="grid grid-cols-4 gap-1.5 sm:gap-2">
             <button
               v-for="(name, idx) in monthNames"
               :key="idx"
               @click="selectYearMonth(idx + 1)"
-              class="py-3 px-2 rounded-lg text-sm font-medium transition"
+              class="py-2.5 sm:py-3 px-1.5 sm:px-2 rounded-lg text-sm font-medium transition"
               :class="
                 pickerYear === currentYear && idx + 1 === currentMonth
                   ? 'bg-blue-600 text-white'
@@ -78,16 +78,16 @@ function handleGoToThisMonth() {
         </div>
 
         <!-- Buttons -->
-        <div class="p-4 border-t border-gray-200 flex gap-2">
+        <div class="p-3 sm:p-4 border-t border-gray-200 flex flex-col sm:flex-row gap-2">
           <button
             @click="handleGoToThisMonth"
-            class="flex-[3] px-4 py-2 bg-indigo-500 hover:bg-indigo-600 rounded-lg text-white font-medium transition"
+            class="w-full sm:flex-[3] px-4 py-2 bg-indigo-500 hover:bg-indigo-600 rounded-lg text-white font-medium transition text-sm sm:text-base"
           >
             이번달 ({{ new Date().getFullYear() }}년{{ new Date().getMonth() + 1 }}월)
           </button>
           <button
             @click="emit('close')"
-            class="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition"
+            class="w-full sm:flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition text-sm sm:text-base"
           >
             닫기
           </button>

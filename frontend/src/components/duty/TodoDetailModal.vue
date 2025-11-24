@@ -191,11 +191,11 @@ function onUploadError(message: string) {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="handleClose"
     >
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-lg max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4">
         <!-- Header -->
-        <div class="flex items-center justify-between p-4 border-b border-gray-200">
+        <div class="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
           <div class="flex items-center gap-2">
-            <h2 class="text-lg font-bold">할 일 상세</h2>
+            <h2 class="text-base sm:text-lg font-bold">할 일 상세</h2>
             <span
               :class="[
                 'px-2 py-0.5 text-xs rounded-full',
@@ -207,13 +207,13 @@ function onUploadError(message: string) {
               {{ isActive ? '진행중' : '완료' }}
             </span>
           </div>
-          <button @click="handleClose" class="p-1 hover:bg-gray-100 rounded-full transition">
-            <X class="w-5 h-5" />
+          <button @click="handleClose" class="p-2 hover:bg-gray-100 rounded-full transition">
+            <X class="w-6 h-6" />
           </button>
         </div>
 
         <!-- Content -->
-        <div class="p-4 overflow-y-auto max-h-[calc(90vh-200px)]">
+        <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(90dvh-200px)] sm:max-h-[calc(90vh-200px)]">
           <!-- View Mode -->
           <template v-if="!isEditMode">
             <div class="space-y-4">
@@ -235,7 +235,7 @@ function onUploadError(message: string) {
               <!-- Attachments (View Mode) -->
               <div v-if="todo.attachments.length > 0">
                 <label class="block text-sm font-medium text-gray-500 mb-2">첨부파일</label>
-                <div class="grid grid-cols-2 gap-2">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div
                     v-for="attachment in todo.attachments"
                     :key="attachment.id"
@@ -324,14 +324,14 @@ function onUploadError(message: string) {
         </div>
 
         <!-- Footer -->
-        <div class="p-4 border-t border-gray-200">
+        <div class="p-3 sm:p-4 border-t border-gray-200">
           <template v-if="!isEditMode">
-            <div class="flex items-center justify-between">
-              <div class="flex gap-2">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-between gap-2">
+              <div class="flex gap-2 order-2 sm:order-1">
                 <button
                   v-if="isActive"
                   @click="emit('complete', todo.id)"
-                  class="flex items-center gap-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                  class="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
                 >
                   <Check class="w-4 h-4" />
                   완료
@@ -339,23 +339,23 @@ function onUploadError(message: string) {
                 <button
                   v-else
                   @click="emit('reopen', todo.id)"
-                  class="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                  class="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                 >
                   <RotateCcw class="w-4 h-4" />
                   재오픈
                 </button>
               </div>
-              <div class="flex gap-2">
+              <div class="flex gap-2 order-1 sm:order-2">
                 <button
                   @click="enterEditMode"
-                  class="flex items-center gap-1 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                  class="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
                 >
                   <Pencil class="w-4 h-4" />
                   수정
                 </button>
                 <button
                   @click="emit('delete', todo.id)"
-                  class="flex items-center gap-1 px-3 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition"
+                  class="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-3 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition"
                 >
                   <Trash2 class="w-4 h-4" />
                   삭제
@@ -364,17 +364,17 @@ function onUploadError(message: string) {
             </div>
           </template>
           <template v-else>
-            <div class="flex justify-end gap-2">
+            <div class="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
               <button
                 @click="cancelEdit"
-                class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
               >
                 취소
               </button>
               <button
                 @click="saveEdit"
                 :disabled="!editTitle.trim() || isUploading"
-                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
               >
                 {{ isUploading ? '업로드 중...' : '저장' }}
               </button>

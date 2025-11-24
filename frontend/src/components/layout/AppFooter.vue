@@ -32,14 +32,14 @@ const isActive = (path: string) => {
 <template>
   <footer
     class="fixed bottom-0 left-0 right-0 border-t z-50"
-    style="background-color: #1f2937; border-color: #374151;"
+    style="background-color: #1f2937; border-color: #374151; padding-bottom: env(safe-area-inset-bottom); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);"
   >
-    <nav class="max-w-lg mx-auto px-4">
-      <ul class="flex justify-around py-2">
+    <nav class="max-w-lg mx-auto px-2 sm:px-4">
+      <ul class="flex justify-around py-1 sm:py-2">
         <li v-for="item in navItems" :key="item.path" class="flex-1">
           <router-link
             :to="item.path"
-            class="flex flex-col items-center px-3 py-3 text-sm rounded-xl transition-colors"
+            class="flex flex-col items-center px-2 sm:px-3 py-2 sm:py-3 text-xs sm:text-sm rounded-xl transition-colors min-h-[56px] sm:min-h-[64px]"
             :style="{
               backgroundColor: isActive(item.path) ? '#4b5563' : 'transparent',
               color: isActive(item.path) ? '#ffffff' : '#9ca3af'
@@ -47,7 +47,7 @@ const isActive = (path: string) => {
           >
             <svg
               v-if="item.icon === 'home'"
-              class="w-7 h-7 mb-1"
+              class="w-6 h-6 sm:w-7 sm:h-7 mb-0.5 sm:mb-1"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -61,7 +61,7 @@ const isActive = (path: string) => {
             </svg>
             <svg
               v-else-if="item.icon === 'calendar'"
-              class="w-7 h-7 mb-1"
+              class="w-6 h-6 sm:w-7 sm:h-7 mb-0.5 sm:mb-1"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -75,7 +75,7 @@ const isActive = (path: string) => {
             </svg>
             <svg
               v-else-if="item.icon === 'users'"
-              class="w-7 h-7 mb-1"
+              class="w-6 h-6 sm:w-7 sm:h-7 mb-0.5 sm:mb-1"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -89,7 +89,7 @@ const isActive = (path: string) => {
             </svg>
             <svg
               v-else-if="item.icon === 'settings'"
-              class="w-7 h-7 mb-1"
+              class="w-6 h-6 sm:w-7 sm:h-7 mb-0.5 sm:mb-1"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -109,7 +109,7 @@ const isActive = (path: string) => {
             </svg>
             <svg
               v-else-if="item.icon === 'admin'"
-              class="w-7 h-7 mb-1"
+              class="w-6 h-6 sm:w-7 sm:h-7 mb-0.5 sm:mb-1"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

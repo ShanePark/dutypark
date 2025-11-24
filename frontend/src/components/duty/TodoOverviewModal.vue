@@ -177,26 +177,26 @@ function formatDate(dateString: string) {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="emit('close')"
     >
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4">
         <!-- Header -->
-        <div class="flex items-center justify-between p-4 border-b border-gray-200">
+        <div class="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
           <div class="flex items-center gap-3">
-            <h2 class="text-lg font-bold">Todo List</h2>
+            <h2 class="text-base sm:text-lg font-bold">Todo List</h2>
             <span class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full">
               {{ todos.length }}
             </span>
           </div>
-          <button @click="emit('close')" class="p-1 hover:bg-gray-100 rounded-full transition">
-            <X class="w-5 h-5" />
+          <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition">
+            <X class="w-6 h-6" />
           </button>
         </div>
 
         <!-- Filters -->
-        <div class="px-4 py-2 border-b border-gray-100 flex items-center gap-2">
-          <Filter class="w-4 h-4 text-gray-500" />
+        <div class="px-3 sm:px-4 py-2 border-b border-gray-100 flex items-center gap-1.5 sm:gap-2 overflow-x-auto">
+          <Filter class="w-4 h-4 text-gray-500 flex-shrink-0" />
           <button
             @click="toggleFilter('all')"
-            class="px-3 py-1 text-sm rounded-full transition"
+            class="px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-full transition whitespace-nowrap"
             :class="
               filters.active && filters.completed
                 ? 'bg-blue-600 text-white'
@@ -207,7 +207,7 @@ function formatDate(dateString: string) {
           </button>
           <button
             @click="toggleFilter('active')"
-            class="px-3 py-1 text-sm rounded-full transition"
+            class="px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-full transition whitespace-nowrap"
             :class="
               filters.active && !filters.completed
                 ? 'bg-blue-600 text-white'
@@ -218,7 +218,7 @@ function formatDate(dateString: string) {
           </button>
           <button
             @click="toggleFilter('completed')"
-            class="px-3 py-1 text-sm rounded-full transition"
+            class="px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-full transition whitespace-nowrap"
             :class="
               !filters.active && filters.completed
                 ? 'bg-gray-600 text-white'
@@ -230,7 +230,7 @@ function formatDate(dateString: string) {
         </div>
 
         <!-- Content -->
-        <div class="p-4 overflow-y-auto max-h-[calc(90vh-180px)]">
+        <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(90dvh-180px)] sm:max-h-[calc(90vh-180px)]">
           <div v-if="filteredTodos.length === 0" class="text-center py-8 text-gray-400">
             표시할 할 일이 없습니다.
           </div>
@@ -281,7 +281,7 @@ function formatDate(dateString: string) {
               </div>
 
               <!-- Actions -->
-              <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+              <div class="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition">
                 <button
                   v-if="todo.status === 'ACTIVE'"
                   @click.stop="emit('complete', todo.id)"

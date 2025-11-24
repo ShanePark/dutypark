@@ -69,20 +69,20 @@ function downloadUrl(attachmentId: string): string {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="emit('close')"
     >
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4">
         <!-- Header -->
-        <div class="flex items-center justify-between p-4 border-b border-gray-200">
-          <div class="flex items-center gap-2">
-            <Lock v-if="schedule.visibility === 'PRIVATE'" class="w-4 h-4 text-gray-500" />
-            <h2 class="text-lg font-bold">{{ schedule.content }}</h2>
+        <div class="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
+          <div class="flex items-center gap-2 min-w-0 flex-1 mr-2">
+            <Lock v-if="schedule.visibility === 'PRIVATE'" class="w-4 h-4 text-gray-500 flex-shrink-0" />
+            <h2 class="text-base sm:text-lg font-bold truncate">{{ schedule.content }}</h2>
           </div>
-          <button @click="emit('close')" class="p-1 hover:bg-gray-100 rounded-full transition">
-            <X class="w-5 h-5" />
+          <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition flex-shrink-0">
+            <X class="w-6 h-6" />
           </button>
         </div>
 
         <!-- Content -->
-        <div class="p-4 overflow-y-auto max-h-[calc(90vh-130px)]">
+        <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(90dvh-130px)] sm:max-h-[calc(90vh-130px)]">
           <!-- Description -->
           <div v-if="schedule.description" class="mb-6">
             <h3 class="text-sm font-medium text-gray-700 mb-2">상세 내용</h3>
@@ -98,7 +98,7 @@ function downloadUrl(attachmentId: string): string {
               <Paperclip class="w-4 h-4" />
               첨부파일 ({{ schedule.attachments.length }})
             </h3>
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
               <div
                 v-for="attachment in schedule.attachments"
                 :key="attachment.id"
@@ -149,10 +149,10 @@ function downloadUrl(attachmentId: string): string {
         </div>
 
         <!-- Footer -->
-        <div class="p-4 border-t border-gray-200 flex justify-end">
+        <div class="p-3 sm:p-4 border-t border-gray-200 flex justify-end">
           <button
             @click="emit('close')"
-            class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+            class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
           >
             닫기
           </button>

@@ -174,7 +174,7 @@ onMounted(() => {
               <p class="text-sm text-gray-500">팀 생성 및 관리</p>
             </div>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
             <button
               @click="refreshData"
               class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
@@ -228,14 +228,14 @@ onMounted(() => {
                 총 {{ totalElements }}개의 팀이 있습니다
               </p>
             </div>
-            <div class="flex items-center gap-2">
-              <div class="relative">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+              <div class="relative flex-1 sm:flex-initial">
                 <Search class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
                   v-model="keyword"
                   type="text"
                   placeholder="팀 검색..."
-                  class="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                  class="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                   @keyup.enter="handleSearch"
                 />
               </div>
@@ -249,8 +249,8 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Team Table -->
-        <div class="overflow-x-auto">
+        <!-- Team Table (Desktop) -->
+        <div class="hidden sm:block overflow-x-auto">
           <table class="w-full">
             <thead class="bg-gray-50">
               <tr>
@@ -298,6 +298,32 @@ onMounted(() => {
           </table>
         </div>
 
+        <!-- Team Cards (Mobile) -->
+        <div class="sm:hidden divide-y divide-gray-100">
+          <div
+            v-for="(team, index) in teams"
+            :key="team.id"
+            class="p-4 hover:bg-gray-50 cursor-pointer transition"
+            @click="manageTeam(team.id)"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Building2 class="w-5 h-5 text-gray-500" />
+                </div>
+                <div class="min-w-0">
+                  <p class="font-medium text-gray-900 truncate">{{ team.name }}</p>
+                  <p class="text-sm text-gray-500 truncate">{{ team.description }}</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-1 text-sm text-gray-600 flex-shrink-0">
+                <Users class="w-4 h-4 text-gray-400" />
+                {{ team.memberCount }}명
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div v-if="teams.length === 0 && !isLoading" class="p-8 text-center text-gray-500">
           검색 결과가 없습니다
         </div>
@@ -321,15 +347,25 @@ onMounted(() => {
             >
               <ChevronLeft class="w-4 h-4" />
             </button>
-            <button
-              v-for="p in totalPages"
-              :key="p"
-              class="px-3 py-1 text-sm rounded-lg transition"
-              :class="p - 1 === page ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'"
-              @click="goToPage(p - 1)"
-            >
-              {{ p }}
-            </button>
+            <!-- Desktop: Show all page numbers -->
+            <template v-for="p in totalPages" :key="p">
+              <button
+                v-if="totalPages <= 5 || p === 1 || p === totalPages || (p >= page && p <= page + 2)"
+                class="px-3 py-1 text-sm rounded-lg transition"
+                :class="p - 1 === page ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'"
+                @click="goToPage(p - 1)"
+              >
+                {{ p }}
+              </button>
+              <span
+                v-else-if="p === 2 && page > 2"
+                class="px-1 text-gray-400"
+              >...</span>
+              <span
+                v-else-if="p === totalPages - 1 && page < totalPages - 3"
+                class="px-1 text-gray-400"
+              >...</span>
+            </template>
             <button
               :disabled="page === totalPages - 1"
               class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"

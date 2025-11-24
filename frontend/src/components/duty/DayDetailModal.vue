@@ -415,17 +415,17 @@ watch(
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="emit('close')"
     >
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4">
         <!-- Header -->
-        <div class="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 class="text-lg font-bold">{{ formattedDate }}</h2>
-          <button @click="emit('close')" class="p-1 hover:bg-gray-100 rounded-full transition">
-            <X class="w-5 h-5" />
+        <div class="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
+          <h2 class="text-base sm:text-lg font-bold">{{ formattedDate }}</h2>
+          <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition">
+            <X class="w-6 h-6" />
           </button>
         </div>
 
         <!-- Content -->
-        <div class="p-4 overflow-y-auto max-h-[calc(90vh-130px)]">
+        <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(90dvh-130px)] sm:max-h-[calc(90vh-130px)]">
           <!-- Duty Type Selection (내 달력에서만 표시, 추가/수정 모드에서는 숨김) -->
           <div v-if="!isCreateMode && !isEditMode && isMyCalendar && dutyTypes.length > 0" class="mb-4">
             <h3 class="text-sm font-medium text-gray-700 mb-2">근무</h3>
@@ -539,7 +539,7 @@ watch(
                       <Paperclip class="w-3 h-3" />
                       첨부파일 ({{ schedule.attachments.length }})
                     </div>
-                    <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <div
                         v-for="(attachment, idx) in schedule.attachments"
                         :key="attachment.id"
@@ -652,7 +652,7 @@ watch(
                 />
               </div>
 
-              <div class="grid grid-cols-2 gap-3">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label class="block text-sm text-gray-600 mb-1">시작 시간</label>
                   <input
@@ -707,17 +707,17 @@ watch(
                 />
               </div>
 
-              <div class="flex gap-2 justify-end">
+              <div class="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
                 <button
                   @click="cancelEdit"
-                  class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                  class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
                 >
                   취소
                 </button>
                 <button
                   @click="saveSchedule"
                   :disabled="isUploading"
-                  class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {{ isUploading ? '업로드 중...' : (isEditMode ? '수정' : '저장') }}
                 </button>
@@ -727,11 +727,11 @@ watch(
         </div>
 
         <!-- Footer -->
-        <div class="p-4 border-t border-gray-200 flex justify-end">
+        <div class="p-3 sm:p-4 border-t border-gray-200 flex justify-end">
           <button
             v-if="!isCreateMode && !isEditMode && isMyCalendar"
             @click="startCreateMode"
-            class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+            class="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
           >
             <Plus class="w-4 h-4" />
             일정 추가

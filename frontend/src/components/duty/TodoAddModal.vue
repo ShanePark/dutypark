@@ -115,17 +115,17 @@ function onUploadError(message: string) {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="handleClose"
     >
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-hidden">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-md max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4">
         <!-- Header -->
-        <div class="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 class="text-lg font-bold">할 일 추가</h2>
-          <button @click="handleClose" class="p-1 hover:bg-gray-100 rounded-full transition">
-            <X class="w-5 h-5" />
+        <div class="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
+          <h2 class="text-base sm:text-lg font-bold">할 일 추가</h2>
+          <button @click="handleClose" class="p-2 hover:bg-gray-100 rounded-full transition">
+            <X class="w-6 h-6" />
           </button>
         </div>
 
         <!-- Content -->
-        <div class="p-4 overflow-y-auto max-h-[calc(90vh-130px)]">
+        <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(90dvh-130px)] sm:max-h-[calc(90vh-130px)]">
           <div class="space-y-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -167,17 +167,17 @@ function onUploadError(message: string) {
         </div>
 
         <!-- Footer -->
-        <div class="p-4 border-t border-gray-200 flex justify-end gap-2">
+        <div class="p-3 sm:p-4 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
           <button
             @click="handleClose"
-            class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+            class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
           >
             취소
           </button>
           <button
             @click="handleSave"
             :disabled="!title.trim() || isUploading"
-            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {{ isUploading ? '업로드 중...' : '저장' }}
           </button>

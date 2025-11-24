@@ -400,8 +400,8 @@ onMounted(() => {
       </div>
 
       <!-- Month Controls -->
-      <div class="flex flex-wrap items-center justify-between gap-2 bg-white p-2 border-x border-gray-200">
-        <div class="w-20"></div>
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-2 bg-white p-2 border-x border-gray-200">
+        <div class="hidden sm:block w-20"></div>
 
         <div class="flex items-center gap-2">
           <button
@@ -429,12 +429,12 @@ onMounted(() => {
         <button
           v-if="isTeamManager"
           @click="goToTeamManage"
-          class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition flex items-center gap-1"
+          class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition flex items-center gap-1 w-full sm:w-auto justify-center"
         >
           <Settings class="w-4 h-4" />
           팀 관리
         </button>
-        <div v-else class="w-20"></div>
+        <div v-else class="hidden sm:block w-20"></div>
       </div>
 
       <!-- Calendar -->
@@ -513,14 +513,14 @@ onMounted(() => {
 
       <!-- Selected Day Schedule -->
       <div class="bg-white border-x border-b border-gray-200 p-3">
-        <div class="flex items-center justify-between mb-3">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
           <h3 class="text-lg font-bold">
             {{ selectedDay.year }}년 {{ selectedDay.month }}월 {{ selectedDay.day }}일
           </h3>
           <button
             v-if="isTeamManager"
             @click="openNewScheduleModal"
-            class="px-3 py-1.5 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition flex items-center gap-1"
+            class="px-3 py-1.5 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition flex items-center gap-1 w-full sm:w-auto justify-center"
           >
             <CalendarPlus class="w-4 h-4" />
             팀 일정 추가
@@ -596,7 +596,7 @@ onMounted(() => {
             </div>
 
             <!-- Members Grid -->
-            <div class="p-3 grid grid-cols-4 gap-2">
+            <div class="p-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
               <div
                 v-for="member in group.members"
                 :key="member.id"
@@ -659,7 +659,7 @@ onMounted(() => {
             ></textarea>
           </div>
 
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">
                 시작일

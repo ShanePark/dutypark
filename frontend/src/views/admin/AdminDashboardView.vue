@@ -298,15 +298,15 @@ onMounted(async () => {
       <!-- Member Management Section -->
       <div class="bg-white rounded-xl border border-gray-200">
         <div class="p-4 border-b border-gray-200">
-          <div class="flex items-center justify-between">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <h2 class="text-lg font-semibold text-gray-900">회원 관리</h2>
-            <div class="relative">
+            <div class="relative w-full sm:w-auto">
               <Search class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 v-model="searchKeyword"
                 type="text"
                 placeholder="회원 검색..."
-                class="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                class="w-full sm:w-auto pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
               />
             </div>
           </div>
@@ -318,13 +318,13 @@ onMounted(async () => {
             :key="member.id"
             class="p-4 hover:bg-gray-50 transition"
           >
-            <div class="flex items-center justify-between mb-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
               <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
                   <span class="text-sm font-medium text-gray-600">{{ member.name.charAt(0) }}</span>
                 </div>
-                <div>
-                  <p class="font-medium text-gray-900">{{ member.name }}</p>
+                <div class="min-w-0">
+                  <p class="font-medium text-gray-900 truncate">{{ member.name }}</p>
                   <p class="text-sm text-gray-500">
                     {{ member.tokens.length > 0 ? `${member.tokens.length}개의 활성 세션` : '활성 세션 없음' }}
                   </p>
@@ -332,37 +332,37 @@ onMounted(async () => {
               </div>
               <button
                 @click="openPasswordModal(member)"
-                class="px-3 py-1.5 text-sm font-medium text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition"
+                class="px-3 py-1.5 text-sm font-medium text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition flex-shrink-0 self-start sm:self-auto"
               >
                 비밀번호 변경
               </button>
             </div>
 
             <!-- Token List -->
-            <div v-if="member.tokens.length > 0" class="ml-13 space-y-2">
+            <div v-if="member.tokens.length > 0" class="ml-0 sm:ml-13 space-y-2">
               <div
                 v-for="(token, index) in member.tokens"
                 :key="index"
-                class="flex items-center gap-4 text-sm bg-gray-50 rounded-lg p-3"
+                class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm bg-gray-50 rounded-lg p-3"
               >
-                <div class="flex items-center gap-2 text-gray-600 min-w-[100px]">
-                  <Clock class="w-4 h-4 text-gray-400" />
-                  {{ formatRelativeTime(token.lastUsed) }}
-                </div>
-                <div class="flex items-center gap-2 text-gray-600 min-w-[120px]">
-                  <Globe class="w-4 h-4 text-gray-400" />
-                  {{ token.remoteAddr }}
+                <div class="flex items-center gap-2 text-gray-600">
+                  <Clock class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <span class="truncate">{{ formatRelativeTime(token.lastUsed) }}</span>
                 </div>
                 <div class="flex items-center gap-2 text-gray-600">
-                  <Monitor class="w-4 h-4 text-gray-400" />
-                  {{ token.userAgent?.device || '-' }}
+                  <Globe class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <span class="truncate">{{ token.remoteAddr }}</span>
                 </div>
-                <div class="text-gray-500">
+                <div class="flex items-center gap-2 text-gray-600">
+                  <Monitor class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <span class="truncate">{{ token.userAgent?.device || '-' }}</span>
+                </div>
+                <div class="text-gray-500 truncate">
                   {{ token.userAgent?.browser || '-' }}
                 </div>
               </div>
             </div>
-            <div v-else class="ml-13 text-sm text-gray-400 py-2">
+            <div v-else class="ml-0 sm:ml-13 text-sm text-gray-400 py-2">
               현재 활성화된 세션이 없습니다
             </div>
           </div>
@@ -382,11 +382,11 @@ onMounted(async () => {
       @click.self="closePasswordModal"
     >
       <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
-        <div class="p-4 border-b border-gray-200">
+        <div class="p-4 sm:p-4 border-b border-gray-200">
           <h3 class="text-lg font-semibold text-gray-900">비밀번호 변경</h3>
           <p class="text-sm text-gray-500">{{ selectedMember?.name }}님의 비밀번호를 변경합니다</p>
         </div>
-        <div class="p-4 space-y-4">
+        <div class="p-4 sm:p-4 space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">새 비밀번호</label>
             <input
