@@ -6,6 +6,7 @@ import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.security.domain.dto.TokenResponse
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.beans.factory.annotation.Value
@@ -14,6 +15,8 @@ import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.net.URI
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 @Service
 @Transactional
@@ -76,6 +79,49 @@ class KakaoLoginService(
         val member = memberRepository.findById(loginMember.id).orElseThrow()
         val kakaoId = getKakaoId(redirectUrl, code)
         member.kakaoId = kakaoId
+    }
+
+    /**
+     * SPA용 카카오 로그인 - Bearer 토큰을 URL 프래그먼트로 전달
+     */
+    fun loginForSpa(
+        req: HttpServletRequest,
+        code: String,
+        redirectUrl: String,
+        spaCallbackUrl: String
+    ): ResponseEntity<Void> {
+        val kakaoId = getKakaoId(redirectUrl, code)
+
+        val member = memberRepository.findMemberByKakaoId(kakaoId)
+        if (member != null) {
+            log.info("Kakao Login Success (SPA): ${member.name}, $kakaoId")
+            val tokenResponse = authService.getTokenResponseByMemberId(member.id!!, req)
+
+            val fragmentParams = buildFragmentParams(tokenResponse)
+            return ResponseEntity
+                .status(HttpStatus.FOUND)
+                .location(URI.create("$spaCallbackUrl#$fragmentParams"))
+                .build()
+        }
+
+        val ssoRegister = MemberSsoRegisterRepository.save(MemberSsoRegister(ssoId = kakaoId, ssoType = SsoType.KAKAO))
+        val errorFragment = "error=sso_required&uuid=${ssoRegister.uuid}"
+
+        return ResponseEntity
+            .status(HttpStatus.FOUND)
+            .location(URI.create("$spaCallbackUrl#$errorFragment"))
+            .build()
+    }
+
+    private fun buildFragmentParams(tokenResponse: TokenResponse): String {
+        return listOf(
+            "access_token" to tokenResponse.accessToken,
+            "refresh_token" to tokenResponse.refreshToken,
+            "expires_in" to tokenResponse.expiresIn.toString(),
+            "token_type" to tokenResponse.tokenType
+        ).joinToString("&") { (key, value) ->
+            "$key=${URLEncoder.encode(value, StandardCharsets.UTF_8)}"
+        }
     }
 
 }

@@ -1,18 +1,24 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useKakao } from '@/composables/useKakao'
 import { AxiosError } from 'axios'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const { initKakao, kakaoLogin } = useKakao()
 
 const email = ref('')
 const password = ref('')
 const rememberMe = ref(false)
 const isLoading = ref(false)
 const error = ref('')
+
+onMounted(() => {
+  initKakao()
+})
 
 async function handleLogin() {
   error.value = ''
@@ -36,6 +42,11 @@ async function handleLogin() {
   } finally {
     isLoading.value = false
   }
+}
+
+function handleKakaoLogin() {
+  const referer = (route.query.redirect as string) || '/'
+  kakaoLogin(referer)
 }
 
 </script>
@@ -116,14 +127,15 @@ async function handleLogin() {
           </div>
 
           <!-- Kakao Login Button -->
-          <a
-            href="/oauth2/authorization/kakao"
-            class="w-full py-3 px-4 rounded-lg font-medium transition flex items-center justify-center gap-3 hover:opacity-90"
+          <button
+            type="button"
+            @click="handleKakaoLogin"
+            class="w-full py-3 px-4 rounded-lg font-medium transition flex items-center justify-center gap-3 hover:opacity-90 cursor-pointer"
             style="background-color: #FEE500; color: #000000;"
           >
             <img src="/img/kakao.png" alt="Kakao" class="w-6 h-6" />
             <span>카카오 로그인</span>
-          </a>
+          </button>
         </form>
       </div>
     </div>

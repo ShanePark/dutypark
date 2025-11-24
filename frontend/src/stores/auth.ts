@@ -60,6 +60,16 @@ export const useAuthStore = defineStore('auth', () => {
     isInitialized.value = false
   }
 
+  async function checkAuth(): Promise<void> {
+    isLoading.value = true
+    try {
+      user.value = await authApi.getStatus()
+      isInitialized.value = true
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   return {
     user,
     isLoading,
@@ -71,5 +81,6 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     setUser,
     clearAuth,
+    checkAuth,
   }
 })

@@ -222,4 +222,26 @@ class AuthService(
         )
     }
 
+    fun getTokenResponseByMemberId(memberId: Long, req: HttpServletRequest): TokenResponse {
+        val member = memberRepository.findById(memberId).orElseThrow {
+            log.info("Token generation failed. member not exist:${memberId}")
+            AuthException("존재하지 않는 계정입니다.")
+        }
+
+        val jwt = jwtProvider.createToken(member)
+        val refreshToken = refreshTokenService.createRefreshToken(
+            memberId = memberId,
+            remoteAddr = req.remoteAddr,
+            userAgent = req.getHeader(HttpHeaders.USER_AGENT)
+        )
+
+        log.info("OAuth Login Success (Bearer): ${member.name}")
+
+        return TokenResponse(
+            accessToken = jwt,
+            refreshToken = refreshToken.token,
+            expiresIn = jwtConfig.tokenValidityInSeconds
+        )
+    }
+
 }

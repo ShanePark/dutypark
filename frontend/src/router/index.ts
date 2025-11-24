@@ -21,6 +21,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false },
   },
   {
+    path: '/auth/oauth-callback',
+    name: 'oauth-callback',
+    component: () => import('@/views/auth/OAuthCallbackView.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
     path: '/duty/:id',
     name: 'duty',
     component: () => import('@/views/duty/DutyView.vue'),

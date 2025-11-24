@@ -46,6 +46,19 @@ class OAuthController(
                 .build()
         }
 
+        // SPA 모드: Bearer 토큰을 URL 프래그먼트로 전달
+        val spa = (state["spa"] as Boolean?) ?: false
+        if (spa) {
+            val spaCallbackUrl = (state["spaCallbackUrl"] as String?) ?: "http://localhost:3000/auth/oauth-callback"
+            val originalRedirectUri = (state["redirectUri"] as String?) ?: redirectUrl
+            return kakaoLoginService.loginForSpa(
+                req = httpServletRequest,
+                code = code,
+                redirectUrl = originalRedirectUri,
+                spaCallbackUrl = spaCallbackUrl
+            )
+        }
+
         return kakaoLoginService.login(
             code = code,
             redirectUrl = redirectUrl,
