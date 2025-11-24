@@ -5,6 +5,7 @@ import type {
   OtherDutyResponse,
   TeamDto,
   HolidayDto,
+  DutyBatchResult,
 } from '@/types'
 
 export const dutyApi = {
@@ -113,6 +114,29 @@ export const dutyApi = {
   getHolidays: async (year: number, month: number): Promise<HolidayDto[][]> => {
     const response = await apiClient.get<HolidayDto[][]>('/holidays', {
       params: { year, month },
+    })
+    return response.data
+  },
+
+  /**
+   * Upload Excel file for batch duty update
+   */
+  uploadDutyBatch: async (
+    memberId: number,
+    year: number,
+    month: number,
+    file: File
+  ): Promise<DutyBatchResult> => {
+    const formData = new FormData()
+    formData.append('memberId', memberId.toString())
+    formData.append('year', year.toString())
+    formData.append('month', month.toString())
+    formData.append('file', file)
+
+    const response = await apiClient.post<DutyBatchResult>('/duty_batch', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
     })
     return response.data
   },

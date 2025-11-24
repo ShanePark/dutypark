@@ -516,6 +516,15 @@ export interface DutyTypeUpdateDto {
 }
 
 // Duty Batch types
+export interface DutyBatchResult {
+  result: boolean
+  errorMessage?: string
+  startDate?: string
+  endDate?: string
+  workingDays: number
+  offDays: number
+}
+
 export interface DutyBatchTeamResult {
   success: boolean
   message: string

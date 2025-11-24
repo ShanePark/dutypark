@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import Swal from 'sweetalert2'
 import { useSwal } from '@/composables/useSwal'
 import {
   Plus,
@@ -16,6 +17,7 @@ import {
   Loader2,
   Lock,
   CalendarCheck,
+  FileSpreadsheet,
 } from 'lucide-vue-next'
 
 // Modal Components
@@ -130,7 +132,7 @@ import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const authStore = useAuthStore()
-const { showError, confirmDelete } = useSwal()
+const { showError, showSuccess, confirmDelete } = useSwal()
 
 // State
 const today = new Date()
@@ -366,6 +368,7 @@ const friends = ref<Friend[]>([])
 const isLoadingFriends = ref(false)
 
 const selectedFriendIds = ref<number[]>([])
+const showMyDuties = ref(false)
 
 const otherDuties = ref<OtherDuty[]>([])
 
@@ -621,6 +624,7 @@ watch(
     pinnedDDay.value = null
     friends.value = []
     selectedFriendIds.value = []
+    showMyDuties.value = false
     otherDuties.value = []
 
     try {
@@ -977,21 +981,43 @@ async function handleFriendToggle(friendId: number) {
   await loadOtherDuties()
 }
 
+async function handleMyDutiesToggle() {
+  showMyDuties.value = !showMyDuties.value
+  await loadOtherDuties()
+}
+
+async function handleToggleOtherDuties() {
+  if (isMyCalendar.value) {
+    // 내 근무표: 친구 선택 모달 열기
+    isOtherDutiesModalOpen.value = true
+  } else {
+    // 다른 사람 근무표: 내 근무 바로 토글
+    await handleMyDutiesToggle()
+  }
+}
+
 async function loadOtherDuties() {
-  if (selectedFriendIds.value.length === 0) {
+  // Build list of member IDs to fetch
+  const memberIdsToFetch = [...selectedFriendIds.value]
+  // 다른 사람 근무표에서 "내 근무 함께보기"면 로그인 사용자 ID 추가
+  if (showMyDuties.value && authStore.user?.id) {
+    memberIdsToFetch.push(authStore.user.id)
+  }
+
+  if (memberIdsToFetch.length === 0) {
     otherDuties.value = []
     return
   }
 
   try {
     const response = await dutyApi.getOtherDuties(
-      selectedFriendIds.value,
+      memberIdsToFetch,
       currentYear.value,
       currentMonth.value
     )
     // Map API response to local OtherDuty format
-    otherDuties.value = response.map((item) => ({
-      memberId: selectedFriendIds.value[response.indexOf(item)] || 0,
+    otherDuties.value = response.map((item, index) => ({
+      memberId: memberIdsToFetch[index] || 0,
       memberName: item.name,
       duties: item.duties.map((d) => ({
         day: d.day,
@@ -1174,6 +1200,100 @@ function isLightColor(color: string | null | undefined): boolean {
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
   return luminance > 0.5
 }
+
+// Batch update modal - update all days in current month to a single duty type
+async function showBatchUpdateModal() {
+  if (!memberId.value || dutyTypes.value.length === 0) return
+
+  const buttonsHtml = dutyTypes.value
+    .map((dt) => {
+      const textColor = isLightColor(dt.color) ? '#000' : '#fff'
+      return `<button class="swal2-styled duty-type-btn" style="background-color: ${dt.color || '#6c757d'}; color: ${textColor}; margin: 4px;" data-id="${dt.id}">${dt.name}</button>`
+    })
+    .join('')
+
+  const result = await Swal.fire({
+    title: '한번에 수정',
+    html: `
+      <p>${currentYear.value}년 ${currentMonth.value}월의 기본 근무를 선택해주세요.</p>
+      <p>현재 월의 모든 날짜가 선택한 근무로 설정됩니다.</p>
+      <p class="text-sm text-orange-600 font-semibold mt-2">클릭시 바로 변경됩니다.</p>
+      <div class="mt-4">${buttonsHtml}</div>
+    `,
+    showConfirmButton: false,
+    showCancelButton: true,
+    cancelButtonText: '취소',
+    didOpen: () => {
+      const buttons = document.querySelectorAll('.duty-type-btn')
+      buttons.forEach((button) => {
+        button.addEventListener('click', async () => {
+          const dutyTypeId = button.getAttribute('data-id')
+          Swal.close()
+          try {
+            await dutyApi.batchUpdateDuty(
+              memberId.value,
+              currentYear.value,
+              currentMonth.value,
+              dutyTypeId ? parseInt(dutyTypeId) : null
+            )
+            await loadDuties()
+          } catch (error) {
+            console.error('Failed to batch update duties:', error)
+            showError('일괄 수정에 실패했습니다.')
+          }
+        })
+      })
+    },
+  })
+}
+
+// Excel upload modal
+async function showExcelUploadModal() {
+  if (!memberId.value || !team.value?.dutyBatchTemplate) return
+
+  const fileExtensions = team.value.dutyBatchTemplate.fileExtensions || ['.xlsx', '.xls']
+
+  const { value: file } = await Swal.fire({
+    title: '시간표 파일 업로드',
+    input: 'file',
+    html: `시간표 파일을 업로드해주세요.<br/>자동으로 파일에 맞춰 시간표를 업데이트 합니다.<br/><span class="text-orange-600 font-semibold">업로드하는 시간표가 ${currentYear.value}년 ${currentMonth.value}월에 맞는지 꼭 확인해주세요.</span>`,
+    inputAttributes: {
+      accept: fileExtensions.join(','),
+      'aria-label': '시간표 파일을 업로드해주세요.',
+    },
+    confirmButtonText: '등록',
+    showCancelButton: true,
+    cancelButtonText: '취소',
+  })
+
+  if (!file) return
+
+  try {
+    const result = await dutyApi.uploadDutyBatch(
+      memberId.value,
+      currentYear.value,
+      currentMonth.value,
+      file
+    )
+
+    if (!result.result) {
+      showError(result.errorMessage || '파일 업로드에 실패했습니다.', '시간표 파일 업로드 실패')
+      return
+    }
+
+    await Swal.fire({
+      icon: 'success',
+      title: '시간표 적용 완료',
+      html: `시간표가 업로드 되었습니다.<br/>[${result.startDate}] ~ [${result.endDate}]<br/>총 ${result.workingDays + result.offDays}일 중 근무일은 ${result.workingDays}, 휴무일은 ${result.offDays}일 입니다.`,
+      confirmButtonText: '확인',
+    })
+
+    await loadDuties()
+  } catch (error) {
+    console.error('Failed to upload duty batch:', error)
+    showError('파일 업로드에 실패했습니다.')
+  }
+}
 </script>
 
 <template>
@@ -1308,14 +1428,14 @@ function isLightColor(color: string | null | undefined): boolean {
       </div>
       <div class="flex flex-wrap gap-2">
         <button
-          @click="isOtherDutiesModalOpen = true"
+          @click="handleToggleOtherDuties"
           class="px-2 sm:px-3 py-1.5 min-h-[44px] border rounded-lg text-xs sm:text-sm hover:bg-gray-50 transition flex items-center gap-1"
-          :class="selectedFriendIds.length > 0 ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300'"
+          :class="(selectedFriendIds.length > 0 || showMyDuties) ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300'"
         >
           <Users class="w-4 h-4" />
           <span class="hidden xs:inline">함께보기</span>
-          <span v-if="selectedFriendIds.length > 0" class="text-xs">
-            ({{ selectedFriendIds.length }})
+          <span v-if="selectedFriendIds.length > 0 || showMyDuties" class="text-xs">
+            ({{ selectedFriendIds.length + (showMyDuties ? 1 : 0) }})
           </span>
         </button>
         <button
@@ -1325,6 +1445,21 @@ function isLightColor(color: string | null | undefined): boolean {
           :class="batchEditMode ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-300 hover:bg-gray-50'"
         >
           편집모드
+        </button>
+        <button
+          v-if="canEdit && isMyCalendar"
+          @click="showBatchUpdateModal"
+          class="px-2 sm:px-3 py-1.5 min-h-[44px] border border-gray-300 rounded-lg text-xs sm:text-sm hover:bg-gray-50 transition"
+        >
+          일괄수정
+        </button>
+        <button
+          v-if="canEdit && isMyCalendar && team?.dutyBatchTemplate"
+          @click="showExcelUploadModal"
+          class="px-2 sm:px-3 py-1.5 min-h-[44px] border border-gray-300 rounded-lg text-xs sm:text-sm hover:bg-gray-50 transition flex items-center gap-1"
+        >
+          <FileSpreadsheet class="w-4 h-4" />
+          <span class="hidden sm:inline">엑셀</span>
         </button>
       </div>
     </div>
@@ -1477,7 +1612,7 @@ function isLightColor(color: string | null | undefined): boolean {
                 color: isLightColor(getOtherDutyForDay(day, otherDuty)?.dutyColor) ? '#000' : '#fff',
               }"
             >
-              {{ otherDuty.memberName }}
+              <span class="font-bold">{{ otherDuty.memberName }}</span><template v-if="getOtherDutyForDay(day, otherDuty)?.dutyType">:<span class="font-normal">{{ getOtherDutyForDay(day, otherDuty)?.dutyType?.slice(0, 4) }}</span></template>
             </div>
           </div>
         </div>
