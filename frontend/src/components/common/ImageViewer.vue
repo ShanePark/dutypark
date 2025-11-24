@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { X, ChevronLeft, ChevronRight, Download } from 'lucide-vue-next'
 import { fetchAuthenticatedImage } from '@/api/attachment'
 
@@ -25,6 +25,14 @@ const emit = defineEmits<{
 const currentIndex = ref(0)
 const fullImageUrls = ref<Record<string, string>>({})
 const isLoading = ref(false)
+
+// Touch/swipe handling
+const touchStartX = ref(0)
+const touchStartY = ref(0)
+const touchEndX = ref(0)
+const touchEndY = ref(0)
+const isSwiping = ref(false)
+const SWIPE_THRESHOLD = 50
 
 watch(
   () => props.isOpen,
@@ -92,10 +100,50 @@ function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'ArrowRight') nextImage()
 }
 
-// Keyboard navigation
-if (typeof window !== 'undefined') {
-  window.addEventListener('keydown', handleKeydown)
+// Touch handlers for swipe navigation
+function handleTouchStart(e: TouchEvent) {
+  touchStartX.value = e.touches[0].clientX
+  touchStartY.value = e.touches[0].clientY
+  isSwiping.value = true
 }
+
+function handleTouchMove(e: TouchEvent) {
+  if (!isSwiping.value) return
+  touchEndX.value = e.touches[0].clientX
+  touchEndY.value = e.touches[0].clientY
+}
+
+function handleTouchEnd() {
+  if (!isSwiping.value) return
+  isSwiping.value = false
+
+  const deltaX = touchEndX.value - touchStartX.value
+  const deltaY = Math.abs(touchEndY.value - touchStartY.value)
+
+  // Only handle horizontal swipes (ignore vertical scrolling)
+  if (Math.abs(deltaX) > SWIPE_THRESHOLD && Math.abs(deltaX) > deltaY) {
+    if (deltaX > 0) {
+      prevImage()
+    } else {
+      nextImage()
+    }
+  }
+
+  // Reset touch values
+  touchStartX.value = 0
+  touchStartY.value = 0
+  touchEndX.value = 0
+  touchEndY.value = 0
+}
+
+// Keyboard navigation
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
 </script>
 
 <template>
@@ -104,20 +152,23 @@ if (typeof window !== 'undefined') {
       v-if="isOpen && images.length > 0"
       class="fixed inset-0 z-[60] flex items-center justify-center bg-black/90"
       @click.self="emit('close')"
+      @touchstart="handleTouchStart"
+      @touchmove="handleTouchMove"
+      @touchend="handleTouchEnd"
     >
       <!-- Close button -->
       <button
         @click="emit('close')"
-        class="absolute top-4 right-4 p-2 text-white hover:bg-white/20 rounded-full transition"
+        class="absolute top-4 right-4 p-2 text-white hover:bg-white/20 rounded-full transition z-10"
       >
         <X class="w-6 h-6" />
       </button>
 
-      <!-- Previous button -->
+      <!-- Previous button - centered vertically, larger touch area on mobile -->
       <button
         v-if="currentIndex > 0"
         @click="prevImage"
-        class="absolute left-4 p-2 text-white hover:bg-white/20 rounded-full transition"
+        class="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-3 sm:p-2 text-white hover:bg-white/20 active:bg-white/30 rounded-full transition z-10"
       >
         <ChevronLeft class="w-8 h-8" />
       </button>
@@ -128,7 +179,7 @@ if (typeof window !== 'undefined') {
           v-if="getCurrentImageUrl()"
           :src="getCurrentImageUrl()!"
           :alt="images[currentIndex]?.originalFilename"
-          class="max-w-full max-h-[80vh] object-contain"
+          class="max-w-full max-h-[70vh] sm:max-h-[80vh] object-contain"
         />
         <div v-else class="text-white">{{ isLoading ? '로딩 중...' : '이미지를 불러올 수 없습니다' }}</div>
 
@@ -140,21 +191,21 @@ if (typeof window !== 'undefined') {
           </div>
         </div>
 
-        <!-- Download button -->
+        <!-- Download button - larger touch area on mobile -->
         <button
           @click="downloadImage"
-          class="mt-4 flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-white transition"
+          class="mt-4 flex items-center gap-2 px-5 py-3 sm:px-4 sm:py-2 bg-white/20 hover:bg-white/30 active:bg-white/40 rounded-lg text-white transition"
         >
-          <Download class="w-4 h-4" />
+          <Download class="w-5 h-5 sm:w-4 sm:h-4" />
           다운로드
         </button>
       </div>
 
-      <!-- Next button -->
+      <!-- Next button - centered vertically, larger touch area on mobile -->
       <button
         v-if="currentIndex < images.length - 1"
         @click="nextImage"
-        class="absolute right-4 p-2 text-white hover:bg-white/20 rounded-full transition"
+        class="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-3 sm:p-2 text-white hover:bg-white/20 active:bg-white/30 rounded-full transition z-10"
       >
         <ChevronRight class="w-8 h-8" />
       </button>

@@ -31,6 +31,10 @@ import {
   ChevronLeft,
   ChevronRight,
   User,
+  Sparkles,
+  CalendarDays,
+  ListTodo,
+  UserCheck,
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -114,11 +118,11 @@ let isDragging = false
 
 // Features for guest view
 const features = [
-  { icon: 'calendar', text: '일정 관리 (등록, 검색, 공개 설정)' },
-  { icon: 'check', text: '할일 관리로 까먹지 않는 일상' },
-  { icon: 'clock', text: '근무 관리 및 시간표 등록' },
-  { icon: 'users', text: '팀원들의 시간표와 일정 공유' },
-  { icon: 'heart', text: '친구 및 가족의 일정 조회와 태그 기능' },
+  { icon: 'calendar', text: '일정 관리 (등록, 검색, 공개 설정)', color: 'blue' },
+  { icon: 'check', text: '할일 관리로 까먹지 않는 일상', color: 'green' },
+  { icon: 'clock', text: '근무 관리 및 시간표 등록', color: 'purple' },
+  { icon: 'users', text: '팀원들의 시간표와 일정 공유', color: 'amber' },
+  { icon: 'heart', text: '친구 및 가족의 일정 조회와 태그 기능', color: 'rose' },
 ]
 
 // Computed: sorted friends (pinned first)
@@ -539,35 +543,43 @@ watch(
     <template v-if="authStore.isLoggedIn">
       <!-- My Info Section -->
       <div
-        class="group bg-white rounded-xl shadow-sm border-2 border-gray-200 mb-4 overflow-hidden cursor-pointer hover:shadow-lg hover:border-gray-400 hover:scale-[1.01] transition-all duration-200"
+        class="group bg-white rounded-2xl shadow-sm border border-gray-200 mb-6 cursor-pointer hover:shadow-lg hover:border-gray-300 transition-all duration-200 overflow-hidden"
         @click="moveTo()"
       >
-        <div class="bg-gray-600 group-hover:bg-gray-800 py-2 text-white font-bold uppercase flex items-center justify-between px-4 transition-colors duration-200">
-          <span class="flex-1 text-center">{{ myInfo?.member.name || '로딩중...' }}</span>
-          <ChevronRight class="w-5 h-5 opacity-70 group-hover:opacity-100 group-hover:translate-x-2 transition-all duration-200" />
+        <!-- Header -->
+        <div class="px-5 py-3 bg-gradient-to-r from-gray-700 to-gray-800 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center">
+              <User class="w-5 h-5 text-white" />
+            </div>
+            <span class="text-lg font-bold text-white">{{ myInfo?.member.name || '로딩중...' }}</span>
+          </div>
+          <ChevronRight class="w-5 h-5 text-gray-400 group-hover:text-white group-hover:translate-x-1 transition-all" />
         </div>
+
+        <!-- Content -->
         <div class="p-5">
           <!-- Error state -->
           <div v-if="myInfoError" class="text-center py-4 text-red-500">
             {{ myInfoError }}
           </div>
-          <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <!-- Left column: Date & Duty -->
             <div class="space-y-3">
               <div class="flex items-center gap-2 text-gray-700">
-                <Calendar class="w-5 h-5 text-gray-500" />
+                <Calendar class="w-5 h-5 text-gray-400" />
                 <span class="font-medium">{{ today }}</span>
               </div>
 
               <div class="flex items-center gap-2">
-                <Briefcase class="w-5 h-5 text-gray-500" />
-                <span class="text-gray-600">근무:</span>
+                <Briefcase class="w-5 h-5 text-gray-400" />
+                <span class="text-gray-500">근무:</span>
                 <template v-if="myInfoLoading">
                   <div class="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
                 </template>
                 <template v-else-if="myInfo?.duty">
                   <span
-                    class="px-2 py-0.5 rounded font-medium text-sm"
+                    class="px-2.5 py-0.5 rounded-md font-semibold text-sm"
                     :style="{
                       backgroundColor: myInfo.duty.dutyColor || '#666',
                       color: isLightColor(myInfo.duty.dutyColor) ? '#1f2937' : '#ffffff'
@@ -581,9 +593,9 @@ watch(
             </div>
 
             <!-- Right column: Today's schedules -->
-            <div class="border-t pt-4 mt-1 sm:border-t-0 sm:pt-0 sm:mt-0 sm:border-l sm:pl-6 border-gray-200">
+            <div class="border-t pt-4 md:border-t-0 md:pt-0 md:border-l md:pl-5 border-gray-200">
               <div class="flex items-center gap-2 mb-2">
-                <ClipboardList class="w-5 h-5 text-gray-500" />
+                <ClipboardList class="w-5 h-5 text-gray-400" />
                 <span class="text-gray-700 font-medium">오늘 일정</span>
               </div>
               <template v-if="myInfoLoading">
@@ -595,10 +607,10 @@ watch(
                 <li
                   v-for="schedule in myInfo?.schedules || []"
                   :key="schedule.id"
-                  class="py-1 border-b border-gray-100 last:border-0 text-gray-700"
+                  class="py-1.5 border-b border-gray-100 last:border-0 text-gray-700 flex items-center justify-between"
                 >
-                  <span>{{ printSchedule(schedule) }}</span>
-                  <span class="text-gray-400 ml-2 text-sm">{{ printScheduleTime(schedule.startDateTime) }}</span>
+                  <span class="truncate">{{ printSchedule(schedule) }}</span>
+                  <span class="text-gray-400 ml-2 text-sm flex-shrink-0">{{ printScheduleTime(schedule.startDateTime) }}</span>
                 </li>
                 <li v-if="!myInfo?.schedules?.length" class="text-gray-400 text-sm">
                   오늘의 일정이 없습니다.
@@ -612,10 +624,13 @@ watch(
       <!-- Friend Request Section -->
       <div
         v-if="friendInfoInitialized && hasPendingRequests && friendInfo"
-        class="bg-white rounded-xl shadow-sm border border-gray-200 mb-4 overflow-hidden"
+        class="bg-white rounded-2xl shadow-sm border border-gray-200 mb-6 overflow-hidden"
       >
-        <div class="bg-gray-600 text-center py-2 text-white font-bold uppercase">
-          친구 요청 관리
+        <div class="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-3">
+          <div class="flex items-center gap-2">
+            <UserCheck class="w-5 h-5 text-white" />
+            <span class="text-white font-bold">친구 요청 관리</span>
+          </div>
         </div>
         <div class="p-5">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -623,23 +638,25 @@ watch(
             <div
               v-for="req in friendInfo.pendingRequestsTo"
               :key="'to-' + req.fromMember.id"
-              class="p-4 border rounded-lg bg-blue-50 border-blue-200"
+              class="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200"
             >
               <div class="flex justify-between items-center">
                 <div class="font-bold text-gray-800 flex items-center gap-2">
-                  <Home v-if="req.requestType === 'FAMILY_REQUEST'" class="w-4 h-4 text-blue-600" />
-                  <UserPlus v-else class="w-4 h-4 text-blue-600" />
+                  <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <Home v-if="req.requestType === 'FAMILY_REQUEST'" class="w-4 h-4 text-blue-600" />
+                    <UserPlus v-else class="w-4 h-4 text-blue-600" />
+                  </div>
                   {{ req.fromMember.name }}
                 </div>
                 <div class="flex gap-2">
                   <button
-                    class="px-3 py-1 text-sm border border-green-500 text-green-600 rounded hover:bg-green-50 transition"
+                    class="px-3 py-1.5 text-sm font-medium bg-green-500 text-white rounded-lg hover:bg-green-600 transition shadow-sm"
                     @click.stop="acceptFriendRequest(req)"
                   >
                     승인
                   </button>
                   <button
-                    class="px-3 py-1 text-sm border border-red-500 text-red-600 rounded hover:bg-red-50 transition"
+                    class="px-3 py-1.5 text-sm font-medium bg-white text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition"
                     @click.stop="rejectFriendRequest(req)"
                   >
                     거절
@@ -652,16 +669,18 @@ watch(
             <div
               v-for="req in friendInfo.pendingRequestsFrom"
               :key="'from-' + req.toMember.id"
-              class="p-4 border rounded-lg bg-yellow-50 border-yellow-200"
+              class="p-4 rounded-xl bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200"
             >
               <div class="flex justify-between items-center">
                 <div class="font-bold text-gray-800 flex items-center gap-2">
-                  <Home v-if="req.requestType === 'FAMILY_REQUEST'" class="w-4 h-4 text-yellow-600" />
-                  <UserPlus v-else class="w-4 h-4 text-yellow-600" />
+                  <div class="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
+                    <Home v-if="req.requestType === 'FAMILY_REQUEST'" class="w-4 h-4 text-amber-600" />
+                    <UserPlus v-else class="w-4 h-4 text-amber-600" />
+                  </div>
                   {{ req.toMember.name }}
                 </div>
                 <button
-                  class="px-3 py-1 text-sm border border-yellow-500 text-yellow-700 rounded hover:bg-yellow-100 transition"
+                  class="px-3 py-1.5 text-sm font-medium bg-white text-amber-700 border border-amber-300 rounded-lg hover:bg-amber-50 transition"
                   @click.stop="cancelRequest(req)"
                 >
                   요청 취소
@@ -673,9 +692,15 @@ watch(
       </div>
 
       <!-- Friends List Section -->
-      <div ref="friendSectionRef" class="friend-section bg-white rounded-xl shadow-sm border border-gray-200 mb-4 overflow-hidden">
-        <div class="bg-gray-600 text-center py-2 text-white font-bold uppercase">
-          친구 목록
+      <div ref="friendSectionRef" class="friend-section bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-3">
+          <div class="flex items-center gap-2">
+            <Users class="w-5 h-5 text-white" />
+            <span class="text-white font-bold">친구 목록</span>
+            <span v-if="friendInfo?.friends.length" class="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs text-white">
+              {{ friendInfo.friends.length }}
+            </span>
+          </div>
         </div>
         <div class="p-5">
           <!-- Error state -->
@@ -693,65 +718,71 @@ watch(
               v-for="friend in sortedFriends"
               :key="friend.member.id ?? 'unknown'"
               :data-member-id="friend.member.id"
-              class="friend-card p-2 sm:p-4 border-2 border-gray-200 rounded-lg cursor-pointer transition-all duration-200 shadow-sm hover:shadow-lg hover:scale-[1.02] hover:border-blue-300 hover:bg-blue-50"
-              :class="{
-                'pinned-friend bg-yellow-50': friend.pinOrder,
-              }"
+              class="friend-card relative overflow-hidden rounded-xl sm:rounded-2xl cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
+              :class="[
+                friend.pinOrder
+                  ? 'pinned-friend bg-gradient-to-br from-amber-50 to-yellow-50 border-2 border-amber-200 shadow-md'
+                  : 'bg-white border border-gray-200 hover:border-blue-300'
+              ]"
               @click="moveTo(friend.member.id)"
             >
-              <div>
+              <div class="p-2 sm:p-4">
                 <!-- Header: Name & Actions -->
-                <div class="flex justify-between items-start sm:items-center mb-1 sm:mb-2">
-                  <div class="font-bold text-gray-800 flex items-center gap-1 text-sm sm:text-base">
-                    <User v-if="!friend.isFamily" class="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" />
-                    <Home v-if="friend.isFamily" class="w-3 h-3 sm:w-4 sm:h-4 text-gray-600 flex-shrink-0" fill="currentColor" />
-                    <span class="truncate">{{ friend.member.name }}</span>
+                <div class="flex items-center justify-between mb-1.5 sm:mb-2">
+                  <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                    <div
+                      class="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                      :class="friend.isFamily ? 'bg-gradient-to-br from-rose-100 to-pink-100' : 'bg-gradient-to-br from-gray-100 to-gray-200'"
+                    >
+                      <Home v-if="friend.isFamily" class="w-3 h-3 sm:w-4 sm:h-4 text-rose-500" />
+                      <User v-else class="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
+                    </div>
+                    <span class="font-bold text-gray-800 text-xs sm:text-sm truncate">{{ friend.member.name }}</span>
                   </div>
-                  <div class="flex items-center gap-0.5 sm:gap-2 flex-shrink-0" @click.stop>
+                  <div class="flex items-center flex-shrink-0" @click.stop>
                     <!-- Pin/Unpin button -->
                     <button
                       v-if="friend.pinOrder"
-                      class="p-1 sm:p-2 min-h-8 min-w-8 sm:min-h-11 sm:min-w-11 flex items-center justify-center text-yellow-500 hover:text-yellow-600 transition"
+                      class="p-0.5 sm:p-1 text-amber-500 hover:text-amber-600 transition"
                       @click.stop="unpinFriend(friend.member)"
                       title="고정 해제"
                     >
-                      <Star class="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" />
+                      <Star class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" />
                     </button>
                     <button
                       v-else
-                      class="p-1 sm:p-2 min-h-8 min-w-8 sm:min-h-11 sm:min-w-11 flex items-center justify-center text-gray-400 hover:text-yellow-500 transition"
+                      class="p-0.5 sm:p-1 text-gray-300 hover:text-amber-500 transition"
                       @click.stop="pinFriend(friend.member)"
                       title="고정"
                     >
-                      <Star class="w-4 h-4 sm:w-5 sm:h-5" />
+                      <Star class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </button>
-
                     <!-- Dropdown toggle -->
                     <div v-if="friend.member.id" class="relative">
                       <button
-                        class="p-1.5 min-h-8 min-w-8 sm:min-h-11 sm:min-w-11 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition flex items-center justify-center"
+                        class="p-0.5 sm:p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition"
                         @click="toggleDropdown(friend.member.id, $event)"
                       >
-                        <MoreVertical class="w-4 h-4" />
+                        <MoreVertical class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       </button>
                       <!-- Dropdown menu -->
                       <div
                         v-if="openDropdownId === friend.member.id"
-                        class="absolute right-0 mt-1 w-28 sm:w-32 bg-white border border-gray-200 rounded-lg shadow-lg z-10"
+                        class="absolute right-0 mt-1 w-28 sm:w-32 bg-white border border-gray-200 rounded-xl shadow-xl z-10 overflow-hidden"
                       >
                         <button
                           v-if="!friend.isFamily"
-                          class="w-full px-2 sm:px-3 py-2 text-left text-xs sm:text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2"
+                          class="w-full px-2.5 py-2 sm:px-3 sm:py-2.5 text-left text-xs sm:text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 transition"
                           @click="addFamily(friend.member)"
                         >
-                          <Home class="w-4 h-4" />
+                          <Home class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           가족 등록
                         </button>
                         <button
-                          class="w-full px-2 sm:px-3 py-2 text-left text-xs sm:text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                          class="w-full px-2.5 py-2 sm:px-3 sm:py-2.5 text-left text-xs sm:text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition"
                           @click="unfriend(friend.member)"
                         >
-                          <Trash2 class="w-4 h-4" />
+                          <Trash2 class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           친구 삭제
                         </button>
                       </div>
@@ -760,35 +791,35 @@ watch(
                 </div>
 
                 <!-- Duty info -->
-                <p class="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2 flex items-center gap-1">
-                  <Briefcase class="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
-                  <span class="hidden sm:inline">근무:</span>
-                  <span v-if="friend.duty" class="truncate">{{ friend.duty.dutyType || '휴무' }}</span>
-                  <span v-else class="text-gray-400">-</span>
-                </p>
+                <div class="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                  <Briefcase class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-400 flex-shrink-0" />
+                  <span class="text-[11px] sm:text-sm text-gray-500">근무:</span>
+                  <span v-if="friend.duty" class="text-[11px] sm:text-sm font-medium text-gray-700 truncate">{{ friend.duty.dutyType || '휴무' }}</span>
+                  <span v-else class="text-[11px] sm:text-sm text-gray-400">-</span>
+                </div>
 
-                <!-- Schedules -->
-                <div v-if="friend.schedules && friend.schedules.length" class="mt-1 sm:mt-2">
-                  <ul class="space-y-0.5 sm:space-y-1">
-                    <li
-                      v-for="schedule in friend.schedules"
-                      :key="schedule.id"
-                      class="text-xs sm:text-sm py-0.5 sm:py-1 border-b border-gray-100 last:border-0 text-gray-600 truncate"
-                    >
-                      <span>{{ printSchedule(schedule) }}</span>
-                      <span class="text-gray-400 ml-1 sm:ml-2 hidden sm:inline">{{ printScheduleTime(schedule.startDateTime) }}</span>
-                    </li>
-                  </ul>
+                <!-- Schedules (hidden on mobile to save space) -->
+                <div v-if="friend.schedules && friend.schedules.length" class="hidden sm:block mt-2 space-y-1">
+                  <div
+                    v-for="schedule in friend.schedules.slice(0, 2)"
+                    :key="schedule.id"
+                    class="text-xs sm:text-sm py-1.5 px-2 bg-gray-50 rounded-lg text-gray-600 truncate"
+                  >
+                    {{ printSchedule(schedule) }}
+                  </div>
+                  <div v-if="friend.schedules.length > 2" class="text-xs text-gray-400 pl-2">
+                    +{{ friend.schedules.length - 2 }}개 더보기
+                  </div>
                 </div>
               </div>
 
               <!-- Drag handle for pinned friends -->
-              <div v-if="friend.pinOrder" class="flex justify-end mt-1" @click.stop>
+              <div v-if="friend.pinOrder" class="absolute bottom-1.5 right-1.5 sm:bottom-2 sm:right-2" @click.stop>
                 <div
-                  class="handle bg-gray-100 rounded-full border border-gray-200 p-1 shadow-sm cursor-grab active:cursor-grabbing"
+                  class="handle bg-amber-100 hover:bg-amber-200 rounded-md sm:rounded-lg p-1 sm:p-1.5 cursor-grab active:cursor-grabbing transition"
                   title="드래그하여 순서 변경"
                 >
-                  <GripVertical class="w-3 h-3 text-gray-400" />
+                  <GripVertical class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-500" />
                 </div>
               </div>
             </div>
@@ -796,11 +827,13 @@ watch(
             <!-- Add Friend Card -->
             <div
               v-if="friendInfoInitialized"
-              class="group p-2 sm:p-4 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer bg-blue-50 hover:bg-blue-400 hover:border-blue-400 hover:scale-[1.02] transition-all duration-200 flex flex-col items-center justify-center"
+              class="group rounded-xl sm:rounded-2xl border-2 border-dashed border-gray-300 cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all duration-300 flex flex-col items-center justify-center min-h-[80px] sm:min-h-[120px]"
               @click="openSearchModal"
             >
-              <UserPlus class="w-5 h-5 sm:w-8 sm:h-8 text-blue-400 group-hover:text-white mb-1 transition-colors duration-200" />
-              <span class="font-bold text-xs sm:text-base text-blue-400 group-hover:text-white transition-colors duration-200">친구 추가</span>
+              <div class="w-8 h-8 sm:w-12 sm:h-12 bg-gray-100 group-hover:bg-blue-100 rounded-full flex items-center justify-center mb-1 sm:mb-2 transition-colors">
+                <UserPlus class="w-4 h-4 sm:w-6 sm:h-6 text-gray-400 group-hover:text-blue-500 transition-colors" />
+              </div>
+              <span class="font-semibold text-xs sm:text-sm text-gray-400 group-hover:text-blue-600 transition-colors">친구 추가</span>
             </div>
           </div>
         </div>
@@ -811,36 +844,72 @@ watch(
     <!-- Guest Dashboard -->
     <template v-else>
       <!-- Hero Section -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-8 text-center mb-6">
-        <h1 class="text-2xl sm:text-4xl font-bold text-gray-900 mb-4">Dutypark</h1>
-        <p class="text-gray-600 mb-6 max-w-lg mx-auto">
-          Dutypark는 근무 관리, 시간표 등록, 일정 관리, 할일 관리 및 팀원들의 시간표 조회, 친구 및 가족의 일정 공유 등 다양한 기능을 통해 여러분의 일상을 도와줍니다.
-        </p>
-        <router-link
-          to="/auth/login"
-          class="inline-block border-2 border-gray-800 text-gray-800 px-8 py-3 rounded-lg font-medium hover:bg-gray-800 hover:!text-white transition"
-        >
-          로그인 / 회원가입
-        </router-link>
+      <div class="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-zinc-900 rounded-3xl shadow-2xl p-8 sm:p-12 text-center mb-8">
+        <!-- Decorative elements -->
+        <div class="absolute top-0 left-0 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl -ml-36 -mt-36"></div>
+        <div class="absolute bottom-0 right-0 w-72 h-72 bg-purple-500/20 rounded-full blur-3xl -mr-36 -mb-36"></div>
+
+        <div class="relative">
+          <div class="inline-flex items-center gap-2 px-4 py-2 bg-white/10 rounded-full mb-6">
+            <Sparkles class="w-4 h-4 text-amber-400" />
+            <span class="text-sm text-gray-300">스마트한 일정 관리</span>
+          </div>
+
+          <h1 class="text-4xl sm:text-5xl font-bold text-white mb-4">Dutypark</h1>
+          <p class="text-gray-400 mb-8 max-w-lg mx-auto leading-relaxed">
+            근무 관리, 시간표 등록, 일정 관리, 할일 관리 및 팀원들의 시간표 조회, 친구 및 가족의 일정 공유 등 다양한 기능을 통해 여러분의 일상을 도와줍니다.
+          </p>
+          <router-link
+            to="/auth/login"
+            class="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-8 py-3.5 rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40"
+          >
+            로그인 / 회원가입
+            <ChevronRight class="w-5 h-5" />
+          </router-link>
+        </div>
       </div>
 
       <!-- Features Section -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-8">
-        <h2 class="text-2xl font-bold text-gray-900 mb-6">주요 기능</h2>
-        <ul class="space-y-4">
-          <li v-for="feature in features" :key="feature.text" class="flex items-start gap-3">
-            <Calendar v-if="feature.icon === 'calendar'" class="w-6 h-6 text-gray-500 mt-0.5" />
-            <CheckCircle v-else-if="feature.icon === 'check'" class="w-6 h-6 text-gray-500 mt-0.5" />
-            <Clock v-else-if="feature.icon === 'clock'" class="w-6 h-6 text-gray-500 mt-0.5" />
-            <Users v-else-if="feature.icon === 'users'" class="w-6 h-6 text-gray-500 mt-0.5" />
-            <Heart v-else-if="feature.icon === 'heart'" class="w-6 h-6 text-gray-500 mt-0.5" />
-            <span class="text-gray-700">{{ feature.text }}</span>
-          </li>
-        </ul>
-        <p class="mt-6 text-gray-600">
-          지금 바로 Dutypark을 사용해보세요!<br>
-          <span class="text-sm text-gray-500">(현재 회원가입은 카카오톡 로그인을 지원합니다.)</span>
-        </p>
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-8 flex items-center gap-3">
+          <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+            <Sparkles class="w-5 h-5 text-white" />
+          </div>
+          주요 기능
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div
+            v-for="feature in features"
+            :key="feature.text"
+            class="flex items-start gap-4 p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:shadow-md transition-shadow"
+          >
+            <div
+              class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              :class="{
+                'bg-blue-100': feature.color === 'blue',
+                'bg-green-100': feature.color === 'green',
+                'bg-purple-100': feature.color === 'purple',
+                'bg-amber-100': feature.color === 'amber',
+                'bg-rose-100': feature.color === 'rose',
+              }"
+            >
+              <CalendarDays v-if="feature.icon === 'calendar'" class="w-5 h-5 text-blue-600" />
+              <ListTodo v-else-if="feature.icon === 'check'" class="w-5 h-5 text-green-600" />
+              <Clock v-else-if="feature.icon === 'clock'" class="w-5 h-5 text-purple-600" />
+              <Users v-else-if="feature.icon === 'users'" class="w-5 h-5 text-amber-600" />
+              <Heart v-else-if="feature.icon === 'heart'" class="w-5 h-5 text-rose-600" />
+            </div>
+            <span class="text-gray-700 font-medium pt-2">{{ feature.text }}</span>
+          </div>
+        </div>
+        <div class="mt-8 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+          <p class="text-gray-700">
+            지금 바로 Dutypark을 사용해보세요!
+          </p>
+          <p class="text-sm text-gray-500 mt-1">
+            (현재 회원가입은 카카오톡 로그인을 지원합니다.)
+          </p>
+        </div>
       </div>
     </template>
 
@@ -852,36 +921,42 @@ watch(
         @click.self="closeSearchModal"
       >
         <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black/50" @click="closeSearchModal"></div>
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="closeSearchModal"></div>
 
         <!-- Modal Content -->
-        <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-2 sm:mx-4 max-h-[90vh] overflow-hidden">
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-2 sm:mx-4 max-h-[90vh] overflow-hidden">
           <!-- Header -->
-          <div class="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
-            <h3 class="text-xl font-semibold text-gray-900">친구 추가</h3>
+          <div class="flex items-center justify-between p-5 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                <UserPlus class="w-5 h-5 text-white" />
+              </div>
+              <h3 class="text-xl font-bold text-gray-900">친구 추가</h3>
+            </div>
             <button
-              class="text-gray-400 hover:text-gray-600 transition"
+              class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition"
               @click="closeSearchModal"
             >
-              <X class="w-6 h-6" />
+              <X class="w-5 h-5" />
             </button>
           </div>
 
           <!-- Body -->
-          <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(90vh-140px)]">
+          <div class="p-5 overflow-y-auto max-h-[calc(90vh-180px)]">
             <!-- Search Input -->
-            <div class="flex gap-2 mb-4">
+            <div class="flex gap-2 mb-5">
               <div class="flex-grow relative">
+                <Search class="w-5 h-5 absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
                   v-model="searchKeyword"
                   type="text"
                   placeholder="이름 또는 팀 검색"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  class="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                   @keyup.enter="search"
                 />
               </div>
               <button
-                class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition flex items-center gap-2"
+                class="px-5 py-3 bg-gradient-to-r from-slate-700 to-slate-800 text-white rounded-xl hover:from-slate-800 hover:to-slate-900 transition-all shadow-lg flex items-center gap-2 font-medium"
                 @click="search"
               >
                 <Search class="w-4 h-4" />
@@ -890,44 +965,40 @@ watch(
             </div>
 
             <!-- Search Loading -->
-            <div v-if="searchLoading" class="flex justify-center py-8">
-              <div class="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+            <div v-if="searchLoading" class="flex justify-center py-10">
+              <div class="w-8 h-8 border-3 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
             </div>
 
             <!-- Search Results -->
             <div v-else-if="searchResult.length > 0">
-              <table class="w-full">
-                <thead class="bg-gray-50">
-                  <tr>
-                    <th class="px-4 py-2 text-left text-sm font-medium text-gray-600 w-12">#</th>
-                    <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">팀</th>
-                    <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">이름</th>
-                    <th class="px-4 py-2 text-center text-sm font-medium text-gray-600 w-24">요청</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                  <tr v-for="(member, index) in searchResult" :key="member.id ?? index" class="hover:bg-gray-50">
-                    <td class="px-4 py-3 text-sm text-gray-500">
-                      {{ searchPage * searchPageSize + index + 1 }}
-                    </td>
-                    <td class="px-4 py-3 text-sm text-gray-700">{{ member.team ?? '-' }}</td>
-                    <td class="px-4 py-3 text-sm text-gray-900 font-medium">{{ member.name }}</td>
-                    <td class="px-4 py-3 text-center">
-                      <button
-                        class="px-3 py-1 text-sm border border-green-500 text-green-600 rounded hover:bg-green-50 transition"
-                        @click="requestFriend(member)"
-                      >
-                        친구 요청
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              <div class="space-y-2">
+                <div
+                  v-for="(member, index) in searchResult"
+                  :key="member.id ?? index"
+                  class="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition"
+                >
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center">
+                      <span class="text-sm font-bold text-gray-600">{{ member.name.charAt(0) }}</span>
+                    </div>
+                    <div>
+                      <p class="font-semibold text-gray-900">{{ member.name }}</p>
+                      <p class="text-sm text-gray-500">{{ member.team ?? '팀 없음' }}</p>
+                    </div>
+                  </div>
+                  <button
+                    class="px-4 py-2 text-sm font-medium bg-green-500 text-white rounded-xl hover:bg-green-600 transition shadow-sm"
+                    @click="requestFriend(member)"
+                  >
+                    친구 요청
+                  </button>
+                </div>
+              </div>
 
               <!-- Pagination -->
-              <div v-if="searchTotalPage > 1" class="flex justify-center items-center gap-2 mt-4">
+              <div v-if="searchTotalPage > 1" class="flex justify-center items-center gap-2 mt-6">
                 <button
-                  class="p-2 h-10 min-w-10 sm:h-8 sm:min-w-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  class="p-2.5 rounded-xl border border-gray-200 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
                   :disabled="searchPage === 0"
                   @click="prevPage"
                 >
@@ -936,10 +1007,10 @@ watch(
 
                 <template v-for="i in searchTotalPage" :key="i">
                   <button
-                    class="h-10 min-w-10 sm:h-8 sm:min-w-8 rounded border transition"
+                    class="w-10 h-10 rounded-xl border font-medium transition"
                     :class="(i - 1) === searchPage
                       ? 'bg-blue-600 text-white border-blue-600'
-                      : 'border-gray-300 hover:bg-gray-100'"
+                      : 'border-gray-200 hover:bg-gray-100'"
                     @click="goToPage(i - 1)"
                   >
                     {{ i }}
@@ -947,7 +1018,7 @@ watch(
                 </template>
 
                 <button
-                  class="p-2 h-10 min-w-10 sm:h-8 sm:min-w-8 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  class="p-2.5 rounded-xl border border-gray-200 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
                   :disabled="searchPage >= searchTotalPage - 1"
                   @click="nextPage"
                 >
@@ -955,19 +1026,20 @@ watch(
                 </button>
               </div>
 
-              <p class="text-center text-sm text-gray-500 mt-2">
+              <p class="text-center text-sm text-gray-500 mt-4">
                 페이지 {{ searchPage + 1 }} / {{ searchTotalPage }} | 전체 결과: {{ searchTotalElements }}
               </p>
             </div>
-            <p v-else class="text-center text-gray-500 py-8">
-              검색어를 입력하고 검색해주세요.
-            </p>
+            <div v-else class="text-center py-12">
+              <Search class="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p class="text-gray-500">검색어를 입력하고 검색해주세요.</p>
+            </div>
           </div>
 
           <!-- Footer -->
-          <div class="flex justify-end p-3 sm:p-4 border-t border-gray-200">
+          <div class="flex justify-end p-5 border-t border-gray-100 bg-gray-50">
             <button
-              class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
+              class="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition font-medium"
               @click="closeSearchModal"
             >
               닫기

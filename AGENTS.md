@@ -112,8 +112,9 @@ cd dutypark_dev_db && docker compose up -d               # standalone MySQL on :
 ### Code Comments Policy
 
 - Prefer self-documenting code; only comment when explaining non-obvious reasoning, workarounds, or subtle edge cases.
-- Document “why” not “what”; avoid comments that restate simple logic or variable names.
-- If you must work around third-party quirks (e.g., Vue reactivity), note it briefly so future changes don’t regress.
+- Document "why" not "what"; avoid comments that restate simple logic or variable names.
+- If you must work around third-party quirks (e.g., Vue reactivity), note it briefly so future changes don't regress.
+- **All code comments must be written in English only.** No Korean (한글) comments in source code—this includes HTML comments (`<!-- -->`), JavaScript/TypeScript comments (`//`, `/* */`), and any other comment syntax.
 
 ---
 

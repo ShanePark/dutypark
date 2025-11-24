@@ -268,7 +268,7 @@ function formatDate(dateString: string) {
               @click="emit('showDetail', todo)"
             >
               <div class="flex items-stretch">
-                <!-- 왼쪽 영역: 드래그 핸들 또는 완료 아이콘 -->
+                <!-- Left area: drag handle or completed icon -->
                 <div
                   class="flex-shrink-0 w-10 sm:w-12 flex items-center justify-center"
                   :class="{
@@ -276,12 +276,12 @@ function formatDate(dateString: string) {
                     'bg-gray-50': todo.status === 'ACTIVE'
                   }"
                 >
-                  <!-- 완료 상태: 체크 아이콘 -->
+                  <!-- Completed: check icon -->
                   <CheckCircle2
                     v-if="todo.status === 'COMPLETED'"
                     class="w-6 h-6 text-green-600"
                   />
-                  <!-- 진행중 + 정렬 가능: 드래그 핸들 -->
+                  <!-- Active + sortable: drag handle -->
                   <div
                     v-else-if="isSortingEnabled"
                     class="drag-handle cursor-grab text-gray-400 hover:text-gray-600 p-1"
@@ -289,11 +289,11 @@ function formatDate(dateString: string) {
                   >
                     <GripVertical class="w-5 h-5" />
                   </div>
-                  <!-- 진행중 + 정렬 불가: 빈 원 -->
+                  <!-- Active + not sortable: empty circle -->
                   <Circle v-else class="w-5 h-5 text-gray-300" />
                 </div>
 
-                <!-- 메인 콘텐츠 -->
+                <!-- Main content -->
                 <div class="flex-1 min-w-0 p-3 sm:p-4">
                   <div class="flex items-start justify-between gap-2">
                     <div class="flex-1 min-w-0">
@@ -320,7 +320,7 @@ function formatDate(dateString: string) {
                       </div>
                     </div>
 
-                    <!-- 액션 버튼 -->
+                    <!-- Action buttons -->
                     <div class="flex items-center gap-1 flex-shrink-0" @click.stop>
                       <button
                         v-if="todo.status === 'ACTIVE'"

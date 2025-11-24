@@ -17,10 +17,8 @@ export const useAuthStore = defineStore('auth', () => {
 
     isLoading.value = true
     try {
-      // 토큰이 있으면 사용자 정보 조회
       if (authApi.hasTokens()) {
         user.value = await authApi.getStatus()
-        // 토큰이 있지만 사용자 정보를 못 가져오면 토큰 클리어
         if (!user.value) {
           tokenManager.clearTokens()
         }
@@ -37,7 +35,6 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(data: LoginDto): Promise<void> {
     isLoading.value = true
     try {
-      // Bearer 토큰 방식 로그인
       await authApi.loginWithToken(data)
       user.value = await authApi.getStatus()
     } finally {

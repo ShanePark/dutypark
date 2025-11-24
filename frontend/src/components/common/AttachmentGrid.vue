@@ -136,10 +136,9 @@ function handleAttachmentClick(index: number) {
   const attachment = props.attachments[index]
   if (!attachment) return
 
+  // Only open image viewer for images; non-image files require explicit download button click
   if (attachment.contentType?.startsWith('image/')) {
     openImageViewer(index)
-  } else {
-    downloadAttachment(attachment.id, attachment.originalFilename)
   }
 }
 
@@ -182,7 +181,7 @@ watch(
 )
 
 const gridColsClass = {
-  2: 'grid-cols-1 sm:grid-cols-2',
+  2: 'grid-cols-2',
   3: 'grid-cols-2 sm:grid-cols-3',
   4: 'grid-cols-2 sm:grid-cols-4',
 }
@@ -198,7 +197,8 @@ const gridColsClass = {
       <div
         v-for="(attachment, idx) in attachments"
         :key="attachment.id"
-        class="relative border border-gray-200 rounded-lg overflow-hidden group cursor-pointer"
+        class="relative border border-gray-200 rounded-lg overflow-hidden group"
+        :class="{ 'cursor-pointer': attachment.contentType?.startsWith('image/') }"
         @click="handleAttachmentClick(idx)"
       >
         <!-- Thumbnail or Icon -->
@@ -225,13 +225,13 @@ const gridColsClass = {
           </div>
         </div>
 
-        <!-- Download button - always visible -->
+        <!-- Download button - always visible, larger touch area on mobile -->
         <button
-          class="absolute top-1 right-1 p-1.5 bg-black/50 rounded text-white hover:bg-black/70 transition-colors"
+          class="absolute top-1 right-1 p-2.5 sm:p-1.5 bg-black/50 rounded text-white hover:bg-black/70 active:bg-black/80 transition-colors"
           @click.stop="downloadAttachment(attachment.id, attachment.originalFilename)"
           title="다운로드"
         >
-          <Download class="w-4 h-4" />
+          <Download class="w-5 h-5 sm:w-4 sm:h-4" />
         </button>
 
         <!-- File info -->

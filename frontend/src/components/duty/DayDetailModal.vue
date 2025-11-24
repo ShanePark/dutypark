@@ -360,7 +360,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
         <div class="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
           <div class="flex items-center gap-3 flex-wrap">
             <h2 class="text-base sm:text-lg font-bold">{{ formattedDate }}</h2>
-            <!-- Duty Type Selection (내 달력에서만 표시, 추가/수정 모드에서는 숨김) -->
+            <!-- Duty Type Selection (my calendar only, hidden in add/edit mode) -->
             <div v-if="!isCreateMode && !isEditMode && canEdit && dutyTypes.length > 0" class="flex flex-wrap gap-1.5">
               <button
                 v-for="dutyType in dutyTypes"
@@ -382,7 +382,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                 {{ dutyType.name }}
               </button>
             </div>
-            <!-- Current Duty (다른 사람 달력일 때만) -->
+            <!-- Current Duty (other's calendar only) -->
             <span
               v-else-if="duty && !canEdit"
               class="px-2.5 py-1 rounded-md text-xs font-medium text-white"

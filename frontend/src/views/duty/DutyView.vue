@@ -12,6 +12,7 @@ import {
   Pencil,
   Trash2,
   Users,
+  User,
   FileText,
   Star,
   Loader2,
@@ -826,21 +827,17 @@ async function handleTodoUpdate(data: {
     console.error('Failed to update todo:', error)
     showError('할 일 수정에 실패했습니다.')
   }
-  // 수정 완료 후 상세 뷰 유지 (selectedTodo는 이미 업데이트됨)
 }
 
 async function handleTodoComplete(id: string) {
   try {
     const completedTodo = await todoApi.completeTodo(id)
-    // Remove from active todos
     todos.value = todos.value.filter((t) => t.id !== id)
-    // Add to completed todos
     completedTodos.value.unshift(mapToLocalTodo(completedTodo))
   } catch (error) {
     console.error('Failed to complete todo:', error)
     showError('할 일 완료 처리에 실패했습니다.')
   }
-  // 완료 후 목록으로 돌아가기
   isTodoDetailModalOpen.value = false
   isTodoOverviewModalOpen.value = true
 }
@@ -848,15 +845,12 @@ async function handleTodoComplete(id: string) {
 async function handleTodoReopen(id: string) {
   try {
     const reopenedTodo = await todoApi.reopenTodo(id)
-    // Remove from completed todos
     completedTodos.value = completedTodos.value.filter((t) => t.id !== id)
-    // Add to active todos
     todos.value.push(mapToLocalTodo(reopenedTodo))
   } catch (error) {
     console.error('Failed to reopen todo:', error)
     showError('할 일 재오픈에 실패했습니다.')
   }
-  // 재오픈 후 목록으로 돌아가기
   isTodoDetailModalOpen.value = false
   isTodoOverviewModalOpen.value = true
 }
@@ -871,7 +865,6 @@ async function handleTodoDelete(id: string) {
     console.error('Failed to delete todo:', error)
     showError('할 일 삭제에 실패했습니다.')
   }
-  // 삭제 후 목록으로 돌아가기
   isTodoDetailModalOpen.value = false
   isTodoOverviewModalOpen.value = true
 }
@@ -894,7 +887,6 @@ async function handleTodoAdd(data: {
     console.error('Failed to add todo:', error)
     showError('할 일 추가에 실패했습니다.')
   }
-  // 추가 후 목록으로 돌아가기
   isTodoAddModalOpen.value = false
   isTodoOverviewModalOpen.value = true
 }
@@ -968,7 +960,7 @@ function handleSearchGoToDate(result: any) {
   isSearchResultModalOpen.value = false
 }
 
-// Other duties (함께보기)
+// Other duties (view together)
 async function handleFriendToggle(friendId: number) {
   const idx = selectedFriendIds.value.indexOf(friendId)
   if (idx >= 0) {
@@ -986,10 +978,10 @@ async function handleMyDutiesToggle() {
 
 async function handleToggleOtherDuties() {
   if (isMyCalendar.value) {
-    // 내 근무표: 친구 선택 모달 열기
+    // My calendar: open friend selection modal
     isOtherDutiesModalOpen.value = true
   } else {
-    // 다른 사람 근무표: 내 근무 바로 토글
+    // Other's calendar: toggle my duties directly
     await handleMyDutiesToggle()
   }
 }
@@ -997,7 +989,7 @@ async function handleToggleOtherDuties() {
 async function loadOtherDuties() {
   // Build list of member IDs to fetch
   const memberIdsToFetch = [...selectedFriendIds.value]
-  // 다른 사람 근무표에서 "내 근무 함께보기"면 로그인 사용자 ID 추가
+  // Add logged-in user ID when "show my duties" is enabled on other's calendar
   if (showMyDuties.value && authStore.user?.id) {
     memberIdsToFetch.push(authStore.user.id)
   }
@@ -1373,13 +1365,14 @@ async function showExcelUploadModal() {
         </button>
       </div>
 
-      <!-- Right: Search -->
-      <div class="w-20 sm:w-24 flex-shrink-0 flex justify-end">
+      <!-- Right: Search or Member Name -->
+      <div class="flex-shrink-0 flex justify-end">
+        <!-- Search available (my calendar or managed member) -->
         <div v-if="canSearch" class="flex items-stretch">
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="검색"
+            :placeholder="isMyCalendar ? '검색' : memberName || '검색'"
             @keyup.enter="handleSearch()"
             class="px-2 py-1.5 border border-gray-300 border-r-0 rounded-l-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-14 sm:w-20"
           />
@@ -1390,12 +1383,12 @@ async function showExcelUploadModal() {
             <Search class="w-4 h-4" />
           </button>
         </div>
+        <!-- No search + other's calendar: show name only -->
+        <div v-else-if="!isMyCalendar && memberName" class="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-lg">
+          <User class="w-4 h-4 text-gray-600" />
+          <span class="text-sm font-bold text-gray-800">{{ memberName }}</span>
+        </div>
       </div>
-    </div>
-
-    <!-- Member name for friend's calendar -->
-    <div v-if="!isMyCalendar && memberName" class="mb-1">
-      <span class="text-sm font-bold text-gray-800">{{ memberName }}님의 달력</span>
     </div>
 
     <!-- Duty Types & Buttons -->
@@ -1419,11 +1412,11 @@ async function showExcelUploadModal() {
           근무 타입 정보 없음
         </span>
       </div>
-      <div class="flex flex-wrap gap-2">
+      <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden">
         <button
           @click="handleToggleOtherDuties"
-          class="px-2 sm:px-3 py-1.5 min-h-[44px] border rounded-lg text-xs sm:text-sm hover:bg-gray-50 transition flex items-center gap-1"
-          :class="(selectedFriendIds.length > 0 || showMyDuties) ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300'"
+          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition flex items-center gap-1 border-r border-gray-300 hover:bg-gray-100"
+          :class="(selectedFriendIds.length > 0 || showMyDuties) ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : ''"
         >
           <Users class="w-4 h-4" />
           <span class="hidden xs:inline">함께보기</span>
@@ -1434,22 +1427,22 @@ async function showExcelUploadModal() {
         <button
           v-if="canEdit"
           @click="batchEditMode = !batchEditMode"
-          class="px-2 sm:px-3 py-1.5 min-h-[44px] border rounded-lg text-xs sm:text-sm transition"
-          :class="batchEditMode ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-300 hover:bg-gray-50'"
+          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition border-r border-gray-300 hover:bg-gray-100"
+          :class="batchEditMode ? 'bg-orange-50 text-orange-700 hover:bg-orange-100' : ''"
         >
           편집모드
         </button>
         <button
           v-if="canEdit && isMyCalendar"
           @click="showBatchUpdateModal"
-          class="px-2 sm:px-3 py-1.5 min-h-[44px] border border-gray-300 rounded-lg text-xs sm:text-sm hover:bg-gray-50 transition"
+          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm hover:bg-gray-100 transition border-r border-gray-300 last:border-r-0"
         >
           일괄수정
         </button>
         <button
           v-if="canEdit && isMyCalendar && team?.dutyBatchTemplate"
           @click="showExcelUploadModal"
-          class="px-2 sm:px-3 py-1.5 min-h-[44px] border border-gray-300 rounded-lg text-xs sm:text-sm hover:bg-gray-50 transition flex items-center gap-1"
+          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm hover:bg-gray-100 transition flex items-center gap-1"
         >
           <FileSpreadsheet class="w-4 h-4" />
           <span class="hidden sm:inline">엑셀</span>
@@ -1460,14 +1453,15 @@ async function showExcelUploadModal() {
     <!-- Calendar Grid -->
     <div class="bg-white rounded-lg border border-gray-300 overflow-hidden mb-2 shadow-sm">
       <!-- Week Days Header -->
-      <div class="grid grid-cols-7 bg-gray-100">
+      <div class="grid grid-cols-7 bg-gray-200">
         <div
           v-for="(day, idx) in weekDays"
           :key="day"
-          class="py-2 text-center font-bold border-b border-gray-300 text-sm"
+          class="py-2 text-center font-bold border-b-2 border-gray-400 text-sm"
           :class="{
-            'text-red-500': idx === 0,
-            'text-blue-500': idx === 6,
+            'text-red-600': idx === 0,
+            'text-blue-600': idx === 6,
+            'border-r border-gray-300': idx < 6,
           }"
         >
           {{ day }}
@@ -1480,7 +1474,7 @@ async function showExcelUploadModal() {
           v-for="(day, idx) in calendarDays"
           :key="idx"
           @click="handleDayClick(day, idx)"
-          class="min-h-[70px] sm:min-h-[80px] md:min-h-[100px] border-b border-r border-gray-200 p-0.5 sm:p-1 transition-all duration-150 relative cursor-pointer hover:brightness-95 hover:shadow-inner"
+          class="min-h-[70px] sm:min-h-[80px] md:min-h-[100px] border-b border-r border-gray-300 p-0.5 sm:p-1 transition-all duration-150 relative cursor-pointer hover:brightness-95 hover:shadow-inner"
           :class="{
             'opacity-50': !day.isCurrentMonth,
             'ring-2 ring-red-500 ring-inset': day.isToday || (searchDay && searchDay.year === day.year && searchDay.month === day.month && searchDay.day === day.day),
@@ -1531,46 +1525,57 @@ async function showExcelUploadModal() {
             </button>
           </div>
 
-          <!-- Normal Mode: Holidays & Schedules -->
-          <div v-if="!batchEditMode" class="mt-0.5 space-y-px">
-            <!-- Holidays -->
+          <div v-if="!batchEditMode && day.isCurrentMonth" class="mt-0.5">
+            <div v-if="otherDuties.length > 0" class="flex flex-wrap justify-center gap-1 mb-1">
+              <div
+                v-for="otherDuty in otherDuties"
+                :key="otherDuty.memberId"
+                class="text-[10px] sm:text-sm px-1.5 py-0.5 rounded-full border border-white/50"
+                :style="{
+                  backgroundColor: getOtherDutyForDay(day, otherDuty)?.dutyColor || '#6c757d',
+                  color: isLightColor(getOtherDutyForDay(day, otherDuty)?.dutyColor) ? '#000' : '#fff',
+                }"
+              >
+                <span class="font-bold">{{ otherDuty.memberName }}</span><template v-if="getOtherDutyForDay(day, otherDuty)?.dutyType">:<span class="font-normal">{{ getOtherDutyForDay(day, otherDuty)?.dutyType?.slice(0, 4) }}</span></template>
+              </div>
+            </div>
+
             <div
               v-for="holiday in holidaysByDays[idx] ?? []"
               :key="holiday.localDate + holiday.dateName"
-              class="text-[10px] sm:text-xs leading-tight px-0.5 border-t-2 border-dashed border-white truncate"
+              class="text-[10px] sm:text-sm leading-snug px-0.5"
               :class="holiday.isHoliday ? 'text-red-600 font-semibold' : 'text-gray-500'"
             >
               {{ holiday.dateName }}
             </div>
-            <!-- Schedules -->
+
+            <div
+              v-for="dday in getDDaysForDay(day)"
+              :key="dday.id"
+              class="text-[10px] sm:text-sm leading-snug text-gray-800 px-0.5 break-words"
+            ><Lock v-if="dday.isPrivate" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-text-bottom" /><CalendarCheck v-else class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-text-bottom" />{{ dday.title }}</div>
+
             <div
               v-for="schedule in schedulesByDays[idx]?.slice(0, 3)"
               :key="schedule.id"
-              class="text-[10px] sm:text-xs leading-tight text-gray-800 px-0.5 border-t-2 border-dashed border-white"
-            >
-              <div class="flex items-center">
-                <Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3 sm:h-3 text-gray-400 flex-shrink-0" />
-                <span class="truncate font-medium">{{ schedule.contentWithoutTime || schedule.content }}</span>
-                <button
-                  v-if="schedule.description || schedule.attachments?.length"
-                  @click.stop="handleShowDescription(schedule)"
-                  class="flex-shrink-0 text-blue-500 hover:text-blue-700 ml-px"
-                  title="상세보기"
-                >
-                  <FileText class="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                </button>
-              </div>
+              class="text-[10px] sm:text-sm leading-snug text-gray-800 px-0.5 border-t-2 border-dashed border-white break-words"
+            ><Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-gray-400 inline align-text-bottom" />{{ schedule.contentWithoutTime || schedule.content }}<button
+                v-if="schedule.description || schedule.attachments?.length"
+                @click.stop="handleShowDescription(schedule)"
+                class="text-blue-500 hover:text-blue-700 ml-px align-text-bottom"
+                title="상세보기"
+              ><FileText class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline" /></button>
               <!-- Tags display -->
               <div v-if="schedule.tags?.length || schedule.isTagged" class="flex flex-wrap gap-0.5 justify-end">
                 <span
                   v-for="tag in schedule.tags?.filter(t => t.id !== memberId)"
                   :key="tag.id"
-                  class="text-[8px] sm:text-[9px] px-1 py-px bg-amber-50 border border-gray-400 rounded-full whitespace-nowrap"
+                  class="text-[8px] sm:text-xs px-1 py-px bg-amber-50 border border-gray-400 rounded-full whitespace-nowrap"
                 >{{ tag.name }}</span>
                 <span
                   v-if="schedule.isTagged"
-                  class="text-[8px] sm:text-[9px] px-1 py-px bg-amber-50 border border-gray-400 rounded-full whitespace-nowrap"
-                ><span class="text-[6px] sm:text-[7px]">by</span> {{ schedule.owner }}</span>
+                  class="text-[8px] sm:text-xs px-1 py-px bg-amber-50 border border-gray-400 rounded-full whitespace-nowrap"
+                ><span class="text-[6px] sm:text-[10px]">by</span> {{ schedule.owner }}</span>
               </div>
             </div>
             <div
@@ -1580,87 +1585,80 @@ async function showExcelUploadModal() {
               +{{ (schedulesByDays[idx]?.length ?? 0) - 3 }}
             </div>
           </div>
-
-          <!-- D-Days on this date -->
-          <div v-if="!batchEditMode && day.isCurrentMonth && getDDaysForDay(day).length > 0" class="mt-0.5 space-y-px">
-            <div
-              v-for="dday in getDDaysForDay(day)"
-              :key="dday.id"
-              class="text-[10px] sm:text-xs truncate text-gray-700 bg-yellow-100/80 rounded px-0.5 flex items-center"
-            >
-              <Lock v-if="dday.isPrivate" class="w-2.5 h-2.5 inline-block flex-shrink-0" />
-              <CalendarCheck v-else class="w-2.5 h-2.5 inline-block flex-shrink-0" />
-              <span class="truncate">{{ dday.title }}</span>
-            </div>
-          </div>
-
-          <!-- Other Duties (함께보기) -->
-          <div v-if="!batchEditMode && otherDuties.length > 0 && day.isCurrentMonth" class="mt-0.5 flex flex-wrap gap-px">
-            <div
-              v-for="otherDuty in otherDuties"
-              :key="otherDuty.memberId"
-              class="text-[9px] sm:text-[10px] px-1 py-px rounded border border-white/50 inline-block"
-              :style="{
-                backgroundColor: getOtherDutyForDay(day, otherDuty)?.dutyColor || '#6c757d',
-                color: isLightColor(getOtherDutyForDay(day, otherDuty)?.dutyColor) ? '#000' : '#fff',
-              }"
-            >
-              <span class="font-bold">{{ otherDuty.memberName }}</span><template v-if="getOtherDutyForDay(day, otherDuty)?.dutyType">:<span class="font-normal">{{ getOtherDutyForDay(day, otherDuty)?.dutyType?.slice(0, 4) }}</span></template>
-            </div>
-          </div>
         </div>
       </div>
     </div>
 
     <!-- D-Day List -->
-    <div class="bg-white rounded-lg border border-gray-200 p-3 sm:p-4 shadow-sm">
-      <h3 class="text-sm font-medium text-gray-700 mb-3">D-Day</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-        <div
-          v-for="dday in dDays"
-          :key="dday.id"
-          class="bg-gray-50 rounded-lg p-3 border border-gray-200 cursor-pointer hover:bg-gray-100 transition min-h-[44px]"
-          :class="{ 'ring-2 ring-blue-500': pinnedDDay?.id === dday.id }"
-          @click="togglePinnedDDay(dday)"
-        >
-          <div class="flex justify-between items-start mb-2">
-            <span
-              class="text-sm font-bold"
-              :class="dday.calc <= 0 ? 'text-gray-500' : 'text-blue-600'"
-            >
-              {{ dday.dDayText }}
-            </span>
-            <div v-if="isMyCalendar" class="flex gap-1">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div
+        v-for="dday in dDays"
+        :key="dday.id"
+        class="relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"
+        :class="[
+          pinnedDDay?.id === dday.id
+            ? 'ring-2 ring-blue-500 shadow-md'
+            : 'shadow-sm',
+          dday.calc <= 0
+            ? 'bg-gradient-to-br from-gray-100 to-gray-200'
+            : 'bg-gradient-to-br from-blue-50 to-indigo-100'
+        ]"
+        @click="togglePinnedDDay(dday)"
+      >
+        <div class="p-4">
+          <!-- D-Day badge and actions -->
+          <div class="flex justify-between items-start mb-3">
+            <div class="flex items-center gap-1.5">
+              <div
+                class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold shadow-sm"
+                :class="dday.calc <= 0
+                  ? 'bg-gray-500 text-white'
+                  : 'bg-blue-600 text-white'"
+              >
+                {{ dday.dDayText }}
+              </div>
+              <Star v-if="pinnedDDay?.id === dday.id" class="w-5 h-5 text-amber-500 fill-amber-500" />
+            </div>
+            <div v-if="isMyCalendar" class="flex gap-0.5">
               <button
                 @click.stop="openDDayModal(dday)"
-                class="text-gray-400 hover:text-gray-600 p-1.5 min-w-[44px] min-h-[44px] -m-1.5 flex items-center justify-center"
+                class="p-2 rounded-full hover:bg-white/50 transition text-gray-500 hover:text-gray-700"
               >
                 <Pencil class="w-4 h-4" />
               </button>
               <button
                 @click.stop="deleteDDay(dday)"
-                class="text-gray-400 hover:text-red-600 p-1.5 min-w-[44px] min-h-[44px] -m-1.5 flex items-center justify-center"
+                class="p-2 rounded-full hover:bg-red-100/50 transition text-gray-500 hover:text-red-600"
               >
                 <Trash2 class="w-4 h-4" />
               </button>
             </div>
           </div>
-          <p class="text-xs text-gray-500 mb-1">{{ dday.date }}</p>
-          <p class="text-sm text-gray-800 font-medium truncate flex items-center gap-1">
-            <Lock v-if="dday.isPrivate" class="w-3 h-3 flex-shrink-0" />
+
+          <!-- Title -->
+          <p class="text-base font-semibold text-gray-800 mb-2 flex items-center gap-1.5">
+            <Lock v-if="dday.isPrivate" class="w-4 h-4 text-gray-500 flex-shrink-0" />
             <span class="truncate">{{ dday.title }}</span>
           </p>
-        </div>
 
-        <!-- Add D-Day Button (only for my calendar) -->
-        <div
-          v-if="isMyCalendar"
-          @click="openDDayModal()"
-          class="bg-gray-50 rounded-lg p-3 border-2 border-dashed border-gray-300 cursor-pointer hover:bg-blue-50 hover:border-blue-400 transition flex flex-col items-center justify-center min-h-[80px] sm:min-h-[100px]"
-        >
-          <Plus class="w-6 h-6 text-gray-400 mb-1" />
-          <span class="text-sm text-gray-500">디데이 추가</span>
+          <!-- Date -->
+          <p class="text-sm text-gray-500 flex items-center gap-1">
+            <CalendarCheck class="w-4 h-4" />
+            {{ dday.date }}
+          </p>
         </div>
+      </div>
+
+      <!-- Add D-Day Button (only for my calendar) -->
+      <div
+        v-if="isMyCalendar"
+        @click="openDDayModal()"
+        class="rounded-2xl border-2 border-dashed border-gray-300 cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-all duration-300 flex flex-col items-center justify-center min-h-[120px] group"
+      >
+        <div class="w-12 h-12 rounded-full bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center mb-2 transition-colors">
+          <Plus class="w-6 h-6 text-gray-400 group-hover:text-blue-500 transition-colors" />
+        </div>
+        <span class="text-sm text-gray-500 group-hover:text-blue-600 transition-colors font-medium">디데이 추가</span>
       </div>
     </div>
 
