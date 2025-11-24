@@ -7,7 +7,7 @@ const route = useRoute()
 const authStore = useAuthStore()
 
 const navItems = computed(() => {
-  const items = [
+  const items: Array<{ path: string; icon: string; label: string }> = [
     { path: '/', icon: 'home', label: '홈' },
     {
       path: authStore.user ? `/duty/${authStore.user.id}` : '/',
@@ -15,11 +15,11 @@ const navItems = computed(() => {
       label: '내 달력',
     },
     { path: '/team', icon: 'users', label: '내 팀' },
-    { path: '/member', icon: 'settings', label: '설정' },
   ]
   if (authStore.isAdmin) {
     items.push({ path: '/admin', icon: 'admin', label: '관리' })
   }
+  items.push({ path: '/member', icon: 'settings', label: '설정' })
   return items
 })
 

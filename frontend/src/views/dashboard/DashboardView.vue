@@ -22,7 +22,7 @@ import {
   Users,
   Star,
   GripVertical,
-  ChevronDown,
+  MoreVertical,
   UserPlus,
   Home,
   Trash2,
@@ -687,69 +687,68 @@ watch(
               <div class="w-8 h-8 border-3 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
             </div>
           </template>
-          <div v-else ref="friendListRef" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div v-else ref="friendListRef" class="grid grid-cols-2 gap-2 sm:gap-3">
             <!-- Friend Cards -->
             <div
               v-for="friend in sortedFriends"
               :key="friend.member.id ?? 'unknown'"
               :data-member-id="friend.member.id"
-              class="friend-card p-4 border-2 border-gray-200 rounded-lg cursor-pointer transition-all duration-200 shadow-sm hover:shadow-lg hover:scale-[1.02] hover:border-blue-300 hover:bg-blue-50 flex flex-col"
+              class="friend-card p-2 sm:p-4 border-2 border-gray-200 rounded-lg cursor-pointer transition-all duration-200 shadow-sm hover:shadow-lg hover:scale-[1.02] hover:border-blue-300 hover:bg-blue-50"
               :class="{
                 'pinned-friend bg-yellow-50': friend.pinOrder,
               }"
               @click="moveTo(friend.member.id)"
             >
-              <div class="flex-grow">
+              <div>
                 <!-- Header: Name & Actions -->
-                <div class="flex justify-between items-center mb-2">
-                  <div class="font-bold text-gray-800 flex items-center gap-1">
-                    <User v-if="!friend.isFamily" class="w-4 h-4 text-gray-500" />
-                    <Home v-if="friend.isFamily" class="w-4 h-4 text-gray-600" fill="currentColor" />
-                    {{ friend.member.name }}
+                <div class="flex justify-between items-start sm:items-center mb-1 sm:mb-2">
+                  <div class="font-bold text-gray-800 flex items-center gap-1 text-sm sm:text-base">
+                    <User v-if="!friend.isFamily" class="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" />
+                    <Home v-if="friend.isFamily" class="w-3 h-3 sm:w-4 sm:h-4 text-gray-600 flex-shrink-0" fill="currentColor" />
+                    <span class="truncate">{{ friend.member.name }}</span>
                   </div>
-                  <div class="flex items-center gap-2" @click.stop>
+                  <div class="flex items-center gap-0.5 sm:gap-2 flex-shrink-0" @click.stop>
                     <!-- Pin/Unpin button -->
                     <button
                       v-if="friend.pinOrder"
-                      class="p-2 min-h-11 min-w-11 flex items-center justify-center text-yellow-500 hover:text-yellow-600 transition"
+                      class="p-1 sm:p-2 min-h-8 min-w-8 sm:min-h-11 sm:min-w-11 flex items-center justify-center text-yellow-500 hover:text-yellow-600 transition"
                       @click.stop="unpinFriend(friend.member)"
                       title="고정 해제"
                     >
-                      <Star class="w-5 h-5" fill="currentColor" />
+                      <Star class="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" />
                     </button>
                     <button
                       v-else
-                      class="p-2 min-h-11 min-w-11 flex items-center justify-center text-gray-400 hover:text-yellow-500 transition"
+                      class="p-1 sm:p-2 min-h-8 min-w-8 sm:min-h-11 sm:min-w-11 flex items-center justify-center text-gray-400 hover:text-yellow-500 transition"
                       @click.stop="pinFriend(friend.member)"
                       title="고정"
                     >
-                      <Star class="w-5 h-5" />
+                      <Star class="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
 
                     <!-- Dropdown toggle -->
                     <div v-if="friend.member.id" class="relative">
                       <button
-                        class="px-3 py-2 min-h-11 text-sm border border-gray-300 rounded hover:bg-gray-100 transition flex items-center gap-1"
+                        class="p-1.5 min-h-8 min-w-8 sm:min-h-11 sm:min-w-11 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition flex items-center justify-center"
                         @click="toggleDropdown(friend.member.id, $event)"
                       >
-                        관리
-                        <ChevronDown class="w-3 h-3" />
+                        <MoreVertical class="w-4 h-4" />
                       </button>
                       <!-- Dropdown menu -->
                       <div
                         v-if="openDropdownId === friend.member.id"
-                        class="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-lg z-10"
+                        class="absolute right-0 mt-1 w-28 sm:w-32 bg-white border border-gray-200 rounded-lg shadow-lg z-10"
                       >
                         <button
                           v-if="!friend.isFamily"
-                          class="w-full px-3 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2"
+                          class="w-full px-2 sm:px-3 py-2 text-left text-xs sm:text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2"
                           @click="addFamily(friend.member)"
                         >
                           <Home class="w-4 h-4" />
                           가족 등록
                         </button>
                         <button
-                          class="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                          class="w-full px-2 sm:px-3 py-2 text-left text-xs sm:text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
                           @click="unfriend(friend.member)"
                         >
                           <Trash2 class="w-4 h-4" />
@@ -761,35 +760,35 @@ watch(
                 </div>
 
                 <!-- Duty info -->
-                <p class="text-sm text-gray-600 mb-2 flex items-center gap-1">
-                  <Briefcase class="w-4 h-4 text-gray-400" />
-                  근무:
-                  <span v-if="friend.duty" class="ml-1">{{ friend.duty.dutyType || '휴무' }}</span>
-                  <span v-else class="ml-1 text-gray-400">-</span>
+                <p class="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2 flex items-center gap-1">
+                  <Briefcase class="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
+                  <span class="hidden sm:inline">근무:</span>
+                  <span v-if="friend.duty" class="truncate">{{ friend.duty.dutyType || '휴무' }}</span>
+                  <span v-else class="text-gray-400">-</span>
                 </p>
 
                 <!-- Schedules -->
-                <div v-if="friend.schedules && friend.schedules.length" class="mt-2">
-                  <ul class="space-y-1">
+                <div v-if="friend.schedules && friend.schedules.length" class="mt-1 sm:mt-2">
+                  <ul class="space-y-0.5 sm:space-y-1">
                     <li
                       v-for="schedule in friend.schedules"
                       :key="schedule.id"
-                      class="text-sm sm:text-base py-1 border-b border-gray-100 last:border-0 text-gray-600"
+                      class="text-xs sm:text-sm py-0.5 sm:py-1 border-b border-gray-100 last:border-0 text-gray-600 truncate"
                     >
                       <span>{{ printSchedule(schedule) }}</span>
-                      <span class="text-gray-400 ml-2">{{ printScheduleTime(schedule.startDateTime) }}</span>
+                      <span class="text-gray-400 ml-1 sm:ml-2 hidden sm:inline">{{ printScheduleTime(schedule.startDateTime) }}</span>
                     </li>
                   </ul>
                 </div>
               </div>
 
               <!-- Drag handle for pinned friends -->
-              <div v-if="friend.pinOrder" class="flex justify-end mt-2" @click.stop>
+              <div v-if="friend.pinOrder" class="flex justify-end mt-1" @click.stop>
                 <div
-                  class="handle bg-gray-100 rounded-full border border-gray-200 px-2 py-1 shadow-sm cursor-grab active:cursor-grabbing"
+                  class="handle bg-gray-100 rounded-full border border-gray-200 p-1 shadow-sm cursor-grab active:cursor-grabbing"
                   title="드래그하여 순서 변경"
                 >
-                  <GripVertical class="w-4 h-4 text-gray-400" />
+                  <GripVertical class="w-3 h-3 text-gray-400" />
                 </div>
               </div>
             </div>
@@ -797,11 +796,11 @@ watch(
             <!-- Add Friend Card -->
             <div
               v-if="friendInfoInitialized"
-              class="group p-4 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer bg-blue-50 hover:bg-blue-400 hover:border-blue-400 hover:scale-[1.02] transition-all duration-200 flex flex-col items-center justify-center min-h-[120px]"
+              class="group p-2 sm:p-4 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer bg-blue-50 hover:bg-blue-400 hover:border-blue-400 hover:scale-[1.02] transition-all duration-200 flex flex-col items-center justify-center"
               @click="openSearchModal"
             >
-              <UserPlus class="w-8 h-8 text-blue-400 group-hover:text-white mb-2 transition-colors duration-200" />
-              <span class="font-bold text-blue-400 group-hover:text-white transition-colors duration-200">친구 추가</span>
+              <UserPlus class="w-5 h-5 sm:w-8 sm:h-8 text-blue-400 group-hover:text-white mb-1 transition-colors duration-200" />
+              <span class="font-bold text-xs sm:text-base text-blue-400 group-hover:text-white transition-colors duration-200">친구 추가</span>
             </div>
           </div>
         </div>

@@ -32,9 +32,9 @@ import YearMonthPicker from '@/components/common/YearMonthPicker.vue'
 // API
 import { todoApi } from '@/api/todo'
 import { dutyApi } from '@/api/duty'
-import { ddayApi, memberApi } from '@/api/member'
+import { ddayApi, memberApi, friendApi } from '@/api/member'
 import { scheduleApi, type ScheduleDto, type ScheduleSearchResult } from '@/api/schedule'
-import type { DutyCalendarDay, TeamDto, DDayDto, DDaySaveDto, CalendarVisibility } from '@/types'
+import type { DutyCalendarDay, TeamDto, DDayDto, DDaySaveDto, CalendarVisibility, OtherDutyResponse } from '@/types'
 
 // Local interfaces for this view
 interface LocalTodo {
@@ -156,6 +156,12 @@ const isMyCalendar = computed(() => {
 })
 const amIManager = ref(false)
 
+// canEdit: true if own calendar or manager of target member
+const canEdit = computed(() => isMyCalendar.value || amIManager.value)
+
+// canSearch: true if can search schedules (same as canEdit)
+const canSearch = computed(() => isMyCalendar.value || amIManager.value)
+
 // Loading states
 const isLoading = ref(false)
 const isLoadingDuties = ref(false)
@@ -168,6 +174,7 @@ const searchQuery = ref('')
 // Modal states
 const isDayDetailModalOpen = ref(false)
 const isTodoAddModalOpen = ref(false)
+const isTodoAddFromOverview = ref(false)
 const isTodoDetailModalOpen = ref(false)
 const isTodoOverviewModalOpen = ref(false)
 const isDDayModalOpen = ref(false)
@@ -338,12 +345,8 @@ const rawDuties = ref<DutyCalendarDay[]>([])
 const dDays = ref<LocalDDay[]>([])
 const isLoadingDDays = ref(false)
 
-const friends = ref<Friend[]>([
-  { id: 1, name: '김철수' },
-  { id: 2, name: '이영희' },
-  { id: 3, name: '박지민' },
-  { id: 4, name: '최수진' },
-])
+const friends = ref<Friend[]>([])
+const isLoadingFriends = ref(false)
 
 const selectedFriendIds = ref<number[]>([])
 
@@ -547,6 +550,7 @@ onMounted(async () => {
       loadDuties(),
       loadDDays(),
       loadSchedules(),
+      loadFriends(),
       checkCanManage(),
     ])
 
@@ -573,7 +577,7 @@ onMounted(async () => {
 watch(
   () => [currentYear.value, currentMonth.value],
   async () => {
-    await Promise.all([loadDuties(), loadSchedules()])
+    await Promise.all([loadDuties(), loadSchedules(), loadOtherDuties()])
   }
 )
 
@@ -593,6 +597,9 @@ watch(
     dutyTypes.value = []
     team.value = null
     pinnedDDay.value = null
+    friends.value = []
+    selectedFriendIds.value = []
+    otherDuties.value = []
 
     try {
       await loadMemberInfo()
@@ -601,6 +608,7 @@ watch(
         loadDuties(),
         loadDDays(),
         loadSchedules(),
+        loadFriends(),
         checkCanManage(),
       ])
       if (teamId.value) {
@@ -648,11 +656,27 @@ function goToToday() {
 
 // Day click handler
 function handleDayClick(day: CalendarDay, index: number) {
-  if (!isMyCalendar.value) return // Disable click on friend's calendar
-  if (batchEditMode.value) return
+  if (!canEdit.value) return // Disable click if no edit permission
+  if (batchEditMode.value) return // In edit mode, clicks are handled by duty type buttons
   selectedDay.value = day
   selectedDayDuty.value = duties.value[index] || undefined
   isDayDetailModalOpen.value = true
+}
+
+// Batch edit mode: change duty type directly on cell
+async function handleBatchDutyChange(day: CalendarDay, dutyTypeId: number | null) {
+  if (!memberId.value) return
+  if (!canEdit.value) return
+
+  const { year, month, day: dayNum } = day
+
+  try {
+    await dutyApi.updateDuty(memberId.value, year, month, dayNum, dutyTypeId)
+    await loadDuties()
+  } catch (error) {
+    console.error('Failed to change duty type:', error)
+    showError('근무 변경에 실패했습니다.')
+  }
 }
 
 // D-Day handlers
@@ -772,7 +796,9 @@ async function handleTodoUpdate(data: {
     console.error('Failed to update todo:', error)
     showError('할 일 수정에 실패했습니다.')
   }
+  // 수정 완료 후 목록으로 돌아가기
   isTodoDetailModalOpen.value = false
+  isTodoOverviewModalOpen.value = true
 }
 
 async function handleTodoComplete(id: string) {
@@ -786,7 +812,9 @@ async function handleTodoComplete(id: string) {
     console.error('Failed to complete todo:', error)
     showError('할 일 완료 처리에 실패했습니다.')
   }
+  // 완료 후 목록으로 돌아가기
   isTodoDetailModalOpen.value = false
+  isTodoOverviewModalOpen.value = true
 }
 
 async function handleTodoReopen(id: string) {
@@ -800,7 +828,9 @@ async function handleTodoReopen(id: string) {
     console.error('Failed to reopen todo:', error)
     showError('할 일 재오픈에 실패했습니다.')
   }
+  // 재오픈 후 목록으로 돌아가기
   isTodoDetailModalOpen.value = false
+  isTodoOverviewModalOpen.value = true
 }
 
 async function handleTodoDelete(id: string) {
@@ -813,7 +843,9 @@ async function handleTodoDelete(id: string) {
     console.error('Failed to delete todo:', error)
     showError('할 일 삭제에 실패했습니다.')
   }
+  // 삭제 후 목록으로 돌아가기
   isTodoDetailModalOpen.value = false
+  isTodoOverviewModalOpen.value = true
 }
 
 async function handleTodoAdd(data: {
@@ -834,7 +866,9 @@ async function handleTodoAdd(data: {
     console.error('Failed to add todo:', error)
     showError('할 일 추가에 실패했습니다.')
   }
+  // 추가 후 목록으로 돌아가기
   isTodoAddModalOpen.value = false
+  isTodoOverviewModalOpen.value = true
 }
 
 // Todo position update for drag-and-drop
@@ -901,35 +935,61 @@ function handleSearchGoToDate(result: any) {
 }
 
 // Other duties (함께보기)
-function handleFriendToggle(friendId: number) {
+async function handleFriendToggle(friendId: number) {
   const idx = selectedFriendIds.value.indexOf(friendId)
   if (idx >= 0) {
     selectedFriendIds.value.splice(idx, 1)
   } else {
     selectedFriendIds.value.push(friendId)
   }
-  // Load other duties (dummy)
-  loadOtherDuties()
+  await loadOtherDuties()
 }
 
-function loadOtherDuties() {
+async function loadOtherDuties() {
   if (selectedFriendIds.value.length === 0) {
     otherDuties.value = []
     return
   }
-  // Dummy data
-  otherDuties.value = selectedFriendIds.value.map((friendId) => {
-    const friend = friends.value.find((f) => f.id === friendId)
-    return {
-      memberId: friendId,
-      memberName: friend?.name || '',
-      duties: Array.from({ length: 31 }, (_, i) => ({
-        day: i + 1,
-        dutyType: i % 5 === 0 ? 'OFF' : '출근',
-        dutyColor: i % 5 === 0 ? '#6c757d' : '#0d6efd',
+
+  try {
+    const response = await dutyApi.getOtherDuties(
+      selectedFriendIds.value,
+      currentYear.value,
+      currentMonth.value
+    )
+    // Map API response to local OtherDuty format
+    otherDuties.value = response.map((item) => ({
+      memberId: selectedFriendIds.value[response.indexOf(item)] || 0,
+      memberName: item.name,
+      duties: item.duties.map((d) => ({
+        day: d.day,
+        dutyType: d.dutyType || 'OFF',
+        dutyColor: d.dutyColor || '#6c757d',
       })),
-    }
-  })
+    }))
+  } catch (error) {
+    console.error('Failed to load other duties:', error)
+    showError('친구 근무 정보를 불러오는데 실패했습니다.')
+  }
+}
+
+// Load friends list
+async function loadFriends() {
+  if (!isMyCalendar.value) return
+
+  isLoadingFriends.value = true
+  try {
+    const response = await friendApi.getFriends()
+    friends.value = response.data.map((f) => ({
+      id: f.id ?? 0,
+      name: f.name,
+      profileImage: undefined,
+    }))
+  } catch (error) {
+    console.error('Failed to load friends:', error)
+  } finally {
+    isLoadingFriends.value = false
+  }
 }
 
 // Schedule handlers
@@ -958,7 +1018,6 @@ async function handleCreateSchedule(data: ScheduleSaveData) {
       attachmentSessionId: data.attachmentSessionId || undefined,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
-    isDayDetailModalOpen.value = false
     await loadSchedules()
   } catch (error) {
     console.error('Failed to create schedule:', error)
@@ -981,7 +1040,6 @@ async function handleEditSchedule(data: ScheduleSaveData) {
       attachmentSessionId: data.attachmentSessionId || undefined,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
-    isDayDetailModalOpen.value = false
     await loadSchedules()
   } catch (error) {
     console.error('Failed to update schedule:', error)
@@ -1008,6 +1066,26 @@ async function handleSwapSchedule(id1: string, id2: string) {
   } catch (error) {
     console.error('Failed to swap schedules:', error)
     showError('일정 순서 변경에 실패했습니다.')
+  }
+}
+
+async function handleAddTag(scheduleId: string, friendId: number) {
+  try {
+    await scheduleApi.tagFriend(scheduleId, friendId)
+    await loadSchedules()
+  } catch (error) {
+    console.error('Failed to add tag:', error)
+    showError('태그 추가에 실패했습니다.')
+  }
+}
+
+async function handleRemoveTag(scheduleId: string, friendId: number) {
+  try {
+    await scheduleApi.untagFriend(scheduleId, friendId)
+    await loadSchedules()
+  } catch (error) {
+    console.error('Failed to remove tag:', error)
+    showError('태그 삭제에 실패했습니다.')
   }
 }
 
@@ -1050,6 +1128,20 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
   if (!day.isCurrentMonth) return null
   return memberDuties.duties.find((d) => d.day === day.day)
 }
+
+// Check if a color is light (for text contrast)
+function isLightColor(color: string | null): boolean {
+  if (!color) return false
+  // Remove # if present
+  const hex = color.replace('#', '')
+  if (hex.length !== 6) return false
+  const r = parseInt(hex.substring(0, 2), 16)
+  const g = parseInt(hex.substring(2, 4), 16)
+  const b = parseInt(hex.substring(4, 6), 16)
+  // Calculate relative luminance
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return luminance > 0.5
+}
 </script>
 
 <template>
@@ -1073,60 +1165,54 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
 
     <!-- Main Content -->
     <template v-else>
-    <!-- Todo List Section -->
-    <div v-if="isMyCalendar" class="bg-white rounded-lg border border-gray-300 shadow-sm mb-4 flex">
-      <!-- Add Todo Button -->
+    <!-- Todo List Section (Bubble Style - Monochrome) -->
+    <div v-if="isMyCalendar" class="mb-2 flex items-center gap-2 bg-gray-50 rounded-2xl p-2 border border-gray-200">
+      <!-- Add Todo Bubble Button -->
       <button
         @click="isTodoAddModalOpen = true"
-        class="flex-shrink-0 w-16 sm:w-24 min-h-[44px] bg-green-500 text-white rounded-l-lg flex items-center justify-center gap-1 border-r border-gray-300 hover:bg-green-600 transition"
+        class="flex-shrink-0 w-10 h-10 sm:w-11 sm:h-11 bg-gray-800 text-white rounded-full flex items-center justify-center shadow-md hover:bg-gray-700 hover:shadow-lg transition-all duration-200"
       >
-        <span class="text-xs sm:text-sm font-medium">Todo</span>
-        <Plus class="w-4 h-4" />
+        <Plus class="w-5 h-5" />
       </button>
 
-      <!-- Todo Items -->
-      <div class="flex-1 min-w-0 overflow-x-auto py-2 px-2">
-        <div class="flex gap-2">
+      <!-- Todo Items Bubbles -->
+      <div class="flex-1 min-w-0 overflow-x-auto">
+        <div class="flex gap-2 py-1">
           <div
             v-for="todo in todos"
             :key="todo.id"
             @click="openTodoDetail(todo)"
-            class="flex-shrink-0 max-w-[150px] sm:max-w-[200px] flex items-center bg-gray-50 border border-gray-200 rounded-lg px-2 sm:px-3 py-2 min-h-[44px] cursor-pointer hover:bg-gray-100 transition"
+            class="flex-shrink-0 max-w-[120px] sm:max-w-[180px] flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-full cursor-pointer transition-all duration-200 hover:shadow-md hover:border-gray-300 bg-white border border-gray-200 shadow-sm"
           >
-            <span class="font-medium text-gray-800 truncate">{{ todo.title }}</span>
-            <FileText v-if="todo.content || todo.hasAttachments" class="w-4 h-4 text-gray-400 ml-1 flex-shrink-0" />
+            <span class="text-xs sm:text-sm font-medium text-gray-700 truncate">{{ todo.title }}</span>
+            <FileText v-if="todo.content || todo.hasAttachments" class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-400 flex-shrink-0" />
           </div>
         </div>
       </div>
 
-      <!-- Todo Count Badge -->
+      <!-- Todo Count Bubble -->
       <button
         @click="isTodoOverviewModalOpen = true"
-        class="flex-shrink-0 px-2 sm:px-4 py-2 min-h-[44px] flex items-center gap-1 sm:gap-2 text-gray-600 hover:bg-gray-50 rounded-r-lg transition border-l border-gray-200"
+        class="flex-shrink-0 h-10 sm:h-11 px-3 sm:px-4 flex items-center gap-1.5 bg-white rounded-full shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200"
       >
-        <ClipboardList class="w-5 h-5" />
-        <span class="hidden sm:inline">Todo List</span>
-        <span class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full">
+        <ClipboardList class="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
+        <span class="bg-gray-800 text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full">
           {{ todos.length }}
         </span>
       </button>
     </div>
 
     <!-- Month Control -->
-    <div class="flex flex-col sm:flex-row items-center justify-between gap-2 mb-4">
-      <!-- Left: Member name (for friend's calendar) or Spacer -->
-      <div class="hidden sm:block w-32">
-        <h1 v-if="!isMyCalendar && memberName" class="text-lg font-bold text-gray-800 truncate">
+    <div class="flex items-center justify-between gap-1 mb-1">
+      <!-- Left: Member name (for friend's calendar) -->
+      <div v-if="!isMyCalendar && memberName" class="flex-shrink-0 max-w-[80px] sm:max-w-[120px]">
+        <h1 class="text-sm sm:text-lg font-bold text-gray-800 truncate">
           {{ memberName }}
         </h1>
       </div>
-      <!-- Mobile: Member name shown above navigation -->
-      <h1 v-if="!isMyCalendar && memberName" class="sm:hidden text-lg font-bold text-gray-800 truncate w-full text-center">
-        {{ memberName }}
-      </h1>
 
       <!-- Center: Year-Month Navigation -->
-      <div class="flex items-center justify-center">
+      <div class="flex items-center justify-center flex-1">
         <button @click="prevMonth" class="p-2 min-w-[44px] min-h-[44px] hover:bg-gray-100 rounded-full transition flex items-center justify-center">
           <ChevronLeft class="w-5 h-5" />
         </button>
@@ -1141,18 +1227,18 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
         </button>
       </div>
 
-      <!-- Right: Search -->
-      <div class="flex items-center w-full sm:w-32 justify-center sm:justify-end">
+      <!-- Right: Search (only when canSearch) -->
+      <div v-if="canSearch" class="flex items-center">
         <input
           v-model="searchQuery"
           type="text"
           placeholder="검색"
           @keyup.enter="handleSearch()"
-          class="px-3 py-1.5 min-h-[44px] border border-gray-300 rounded-l-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-24 max-w-[200px]"
+          class="px-2 py-1.5 min-h-[44px] border border-gray-300 rounded-l-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-16 sm:w-24"
         />
         <button
           @click="handleSearch()"
-          class="px-3 py-1.5 min-h-[44px] min-w-[44px] bg-gray-800 text-white rounded-r-lg hover:bg-gray-700 transition flex items-center justify-center"
+          class="px-2 py-1.5 min-h-[44px] min-w-[44px] bg-gray-800 text-white rounded-r-lg hover:bg-gray-700 transition flex items-center justify-center"
         >
           <Search class="w-4 h-4" />
         </button>
@@ -1160,7 +1246,7 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
     </div>
 
     <!-- Duty Types & Buttons -->
-    <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+    <div class="flex flex-wrap items-center justify-between gap-1 mb-1.5">
       <div class="flex flex-wrap items-center gap-2 sm:gap-4">
         <template v-if="dutyTypes.length > 0">
           <div v-for="dutyType in dutyTypes" :key="dutyType.name" class="flex items-center gap-1">
@@ -1193,7 +1279,7 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
           </span>
         </button>
         <button
-          v-if="isMyCalendar"
+          v-if="canEdit"
           @click="batchEditMode = !batchEditMode"
           class="px-2 sm:px-3 py-1.5 min-h-[44px] border rounded-lg text-xs sm:text-sm transition"
           :class="batchEditMode ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-300 hover:bg-gray-50'"
@@ -1204,7 +1290,7 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
     </div>
 
     <!-- Calendar Grid -->
-    <div class="bg-white rounded-lg border border-gray-300 overflow-hidden mb-4 shadow-sm">
+    <div class="bg-white rounded-lg border border-gray-300 overflow-hidden mb-2 shadow-sm">
       <!-- Week Days Header -->
       <div class="grid grid-cols-7 bg-gray-100">
         <div
@@ -1226,18 +1312,17 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
           v-for="(day, idx) in calendarDays"
           :key="idx"
           @click="handleDayClick(day, idx)"
-          class="min-h-[60px] sm:min-h-[80px] md:min-h-[100px] border-b border-r border-gray-200 p-0.5 sm:p-1 transition relative"
+          class="min-h-[70px] sm:min-h-[80px] md:min-h-[100px] border-b border-r border-gray-200 p-0.5 sm:p-1 transition-all duration-150 relative cursor-pointer hover:brightness-95 hover:shadow-inner"
           :class="{
-            'opacity-40 bg-gray-50': !day.isCurrentMonth,
+            'opacity-50': !day.isCurrentMonth,
             'ring-2 ring-red-500 ring-inset': day.isToday,
-            'cursor-pointer hover:bg-gray-50': isMyCalendar,
           }"
-          :style="day.isCurrentMonth && duties[idx]?.dutyColor ? { backgroundColor: duties[idx].dutyColor + '80' } : {}"
+          :style="duties[idx]?.dutyColor ? { backgroundColor: duties[idx].dutyColor + (day.isCurrentMonth ? '80' : '40') } : (!day.isCurrentMonth ? { backgroundColor: '#f9fafb' } : {})"
         >
           <!-- Day Number -->
           <div class="flex items-center justify-between">
             <span
-              class="text-sm font-medium"
+              class="text-xs sm:text-sm font-medium"
               :class="{
                 'text-red-500': idx % 7 === 0,
                 'text-blue-500': idx % 7 === 6,
@@ -1246,64 +1331,103 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
             >
               {{ day.day }}
             </span>
-            <!-- D-Day indicator -->
+            <!-- D-Day indicator (compact) -->
             <span
-              v-if="pinnedDDay && day.isCurrentMonth"
-              class="text-xs text-gray-500 font-medium"
+              v-if="pinnedDDay && day.isCurrentMonth && !batchEditMode"
+              class="text-[9px] sm:text-xs text-gray-500"
             >
               {{ calcDDayForDay(day) }}
             </span>
           </div>
 
-          <!-- Schedules -->
-          <div class="mt-1 space-y-0.5">
-            <div
-              v-for="schedule in schedulesByDays[idx]?.slice(0, 2)"
-              :key="schedule.id"
-              class="text-xs truncate text-gray-700 bg-white/60 rounded px-1 flex items-center gap-0.5"
+          <!-- Batch Edit Mode: Duty Type Buttons -->
+          <div v-if="batchEditMode && day.isCurrentMonth" class="mt-1 grid grid-cols-2 gap-0.5">
+            <button
+              v-for="dutyType in dutyTypes"
+              :key="dutyType.id ?? 'off'"
+              @click.stop="handleBatchDutyChange(day, dutyType.id)"
+              class="text-[10px] sm:text-xs px-1 py-1 rounded border transition-all min-h-[22px] sm:min-h-[26px] truncate"
+              :class="{
+                'ring-2 ring-gray-800 font-bold shadow-sm':
+                  (duties[idx]?.dutyType === dutyType.name) ||
+                  (!duties[idx]?.dutyType && dutyType.id === null),
+                'hover:opacity-80': true,
+              }"
+              :style="{
+                backgroundColor: dutyType.color || '#6c757d',
+                color: isLightColor(dutyType.color) ? '#000' : '#fff',
+                borderColor: dutyType.color || '#6c757d',
+              }"
             >
-              <Lock v-if="schedule.visibility === 'PRIVATE'" class="w-3 h-3 text-gray-400 flex-shrink-0" />
-              <span class="truncate">{{ schedule.contentWithoutTime || schedule.content }}</span>
-              <span class="text-gray-400 flex-shrink-0">{{ formatScheduleTime(schedule) }}</span>
-              <button
-                v-if="schedule.description || schedule.attachments?.length"
-                @click.stop="handleShowDescription(schedule)"
-                class="flex-shrink-0 text-blue-500 hover:text-blue-700"
-                title="상세보기"
-              >
-                <FileText class="w-3 h-3" />
-              </button>
-              <span v-if="schedule.isTagged" class="flex-shrink-0 text-[10px] bg-gray-200 text-gray-600 px-1 rounded-full whitespace-nowrap">by{{ schedule.owner }}</span>
+              {{ dutyType.name.length > 4 ? dutyType.name.substring(0, 4) : dutyType.name }}
+            </button>
+          </div>
+
+          <!-- Normal Mode: Schedules -->
+          <div v-if="!batchEditMode" class="mt-0.5 space-y-px">
+            <div
+              v-for="schedule in schedulesByDays[idx]?.slice(0, 3)"
+              :key="schedule.id"
+              class="text-[10px] sm:text-xs leading-tight text-gray-800 bg-white/70 rounded px-0.5"
+            >
+              <div class="flex items-center">
+                <Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3 sm:h-3 text-gray-400 flex-shrink-0" />
+                <span class="truncate font-medium">{{ schedule.contentWithoutTime || schedule.content }}</span>
+                <button
+                  v-if="schedule.description || schedule.attachments?.length"
+                  @click.stop="handleShowDescription(schedule)"
+                  class="flex-shrink-0 text-blue-500 hover:text-blue-700 ml-px"
+                  title="상세보기"
+                >
+                  <FileText class="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                </button>
+              </div>
+              <!-- Tags display -->
+              <div v-if="schedule.tags?.length || schedule.isTagged" class="flex flex-wrap gap-0.5 justify-end">
+                <span
+                  v-for="tag in schedule.tags?.filter(t => t.id !== memberId)"
+                  :key="tag.id"
+                  class="text-[8px] sm:text-[9px] px-1 py-px bg-amber-50 border border-gray-400 rounded-full whitespace-nowrap"
+                >{{ tag.name }}</span>
+                <span
+                  v-if="schedule.isTagged"
+                  class="text-[8px] sm:text-[9px] px-1 py-px bg-amber-50 border border-gray-400 rounded-full whitespace-nowrap"
+                ><span class="text-[6px] sm:text-[7px]">by</span> {{ schedule.owner }}</span>
+              </div>
             </div>
             <div
-              v-if="(schedulesByDays[idx]?.length ?? 0) > 2"
-              class="text-xs text-gray-400"
+              v-if="(schedulesByDays[idx]?.length ?? 0) > 3"
+              class="text-[10px] text-gray-500 font-medium"
             >
-              +{{ (schedulesByDays[idx]?.length ?? 0) - 2 }} more
+              +{{ (schedulesByDays[idx]?.length ?? 0) - 3 }}
             </div>
           </div>
 
           <!-- D-Days on this date -->
-          <div v-if="day.isCurrentMonth && getDDaysForDay(day).length > 0" class="mt-1 space-y-0.5">
+          <div v-if="!batchEditMode && day.isCurrentMonth && getDDaysForDay(day).length > 0" class="mt-0.5 space-y-px">
             <div
               v-for="dday in getDDaysForDay(day)"
               :key="dday.id"
-              class="text-xs truncate text-gray-600 bg-gray-100 rounded px-1"
+              class="text-[10px] sm:text-xs truncate text-gray-700 bg-yellow-100/80 rounded px-0.5 flex items-center"
             >
-              <Lock v-if="dday.isPrivate" class="w-3 h-3 inline-block" />
-              <CalendarCheck v-else class="w-3 h-3 inline-block" />
-              {{ dday.title }}
+              <Lock v-if="dday.isPrivate" class="w-2.5 h-2.5 inline-block flex-shrink-0" />
+              <CalendarCheck v-else class="w-2.5 h-2.5 inline-block flex-shrink-0" />
+              <span class="truncate">{{ dday.title }}</span>
             </div>
           </div>
 
           <!-- Other Duties (함께보기) -->
-          <div v-if="otherDuties.length > 0 && day.isCurrentMonth" class="mt-1 space-y-0.5">
+          <div v-if="!batchEditMode && otherDuties.length > 0 && day.isCurrentMonth" class="mt-0.5 flex flex-wrap gap-px">
             <div
               v-for="otherDuty in otherDuties"
               :key="otherDuty.memberId"
-              class="text-xs px-1.5 py-0.5 rounded-full border border-gray-300 bg-white inline-block mr-1"
+              class="text-[9px] sm:text-[10px] px-1 py-px rounded border border-white/50 inline-block"
+              :style="{
+                backgroundColor: getOtherDutyForDay(day, otherDuty)?.dutyColor || '#6c757d',
+                color: isLightColor(getOtherDutyForDay(day, otherDuty)?.dutyColor) ? '#000' : '#fff',
+              }"
             >
-              {{ otherDuty.memberName }}:{{ getOtherDutyForDay(day, otherDuty)?.dutyType || '-' }}
+              {{ otherDuty.memberName }}
             </div>
           </div>
         </div>
@@ -1369,7 +1493,7 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
       :duty="selectedDayDuty"
       :schedules="selectedDay ? (schedulesByDays[calendarDays.findIndex(d => d.year === selectedDay!.year && d.month === selectedDay!.month && d.day === selectedDay!.day)] ?? []) : []"
       :duty-types="dutyTypes"
-      :is-my-calendar="isMyCalendar"
+      :can-edit="canEdit"
       :batch-edit-mode="batchEditMode"
       :friends="friends"
       @close="isDayDetailModalOpen = false"
@@ -1377,8 +1501,8 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
       @edit-schedule="handleEditSchedule"
       @delete-schedule="handleDeleteSchedule"
       @swap-schedule="handleSwapSchedule"
-      @add-tag="isDayDetailModalOpen = false"
-      @remove-tag="isDayDetailModalOpen = false"
+      @add-tag="handleAddTag"
+      @remove-tag="handleRemoveTag"
       @change-duty-type="handleChangeDutyType"
     />
 
@@ -1390,7 +1514,7 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
 
     <TodoAddModal
       :is-open="isTodoAddModalOpen"
-      @close="isTodoAddModalOpen = false"
+      @close="isTodoAddModalOpen = false; if (isTodoAddFromOverview) { isTodoOverviewModalOpen = true; isTodoAddFromOverview = false; }"
       @save="handleTodoAdd"
     />
 
@@ -1402,6 +1526,7 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
       @complete="handleTodoComplete"
       @reopen="handleTodoReopen"
       @delete="handleTodoDelete"
+      @back-to-list="isTodoDetailModalOpen = false; isTodoOverviewModalOpen = true"
     />
 
     <TodoOverviewModal
@@ -1414,6 +1539,7 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
       @reopen="handleTodoReopen"
       @delete="handleTodoDelete"
       @reorder="handleTodoPositionUpdate"
+      @add="isTodoOverviewModalOpen = false; isTodoAddModalOpen = true; isTodoAddFromOverview = true"
     />
 
     <DDayModal

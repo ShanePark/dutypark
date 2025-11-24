@@ -498,10 +498,6 @@ async function removeTeam() {
   showWarning('팀 삭제 기능은 관리자에게 문의해주세요.')
 }
 
-function goBack() {
-  router.push('/team')
-}
-
 onMounted(() => {
   fetchTeam()
   fetchDutyBatchTemplates()
@@ -521,15 +517,15 @@ onUnmounted(() => {
 
     <template v-else-if="team">
       <!-- Header -->
-      <div class="bg-gray-600 text-white font-bold text-xl text-center py-3 rounded-t-lg flex items-center justify-center gap-2">
-        {{ team.name }} 관리
-        <a
-          v-if="isAppAdmin"
-          href="/admin/team"
-          class="px-3 py-1 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition"
+      <div class="bg-gray-600 text-white font-bold text-xl py-3 rounded-t-lg flex items-center justify-between px-4">
+        <button
+          @click="router.back()"
+          class="px-3 py-1 bg-gray-500 text-white text-sm rounded-lg hover:bg-gray-400 transition flex items-center gap-1"
         >
-          팀 목록
-        </a>
+          <ChevronLeft class="w-4 h-4" />
+          뒤로
+        </button>
+        <span>{{ team.name }} 관리</span>
         <button
           v-if="isAdmin && teamLoaded && !hasMember"
           @click="removeTeam"
@@ -537,6 +533,7 @@ onUnmounted(() => {
         >
           팀 삭제
         </button>
+        <span v-else class="w-16"></span>
       </div>
 
     <!-- Team Info Card -->
@@ -828,16 +825,6 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- Back Button -->
-    <div class="mt-4">
-      <button
-        @click="goBack"
-        class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition flex items-center gap-1"
-      >
-        <ChevronLeft class="w-4 h-4" />
-        팀으로 돌아가기
-      </button>
-    </div>
 
     <!-- Member Search Modal -->
     <div

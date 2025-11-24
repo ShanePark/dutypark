@@ -195,8 +195,10 @@ export const refreshTokenApi = {
    * Get all refresh tokens (sessions)
    */
   getRefreshTokens(validOnly = true) {
+    const currentRefreshToken = localStorage.getItem('refreshToken')
     return apiClient.get<RefreshTokenDto[]>('/refresh-tokens', {
       params: { validOnly },
+      headers: currentRefreshToken ? { 'X-Current-Token': currentRefreshToken } : {},
     })
   },
 

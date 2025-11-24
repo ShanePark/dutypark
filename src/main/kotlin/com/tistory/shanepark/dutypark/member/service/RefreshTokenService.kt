@@ -49,6 +49,12 @@ class RefreshTokenService(
         return refreshTokenRepository.findByToken(refreshToken)
     }
 
+    fun deleteByToken(token: String): Boolean {
+        val refreshToken = refreshTokenRepository.findByToken(token) ?: return false
+        refreshTokenRepository.delete(refreshToken)
+        return true
+    }
+
     fun createRefreshToken(memberId: Long, remoteAddr: String?, userAgent: String?): RefreshToken {
         val member = memberRepository.findById(memberId).orElseThrow()
         val refreshToken = RefreshToken(

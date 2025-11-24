@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, reactive } from 'vue'
+import { ref, computed, watch } from 'vue'
 import {
   X,
   Plus,
@@ -9,17 +9,16 @@ import {
   ChevronDown,
   Paperclip,
   Eye,
-  EyeOff,
+  Lock,
   Users,
   User,
-  Tag,
-  Download,
-  ChevronLeft,
-  ChevronRight,
+  UserPlus,
+  Check,
 } from 'lucide-vue-next'
 import FileUploader from '@/components/common/FileUploader.vue'
+import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
 import type { NormalizedAttachment } from '@/types'
-import { normalizeAttachment, fetchAuthenticatedImage } from '@/api/attachment'
+import { normalizeAttachment } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
 
 const { showWarning, showError } = useSwal()
@@ -57,7 +56,7 @@ interface Props {
   duty?: { dutyType: string; dutyColor: string }
   schedules: Schedule[]
   dutyTypes: DutyType[]
-  isMyCalendar: boolean
+  canEdit: boolean
   batchEditMode: boolean
   friends: Array<{ id: number; name: string }>
 }
@@ -96,6 +95,24 @@ const editingScheduleId = ref<string | null>(null)
 const fileUploaderRef = ref<InstanceType<typeof FileUploader> | null>(null)
 const isUploading = ref(false)
 
+// Local duty state for immediate UI feedback
+const selectedDutyType = ref<string | null>(null)
+
+// Sync selectedDutyType with props.duty
+watch(
+  () => props.duty?.dutyType,
+  (newVal) => {
+    selectedDutyType.value = newVal ?? null
+  },
+  { immediate: true }
+)
+
+// Handle duty type change with immediate UI feedback
+function handleDutyTypeChange(dutyTypeId: number | null, dutyTypeName: string) {
+  selectedDutyType.value = dutyTypeName
+  emit('changeDutyType', dutyTypeId)
+}
+
 const newSchedule = ref({
   content: '',
   description: '',
@@ -106,73 +123,7 @@ const newSchedule = ref({
 })
 const editAttachments = ref<NormalizedAttachment[]>([])
 
-const showTagDropdown = ref<string | null>(null)
-const thumbnailBlobUrls = reactive<Record<string, string>>({})
-const fullImageBlobUrls = reactive<Record<string, string>>({})
-
-// Image viewer state
-const imageViewerOpen = ref(false)
-const currentImageIndex = ref(0)
-const currentImageAttachments = ref<Array<{ id: string; originalFilename: string; contentType: string }>>([])
-
-function openImageViewer(attachments: Array<{ id: string; originalFilename: string; contentType: string }>, index: number) {
-  const imageAttachments = attachments.filter((a) => a.contentType.startsWith('image/'))
-  if (imageAttachments.length === 0) return
-
-  currentImageAttachments.value = imageAttachments
-  const clickedAttachment = attachments[index]
-  const imageIndex = imageAttachments.findIndex((a) => a.id === clickedAttachment?.id)
-  currentImageIndex.value = imageIndex >= 0 ? imageIndex : 0
-  imageViewerOpen.value = true
-
-  // Load full image
-  loadFullImage(currentImageAttachments.value[currentImageIndex.value]?.id)
-}
-
-function closeImageViewer() {
-  imageViewerOpen.value = false
-}
-
-function prevImage() {
-  if (currentImageIndex.value > 0) {
-    currentImageIndex.value--
-    loadFullImage(currentImageAttachments.value[currentImageIndex.value]?.id)
-  }
-}
-
-function nextImage() {
-  if (currentImageIndex.value < currentImageAttachments.value.length - 1) {
-    currentImageIndex.value++
-    loadFullImage(currentImageAttachments.value[currentImageIndex.value]?.id)
-  }
-}
-
-async function loadFullImage(attachmentId: string | undefined) {
-  if (!attachmentId || fullImageBlobUrls[attachmentId]) return
-  const blobUrl = await fetchAuthenticatedImage(`/api/attachments/${attachmentId}/download?inline=true`)
-  if (blobUrl) {
-    fullImageBlobUrls[attachmentId] = blobUrl
-  }
-}
-
-function getCurrentImageUrl(): string | null {
-  const attachment = currentImageAttachments.value[currentImageIndex.value]
-  if (!attachment) return null
-  return fullImageBlobUrls[attachment.id] || thumbnailBlobUrls[attachment.id] || null
-}
-
-async function downloadAttachment(attachmentId: string, filename: string) {
-  const blobUrl = await fetchAuthenticatedImage(`/api/attachments/${attachmentId}/download`)
-  if (blobUrl) {
-    const a = document.createElement('a')
-    a.href = blobUrl
-    a.download = filename
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(blobUrl)
-  }
-}
+const taggingScheduleId = ref<string | null>(null)
 
 const formattedDate = computed(() => {
   const { year, month, day } = props.date
@@ -328,7 +279,7 @@ function getVisibilityIcon(visibility: string) {
     case 'FAMILY':
       return User
     case 'PRIVATE':
-      return EyeOff
+      return Lock
     default:
       return Eye
   }
@@ -364,48 +315,37 @@ function formatScheduleTime(schedule: Schedule) {
   return `(${startTime}~${endTime})`
 }
 
-function toggleTagDropdown(scheduleId: string) {
-  showTagDropdown.value = showTagDropdown.value === scheduleId ? null : scheduleId
+function openTagPanel(scheduleId: string) {
+  taggingScheduleId.value = scheduleId
 }
 
-function getFileIcon(contentType: string): string {
-  if (contentType.startsWith('image/')) return 'IMG'
-  if (contentType.startsWith('video/')) return 'VID'
-  if (contentType.startsWith('audio/')) return 'AUD'
-  if (contentType.includes('pdf')) return 'PDF'
-  if (contentType.includes('word') || contentType.includes('document')) return 'DOC'
-  if (contentType.includes('excel') || contentType.includes('spreadsheet')) return 'XLS'
-  if (contentType.includes('zip') || contentType.includes('rar')) return 'ZIP'
-  return 'FILE'
+function closeTagPanel() {
+  taggingScheduleId.value = null
 }
 
-// Load thumbnail images with authentication
-async function loadThumbnails() {
-  for (const schedule of props.schedules) {
-    if (!schedule.attachments) continue
-    for (const attachment of schedule.attachments) {
-      if (attachment.hasThumbnail && attachment.thumbnailUrl && !thumbnailBlobUrls[attachment.id]) {
-        const blobUrl = await fetchAuthenticatedImage(attachment.thumbnailUrl)
-        if (blobUrl) {
-          thumbnailBlobUrls[attachment.id] = blobUrl
-        }
-      }
-    }
-  }
+function getUntaggedFriends(schedule: Schedule) {
+  const taggedIds = new Set(schedule.tags?.map((t) => t.id) || [])
+  return props.friends.filter((f) => !taggedIds.has(f.id))
 }
 
-function getThumbnailUrl(attachmentId: string): string | null {
-  return thumbnailBlobUrls[attachmentId] || null
+function toNormalizedAttachments(attachments: Schedule['attachments']): NormalizedAttachment[] {
+  if (!attachments) return []
+  return attachments.map((a) =>
+    normalizeAttachment({
+      id: a.id,
+      contextType: 'SCHEDULE',
+      contextId: '',
+      originalFilename: a.originalFilename,
+      contentType: a.contentType,
+      size: a.size,
+      hasThumbnail: a.hasThumbnail,
+      thumbnailUrl: a.thumbnailUrl || null,
+      orderIndex: 0,
+      createdAt: '',
+      createdBy: 0,
+    })
+  )
 }
-
-// Watch for schedule changes to load thumbnails
-watch(
-  () => props.schedules,
-  () => {
-    loadThumbnails()
-  },
-  { immediate: true, deep: true }
-)
 </script>
 
 <template>
@@ -418,52 +358,46 @@ watch(
       <div class="bg-white rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4">
         <!-- Header -->
         <div class="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
-          <h2 class="text-base sm:text-lg font-bold">{{ formattedDate }}</h2>
-          <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition">
+          <div class="flex items-center gap-3 flex-wrap">
+            <h2 class="text-base sm:text-lg font-bold">{{ formattedDate }}</h2>
+            <!-- Duty Type Selection (내 달력에서만 표시, 추가/수정 모드에서는 숨김) -->
+            <div v-if="!isCreateMode && !isEditMode && canEdit && dutyTypes.length > 0" class="flex flex-wrap gap-1.5">
+              <button
+                v-for="dutyType in dutyTypes"
+                :key="dutyType.id ?? 'off'"
+                @click="handleDutyTypeChange(dutyType.id, dutyType.name)"
+                class="px-2.5 py-1 rounded-md border text-xs font-medium transition flex items-center gap-1.5"
+                :class="{
+                  'border-blue-500 ring-1 ring-blue-200': selectedDutyType === dutyType.name,
+                  'border-gray-200 hover:border-gray-400': selectedDutyType !== dutyType.name,
+                }"
+                :style="{
+                  backgroundColor: selectedDutyType === dutyType.name && dutyType.color ? dutyType.color + '30' : undefined,
+                }"
+              >
+                <span
+                  class="inline-block w-3 h-3 rounded"
+                  :style="{ backgroundColor: dutyType.color || '#6c757d' }"
+                ></span>
+                {{ dutyType.name }}
+              </button>
+            </div>
+            <!-- Current Duty (다른 사람 달력일 때만) -->
+            <span
+              v-else-if="duty && !canEdit"
+              class="px-2.5 py-1 rounded-md text-xs font-medium text-white"
+              :style="{ backgroundColor: duty.dutyColor || '#6c757d' }"
+            >
+              {{ duty.dutyType || 'OFF' }}
+            </span>
+          </div>
+          <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition flex-shrink-0">
             <X class="w-6 h-6" />
           </button>
         </div>
 
         <!-- Content -->
         <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(90dvh-130px)] sm:max-h-[calc(90vh-130px)]">
-          <!-- Duty Type Selection (내 달력에서만 표시, 추가/수정 모드에서는 숨김) -->
-          <div v-if="!isCreateMode && !isEditMode && isMyCalendar && dutyTypes.length > 0" class="mb-4">
-            <h3 class="text-sm font-medium text-gray-700 mb-2">근무</h3>
-            <div class="flex flex-wrap gap-2">
-              <button
-                v-for="dutyType in dutyTypes"
-                :key="dutyType.id ?? 'off'"
-                @click="emit('changeDutyType', dutyType.id)"
-                class="px-4 py-2 rounded-lg border-2 text-sm font-medium transition flex items-center gap-2"
-                :class="{
-                  'border-blue-500 ring-2 ring-blue-200': duty?.dutyType === dutyType.name,
-                  'border-gray-200 hover:border-gray-400': duty?.dutyType !== dutyType.name,
-                }"
-                :style="{
-                  backgroundColor: duty?.dutyType === dutyType.name && dutyType.color ? dutyType.color + '30' : undefined,
-                }"
-              >
-                <span
-                  class="inline-block w-4 h-4 rounded"
-                  :style="{ backgroundColor: dutyType.color || '#6c757d' }"
-                ></span>
-                {{ dutyType.name }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Current Duty (다른 사람 달력일 때만) -->
-          <div v-else-if="duty && !isMyCalendar" class="mb-4">
-            <div class="flex items-center gap-2">
-              <span class="text-sm text-gray-500">근무:</span>
-              <span
-                class="px-3 py-1 rounded-full text-sm font-medium text-white"
-                :style="{ backgroundColor: duty.dutyColor || '#6c757d' }"
-              >
-                {{ duty.dutyType || 'OFF' }}
-              </span>
-            </div>
-          </div>
 
           <!-- Schedules List (hidden during create/edit mode) -->
           <div v-if="!isCreateMode && !isEditMode" class="space-y-3">
@@ -481,11 +415,17 @@ watch(
               <div class="flex items-start justify-between">
                 <div class="flex-1">
                   <div class="flex items-center gap-2 flex-wrap">
+                    <Lock
+                      v-if="schedule.visibility === 'PRIVATE'"
+                      class="w-4 h-4 text-gray-400"
+                      :title="getVisibilityLabel(schedule.visibility)"
+                    />
                     <span class="font-medium">{{ schedule.content }}</span>
                     <span v-if="formatScheduleTime(schedule)" class="text-sm text-gray-500">
                       {{ formatScheduleTime(schedule) }}
                     </span>
                     <component
+                      v-if="schedule.visibility !== 'PRIVATE'"
                       :is="getVisibilityIcon(schedule.visibility)"
                       class="w-4 h-4 text-gray-400"
                       :title="getVisibilityLabel(schedule.visibility)"
@@ -499,10 +439,73 @@ watch(
                     </span>
                   </div>
 
-                  <!-- Tags -->
+                  <!-- Tags Section -->
                   <div
-                    v-if="schedule.tags?.length"
-                    class="flex items-center gap-1 mt-1 flex-wrap"
+                    v-if="schedule.isMine && canEdit && (schedule.tags?.length || friends.length > 0)"
+                    class="mt-2"
+                  >
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <!-- Existing tags -->
+                      <span
+                        v-for="tag in schedule.tags"
+                        :key="tag.id"
+                        class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full"
+                      >
+                        {{ tag.name }}
+                        <button
+                          @click.stop="emit('removeTag', schedule.id, tag.id)"
+                          class="p-0.5 hover:bg-blue-200 rounded-full transition"
+                          title="태그 삭제"
+                        >
+                          <X class="w-3 h-3" />
+                        </button>
+                      </span>
+
+                      <!-- Add tag button -->
+                      <button
+                        v-if="friends.length > 0"
+                        @click.stop="openTagPanel(schedule.id)"
+                        class="inline-flex items-center gap-1 px-2 py-0.5 border border-dashed border-gray-300 text-gray-500 text-xs rounded-full hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition"
+                        :class="{ 'border-blue-400 text-blue-500 bg-blue-50': taggingScheduleId === schedule.id }"
+                        title="친구 태그"
+                      >
+                        <UserPlus class="w-3 h-3" />
+                        <span>태그</span>
+                      </button>
+                    </div>
+
+                    <!-- Inline tag selection (expanded below the button) -->
+                    <div
+                      v-if="taggingScheduleId === schedule.id && getUntaggedFriends(schedule).length > 0"
+                      class="mt-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg"
+                    >
+                      <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-medium text-blue-700">친구 선택</span>
+                        <button
+                          @click.stop="closeTagPanel"
+                          class="p-0.5 hover:bg-blue-100 rounded transition"
+                        >
+                          <X class="w-3.5 h-3.5 text-blue-500" />
+                        </button>
+                      </div>
+                      <div class="flex flex-wrap gap-1.5">
+                        <button
+                          v-for="friend in getUntaggedFriends(schedule)"
+                          :key="friend.id"
+                          @click.stop="emit('addTag', schedule.id, friend.id)"
+                          class="inline-flex items-center gap-1 px-2 py-1 bg-white border border-blue-200 text-gray-700 text-xs rounded-full hover:border-blue-400 hover:bg-blue-100 transition"
+                        >
+                          <User class="w-3 h-3" />
+                          {{ friend.name }}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Tags display for non-owners (show tags list) -->
+                  <div
+                    v-else-if="!schedule.isTagged && schedule.tags?.length"
+                    class="flex items-center gap-1.5 mt-2 flex-wrap"
                   >
                     <span
                       v-for="tag in schedule.tags"
@@ -510,22 +513,17 @@ watch(
                       class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full"
                     >
                       {{ tag.name }}
-                      <button
-                        v-if="isMyCalendar"
-                        @click.stop="emit('removeTag', schedule.id, tag.id)"
-                        class="hover:text-red-500"
-                      >
-                        <X class="w-3 h-3" />
-                      </button>
                     </span>
                   </div>
 
-                  <!-- Tagged indicator -->
+                  <!-- Tagged by indicator (when I was tagged by someone) -->
                   <div
-                    v-if="schedule.isTagged"
-                    class="text-xs text-gray-500 mt-1"
+                    v-else-if="schedule.isTagged"
+                    class="mt-2"
                   >
-                    by {{ schedule.taggedBy }}
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                      by {{ schedule.taggedBy }}
+                    </span>
                   </div>
 
                   <!-- Description -->
@@ -535,38 +533,10 @@ watch(
 
                   <!-- Attachments -->
                   <div v-if="schedule.attachments?.length" class="mt-2 pt-2 border-t border-gray-100">
-                    <div class="flex items-center gap-1 text-sm text-gray-500 mb-2">
-                      <Paperclip class="w-3 h-3" />
-                      첨부파일 ({{ schedule.attachments.length }})
-                    </div>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      <div
-                        v-for="(attachment, idx) in schedule.attachments"
-                        :key="attachment.id"
-                        class="relative border border-gray-200 rounded overflow-hidden group cursor-pointer"
-                        @click="attachment.contentType.startsWith('image/') ? openImageViewer(schedule.attachments, idx) : downloadAttachment(attachment.id, attachment.originalFilename)"
-                      >
-                        <div class="aspect-square bg-gray-100 flex items-center justify-center">
-                          <img
-                            v-if="getThumbnailUrl(attachment.id)"
-                            :src="getThumbnailUrl(attachment.id)!"
-                            :alt="attachment.originalFilename"
-                            class="w-full h-full object-cover"
-                          />
-                          <span v-else class="text-2xl text-gray-400">
-                            {{ getFileIcon(attachment.contentType) }}
-                          </span>
-                        </div>
-                        <!-- Download button in corner -->
-                        <button
-                          class="absolute top-1 right-1 p-1 bg-black/50 rounded text-white opacity-0 group-hover:opacity-100 transition hover:bg-black/70"
-                          @click.stop="downloadAttachment(attachment.id, attachment.originalFilename)"
-                          title="다운로드"
-                        >
-                          <Download class="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
+                    <AttachmentGrid
+                      :attachments="toNormalizedAttachments(schedule.attachments)"
+                      :columns="4"
+                    />
                   </div>
                 </div>
 
@@ -574,7 +544,7 @@ watch(
                 <div class="flex items-center gap-1 ml-2">
                   <!-- Reorder buttons -->
                   <button
-                    v-if="idx > 0 && isMyCalendar && schedules[idx - 1]"
+                    v-if="idx > 0 && canEdit && schedules[idx - 1]"
                     @click="emit('swapSchedule', schedule.id, schedules[idx - 1]!.id)"
                     class="p-1 hover:bg-gray-200 rounded transition"
                     title="위로"
@@ -582,7 +552,7 @@ watch(
                     <ChevronUp class="w-4 h-4" />
                   </button>
                   <button
-                    v-if="idx < schedules.length - 1 && isMyCalendar && schedules[idx + 1]"
+                    v-if="idx < schedules.length - 1 && canEdit && schedules[idx + 1]"
                     @click="emit('swapSchedule', schedule.id, schedules[idx + 1]!.id)"
                     class="p-1 hover:bg-gray-200 rounded transition"
                     title="아래로"
@@ -590,33 +560,9 @@ watch(
                     <ChevronDown class="w-4 h-4" />
                   </button>
 
-                  <!-- Tag button -->
-                  <div v-if="isMyCalendar && schedule.isMine" class="relative">
-                    <button
-                      @click="toggleTagDropdown(schedule.id)"
-                      class="p-1 hover:bg-gray-200 rounded transition"
-                      title="태그"
-                    >
-                      <Tag class="w-4 h-4" />
-                    </button>
-                    <div
-                      v-if="showTagDropdown === schedule.id"
-                      class="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-10"
-                    >
-                      <div
-                        v-for="friend in friends"
-                        :key="friend.id"
-                        @click="emit('addTag', schedule.id, friend.id); showTagDropdown = null"
-                        class="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
-                      >
-                        {{ friend.name }}
-                      </div>
-                    </div>
-                  </div>
-
                   <!-- Edit -->
                   <button
-                    v-if="schedule.isMine || isMyCalendar"
+                    v-if="schedule.isMine || canEdit"
                     @click="startEditMode(schedule)"
                     class="p-1 hover:bg-gray-200 rounded transition text-blue-600"
                     title="수정"
@@ -626,7 +572,7 @@ watch(
 
                   <!-- Delete -->
                   <button
-                    v-if="schedule.isMine || isMyCalendar"
+                    v-if="schedule.isMine || canEdit"
                     @click="emit('deleteSchedule', schedule.id)"
                     class="p-1 hover:bg-gray-200 rounded transition text-red-600"
                     title="삭제"
@@ -729,7 +675,7 @@ watch(
         <!-- Footer -->
         <div class="p-3 sm:p-4 border-t border-gray-200 flex justify-end">
           <button
-            v-if="!isCreateMode && !isEditMode && isMyCalendar"
+            v-if="!isCreateMode && !isEditMode && canEdit"
             @click="startCreateMode"
             class="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
           >
@@ -738,67 +684,6 @@ watch(
           </button>
         </div>
       </div>
-    </div>
-
-    <!-- Image Viewer Modal -->
-    <div
-      v-if="imageViewerOpen"
-      class="fixed inset-0 z-[60] flex items-center justify-center bg-black/90"
-      @click.self="closeImageViewer"
-    >
-      <!-- Close button -->
-      <button
-        @click="closeImageViewer"
-        class="absolute top-4 right-4 p-2 text-white hover:bg-white/20 rounded-full transition"
-      >
-        <X class="w-6 h-6" />
-      </button>
-
-      <!-- Previous button -->
-      <button
-        v-if="currentImageIndex > 0"
-        @click="prevImage"
-        class="absolute left-4 p-2 text-white hover:bg-white/20 rounded-full transition"
-      >
-        <ChevronLeft class="w-8 h-8" />
-      </button>
-
-      <!-- Image -->
-      <div class="max-w-[90vw] max-h-[90vh] flex flex-col items-center">
-        <img
-          v-if="getCurrentImageUrl()"
-          :src="getCurrentImageUrl()!"
-          :alt="currentImageAttachments[currentImageIndex]?.originalFilename"
-          class="max-w-full max-h-[80vh] object-contain"
-        />
-        <div v-else class="text-white">로딩 중...</div>
-
-        <!-- Image info -->
-        <div class="mt-4 text-white text-center">
-          <div class="text-sm">{{ currentImageAttachments[currentImageIndex]?.originalFilename }}</div>
-          <div class="text-xs text-gray-400 mt-1">
-            {{ currentImageIndex + 1 }} / {{ currentImageAttachments.length }}
-          </div>
-        </div>
-
-        <!-- Download button -->
-        <button
-          @click="downloadAttachment(currentImageAttachments[currentImageIndex]?.id, currentImageAttachments[currentImageIndex]?.originalFilename)"
-          class="mt-4 flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-white transition"
-        >
-          <Download class="w-4 h-4" />
-          다운로드
-        </button>
-      </div>
-
-      <!-- Next button -->
-      <button
-        v-if="currentImageIndex < currentImageAttachments.length - 1"
-        @click="nextImage"
-        class="absolute right-4 p-2 text-white hover:bg-white/20 rounded-full transition"
-      >
-        <ChevronRight class="w-8 h-8" />
-      </button>
     </div>
   </Teleport>
 </template>

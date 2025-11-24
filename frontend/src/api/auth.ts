@@ -22,8 +22,19 @@ export const authApi = {
   },
 
   logout: async (): Promise<void> => {
+    // Delete current refresh token from server
+    const refreshToken = tokenManager.getRefreshToken()
+    if (refreshToken) {
+      try {
+        await apiClient.delete('/refresh-tokens/current', {
+          headers: { 'X-Current-Token': refreshToken },
+        })
+      } catch {
+        // Ignore errors during logout
+      }
+    }
     tokenManager.clearTokens()
-    window.location.href = '/logout'
+    window.location.href = '/'
   },
 
   getStatus: async (): Promise<LoginMember | null> => {

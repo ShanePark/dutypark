@@ -6,27 +6,15 @@ import {
   Trash2,
   Check,
   RotateCcw,
-  FileText,
-  Download,
+  List,
 } from 'lucide-vue-next'
 import FileUploader from '@/components/common/FileUploader.vue'
-import { formatBytes } from '@/api/attachment'
+import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
+import { attachmentApi } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
 import type { NormalizedAttachment } from '@/types'
 
 const { showWarning, showError } = useSwal()
-
-interface Attachment {
-  id: string
-  name: string
-  originalFilename: string
-  size: number
-  contentType: string
-  isImage: boolean
-  hasThumbnail: boolean
-  thumbnailUrl?: string
-  downloadUrl: string
-}
 
 interface Todo {
   id: string
@@ -35,7 +23,6 @@ interface Todo {
   status: 'ACTIVE' | 'COMPLETED'
   createdDate: string
   completedDate?: string
-  attachments: Attachment[]
 }
 
 interface Props {
@@ -57,6 +44,7 @@ const emit = defineEmits<{
   (e: 'complete', id: string): void
   (e: 'reopen', id: string): void
   (e: 'delete', id: string): void
+  (e: 'backToList'): void
 }>()
 
 const isEditMode = ref(false)
@@ -66,48 +54,58 @@ const editAttachments = ref<NormalizedAttachment[]>([])
 const sessionId = ref<string | null>(null)
 const isUploading = ref(false)
 const fileUploaderRef = ref<InstanceType<typeof FileUploader> | null>(null)
-
-// Convert backend attachment to normalized format
-function toNormalizedAttachment(att: Attachment): NormalizedAttachment {
-  return {
-    id: att.id,
-    name: att.name || att.originalFilename,
-    originalFilename: att.originalFilename,
-    contentType: att.contentType,
-    size: att.size,
-    thumbnailUrl: att.thumbnailUrl || null,
-    downloadUrl: att.downloadUrl || `/api/attachments/${att.id}/download`,
-    isImage: att.isImage,
-    hasThumbnail: att.hasThumbnail,
-    orderIndex: 0,
-    createdAt: null,
-    createdBy: null,
-    previewUrl: null,
-  }
-}
+const viewAttachments = ref<NormalizedAttachment[]>([])
+const isLoadingAttachments = ref(false)
 
 watch(
   () => props.isOpen,
-  (open) => {
+  async (open) => {
     if (open && props.todo) {
       isEditMode.value = false
       editTitle.value = props.todo.title
       editContent.value = props.todo.content
-      editAttachments.value = props.todo.attachments.map(toNormalizedAttachment)
       sessionId.value = null
       isUploading.value = false
+
+      // Load attachments from API
+      isLoadingAttachments.value = true
+      viewAttachments.value = []
+      try {
+        viewAttachments.value = await attachmentApi.listAttachments('TODO', props.todo.id)
+        editAttachments.value = [...viewAttachments.value]
+      } catch (error) {
+        console.error('Failed to load attachments:', error)
+        viewAttachments.value = []
+        editAttachments.value = []
+      } finally {
+        isLoadingAttachments.value = false
+      }
     }
   }
 )
 
 const isActive = computed(() => props.todo?.status === 'ACTIVE')
 
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr)
+  const year = date.getFullYear()
+  const month = date.getMonth() + 1
+  const day = date.getDate()
+  const hours = date.getHours()
+  const minutes = date.getMinutes()
+
+  if (hours === 0 && minutes === 0) {
+    return `${year}년 ${month}월 ${day}일`
+  }
+  return `${year}년 ${month}월 ${day}일 ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+}
+
 function enterEditMode() {
   if (!props.todo) return
   isEditMode.value = true
   editTitle.value = props.todo.title
   editContent.value = props.todo.content
-  editAttachments.value = props.todo.attachments.map(toNormalizedAttachment)
+  editAttachments.value = [...viewAttachments.value]
   sessionId.value = null
   isUploading.value = false
 }
@@ -121,7 +119,7 @@ function cancelEdit() {
   if (props.todo) {
     editTitle.value = props.todo.title
     editContent.value = props.todo.content
-    editAttachments.value = props.todo.attachments.map(toNormalizedAttachment)
+    editAttachments.value = [...viewAttachments.value]
   }
   sessionId.value = null
   isUploading.value = false
@@ -194,20 +192,35 @@ function onUploadError(message: string) {
       <div class="bg-white rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-lg max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4">
         <!-- Header -->
         <div class="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
-          <div class="flex items-center gap-2">
-            <h2 class="text-base sm:text-lg font-bold">할 일 상세</h2>
-            <span
-              :class="[
-                'px-2 py-0.5 text-xs rounded-full',
-                isActive
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-gray-100 text-gray-600 line-through',
-              ]"
+          <div class="flex items-center gap-2 min-w-0 flex-1">
+            <button
+              @click="emit('backToList')"
+              class="p-1.5 hover:bg-gray-100 rounded-lg transition text-gray-500 hover:text-gray-700 flex-shrink-0"
+              title="목록으로"
             >
-              {{ isActive ? '진행중' : '완료' }}
-            </span>
+              <List class="w-5 h-5" />
+            </button>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <h2 class="text-base sm:text-lg font-bold truncate">{{ todo.title }}</h2>
+                <span
+                  :class="[
+                    'px-2 py-0.5 text-xs rounded-full flex-shrink-0',
+                    isActive
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'bg-gray-100 text-gray-600 line-through',
+                  ]"
+                >
+                  {{ isActive ? '진행중' : '완료' }}
+                </span>
+              </div>
+              <p class="text-xs text-gray-400">
+                {{ formatDate(todo.createdDate) }}
+                <span v-if="todo.completedDate"> · 완료 {{ formatDate(todo.completedDate) }}</span>
+              </p>
+            </div>
           </div>
-          <button @click="handleClose" class="p-2 hover:bg-gray-100 rounded-full transition">
+          <button @click="handleClose" class="p-2 hover:bg-gray-100 rounded-full transition flex-shrink-0">
             <X class="w-6 h-6" />
           </button>
         </div>
@@ -217,66 +230,19 @@ function onUploadError(message: string) {
           <!-- View Mode -->
           <template v-if="!isEditMode">
             <div class="space-y-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-500 mb-1">제목</label>
-                <p class="text-lg font-medium">{{ todo.title }}</p>
-              </div>
-
               <div v-if="todo.content">
-                <label class="block text-sm font-medium text-gray-500 mb-1">내용</label>
                 <p class="text-gray-700 whitespace-pre-wrap">{{ todo.content }}</p>
               </div>
 
-              <div class="text-sm text-gray-500">
-                <p>등록: {{ todo.createdDate }}</p>
-                <p v-if="todo.completedDate">완료: {{ todo.completedDate }}</p>
-              </div>
-
               <!-- Attachments (View Mode) -->
-              <div v-if="todo.attachments.length > 0">
-                <label class="block text-sm font-medium text-gray-500 mb-2">첨부파일</label>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div
-                    v-for="attachment in todo.attachments"
-                    :key="attachment.id"
-                    class="border border-gray-200 rounded-lg overflow-hidden"
-                  >
-                    <div
-                      v-if="attachment.hasThumbnail"
-                      class="aspect-square bg-gray-100 flex items-center justify-center"
-                    >
-                      <img
-                        :src="attachment.thumbnailUrl"
-                        :alt="attachment.originalFilename"
-                        class="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div
-                      v-else
-                      class="aspect-square bg-gray-50 flex items-center justify-center"
-                    >
-                      <FileText class="w-12 h-12 text-gray-300" />
-                    </div>
-                    <div class="p-2">
-                      <p class="text-sm truncate" :title="attachment.originalFilename">
-                        {{ attachment.originalFilename }}
-                      </p>
-                      <div class="flex items-center justify-between mt-1">
-                        <span class="text-xs text-gray-500">{{
-                          formatBytes(attachment.size)
-                        }}</span>
-                        <a
-                          :href="attachment.downloadUrl"
-                          download
-                          class="text-blue-600 hover:text-blue-700"
-                        >
-                          <Download class="w-4 h-4" />
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              <div v-if="isLoadingAttachments" class="text-sm text-gray-500">
+                첨부파일 로딩 중...
               </div>
+              <AttachmentGrid
+                v-else
+                :attachments="viewAttachments"
+                :columns="2"
+              />
             </div>
           </template>
 

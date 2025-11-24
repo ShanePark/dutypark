@@ -218,7 +218,7 @@ a:hover {
 
 /* Friend Cards */
 .friend-card {
-  @apply min-h-[11rem] relative overflow-hidden transition-all duration-200 cursor-pointer;
+  @apply relative overflow-hidden transition-all duration-200 cursor-pointer;
 }
 
 .friend-card:hover {

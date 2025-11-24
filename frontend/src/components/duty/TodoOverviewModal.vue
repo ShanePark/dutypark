@@ -10,6 +10,11 @@ import {
   Trash2,
   FileText,
   Filter,
+  CheckCircle2,
+  Circle,
+  Paperclip,
+  Calendar,
+  Plus,
 } from 'lucide-vue-next'
 
 interface Todo {
@@ -48,11 +53,12 @@ const emit = defineEmits<{
   (e: 'reopen', id: string): void
   (e: 'delete', id: string): void
   (e: 'reorder', todoIds: string[]): void
+  (e: 'add'): void
 }>()
 
 const filters = ref({
   active: true,
-  completed: false,
+  completed: true,
 })
 
 const filteredTodos = computed(() => {
@@ -160,8 +166,12 @@ function toggleFilter(type: 'active' | 'completed' | 'all') {
   if (type === 'all') {
     filters.value.active = true
     filters.value.completed = true
+  } else if (type === 'active') {
+    filters.value.active = true
+    filters.value.completed = false
   } else {
-    filters.value[type] = !filters.value[type]
+    filters.value.active = false
+    filters.value.completed = true
   }
 }
 
@@ -186,9 +196,18 @@ function formatDate(dateString: string) {
               {{ todos.length }}
             </span>
           </div>
-          <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition">
-            <X class="w-6 h-6" />
-          </button>
+          <div class="flex items-center gap-2">
+            <button
+              @click="emit('add')"
+              class="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition"
+            >
+              <Plus class="w-4 h-4" />
+              <span class="hidden sm:inline">추가</span>
+            </button>
+            <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition">
+              <X class="w-6 h-6" />
+            </button>
+          </div>
         </div>
 
         <!-- Filters -->
@@ -231,80 +250,104 @@ function formatDate(dateString: string) {
 
         <!-- Content -->
         <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(90dvh-180px)] sm:max-h-[calc(90vh-180px)]">
-          <div v-if="filteredTodos.length === 0" class="text-center py-8 text-gray-400">
-            표시할 할 일이 없습니다.
+          <div v-if="filteredTodos.length === 0" class="text-center py-12 text-gray-400">
+            <Circle class="w-12 h-12 mx-auto mb-3 opacity-30" />
+            <p>표시할 할 일이 없습니다.</p>
           </div>
 
-          <div v-else ref="todoListRef" class="space-y-2">
+          <div v-else ref="todoListRef" class="space-y-3">
             <div
               v-for="todo in filteredTodos"
               :key="todo.id"
               :data-id="todo.id"
-              class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition group"
+              class="border rounded-xl overflow-hidden transition-all cursor-pointer group"
               :class="{
-                'opacity-60': todo.status === 'COMPLETED',
-                'todo-item-active': todo.status === 'ACTIVE'
+                'bg-green-50 border-green-200': todo.status === 'COMPLETED',
+                'bg-white border-gray-200 hover:border-blue-300 hover:shadow-md todo-item-active': todo.status === 'ACTIVE'
               }"
+              @click="emit('showDetail', todo)"
             >
-              <!-- Drag Handle (only for active todos) -->
-              <div
-                v-if="todo.status === 'ACTIVE' && isSortingEnabled"
-                class="drag-handle cursor-grab text-gray-400 hover:text-gray-600"
-              >
-                <GripVertical class="w-5 h-5" />
-              </div>
-              <div v-else class="w-5"></div>
-
-              <!-- Content -->
-              <div
-                class="flex-1 min-w-0 cursor-pointer"
-                @click="emit('showDetail', todo)"
-              >
-                <div class="flex items-center gap-2">
-                  <span
-                    class="font-medium"
-                    :class="{ 'line-through text-gray-400': todo.status === 'COMPLETED' }"
-                  >
-                    {{ todo.title }}
-                  </span>
-                  <FileText
-                    v-if="todo.content || todo.hasAttachments"
-                    class="w-4 h-4 text-gray-400"
+              <div class="flex items-stretch">
+                <!-- 왼쪽 영역: 드래그 핸들 또는 완료 아이콘 -->
+                <div
+                  class="flex-shrink-0 w-10 sm:w-12 flex items-center justify-center"
+                  :class="{
+                    'bg-green-100': todo.status === 'COMPLETED',
+                    'bg-gray-50': todo.status === 'ACTIVE'
+                  }"
+                >
+                  <!-- 완료 상태: 체크 아이콘 -->
+                  <CheckCircle2
+                    v-if="todo.status === 'COMPLETED'"
+                    class="w-6 h-6 text-green-600"
                   />
+                  <!-- 진행중 + 정렬 가능: 드래그 핸들 -->
+                  <div
+                    v-else-if="isSortingEnabled"
+                    class="drag-handle cursor-grab text-gray-400 hover:text-gray-600 p-1"
+                    @click.stop
+                  >
+                    <GripVertical class="w-5 h-5" />
+                  </div>
+                  <!-- 진행중 + 정렬 불가: 빈 원 -->
+                  <Circle v-else class="w-5 h-5 text-gray-300" />
                 </div>
-                <p class="text-xs text-gray-500 mt-0.5">
-                  {{ formatDate(todo.createdDate) }}
-                  <span v-if="todo.completedDate">
-                    - {{ formatDate(todo.completedDate) }}
-                  </span>
-                </p>
-              </div>
 
-              <!-- Actions -->
-              <div class="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition">
-                <button
-                  v-if="todo.status === 'ACTIVE'"
-                  @click.stop="emit('complete', todo.id)"
-                  class="p-1.5 text-green-600 hover:bg-green-100 rounded transition"
-                  title="완료"
-                >
-                  <Check class="w-4 h-4" />
-                </button>
-                <button
-                  v-else
-                  @click.stop="emit('reopen', todo.id)"
-                  class="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition"
-                  title="재오픈"
-                >
-                  <RotateCcw class="w-4 h-4" />
-                </button>
-                <button
-                  @click.stop="emit('delete', todo.id)"
-                  class="p-1.5 text-red-600 hover:bg-red-100 rounded transition"
-                  title="삭제"
-                >
-                  <Trash2 class="w-4 h-4" />
-                </button>
+                <!-- 메인 콘텐츠 -->
+                <div class="flex-1 min-w-0 p-3 sm:p-4">
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="flex-1 min-w-0">
+                      <h3
+                        class="font-semibold text-sm sm:text-base truncate"
+                        :class="{
+                          'text-green-700 line-through': todo.status === 'COMPLETED',
+                          'text-gray-800': todo.status === 'ACTIVE'
+                        }"
+                      >
+                        {{ todo.title }}
+                      </h3>
+                      <div class="flex items-center gap-2 mt-1 text-xs text-gray-500">
+                        <span class="flex items-center gap-1">
+                          <Calendar class="w-3 h-3" />
+                          {{ formatDate(todo.createdDate) }}
+                        </span>
+                        <span v-if="todo.completedDate" class="flex items-center gap-1 text-green-600">
+                          <Check class="w-3 h-3" />
+                          {{ formatDate(todo.completedDate) }}
+                        </span>
+                        <FileText v-if="todo.content" class="w-3.5 h-3.5 text-blue-400" title="메모 있음" />
+                        <Paperclip v-if="todo.hasAttachments" class="w-3.5 h-3.5 text-purple-400" title="첨부파일 있음" />
+                      </div>
+                    </div>
+
+                    <!-- 액션 버튼 -->
+                    <div class="flex items-center gap-1 flex-shrink-0" @click.stop>
+                      <button
+                        v-if="todo.status === 'ACTIVE'"
+                        @click="emit('complete', todo.id)"
+                        class="p-2 text-green-600 hover:bg-green-100 rounded-lg transition"
+                        title="완료"
+                      >
+                        <Check class="w-5 h-5" />
+                      </button>
+                      <button
+                        v-else
+                        @click="emit('reopen', todo.id)"
+                        class="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition"
+                        title="재오픈"
+                      >
+                        <RotateCcw class="w-5 h-5" />
+                      </button>
+                      <button
+                        @click="emit('delete', todo.id)"
+                        class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-100 rounded-lg transition"
+                        title="삭제"
+                      >
+                        <Trash2 class="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

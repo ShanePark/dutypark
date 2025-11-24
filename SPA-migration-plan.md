@@ -79,7 +79,14 @@
 - [x] 프론트 실제 연동 (인증): ✅ 2024-11-24
   - [x] 퍼블리싱된 화면에 API 클라이언트 연결, 인터셉터로 토큰 슬라이딩/리프레시 처리.
   - [x] 도메인별 Strangler 순서대로 기능 연결: 대시보드, 근무 달력, Todo, 팀/회원 설정 ✅ 2024-11-24
-  - [ ] 일정 첨부파일 업로드/AI 파싱 연동
+  - [x] 일정 첨부파일 업로드 연동 ✅ 2025-11-24
+  - [x] 모바일 반응형 최적화 (iPhone Pro 390x844) ✅ 2025-11-24
+  - [x] 첨부파일 그리드 및 이미지 뷰어 컴포넌트 (AttachmentGrid, ImageViewer) ✅ 2025-11-24
+  - [ ] SSO 가입 플로우 구현 ⚠️ UI만 완료 (폼 제출/이용약관/성공페이지 미구현) 🔴 P0
+  - [ ] DutyView 공휴일 표시 UI 🟡 P1
+  - [ ] DutyView 엑셀 배치 업로드 🟡 P1
+  - [ ] TeamManageView 팀 삭제 API 연결 🟡 P1
+  - [ ] AI 파싱 UI 연동 🟢 P2
   - [ ] 연결 후 Playwright MCP로 기존 대비 UX/동작 재검증.
 - [ ] 정리: 전환된 경로의 Thymeleaf 뷰/불용 자산 제거, 문서/런북 업데이트.
 
@@ -407,7 +414,7 @@ data class TokenResponse(
 
 ---
 
-### 다음 단계 (미완료 현황) - 2024-11-24 재분석
+### 다음 단계 (미완료 현황) - 2025-11-24 Thymeleaf vs SPA 병렬 분석 완료
 
 #### 완료된 작업
 - [x] 대시보드 API 연동 ✅
@@ -417,175 +424,250 @@ data class TokenResponse(
 - [x] DashboardView 친구 관리 API 연동 ✅
 - [x] AdminDashboardView API 연동 ✅ (통계, 회원목록, 비밀번호 변경 등 완료)
 - [x] AdminTeamListView API 연동 ✅ (팀 목록, 생성, 검색 완료)
+- [x] 모바일 반응형 최적화 ✅ (iPhone Pro 390x844 대응)
+- [x] 로그아웃 플로우 개선 ✅ (X-Current-Token 헤더 기반 세션 정리)
+- [x] 첨부파일 그리드 및 이미지 뷰어 ✅ (AttachmentGrid, ImageViewer 컴포넌트)
 
 ---
 
-### 미구현 기능 상세 (기존 Thymeleaf 대비) - 2024-11-24 재검토
+### 미구현 기능 상세 (Thymeleaf vs SPA 병렬 비교 결과) - 2025-11-24
 
 #### 1. DutyView (근무 달력) - 대부분 완료 ✅
 
-| 기능 | 기존 코드 위치 | 상태 | 우선순위 |
-|------|---------------|------|----------|
+| 기능 | Thymeleaf 위치 | SPA 상태 | 우선순위 |
+|------|---------------|----------|----------|
 | 편집모드 - 인라인 근무유형 버튼 | `day-grid.html:79-88` | ✅ 구현됨 (배치 편집 모드) | - |
 | 한번에 수정 - 배치 업데이트 모달 | `duty-table-header.js:2-57` | ✅ 구현됨 | - |
 | 함께보기 API 연동 | `show-other-duties-modal.js` | ✅ 구현됨 (`getOtherDuties` API) | - |
 | 일정 태그/언태그 UI | `duty.js:421-456` | ✅ 구현됨 (`DayDetailModal`) | - |
-| **시간표 파일 업로드 (엑셀 배치)** | `duty-table-header.js:58-113` | ❌ 미구현 | 🟡 중간 |
-| 공휴일 표시 | `day-grid.html:35-42` | ⚠️ 캘린더 API에서 받아오지만 UI 미표시 | 🟡 중간 |
-| 모달 닫을 때 세션 정리 | `duty.js:505-522` | ⚠️ 부분 구현 | 🟢 낮음 |
+| 권한 기반 편집 | - | ✅ 구현됨 (`canEdit` prop, 매니저 지원) | - |
+| 첨부파일 그리드 표시 | `detail-view-modal.js` | ✅ 구현됨 (`AttachmentGrid` 컴포넌트) | - |
+| **공휴일 표시** | `day-grid.html:35-42` (`holidaysByDays`) | ❌ API 데이터 있으나 UI 미표시 | 🟡 중간 |
+| **엑셀 배치 업로드** | `duty-table-header.js:58-113` | ❌ DutyView에서 미구현 (TeamManageView에만 있음) | 🟡 중간 |
+| **한달 일괄 수정 모달** | `duty-table-header.js:showBatchUpdate` | ❌ 미구현 | 🟡 중간 |
+| **함께보기 - 내 근무 토글** | `show-other-duties-modal.js:showMyDuties` | ❌ 미구현 | 🟢 낮음 |
+| D-Day 빠른 날짜 버튼 | `dday-list.js:78-92` (+7일, +30일, 리셋) | ❌ 미구현 | 🟢 낮음 |
 
-**세부 설명:**
-- **시간표 파일 업로드**: 팀별 `dutyBatchTemplate`에 따른 엑셀 파일 파싱 (`POST /api/duty_batch`) - TeamManageView에서는 구현됨, DutyView에서는 미구현
+#### 2. LoginView/OAuth (로그인) - ⚠️ SSO 가입 미완료
 
-#### 2. LoginView/OAuth (로그인) - 고위험 ⚠️
-
-| 기능 | 기존 코드 위치 | 상태 | 우선순위 |
-|------|---------------|------|----------|
-| **아이디 저장 (Remember Me)** | `login.html:47-49`, `AuthService.kt:91-97` | ❌ 체크박스만 있고 동작 안함 | 🔴 높음 |
-| **이용약관 표시** | `sso-signup.html:19-68` | ❌ 체크박스만, 약관 내용 없음 | 🔴 높음 |
-| **SSO 가입 폼 제출** | `sso-signup.html:6, 70-94` | ❌ @submit 핸들러 없음 | 🔴 높음 |
-| **가입 성공 페이지** | `sso-congrats.html` | ❌ 페이지 없음 | 🔴 높음 |
-| UUID 상태 관리 | `sso-signup.html:7, 81` | ❌ route params에서 읽지 않음 | 🔴 높음 |
+| 기능 | Thymeleaf 위치 | SPA 상태 | 우선순위 |
+|------|---------------|----------|----------|
+| 이메일/비밀번호 로그인 | `login.html` | ✅ 구현됨 | - |
+| 카카오 OAuth 로그인 | `login.html` | ✅ 구현됨 (useKakao composable) | - |
+| OAuth 콜백 처리 | `OAuthController.kt` | ✅ 구현됨 (OAuthCallbackView) | - |
+| 아이디 저장 체크박스 | `login.html:47-49` | ✅ 구현됨 (localStorage) | - |
+| **이용약관 전문 표시** | `sso-signup.html:19-68` (~50줄 약관) | ❌ 체크박스만, 약관 내용 없음 | 🔴 높음 |
+| **SSO 가입 폼 제출** | `sso-signup.html` → `POST /api/auth/sso/signup` | ❌ @submit 핸들러 없음 (완전 미구현) | 🔴 높음 |
+| **가입 성공 페이지** | `sso-congrats.html` | ❌ SsoCongratsView 없음 | 🔴 높음 |
+| **라우터 경로** | `/auth/sso-congrats` | ❌ 라우터 미등록 | 🔴 높음 |
+| username maxlength=10 | `sso-signup.html` | ❌ 검증 없음 | 🟡 중간 |
 | 비밀번호 maxlength | `login.html:17` | ❌ 없음 | 🟢 낮음 |
-| 사용자명 helper text | `sso-signup.html:14-16` | ❌ 없음 | 🟡 중간 |
 
-**세부 설명:**
-- **아이디 저장**: 로그인 시 `rememberMe` 쿠키에 이메일 저장, 다음 방문 시 자동 입력
-- **이용약관**: 10개 조항의 스크롤 가능한 약관 전문 표시 필요
-- **SSO 가입**: `POST /api/auth/sso/signup`에 `uuid`, `username`, `term_agree` 전송
+**SsoSignupView 현재 상태 (56줄):**
+- UI만 구현: username input, termAgree checkbox, 가입 버튼
+- 미구현: @submit 핸들러, API 연동, uuid 파라미터 처리, 에러 핸들링, 로딩 상태, 성공 리다이렉트
 
 #### 3. DashboardView (대시보드) - 완료 ✅
 
-| 기능 | 기존 코드 위치 | 상태 | 우선순위 |
-|------|---------------|------|----------|
-| 관리자 섹션 링크 | `dashboard.html:219-233` | ✅ AppFooter에서 관리자 메뉴 제공 | - |
-
-**세부 설명:**
-- Admin 사용자는 하단 네비게이션에서 관리자 메뉴 접근 가능
+| 기능 | Thymeleaf 위치 | SPA 상태 | 비고 |
+|------|---------------|----------|------|
+| 내 정보 카드 | `dashboard.html` | ✅ 오늘 근무/일정 표시 | - |
+| 친구 목록 그리드 | `dashboard.html` | ✅ 반응형 (2열 모바일) | - |
+| 친구 검색/추가 | `dashboard.html` | ✅ 페이지네이션 포함 | - |
+| 친구 요청 관리 | `dashboard.html` | ✅ 수락/거절/취소 | - |
+| 핀/가족 관리 | `dashboard.html` | ✅ SortableJS 드래그 정렬 | - |
+| 관리자 섹션 링크 | `dashboard.html:219-233` | ✅ AppFooter에서 제공 | - |
 
 #### 4. TeamManageView (팀 관리) - 대부분 완료 ✅
 
-| 기능 | 기존 코드 위치 | 상태 | 우선순위 |
-|------|---------------|------|----------|
+| 기능 | Thymeleaf 위치 | SPA 상태 | 우선순위 |
+|------|---------------|----------|----------|
 | 배치 업로드 (엑셀) | `team-manage.html:763-862` | ✅ 구현됨 | - |
-| 근무유형 CRUD | - | ✅ 구현됨 (색상 선택 포함) | - |
-| **팀 삭제** | `team-manage.html:950-979` | ❌ 백엔드 API 미구현 (경고만 표시) | 🟡 중간 |
+| 근무유형 CRUD | `team-manage.html` | ✅ 구현됨 (Pickr 색상 선택) | - |
+| 멤버/관리자 관리 | `team-manage.html` | ✅ 구현됨 (검색, 추가/삭제) | - |
+| 관리자 위임 | `team-manage.html` | ✅ 구현됨 | - |
+| **팀 삭제** | `team-manage.html:950-979` → `/admin/api/teams/{id}` | ⚠️ showWarning만 (API 연결 미완료) | 🟡 중간 |
 | 팀 설명 편집 | `team-manage.html:14-16` | ❌ 읽기전용 | 🟢 낮음 |
 
 #### 5. MemberView (회원 설정) - 완료 ✅
 
-- 모든 기능 구현됨
-- 비밀번호 변경 (현재 비밀번호 검증 포함)
-- 세션/리프레시 토큰 관리
-- 친구 가시성 설정
-- D-Day 관리
+| 기능 | Thymeleaf 위치 | SPA 상태 | 비고 |
+|------|---------------|----------|------|
+| 프로필 표시 | `member.html` | ✅ 이름, 팀, 이메일 | - |
+| 비밀번호 변경 | `member.html` | ✅ 현재 비밀번호 검증, 8자 이상 | SPA가 더 강화 |
+| 가시성 설정 | `member.html` (3단계) | ✅ 4단계 (PUBLIC/FRIENDS/FAMILY/PRIVATE) | SPA에 FAMILY 추가 |
+| 세션/토큰 관리 | `member.html` | ✅ 디바이스/브라우저 아이콘 | - |
+| 매니저 위임 | `member.html` | ✅ 구현됨 | - |
+| SSO 연동 상태 | `member.html` | ✅ 표시만 (연동 해제 불가) | - |
+| **카카오 연동 해제** | ❌ 양쪽 미구현 | ❌ 미구현 | 🟢 낮음 |
 
 #### 6. AdminView (관리자) - 완료 ✅
 
-- 통계 대시보드 (회원수, 팀수, 토큰수, 오늘 로그인)
-- 회원 목록 검색 및 페이지네이션
-- 세션 토큰 관리
-- 비밀번호 초기화
-- 팀 목록/생성/검색
+| 기능 | Thymeleaf 위치 | SPA 상태 | 비고 |
+|------|---------------|----------|------|
+| 통계 대시보드 | - | ✅ 회원수, 팀수, 토큰수, 오늘 로그인 | SPA에서 추가 |
+| 회원 목록 검색 | `admin-home.html` | ✅ 실시간 필터링 | - |
+| 세션 토큰 관리 | `admin-home.html` | ✅ 디바이스/브라우저 정보 | - |
+| 비밀번호 초기화 | `admin-home.html` | ✅ 8자 이상 검증 | - |
+| 팀 목록/생성/검색 | `team-list.html` | ✅ 구현됨 | - |
+| System Logs/Settings | - | ⚠️ disabled placeholder | 향후 구현 |
+
+#### 7. TeamView (팀 대시보드) - 완료 ✅
+
+| 기능 | Thymeleaf 위치 | SPA 상태 | 비고 |
+|------|---------------|----------|------|
+| 팀 캘린더 | `team-my.html` | ✅ 월별 표시 | - |
+| 팀 일정 CRUD | `team-my.html` | ✅ 구현됨 | - |
+| 교대 근무자 그룹 | `team-my.html` | ✅ 근무유형별 표시 | - |
+| YearMonthPicker | - | ✅ 개선된 UI | SPA 개선 |
 
 ---
 
-### 우선순위별 작업 목록 - 2024-11-24 재검토
+### 우선순위별 작업 목록 - 2025-11-24 병렬 분석 결과
 
 #### 🔴 P0 - 필수 (SPA 출시 전 완료 필요)
 
-**DutyView:** (대부분 완료)
-- [x] 편집모드 인라인 근무유형 버튼 구현 ✅
-- [x] 한번에 수정 배치 업데이트 모달 구현 ✅
-- [x] 함께보기 API 연동 ✅
-
-**LoginView/OAuth:**
-- [ ] 아이디 저장 (Remember Me) 기능 구현
-- [ ] SsoSignupView 이용약관 전문 표시
-- [ ] SsoSignupView 폼 제출 핸들러 구현 (UUID 포함)
-- [ ] SsoCongratsView 가입 성공 페이지 생성
+**SSO 가입 플로우 (신규 카카오 사용자 가입 불가 상태):**
+1. [ ] SsoSignupView 이용약관 전문 표시 (Thymeleaf sso-signup.html:19-68 참조)
+2. [ ] SsoSignupView 폼 제출 핸들러 구현
+   - uuid 쿼리 파라미터 파싱
+   - `POST /api/auth/sso/signup` API 연동 (uuid, username, term_agree)
+   - username maxlength=10 검증
+   - 로딩 상태, 에러 핸들링
+3. [ ] SsoCongratsView 가입 성공 페이지 생성 (sso-congrats.html 참조)
+4. [ ] 라우터에 `/auth/sso-congrats` 경로 추가
+5. [ ] 가입 성공 후 자동 로그인 + 홈 리다이렉트
 
 #### 🟡 P1 - 중요 (출시 후 빠른 패치)
 
-- [ ] DutyView 시간표 파일 업로드 (엑셀 배치) - 개인 캘린더에서
-- [ ] DutyView 공휴일 표시 UI (API 연동 완료, UI 미표시)
-- [ ] TeamManageView 팀 삭제 기능 (백엔드 API 필요)
-- [ ] SsoSignupView 사용자명 helper text 추가
+- [ ] DutyView 공휴일 표시 UI (API 데이터 있음, UI 미표시)
+- [ ] DutyView 엑셀 배치 업로드 (TeamManageView 코드 재사용 가능)
+- [ ] DutyView 한달 일괄 수정 모달
+- [ ] TeamManageView 팀 삭제 API 연결 완료
 
 #### 🟢 P2 - 개선 (추후 진행)
 
+- [ ] DutyView 함께보기 - 내 근무 토글 (`showMyDuties`)
+- [ ] DDayModal 빠른 날짜 버튼 (+7일, +30일, 리셋)
 - [ ] LoginView 비밀번호 maxlength 추가
 - [ ] TeamManageView 팀 설명 편집 기능
-- [ ] MemberView 카카오 연동 해제 기능 (신규)
-- [ ] 모달 닫을 때 첨부파일 세션 정리 개선
+- [ ] MemberView 카카오 연동 해제 기능
+- [ ] AI 파싱 연동 (백엔드 구현됨, 프론트 UI 미구현)
 
 ---
 
 ### 기타 미완료 작업
 
 - [x] 일정 첨부파일 업로드 연동 ✅ (FileUploader, DayDetailModal에서 동작)
-- [ ] AI 파싱 연동 (백엔드 구현됨, 프론트 UI 미구현)
+- [x] 모바일 반응형 최적화 ✅ (iPhone Pro 390x844)
+- [x] 첨부파일 그리드 및 이미지 뷰어 ✅ (AttachmentGrid, ImageViewer)
 - [ ] Playwright MCP로 기존 대비 UX/동작 재검증
 - [ ] 전환된 경로의 Thymeleaf 뷰 제거
 - [ ] SPA 정적 서빙 및 `/api/**` 네임스페이스 분리
 
 ---
 
-### 2024-11-24: 코드 분석 요약
+### 2025-11-24: 코드 분석 요약 (Thymeleaf vs SPA 병렬 분석 결과)
 
-#### 프론트엔드 구조 현황
+#### 프론트엔드 구조 현황 (15개 컴포넌트, 11개 뷰)
 
 ```
 frontend/
 ├── src/
-│   ├── api/                    # 10개 API 모듈
-│   │   ├── client.ts           # Axios 인터셉터, 토큰 관리
-│   │   ├── auth.ts             # 인증 (Bearer 토큰)
-│   │   ├── admin.ts            # 관리자 API
-│   │   ├── dashboard.ts        # 대시보드
-│   │   ├── duty.ts             # 근무
-│   │   ├── todo.ts             # 할일
-│   │   ├── schedule.ts         # 일정
-│   │   ├── member.ts           # 회원/친구/D-Day
-│   │   ├── team.ts             # 팀
-│   │   └── attachment.ts       # 첨부파일
-│   ├── components/
-│   │   ├── common/             # 공용 컴포넌트
-│   │   │   ├── FileUploader.vue
-│   │   │   └── YearMonthPicker.vue
-│   │   ├── duty/               # 근무 관련 모달
-│   │   │   ├── DayDetailModal.vue
-│   │   │   ├── TodoAddModal.vue
-│   │   │   ├── TodoDetailModal.vue
-│   │   │   └── ScheduleDetailModal.vue
-│   │   └── layout/             # 레이아웃
+│   ├── api/                    # 10개 API 모듈 (120+ 엔드포인트)
+│   │   ├── client.ts           # Axios 인터셉터, 토큰 관리, 401 자동 갱신
+│   │   ├── auth.ts             # 인증 (Bearer 토큰, 로그아웃, 비밀번호)
+│   │   ├── admin.ts            # 관리자 API (별도 baseURL: /admin/api)
+│   │   ├── dashboard.ts        # 대시보드 집계
+│   │   ├── duty.ts             # 근무 캘린더
+│   │   ├── todo.ts             # 할일 CRUD + 정렬
+│   │   ├── schedule.ts         # 일정 CRUD + 태그 + 검색
+│   │   ├── member.ts           # 회원/친구/D-Day/세션 (25개 함수)
+│   │   ├── team.ts             # 팀 관리 (26개 함수)
+│   │   └── attachment.ts       # 첨부파일 세션/유틸리티
+│   ├── components/             # 15개 컴포넌트
+│   │   ├── common/             # 공용 (4개)
+│   │   │   ├── FileUploader.vue     # Uppy 기반 파일 업로더
+│   │   │   ├── YearMonthPicker.vue  # 연월 선택 모달
+│   │   │   ├── AttachmentGrid.vue   # 첨부파일 그리드 표시
+│   │   │   └── ImageViewer.vue      # 이미지 뷰어/라이트박스
+│   │   ├── duty/               # 근무 관련 모달 (8개)
+│   │   │   ├── DayDetailModal.vue        # 일별 상세 (근무, 일정, 첨부)
+│   │   │   ├── TodoAddModal.vue          # 할일 추가
+│   │   │   ├── TodoDetailModal.vue       # 할일 상세/수정/완료
+│   │   │   ├── TodoOverviewModal.vue     # 할일 목록 (SortableJS 드래그)
+│   │   │   ├── DDayModal.vue             # D-Day 관리
+│   │   │   ├── ScheduleDetailModal.vue   # 일정 상세 (읽기전용)
+│   │   │   ├── OtherDutiesModal.vue      # 함께보기 선택
+│   │   │   └── SearchResultModal.vue     # 일정 검색 결과
+│   │   └── layout/             # 레이아웃 (3개)
+│   │       ├── AppLayout.vue
 │   │       ├── AppHeader.vue
 │   │       └── AppFooter.vue
-│   ├── composables/
-│   │   └── useSwal.ts          # SweetAlert2 래퍼
-│   ├── views/                  # 7개 주요 뷰
-│   │   ├── auth/
+│   ├── composables/            # 2개
+│   │   ├── useSwal.ts          # SweetAlert2 래퍼 (toast, confirm, dialogs)
+│   │   └── useKakao.ts         # 카카오 OAuth 초기화 (dev/prod 키 분리)
+│   ├── stores/
+│   │   └── auth.ts             # Pinia 인증 스토어
+│   ├── views/                  # 11개 뷰
+│   │   ├── auth/               # 3개
+│   │   │   ├── LoginView.vue           # ✅ 완료 (이메일/비밀번호, 카카오)
+│   │   │   ├── OAuthCallbackView.vue   # ✅ 완료 (토큰 추출, SSO 리다이렉트)
+│   │   │   └── SsoSignupView.vue       # ⚠️ UI만 (폼 제출 미구현)
 │   │   ├── dashboard/
+│   │   │   └── DashboardView.vue       # ✅ 완료 (내 정보, 친구 관리)
 │   │   ├── duty/
+│   │   │   └── DutyView.vue            # ✅ 대부분 완료 (공휴일/배치 미구현)
 │   │   ├── member/
+│   │   │   └── MemberView.vue          # ✅ 완료
 │   │   ├── team/
-│   │   └── admin/
-│   ├── types/index.ts          # 50+ 타입 정의
+│   │   │   ├── TeamView.vue            # ✅ 완료
+│   │   │   └── TeamManageView.vue      # ✅ 대부분 완료 (팀 삭제 미연결)
+│   │   ├── admin/
+│   │   │   ├── AdminDashboardView.vue  # ✅ 완료
+│   │   │   └── AdminTeamListView.vue   # ✅ 완료
+│   │   └── NotFoundView.vue
+│   ├── types/index.ts          # 50+ TypeScript 타입 (~520줄)
 │   └── style.css               # Tailwind + 디자인 토큰
-└── vite.config.ts              # Vite 설정 (프록시 포함)
+└── vite.config.ts              # Vite 설정 (프록시: /api → localhost:8080)
 ```
 
-#### 완료된 주요 기능
+#### Thymeleaf vs SPA 기능 비교 요약
 
-1. **인증 시스템**: Bearer 토큰 로그인, 자동 갱신, 카카오 OAuth
-2. **대시보드**: 내 정보, 오늘 근무/일정, 친구 관리 (검색/핀/가족)
-3. **근무 달력**: 월별 조회, 배치 수정, 함께보기, D-Day
-4. **Todo**: CRUD, 드래그 정렬, 완료/재오픈, 첨부파일
-5. **일정**: CRUD, 태그, 첨부파일 업로드, 검색
-6. **팀**: 조회, 팀 일정, 팀 관리 (멤버/관리자/근무유형)
-7. **관리자**: 통계, 회원/팀 관리, 비밀번호 초기화
+| 영역 | Thymeleaf 기능 수 | SPA 구현 | 완료율 |
+|------|------------------|----------|--------|
+| 인증/로그인 | 4개 | 3개 (SSO 가입 미완료) | 75% |
+| 대시보드 | 6개 | 6개 | 100% |
+| 근무 달력 | 10개 | 7개 | 70% |
+| 팀 관리 | 8개 | 7개 | 88% |
+| 회원 설정 | 7개 | 6개 | 86% |
+| 관리자 | 5개 | 5개 | 100% |
+| **전체** | **40개** | **34개** | **85%** |
 
-#### 미완료 P0 (출시 차단)
+#### SPA 개선 사항 (Thymeleaf 대비)
 
-- SSO 가입 플로우 (이용약관, 폼 제출, 성공 페이지)
-- Remember Me (아이디 저장)
+1. **TypeScript 타입 안전성**: 50+ 타입 정의로 컴파일 타임 에러 검출
+2. **반응형 개선**: Tailwind CSS + 모바일 최적화 (iPhone Pro 390x844)
+3. **가시성 옵션 확장**: PUBLIC/FRIENDS/FAMILY/PRIVATE (4단계, Thymeleaf는 3단계)
+4. **통계 대시보드**: AdminDashboardView에 실시간 통계 카드 추가
+5. **이미지 뷰어**: ImageViewer 컴포넌트로 라이트박스 기능 추가
+6. **비밀번호 검증 강화**: 8자 이상, 현재 비밀번호 확인 필수
+
+#### 미구현 기능 상세
+
+**🔴 출시 차단 (P0):**
+- SsoSignupView 폼 제출 (현재 56줄 UI만 존재)
+- SsoCongratsView 페이지 (존재하지 않음)
+- 라우터 `/auth/sso-congrats` (미등록)
+
+**🟡 출시 후 패치 (P1):**
+- DutyView 공휴일 UI 표시
+- DutyView 엑셀 배치 업로드
+- DutyView 한달 일괄 수정 모달
+- TeamManageView 팀 삭제 API 연결
+
+**🟢 향후 개선 (P2):**
+- 함께보기 내 근무 토글
+- D-Day 빠른 날짜 버튼
+- 카카오 연동 해제
+- AI 파싱 UI

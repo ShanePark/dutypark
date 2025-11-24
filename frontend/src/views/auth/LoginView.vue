@@ -52,10 +52,10 @@ function handleKakaoLogin() {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-100 px-4 pb-safe pt-safe">
+  <div class="min-h-screen flex items-center justify-center bg-white sm:bg-gray-100 px-0 sm:px-4 pb-safe pt-safe">
     <div class="w-full max-w-md">
       <!-- Login Card -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8">
+      <div class="bg-white sm:rounded-xl sm:shadow-sm sm:border sm:border-gray-200 p-6 sm:p-8">
         <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">로그인</h1>
         <hr class="mb-6">
 
