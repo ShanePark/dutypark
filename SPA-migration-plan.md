@@ -68,10 +68,10 @@
 
 ## 전체 작업 순서 및 체크리스트
 - [x] 준비: 컨트롤러/템플릿 인벤토리 작성, 인증/라우팅 설계, Tailwind 기반 디자인 토큰 초안 마련. ✅ 2024-11-24
-- [ ] 디자인 퍼블리싱(병렬 가능):
-  - [ ] 기존 CSS/Bootstrap/jQuery 의존 제거, Tailwind만 사용해 HTML/CSS 퍼블리싱.
-  - [ ] 더미 데이터로 PC/모바일 UI 구성, 현재 형태 최대한 유지.
-  - [ ] Playwright MCP로 기존 화면과 신규 퍼블리싱 화면을 동일 백엔드(`http://localhost:8080`, 계정 `test@duty.park / 1234`)에 붙여 시각/동작 비교.
+- [x] 디자인 퍼블리싱(병렬 가능): ✅ 2024-11-24
+  - [x] 기존 CSS/Bootstrap/jQuery 의존 제거, Tailwind만 사용해 HTML/CSS 퍼블리싱.
+  - [x] 더미 데이터로 PC/모바일 UI 구성, 현재 형태 최대한 유지.
+  - [x] Playwright MCP로 기존 화면과 신규 퍼블리싱 화면을 동일 백엔드(`http://localhost:8080`, 계정 `test@duty.park / 1234`)에 붙여 시각/동작 비교.
 - [ ] 백엔드 SPA 동시 지원:
   - [ ] Authorization 헤더 Bearer 지원 추가(쿠키 방식 유지).
   - [ ] CORS/CSRF 재구성(쿠키/헤더 병행), Refresh API 정비.
@@ -206,10 +206,40 @@ npm run build # dist/ 생성 확인
 
 ---
 
-### 다음 단계: 디자인 퍼블리싱
+### 2024-11-24: 디자인 퍼블리싱 완료
 
-1. 기존 화면 캡처 (Playwright로 localhost:8080 접속)
-2. 대시보드 퍼블리싱 (더미 데이터)
-3. 로그인 페이지 퍼블리싱
-4. 근무 달력 퍼블리싱
-5. PC/모바일 반응형 확인
+#### 1. 기존 화면 캡처
+- Playwright로 localhost:8080 접속
+- 비로그인 대시보드, 로그인 페이지, 로그인 후 대시보드, 근무 달력 캡처
+- 스크린샷 저장: `.playwright-mcp/screenshots/`
+
+#### 2. 퍼블리싱 완료 페이지
+
+| 페이지 | 파일 | 주요 기능 |
+|--------|------|----------|
+| 대시보드 (비로그인) | `DashboardView.vue` | 소개, 주요 기능 목록, 로그인 버튼 |
+| 대시보드 (로그인) | `DashboardView.vue` | 오늘 정보, 근무, 일정, 친구 목록 그리드 |
+| 로그인 | `LoginView.vue` | 이메일/비밀번호, 아이디 저장, 카카오 로그인 |
+| 근무 달력 | `DutyView.vue` | Todo 리스트, 월 컨트롤, 7열 그리드, D-Day |
+
+#### 3. 반응형 확인
+- PC (1280x800): 정상
+- 모바일 (375x812): 정상
+- Tailwind 반응형 클래스 적용: `sm:`, `md:` breakpoints
+
+#### 4. 주요 변경 파일
+```
+frontend/src/views/
+├── auth/LoginView.vue          # 로그인 폼, 카카오 버튼
+├── dashboard/DashboardView.vue # 게스트/로그인 분기, 친구 그리드
+└── duty/DutyView.vue           # 7열 달력, Todo, D-Day
+```
+
+---
+
+### 다음 단계: 백엔드 SPA 동시 지원
+
+1. Authorization 헤더 Bearer 지원 추가
+2. CORS/CSRF 재구성
+3. Refresh API 정비
+4. SPA 정적 서빙 설정
