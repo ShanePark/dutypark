@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onBeforeUnmount, nextTick } from 'vue'
+import Sortable from 'sortablejs'
+import type { SortableEvent } from 'sortablejs'
 import {
   X,
   GripVertical,
@@ -62,6 +64,96 @@ const filteredTodos = computed(() => {
     items.push(...props.completedTodos)
   }
   return items
+})
+
+// SortableJS integration
+const todoListRef = ref<HTMLElement | null>(null)
+let sortableInstance: Sortable | null = null
+
+// Check if sorting should be enabled (only active todos, no completed filter)
+const isSortingEnabled = computed(() => filters.value.active && !filters.value.completed)
+
+function initSortable() {
+  if (!todoListRef.value) return
+
+  // Destroy existing instance
+  destroySortable()
+
+  // Only init if sorting is enabled
+  if (!isSortingEnabled.value) return
+
+  sortableInstance = Sortable.create(todoListRef.value, {
+    animation: 150,
+    handle: '.drag-handle',
+    draggable: '.todo-item-active',
+    ghostClass: 'bg-blue-100',
+    chosenClass: 'bg-blue-50',
+    dragClass: 'opacity-50',
+    onEnd: () => {
+      // Read new order directly from DOM elements
+      if (!todoListRef.value) return
+      const todoElements = todoListRef.value.querySelectorAll('[data-id]')
+      const newOrderIds: string[] = []
+      todoElements.forEach((el) => {
+        const id = el.getAttribute('data-id')
+        // Only include active todos (not completed)
+        const todo = props.todos.find(t => t.id === id)
+        if (id && todo) {
+          newOrderIds.push(id)
+        }
+      })
+
+      if (newOrderIds.length > 0) {
+        emit('reorder', newOrderIds)
+      }
+    },
+  })
+}
+
+function destroySortable() {
+  if (sortableInstance) {
+    sortableInstance.destroy()
+    sortableInstance = null
+  }
+}
+
+// Initialize sortable when modal opens
+watch(
+  () => props.isOpen,
+  async (isOpen) => {
+    if (isOpen) {
+      // Wait for DOM to render
+      await nextTick()
+      // Additional delay to ensure DOM is fully ready
+      setTimeout(() => {
+        if (isSortingEnabled.value) {
+          initSortable()
+        }
+      }, 100)
+    } else {
+      destroySortable()
+    }
+  }
+)
+
+// Reinitialize when filter or todos change
+watch(
+  [isSortingEnabled, () => props.todos],
+  async () => {
+    if (props.isOpen) {
+      await nextTick()
+      if (isSortingEnabled.value) {
+        initSortable()
+      } else {
+        destroySortable()
+      }
+    }
+  }
+)
+
+// Cleanup on unmount
+onBeforeUnmount(() => {
+  destroySortable()
 })
 
 function toggleFilter(type: 'active' | 'completed' | 'all') {
@@ -143,17 +235,21 @@ function formatDate(dateString: string) {
             표시할 할 일이 없습니다.
           </div>
 
-          <div v-else class="space-y-2">
+          <div v-else ref="todoListRef" class="space-y-2">
             <div
               v-for="todo in filteredTodos"
               :key="todo.id"
+              :data-id="todo.id"
               class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition group"
-              :class="{ 'opacity-60': todo.status === 'COMPLETED' }"
+              :class="{
+                'opacity-60': todo.status === 'COMPLETED',
+                'todo-item-active': todo.status === 'ACTIVE'
+              }"
             >
               <!-- Drag Handle (only for active todos) -->
               <div
-                v-if="todo.status === 'ACTIVE'"
-                class="cursor-grab text-gray-400 hover:text-gray-600"
+                v-if="todo.status === 'ACTIVE' && isSortingEnabled"
+                class="drag-handle cursor-grab text-gray-400 hover:text-gray-600"
               >
                 <GripVertical class="w-5 h-5" />
               </div>

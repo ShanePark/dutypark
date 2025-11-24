@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   ChevronLeft,
@@ -12,87 +12,61 @@ import {
   User,
   Building2,
   X,
+  Loader2,
 } from 'lucide-vue-next'
+import { useAuthStore } from '@/stores/auth'
+import { teamApi } from '@/api/team'
+import type {
+  TeamDto,
+  TeamScheduleDto,
+  DutyByShift,
+  SimpleMemberDto,
+} from '@/types'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
-// State
-const hasTeam = ref(true) // Toggle this to false to see no-team state
-const isTeamManager = ref(true)
-const loginMemberId = ref(1)
+// Loading state
+const loading = ref(false)
+const shiftLoading = ref(false)
+const saving = ref(false)
+
+// State from API
+const hasTeam = ref(false)
+const isTeamManager = ref(false)
+const loginMemberId = computed(() => authStore.user?.id ?? 0)
+const team = ref<TeamDto | null>(null)
 
 // Current view date
-const currentYear = ref(2025)
-const currentMonth = ref(11)
+const now = new Date()
+const currentYear = ref(now.getFullYear())
+const currentMonth = ref(now.getMonth() + 1)
 
 // Today's date
 const today = {
-  year: 2025,
-  month: 11,
-  day: 24,
+  year: now.getFullYear(),
+  month: now.getMonth() + 1,
+  day: now.getDate(),
 }
 
 // Selected day
 const selectedDay = ref({
-  year: 2025,
-  month: 11,
-  day: 24,
+  year: today.year,
+  month: today.month,
+  day: today.day,
   index: -1,
 })
 
 const weekDays = ['일', '월', '화', '수', '목', '금', '토']
 
-// Dummy team data
-const team = ref({
-  id: 1,
-  name: '개발팀',
-})
+// Team schedules from API - indexed by calendar position
+const teamSchedules = ref<TeamScheduleDto[][]>([])
 
-// Dummy my duty colors (indexed by calendar day)
-const myDuty = ref<Array<{ dutyColor: string } | null>>([])
+// Shift data from API
+const shift = ref<(DutyByShift & { isMyGroup: boolean })[]>([])
 
-// Dummy team schedules grouped by day index
-const teamSchedules = ref<Array<Array<{
-  id: string
-  content: string
-  description?: string
-  startDateTime: string
-  endDateTime: string
-  createMember: string
-  daysFromStart: number
-  totalDays: number
-}>>>([])
-
-// Dummy shift data
-const shift = ref([
-  {
-    dutyType: { id: 1, name: '주간', color: '#bae1ff' },
-    members: [
-      { id: 1, name: '김철수' },
-      { id: 2, name: '이영희' },
-      { id: 3, name: '박지민' },
-      { id: 4, name: '정수현' },
-    ],
-    isMyGroup: true,
-  },
-  {
-    dutyType: { id: 2, name: '야간', color: '#baffc9' },
-    members: [
-      { id: 5, name: '최민수' },
-      { id: 6, name: '강태희' },
-    ],
-    isMyGroup: false,
-  },
-  {
-    dutyType: { id: 0, name: 'OFF', color: '#ffffba' },
-    members: [
-      { id: 7, name: '윤서연' },
-      { id: 8, name: '한지우' },
-      { id: 9, name: '송민아' },
-    ],
-    isMyGroup: false,
-  },
-])
+// My duty data - indexed by calendar position (fetched from API via team summary)
+const myDutyDays = ref<Set<string>>(new Set())
 
 // Schedule Modal
 const showScheduleModal = ref(false)
@@ -158,88 +132,95 @@ const teamDays = computed(() => {
   return days
 })
 
-// Generate dummy data based on calendar
-function generateDummyData() {
-  // Generate duty colors
-  const duties: Array<{ dutyColor: string } | null> = []
-  for (let i = 0; i < 42; i++) {
-    const dayItem = teamDays.value[i]
-    if (dayItem?.isCurrentMonth) {
-      const dayNum = dayItem.day
-      if (dayNum % 7 === 0 || dayNum % 7 === 6) {
-        duties.push({ dutyColor: '#ffffba' }) // Weekend - OFF
-      } else if (dayNum % 3 === 0) {
-        duties.push({ dutyColor: '#baffc9' }) // Night shift
-      } else {
-        duties.push({ dutyColor: '#bae1ff' }) // Day shift
-      }
-    } else {
-      duties.push(null)
-    }
-  }
-  myDuty.value = duties
+// Fetch team summary for the month
+async function fetchTeamSummary() {
+  loading.value = true
+  try {
+    const response = await teamApi.getMyTeamSummary(currentYear.value, currentMonth.value)
+    const data = response.data
 
-  // Generate schedules
-  const schedules: typeof teamSchedules.value = []
-  for (let i = 0; i < 42; i++) {
-    if (teamDays.value[i]?.day === 24 && teamDays.value[i]?.month === 11) {
-      schedules.push([
-        {
-          id: '1',
-          content: '팀 회의',
-          description: '월간 정기 회의',
-          startDateTime: '2025-11-24T10:00:00',
-          endDateTime: '2025-11-24T12:00:00',
-          createMember: '김철수',
-          daysFromStart: 1,
-          totalDays: 1,
-        },
-        {
-          id: '2',
-          content: '연말 회식',
-          description: '송년회 겸 회식',
-          startDateTime: '2025-11-24T18:00:00',
-          endDateTime: '2025-11-25T22:00:00',
-          createMember: '박지민',
-          daysFromStart: 1,
-          totalDays: 2,
-        },
-      ])
-    } else if (teamDays.value[i]?.day === 25 && teamDays.value[i]?.month === 11) {
-      schedules.push([
-        {
-          id: '2',
-          content: '연말 회식',
-          description: '송년회 겸 회식',
-          startDateTime: '2025-11-24T18:00:00',
-          endDateTime: '2025-11-25T22:00:00',
-          createMember: '박지민',
-          daysFromStart: 2,
-          totalDays: 2,
-        },
-      ])
-    } else if (teamDays.value[i]?.day === 28 && teamDays.value[i]?.month === 11) {
-      schedules.push([
-        {
-          id: '3',
-          content: '프로젝트 마감',
-          description: '',
-          startDateTime: '2025-11-28T00:00:00',
-          endDateTime: '2025-11-28T23:59:59',
-          createMember: '이영희',
-          daysFromStart: 1,
-          totalDays: 1,
-        },
-      ])
+    if (data.team) {
+      hasTeam.value = true
+      team.value = data.team
+      isTeamManager.value = data.isTeamManager
+
+      // Build duty days set
+      myDutyDays.value = new Set(
+        data.teamDays.map(d => `${d.year}-${d.month}-${d.day}`)
+      )
+
+      // Fetch schedules for the team
+      await fetchTeamSchedules()
     } else {
-      schedules.push([])
+      hasTeam.value = false
+      team.value = null
+      isTeamManager.value = false
+      teamSchedules.value = []
     }
+  } catch (error) {
+    console.error('Failed to fetch team summary:', error)
+    hasTeam.value = false
+  } finally {
+    loading.value = false
   }
-  teamSchedules.value = schedules
 }
 
-// Initial data generation
-generateDummyData()
+// Fetch team schedules
+async function fetchTeamSchedules() {
+  if (!team.value) return
+
+  try {
+    const response = await teamApi.getTeamSchedules(
+      team.value.id,
+      currentYear.value,
+      currentMonth.value
+    )
+    teamSchedules.value = response.data
+  } catch (error) {
+    console.error('Failed to fetch team schedules:', error)
+    teamSchedules.value = []
+  }
+}
+
+// Fetch shift data for selected day
+async function fetchShift() {
+  if (!hasTeam.value) return
+
+  shiftLoading.value = true
+  try {
+    const response = await teamApi.getShift(
+      selectedDay.value.year,
+      selectedDay.value.month,
+      selectedDay.value.day
+    )
+
+    // Add isMyGroup flag based on loginMemberId
+    shift.value = response.data.map(group => ({
+      ...group,
+      isMyGroup: group.members.some((m: SimpleMemberDto) => m.id === loginMemberId.value),
+    }))
+  } catch (error) {
+    console.error('Failed to fetch shift:', error)
+    shift.value = []
+  } finally {
+    shiftLoading.value = false
+  }
+}
+
+// Get duty color for a day
+function getDutyColor(day: { year: number; month: number; day: number }): string | null {
+  if (!team.value) return null
+
+  // Find duty type for this member on this day
+  // For now, use a default color if the day is in teamDays
+  const key = `${day.year}-${day.month}-${day.day}`
+  if (myDutyDays.value.has(key)) {
+    // Return default duty color from team
+    const defaultDuty = team.value.dutyTypes.find(dt => dt.position === -1)
+    return defaultDuty?.color ?? '#e8e8e8'
+  }
+  return null
+}
 
 // Find selected day index
 function findSelectedDayIndex() {
@@ -250,9 +231,6 @@ function findSelectedDayIndex() {
   )
   selectedDay.value.index = index
 }
-
-// Call on mount
-findSelectedDayIndex()
 
 function isToday(day: { year: number; month: number; day: number }) {
   return day.year === today.year && day.month === today.month && day.day === today.day
@@ -266,6 +244,7 @@ function isSelectedDay(day: { year: number; month: number; day: number }) {
 
 function selectDay(day: { year: number; month: number; day: number }, index: number) {
   selectedDay.value = { ...day, index }
+  fetchShift()
 }
 
 function prevMonth() {
@@ -275,7 +254,7 @@ function prevMonth() {
   } else {
     currentMonth.value--
   }
-  generateDummyData()
+  fetchTeamSummary()
 }
 
 function nextMonth() {
@@ -285,19 +264,23 @@ function nextMonth() {
   } else {
     currentMonth.value++
   }
-  generateDummyData()
+  fetchTeamSummary()
 }
 
 function goToToday() {
   currentYear.value = today.year
   currentMonth.value = today.month
   selectedDay.value = { ...today, index: -1 }
-  generateDummyData()
-  findSelectedDayIndex()
+  fetchTeamSummary().then(() => {
+    findSelectedDayIndex()
+    fetchShift()
+  })
 }
 
 function goToTeamManage() {
-  router.push(`/team/manage/${team.value.id}`)
+  if (team.value) {
+    router.push(`/team/manage/${team.value.id}`)
+  }
 }
 
 function goToMemberDuty(memberId: number) {
@@ -317,13 +300,7 @@ function openNewScheduleModal() {
   showScheduleModal.value = true
 }
 
-function openEditScheduleModal(schedule: {
-  id: string
-  content: string
-  description?: string
-  startDateTime: string
-  endDateTime: string
-}) {
+function openEditScheduleModal(schedule: TeamScheduleDto) {
   scheduleForm.value = {
     id: schedule.id,
     content: schedule.content,
@@ -338,23 +315,59 @@ function closeScheduleModal() {
   showScheduleModal.value = false
 }
 
-function saveSchedule() {
-  // Dummy save - just close modal
-  console.log('Saving schedule:', scheduleForm.value)
-  showScheduleModal.value = false
-}
+async function saveSchedule() {
+  if (!team.value || !scheduleForm.value.content.trim()) return
 
-function deleteSchedule(scheduleId: string) {
-  if (confirm('정말 삭제하시겠습니까?\n삭제된 일정은 복구할 수 없습니다.')) {
-    console.log('Deleting schedule:', scheduleId)
+  saving.value = true
+  try {
+    await teamApi.saveTeamSchedule({
+      id: scheduleForm.value.id ?? undefined,
+      teamId: team.value.id,
+      content: scheduleForm.value.content,
+      description: scheduleForm.value.description,
+      startDateTime: `${scheduleForm.value.startDate}T00:00:00`,
+      endDateTime: `${scheduleForm.value.endDate}T23:59:59`,
+    })
+    showScheduleModal.value = false
+    await fetchTeamSchedules()
+  } catch (error) {
+    console.error('Failed to save schedule:', error)
+    alert('일정 저장에 실패했습니다.')
+  } finally {
+    saving.value = false
   }
 }
+
+async function deleteSchedule(scheduleId: string) {
+  if (!confirm('정말 삭제하시겠습니까?\n삭제된 일정은 복구할 수 없습니다.')) return
+
+  try {
+    await teamApi.deleteTeamSchedule(scheduleId)
+    await fetchTeamSchedules()
+  } catch (error) {
+    console.error('Failed to delete schedule:', error)
+    alert('일정 삭제에 실패했습니다.')
+  }
+}
+
+// Initial load
+onMounted(() => {
+  fetchTeamSummary().then(() => {
+    findSelectedDayIndex()
+    fetchShift()
+  })
+})
 </script>
 
 <template>
   <div class="max-w-4xl mx-auto px-2 sm:px-4 py-4">
+    <!-- Loading State -->
+    <div v-if="loading" class="flex items-center justify-center py-20">
+      <Loader2 class="w-8 h-8 animate-spin text-blue-500" />
+    </div>
+
     <!-- No Team State -->
-    <template v-if="!hasTeam">
+    <template v-else-if="!hasTeam">
       <div class="bg-white rounded-lg shadow overflow-hidden">
         <div class="bg-gray-600 text-white font-bold text-xl text-center py-3">
           내 팀
@@ -368,7 +381,7 @@ function deleteSchedule(scheduleId: string) {
     </template>
 
     <!-- Team View -->
-    <template v-if="hasTeam">
+    <template v-else-if="team">
       <!-- Team Header -->
       <div class="bg-gray-600 text-white font-bold text-xl text-center py-3 rounded-t-lg">
         {{ team.name }}
@@ -443,7 +456,7 @@ function deleteSchedule(scheduleId: string) {
               'opacity-60': !day.isCurrentMonth,
               'ring-2 ring-inset ring-blue-500': isSelectedDay(day),
             }"
-            :style="{ backgroundColor: day.isCurrentMonth && myDuty[idx]?.dutyColor ? myDuty[idx]?.dutyColor : '' }"
+            :style="{ backgroundColor: day.isCurrentMonth && getDutyColor(day) ? getDutyColor(day) ?? '' : '' }"
           >
             <!-- Today indicator -->
             <div
@@ -474,7 +487,7 @@ function deleteSchedule(scheduleId: string) {
                 class="text-xs text-gray-600 truncate px-0.5"
               >
                 {{ schedule.content }}
-                <span v-if="schedule.totalDays > 1" class="text-gray-400">
+                <span v-if="schedule.totalDays && schedule.totalDays > 1" class="text-gray-400">
                   ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})
                 </span>
               </div>
@@ -552,7 +565,10 @@ function deleteSchedule(scheduleId: string) {
       </div>
 
       <!-- Shift Groups -->
-      <div v-if="shift.length > 0" class="mt-4 space-y-4">
+      <div v-if="shiftLoading" class="mt-4 flex items-center justify-center py-8">
+        <Loader2 class="w-6 h-6 animate-spin text-blue-500" />
+      </div>
+      <div v-else-if="shift.length > 0" class="mt-4 space-y-4">
         <template v-for="group in shift" :key="group.dutyType.id">
           <div
             v-if="group.members.length > 0"
@@ -562,7 +578,7 @@ function deleteSchedule(scheduleId: string) {
             <!-- Duty Type Header -->
             <div
               class="p-3 flex items-center justify-between"
-              :style="{ backgroundColor: group.dutyType.color }"
+              :style="{ backgroundColor: group.dutyType.color ?? '#e8e8e8' }"
             >
               <span class="font-bold text-gray-800">{{ group.dutyType.name }}</span>
               <span class="bg-white text-gray-800 px-2 py-0.5 rounded-full text-sm font-medium">
@@ -615,7 +631,7 @@ function deleteSchedule(scheduleId: string) {
             <input
               v-model="scheduleForm.content"
               type="text"
-              maxlength="30"
+              maxlength="50"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="일정 제목을 입력하세요"
             />
@@ -662,8 +678,10 @@ function deleteSchedule(scheduleId: string) {
         <div class="flex justify-end gap-2 p-4 border-t">
           <button
             @click="saveSchedule"
-            class="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition"
+            :disabled="saving || !scheduleForm.content.trim()"
+            class="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
+            <Loader2 v-if="saving" class="w-4 h-4 animate-spin" />
             저장
           </button>
           <button

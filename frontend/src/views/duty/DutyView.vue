@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   Plus,
@@ -10,10 +10,10 @@ import {
   Pencil,
   Trash2,
   Users,
-  GripVertical,
   FileText,
   Star,
   RotateCcw,
+  Loader2,
 } from 'lucide-vue-next'
 
 // Modal Components
@@ -25,8 +25,15 @@ import DDayModal from '@/components/duty/DDayModal.vue'
 import SearchResultModal from '@/components/duty/SearchResultModal.vue'
 import OtherDutiesModal from '@/components/duty/OtherDutiesModal.vue'
 
-// Types
-interface Todo {
+// API
+import { todoApi } from '@/api/todo'
+import { dutyApi } from '@/api/duty'
+import { ddayApi } from '@/api/member'
+import { scheduleApi, type ScheduleDto, type ScheduleSearchResult } from '@/api/schedule'
+import type { DutyCalendarDay, TeamDto, DDayDto, DDaySaveDto, CalendarVisibility } from '@/types'
+
+// Local interfaces for this view
+interface LocalTodo {
   id: string
   title: string
   content: string
@@ -50,10 +57,11 @@ interface Todo {
 interface DutyType {
   id: number | null
   name: string
-  color: string
+  color: string | null
   cnt?: number
 }
 
+// Schedule interface for UI display (converted from ScheduleDto)
 interface Schedule {
   id: string
   content: string
@@ -61,9 +69,10 @@ interface Schedule {
   description?: string
   startDateTime: string
   endDateTime: string
-  visibility: 'PUBLIC' | 'FRIENDS' | 'FAMILY' | 'PRIVATE'
+  visibility: CalendarVisibility
   isMine: boolean
   isTagged: boolean
+  owner?: string
   taggedBy?: string
   attachments?: Array<{
     id: string
@@ -74,17 +83,17 @@ interface Schedule {
     hasThumbnail: boolean
   }>
   tags?: Array<{ id: number; name: string }>
-  daysFromStart?: number
-  totalDays?: number
+  daysFromStart: number
+  totalDays: number
 }
 
-interface DDay {
+interface LocalDDay {
   id: number
   title: string
   date: string
   isPrivate: boolean
   calc: number
-  dDayText?: string
+  dDayText: string
 }
 
 interface Friend {
@@ -119,19 +128,33 @@ const route = useRoute()
 const authStore = useAuthStore()
 
 // State
-const currentYear = ref(2025)
-const currentMonth = ref(11)
-const memberName = ref('박세현')
-const memberId = ref(route.params.id as string || 'me')
+const today = new Date()
+const currentYear = ref(today.getFullYear())
+const currentMonth = ref(today.getMonth() + 1)
+const memberName = ref('')
+const memberId = computed(() => {
+  const paramId = route.params.id as string | undefined
+  if (!paramId || paramId === 'me') {
+    return authStore.user?.id ?? 0
+  }
+  return parseInt(paramId)
+})
+const teamId = ref<number | null>(null)
+
 // isMyCalendar: true if viewing own calendar (no id param, or id matches logged-in user)
 const isMyCalendar = computed(() => {
   const paramId = route.params.id as string | undefined
   if (!paramId || paramId === 'me') return true
   // Compare with logged-in user's ID
   const loggedInUserId = authStore.user?.id
-  return loggedInUserId !== undefined && String(loggedInUserId) === paramId
+  return loggedInUserId !== undefined && loggedInUserId === memberId.value
 })
 const amIManager = ref(false)
+
+// Loading states
+const isLoading = ref(false)
+const isLoadingDuties = ref(false)
+const loadError = ref<string | null>(null)
 
 // Edit mode states
 const batchEditMode = ref(false)
@@ -175,77 +198,157 @@ function pickerNextYear() {
 // Selected items
 const selectedDay = ref<CalendarDay | null>(null)
 const selectedDayDuty = ref<{ dutyType: string; dutyColor: string } | undefined>(undefined)
-const selectedTodo = ref<Todo | null>(null)
-const selectedDDay = ref<DDay | null>(null)
-const pinnedDDay = ref<DDay | null>(null)
+const selectedTodo = ref<LocalTodo | null>(null)
+const selectedDDay = ref<LocalDDay | null>(null)
+const pinnedDDay = ref<LocalDDay | null>(null)
 
 // Data
-const todos = ref<Todo[]>([
-  {
-    id: '1',
-    title: 'API 문서 작성',
-    content: 'REST API 문서 Swagger로 작성하기',
-    status: 'ACTIVE',
-    createdDate: '2025-11-20T10:00:00',
+const todos = ref<LocalTodo[]>([])
+const completedTodos = ref<LocalTodo[]>([])
+const isLoadingTodos = ref(false)
+
+// Convert API Todo to LocalTodo
+function mapToLocalTodo(apiTodo: { id: string; title: string; content: string; position: number | null; status: 'ACTIVE' | 'COMPLETED'; createdDate: string; completedDate: string | null }): LocalTodo {
+  return {
+    id: apiTodo.id,
+    title: apiTodo.title,
+    content: apiTodo.content,
+    status: apiTodo.status,
+    createdDate: apiTodo.createdDate,
+    completedDate: apiTodo.completedDate ?? undefined,
     hasAttachments: false,
     attachments: [],
-  },
-  {
-    id: '2',
-    title: '프론트엔드 리팩토링',
-    content: 'Vue 3 Composition API로 마이그레이션',
-    status: 'ACTIVE',
-    createdDate: '2025-11-18T14:30:00',
-    hasAttachments: true,
-    attachments: [
-      {
-        id: 'att1',
-        name: 'migration-plan.pdf',
-        originalFilename: 'migration-plan.pdf',
-        size: 1024000,
-        contentType: 'application/pdf',
-        isImage: false,
-        hasThumbnail: false,
-        downloadUrl: '/api/attachments/att1/download',
-      },
-    ],
-  },
-  {
-    id: '3',
-    title: '테스트 코드 추가',
-    content: '',
-    status: 'ACTIVE',
-    createdDate: '2025-11-15T09:00:00',
-    hasAttachments: false,
-    attachments: [],
-  },
-])
+  }
+}
 
-const completedTodos = ref<Todo[]>([
-  {
-    id: '4',
-    title: '로그인 버그 수정',
-    content: '세션 만료 시 리다이렉트 이슈',
-    status: 'COMPLETED',
-    createdDate: '2025-11-10T11:00:00',
-    completedDate: '2025-11-12T16:00:00',
-    hasAttachments: false,
-    attachments: [],
-  },
-])
+// Convert API DDayDto to LocalDDay
+function mapToLocalDDay(apiDDay: DDayDto): LocalDDay {
+  const dDayText = apiDDay.calc === 0 ? 'D-Day' : apiDDay.calc < 0 ? `D+${Math.abs(apiDDay.calc)}` : `D-${apiDDay.calc}`
+  return {
+    id: apiDDay.id,
+    title: apiDDay.title,
+    date: apiDDay.date,
+    isPrivate: apiDDay.isPrivate,
+    calc: apiDDay.calc,
+    dDayText,
+  }
+}
 
-const dutyTypes = ref<DutyType[]>([
-  { id: null, name: 'OFF', color: '#6c757d', cnt: 10 },
-  { id: 1, name: '출근', color: '#0d6efd', cnt: 15 },
-  { id: 2, name: '야근', color: '#dc3545', cnt: 5 },
-])
+// Load todos from API
+async function loadTodos() {
+  if (!isMyCalendar.value) return
 
-const dDays = ref<DDay[]>([
-  { id: 1, title: '루나 생일', date: '2023-09-13', isPrivate: false, calc: -804, dDayText: 'D+804' },
-  { id: 2, title: '정수기 필터교체', date: '2025-12-19', isPrivate: false, calc: 25, dDayText: 'D-25' },
-  { id: 3, title: '최근 세차', date: '2025-08-23', isPrivate: true, calc: -93, dDayText: 'D+93' },
-  { id: 4, title: 'dutypark-ssl 갱신', date: '2026-02-20', isPrivate: false, calc: 88, dDayText: 'D-88' },
-])
+  isLoadingTodos.value = true
+  try {
+    const [activeTodos, completed] = await Promise.all([
+      todoApi.getActiveTodos(),
+      todoApi.getCompletedTodos(),
+    ])
+    todos.value = activeTodos.map(mapToLocalTodo)
+    completedTodos.value = completed.map(mapToLocalTodo)
+  } catch (error) {
+    console.error('Failed to load todos:', error)
+  } finally {
+    isLoadingTodos.value = false
+  }
+}
+
+// Load D-Days from API
+async function loadDDays() {
+  isLoadingDDays.value = true
+  try {
+    let apiDDays: DDayDto[]
+    if (isMyCalendar.value) {
+      apiDDays = (await ddayApi.getMyDDays()).data
+    } else {
+      apiDDays = (await ddayApi.getDDaysByMemberId(memberId.value)).data
+    }
+    dDays.value = apiDDays.map(mapToLocalDDay)
+  } catch (error) {
+    console.error('Failed to load D-Days:', error)
+  } finally {
+    isLoadingDDays.value = false
+  }
+}
+
+// Convert ScheduleDto to Schedule for UI
+function mapToSchedule(dto: ScheduleDto): Schedule {
+  return {
+    id: dto.id,
+    content: dto.content,
+    contentWithoutTime: dto.content, // API doesn't provide this separately
+    description: dto.description,
+    startDateTime: dto.startDateTime,
+    endDateTime: dto.endDateTime,
+    visibility: dto.visibility || 'FRIENDS',
+    isMine: !dto.isTagged,
+    isTagged: dto.isTagged,
+    owner: dto.owner,
+    taggedBy: dto.isTagged ? dto.owner : undefined,
+    attachments: dto.attachments.map((a) => ({
+      id: a.id,
+      originalFilename: a.originalFileName,
+      contentType: 'application/octet-stream', // Default, actual type not provided
+      size: 0, // Default, actual size not provided
+      thumbnailUrl: a.thumbnailAvailable ? `/api/attachments/${a.id}/thumbnail` : undefined,
+      hasThumbnail: a.thumbnailAvailable,
+    })),
+    tags: dto.tags.map((t) => ({ id: t.id ?? 0, name: t.name })),
+    daysFromStart: dto.daysFromStart,
+    totalDays: dto.totalDays,
+  }
+}
+
+// Load schedules from API
+const isLoadingSchedules = ref(false)
+
+async function loadSchedules() {
+  if (!memberId.value) return
+
+  isLoadingSchedules.value = true
+  try {
+    const response = await scheduleApi.getSchedules(
+      memberId.value,
+      currentYear.value,
+      currentMonth.value
+    )
+    // API returns array indexed by day (0 = day 1, etc.)
+    // We need to map this to our calendarDays structure
+    const schedulesMap = new Map<string, Schedule[]>()
+
+    // Process each day's schedules from API response
+    response.forEach((daySchedules) => {
+      daySchedules.forEach((dto) => {
+        // Create key from the date in the DTO
+        const key = `${dto.year}-${dto.month}-${dto.dayOfMonth}`
+        if (!schedulesMap.has(key)) {
+          schedulesMap.set(key, [])
+        }
+        schedulesMap.get(key)!.push(mapToSchedule(dto))
+      })
+    })
+
+    // Map to calendarDays structure
+    schedulesByDays.value = calendarDays.value.map((day) => {
+      const key = `${day.year}-${day.month}-${day.day}`
+      return schedulesMap.get(key) || []
+    })
+  } catch (error) {
+    console.error('Failed to load schedules:', error)
+  } finally {
+    isLoadingSchedules.value = false
+  }
+}
+
+// Team and duty types from API
+const team = ref<TeamDto | null>(null)
+const dutyTypes = ref<DutyType[]>([])
+
+// Raw duty data from API
+const rawDuties = ref<DutyCalendarDay[]>([])
+
+const dDays = ref<LocalDDay[]>([])
+const isLoadingDDays = ref(false)
 
 const friends = ref<Friend[]>([
   { id: 1, name: '김철수' },
@@ -324,87 +427,150 @@ const calendarDays = computed(() => {
   return days
 })
 
-// Dummy duties for each day
+// Duties computed from raw API data
 const duties = computed(() => {
-  return calendarDays.value.map((day, idx) => {
-    if (!day.isCurrentMonth) return null
-    const dayNum = day.day
-    if (dayNum % 7 === 0) return { dutyType: 'OFF', dutyColor: '#6c757d', dutyTypeId: null }
-    if (dayNum % 7 === 6) return { dutyType: '야근', dutyColor: '#dc3545', dutyTypeId: 2 }
-    return { dutyType: '출근', dutyColor: '#0d6efd', dutyTypeId: 1 }
+  return calendarDays.value.map((day) => {
+    // Find matching duty from raw data
+    const duty = rawDuties.value.find(
+      (d) => d.year === day.year && d.month === day.month && d.day === day.day
+    )
+    if (!duty) return null
+
+    // Find duty type ID from name
+    const dutyType = dutyTypes.value.find((dt) => dt.name === duty.dutyType)
+    return {
+      dutyType: duty.dutyType || 'OFF',
+      dutyColor: duty.dutyColor || '#6c757d',
+      dutyTypeId: dutyType?.id ?? null,
+    }
   })
 })
 
-// Initialize schedules
-onMounted(() => {
-  // Create empty schedule arrays for each day
-  schedulesByDays.value = calendarDays.value.map(() => [])
+// Load team info and duty types
+async function loadTeam() {
+  if (!teamId.value) return
 
-  // Add some dummy schedules
-  const todayIndex = calendarDays.value.findIndex(
-    (d) => d.isCurrentMonth && d.day === 24
-  )
-  if (todayIndex >= 0) {
-    schedulesByDays.value[todayIndex] = [
-      {
-        id: 's1',
-        content: '팀 미팅',
-        description: '주간 업무 보고 및 다음 주 계획 수립',
-        startDateTime: '2025-11-24T10:00:00',
-        endDateTime: '2025-11-24T11:00:00',
-        visibility: 'FAMILY',
-        isMine: true,
-        isTagged: false,
-        attachments: [],
-        tags: [{ id: 1, name: '김철수' }],
-      },
-      {
-        id: 's2',
-        content: '점심 약속',
-        startDateTime: '2025-11-24T12:00:00',
-        endDateTime: '2025-11-24T13:00:00',
-        visibility: 'PRIVATE',
-        isMine: true,
-        isTagged: false,
-      },
-    ]
+  try {
+    team.value = await dutyApi.getTeam(teamId.value)
+    // Map duty types from team
+    dutyTypes.value = team.value.dutyTypes.map((dt) => ({
+      id: dt.id,
+      name: dt.name,
+      color: dt.color,
+      cnt: 0,
+    }))
+  } catch (error) {
+    console.error('Failed to load team:', error)
   }
+}
 
-  // Add schedule on day 26
-  const day26Index = calendarDays.value.findIndex(
-    (d) => d.isCurrentMonth && d.day === 26
-  )
-  if (day26Index >= 0) {
-    schedulesByDays.value[day26Index] = [
-      {
-        id: 's3',
-        content: '프로젝트 마감',
-        description: '1차 버전 릴리즈',
-        startDateTime: '2025-11-26T00:00:00',
-        endDateTime: '2025-11-26T23:59:00',
-        visibility: 'FAMILY',
-        isMine: true,
-        isTagged: false,
-        attachments: [
-          {
-            id: 'a1',
-            originalFilename: 'release-notes.pdf',
-            contentType: 'application/pdf',
-            size: 512000,
-            hasThumbnail: false,
-          },
-        ],
-      },
-    ]
+// Load duties from API
+async function loadDuties() {
+  if (!memberId.value) return
+
+  isLoadingDuties.value = true
+  try {
+    rawDuties.value = await dutyApi.getDuties(
+      memberId.value,
+      currentYear.value,
+      currentMonth.value
+    )
+    // Update duty counts
+    updateDutyCounts()
+  } catch (error) {
+    console.error('Failed to load duties:', error)
+    loadError.value = '근무 정보를 불러오는데 실패했습니다.'
+  } finally {
+    isLoadingDuties.value = false
   }
+}
 
-  // Set pinned DDay
-  const storedDDay = localStorage.getItem(`selectedDday_${memberId.value}`)
-  if (storedDDay) {
-    const id = parseInt(storedDDay)
-    pinnedDDay.value = dDays.value.find((d) => d.id === id) || null
+// Update duty type counts for the current month
+function updateDutyCounts() {
+  const daysInMonth = new Date(currentYear.value, currentMonth.value, 0).getDate()
+  let offCount = daysInMonth
+
+  // Reset all counts
+  dutyTypes.value.forEach((dt) => {
+    dt.cnt = 0
+  })
+
+  // Count duties for current month only
+  rawDuties.value
+    .filter((d) => d.month === currentMonth.value)
+    .forEach((duty) => {
+      const dutyType = dutyTypes.value.find((dt) => dt.id !== null && dt.name === duty.dutyType)
+      if (dutyType) {
+        dutyType.cnt = (dutyType.cnt || 0) + 1
+        offCount--
+      }
+    })
+
+  // Set OFF count (id === null)
+  const offType = dutyTypes.value.find((dt) => dt.id === null)
+  if (offType) {
+    offType.cnt = offCount
+  }
+}
+
+// Check if user can manage this member's duties
+async function checkCanManage() {
+  if (!authStore.user?.id || !memberId.value) return
+
+  try {
+    amIManager.value = await dutyApi.canManage(memberId.value)
+  } catch (error) {
+    console.error('Failed to check management permission:', error)
+  }
+}
+
+// Initialize on mount
+onMounted(async () => {
+  isLoading.value = true
+  loadError.value = null
+
+  try {
+    // Get member info from auth store
+    if (isMyCalendar.value && authStore.user) {
+      memberName.value = authStore.user.name
+      teamId.value = authStore.user.teamId
+    }
+
+    // Load data in parallel
+    await Promise.all([
+      loadTodos(),
+      loadDuties(),
+      loadDDays(),
+      loadSchedules(),
+      checkCanManage(),
+    ])
+
+    // Load team info for duty types
+    if (teamId.value) {
+      await loadTeam()
+    }
+
+    // Set pinned DDay from localStorage (after D-Days are loaded)
+    const storedDDay = localStorage.getItem(`selectedDday_${memberId.value}`)
+    if (storedDDay) {
+      const id = parseInt(storedDDay)
+      pinnedDDay.value = dDays.value.find((d) => d.id === id) || null
+    }
+  } catch (error) {
+    console.error('Failed to initialize duty view:', error)
+    loadError.value = '데이터를 불러오는데 실패했습니다.'
+  } finally {
+    isLoading.value = false
   }
 })
+
+// Watch for month changes to reload data
+watch(
+  () => [currentYear.value, currentMonth.value],
+  async () => {
+    await Promise.all([loadDuties(), loadSchedules()])
+  }
+)
 
 // Navigation
 function prevMonth() {
@@ -440,7 +606,7 @@ function handleDayClick(day: CalendarDay, index: number) {
 }
 
 // D-Day handlers
-function togglePinnedDDay(dday: DDay) {
+function togglePinnedDDay(dday: LocalDDay) {
   if (pinnedDDay.value?.id === dday.id) {
     pinnedDDay.value = null
     localStorage.removeItem(`selectedDday_${memberId.value}`)
@@ -450,44 +616,56 @@ function togglePinnedDDay(dday: DDay) {
   }
 }
 
-function openDDayModal(dday?: DDay) {
+function openDDayModal(dday?: LocalDDay) {
   selectedDDay.value = dday || null
   isDDayModalOpen.value = true
 }
 
-function handleDDaySave(dday: { id?: number; title: string; date: string; isPrivate: boolean }) {
-  if (dday.id) {
-    // Update existing
-    const idx = dDays.value.findIndex((d) => d.id === dday.id)
-    const existing = dDays.value[idx]
-    if (idx >= 0 && existing) {
-      existing.title = dday.title
-      existing.date = dday.date
-      existing.isPrivate = dday.isPrivate
+async function handleDDaySave(dday: { id?: number; title: string; date: string; isPrivate: boolean }) {
+  try {
+    const saveDto: DDaySaveDto = {
+      id: dday.id,
+      title: dday.title,
+      date: dday.date,
+      isPrivate: dday.isPrivate,
     }
-  } else {
-    // Create new
-    const newId = Math.max(...dDays.value.map((d) => d.id)) + 1
-    const today = new Date()
-    const targetDate = new Date(dday.date)
-    const diffDays = Math.ceil((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-    dDays.value.push({
-      ...dday,
-      id: newId,
-      calc: diffDays,
-      dDayText: diffDays <= 0 ? `D+${Math.abs(diffDays)}` : `D-${diffDays}`,
-    })
+    const savedDDay = (await ddayApi.saveDDay(saveDto)).data
+    const localDDay = mapToLocalDDay(savedDDay)
+
+    if (dday.id) {
+      // Update existing in local list
+      const idx = dDays.value.findIndex((d) => d.id === dday.id)
+      if (idx >= 0) {
+        dDays.value[idx] = localDDay
+      }
+      // Update pinned D-Day if it's the one being edited
+      if (pinnedDDay.value?.id === dday.id) {
+        pinnedDDay.value = localDDay
+      }
+    } else {
+      // Add new to local list
+      dDays.value.push(localDDay)
+    }
+  } catch (error) {
+    console.error('Failed to save D-Day:', error)
+    alert('D-Day 저장에 실패했습니다.')
   }
   isDDayModalOpen.value = false
 }
 
-function deleteDDay(dday: DDay) {
-  if (confirm(`[${dday.title}]을(를) 정말로 삭제하시겠습니까?`)) {
+async function deleteDDay(dday: LocalDDay) {
+  if (!confirm(`[${dday.title}]을(를) 정말로 삭제하시겠습니까?`)) return
+
+  try {
+    await ddayApi.deleteDDay(dday.id)
     dDays.value = dDays.value.filter((d) => d.id !== dday.id)
     if (pinnedDDay.value?.id === dday.id) {
       pinnedDDay.value = null
       localStorage.removeItem(`selectedDday_${memberId.value}`)
     }
+  } catch (error) {
+    console.error('Failed to delete D-Day:', error)
+    alert('D-Day 삭제에 실패했습니다.')
   }
 }
 
@@ -501,97 +679,168 @@ function calcDDayForDay(day: CalendarDay) {
   return diffDays < 0 ? `D${diffDays}` : `D+${diffDays + 1}`
 }
 
+// Get D-Days that fall on a specific day
+function getDDaysForDay(day: CalendarDay): LocalDDay[] {
+  return dDays.value.filter((dday) => {
+    const ddayDate = new Date(dday.date)
+    return (
+      ddayDate.getFullYear() === day.year &&
+      ddayDate.getMonth() + 1 === day.month &&
+      ddayDate.getDate() === day.day
+    )
+  })
+}
+
 // Todo handlers
-function openTodoDetail(todo: Todo) {
+function openTodoDetail(todo: LocalTodo) {
   selectedTodo.value = todo
   isTodoDetailModalOpen.value = true
 }
 
-function handleTodoUpdate(data: { id: string; title: string; content: string }) {
-  const todo = todos.value.find((t) => t.id === data.id)
-  if (todo) {
-    todo.title = data.title
-    todo.content = data.content
-  }
-  isTodoDetailModalOpen.value = false
-}
-
-function handleTodoComplete(id: string) {
-  const idx = todos.value.findIndex((t) => t.id === id)
-  if (idx >= 0) {
-    const todo = todos.value.splice(idx, 1)[0]
-    if (todo) {
-      todo.status = 'COMPLETED'
-      todo.completedDate = new Date().toISOString()
-      completedTodos.value.unshift(todo)
+async function handleTodoUpdate(data: {
+  id: string
+  title: string
+  content: string
+  attachmentSessionId?: string
+  orderedAttachmentIds?: string[]
+}) {
+  try {
+    const updatedTodo = await todoApi.updateTodo(data.id, {
+      title: data.title,
+      content: data.content,
+      attachmentSessionId: data.attachmentSessionId,
+      orderedAttachmentIds: data.orderedAttachmentIds,
+    })
+    const localTodo = mapToLocalTodo(updatedTodo)
+    const idx = todos.value.findIndex((t) => t.id === data.id)
+    if (idx >= 0) {
+      todos.value[idx] = localTodo
     }
+    // Update selectedTodo for the detail modal
+    selectedTodo.value = localTodo
+  } catch (error) {
+    console.error('Failed to update todo:', error)
+    alert('할 일 수정에 실패했습니다.')
   }
   isTodoDetailModalOpen.value = false
 }
 
-function handleTodoReopen(id: string) {
-  const idx = completedTodos.value.findIndex((t) => t.id === id)
-  if (idx >= 0) {
-    const todo = completedTodos.value.splice(idx, 1)[0]
-    if (todo) {
-      todo.status = 'ACTIVE'
-      todo.completedDate = undefined
-      todos.value.push(todo)
-    }
+async function handleTodoComplete(id: string) {
+  try {
+    const completedTodo = await todoApi.completeTodo(id)
+    // Remove from active todos
+    todos.value = todos.value.filter((t) => t.id !== id)
+    // Add to completed todos
+    completedTodos.value.unshift(mapToLocalTodo(completedTodo))
+  } catch (error) {
+    console.error('Failed to complete todo:', error)
+    alert('할 일 완료 처리에 실패했습니다.')
   }
   isTodoDetailModalOpen.value = false
 }
 
-function handleTodoDelete(id: string) {
+async function handleTodoReopen(id: string) {
+  try {
+    const reopenedTodo = await todoApi.reopenTodo(id)
+    // Remove from completed todos
+    completedTodos.value = completedTodos.value.filter((t) => t.id !== id)
+    // Add to active todos
+    todos.value.push(mapToLocalTodo(reopenedTodo))
+  } catch (error) {
+    console.error('Failed to reopen todo:', error)
+    alert('할 일 재오픈에 실패했습니다.')
+  }
+  isTodoDetailModalOpen.value = false
+}
+
+async function handleTodoDelete(id: string) {
   if (!confirm('할 일을 삭제하시겠습니까?')) return
-  todos.value = todos.value.filter((t) => t.id !== id)
-  completedTodos.value = completedTodos.value.filter((t) => t.id !== id)
+  try {
+    await todoApi.deleteTodo(id)
+    todos.value = todos.value.filter((t) => t.id !== id)
+    completedTodos.value = completedTodos.value.filter((t) => t.id !== id)
+  } catch (error) {
+    console.error('Failed to delete todo:', error)
+    alert('할 일 삭제에 실패했습니다.')
+  }
   isTodoDetailModalOpen.value = false
 }
 
-function handleTodoAdd(data: { title: string; content: string }) {
-  const newTodo: Todo = {
-    id: `t${Date.now()}`,
-    title: data.title,
-    content: data.content,
-    status: 'ACTIVE',
-    createdDate: new Date().toISOString(),
-    hasAttachments: false,
-    attachments: [],
+async function handleTodoAdd(data: {
+  title: string
+  content: string
+  attachmentSessionId?: string
+  orderedAttachmentIds?: string[]
+}) {
+  try {
+    const newTodo = await todoApi.createTodo({
+      title: data.title,
+      content: data.content,
+      attachmentSessionId: data.attachmentSessionId,
+      orderedAttachmentIds: data.orderedAttachmentIds,
+    })
+    todos.value.unshift(mapToLocalTodo(newTodo))
+  } catch (error) {
+    console.error('Failed to add todo:', error)
+    alert('할 일 추가에 실패했습니다.')
   }
-  todos.value.unshift(newTodo)
   isTodoAddModalOpen.value = false
 }
 
-// Search handler
-function handleSearch() {
-  if (!searchQuery.value.trim()) return
-  // Dummy search results
-  searchResults.value = [
-    {
-      id: 'sr1',
-      content: '팀 미팅',
-      description: '주간 업무 보고',
-      startDateTime: '2025-11-24T10:00:00',
-      endDateTime: '2025-11-24T11:00:00',
-      hasAttachments: false,
-    },
-    {
-      id: 'sr2',
-      content: '프로젝트 마감',
-      description: '1차 버전 릴리즈',
-      startDateTime: '2025-11-26T00:00:00',
-      endDateTime: '2025-11-26T23:59:00',
-      hasAttachments: true,
-    },
-  ]
-  searchPageInfo.value = {
-    pageNumber: 0,
-    pageSize: 10,
-    totalPages: 1,
-    totalElements: 2,
+// Todo position update for drag-and-drop
+async function handleTodoPositionUpdate(orderedIds: string[]) {
+  try {
+    await todoApi.updatePositions(orderedIds)
+    // Reorder local todos array to match the new order
+    const todoMap = new Map(todos.value.map((t) => [t.id, t]))
+    todos.value = orderedIds.map((id) => todoMap.get(id)).filter((t): t is LocalTodo => t !== undefined)
+  } catch (error) {
+    console.error('Failed to update todo positions:', error)
+    alert('할 일 순서 변경에 실패했습니다.')
+    // Reload todos to restore correct order
+    await loadTodos()
   }
-  isSearchResultModalOpen.value = true
+}
+
+// Search handler
+const isSearching = ref(false)
+
+async function handleSearch(page: number = 0) {
+  if (!searchQuery.value.trim() || !memberId.value) return
+
+  isSearching.value = true
+  try {
+    const response = await scheduleApi.searchSchedules(
+      memberId.value,
+      searchQuery.value.trim(),
+      page,
+      searchPageInfo.value.pageSize
+    )
+    searchResults.value = response.content.map((result) => ({
+      id: result.id,
+      content: result.content,
+      description: result.description,
+      startDateTime: result.startDateTime,
+      endDateTime: result.endDateTime,
+      hasAttachments: result.hasAttachments,
+    }))
+    searchPageInfo.value = {
+      pageNumber: response.number,
+      pageSize: response.size,
+      totalPages: response.totalPages,
+      totalElements: response.totalElements,
+    }
+    isSearchResultModalOpen.value = true
+  } catch (error) {
+    console.error('Failed to search schedules:', error)
+    alert('검색에 실패했습니다.')
+  } finally {
+    isSearching.value = false
+  }
+}
+
+function handleSearchPageChange(page: number) {
+  handleSearch(page)
 }
 
 function handleSearchGoToDate(result: any) {
@@ -654,6 +903,25 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
 
 <template>
   <div class="max-w-4xl mx-auto px-2 sm:px-4 py-4">
+    <!-- Loading State -->
+    <div v-if="isLoading" class="flex items-center justify-center py-20">
+      <Loader2 class="w-8 h-8 text-blue-500 animate-spin" />
+      <span class="ml-2 text-gray-600">데이터를 불러오는 중...</span>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="loadError" class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+      <p class="text-red-700">{{ loadError }}</p>
+      <button
+        @click="loadDuties"
+        class="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
+      >
+        다시 시도
+      </button>
+    </div>
+
+    <!-- Main Content -->
+    <template v-else>
     <!-- Todo List Section -->
     <div v-if="isMyCalendar" class="bg-white rounded-lg border border-gray-300 shadow-sm mb-4 flex">
       <!-- Add Todo Button -->
@@ -674,9 +942,6 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
             @click="openTodoDetail(todo)"
             class="flex-shrink-0 flex items-center bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 cursor-pointer hover:bg-gray-100 transition"
           >
-            <span class="text-gray-400 mr-2 cursor-grab">
-              <GripVertical class="w-4 h-4" />
-            </span>
             <span class="font-medium text-gray-800">{{ todo.title }}</span>
             <FileText v-if="todo.content || todo.hasAttachments" class="w-4 h-4 text-gray-400 ml-1" />
           </div>
@@ -731,11 +996,11 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
           v-model="searchQuery"
           type="text"
           placeholder="검색"
-          @keyup.enter="handleSearch"
+          @keyup.enter="handleSearch()"
           class="px-3 py-1.5 border border-gray-300 rounded-l-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-24"
         />
         <button
-          @click="handleSearch"
+          @click="handleSearch()"
           class="px-3 py-1.5 bg-gray-800 text-white rounded-r-lg hover:bg-gray-700 transition"
         >
           <Search class="w-4 h-4" />
@@ -746,14 +1011,23 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
     <!-- Duty Types & Buttons -->
     <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
       <div class="flex items-center gap-4">
-        <div v-for="dutyType in dutyTypes" :key="dutyType.name" class="flex items-center gap-1">
-          <span
-            class="w-4 h-4 rounded border-2 border-gray-200"
-            :style="{ backgroundColor: dutyType.color }"
-          ></span>
-          <span class="text-sm text-gray-600">{{ dutyType.name }}</span>
-          <span class="text-sm font-bold text-gray-800">{{ dutyType.cnt }}</span>
-        </div>
+        <template v-if="dutyTypes.length > 0">
+          <div v-for="dutyType in dutyTypes" :key="dutyType.name" class="flex items-center gap-1">
+            <span
+              class="w-4 h-4 rounded border-2 border-gray-200"
+              :style="{ backgroundColor: dutyType.color || '#6c757d' }"
+            ></span>
+            <span class="text-sm text-gray-600">{{ dutyType.name }}</span>
+            <span class="text-sm font-bold text-gray-800">{{ dutyType.cnt }}</span>
+          </div>
+        </template>
+        <span v-else-if="isLoadingDuties" class="text-sm text-gray-400">
+          <Loader2 class="w-4 h-4 animate-spin inline mr-1" />
+          로딩 중...
+        </span>
+        <span v-else class="text-sm text-gray-400">
+          근무 타입 정보 없음
+        </span>
       </div>
       <div class="flex gap-2">
         <button
@@ -848,14 +1122,27 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
               :key="schedule.id"
               class="text-xs truncate text-gray-700 bg-white/60 rounded px-1"
             >
+              <span v-if="schedule.isTagged" class="text-gray-400 mr-0.5">{{ schedule.visibility === 'PRIVATE' ? '🔒' : '' }}</span>
               {{ schedule.contentWithoutTime || schedule.content }}
               <span class="text-gray-400">{{ formatScheduleTime(schedule) }}</span>
+              <span v-if="schedule.isTagged" class="ml-1 text-[10px] bg-gray-200 text-gray-600 px-1 rounded-full whitespace-nowrap">by{{ schedule.owner }}</span>
             </div>
             <div
               v-if="(schedulesByDays[idx]?.length ?? 0) > 2"
               class="text-xs text-gray-400"
             >
               +{{ (schedulesByDays[idx]?.length ?? 0) - 2 }} more
+            </div>
+          </div>
+
+          <!-- D-Days on this date -->
+          <div v-if="day.isCurrentMonth && getDDaysForDay(day).length > 0" class="mt-1 space-y-0.5">
+            <div
+              v-for="dday in getDDaysForDay(day)"
+              :key="dday.id"
+              class="text-xs truncate text-purple-600 bg-purple-50 rounded px-1"
+            >
+              🎯 {{ dday.title }}
             </div>
           </div>
 
@@ -886,7 +1173,7 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
         >
           <div class="flex justify-between items-start mb-2">
             <span
-              class="text-lg font-bold"
+              class="text-sm font-bold"
               :class="dday.calc <= 0 ? 'text-gray-500' : 'text-blue-600'"
             >
               {{ dday.dDayText }}
@@ -963,10 +1250,11 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
       :todos="todos"
       :completed-todos="completedTodos"
       @close="isTodoOverviewModalOpen = false"
-      @show-detail="(todo: Todo) => { selectedTodo = todo; isTodoDetailModalOpen = true; isTodoOverviewModalOpen = false; }"
+      @show-detail="(todo: LocalTodo) => { selectedTodo = todo; isTodoDetailModalOpen = true; isTodoOverviewModalOpen = false; }"
       @complete="handleTodoComplete"
       @reopen="handleTodoReopen"
       @delete="handleTodoDelete"
+      @reorder="handleTodoPositionUpdate"
     />
 
     <DDayModal
@@ -983,7 +1271,7 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
       :page-info="searchPageInfo"
       @close="isSearchResultModalOpen = false"
       @go-to-date="handleSearchGoToDate"
-      @change-page="() => {}"
+      @change-page="handleSearchPageChange"
     />
 
     <OtherDutiesModal
@@ -993,6 +1281,8 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
       @close="isOtherDutiesModalOpen = false"
       @toggle="handleFriendToggle"
     />
+
+    </template>
 
     <!-- Year-Month Picker Modal -->
     <Teleport to="body">

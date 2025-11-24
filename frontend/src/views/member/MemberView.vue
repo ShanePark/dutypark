@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { memberApi, refreshTokenApi } from '@/api/member'
+import type { FriendDto, MemberDto, RefreshTokenDto, CalendarVisibility } from '@/types'
 import {
   User,
   Building2,
@@ -19,57 +22,58 @@ import {
   Check,
   X,
   ChevronRight,
+  Loader2,
 } from 'lucide-vue-next'
 
+const router = useRouter()
 const authStore = useAuthStore()
 
+// Loading states
+const loading = ref(false)
+const tokensLoading = ref(false)
+const savingVisibility = ref(false)
+const savingManager = ref(false)
+
 // Visibility settings
-type VisibilityType = 'PUBLIC' | 'FRIENDS' | 'PRIVATE'
-const calendarVisibility = ref<VisibilityType>('FRIENDS')
+const calendarVisibility = ref<CalendarVisibility>('FRIENDS')
 const showVisibilityModal = ref(false)
 
 const visibilityLabel = computed(() => {
-  const labels: Record<VisibilityType, string> = {
+  const labels: Record<CalendarVisibility, string> = {
     PUBLIC: '누구나',
     FRIENDS: '친구만',
+    FAMILY: '가족만',
     PRIVATE: '비공개',
   }
   return labels[calendarVisibility.value]
 })
 
-const visibilityOptions: { value: VisibilityType; label: string; color: string; description: string }[] = [
+const visibilityOptions: { value: CalendarVisibility; label: string; color: string; description: string }[] = [
   { value: 'PUBLIC', label: '누구나', color: 'bg-green-500', description: '모든 사용자가 내 시간표를 볼 수 있습니다' },
   { value: 'FRIENDS', label: '친구만', color: 'bg-yellow-500', description: '친구로 등록된 사용자만 볼 수 있습니다' },
+  { value: 'FAMILY', label: '가족만', color: 'bg-orange-500', description: '가족으로 등록된 사용자만 볼 수 있습니다' },
   { value: 'PRIVATE', label: '비공개', color: 'bg-red-500', description: '나만 볼 수 있습니다' },
 ]
 
-function setVisibility(value: VisibilityType) {
-  calendarVisibility.value = value
-  showVisibilityModal.value = false
-  // TODO: API call to update visibility
+async function setVisibility(value: CalendarVisibility) {
+  if (!authStore.user) return
+
+  savingVisibility.value = true
+  try {
+    await memberApi.updateVisibility(authStore.user.id, value)
+    calendarVisibility.value = value
+    showVisibilityModal.value = false
+  } catch (error) {
+    console.error('Failed to update visibility:', error)
+    alert('공개 설정 변경에 실패했습니다.')
+  } finally {
+    savingVisibility.value = false
+  }
 }
 
 // Manager delegation
-interface FamilyMember {
-  id: number
-  name: string
-}
-
-interface Manager {
-  id: number
-  name: string
-}
-
-const familyMembers = ref<FamilyMember[]>([
-  { id: 2, name: '이동현' },
-  { id: 3, name: '박루나' },
-  { id: 4, name: '김현주' },
-])
-
-const managers = ref<Manager[]>([
-  { id: 2, name: '이동현' },
-])
-
+const familyMembers = ref<FriendDto[]>([])
+const managers = ref<MemberDto[]>([])
 const selectedManagerToAdd = ref<string>('')
 
 const availableFamilyMembers = computed(() => {
@@ -78,66 +82,90 @@ const availableFamilyMembers = computed(() => {
   )
 })
 
-function assignManager() {
-  if (!selectedManagerToAdd.value) return
-  const memberId = parseInt(selectedManagerToAdd.value)
-  const member = familyMembers.value.find((m) => m.id === memberId)
-  if (member && !managers.value.some((m) => m.id === memberId)) {
-    managers.value.push({ id: member.id, name: member.name })
+async function fetchFamilyAndManagers() {
+  try {
+    const [familyResponse, managersResponse] = await Promise.all([
+      memberApi.getFamilyMembers(),
+      memberApi.getManagers(),
+    ])
+    familyMembers.value = familyResponse.data
+    managers.value = managersResponse.data
+  } catch (error) {
+    console.error('Failed to fetch family/managers:', error)
   }
-  selectedManagerToAdd.value = ''
-  // TODO: API call to assign manager
 }
 
-function unAssignManager(manager: Manager) {
-  if (confirm(`정말 ${manager.name} 님의 관리자 권한을 해제하시겠습니까?`)) {
-    managers.value = managers.value.filter((m) => m.id !== manager.id)
-    // TODO: API call to unassign manager
+async function assignManager() {
+  if (!selectedManagerToAdd.value) return
+
+  const memberId = parseInt(selectedManagerToAdd.value)
+  savingManager.value = true
+  try {
+    await memberApi.assignManager(memberId)
+    await fetchFamilyAndManagers()
+    selectedManagerToAdd.value = ''
+  } catch (error) {
+    console.error('Failed to assign manager:', error)
+    alert('관리자 추가에 실패했습니다.')
+  } finally {
+    savingManager.value = false
+  }
+}
+
+async function unAssignManager(manager: MemberDto) {
+  if (!confirm(`정말 ${manager.name} 님의 관리자 권한을 해제하시겠습니까?`)) return
+
+  try {
+    await memberApi.unassignManager(manager.id!)
+    await fetchFamilyAndManagers()
+  } catch (error) {
+    console.error('Failed to unassign manager:', error)
+    alert('관리자 권한 해제에 실패했습니다.')
   }
 }
 
 // Session management
-interface RefreshToken {
-  id: string
-  lastUsed: string
-  remoteAddr: string
-  device: string
-  browser: string
-  isCurrentLogin: boolean
+const tokens = ref<RefreshTokenDto[]>([])
+
+async function fetchTokens() {
+  tokensLoading.value = true
+  try {
+    const response = await refreshTokenApi.getRefreshTokens()
+    tokens.value = response.data
+  } catch (error) {
+    console.error('Failed to fetch tokens:', error)
+  } finally {
+    tokensLoading.value = false
+  }
 }
 
-const tokens = ref<RefreshToken[]>([
-  {
-    id: '1',
-    lastUsed: '방금 전',
-    remoteAddr: '192.168.1.100',
-    device: 'Desktop',
-    browser: 'Chrome',
-    isCurrentLogin: true,
-  },
-  {
-    id: '2',
-    lastUsed: '2시간 전',
-    remoteAddr: '192.168.1.101',
-    device: 'Mobile',
-    browser: 'Safari',
-    isCurrentLogin: false,
-  },
-  {
-    id: '3',
-    lastUsed: '1일 전',
-    remoteAddr: '10.0.0.50',
-    device: 'Tablet',
-    browser: 'Firefox',
-    isCurrentLogin: false,
-  },
-])
+async function deleteToken(tokenId: number) {
+  if (!confirm('정말 로그아웃 하시겠습니까? 해당 기기에서 로그아웃 됩니다.')) return
 
-function deleteToken(tokenId: string) {
-  if (confirm('정말 로그아웃 하시겠습니까? 해당 기기에서 로그아웃 됩니다.')) {
-    tokens.value = tokens.value.filter((t) => t.id !== tokenId)
-    // TODO: API call to delete token
+  try {
+    await refreshTokenApi.deleteRefreshToken(tokenId)
+    await fetchTokens()
+  } catch (error) {
+    console.error('Failed to delete token:', error)
+    alert('세션 종료에 실패했습니다.')
   }
+}
+
+function formatLastUsed(lastUsed: string | null): string {
+  if (!lastUsed) return '-'
+
+  const date = new Date(lastUsed)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+
+  if (diffMins < 1) return '방금 전'
+  if (diffMins < 60) return `${diffMins}분 전`
+  if (diffHours < 24) return `${diffHours}시간 전`
+  if (diffDays < 7) return `${diffDays}일 전`
+  return date.toLocaleDateString()
 }
 
 // SSO connections
@@ -148,9 +176,7 @@ interface SsoConnection {
   accountName?: string
 }
 
-const ssoConnections = ref<SsoConnection[]>([
-  { provider: 'Kakao', icon: '/img/kakao.png', connected: true, accountName: 'user@kakao.com' },
-])
+const ssoConnections = ref<SsoConnection[]>([])
 
 function connectSso(provider: string) {
   if (provider === 'Kakao') {
@@ -215,7 +241,6 @@ function changePassword() {
   // TODO: API call to change password
   alert('비밀번호가 변경되었습니다. 다시 로그인 해주세요.')
   showPasswordModal.value = false
-  // TODO: Redirect to logout
 }
 
 // Account deletion
@@ -225,260 +250,306 @@ function deleteAccount() {
 
 // Logout
 function logout() {
-  if (confirm('로그아웃 하시겠습니까?')) {
-    authStore.logout()
-    // TODO: Redirect to login page
-  }
+  authStore.logout()
+  router.push('/auth/login')
 }
 
-// Member info (from authStore or dummy)
+// Member info (from authStore)
 const memberInfo = computed(() => ({
-  name: authStore.user?.name || '박성진',
-  team: authStore.user?.team || '개발팀',
-  email: authStore.user?.email || 'user@example.com',
-  hasPassword: true,
-  kakaoId: 'connected',
+  name: authStore.user?.name || '-',
+  team: authStore.user?.team || '-',
+  email: authStore.user?.email || '-',
+  hasPassword: true, // Assume true for now, could be fetched from API
+  kakaoId: null as string | null, // Could be fetched from API
 }))
+
+// Initialize data
+onMounted(async () => {
+  loading.value = true
+  try {
+    // Fetch all data in parallel
+    await Promise.all([
+      fetchFamilyAndManagers(),
+      fetchTokens(),
+    ])
+
+    // Set initial visibility from user data if available
+    // For now, default to FRIENDS
+    calendarVisibility.value = 'FRIENDS'
+
+    // Set SSO connections based on user data
+    ssoConnections.value = [
+      {
+        provider: 'Kakao',
+        icon: '/img/kakao.png',
+        connected: !!memberInfo.value.kakaoId,
+        accountName: memberInfo.value.kakaoId || undefined,
+      },
+    ]
+  } catch (error) {
+    console.error('Failed to initialize:', error)
+  } finally {
+    loading.value = false
+  }
+})
 </script>
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-6">
     <h1 class="text-2xl font-bold text-gray-900 mb-6">내 정보</h1>
 
-    <!-- Profile Section -->
-    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
-      <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-        <User class="w-5 h-5 text-gray-500" />
-        기본 정보
-      </h2>
-      <div class="space-y-4">
-        <div class="flex items-center py-3 border-b border-gray-100">
-          <div class="w-24 text-sm font-medium text-gray-500 flex items-center gap-2">
-            <User class="w-4 h-4" />
-            이름
-          </div>
-          <div class="flex-1 text-gray-900">{{ memberInfo.name }}</div>
-        </div>
-        <div class="flex items-center py-3 border-b border-gray-100">
-          <div class="w-24 text-sm font-medium text-gray-500 flex items-center gap-2">
-            <Building2 class="w-4 h-4" />
-            소속
-          </div>
-          <div class="flex-1 text-gray-900">{{ memberInfo.team || '-' }}</div>
-        </div>
-        <div v-if="memberInfo.email" class="flex items-center py-3">
-          <div class="w-24 text-sm font-medium text-gray-500 flex items-center gap-2">
-            <Mail class="w-4 h-4" />
-            이메일
-          </div>
-          <div class="flex-1 text-gray-900">{{ memberInfo.email }}</div>
-        </div>
-      </div>
-    </section>
+    <!-- Loading State -->
+    <div v-if="loading" class="flex items-center justify-center py-20">
+      <Loader2 class="w-8 h-8 animate-spin text-blue-500" />
+    </div>
 
-    <!-- Privacy Settings Section -->
-    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
-      <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-        <Eye class="w-5 h-5 text-gray-500" />
-        시간표 공개 설정
-      </h2>
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-gray-700">현재 공개 대상</p>
-          <p class="text-sm text-gray-500 mt-1">내 시간표를 볼 수 있는 사람을 설정합니다</p>
+    <template v-else>
+      <!-- Profile Section -->
+      <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <User class="w-5 h-5 text-gray-500" />
+          기본 정보
+        </h2>
+        <div class="space-y-4">
+          <div class="flex items-center py-3 border-b border-gray-100">
+            <div class="w-24 text-sm font-medium text-gray-500 flex items-center gap-2">
+              <User class="w-4 h-4" />
+              이름
+            </div>
+            <div class="flex-1 text-gray-900">{{ memberInfo.name }}</div>
+          </div>
+          <div class="flex items-center py-3 border-b border-gray-100">
+            <div class="w-24 text-sm font-medium text-gray-500 flex items-center gap-2">
+              <Building2 class="w-4 h-4" />
+              소속
+            </div>
+            <div class="flex-1 text-gray-900">{{ memberInfo.team || '-' }}</div>
+          </div>
+          <div v-if="memberInfo.email" class="flex items-center py-3">
+            <div class="w-24 text-sm font-medium text-gray-500 flex items-center gap-2">
+              <Mail class="w-4 h-4" />
+              이메일
+            </div>
+            <div class="flex-1 text-gray-900">{{ memberInfo.email }}</div>
+          </div>
         </div>
-        <button
-          @click="showVisibilityModal = true"
-          class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition flex items-center gap-2"
-        >
-          <span
-            class="w-2 h-2 rounded-full"
-            :class="{
-              'bg-green-500': calendarVisibility === 'PUBLIC',
-              'bg-yellow-500': calendarVisibility === 'FRIENDS',
-              'bg-red-500': calendarVisibility === 'PRIVATE',
-            }"
-          ></span>
-          {{ visibilityLabel }}
-          <ChevronRight class="w-4 h-4" />
-        </button>
-      </div>
-    </section>
+      </section>
 
-    <!-- Manager Delegation Section -->
-    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
-      <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-        <Shield class="w-5 h-5 text-gray-500" />
-        관리 권한 위임
-      </h2>
-      <div class="space-y-4">
-        <div class="flex items-center gap-2 text-sm text-gray-500">
-          <Info class="w-4 h-4" />
-          <span>가족만 관리자로 추가할 수 있어요</span>
-        </div>
-
-        <!-- Add Manager -->
-        <div class="flex items-center gap-3">
-          <select
-            v-model="selectedManagerToAdd"
-            @change="assignManager"
-            class="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      <!-- Privacy Settings Section -->
+      <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <Eye class="w-5 h-5 text-gray-500" />
+          시간표 공개 설정
+        </h2>
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-700">현재 공개 대상</p>
+            <p class="text-sm text-gray-500 mt-1">내 시간표를 볼 수 있는 사람을 설정합니다</p>
+          </div>
+          <button
+            @click="showVisibilityModal = true"
+            class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition flex items-center gap-2"
           >
-            <option value="">관리자 추가</option>
-            <option v-for="member in availableFamilyMembers" :key="member.id" :value="member.id">
-              {{ member.name }}
-            </option>
-          </select>
+            <span
+              class="w-2 h-2 rounded-full"
+              :class="{
+                'bg-green-500': calendarVisibility === 'PUBLIC',
+                'bg-yellow-500': calendarVisibility === 'FRIENDS',
+                'bg-orange-500': calendarVisibility === 'FAMILY',
+                'bg-red-500': calendarVisibility === 'PRIVATE',
+              }"
+            ></span>
+            {{ visibilityLabel }}
+            <ChevronRight class="w-4 h-4" />
+          </button>
         </div>
+      </section>
 
-        <!-- Current Managers -->
-        <div v-if="managers.length > 0" class="flex flex-wrap gap-2">
-          <div
-            v-for="manager in managers"
-            :key="manager.id"
-            class="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg"
-          >
-            <span class="text-gray-700">{{ manager.name }}</span>
-            <button
-              @click="unAssignManager(manager)"
-              class="text-gray-400 hover:text-red-500 transition"
-            >
-              <Trash2 class="w-4 h-4" />
-            </button>
+      <!-- Manager Delegation Section -->
+      <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <Shield class="w-5 h-5 text-gray-500" />
+          관리 권한 위임
+        </h2>
+        <div class="space-y-4">
+          <div class="flex items-center gap-2 text-sm text-gray-500">
+            <Info class="w-4 h-4" />
+            <span>가족만 관리자로 추가할 수 있어요</span>
           </div>
-        </div>
-        <p v-else class="text-sm text-gray-400">등록된 관리자가 없습니다</p>
-      </div>
-    </section>
 
-    <!-- Session Management Section -->
-    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
-      <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-        <Smartphone class="w-5 h-5 text-gray-500" />
-        접속 세션 관리
-      </h2>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="border-b border-gray-200">
-              <th class="text-left py-3 px-2 font-medium text-gray-500">접속 시간</th>
-              <th class="text-left py-3 px-2 font-medium text-gray-500">IP</th>
-              <th class="text-left py-3 px-2 font-medium text-gray-500">기기</th>
-              <th class="text-left py-3 px-2 font-medium text-gray-500">브라우저</th>
-              <th class="text-center py-3 px-2 font-medium text-gray-500">관리</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="token in tokens" :key="token.id" class="border-b border-gray-100 hover:bg-gray-50">
-              <td class="py-3 px-2 text-gray-700">{{ token.lastUsed }}</td>
-              <td class="py-3 px-2 text-gray-700">{{ token.remoteAddr }}</td>
-              <td class="py-3 px-2">
-                <span class="flex items-center gap-1 text-gray-700">
-                  <Monitor v-if="token.device === 'Desktop'" class="w-4 h-4 text-gray-400" />
-                  <Smartphone v-else class="w-4 h-4 text-gray-400" />
-                  {{ token.device }}
-                </span>
-              </td>
-              <td class="py-3 px-2">
-                <span class="flex items-center gap-1 text-gray-700">
-                  <Globe class="w-4 h-4 text-gray-400" />
-                  {{ token.browser }}
-                </span>
-              </td>
-              <td class="py-3 px-2 text-center">
-                <button
-                  v-if="!token.isCurrentLogin"
-                  @click="deleteToken(token.id)"
-                  class="px-3 py-1 text-xs font-medium text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-full transition"
-                >
-                  접속 종료
-                </button>
-                <span
-                  v-else
-                  class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full"
-                >
-                  현재 접속
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- SSO Connections Section -->
-    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
-      <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-        <Link class="w-5 h-5 text-gray-500" />
-        소셜 계정 연동
-      </h2>
-      <div class="space-y-3">
-        <div
-          v-for="sso in ssoConnections"
-          :key="sso.provider"
-          class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-        >
+          <!-- Add Manager -->
           <div class="flex items-center gap-3">
-            <img :src="sso.icon" :alt="sso.provider" class="w-8 h-8 rounded" />
-            <div>
-              <p class="font-medium text-gray-900">{{ sso.provider }}</p>
-              <p v-if="sso.connected && sso.accountName" class="text-sm text-gray-500">
-                {{ sso.accountName }}
-              </p>
+            <select
+              v-model="selectedManagerToAdd"
+              @change="assignManager"
+              :disabled="savingManager || availableFamilyMembers.length === 0"
+              class="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+            >
+              <option value="">관리자 추가</option>
+              <option v-for="member in availableFamilyMembers" :key="member.id ?? 'none'" :value="member.id">
+                {{ member.name }}
+              </option>
+            </select>
+            <Loader2 v-if="savingManager" class="w-5 h-5 animate-spin text-blue-500" />
+          </div>
+
+          <!-- Current Managers -->
+          <div v-if="managers.length > 0" class="flex flex-wrap gap-2">
+            <div
+              v-for="manager in managers"
+              :key="manager.id ?? 'none'"
+              class="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg"
+            >
+              <span class="text-gray-700">{{ manager.name }}</span>
+              <button
+                @click="unAssignManager(manager)"
+                class="text-gray-400 hover:text-red-500 transition"
+              >
+                <Trash2 class="w-4 h-4" />
+              </button>
             </div>
           </div>
-          <div>
-            <span v-if="sso.connected" class="flex items-center gap-1 text-green-600 text-sm">
-              <Check class="w-4 h-4" />
-              연동중
-            </span>
-            <button
-              v-else
-              @click="connectSso(sso.provider)"
-              class="px-4 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition"
-            >
-              연동하기
-            </button>
+          <p v-else class="text-sm text-gray-400">등록된 관리자가 없습니다</p>
+        </div>
+      </section>
+
+      <!-- Session Management Section -->
+      <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <Smartphone class="w-5 h-5 text-gray-500" />
+          접속 세션 관리
+        </h2>
+        <div v-if="tokensLoading" class="flex items-center justify-center py-8">
+          <Loader2 class="w-6 h-6 animate-spin text-blue-500" />
+        </div>
+        <div v-else class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-gray-200">
+                <th class="text-left py-3 px-2 font-medium text-gray-500">접속 시간</th>
+                <th class="text-left py-3 px-2 font-medium text-gray-500">IP</th>
+                <th class="text-left py-3 px-2 font-medium text-gray-500">기기</th>
+                <th class="text-left py-3 px-2 font-medium text-gray-500">브라우저</th>
+                <th class="text-center py-3 px-2 font-medium text-gray-500">관리</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="token in tokens" :key="token.id" class="border-b border-gray-100 hover:bg-gray-50">
+                <td class="py-3 px-2 text-gray-700">{{ formatLastUsed(token.lastUsed) }}</td>
+                <td class="py-3 px-2 text-gray-700">{{ token.remoteAddr || '-' }}</td>
+                <td class="py-3 px-2">
+                  <span class="flex items-center gap-1 text-gray-700">
+                    <Monitor v-if="token.userAgent?.device === 'Other'" class="w-4 h-4 text-gray-400" />
+                    <Smartphone v-else class="w-4 h-4 text-gray-400" />
+                    {{ token.userAgent?.device || '-' }}
+                  </span>
+                </td>
+                <td class="py-3 px-2">
+                  <span class="flex items-center gap-1 text-gray-700">
+                    <Globe class="w-4 h-4 text-gray-400" />
+                    {{ token.userAgent?.browser || '-' }}
+                  </span>
+                </td>
+                <td class="py-3 px-2 text-center">
+                  <button
+                    v-if="!token.isCurrentLogin"
+                    @click="deleteToken(token.id)"
+                    class="px-3 py-1 text-xs font-medium text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-full transition"
+                  >
+                    접속 종료
+                  </button>
+                  <span
+                    v-else
+                    class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full"
+                  >
+                    현재 접속
+                  </span>
+                </td>
+              </tr>
+              <tr v-if="tokens.length === 0">
+                <td colspan="5" class="py-8 text-center text-gray-400">
+                  세션 정보가 없습니다
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SSO Connections Section -->
+      <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <Link class="w-5 h-5 text-gray-500" />
+          소셜 계정 연동
+        </h2>
+        <div class="space-y-3">
+          <div
+            v-for="sso in ssoConnections"
+            :key="sso.provider"
+            class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+          >
+            <div class="flex items-center gap-3">
+              <img :src="sso.icon" :alt="sso.provider" class="w-8 h-8 rounded" />
+              <div>
+                <p class="font-medium text-gray-900">{{ sso.provider }}</p>
+                <p v-if="sso.connected && sso.accountName" class="text-sm text-gray-500">
+                  {{ sso.accountName }}
+                </p>
+              </div>
+            </div>
+            <div>
+              <span v-if="sso.connected" class="flex items-center gap-1 text-green-600 text-sm">
+                <Check class="w-4 h-4" />
+                연동중
+              </span>
+              <button
+                v-else
+                @click="connectSso(sso.provider)"
+                class="px-4 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition"
+              >
+                연동하기
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- Account Management Section -->
-    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
-      <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-        <Lock class="w-5 h-5 text-gray-500" />
-        회원정보 관리
-      </h2>
-      <div class="flex flex-wrap gap-3">
-        <button
-          v-if="memberInfo.hasPassword"
-          @click="openPasswordModal"
-          class="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition flex items-center gap-2"
-        >
-          <Lock class="w-4 h-4" />
-          비밀번호 변경
-        </button>
-        <button
-          @click="deleteAccount"
-          class="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition flex items-center gap-2"
-        >
-          <UserX class="w-4 h-4" />
-          회원 탈퇴
-        </button>
-      </div>
-    </section>
+      <!-- Account Management Section -->
+      <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <Lock class="w-5 h-5 text-gray-500" />
+          회원정보 관리
+        </h2>
+        <div class="flex flex-wrap gap-3">
+          <button
+            v-if="memberInfo.hasPassword"
+            @click="openPasswordModal"
+            class="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition flex items-center gap-2"
+          >
+            <Lock class="w-4 h-4" />
+            비밀번호 변경
+          </button>
+          <button
+            @click="deleteAccount"
+            class="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition flex items-center gap-2"
+          >
+            <UserX class="w-4 h-4" />
+            회원 탈퇴
+          </button>
+        </div>
+      </section>
 
-    <!-- Logout Section -->
-    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <button
-        @click="logout"
-        class="w-full px-4 py-3 text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-lg font-medium transition flex items-center justify-center gap-2"
-      >
-        <LogOut class="w-5 h-5" />
-        로그아웃
-      </button>
-    </section>
+      <!-- Logout Section -->
+      <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <button
+          @click="logout"
+          class="w-full px-4 py-3 text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-lg font-medium transition flex items-center justify-center gap-2"
+        >
+          <LogOut class="w-5 h-5" />
+          로그아웃
+        </button>
+      </section>
+    </template>
 
     <!-- Visibility Modal -->
     <Teleport to="body">
@@ -502,7 +573,8 @@ const memberInfo = computed(() => ({
                 v-for="option in visibilityOptions"
                 :key="option.value"
                 @click="setVisibility(option.value)"
-                class="w-full p-4 rounded-lg border-2 transition text-left"
+                :disabled="savingVisibility"
+                class="w-full p-4 rounded-lg border-2 transition text-left disabled:opacity-50"
                 :class="
                   calendarVisibility === option.value
                     ? 'border-blue-500 bg-blue-50'
@@ -515,6 +587,10 @@ const memberInfo = computed(() => ({
                   <Check
                     v-if="calendarVisibility === option.value"
                     class="w-5 h-5 text-blue-500 ml-auto"
+                  />
+                  <Loader2
+                    v-if="savingVisibility && calendarVisibility !== option.value"
+                    class="w-5 h-5 animate-spin text-gray-400 ml-auto"
                   />
                 </div>
                 <p class="text-sm text-gray-500 mt-1 ml-6">{{ option.description }}</p>

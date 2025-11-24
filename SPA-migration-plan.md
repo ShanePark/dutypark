@@ -78,7 +78,8 @@
   - [ ] SPA 정적 서빙 및 `/api/**` 네임스페이스 분리, 라우팅 플래그로 신구 전환 가능하게.
 - [x] 프론트 실제 연동 (인증): ✅ 2024-11-24
   - [x] 퍼블리싱된 화면에 API 클라이언트 연결, 인터셉터로 토큰 슬라이딩/리프레시 처리.
-  - [ ] 도메인별 Strangler 순서대로 기능 연결(읽기 전용 → 투두 → 당직 → 일정 첨부/AI → 대시보드).
+  - [x] 도메인별 Strangler 순서대로 기능 연결: 대시보드, 근무 달력, Todo, 팀/회원 설정 ✅ 2024-11-24
+  - [ ] 일정 첨부파일 업로드/AI 파싱 연동
   - [ ] 연결 후 Playwright MCP로 기존 대비 UX/동작 재검증.
 - [ ] 정리: 전환된 경로의 Thymeleaf 뷰/불용 자산 제거, 문서/런북 업데이트.
 
@@ -295,9 +296,75 @@ data class TokenResponse(
 
 ---
 
-### 다음 단계: 도메인별 API 연동
+### 2024-11-24: 도메인별 API 연동 (Phase 3 진행 중)
 
-1. 대시보드 API 연동 (내 정보, 친구 목록)
-2. 근무 달력 API 연동
-3. Todo API 연동
-4. 팀/회원 설정 API 연동
+#### 1. 새로운 API 모듈 추가 (7개)
+
+| 파일 | 주요 기능 |
+|------|----------|
+| `api/dashboard.ts` | 대시보드 데이터 조회 |
+| `api/duty.ts` | 근무 조회/변경, 월별 데이터 |
+| `api/todo.ts` | 할일 CRUD, 정렬, 완료/재오픈 |
+| `api/schedule.ts` | 일정 CRUD, 검색, 첨부파일 연결 |
+| `api/member.ts` | 회원 정보, 친구, D-Day, 설정 |
+| `api/team.ts` | 팀 정보, 멤버 목록 |
+| `api/attachment.ts` | 파일 업로드 세션, 첨부파일 관리 |
+
+#### 2. 공통 컴포넌트 추가
+
+| 컴포넌트 | 설명 |
+|----------|------|
+| `components/common/FileUploader.vue` | Uppy 기반 파일 업로더 (드래그앤드롭, 진행률, 세션 관리) |
+
+#### 3. 뷰 API 연동 완료
+
+| 뷰 | 연동 내용 |
+|----|----------|
+| `DashboardView.vue` | 내 정보, 오늘 근무/일정, 친구 목록 API 연동 |
+| `DutyView.vue` | 월별 근무 달력, Todo 리스트, 일정 조회/생성/수정 연동 |
+| `MemberView.vue` | 회원 정보, 친구 관리, D-Day 설정 연동 |
+| `TeamView.vue` | 팀 정보, 멤버 목록 조회 연동 |
+
+#### 4. 모달 컴포넌트 API 연동
+
+| 컴포넌트 | 연동 내용 |
+|----------|----------|
+| `DayDetailModal.vue` | 일별 상세 조회 |
+| `TodoAddModal.vue` | 할일 생성 API |
+| `TodoDetailModal.vue` | 할일 상세/수정/삭제 API |
+| `TodoOverviewModal.vue` | 할일 전체 조회, 드래그 정렬 API |
+
+#### 5. 타입 정의 확장 (`types/index.ts`)
+
+- Dashboard 관련: `DashboardData`, `TodayInfo`, `FriendInfo`
+- Duty 관련: `DutyMonth`, `DutyDay`, `DutyType`
+- Todo 관련: `Todo`, `TodoCreate`, `TodoUpdate`
+- Schedule 관련: `Schedule`, `ScheduleCreate`, `ScheduleUpdate`
+- Member 관련: `MemberProfile`, `Friend`, `DDay`
+- Team 관련: `Team`, `TeamMember`
+- Attachment 관련: `UploadSession`, `Attachment`, `AttachmentInfo`
+
+#### 6. 백엔드 변경사항
+
+**LoginMember.kt**
+- `teamId` 필드 추가 (SPA에서 팀 정보 접근용)
+
+**JwtProvider.kt**
+- JWT Claims에 `teamId` 추가
+
+#### 7. 의존성 추가 (`package.json`)
+
+- `@uppy/core`, `@uppy/dashboard`, `@uppy/xhr-upload` - 파일 업로더
+- `sortablejs`, `@types/sortablejs` - 드래그앤드롭 정렬
+
+---
+
+### 다음 단계
+
+1. [x] 대시보드 API 연동 ✅
+2. [x] 근무 달력 API 연동 ✅
+3. [x] Todo API 연동 ✅
+4. [x] 팀/회원 설정 API 연동 ✅
+5. [ ] 일정 첨부파일 업로드/AI 파싱 연동
+6. [ ] Playwright MCP로 기존 대비 UX/동작 재검증
+7. [ ] 전환된 경로의 Thymeleaf 뷰 제거

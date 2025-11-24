@@ -1,13 +1,18 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { dashboardApi } from '@/api/dashboard'
+import type {
+  DashboardMyDetail,
+  DashboardFriendInfo,
+  DashboardScheduleDto,
+} from '@/types'
 import {
   Calendar,
   Briefcase,
   ClipboardList,
   Heart,
-  Plus,
   CheckCircle,
   Clock,
   Users,
@@ -31,7 +36,11 @@ const authStore = useAuthStore()
 // Loading states
 const myInfoLoading = ref(false)
 const friendInfoLoading = ref(false)
-const friendInfoInitialized = ref(true) // Set to true for dummy data display
+const friendInfoInitialized = ref(false)
+
+// Error states
+const myInfoError = ref<string | null>(null)
+const friendInfoError = ref<string | null>(null)
 
 // Today's date formatted
 const today = computed(() => {
@@ -43,91 +52,50 @@ const today = computed(() => {
   })
 })
 
-// Dummy data for my info section
-const myInfo = ref({
-  member: { id: 1, name: '박성철' },
-  duty: {
-    dutyType: '출근',
-    dutyColor: '#4CAF50',
-  },
-  schedules: [
-    { id: '1', content: '팀 미팅', startDateTime: '2025-11-24T10:00:00', totalDays: 1, daysFromStart: 1, isTagged: false, owner: '' },
-    { id: '2', content: '프로젝트 리뷰', startDateTime: '2025-11-24T14:30:00', totalDays: 1, daysFromStart: 1, isTagged: false, owner: '' },
-  ],
-})
+// API data
+const myInfo = ref<DashboardMyDetail | null>(null)
+const friendInfo = ref<DashboardFriendInfo | null>(null)
 
-// Friend request data
-const friendInfo = ref({
-  friends: [
-    {
-      member: { id: 2, name: '이동현' },
-      isFamily: true,
-      pinOrder: 1,
-      duty: { dutyType: '휴무', dutyColor: '#9E9E9E' },
-      schedules: [
-        { id: '3', content: '가족 여행', startDateTime: '2025-11-24T00:00:00', totalDays: 3, daysFromStart: 2, isTagged: false, owner: '' },
-      ],
-    },
-    {
-      member: { id: 3, name: '김현주' },
-      isFamily: false,
-      pinOrder: 2,
-      duty: { dutyType: 'OFF', dutyColor: '#FF9800' },
-      schedules: [],
-    },
-    {
-      member: { id: 4, name: '박재현' },
-      isFamily: false,
-      pinOrder: null,
-      duty: { dutyType: 'OFF', dutyColor: '#FF9800' },
-      schedules: [
-        { id: '4', content: '병원 예약', startDateTime: '2025-11-24T11:00:00', totalDays: 1, daysFromStart: 1, isTagged: false, owner: '' },
-      ],
-    },
-    {
-      member: { id: 5, name: '박루나' },
-      isFamily: true,
-      pinOrder: null,
-      duty: { dutyType: '가정보육', dutyColor: '#E91E63' },
-      schedules: [],
-    },
-    {
-      member: { id: 6, name: '이보연' },
-      isFamily: false,
-      pinOrder: null,
-      duty: null,
-      schedules: [],
-    },
-    {
-      member: { id: 7, name: '전소이' },
-      isFamily: false,
-      pinOrder: null,
-      duty: null,
-      schedules: [],
-    },
-  ],
-  pendingRequestsTo: [
-    { fromMember: { id: 10, name: '정유진' }, requestType: 'FRIEND_REQUEST' },
-    { fromMember: { id: 11, name: '최민수' }, requestType: 'FAMILY_REQUEST' },
-  ],
-  pendingRequestsFrom: [
-    { toMember: { id: 12, name: '한지민' }, requestType: 'FRIEND_REQUEST' },
-  ],
-})
+// Load my dashboard data
+async function loadMyDashboard() {
+  if (!authStore.isLoggedIn) return
+
+  myInfoLoading.value = true
+  myInfoError.value = null
+  try {
+    myInfo.value = await dashboardApi.getMyDashboard()
+  } catch (error) {
+    console.error('Failed to load my dashboard:', error)
+    myInfoError.value = '대시보드 정보를 불러오는데 실패했습니다.'
+  } finally {
+    myInfoLoading.value = false
+  }
+}
+
+// Load friends dashboard data
+async function loadFriendsDashboard() {
+  if (!authStore.isLoggedIn) return
+
+  friendInfoLoading.value = true
+  friendInfoError.value = null
+  try {
+    friendInfo.value = await dashboardApi.getFriendsDashboard()
+    friendInfoInitialized.value = true
+  } catch (error) {
+    console.error('Failed to load friends dashboard:', error)
+    friendInfoError.value = '친구 정보를 불러오는데 실패했습니다.'
+  } finally {
+    friendInfoLoading.value = false
+  }
+}
 
 // Search modal state
 const showSearchModal = ref(false)
 const searchKeyword = ref('')
-const searchResult = ref<Array<{ id: number; name: string; team: string }>>([
-  { id: 20, name: '김서연', team: '개발팀' },
-  { id: 21, name: '이준호', team: '디자인팀' },
-  { id: 22, name: '박지은', team: '마케팅팀' },
-  { id: 23, name: '최현우', team: '개발팀' },
-  { id: 24, name: '정수빈', team: '기획팀' },
-])
+const searchResult = ref<Array<{ id: number; name: string; team: string | null }>>([])
 const searchPage = ref(1)
-const searchTotalPage = ref(3)
-const searchTotalElements = ref(15)
+const searchTotalPage = ref(0)
+const searchTotalElements = ref(0)
 const searchPageSize = ref(5)
 
 // Dropdown state for friend management
@@ -147,6 +115,7 @@ const features = [
 
 // Computed: sorted friends (pinned first)
 const sortedFriends = computed(() => {
+  if (!friendInfo.value) return []
   return [...friendInfo.value.friends].sort((a, b) => {
     const aPinned = a.pinOrder ? 0 : 1
     const bPinned = b.pinOrder ? 0 : 1
@@ -162,12 +131,14 @@ const sortedFriends = computed(() => {
 
 // Computed: has pending requests
 const hasPendingRequests = computed(() => {
+  if (!friendInfo.value) return false
   return friendInfo.value.pendingRequestsTo.length > 0 || friendInfo.value.pendingRequestsFrom.length > 0
 })
 
 // Methods
-function moveTo(memberId?: number) {
-  const id = memberId || myInfo.value.member.id
+function moveTo(memberId?: number | null) {
+  const id = memberId || myInfo.value?.member.id
+  if (!id) return
   router.push(`/duty/${id}`)
 }
 
@@ -180,6 +151,18 @@ function printSchedule(schedule: { content: string; totalDays: number; daysFromS
     text = `${text} (by ${schedule.owner})`
   }
   return text
+}
+
+// Calculate if a color is light (for text contrast)
+function isLightColor(hexColor: string | null | undefined): boolean {
+  if (!hexColor) return false
+  const hex = hexColor.replace('#', '')
+  const r = parseInt(hex.substring(0, 2), 16)
+  const g = parseInt(hex.substring(2, 4), 16)
+  const b = parseInt(hex.substring(4, 6), 16)
+  // Using luminance formula
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return luminance > 0.6
 }
 
 function printScheduleTime(startDateTime: string) {
@@ -198,7 +181,8 @@ function printScheduleTime(startDateTime: string) {
 }
 
 // Pin/Unpin friend
-function pinFriend(member: { id: number; name: string }) {
+function pinFriend(member: { id: number | null; name: string }) {
+  if (!friendInfo.value || !member.id) return
   const friend = friendInfo.value.friends.find((f) => f.member.id === member.id)
   if (friend) {
     const maxOrder = Math.max(0, ...friendInfo.value.friends.map((f) => f.pinOrder || 0))
@@ -208,7 +192,8 @@ function pinFriend(member: { id: number; name: string }) {
   }
 }
 
-function unpinFriend(member: { id: number; name: string }) {
+function unpinFriend(member: { id: number | null; name: string }) {
+  if (!friendInfo.value || !member.id) return
   const friend = friendInfo.value.friends.find((f) => f.member.id === member.id)
   if (friend) {
     friend.pinOrder = null
@@ -218,7 +203,8 @@ function unpinFriend(member: { id: number; name: string }) {
 }
 
 // Friend request actions
-function acceptFriendRequest(req: { fromMember: { id: number; name: string } }) {
+function acceptFriendRequest(req: { fromMember: { id: number | null; name: string } }) {
+  if (!friendInfo.value || !req.fromMember.id) return
   friendInfo.value.pendingRequestsTo = friendInfo.value.pendingRequestsTo.filter(
     (r) => r.fromMember.id !== req.fromMember.id
   )
@@ -226,7 +212,8 @@ function acceptFriendRequest(req: { fromMember: { id: number; name: string } }) 
   console.log('Accept request from:', req.fromMember.id)
 }
 
-function rejectFriendRequest(req: { fromMember: { id: number; name: string } }) {
+function rejectFriendRequest(req: { fromMember: { id: number | null; name: string } }) {
+  if (!friendInfo.value || !req.fromMember.id) return
   friendInfo.value.pendingRequestsTo = friendInfo.value.pendingRequestsTo.filter(
     (r) => r.fromMember.id !== req.fromMember.id
   )
@@ -234,7 +221,8 @@ function rejectFriendRequest(req: { fromMember: { id: number; name: string } }) 
   console.log('Reject request from:', req.fromMember.id)
 }
 
-function cancelRequest(req: { toMember: { id: number; name: string } }) {
+function cancelRequest(req: { toMember: { id: number | null; name: string } }) {
+  if (!friendInfo.value || !req.toMember.id) return
   friendInfo.value.pendingRequestsFrom = friendInfo.value.pendingRequestsFrom.filter(
     (r) => r.toMember.id !== req.toMember.id
   )
@@ -243,7 +231,8 @@ function cancelRequest(req: { toMember: { id: number; name: string } }) {
 }
 
 // Friend management actions
-function addFamily(member: { id: number; name: string }) {
+function addFamily(member: { id: number | null; name: string }) {
+  if (!friendInfo.value || !member.id) return
   // Check if already sent family request
   const alreadySent = friendInfo.value.pendingRequestsFrom.some((r) => r.toMember.id === member.id)
   if (alreadySent) {
@@ -255,7 +244,8 @@ function addFamily(member: { id: number; name: string }) {
   closeDropdown()
 }
 
-function unfriend(member: { id: number; name: string }) {
+function unfriend(member: { id: number | null; name: string }) {
+  if (!friendInfo.value || !member.id) return
   if (confirm(`정말로 [${member.name}]님을 친구목록에서 삭제하시겠습니까?`)) {
     friendInfo.value.friends = friendInfo.value.friends.filter((f) => f.member.id !== member.id)
     // TODO: API call - DELETE /api/friends/{memberId}
@@ -330,7 +320,7 @@ function onDragOver(event: DragEvent) {
 
 function onDrop(event: DragEvent, targetFriendId: number) {
   event.preventDefault()
-  if (draggedFriend.value === null || draggedFriend.value === targetFriendId) {
+  if (!friendInfo.value || draggedFriend.value === null || draggedFriend.value === targetFriendId) {
     draggedFriend.value = null
     return
   }
@@ -359,10 +349,30 @@ function onDragEnd() {
   draggedFriend.value = null
 }
 
-// Close dropdown when clicking outside
-onMounted(() => {
+// Load dashboard data when logged in
+onMounted(async () => {
   document.addEventListener('click', closeDropdown)
+
+  if (authStore.isLoggedIn) {
+    // Load both APIs in parallel
+    await Promise.all([loadMyDashboard(), loadFriendsDashboard()])
+  }
 })
+
+// Watch for login state changes
+watch(
+  () => authStore.isLoggedIn,
+  async (isLoggedIn) => {
+    if (isLoggedIn) {
+      await Promise.all([loadMyDashboard(), loadFriendsDashboard()])
+    } else {
+      // Clear data on logout
+      myInfo.value = null
+      friendInfo.value = null
+      friendInfoInitialized.value = false
+    }
+  }
+)
 </script>
 
 <template>
@@ -375,10 +385,14 @@ onMounted(() => {
         @click="moveTo()"
       >
         <div class="bg-gray-600 text-center py-2 text-white font-bold uppercase">
-          {{ myInfo.member.name || '로딩중...' }}
+          {{ myInfo?.member.name || '로딩중...' }}
         </div>
         <div class="p-5">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Error state -->
+          <div v-if="myInfoError" class="text-center py-4 text-red-500">
+            {{ myInfoError }}
+          </div>
+          <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- Left column: Date & Duty -->
             <div class="space-y-3">
               <div class="flex items-center gap-2 text-gray-700">
@@ -392,12 +406,15 @@ onMounted(() => {
                 <template v-if="myInfoLoading">
                   <div class="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
                 </template>
-                <template v-else-if="myInfo.duty">
+                <template v-else-if="myInfo?.duty">
                   <span
-                    class="px-2 py-0.5 rounded text-white font-medium text-sm"
-                    :style="{ backgroundColor: myInfo.duty.dutyColor }"
+                    class="px-2 py-0.5 rounded font-medium text-sm"
+                    :style="{
+                      backgroundColor: myInfo.duty.dutyColor || '#666',
+                      color: isLightColor(myInfo.duty.dutyColor) ? '#1f2937' : '#ffffff'
+                    }"
                   >
-                    {{ myInfo.duty.dutyType }}
+                    {{ myInfo.duty.dutyType || '휴무' }}
                   </span>
                 </template>
                 <span v-else class="text-gray-400">없음</span>
@@ -417,14 +434,14 @@ onMounted(() => {
               </template>
               <ul v-else class="space-y-1">
                 <li
-                  v-for="schedule in myInfo.schedules"
+                  v-for="schedule in myInfo?.schedules || []"
                   :key="schedule.id"
                   class="py-1 border-b border-gray-100 last:border-0 text-gray-700"
                 >
                   <span>{{ printSchedule(schedule) }}</span>
                   <span class="text-gray-400 ml-2 text-sm">{{ printScheduleTime(schedule.startDateTime) }}</span>
                 </li>
-                <li v-if="myInfo.schedules.length === 0" class="text-gray-400 text-sm">
+                <li v-if="!myInfo?.schedules?.length" class="text-gray-400 text-sm">
                   오늘의 일정이 없습니다.
                 </li>
               </ul>
@@ -435,7 +452,7 @@ onMounted(() => {
 
       <!-- Friend Request Section -->
       <div
-        v-if="friendInfoInitialized && hasPendingRequests"
+        v-if="friendInfoInitialized && hasPendingRequests && friendInfo"
         class="bg-white rounded-xl shadow-sm border border-gray-200 mb-4 overflow-hidden"
       >
         <div class="bg-gray-600 text-center py-2 text-white font-bold uppercase">
@@ -458,13 +475,13 @@ onMounted(() => {
                 <div class="flex gap-2">
                   <button
                     class="px-3 py-1 text-sm border border-green-500 text-green-600 rounded hover:bg-green-50 transition"
-                    @click="acceptFriendRequest(req)"
+                    @click.stop="acceptFriendRequest(req)"
                   >
                     승인
                   </button>
                   <button
                     class="px-3 py-1 text-sm border border-red-500 text-red-600 rounded hover:bg-red-50 transition"
-                    @click="rejectFriendRequest(req)"
+                    @click.stop="rejectFriendRequest(req)"
                   >
                     거절
                   </button>
@@ -486,7 +503,7 @@ onMounted(() => {
                 </div>
                 <button
                   class="px-3 py-1 text-sm border border-yellow-500 text-yellow-700 rounded hover:bg-yellow-100 transition"
-                  @click="cancelRequest(req)"
+                  @click.stop="cancelRequest(req)"
                 >
                   요청 취소
                 </button>
@@ -502,7 +519,11 @@ onMounted(() => {
           친구 목록
         </div>
         <div class="p-5">
-          <template v-if="friendInfoLoading">
+          <!-- Error state -->
+          <div v-if="friendInfoError" class="text-center py-4 text-red-500">
+            {{ friendInfoError }}
+          </div>
+          <template v-else-if="friendInfoLoading">
             <div class="flex justify-center py-10">
               <div class="w-8 h-8 border-3 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
             </div>
@@ -511,7 +532,7 @@ onMounted(() => {
             <!-- Friend Cards -->
             <div
               v-for="friend in sortedFriends"
-              :key="friend.member.id"
+              :key="friend.member.id ?? 'unknown'"
               :draggable="friend.pinOrder !== null"
               class="p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition shadow-sm flex flex-col"
               :class="{
@@ -519,9 +540,9 @@ onMounted(() => {
                 'border-gray-200': !friend.pinOrder,
               }"
               @click="moveTo(friend.member.id)"
-              @dragstart="(e) => friend.pinOrder && onDragStart(e, friend.member.id)"
+              @dragstart="(e) => friend.pinOrder && friend.member.id && onDragStart(e, friend.member.id)"
               @dragover="onDragOver"
-              @drop="(e) => friend.pinOrder && onDrop(e, friend.member.id)"
+              @drop="(e) => friend.pinOrder && friend.member.id && onDrop(e, friend.member.id)"
               @dragend="onDragEnd"
             >
               <div class="flex-grow">
@@ -529,7 +550,7 @@ onMounted(() => {
                 <div class="flex justify-between items-center mb-2">
                   <div class="font-bold text-gray-800 flex items-center gap-1">
                     <User v-if="!friend.isFamily" class="w-4 h-4 text-gray-500" />
-                    <Heart v-if="friend.isFamily" class="w-4 h-4 text-red-400" fill="currentColor" />
+                    <Home v-if="friend.isFamily" class="w-4 h-4 text-amber-500" fill="currentColor" />
                     {{ friend.member.name }}
                   </div>
                   <div class="flex items-center gap-2" @click.stop>
@@ -552,7 +573,7 @@ onMounted(() => {
                     </button>
 
                     <!-- Dropdown toggle -->
-                    <div class="relative">
+                    <div v-if="friend.member.id" class="relative">
                       <button
                         class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 transition flex items-center gap-1"
                         @click="toggleDropdown(friend.member.id, $event)"
@@ -589,7 +610,7 @@ onMounted(() => {
                 <p class="text-sm text-gray-600 mb-2 flex items-center gap-1">
                   <Briefcase class="w-4 h-4 text-gray-400" />
                   근무:
-                  <span v-if="friend.duty" class="ml-1">{{ friend.duty.dutyType }}</span>
+                  <span v-if="friend.duty" class="ml-1">{{ friend.duty.dutyType || '휴무' }}</span>
                   <span v-else class="ml-1 text-gray-400">-</span>
                 </p>
 

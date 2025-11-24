@@ -6,11 +6,12 @@ import {
   Trash2,
   Check,
   RotateCcw,
-  Upload,
   FileText,
-  Image,
   Download,
 } from 'lucide-vue-next'
+import FileUploader from '@/components/common/FileUploader.vue'
+import { formatBytes } from '@/api/attachment'
+import type { NormalizedAttachment } from '@/types'
 
 interface Attachment {
   id: string
@@ -43,7 +44,13 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'update', data: { id: string; title: string; content: string }): void
+  (e: 'update', data: {
+    id: string
+    title: string
+    content: string
+    attachmentSessionId?: string
+    orderedAttachmentIds?: string[]
+  }): void
   (e: 'complete', id: string): void
   (e: 'reopen', id: string): void
   (e: 'delete', id: string): void
@@ -52,7 +59,29 @@ const emit = defineEmits<{
 const isEditMode = ref(false)
 const editTitle = ref('')
 const editContent = ref('')
-const editAttachments = ref<Attachment[]>([])
+const editAttachments = ref<NormalizedAttachment[]>([])
+const sessionId = ref<string | null>(null)
+const isUploading = ref(false)
+const fileUploaderRef = ref<InstanceType<typeof FileUploader> | null>(null)
+
+// Convert backend attachment to normalized format
+function toNormalizedAttachment(att: Attachment): NormalizedAttachment {
+  return {
+    id: att.id,
+    name: att.name || att.originalFilename,
+    originalFilename: att.originalFilename,
+    contentType: att.contentType,
+    size: att.size,
+    thumbnailUrl: att.thumbnailUrl || null,
+    downloadUrl: att.downloadUrl || `/api/attachments/${att.id}/download`,
+    isImage: att.isImage,
+    hasThumbnail: att.hasThumbnail,
+    orderIndex: 0,
+    createdAt: null,
+    createdBy: null,
+    previewUrl: null,
+  }
+}
 
 watch(
   () => props.isOpen,
@@ -61,7 +90,9 @@ watch(
       isEditMode.value = false
       editTitle.value = props.todo.title
       editContent.value = props.todo.content
-      editAttachments.value = [...props.todo.attachments]
+      editAttachments.value = props.todo.attachments.map(toNormalizedAttachment)
+      sessionId.value = null
+      isUploading.value = false
     }
   }
 )
@@ -73,43 +104,80 @@ function enterEditMode() {
   isEditMode.value = true
   editTitle.value = props.todo.title
   editContent.value = props.todo.content
-  editAttachments.value = [...props.todo.attachments]
+  editAttachments.value = props.todo.attachments.map(toNormalizedAttachment)
+  sessionId.value = null
+  isUploading.value = false
 }
 
 function cancelEdit() {
+  // Discard session if created during edit
+  if (fileUploaderRef.value) {
+    fileUploaderRef.value.discardSession()
+  }
   isEditMode.value = false
   if (props.todo) {
     editTitle.value = props.todo.title
     editContent.value = props.todo.content
-    editAttachments.value = [...props.todo.attachments]
+    editAttachments.value = props.todo.attachments.map(toNormalizedAttachment)
   }
+  sessionId.value = null
+  isUploading.value = false
 }
 
 function saveEdit() {
   if (!props.todo || !editTitle.value.trim()) return
+  if (isUploading.value) {
+    alert('파일 업로드가 진행 중입니다. 완료 후 다시 시도해주세요.')
+    return
+  }
+
+  const orderedAttachmentIds = editAttachments.value.map((a) => a.id)
+
   emit('update', {
     id: props.todo.id,
     title: editTitle.value.trim(),
     content: editContent.value.trim(),
+    attachmentSessionId: sessionId.value || undefined,
+    orderedAttachmentIds: orderedAttachmentIds.length > 0 ? orderedAttachmentIds : undefined,
   })
+
+  // Cleanup after save
+  if (fileUploaderRef.value) {
+    fileUploaderRef.value.cleanup()
+  }
   isEditMode.value = false
+  sessionId.value = null
+  isUploading.value = false
 }
 
 function handleClose() {
+  if (isEditMode.value && fileUploaderRef.value) {
+    fileUploaderRef.value.discardSession()
+  }
   isEditMode.value = false
+  sessionId.value = null
+  isUploading.value = false
   emit('close')
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 Bytes'
-  const k = 1024
-  const sizes = ['Bytes', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
+function onSessionCreated(sid: string) {
+  sessionId.value = sid
 }
 
-function removeAttachment(id: string) {
-  editAttachments.value = editAttachments.value.filter((a) => a.id !== id)
+function onAttachmentsUpdate(newAttachments: NormalizedAttachment[]) {
+  editAttachments.value = newAttachments
+}
+
+function onUploadStart() {
+  isUploading.value = true
+}
+
+function onUploadComplete() {
+  isUploading.value = false
+}
+
+function onUploadError(message: string) {
+  alert(message)
 }
 </script>
 
@@ -235,36 +303,18 @@ function removeAttachment(id: string) {
               <!-- Attachments (Edit Mode) -->
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">첨부파일</label>
-                <label
-                  class="flex items-center justify-center gap-2 w-full h-16 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition"
-                >
-                  <Upload class="w-5 h-5 text-gray-400" />
-                  <span class="text-sm text-gray-500">파일 추가</span>
-                  <input type="file" multiple class="hidden" />
-                </label>
-
-                <div v-if="editAttachments.length > 0" class="mt-2 space-y-2">
-                  <div
-                    v-for="attachment in editAttachments"
-                    :key="attachment.id"
-                    class="flex items-center gap-3 p-2 bg-gray-50 rounded-lg"
-                  >
-                    <div class="flex-shrink-0">
-                      <Image v-if="attachment.isImage" class="w-6 h-6 text-gray-400" />
-                      <FileText v-else class="w-6 h-6 text-gray-400" />
-                    </div>
-                    <div class="flex-1 min-w-0">
-                      <p class="text-sm truncate">{{ attachment.originalFilename }}</p>
-                      <p class="text-xs text-gray-500">{{ formatBytes(attachment.size) }}</p>
-                    </div>
-                    <button
-                      @click="removeAttachment(attachment.id)"
-                      class="p-1 text-gray-400 hover:text-red-600"
-                    >
-                      <Trash2 class="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
+                <FileUploader
+                  v-if="isEditMode"
+                  ref="fileUploaderRef"
+                  context-type="TODO"
+                  :target-context-id="todo?.id"
+                  :existing-attachments="editAttachments"
+                  @session-created="onSessionCreated"
+                  @update:attachments="onAttachmentsUpdate"
+                  @upload-start="onUploadStart"
+                  @upload-complete="onUploadComplete"
+                  @error="onUploadError"
+                />
               </div>
             </div>
           </template>
@@ -320,10 +370,10 @@ function removeAttachment(id: string) {
               </button>
               <button
                 @click="saveEdit"
-                :disabled="!editTitle.trim()"
+                :disabled="!editTitle.trim() || isUploading"
                 class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
               >
-                저장
+                {{ isUploading ? '업로드 중...' : '저장' }}
               </button>
             </div>
           </template>

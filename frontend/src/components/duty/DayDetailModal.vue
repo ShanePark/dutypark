@@ -42,7 +42,7 @@ interface Schedule {
 interface DutyType {
   id: number | null
   name: string
-  color: string
+  color: string | null
 }
 
 interface Props {
@@ -213,12 +213,12 @@ function toggleTagDropdown(scheduleId: string) {
                   'border-gray-200 hover:border-gray-400': duty?.dutyType !== dutyType.name,
                 }"
                 :style="{
-                  backgroundColor: duty?.dutyType === dutyType.name ? dutyType.color + '30' : undefined,
+                  backgroundColor: duty?.dutyType === dutyType.name && dutyType.color ? dutyType.color + '30' : undefined,
                 }"
               >
                 <span
                   class="inline-block w-4 h-4 rounded"
-                  :style="{ backgroundColor: dutyType.color }"
+                  :style="{ backgroundColor: dutyType.color || '#6c757d' }"
                 ></span>
                 {{ dutyType.name }}
               </button>

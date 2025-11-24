@@ -32,6 +32,7 @@ class JwtProvider(
             .subject(member.id.toString())
             .claim("email", member.email)
             .claim("name", member.name)
+            .claim("teamId", team?.id)
             .claim("teamName", team?.name)
             .signWith(key)
             .expiration(validity)
@@ -47,11 +48,13 @@ class JwtProvider(
             .payload
 
         val email = claims["email"] as String?
+        val teamId = (claims["teamId"] as? Number)?.toLong()
 
         val loginMember = LoginMember(
             id = claims.subject.toLong(),
             email = email,
             name = claims["name"] as String,
+            teamId = teamId,
             team = claims["teamName"] as String?,
             isAdmin = dutyparkProperties.adminEmails.contains(email),
         )

@@ -24,18 +24,24 @@ const isActive = (path: string) => {
 </script>
 
 <template>
-  <footer class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+  <footer
+    class="fixed bottom-0 left-0 right-0 border-t z-50"
+    style="background-color: #1f2937; border-color: #374151;"
+  >
     <nav class="max-w-lg mx-auto px-4">
       <ul class="flex justify-around py-2">
-        <li v-for="item in navItems" :key="item.path">
+        <li v-for="item in navItems" :key="item.path" class="flex-1">
           <router-link
             :to="item.path"
-            class="flex flex-col items-center px-3 py-1 text-xs"
-            :class="isActive(item.path) ? 'text-blue-600' : 'text-gray-500'"
+            class="flex flex-col items-center px-3 py-3 text-sm rounded-xl transition-colors"
+            :style="{
+              backgroundColor: isActive(item.path) ? '#4b5563' : 'transparent',
+              color: isActive(item.path) ? '#ffffff' : '#9ca3af'
+            }"
           >
             <svg
               v-if="item.icon === 'home'"
-              class="w-6 h-6 mb-1"
+              class="w-7 h-7 mb-1"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -49,7 +55,7 @@ const isActive = (path: string) => {
             </svg>
             <svg
               v-else-if="item.icon === 'calendar'"
-              class="w-6 h-6 mb-1"
+              class="w-7 h-7 mb-1"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -63,7 +69,7 @@ const isActive = (path: string) => {
             </svg>
             <svg
               v-else-if="item.icon === 'users'"
-              class="w-6 h-6 mb-1"
+              class="w-7 h-7 mb-1"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -77,7 +83,7 @@ const isActive = (path: string) => {
             </svg>
             <svg
               v-else-if="item.icon === 'settings'"
-              class="w-6 h-6 mb-1"
+              class="w-7 h-7 mb-1"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

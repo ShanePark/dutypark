@@ -1,42 +1,56 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { X, Upload, FileText, Image, Trash2 } from 'lucide-vue-next'
-
-interface Attachment {
-  id: string
-  name: string
-  size: number
-  isImage: boolean
-  previewUrl?: string
-  progress?: number
-}
+import { X } from 'lucide-vue-next'
+import FileUploader from '@/components/common/FileUploader.vue'
+import type { NormalizedAttachment } from '@/types'
 
 interface Props {
   isOpen: boolean
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'save', data: { title: string; content: string }): void
+  (e: 'save', data: {
+    title: string
+    content: string
+    attachmentSessionId?: string
+    orderedAttachmentIds?: string[]
+  }): void
 }>()
 
 const title = ref('')
 const content = ref('')
-const attachments = ref<Attachment[]>([])
+const attachments = ref<NormalizedAttachment[]>([])
+const sessionId = ref<string | null>(null)
+const isUploading = ref(false)
+const fileUploaderRef = ref<InstanceType<typeof FileUploader> | null>(null)
 
 watch(
-  () => title.value,
-  () => {
-    // Reset when modal opens fresh
+  () => props.isOpen,
+  (open) => {
+    if (open) {
+      // Reset form when opening
+      title.value = ''
+      content.value = ''
+      attachments.value = []
+      sessionId.value = null
+      isUploading.value = false
+    }
   }
 )
 
 function handleClose() {
+  // Discard session if exists
+  if (fileUploaderRef.value) {
+    fileUploaderRef.value.discardSession()
+  }
   title.value = ''
   content.value = ''
   attachments.value = []
+  sessionId.value = null
+  isUploading.value = false
   emit('close')
 }
 
@@ -44,23 +58,50 @@ function handleSave() {
   if (!title.value.trim()) {
     return
   }
+  if (isUploading.value) {
+    alert('파일 업로드가 진행 중입니다. 완료 후 다시 시도해주세요.')
+    return
+  }
+
+  const orderedAttachmentIds = attachments.value.map((a) => a.id)
+
   emit('save', {
     title: title.value.trim(),
     content: content.value.trim(),
+    attachmentSessionId: sessionId.value || undefined,
+    orderedAttachmentIds: orderedAttachmentIds.length > 0 ? orderedAttachmentIds : undefined,
   })
-  handleClose()
+
+  // Cleanup after save (don't discard session - it will be used by the todo)
+  if (fileUploaderRef.value) {
+    fileUploaderRef.value.cleanup()
+  }
+  title.value = ''
+  content.value = ''
+  attachments.value = []
+  sessionId.value = null
+  isUploading.value = false
+  emit('close')
 }
 
-function removeAttachment(id: string) {
-  attachments.value = attachments.value.filter((a) => a.id !== id)
+function onSessionCreated(sid: string) {
+  sessionId.value = sid
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 Bytes'
-  const k = 1024
-  const sizes = ['Bytes', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
+function onAttachmentsUpdate(newAttachments: NormalizedAttachment[]) {
+  attachments.value = newAttachments
+}
+
+function onUploadStart() {
+  isUploading.value = true
+}
+
+function onUploadComplete() {
+  isUploading.value = false
+}
+
+function onUploadError(message: string) {
+  alert(message)
 }
 </script>
 
@@ -108,46 +149,16 @@ function formatBytes(bytes: number): string {
             <!-- Attachment Upload -->
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">첨부파일</label>
-              <label
-                class="flex items-center justify-center gap-2 w-full h-20 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition"
-              >
-                <Upload class="w-5 h-5 text-gray-400" />
-                <span class="text-sm text-gray-500">파일을 드래그하거나 클릭하여 업로드</span>
-                <input type="file" multiple class="hidden" />
-              </label>
-            </div>
-
-            <!-- Uploaded Attachments -->
-            <div v-if="attachments.length > 0" class="space-y-2">
-              <div
-                v-for="attachment in attachments"
-                :key="attachment.id"
-                class="flex items-center gap-3 p-2 bg-gray-50 rounded-lg"
-              >
-                <div class="flex-shrink-0">
-                  <Image v-if="attachment.isImage" class="w-8 h-8 text-gray-400" />
-                  <FileText v-else class="w-8 h-8 text-gray-400" />
-                </div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-gray-700 truncate">{{ attachment.name }}</p>
-                  <p class="text-xs text-gray-500">{{ formatBytes(attachment.size) }}</p>
-                  <div
-                    v-if="attachment.progress !== undefined && attachment.progress < 100"
-                    class="w-full bg-gray-200 rounded-full h-1.5 mt-1"
-                  >
-                    <div
-                      class="bg-blue-600 h-1.5 rounded-full transition-all"
-                      :style="{ width: `${attachment.progress}%` }"
-                    ></div>
-                  </div>
-                </div>
-                <button
-                  @click="removeAttachment(attachment.id)"
-                  class="p-1 text-gray-400 hover:text-red-600 transition"
-                >
-                  <Trash2 class="w-4 h-4" />
-                </button>
-              </div>
+              <FileUploader
+                v-if="isOpen"
+                ref="fileUploaderRef"
+                context-type="TODO"
+                @session-created="onSessionCreated"
+                @update:attachments="onAttachmentsUpdate"
+                @upload-start="onUploadStart"
+                @upload-complete="onUploadComplete"
+                @error="onUploadError"
+              />
             </div>
           </div>
         </div>
@@ -162,10 +173,10 @@ function formatBytes(bytes: number): string {
           </button>
           <button
             @click="handleSave"
-            :disabled="!title.trim()"
+            :disabled="!title.trim() || isUploading"
             class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            저장
+            {{ isUploading ? '업로드 중...' : '저장' }}
           </button>
         </div>
       </div>
