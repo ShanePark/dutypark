@@ -50,7 +50,9 @@ class AuthController(
         if (loginMember.id != param.memberId && !loginMember.isAdmin) {
             throw AuthException("You are not authorized to change this password")
         }
-        authService.changePassword(param, loginMember.isAdmin)
+        // 자기 자신의 비밀번호 변경 시에는 admin이라도 현재 비밀번호 검증 필요
+        val byAdmin = loginMember.isAdmin && loginMember.id != param.memberId
+        authService.changePassword(param, byAdmin)
         return ResponseEntity.ok().body("Password Changed")
     }
 

@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { memberApi, refreshTokenApi } from '@/api/member'
+import { authApi } from '@/api/auth'
 import type { FriendDto, MemberDto, RefreshTokenDto, CalendarVisibility } from '@/types'
 import {
   User,
@@ -235,12 +236,29 @@ function validatePasswordForm(): boolean {
   return isValid
 }
 
-function changePassword() {
-  if (!validatePasswordForm()) return
+const changingPassword = ref(false)
 
-  // TODO: API call to change password
-  alert('비밀번호가 변경되었습니다. 다시 로그인 해주세요.')
-  showPasswordModal.value = false
+async function changePassword() {
+  if (!validatePasswordForm()) return
+  if (!authStore.user) return
+
+  changingPassword.value = true
+  try {
+    await authApi.changePassword({
+      memberId: authStore.user.id,
+      currentPassword: passwordForm.value.currentPassword,
+      newPassword: passwordForm.value.newPassword,
+    })
+    alert('비밀번호가 변경되었습니다. 다시 로그인 해주세요.')
+    showPasswordModal.value = false
+    authStore.logout()
+    router.push('/auth/login')
+  } catch (error: any) {
+    const message = error.response?.data?.message || '비밀번호 변경에 실패했습니다.'
+    alert(message)
+  } finally {
+    changingPassword.value = false
+  }
 }
 
 // Account deletion
@@ -667,15 +685,18 @@ onMounted(async () => {
           <div class="p-4 border-t border-gray-200 flex gap-2">
             <button
               @click="showPasswordModal = false"
-              class="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition"
+              :disabled="changingPassword"
+              class="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition disabled:opacity-50"
             >
               취소
             </button>
             <button
               @click="changePassword"
-              class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-medium transition"
+              :disabled="changingPassword"
+              class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-medium transition disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              변경
+              <Loader2 v-if="changingPassword" class="w-4 h-4 animate-spin" />
+              {{ changingPassword ? '변경 중...' : '변경' }}
             </button>
           </div>
         </div>
