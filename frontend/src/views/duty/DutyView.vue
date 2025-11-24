@@ -826,9 +826,7 @@ async function handleTodoUpdate(data: {
     console.error('Failed to update todo:', error)
     showError('할 일 수정에 실패했습니다.')
   }
-  // 수정 완료 후 목록으로 돌아가기
-  isTodoDetailModalOpen.value = false
-  isTodoOverviewModalOpen.value = true
+  // 수정 완료 후 상세 뷰 유지 (selectedTodo는 이미 업데이트됨)
 }
 
 async function handleTodoComplete(id: string) {
@@ -1355,19 +1353,12 @@ async function showExcelUploadModal() {
     </div>
 
     <!-- Month Control -->
-    <div class="flex items-center gap-1 mb-1">
-      <!-- Left: Today button -->
-      <div class="flex-shrink-0">
-        <button
-          @click="goToToday"
-          class="px-2 py-1 text-xs sm:text-sm bg-sky-200 hover:bg-sky-300 rounded-lg transition whitespace-nowrap"
-        >
-          Today
-        </button>
-      </div>
+    <div class="flex items-center justify-between gap-1 mb-1">
+      <!-- Left spacer for balance -->
+      <div class="w-20 sm:w-24 flex-shrink-0"></div>
 
       <!-- Center: Year-Month Navigation -->
-      <div class="flex items-center justify-center flex-1 min-w-0">
+      <div class="flex items-center justify-center">
         <button @click="prevMonth" class="p-1 sm:p-2 hover:bg-gray-100 rounded-full transition flex items-center justify-center flex-shrink-0">
           <ChevronLeft class="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
@@ -1383,20 +1374,22 @@ async function showExcelUploadModal() {
       </div>
 
       <!-- Right: Search -->
-      <div v-if="canSearch" class="flex items-stretch flex-shrink-0">
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="검색"
-          @keyup.enter="handleSearch()"
-          class="px-2 py-1.5 border border-gray-300 border-r-0 rounded-l-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-14 sm:w-20"
-        />
-        <button
-          @click="handleSearch()"
-          class="px-2 py-1.5 bg-gray-800 text-white rounded-r-lg hover:bg-gray-700 transition flex items-center justify-center"
-        >
-          <Search class="w-4 h-4" />
-        </button>
+      <div class="w-20 sm:w-24 flex-shrink-0 flex justify-end">
+        <div v-if="canSearch" class="flex items-stretch">
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="검색"
+            @keyup.enter="handleSearch()"
+            class="px-2 py-1.5 border border-gray-300 border-r-0 rounded-l-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-14 sm:w-20"
+          />
+          <button
+            @click="handleSearch()"
+            class="px-2 py-1.5 bg-gray-800 text-white rounded-r-lg hover:bg-gray-700 transition flex items-center justify-center"
+          >
+            <Search class="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
 

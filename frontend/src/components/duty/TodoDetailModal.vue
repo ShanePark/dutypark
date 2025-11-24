@@ -68,21 +68,40 @@ watch(
       isUploading.value = false
 
       // Load attachments from API
-      isLoadingAttachments.value = true
-      viewAttachments.value = []
-      try {
-        viewAttachments.value = await attachmentApi.listAttachments('TODO', props.todo.id)
-        editAttachments.value = [...viewAttachments.value]
-      } catch (error) {
-        console.error('Failed to load attachments:', error)
-        viewAttachments.value = []
-        editAttachments.value = []
-      } finally {
-        isLoadingAttachments.value = false
-      }
+      await loadAttachments()
     }
   }
 )
+
+// Watch for todo content changes (e.g., after update) to reload attachments
+watch(
+  () => props.todo,
+  async (newTodo, oldTodo) => {
+    if (props.isOpen && newTodo && oldTodo && newTodo.id === oldTodo.id) {
+      // Same todo was updated, reload attachments and reset edit mode
+      editTitle.value = newTodo.title
+      editContent.value = newTodo.content
+      await loadAttachments()
+    }
+  },
+  { deep: true }
+)
+
+async function loadAttachments() {
+  if (!props.todo) return
+  isLoadingAttachments.value = true
+  viewAttachments.value = []
+  try {
+    viewAttachments.value = await attachmentApi.listAttachments('TODO', props.todo.id)
+    editAttachments.value = [...viewAttachments.value]
+  } catch (error) {
+    console.error('Failed to load attachments:', error)
+    viewAttachments.value = []
+    editAttachments.value = []
+  } finally {
+    isLoadingAttachments.value = false
+  }
+}
 
 const isActive = computed(() => props.todo?.status === 'ACTIVE')
 
