@@ -1,28 +1,609 @@
 <script setup lang="ts">
+import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import {
+  User,
+  Building2,
+  Mail,
+  Eye,
+  Shield,
+  Smartphone,
+  Globe,
+  Monitor,
+  Link,
+  Lock,
+  UserX,
+  LogOut,
+  Trash2,
+  Info,
+  Check,
+  X,
+  ChevronRight,
+} from 'lucide-vue-next'
 
 const authStore = useAuthStore()
+
+// Visibility settings
+type VisibilityType = 'PUBLIC' | 'FRIENDS' | 'PRIVATE'
+const calendarVisibility = ref<VisibilityType>('FRIENDS')
+const showVisibilityModal = ref(false)
+
+const visibilityLabel = computed(() => {
+  const labels: Record<VisibilityType, string> = {
+    PUBLIC: '누구나',
+    FRIENDS: '친구만',
+    PRIVATE: '비공개',
+  }
+  return labels[calendarVisibility.value]
+})
+
+const visibilityOptions: { value: VisibilityType; label: string; color: string; description: string }[] = [
+  { value: 'PUBLIC', label: '누구나', color: 'bg-green-500', description: '모든 사용자가 내 시간표를 볼 수 있습니다' },
+  { value: 'FRIENDS', label: '친구만', color: 'bg-yellow-500', description: '친구로 등록된 사용자만 볼 수 있습니다' },
+  { value: 'PRIVATE', label: '비공개', color: 'bg-red-500', description: '나만 볼 수 있습니다' },
+]
+
+function setVisibility(value: VisibilityType) {
+  calendarVisibility.value = value
+  showVisibilityModal.value = false
+  // TODO: API call to update visibility
+}
+
+// Manager delegation
+interface FamilyMember {
+  id: number
+  name: string
+}
+
+interface Manager {
+  id: number
+  name: string
+}
+
+const familyMembers = ref<FamilyMember[]>([
+  { id: 2, name: '이동현' },
+  { id: 3, name: '박루나' },
+  { id: 4, name: '김현주' },
+])
+
+const managers = ref<Manager[]>([
+  { id: 2, name: '이동현' },
+])
+
+const selectedManagerToAdd = ref<string>('')
+
+const availableFamilyMembers = computed(() => {
+  return familyMembers.value.filter(
+    (member) => !managers.value.some((m) => m.id === member.id)
+  )
+})
+
+function assignManager() {
+  if (!selectedManagerToAdd.value) return
+  const memberId = parseInt(selectedManagerToAdd.value)
+  const member = familyMembers.value.find((m) => m.id === memberId)
+  if (member && !managers.value.some((m) => m.id === memberId)) {
+    managers.value.push({ id: member.id, name: member.name })
+  }
+  selectedManagerToAdd.value = ''
+  // TODO: API call to assign manager
+}
+
+function unAssignManager(manager: Manager) {
+  if (confirm(`정말 ${manager.name} 님의 관리자 권한을 해제하시겠습니까?`)) {
+    managers.value = managers.value.filter((m) => m.id !== manager.id)
+    // TODO: API call to unassign manager
+  }
+}
+
+// Session management
+interface RefreshToken {
+  id: string
+  lastUsed: string
+  remoteAddr: string
+  device: string
+  browser: string
+  isCurrentLogin: boolean
+}
+
+const tokens = ref<RefreshToken[]>([
+  {
+    id: '1',
+    lastUsed: '방금 전',
+    remoteAddr: '192.168.1.100',
+    device: 'Desktop',
+    browser: 'Chrome',
+    isCurrentLogin: true,
+  },
+  {
+    id: '2',
+    lastUsed: '2시간 전',
+    remoteAddr: '192.168.1.101',
+    device: 'Mobile',
+    browser: 'Safari',
+    isCurrentLogin: false,
+  },
+  {
+    id: '3',
+    lastUsed: '1일 전',
+    remoteAddr: '10.0.0.50',
+    device: 'Tablet',
+    browser: 'Firefox',
+    isCurrentLogin: false,
+  },
+])
+
+function deleteToken(tokenId: string) {
+  if (confirm('정말 로그아웃 하시겠습니까? 해당 기기에서 로그아웃 됩니다.')) {
+    tokens.value = tokens.value.filter((t) => t.id !== tokenId)
+    // TODO: API call to delete token
+  }
+}
+
+// SSO connections
+interface SsoConnection {
+  provider: string
+  icon: string
+  connected: boolean
+  accountName?: string
+}
+
+const ssoConnections = ref<SsoConnection[]>([
+  { provider: 'Kakao', icon: '/img/kakao.png', connected: true, accountName: 'user@kakao.com' },
+])
+
+function connectSso(provider: string) {
+  if (provider === 'Kakao') {
+    window.location.href = '/oauth2/authorization/kakao'
+    return
+  }
+}
+
+// Password change
+const showPasswordModal = ref(false)
+const passwordForm = ref({
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+})
+const passwordErrors = ref({
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+})
+
+function openPasswordModal() {
+  passwordForm.value = { currentPassword: '', newPassword: '', confirmPassword: '' }
+  passwordErrors.value = { currentPassword: '', newPassword: '', confirmPassword: '' }
+  showPasswordModal.value = true
+}
+
+function validatePasswordForm(): boolean {
+  passwordErrors.value = { currentPassword: '', newPassword: '', confirmPassword: '' }
+  let isValid = true
+
+  if (!passwordForm.value.currentPassword) {
+    passwordErrors.value.currentPassword = '현재 비밀번호를 입력해주세요'
+    isValid = false
+  }
+
+  if (!passwordForm.value.newPassword) {
+    passwordErrors.value.newPassword = '새 비밀번호를 입력해주세요'
+    isValid = false
+  } else if (passwordForm.value.newPassword.length < 8) {
+    passwordErrors.value.newPassword = '비밀번호는 8자 이상이어야 합니다'
+    isValid = false
+  } else if (passwordForm.value.currentPassword === passwordForm.value.newPassword) {
+    passwordErrors.value.newPassword = '현재 비밀번호와 동일합니다'
+    isValid = false
+  }
+
+  if (!passwordForm.value.confirmPassword) {
+    passwordErrors.value.confirmPassword = '비밀번호 확인을 입력해주세요'
+    isValid = false
+  } else if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
+    passwordErrors.value.confirmPassword = '비밀번호가 일치하지 않습니다'
+    isValid = false
+  }
+
+  return isValid
+}
+
+function changePassword() {
+  if (!validatePasswordForm()) return
+
+  // TODO: API call to change password
+  alert('비밀번호가 변경되었습니다. 다시 로그인 해주세요.')
+  showPasswordModal.value = false
+  // TODO: Redirect to logout
+}
+
+// Account deletion
+function deleteAccount() {
+  alert('회원 탈퇴는 관리자에게 문의해주세요.')
+}
+
+// Logout
+function logout() {
+  if (confirm('로그아웃 하시겠습니까?')) {
+    authStore.logout()
+    // TODO: Redirect to login page
+  }
+}
+
+// Member info (from authStore or dummy)
+const memberInfo = computed(() => ({
+  name: authStore.user?.name || '박성진',
+  team: authStore.user?.team || '개발팀',
+  email: authStore.user?.email || 'user@example.com',
+  hasPassword: true,
+  kakaoId: 'connected',
+}))
 </script>
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-6">
-    <h1 class="text-2xl font-bold text-gray-900 mb-6">설정</h1>
-    <div class="bg-white rounded-lg shadow p-6">
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">내 정보</h1>
+
+    <!-- Profile Section -->
+    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
+      <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <User class="w-5 h-5 text-gray-500" />
+        기본 정보
+      </h2>
       <div class="space-y-4">
-        <div>
-          <label class="text-sm font-medium text-gray-500">이름</label>
-          <p class="text-gray-900">{{ authStore.user?.name }}</p>
+        <div class="flex items-center py-3 border-b border-gray-100">
+          <div class="w-24 text-sm font-medium text-gray-500 flex items-center gap-2">
+            <User class="w-4 h-4" />
+            이름
+          </div>
+          <div class="flex-1 text-gray-900">{{ memberInfo.name }}</div>
         </div>
-        <div>
-          <label class="text-sm font-medium text-gray-500">이메일</label>
-          <p class="text-gray-900">{{ authStore.user?.email }}</p>
+        <div class="flex items-center py-3 border-b border-gray-100">
+          <div class="w-24 text-sm font-medium text-gray-500 flex items-center gap-2">
+            <Building2 class="w-4 h-4" />
+            소속
+          </div>
+          <div class="flex-1 text-gray-900">{{ memberInfo.team || '-' }}</div>
         </div>
-        <div>
-          <label class="text-sm font-medium text-gray-500">팀</label>
-          <p class="text-gray-900">{{ authStore.user?.team || '-' }}</p>
+        <div v-if="memberInfo.email" class="flex items-center py-3">
+          <div class="w-24 text-sm font-medium text-gray-500 flex items-center gap-2">
+            <Mail class="w-4 h-4" />
+            이메일
+          </div>
+          <div class="flex-1 text-gray-900">{{ memberInfo.email }}</div>
         </div>
       </div>
-      <p class="text-gray-600 mt-6">회원 설정 콘텐츠 (구현 예정)</p>
-    </div>
+    </section>
+
+    <!-- Privacy Settings Section -->
+    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
+      <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <Eye class="w-5 h-5 text-gray-500" />
+        시간표 공개 설정
+      </h2>
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-gray-700">현재 공개 대상</p>
+          <p class="text-sm text-gray-500 mt-1">내 시간표를 볼 수 있는 사람을 설정합니다</p>
+        </div>
+        <button
+          @click="showVisibilityModal = true"
+          class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition flex items-center gap-2"
+        >
+          <span
+            class="w-2 h-2 rounded-full"
+            :class="{
+              'bg-green-500': calendarVisibility === 'PUBLIC',
+              'bg-yellow-500': calendarVisibility === 'FRIENDS',
+              'bg-red-500': calendarVisibility === 'PRIVATE',
+            }"
+          ></span>
+          {{ visibilityLabel }}
+          <ChevronRight class="w-4 h-4" />
+        </button>
+      </div>
+    </section>
+
+    <!-- Manager Delegation Section -->
+    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
+      <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <Shield class="w-5 h-5 text-gray-500" />
+        관리 권한 위임
+      </h2>
+      <div class="space-y-4">
+        <div class="flex items-center gap-2 text-sm text-gray-500">
+          <Info class="w-4 h-4" />
+          <span>가족만 관리자로 추가할 수 있어요</span>
+        </div>
+
+        <!-- Add Manager -->
+        <div class="flex items-center gap-3">
+          <select
+            v-model="selectedManagerToAdd"
+            @change="assignManager"
+            class="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">관리자 추가</option>
+            <option v-for="member in availableFamilyMembers" :key="member.id" :value="member.id">
+              {{ member.name }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Current Managers -->
+        <div v-if="managers.length > 0" class="flex flex-wrap gap-2">
+          <div
+            v-for="manager in managers"
+            :key="manager.id"
+            class="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg"
+          >
+            <span class="text-gray-700">{{ manager.name }}</span>
+            <button
+              @click="unAssignManager(manager)"
+              class="text-gray-400 hover:text-red-500 transition"
+            >
+              <Trash2 class="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+        <p v-else class="text-sm text-gray-400">등록된 관리자가 없습니다</p>
+      </div>
+    </section>
+
+    <!-- Session Management Section -->
+    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
+      <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <Smartphone class="w-5 h-5 text-gray-500" />
+        접속 세션 관리
+      </h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-200">
+              <th class="text-left py-3 px-2 font-medium text-gray-500">접속 시간</th>
+              <th class="text-left py-3 px-2 font-medium text-gray-500">IP</th>
+              <th class="text-left py-3 px-2 font-medium text-gray-500">기기</th>
+              <th class="text-left py-3 px-2 font-medium text-gray-500">브라우저</th>
+              <th class="text-center py-3 px-2 font-medium text-gray-500">관리</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="token in tokens" :key="token.id" class="border-b border-gray-100 hover:bg-gray-50">
+              <td class="py-3 px-2 text-gray-700">{{ token.lastUsed }}</td>
+              <td class="py-3 px-2 text-gray-700">{{ token.remoteAddr }}</td>
+              <td class="py-3 px-2">
+                <span class="flex items-center gap-1 text-gray-700">
+                  <Monitor v-if="token.device === 'Desktop'" class="w-4 h-4 text-gray-400" />
+                  <Smartphone v-else class="w-4 h-4 text-gray-400" />
+                  {{ token.device }}
+                </span>
+              </td>
+              <td class="py-3 px-2">
+                <span class="flex items-center gap-1 text-gray-700">
+                  <Globe class="w-4 h-4 text-gray-400" />
+                  {{ token.browser }}
+                </span>
+              </td>
+              <td class="py-3 px-2 text-center">
+                <button
+                  v-if="!token.isCurrentLogin"
+                  @click="deleteToken(token.id)"
+                  class="px-3 py-1 text-xs font-medium text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-full transition"
+                >
+                  접속 종료
+                </button>
+                <span
+                  v-else
+                  class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full"
+                >
+                  현재 접속
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SSO Connections Section -->
+    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
+      <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <Link class="w-5 h-5 text-gray-500" />
+        소셜 계정 연동
+      </h2>
+      <div class="space-y-3">
+        <div
+          v-for="sso in ssoConnections"
+          :key="sso.provider"
+          class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+        >
+          <div class="flex items-center gap-3">
+            <img :src="sso.icon" :alt="sso.provider" class="w-8 h-8 rounded" />
+            <div>
+              <p class="font-medium text-gray-900">{{ sso.provider }}</p>
+              <p v-if="sso.connected && sso.accountName" class="text-sm text-gray-500">
+                {{ sso.accountName }}
+              </p>
+            </div>
+          </div>
+          <div>
+            <span v-if="sso.connected" class="flex items-center gap-1 text-green-600 text-sm">
+              <Check class="w-4 h-4" />
+              연동중
+            </span>
+            <button
+              v-else
+              @click="connectSso(sso.provider)"
+              class="px-4 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition"
+            >
+              연동하기
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Account Management Section -->
+    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
+      <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <Lock class="w-5 h-5 text-gray-500" />
+        회원정보 관리
+      </h2>
+      <div class="flex flex-wrap gap-3">
+        <button
+          v-if="memberInfo.hasPassword"
+          @click="openPasswordModal"
+          class="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition flex items-center gap-2"
+        >
+          <Lock class="w-4 h-4" />
+          비밀번호 변경
+        </button>
+        <button
+          @click="deleteAccount"
+          class="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition flex items-center gap-2"
+        >
+          <UserX class="w-4 h-4" />
+          회원 탈퇴
+        </button>
+      </div>
+    </section>
+
+    <!-- Logout Section -->
+    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <button
+        @click="logout"
+        class="w-full px-4 py-3 text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-lg font-medium transition flex items-center justify-center gap-2"
+      >
+        <LogOut class="w-5 h-5" />
+        로그아웃
+      </button>
+    </section>
+
+    <!-- Visibility Modal -->
+    <Teleport to="body">
+      <div
+        v-if="showVisibilityModal"
+        class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        @click.self="showVisibilityModal = false"
+      >
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full">
+          <div class="flex items-center justify-between p-4 border-b border-gray-200">
+            <h3 class="text-lg font-bold text-gray-900">시간표 공개 대상 설정</h3>
+            <button @click="showVisibilityModal = false" class="text-gray-400 hover:text-gray-600">
+              <X class="w-5 h-5" />
+            </button>
+          </div>
+          <div class="p-4">
+            <p class="text-gray-600 mb-4">내 달력을 공개할 범위를 설정하세요.</p>
+            <p class="text-sm text-gray-500 mb-4">선택시 변경사항이 즉시 저장됩니다.</p>
+            <div class="space-y-2">
+              <button
+                v-for="option in visibilityOptions"
+                :key="option.value"
+                @click="setVisibility(option.value)"
+                class="w-full p-4 rounded-lg border-2 transition text-left"
+                :class="
+                  calendarVisibility === option.value
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                "
+              >
+                <div class="flex items-center gap-3">
+                  <span class="w-3 h-3 rounded-full" :class="option.color"></span>
+                  <span class="font-medium text-gray-900">{{ option.label }}</span>
+                  <Check
+                    v-if="calendarVisibility === option.value"
+                    class="w-5 h-5 text-blue-500 ml-auto"
+                  />
+                </div>
+                <p class="text-sm text-gray-500 mt-1 ml-6">{{ option.description }}</p>
+              </button>
+            </div>
+          </div>
+          <div class="p-4 border-t border-gray-200">
+            <button
+              @click="showVisibilityModal = false"
+              class="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition"
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Password Change Modal -->
+    <Teleport to="body">
+      <div
+        v-if="showPasswordModal"
+        class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        @click.self="showPasswordModal = false"
+      >
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full">
+          <div class="flex items-center justify-between p-4 border-b border-gray-200">
+            <h3 class="text-lg font-bold text-gray-900">비밀번호 변경</h3>
+            <button @click="showPasswordModal = false" class="text-gray-400 hover:text-gray-600">
+              <X class="w-5 h-5" />
+            </button>
+          </div>
+          <div class="p-4 space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">현재 비밀번호</label>
+              <input
+                v-model="passwordForm.currentPassword"
+                type="password"
+                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                :class="passwordErrors.currentPassword ? 'border-red-500' : 'border-gray-300'"
+                placeholder="현재 비밀번호"
+              />
+              <p v-if="passwordErrors.currentPassword" class="text-sm text-red-500 mt-1">
+                {{ passwordErrors.currentPassword }}
+              </p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">새 비밀번호</label>
+              <input
+                v-model="passwordForm.newPassword"
+                type="password"
+                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                :class="passwordErrors.newPassword ? 'border-red-500' : 'border-gray-300'"
+                placeholder="새 비밀번호 (8자 이상)"
+              />
+              <p v-if="passwordErrors.newPassword" class="text-sm text-red-500 mt-1">
+                {{ passwordErrors.newPassword }}
+              </p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">새 비밀번호 확인</label>
+              <input
+                v-model="passwordForm.confirmPassword"
+                type="password"
+                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                :class="passwordErrors.confirmPassword ? 'border-red-500' : 'border-gray-300'"
+                placeholder="새 비밀번호 확인"
+              />
+              <p v-if="passwordErrors.confirmPassword" class="text-sm text-red-500 mt-1">
+                {{ passwordErrors.confirmPassword }}
+              </p>
+            </div>
+          </div>
+          <div class="p-4 border-t border-gray-200 flex gap-2">
+            <button
+              @click="showPasswordModal = false"
+              class="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition"
+            >
+              취소
+            </button>
+            <button
+              @click="changePassword"
+              class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-medium transition"
+            >
+              변경
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>

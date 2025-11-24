@@ -1,0 +1,390 @@
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import {
+  Users,
+  Building2,
+  Shield,
+  Clock,
+  Monitor,
+  Globe,
+  Key,
+  ChevronRight,
+  Search,
+  RefreshCw,
+  Settings,
+  Activity,
+} from 'lucide-vue-next'
+
+const router = useRouter()
+const authStore = useAuthStore()
+
+// Admin stats (dummy data)
+const stats = ref({
+  totalMembers: 42,
+  totalTeams: 8,
+  activeTokens: 156,
+  todayLogins: 23,
+})
+
+// Members with tokens (dummy data)
+const members = ref([
+  {
+    id: 1,
+    name: '박상현',
+    tokens: [
+      {
+        lastUsed: '2025-11-24T10:30:00',
+        remoteAddr: '192.168.1.100',
+        userAgent: { device: 'Desktop', browser: 'Chrome 120' },
+      },
+      {
+        lastUsed: '2025-11-23T18:45:00',
+        remoteAddr: '10.0.0.55',
+        userAgent: { device: 'Mobile', browser: 'Safari 17' },
+      },
+    ],
+  },
+  {
+    id: 2,
+    name: '이동현',
+    tokens: [
+      {
+        lastUsed: '2025-11-24T09:15:00',
+        remoteAddr: '172.16.0.10',
+        userAgent: { device: 'Desktop', browser: 'Firefox 121' },
+      },
+    ],
+  },
+  {
+    id: 3,
+    name: '김현주',
+    tokens: [
+      {
+        lastUsed: '2025-11-24T08:00:00',
+        remoteAddr: '192.168.2.50',
+        userAgent: { device: 'Mobile', browser: 'Chrome Mobile 120' },
+      },
+    ],
+  },
+  {
+    id: 4,
+    name: '박재현',
+    tokens: [],
+  },
+  {
+    id: 5,
+    name: '전소이',
+    tokens: [
+      {
+        lastUsed: '2025-11-22T14:20:00',
+        remoteAddr: '10.10.10.1',
+        userAgent: { device: 'Tablet', browser: 'Safari 17' },
+      },
+    ],
+  },
+])
+
+const searchKeyword = ref('')
+const isLoading = ref(false)
+
+const filteredMembers = computed(() => {
+  if (!searchKeyword.value) return members.value
+  const keyword = searchKeyword.value.toLowerCase()
+  return members.value.filter((member) => member.name.toLowerCase().includes(keyword))
+})
+
+// Format relative time
+function formatRelativeTime(dateString: string): string {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+
+  if (diffMins < 1) return '방금 전'
+  if (diffMins < 60) return `${diffMins}분 전`
+  if (diffHours < 24) return `${diffHours}시간 전`
+  if (diffDays < 7) return `${diffDays}일 전`
+  return date.toLocaleDateString('ko-KR')
+}
+
+// Change password modal state
+const showPasswordModal = ref(false)
+const selectedMember = ref<{ id: number; name: string } | null>(null)
+const newPassword = ref('')
+const confirmPassword = ref('')
+const passwordError = ref('')
+
+function openPasswordModal(member: { id: number; name: string }) {
+  selectedMember.value = member
+  newPassword.value = ''
+  confirmPassword.value = ''
+  passwordError.value = ''
+  showPasswordModal.value = true
+}
+
+function closePasswordModal() {
+  showPasswordModal.value = false
+  selectedMember.value = null
+}
+
+function handleChangePassword() {
+  if (!newPassword.value || !confirmPassword.value) {
+    passwordError.value = '비밀번호를 입력해주세요'
+    return
+  }
+  if (newPassword.value !== confirmPassword.value) {
+    passwordError.value = '비밀번호가 일치하지 않습니다'
+    return
+  }
+  // API call would go here
+  console.log('Password changed for member:', selectedMember.value?.id)
+  closePasswordModal()
+}
+
+function refreshData() {
+  isLoading.value = true
+  // Simulate API call
+  setTimeout(() => {
+    isLoading.value = false
+  }, 1000)
+}
+
+function navigateToTeams() {
+  router.push('/admin/teams')
+}
+
+onMounted(() => {
+  // Check admin access
+  if (!authStore.isAdmin) {
+    router.push('/')
+  }
+})
+</script>
+
+<template>
+  <div class="min-h-screen bg-gray-50">
+    <!-- Admin Header -->
+    <div class="bg-white border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center">
+              <Shield class="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 class="text-xl font-bold text-gray-900">관리자 대시보드</h1>
+              <p class="text-sm text-gray-500">시스템 관리 및 회원 관리</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              @click="refreshData"
+              class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
+              :class="{ 'animate-spin': isLoading }"
+            >
+              <RefreshCw class="w-5 h-5" />
+            </button>
+            <button class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition">
+              <Settings class="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <!-- Admin Navigation -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <router-link
+          to="/admin"
+          class="bg-gray-700 text-white rounded-xl p-4 hover:bg-gray-800 transition"
+        >
+          <Users class="w-6 h-6 mb-2 text-white" />
+          <span class="font-medium text-white">회원 관리</span>
+        </router-link>
+        <router-link
+          to="/admin/teams"
+          class="bg-white border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition"
+        >
+          <Building2 class="w-6 h-6 mb-2 text-gray-600" />
+          <span class="font-medium text-gray-700">팀 관리</span>
+        </router-link>
+        <div class="bg-white border border-gray-200 rounded-xl p-4 opacity-50 cursor-not-allowed">
+          <Activity class="w-6 h-6 mb-2 text-gray-400" />
+          <span class="font-medium text-gray-400">시스템 로그</span>
+        </div>
+        <div class="bg-white border border-gray-200 rounded-xl p-4 opacity-50 cursor-not-allowed">
+          <Settings class="w-6 h-6 mb-2 text-gray-400" />
+          <span class="font-medium text-gray-400">설정</span>
+        </div>
+      </div>
+
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
+          <div class="flex items-center justify-between mb-2">
+            <Users class="w-5 h-5 text-blue-500" />
+            <span class="text-xs text-gray-400">전체</span>
+          </div>
+          <p class="text-2xl font-bold text-gray-900">{{ stats.totalMembers }}</p>
+          <p class="text-sm text-gray-500">등록 회원</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
+          <div class="flex items-center justify-between mb-2">
+            <Building2 class="w-5 h-5 text-green-500" />
+            <span class="text-xs text-gray-400">활성</span>
+          </div>
+          <p class="text-2xl font-bold text-gray-900">{{ stats.totalTeams }}</p>
+          <p class="text-sm text-gray-500">등록 팀</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
+          <div class="flex items-center justify-between mb-2">
+            <Key class="w-5 h-5 text-yellow-500" />
+            <span class="text-xs text-gray-400">유효</span>
+          </div>
+          <p class="text-2xl font-bold text-gray-900">{{ stats.activeTokens }}</p>
+          <p class="text-sm text-gray-500">활성 토큰</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
+          <div class="flex items-center justify-between mb-2">
+            <Clock class="w-5 h-5 text-purple-500" />
+            <span class="text-xs text-gray-400">오늘</span>
+          </div>
+          <p class="text-2xl font-bold text-gray-900">{{ stats.todayLogins }}</p>
+          <p class="text-sm text-gray-500">접속 횟수</p>
+        </div>
+      </div>
+
+      <!-- Member Management Section -->
+      <div class="bg-white rounded-xl border border-gray-200">
+        <div class="p-4 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-900">회원 관리</h2>
+            <div class="relative">
+              <Search class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                v-model="searchKeyword"
+                type="text"
+                placeholder="회원 검색..."
+                class="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="divide-y divide-gray-100">
+          <div
+            v-for="member in filteredMembers"
+            :key="member.id"
+            class="p-4 hover:bg-gray-50 transition"
+          >
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                  <span class="text-sm font-medium text-gray-600">{{ member.name.charAt(0) }}</span>
+                </div>
+                <div>
+                  <p class="font-medium text-gray-900">{{ member.name }}</p>
+                  <p class="text-sm text-gray-500">
+                    {{ member.tokens.length > 0 ? `${member.tokens.length}개의 활성 세션` : '활성 세션 없음' }}
+                  </p>
+                </div>
+              </div>
+              <button
+                @click="openPasswordModal(member)"
+                class="px-3 py-1.5 text-sm font-medium text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition"
+              >
+                비밀번호 변경
+              </button>
+            </div>
+
+            <!-- Token List -->
+            <div v-if="member.tokens.length > 0" class="ml-13 space-y-2">
+              <div
+                v-for="(token, index) in member.tokens"
+                :key="index"
+                class="flex items-center gap-4 text-sm bg-gray-50 rounded-lg p-3"
+              >
+                <div class="flex items-center gap-2 text-gray-600 min-w-[100px]">
+                  <Clock class="w-4 h-4 text-gray-400" />
+                  {{ formatRelativeTime(token.lastUsed) }}
+                </div>
+                <div class="flex items-center gap-2 text-gray-600 min-w-[120px]">
+                  <Globe class="w-4 h-4 text-gray-400" />
+                  {{ token.remoteAddr }}
+                </div>
+                <div class="flex items-center gap-2 text-gray-600">
+                  <Monitor class="w-4 h-4 text-gray-400" />
+                  {{ token.userAgent?.device || '-' }}
+                </div>
+                <div class="text-gray-500">
+                  {{ token.userAgent?.browser || '-' }}
+                </div>
+              </div>
+            </div>
+            <div v-else class="ml-13 text-sm text-gray-400 py-2">
+              현재 활성화된 세션이 없습니다
+            </div>
+          </div>
+        </div>
+
+        <div v-if="filteredMembers.length === 0" class="p-8 text-center text-gray-500">
+          검색 결과가 없습니다
+        </div>
+      </div>
+    </div>
+
+    <!-- Password Change Modal -->
+    <div
+      v-if="showPasswordModal"
+      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      @click.self="closePasswordModal"
+    >
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+        <div class="p-4 border-b border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900">비밀번호 변경</h3>
+          <p class="text-sm text-gray-500">{{ selectedMember?.name }}님의 비밀번호를 변경합니다</p>
+        </div>
+        <div class="p-4 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">새 비밀번호</label>
+            <input
+              v-model="newPassword"
+              type="password"
+              class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+              placeholder="새 비밀번호 입력"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">비밀번호 확인</label>
+            <input
+              v-model="confirmPassword"
+              type="password"
+              class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+              placeholder="비밀번호 다시 입력"
+            />
+          </div>
+          <p v-if="passwordError" class="text-sm text-red-500">{{ passwordError }}</p>
+        </div>
+        <div class="p-4 border-t border-gray-200 flex justify-end gap-2">
+          <button
+            @click="closePasswordModal"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+          >
+            취소
+          </button>
+          <button
+            @click="handleChangePassword"
+            class="px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-lg transition"
+          >
+            변경
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>

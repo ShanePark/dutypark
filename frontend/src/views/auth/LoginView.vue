@@ -33,10 +33,6 @@ async function handleLogin() {
   }
 }
 
-function handleKakaoLogin() {
-  // Kakao OAuth will be implemented with backend integration
-  console.log('Kakao login clicked')
-}
 </script>
 
 <template>
@@ -116,17 +112,14 @@ function handleKakaoLogin() {
           </div>
 
           <!-- Kakao Login Button -->
-          <button
-            type="button"
-            @click="handleKakaoLogin"
-            class="w-full py-3 px-4 rounded-lg font-medium transition flex items-center justify-center gap-3"
+          <a
+            href="/oauth2/authorization/kakao"
+            class="w-full py-3 px-4 rounded-lg font-medium transition flex items-center justify-center gap-3 hover:opacity-90"
             style="background-color: #FEE500; color: #000000;"
           >
-            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 3C6.477 3 2 6.477 2 10.5c0 2.47 1.607 4.647 4.023 5.913-.176.66-.637 2.392-.729 2.763-.114.46.168.454.354.33.146-.097 2.322-1.574 3.26-2.21.352.046.712.07 1.082.07 5.523 0 10-2.977 10-6.866C20 6.477 17.523 3 12 3z"/>
-            </svg>
+            <img src="/img/kakao.png" alt="Kakao" class="w-6 h-6" />
             <span>카카오 로그인</span>
-          </button>
+          </a>
         </form>
       </div>
     </div>

@@ -44,6 +44,19 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/team/TeamManageView.vue'),
     meta: { requiresAuth: true },
   },
+  // Admin routes
+  {
+    path: '/admin',
+    name: 'admin',
+    component: () => import('@/views/admin/AdminDashboardView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
+    path: '/admin/teams',
+    name: 'admin-teams',
+    component: () => import('@/views/admin/AdminTeamListView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
   {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
@@ -72,6 +85,12 @@ router.beforeEach(async (to, _from, next) => {
 
   // Redirect logged-in users away from guest-only pages
   if (to.meta.guestOnly && authStore.isLoggedIn) {
+    next({ name: 'dashboard' })
+    return
+  }
+
+  // Check admin requirements
+  if (to.meta.requiresAdmin && !authStore.isAdmin) {
     next({ name: 'dashboard' })
     return
   }

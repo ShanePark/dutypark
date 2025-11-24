@@ -144,3 +144,36 @@ export interface ApiError {
   message: string
   code?: string
 }
+
+// Admin types
+export interface AdminMember {
+  id: number
+  name: string
+  tokens: RefreshToken[]
+}
+
+export interface RefreshToken {
+  memberId: number
+  lastUsed: string
+  remoteAddr: string
+  userAgent?: UserAgentInfo
+}
+
+export interface UserAgentInfo {
+  device: string
+  browser: string
+}
+
+export interface SimpleTeam {
+  id: number
+  name: string
+  description: string
+  memberCount: number
+}
+
+export interface TeamCreateDto {
+  name: string
+  description: string
+}
+
+export type TeamNameCheckResult = 'OK' | 'TOO_SHORT' | 'TOO_LONG' | 'DUPLICATED'
