@@ -18,6 +18,13 @@ export interface LoginResponse {
   member: LoginMember
 }
 
+export interface TokenResponse {
+  accessToken: string
+  refreshToken: string
+  expiresIn: number
+  tokenType: string
+}
+
 // Member types
 export interface Member {
   id: number

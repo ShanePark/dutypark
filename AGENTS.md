@@ -139,9 +139,26 @@ cd dutypark_dev_db && docker compose up -d               # standalone MySQL on :
 - Break each checklist item into 3–5 small todos; finish all todos for the current item before moving on.
 - Follow a strict **RED → GREEN → REFACTOR** cadence for every feature or fix; do not jump phases or mix steps.
 - After finishing a checklist item, **stop and present the code for review**—do not continue until the user approves.
-- **Never commit automatically**; wait for explicit instructions like “commit this.”
+- **Never commit automatically**; wait for explicit instructions like "commit this."
 - Only start the next checklist item after user confirms the previous one and requests the commit (if any).
 - **User Communication:** All agent responses to user messages must be written in Korean.
+
+### Parallel Execution & Sub-agent Strategy
+
+**Before starting any task, always evaluate opportunities for safe parallel execution.**
+
+- **Assess parallelizability first:** Identify independent subtasks that don't share mutable state or have dependencies on each other.
+- **Use sub-agents proactively:** When multiple independent operations exist (e.g., searching different modules, reading unrelated files, running independent tests), spawn sub-agents in parallel to maximize throughput.
+- **Safe parallel patterns:**
+  - Reading multiple unrelated files simultaneously
+  - Searching across different directories or modules
+  - Running independent validation checks
+  - Exploring codebase structure from multiple angles
+- **Avoid parallel execution when:**
+  - Tasks have sequential dependencies (e.g., create file → edit file)
+  - Operations modify shared state or the same files
+  - Order of execution affects correctness
+- **Always prefer parallel sub-agents** for exploration, research, and information gathering tasks—these are inherently safe to parallelize and significantly reduce response time.
 
 ---
 

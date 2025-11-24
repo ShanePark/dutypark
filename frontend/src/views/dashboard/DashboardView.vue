@@ -671,7 +671,7 @@ onMounted(() => {
         </p>
         <router-link
           to="/auth/login"
-          class="inline-block bg-gray-900 text-white px-8 py-3 rounded-lg font-medium hover:bg-gray-800 transition"
+          class="inline-block border-2 border-gray-800 text-gray-800 px-8 py-3 rounded-lg font-medium hover:bg-gray-800 hover:!text-white transition"
         >
           로그인 / 회원가입
         </router-link>
@@ -682,11 +682,11 @@ onMounted(() => {
         <h2 class="text-2xl font-bold text-gray-900 mb-6">주요 기능</h2>
         <ul class="space-y-4">
           <li v-for="feature in features" :key="feature.text" class="flex items-start gap-3">
-            <Calendar v-if="feature.icon === 'calendar'" class="w-6 h-6 text-blue-500 mt-0.5" />
-            <CheckCircle v-else-if="feature.icon === 'check'" class="w-6 h-6 text-green-500 mt-0.5" />
-            <Clock v-else-if="feature.icon === 'clock'" class="w-6 h-6 text-yellow-500 mt-0.5" />
-            <Users v-else-if="feature.icon === 'users'" class="w-6 h-6 text-purple-500 mt-0.5" />
-            <Heart v-else-if="feature.icon === 'heart'" class="w-6 h-6 text-red-500 mt-0.5" />
+            <Calendar v-if="feature.icon === 'calendar'" class="w-6 h-6 text-gray-500 mt-0.5" />
+            <CheckCircle v-else-if="feature.icon === 'check'" class="w-6 h-6 text-gray-500 mt-0.5" />
+            <Clock v-else-if="feature.icon === 'clock'" class="w-6 h-6 text-gray-500 mt-0.5" />
+            <Users v-else-if="feature.icon === 'users'" class="w-6 h-6 text-gray-500 mt-0.5" />
+            <Heart v-else-if="feature.icon === 'heart'" class="w-6 h-6 text-gray-500 mt-0.5" />
             <span class="text-gray-700">{{ feature.text }}</span>
           </li>
         </ul>

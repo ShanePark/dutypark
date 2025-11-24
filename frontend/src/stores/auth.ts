@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { LoginMember, LoginDto } from '@/types'
 import { authApi } from '@/api/auth'
+import { tokenManager } from '@/api/client'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<LoginMember | null>(null)
@@ -16,21 +17,29 @@ export const useAuthStore = defineStore('auth', () => {
 
     isLoading.value = true
     try {
-      user.value = await authApi.getStatus()
+      // 토큰이 있으면 사용자 정보 조회
+      if (authApi.hasTokens()) {
+        user.value = await authApi.getStatus()
+        // 토큰이 있지만 사용자 정보를 못 가져오면 토큰 클리어
+        if (!user.value) {
+          tokenManager.clearTokens()
+        }
+      }
     } catch {
       user.value = null
+      tokenManager.clearTokens()
     } finally {
       isLoading.value = false
       isInitialized.value = true
     }
   }
 
-  async function login(data: LoginDto): Promise<string> {
+  async function login(data: LoginDto): Promise<void> {
     isLoading.value = true
     try {
-      const redirectUrl = await authApi.login(data)
+      // Bearer 토큰 방식 로그인
+      await authApi.loginWithToken(data)
       user.value = await authApi.getStatus()
-      return redirectUrl
     } finally {
       isLoading.value = false
     }
@@ -45,6 +54,12 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = member
   }
 
+  function clearAuth() {
+    user.value = null
+    tokenManager.clearTokens()
+    isInitialized.value = false
+  }
+
   return {
     user,
     isLoading,
@@ -55,5 +70,6 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     logout,
     setUser,
+    clearAuth,
   }
 })

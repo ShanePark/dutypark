@@ -72,12 +72,12 @@
   - [x] 기존 CSS/Bootstrap/jQuery 의존 제거, Tailwind만 사용해 HTML/CSS 퍼블리싱.
   - [x] 더미 데이터로 PC/모바일 UI 구성, 현재 형태 최대한 유지.
   - [x] Playwright MCP로 기존 화면과 신규 퍼블리싱 화면을 동일 백엔드(`http://localhost:8080`, 계정 `test@duty.park / 1234`)에 붙여 시각/동작 비교.
-- [ ] 백엔드 SPA 동시 지원:
-  - [ ] Authorization 헤더 Bearer 지원 추가(쿠키 방식 유지).
-  - [ ] CORS/CSRF 재구성(쿠키/헤더 병행), Refresh API 정비.
+- [x] 백엔드 SPA 동시 지원: ✅ 2024-11-24
+  - [x] Authorization 헤더 Bearer 지원 추가(쿠키 방식 유지).
+  - [x] CORS/CSRF 재구성(쿠키/헤더 병행), Refresh API 정비.
   - [ ] SPA 정적 서빙 및 `/api/**` 네임스페이스 분리, 라우팅 플래그로 신구 전환 가능하게.
-- [ ] 프론트 실제 연동:
-  - [ ] 퍼블리싱된 화면에 API 클라이언트 연결, 인터셉터로 토큰 슬라이딩/리프레시 처리.
+- [x] 프론트 실제 연동 (인증): ✅ 2024-11-24
+  - [x] 퍼블리싱된 화면에 API 클라이언트 연결, 인터셉터로 토큰 슬라이딩/리프레시 처리.
   - [ ] 도메인별 Strangler 순서대로 기능 연결(읽기 전용 → 투두 → 당직 → 일정 첨부/AI → 대시보드).
   - [ ] 연결 후 Playwright MCP로 기존 대비 UX/동작 재검증.
 - [ ] 정리: 전환된 경로의 Thymeleaf 뷰/불용 자산 제거, 문서/런북 업데이트.
@@ -237,9 +237,67 @@ frontend/src/views/
 
 ---
 
-### 다음 단계: 백엔드 SPA 동시 지원
+### 2024-11-24: 백엔드 SPA 동시 지원 및 인증 연동 완료
 
-1. Authorization 헤더 Bearer 지원 추가
-2. CORS/CSRF 재구성
-3. Refresh API 정비
-4. SPA 정적 서빙 설정
+#### 1. 백엔드 변경사항
+
+**JwtAuthFilter.kt**
+- Authorization Bearer 헤더 지원 추가
+- 헤더 우선 → 쿠키 폴백 순서로 토큰 검사
+- `extractBearerToken()` 메서드 추가
+
+**SecurityConfig.kt**
+- CORS 설정 추가 (`/api/**` 경로)
+- `dutypark.cors.allowed-origins` 환경변수로 Origin 설정 가능 (기본: `http://localhost:3000`)
+- `corsConfigurationSource()` Bean 추가
+
+**AuthController.kt - 새 API**
+- `POST /api/auth/token`: Bearer 토큰 로그인 (JSON body로 토큰 반환)
+- `POST /api/auth/refresh`: Refresh token으로 새 Access token 발급
+
+**AuthService.kt**
+- `getTokenResponse()`: 로그인 후 TokenResponse 반환
+- `refreshAccessToken()`: refresh token으로 access token 갱신
+
+**TokenResponse.kt (신규)**
+```kotlin
+data class TokenResponse(
+    val accessToken: String,
+    val refreshToken: String,
+    val expiresIn: Long,
+    val tokenType: String = "Bearer"
+)
+```
+
+#### 2. 프론트엔드 변경사항
+
+**api/client.ts**
+- `tokenManager`: localStorage 기반 토큰 관리
+- Request interceptor: Authorization Bearer 헤더 자동 추가
+- Response interceptor: 401 시 자동 토큰 갱신, 실패 시 로그인 페이지 리다이렉트
+
+**api/auth.ts**
+- `loginWithToken()`: Bearer 토큰 방식 로그인
+- `refresh()`: 토큰 갱신
+- `hasTokens()`: 토큰 존재 여부 확인
+
+**stores/auth.ts**
+- Bearer 토큰 방식 로그인으로 변경
+- `clearAuth()` 메서드 추가
+
+**types/index.ts**
+- `TokenResponse` 인터페이스 추가
+
+#### 3. 테스트 결과
+- Playwright MCP로 `http://localhost:3000/auth/login` 접속
+- 테스트 계정 (`test@duty.park / 1234`)으로 로그인 성공
+- 대시보드 정상 표시 확인
+
+---
+
+### 다음 단계: 도메인별 API 연동
+
+1. 대시보드 API 연동 (내 정보, 친구 목록)
+2. 근무 달력 API 연동
+3. Todo API 연동
+4. 팀/회원 설정 API 연동

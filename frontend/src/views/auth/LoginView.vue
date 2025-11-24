@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { AxiosError } from 'axios'
 
 const router = useRouter()
 const route = useRoute()
@@ -27,7 +28,11 @@ async function handleLogin() {
     const redirect = (route.query.redirect as string) || '/'
     router.push(redirect)
   } catch (e: unknown) {
-    error.value = '로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.'
+    if (e instanceof AxiosError && e.response?.data?.error) {
+      error.value = e.response.data.error
+    } else {
+      error.value = '로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.'
+    }
   } finally {
     isLoading.value = false
   }
@@ -52,8 +57,7 @@ async function handleLogin() {
             <input
               id="email"
               v-model="email"
-              type="email"
-              required
+              type="text"
               autocomplete="email"
               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               placeholder="이메일 주소"

@@ -9,6 +9,7 @@ import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.PasswordChangeDto
+import com.tistory.shanepark.dutypark.security.domain.dto.TokenResponse
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus
 import jakarta.servlet.http.Cookie
@@ -166,6 +167,59 @@ class AuthService(
         if (!memberSsoRegister.isValid()) {
             throw IllegalArgumentException("만료된 요청 입니다.")
         }
+    }
+
+    fun getTokenResponse(login: LoginDto, req: HttpServletRequest): TokenResponse {
+        val member = memberRepository.findByEmail(login.email).orElseThrow {
+            log.info("Login failed. email not exist:${login.email}")
+            AuthException("존재하지 않는 계정입니다.")
+        }
+
+        if (!passwordEncoder.matches(login.password, member.password)) {
+            log.info("Login failed. password not match:${login.email}")
+            throw AuthException("비밀번호가 일치하지 않습니다.")
+        }
+
+        val jwt = jwtProvider.createToken(member)
+        val refreshToken = refreshTokenService.createRefreshToken(
+            memberId = member.id!!,
+            remoteAddr = req.remoteAddr,
+            userAgent = req.getHeader(HttpHeaders.USER_AGENT)
+        )
+
+        log.info("Login Success (Bearer): ${member.name}")
+
+        return TokenResponse(
+            accessToken = jwt,
+            refreshToken = refreshToken.token,
+            expiresIn = jwtConfig.tokenValidityInSeconds
+        )
+    }
+
+    fun refreshAccessToken(refreshTokenValue: String, req: HttpServletRequest): TokenResponse {
+        val refreshToken = refreshTokenService.findByToken(refreshTokenValue)
+            ?: throw AuthException("Invalid refresh token")
+
+        if (!refreshToken.isValid()) {
+            throw AuthException("Refresh token expired")
+        }
+
+        val member = refreshToken.member
+        val newJwt = jwtProvider.createToken(member)
+
+        refreshToken.slideValidUntil(
+            req.remoteAddr,
+            req.getHeader(HttpHeaders.USER_AGENT),
+            jwtConfig.refreshTokenValidityInDays
+        )
+
+        log.info("Token refresh succeed (Bearer). member:${member.email}")
+
+        return TokenResponse(
+            accessToken = newJwt,
+            refreshToken = refreshToken.token,
+            expiresIn = jwtConfig.tokenValidityInSeconds
+        )
     }
 
 }

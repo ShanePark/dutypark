@@ -37,9 +37,19 @@ class JwtAuthFilter(
         var jwt = ""
         var status = NOT_EXIST
         val refreshToken = findCookie(request, RefreshToken.cookieName)
-        findCookie(request, jwtConfig.cookieName)?.let {
+
+        // 1. Authorization Bearer 헤더 우선 검사
+        extractBearerToken(request)?.let {
             status = authService.validateToken(it)
             jwt = it
+        }
+
+        // 2. 헤더에 없으면 쿠키에서 검사
+        if (status != VALID) {
+            findCookie(request, jwtConfig.cookieName)?.let {
+                status = authService.validateToken(it)
+                jwt = it
+            }
         }
 
         if (refreshToken != null && status != VALID) {
@@ -109,6 +119,17 @@ class JwtAuthFilter(
             }
         }
         return null
+    }
+
+    private fun extractBearerToken(request: HttpServletRequest): String? {
+        val authHeader = request.getHeader(HttpHeaders.AUTHORIZATION) ?: return null
+        return if (authHeader.startsWith(BEARER_PREFIX, ignoreCase = true)) {
+            authHeader.substring(BEARER_PREFIX.length).trim()
+        } else null
+    }
+
+    companion object {
+        private const val BEARER_PREFIX = "Bearer "
     }
 }
 
