@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import {
+  Calendar,
+  Briefcase,
+  ClipboardList,
+  Heart,
+  Plus,
+  CheckCircle,
+  Clock,
+  Users,
+} from 'lucide-vue-next'
 
 const authStore = useAuthStore()
 
@@ -44,25 +54,19 @@ const features = [
         <!-- Today Info -->
         <div class="space-y-3">
           <div class="flex items-center gap-2 text-gray-700">
-            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
+            <Calendar class="w-5 h-5 text-gray-500" />
             <span class="font-medium">{{ todayInfo.date }}</span>
           </div>
 
           <div class="flex items-center gap-2">
-            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
+            <Briefcase class="w-5 h-5 text-gray-500" />
             <span class="text-gray-600">근무:</span>
             <span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded font-medium">{{ todayInfo.duty }}</span>
           </div>
 
           <div>
             <div class="flex items-center gap-2 mb-2">
-              <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
+              <ClipboardList class="w-5 h-5 text-gray-500" />
               <span class="text-gray-600">오늘 일정</span>
             </div>
             <ul class="ml-7 space-y-1">
@@ -88,26 +92,20 @@ const features = [
           >
             <div class="flex items-center justify-between mb-2">
               <span class="font-medium text-gray-900">
-                <svg v-if="friend.isFamily" class="w-4 h-4 inline text-red-400 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                </svg>
+                <Heart v-if="friend.isFamily" class="w-4 h-4 inline text-red-400 mr-1" fill="currentColor" />
                 {{ friend.name }}
               </span>
               <button class="text-xs text-gray-400 hover:text-gray-600">관리</button>
             </div>
             <p class="text-sm text-gray-600">
-              <svg class="w-4 h-4 inline text-gray-400 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
+              <Briefcase class="w-4 h-4 inline text-gray-400 mr-1" />
               근무: {{ friend.duty }}
             </p>
           </div>
 
           <!-- Add Friend Card -->
           <div class="bg-gray-50 rounded-lg p-4 border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50 transition cursor-pointer flex flex-col items-center justify-center min-h-[100px]">
-            <svg class="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
+            <Plus class="w-8 h-8 text-gray-400 mb-2" />
             <span class="text-sm text-gray-500">친구 추가</span>
           </div>
         </div>
@@ -135,21 +133,11 @@ const features = [
         <h2 class="text-2xl font-bold text-gray-900 mb-6">주요 기능</h2>
         <ul class="space-y-4">
           <li v-for="feature in features" :key="feature.text" class="flex items-start gap-3">
-            <svg v-if="feature.icon === 'calendar'" class="w-6 h-6 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <svg v-else-if="feature.icon === 'check'" class="w-6 h-6 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <svg v-else-if="feature.icon === 'clock'" class="w-6 h-6 text-yellow-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <svg v-else-if="feature.icon === 'users'" class="w-6 h-6 text-purple-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-            <svg v-else-if="feature.icon === 'heart'" class="w-6 h-6 text-red-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
+            <Calendar v-if="feature.icon === 'calendar'" class="w-6 h-6 text-blue-500 mt-0.5" />
+            <CheckCircle v-else-if="feature.icon === 'check'" class="w-6 h-6 text-green-500 mt-0.5" />
+            <Clock v-else-if="feature.icon === 'clock'" class="w-6 h-6 text-yellow-500 mt-0.5" />
+            <Users v-else-if="feature.icon === 'users'" class="w-6 h-6 text-purple-500 mt-0.5" />
+            <Heart v-else-if="feature.icon === 'heart'" class="w-6 h-6 text-red-500 mt-0.5" />
             <span class="text-gray-700">{{ feature.text }}</span>
           </li>
         </ul>
