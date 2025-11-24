@@ -4,6 +4,7 @@ import type {
   DutyCalendarResponse,
   OtherDutyResponse,
   TeamDto,
+  HolidayDto,
 } from '@/types'
 
 export const dutyApi = {
@@ -103,6 +104,16 @@ export const dutyApi = {
    */
   canManage: async (memberId: number): Promise<boolean> => {
     const response = await apiClient.get<boolean>(`/members/${memberId}/canManage`)
+    return response.data
+  },
+
+  /**
+   * Get holidays for a month (returns Array<List<HolidayDto>> - one list per day index)
+   */
+  getHolidays: async (year: number, month: number): Promise<HolidayDto[][]> => {
+    const response = await apiClient.get<HolidayDto[][]>('/holidays', {
+      params: { year, month },
+    })
     return response.data
   },
 }

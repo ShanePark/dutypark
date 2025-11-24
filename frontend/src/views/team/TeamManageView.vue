@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useSwal } from '@/composables/useSwal'
 import { useAuthStore } from '@/stores/auth'
 import { teamApi } from '@/api/team'
+import adminApi from '@/api/admin'
 import Pickr from '@simonwep/pickr'
 import '@simonwep/pickr/dist/themes/monolith.min.css'
 import type {
@@ -494,8 +495,17 @@ async function uploadBatch() {
 }
 
 async function removeTeam() {
-  // Team delete is not implemented in backend API for now
-  showWarning('팀 삭제 기능은 관리자에게 문의해주세요.')
+  const confirmed = await confirmDelete('팀 삭제', '정말로 이 팀을 삭제하겠습니까?')
+  if (!confirmed) return
+
+  try {
+    await adminApi.deleteTeam(teamId)
+    toastSuccess('팀이 삭제되었습니다.')
+    router.push('/admin/teams')
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : '팀 삭제에 실패했습니다.'
+    showError(message)
+  }
 }
 
 onMounted(() => {
@@ -527,7 +537,7 @@ onUnmounted(() => {
         </button>
         <span>{{ team.name }} 관리</span>
         <button
-          v-if="isAdmin && teamLoaded && !hasMember"
+          v-if="isAppAdmin && teamLoaded && !hasMember"
           @click="removeTeam"
           class="px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition"
         >

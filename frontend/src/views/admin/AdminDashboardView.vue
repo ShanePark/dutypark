@@ -35,8 +35,8 @@ const allTokens = ref<RefreshTokenDto[]>([])
 
 // Computed stats
 const stats = computed(() => {
-  const today = new Date().toISOString().split('T')[0]
-  const todayTokens = allTokens.value.filter(t => t.lastUsed?.startsWith(today))
+  const today = new Date().toISOString().split('T')[0] ?? ''
+  const todayTokens = allTokens.value.filter(t => t.lastUsed?.startsWith(today) ?? false)
 
   return {
     totalMembers: allMembers.value.length,

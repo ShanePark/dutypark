@@ -380,6 +380,13 @@ export interface DutyCalendarResponse {
   holidayName: string | null
 }
 
+// Holiday API response
+export interface HolidayDto {
+  dateName: string
+  isHoliday: boolean
+  localDate: string // ISO date string (YYYY-MM-DD)
+}
+
 // Team API types
 export interface TeamDay {
   year: number

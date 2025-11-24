@@ -34,7 +34,7 @@ import { todoApi } from '@/api/todo'
 import { dutyApi } from '@/api/duty'
 import { ddayApi, memberApi, friendApi } from '@/api/member'
 import { scheduleApi, type ScheduleDto, type ScheduleSearchResult } from '@/api/schedule'
-import type { DutyCalendarDay, TeamDto, DDayDto, DDaySaveDto, CalendarVisibility, OtherDutyResponse } from '@/types'
+import type { DutyCalendarDay, TeamDto, DDayDto, DDaySaveDto, CalendarVisibility, OtherDutyResponse, HolidayDto } from '@/types'
 
 // Local interfaces for this view
 interface LocalTodo {
@@ -180,10 +180,14 @@ const isTodoOverviewModalOpen = ref(false)
 const isDDayModalOpen = ref(false)
 const isSearchResultModalOpen = ref(false)
 const isOtherDutiesModalOpen = ref(false)
+
+// Search highlight - tracks the date to highlight after search navigation
+const searchDay = ref<{ year: number; month: number; day: number } | null>(null)
 const isScheduleDetailModalOpen = ref(false)
 const isYearMonthPickerOpen = ref(false)
 
 function handleYearMonthSelect(year: number, month: number) {
+  searchDay.value = null // Clear search highlight when navigating
   currentYear.value = year
   currentMonth.value = month
   isYearMonthPickerOpen.value = false
@@ -285,7 +289,7 @@ function mapToSchedule(dto: ScheduleDto): Schedule {
       originalFilename: a.originalFilename,
       contentType: a.contentType,
       size: a.size,
-      thumbnailUrl: a.thumbnailUrl,
+      thumbnailUrl: a.thumbnailUrl ?? undefined,
       hasThumbnail: a.hasThumbnail,
     })),
     tags: dto.tags.map((t) => ({ id: t.id ?? 0, name: t.name })),
@@ -335,6 +339,19 @@ async function loadSchedules() {
   }
 }
 
+// Load holidays from API
+async function loadHolidays() {
+  try {
+    holidaysByDays.value = await dutyApi.getHolidays(
+      currentYear.value,
+      currentMonth.value
+    )
+  } catch (error) {
+    console.error('Failed to load holidays:', error)
+    holidaysByDays.value = []
+  }
+}
+
 // Team and duty types from API
 const team = ref<TeamDto | null>(null)
 const dutyTypes = ref<DutyType[]>([])
@@ -354,6 +371,9 @@ const otherDuties = ref<OtherDuty[]>([])
 
 // Schedules by day index
 const schedulesByDays = ref<Schedule[][]>([])
+
+// Holidays by day index
+const holidaysByDays = ref<HolidayDto[][]>([])
 
 // Search results
 const searchResults = ref<any[]>([])
@@ -552,6 +572,7 @@ onMounted(async () => {
       loadSchedules(),
       loadFriends(),
       checkCanManage(),
+      loadHolidays(),
     ])
 
     // Load team info for duty types
@@ -577,7 +598,7 @@ onMounted(async () => {
 watch(
   () => [currentYear.value, currentMonth.value],
   async () => {
-    await Promise.all([loadDuties(), loadSchedules(), loadOtherDuties()])
+    await Promise.all([loadDuties(), loadSchedules(), loadOtherDuties(), loadHolidays()])
   }
 )
 
@@ -594,6 +615,7 @@ watch(
     dDays.value = []
     rawDuties.value = []
     schedulesByDays.value = []
+    holidaysByDays.value = []
     dutyTypes.value = []
     team.value = null
     pinnedDDay.value = null
@@ -610,6 +632,7 @@ watch(
         loadSchedules(),
         loadFriends(),
         checkCanManage(),
+        loadHolidays(),
       ])
       if (teamId.value) {
         await loadTeam()
@@ -631,6 +654,7 @@ watch(
 
 // Navigation
 function prevMonth() {
+  searchDay.value = null // Clear search highlight when navigating
   if (currentMonth.value === 1) {
     currentMonth.value = 12
     currentYear.value--
@@ -640,6 +664,7 @@ function prevMonth() {
 }
 
 function nextMonth() {
+  searchDay.value = null // Clear search highlight when navigating
   if (currentMonth.value === 12) {
     currentMonth.value = 1
     currentYear.value++
@@ -649,6 +674,7 @@ function nextMonth() {
 }
 
 function goToToday() {
+  searchDay.value = null // Clear search highlight when navigating
   const today = new Date()
   currentYear.value = today.getFullYear()
   currentMonth.value = today.getMonth() + 1
@@ -931,6 +957,12 @@ function handleSearchGoToDate(result: any) {
   const date = new Date(result.startDateTime)
   currentYear.value = date.getFullYear()
   currentMonth.value = date.getMonth() + 1
+  // Set searchDay to highlight the selected date on the calendar
+  searchDay.value = {
+    year: date.getFullYear(),
+    month: date.getMonth() + 1,
+    day: date.getDate(),
+  }
   isSearchResultModalOpen.value = false
 }
 
@@ -1130,7 +1162,7 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
 }
 
 // Check if a color is light (for text contrast)
-function isLightColor(color: string | null): boolean {
+function isLightColor(color: string | null | undefined): boolean {
   if (!color) return false
   // Remove # if present
   const hex = color.replace('#', '')
@@ -1203,46 +1235,54 @@ function isLightColor(color: string | null): boolean {
     </div>
 
     <!-- Month Control -->
-    <div class="flex items-center justify-between gap-1 mb-1">
-      <!-- Left: Member name (for friend's calendar) -->
-      <div v-if="!isMyCalendar && memberName" class="flex-shrink-0 max-w-[80px] sm:max-w-[120px]">
-        <h1 class="text-sm sm:text-lg font-bold text-gray-800 truncate">
-          {{ memberName }}
-        </h1>
+    <div class="flex items-center gap-1 mb-1">
+      <!-- Left: Today button -->
+      <div class="flex-shrink-0">
+        <button
+          @click="goToToday"
+          class="px-2 py-1 text-xs sm:text-sm bg-sky-200 hover:bg-sky-300 rounded-lg transition whitespace-nowrap"
+        >
+          Today
+        </button>
       </div>
 
       <!-- Center: Year-Month Navigation -->
-      <div class="flex items-center justify-center flex-1">
-        <button @click="prevMonth" class="p-2 min-w-[44px] min-h-[44px] hover:bg-gray-100 rounded-full transition flex items-center justify-center">
-          <ChevronLeft class="w-5 h-5" />
+      <div class="flex items-center justify-center flex-1 min-w-0">
+        <button @click="prevMonth" class="p-1 sm:p-2 hover:bg-gray-100 rounded-full transition flex items-center justify-center flex-shrink-0">
+          <ChevronLeft class="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
         <button
           @click="isYearMonthPickerOpen = true"
-          class="px-2 sm:px-3 py-1 text-base sm:text-lg font-semibold hover:bg-gray-100 rounded transition min-w-[100px] sm:min-w-[120px] min-h-[44px]"
+          class="px-1 sm:px-3 py-1 text-lg sm:text-2xl font-semibold hover:bg-gray-100 rounded transition whitespace-nowrap"
         >
           {{ currentYear }}-{{ String(currentMonth).padStart(2, '0') }}
         </button>
-        <button @click="nextMonth" class="p-2 min-w-[44px] min-h-[44px] hover:bg-gray-100 rounded-full transition flex items-center justify-center">
-          <ChevronRight class="w-5 h-5" />
+        <button @click="nextMonth" class="p-1 sm:p-2 hover:bg-gray-100 rounded-full transition flex items-center justify-center flex-shrink-0">
+          <ChevronRight class="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
       </div>
 
-      <!-- Right: Search (only when canSearch) -->
-      <div v-if="canSearch" class="flex items-center">
+      <!-- Right: Search -->
+      <div v-if="canSearch" class="flex items-stretch flex-shrink-0">
         <input
           v-model="searchQuery"
           type="text"
           placeholder="검색"
           @keyup.enter="handleSearch()"
-          class="px-2 py-1.5 min-h-[44px] border border-gray-300 rounded-l-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-16 sm:w-24"
+          class="px-2 py-1.5 border border-gray-300 border-r-0 rounded-l-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-14 sm:w-20"
         />
         <button
           @click="handleSearch()"
-          class="px-2 py-1.5 min-h-[44px] min-w-[44px] bg-gray-800 text-white rounded-r-lg hover:bg-gray-700 transition flex items-center justify-center"
+          class="px-2 py-1.5 bg-gray-800 text-white rounded-r-lg hover:bg-gray-700 transition flex items-center justify-center"
         >
           <Search class="w-4 h-4" />
         </button>
       </div>
+    </div>
+
+    <!-- Member name for friend's calendar -->
+    <div v-if="!isMyCalendar && memberName" class="mb-1">
+      <span class="text-sm font-bold text-gray-800">{{ memberName }}님의 달력</span>
     </div>
 
     <!-- Duty Types & Buttons -->
@@ -1315,7 +1355,7 @@ function isLightColor(color: string | null): boolean {
           class="min-h-[70px] sm:min-h-[80px] md:min-h-[100px] border-b border-r border-gray-200 p-0.5 sm:p-1 transition-all duration-150 relative cursor-pointer hover:brightness-95 hover:shadow-inner"
           :class="{
             'opacity-50': !day.isCurrentMonth,
-            'ring-2 ring-red-500 ring-inset': day.isToday,
+            'ring-2 ring-red-500 ring-inset': day.isToday || (searchDay && searchDay.year === day.year && searchDay.month === day.month && searchDay.day === day.day),
           }"
           :style="duties[idx]?.dutyColor ? { backgroundColor: duties[idx].dutyColor + (day.isCurrentMonth ? '80' : '40') } : (!day.isCurrentMonth ? { backgroundColor: '#f9fafb' } : {})"
         >
@@ -1363,12 +1403,22 @@ function isLightColor(color: string | null): boolean {
             </button>
           </div>
 
-          <!-- Normal Mode: Schedules -->
+          <!-- Normal Mode: Holidays & Schedules -->
           <div v-if="!batchEditMode" class="mt-0.5 space-y-px">
+            <!-- Holidays -->
+            <div
+              v-for="holiday in holidaysByDays[idx] ?? []"
+              :key="holiday.localDate + holiday.dateName"
+              class="text-[10px] sm:text-xs leading-tight px-0.5 border-t-2 border-dashed border-white truncate"
+              :class="holiday.isHoliday ? 'text-red-600 font-semibold' : 'text-gray-500'"
+            >
+              {{ holiday.dateName }}
+            </div>
+            <!-- Schedules -->
             <div
               v-for="schedule in schedulesByDays[idx]?.slice(0, 3)"
               :key="schedule.id"
-              class="text-[10px] sm:text-xs leading-tight text-gray-800 bg-white/70 rounded px-0.5"
+              class="text-[10px] sm:text-xs leading-tight text-gray-800 px-0.5 border-t-2 border-dashed border-white"
             >
               <div class="flex items-center">
                 <Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3 sm:h-3 text-gray-400 flex-shrink-0" />

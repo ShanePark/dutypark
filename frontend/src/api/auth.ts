@@ -1,6 +1,12 @@
 import apiClient, { tokenManager } from './client'
 import type { LoginDto, LoginMember, TokenResponse } from '@/types'
 
+export interface SsoSignupDto {
+  uuid: string
+  username: string
+  termAgree: boolean
+}
+
 export const authApi = {
   /**
    * Bearer 토큰 방식 로그인
@@ -71,5 +77,16 @@ export const authApi = {
    */
   hasTokens: (): boolean => {
     return tokenManager.hasTokens()
+  },
+
+  /**
+   * SSO 회원가입 (Bearer 토큰 방식)
+   * 토큰을 localStorage에 저장합니다.
+   */
+  ssoSignupWithToken: async (data: SsoSignupDto): Promise<TokenResponse> => {
+    const response = await apiClient.post<TokenResponse>('/auth/sso/signup/token', data)
+    const { accessToken, refreshToken } = response.data
+    tokenManager.setTokens(accessToken, refreshToken)
+    return response.data
   },
 }

@@ -78,16 +78,16 @@ function handleGoToThisMonth() {
         </div>
 
         <!-- Buttons -->
-        <div class="p-3 sm:p-4 border-t border-gray-200 flex flex-col sm:flex-row gap-2">
+        <div class="p-3 sm:p-4 border-t border-gray-200 flex flex-row gap-2">
           <button
             @click="handleGoToThisMonth"
-            class="w-full sm:flex-[3] px-4 py-2 bg-indigo-500 hover:bg-indigo-600 rounded-lg text-white font-medium transition text-sm sm:text-base"
+            class="flex-[3] px-3 sm:px-4 py-2 bg-indigo-500 hover:bg-indigo-600 rounded-lg text-white font-medium transition text-sm"
           >
             이번달 ({{ new Date().getFullYear() }}년{{ new Date().getMonth() + 1 }}월)
           </button>
           <button
             @click="emit('close')"
-            class="w-full sm:flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition text-sm sm:text-base"
+            class="flex-1 px-3 sm:px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition text-sm"
           >
             닫기
           </button>

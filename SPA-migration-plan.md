@@ -82,7 +82,7 @@
   - [x] 일정 첨부파일 업로드 연동 ✅ 2025-11-24
   - [x] 모바일 반응형 최적화 (iPhone Pro 390x844) ✅ 2025-11-24
   - [x] 첨부파일 그리드 및 이미지 뷰어 컴포넌트 (AttachmentGrid, ImageViewer) ✅ 2025-11-24
-  - [ ] SSO 가입 플로우 구현 ⚠️ UI만 완료 (폼 제출/이용약관/성공페이지 미구현) 🔴 P0
+  - [x] SSO 가입 플로우 구현 ✅ 2025-11-24 (이용약관, 폼 제출, 성공페이지, Bearer 토큰 API)
   - [ ] DutyView 공휴일 표시 UI 🟡 P1
   - [ ] DutyView 엑셀 배치 업로드 🟡 P1
   - [ ] TeamManageView 팀 삭제 API 연결 🟡 P1
@@ -448,7 +448,7 @@ data class TokenResponse(
 | **함께보기 - 내 근무 토글** | `show-other-duties-modal.js:showMyDuties` | ❌ 미구현 | 🟢 낮음 |
 | D-Day 빠른 날짜 버튼 | `dday-list.js:78-92` (+7일, +30일, 리셋) | ❌ 미구현 | 🟢 낮음 |
 
-#### 2. LoginView/OAuth (로그인) - ⚠️ SSO 가입 미완료
+#### 2. LoginView/OAuth (로그인) - 완료 ✅
 
 | 기능 | Thymeleaf 위치 | SPA 상태 | 우선순위 |
 |------|---------------|----------|----------|
@@ -456,16 +456,12 @@ data class TokenResponse(
 | 카카오 OAuth 로그인 | `login.html` | ✅ 구현됨 (useKakao composable) | - |
 | OAuth 콜백 처리 | `OAuthController.kt` | ✅ 구현됨 (OAuthCallbackView) | - |
 | 아이디 저장 체크박스 | `login.html:47-49` | ✅ 구현됨 (localStorage) | - |
-| **이용약관 전문 표시** | `sso-signup.html:19-68` (~50줄 약관) | ❌ 체크박스만, 약관 내용 없음 | 🔴 높음 |
-| **SSO 가입 폼 제출** | `sso-signup.html` → `POST /api/auth/sso/signup` | ❌ @submit 핸들러 없음 (완전 미구현) | 🔴 높음 |
-| **가입 성공 페이지** | `sso-congrats.html` | ❌ SsoCongratsView 없음 | 🔴 높음 |
-| **라우터 경로** | `/auth/sso-congrats` | ❌ 라우터 미등록 | 🔴 높음 |
-| username maxlength=10 | `sso-signup.html` | ❌ 검증 없음 | 🟡 중간 |
+| 이용약관 전문 표시 | `sso-signup.html:19-68` (~50줄 약관) | ✅ 구현됨 (스크롤 가능 영역) | - |
+| SSO 가입 폼 제출 | `sso-signup.html` → `POST /api/auth/sso/signup` | ✅ 구현됨 (Bearer 토큰 API) | - |
+| 가입 성공 페이지 | `sso-congrats.html` | ✅ SsoCongratsView 구현됨 | - |
+| 라우터 경로 | `/auth/sso-congrats` | ✅ 라우터 등록됨 | - |
+| username maxlength=10 | `sso-signup.html` | ✅ 검증 구현됨 | - |
 | 비밀번호 maxlength | `login.html:17` | ❌ 없음 | 🟢 낮음 |
-
-**SsoSignupView 현재 상태 (56줄):**
-- UI만 구현: username input, termAgree checkbox, 가입 버튼
-- 미구현: @submit 핸들러, API 연동, uuid 파라미터 처리, 에러 핸들링, 로딩 상태, 성공 리다이렉트
 
 #### 3. DashboardView (대시보드) - 완료 ✅
 
@@ -527,16 +523,16 @@ data class TokenResponse(
 
 #### 🔴 P0 - 필수 (SPA 출시 전 완료 필요)
 
-**SSO 가입 플로우 (신규 카카오 사용자 가입 불가 상태):**
-1. [ ] SsoSignupView 이용약관 전문 표시 (Thymeleaf sso-signup.html:19-68 참조)
-2. [ ] SsoSignupView 폼 제출 핸들러 구현
+**SSO 가입 플로우 ✅ 완료 (2025-11-24):**
+1. [x] SsoSignupView 이용약관 전문 표시 (스크롤 가능 영역)
+2. [x] SsoSignupView 폼 제출 핸들러 구현
    - uuid 쿼리 파라미터 파싱
-   - `POST /api/auth/sso/signup` API 연동 (uuid, username, term_agree)
+   - `POST /api/auth/sso/signup/token` Bearer 토큰 API 연동
    - username maxlength=10 검증
    - 로딩 상태, 에러 핸들링
-3. [ ] SsoCongratsView 가입 성공 페이지 생성 (sso-congrats.html 참조)
-4. [ ] 라우터에 `/auth/sso-congrats` 경로 추가
-5. [ ] 가입 성공 후 자동 로그인 + 홈 리다이렉트
+3. [x] SsoCongratsView 가입 성공 페이지 생성
+4. [x] 라우터에 `/auth/sso-congrats` 경로 추가
+5. [x] 가입 성공 후 자동 로그인 + 홈 리다이렉트
 
 #### 🟡 P1 - 중요 (출시 후 빠른 패치)
 
@@ -636,13 +632,13 @@ frontend/
 
 | 영역 | Thymeleaf 기능 수 | SPA 구현 | 완료율 |
 |------|------------------|----------|--------|
-| 인증/로그인 | 4개 | 3개 (SSO 가입 미완료) | 75% |
+| 인증/로그인 | 4개 | 4개 | 100% |
 | 대시보드 | 6개 | 6개 | 100% |
 | 근무 달력 | 10개 | 7개 | 70% |
 | 팀 관리 | 8개 | 7개 | 88% |
 | 회원 설정 | 7개 | 6개 | 86% |
 | 관리자 | 5개 | 5개 | 100% |
-| **전체** | **40개** | **34개** | **85%** |
+| **전체** | **40개** | **35개** | **88%** |
 
 #### SPA 개선 사항 (Thymeleaf 대비)
 
@@ -655,10 +651,7 @@ frontend/
 
 #### 미구현 기능 상세
 
-**🔴 출시 차단 (P0):**
-- SsoSignupView 폼 제출 (현재 56줄 UI만 존재)
-- SsoCongratsView 페이지 (존재하지 않음)
-- 라우터 `/auth/sso-congrats` (미등록)
+**🔴 출시 차단 (P0): 없음 ✅**
 
 **🟡 출시 후 패치 (P1):**
 - DutyView 공휴일 UI 표시

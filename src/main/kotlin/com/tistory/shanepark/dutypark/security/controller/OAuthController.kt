@@ -5,6 +5,8 @@ import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.security.domain.dto.SsoSignupRequest
+import com.tistory.shanepark.dutypark.security.domain.dto.TokenResponse
 import com.tistory.shanepark.dutypark.security.oauth.kakao.KakaoLoginService
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import jakarta.servlet.http.HttpServletRequest
@@ -91,6 +93,29 @@ class OAuthController(
             .headers(loginCookieHeaders)
             .location(URI.create("/auth/sso-congrats"))
             .build()
+    }
+
+    @PostMapping("sso/signup/token")
+    @SlackNotification
+    fun ssoSignupForSpa(
+        @RequestBody request: SsoSignupRequest,
+        httpServletRequest: HttpServletRequest
+    ): ResponseEntity<TokenResponse> {
+        if (!request.termAgree) {
+            return ResponseEntity.badRequest().build()
+        }
+
+        val member = memberService.createSsoMember(
+            username = request.username,
+            memberSsoRegisterUUID = request.uuid
+        )
+
+        val tokenResponse = authService.getTokenResponseByMemberId(
+            memberId = member.id!!,
+            req = httpServletRequest
+        )
+
+        return ResponseEntity.ok(tokenResponse)
     }
 
 }

@@ -1,6 +1,19 @@
 <script setup lang="ts">
-import { ref, watch, reactive } from 'vue'
-import { Download, Paperclip } from 'lucide-vue-next'
+import { ref, watch, reactive, computed, type Component } from 'vue'
+import {
+  Download,
+  Paperclip,
+  ZoomIn,
+  FileText,
+  FileImage,
+  FileVideo,
+  FileAudio,
+  FileArchive,
+  FileSpreadsheet,
+  FileCode,
+  File,
+  Presentation,
+} from 'lucide-vue-next'
 import { fetchAuthenticatedImage, formatBytes } from '@/api/attachment'
 import ImageViewer from './ImageViewer.vue'
 import type { NormalizedAttachment } from '@/types'
@@ -23,15 +36,85 @@ const imageViewerOpen = ref(false)
 const imageViewerIndex = ref(0)
 const imageAttachments = ref<Array<{ id: string; originalFilename: string }>>([])
 
-function getFileIcon(contentType: string): string {
-  if (contentType.startsWith('image/')) return 'IMG'
-  if (contentType.startsWith('video/')) return 'VID'
-  if (contentType.startsWith('audio/')) return 'AUD'
-  if (contentType.includes('pdf')) return 'PDF'
-  if (contentType.includes('word') || contentType.includes('document')) return 'DOC'
-  if (contentType.includes('excel') || contentType.includes('spreadsheet')) return 'XLS'
-  if (contentType.includes('zip') || contentType.includes('rar')) return 'ZIP'
-  return 'FILE'
+// File extension to icon mapping
+const EXTENSION_ICON_MAP: Record<string, Component> = {
+  // Documents
+  pdf: FileText,
+  doc: FileText,
+  docx: FileText,
+  txt: FileText,
+  rtf: FileText,
+  md: FileText,
+  // Spreadsheets
+  xls: FileSpreadsheet,
+  xlsx: FileSpreadsheet,
+  csv: FileSpreadsheet,
+  // Presentations
+  ppt: Presentation,
+  pptx: Presentation,
+  key: Presentation,
+  // Code
+  js: FileCode,
+  ts: FileCode,
+  jsx: FileCode,
+  tsx: FileCode,
+  html: FileCode,
+  css: FileCode,
+  json: FileCode,
+  xml: FileCode,
+  java: FileCode,
+  kt: FileCode,
+  py: FileCode,
+  // Archives
+  zip: FileArchive,
+  rar: FileArchive,
+  '7z': FileArchive,
+  gz: FileArchive,
+  tar: FileArchive,
+  // Media
+  mp3: FileAudio,
+  wav: FileAudio,
+  flac: FileAudio,
+  ogg: FileAudio,
+  mp4: FileVideo,
+  mov: FileVideo,
+  avi: FileVideo,
+  mkv: FileVideo,
+  webm: FileVideo,
+  // Images
+  jpg: FileImage,
+  jpeg: FileImage,
+  png: FileImage,
+  gif: FileImage,
+  webp: FileImage,
+  svg: FileImage,
+  bmp: FileImage,
+}
+
+function getFileExtension(filename: string): string {
+  if (!filename || !filename.includes('.')) return ''
+  return filename.split('.').pop()?.toLowerCase() || ''
+}
+
+function getFileIconComponent(attachment: NormalizedAttachment): Component {
+  // First try by extension
+  const ext = getFileExtension(attachment.originalFilename)
+  if (ext && EXTENSION_ICON_MAP[ext]) {
+    return EXTENSION_ICON_MAP[ext]
+  }
+
+  // Fallback by content type
+  const contentType = attachment.contentType || ''
+  if (contentType.startsWith('image/')) return FileImage
+  if (contentType.startsWith('video/')) return FileVideo
+  if (contentType.startsWith('audio/')) return FileAudio
+  if (contentType.includes('pdf')) return FileText
+  if (contentType.includes('word') || contentType.includes('document')) return FileText
+  if (contentType.includes('excel') || contentType.includes('spreadsheet')) return FileSpreadsheet
+  if (contentType.includes('powerpoint') || contentType.includes('presentation')) return Presentation
+  if (contentType.includes('zip') || contentType.includes('rar') || contentType.includes('archive')) return FileArchive
+
+  return File
 }
 
 async function loadThumbnails() {
@@ -119,21 +202,32 @@ const gridColsClass = {
         @click="handleAttachmentClick(idx)"
       >
         <!-- Thumbnail or Icon -->
-        <div class="aspect-square bg-gray-100 flex items-center justify-center">
+        <div class="aspect-square bg-gray-100 flex items-center justify-center relative">
           <img
             v-if="getThumbnailUrl(attachment.id)"
             :src="getThumbnailUrl(attachment.id)!"
             :alt="attachment.originalFilename"
             class="w-full h-full object-cover"
           />
-          <span v-else class="text-2xl text-gray-400">
-            {{ getFileIcon(attachment.contentType || '') }}
-          </span>
+          <component
+            v-else
+            :is="getFileIconComponent(attachment)"
+            class="w-12 h-12 text-gray-400"
+          />
+
+          <!-- Zoom overlay for images - shown on hover -->
+          <div
+            v-if="attachment.contentType?.startsWith('image/')"
+            class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            @click.stop="openImageViewer(idx)"
+          >
+            <ZoomIn class="w-10 h-10 text-white" />
+          </div>
         </div>
 
-        <!-- Download button overlay -->
+        <!-- Download button - always visible -->
         <button
-          class="absolute top-1 right-1 p-1 bg-black/50 rounded text-white opacity-0 group-hover:opacity-100 transition hover:bg-black/70"
+          class="absolute top-1 right-1 p-1.5 bg-black/50 rounded text-white hover:bg-black/70 transition-colors"
           @click.stop="downloadAttachment(attachment.id, attachment.originalFilename)"
           title="다운로드"
         >

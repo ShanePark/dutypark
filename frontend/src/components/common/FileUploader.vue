@@ -436,8 +436,9 @@ function getIconComponent(attachment: NormalizedAttachment) {
 // Get display image URL for attachment
 function getDisplayImageUrl(attachment: NormalizedAttachment): string | null {
   // First check blob URL cache
-  if (imageBlobUrls.value[attachment.id]) {
-    return imageBlobUrls.value[attachment.id]
+  const blobUrl = imageBlobUrls.value[attachment.id]
+  if (blobUrl) {
+    return blobUrl
   }
   // Then check previewUrl (local blob URL from upload)
   if (attachment.previewUrl?.startsWith('blob:')) {
