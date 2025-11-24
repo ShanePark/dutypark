@@ -18,6 +18,10 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
+      '/admin/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
       '/logout': {
         target: 'http://localhost:8080',
         changeOrigin: true,

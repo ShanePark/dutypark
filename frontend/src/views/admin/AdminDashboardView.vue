@@ -2,6 +2,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { adminApi } from '@/api/admin'
+import { authApi } from '@/api/auth'
+import { useSwal } from '@/composables/useSwal'
+import type { MemberDto, RefreshTokenDto } from '@/types'
 import {
   Users,
   Building2,
@@ -15,76 +19,66 @@ import {
   RefreshCw,
   Settings,
   Activity,
+  Loader2,
 } from 'lucide-vue-next'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { showSuccess, showError, confirm } = useSwal()
 
-// Admin stats (dummy data)
-const stats = ref({
-  totalMembers: 42,
-  totalTeams: 8,
-  activeTokens: 156,
-  todayLogins: 23,
+// Loading state
+const loading = ref(true)
+
+// Data from API
+const allMembers = ref<MemberDto[]>([])
+const allTokens = ref<RefreshTokenDto[]>([])
+
+// Computed stats
+const stats = computed(() => {
+  const today = new Date().toISOString().split('T')[0]
+  const todayTokens = allTokens.value.filter(t => t.lastUsed?.startsWith(today))
+
+  return {
+    totalMembers: allMembers.value.length,
+    totalTeams: new Set(allMembers.value.map(m => m.teamId).filter(Boolean)).size,
+    activeTokens: allTokens.value.length,
+    todayLogins: todayTokens.length,
+  }
 })
 
-// Members with tokens (dummy data)
-const members = ref([
-  {
-    id: 1,
-    name: '박상현',
-    tokens: [
-      {
-        lastUsed: '2025-11-24T10:30:00',
-        remoteAddr: '192.168.1.100',
-        userAgent: { device: 'Desktop', browser: 'Chrome 120' },
-      },
-      {
-        lastUsed: '2025-11-23T18:45:00',
-        remoteAddr: '10.0.0.55',
-        userAgent: { device: 'Mobile', browser: 'Safari 17' },
-      },
-    ],
-  },
-  {
-    id: 2,
-    name: '이동현',
-    tokens: [
-      {
-        lastUsed: '2025-11-24T09:15:00',
-        remoteAddr: '172.16.0.10',
-        userAgent: { device: 'Desktop', browser: 'Firefox 121' },
-      },
-    ],
-  },
-  {
-    id: 3,
-    name: '김현주',
-    tokens: [
-      {
-        lastUsed: '2025-11-24T08:00:00',
-        remoteAddr: '192.168.2.50',
-        userAgent: { device: 'Mobile', browser: 'Chrome Mobile 120' },
-      },
-    ],
-  },
-  {
-    id: 4,
-    name: '박재현',
-    tokens: [],
-  },
-  {
-    id: 5,
-    name: '전소이',
-    tokens: [
-      {
-        lastUsed: '2025-11-22T14:20:00',
-        remoteAddr: '10.10.10.1',
-        userAgent: { device: 'Tablet', browser: 'Safari 17' },
-      },
-    ],
-  },
-])
+// Group tokens by member
+interface MemberWithTokens {
+  id: number
+  name: string
+  tokens: RefreshTokenDto[]
+}
+
+const members = computed<MemberWithTokens[]>(() => {
+  const tokensByMember = new Map<number, RefreshTokenDto[]>()
+
+  for (const token of allTokens.value) {
+    const memberId = token.memberId
+    if (!tokensByMember.has(memberId)) {
+      tokensByMember.set(memberId, [])
+    }
+    tokensByMember.get(memberId)!.push(token)
+  }
+
+  // 각 회원의 가장 최근 토큰 시간 가져오기
+  const getLatestTokenTime = (memberId: number): number => {
+    const tokens = tokensByMember.get(memberId) || []
+    if (tokens.length === 0) return 0
+    return Math.max(...tokens.map(t => t.lastUsed ? new Date(t.lastUsed).getTime() : 0))
+  }
+
+  return allMembers.value
+    .map(member => ({
+      id: member.id!,
+      name: member.name,
+      tokens: tokensByMember.get(member.id!) || [],
+    }))
+    .sort((a, b) => getLatestTokenTime(b.id) - getLatestTokenTime(a.id))
+})
 
 const searchKeyword = ref('')
 const isLoading = ref(false)
@@ -96,7 +90,8 @@ const filteredMembers = computed(() => {
 })
 
 // Format relative time
-function formatRelativeTime(dateString: string): string {
+function formatRelativeTime(dateString: string | null): string {
+  if (!dateString) return '-'
   const date = new Date(dateString)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
@@ -131,37 +126,72 @@ function closePasswordModal() {
   selectedMember.value = null
 }
 
-function handleChangePassword() {
+const changingPassword = ref(false)
+
+async function handleChangePassword() {
   if (!newPassword.value || !confirmPassword.value) {
     passwordError.value = '비밀번호를 입력해주세요'
+    return
+  }
+  if (newPassword.value.length < 8) {
+    passwordError.value = '비밀번호는 8자 이상이어야 합니다'
     return
   }
   if (newPassword.value !== confirmPassword.value) {
     passwordError.value = '비밀번호가 일치하지 않습니다'
     return
   }
-  // API call would go here
-  console.log('Password changed for member:', selectedMember.value?.id)
-  closePasswordModal()
+
+  changingPassword.value = true
+  try {
+    await authApi.changePassword({
+      memberId: selectedMember.value!.id,
+      newPassword: newPassword.value,
+    })
+    showSuccess(`${selectedMember.value?.name}님의 비밀번호가 변경되었습니다.`)
+    closePasswordModal()
+  } catch (error: any) {
+    const message = error.response?.data?.message || '비밀번호 변경에 실패했습니다.'
+    passwordError.value = message
+  } finally {
+    changingPassword.value = false
+  }
 }
 
-function refreshData() {
+async function fetchData() {
+  loading.value = true
+  try {
+    const [membersRes, tokensRes] = await Promise.all([
+      adminApi.getAllMembers(),
+      adminApi.getAllRefreshTokens(),
+    ])
+    allMembers.value = membersRes.data
+    allTokens.value = tokensRes.data
+  } catch (error) {
+    console.error('Failed to fetch admin data:', error)
+    showError('데이터를 불러오는데 실패했습니다.')
+  } finally {
+    loading.value = false
+  }
+}
+
+async function refreshData() {
   isLoading.value = true
-  // Simulate API call
-  setTimeout(() => {
-    isLoading.value = false
-  }, 1000)
+  await fetchData()
+  isLoading.value = false
 }
 
 function navigateToTeams() {
   router.push('/admin/teams')
 }
 
-onMounted(() => {
+onMounted(async () => {
   // Check admin access
   if (!authStore.isAdmin) {
     router.push('/')
+    return
   }
+  await fetchData()
 })
 </script>
 
@@ -197,6 +227,12 @@ onMounted(() => {
     </div>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <!-- Loading State -->
+      <div v-if="loading" class="flex items-center justify-center py-20">
+        <Loader2 class="w-8 h-8 animate-spin text-gray-500" />
+      </div>
+
+      <template v-else>
       <!-- Admin Navigation -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <router-link
@@ -336,6 +372,7 @@ onMounted(() => {
           검색 결과가 없습니다
         </div>
       </div>
+      </template>
     </div>
 
     <!-- Password Change Modal -->
@@ -373,15 +410,18 @@ onMounted(() => {
         <div class="p-4 border-t border-gray-200 flex justify-end gap-2">
           <button
             @click="closePasswordModal"
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+            :disabled="changingPassword"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition disabled:opacity-50"
           >
             취소
           </button>
           <button
             @click="handleChangePassword"
-            class="px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-lg transition"
+            :disabled="changingPassword"
+            class="px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-lg transition disabled:opacity-50 flex items-center gap-2"
           >
-            변경
+            <Loader2 v-if="changingPassword" class="w-4 h-4 animate-spin" />
+            {{ changingPassword ? '변경 중...' : '변경' }}
           </button>
         </div>
       </div>

@@ -4,7 +4,6 @@ import { useRouter } from 'vue-router'
 import {
   ChevronLeft,
   ChevronRight,
-  Calendar,
   Settings,
   CalendarPlus,
   Pencil,
@@ -16,6 +15,8 @@ import {
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { teamApi } from '@/api/team'
+import { useSwal } from '@/composables/useSwal'
+import YearMonthPicker from '@/components/common/YearMonthPicker.vue'
 import type {
   TeamDto,
   TeamScheduleDto,
@@ -25,6 +26,7 @@ import type {
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { showError, confirmDelete } = useSwal()
 
 // Loading state
 const loading = ref(false)
@@ -41,6 +43,16 @@ const team = ref<TeamDto | null>(null)
 const now = new Date()
 const currentYear = ref(now.getFullYear())
 const currentMonth = ref(now.getMonth() + 1)
+
+// Year-Month Picker
+const isYearMonthPickerOpen = ref(false)
+
+function handleYearMonthSelect(year: number, month: number) {
+  currentYear.value = year
+  currentMonth.value = month
+  isYearMonthPickerOpen.value = false
+  fetchTeamSummary()
+}
 
 // Today's date
 const today = {
@@ -332,21 +344,21 @@ async function saveSchedule() {
     await fetchTeamSchedules()
   } catch (error) {
     console.error('Failed to save schedule:', error)
-    alert('일정 저장에 실패했습니다.')
+    showError('일정 저장에 실패했습니다.')
   } finally {
     saving.value = false
   }
 }
 
 async function deleteSchedule(scheduleId: string) {
-  if (!confirm('정말 삭제하시겠습니까?\n삭제된 일정은 복구할 수 없습니다.')) return
+  if (!await confirmDelete('정말 삭제하시겠습니까?\n삭제된 일정은 복구할 수 없습니다.')) return
 
   try {
     await teamApi.deleteTeamSchedule(scheduleId)
     await fetchTeamSchedules()
   } catch (error) {
     console.error('Failed to delete schedule:', error)
-    alert('일정 삭제에 실패했습니다.')
+    showError('일정 삭제에 실패했습니다.')
   }
 }
 
@@ -389,29 +401,26 @@ onMounted(() => {
 
       <!-- Month Controls -->
       <div class="flex flex-wrap items-center justify-between gap-2 bg-white p-2 border-x border-gray-200">
-        <button
-          @click="goToToday"
-          class="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition flex items-center gap-1"
-        >
-          오늘
-          <Calendar class="w-4 h-4" />
-        </button>
+        <div class="w-20"></div>
 
         <div class="flex items-center gap-2">
           <button
             @click="prevMonth"
-            class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition"
+            class="p-2 hover:bg-gray-100 rounded-full transition"
           >
             <ChevronLeft class="w-5 h-5" />
           </button>
 
-          <h2 class="text-lg font-bold min-w-[140px] text-center">
-            {{ currentYear }}년 {{ currentMonth }}월
-          </h2>
+          <button
+            @click="isYearMonthPickerOpen = true"
+            class="px-3 py-1 text-lg font-bold hover:bg-gray-100 rounded transition min-w-[120px]"
+          >
+            {{ currentYear }}-{{ String(currentMonth).padStart(2, '0') }}
+          </button>
 
           <button
             @click="nextMonth"
-            class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition"
+            class="p-2 hover:bg-gray-100 rounded-full transition"
           >
             <ChevronRight class="w-5 h-5" />
           </button>
@@ -609,7 +618,7 @@ onMounted(() => {
     <!-- Schedule Modal -->
     <div
       v-if="showScheduleModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
       @click.self="closeScheduleModal"
     >
       <div class="bg-white rounded-lg shadow-xl w-full max-w-lg">
@@ -693,5 +702,14 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <YearMonthPicker
+      :is-open="isYearMonthPickerOpen"
+      :current-year="currentYear"
+      :current-month="currentMonth"
+      @close="isYearMonthPickerOpen = false"
+      @select="handleYearMonthSelect"
+      @go-to-this-month="goToToday(); isYearMonthPickerOpen = false"
+    />
   </div>
 </template>

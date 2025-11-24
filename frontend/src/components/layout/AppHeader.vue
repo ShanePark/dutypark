@@ -1,7 +1,16 @@
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/auth'
+import { useSwal } from '@/composables/useSwal'
 
 const authStore = useAuthStore()
+const { confirm } = useSwal()
+
+const handleLogout = async () => {
+  const confirmed = await confirm('정말 로그아웃 하시겠습니까?', '로그아웃')
+  if (confirmed) {
+    authStore.logout()
+  }
+}
 </script>
 
 <template>
@@ -15,7 +24,7 @@ const authStore = useAuthStore()
           <template v-if="authStore.isLoggedIn">
             <span class="text-sm text-gray-600">{{ authStore.user?.name }}</span>
             <button
-              @click="authStore.logout"
+              @click="handleLogout"
               class="text-sm text-gray-500 hover:text-gray-700"
             >
               로그아웃

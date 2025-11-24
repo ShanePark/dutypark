@@ -198,6 +198,12 @@ class FriendService(
     }
 
     @Transactional(readOnly = true)
+    fun checkVisibility(login: LoginMember?, targetId: Long, scheduleVisibilityCheck: Boolean = false) {
+        val target = memberRepository.findById(targetId).orElseThrow()
+        checkVisibility(login, target, scheduleVisibilityCheck)
+    }
+
+    @Transactional(readOnly = true)
     fun isVisible(login: LoginMember?, targetId: Long?, scheduleVisibilityCheck: Boolean = false): Boolean {
         val targetMember = memberRepository.findById(targetId!!).orElseThrow()
         login ?: return targetMember.calendarVisibility == Visibility.PUBLIC

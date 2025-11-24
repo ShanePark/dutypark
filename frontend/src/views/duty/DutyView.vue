@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useSwal } from '@/composables/useSwal'
 import {
   Plus,
   ClipboardList,
@@ -12,8 +13,9 @@ import {
   Users,
   FileText,
   Star,
-  RotateCcw,
   Loader2,
+  Lock,
+  CalendarCheck,
 } from 'lucide-vue-next'
 
 // Modal Components
@@ -24,11 +26,13 @@ import TodoOverviewModal from '@/components/duty/TodoOverviewModal.vue'
 import DDayModal from '@/components/duty/DDayModal.vue'
 import SearchResultModal from '@/components/duty/SearchResultModal.vue'
 import OtherDutiesModal from '@/components/duty/OtherDutiesModal.vue'
+import ScheduleDetailModal from '@/components/duty/ScheduleDetailModal.vue'
+import YearMonthPicker from '@/components/common/YearMonthPicker.vue'
 
 // API
 import { todoApi } from '@/api/todo'
 import { dutyApi } from '@/api/duty'
-import { ddayApi } from '@/api/member'
+import { ddayApi, memberApi } from '@/api/member'
 import { scheduleApi, type ScheduleDto, type ScheduleSearchResult } from '@/api/schedule'
 import type { DutyCalendarDay, TeamDto, DDayDto, DDaySaveDto, CalendarVisibility } from '@/types'
 
@@ -126,6 +130,7 @@ import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const authStore = useAuthStore()
+const { showError, confirmDelete } = useSwal()
 
 // State
 const today = new Date()
@@ -168,31 +173,13 @@ const isTodoOverviewModalOpen = ref(false)
 const isDDayModalOpen = ref(false)
 const isSearchResultModalOpen = ref(false)
 const isOtherDutiesModalOpen = ref(false)
+const isScheduleDetailModalOpen = ref(false)
 const isYearMonthPickerOpen = ref(false)
 
-// Year-Month Picker
-const pickerYear = ref(currentYear.value)
-const pickerMonth = ref(currentMonth.value)
-const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월']
-
-function openYearMonthPicker() {
-  pickerYear.value = currentYear.value
-  pickerMonth.value = currentMonth.value
-  isYearMonthPickerOpen.value = true
-}
-
-function selectYearMonth(month: number) {
-  currentYear.value = pickerYear.value
+function handleYearMonthSelect(year: number, month: number) {
+  currentYear.value = year
   currentMonth.value = month
   isYearMonthPickerOpen.value = false
-}
-
-function pickerPrevYear() {
-  pickerYear.value--
-}
-
-function pickerNextYear() {
-  pickerYear.value++
 }
 
 // Selected items
@@ -201,6 +188,7 @@ const selectedDayDuty = ref<{ dutyType: string; dutyColor: string } | undefined>
 const selectedTodo = ref<LocalTodo | null>(null)
 const selectedDDay = ref<LocalDDay | null>(null)
 const pinnedDDay = ref<LocalDDay | null>(null)
+const selectedScheduleForDetail = ref<Schedule | null>(null)
 
 // Data
 const todos = ref<LocalTodo[]>([])
@@ -287,11 +275,11 @@ function mapToSchedule(dto: ScheduleDto): Schedule {
     taggedBy: dto.isTagged ? dto.owner : undefined,
     attachments: dto.attachments.map((a) => ({
       id: a.id,
-      originalFilename: a.originalFileName,
-      contentType: 'application/octet-stream', // Default, actual type not provided
-      size: 0, // Default, actual size not provided
-      thumbnailUrl: a.thumbnailAvailable ? `/api/attachments/${a.id}/thumbnail` : undefined,
-      hasThumbnail: a.thumbnailAvailable,
+      originalFilename: a.originalFilename,
+      contentType: a.contentType,
+      size: a.size,
+      thumbnailUrl: a.thumbnailUrl,
+      hasThumbnail: a.hasThumbnail,
     })),
     tags: dto.tags.map((t) => ({ id: t.id ?? 0, name: t.name })),
     daysFromStart: dto.daysFromStart,
@@ -524,17 +512,34 @@ async function checkCanManage() {
   }
 }
 
+// Load member info (for friend's calendar)
+async function loadMemberInfo() {
+  if (isMyCalendar.value) {
+    // Use auth store for own calendar
+    if (authStore.user) {
+      memberName.value = authStore.user.name
+      teamId.value = authStore.user.teamId
+    }
+  } else {
+    // Fetch member info for friend's calendar
+    try {
+      const response = await memberApi.getMemberById(memberId.value)
+      memberName.value = response.data.name
+      teamId.value = response.data.teamId
+    } catch (error) {
+      console.error('Failed to load member info:', error)
+    }
+  }
+}
+
 // Initialize on mount
 onMounted(async () => {
   isLoading.value = true
   loadError.value = null
 
   try {
-    // Get member info from auth store
-    if (isMyCalendar.value && authStore.user) {
-      memberName.value = authStore.user.name
-      teamId.value = authStore.user.teamId
-    }
+    // Load member info first to get teamId
+    await loadMemberInfo()
 
     // Load data in parallel
     await Promise.all([
@@ -572,6 +577,50 @@ watch(
   }
 )
 
+// Watch for route params changes (when navigating between calendars)
+watch(
+  () => route.params.id,
+  async () => {
+    isLoading.value = true
+    loadError.value = null
+
+    // Reset state
+    todos.value = []
+    completedTodos.value = []
+    dDays.value = []
+    rawDuties.value = []
+    schedulesByDays.value = []
+    dutyTypes.value = []
+    team.value = null
+    pinnedDDay.value = null
+
+    try {
+      await loadMemberInfo()
+      await Promise.all([
+        loadTodos(),
+        loadDuties(),
+        loadDDays(),
+        loadSchedules(),
+        checkCanManage(),
+      ])
+      if (teamId.value) {
+        await loadTeam()
+      }
+      // Restore pinned D-Day from localStorage
+      const storedDDay = localStorage.getItem(`selectedDday_${memberId.value}`)
+      if (storedDDay) {
+        const id = parseInt(storedDDay)
+        pinnedDDay.value = dDays.value.find((d) => d.id === id) || null
+      }
+    } catch (error) {
+      console.error('Failed to reload duty view:', error)
+      loadError.value = '데이터를 불러오는데 실패했습니다.'
+    } finally {
+      isLoading.value = false
+    }
+  }
+)
+
 // Navigation
 function prevMonth() {
   if (currentMonth.value === 1) {
@@ -599,6 +648,7 @@ function goToToday() {
 
 // Day click handler
 function handleDayClick(day: CalendarDay, index: number) {
+  if (!isMyCalendar.value) return // Disable click on friend's calendar
   if (batchEditMode.value) return
   selectedDay.value = day
   selectedDayDuty.value = duties.value[index] || undefined
@@ -648,13 +698,13 @@ async function handleDDaySave(dday: { id?: number; title: string; date: string; 
     }
   } catch (error) {
     console.error('Failed to save D-Day:', error)
-    alert('D-Day 저장에 실패했습니다.')
+    showError('D-Day 저장에 실패했습니다.')
   }
   isDDayModalOpen.value = false
 }
 
 async function deleteDDay(dday: LocalDDay) {
-  if (!confirm(`[${dday.title}]을(를) 정말로 삭제하시겠습니까?`)) return
+  if (!await confirmDelete(`[${dday.title}]을(를) 정말로 삭제하시겠습니까?`)) return
 
   try {
     await ddayApi.deleteDDay(dday.id)
@@ -665,7 +715,7 @@ async function deleteDDay(dday: LocalDDay) {
     }
   } catch (error) {
     console.error('Failed to delete D-Day:', error)
-    alert('D-Day 삭제에 실패했습니다.')
+    showError('D-Day 삭제에 실패했습니다.')
   }
 }
 
@@ -720,7 +770,7 @@ async function handleTodoUpdate(data: {
     selectedTodo.value = localTodo
   } catch (error) {
     console.error('Failed to update todo:', error)
-    alert('할 일 수정에 실패했습니다.')
+    showError('할 일 수정에 실패했습니다.')
   }
   isTodoDetailModalOpen.value = false
 }
@@ -734,7 +784,7 @@ async function handleTodoComplete(id: string) {
     completedTodos.value.unshift(mapToLocalTodo(completedTodo))
   } catch (error) {
     console.error('Failed to complete todo:', error)
-    alert('할 일 완료 처리에 실패했습니다.')
+    showError('할 일 완료 처리에 실패했습니다.')
   }
   isTodoDetailModalOpen.value = false
 }
@@ -748,20 +798,20 @@ async function handleTodoReopen(id: string) {
     todos.value.push(mapToLocalTodo(reopenedTodo))
   } catch (error) {
     console.error('Failed to reopen todo:', error)
-    alert('할 일 재오픈에 실패했습니다.')
+    showError('할 일 재오픈에 실패했습니다.')
   }
   isTodoDetailModalOpen.value = false
 }
 
 async function handleTodoDelete(id: string) {
-  if (!confirm('할 일을 삭제하시겠습니까?')) return
+  if (!await confirmDelete('할 일을 삭제하시겠습니까?')) return
   try {
     await todoApi.deleteTodo(id)
     todos.value = todos.value.filter((t) => t.id !== id)
     completedTodos.value = completedTodos.value.filter((t) => t.id !== id)
   } catch (error) {
     console.error('Failed to delete todo:', error)
-    alert('할 일 삭제에 실패했습니다.')
+    showError('할 일 삭제에 실패했습니다.')
   }
   isTodoDetailModalOpen.value = false
 }
@@ -782,7 +832,7 @@ async function handleTodoAdd(data: {
     todos.value.unshift(mapToLocalTodo(newTodo))
   } catch (error) {
     console.error('Failed to add todo:', error)
-    alert('할 일 추가에 실패했습니다.')
+    showError('할 일 추가에 실패했습니다.')
   }
   isTodoAddModalOpen.value = false
 }
@@ -796,7 +846,7 @@ async function handleTodoPositionUpdate(orderedIds: string[]) {
     todos.value = orderedIds.map((id) => todoMap.get(id)).filter((t): t is LocalTodo => t !== undefined)
   } catch (error) {
     console.error('Failed to update todo positions:', error)
-    alert('할 일 순서 변경에 실패했습니다.')
+    showError('할 일 순서 변경에 실패했습니다.')
     // Reload todos to restore correct order
     await loadTodos()
   }
@@ -833,7 +883,7 @@ async function handleSearch(page: number = 0) {
     isSearchResultModalOpen.value = true
   } catch (error) {
     console.error('Failed to search schedules:', error)
-    alert('검색에 실패했습니다.')
+    showError('검색에 실패했습니다.')
   } finally {
     isSearching.value = false
   }
@@ -880,6 +930,107 @@ function loadOtherDuties() {
       })),
     }
   })
+}
+
+// Schedule handlers
+interface ScheduleSaveData {
+  id?: string
+  content: string
+  description: string
+  startDateTime: string
+  endDateTime: string
+  visibility: 'PUBLIC' | 'FRIENDS' | 'FAMILY' | 'PRIVATE'
+  attachmentSessionId?: string | null
+  orderedAttachmentIds?: string[]
+}
+
+async function handleCreateSchedule(data: ScheduleSaveData) {
+  if (!memberId.value) return
+
+  try {
+    await scheduleApi.saveSchedule({
+      memberId: memberId.value,
+      content: data.content,
+      description: data.description || undefined,
+      startDateTime: data.startDateTime,
+      endDateTime: data.endDateTime,
+      visibility: data.visibility,
+      attachmentSessionId: data.attachmentSessionId || undefined,
+      orderedAttachmentIds: data.orderedAttachmentIds,
+    })
+    isDayDetailModalOpen.value = false
+    await loadSchedules()
+  } catch (error) {
+    console.error('Failed to create schedule:', error)
+    showError('일정 생성에 실패했습니다.')
+  }
+}
+
+async function handleEditSchedule(data: ScheduleSaveData) {
+  if (!memberId.value || !data.id) return
+
+  try {
+    await scheduleApi.saveSchedule({
+      id: data.id,
+      memberId: memberId.value,
+      content: data.content,
+      description: data.description || undefined,
+      startDateTime: data.startDateTime,
+      endDateTime: data.endDateTime,
+      visibility: data.visibility,
+      attachmentSessionId: data.attachmentSessionId || undefined,
+      orderedAttachmentIds: data.orderedAttachmentIds,
+    })
+    isDayDetailModalOpen.value = false
+    await loadSchedules()
+  } catch (error) {
+    console.error('Failed to update schedule:', error)
+    showError('일정 수정에 실패했습니다.')
+  }
+}
+
+async function handleDeleteSchedule(scheduleId: string) {
+  if (!await confirmDelete('이 일정을 삭제하시겠습니까?')) return
+
+  try {
+    await scheduleApi.deleteSchedule(scheduleId)
+    await loadSchedules()
+  } catch (error) {
+    console.error('Failed to delete schedule:', error)
+    showError('일정 삭제에 실패했습니다.')
+  }
+}
+
+async function handleSwapSchedule(id1: string, id2: string) {
+  try {
+    await scheduleApi.swapSchedulePosition(id1, id2)
+    await loadSchedules()
+  } catch (error) {
+    console.error('Failed to swap schedules:', error)
+    showError('일정 순서 변경에 실패했습니다.')
+  }
+}
+
+async function handleChangeDutyType(dutyTypeId: number | null) {
+  if (!memberId.value || !selectedDay.value) return
+  // Allow if viewing own calendar OR if user has manager permission
+  if (!isMyCalendar.value && !amIManager.value) return
+
+  const { year, month, day } = selectedDay.value
+
+  try {
+    await dutyApi.updateDuty(memberId.value, year, month, day, dutyTypeId)
+    await loadDuties()
+  } catch (error) {
+    console.error('Failed to change duty type:', error)
+    showError('근무 변경에 실패했습니다.')
+  }
+}
+
+// Show schedule detail modal
+function handleShowDescription(schedule: Schedule) {
+  selectedScheduleForDetail.value = schedule
+  isScheduleDetailModalOpen.value = true
 }
 
 // Get schedule time display
@@ -963,24 +1114,20 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
 
     <!-- Month Control -->
     <div class="flex items-center justify-between gap-2 mb-4">
-      <!-- Left: Today Button -->
-      <div class="flex items-center gap-2 w-32">
-        <button
-          @click="goToToday"
-          class="px-3 py-1.5 bg-sky-300 text-gray-800 rounded-full text-sm font-medium hover:bg-sky-400 transition flex items-center gap-1"
-        >
-          <RotateCcw class="w-3.5 h-3.5" />
-          Today
-        </button>
+      <!-- Left: Member name (for friend's calendar) or Spacer -->
+      <div class="w-32">
+        <h1 v-if="!isMyCalendar && memberName" class="text-lg font-bold text-gray-800 truncate">
+          {{ memberName }}
+        </h1>
       </div>
 
       <!-- Center: Year-Month Navigation -->
-      <div class="flex items-center justify-center flex-1">
+      <div class="flex items-center justify-center">
         <button @click="prevMonth" class="p-2 hover:bg-gray-100 rounded-full transition">
           <ChevronLeft class="w-5 h-5" />
         </button>
         <button
-          @click="openYearMonthPicker"
+          @click="isYearMonthPickerOpen = true"
           class="px-3 py-1 text-lg font-semibold hover:bg-gray-100 rounded transition min-w-[120px]"
         >
           {{ currentYear }}-{{ String(currentMonth).padStart(2, '0') }}
@@ -1087,12 +1234,13 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
           v-for="(day, idx) in calendarDays"
           :key="idx"
           @click="handleDayClick(day, idx)"
-          class="min-h-[80px] sm:min-h-[100px] border-b border-r border-gray-200 p-1 cursor-pointer hover:bg-gray-50 transition relative"
+          class="min-h-[80px] sm:min-h-[100px] border-b border-r border-gray-200 p-1 transition relative"
           :class="{
             'opacity-40 bg-gray-50': !day.isCurrentMonth,
             'ring-2 ring-red-500 ring-inset': day.isToday,
+            'cursor-pointer hover:bg-gray-50': isMyCalendar,
           }"
-          :style="day.isCurrentMonth && duties[idx] ? { backgroundColor: duties[idx]?.dutyColor + '15' } : {}"
+          :style="day.isCurrentMonth && duties[idx]?.dutyColor ? { backgroundColor: duties[idx].dutyColor + '80' } : {}"
         >
           <!-- Day Number -->
           <div class="flex items-center justify-between">
@@ -1109,7 +1257,7 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
             <!-- D-Day indicator -->
             <span
               v-if="pinnedDDay && day.isCurrentMonth"
-              class="text-xs text-purple-600 font-medium"
+              class="text-xs text-gray-500 font-medium"
             >
               {{ calcDDayForDay(day) }}
             </span>
@@ -1120,12 +1268,20 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
             <div
               v-for="schedule in schedulesByDays[idx]?.slice(0, 2)"
               :key="schedule.id"
-              class="text-xs truncate text-gray-700 bg-white/60 rounded px-1"
+              class="text-xs truncate text-gray-700 bg-white/60 rounded px-1 flex items-center gap-0.5"
             >
-              <span v-if="schedule.isTagged" class="text-gray-400 mr-0.5">{{ schedule.visibility === 'PRIVATE' ? '🔒' : '' }}</span>
-              {{ schedule.contentWithoutTime || schedule.content }}
-              <span class="text-gray-400">{{ formatScheduleTime(schedule) }}</span>
-              <span v-if="schedule.isTagged" class="ml-1 text-[10px] bg-gray-200 text-gray-600 px-1 rounded-full whitespace-nowrap">by{{ schedule.owner }}</span>
+              <Lock v-if="schedule.visibility === 'PRIVATE'" class="w-3 h-3 text-gray-400 flex-shrink-0" />
+              <span class="truncate">{{ schedule.contentWithoutTime || schedule.content }}</span>
+              <span class="text-gray-400 flex-shrink-0">{{ formatScheduleTime(schedule) }}</span>
+              <button
+                v-if="schedule.description || schedule.attachments?.length"
+                @click.stop="handleShowDescription(schedule)"
+                class="flex-shrink-0 text-blue-500 hover:text-blue-700"
+                title="상세보기"
+              >
+                <FileText class="w-3 h-3" />
+              </button>
+              <span v-if="schedule.isTagged" class="flex-shrink-0 text-[10px] bg-gray-200 text-gray-600 px-1 rounded-full whitespace-nowrap">by{{ schedule.owner }}</span>
             </div>
             <div
               v-if="(schedulesByDays[idx]?.length ?? 0) > 2"
@@ -1140,9 +1296,11 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
             <div
               v-for="dday in getDDaysForDay(day)"
               :key="dday.id"
-              class="text-xs truncate text-purple-600 bg-purple-50 rounded px-1"
+              class="text-xs truncate text-gray-600 bg-gray-100 rounded px-1"
             >
-              🎯 {{ dday.title }}
+              <Lock v-if="dday.isPrivate" class="w-3 h-3 inline-block" />
+              <CalendarCheck v-else class="w-3 h-3 inline-block" />
+              {{ dday.title }}
             </div>
           </div>
 
@@ -1178,7 +1336,7 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
             >
               {{ dday.dDayText }}
             </span>
-            <div class="flex gap-1">
+            <div v-if="isMyCalendar" class="flex gap-1">
               <button
                 @click.stop="openDDayModal(dday)"
                 class="text-gray-400 hover:text-gray-600 p-1"
@@ -1194,11 +1352,15 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
             </div>
           </div>
           <p class="text-xs text-gray-500 mb-1">{{ dday.date }}</p>
-          <p class="text-sm text-gray-800 font-medium truncate">{{ dday.title }}</p>
+          <p class="text-sm text-gray-800 font-medium truncate flex items-center gap-1">
+            <Lock v-if="dday.isPrivate" class="w-3 h-3 flex-shrink-0" />
+            <span class="truncate">{{ dday.title }}</span>
+          </p>
         </div>
 
-        <!-- Add D-Day Button -->
+        <!-- Add D-Day Button (only for my calendar) -->
         <div
+          v-if="isMyCalendar"
           @click="openDDayModal()"
           class="bg-gray-50 rounded-lg p-3 border-2 border-dashed border-gray-300 cursor-pointer hover:bg-blue-50 hover:border-blue-400 transition flex flex-col items-center justify-center min-h-[100px]"
         >
@@ -1219,14 +1381,19 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
       :batch-edit-mode="batchEditMode"
       :friends="friends"
       @close="isDayDetailModalOpen = false"
-      @create-schedule="isDayDetailModalOpen = false"
-      @edit-schedule="isDayDetailModalOpen = false"
-      @delete-schedule="isDayDetailModalOpen = false"
-      @swap-schedule="isDayDetailModalOpen = false"
+      @create-schedule="handleCreateSchedule"
+      @edit-schedule="handleEditSchedule"
+      @delete-schedule="handleDeleteSchedule"
+      @swap-schedule="handleSwapSchedule"
       @add-tag="isDayDetailModalOpen = false"
       @remove-tag="isDayDetailModalOpen = false"
-      @show-description="isDayDetailModalOpen = false"
-      @change-duty-type="isDayDetailModalOpen = false"
+      @change-duty-type="handleChangeDutyType"
+    />
+
+    <ScheduleDetailModal
+      :is-open="isScheduleDetailModalOpen"
+      :schedule="selectedScheduleForDetail"
+      @close="isScheduleDetailModalOpen = false"
     />
 
     <TodoAddModal
@@ -1284,61 +1451,13 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
 
     </template>
 
-    <!-- Year-Month Picker Modal -->
-    <Teleport to="body">
-      <div
-        v-if="isYearMonthPickerOpen"
-        class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-        @click.self="isYearMonthPickerOpen = false"
-      >
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-sm">
-          <!-- Year Navigation -->
-          <div class="flex items-center justify-between p-4 border-b border-gray-200">
-            <button
-              @click="pickerPrevYear"
-              class="p-2 hover:bg-gray-100 rounded-full transition"
-            >
-              <ChevronLeft class="w-5 h-5" />
-            </button>
-            <span class="text-xl font-bold text-gray-900">{{ pickerYear }}년</span>
-            <button
-              @click="pickerNextYear"
-              class="p-2 hover:bg-gray-100 rounded-full transition"
-            >
-              <ChevronRight class="w-5 h-5" />
-            </button>
-          </div>
-
-          <!-- Month Grid -->
-          <div class="p-4">
-            <div class="grid grid-cols-4 gap-2">
-              <button
-                v-for="(name, idx) in monthNames"
-                :key="idx"
-                @click="selectYearMonth(idx + 1)"
-                class="py-3 px-2 rounded-lg text-sm font-medium transition"
-                :class="
-                  pickerYear === currentYear && idx + 1 === currentMonth
-                    ? 'bg-blue-600 text-white'
-                    : 'hover:bg-gray-100 text-gray-700'
-                "
-              >
-                {{ name }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Close Button -->
-          <div class="p-4 border-t border-gray-200">
-            <button
-              @click="isYearMonthPickerOpen = false"
-              class="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition"
-            >
-              닫기
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <YearMonthPicker
+      :is-open="isYearMonthPickerOpen"
+      :current-year="currentYear"
+      :current-month="currentMonth"
+      @close="isYearMonthPickerOpen = false"
+      @select="handleYearMonthSelect"
+      @go-to-this-month="goToToday(); isYearMonthPickerOpen = false"
+    />
   </div>
 </template>

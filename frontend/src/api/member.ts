@@ -14,6 +14,20 @@ import type {
  */
 export const memberApi = {
   /**
+   * Get my member info
+   */
+  getMyInfo() {
+    return apiClient.get<MemberDto>('/members/me')
+  },
+
+  /**
+   * Get member info by ID (requires visibility permission)
+   */
+  getMemberById(memberId: number) {
+    return apiClient.get<MemberDto>(`/members/${memberId}`)
+  },
+
+  /**
    * Update calendar visibility
    */
   updateVisibility(memberId: number, visibility: CalendarVisibility) {

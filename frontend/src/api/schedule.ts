@@ -40,8 +40,12 @@ export interface ScheduleTagMemberDto {
 
 export interface ScheduleAttachmentDto {
   id: string
-  originalFileName: string
-  thumbnailAvailable: boolean
+  originalFilename: string
+  contentType: string
+  size: number
+  hasThumbnail: boolean
+  thumbnailUrl: string | null
+  orderIndex: number
 }
 
 // Save DTO matching backend ScheduleSaveDto

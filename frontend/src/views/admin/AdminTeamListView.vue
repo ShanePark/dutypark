@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { adminApi } from '@/api/admin'
+import { useSwal } from '@/composables/useSwal'
+import type { SimpleTeam, TeamNameCheckResult } from '@/types'
 import {
   Shield,
   Building2,
@@ -15,58 +18,46 @@ import {
   X,
   Check,
   AlertCircle,
+  Loader2,
 } from 'lucide-vue-next'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { showError, toastSuccess } = useSwal()
 
-interface Team {
-  id: number
-  name: string
-  description: string
-  memberCount: number
-}
-
-// Dummy data
-const teams = ref<Team[]>([
-  { id: 1, name: '개발팀', description: '소프트웨어 개발 및 유지보수', memberCount: 12 },
-  { id: 2, name: '디자인팀', description: 'UI/UX 디자인 및 브랜딩', memberCount: 5 },
-  { id: 3, name: '마케팅팀', description: '마케팅 전략 및 실행', memberCount: 8 },
-  { id: 4, name: '영업팀', description: '고객 관리 및 영업', memberCount: 15 },
-  { id: 5, name: '인사팀', description: '인사 관리 및 채용', memberCount: 4 },
-  { id: 6, name: '재무팀', description: '재무 관리 및 회계', memberCount: 6 },
-  { id: 7, name: '기획팀', description: '사업 기획 및 전략', memberCount: 7 },
-  { id: 8, name: '고객지원팀', description: '고객 문의 및 지원', memberCount: 10 },
-])
-
+// Team list state
+const teams = ref<SimpleTeam[]>([])
 const keyword = ref('')
+const searchKeyword = ref('')
 const page = ref(0)
 const size = 10
+const totalElements = ref(0)
+const totalPages = ref(0)
 const isLoading = ref(false)
-
-const filteredTeams = computed(() => {
-  if (!keyword.value) return teams.value
-  const searchKeyword = keyword.value.toLowerCase()
-  return teams.value.filter(
-    (team) =>
-      team.name.toLowerCase().includes(searchKeyword) ||
-      team.description.toLowerCase().includes(searchKeyword)
-  )
-})
-
-const totalElements = computed(() => filteredTeams.value.length)
-const totalPages = computed(() => Math.ceil(filteredTeams.value.length / size))
-const paginatedTeams = computed(() => {
-  const start = page.value * size
-  return filteredTeams.value.slice(start, start + size)
-})
 
 // New team modal state
 const showNewTeamModal = ref(false)
 const newTeamName = ref('')
 const newTeamDescription = ref('')
-const nameCheckResult = ref<'OK' | 'TOO_SHORT' | 'TOO_LONG' | 'DUPLICATED' | null>(null)
+const nameCheckResult = ref<TeamNameCheckResult | null>(null)
 const isCheckingName = ref(false)
+const isCreating = ref(false)
+
+// Fetch teams from API
+async function fetchTeams() {
+  isLoading.value = true
+  try {
+    const response = await adminApi.getTeams(searchKeyword.value, page.value, size)
+    teams.value = response.data.content
+    totalElements.value = response.data.totalElements
+    totalPages.value = response.data.totalPages
+  } catch (error) {
+    console.error('Failed to fetch teams:', error)
+    showError('팀 목록을 불러오는데 실패했습니다.')
+  } finally {
+    isLoading.value = false
+  }
+}
 
 function openNewTeamModal() {
   newTeamName.value = ''
@@ -79,7 +70,7 @@ function closeNewTeamModal() {
   showNewTeamModal.value = false
 }
 
-function checkTeamName() {
+async function checkTeamName() {
   if (newTeamName.value.length < 2) {
     nameCheckResult.value = 'TOO_SHORT'
     return
@@ -88,15 +79,17 @@ function checkTeamName() {
     nameCheckResult.value = 'TOO_LONG'
     return
   }
-  // Check for duplicate (dummy implementation)
-  const isDuplicated = teams.value.some(
-    (team) => team.name.toLowerCase() === newTeamName.value.toLowerCase()
-  )
-  if (isDuplicated) {
-    nameCheckResult.value = 'DUPLICATED'
-    return
+
+  isCheckingName.value = true
+  try {
+    const response = await adminApi.checkTeamName(newTeamName.value)
+    nameCheckResult.value = response.data
+  } catch (error) {
+    console.error('Failed to check team name:', error)
+    showError('팀 이름 확인에 실패했습니다.')
+  } finally {
+    isCheckingName.value = false
   }
-  nameCheckResult.value = 'OK'
 }
 
 function getNameCheckMessage(): string {
@@ -114,22 +107,26 @@ function getNameCheckMessage(): string {
   }
 }
 
-function handleCreateTeam() {
+async function handleCreateTeam() {
   if (nameCheckResult.value !== 'OK') return
   if (!newTeamDescription.value) return
 
-  // API call would go here
-  const newTeam: Team = {
-    id: teams.value.length + 1,
-    name: newTeamName.value,
-    description: newTeamDescription.value,
-    memberCount: 0,
+  isCreating.value = true
+  try {
+    const response = await adminApi.createTeam({
+      name: newTeamName.value,
+      description: newTeamDescription.value,
+    })
+    toastSuccess('팀이 생성되었습니다.')
+    closeNewTeamModal()
+    // Navigate to team manage page
+    router.push(`/team/manage/${response.data.id}`)
+  } catch (error) {
+    console.error('Failed to create team:', error)
+    showError('팀 생성에 실패했습니다.')
+  } finally {
+    isCreating.value = false
   }
-  teams.value.unshift(newTeam)
-  closeNewTeamModal()
-
-  // Navigate to team manage page
-  router.push(`/team/manage/${newTeam.id}`)
 }
 
 function manageTeam(teamId: number) {
@@ -137,26 +134,28 @@ function manageTeam(teamId: number) {
 }
 
 function handleSearch() {
+  searchKeyword.value = keyword.value
   page.value = 0
+  fetchTeams()
 }
 
 function goToPage(pageNum: number) {
   if (pageNum >= 0 && pageNum < totalPages.value) {
     page.value = pageNum
+    fetchTeams()
   }
 }
 
 function refreshData() {
-  isLoading.value = true
-  setTimeout(() => {
-    isLoading.value = false
-  }, 1000)
+  fetchTeams()
 }
 
 onMounted(() => {
   if (!authStore.isAdmin) {
     router.push('/')
+    return
   }
+  fetchTeams()
 })
 </script>
 
@@ -225,7 +224,7 @@ onMounted(() => {
             <div>
               <h2 class="text-lg font-semibold text-gray-900">팀 목록</h2>
               <p class="text-sm text-gray-500">
-                <span v-if="keyword" class="text-blue-600">[{{ keyword }}]</span>
+                <span v-if="searchKeyword" class="text-blue-600">[{{ searchKeyword }}]</span>
                 총 {{ totalElements }}개의 팀이 있습니다
               </p>
             </div>
@@ -271,7 +270,7 @@ onMounted(() => {
             </thead>
             <tbody class="divide-y divide-gray-100">
               <tr
-                v-for="(team, index) in paginatedTeams"
+                v-for="(team, index) in teams"
                 :key="team.id"
                 class="hover:bg-gray-50 cursor-pointer transition"
                 @click="manageTeam(team.id)"
@@ -299,7 +298,7 @@ onMounted(() => {
           </table>
         </div>
 
-        <div v-if="paginatedTeams.length === 0" class="p-8 text-center text-gray-500">
+        <div v-if="teams.length === 0 && !isLoading" class="p-8 text-center text-gray-500">
           검색 결과가 없습니다
         </div>
 

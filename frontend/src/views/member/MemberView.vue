@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { memberApi, refreshTokenApi } from '@/api/member'
 import { authApi } from '@/api/auth'
+import { useSwal } from '@/composables/useSwal'
 import type { FriendDto, MemberDto, RefreshTokenDto, CalendarVisibility } from '@/types'
 import {
   User,
@@ -28,6 +29,7 @@ import {
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { showSuccess, showError, showInfo, confirm } = useSwal()
 
 // Loading states
 const loading = ref(false)
@@ -66,7 +68,7 @@ async function setVisibility(value: CalendarVisibility) {
     showVisibilityModal.value = false
   } catch (error) {
     console.error('Failed to update visibility:', error)
-    alert('공개 설정 변경에 실패했습니다.')
+    showError('공개 설정 변경에 실패했습니다.')
   } finally {
     savingVisibility.value = false
   }
@@ -107,21 +109,21 @@ async function assignManager() {
     selectedManagerToAdd.value = ''
   } catch (error) {
     console.error('Failed to assign manager:', error)
-    alert('관리자 추가에 실패했습니다.')
+    showError('관리자 추가에 실패했습니다.')
   } finally {
     savingManager.value = false
   }
 }
 
 async function unAssignManager(manager: MemberDto) {
-  if (!confirm(`정말 ${manager.name} 님의 관리자 권한을 해제하시겠습니까?`)) return
+  if (!await confirm(`정말 ${manager.name} 님의 관리자 권한을 해제하시겠습니까?`)) return
 
   try {
     await memberApi.unassignManager(manager.id!)
     await fetchFamilyAndManagers()
   } catch (error) {
     console.error('Failed to unassign manager:', error)
-    alert('관리자 권한 해제에 실패했습니다.')
+    showError('관리자 권한 해제에 실패했습니다.')
   }
 }
 
@@ -141,14 +143,14 @@ async function fetchTokens() {
 }
 
 async function deleteToken(tokenId: number) {
-  if (!confirm('정말 로그아웃 하시겠습니까? 해당 기기에서 로그아웃 됩니다.')) return
+  if (!await confirm('정말 로그아웃 하시겠습니까? 해당 기기에서 로그아웃 됩니다.')) return
 
   try {
     await refreshTokenApi.deleteRefreshToken(tokenId)
     await fetchTokens()
   } catch (error) {
     console.error('Failed to delete token:', error)
-    alert('세션 종료에 실패했습니다.')
+    showError('세션 종료에 실패했습니다.')
   }
 }
 
@@ -249,13 +251,13 @@ async function changePassword() {
       currentPassword: passwordForm.value.currentPassword,
       newPassword: passwordForm.value.newPassword,
     })
-    alert('비밀번호가 변경되었습니다. 다시 로그인 해주세요.')
+    await showSuccess('비밀번호가 변경되었습니다. 다시 로그인 해주세요.')
     showPasswordModal.value = false
     authStore.logout()
     router.push('/auth/login')
   } catch (error: any) {
     const message = error.response?.data?.message || '비밀번호 변경에 실패했습니다.'
-    alert(message)
+    showError(message)
   } finally {
     changingPassword.value = false
   }
@@ -263,23 +265,25 @@ async function changePassword() {
 
 // Account deletion
 function deleteAccount() {
-  alert('회원 탈퇴는 관리자에게 문의해주세요.')
+  showInfo('회원 탈퇴는 관리자에게 문의해주세요.')
 }
 
 // Logout
-function logout() {
-  authStore.logout()
-  router.push('/auth/login')
+async function logout() {
+  const confirmed = await confirm('정말 로그아웃 하시겠습니까?', '로그아웃')
+  if (confirmed) {
+    authStore.logout()
+    router.push('/auth/login')
+  }
 }
 
-// Member info (from authStore)
-const memberInfo = computed(() => ({
-  name: authStore.user?.name || '-',
-  team: authStore.user?.team || '-',
-  email: authStore.user?.email || '-',
-  hasPassword: true, // Assume true for now, could be fetched from API
-  kakaoId: null as string | null, // Could be fetched from API
-}))
+// Member info (fetched from API)
+const memberInfo = ref<MemberDto | null>(null)
+
+async function fetchMemberInfo() {
+  const response = await memberApi.getMyInfo()
+  memberInfo.value = response.data
+}
 
 // Initialize data
 onMounted(async () => {
@@ -287,21 +291,22 @@ onMounted(async () => {
   try {
     // Fetch all data in parallel
     await Promise.all([
+      fetchMemberInfo(),
       fetchFamilyAndManagers(),
       fetchTokens(),
     ])
 
-    // Set initial visibility from user data if available
-    // For now, default to FRIENDS
-    calendarVisibility.value = 'FRIENDS'
+    // Set initial visibility from user data
+    if (memberInfo.value) {
+      calendarVisibility.value = memberInfo.value.calendarVisibility
+    }
 
     // Set SSO connections based on user data
     ssoConnections.value = [
       {
         provider: 'Kakao',
         icon: '/img/kakao.png',
-        connected: !!memberInfo.value.kakaoId,
-        accountName: memberInfo.value.kakaoId || undefined,
+        connected: !!memberInfo.value?.kakaoId,
       },
     ]
   } catch (error) {
@@ -334,21 +339,21 @@ onMounted(async () => {
               <User class="w-4 h-4" />
               이름
             </div>
-            <div class="flex-1 text-gray-900">{{ memberInfo.name }}</div>
+            <div class="flex-1 text-gray-900">{{ memberInfo?.name }}</div>
           </div>
           <div class="flex items-center py-3 border-b border-gray-100">
             <div class="w-24 text-sm font-medium text-gray-500 flex items-center gap-2">
               <Building2 class="w-4 h-4" />
               소속
             </div>
-            <div class="flex-1 text-gray-900">{{ memberInfo.team || '-' }}</div>
+            <div class="flex-1 text-gray-900">{{ memberInfo?.team || '-' }}</div>
           </div>
-          <div v-if="memberInfo.email" class="flex items-center py-3">
+          <div v-if="memberInfo?.email" class="flex items-center py-3">
             <div class="w-24 text-sm font-medium text-gray-500 flex items-center gap-2">
               <Mail class="w-4 h-4" />
               이메일
             </div>
-            <div class="flex-1 text-gray-900">{{ memberInfo.email }}</div>
+            <div class="flex-1 text-gray-900">{{ memberInfo?.email }}</div>
           </div>
         </div>
       </section>
@@ -540,7 +545,7 @@ onMounted(async () => {
         </h2>
         <div class="flex flex-wrap gap-3">
           <button
-            v-if="memberInfo.hasPassword"
+            v-if="memberInfo?.hasPassword"
             @click="openPasswordModal"
             class="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition flex items-center gap-2"
           >

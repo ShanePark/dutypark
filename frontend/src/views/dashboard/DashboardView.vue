@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { dashboardApi } from '@/api/dashboard'
+import { friendApi } from '@/api/member'
+import { useSwal } from '@/composables/useSwal'
+import Sortable from 'sortablejs'
 import type {
   DashboardMyDetail,
   DashboardFriendInfo,
   DashboardScheduleDto,
+  FriendDto,
 } from '@/types'
 import {
   Calendar,
@@ -26,12 +30,12 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  Settings,
   User,
 } from 'lucide-vue-next'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { showWarning, confirm, confirmDelete, toastSuccess } = useSwal()
 
 // Loading states
 const myInfoLoading = ref(false)
@@ -92,17 +96,21 @@ async function loadFriendsDashboard() {
 // Search modal state
 const showSearchModal = ref(false)
 const searchKeyword = ref('')
-const searchResult = ref<Array<{ id: number; name: string; team: string | null }>>([])
-const searchPage = ref(1)
+const searchResult = ref<FriendDto[]>([])
+const searchPage = ref(0)
 const searchTotalPage = ref(0)
 const searchTotalElements = ref(0)
-const searchPageSize = ref(5)
+const searchPageSize = 5
+const searchLoading = ref(false)
 
 // Dropdown state for friend management
 const openDropdownId = ref<number | null>(null)
 
-// Drag state
-const draggedFriend = ref<number | null>(null)
+// Sortable instance
+let friendSortable: Sortable | null = null
+const friendListRef = ref<HTMLElement | null>(null)
+const friendSectionRef = ref<HTMLElement | null>(null)
+let isDragging = false
 
 // Features for guest view
 const features = [
@@ -137,6 +145,8 @@ const hasPendingRequests = computed(() => {
 
 // Methods
 function moveTo(memberId?: number | null) {
+  // Prevent navigation if we just finished dragging
+  if (isDragging) return
   const id = memberId || myInfo.value?.member.id
   if (!id) return
   router.push(`/duty/${id}`)
@@ -181,77 +191,137 @@ function printScheduleTime(startDateTime: string) {
 }
 
 // Pin/Unpin friend
-function pinFriend(member: { id: number | null; name: string }) {
+async function pinFriend(member: { id: number | null; name: string }) {
   if (!friendInfo.value || !member.id) return
   const friend = friendInfo.value.friends.find((f) => f.member.id === member.id)
   if (friend) {
     const maxOrder = Math.max(0, ...friendInfo.value.friends.map((f) => f.pinOrder || 0))
     friend.pinOrder = maxOrder + 1
-    // TODO: API call - PATCH /api/friends/pin/{memberId}
-    console.log('Pin friend:', member.id)
+    sortFriendsByPinOrder()
+    nextTick(() => {
+      initFriendSortable()
+    })
+    try {
+      await friendApi.pinFriend(member.id)
+    } catch (error) {
+      console.error('Failed to pin friend:', error)
+      friend.pinOrder = null
+      sortFriendsByPinOrder()
+      showWarning('친구 고정에 실패했습니다.')
+    }
   }
 }
 
-function unpinFriend(member: { id: number | null; name: string }) {
+async function unpinFriend(member: { id: number | null; name: string }) {
   if (!friendInfo.value || !member.id) return
   const friend = friendInfo.value.friends.find((f) => f.member.id === member.id)
   if (friend) {
+    const oldPinOrder = friend.pinOrder
     friend.pinOrder = null
-    // TODO: API call - PATCH /api/friends/unpin/{memberId}
-    console.log('Unpin friend:', member.id)
+    sortFriendsByPinOrder()
+    nextTick(() => {
+      initFriendSortable()
+    })
+    try {
+      await friendApi.unpinFriend(member.id)
+    } catch (error) {
+      console.error('Failed to unpin friend:', error)
+      friend.pinOrder = oldPinOrder
+      sortFriendsByPinOrder()
+      showWarning('친구 고정 해제에 실패했습니다.')
+    }
   }
+}
+
+// Sort friends by pin order
+function sortFriendsByPinOrder() {
+  if (!friendInfo.value) return
+  friendInfo.value.friends.sort((a, b) => {
+    const aPinned = a.pinOrder ? 0 : 1
+    const bPinned = b.pinOrder ? 0 : 1
+    if (aPinned !== bPinned) {
+      return aPinned - bPinned
+    }
+    if (a.pinOrder && b.pinOrder) {
+      return (a.pinOrder || 0) - (b.pinOrder || 0)
+    }
+    return 0
+  })
 }
 
 // Friend request actions
-function acceptFriendRequest(req: { fromMember: { id: number | null; name: string } }) {
+async function acceptFriendRequest(req: { fromMember: { id: number | null; name: string } }) {
   if (!friendInfo.value || !req.fromMember.id) return
-  friendInfo.value.pendingRequestsTo = friendInfo.value.pendingRequestsTo.filter(
-    (r) => r.fromMember.id !== req.fromMember.id
-  )
-  // TODO: API call - POST /api/friends/request/accept/{fromMemberId}
-  console.log('Accept request from:', req.fromMember.id)
+  try {
+    await friendApi.acceptFriendRequest(req.fromMember.id)
+    await loadFriendsDashboard()
+    toastSuccess(`${req.fromMember.name}님의 친구 요청을 수락했습니다.`)
+  } catch (error) {
+    console.error('Failed to accept friend request:', error)
+    showWarning('친구 요청 수락에 실패했습니다.')
+  }
 }
 
-function rejectFriendRequest(req: { fromMember: { id: number | null; name: string } }) {
+async function rejectFriendRequest(req: { fromMember: { id: number | null; name: string } }) {
   if (!friendInfo.value || !req.fromMember.id) return
-  friendInfo.value.pendingRequestsTo = friendInfo.value.pendingRequestsTo.filter(
-    (r) => r.fromMember.id !== req.fromMember.id
-  )
-  // TODO: API call - POST /api/friends/request/reject/{fromMemberId}
-  console.log('Reject request from:', req.fromMember.id)
+  try {
+    await friendApi.rejectFriendRequest(req.fromMember.id)
+    friendInfo.value.pendingRequestsTo = friendInfo.value.pendingRequestsTo.filter(
+      (r) => r.fromMember.id !== req.fromMember.id
+    )
+    toastSuccess(`${req.fromMember.name}님의 친구 요청을 거절했습니다.`)
+  } catch (error) {
+    console.error('Failed to reject friend request:', error)
+    showWarning('친구 요청 거절에 실패했습니다.')
+  }
 }
 
-function cancelRequest(req: { toMember: { id: number | null; name: string } }) {
+async function cancelRequest(req: { toMember: { id: number | null; name: string } }) {
   if (!friendInfo.value || !req.toMember.id) return
-  friendInfo.value.pendingRequestsFrom = friendInfo.value.pendingRequestsFrom.filter(
-    (r) => r.toMember.id !== req.toMember.id
-  )
-  // TODO: API call - DELETE /api/friends/request/cancel/{toMemberId}
-  console.log('Cancel request to:', req.toMember.id)
+  if (!await confirm(`${req.toMember.name}님에게 보낸 요청을 취소하시겠습니까?`, '요청 취소')) return
+  try {
+    await friendApi.cancelFriendRequest(req.toMember.id)
+    await loadFriendsDashboard()
+  } catch (error) {
+    console.error('Failed to cancel friend request:', error)
+    showWarning('친구 요청 취소에 실패했습니다.')
+  }
 }
 
 // Friend management actions
-function addFamily(member: { id: number | null; name: string }) {
+async function addFamily(member: { id: number | null; name: string }) {
   if (!friendInfo.value || !member.id) return
-  // Check if already sent family request
   const alreadySent = friendInfo.value.pendingRequestsFrom.some((r) => r.toMember.id === member.id)
   if (alreadySent) {
-    alert('이미 가족 요청을 보낸 상태입니다.')
+    showWarning('이미 가족 요청을 보낸 상태입니다.')
     return
   }
-  // TODO: API call - PUT /api/friends/family/{memberId}
-  console.log('Add family:', member.id)
   closeDropdown()
+  try {
+    await friendApi.sendFamilyRequest(member.id)
+    await loadFriendsDashboard()
+    toastSuccess(`${member.name}님에게 가족 요청을 보냈습니다.`)
+  } catch (error) {
+    console.error('Failed to send family request:', error)
+    showWarning('가족 요청 전송에 실패했습니다.')
+  }
 }
 
-function unfriend(member: { id: number | null; name: string }) {
+async function unfriend(member: { id: number | null; name: string }) {
   if (!friendInfo.value || !member.id) return
-  if (confirm(`정말로 [${member.name}]님을 친구목록에서 삭제하시겠습니까?`)) {
-    friendInfo.value.friends = friendInfo.value.friends.filter((f) => f.member.id !== member.id)
-    // TODO: API call - DELETE /api/friends/{memberId}
-    console.log('Unfriend:', member.id)
+  if (await confirmDelete(`정말로 [${member.name}]님을 친구목록에서 삭제하시겠습니까?`)) {
+    closeDropdown()
+    try {
+      await friendApi.unfriend(member.id)
+      friendInfo.value.friends = friendInfo.value.friends.filter((f) => f.member.id !== member.id)
+      toastSuccess(`${member.name}님을 친구 목록에서 삭제했습니다.`)
+    } catch (error) {
+      console.error('Failed to unfriend:', error)
+      showWarning('친구 삭제에 실패했습니다.')
+    }
+  } else {
+    closeDropdown()
   }
-  closeDropdown()
 }
 
 // Dropdown management
@@ -268,34 +338,67 @@ function closeDropdown() {
 function openSearchModal() {
   showSearchModal.value = true
   searchKeyword.value = ''
-  searchPage.value = 1
+  searchPage.value = 0
+  searchResult.value = []
+  searchTotalPage.value = 0
+  searchTotalElements.value = 0
 }
 
 function closeSearchModal() {
   showSearchModal.value = false
 }
 
-function search() {
-  // TODO: API call - GET /api/friends/search?keyword={keyword}&page={page}&size={size}
-  console.log('Search:', searchKeyword.value, 'Page:', searchPage.value)
+async function search() {
+  if (!searchKeyword.value.trim()) {
+    searchResult.value = []
+    searchTotalPage.value = 0
+    searchTotalElements.value = 0
+    return
+  }
+
+  searchLoading.value = true
+  try {
+    const response = await friendApi.searchPossibleFriends(
+      searchKeyword.value,
+      searchPage.value,
+      searchPageSize
+    )
+    searchResult.value = response.data.content
+    searchTotalPage.value = response.data.totalPages
+    searchTotalElements.value = response.data.totalElements
+  } catch (error) {
+    console.error('Failed to search friends:', error)
+    searchResult.value = []
+  } finally {
+    searchLoading.value = false
+  }
 }
 
-function requestFriend(member: { id: number; name: string }) {
-  // TODO: API call - POST /api/friends/request/send/{memberId}
-  console.log('Request friend:', member.id)
-  // Remove from search results to show it's been requested
-  searchResult.value = searchResult.value.filter((m) => m.id !== member.id)
+async function requestFriend(member: FriendDto) {
+  if (!member.id) return
+  if (!await confirm(`${member.name}님에게 친구 요청을 보내시겠습니까?`, '친구 요청')) return
+  try {
+    await friendApi.sendFriendRequest(member.id)
+    // Remove from search results to show it's been requested
+    searchResult.value = searchResult.value.filter((m) => m.id !== member.id)
+    // Refresh friend requests section
+    await loadFriendsDashboard()
+    toastSuccess(`${member.name}님에게 친구 요청을 보냈습니다.`)
+  } catch (error) {
+    console.error('Failed to send friend request:', error)
+    showWarning('친구 요청을 보내는데 실패했습니다.')
+  }
 }
 
 function prevPage() {
-  if (searchPage.value > 1) {
+  if (searchPage.value > 0) {
     searchPage.value--
     search()
   }
 }
 
 function nextPage() {
-  if (searchPage.value < searchTotalPage.value) {
+  if (searchPage.value < searchTotalPage.value - 1) {
     searchPage.value++
     search()
   }
@@ -306,47 +409,87 @@ function goToPage(page: number) {
   search()
 }
 
-// Drag and drop for pinned friends
-function onDragStart(event: DragEvent, friendId: number) {
-  draggedFriend.value = friendId
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = 'move'
-  }
-}
-
-function onDragOver(event: DragEvent) {
-  event.preventDefault()
-}
-
-function onDrop(event: DragEvent, targetFriendId: number) {
-  event.preventDefault()
-  if (!friendInfo.value || draggedFriend.value === null || draggedFriend.value === targetFriendId) {
-    draggedFriend.value = null
+// Initialize SortableJS for friend list
+function initFriendSortable() {
+  if (!friendListRef.value) {
+    if (friendSortable) {
+      friendSortable.destroy()
+      friendSortable = null
+    }
     return
   }
 
-  const friends = friendInfo.value.friends
-  const draggedIndex = friends.findIndex((f) => f.member.id === draggedFriend.value)
-  const targetIndex = friends.findIndex((f) => f.member.id === targetFriendId)
-
-  if (draggedIndex !== -1 && targetIndex !== -1) {
-    // Swap positions
-    const draggedFriendObj = friends[draggedIndex]
-    const targetFriendObj = friends[targetIndex]
-    if (draggedFriendObj && targetFriendObj && draggedFriendObj.pinOrder && targetFriendObj.pinOrder) {
-      const tempOrder = draggedFriendObj.pinOrder
-      draggedFriendObj.pinOrder = targetFriendObj.pinOrder
-      targetFriendObj.pinOrder = tempOrder
-    }
-    // TODO: API call - PATCH /api/friends/pin/order with new order
-    console.log('Reorder friends')
+  if (friendSortable) {
+    friendSortable.destroy()
   }
 
-  draggedFriend.value = null
+  friendSortable = new Sortable(friendListRef.value, {
+    animation: 150,
+    draggable: '.pinned-friend',
+    handle: '.handle',
+    ghostClass: 'sortable-ghost',
+    fallbackClass: 'sortable-fallback',
+    fallbackOnBody: true,
+    forceFallback: true,
+    chosenClass: 'sortable-chosen',
+    onStart: () => {
+      isDragging = true
+      friendSectionRef.value?.classList.add('friend-section-sorting')
+    },
+    onEnd: () => {
+      friendSectionRef.value?.classList.remove('friend-section-sorting')
+      updateFriendsPin()
+      // Delay resetting isDragging to prevent click event from firing
+      setTimeout(() => {
+        isDragging = false
+      }, 100)
+    },
+  })
 }
 
-function onDragEnd() {
-  draggedFriend.value = null
+// Update friend pin order after drag
+async function updateFriendsPin() {
+  if (!friendListRef.value || !friendInfo.value) return
+
+  const pinnedElements = friendListRef.value.querySelectorAll('.pinned-friend')
+  const friendIds = Array.from(pinnedElements)
+    .map((el) => Number(el.getAttribute('data-member-id')))
+    .filter((id) => !isNaN(id) && id > 0)
+
+  if (friendIds.length === 0) return
+
+  applyFriendOrder(friendIds)
+
+  nextTick(() => {
+    initFriendSortable()
+  })
+
+  try {
+    await friendApi.updateFriendsPinOrder(friendIds)
+  } catch (error) {
+    console.error('Failed to update friend pin order:', error)
+    showWarning('친구 순서 변경에 실패했습니다.')
+  }
+}
+
+// Apply friend order based on IDs
+function applyFriendOrder(friendIds: number[]) {
+  if (!friendInfo.value || friendIds.length === 0) return
+
+  const friendMap = new Map(friendInfo.value.friends.map((f) => [f.member.id, f]))
+  const pinnedSet = new Set(friendIds)
+  const pinnedFriends = friendIds.map((id) => friendMap.get(id)).filter(Boolean)
+  const unpinnedFriends = friendInfo.value.friends.filter((f) => f.member.id !== null && !pinnedSet.has(f.member.id))
+
+  friendInfo.value.friends = [...pinnedFriends, ...unpinnedFriends] as typeof friendInfo.value.friends
+}
+
+// Destroy sortable on unmount
+function destroyFriendSortable() {
+  if (friendSortable) {
+    friendSortable.destroy()
+    friendSortable = null
+  }
 }
 
 // Load dashboard data when logged in
@@ -356,7 +499,17 @@ onMounted(async () => {
   if (authStore.isLoggedIn) {
     // Load both APIs in parallel
     await Promise.all([loadMyDashboard(), loadFriendsDashboard()])
+    // Initialize sortable after data is loaded
+    nextTick(() => {
+      initFriendSortable()
+    })
   }
+})
+
+// Cleanup on unmount
+onUnmounted(() => {
+  document.removeEventListener('click', closeDropdown)
+  destroyFriendSortable()
 })
 
 // Watch for login state changes
@@ -365,11 +518,16 @@ watch(
   async (isLoggedIn) => {
     if (isLoggedIn) {
       await Promise.all([loadMyDashboard(), loadFriendsDashboard()])
+      // Initialize sortable after data is loaded
+      nextTick(() => {
+        initFriendSortable()
+      })
     } else {
       // Clear data on logout
       myInfo.value = null
       friendInfo.value = null
       friendInfoInitialized.value = false
+      destroyFriendSortable()
     }
   }
 )
@@ -381,11 +539,12 @@ watch(
     <template v-if="authStore.isLoggedIn">
       <!-- My Info Section -->
       <div
-        class="bg-white rounded-xl shadow-sm border border-gray-200 mb-4 overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+        class="group bg-white rounded-xl shadow-sm border-2 border-gray-200 mb-4 overflow-hidden cursor-pointer hover:shadow-lg hover:border-gray-400 hover:scale-[1.01] transition-all duration-200"
         @click="moveTo()"
       >
-        <div class="bg-gray-600 text-center py-2 text-white font-bold uppercase">
-          {{ myInfo?.member.name || '로딩중...' }}
+        <div class="bg-gray-600 group-hover:bg-gray-800 py-2 text-white font-bold uppercase flex items-center justify-between px-4 transition-colors duration-200">
+          <span class="flex-1 text-center">{{ myInfo?.member.name || '로딩중...' }}</span>
+          <ChevronRight class="w-5 h-5 opacity-70 group-hover:opacity-100 group-hover:translate-x-2 transition-all duration-200" />
         </div>
         <div class="p-5">
           <!-- Error state -->
@@ -514,7 +673,7 @@ watch(
       </div>
 
       <!-- Friends List Section -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-4 overflow-hidden">
+      <div ref="friendSectionRef" class="friend-section bg-white rounded-xl shadow-sm border border-gray-200 mb-4 overflow-hidden">
         <div class="bg-gray-600 text-center py-2 text-white font-bold uppercase">
           친구 목록
         </div>
@@ -528,29 +687,24 @@ watch(
               <div class="w-8 h-8 border-3 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
             </div>
           </template>
-          <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div v-else ref="friendListRef" class="flex flex-wrap gap-3">
             <!-- Friend Cards -->
             <div
               v-for="friend in sortedFriends"
               :key="friend.member.id ?? 'unknown'"
-              :draggable="friend.pinOrder !== null"
-              class="p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition shadow-sm flex flex-col"
+              :data-member-id="friend.member.id"
+              class="friend-card p-4 border-2 border-gray-200 rounded-lg cursor-pointer transition-all duration-200 shadow-sm hover:shadow-lg hover:scale-[1.02] hover:border-blue-300 hover:bg-blue-50 flex flex-col w-full md:w-[calc(50%-6px)]"
               :class="{
-                'border-yellow-300 bg-yellow-50': friend.pinOrder,
-                'border-gray-200': !friend.pinOrder,
+                'pinned-friend bg-yellow-50': friend.pinOrder,
               }"
               @click="moveTo(friend.member.id)"
-              @dragstart="(e) => friend.pinOrder && friend.member.id && onDragStart(e, friend.member.id)"
-              @dragover="onDragOver"
-              @drop="(e) => friend.pinOrder && friend.member.id && onDrop(e, friend.member.id)"
-              @dragend="onDragEnd"
             >
               <div class="flex-grow">
                 <!-- Header: Name & Actions -->
                 <div class="flex justify-between items-center mb-2">
                   <div class="font-bold text-gray-800 flex items-center gap-1">
                     <User v-if="!friend.isFamily" class="w-4 h-4 text-gray-500" />
-                    <Home v-if="friend.isFamily" class="w-4 h-4 text-amber-500" fill="currentColor" />
+                    <Home v-if="friend.isFamily" class="w-4 h-4 text-gray-600" fill="currentColor" />
                     {{ friend.member.name }}
                   </div>
                   <div class="flex items-center gap-2" @click.stop>
@@ -632,7 +786,7 @@ watch(
               <!-- Drag handle for pinned friends -->
               <div v-if="friend.pinOrder" class="flex justify-end mt-2" @click.stop>
                 <div
-                  class="bg-gray-100 rounded-full border border-gray-200 px-2 py-1 shadow-sm cursor-grab active:cursor-grabbing"
+                  class="handle bg-gray-100 rounded-full border border-gray-200 px-2 py-1 shadow-sm cursor-grab active:cursor-grabbing"
                   title="드래그하여 순서 변경"
                 >
                   <GripVertical class="w-4 h-4 text-gray-400" />
@@ -643,43 +797,16 @@ watch(
             <!-- Add Friend Card -->
             <div
               v-if="friendInfoInitialized"
-              class="p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition flex flex-col items-center justify-center min-h-[120px] bg-blue-600"
+              class="group p-4 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer bg-blue-50 hover:bg-blue-400 hover:border-blue-400 hover:scale-[1.02] transition-all duration-200 flex flex-col items-center justify-center min-h-[120px] w-full md:w-[calc(50%-6px)]"
               @click="openSearchModal"
             >
-              <UserPlus class="w-8 h-8 text-white mb-2" />
-              <span class="font-bold text-white">친구 추가</span>
+              <UserPlus class="w-8 h-8 text-blue-400 group-hover:text-white mb-2 transition-colors duration-200" />
+              <span class="font-bold text-blue-400 group-hover:text-white transition-colors duration-200">친구 추가</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Admin Section -->
-      <div
-        v-if="authStore.isAdmin && friendInfoInitialized"
-        class="bg-white rounded-xl shadow-sm border border-gray-200 mb-4 overflow-hidden"
-      >
-        <div class="bg-gray-600 text-center py-2 text-white font-bold uppercase">
-          관리자
-        </div>
-        <div class="p-5">
-          <div class="grid grid-cols-2 gap-3">
-            <router-link
-              to="/admin"
-              class="p-4 border rounded-lg text-center hover:bg-gray-50 transition flex items-center justify-center gap-2 text-lg"
-            >
-              회원관리
-              <Settings class="w-5 h-5" />
-            </router-link>
-            <router-link
-              to="/admin/teams"
-              class="p-4 border rounded-lg text-center hover:bg-gray-50 transition flex items-center justify-center gap-2 text-lg"
-            >
-              팀 관리
-              <Settings class="w-5 h-5" />
-            </router-link>
-          </div>
-        </div>
-      </div>
     </template>
 
     <!-- Guest Dashboard -->
@@ -763,8 +890,13 @@ watch(
               </button>
             </div>
 
+            <!-- Search Loading -->
+            <div v-if="searchLoading" class="flex justify-center py-8">
+              <div class="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+            </div>
+
             <!-- Search Results -->
-            <div v-if="searchResult.length > 0">
+            <div v-else-if="searchResult.length > 0">
               <table class="w-full">
                 <thead class="bg-gray-50">
                   <tr>
@@ -775,11 +907,11 @@ watch(
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
-                  <tr v-for="(member, index) in searchResult" :key="member.id" class="hover:bg-gray-50">
+                  <tr v-for="(member, index) in searchResult" :key="member.id ?? index" class="hover:bg-gray-50">
                     <td class="px-4 py-3 text-sm text-gray-500">
-                      {{ (searchPage - 1) * searchPageSize + index + 1 }}
+                      {{ searchPage * searchPageSize + index + 1 }}
                     </td>
-                    <td class="px-4 py-3 text-sm text-gray-700">{{ member.team }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">{{ member.team ?? '-' }}</td>
                     <td class="px-4 py-3 text-sm text-gray-900 font-medium">{{ member.name }}</td>
                     <td class="px-4 py-3 text-center">
                       <button
@@ -794,10 +926,10 @@ watch(
               </table>
 
               <!-- Pagination -->
-              <div class="flex justify-center items-center gap-2 mt-4">
+              <div v-if="searchTotalPage > 1" class="flex justify-center items-center gap-2 mt-4">
                 <button
                   class="p-2 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                  :disabled="searchPage === 1"
+                  :disabled="searchPage === 0"
                   @click="prevPage"
                 >
                   <ChevronLeft class="w-4 h-4" />
@@ -806,10 +938,10 @@ watch(
                 <template v-for="i in searchTotalPage" :key="i">
                   <button
                     class="w-8 h-8 rounded border transition"
-                    :class="i === searchPage
+                    :class="(i - 1) === searchPage
                       ? 'bg-blue-600 text-white border-blue-600'
                       : 'border-gray-300 hover:bg-gray-100'"
-                    @click="goToPage(i)"
+                    @click="goToPage(i - 1)"
                   >
                     {{ i }}
                   </button>
@@ -817,7 +949,7 @@ watch(
 
                 <button
                   class="p-2 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                  :disabled="searchPage === searchTotalPage"
+                  :disabled="searchPage >= searchTotalPage - 1"
                   @click="nextPage"
                 >
                   <ChevronRight class="w-4 h-4" />
@@ -825,11 +957,11 @@ watch(
               </div>
 
               <p class="text-center text-sm text-gray-500 mt-2">
-                페이지 {{ searchPage }} / {{ searchTotalPage }} | 전체 결과: {{ searchTotalElements }}
+                페이지 {{ searchPage + 1 }} / {{ searchTotalPage }} | 전체 결과: {{ searchTotalElements }}
               </p>
             </div>
             <p v-else class="text-center text-gray-500 py-8">
-              검색 결과가 없습니다.
+              검색어를 입력하고 검색해주세요.
             </p>
           </div>
 

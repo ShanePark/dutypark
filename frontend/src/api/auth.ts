@@ -37,7 +37,7 @@ export const authApi = {
 
   changePassword: async (data: {
     memberId: number
-    currentPassword: string
+    currentPassword?: string
     newPassword: string
   }): Promise<void> => {
     await apiClient.put('/auth/password', data)

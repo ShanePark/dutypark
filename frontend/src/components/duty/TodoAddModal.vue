@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import { X } from 'lucide-vue-next'
 import FileUploader from '@/components/common/FileUploader.vue'
 import type { NormalizedAttachment } from '@/types'
+import { useSwal } from '@/composables/useSwal'
 
 interface Props {
   isOpen: boolean
@@ -26,6 +27,8 @@ const attachments = ref<NormalizedAttachment[]>([])
 const sessionId = ref<string | null>(null)
 const isUploading = ref(false)
 const fileUploaderRef = ref<InstanceType<typeof FileUploader> | null>(null)
+
+const { showWarning, showError } = useSwal()
 
 watch(
   () => props.isOpen,
@@ -59,7 +62,7 @@ function handleSave() {
     return
   }
   if (isUploading.value) {
-    alert('파일 업로드가 진행 중입니다. 완료 후 다시 시도해주세요.')
+    showWarning('파일 업로드가 진행 중입니다. 완료 후 다시 시도해주세요.')
     return
   }
 
@@ -101,7 +104,7 @@ function onUploadComplete() {
 }
 
 function onUploadError(message: string) {
-  alert(message)
+  showError(message)
 }
 </script>
 

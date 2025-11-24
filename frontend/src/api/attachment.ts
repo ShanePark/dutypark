@@ -140,6 +140,22 @@ export function validateFile(file: File): { valid: boolean; message?: string } {
   return { valid: true }
 }
 
+// Fetch image with authentication and return blob URL
+export async function fetchAuthenticatedImage(url: string): Promise<string | null> {
+  try {
+    const token = tokenManager.getAccessToken()
+    const response = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: 'include',
+    })
+    if (!response.ok) return null
+    const blob = await response.blob()
+    return URL.createObjectURL(blob)
+  } catch {
+    return null
+  }
+}
+
 // API functions
 export const attachmentApi = {
   /**

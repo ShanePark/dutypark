@@ -230,8 +230,18 @@ a:hover {
   @apply opacity-100 outline outline-2 outline-blue-500 -outline-offset-2 shadow-lg bg-blue-50 rounded-lg;
 }
 
+.sortable-fallback {
+  @apply fixed z-[1060] opacity-90 outline outline-2 outline-blue-500 -outline-offset-2 shadow-xl bg-blue-50 rounded-lg;
+  transition: none !important;
+}
+
 .sortable-chosen {
   @apply border-blue-500 shadow-sm;
+}
+
+/* Friend section - prevent hover effects while sorting */
+.friend-section-sorting .friend-card:hover {
+  @apply bg-inherit shadow-none;
 }
 
 /* Attachment Gallery */
@@ -312,4 +322,44 @@ a:hover {
 /* Vue Cloak */
 [v-cloak] {
   @apply hidden;
+}
+
+/* ====================================
+   Color Picker (Pickr)
+   ==================================== */
+
+.color-picker-container {
+  @apply flex flex-col gap-4 mt-2;
+}
+
+.color-picker-wrapper {
+  @apply flex flex-col gap-2;
+}
+
+.color-picker {
+  @apply w-full max-w-[300px] rounded-lg;
+}
+
+.pickr {
+  @apply relative;
+}
+
+.pickr .pcr-app {
+  position: static !important;
+  display: block !important;
+  visibility: visible !important;
+  @apply shadow-md rounded-lg mt-1;
+}
+
+.pickr .pcr-button {
+  display: none !important;
+}
+
+/* Monolith theme adjustments */
+.pickr .pcr-app.monolith {
+  @apply rounded-lg shadow-md;
+}
+
+.pickr .pcr-app.monolith .pcr-selection {
+  height: 160px !important;
 }

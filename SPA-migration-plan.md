@@ -7,7 +7,7 @@
 - 인증 토폴로지 설계: 쿠키 유지 + Bearer 병행, CORS/CSRF 정책 확정, Refresh 흐름 다이어그램화.
 - 라우팅 경계: `/api/**`·`/auth/**`·`/docs/**`만 백엔드, SPA는 정적 호스팅(별 도메인 또는 리버스 프록시).
 - 공용 기술 스택 결정: SPA 프레임워크(Vite+Vue3 등), API 클라이언트 패턴, 디자인 토큰.
-- 로컬 계정/환경: 백엔드는 항상 `localhost:8080`에서 띄우고, 테스트 로그인 계정 `test@duty.park / 1234` 사용 가능.
+- 로컬 계정/환경: 백엔드는 항상 `localhost:8080`에서 띄우고, 테스트 로그인 계정 `test@duty.park / 12345678` 사용 가능.
 
 ## Phase 1 — 인증/플랫폼 기반
 - Bearer 지원: JWT 필터/리졸버가 Authorization 헤더도 수용(Claims 동일).
@@ -63,7 +63,7 @@
 
 ## 로컬 개발 메모
 - 백엔드는 항상 `http://localhost:8080`에서 실행.
-- 로그인 테스트 계정: `test@duty.park / 1234`.
+- 로그인 테스트 계정: `test@duty.park / 12345678`.
 - 프론트 개발 시 Playwright MCP로 같은 백엔드에 접속해 기존 화면과 신구 UI를 나란히 비교하며 최대한 동일 동작을 맞춘다.
 
 ## 전체 작업 순서 및 체크리스트
@@ -71,7 +71,7 @@
 - [x] 디자인 퍼블리싱(병렬 가능): ✅ 2024-11-24
   - [x] 기존 CSS/Bootstrap/jQuery 의존 제거, Tailwind만 사용해 HTML/CSS 퍼블리싱.
   - [x] 더미 데이터로 PC/모바일 UI 구성, 현재 형태 최대한 유지.
-  - [x] Playwright MCP로 기존 화면과 신규 퍼블리싱 화면을 동일 백엔드(`http://localhost:8080`, 계정 `test@duty.park / 1234`)에 붙여 시각/동작 비교.
+  - [x] Playwright MCP로 기존 화면과 신규 퍼블리싱 화면을 동일 백엔드(`http://localhost:8080`, 계정 `test@duty.park / 12345678`)에 붙여 시각/동작 비교.
 - [x] 백엔드 SPA 동시 지원: ✅ 2024-11-24
   - [x] Authorization 헤더 Bearer 지원 추가(쿠키 방식 유지).
   - [x] CORS/CSRF 재구성(쿠키/헤더 병행), Refresh API 정비.
@@ -291,60 +291,81 @@ data class TokenResponse(
 
 #### 3. 테스트 결과
 - Playwright MCP로 `http://localhost:3000/auth/login` 접속
-- 테스트 계정 (`test@duty.park / 1234`)으로 로그인 성공
+- 테스트 계정 (`test@duty.park / 12345678`)으로 로그인 성공
 - 대시보드 정상 표시 확인
 
 ---
 
 ### 2024-11-24: 도메인별 API 연동 (Phase 3 진행 중)
 
-#### 1. 새로운 API 모듈 추가 (7개)
+#### 1. 새로운 API 모듈 추가 (10개)
 
 | 파일 | 주요 기능 |
 |------|----------|
-| `api/dashboard.ts` | 대시보드 데이터 조회 |
-| `api/duty.ts` | 근무 조회/변경, 월별 데이터 |
+| `api/client.ts` | Axios 인터셉터, Bearer 토큰 관리, 401 자동 갱신 |
+| `api/dashboard.ts` | 대시보드 데이터 조회 (내 정보 + 친구 목록) |
+| `api/duty.ts` | 근무 조회/변경, 월별 데이터, 배치 업데이트, 함께보기 |
 | `api/todo.ts` | 할일 CRUD, 정렬, 완료/재오픈 |
-| `api/schedule.ts` | 일정 CRUD, 검색, 첨부파일 연결 |
-| `api/member.ts` | 회원 정보, 친구, D-Day, 설정 |
-| `api/team.ts` | 팀 정보, 멤버 목록 |
-| `api/attachment.ts` | 파일 업로드 세션, 첨부파일 관리 |
+| `api/schedule.ts` | 일정 CRUD, 검색, 첨부파일 연결, 태그 관리 |
+| `api/member.ts` | 회원 정보, 친구 관리(핀/언핀/가족), D-Day, 리프레시 토큰 |
+| `api/team.ts` | 팀 정보, 멤버/관리자 관리, 근무유형, 배치 업로드 |
+| `api/attachment.ts` | 파일 업로드 세션, 첨부파일 관리, 유틸리티 |
+| `api/admin.ts` | 관리자 전용 (회원/팀 관리, 통계) |
+| `api/auth.ts` | Bearer 토큰 로그인, 리프레시, 비밀번호 변경 |
 
 #### 2. 공통 컴포넌트 추가
 
 | 컴포넌트 | 설명 |
 |----------|------|
 | `components/common/FileUploader.vue` | Uppy 기반 파일 업로더 (드래그앤드롭, 진행률, 세션 관리) |
+| `components/common/YearMonthPicker.vue` | 연/월 선택 모달 (12개월 그리드, 년도 이동) |
+| `components/duty/DayDetailModal.vue` | 일별 상세 모달 (근무유형, 일정 CRUD, 태그, 첨부파일) |
+| `components/duty/TodoAddModal.vue` | 할일 생성 모달 (파일 업로드 포함) |
+| `components/duty/TodoDetailModal.vue` | 할일 상세/수정/완료/재오픈/삭제 모달 |
+| `components/duty/ScheduleDetailModal.vue` | 일정 상세 읽기 전용 모달 (첨부파일 갤러리) |
 
-#### 3. 뷰 API 연동 완료
+#### 3. 유틸리티 추가
+
+| 파일 | 설명 |
+|------|------|
+| `composables/useSwal.ts` | SweetAlert2 래퍼 (confirm, toast, error/success/warning 모달) |
+| `types/index.ts` | 전체 타입 정의 (인증, 도메인, 페이지네이션 등 50+ 타입) |
+
+#### 4. 뷰 API 연동 완료
 
 | 뷰 | 연동 내용 |
 |----|----------|
-| `DashboardView.vue` | 내 정보, 오늘 근무/일정, 친구 목록 API 연동 |
-| `DutyView.vue` | 월별 근무 달력, Todo 리스트, 일정 조회/생성/수정 연동 |
-| `MemberView.vue` | 회원 정보, 친구 관리, D-Day 설정 연동 |
-| `TeamView.vue` | 팀 정보, 멤버 목록 조회 연동 |
+| `DashboardView.vue` | 내 정보, 오늘 근무/일정, 친구 목록/검색/핀/가족 API 연동 |
+| `DutyView.vue` | 월별 근무 달력, Todo 전체 CRUD, 일정 CRUD, D-Day, 함께보기 연동 |
+| `MemberView.vue` | 회원 정보, 친구 관리, D-Day, 세션 관리, 비밀번호 변경 연동 |
+| `TeamView.vue` | 팀 정보, 멤버 목록, 팀 일정 CRUD 연동 |
+| `TeamManageView.vue` | 팀 관리, 멤버/관리자, 근무유형 CRUD, 배치 업로드 연동 |
+| `AdminDashboardView.vue` | 통계, 회원 목록, 세션 관리, 비밀번호 초기화 연동 |
+| `AdminTeamListView.vue` | 팀 목록, 생성, 검색 연동 |
 
-#### 4. 모달 컴포넌트 API 연동
+#### 5. 모달 컴포넌트 API 연동
 
 | 컴포넌트 | 연동 내용 |
 |----------|----------|
-| `DayDetailModal.vue` | 일별 상세 조회 |
-| `TodoAddModal.vue` | 할일 생성 API |
-| `TodoDetailModal.vue` | 할일 상세/수정/삭제 API |
-| `TodoOverviewModal.vue` | 할일 전체 조회, 드래그 정렬 API |
+| `DayDetailModal.vue` | 일별 상세 조회, 근무유형 변경, 일정 CRUD, 태그 관리, 첨부파일 |
+| `TodoAddModal.vue` | 할일 생성 API, 파일 업로드 세션 |
+| `TodoDetailModal.vue` | 할일 상세/수정/삭제/완료/재오픈 API |
+| `ScheduleDetailModal.vue` | 일정 상세 읽기 전용, 첨부파일 갤러리 |
 
-#### 5. 타입 정의 확장 (`types/index.ts`)
+#### 6. 타입 정의 확장 (`types/index.ts`)
 
-- Dashboard 관련: `DashboardData`, `TodayInfo`, `FriendInfo`
-- Duty 관련: `DutyMonth`, `DutyDay`, `DutyType`
-- Todo 관련: `Todo`, `TodoCreate`, `TodoUpdate`
-- Schedule 관련: `Schedule`, `ScheduleCreate`, `ScheduleUpdate`
-- Member 관련: `MemberProfile`, `Friend`, `DDay`
-- Team 관련: `Team`, `TeamMember`
-- Attachment 관련: `UploadSession`, `Attachment`, `AttachmentInfo`
+- Authentication: `LoginMember`, `LoginDto`, `LoginResponse`, `TokenResponse`
+- Dashboard: `DashboardMyDetail`, `DashboardFriendDetail`, `DashboardMyInfo`, `DashboardFriendsInfo`
+- Duty: `Duty`, `DutyType`, `DutyCalendarDay`, `DutyCalendarResponse`
+- Todo: `Todo`, `TodoStatus` (ACTIVE | COMPLETED)
+- Schedule: `Schedule`, `ScheduleTag`, `TeamScheduleDto`
+- Member: `Member`, `Friend`, `FriendDto`, `FriendRequest`, `DDay`, `DDayDto`
+- Team: `Team`, `TeamDto`, `DutyTypeDto`, `TeamMemberDto`, `DutyBatchTemplateDto`
+- Admin: `AdminMember`, `RefreshToken`, `RefreshTokenDto`, `UserAgentInfo`
+- Attachment: `Attachment`, `AttachmentDto`, `NormalizedAttachment`
+- Common: `Page<T>`, `PageResponse<T>`, `CalendarVisibility`, `AttachmentContextType`
 
-#### 6. 백엔드 변경사항
+#### 7. 백엔드 변경사항
 
 **LoginMember.kt**
 - `teamId` 필드 추가 (SPA에서 팀 정보 접근용)
@@ -352,19 +373,219 @@ data class TokenResponse(
 **JwtProvider.kt**
 - JWT Claims에 `teamId` 추가
 
-#### 7. 의존성 추가 (`package.json`)
+**MemberController.kt**
+- `GET /api/members/me`: 현재 로그인 사용자 정보 조회
+- `GET /api/members/{memberId}`: 특정 회원 정보 조회 (visibility 체크)
+
+**FriendService.kt**
+- `checkVisibility(LoginMember?, Long, Boolean)`: memberId로 visibility 체크하는 오버로드 추가
+
+#### 8. 의존성 추가 (`package.json`)
 
 - `@uppy/core`, `@uppy/dashboard`, `@uppy/xhr-upload` - 파일 업로더
 - `sortablejs`, `@types/sortablejs` - 드래그앤드롭 정렬
+- `@vueuse/core` - Vue 유틸리티 컴포저블
+- `lucide-vue-next` - 아이콘 라이브러리
+- `sweetalert2` - 알림/확인 모달
+- `pickr` - 컬러 피커 (근무유형 색상 선택)
 
 ---
 
-### 다음 단계
+### 2024-11-24: DashboardView 친구 관리 API 연동 완료
 
-1. [x] 대시보드 API 연동 ✅
-2. [x] 근무 달력 API 연동 ✅
-3. [x] Todo API 연동 ✅
-4. [x] 팀/회원 설정 API 연동 ✅
-5. [ ] 일정 첨부파일 업로드/AI 파싱 연동
-6. [ ] Playwright MCP로 기존 대비 UX/동작 재검증
-7. [ ] 전환된 경로의 Thymeleaf 뷰 제거
+#### 연동 완료 함수 (7개)
+
+| 함수 | 연동 API | 설명 |
+|------|---------|------|
+| `pinFriend()` | `PATCH /api/friends/pin/{id}` | 친구 고정 |
+| `unpinFriend()` | `PATCH /api/friends/unpin/{id}` | 친구 고정 해제 |
+| `acceptFriendRequest()` | `POST /api/friends/request/accept/{id}` | 친구 요청 수락 |
+| `rejectFriendRequest()` | `POST /api/friends/request/reject/{id}` | 친구 요청 거절 |
+| `addFamily()` | `PUT /api/friends/family/{id}` | 가족 요청 전송 |
+| `unfriend()` | `DELETE /api/friends/{id}` | 친구 삭제 |
+| `updateFriendsPin()` | `PATCH /api/friends/pin/order` | 친구 순서 변경 (드래그) |
+
+---
+
+### 다음 단계 (미완료 현황) - 2024-11-24 재분석
+
+#### 완료된 작업
+- [x] 대시보드 API 연동 ✅
+- [x] 근무 달력 API 연동 ✅
+- [x] Todo API 연동 ✅
+- [x] 팀/회원 설정 API 연동 ✅
+- [x] DashboardView 친구 관리 API 연동 ✅
+- [x] AdminDashboardView API 연동 ✅ (통계, 회원목록, 비밀번호 변경 등 완료)
+- [x] AdminTeamListView API 연동 ✅ (팀 목록, 생성, 검색 완료)
+
+---
+
+### 미구현 기능 상세 (기존 Thymeleaf 대비) - 2024-11-24 재검토
+
+#### 1. DutyView (근무 달력) - 대부분 완료 ✅
+
+| 기능 | 기존 코드 위치 | 상태 | 우선순위 |
+|------|---------------|------|----------|
+| 편집모드 - 인라인 근무유형 버튼 | `day-grid.html:79-88` | ✅ 구현됨 (배치 편집 모드) | - |
+| 한번에 수정 - 배치 업데이트 모달 | `duty-table-header.js:2-57` | ✅ 구현됨 | - |
+| 함께보기 API 연동 | `show-other-duties-modal.js` | ✅ 구현됨 (`getOtherDuties` API) | - |
+| 일정 태그/언태그 UI | `duty.js:421-456` | ✅ 구현됨 (`DayDetailModal`) | - |
+| **시간표 파일 업로드 (엑셀 배치)** | `duty-table-header.js:58-113` | ❌ 미구현 | 🟡 중간 |
+| 공휴일 표시 | `day-grid.html:35-42` | ⚠️ 캘린더 API에서 받아오지만 UI 미표시 | 🟡 중간 |
+| 모달 닫을 때 세션 정리 | `duty.js:505-522` | ⚠️ 부분 구현 | 🟢 낮음 |
+
+**세부 설명:**
+- **시간표 파일 업로드**: 팀별 `dutyBatchTemplate`에 따른 엑셀 파일 파싱 (`POST /api/duty_batch`) - TeamManageView에서는 구현됨, DutyView에서는 미구현
+
+#### 2. LoginView/OAuth (로그인) - 고위험 ⚠️
+
+| 기능 | 기존 코드 위치 | 상태 | 우선순위 |
+|------|---------------|------|----------|
+| **아이디 저장 (Remember Me)** | `login.html:47-49`, `AuthService.kt:91-97` | ❌ 체크박스만 있고 동작 안함 | 🔴 높음 |
+| **이용약관 표시** | `sso-signup.html:19-68` | ❌ 체크박스만, 약관 내용 없음 | 🔴 높음 |
+| **SSO 가입 폼 제출** | `sso-signup.html:6, 70-94` | ❌ @submit 핸들러 없음 | 🔴 높음 |
+| **가입 성공 페이지** | `sso-congrats.html` | ❌ 페이지 없음 | 🔴 높음 |
+| UUID 상태 관리 | `sso-signup.html:7, 81` | ❌ route params에서 읽지 않음 | 🔴 높음 |
+| 비밀번호 maxlength | `login.html:17` | ❌ 없음 | 🟢 낮음 |
+| 사용자명 helper text | `sso-signup.html:14-16` | ❌ 없음 | 🟡 중간 |
+
+**세부 설명:**
+- **아이디 저장**: 로그인 시 `rememberMe` 쿠키에 이메일 저장, 다음 방문 시 자동 입력
+- **이용약관**: 10개 조항의 스크롤 가능한 약관 전문 표시 필요
+- **SSO 가입**: `POST /api/auth/sso/signup`에 `uuid`, `username`, `term_agree` 전송
+
+#### 3. DashboardView (대시보드) - 완료 ✅
+
+| 기능 | 기존 코드 위치 | 상태 | 우선순위 |
+|------|---------------|------|----------|
+| 관리자 섹션 링크 | `dashboard.html:219-233` | ✅ AppFooter에서 관리자 메뉴 제공 | - |
+
+**세부 설명:**
+- Admin 사용자는 하단 네비게이션에서 관리자 메뉴 접근 가능
+
+#### 4. TeamManageView (팀 관리) - 대부분 완료 ✅
+
+| 기능 | 기존 코드 위치 | 상태 | 우선순위 |
+|------|---------------|------|----------|
+| 배치 업로드 (엑셀) | `team-manage.html:763-862` | ✅ 구현됨 | - |
+| 근무유형 CRUD | - | ✅ 구현됨 (색상 선택 포함) | - |
+| **팀 삭제** | `team-manage.html:950-979` | ❌ 백엔드 API 미구현 (경고만 표시) | 🟡 중간 |
+| 팀 설명 편집 | `team-manage.html:14-16` | ❌ 읽기전용 | 🟢 낮음 |
+
+#### 5. MemberView (회원 설정) - 완료 ✅
+
+- 모든 기능 구현됨
+- 비밀번호 변경 (현재 비밀번호 검증 포함)
+- 세션/리프레시 토큰 관리
+- 친구 가시성 설정
+- D-Day 관리
+
+#### 6. AdminView (관리자) - 완료 ✅
+
+- 통계 대시보드 (회원수, 팀수, 토큰수, 오늘 로그인)
+- 회원 목록 검색 및 페이지네이션
+- 세션 토큰 관리
+- 비밀번호 초기화
+- 팀 목록/생성/검색
+
+---
+
+### 우선순위별 작업 목록 - 2024-11-24 재검토
+
+#### 🔴 P0 - 필수 (SPA 출시 전 완료 필요)
+
+**DutyView:** (대부분 완료)
+- [x] 편집모드 인라인 근무유형 버튼 구현 ✅
+- [x] 한번에 수정 배치 업데이트 모달 구현 ✅
+- [x] 함께보기 API 연동 ✅
+
+**LoginView/OAuth:**
+- [ ] 아이디 저장 (Remember Me) 기능 구현
+- [ ] SsoSignupView 이용약관 전문 표시
+- [ ] SsoSignupView 폼 제출 핸들러 구현 (UUID 포함)
+- [ ] SsoCongratsView 가입 성공 페이지 생성
+
+#### 🟡 P1 - 중요 (출시 후 빠른 패치)
+
+- [ ] DutyView 시간표 파일 업로드 (엑셀 배치) - 개인 캘린더에서
+- [ ] DutyView 공휴일 표시 UI (API 연동 완료, UI 미표시)
+- [ ] TeamManageView 팀 삭제 기능 (백엔드 API 필요)
+- [ ] SsoSignupView 사용자명 helper text 추가
+
+#### 🟢 P2 - 개선 (추후 진행)
+
+- [ ] LoginView 비밀번호 maxlength 추가
+- [ ] TeamManageView 팀 설명 편집 기능
+- [ ] MemberView 카카오 연동 해제 기능 (신규)
+- [ ] 모달 닫을 때 첨부파일 세션 정리 개선
+
+---
+
+### 기타 미완료 작업
+
+- [x] 일정 첨부파일 업로드 연동 ✅ (FileUploader, DayDetailModal에서 동작)
+- [ ] AI 파싱 연동 (백엔드 구현됨, 프론트 UI 미구현)
+- [ ] Playwright MCP로 기존 대비 UX/동작 재검증
+- [ ] 전환된 경로의 Thymeleaf 뷰 제거
+- [ ] SPA 정적 서빙 및 `/api/**` 네임스페이스 분리
+
+---
+
+### 2024-11-24: 코드 분석 요약
+
+#### 프론트엔드 구조 현황
+
+```
+frontend/
+├── src/
+│   ├── api/                    # 10개 API 모듈
+│   │   ├── client.ts           # Axios 인터셉터, 토큰 관리
+│   │   ├── auth.ts             # 인증 (Bearer 토큰)
+│   │   ├── admin.ts            # 관리자 API
+│   │   ├── dashboard.ts        # 대시보드
+│   │   ├── duty.ts             # 근무
+│   │   ├── todo.ts             # 할일
+│   │   ├── schedule.ts         # 일정
+│   │   ├── member.ts           # 회원/친구/D-Day
+│   │   ├── team.ts             # 팀
+│   │   └── attachment.ts       # 첨부파일
+│   ├── components/
+│   │   ├── common/             # 공용 컴포넌트
+│   │   │   ├── FileUploader.vue
+│   │   │   └── YearMonthPicker.vue
+│   │   ├── duty/               # 근무 관련 모달
+│   │   │   ├── DayDetailModal.vue
+│   │   │   ├── TodoAddModal.vue
+│   │   │   ├── TodoDetailModal.vue
+│   │   │   └── ScheduleDetailModal.vue
+│   │   └── layout/             # 레이아웃
+│   │       ├── AppHeader.vue
+│   │       └── AppFooter.vue
+│   ├── composables/
+│   │   └── useSwal.ts          # SweetAlert2 래퍼
+│   ├── views/                  # 7개 주요 뷰
+│   │   ├── auth/
+│   │   ├── dashboard/
+│   │   ├── duty/
+│   │   ├── member/
+│   │   ├── team/
+│   │   └── admin/
+│   ├── types/index.ts          # 50+ 타입 정의
+│   └── style.css               # Tailwind + 디자인 토큰
+└── vite.config.ts              # Vite 설정 (프록시 포함)
+```
+
+#### 완료된 주요 기능
+
+1. **인증 시스템**: Bearer 토큰 로그인, 자동 갱신, 카카오 OAuth
+2. **대시보드**: 내 정보, 오늘 근무/일정, 친구 관리 (검색/핀/가족)
+3. **근무 달력**: 월별 조회, 배치 수정, 함께보기, D-Day
+4. **Todo**: CRUD, 드래그 정렬, 완료/재오픈, 첨부파일
+5. **일정**: CRUD, 태그, 첨부파일 업로드, 검색
+6. **팀**: 조회, 팀 일정, 팀 관리 (멤버/관리자/근무유형)
+7. **관리자**: 통계, 회원/팀 관리, 비밀번호 초기화
+
+#### 미완료 P0 (출시 차단)
+
+- SSO 가입 플로우 (이용약관, 폼 제출, 성공 페이지)
+- Remember Me (아이디 저장)

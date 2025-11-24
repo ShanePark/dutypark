@@ -362,12 +362,13 @@ export interface TeamMemberDto {
   name: string
   email: string | null
   isManager: boolean
+  isAdmin: boolean
 }
 
 export interface DutyBatchTemplateDto {
-  id: number
   name: string
-  parserType: string
+  label: string
+  fileExtensions: string[]
 }
 
 // Calendar response structure
@@ -481,4 +482,38 @@ export interface RefreshTokenUserAgent {
   os: string
   browser: string
   device: string
+}
+
+// Page response type
+export interface PageResponse<T> {
+  content: T[]
+  totalElements: number
+  totalPages: number
+  size: number
+  number: number
+  first: boolean
+  last: boolean
+}
+
+// Duty Type management types
+export interface DutyTypeCreateDto {
+  teamId: number
+  name: string
+  color: string
+}
+
+export interface DutyTypeUpdateDto {
+  id: number
+  name: string
+  color: string
+}
+
+// Duty Batch types
+export interface DutyBatchTeamResult {
+  success: boolean
+  message: string
+  teamId?: number
+  year?: number
+  month?: number
+  processedCount?: number
 }

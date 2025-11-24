@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, reactive } from 'vue'
 import {
   X,
   Plus,
@@ -12,11 +12,17 @@ import {
   EyeOff,
   Users,
   User,
-  Upload,
-  Download,
   Tag,
-  FileText,
+  Download,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-vue-next'
+import FileUploader from '@/components/common/FileUploader.vue'
+import type { NormalizedAttachment } from '@/types'
+import { normalizeAttachment, fetchAuthenticatedImage } from '@/api/attachment'
+import { useSwal } from '@/composables/useSwal'
+
+const { showWarning, showError } = useSwal()
 
 interface Schedule {
   id: string
@@ -62,29 +68,111 @@ const props = withDefaults(defineProps<Props>(), {
   friends: () => [],
 })
 
+interface ScheduleSaveData {
+  id?: string
+  content: string
+  description: string
+  startDateTime: string
+  endDateTime: string
+  visibility: 'PUBLIC' | 'FRIENDS' | 'FAMILY' | 'PRIVATE'
+  attachmentSessionId?: string | null
+  orderedAttachmentIds?: string[]
+}
+
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'changeDutyType', dutyTypeId: number | null): void
-  (e: 'createSchedule'): void
-  (e: 'editSchedule', schedule: Schedule): void
+  (e: 'createSchedule', data: ScheduleSaveData): void
+  (e: 'editSchedule', data: ScheduleSaveData): void
   (e: 'deleteSchedule', scheduleId: string): void
   (e: 'swapSchedule', schedule1Id: string, schedule2Id: string): void
   (e: 'addTag', scheduleId: string, friendId: number): void
   (e: 'removeTag', scheduleId: string, friendId: number): void
-  (e: 'showDescription', schedule: Schedule): void
 }>()
 
 const isCreateMode = ref(false)
+const isEditMode = ref(false)
+const editingScheduleId = ref<string | null>(null)
+const fileUploaderRef = ref<InstanceType<typeof FileUploader> | null>(null)
+const isUploading = ref(false)
+
 const newSchedule = ref({
   content: '',
   description: '',
   startDate: '',
   startTime: '00:00',
   endDateTime: '',
-  visibility: 'FAMILY' as const,
+  visibility: 'FAMILY' as 'PUBLIC' | 'FRIENDS' | 'FAMILY' | 'PRIVATE',
 })
+const editAttachments = ref<NormalizedAttachment[]>([])
 
 const showTagDropdown = ref<string | null>(null)
+const thumbnailBlobUrls = reactive<Record<string, string>>({})
+const fullImageBlobUrls = reactive<Record<string, string>>({})
+
+// Image viewer state
+const imageViewerOpen = ref(false)
+const currentImageIndex = ref(0)
+const currentImageAttachments = ref<Array<{ id: string; originalFilename: string; contentType: string }>>([])
+
+function openImageViewer(attachments: Array<{ id: string; originalFilename: string; contentType: string }>, index: number) {
+  const imageAttachments = attachments.filter((a) => a.contentType.startsWith('image/'))
+  if (imageAttachments.length === 0) return
+
+  currentImageAttachments.value = imageAttachments
+  const clickedAttachment = attachments[index]
+  const imageIndex = imageAttachments.findIndex((a) => a.id === clickedAttachment?.id)
+  currentImageIndex.value = imageIndex >= 0 ? imageIndex : 0
+  imageViewerOpen.value = true
+
+  // Load full image
+  loadFullImage(currentImageAttachments.value[currentImageIndex.value]?.id)
+}
+
+function closeImageViewer() {
+  imageViewerOpen.value = false
+}
+
+function prevImage() {
+  if (currentImageIndex.value > 0) {
+    currentImageIndex.value--
+    loadFullImage(currentImageAttachments.value[currentImageIndex.value]?.id)
+  }
+}
+
+function nextImage() {
+  if (currentImageIndex.value < currentImageAttachments.value.length - 1) {
+    currentImageIndex.value++
+    loadFullImage(currentImageAttachments.value[currentImageIndex.value]?.id)
+  }
+}
+
+async function loadFullImage(attachmentId: string | undefined) {
+  if (!attachmentId || fullImageBlobUrls[attachmentId]) return
+  const blobUrl = await fetchAuthenticatedImage(`/api/attachments/${attachmentId}/download?inline=true`)
+  if (blobUrl) {
+    fullImageBlobUrls[attachmentId] = blobUrl
+  }
+}
+
+function getCurrentImageUrl(): string | null {
+  const attachment = currentImageAttachments.value[currentImageIndex.value]
+  if (!attachment) return null
+  return fullImageBlobUrls[attachment.id] || thumbnailBlobUrls[attachment.id] || null
+}
+
+async function downloadAttachment(attachmentId: string, filename: string) {
+  const blobUrl = await fetchAuthenticatedImage(`/api/attachments/${attachmentId}/download`)
+  if (blobUrl) {
+    const a = document.createElement('a')
+    a.href = blobUrl
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(blobUrl)
+  }
+}
 
 const formattedDate = computed(() => {
   const { year, month, day } = props.date
@@ -99,15 +187,24 @@ watch(
   (open) => {
     if (open) {
       isCreateMode.value = false
+      isEditMode.value = false
+      editingScheduleId.value = null
+      editAttachments.value = []
       const { year, month, day } = props.date
       newSchedule.value.startDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
       newSchedule.value.endDateTime = `${newSchedule.value.startDate}T00:00`
+    } else {
+      // Cleanup when modal closes
+      fileUploaderRef.value?.cleanup()
     }
   }
 )
 
 function startCreateMode() {
   isCreateMode.value = true
+  isEditMode.value = false
+  editingScheduleId.value = null
+  editAttachments.value = []
   const { year, month, day } = props.date
   newSchedule.value = {
     content: '',
@@ -119,16 +216,107 @@ function startCreateMode() {
   }
 }
 
-function cancelCreate() {
+function startEditMode(schedule: Schedule) {
   isCreateMode.value = false
+  isEditMode.value = true
+  editingScheduleId.value = schedule.id
+
+  const start = new Date(schedule.startDateTime)
+  const end = new Date(schedule.endDateTime)
+
+  newSchedule.value = {
+    content: schedule.content,
+    description: schedule.description || '',
+    startDate: schedule.startDateTime.split('T')[0] || '',
+    startTime: `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`,
+    endDateTime: `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}T${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`,
+    visibility: schedule.visibility,
+  }
+
+  // Load existing attachments
+  editAttachments.value = (schedule.attachments || []).map((a) =>
+    normalizeAttachment({
+      id: a.id,
+      contextType: 'SCHEDULE',
+      contextId: schedule.id,
+      originalFilename: a.originalFilename,
+      contentType: a.contentType,
+      size: a.size,
+      hasThumbnail: a.hasThumbnail,
+      thumbnailUrl: a.thumbnailUrl || null,
+      orderIndex: 0,
+      createdAt: '',
+      createdBy: 0,
+    })
+  )
+}
+
+function cancelEdit() {
+  isCreateMode.value = false
+  isEditMode.value = false
+  editingScheduleId.value = null
+  editAttachments.value = []
+  fileUploaderRef.value?.cleanup()
+}
+
+function buildScheduleData(): ScheduleSaveData {
+  const { year, month, day } = props.date
+  const startDateTime = `${newSchedule.value.startDate}T${newSchedule.value.startTime}:00`
+  const endDateTime = newSchedule.value.endDateTime
+    ? `${newSchedule.value.endDateTime}:00`
+    : `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00`
+
+  const sessionId = fileUploaderRef.value?.getSessionId() || null
+  const attachments = fileUploaderRef.value?.getAttachments() || []
+  const orderedIds = attachments.map((a) => a.id)
+
+  return {
+    id: isEditMode.value ? editingScheduleId.value || undefined : undefined,
+    content: newSchedule.value.content.trim(),
+    description: newSchedule.value.description.trim(),
+    startDateTime,
+    endDateTime,
+    visibility: newSchedule.value.visibility,
+    attachmentSessionId: sessionId,
+    orderedAttachmentIds: orderedIds.length > 0 ? orderedIds : undefined,
+  }
 }
 
 function saveSchedule() {
   if (!newSchedule.value.content.trim()) {
     return
   }
-  emit('createSchedule')
+
+  // Check if upload is in progress
+  if (fileUploaderRef.value?.isUploading()) {
+    showWarning('파일 업로드가 진행 중입니다. 잠시 후 다시 시도해주세요.')
+    return
+  }
+
+  const data = buildScheduleData()
+
+  if (isEditMode.value) {
+    emit('editSchedule', data)
+  } else {
+    emit('createSchedule', data)
+  }
+
   isCreateMode.value = false
+  isEditMode.value = false
+  editingScheduleId.value = null
+  editAttachments.value = []
+}
+
+function handleUploadStart() {
+  isUploading.value = true
+}
+
+function handleUploadComplete() {
+  isUploading.value = false
+}
+
+function handleUploadError(message: string) {
+  showError(message)
 }
 
 function getVisibilityIcon(visibility: string) {
@@ -179,6 +367,45 @@ function formatScheduleTime(schedule: Schedule) {
 function toggleTagDropdown(scheduleId: string) {
   showTagDropdown.value = showTagDropdown.value === scheduleId ? null : scheduleId
 }
+
+function getFileIcon(contentType: string): string {
+  if (contentType.startsWith('image/')) return 'IMG'
+  if (contentType.startsWith('video/')) return 'VID'
+  if (contentType.startsWith('audio/')) return 'AUD'
+  if (contentType.includes('pdf')) return 'PDF'
+  if (contentType.includes('word') || contentType.includes('document')) return 'DOC'
+  if (contentType.includes('excel') || contentType.includes('spreadsheet')) return 'XLS'
+  if (contentType.includes('zip') || contentType.includes('rar')) return 'ZIP'
+  return 'FILE'
+}
+
+// Load thumbnail images with authentication
+async function loadThumbnails() {
+  for (const schedule of props.schedules) {
+    if (!schedule.attachments) continue
+    for (const attachment of schedule.attachments) {
+      if (attachment.hasThumbnail && attachment.thumbnailUrl && !thumbnailBlobUrls[attachment.id]) {
+        const blobUrl = await fetchAuthenticatedImage(attachment.thumbnailUrl)
+        if (blobUrl) {
+          thumbnailBlobUrls[attachment.id] = blobUrl
+        }
+      }
+    }
+  }
+}
+
+function getThumbnailUrl(attachmentId: string): string | null {
+  return thumbnailBlobUrls[attachmentId] || null
+}
+
+// Watch for schedule changes to load thumbnails
+watch(
+  () => props.schedules,
+  () => {
+    loadThumbnails()
+  },
+  { immediate: true, deep: true }
+)
 </script>
 
 <template>
@@ -199,8 +426,8 @@ function toggleTagDropdown(scheduleId: string) {
 
         <!-- Content -->
         <div class="p-4 overflow-y-auto max-h-[calc(90vh-130px)]">
-          <!-- Duty Type Selection (내 달력에서만 표시) -->
-          <div v-if="isMyCalendar && dutyTypes.length > 0" class="mb-4">
+          <!-- Duty Type Selection (내 달력에서만 표시, 추가/수정 모드에서는 숨김) -->
+          <div v-if="!isCreateMode && !isEditMode && isMyCalendar && dutyTypes.length > 0" class="mb-4">
             <h3 class="text-sm font-medium text-gray-700 mb-2">근무</h3>
             <div class="flex flex-wrap gap-2">
               <button
@@ -238,8 +465,8 @@ function toggleTagDropdown(scheduleId: string) {
             </div>
           </div>
 
-          <!-- Schedules List -->
-          <div class="space-y-3">
+          <!-- Schedules List (hidden during create/edit mode) -->
+          <div v-if="!isCreateMode && !isEditMode" class="space-y-3">
             <h3 class="text-sm font-medium text-gray-700">일정 목록</h3>
 
             <div v-if="schedules.length === 0" class="text-center py-6 text-gray-400">
@@ -300,6 +527,47 @@ function toggleTagDropdown(scheduleId: string) {
                   >
                     by {{ schedule.taggedBy }}
                   </div>
+
+                  <!-- Description -->
+                  <div v-if="schedule.description" class="mt-2 pt-2 border-t border-gray-100">
+                    <div class="text-sm text-gray-600 whitespace-pre-wrap">{{ schedule.description }}</div>
+                  </div>
+
+                  <!-- Attachments -->
+                  <div v-if="schedule.attachments?.length" class="mt-2 pt-2 border-t border-gray-100">
+                    <div class="flex items-center gap-1 text-sm text-gray-500 mb-2">
+                      <Paperclip class="w-3 h-3" />
+                      첨부파일 ({{ schedule.attachments.length }})
+                    </div>
+                    <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      <div
+                        v-for="(attachment, idx) in schedule.attachments"
+                        :key="attachment.id"
+                        class="relative border border-gray-200 rounded overflow-hidden group cursor-pointer"
+                        @click="attachment.contentType.startsWith('image/') ? openImageViewer(schedule.attachments, idx) : downloadAttachment(attachment.id, attachment.originalFilename)"
+                      >
+                        <div class="aspect-square bg-gray-100 flex items-center justify-center">
+                          <img
+                            v-if="getThumbnailUrl(attachment.id)"
+                            :src="getThumbnailUrl(attachment.id)!"
+                            :alt="attachment.originalFilename"
+                            class="w-full h-full object-cover"
+                          />
+                          <span v-else class="text-2xl text-gray-400">
+                            {{ getFileIcon(attachment.contentType) }}
+                          </span>
+                        </div>
+                        <!-- Download button in corner -->
+                        <button
+                          class="absolute top-1 right-1 p-1 bg-black/50 rounded text-white opacity-0 group-hover:opacity-100 transition hover:bg-black/70"
+                          @click.stop="downloadAttachment(attachment.id, attachment.originalFilename)"
+                          title="다운로드"
+                        >
+                          <Download class="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <!-- Actions -->
@@ -346,20 +614,10 @@ function toggleTagDropdown(scheduleId: string) {
                     </div>
                   </div>
 
-                  <!-- View description -->
-                  <button
-                    v-if="schedule.description || schedule.attachments?.length"
-                    @click="emit('showDescription', schedule)"
-                    class="p-1 hover:bg-gray-200 rounded transition"
-                    title="상세보기"
-                  >
-                    <FileText class="w-4 h-4" />
-                  </button>
-
                   <!-- Edit -->
                   <button
                     v-if="schedule.isMine || isMyCalendar"
-                    @click="emit('editSchedule', schedule)"
+                    @click="startEditMode(schedule)"
                     class="p-1 hover:bg-gray-200 rounded transition text-blue-600"
                     title="수정"
                   >
@@ -380,9 +638,9 @@ function toggleTagDropdown(scheduleId: string) {
             </div>
           </div>
 
-          <!-- Create Schedule Form -->
-          <div v-if="isCreateMode" class="mt-4 border-t border-gray-200 pt-4">
-            <h3 class="text-sm font-medium text-gray-700 mb-3">일정 추가</h3>
+          <!-- Create/Edit Schedule Form -->
+          <div v-if="isCreateMode || isEditMode" class="mt-4 border-t border-gray-200 pt-4">
+            <h3 class="text-sm font-medium text-gray-700 mb-3">{{ isEditMode ? '일정 수정' : '일정 추가' }}</h3>
             <div class="space-y-3">
               <div>
                 <label class="block text-sm text-gray-600 mb-1">내용</label>
@@ -439,27 +697,29 @@ function toggleTagDropdown(scheduleId: string) {
               <!-- Attachment Upload Area -->
               <div>
                 <label class="block text-sm text-gray-600 mb-1">첨부파일</label>
-                <label
-                  class="flex items-center justify-center gap-2 w-full h-20 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition"
-                >
-                  <Upload class="w-5 h-5 text-gray-400" />
-                  <span class="text-sm text-gray-500">파일을 드래그하거나 클릭하여 업로드</span>
-                  <input type="file" multiple class="hidden" />
-                </label>
+                <FileUploader
+                  ref="fileUploaderRef"
+                  context-type="SCHEDULE"
+                  :existing-attachments="editAttachments"
+                  @upload-start="handleUploadStart"
+                  @upload-complete="handleUploadComplete"
+                  @error="handleUploadError"
+                />
               </div>
 
               <div class="flex gap-2 justify-end">
                 <button
-                  @click="cancelCreate"
+                  @click="cancelEdit"
                   class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
                 >
                   취소
                 </button>
                 <button
                   @click="saveSchedule"
-                  class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                  :disabled="isUploading"
+                  class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  저장
+                  {{ isUploading ? '업로드 중...' : (isEditMode ? '수정' : '저장') }}
                 </button>
               </div>
             </div>
@@ -469,7 +729,7 @@ function toggleTagDropdown(scheduleId: string) {
         <!-- Footer -->
         <div class="p-4 border-t border-gray-200 flex justify-end">
           <button
-            v-if="!isCreateMode && isMyCalendar"
+            v-if="!isCreateMode && !isEditMode && isMyCalendar"
             @click="startCreateMode"
             class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
           >
@@ -478,6 +738,67 @@ function toggleTagDropdown(scheduleId: string) {
           </button>
         </div>
       </div>
+    </div>
+
+    <!-- Image Viewer Modal -->
+    <div
+      v-if="imageViewerOpen"
+      class="fixed inset-0 z-[60] flex items-center justify-center bg-black/90"
+      @click.self="closeImageViewer"
+    >
+      <!-- Close button -->
+      <button
+        @click="closeImageViewer"
+        class="absolute top-4 right-4 p-2 text-white hover:bg-white/20 rounded-full transition"
+      >
+        <X class="w-6 h-6" />
+      </button>
+
+      <!-- Previous button -->
+      <button
+        v-if="currentImageIndex > 0"
+        @click="prevImage"
+        class="absolute left-4 p-2 text-white hover:bg-white/20 rounded-full transition"
+      >
+        <ChevronLeft class="w-8 h-8" />
+      </button>
+
+      <!-- Image -->
+      <div class="max-w-[90vw] max-h-[90vh] flex flex-col items-center">
+        <img
+          v-if="getCurrentImageUrl()"
+          :src="getCurrentImageUrl()!"
+          :alt="currentImageAttachments[currentImageIndex]?.originalFilename"
+          class="max-w-full max-h-[80vh] object-contain"
+        />
+        <div v-else class="text-white">로딩 중...</div>
+
+        <!-- Image info -->
+        <div class="mt-4 text-white text-center">
+          <div class="text-sm">{{ currentImageAttachments[currentImageIndex]?.originalFilename }}</div>
+          <div class="text-xs text-gray-400 mt-1">
+            {{ currentImageIndex + 1 }} / {{ currentImageAttachments.length }}
+          </div>
+        </div>
+
+        <!-- Download button -->
+        <button
+          @click="downloadAttachment(currentImageAttachments[currentImageIndex]?.id, currentImageAttachments[currentImageIndex]?.originalFilename)"
+          class="mt-4 flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-white transition"
+        >
+          <Download class="w-4 h-4" />
+          다운로드
+        </button>
+      </div>
+
+      <!-- Next button -->
+      <button
+        v-if="currentImageIndex < currentImageAttachments.length - 1"
+        @click="nextImage"
+        class="absolute right-4 p-2 text-white hover:bg-white/20 rounded-full transition"
+      >
+        <ChevronRight class="w-8 h-8" />
+      </button>
     </div>
   </Teleport>
 </template>

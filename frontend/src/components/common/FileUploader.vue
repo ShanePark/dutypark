@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
+import { ref, shallowRef, onMounted, onUnmounted, watch, computed } from 'vue'
 import Uppy from '@uppy/core'
 import XHRUpload from '@uppy/xhr-upload'
 import { Upload, X, FileIcon, Image, Loader2 } from 'lucide-vue-next'
@@ -16,6 +16,7 @@ import {
   formatBytes,
   getAttachmentIcon,
   validateFile,
+  fetchAuthenticatedImage,
 } from '@/api/attachment'
 
 // Props
@@ -47,11 +48,12 @@ const uploadProgress = ref<Record<string, number>>({})
 const uploadMeta = ref<Record<string, { bytesUploaded: number; bytesTotal: number; startedAt: number }>>({})
 const sessionId = ref<string | null>(null)
 const sessionCreationPromise = ref<Promise<string> | null>(null)
-const uppy = ref<Uppy | null>(null)
+const uppy = shallowRef<Uppy | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const dropZoneRef = ref<HTMLElement | null>(null)
 const isDragging = ref(false)
 const ticker = ref(0)
+const imageBlobUrls = ref<Record<string, string>>({})
 let tickerInterval: number | null = null
 
 // Computed
@@ -63,6 +65,7 @@ watch(
   () => props.existingAttachments,
   (newVal) => {
     uploadedAttachments.value = [...newVal]
+    loadExistingImages()
   }
 )
 
@@ -115,7 +118,11 @@ function stopTicker() {
 // Setup Uppy
 function setupUppy() {
   if (uppy.value) {
-    uppy.value.cancelAll()
+    try {
+      uppy.value.cancelAll()
+    } catch (e) {
+      console.warn('Failed to cancel uppy:', e)
+    }
   }
 
   const uppyInstance = new Uppy({
@@ -224,16 +231,9 @@ function setupUppy() {
       const existing = uploadedAttachments.value[index]
       const oldPreviewUrl = existing?.previewUrl
 
-      if (normalized.isImage) {
-        const inlineUrl = getDownloadUrl(normalized, true)
-        if (inlineUrl) {
-          normalized.previewUrl = inlineUrl
-          if (oldPreviewUrl?.startsWith('blob:')) {
-            URL.revokeObjectURL(oldPreviewUrl)
-          }
-        } else if (!normalized.previewUrl) {
-          normalized.previewUrl = oldPreviewUrl ?? null
-        }
+      // Keep the local blob URL for display
+      if (normalized.isImage && oldPreviewUrl?.startsWith('blob:')) {
+        imageBlobUrls.value[normalized.id] = oldPreviewUrl
       }
 
       uploadedAttachments.value[index] = normalized
@@ -365,8 +365,13 @@ function onDrop(event: DragEvent) {
 // Cleanup
 function cleanup() {
   if (uppy.value) {
-    uppy.value.cancelAll()
+    const uppyInstance = uppy.value
     uppy.value = null
+    try {
+      uppyInstance.cancelAll()
+    } catch (e) {
+      console.warn('Failed to cleanup uppy:', e)
+    }
   }
 
   uploadedAttachments.value.forEach((attachment) => {
@@ -374,6 +379,12 @@ function cleanup() {
       URL.revokeObjectURL(attachment.previewUrl)
     }
   })
+
+  // Cleanup cached blob URLs
+  Object.values(imageBlobUrls.value).forEach((url) => {
+    URL.revokeObjectURL(url)
+  })
+  imageBlobUrls.value = {}
 
   uploadedAttachments.value = []
   uploadProgress.value = {}
@@ -408,6 +419,7 @@ defineExpose({
 // Lifecycle
 onMounted(() => {
   setupUppy()
+  loadExistingImages()
 })
 
 onUnmounted(() => {
@@ -419,6 +431,41 @@ function getIconComponent(attachment: NormalizedAttachment) {
   const iconName = getAttachmentIcon(attachment)
   if (iconName === 'image') return Image
   return FileIcon
+}
+
+// Get display image URL for attachment
+function getDisplayImageUrl(attachment: NormalizedAttachment): string | null {
+  // First check blob URL cache
+  if (imageBlobUrls.value[attachment.id]) {
+    return imageBlobUrls.value[attachment.id]
+  }
+  // Then check previewUrl (local blob URL from upload)
+  if (attachment.previewUrl?.startsWith('blob:')) {
+    return attachment.previewUrl
+  }
+  return null
+}
+
+// Load authenticated image as blob URL
+async function loadAuthenticatedImage(attachment: NormalizedAttachment) {
+  if (!attachment.isImage) return
+  if (imageBlobUrls.value[attachment.id]) return
+  if (attachment.previewUrl?.startsWith('blob:')) return
+
+  const imageUrl = attachment.thumbnailUrl || getDownloadUrl(attachment, true)
+  if (!imageUrl) return
+
+  const blobUrl = await fetchAuthenticatedImage(imageUrl)
+  if (blobUrl) {
+    imageBlobUrls.value[attachment.id] = blobUrl
+  }
+}
+
+// Load images for existing attachments
+async function loadExistingImages() {
+  for (const attachment of uploadedAttachments.value) {
+    await loadAuthenticatedImage(attachment)
+  }
 }
 </script>
 
@@ -457,9 +504,9 @@ function getIconComponent(attachment: NormalizedAttachment) {
       >
         <!-- Thumbnail or icon -->
         <div class="attachment-preview">
-          <template v-if="attachment.isImage && (attachment.previewUrl || attachment.thumbnailUrl)">
+          <template v-if="attachment.isImage && getDisplayImageUrl(attachment)">
             <img
-              :src="attachment.previewUrl || attachment.thumbnailUrl || ''"
+              :src="getDisplayImageUrl(attachment) || ''"
               :alt="attachment.name"
               class="thumbnail"
             />

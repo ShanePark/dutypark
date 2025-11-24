@@ -1,6 +1,18 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, nextTick, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useSwal } from '@/composables/useSwal'
+import { useAuthStore } from '@/stores/auth'
+import { teamApi } from '@/api/team'
+import Pickr from '@simonwep/pickr'
+import '@simonwep/pickr/dist/themes/monolith.min.css'
+import type {
+  TeamDto,
+  TeamMemberDto,
+  DutyTypeDto,
+  DutyBatchTemplateDto,
+  MemberDto,
+} from '@/types'
 import {
   UserPlus,
   Trash2,
@@ -17,46 +29,29 @@ import {
   Shield,
   ShieldOff,
   Crown,
+  Loader2,
 } from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
-const teamId = route.params.teamId
+const authStore = useAuthStore()
+const { showWarning, showError, toastSuccess, confirmDelete, confirm } = useSwal()
+const teamId = Number(route.params.teamId)
+
+// Loading state
+const loading = ref(false)
+const saving = ref(false)
 
 // State
-const isAdmin = ref(true) // Is team admin
-const isAppAdmin = ref(false) // Is application admin
-const loginId = ref(1)
-const teamLoaded = ref(true)
+const isAdmin = ref(false) // Is team admin
+const isAppAdmin = computed(() => authStore.user?.isAdmin ?? false)
+const loginId = computed(() => authStore.user?.id ?? 0)
+const teamLoaded = ref(false)
 
 // Team data
-const team = ref({
-  id: Number(teamId),
-  name: '개발팀',
-  description: '프론트엔드 및 백엔드 개발을 담당하는 팀입니다.',
-  adminId: 1,
-  adminName: '김철수',
-  workType: 'WEEKDAY',
-  dutyBatchTemplate: null as { name: string; label: string } | null,
-  members: [
-    { id: 1, name: '김철수', isManager: true, isAdmin: true },
-    { id: 2, name: '이영희', isManager: true, isAdmin: false },
-    { id: 3, name: '박지민', isManager: false, isAdmin: false },
-    { id: 4, name: '정수현', isManager: false, isAdmin: false },
-    { id: 5, name: '최민수', isManager: false, isAdmin: false },
-  ],
-  dutyTypes: [
-    { id: null, name: 'OFF', color: '#ffffba' }, // Default off duty (no id)
-    { id: 1, name: '주간', color: '#bae1ff' },
-    { id: 2, name: '야간', color: '#baffc9' },
-    { id: 3, name: '당직', color: '#ffdfba' },
-  ],
-})
+const team = ref<TeamDto | null>(null)
 
-const dutyBatchTemplates = ref([
-  { name: 'SUNGSIM_CAKE', label: '성심케익 근무표' },
-  { name: 'STANDARD', label: '표준 근무표' },
-])
+const dutyBatchTemplates = ref<DutyBatchTemplateDto[]>([])
 
 const workTypes = [
   { value: 'WEEKDAY', label: '평일 근무' },
@@ -66,34 +61,18 @@ const workTypes = [
 ]
 
 // Computed
-const hasMember = computed(() => team.value.members && team.value.members.length > 0)
-const hasDutyType = computed(() => team.value.dutyTypes && team.value.dutyTypes.length > 0)
+const hasMember = computed(() => team.value?.members && team.value.members.length > 0)
+const hasDutyType = computed(() => team.value?.dutyTypes && team.value.dutyTypes.length > 0)
 
 // Member Search Modal
 const showMemberSearchModal = ref(false)
 const searchKeyword = ref('')
-const searchResult = ref<Array<{
-  id: number
-  name: string
-  email: string
-  team?: string
-}>>([])
-const currentPage = ref(1)
+const searchLoading = ref(false)
+const searchResult = ref<MemberDto[]>([])
+const currentPage = ref(0) // 0-indexed for API
 const totalPages = ref(1)
 const totalElements = ref(0)
 const pageSize = 5
-
-// Dummy search results
-const allMembers: Array<{ id: number; name: string; email: string; team?: string }> = [
-  { id: 10, name: '홍길동', email: 'hong@example.com' },
-  { id: 11, name: '임꺽정', email: 'im@example.com' },
-  { id: 12, name: '장보고', email: 'jang@example.com', team: '마케팅팀' },
-  { id: 13, name: '이순신', email: 'lee@example.com' },
-  { id: 14, name: '강감찬', email: 'kang@example.com' },
-  { id: 15, name: '을지문덕', email: 'eulji@example.com', team: '디자인팀' },
-  { id: 16, name: '계백', email: 'gye@example.com' },
-  { id: 17, name: '김유신', email: 'kimy@example.com' },
-]
 
 // Duty Type Modal
 const showDutyTypeModal = ref(false)
@@ -112,17 +91,44 @@ const batchForm = ref({
   month: new Date().getMonth() + 1,
 })
 
-// Color presets
-const colorPresets = [
-  '#ffb3ba', '#ffdfba', '#ffffba', '#baffc9', '#bae1ff',
-  '#e0bbff', '#ffd1dc', '#c1e1c1', '#aec6cf', '#f5f5dc',
-]
+// Pickr instance
+let pickrInstance: Pickr | null = null
+const colorPickerRef = ref<HTMLElement | null>(null)
+
+// Fetch team data
+async function fetchTeam() {
+  loading.value = true
+  try {
+    const response = await teamApi.getTeamForManage(teamId)
+    team.value = response.data
+    teamLoaded.value = true
+    // Check if current user is admin
+    isAdmin.value = team.value.adminId === loginId.value ||
+      team.value.members.some(m => m.id === loginId.value && m.isManager)
+  } catch (error) {
+    console.error('Failed to fetch team:', error)
+    showError('팀 정보를 불러오는데 실패했습니다.')
+    router.push('/team')
+  } finally {
+    loading.value = false
+  }
+}
+
+// Fetch duty batch templates
+async function fetchDutyBatchTemplates() {
+  try {
+    const response = await teamApi.getDutyBatchTemplates()
+    dutyBatchTemplates.value = response.data
+  } catch (error) {
+    console.error('Failed to fetch duty batch templates:', error)
+  }
+}
 
 // Methods
 function openMemberSearchModal() {
   showMemberSearchModal.value = true
   searchKeyword.value = ''
-  currentPage.value = 1
+  currentPage.value = 0
   searchMembers()
 }
 
@@ -130,26 +136,33 @@ function closeMemberSearchModal() {
   showMemberSearchModal.value = false
 }
 
-function searchMembers() {
-  const keyword = searchKeyword.value.toLowerCase()
-  const filtered = allMembers.filter(m =>
-    m.name.includes(keyword) || m.email.includes(keyword)
-  )
-  totalElements.value = filtered.length
-  totalPages.value = Math.ceil(filtered.length / pageSize) || 1
-  const start = (currentPage.value - 1) * pageSize
-  searchResult.value = filtered.slice(start, start + pageSize)
+async function searchMembers() {
+  searchLoading.value = true
+  try {
+    const response = await teamApi.searchMembersToInvite(
+      searchKeyword.value,
+      currentPage.value,
+      pageSize
+    )
+    searchResult.value = response.data.content
+    totalElements.value = response.data.totalElements
+    totalPages.value = response.data.totalPages || 1
+  } catch (error) {
+    console.error('Failed to search members:', error)
+  } finally {
+    searchLoading.value = false
+  }
 }
 
 function prevPage() {
-  if (currentPage.value > 1) {
+  if (currentPage.value > 0) {
     currentPage.value--
     searchMembers()
   }
 }
 
 function nextPage() {
-  if (currentPage.value < totalPages.value) {
+  if (currentPage.value < totalPages.value - 1) {
     currentPage.value++
     searchMembers()
   }
@@ -160,55 +173,166 @@ function goToPage(page: number) {
   searchMembers()
 }
 
-function addMember(member: { id: number; name: string }) {
-  if (confirm(`${member.name} 님을 팀에 추가하시겠습니까?`)) {
-    console.log('Adding member:', member.id)
+async function addMember(member: MemberDto) {
+  if (!member.id) return
+  if (!await confirm(`${member.name} 님을 팀에 추가하시겠습니까?`)) return
+
+  saving.value = true
+  try {
+    await teamApi.addMember(teamId, member.id)
+    toastSuccess(`${member.name} 님이 팀에 추가되었습니다.`)
     closeMemberSearchModal()
+    await fetchTeam()
+  } catch (error) {
+    console.error('Failed to add member:', error)
+    showError('멤버 추가에 실패했습니다.')
+  } finally {
+    saving.value = false
   }
 }
 
-function removeMember(memberId: number) {
-  const member = team.value.members.find(m => m.id === memberId)
-  if (confirm(`정말로 ${member?.name} 님을 팀에서 제외하시겠습니까?`)) {
-    console.log('Removing member:', memberId)
+async function removeMember(memberId: number) {
+  const member = team.value?.members.find(m => m.id === memberId)
+  if (!await confirmDelete(`정말로 ${member?.name} 님을 팀에서 제외하시겠습니까?`)) return
+
+  saving.value = true
+  try {
+    await teamApi.removeMember(teamId, memberId)
+    toastSuccess(`${member?.name} 님이 팀에서 제외되었습니다.`)
+    await fetchTeam()
+  } catch (error) {
+    console.error('Failed to remove member:', error)
+    showError('멤버 제외에 실패했습니다.')
+  } finally {
+    saving.value = false
   }
 }
 
-function assignManager(member: { id: number; name: string }) {
-  if (confirm(`${member.name} 님에게 매니저 권한을 부여하시겠습니까?`)) {
-    console.log('Assigning manager:', member.id)
+async function assignManager(member: TeamMemberDto) {
+  if (!await confirm(`${member.name} 님에게 매니저 권한을 부여하시겠습니까?`)) return
+
+  saving.value = true
+  try {
+    await teamApi.addManager(teamId, member.id)
+    toastSuccess(`${member.name} 님에게 매니저 권한이 부여되었습니다.`)
+    await fetchTeam()
+  } catch (error) {
+    console.error('Failed to assign manager:', error)
+    showError('매니저 권한 부여에 실패했습니다.')
+  } finally {
+    saving.value = false
   }
 }
 
-function unAssignManager(member: { id: number; name: string }) {
-  if (confirm(`${member.name} 님의 매니저 권한을 취소하시겠습니까?`)) {
-    console.log('Unassigning manager:', member.id)
+async function unAssignManager(member: TeamMemberDto) {
+  if (!await confirm(`${member.name} 님의 매니저 권한을 취소하시겠습니까?`)) return
+
+  saving.value = true
+  try {
+    await teamApi.removeManager(teamId, member.id)
+    toastSuccess(`${member.name} 님의 매니저 권한이 취소되었습니다.`)
+    await fetchTeam()
+  } catch (error) {
+    console.error('Failed to unassign manager:', error)
+    showError('매니저 권한 취소에 실패했습니다.')
+  } finally {
+    saving.value = false
   }
 }
 
-function changeAdmin(member?: { id: number; name: string }) {
+async function changeAdmin(member?: TeamMemberDto) {
   const message = member
     ? `정말 ${member.name} 님을 대표로 변경하시겠습니까?\n다시 대표 권한을 획득하려면 ${member.name} 님에게 요청해야합니다.`
     : '팀의 대표를 초기화 하시겠습니까?'
 
-  if (confirm(message)) {
-    console.log('Changing admin to:', member?.id || 'null')
+  if (!await confirm(message)) return
+
+  saving.value = true
+  try {
+    await teamApi.changeAdmin(teamId, member?.id ?? null)
+    toastSuccess(member ? `${member.name} 님이 대표로 변경되었습니다.` : '대표가 초기화되었습니다.')
+    await fetchTeam()
+  } catch (error) {
+    console.error('Failed to change admin:', error)
+    showError('대표 변경에 실패했습니다.')
+  } finally {
+    saving.value = false
   }
 }
 
-function updateWorkType(workType: string) {
-  console.log('Updating work type:', workType)
-  alert('근무 형태가 성공적으로 변경되었습니다.')
+async function updateWorkType(workType: string) {
+  saving.value = true
+  try {
+    await teamApi.updateWorkType(teamId, workType)
+    if (team.value) team.value.workType = workType
+    toastSuccess('근무 형태가 변경되었습니다.')
+  } catch (error) {
+    console.error('Failed to update work type:', error)
+    showError('근무 형태 변경에 실패했습니다.')
+  } finally {
+    saving.value = false
+  }
 }
 
-function updateBatchTemplate(templateName: string) {
-  console.log('Updating batch template:', templateName)
-  team.value.dutyBatchTemplate = templateName
-    ? dutyBatchTemplates.value.find(t => t.name === templateName) || null
-    : null
+async function updateBatchTemplate(templateName: string) {
+  saving.value = true
+  try {
+    await teamApi.updateBatchTemplate(teamId, templateName || null)
+    if (team.value) {
+      team.value.dutyBatchTemplate = templateName
+        ? dutyBatchTemplates.value.find(t => t.name === templateName) || null
+        : null
+    }
+    toastSuccess('근무 반입 양식이 변경되었습니다.')
+  } catch (error) {
+    console.error('Failed to update batch template:', error)
+    showError('근무 반입 양식 변경에 실패했습니다.')
+  } finally {
+    saving.value = false
+  }
 }
 
 // Duty Type Methods
+function initPickr(defaultColor: string) {
+  nextTick(() => {
+    if (colorPickerRef.value && !pickrInstance) {
+      pickrInstance = Pickr.create({
+        el: colorPickerRef.value,
+        theme: 'monolith',
+        default: defaultColor,
+        inline: true,
+        showAlways: true,
+        components: {
+          preview: true,
+          opacity: false,
+          hue: true,
+          interaction: {
+            hex: true,
+            rgba: false,
+            hsla: false,
+            hsva: false,
+            cmyk: false,
+            input: true,
+            save: false
+          }
+        }
+      })
+
+      pickrInstance.on('change', (color: Pickr.HSVaColor) => {
+        const hexColor = color.toHEXA().toString()
+        dutyTypeForm.value.color = hexColor
+      })
+    }
+  })
+}
+
+function destroyPickr() {
+  if (pickrInstance) {
+    pickrInstance.destroyAndRemove()
+    pickrInstance = null
+  }
+}
+
 function openAddDutyTypeModal() {
   dutyTypeForm.value = {
     id: null,
@@ -217,53 +341,105 @@ function openAddDutyTypeModal() {
     isDefault: false,
   }
   showDutyTypeModal.value = true
+  initPickr('#ffb3ba')
 }
 
-function openEditDutyTypeModal(dutyType: { id: number | null; name: string; color: string }) {
+function openEditDutyTypeModal(dutyType: DutyTypeDto) {
   dutyTypeForm.value = {
     id: dutyType.id,
     name: dutyType.name,
-    color: dutyType.color,
-    isDefault: dutyType.id === null,
+    color: dutyType.color || '#ffb3ba',
+    isDefault: dutyType.position === -1,
   }
   showDutyTypeModal.value = true
+  initPickr(dutyType.color || '#ffb3ba')
 }
 
 function closeDutyTypeModal() {
+  destroyPickr()
   showDutyTypeModal.value = false
 }
 
-function saveDutyType() {
+async function saveDutyType() {
   if (!dutyTypeForm.value.name) {
-    alert('근무유형 이름을 입력해주세요.')
+    showWarning('근무유형 이름을 입력해주세요.')
     return
   }
 
-  const exists = team.value.dutyTypes.some(
+  const exists = team.value?.dutyTypes.some(
     dt => dt.name === dutyTypeForm.value.name && dt.id !== dutyTypeForm.value.id
   )
   if (exists) {
-    alert(`${dutyTypeForm.value.name} 이름의 근무유형이 이미 존재합니다.`)
+    showWarning(`${dutyTypeForm.value.name} 이름의 근무유형이 이미 존재합니다.`)
     return
   }
 
-  console.log('Saving duty type:', dutyTypeForm.value)
-  closeDutyTypeModal()
-}
-
-function removeDutyType(dutyType: { id: number | null; name: string }) {
-  if (confirm(`[ ${dutyType.name} ] 근무 유형을 삭제하시겠습니까?\n삭제는 되돌릴 수 없으며 해당 유형으로 표시된 근무는 모두 제거됩니다.`)) {
-    console.log('Removing duty type:', dutyType.id)
+  saving.value = true
+  try {
+    if (dutyTypeForm.value.isDefault) {
+      // Update default duty (OFF)
+      await teamApi.updateDefaultDuty(teamId, dutyTypeForm.value.name, dutyTypeForm.value.color)
+    } else if (dutyTypeForm.value.id) {
+      // Update existing duty type
+      await teamApi.updateDutyType(teamId, {
+        id: dutyTypeForm.value.id,
+        name: dutyTypeForm.value.name,
+        color: dutyTypeForm.value.color,
+      })
+    } else {
+      // Create new duty type
+      await teamApi.addDutyType(teamId, {
+        teamId,
+        name: dutyTypeForm.value.name,
+        color: dutyTypeForm.value.color,
+      })
+    }
+    toastSuccess('근무 유형이 저장되었습니다.')
+    closeDutyTypeModal()
+    await fetchTeam()
+  } catch (error) {
+    console.error('Failed to save duty type:', error)
+    showError('근무 유형 저장에 실패했습니다.')
+  } finally {
+    saving.value = false
   }
 }
 
-function swapPosition(index1: number, index2: number) {
-  console.log('Swapping positions:', index1, index2)
-  const temp = team.value.dutyTypes[index1]
-  const other = team.value.dutyTypes[index2]
-  if (temp && other) {
-    team.value.dutyTypes[index1] = other
-    team.value.dutyTypes[index2] = temp
+async function removeDutyType(dutyType: DutyTypeDto) {
+  if (!dutyType.id) return
+  if (!await confirmDelete(`[ ${dutyType.name} ] 근무 유형을 삭제하시겠습니까?\n삭제는 되돌릴 수 없으며 해당 유형으로 표시된 근무는 모두 제거됩니다.`)) return
+
+  saving.value = true
+  try {
+    await teamApi.deleteDutyType(teamId, dutyType.id)
+    toastSuccess('근무 유형이 삭제되었습니다.')
+    await fetchTeam()
+  } catch (error) {
+    console.error('Failed to delete duty type:', error)
+    showError('근무 유형 삭제에 실패했습니다.')
+  } finally {
+    saving.value = false
+  }
+}
+
+async function swapPosition(index1: number, index2: number) {
+  if (!team.value) return
+  const dt1 = team.value.dutyTypes[index1]
+  const dt2 = team.value.dutyTypes[index2]
+  if (!dt1?.id || !dt2?.id) return
+
+  saving.value = true
+  try {
+    await teamApi.swapDutyTypePosition(teamId, dt1.id, dt2.id)
+    // Swap locally for immediate feedback
+    team.value.dutyTypes[index1] = dt2
+    team.value.dutyTypes[index2] = dt1
+  } catch (error) {
+    console.error('Failed to swap duty type positions:', error)
+    showError('순서 변경에 실패했습니다.')
+    await fetchTeam()
+  } finally {
+    saving.value = false
   }
 }
 
@@ -288,48 +464,80 @@ function handleFileChange(event: Event) {
   }
 }
 
-function uploadBatch() {
+async function uploadBatch() {
   if (!batchForm.value.file) {
-    alert('파일을 선택해주세요.')
+    showWarning('파일을 선택해주세요.')
     return
   }
-  console.log('Uploading batch:', batchForm.value)
-  alert('근무표가 성공적으로 업로드되었습니다.')
-  closeBatchUploadModal()
+
+  saving.value = true
+  try {
+    const result = await teamApi.uploadDutyBatch(
+      teamId,
+      batchForm.value.file,
+      batchForm.value.year,
+      batchForm.value.month
+    )
+    if (result.data.success) {
+      toastSuccess('근무표가 업로드되었습니다.')
+      closeBatchUploadModal()
+    } else {
+      showError(result.data.message || '근무표 업로드에 실패했습니다.')
+    }
+  } catch (error: any) {
+    console.error('Failed to upload batch:', error)
+    const message = error.response?.data?.message || '근무표 업로드에 실패했습니다.'
+    showError(message)
+  } finally {
+    saving.value = false
+  }
 }
 
-function removeTeam() {
-  if (confirm('정말로 이 팀을 삭제하겠습니까?')) {
-    console.log('Removing team:', team.value.id)
-    router.push('/admin/team')
-  }
+async function removeTeam() {
+  // Team delete is not implemented in backend API for now
+  showWarning('팀 삭제 기능은 관리자에게 문의해주세요.')
 }
 
 function goBack() {
   router.push('/team')
 }
+
+onMounted(() => {
+  fetchTeam()
+  fetchDutyBatchTemplates()
+})
+
+onUnmounted(() => {
+  destroyPickr()
+})
 </script>
 
 <template>
   <div class="max-w-4xl mx-auto px-2 sm:px-4 py-4">
-    <!-- Header -->
-    <div class="bg-gray-600 text-white font-bold text-xl text-center py-3 rounded-t-lg flex items-center justify-center gap-2">
-      {{ team.name }} 관리
-      <a
-        v-if="isAppAdmin"
-        href="/admin/team"
-        class="px-3 py-1 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition"
-      >
-        팀 목록
-      </a>
-      <button
-        v-if="isAdmin && teamLoaded && !hasMember"
-        @click="removeTeam"
-        class="px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition"
-      >
-        팀 삭제
-      </button>
+    <!-- Loading State -->
+    <div v-if="loading" class="flex items-center justify-center py-20">
+      <Loader2 class="w-8 h-8 animate-spin text-blue-500" />
     </div>
+
+    <template v-else-if="team">
+      <!-- Header -->
+      <div class="bg-gray-600 text-white font-bold text-xl text-center py-3 rounded-t-lg flex items-center justify-center gap-2">
+        {{ team.name }} 관리
+        <a
+          v-if="isAppAdmin"
+          href="/admin/team"
+          class="px-3 py-1 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition"
+        >
+          팀 목록
+        </a>
+        <button
+          v-if="isAdmin && teamLoaded && !hasMember"
+          @click="removeTeam"
+          class="px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition"
+        >
+          팀 삭제
+        </button>
+      </div>
 
     <!-- Team Info Card -->
     <div class="bg-white border border-gray-200 rounded-b-lg overflow-hidden mb-4">
@@ -520,8 +728,9 @@ function goBack() {
               </td>
               <td class="px-4 py-3 text-center">
                 <span
-                  class="inline-block w-6 h-6 rounded-full border-2 border-gray-200"
-                  :style="{ backgroundColor: dutyType.color }"
+                  @click="openEditDutyTypeModal(dutyType)"
+                  class="inline-block w-6 h-6 rounded-full border-2 border-gray-200 cursor-pointer hover:ring-2 hover:ring-offset-1 hover:ring-gray-400 transition"
+                  :style="{ backgroundColor: dutyType.color || '#e8e8e8' }"
                 ></span>
               </td>
               <td class="px-4 py-3">
@@ -580,7 +789,7 @@ function goBack() {
     <!-- Member Search Modal -->
     <div
       v-if="showMemberSearchModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
       @click.self="closeMemberSearchModal"
     >
       <div class="bg-white rounded-lg shadow-xl w-full max-w-lg">
@@ -613,7 +822,10 @@ function goBack() {
           </div>
 
           <!-- Search Results -->
-          <div v-if="searchResult.length > 0" class="overflow-x-auto">
+          <div v-if="searchLoading" class="flex items-center justify-center py-8">
+            <Loader2 class="w-6 h-6 animate-spin text-blue-500" />
+          </div>
+          <div v-else-if="searchResult.length > 0" class="overflow-x-auto">
             <table class="w-full">
               <thead class="bg-gray-100">
                 <tr>
@@ -624,19 +836,19 @@ function goBack() {
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-200">
-                <tr v-for="(member, index) in searchResult" :key="member.id" class="hover:bg-gray-50">
+                <tr v-for="(member, index) in searchResult" :key="member.id ?? index" class="hover:bg-gray-50">
                   <td class="px-3 py-2 text-sm text-gray-600">
-                    {{ (currentPage - 1) * pageSize + index + 1 }}
+                    {{ currentPage * pageSize + index + 1 }}
                   </td>
                   <td class="px-3 py-2 text-sm font-medium">{{ member.name }}</td>
                   <td class="px-3 py-2 text-sm text-gray-600">{{ member.email }}</td>
                   <td class="px-3 py-2 text-center">
                     <button
                       @click="addMember(member)"
-                      :disabled="!!member.team"
+                      :disabled="!!member.teamId || saving"
                       class="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      추가
+                      {{ member.teamId ? '소속 있음' : '추가' }}
                     </button>
                   </td>
                 </tr>
@@ -650,12 +862,12 @@ function goBack() {
           <!-- Pagination -->
           <div v-if="searchResult.length > 0" class="mt-4">
             <div class="text-sm text-gray-600 mb-2">
-              Page {{ currentPage }} of {{ totalPages }} | Total: {{ totalElements }}
+              Page {{ currentPage + 1 }} of {{ totalPages }} | Total: {{ totalElements }}
             </div>
             <div class="flex items-center gap-1">
               <button
                 @click="prevPage"
-                :disabled="currentPage === 1"
+                :disabled="currentPage === 0"
                 class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition disabled:opacity-50"
               >
                 <ChevronLeft class="w-4 h-4" />
@@ -663,15 +875,15 @@ function goBack() {
               <button
                 v-for="i in totalPages"
                 :key="i"
-                @click="goToPage(i)"
+                @click="goToPage(i - 1)"
                 class="px-3 py-1 border rounded transition"
-                :class="i === currentPage ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-300 hover:bg-gray-100'"
+                :class="i - 1 === currentPage ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-300 hover:bg-gray-100'"
               >
                 {{ i }}
               </button>
               <button
                 @click="nextPage"
-                :disabled="currentPage === totalPages"
+                :disabled="currentPage >= totalPages - 1"
                 class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition disabled:opacity-50"
               >
                 <ChevronRight class="w-4 h-4" />
@@ -694,7 +906,7 @@ function goBack() {
     <!-- Duty Type Modal -->
     <div
       v-if="showDutyTypeModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
       @click.self="closeDutyTypeModal"
     >
       <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
@@ -724,43 +936,23 @@ function goBack() {
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">
-              근무유형
+              근무명
             </label>
             <input
               v-model="dutyTypeForm.name"
               type="text"
               maxlength="10"
-              placeholder="근무유형"
+              placeholder="근무명"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
-          <div>
+          <div class="color-picker-container">
             <label class="block text-sm font-medium text-gray-700 mb-2">
               색상 선택
             </label>
-            <div class="flex flex-wrap gap-2 mb-3">
-              <button
-                v-for="color in colorPresets"
-                :key="color"
-                @click="dutyTypeForm.color = color"
-                class="w-8 h-8 rounded-full border-2 transition"
-                :class="dutyTypeForm.color === color ? 'border-gray-800 ring-2 ring-offset-1 ring-gray-400' : 'border-gray-200 hover:border-gray-400'"
-                :style="{ backgroundColor: color }"
-              ></button>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-sm text-gray-600">직접 입력:</span>
-              <input
-                v-model="dutyTypeForm.color"
-                type="color"
-                class="w-10 h-10 rounded cursor-pointer"
-              />
-              <input
-                v-model="dutyTypeForm.color"
-                type="text"
-                class="px-2 py-1 border border-gray-300 rounded text-sm w-24"
-              />
+            <div class="color-picker-wrapper flex justify-center items-center">
+              <div ref="colorPickerRef" class="color-picker"></div>
             </div>
           </div>
 
@@ -780,7 +972,8 @@ function goBack() {
         <div class="flex justify-end gap-2 p-4 border-t">
           <button
             @click="saveDutyType"
-            class="px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition"
+            :disabled="!dutyTypeForm.name.trim()"
+            class="px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {{ dutyTypeForm.id !== null || dutyTypeForm.isDefault ? '저장' : '추가' }}
           </button>
@@ -797,7 +990,7 @@ function goBack() {
     <!-- Batch Upload Modal -->
     <div
       v-if="showBatchUploadModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
       @click.self="closeBatchUploadModal"
     >
       <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
@@ -855,8 +1048,10 @@ function goBack() {
         <div class="flex justify-end gap-2 p-4 border-t">
           <button
             @click="uploadBatch"
-            class="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition"
+            :disabled="saving || !batchForm.file"
+            class="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
+            <Loader2 v-if="saving" class="w-4 h-4 animate-spin" />
             업로드
           </button>
           <button
@@ -868,5 +1063,6 @@ function goBack() {
         </div>
       </div>
     </div>
+    </template>
   </div>
 </template>

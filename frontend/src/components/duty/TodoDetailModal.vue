@@ -11,7 +11,10 @@ import {
 } from 'lucide-vue-next'
 import FileUploader from '@/components/common/FileUploader.vue'
 import { formatBytes } from '@/api/attachment'
+import { useSwal } from '@/composables/useSwal'
 import type { NormalizedAttachment } from '@/types'
+
+const { showWarning, showError } = useSwal()
 
 interface Attachment {
   id: string
@@ -127,7 +130,7 @@ function cancelEdit() {
 function saveEdit() {
   if (!props.todo || !editTitle.value.trim()) return
   if (isUploading.value) {
-    alert('파일 업로드가 진행 중입니다. 완료 후 다시 시도해주세요.')
+    showWarning('파일 업로드가 진행 중입니다. 완료 후 다시 시도해주세요.')
     return
   }
 
@@ -177,7 +180,7 @@ function onUploadComplete() {
 }
 
 function onUploadError(message: string) {
-  alert(message)
+  showError(message)
 }
 </script>
 
