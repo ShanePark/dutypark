@@ -53,7 +53,7 @@ class SecurityConfig(
         val origins = corsAllowedOrigins.split(",")
             .map { it.trim() }
             .filter { it.isNotEmpty() }
-            .ifEmpty { listOf("http://localhost:3000") }
+            .ifEmpty { listOf("http://localhost:5173") }
         configuration.allowedOrigins = origins
         configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
         configuration.allowedHeaders = listOf("*")

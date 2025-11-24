@@ -205,7 +205,7 @@ frontend/
 
 ```bash
 cd frontend
-npm run dev   # http://localhost:3000
+npm run dev   # http://localhost:5173
 npm run build # dist/ 생성 확인
 ```
 
@@ -256,7 +256,7 @@ frontend/src/views/
 
 **SecurityConfig.kt**
 - CORS 설정 추가 (`/api/**` 경로)
-- `dutypark.cors.allowed-origins` 환경변수로 Origin 설정 가능 (기본: `http://localhost:3000`)
+- `dutypark.cors.allowed-origins` 환경변수로 Origin 설정 가능 (기본: `http://localhost:5173`)
 - `corsConfigurationSource()` Bean 추가
 
 **AuthController.kt - 새 API**
@@ -297,7 +297,7 @@ data class TokenResponse(
 - `TokenResponse` 인터페이스 추가
 
 #### 3. 테스트 결과
-- Playwright MCP로 `http://localhost:3000/auth/login` 접속
+- Playwright MCP로 `http://localhost:5173/auth/login` 접속
 - 테스트 계정 (`test@duty.park / 12345678`)으로 로그인 성공
 - 대시보드 정상 표시 확인
 
