@@ -44,12 +44,8 @@ export const authApi = {
   },
 
   getStatus: async (): Promise<LoginMember | null> => {
-    try {
-      const response = await apiClient.get<LoginMember>('/auth/status')
-      return response.data
-    } catch {
-      return null
-    }
+    const response = await apiClient.get<LoginMember>('/auth/status')
+    return response.data
   },
 
   changePassword: async (data: {

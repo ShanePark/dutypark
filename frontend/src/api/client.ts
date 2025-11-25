@@ -46,7 +46,7 @@ export const tokenManager = {
   },
 
   hasTokens: (): boolean => {
-    return !!localStorage.getItem(ACCESS_TOKEN_KEY)
+    return !!(localStorage.getItem(ACCESS_TOKEN_KEY) || localStorage.getItem(REFRESH_TOKEN_KEY))
   },
 }
 
@@ -129,6 +129,16 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest)
       } catch (refreshError) {
         processQueue(refreshError as Error, null)
+
+        const axiosError = refreshError as AxiosError
+        const status = axiosError.response?.status
+        const isNetworkError = axiosError.code === 'ERR_NETWORK' || !axiosError.response
+
+        // Keep tokens when server is down or returning 5xx so we can retry later
+        if (isNetworkError || (status !== undefined && status >= 500)) {
+          return Promise.reject(refreshError)
+        }
+
         tokenManager.clearTokens()
         window.location.href = '/auth/login'
         return Promise.reject(refreshError)
