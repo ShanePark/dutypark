@@ -35,7 +35,7 @@ const isActive = (path: string) => {
     :style="{
       backgroundColor: 'var(--dp-bg-footer)',
       borderColor: 'var(--dp-border-secondary)',
-      paddingBottom: 'env(safe-area-inset-bottom)',
+      paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)',
       paddingLeft: 'env(safe-area-inset-left)',
       paddingRight: 'env(safe-area-inset-right)'
     }"
