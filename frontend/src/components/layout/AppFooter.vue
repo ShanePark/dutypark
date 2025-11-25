@@ -46,7 +46,11 @@ const isActive = (path: string) => {
           <router-link
             :to="item.path"
             class="flex flex-col items-center px-2 sm:px-3 py-2 sm:py-3 text-xs sm:text-sm rounded-xl transition-colors min-h-[56px] sm:min-h-[64px]"
-            :class="isActive(item.path) ? 'footer-nav-active' : 'footer-nav-inactive'"
+            :style="{
+              backgroundColor: isActive(item.path) ? 'rgba(255, 255, 255, 0.25)' : 'transparent',
+              color: isActive(item.path) ? '#ffffff' : 'rgba(255, 255, 255, 0.55)',
+              fontWeight: isActive(item.path) ? '600' : '400'
+            }"
           >
             <svg
               v-if="item.icon === 'home'"

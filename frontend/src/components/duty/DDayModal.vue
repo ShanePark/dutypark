@@ -117,79 +117,41 @@ const isEditMode = props.dday !== null && props.dday !== undefined
           </div>
 
           <!-- Quick Date Buttons -->
-          <div class="flex flex-wrap gap-2">
-            <button
-              @click="addDays(-30)"
-              class="flex items-center gap-1 px-2 py-1 text-xs rounded transition"
-              :style="{
-                backgroundColor: 'var(--dp-bg-tertiary)',
-                color: 'var(--dp-text-primary)'
-              }"
-            >
-              <Minus class="w-3 h-3" />
-              30일
-            </button>
+          <div class="flex justify-center gap-2">
             <button
               @click="addDays(-7)"
-              class="flex items-center gap-1 px-2 py-1 text-xs rounded transition"
-              :style="{
-                backgroundColor: 'var(--dp-bg-tertiary)',
-                color: 'var(--dp-text-primary)'
-              }"
+              class="date-adjust-btn flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
             >
               <Minus class="w-3 h-3" />
               7일
             </button>
             <button
               @click="addDays(-1)"
-              class="flex items-center gap-1 px-2 py-1 text-xs rounded transition"
-              :style="{
-                backgroundColor: 'var(--dp-bg-tertiary)',
-                color: 'var(--dp-text-primary)'
-              }"
+              class="date-adjust-btn flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
             >
               <Minus class="w-3 h-3" />
               1일
             </button>
             <button
               @click="resetToToday"
-              class="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition"
+              class="date-adjust-btn date-adjust-btn--today flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
             >
               <RotateCcw class="w-3 h-3" />
               오늘
             </button>
             <button
               @click="addDays(1)"
-              class="flex items-center gap-1 px-2 py-1 text-xs rounded transition"
-              :style="{
-                backgroundColor: 'var(--dp-bg-tertiary)',
-                color: 'var(--dp-text-primary)'
-              }"
+              class="date-adjust-btn flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
             >
               <Plus class="w-3 h-3" />
               1일
             </button>
             <button
               @click="addDays(7)"
-              class="flex items-center gap-1 px-2 py-1 text-xs rounded transition"
-              :style="{
-                backgroundColor: 'var(--dp-bg-tertiary)',
-                color: 'var(--dp-text-primary)'
-              }"
+              class="date-adjust-btn flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
             >
               <Plus class="w-3 h-3" />
               7일
-            </button>
-            <button
-              @click="addDays(30)"
-              class="flex items-center gap-1 px-2 py-1 text-xs rounded transition"
-              :style="{
-                backgroundColor: 'var(--dp-bg-tertiary)',
-                color: 'var(--dp-text-primary)'
-              }"
-            >
-              <Plus class="w-3 h-3" />
-              30일
             </button>
           </div>
 
@@ -232,3 +194,35 @@ const isEditMode = props.dday !== null && props.dday !== undefined
     </div>
   </Teleport>
 </template>
+
+<style scoped>
+.date-adjust-btn {
+  cursor: pointer;
+  background-color: var(--dp-bg-tertiary);
+  color: var(--dp-text-primary);
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.date-adjust-btn:hover {
+  border-color: var(--dp-border-secondary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.date-adjust-btn:active {
+  transform: scale(0.92);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.date-adjust-btn--today {
+  background-color: var(--dp-accent-bg);
+  color: var(--dp-accent-text);
+  font-weight: 500;
+}
+
+.date-adjust-btn--today:hover {
+  filter: brightness(0.95);
+}
+</style>

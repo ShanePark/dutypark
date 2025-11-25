@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 
-export type ThemeMode = 'light' | 'dark' | 'system'
+export type ThemeMode = 'light' | 'dark'
 
 export const useThemeStore = defineStore('theme', () => {
   const mode = ref<ThemeMode>(getStoredTheme())
@@ -9,25 +9,14 @@ export const useThemeStore = defineStore('theme', () => {
 
   function getStoredTheme(): ThemeMode {
     const stored = localStorage.getItem('theme')
-    if (stored === 'light' || stored === 'dark' || stored === 'system') {
+    if (stored === 'light' || stored === 'dark') {
       return stored
     }
-    return 'system'
-  }
-
-  function getSystemPreference(): boolean {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches
+    return 'light'
   }
 
   function applyTheme() {
-    let shouldBeDark = false
-
-    if (mode.value === 'dark') {
-      shouldBeDark = true
-    } else if (mode.value === 'system') {
-      shouldBeDark = getSystemPreference()
-    }
-
+    const shouldBeDark = mode.value === 'dark'
     isDark.value = shouldBeDark
 
     if (shouldBeDark) {
@@ -44,26 +33,11 @@ export const useThemeStore = defineStore('theme', () => {
   }
 
   function toggleTheme() {
-    if (mode.value === 'light') {
-      setTheme('dark')
-    } else if (mode.value === 'dark') {
-      setTheme('light')
-    } else {
-      // system mode - toggle to opposite of current
-      setTheme(isDark.value ? 'light' : 'dark')
-    }
+    setTheme(mode.value === 'light' ? 'dark' : 'light')
   }
 
-  // Watch for system preference changes
   function initializeTheme() {
     applyTheme()
-
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    mediaQuery.addEventListener('change', () => {
-      if (mode.value === 'system') {
-        applyTheme()
-      }
-    })
   }
 
   watch(mode, applyTheme)

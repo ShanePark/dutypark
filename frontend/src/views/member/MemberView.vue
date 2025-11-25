@@ -28,7 +28,6 @@ import {
   Loader2,
   Sun,
   Moon,
-  MonitorSmartphone,
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -40,7 +39,6 @@ const { showSuccess, showError, showInfo, confirm } = useSwal()
 const themeOptions: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
   { value: 'light', label: '라이트', icon: Sun },
   { value: 'dark', label: '다크', icon: Moon },
-  { value: 'system', label: '시스템', icon: MonitorSmartphone },
 ]
 
 function setTheme(mode: ThemeMode) {
@@ -431,7 +429,7 @@ onMounted(async () => {
           </button>
         </div>
         <p class="text-sm mt-3" :style="{ color: 'var(--dp-text-muted)' }">
-          {{ themeStore.mode === 'system' ? '시스템 설정에 따라 자동으로 테마가 변경됩니다' : (themeStore.mode === 'dark' ? '다크 모드가 적용됩니다' : '라이트 모드가 적용됩니다') }}
+          {{ themeStore.mode === 'dark' ? '다크 모드가 적용됩니다' : '라이트 모드가 적용됩니다' }}
         </p>
       </section>
 
