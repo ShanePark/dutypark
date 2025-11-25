@@ -873,7 +873,7 @@ watch(
           </p>
           <router-link
             to="/auth/login"
-            class="inline-flex items-center gap-2 bg-gray-800 px-8 py-3.5 rounded-xl font-semibold hover:bg-gray-700 transition-all shadow-lg"
+            class="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl font-semibold transition-all shadow-lg border-2 bg-blue-600 hover:bg-blue-700 border-blue-700"
             style="color: white;"
           >
             로그인 / 회원가입

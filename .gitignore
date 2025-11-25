@@ -44,6 +44,7 @@ src/main/resources/static/docs/**
 
 ### Monitoring
 data/grafana/
+data/storage/
 
 ### Kotlin
 .kotlin
@@ -53,10 +54,5 @@ data/grafana/
 
 ### Environment Variables
 .env
-
-### Frontend (SPA)
-frontend/node_modules/
-frontend/dist/
-frontend/.vscode/
 
 .playwright-mcp/

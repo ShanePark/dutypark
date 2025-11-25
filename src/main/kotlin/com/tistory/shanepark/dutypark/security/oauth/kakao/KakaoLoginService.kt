@@ -25,7 +25,7 @@ class KakaoLoginService(
     private val kakaoUserInfoApi: KakaoUserInfoApi,
     private val memberRepository: MemberRepository,
     private val authService: AuthService,
-    private val MemberSsoRegisterRepository: MemberSsoRegisterRepository,
+    private val memberSsoRegisterRepository: MemberSsoRegisterRepository,
     @param:Value("\${oauth.kakao.rest-api-key}") private val restApiKey: String
 ) {
     private val log = logger()
@@ -50,11 +50,11 @@ class KakaoLoginService(
         member.kakaoId = kakaoId
     }
 
-    fun loginForSpa(
+    fun login(
         req: HttpServletRequest,
         code: String,
         redirectUrl: String,
-        spaCallbackUrl: String
+        callbackUrl: String
     ): ResponseEntity<Void> {
         val kakaoId = getKakaoId(redirectUrl, code)
 
@@ -66,16 +66,16 @@ class KakaoLoginService(
             val fragmentParams = buildFragmentParams(tokenResponse)
             return ResponseEntity
                 .status(HttpStatus.FOUND)
-                .location(URI.create("$spaCallbackUrl#$fragmentParams"))
+                .location(URI.create("$callbackUrl#$fragmentParams"))
                 .build()
         }
 
-        val ssoRegister = MemberSsoRegisterRepository.save(MemberSsoRegister(ssoId = kakaoId, ssoType = SsoType.KAKAO))
+        val ssoRegister = memberSsoRegisterRepository.save(MemberSsoRegister(ssoId = kakaoId, ssoType = SsoType.KAKAO))
         val errorFragment = "error=sso_required&uuid=${ssoRegister.uuid}"
 
         return ResponseEntity
             .status(HttpStatus.FOUND)
-            .location(URI.create("$spaCallbackUrl#$errorFragment"))
+            .location(URI.create("$callbackUrl#$errorFragment"))
             .build()
     }
 

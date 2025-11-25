@@ -18,12 +18,15 @@ const KAKAO_PROD_KEY = 'fe206dfae05cfafc94806ad67abbcfc1'
 
 let initialized = false
 
+function isLocalHost(): boolean {
+  return ['localhost', '127.0.0.1'].some((host) => window.location.hostname === host)
+}
+
 export function useKakao() {
   const initKakao = () => {
     if (initialized || !window.Kakao) return
 
-    const isLocal = window.location.href.includes('localhost')
-    const appKey = isLocal ? KAKAO_TEST_KEY : KAKAO_PROD_KEY
+    const appKey = isLocalHost() ? KAKAO_TEST_KEY : KAKAO_PROD_KEY
 
     if (!window.Kakao.isInitialized()) {
       window.Kakao.init(appKey)
@@ -34,16 +37,15 @@ export function useKakao() {
   const kakaoLogin = (referer: string = '/') => {
     initKakao()
 
-    const spaCallbackUrl = `${window.location.origin}/auth/oauth-callback`
-    const redirectUri = `${window.location.origin}/api/auth/Oauth2ClientCallback/kakao`
+    const baseUrl = isLocalHost() ? 'http://localhost:8080' : window.location.origin
+    const redirectUri = `${baseUrl}/api/auth/Oauth2ClientCallback/kakao`
+    const callbackUrl = `${window.location.origin}/auth/oauth-callback`
 
     window.Kakao.Auth.authorize({
       redirectUri,
       state: JSON.stringify({
-        spa: true,
-        spaCallbackUrl,
-        redirectUri,
         referer,
+        callbackUrl,
       }),
     })
   }

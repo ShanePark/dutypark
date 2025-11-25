@@ -60,15 +60,14 @@ dutypark:
   data-go-kr:
     service-key: "${DATA_GO_KR_SERVICE_KEY:DECODED_SERVICE_KEY_HERE}"
   log.path: "/dutypark/logs"
-  ssl.enabled: "${COOKIE_SSL_ENABLED:false}"
   storage:
     root: /dutypark/storage
     max-file-size: 50MB
     blacklist-ext:
-     - exe
-     - bat
-     - cmd
-     - sh
+      - exe
+      - bat
+      - cmd
+      - sh
     thumbnail:
       max-side: 200
     session-expiration-hours: 24

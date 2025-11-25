@@ -106,12 +106,12 @@ cp .env.sample .env   # fill in the placeholders before running the stack
 ### Run with Docker Compose
 ```bash
 # HTTP-only local stack (uses data/nginx.local.conf and skips TLS)
-NGINX_CONF_NAME=nginx.local.conf docker compose up -d
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
 
 # Production-style stack (HTTPS + nginx reverse proxy)
 docker compose up -d
 ```
-The Compose file spins up MySQL, the Spring Boot app, nginx (with HTTP→HTTPS redirect + HSTS), Prometheus, and Grafana. App logs and attachment storage are bind-mounted under `./data/`.
+The Compose file spins up MySQL, the Spring Boot app, frontend build, nginx, Prometheus, and Grafana. Frontend is automatically built via Node.js container before nginx starts. App logs and attachment storage are bind-mounted under `./data/`.
 
 ### Development database only
 Need just MySQL while running the app via Gradle? Use the helper stack:

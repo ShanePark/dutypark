@@ -48,19 +48,19 @@ class OAuthController(
                 .build()
         }
 
-        val spaCallbackUrl = (state["spaCallbackUrl"] as String?) ?: "http://localhost:5173/auth/oauth-callback"
-        val originalRedirectUri = (state["redirectUri"] as String?) ?: redirectUrl
-        return kakaoLoginService.loginForSpa(
+        val callbackUrl = state["callbackUrl"] as String?
+            ?: throw IllegalArgumentException("callbackUrl is required in state")
+        return kakaoLoginService.login(
             req = httpServletRequest,
             code = code,
-            redirectUrl = originalRedirectUri,
-            spaCallbackUrl = spaCallbackUrl
+            redirectUrl = redirectUrl,
+            callbackUrl = callbackUrl
         )
     }
 
     @PostMapping("sso/signup/token")
     @SlackNotification
-    fun ssoSignupForSpa(
+    fun ssoSignup(
         @RequestBody request: SsoSignupRequest,
         httpServletRequest: HttpServletRequest
     ): ResponseEntity<TokenResponse> {

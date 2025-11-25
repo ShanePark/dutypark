@@ -239,6 +239,27 @@ export const exampleApi = {
 - Keep components focused; extract reusable logic to `composables/`.
 - Type all API responses using interfaces in `types/index.ts`.
 
+### Dark Mode & Responsive Design (CRITICAL)
+
+**Every UI change must consider both dark mode and responsive design.**
+
+- **Dark mode:** Use CSS variables (`--dp-*`) from `style.css` instead of hardcoded colors. For hover states, use utility classes like `hover-bg-light` that respect the current theme.
+- **Avoid hardcoded colors:** Don't use `bg-gray-50`, `hover:bg-gray-100`, etc. directly. Instead use theme-aware variables or utility classes.
+- **Interactive elements:** All clickable elements must have:
+  - `cursor-pointer` for visual feedback
+  - Hover state that works in both light and dark modes
+  - Appropriate touch targets for mobile (min 44px)
+- **Responsive breakpoints:** Always test with mobile-first approach. Use Tailwind's responsive prefixes (`sm:`, `md:`, `lg:`) consistently.
+- **Common patterns:**
+  ```css
+  /* Good: Theme-aware hover */
+  class="hover-bg-light cursor-pointer"
+  :style="{ backgroundColor: 'var(--dp-bg-card)' }"
+
+  /* Bad: Hardcoded colors that break in dark mode */
+  class="bg-white hover:bg-gray-50"
+  ```
+
 ### Code Comments Policy
 
 - Prefer self-documenting code; only comment when explaining non-obvious reasoning, workarounds, or subtle edge cases.

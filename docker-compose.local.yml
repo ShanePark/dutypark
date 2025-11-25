@@ -1,0 +1,10 @@
+services:
+  nginx:
+    ports:
+      - "80:80"
+    volumes:
+      - ./data/nginx.local.conf:/tmp/nginx.template:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
+    depends_on:
+      app:
+        condition: service_started

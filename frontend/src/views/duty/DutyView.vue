@@ -1411,7 +1411,7 @@ async function showExcelUploadModal() {
       <!-- Todo Count Bubble -->
       <button
         @click="isTodoOverviewModalOpen = true"
-        class="flex-shrink-0 h-10 sm:h-11 px-3 sm:px-4 flex items-center gap-1.5 rounded-full shadow-sm hover:shadow-md transition-all duration-200 border"
+        class="flex-shrink-0 h-10 sm:h-11 px-3 sm:px-4 flex items-center gap-1.5 rounded-full shadow-sm hover:shadow-md transition-all duration-200 border cursor-pointer hover-bg-light"
         :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }"
       >
         <ClipboardList class="w-4 h-4 sm:w-5 sm:h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
