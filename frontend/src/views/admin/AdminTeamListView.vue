@@ -152,6 +152,7 @@ function refreshData() {
   fetchTeams()
 }
 
+
 onMounted(() => {
   if (!authStore.isAdmin) {
     router.push('/')
@@ -461,5 +462,6 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
   </div>
 </template>

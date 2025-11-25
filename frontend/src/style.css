@@ -367,3 +367,102 @@ a:hover {
 .pickr .pcr-app.monolith .pcr-selection {
   height: 160px !important;
 }
+
+/* ====================================
+   SweetAlert2 Custom Styles
+   ==================================== */
+
+.swal2-popup {
+  @apply rounded-2xl shadow-lg border border-gray-200 p-0 overflow-hidden;
+  font-family: var(--font-sans);
+  width: auto !important;
+  min-width: 280px;
+  max-width: 340px;
+}
+
+.swal2-title {
+  @apply text-sm font-semibold text-gray-700 m-0 py-2.5 px-4 bg-gray-100 border-b border-gray-200;
+}
+
+.swal2-html-container {
+  @apply text-sm text-gray-600 mt-0 mb-0 py-4 px-4;
+}
+
+.swal2-icon {
+  display: none !important;
+}
+
+.swal2-actions {
+  @apply mt-0 mb-4 gap-2;
+}
+
+.swal2-confirm {
+  @apply px-5 py-2 rounded-full font-medium text-sm transition-all duration-200 shadow-none;
+}
+
+.swal2-confirm:focus {
+  @apply shadow-none;
+}
+
+.swal2-cancel {
+  @apply px-5 py-2 rounded-full font-medium text-sm bg-gray-100 text-gray-600 transition-all duration-200;
+}
+
+.swal2-cancel:hover {
+  @apply bg-gray-200;
+}
+
+.swal2-cancel:focus {
+  @apply shadow-none;
+}
+
+/* Toast styles */
+.swal2-popup.swal2-toast {
+  @apply rounded-xl shadow-md border border-gray-200 py-2.5 px-4;
+  min-width: auto;
+  max-width: none;
+}
+
+.swal2-popup.swal2-toast .swal2-icon {
+  display: flex !important;
+  @apply m-0 mr-2;
+  width: 20px !important;
+  height: 20px !important;
+  border: none !important;
+}
+
+.swal2-popup.swal2-toast .swal2-icon .swal2-icon-content {
+  font-size: 14px !important;
+}
+
+.swal2-popup.swal2-toast .swal2-title {
+  @apply text-sm font-medium;
+}
+
+.swal2-popup.swal2-toast .swal2-icon.swal2-success {
+  @apply text-green-500;
+}
+
+.swal2-popup.swal2-toast .swal2-icon.swal2-success .swal2-success-ring {
+  @apply border-green-200;
+}
+
+.swal2-popup.swal2-toast .swal2-icon.swal2-success [class^='swal2-success-line'] {
+  @apply bg-green-500;
+}
+
+.swal2-popup.swal2-toast .swal2-icon.swal2-error {
+  @apply text-red-500;
+}
+
+.swal2-popup.swal2-toast .swal2-icon.swal2-error [class^='swal2-x-mark-line'] {
+  @apply bg-red-500;
+}
+
+.swal2-popup.swal2-toast .swal2-icon.swal2-info {
+  @apply text-blue-500;
+}
+
+.swal2-popup.swal2-toast .swal2-icon.swal2-info .swal2-icon-content {
+  @apply text-blue-500;
+}

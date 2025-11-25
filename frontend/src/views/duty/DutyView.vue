@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import Swal from 'sweetalert2'
+import Sortable from 'sortablejs'
 import { useSwal } from '@/composables/useSwal'
 import {
   Plus,
@@ -19,6 +20,7 @@ import {
   Lock,
   CalendarCheck,
   FileSpreadsheet,
+  GripVertical,
 } from 'lucide-vue-next'
 
 // Modal Components
@@ -208,6 +210,57 @@ const selectedScheduleForDetail = ref<Schedule | null>(null)
 const todos = ref<LocalTodo[]>([])
 const completedTodos = ref<LocalTodo[]>([])
 const isLoadingTodos = ref(false)
+
+// Todo bubble sortable
+const todoBubbleListRef = ref<HTMLElement | null>(null)
+let todoBubbleSortable: Sortable | null = null
+let isTodoBubbleDragging = false
+
+function initTodoBubbleSortable() {
+  if (!todoBubbleListRef.value) return
+  destroyTodoBubbleSortable()
+
+  todoBubbleSortable = Sortable.create(todoBubbleListRef.value, {
+    animation: 200,
+    handle: '.todo-bubble-handle',
+    draggable: '.todo-bubble-item',
+    direction: 'horizontal',
+    ghostClass: 'sortable-ghost-bubble',
+    chosenClass: 'sortable-chosen-bubble',
+    forceFallback: true,
+    onStart: () => {
+      isTodoBubbleDragging = true
+    },
+    onEnd: () => {
+      setTimeout(() => {
+        isTodoBubbleDragging = false
+      }, 100)
+
+      if (!todoBubbleListRef.value) return
+      const elements = todoBubbleListRef.value.querySelectorAll('[data-todo-id]')
+      const newOrderIds: string[] = []
+      elements.forEach((el) => {
+        const id = el.getAttribute('data-todo-id')
+        if (id) newOrderIds.push(id)
+      })
+      if (newOrderIds.length > 0) {
+        handleTodoPositionUpdate(newOrderIds)
+      }
+    },
+  })
+}
+
+function destroyTodoBubbleSortable() {
+  if (todoBubbleSortable) {
+    todoBubbleSortable.destroy()
+    todoBubbleSortable = null
+  }
+}
+
+function handleTodoBubbleClick(todo: LocalTodo) {
+  if (isTodoBubbleDragging) return
+  openTodoDetail(todo)
+}
 
 // Convert API Todo to LocalTodo
 function mapToLocalTodo(apiTodo: { id: string; title: string; content: string; position: number | null; status: 'ACTIVE' | 'COMPLETED'; createdDate: string; completedDate: string | null }): LocalTodo {
@@ -596,7 +649,24 @@ onMounted(async () => {
   } finally {
     isLoading.value = false
   }
+
+  // Initialize todo bubble sortable after DOM is ready
+  await nextTick()
+  initTodoBubbleSortable()
 })
+
+onBeforeUnmount(() => {
+  destroyTodoBubbleSortable()
+})
+
+// Reinitialize sortable when todos change
+watch(
+  () => todos.value,
+  async () => {
+    await nextTick()
+    initTodoBubbleSortable()
+  }
+)
 
 // Watch for month changes to reload data
 watch(
@@ -1319,15 +1389,27 @@ async function showExcelUploadModal() {
 
       <!-- Todo Items Bubbles -->
       <div class="flex-1 min-w-0 overflow-x-auto">
-        <div class="flex gap-2 py-1">
+        <div ref="todoBubbleListRef" class="flex gap-2 py-1">
           <div
             v-for="todo in todos"
             :key="todo.id"
-            @click="openTodoDetail(todo)"
-            class="flex-shrink-0 max-w-[120px] sm:max-w-[180px] flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-full cursor-pointer transition-all duration-200 hover:shadow-md hover:border-gray-300 bg-white border border-gray-200 shadow-sm"
+            :data-todo-id="todo.id"
+            class="todo-bubble-item flex-shrink-0 max-w-[140px] sm:max-w-[200px] flex items-center gap-1 px-1 sm:px-1.5 py-1 rounded-full cursor-pointer transition-all duration-200 hover:shadow-md hover:border-gray-300 bg-white border border-gray-200 shadow-sm"
           >
-            <span class="text-xs sm:text-sm font-medium text-gray-700 truncate">{{ todo.title }}</span>
-            <FileText v-if="todo.content || todo.hasAttachments" class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-400 flex-shrink-0" />
+            <div
+              class="todo-bubble-handle flex-shrink-0 p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full cursor-grab active:cursor-grabbing transition-colors"
+              @click.stop
+              title="드래그하여 순서 변경"
+            >
+              <GripVertical class="w-3.5 h-3.5" />
+            </div>
+            <div
+              @click="handleTodoBubbleClick(todo)"
+              class="flex items-center gap-1 pr-2 min-w-0"
+            >
+              <span class="text-xs sm:text-sm font-medium text-gray-700 truncate">{{ todo.title }}</span>
+              <FileText v-if="todo.content || todo.hasAttachments" class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-400 flex-shrink-0" />
+            </div>
           </div>
         </div>
       </div>
@@ -1755,3 +1837,16 @@ async function showExcelUploadModal() {
     />
   </div>
 </template>
+
+<style>
+/* Todo bubble sortable styles */
+.sortable-ghost-bubble {
+  opacity: 0.4 !important;
+  background-color: rgb(219 234 254) !important;
+  border-color: rgb(147 197 253) !important;
+}
+
+.sortable-chosen-bubble {
+  box-shadow: 0 0 0 2px rgb(96 165 250), 0 4px 6px -1px rgb(0 0 0 / 0.1) !important;
+}
+</style>

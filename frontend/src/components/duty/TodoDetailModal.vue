@@ -214,10 +214,11 @@ function onUploadError(message: string) {
           <div class="flex items-center gap-2 min-w-0 flex-1">
             <button
               @click="emit('backToList')"
-              class="p-1.5 hover:bg-gray-100 rounded-lg transition text-gray-500 hover:text-gray-700 flex-shrink-0"
-              title="목록으로"
+              class="flex items-center gap-1 px-2 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition text-gray-600 hover:text-gray-800 flex-shrink-0"
+              title="목록으로 돌아가기"
             >
-              <List class="w-5 h-5" />
+              <List class="w-4 h-4" />
+              <span class="text-xs font-medium hidden sm:inline">목록</span>
             </button>
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-2">

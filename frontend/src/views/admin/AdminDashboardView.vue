@@ -181,6 +181,7 @@ function navigateToTeams() {
   router.push('/admin/teams')
 }
 
+
 onMounted(async () => {
   if (!authStore.isAdmin) {
     router.push('/')
@@ -426,5 +427,6 @@ onMounted(async () => {
         </div>
       </div>
     </div>
+
   </div>
 </template>

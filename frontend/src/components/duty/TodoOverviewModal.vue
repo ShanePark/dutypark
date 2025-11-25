@@ -75,9 +75,10 @@ const filteredTodos = computed(() => {
 // SortableJS integration
 const todoListRef = ref<HTMLElement | null>(null)
 let sortableInstance: Sortable | null = null
+let isDragging = false
 
-// Check if sorting should be enabled (only active todos, no completed filter)
-const isSortingEnabled = computed(() => filters.value.active && !filters.value.completed)
+// Check if sorting should be enabled (when active todos are shown)
+const isSortingEnabled = computed(() => filters.value.active)
 
 function initSortable() {
   if (!todoListRef.value) return
@@ -89,13 +90,23 @@ function initSortable() {
   if (!isSortingEnabled.value) return
 
   sortableInstance = Sortable.create(todoListRef.value, {
-    animation: 150,
+    animation: 200,
     handle: '.drag-handle',
     draggable: '.todo-item-active',
-    ghostClass: 'bg-blue-100',
-    chosenClass: 'bg-blue-50',
-    dragClass: 'opacity-50',
+    ghostClass: 'sortable-ghost',
+    chosenClass: 'sortable-chosen',
+    dragClass: 'sortable-drag',
+    forceFallback: true,
+    fallbackClass: 'sortable-fallback',
+    onStart: () => {
+      isDragging = true
+    },
     onEnd: () => {
+      // Delay resetting isDragging to prevent click event from firing
+      setTimeout(() => {
+        isDragging = false
+      }, 100)
+
       // Read new order directly from DOM elements
       if (!todoListRef.value) return
       const todoElements = todoListRef.value.querySelectorAll('[data-id]')
@@ -177,6 +188,12 @@ function toggleFilter(type: 'active' | 'completed' | 'all') {
 
 function formatDate(dateString: string) {
   return dateString.split('T')[0]
+}
+
+function handleTodoClick(todo: Todo) {
+  // Ignore click if we just finished dragging
+  if (isDragging) return
+  emit('showDetail', todo)
 }
 </script>
 
@@ -265,7 +282,7 @@ function formatDate(dateString: string) {
                 'bg-green-50 border-green-200': todo.status === 'COMPLETED',
                 'bg-white border-gray-200 hover:border-blue-300 hover:shadow-md todo-item-active': todo.status === 'ACTIVE'
               }"
-              @click="emit('showDetail', todo)"
+              @click="handleTodoClick(todo)"
             >
               <div class="flex items-stretch">
                 <!-- Left area: drag handle or completed icon -->
@@ -284,8 +301,9 @@ function formatDate(dateString: string) {
                   <!-- Active + sortable: drag handle -->
                   <div
                     v-else-if="isSortingEnabled"
-                    class="drag-handle cursor-grab text-gray-400 hover:text-gray-600 p-1"
+                    class="drag-handle cursor-grab active:cursor-grabbing text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded p-1.5 transition-colors"
                     @click.stop
+                    title="드래그하여 순서 변경"
                   >
                     <GripVertical class="w-5 h-5" />
                   </div>
@@ -356,3 +374,26 @@ function formatDate(dateString: string) {
     </div>
   </Teleport>
 </template>
+
+<style>
+/* SortableJS drag-and-drop styles - must be unscoped for dynamic classes */
+.sortable-ghost {
+  background-color: rgb(219 234 254) !important; /* bg-blue-100 */
+  border-color: rgb(147 197 253) !important; /* border-blue-300 */
+  opacity: 0.6 !important;
+}
+
+.sortable-chosen {
+  box-shadow: 0 0 0 2px rgb(96 165 250), 0 10px 15px -3px rgb(0 0 0 / 0.1) !important; /* ring-2 ring-blue-400 shadow-lg */
+}
+
+.sortable-drag {
+  opacity: 1 !important;
+}
+
+.sortable-fallback {
+  opacity: 0.9 !important;
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25) !important; /* shadow-xl */
+  transform: rotate(1deg) !important;
+}
+</style>

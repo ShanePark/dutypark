@@ -4,7 +4,7 @@
 
 [https://dutypark.o-r.kr](https://dutypark.o-r.kr)
 
-<a href="#" target="_blank"><img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=Kotlin&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Spring Boot-6DB33F?style=flat-square&logo=Spring-Boot&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/JPA-ED2761?style=flat-square&logo=Spring&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=MySQL&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Thymeleaf-005F0F?style=flat-square&logo=Thymeleaf&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Vue.js-4FC08D?style=flat-square&logo=Vue.js&logoColor=white"/></a>
+<a href="#" target="_blank"><img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=Kotlin&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Spring Boot-6DB33F?style=flat-square&logo=Spring-Boot&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/JPA-ED2761?style=flat-square&logo=Spring&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=MySQL&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Vue.js-4FC08D?style=flat-square&logo=Vue.js&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=TypeScript&logoColor=white"/></a>
 
 > **Add your duties and schedules in a snap — then share with friends or family.**
 
@@ -44,7 +44,7 @@ A lightweight, Kotlin + Spring Boot web app for duty rosters, personal schedules
 - **Backend:** Kotlin 2.1.10, Spring Boot 3.5.6 (Data JPA, Web, WebFlux, Validation, Security, Actuator, DevTools), Java 21 toolchain.
 - **Data:** MySQL 8.0 + Flyway migrations (`db/migration/v1`, `v2`), JPA auditing, ULID entities, optional P6Spy SQL tracing.
 - **AI & Messaging:** Spring AI starter (Gemini 2.0 Flash Lite via OpenAI-compatible endpoint) and Slack webhook integrations.
-- **Frontend:** Thymeleaf layouts + Vue.js components, Bootstrap 5, dayjs, SweetAlert2, WaitMe, Pickr, SortableJS, Uppy 5, Pretty Checkbox, custom Nexon fonts, and a PWA manifest.
+- **Frontend:** Vue 3 SPA (Vite + TypeScript + Pinia + Tailwind CSS), fully separated from backend with JWT Bearer token authentication.
 - **Build & Docs:** Gradle Kotlin DSL with `org.asciidoctor.jvm.convert` and git-properties plugin (surfaced in Slack + `/actuator/info`).
 - **Observability & Ops:** Micrometer Prometheus registry, Grafana dashboards, Logback rolling files, Docker Compose orchestration.
 - **Testing:** JUnit 5, H2 in-memory DB, Mockito-Kotlin, fail-fast Gradle test runs.
@@ -66,11 +66,12 @@ A lightweight, Kotlin + Spring Boot web app for duty rosters, personal schedules
 - `common/` — Layout helpers, cached `/api/calendar` grids, Slack notification infrastructure, async/throttle configs, and custom logging configuration.
 
 ### Frontend layers
-- Thymeleaf layout (`templates/layout`) injects shared head/footer assets and a mobile-first footer dock.
-- Vue roots under `templates/duty`, `dashboard.html`, `member/*.html`, and `team/*.html` consume REST APIs for data hydration.
-- `static/js/duty/*` modules cover calendar rendering, D-Day modal, todo modals, search modal, attachment detail modal, and other UI fragments.
-- Asset pipeline loads Bootstrap, dayjs, Vue, SortableJS, Uppy, Pickr, SweetAlert2, WaitMe, and Kakao/Naver logos via `layout/include.html`.
-- Static assets ship with a manifest, icons, and custom fonts for PWA installation.
+- Vue 3 SPA with Composition API (`<script setup lang="ts">`) and TypeScript for type safety.
+- Pinia for state management (auth store with JWT token handling).
+- Vue Router with lazy-loaded routes and navigation guards for authentication.
+- Axios with request/response interceptors for automatic JWT refresh.
+- Tailwind CSS for styling with custom design tokens.
+- SortableJS for drag-drop reordering, Uppy for file uploads, SweetAlert2 for notifications.
 
 ### Integrations & automation
 - Spring Scheduling powers attachment session cleanup (2am) and AI parsing queues; caching is enabled for calendars/holidays.
@@ -195,8 +196,7 @@ management.endpoints.web.exposure.include: health,metrics,prometheus
 | `src/main/kotlin/com/tistory/shanepark/dutypark/team` | Team/domain logic (managers, schedules, work types, duty types). |
 | `src/main/kotlin/com/tistory/shanepark/dutypark/security` | JWT auth, filters, Kakao OAuth, admin routing, cookie configuration. |
 | `src/main/kotlin/com/tistory/shanepark/dutypark/dashboard` | Dashboard controller/service aggregating duties + schedules. |
-| `src/main/resources/templates` | Thymeleaf pages (layout, duty, team, admin, member, error). |
-| `src/main/resources/static/js` | Vue modules for duty calendar, dashboard, todo modals, attachment UI, etc. |
+| `frontend/` | Vue 3 SPA source code (Vite + TypeScript + Pinia + Tailwind CSS). |
 | `src/main/resources/db/migration` | Flyway SQL scripts (`v1`, `v2`) that define/upgrade the schema. |
 | `src/docs/asciidoc` | Source for Spring REST Docs; build output copied to `static/docs`. |
 | `data/` | Docker volumes: MySQL data, logs, nginx templates, Prometheus, Grafana, storage. |
@@ -251,13 +251,12 @@ management.endpoints.web.exposure.include: health,metrics,prometheus
 
 ## 🎨 Frontend Experience
 
-- Single layout (`layout/layout.html`) provides shared head assets, icons, manifest, and a fixed footer nav optimized for mobile.
-- The duty calendar Vue app (`static/js/duty/duty.js`) hydrates calendar grids, schedules, holidays, todos, and attachments with per-module mixins (`day-grid`, `dday-list`, `todo-*`, `search-result-modal`).
-- D-Day management leverages SweetAlert popups, localStorage for quick selection, and supports private events.
-- Todo modals and overview leverage SortableJS handles, reposition APIs (`/api/todos/position`), and inline success/error toasts.
-- Schedule detail modal integrates Uppy for uploads, real-time progress bars, thumbnail previews, and reordering.
-- Team management pages use Pickr for color selection, Pretty Checkbox for toggles, and custom alert flows.
-- Custom Nexon font + Bootstrap utilities keep the UI consistent, while PWA manifest & icons allow “Install” prompts on mobile.
+- Vue 3 SPA with TypeScript and Composition API for type-safe, maintainable code.
+- Responsive design with Tailwind CSS, optimized for mobile devices.
+- D-Day management with SweetAlert popups and localStorage for quick selection.
+- Todo board with SortableJS drag-drop reordering and inline toasts.
+- Schedule detail modal integrates Uppy for uploads with real-time progress bars and thumbnail previews.
+- JWT Bearer token authentication with automatic refresh handling via Axios interceptors.
 
 ---
 

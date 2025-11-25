@@ -1,5 +1,10 @@
 import Swal from 'sweetalert2'
 
+const defaultConfig = {
+  confirmButtonColor: '#2563eb',
+  cancelButtonColor: '#f3f4f6',
+}
+
 const Toast = Swal.mixin({
   toast: true,
   position: 'top-end',
@@ -15,6 +20,7 @@ export function useSwal() {
       title,
       text: message,
       confirmButtonText: '확인',
+      confirmButtonColor: defaultConfig.confirmButtonColor,
     })
   }
 
@@ -24,6 +30,7 @@ export function useSwal() {
       title,
       text: message,
       confirmButtonText: '확인',
+      confirmButtonColor: defaultConfig.confirmButtonColor,
     })
   }
 
@@ -33,6 +40,7 @@ export function useSwal() {
       title,
       text: message,
       confirmButtonText: '확인',
+      confirmButtonColor: defaultConfig.confirmButtonColor,
     })
   }
 
@@ -42,6 +50,7 @@ export function useSwal() {
       title,
       text: message,
       confirmButtonText: '확인',
+      confirmButtonColor: defaultConfig.confirmButtonColor,
     })
   }
 
@@ -53,6 +62,7 @@ export function useSwal() {
       showCancelButton: true,
       confirmButtonText: '확인',
       cancelButtonText: '취소',
+      confirmButtonColor: defaultConfig.confirmButtonColor,
     }).then((result) => result.isConfirmed)
   }
 
@@ -64,7 +74,7 @@ export function useSwal() {
       showCancelButton: true,
       confirmButtonText: '삭제',
       cancelButtonText: '취소',
-      confirmButtonColor: '#dc3545',
+      confirmButtonColor: '#dc2626',
     }).then((result) => result.isConfirmed)
   }
 

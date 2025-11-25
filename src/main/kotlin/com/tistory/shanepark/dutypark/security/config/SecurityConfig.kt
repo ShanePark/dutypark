@@ -40,9 +40,6 @@ class SecurityConfig(
             .logout { it.disable() }
             .csrf { it.disable() }
             .cors { it.configurationSource(corsConfigurationSource()) }
-            .headers { headers ->
-                headers.frameOptions { it.sameOrigin() }
-            }
             .build()
     }
 

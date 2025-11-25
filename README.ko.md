@@ -4,7 +4,7 @@
 
 [https://dutypark.o-r.kr](https://dutypark.o-r.kr)
 
-<a href="#" target="_blank"><img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=Kotlin&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Spring Boot-6DB33F?style=flat-square&logo=Spring-Boot&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/JPA-ED2761?style=flat-square&logo=Spring&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=MySQL&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Thymeleaf-005F0F?style=flat-square&logo=Thymeleaf&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Vue.js-4FC08D?style=flat-square&logo=Vue.js&logoColor=white"/></a>
+<a href="#" target="_blank"><img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=Kotlin&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Spring Boot-6DB33F?style=flat-square&logo=Spring-Boot&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/JPA-ED2761?style=flat-square&logo=Spring&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=MySQL&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Vue.js-4FC08D?style=flat-square&logo=Vue.js&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=TypeScript&logoColor=white"/></a>
 
 > **근무와 일정을 빠르게 추가하고 친구나 가족과 공유하세요.**
 
@@ -44,7 +44,7 @@
 - **백엔드:** Kotlin 2.1.10, Spring Boot 3.5.6 (Data JPA, Web, WebFlux, Validation, Security, Actuator, DevTools), Java 21 툴체인.
 - **데이터:** MySQL 8.0 + Flyway 마이그레이션(`db/migration/v1`, `v2`), JPA 감사, ULID 엔티티, 선택적 P6Spy SQL 추적.
 - **AI 및 메시징:** Spring AI 스타터(OpenAI 호환 엔드포인트를 통한 Gemini 2.0 Flash Lite) 및 Slack 웹훅 통합.
-- **프론트엔드:** Thymeleaf 레이아웃 + Vue.js 컴포넌트, Bootstrap 5, dayjs, SweetAlert2, WaitMe, Pickr, SortableJS, Uppy 5, Pretty Checkbox, 사용자 정의 Nexon 글꼴, PWA 매니페스트.
+- **프론트엔드:** Vue 3 SPA (Vite + TypeScript + Pinia + Tailwind CSS), 백엔드와 완전 분리된 JWT Bearer 토큰 인증.
 - **빌드 및 문서화:** Gradle Kotlin DSL, `org.asciidoctor.jvm.convert` 및 git-properties 플러그인(Slack + `/actuator/info`에 표시).
 - **관찰 가능성 및 운영:** Micrometer Prometheus 레지스트리, Grafana 대시보드, Logback 롤링 파일, Docker Compose 오케스트레이션.
 - **테스팅:** JUnit 5, H2 인메모리 DB, Mockito-Kotlin, fail-fast Gradle 테스트 실행.
@@ -66,11 +66,12 @@
 - `common/` — 레이아웃 헬퍼, 캐시된 `/api/calendar` 그리드, Slack 알림 인프라, 비동기/스로틀 구성, 사용자 정의 로깅 구성.
 
 ### 프론트엔드 레이어
-- Thymeleaf 레이아웃(`templates/layout`)은 공유 헤드/푸터 자산 및 모바일 우선 푸터 도크를 주입.
-- `templates/duty`, `dashboard.html`, `member/*.html`, `team/*.html` 아래의 Vue 루트는 데이터 하이드레이션을 위한 REST API를 사용.
-- `static/js/duty/*` 모듈은 캘린더 렌더링, 디데이 모달, 할 일 모달, 검색 모달, 첨부파일 상세 모달 및 기타 UI 프래그먼트를 다룹니다.
-- 자산 파이프라인은 `layout/include.html`을 통해 Bootstrap, dayjs, Vue, SortableJS, Uppy, Pickr, SweetAlert2, WaitMe, 카카오/네이버 로고를 로드.
-- 정적 자산은 PWA 설치를 위한 매니페스트, 아이콘, 사용자 정의 글꼴과 함께 제공.
+- Vue 3 SPA, Composition API (`<script setup lang="ts">`) 및 TypeScript로 타입 안전성 확보.
+- Pinia를 통한 상태 관리 (JWT 토큰 처리 포함 인증 스토어).
+- Vue Router의 지연 로딩 라우트 및 인증용 네비게이션 가드.
+- Axios 요청/응답 인터셉터를 통한 자동 JWT 갱신.
+- Tailwind CSS 기반 스타일링 및 커스텀 디자인 토큰.
+- SortableJS 드래그 드롭 정렬, Uppy 파일 업로드, SweetAlert2 알림.
 
 ### 통합 및 자동화
 - Spring Scheduling은 첨부 파일 세션 정리(오전 2시) 및 AI 파싱 큐를 지원; 캘린더/공휴일에 대한 캐싱 활성화.
@@ -195,8 +196,7 @@ management.endpoints.web.exposure.include: health,metrics,prometheus
 | `src/main/kotlin/com/tistory/shanepark/dutypark/team` | 팀/도메인 로직(관리자, 일정, 작업 유형, 근무 유형). |
 | `src/main/kotlin/com/tistory/shanepark/dutypark/security` | JWT 인증, 필터, 카카오 OAuth, 관리자 라우팅, 쿠키 구성. |
 | `src/main/kotlin/com/tistory/shanepark/dutypark/dashboard` | 근무 + 일정을 집계하는 대시보드 컨트롤러/서비스. |
-| `src/main/resources/templates` | Thymeleaf 페이지(레이아웃, 근무, 팀, 관리자, 멤버, 오류). |
-| `src/main/resources/static/js` | 근무 캘린더, 대시보드, 할 일 모달, 첨부 파일 UI 등을 위한 Vue 모듈. |
+| `frontend/` | Vue 3 SPA 소스 코드 (Vite + TypeScript + Pinia + Tailwind CSS). |
 | `src/main/resources/db/migration` | 스키마를 정의/업그레이드하는 Flyway SQL 스크립트(`v1`, `v2`). |
 | `src/docs/asciidoc` | Spring REST Docs용 소스; 빌드 출력은 `static/docs`로 복사. |
 | `data/` | Docker 볼륨: MySQL 데이터, 로그, nginx 템플릿, Prometheus, Grafana, 저장소. |
@@ -251,13 +251,12 @@ management.endpoints.web.exposure.include: health,metrics,prometheus
 
 ## 🎨 프론트엔드 경험
 
-- 단일 레이아웃(`layout/layout.html`)은 공유 헤드 자산, 아이콘, 매니페스트, 모바일에 최적화된 고정 푸터 내비게이션을 제공.
-- 근무 캘린더 Vue 앱(`static/js/duty/duty.js`)은 모듈별 믹스인(`day-grid`, `dday-list`, `todo-*`, `search-result-modal`)을 사용하여 캘린더 그리드, 일정, 공휴일, 할 일, 첨부 파일을 하이드레이션.
-- 디데이 관리는 SweetAlert 팝업, 빠른 선택을 위한 localStorage를 활용하고 비공개 이벤트를 지원.
-- 할 일 모달 및 개요는 SortableJS 핸들, 재배치 API(`/api/todos/position`), 인라인 성공/오류 토스트를 활용.
-- 일정 상세 모달은 업로드를 위한 Uppy, 실시간 진행률 표시줄, 썸네일 미리보기, 순서 변경을 통합.
-- 팀 관리 페이지는 색상 선택을 위해 Pickr, 토글을 위해 Pretty Checkbox, 사용자 정의 알림 플로우를 사용.
-- 사용자 정의 Nexon 글꼴 + Bootstrap 유틸리티는 UI를 일관되게 유지하고, PWA 매니페스트 및 아이콘은 모바일에서 "설치" 프롬프트를 허용.
+- Vue 3 SPA, TypeScript와 Composition API로 타입 안전하고 유지보수 가능한 코드.
+- Tailwind CSS 기반 반응형 디자인, 모바일 디바이스 최적화.
+- SweetAlert 팝업과 localStorage를 활용한 디데이 관리.
+- SortableJS 드래그 드롭 정렬과 인라인 토스트를 활용한 할 일 보드.
+- Uppy를 통한 실시간 진행률 표시줄과 썸네일 미리보기가 포함된 일정 상세 모달.
+- Axios 인터셉터를 통한 자동 갱신 처리가 포함된 JWT Bearer 토큰 인증.
 
 ---
 
