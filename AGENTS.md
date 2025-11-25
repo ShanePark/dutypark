@@ -7,12 +7,32 @@ Use this document whenever you change code in Dutypark. It distills everything a
 ## 1. Core Context
 
 - **Backend:** Kotlin 2.1, Spring Boot 3.5.x (Data JPA, Web, WebFlux, Security, Validation, Actuator, DevTools, Scheduling, Async, Caching)
-- **Frontend:** Thymeleaf layout + Vue.js components, Bootstrap 5, dayjs, SweetAlert2, WaitMe, Pickr, SortableJS, Uppy
+- **Frontend:** Vue 3 SPA (Vite + TypeScript + Pinia + Tailwind CSS), fully separated from backend
 - **Persistence:** MySQL 8.0 via Flyway migrations (`db/migration/v1`, `v2`); ULID entities for attachments/schedules/todos
-- **Auth:** JWT access cookies + sliding refresh tokens, Kakao OAuth SSO, `@Login` argument resolver
+- **Auth:** JWT Bearer tokens + sliding refresh tokens (SPA), Kakao OAuth SSO, `@Login` argument resolver
 - **AI:** Spring AI + Gemini 2.0 Flash Lite for schedule time parsing (queue manager + worker in `schedule/timeparsing`)
 - **Observability:** Micrometer Prometheus registry, Slack lifecycle/error hooks, rolling Logback files
 - **Deployment:** Docker Compose stack: app, mysql, nginx (TLS), Prometheus, Grafana (+ standalone MySQL stack in `dutypark_dev_db`)
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────┐
+│      Vue 3 SPA (frontend/)              │
+│  Vite dev: http://localhost:5173        │
+└────────────┬────────────────────────────┘
+             │ /api/* proxy
+             ▼
+┌─────────────────────────────────────────┐
+│   Spring Boot Backend (:8080)           │
+│   REST API + JWT Auth                   │
+└────────────┬────────────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────────────┐
+│   MySQL 8.0 (:3306/3307)                │
+└─────────────────────────────────────────┘
+```
 
 ### Key Modules & Responsibilities
 
@@ -21,11 +41,11 @@ Use this document whenever you change code in Dutypark. It distills everything a
 | `attachment/` | Upload sessions, validation/blacklist, filesystem abstraction, thumbnail generation, nightly cleanup, permission evaluator.    |
 | `schedule/`   | Schedule CRUD, tagging, search, AI parsing queue/worker, attachment orchestration, visibility enforcement via `FriendService`. |
 | `duty/`       | Calendar duties, Excel batch import (`SungsimCakeParser`) for members/teams, duty type management.                             |
-| `todo/`       | UUID todos, draggable ordering with SortableJS, reopen/complete logic, modal detail/edit flows.                                |
-| `team/`       | Teams, managers, duty types/colors (Pickr UI), work-type presets, shared team schedules.                                       |
+| `todo/`       | UUID todos, draggable ordering with SortableJS, reopen/complete logic.                                                         |
+| `team/`       | Teams, managers, duty types/colors, work-type presets, shared team schedules.                                                  |
 | `member/`     | Friends/family, D-Day events, refresh tokens, SSO onboarding, `@Login` annotation.                                             |
-| `dashboard/`  | Aggregated “my + friends” snapshot (duties, schedules, requests, pins).                                                        |
-| `security/`   | Jwt provider/filter, Kakao OAuth plumbing, admin filter/forwarded header filter, cookie configuration.                         |
+| `dashboard/`  | Aggregated "my + friends" snapshot (duties, schedules, requests, pins).                                                        |
+| `security/`   | JWT provider/filter, Bearer token support, Kakao OAuth, admin filter, CORS configuration.                                      |
 | `common/`     | Core configs (async, clock, storage, logging), cached `/api/calendar`, Slack notifier, DataGoKr client, exception advisors.    |
 
 ### High-Impact Features
@@ -33,9 +53,9 @@ Use this document whenever you change code in Dutypark. It distills everything a
 - Duty calendar with visibility-aware data, manager checks, Excel batch import, default off-type fallback.
 - Schedule editor with attachments (session-based Uppy uploads, thumbnails via Thumbnailator/TwelveMonkeys, cleanup scheduler).
 - AI-assisted time parsing queue that respects Gemini rate limits (30 RPM / 1500 RPD) and populates `contentWithoutTime`.
-- Todo overview modal (SortableJS reorder, reopen/complete, SweetAlert confirmations).
-- D-Day creation with SweetAlert, privacy flag, localStorage selection for quick display.
-- Dashboard showing my duty + today’s schedules plus friends/family insights and request management.
+- Todo management with SortableJS drag-drop reordering, reopen/complete logic.
+- D-Day creation with privacy flag, localStorage selection for quick display.
+- Dashboard showing my duty + today's schedules plus friends/family insights and request management.
 - Team schedule board and templates, plus DataGoKr-powered holiday sync with caching and concurrency locks.
 - Slack notifications for startup/shutdown and error detections (request payload + metadata).
 
@@ -43,12 +63,28 @@ Use this document whenever you change code in Dutypark. It distills everything a
 
 ## 2. Build & Run Reference
 
+### Backend
+
 ```bash
 ./gradlew bootRun          # dev server (DevTools toggled in application-dev.yml)
 ./gradlew test             # fail-fast H2 + Mockito suites
 ./gradlew build            # compiles + tests + bootJar (plain jar disabled)
 ./gradlew asciidoctor      # runs tests, exports REST Docs to static/docs
+```
 
+### Frontend (Vue 3 SPA)
+
+```bash
+cd frontend
+npm install                # install dependencies
+npm run dev                # dev server at http://localhost:5173
+npm run build              # production build to dist/
+npm run type-check         # TypeScript type checking (vue-tsc)
+```
+
+### Docker
+
+```bash
 docker compose up -d                               # full stack (nginx TLS)
 NGINX_CONF_NAME=nginx.local.conf docker compose up -d   # HTTP-only local stack
 cd dutypark_dev_db && docker compose up -d               # standalone MySQL on :3307
@@ -56,19 +92,18 @@ cd dutypark_dev_db && docker compose up -d               # standalone MySQL on :
 
 ### Build Guidelines
 
-**IMPORTANT: DO NOT run `./gradlew build` or `./gradlew test` for frontend-only changes!**
+**Backend changes** (Kotlin/Java, dependencies, configuration):
+- Run `./gradlew build` (or at least `./gradlew test`) to compile and catch regressions
+- Examples: Controllers, Services, Repositories, Entity classes, configuration files
 
-- **Frontend-only changes** (JS/HTML/CSS under `src/main/resources/static/` or `templates/`):
-  - **NO Gradle build required**
-  - Verify in-browser only (Boot DevTools hot reload covers most cases)
-  - Examples: Vue.js components, CSS styles, HTML templates, JavaScript modules
-  - Simply refresh the browser after changes
-- **Backend changes** (Kotlin/Java, dependencies, configuration):
-  - Run `./gradlew build` (or at least `./gradlew test`) to compile and catch regressions
-  - Examples: Controllers, Services, Repositories, Entity classes, configuration files
-- **API/testing work**:
-  - Prefer `./gradlew test` for quick feedback
-  - Rerun `./gradlew asciidoctor` when controller contract changes impact docs
+**Frontend changes** (Vue/TypeScript/CSS under `frontend/`):
+- Run `npm run type-check` to verify TypeScript types
+- Run `npm run build` for production build verification
+- Dev server auto-reloads on file changes
+
+**API/testing work**:
+- Prefer `./gradlew test` for quick feedback
+- Rerun `./gradlew asciidoctor` when controller contract changes impact docs
 
 ### Configuration Essentials
 
@@ -80,18 +115,110 @@ cd dutypark_dev_db && docker compose up -d               # standalone MySQL on :
 
 ---
 
-## 3. Infra & Ops Notes
+## 3. Frontend Architecture (Vue 3 SPA)
 
-- **Docker:** `docker-compose.yml` wires mysql → app → nginx, plus Prometheus/Grafana; app logs + storage are volume-mounted (`./data/logs`, `./data/storage`). `dutypark_dev_db` provides a lightweight DB-only stack.
-- **nginx:** Configs under `data/nginx*.conf` (HTTPS vs HTTP). Includes HTTP→HTTPS redirect, Let’s Encrypt mounts, `/actuator` IP allowlist, static caching, strict security headers.
-- **Monitoring:** Prometheus config at `data/prometheus/prometheus.yml` scrapes `app:8080/actuator/prometheus`; Grafana served on `:3000` with persistent volume `./data/grafana`.
-- **Logging:** `LogbackConfig` writes daily rolling files to `dutypark.log.path` (default `/dutypark/logs`). Keep log path in sync with Docker volumes when changing.
-- **Slack:** `ApplicationStartupShutdownListener` announces lifecycle with `git.properties` info; `ErrorDetectAdvisor` pushes stack traces + request context; optional `@SlackNotification` aspect for domain events.
-- **Scheduled jobs:** Attachment session cleanup (02:00 every day) and AI parsing worker. Ensure new async code respects existing executors/logging.
+### Directory Structure
+
+```
+frontend/
+├── src/
+│   ├── api/                    # API client modules (Axios)
+│   │   ├── client.ts           # Axios instance, interceptors, token management
+│   │   ├── auth.ts             # Authentication (Bearer tokens, OAuth)
+│   │   ├── admin.ts            # Admin API (separate /admin/api base)
+│   │   ├── dashboard.ts        # Dashboard aggregation
+│   │   ├── duty.ts             # Duty calendar
+│   │   ├── todo.ts             # Todo CRUD + ordering
+│   │   ├── schedule.ts         # Schedule CRUD + tags + search
+│   │   ├── member.ts           # Member/friends/D-Day
+│   │   ├── team.ts             # Team management
+│   │   └── attachment.ts       # File upload sessions
+│   ├── components/
+│   │   ├── common/             # FileUploader, YearMonthPicker, AttachmentGrid, ImageViewer
+│   │   ├── duty/               # DayDetailModal, TodoModals, DDayModal, OtherDutiesModal, etc.
+│   │   └── layout/             # AppLayout, AppHeader, AppFooter
+│   ├── composables/            # useSwal, useKakao
+│   ├── stores/auth.ts          # Pinia authentication store
+│   ├── views/                  # Page-level components
+│   │   ├── auth/               # LoginView, OAuthCallbackView, SsoSignupView, SsoCongratsView
+│   │   ├── dashboard/          # DashboardView
+│   │   ├── duty/               # DutyView
+│   │   ├── member/             # MemberView
+│   │   ├── team/               # TeamView, TeamManageView
+│   │   ├── admin/              # AdminDashboardView, AdminTeamListView
+│   │   └── NotFoundView.vue
+│   ├── types/index.ts          # TypeScript type definitions
+│   ├── router/index.ts         # Vue Router configuration
+│   └── style.css               # Tailwind CSS + design tokens
+├── vite.config.ts              # Vite config (proxy: /api → localhost:8080)
+└── package.json
+```
+
+### Key Technologies
+
+- **Vue 3** with Composition API (`<script setup>`)
+- **TypeScript** for type safety
+- **Pinia** for state management (auth store)
+- **Vue Router** with lazy-loaded routes and navigation guards
+- **Axios** with request/response interceptors for JWT handling
+- **Tailwind CSS** for styling (custom design tokens in `style.css`)
+- **SweetAlert2** via `useSwal` composable
+- **SortableJS** for drag-drop reordering
+- **Uppy** for file uploads with progress tracking
+- **dayjs** for date handling
+
+### Authentication Flow
+
+1. User logs in via `LoginView.vue` → calls `authApi.loginWithToken()`
+2. Receives JWT tokens → stored in `localStorage` via `tokenManager`
+3. Axios request interceptor adds `Authorization: Bearer {token}` header
+4. On 401 response → auto-refresh via response interceptor with request queue
+5. Router guards check `authStore.isLoggedIn` before navigation
+
+### API Client Pattern
+
+```typescript
+// All API modules follow this pattern
+import apiClient from './client'
+
+export const exampleApi = {
+  getItems: () => apiClient.get<ItemDto[]>('/items'),
+  createItem: (data: CreateItemDto) => apiClient.post<ItemDto>('/items', data),
+  updateItem: (id: string, data: UpdateItemDto) => apiClient.put<ItemDto>(`/items/${id}`, data),
+  deleteItem: (id: string) => apiClient.delete(`/items/${id}`)
+}
+```
+
+### Router Structure
+
+| Path | View | Auth | Notes |
+|------|------|------|-------|
+| `/` | DashboardView | Optional | Guest sees intro |
+| `/auth/login` | LoginView | Guest only | |
+| `/auth/sso-signup` | SsoSignupView | Optional | |
+| `/auth/sso-congrats` | SsoCongratsView | Required | |
+| `/auth/oauth-callback` | OAuthCallbackView | Optional | |
+| `/duty/:id` | DutyView | Optional | Visibility check |
+| `/member` | MemberView | Required | |
+| `/team` | TeamView | Required | |
+| `/team/manage/:teamId` | TeamManageView | Required | Permission check |
+| `/admin` | AdminDashboardView | Admin | |
+| `/admin/teams` | AdminTeamListView | Admin | |
 
 ---
 
-## 4. Coding Conventions & Gotchas
+## 4. Infra & Ops Notes
+
+- **Docker:** `docker-compose.yml` wires mysql → app → nginx, plus Prometheus/Grafana; app logs + storage are volume-mounted (`./data/logs`, `./data/storage`). `dutypark_dev_db` provides a lightweight DB-only stack.
+- **nginx:** Configs under `data/nginx*.conf` (HTTPS vs HTTP). Includes HTTP→HTTPS redirect, Let's Encrypt mounts, `/actuator` IP allowlist, static caching, strict security headers.
+- **Monitoring:** Prometheus config at `data/prometheus/prometheus.yml` scrapes `app:8080/actuator/prometheus`; Grafana served on `:3000` with persistent volume `./data/grafana`.
+- **Logging:** `LogbackConfig` writes daily rolling files to `dutypark.log.path` (default `/dutypark/logs`). Keep log path in sync with Docker volumes when changing.
+- **Slack:** `ApplicationStartupShutdownListener` announces lifecycle with `git.properties` info; `ErrorDetectAdvisor` pushes stack traces + request context; optional `@SlackNotification` aspect for domain events.
+- **Scheduled jobs:** Attachment session cleanup (02:00 every day), refresh token cleanup (00:00 daily), and AI parsing worker. Ensure new async code respects existing executors/logging.
+
+---
+
+## 5. Coding Conventions & Gotchas
 
 ### Backend
 
@@ -101,29 +228,49 @@ cd dutypark_dev_db && docker compose up -d               # standalone MySQL on :
 - When adding upload contexts or storage tweaks, update every layer: DTO, validation, path resolver, cleanup scheduler, and Docker volume expectations.
 - Schedule updates should reset `ParsingTimeStatus` to `WAIT` and push tasks onto the queue when content/time changes.
 - For multi-threaded writes (e.g., worker), avoid relying on JPA dirty checking—explicit `save` already in place.
+- JWT supports both cookie-based auth (legacy) and Bearer token auth (SPA); both flows coexist.
 
 ### Frontend
 
-- All templates extend `layout/layout.html`; shared assets live in `layout/include.html`.
-- Use Vue mixins/modules under `static/js/duty`. Keep new logic modular (e.g., `todoListMethods`, `searchResultMethods` pattern).
-- **Styling rules:** Bootstrap utility classes over inline styles (`class="mt-2 d-flex"` instead of `style="margin-top: 10px"`); inline styles only for dynamic values (colors, computed spacing).
-- Attachment UI (`detail-view-modal.js`) lazy-loads Uppy; maintain session/ETA tracking data structures.
+- Use Composition API (`<script setup lang="ts">`) for all new components.
+- Follow existing patterns in `src/api/` for API client modules.
+- Use `useSwal()` composable for all user notifications and confirmations.
+- **Styling rules:** Tailwind utility classes over inline styles; custom design tokens defined in `style.css`.
+- Keep components focused; extract reusable logic to `composables/`.
+- Type all API responses using interfaces in `types/index.ts`.
 
 ### Code Comments Policy
 
 - Prefer self-documenting code; only comment when explaining non-obvious reasoning, workarounds, or subtle edge cases.
 - Document "why" not "what"; avoid comments that restate simple logic or variable names.
 - If you must work around third-party quirks (e.g., Vue reactivity), note it briefly so future changes don't regress.
-- **All code comments must be written in English only.** No Korean (한글) comments in source code—this includes HTML comments (`<!-- -->`), JavaScript/TypeScript comments (`//`, `/* */`), and any other comment syntax.
+- **All code comments must be written in English only.** No Korean comments in source code—this includes HTML comments (`<!-- -->`), TypeScript comments (`//`, `/* */`), and any other comment syntax.
 
 ---
 
-## 5. Testing & Docs
+## 6. Testing & Docs
 
-- **Structure:** service-layer unit tests (Mockito), controller/integration tests, REST Docs generation, all JUnit 5.
+- **Backend Structure:** service-layer unit tests (Mockito), controller/integration tests, REST Docs generation, all JUnit 5.
+- **Test Base Classes:** `DutyparkIntegrationTest` (full Spring context + H2), `RestDocsTest` (MockMvc + REST Docs).
 - **Best practices:** cover security (permissions, ownership), edge cases (empty lists, boundaries), performance (N+1, transactions), and error handling (missing resources, storage failures).
 - **Commands:** use `./gradlew test --tests "ClassName"` or `./gradlew clean test --tests "*ControllerTest"` for targeted runs; `./gradlew test jacocoTestReport` for coverage.
 - **REST Docs:** `./gradlew asciidoctor` depends on tests; output copied to `src/main/resources/static/docs`. Keep docs build passing when editing controllers.
+
+### REST Docs Requirements
+
+**When adding new API endpoints, REST Docs tests are mandatory.**
+
+- Every new controller endpoint must have a corresponding test in `*ControllerTest.kt` that extends `RestDocsTest`.
+- Document all path parameters, query parameters, request fields, and response fields.
+- For empty/optional arrays, use `subsectionWithPath()` instead of `fieldWithPath()` to avoid type inference errors.
+- Update `src/docs/asciidoc/index.adoc` to include new endpoint documentation.
+- Run `./gradlew asciidoctor` after adding tests to verify documentation generates correctly.
+- Reference: See `FriendControllerTest.kt` or `TeamControllerTest.kt` for comprehensive examples.
+
+### Frontend Testing
+
+- TypeScript type checking: `npm run type-check`
+- Build verification: `npm run build`
 
 ### Playwright MCP Usage
 
@@ -142,7 +289,7 @@ cd dutypark_dev_db && docker compose up -d               # standalone MySQL on :
 
 ---
 
-## 6. Collaboration Preferences
+## 7. Collaboration Preferences
 
 - Confirm unclear requirements with short, numbered questions (user answers by number).
 - Favor TDD-ish workflow: implement backend pieces first, then frontend, especially for cross-cutting features.
@@ -178,7 +325,7 @@ cd dutypark_dev_db && docker compose up -d               # standalone MySQL on :
 
 ---
 
-## 7. Git & GitHub Workflow
+## 8. Git & GitHub Workflow
 
 ### GitHub CLI Usage
 
@@ -205,20 +352,59 @@ cd dutypark_dev_db && docker compose up -d               # standalone MySQL on :
 
 ---
 
-## 8. Quick Command Reminders
+## 9. Quick Command Reminders
 
 ```bash
 # Environment bootstrap
 cp .env.sample .env && edit placeholders
 
+# Backend development
+./gradlew bootRun                          # Start backend on :8080
+
+# Frontend development
+cd frontend && npm run dev                 # Start Vite dev server on :5173
+
 # Docker helpers
 docker compose up -d                       # full stack
-docker compose down                       # stop stack
-cd dutypark_dev_db && docker compose up -d  # DB-only
+docker compose down                        # stop stack
+cd dutypark_dev_db && docker compose up -d # DB-only on :3307
 
 # Attachments / storage
-ls ./data/storage                         # host-side storage mount
+ls ./data/storage                          # host-side storage mount
+
+# Type checking
+cd frontend && npm run type-check          # TypeScript verification
 ```
+
+---
+
+## 10. API Reference
+
+### Authentication Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/auth/token` | POST | Bearer token login (SPA) |
+| `/api/auth/refresh` | POST | Refresh access token |
+| `/api/auth/status` | GET | Check login status |
+| `/api/auth/password` | PUT | Change password |
+| `/api/auth/sso/signup/token` | POST | SSO signup (SPA) |
+
+### Core Domain Endpoints
+
+| Base Path | Domain | Key Operations |
+|-----------|--------|----------------|
+| `/api/duty` | Duties | GET (monthly), PUT (change), PUT (batch) |
+| `/api/schedules` | Schedules | CRUD, search, tag friends, reorder |
+| `/api/todos` | Todos | CRUD, reorder, complete/reopen |
+| `/api/dashboard` | Dashboard | GET /my, GET /friends |
+| `/api/members` | Members | Profile, visibility, managers |
+| `/api/friends` | Friends | CRUD, requests, pin/unpin |
+| `/api/dday` | D-Day | CRUD |
+| `/api/teams` | Teams | Read, schedules, shift view |
+| `/api/teams/manage` | Team Admin | Members, duty types, batch upload |
+| `/api/attachments` | Files | Upload, download, reorder, sessions |
+| `/admin/api` | Admin | Members, teams, refresh tokens |
 
 ---
 
