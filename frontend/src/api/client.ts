@@ -79,9 +79,10 @@ apiClient.interceptors.response.use(
       _retry?: boolean
     }
 
-    // Skip auto-redirect for login/token endpoints
+    // Skip auto-refresh for auth endpoints (login, token, refresh)
     const isAuthEndpoint = originalRequest?.url?.includes('/auth/token') ||
-                           originalRequest?.url?.includes('/auth/login')
+                           originalRequest?.url?.includes('/auth/login') ||
+                           originalRequest?.url?.includes('/auth/refresh')
 
     // Handle 401 - try to refresh token
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {

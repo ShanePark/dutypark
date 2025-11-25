@@ -21,6 +21,7 @@ import {
   CalendarCheck,
   FileSpreadsheet,
   GripVertical,
+  AlignLeft,
 } from 'lucide-vue-next'
 
 // Modal Components
@@ -31,7 +32,6 @@ import TodoOverviewModal from '@/components/duty/TodoOverviewModal.vue'
 import DDayModal from '@/components/duty/DDayModal.vue'
 import SearchResultModal from '@/components/duty/SearchResultModal.vue'
 import OtherDutiesModal from '@/components/duty/OtherDutiesModal.vue'
-import ScheduleDetailModal from '@/components/duty/ScheduleDetailModal.vue'
 import YearMonthPicker from '@/components/common/YearMonthPicker.vue'
 
 // API
@@ -188,7 +188,6 @@ const isOtherDutiesModalOpen = ref(false)
 
 // Search highlight - tracks the date to highlight after search navigation
 const searchDay = ref<{ year: number; month: number; day: number } | null>(null)
-const isScheduleDetailModalOpen = ref(false)
 const isYearMonthPickerOpen = ref(false)
 
 function handleYearMonthSelect(year: number, month: number) {
@@ -204,7 +203,6 @@ const selectedDayDuty = ref<{ dutyType: string; dutyColor: string } | undefined>
 const selectedTodo = ref<LocalTodo | null>(null)
 const selectedDDay = ref<LocalDDay | null>(null)
 const pinnedDDay = ref<LocalDDay | null>(null)
-const selectedScheduleForDetail = ref<Schedule | null>(null)
 
 // Data
 const todos = ref<LocalTodo[]>([])
@@ -1223,12 +1221,6 @@ async function handleChangeDutyType(dutyTypeId: number | null) {
   }
 }
 
-// Show schedule detail modal
-function handleShowDescription(schedule: Schedule) {
-  selectedScheduleForDetail.value = schedule
-  isScheduleDetailModalOpen.value = true
-}
-
 // Get schedule time display
 function formatScheduleTime(schedule: Schedule) {
   const start = new Date(schedule.startDateTime)
@@ -1453,18 +1445,18 @@ async function showExcelUploadModal() {
       <!-- Right: Search or Member Name -->
       <div class="flex-shrink-0 flex justify-end">
         <!-- Search available (my calendar or managed member) -->
-        <div v-if="canSearch" class="flex items-stretch">
+        <div v-if="canSearch" class="flex items-stretch rounded-lg border overflow-hidden" :style="{ borderColor: 'var(--dp-border-secondary)' }">
           <input
             v-model="searchQuery"
             type="text"
             :placeholder="isMyCalendar ? '검색' : memberName || '검색'"
             @keyup.enter="handleSearch()"
-            class="px-2 py-1.5 border border-r-0 rounded-l-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-14 sm:w-20"
-            :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
+            class="px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none w-14 sm:w-20 border-none"
+            :style="{ backgroundColor: 'var(--dp-bg-input)', color: 'var(--dp-text-primary)' }"
           />
           <button
             @click="handleSearch()"
-            class="px-2 py-1.5 bg-gray-800 text-white rounded-r-lg hover:bg-gray-700 transition flex items-center justify-center"
+            class="px-2 py-1.5 bg-gray-800 text-white hover:bg-gray-700 transition flex items-center justify-center"
           >
             <Search class="w-4 h-4" />
           </button>
@@ -1501,7 +1493,7 @@ async function showExcelUploadModal() {
       <div class="inline-flex rounded-lg border overflow-hidden" :style="{ borderColor: 'var(--dp-border-secondary)' }">
         <button
           @click="handleToggleOtherDuties"
-          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition flex items-center gap-1 border-r"
+          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition flex items-center gap-1 border-r cursor-pointer"
           :style="{ borderColor: 'var(--dp-border-secondary)' }"
           :class="(selectedFriendIds.length > 0 || showMyDuties) ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'hover-bg-light'"
         >
@@ -1514,7 +1506,7 @@ async function showExcelUploadModal() {
         <button
           v-if="canEdit"
           @click="batchEditMode = !batchEditMode"
-          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition border-r"
+          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition border-r cursor-pointer"
           :style="{ borderColor: 'var(--dp-border-secondary)' }"
           :class="batchEditMode ? 'bg-orange-50 text-orange-700 hover:bg-orange-100' : 'hover-bg-light'"
         >
@@ -1523,7 +1515,7 @@ async function showExcelUploadModal() {
         <button
           v-if="canEdit && isMyCalendar"
           @click="showBatchUpdateModal"
-          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition border-r last:border-r-0 hover-bg-light"
+          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition border-r last:border-r-0 cursor-pointer hover-bg-light"
           :style="{ borderColor: 'var(--dp-border-secondary)' }"
         >
           일괄수정
@@ -1531,7 +1523,7 @@ async function showExcelUploadModal() {
         <button
           v-if="canEdit && isMyCalendar && team?.dutyBatchTemplate"
           @click="showExcelUploadModal"
-          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition flex items-center gap-1 hover-bg-light"
+          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition flex items-center gap-1 cursor-pointer hover-bg-light"
         >
           <FileSpreadsheet class="w-4 h-4" />
           <span class="hidden sm:inline">엑셀</span>
@@ -1577,9 +1569,10 @@ async function showExcelUploadModal() {
             <span
               class="text-xs sm:text-sm font-medium"
               :class="{
-                'text-red-500': idx % 7 === 0,
-                'text-blue-500': idx % 7 === 6,
                 'font-bold': day.isToday,
+              }"
+              :style="{
+                color: idx % 7 === 0 ? '#dc2626' : idx % 7 === 6 ? '#2563eb' : (duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#1f2937' : '#ffffff') : 'var(--dp-text-primary)')
               }"
             >
               {{ day.day }}
@@ -1647,19 +1640,18 @@ async function showExcelUploadModal() {
               :key="dday.id"
               class="text-[10px] sm:text-sm leading-snug px-0.5 break-words"
               :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#1f2937' : '#ffffff') : 'var(--dp-text-primary)' }"
-            ><Lock v-if="dday.isPrivate" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-text-bottom" /><CalendarCheck v-else class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-text-bottom" />{{ dday.title }}</div>
+            ><Lock v-if="dday.isPrivate" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" /><CalendarCheck v-else class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" />{{ dday.title }}</div>
 
             <div
               v-for="schedule in schedulesByDays[idx]?.slice(0, 3)"
               :key="schedule.id"
               class="text-[10px] sm:text-sm leading-snug px-0.5 border-t-2 border-dashed break-words"
               :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#1f2937' : '#ffffff') : 'var(--dp-text-primary)', borderColor: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.3)') : 'var(--dp-border-primary)' }"
-            ><Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-text-bottom" :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }" />{{ schedule.contentWithoutTime || schedule.content }}<button
+            ><Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }" />{{ schedule.contentWithoutTime || schedule.content }}<AlignLeft
                 v-if="schedule.description || schedule.attachments?.length"
-                @click.stop="handleShowDescription(schedule)"
-                class="text-blue-500 hover:text-blue-700 ml-px align-text-bottom"
-                title="상세보기"
-              ><FileText class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline" /></button>
+                class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px] ml-0.5"
+                :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#9ca3af' : 'rgba(255,255,255,0.5)') : 'var(--dp-text-muted)' }"
+              />
               <!-- Tags display -->
               <div v-if="schedule.tags?.length || schedule.isTagged" class="flex flex-wrap gap-0.5 justify-end">
                 <span
@@ -1779,12 +1771,6 @@ async function showExcelUploadModal() {
       @add-tag="handleAddTag"
       @remove-tag="handleRemoveTag"
       @change-duty-type="handleChangeDutyType"
-    />
-
-    <ScheduleDetailModal
-      :is-open="isScheduleDetailModalOpen"
-      :schedule="selectedScheduleForDetail"
-      @close="isScheduleDetailModalOpen = false"
     />
 
     <TodoAddModal

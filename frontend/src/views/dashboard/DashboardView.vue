@@ -836,7 +836,7 @@ watch(
               <!-- Drag handle for pinned friends -->
               <div v-if="friend.pinOrder" class="absolute bottom-1.5 right-1.5 sm:bottom-2 sm:right-2" @click.stop>
                 <div
-                  class="handle friend-drag-handle rounded-md sm:rounded-lg p-1 sm:p-1.5 cursor-grab active:cursor-grabbing transition"
+                  class="handle friend-drag-handle rounded-md sm:rounded-lg p-1 sm:p-1.5 transition hover:bg-black/10 !cursor-grab active:!cursor-grabbing"
                   title="드래그하여 순서 변경"
                 >
                   <GripVertical class="w-3 h-3 sm:w-3.5 sm:h-3.5" />
