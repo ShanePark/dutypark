@@ -4,7 +4,7 @@
 
 [https://dutypark.o-r.kr](https://dutypark.o-r.kr)
 
-<a href="#" target="_blank"><img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=Kotlin&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Spring Boot-6DB33F?style=flat-square&logo=Spring-Boot&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/JPA-ED2761?style=flat-square&logo=Spring&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=MySQL&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Thymeleaf-005F0F?style=flat-square&logo=Thymeleaf&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Vue.js-4FC08D?style=flat-square&logo=Vue.js&logoColor=white"/></a>
+<a href="#" target="_blank"><img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=Kotlin&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Spring Boot-6DB33F?style=flat-square&logo=Spring-Boot&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/JPA-ED2761?style=flat-square&logo=Spring&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=MySQL&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Vue.js-4FC08D?style=flat-square&logo=Vue.js&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=TypeScript&logoColor=white"/></a>
 
 > **Add your duties and schedules in a snap — then share with friends or family.**
 
@@ -44,7 +44,7 @@ A lightweight, Kotlin + Spring Boot web app for duty rosters, personal schedules
 - **Backend:** Kotlin 2.1.10, Spring Boot 3.5.6 (Data JPA, Web, WebFlux, Validation, Security, Actuator, DevTools), Java 21 toolchain.
 - **Data:** MySQL 8.0 + Flyway migrations (`db/migration/v1`, `v2`), JPA auditing, ULID entities, optional P6Spy SQL tracing.
 - **AI & Messaging:** Spring AI starter (Gemini 2.0 Flash Lite via OpenAI-compatible endpoint) and Slack webhook integrations.
-- **Frontend:** Thymeleaf layouts + Vue.js components, Bootstrap 5, dayjs, SweetAlert2, WaitMe, Pickr, SortableJS, Uppy 5, Pretty Checkbox, custom Nexon fonts, and a PWA manifest.
+- **Frontend:** Vue 3 SPA (Vite + TypeScript + Pinia + Tailwind CSS), fully separated from backend with JWT Bearer token authentication.
 - **Build & Docs:** Gradle Kotlin DSL with `org.asciidoctor.jvm.convert` and git-properties plugin (surfaced in Slack + `/actuator/info`).
 - **Observability & Ops:** Micrometer Prometheus registry, Grafana dashboards, Logback rolling files, Docker Compose orchestration.
 - **Testing:** JUnit 5, H2 in-memory DB, Mockito-Kotlin, fail-fast Gradle test runs.
@@ -66,11 +66,12 @@ A lightweight, Kotlin + Spring Boot web app for duty rosters, personal schedules
 - `common/` — Layout helpers, cached `/api/calendar` grids, Slack notification infrastructure, async/throttle configs, and custom logging configuration.
 
 ### Frontend layers
-- Thymeleaf layout (`templates/layout`) injects shared head/footer assets and a mobile-first footer dock.
-- Vue roots under `templates/duty`, `dashboard.html`, `member/*.html`, and `team/*.html` consume REST APIs for data hydration.
-- `static/js/duty/*` modules cover calendar rendering, D-Day modal, todo modals, search modal, attachment detail modal, and other UI fragments.
-- Asset pipeline loads Bootstrap, dayjs, Vue, SortableJS, Uppy, Pickr, SweetAlert2, WaitMe, and Kakao/Naver logos via `layout/include.html`.
-- Static assets ship with a manifest, icons, and custom fonts for PWA installation.
+- Vue 3 SPA with Composition API (`<script setup lang="ts">`) and TypeScript for type safety.
+- Pinia for state management (auth store with JWT token handling).
+- Vue Router with lazy-loaded routes and navigation guards for authentication.
+- Axios with request/response interceptors for automatic JWT refresh.
+- Tailwind CSS for styling with custom design tokens.
+- SortableJS for drag-drop reordering, Uppy for file uploads, SweetAlert2 for notifications.
 
 ### Integrations & automation
 - Spring Scheduling powers attachment session cleanup (2am) and AI parsing queues; caching is enabled for calendars/holidays.
@@ -83,8 +84,9 @@ A lightweight, Kotlin + Spring Boot web app for duty rosters, personal schedules
 ## 🧑‍💻 Local Development
 
 ### Requirements
-- JDK 21+
-- Docker & Docker Compose (optional but recommended for full-stack/local DB)
+- **Backend:** JDK 21+
+- **Frontend:** Node.js 20+ and npm
+- **Database:** Docker & Docker Compose (optional but recommended)
 - MySQL client (optional) for direct DB access
 
 ### Clone & configure
@@ -94,40 +96,130 @@ cd dutypark
 cp .env.sample .env   # fill in the placeholders before running the stack
 ```
 
-### Run with Gradle
+### Backend Development
+
+Run the Spring Boot application with hot reload:
+
 ```bash
-./gradlew bootRun          # launches the Spring Boot app (DevTools enabled via application-dev.yml)
+./gradlew bootRun          # launches backend on http://localhost:8080 (DevTools enabled)
 ./gradlew test             # runs fail-fast unit/integration tests on H2
-./gradlew build            # compiles + runs tests
+./gradlew build            # compiles + runs tests + creates bootJar
 ./gradlew asciidoctor      # generates Spring REST Docs into src/main/resources/static/docs
 ```
 
-### Run with Docker Compose
+**Note:** Backend requires MySQL running. Use `dutypark_dev_db` stack or configure your own MySQL instance.
+
+### Frontend Development
+
+Run the Vue 3 SPA with Vite dev server:
+
 ```bash
-# HTTP-only local stack (uses data/nginx.local.conf and skips TLS)
-NGINX_CONF_NAME=nginx.local.conf docker compose up -d
+cd frontend
+npm install                # install dependencies (first time only)
+npm run dev                # starts dev server at http://localhost:5173
+npm run build              # production build to dist/
+npm run type-check         # TypeScript type checking (vue-tsc)
+npm run preview            # preview production build locally
+```
+
+**Development Workflow:**
+
+1. Start MySQL: `cd dutypark_dev_db && docker compose up -d`
+2. Start backend: `./gradlew bootRun` (from project root)
+3. Start frontend: `cd frontend && npm run dev` (in separate terminal)
+4. Open browser: http://localhost:5173
+
+The Vite dev server automatically proxies API requests (`/api/*`, `/admin/api/*`) to `localhost:8080`, so you can develop frontend and backend independently.
+
+**Frontend Hot Reload:**
+- Vue components auto-reload on save (HMR)
+- Tailwind CSS changes apply instantly
+- API types in `src/types/index.ts` provide full IntelliSense
+
+### Full Stack with Docker Compose
+
+For production-like environment or if you prefer containerized development:
+
+```bash
+# HTTP-only local stack (uses docker-compose.local.yml overlay)
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
 
 # Production-style stack (HTTPS + nginx reverse proxy)
 docker compose up -d
 ```
-The Compose file spins up MySQL, the Spring Boot app, nginx (with HTTP→HTTPS redirect + HSTS), Prometheus, and Grafana. App logs and attachment storage are bind-mounted under `./data/`.
+
+The Compose file spins up:
+- MySQL database
+- Spring Boot backend (built from Dockerfile)
+- nginx serving static frontend from `frontend/dist`
+- Prometheus + Grafana for monitoring
+
+App logs and attachment storage are bind-mounted under `./data/`.
+
+**Note:** For Docker deployment, you must build the frontend first:
+```bash
+cd frontend && npm run build
+```
 
 ### Development database only
-Need just MySQL while running the app via Gradle? Use the helper stack:
+Need just MySQL while running backend/frontend separately? Use the helper stack:
 
 ```bash
 cd dutypark_dev_db
 docker compose up -d   # exposes MySQL on localhost:3307
 ```
 
-Point `application-dev.yml` (already configured) or your `.env` to `jdbc:mysql://localhost:3307/dutypark`.
+Point `application-dev.yml` (already configured) to `jdbc:mysql://localhost:3307/dutypark`.
 
-### Production deployment checklist
-1. Provision a domain + TLS certificates (Let's Encrypt).  
-2. Update `.env` with production secrets (DB, JWT, OAuth, Slack, Gemini, etc.).  
-3. Run `docker compose up -d` (defaults to `data/nginx.conf` which assumes HTTPS).  
-4. Monitor `/actuator/health` and `/actuator/prometheus` via Prometheus/Grafana.  
-5. Rotate secrets and refresh SSL certs periodically.
+### Production Deployment
+
+**Automated CI/CD via GitHub Actions:**
+
+The project includes a complete CI/CD pipeline (`.github/workflows/gradle.yml`) that:
+1. Builds backend JAR and frontend dist on every push to `main`/`stage`
+2. Runs tests and type checking
+3. Deploys to production server via SSH
+4. Performs atomic rollover to minimize downtime
+
+**Manual Production Deployment:**
+
+1. **Build artifacts:**
+```bash
+# Backend
+./gradlew build                    # creates build/libs/dutypark.jar
+
+# Frontend
+cd frontend && npm run build       # creates frontend/dist/
+```
+
+2. **Prepare server:**
+```bash
+# On production server
+sudo certbot certonly --standalone -d yourdomain.com  # obtain Let's Encrypt cert
+cp .env.sample .env                                   # configure production secrets
+```
+
+3. **Deploy via Docker Compose:**
+```bash
+# Copy artifacts to server
+scp build/libs/*.jar user@server:/dutypark/build/libs/dutypark.jar
+scp -r frontend/dist/* user@server:/dutypark/frontend/dist/
+
+# On server
+docker compose build app           # rebuild app container
+docker compose up -d               # start/restart services
+```
+
+4. **Monitoring:**
+- Health check: `https://yourdomain.com/actuator/health`
+- Metrics: `https://yourdomain.com/actuator/prometheus`
+- Grafana: `http://yourdomain.com:3000` (admin/admin)
+
+5. **Maintenance:**
+- Rotate JWT secrets and refresh tokens periodically
+- Renew SSL certificates: `sudo certbot renew`
+- Backup MySQL data: `./data/db/`
+- Monitor logs: `./data/logs/dutypark.log`
 
 ### Monitoring (optional)
 Prometheus and Grafana services are part of the default Compose stack. Grafana listens on `http://localhost:3000` with credentials `admin/admin`, and its data directory persists in `./data/grafana`. Prometheus scrapes `app:8080/actuator/prometheus` as defined in `data/prometheus/prometheus.yml`.
@@ -195,8 +287,7 @@ management.endpoints.web.exposure.include: health,metrics,prometheus
 | `src/main/kotlin/com/tistory/shanepark/dutypark/team` | Team/domain logic (managers, schedules, work types, duty types). |
 | `src/main/kotlin/com/tistory/shanepark/dutypark/security` | JWT auth, filters, Kakao OAuth, admin routing, cookie configuration. |
 | `src/main/kotlin/com/tistory/shanepark/dutypark/dashboard` | Dashboard controller/service aggregating duties + schedules. |
-| `src/main/resources/templates` | Thymeleaf pages (layout, duty, team, admin, member, error). |
-| `src/main/resources/static/js` | Vue modules for duty calendar, dashboard, todo modals, attachment UI, etc. |
+| `frontend/` | Vue 3 SPA source code (Vite + TypeScript + Pinia + Tailwind CSS). |
 | `src/main/resources/db/migration` | Flyway SQL scripts (`v1`, `v2`) that define/upgrade the schema. |
 | `src/docs/asciidoc` | Source for Spring REST Docs; build output copied to `static/docs`. |
 | `data/` | Docker volumes: MySQL data, logs, nginx templates, Prometheus, Grafana, storage. |
@@ -251,13 +342,12 @@ management.endpoints.web.exposure.include: health,metrics,prometheus
 
 ## 🎨 Frontend Experience
 
-- Single layout (`layout/layout.html`) provides shared head assets, icons, manifest, and a fixed footer nav optimized for mobile.
-- The duty calendar Vue app (`static/js/duty/duty.js`) hydrates calendar grids, schedules, holidays, todos, and attachments with per-module mixins (`day-grid`, `dday-list`, `todo-*`, `search-result-modal`).
-- D-Day management leverages SweetAlert popups, localStorage for quick selection, and supports private events.
-- Todo modals and overview leverage SortableJS handles, reposition APIs (`/api/todos/position`), and inline success/error toasts.
-- Schedule detail modal integrates Uppy for uploads, real-time progress bars, thumbnail previews, and reordering.
-- Team management pages use Pickr for color selection, Pretty Checkbox for toggles, and custom alert flows.
-- Custom Nexon font + Bootstrap utilities keep the UI consistent, while PWA manifest & icons allow “Install” prompts on mobile.
+- Vue 3 SPA with TypeScript and Composition API for type-safe, maintainable code.
+- Responsive design with Tailwind CSS, optimized for mobile devices.
+- D-Day management with SweetAlert popups and localStorage for quick selection.
+- Todo board with SortableJS drag-drop reordering and inline toasts.
+- Schedule detail modal integrates Uppy for uploads with real-time progress bars and thumbnail previews.
+- JWT Bearer token authentication with automatic refresh handling via Axios interceptors.
 
 ---
 

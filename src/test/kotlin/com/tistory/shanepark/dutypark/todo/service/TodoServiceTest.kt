@@ -27,7 +27,7 @@ class TodoServiceTest {
     private lateinit var todoRepository: TodoRepository
     private lateinit var attachmentService: AttachmentService
 
-    private val loginMember = LoginMember(1, "", "", "", false)
+    private val loginMember = LoginMember(id = 1, email = "", name = "", team = "", isAdmin = false)
     private val member = Member(name = "", password = "")
 
     @BeforeEach

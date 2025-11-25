@@ -7,11 +7,69 @@ DutyPark Server REST API
 :toclevels: 2
 :sectlinks:
 
+== Authentication
+
+=== Login (Bearer Token)
+
+operation::auth/login-token[]
+
+==== Login [Unauthorized]
+
+operation::auth/login-token-unauthorized[]
+
+=== Login Status
+
+operation::auth/status[]
+
+==== Login Status [Unauthenticated]
+
+operation::auth/status-unauthenticated[]
+
+=== Change Password
+
+operation::auth/change-password[]
+
+== Dashboard
+
+=== My Dashboard
+
+operation::dashboard/my[]
+
+==== My Dashboard [Unauthorized]
+
+operation::dashboard/my-unauthorized[]
+
+=== Friends Dashboard
+
+operation::dashboard/friends[]
+
 == Member
 
 === Calendar Visibility
 
 operation::members/update-visibility[]
+
+== Duty
+
+=== Get Duties
+
+operation::duty/get-list[]
+
+=== Get Others' Duties
+
+operation::duty/get-others[]
+
+=== Update Single Duty
+
+operation::duty/update[]
+
+==== Update Duty [Unauthorized]
+
+operation::duty/update-unauthorized[]
+
+=== Batch Update Duties
+
+operation::duty/batch-update[]
 
 == Schedules
 
@@ -35,27 +93,15 @@ operation::schedules/position[]
 
 operation::schedules/delete[]
 
-== Holiday
-
-=== GET
-
-operation::holiday/get[]
-
-=== RESET
-
-operation::holiday/reset[]
-
-== Friends
-
-=== friend-info
-
-operation::friends/friend-info[]
-
 == TODO
 
-=== GET
+=== GET List
 
 operation::todos/get-list[]
+
+=== GET Completed List
+
+operation::todos/get-completed-list[]
 
 === CREATE
 
@@ -69,9 +115,109 @@ operation::todos/update[]
 
 operation::todos/update-position[]
 
+=== COMPLETE
+
+operation::todos/complete[]
+
+=== REOPEN
+
+operation::todos/reopen[]
+
 === DELETE
 
 operation::todos/delete[]
+
+== D-Day
+
+=== Create D-Day
+
+operation::dday/create[]
+
+=== Update D-Day
+
+operation::dday/update[]
+
+=== Get D-Day List
+
+operation::dday/get-list[]
+
+=== Get D-Day by Member
+
+operation::dday/get-by-member[]
+
+=== Delete D-Day
+
+operation::dday/delete[]
+
+== Friends
+
+=== Get Friends List
+
+operation::friends/get-list[]
+
+=== Search Possible Friends
+
+operation::friends/search[]
+
+=== Send Friend Request
+
+operation::friends/send-request[]
+
+=== Accept Friend Request
+
+operation::friends/accept-request[]
+
+=== Reject Friend Request
+
+operation::friends/reject-request[]
+
+=== Cancel Friend Request
+
+operation::friends/cancel-request[]
+
+=== Unfriend
+
+operation::friends/unfriend[]
+
+=== Pin Friend
+
+operation::friends/pin[]
+
+=== Unpin Friend
+
+operation::friends/unpin[]
+
+=== Update Pin Order
+
+operation::friends/update-pin-order[]
+
+=== Send Family Request
+
+operation::friends/send-family-request[]
+
+== Teams
+
+=== Get Team by ID
+
+operation::teams/get-by-id[]
+
+=== My Team Summary
+
+operation::teams/my-summary[]
+
+=== Get Shift
+
+operation::teams/shift[]
+
+== Holiday
+
+=== GET
+
+operation::holiday/get[]
+
+=== RESET
+
+operation::holiday/reset[]
 
 == Attachments
 
@@ -83,13 +229,13 @@ operation::attachments/sessions/create[]
 
 operation::attachments/sessions/create-unauthorized[]
 
+=== Discard Session
+
+operation::attachments/sessions/discard[]
+
 === Upload File
 
 operation::attachments/upload[]
-
-=== Finalize Session
-
-operation::attachments/sessions/finalize[]
 
 === List Attachments
 
@@ -110,5 +256,3 @@ operation::attachments/thumbnail[]
 === Delete Attachment
 
 operation::attachments/delete[]
-
-

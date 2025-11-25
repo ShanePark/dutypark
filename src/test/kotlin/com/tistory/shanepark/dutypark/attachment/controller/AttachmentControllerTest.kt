@@ -11,7 +11,6 @@ import com.tistory.shanepark.dutypark.attachment.repository.AttachmentUploadSess
 import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
-import jakarta.servlet.http.Cookie
 import java.time.LocalDateTime
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
@@ -25,6 +24,7 @@ import org.springframework.restdocs.payload.PayloadDocumentation.*
 import org.springframework.restdocs.request.RequestDocumentation.*
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
@@ -64,7 +64,6 @@ class AttachmentControllerTest : RestDocsTest() {
     @Test
     fun `upload file successfully`() {
         val member = TestData.member
-        val jwt = getJwt(member)
 
         val session = sessionRepository.save(
             AttachmentUploadSession(
@@ -88,7 +87,7 @@ class AttachmentControllerTest : RestDocsTest() {
             multipart("/api/attachments")
                 .file(file)
                 .param("sessionId", session.id.toString())
-                .cookie(Cookie(jwtConfig.cookieName, jwt))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
         ).andExpect(status().isOk)
             .andExpect(jsonPath("$.id").exists())
             .andExpect(jsonPath("$.originalFilename").value("test.txt"))
@@ -147,7 +146,6 @@ class AttachmentControllerTest : RestDocsTest() {
     @Test
     fun `delete attachment successfully`() {
         val member = TestData.member
-        val jwt = getJwt(member)
 
         val session = sessionRepository.save(
             AttachmentUploadSession(
@@ -181,7 +179,7 @@ class AttachmentControllerTest : RestDocsTest() {
 
         mockMvc.perform(
             delete("/api/attachments/{id}", attachment.id)
-                .cookie(Cookie(jwtConfig.cookieName, jwt))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
         ).andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
             .andDo(
@@ -194,7 +192,6 @@ class AttachmentControllerTest : RestDocsTest() {
     @Test
     fun `list attachments by context`() {
         val member = TestData.member
-        val jwt = getJwt(member)
 
         val schedule = scheduleRepository.save(
             Schedule(
@@ -240,7 +237,7 @@ class AttachmentControllerTest : RestDocsTest() {
             get("/api/attachments")
                 .param("contextType", "SCHEDULE")
                 .param("contextId", contextId)
-                .cookie(Cookie(jwtConfig.cookieName, jwt))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
         ).andExpect(status().isOk)
             .andExpect(jsonPath("$").isArray)
             .andExpect(jsonPath("$.length()").value(2))
@@ -274,7 +271,6 @@ class AttachmentControllerTest : RestDocsTest() {
     @Test
     fun `reorder attachments successfully`() {
         val member = TestData.member
-        val jwt = getJwt(member)
 
         val schedule = scheduleRepository.save(
             Schedule(
@@ -328,7 +324,7 @@ class AttachmentControllerTest : RestDocsTest() {
                 .accept("application/json")
                 .contentType("application/json")
                 .content(json)
-                .cookie(Cookie(jwtConfig.cookieName, jwt))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
         ).andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
             .andDo(
@@ -352,7 +348,6 @@ class AttachmentControllerTest : RestDocsTest() {
     @Test
     fun `download attachment successfully`() {
         val member = TestData.member
-        val jwt = getJwt(member)
 
         val schedule = scheduleRepository.save(
             Schedule(
@@ -385,7 +380,7 @@ class AttachmentControllerTest : RestDocsTest() {
 
         mockMvc.perform(
             get("/api/attachments/{id}/download", attachment.id)
-                .cookie(Cookie(jwtConfig.cookieName, jwt))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
         ).andExpect(status().isOk)
             .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"test-document.txt\"; filename*=UTF-8''test-document.txt"))
             .andExpect(content().contentType(MediaType.TEXT_PLAIN))
@@ -404,7 +399,6 @@ class AttachmentControllerTest : RestDocsTest() {
     @Test
     fun `get thumbnail successfully`() {
         val member = TestData.member
-        val jwt = getJwt(member)
 
         val schedule = scheduleRepository.save(
             Schedule(
@@ -440,7 +434,7 @@ class AttachmentControllerTest : RestDocsTest() {
 
         mockMvc.perform(
             get("/api/attachments/{id}/thumbnail", attachment.id)
-                .cookie(Cookie(jwtConfig.cookieName, jwt))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
         ).andExpect(status().isOk)
             .andExpect(content().contentType(MediaType.IMAGE_PNG))
             .andExpect(content().bytes(thumbnailContent))

@@ -3,7 +3,6 @@ package com.tistory.shanepark.dutypark.security.config
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.security.filters.AdminAuthFilter
 import com.tistory.shanepark.dutypark.security.filters.JwtAuthFilter
-import com.tistory.shanepark.dutypark.security.handlers.LogoutSuccessHandle
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import jakarta.servlet.Filter
 import org.springframework.beans.factory.annotation.Value
@@ -14,32 +13,52 @@ import org.springframework.core.Ordered
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.access.intercept.AuthorizationFilter
+import org.springframework.web.cors.CorsConfiguration
+import org.springframework.web.cors.CorsConfigurationSource
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 import org.springframework.web.filter.ForwardedHeaderFilter
 
 @Configuration
 class SecurityConfig(
-    private val logoutHandler: LogoutSuccessHandle,
     private val authService: AuthService,
-    private val jwtConfig: JwtConfig,
-    @param:Value("\${dutypark.ssl.enabled}") private val isSecure: Boolean
+    @param:Value("\${dutypark.cors.allowed-origins:}") private val corsAllowedOrigins: String
 ) {
 
     private val log = logger()
 
     init {
-        log.info("Init SecurityConfig. isSecure: $isSecure, jwtConfig: $jwtConfig")
+        log.info("Init SecurityConfig. corsAllowedOrigins: $corsAllowedOrigins")
     }
 
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
-        val jwtAuthFilter = JwtAuthFilter(authService, jwtConfig, isSecure = isSecure)
+        val jwtAuthFilter = JwtAuthFilter(authService)
         http.addFilterBefore(jwtAuthFilter, AuthorizationFilter::class.java)
 
         return http
             .authorizeHttpRequests { it.anyRequest().permitAll() }
-            .logout { it.logoutUrl("/logout").logoutSuccessHandler(logoutHandler) }
+            .logout { it.disable() }
             .csrf { it.disable() }
+            .cors { it.configurationSource(corsConfigurationSource()) }
             .build()
+    }
+
+    @Bean
+    fun corsConfigurationSource(): CorsConfigurationSource {
+        val configuration = CorsConfiguration()
+        val origins = corsAllowedOrigins.split(",")
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .ifEmpty { listOf("http://localhost:5173") }
+        configuration.allowedOrigins = origins
+        configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
+        configuration.allowedHeaders = listOf("*")
+        configuration.allowCredentials = true
+        configuration.maxAge = 3600L
+
+        val source = UrlBasedCorsConfigurationSource()
+        source.registerCorsConfiguration("/api/**", configuration)
+        return source
     }
 
     @Bean

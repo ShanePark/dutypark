@@ -72,6 +72,14 @@ class ScheduleController(
         scheduleService.swapSchedulePosition(loginMember, id1, id2)
     }
 
+    @PatchMapping("/positions")
+    fun reorderSchedulePositions(
+        @RequestBody scheduleIds: List<UUID>,
+        @Login loginMember: LoginMember,
+    ) {
+        scheduleService.reorderSchedulePositions(loginMember, scheduleIds)
+    }
+
     @DeleteMapping("/{id}")
     fun deleteSchedule(
         @PathVariable id: UUID,

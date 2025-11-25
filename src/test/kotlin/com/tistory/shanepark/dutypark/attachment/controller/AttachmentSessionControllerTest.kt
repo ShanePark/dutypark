@@ -7,7 +7,6 @@ import com.tistory.shanepark.dutypark.attachment.dto.CreateSessionRequest
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentUploadSessionRepository
 import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
-import jakarta.servlet.http.Cookie
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
@@ -71,7 +70,7 @@ class AttachmentSessionControllerTest : RestDocsTest() {
                 .accept("application/json")
                 .contentType("application/json")
                 .content(json)
-                .cookie(Cookie(jwtConfig.cookieName, jwt))
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().isOk)
             .andExpect(jsonPath("$.sessionId").exists())
             .andExpect(jsonPath("$.expiresAt").exists())
@@ -146,7 +145,7 @@ class AttachmentSessionControllerTest : RestDocsTest() {
             multipart("/api/attachments")
                 .file(file)
                 .param("sessionId", session.id.toString())
-                .cookie(Cookie(jwtConfig.cookieName, jwt))
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().isOk)
 
         val tempDir = pathResolver.resolveTemporaryDirectory(session.id)
@@ -156,7 +155,7 @@ class AttachmentSessionControllerTest : RestDocsTest() {
 
         mockMvc.perform(
             delete("/api/attachments/sessions/{sessionId}", session.id)
-                .cookie(Cookie(jwtConfig.cookieName, jwt))
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
             .andDo(
@@ -190,7 +189,7 @@ class AttachmentSessionControllerTest : RestDocsTest() {
 
         mockMvc.perform(
             delete("/api/attachments/sessions/{sessionId}", session.id)
-                .cookie(Cookie(jwtConfig.cookieName, jwt))
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().is4xxClientError)
             .andDo(MockMvcResultHandlers.print())
 

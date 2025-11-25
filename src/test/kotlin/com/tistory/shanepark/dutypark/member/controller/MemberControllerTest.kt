@@ -2,7 +2,6 @@ package com.tistory.shanepark.dutypark.member.controller
 
 import com.tistory.shanepark.dutypark.RestDocsTest
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
-import jakarta.servlet.http.Cookie
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
@@ -26,7 +25,7 @@ class MemberControllerTest : RestDocsTest() {
                 .accept("application/json")
                 .contentType("application/json")
                 .content("{\"visibility\": \"PRIVATE\"}")
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(member)))
+                .withAuth(member)
         )
             .andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())

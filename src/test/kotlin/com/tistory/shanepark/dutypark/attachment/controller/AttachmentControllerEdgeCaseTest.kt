@@ -11,7 +11,6 @@ import com.tistory.shanepark.dutypark.attachment.repository.AttachmentUploadSess
 import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
-import jakarta.servlet.http.Cookie
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -80,7 +79,7 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
             multipart("/api/attachments")
                 .file(file)
                 .param("sessionId", session.id.toString())
-                .cookie(Cookie(jwtConfig.cookieName, jwt))
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().is4xxClientError)
             .andDo(MockMvcResultHandlers.print())
     }
@@ -111,7 +110,7 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
             multipart("/api/attachments")
                 .file(file)
                 .param("sessionId", session.id.toString())
-                .cookie(Cookie(jwtConfig.cookieName, jwt))
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
     }
@@ -149,7 +148,7 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
 
         mockMvc.perform(
             delete("/api/attachments/{id}", attachment.id)
-                .cookie(Cookie(jwtConfig.cookieName, jwt))
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().is4xxClientError)
             .andDo(MockMvcResultHandlers.print())
     }
@@ -188,7 +187,7 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
                 .accept("application/json")
                 .contentType("application/json")
                 .content(json)
-                .cookie(Cookie(jwtConfig.cookieName, jwt))
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
     }
@@ -220,7 +219,7 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
                 .accept("application/json")
                 .contentType("application/json")
                 .content(json)
-                .cookie(Cookie(jwtConfig.cookieName, jwt))
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
     }
@@ -234,7 +233,7 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
             get("/api/attachments")
                 .param("contextType", "SCHEDULE")
                 .param("contextId", UUID.randomUUID().toString())
-                .cookie(Cookie(jwtConfig.cookieName, jwt))
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
     }
@@ -275,7 +274,7 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
 
         mockMvc.perform(
             get("/api/attachments/{id}/download", attachment.id)
-                .cookie(Cookie(jwtConfig.cookieName, jwt))
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
     }

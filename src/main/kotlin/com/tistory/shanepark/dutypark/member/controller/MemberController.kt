@@ -16,6 +16,13 @@ class MemberController(
     private val friendService: FriendService,
 ) {
 
+    @GetMapping("/me")
+    fun getMyInfo(
+        @Login loginMember: LoginMember,
+    ): MemberDto {
+        return memberService.findById(loginMember.id)
+    }
+
     @PutMapping("{memberId}/visibility")
     fun updateCalendarVisibility(
         @Login loginMember: LoginMember,
@@ -68,6 +75,15 @@ class MemberController(
             return false
         }
         return memberService.isManager(isManager = loginMember, targetMemberId = memberId)
+    }
+
+    @GetMapping("/{memberId}")
+    fun getMemberById(
+        @Login(required = false) loginMember: LoginMember?,
+        @PathVariable memberId: Long,
+    ): MemberDto {
+        friendService.checkVisibility(loginMember, memberId)
+        return memberService.findById(memberId)
     }
 
 }

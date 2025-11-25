@@ -53,13 +53,15 @@ services:
       DOMAIN_NAME: ${DOMAIN_NAME}
     volumes:
       - ./data/${NGINX_CONF_NAME:-nginx.conf}:/tmp/nginx.template:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
       # SSL certificate volumes - ensure Let's Encrypt certificates are obtained first
       # Run: sudo certbot certonly --standalone -d ${DOMAIN_NAME} before deploying
       - /etc/letsencrypt/live/${DOMAIN_NAME}:/etc/letsencrypt/live/${DOMAIN_NAME}:ro
       - /etc/letsencrypt/archive/${DOMAIN_NAME}:/etc/letsencrypt/archive/${DOMAIN_NAME}:ro
     command: /bin/sh -c "envsubst '$$DOMAIN_NAME' < /tmp/nginx.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
     depends_on:
-      - app
+      app:
+        condition: service_started
     networks:
       - dutypark-network
 

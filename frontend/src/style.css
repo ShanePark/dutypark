@@ -1,0 +1,667 @@
+@import 'tailwindcss';
+
+/* ====================================
+   Dutypark Design Tokens
+   ==================================== */
+
+@theme {
+  /* Colors - Primary */
+  --color-primary: #0d6efd;
+  --color-primary-hover: #0b5ed7;
+  --color-primary-light: #e7f1ff;
+
+  /* Colors - Secondary/Neutral */
+  --color-secondary: #6c757d;
+  --color-secondary-hover: #5c636a;
+
+  /* Colors - Success */
+  --color-success: #198754;
+  --color-success-hover: #157347;
+  --color-success-light: #e9f7f0;
+
+  /* Colors - Danger */
+  --color-danger: #dc3545;
+  --color-danger-hover: #bb2d3b;
+
+  /* Colors - Warning */
+  --color-warning: #ffc107;
+  --color-warning-hover: #ffca2c;
+
+  /* Colors - Backgrounds */
+  --color-bg-hover: #f8f9fa;
+  --color-bg-light: #f1f3f5;
+  --color-bg-muted: #e9ecef;
+  --color-bg-calendar: #eee;
+  --color-bg-footer: rgb(33, 37, 41);
+
+  /* Colors - Borders */
+  --color-border: #dee2e6;
+  --color-border-dark: #ced4da;
+
+  /* Colors - Text */
+  --color-text: #212529;
+  --color-text-muted: #6c757d;
+  --color-text-light: rgba(255, 255, 255, 0.87);
+
+  /* Colors - Special */
+  --color-sunday: #dc3545;
+  --color-saturday: #0d6efd;
+  --color-holiday: #dc3545;
+  --color-today-border: #dc3545;
+  --color-kakao: #fee500;
+  --color-kakao-text: #000000;
+
+  /* Fonts */
+  --font-sans: 'NexonMaplestory', system-ui, -apple-system, sans-serif;
+
+  /* Spacing */
+  --spacing-container: 64rem;
+
+  /* Border Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow: 300ms ease;
+}
+
+/* ====================================
+   Dark Mode CSS Variables
+   ==================================== */
+
+:root {
+  /* Light mode (default) */
+  --dp-bg-primary: #ffffff;
+  --dp-bg-secondary: #f9fafb;
+  --dp-bg-tertiary: #f3f4f6;
+  --dp-bg-hover: #f8f9fa;
+  --dp-bg-card: #ffffff;
+  --dp-bg-input: #ffffff;
+  --dp-bg-modal: #ffffff;
+  --dp-bg-footer: #1f2937;
+
+  --dp-text-primary: #111827;
+  --dp-text-secondary: #4b5563;
+  --dp-text-muted: #6b7280;
+  --dp-text-inverse: #ffffff;
+
+  --dp-border-primary: #e5e7eb;
+  --dp-border-secondary: #d1d5db;
+  --dp-border-input: #d1d5db;
+
+  --dp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --dp-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --dp-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+
+  --dp-calendar-cell-bg: #ffffff;
+  --dp-calendar-cell-prev-next: #f9fafb;
+  --dp-calendar-header-bg: #e5e7eb;
+}
+
+.dark {
+  /* Dark mode */
+  --dp-bg-primary: #111827;
+  --dp-bg-secondary: #1f2937;
+  --dp-bg-tertiary: #374151;
+  --dp-bg-hover: #374151;
+  --dp-bg-card: #1f2937;
+  --dp-bg-input: #374151;
+  --dp-bg-modal: #1f2937;
+  --dp-bg-footer: #030712;
+
+  --dp-text-primary: #f9fafb;
+  --dp-text-secondary: #d1d5db;
+  --dp-text-muted: #9ca3af;
+  --dp-text-inverse: #111827;
+
+  --dp-border-primary: #374151;
+  --dp-border-secondary: #4b5563;
+  --dp-border-input: #4b5563;
+
+  --dp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --dp-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --dp-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+
+  --dp-calendar-cell-bg: #1f2937;
+  --dp-calendar-cell-prev-next: #111827;
+  --dp-calendar-header-bg: #374151;
+}
+
+/* ====================================
+   Base Styles
+   ==================================== */
+
+body {
+  @apply min-h-screen antialiased;
+  font-family: var(--font-sans);
+  background-color: var(--dp-bg-secondary);
+  color: var(--dp-text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+a {
+  @apply no-underline text-inherit;
+}
+
+a:hover {
+  @apply no-underline text-inherit;
+}
+
+/* Dark mode transition for smoother theme switching */
+html {
+  transition: background-color 0.2s ease;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+/* ====================================
+   Component Classes
+   ==================================== */
+
+/* Buttons */
+.btn {
+  @apply inline-flex items-center justify-center px-4 py-2 font-medium rounded-lg transition-all duration-200;
+}
+
+.btn-primary {
+  @apply bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-secondary {
+  @apply text-gray-800 hover:bg-gray-300;
+  background-color: var(--dp-bg-tertiary);
+}
+
+.dark .btn-secondary {
+  @apply text-gray-200 hover:bg-gray-600;
+}
+
+.btn-success {
+  @apply bg-green-600 text-white hover:bg-green-700;
+}
+
+.btn-danger {
+  @apply bg-red-600 text-white hover:bg-red-700;
+}
+
+.btn-outline {
+  @apply border bg-white text-gray-700 hover:bg-gray-50;
+  border-color: var(--dp-border-primary);
+}
+
+.dark .btn-outline {
+  background-color: var(--dp-bg-tertiary);
+  color: var(--dp-text-secondary);
+  @apply hover:bg-gray-600;
+}
+
+.btn-kakao {
+  background-color: var(--color-kakao);
+  color: var(--color-kakao-text);
+  @apply hover:brightness-95;
+}
+
+/* Cards */
+.card {
+  @apply rounded-lg;
+  background-color: var(--dp-bg-card);
+  border: 1px solid var(--dp-border-primary);
+  box-shadow: var(--dp-shadow-sm);
+}
+
+.card-body {
+  @apply p-4;
+}
+
+/* Form Controls */
+.form-control {
+  @apply w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+  background-color: var(--dp-bg-input);
+  border: 1px solid var(--dp-border-input);
+  color: var(--dp-text-primary);
+}
+
+.form-control:disabled,
+.form-control[readonly] {
+  @apply cursor-not-allowed;
+  background-color: var(--dp-bg-tertiary);
+}
+
+.form-label {
+  @apply block text-sm font-medium mb-1;
+  color: var(--dp-text-secondary);
+}
+
+/* Calendar Grid (7 columns) */
+.row-7 {
+  @apply flex flex-wrap;
+}
+
+.row-7 > * {
+  width: 14.28571428571429%;
+}
+
+/* Day Grid */
+.day-grid .day-cell {
+  @apply min-h-[9vw] p-0 pb-1 break-all;
+  background-color: var(--dp-calendar-cell-bg);
+  border: 1px solid var(--dp-border-secondary);
+}
+
+.day-grid .day-cell.has-schedule {
+  @apply brightness-90;
+}
+
+.dark .day-grid .day-cell.has-schedule {
+  @apply brightness-110;
+}
+
+.day-grid .day-cell.month-prev,
+.day-grid .day-cell.month-next {
+  @apply opacity-60;
+  background-color: var(--dp-calendar-cell-prev-next);
+}
+
+.day-grid .day-cell.today {
+  @apply border-3 border-red-500;
+}
+
+/* Day of Week Header */
+.day-of-week {
+  @apply mt-4;
+  background-color: var(--dp-calendar-header-bg);
+}
+
+.day-of-week > div {
+  @apply text-center p-2;
+  border: 1px solid var(--dp-border-secondary);
+  color: var(--dp-text-primary);
+}
+
+/* Sunday (1st column) */
+.day-of-week > div:nth-child(7n+1),
+.day-grid > div:nth-child(7n+1) .day-number {
+  @apply text-red-500;
+}
+
+/* Saturday (7th column) */
+.day-of-week > div:nth-child(7n),
+.day-grid > div:not(.holiday):nth-child(7n) .day-number {
+  @apply text-blue-500;
+}
+
+/* Holiday */
+.day-grid .holiday .day-number {
+  @apply text-red-500;
+}
+
+/* Todo Items */
+.todo-item {
+  @apply flex-none flex items-center rounded-lg shadow-sm ml-2 transition-colors duration-300 relative select-none cursor-pointer;
+  background-color: var(--dp-bg-tertiary);
+  border: 1px solid var(--dp-border-primary);
+}
+
+.todo-item:hover {
+  background-color: var(--dp-bg-hover);
+}
+
+.todo-item .handle {
+  @apply p-1 cursor-grab text-xl flex items-center justify-center;
+  border-right: 1px solid var(--dp-border-primary);
+}
+
+/* Friend Cards */
+.friend-card {
+  @apply relative overflow-hidden transition-all duration-200 cursor-pointer;
+  background-color: var(--dp-bg-card);
+}
+
+.friend-card:hover {
+  @apply shadow-md;
+  background-color: var(--dp-bg-hover);
+}
+
+/* Pinned friend card highlight - neutral gray theme */
+.pinned-friend-highlight {
+  background: linear-gradient(to bottom right, var(--dp-bg-secondary), var(--dp-bg-tertiary));
+  border-color: var(--dp-border-secondary);
+}
+
+/* Friend icon styles */
+.friend-icon-family {
+  background: linear-gradient(to bottom right, var(--dp-bg-tertiary), var(--dp-bg-secondary));
+  color: var(--dp-text-secondary);
+}
+
+.friend-icon-regular {
+  background: linear-gradient(to bottom right, var(--dp-bg-tertiary), var(--dp-bg-secondary));
+  color: var(--dp-text-muted);
+}
+
+/* Friend schedule item */
+.friend-schedule-item {
+  background-color: var(--dp-bg-secondary);
+  color: var(--dp-text-secondary);
+}
+
+/* Friend drag handle */
+.friend-drag-handle {
+  background-color: var(--dp-bg-tertiary);
+  color: var(--dp-text-muted);
+}
+
+.friend-drag-handle:hover {
+  background-color: var(--dp-bg-hover);
+}
+
+/* D-Day Cards */
+.dday-card-past {
+  background: linear-gradient(to bottom right, var(--dp-bg-secondary), var(--dp-bg-tertiary));
+  border-color: var(--dp-border-secondary);
+}
+
+.dday-card-future {
+  background: linear-gradient(to bottom right, var(--dp-bg-card), var(--dp-bg-secondary));
+  border-color: var(--dp-border-primary);
+}
+
+/* Sortable (Drag & Drop) */
+.sortable-ghost {
+  @apply opacity-100 outline outline-2 outline-blue-500 -outline-offset-2 shadow-lg rounded-lg;
+  background-color: #eff6ff;
+}
+
+.dark .sortable-ghost {
+  background-color: #1e3a5f;
+}
+
+.sortable-fallback {
+  @apply fixed z-[1060] opacity-90 outline outline-2 outline-blue-500 -outline-offset-2 shadow-xl rounded-lg;
+  background-color: #eff6ff;
+  transition: none !important;
+}
+
+.dark .sortable-fallback {
+  background-color: #1e3a5f;
+}
+
+.sortable-chosen {
+  @apply border-blue-500 shadow-sm;
+}
+
+/* Friend section - prevent hover effects while sorting */
+.friend-section-sorting .friend-card:hover {
+  @apply shadow-none;
+  background-color: inherit;
+}
+
+/* Attachment Gallery */
+.attachment-gallery {
+  @apply flex flex-wrap gap-3;
+}
+
+.attachment-tile {
+  @apply relative flex-none w-[120px] h-[120px] mb-12;
+}
+
+.attachment-thumb {
+  @apply w-full aspect-square rounded-xl border border-dashed flex items-center justify-center overflow-hidden relative transition-all duration-200;
+  background-color: var(--dp-bg-tertiary);
+  border-color: var(--dp-border-secondary);
+}
+
+.attachment-thumb.drag-over {
+  @apply border-blue-500 border-2 scale-105;
+  background-color: #eff6ff;
+}
+
+.dark .attachment-thumb.drag-over {
+  background-color: #1e3a5f;
+}
+
+/* Modal */
+.modal-body {
+  @apply max-h-[580px] overflow-y-auto;
+}
+
+/* Footer Navigation */
+.footer-nav {
+  @apply fixed bottom-0 left-0 right-0 text-white z-50;
+  background-color: var(--dp-bg-footer);
+}
+
+.footer-nav-item {
+  @apply relative inline-block py-4 transition-colors duration-200;
+}
+
+.footer-nav-item:hover {
+  @apply bg-white/10;
+}
+
+.footer-nav-item.active {
+  @apply bg-white/20;
+}
+
+/* Footer navigation selection states */
+.footer-nav-active {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.footer-nav-inactive {
+  background-color: transparent;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.footer-nav-inactive:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Schedule Tags */
+.schedule-tag {
+  @apply text-[8px] sm:text-xs px-1.5 py-px rounded-full whitespace-nowrap inline-block;
+  @apply shadow-sm font-medium;
+  background: linear-gradient(to bottom, var(--dp-bg-primary), var(--dp-bg-tertiary));
+  border: 1px solid var(--dp-border-secondary);
+  color: var(--dp-text-secondary);
+}
+
+/* Duty Type Indicator */
+.duty-type-indicator {
+  @apply ml-1 border-2 p-0.5;
+  border-color: var(--dp-border-primary);
+}
+
+/* Badge */
+.badge {
+  @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+}
+
+.badge-primary {
+  @apply bg-blue-100 text-blue-800;
+}
+
+.badge-success {
+  @apply bg-green-100 text-green-800;
+}
+
+.badge-danger {
+  @apply bg-red-100 text-red-800;
+}
+
+/* Utility Classes */
+.hover-bg-light:hover {
+  background-color: var(--dp-bg-hover);
+}
+
+.cursor-pointer {
+  @apply cursor-pointer;
+}
+
+/* Vue Cloak */
+[v-cloak] {
+  @apply hidden;
+}
+
+/* ====================================
+   Color Picker (Pickr)
+   ==================================== */
+
+.color-picker-container {
+  @apply flex flex-col gap-4 mt-2;
+}
+
+.color-picker-wrapper {
+  @apply flex flex-col gap-2;
+}
+
+.color-picker {
+  @apply w-full max-w-[300px] rounded-lg;
+}
+
+.pickr {
+  @apply relative;
+}
+
+.pickr .pcr-app {
+  position: static !important;
+  display: block !important;
+  visibility: visible !important;
+  @apply shadow-md rounded-lg mt-1;
+}
+
+.pickr .pcr-button {
+  display: none !important;
+}
+
+/* Monolith theme adjustments */
+.pickr .pcr-app.monolith {
+  @apply rounded-lg shadow-md;
+}
+
+.pickr .pcr-app.monolith .pcr-selection {
+  height: 160px !important;
+}
+
+/* ====================================
+   SweetAlert2 Custom Styles
+   ==================================== */
+
+.swal2-popup {
+  @apply rounded-2xl shadow-lg p-0 overflow-hidden;
+  font-family: var(--font-sans);
+  width: auto !important;
+  min-width: 280px;
+  max-width: 340px;
+  background-color: var(--dp-bg-modal);
+  border: 1px solid var(--dp-border-primary);
+}
+
+.swal2-title {
+  @apply text-sm font-semibold m-0 py-2.5 px-4;
+  color: var(--dp-text-primary);
+  background-color: var(--dp-bg-tertiary);
+  border-bottom: 1px solid var(--dp-border-primary);
+}
+
+.swal2-html-container {
+  @apply text-sm mt-0 mb-0 py-4 px-4;
+  color: var(--dp-text-secondary);
+}
+
+.swal2-icon {
+  display: none !important;
+}
+
+.swal2-actions {
+  @apply mt-0 mb-4 gap-2;
+}
+
+.swal2-confirm {
+  @apply px-5 py-2 rounded-full font-medium text-sm transition-all duration-200 shadow-none;
+}
+
+.swal2-confirm:focus {
+  @apply shadow-none;
+}
+
+.swal2-cancel {
+  @apply px-5 py-2 rounded-full font-medium text-sm transition-all duration-200;
+  background-color: var(--dp-bg-tertiary);
+  color: var(--dp-text-secondary);
+}
+
+.swal2-cancel:hover {
+  background-color: var(--dp-bg-hover);
+}
+
+.swal2-cancel:focus {
+  @apply shadow-none;
+}
+
+/* Toast styles */
+.swal2-popup.swal2-toast {
+  @apply rounded-xl shadow-md py-2.5 px-4;
+  min-width: auto;
+  max-width: none;
+  background-color: var(--dp-bg-card);
+  border: 1px solid var(--dp-border-primary);
+}
+
+.swal2-popup.swal2-toast .swal2-icon {
+  display: flex !important;
+  @apply m-0 mr-2;
+  width: 20px !important;
+  height: 20px !important;
+  border: none !important;
+}
+
+.swal2-popup.swal2-toast .swal2-icon .swal2-icon-content {
+  font-size: 14px !important;
+}
+
+.swal2-popup.swal2-toast .swal2-title {
+  @apply text-sm font-medium;
+}
+
+.swal2-popup.swal2-toast .swal2-icon.swal2-success {
+  @apply text-green-500;
+}
+
+.swal2-popup.swal2-toast .swal2-icon.swal2-success .swal2-success-ring {
+  @apply border-green-200;
+}
+
+.swal2-popup.swal2-toast .swal2-icon.swal2-success [class^='swal2-success-line'] {
+  @apply bg-green-500;
+}
+
+.swal2-popup.swal2-toast .swal2-icon.swal2-error {
+  @apply text-red-500;
+}
+
+.swal2-popup.swal2-toast .swal2-icon.swal2-error [class^='swal2-x-mark-line'] {
+  @apply bg-red-500;
+}
+
+.swal2-popup.swal2-toast .swal2-icon.swal2-info {
+  @apply text-blue-500;
+}
+
+.swal2-popup.swal2-toast .swal2-icon.swal2-info .swal2-icon-content {
+  @apply text-blue-500;
+}

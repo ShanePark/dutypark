@@ -4,7 +4,7 @@
 
 [https://dutypark.o-r.kr](https://dutypark.o-r.kr)
 
-<a href="#" target="_blank"><img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=Kotlin&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Spring Boot-6DB33F?style=flat-square&logo=Spring-Boot&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/JPA-ED2761?style=flat-square&logo=Spring&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=MySQL&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Thymeleaf-005F0F?style=flat-square&logo=Thymeleaf&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Vue.js-4FC08D?style=flat-square&logo=Vue.js&logoColor=white"/></a>
+<a href="#" target="_blank"><img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=Kotlin&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Spring Boot-6DB33F?style=flat-square&logo=Spring-Boot&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/JPA-ED2761?style=flat-square&logo=Spring&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=MySQL&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Vue.js-4FC08D?style=flat-square&logo=Vue.js&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=TypeScript&logoColor=white"/></a>
 
 > **근무와 일정을 빠르게 추가하고 친구나 가족과 공유하세요.**
 
@@ -44,7 +44,7 @@
 - **백엔드:** Kotlin 2.1.10, Spring Boot 3.5.6 (Data JPA, Web, WebFlux, Validation, Security, Actuator, DevTools), Java 21 툴체인.
 - **데이터:** MySQL 8.0 + Flyway 마이그레이션(`db/migration/v1`, `v2`), JPA 감사, ULID 엔티티, 선택적 P6Spy SQL 추적.
 - **AI 및 메시징:** Spring AI 스타터(OpenAI 호환 엔드포인트를 통한 Gemini 2.0 Flash Lite) 및 Slack 웹훅 통합.
-- **프론트엔드:** Thymeleaf 레이아웃 + Vue.js 컴포넌트, Bootstrap 5, dayjs, SweetAlert2, WaitMe, Pickr, SortableJS, Uppy 5, Pretty Checkbox, 사용자 정의 Nexon 글꼴, PWA 매니페스트.
+- **프론트엔드:** Vue 3 SPA (Vite + TypeScript + Pinia + Tailwind CSS), 백엔드와 완전 분리된 JWT Bearer 토큰 인증.
 - **빌드 및 문서화:** Gradle Kotlin DSL, `org.asciidoctor.jvm.convert` 및 git-properties 플러그인(Slack + `/actuator/info`에 표시).
 - **관찰 가능성 및 운영:** Micrometer Prometheus 레지스트리, Grafana 대시보드, Logback 롤링 파일, Docker Compose 오케스트레이션.
 - **테스팅:** JUnit 5, H2 인메모리 DB, Mockito-Kotlin, fail-fast Gradle 테스트 실행.
@@ -66,11 +66,12 @@
 - `common/` — 레이아웃 헬퍼, 캐시된 `/api/calendar` 그리드, Slack 알림 인프라, 비동기/스로틀 구성, 사용자 정의 로깅 구성.
 
 ### 프론트엔드 레이어
-- Thymeleaf 레이아웃(`templates/layout`)은 공유 헤드/푸터 자산 및 모바일 우선 푸터 도크를 주입.
-- `templates/duty`, `dashboard.html`, `member/*.html`, `team/*.html` 아래의 Vue 루트는 데이터 하이드레이션을 위한 REST API를 사용.
-- `static/js/duty/*` 모듈은 캘린더 렌더링, 디데이 모달, 할 일 모달, 검색 모달, 첨부파일 상세 모달 및 기타 UI 프래그먼트를 다룹니다.
-- 자산 파이프라인은 `layout/include.html`을 통해 Bootstrap, dayjs, Vue, SortableJS, Uppy, Pickr, SweetAlert2, WaitMe, 카카오/네이버 로고를 로드.
-- 정적 자산은 PWA 설치를 위한 매니페스트, 아이콘, 사용자 정의 글꼴과 함께 제공.
+- Vue 3 SPA, Composition API (`<script setup lang="ts">`) 및 TypeScript로 타입 안전성 확보.
+- Pinia를 통한 상태 관리 (JWT 토큰 처리 포함 인증 스토어).
+- Vue Router의 지연 로딩 라우트 및 인증용 네비게이션 가드.
+- Axios 요청/응답 인터셉터를 통한 자동 JWT 갱신.
+- Tailwind CSS 기반 스타일링 및 커스텀 디자인 토큰.
+- SortableJS 드래그 드롭 정렬, Uppy 파일 업로드, SweetAlert2 알림.
 
 ### 통합 및 자동화
 - Spring Scheduling은 첨부 파일 세션 정리(오전 2시) 및 AI 파싱 큐를 지원; 캘린더/공휴일에 대한 캐싱 활성화.
@@ -83,8 +84,9 @@
 ## 🧑‍💻 로컬 개발
 
 ### 요구사항
-- JDK 21+
-- Docker & Docker Compose (선택사항이지만 전체 스택/로컬 DB에 권장)
+- **백엔드:** JDK 21+
+- **프론트엔드:** Node.js 20+ 및 npm
+- **데이터베이스:** Docker & Docker Compose (선택사항이지만 권장)
 - MySQL 클라이언트(선택사항) 직접 DB 액세스용
 
 ### 클론 및 구성
@@ -94,40 +96,130 @@ cd dutypark
 cp .env.sample .env   # 스택 실행 전 플레이스홀더 채우기
 ```
 
-### Gradle로 실행
+### 백엔드 개발
+
+핫 리로드와 함께 Spring Boot 애플리케이션 실행:
+
 ```bash
-./gradlew bootRun          # Spring Boot 앱 시작 (application-dev.yml을 통해 DevTools 활성화)
+./gradlew bootRun          # http://localhost:8080에서 백엔드 시작 (DevTools 활성화)
 ./gradlew test             # H2에서 fail-fast 단위/통합 테스트 실행
-./gradlew build            # 컴파일 + 테스트 실행
+./gradlew build            # 컴파일 + 테스트 실행 + bootJar 생성
 ./gradlew asciidoctor      # Spring REST Docs를 src/main/resources/static/docs로 생성
 ```
 
-### Docker Compose로 실행
+**참고:** 백엔드는 MySQL이 실행 중이어야 합니다. `dutypark_dev_db` 스택을 사용하거나 자체 MySQL 인스턴스를 구성하세요.
+
+### 프론트엔드 개발
+
+Vite 개발 서버로 Vue 3 SPA 실행:
+
 ```bash
-# HTTP 전용 로컬 스택 (data/nginx.local.conf 사용 및 TLS 건너뛰기)
-NGINX_CONF_NAME=nginx.local.conf docker compose up -d
+cd frontend
+npm install                # 종속성 설치 (최초 1회만)
+npm run dev                # http://localhost:5173에서 개발 서버 시작
+npm run build              # dist/로 프로덕션 빌드
+npm run type-check         # TypeScript 타입 체킹 (vue-tsc)
+npm run preview            # 로컬에서 프로덕션 빌드 미리보기
+```
+
+**개발 워크플로:**
+
+1. MySQL 시작: `cd dutypark_dev_db && docker compose up -d`
+2. 백엔드 시작: `./gradlew bootRun` (프로젝트 루트에서)
+3. 프론트엔드 시작: `cd frontend && npm run dev` (별도 터미널에서)
+4. 브라우저 열기: http://localhost:5173
+
+Vite 개발 서버는 API 요청(`/api/*`, `/admin/api/*`)을 `localhost:8080`으로 자동 프록시하므로, 프론트엔드와 백엔드를 독립적으로 개발할 수 있습니다.
+
+**프론트엔드 핫 리로드:**
+- Vue 컴포넌트는 저장 시 자동 리로드 (HMR)
+- Tailwind CSS 변경사항 즉시 적용
+- `src/types/index.ts`의 API 타입으로 완전한 IntelliSense 제공
+
+### Docker Compose로 전체 스택 실행
+
+프로덕션과 유사한 환경이 필요하거나 컨테이너화된 개발을 선호하는 경우:
+
+```bash
+# HTTP 전용 로컬 스택 (docker-compose.local.yml 오버레이 사용)
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
 
 # 프로덕션 스타일 스택 (HTTPS + nginx 리버스 프록시)
 docker compose up -d
 ```
-Compose 파일은 MySQL, Spring Boot 앱, nginx(HTTP→HTTPS 리디렉션 + HSTS), Prometheus, Grafana를 시작합니다. 앱 로그 및 첨부 파일 저장소는 `./data/` 아래에 바인드 마운트됩니다.
+
+Compose 파일이 시작하는 서비스:
+- MySQL 데이터베이스
+- Spring Boot 백엔드 (Dockerfile에서 빌드)
+- `frontend/dist`의 정적 프론트엔드를 제공하는 nginx
+- 모니터링을 위한 Prometheus + Grafana
+
+앱 로그 및 첨부 파일 저장소는 `./data/` 아래에 바인드 마운트됩니다.
+
+**참고:** Docker 배포의 경우 먼저 프론트엔드를 빌드해야 합니다:
+```bash
+cd frontend && npm run build
+```
 
 ### 개발 전용 데이터베이스
-Gradle을 통해 앱을 실행하는 동안 MySQL만 필요하신가요? 헬퍼 스택을 사용하세요:
+백엔드/프론트엔드를 별도로 실행하는 동안 MySQL만 필요하신가요? 헬퍼 스택을 사용하세요:
 
 ```bash
 cd dutypark_dev_db
 docker compose up -d   # localhost:3307에 MySQL 노출
 ```
 
-`application-dev.yml`(이미 구성됨) 또는 `.env`를 `jdbc:mysql://localhost:3307/dutypark`로 지정하세요.
+`application-dev.yml`(이미 구성됨)을 `jdbc:mysql://localhost:3307/dutypark`로 지정하세요.
 
-### 프로덕션 배포 체크리스트
-1. 도메인 + TLS 인증서(Let's Encrypt) 프로비저닝.
-2. 프로덕션 시크릿(DB, JWT, OAuth, Slack, Gemini 등)으로 `.env` 업데이트.
-3. `docker compose up -d` 실행(기본값은 HTTPS를 가정하는 `data/nginx.conf`).
-4. Prometheus/Grafana를 통해 `/actuator/health` 및 `/actuator/prometheus` 모니터링.
-5. 시크릿 및 SSL 인증서를 주기적으로 갱신.
+### 프로덕션 배포
+
+**GitHub Actions를 통한 자동 CI/CD:**
+
+프로젝트에는 완전한 CI/CD 파이프라인(`.github/workflows/gradle.yml`)이 포함되어 있습니다:
+1. `main`/`stage` 푸시 시마다 백엔드 JAR 및 프론트엔드 dist 빌드
+2. 테스트 및 타입 체킹 실행
+3. SSH를 통해 프로덕션 서버에 배포
+4. 다운타임 최소화를 위한 원자적 롤오버 수행
+
+**수동 프로덕션 배포:**
+
+1. **아티팩트 빌드:**
+```bash
+# 백엔드
+./gradlew build                    # build/libs/dutypark.jar 생성
+
+# 프론트엔드
+cd frontend && npm run build       # frontend/dist/ 생성
+```
+
+2. **서버 준비:**
+```bash
+# 프로덕션 서버에서
+sudo certbot certonly --standalone -d yourdomain.com  # Let's Encrypt 인증서 획득
+cp .env.sample .env                                   # 프로덕션 시크릿 구성
+```
+
+3. **Docker Compose를 통한 배포:**
+```bash
+# 서버로 아티팩트 복사
+scp build/libs/*.jar user@server:/dutypark/build/libs/dutypark.jar
+scp -r frontend/dist/* user@server:/dutypark/frontend/dist/
+
+# 서버에서
+docker compose build app           # 앱 컨테이너 재빌드
+docker compose up -d               # 서비스 시작/재시작
+```
+
+4. **모니터링:**
+- 헬스 체크: `https://yourdomain.com/actuator/health`
+- 메트릭: `https://yourdomain.com/actuator/prometheus`
+- Grafana: `http://yourdomain.com:3000` (admin/admin)
+
+5. **유지보수:**
+- JWT 시크릿 및 리프레시 토큰 주기적 갱신
+- SSL 인증서 갱신: `sudo certbot renew`
+- MySQL 데이터 백업: `./data/db/`
+- 로그 모니터링: `./data/logs/dutypark.log`
 
 ### 모니터링(선택사항)
 Prometheus 및 Grafana 서비스는 기본 Compose 스택의 일부입니다. Grafana는 `http://localhost:3000`에서 수신 대기하며 자격 증명은 `admin/admin`이고, 데이터 디렉터리는 `./data/grafana`에 유지됩니다. Prometheus는 `data/prometheus/prometheus.yml`에 정의된 대로 `app:8080/actuator/prometheus`를 스크랩합니다.
@@ -195,8 +287,7 @@ management.endpoints.web.exposure.include: health,metrics,prometheus
 | `src/main/kotlin/com/tistory/shanepark/dutypark/team` | 팀/도메인 로직(관리자, 일정, 작업 유형, 근무 유형). |
 | `src/main/kotlin/com/tistory/shanepark/dutypark/security` | JWT 인증, 필터, 카카오 OAuth, 관리자 라우팅, 쿠키 구성. |
 | `src/main/kotlin/com/tistory/shanepark/dutypark/dashboard` | 근무 + 일정을 집계하는 대시보드 컨트롤러/서비스. |
-| `src/main/resources/templates` | Thymeleaf 페이지(레이아웃, 근무, 팀, 관리자, 멤버, 오류). |
-| `src/main/resources/static/js` | 근무 캘린더, 대시보드, 할 일 모달, 첨부 파일 UI 등을 위한 Vue 모듈. |
+| `frontend/` | Vue 3 SPA 소스 코드 (Vite + TypeScript + Pinia + Tailwind CSS). |
 | `src/main/resources/db/migration` | 스키마를 정의/업그레이드하는 Flyway SQL 스크립트(`v1`, `v2`). |
 | `src/docs/asciidoc` | Spring REST Docs용 소스; 빌드 출력은 `static/docs`로 복사. |
 | `data/` | Docker 볼륨: MySQL 데이터, 로그, nginx 템플릿, Prometheus, Grafana, 저장소. |
@@ -251,13 +342,12 @@ management.endpoints.web.exposure.include: health,metrics,prometheus
 
 ## 🎨 프론트엔드 경험
 
-- 단일 레이아웃(`layout/layout.html`)은 공유 헤드 자산, 아이콘, 매니페스트, 모바일에 최적화된 고정 푸터 내비게이션을 제공.
-- 근무 캘린더 Vue 앱(`static/js/duty/duty.js`)은 모듈별 믹스인(`day-grid`, `dday-list`, `todo-*`, `search-result-modal`)을 사용하여 캘린더 그리드, 일정, 공휴일, 할 일, 첨부 파일을 하이드레이션.
-- 디데이 관리는 SweetAlert 팝업, 빠른 선택을 위한 localStorage를 활용하고 비공개 이벤트를 지원.
-- 할 일 모달 및 개요는 SortableJS 핸들, 재배치 API(`/api/todos/position`), 인라인 성공/오류 토스트를 활용.
-- 일정 상세 모달은 업로드를 위한 Uppy, 실시간 진행률 표시줄, 썸네일 미리보기, 순서 변경을 통합.
-- 팀 관리 페이지는 색상 선택을 위해 Pickr, 토글을 위해 Pretty Checkbox, 사용자 정의 알림 플로우를 사용.
-- 사용자 정의 Nexon 글꼴 + Bootstrap 유틸리티는 UI를 일관되게 유지하고, PWA 매니페스트 및 아이콘은 모바일에서 "설치" 프롬프트를 허용.
+- Vue 3 SPA, TypeScript와 Composition API로 타입 안전하고 유지보수 가능한 코드.
+- Tailwind CSS 기반 반응형 디자인, 모바일 디바이스 최적화.
+- SweetAlert 팝업과 localStorage를 활용한 디데이 관리.
+- SortableJS 드래그 드롭 정렬과 인라인 토스트를 활용한 할 일 보드.
+- Uppy를 통한 실시간 진행률 표시줄과 썸네일 미리보기가 포함된 일정 상세 모달.
+- Axios 인터셉터를 통한 자동 갱신 처리가 포함된 JWT Bearer 토큰 인증.
 
 ---
 

@@ -5,6 +5,8 @@ import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.security.domain.dto.SsoSignupRequest
+import com.tistory.shanepark.dutypark.security.domain.dto.TokenResponse
 import com.tistory.shanepark.dutypark.security.oauth.kakao.KakaoLoginService
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import jakarta.servlet.http.HttpServletRequest
@@ -46,38 +48,37 @@ class OAuthController(
                 .build()
         }
 
+        val callbackUrl = state["callbackUrl"] as String?
+            ?: throw IllegalArgumentException("callbackUrl is required in state")
         return kakaoLoginService.login(
+            req = httpServletRequest,
             code = code,
             redirectUrl = redirectUrl,
-            referer = referer,
-            req = httpServletRequest
+            callbackUrl = callbackUrl
         )
     }
 
-    @PostMapping("sso/signup")
+    @PostMapping("sso/signup/token")
     @SlackNotification
     fun ssoSignup(
-        @RequestParam uuid: String,
-        @RequestParam(value = "username") username: String,
-        @RequestParam(value = "term_agree") termAgree: Boolean,
+        @RequestBody request: SsoSignupRequest,
         httpServletRequest: HttpServletRequest
-    ): ResponseEntity<Void> {
-        if (!termAgree) {
+    ): ResponseEntity<TokenResponse> {
+        if (!request.termAgree) {
             return ResponseEntity.badRequest().build()
         }
 
-        val member = memberService.createSsoMember(username = username, memberSsoRegisterUUID = uuid)
-
-        val loginCookieHeaders = authService.getLoginCookieHeaders(
-            memberId = member.id,
-            req = httpServletRequest,
+        val member = memberService.createSsoMember(
+            username = request.username,
+            memberSsoRegisterUUID = request.uuid
         )
 
-        return ResponseEntity
-            .status(HttpStatus.FOUND)
-            .headers(loginCookieHeaders)
-            .location(URI.create("/auth/sso-congrats"))
-            .build()
+        val tokenResponse = authService.getTokenResponseByMemberId(
+            memberId = member.id!!,
+            req = httpServletRequest
+        )
+
+        return ResponseEntity.ok(tokenResponse)
     }
 
 }

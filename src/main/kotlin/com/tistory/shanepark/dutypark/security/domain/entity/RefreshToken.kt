@@ -4,9 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.tistory.shanepark.dutypark.common.domain.entity.BaseTimeEntity
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import jakarta.persistence.*
-import jakarta.servlet.http.Cookie
 import java.time.LocalDateTime
-import java.time.ZoneOffset
 import java.util.*
 
 @Entity
@@ -53,16 +51,4 @@ class RefreshToken(
         this.userAgent = userAgent
     }
 
-    fun createCookie(): Cookie {
-        val maxAge = validUntil.toEpochSecond(ZoneOffset.UTC) - LocalDateTime.now().toEpochSecond(ZoneOffset.UTC)
-        return Cookie(cookieName, this.token).apply {
-            this.path = "/"
-            this.maxAge = maxAge.toInt()
-            this.isHttpOnly = true
-        }
-    }
-
-    companion object {
-        const val cookieName: String = "REFRESH_TOKEN"
-    }
 }

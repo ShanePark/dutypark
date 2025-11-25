@@ -19,30 +19,62 @@ jobs:
           submodules: recursive
           token: ${{ secrets.PAT_TOKEN }}
           fetch-depth: 0
+
+      # Backend build
       - name: Set up JDK 21
         uses: actions/setup-java@v3
         with:
           java-version: '21'
           distribution: 'temurin'
-      - name: Build with Gradle
+      - name: Build backend with Gradle
         uses: gradle/gradle-build-action@67421db6bd0bf253fb4bd25b31ebb98943c375e1
         with:
           arguments: build
-      - name: Upload artifact
+
+      # Frontend build
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+      - name: Type check frontend
+        run: npm run type-check
+        working-directory: frontend
+      - name: Build frontend
+        run: npm run build
+        working-directory: frontend
+
+      # Upload artifacts
+      - name: Upload backend artifact
         uses: actions/upload-artifact@v4
         with:
-          name: dutypark-ci
+          name: backend-jar
           path: build/libs/*.jar
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
 
   deploy:
     needs: build
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/stage')
     runs-on: ubuntu-latest
     steps:
-      - name: Download artifact
+      - name: Download backend artifact
         uses: actions/download-artifact@v4
         with:
-          name: dutypark-ci
+          name: backend-jar
+          path: backend
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend-dist
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.5.4
         with:
@@ -51,12 +83,18 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_IP }} >> ~/.ssh/known_hosts
-      - name: SCP transfer with temporary filename
-        run: scp -P ${{ secrets.SSH_PORT }} *.jar ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }}:/dutypark/download.jar
+      - name: Deploy backend JAR
+        run: scp -P ${{ secrets.SSH_PORT }} backend/*.jar ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }}:/dutypark/download.jar
+      - name: Deploy frontend dist
+        run: |
+          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} "rm -rf /dutypark/frontend-download && mkdir -p /dutypark/frontend-download"
+          scp -r -P ${{ secrets.SSH_PORT }} frontend-dist/* ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }}:/dutypark/frontend-download/
       - name: Execute remote commands
         run: |
           ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} << 'EOF'
             mv /dutypark/download.jar /dutypark/build/libs/dutypark.jar
+            rm -rf /dutypark/frontend/dist/*
+            mv /dutypark/frontend-download/* /dutypark/frontend/dist/
             docker compose -f /dutypark/docker-compose.yml build app
-            docker compose -f /dutypark/docker-compose.yml up -d app
+            docker compose -f /dutypark/docker-compose.yml up -d app nginx
           EOF

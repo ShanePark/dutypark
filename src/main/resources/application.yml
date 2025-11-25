@@ -51,7 +51,6 @@ jwt:
   secret: "${JWT_SECRET:WvQiOAms2XFyW/UnmfO/9xL24ch4IlfUikP9QohMuso=}"
   token-validity-in-seconds: 1800
   refresh-token-validity-in-days: 7
-  cookie_name: "SESSION"
 
 dutypark:
   adminEmails:
@@ -61,15 +60,14 @@ dutypark:
   data-go-kr:
     service-key: "${DATA_GO_KR_SERVICE_KEY:DECODED_SERVICE_KEY_HERE}"
   log.path: "/dutypark/logs"
-  ssl.enabled: "${COOKIE_SSL_ENABLED:false}"
   storage:
     root: /dutypark/storage
     max-file-size: 50MB
     blacklist-ext:
-     - exe
-     - bat
-     - cmd
-     - sh
+      - exe
+      - bat
+      - cmd
+      - sh
     thumbnail:
       max-side: 200
     session-expiration-hours: 24

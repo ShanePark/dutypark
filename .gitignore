@@ -44,6 +44,7 @@ src/main/resources/static/docs/**
 
 ### Monitoring
 data/grafana/
+data/storage/
 
 ### Kotlin
 .kotlin
@@ -54,3 +55,4 @@ data/grafana/
 ### Environment Variables
 .env
 
+.playwright-mcp/
