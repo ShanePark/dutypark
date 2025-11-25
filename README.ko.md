@@ -84,8 +84,9 @@
 ## 🧑‍💻 로컬 개발
 
 ### 요구사항
-- JDK 21+
-- Docker & Docker Compose (선택사항이지만 전체 스택/로컬 DB에 권장)
+- **백엔드:** JDK 21+
+- **프론트엔드:** Node.js 20+ 및 npm
+- **데이터베이스:** Docker & Docker Compose (선택사항이지만 권장)
 - MySQL 클라이언트(선택사항) 직접 DB 액세스용
 
 ### 클론 및 구성
@@ -95,40 +96,130 @@ cd dutypark
 cp .env.sample .env   # 스택 실행 전 플레이스홀더 채우기
 ```
 
-### Gradle로 실행
+### 백엔드 개발
+
+핫 리로드와 함께 Spring Boot 애플리케이션 실행:
+
 ```bash
-./gradlew bootRun          # Spring Boot 앱 시작 (application-dev.yml을 통해 DevTools 활성화)
+./gradlew bootRun          # http://localhost:8080에서 백엔드 시작 (DevTools 활성화)
 ./gradlew test             # H2에서 fail-fast 단위/통합 테스트 실행
-./gradlew build            # 컴파일 + 테스트 실행
+./gradlew build            # 컴파일 + 테스트 실행 + bootJar 생성
 ./gradlew asciidoctor      # Spring REST Docs를 src/main/resources/static/docs로 생성
 ```
 
-### Docker Compose로 실행
+**참고:** 백엔드는 MySQL이 실행 중이어야 합니다. `dutypark_dev_db` 스택을 사용하거나 자체 MySQL 인스턴스를 구성하세요.
+
+### 프론트엔드 개발
+
+Vite 개발 서버로 Vue 3 SPA 실행:
+
 ```bash
-# HTTP 전용 로컬 스택 (data/nginx.local.conf 사용 및 TLS 건너뛰기)
-NGINX_CONF_NAME=nginx.local.conf docker compose up -d
+cd frontend
+npm install                # 종속성 설치 (최초 1회만)
+npm run dev                # http://localhost:5173에서 개발 서버 시작
+npm run build              # dist/로 프로덕션 빌드
+npm run type-check         # TypeScript 타입 체킹 (vue-tsc)
+npm run preview            # 로컬에서 프로덕션 빌드 미리보기
+```
+
+**개발 워크플로:**
+
+1. MySQL 시작: `cd dutypark_dev_db && docker compose up -d`
+2. 백엔드 시작: `./gradlew bootRun` (프로젝트 루트에서)
+3. 프론트엔드 시작: `cd frontend && npm run dev` (별도 터미널에서)
+4. 브라우저 열기: http://localhost:5173
+
+Vite 개발 서버는 API 요청(`/api/*`, `/admin/api/*`)을 `localhost:8080`으로 자동 프록시하므로, 프론트엔드와 백엔드를 독립적으로 개발할 수 있습니다.
+
+**프론트엔드 핫 리로드:**
+- Vue 컴포넌트는 저장 시 자동 리로드 (HMR)
+- Tailwind CSS 변경사항 즉시 적용
+- `src/types/index.ts`의 API 타입으로 완전한 IntelliSense 제공
+
+### Docker Compose로 전체 스택 실행
+
+프로덕션과 유사한 환경이 필요하거나 컨테이너화된 개발을 선호하는 경우:
+
+```bash
+# HTTP 전용 로컬 스택 (docker-compose.local.yml 오버레이 사용)
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
 
 # 프로덕션 스타일 스택 (HTTPS + nginx 리버스 프록시)
 docker compose up -d
 ```
-Compose 파일은 MySQL, Spring Boot 앱, nginx(HTTP→HTTPS 리디렉션 + HSTS), Prometheus, Grafana를 시작합니다. 앱 로그 및 첨부 파일 저장소는 `./data/` 아래에 바인드 마운트됩니다.
+
+Compose 파일이 시작하는 서비스:
+- MySQL 데이터베이스
+- Spring Boot 백엔드 (Dockerfile에서 빌드)
+- `frontend/dist`의 정적 프론트엔드를 제공하는 nginx
+- 모니터링을 위한 Prometheus + Grafana
+
+앱 로그 및 첨부 파일 저장소는 `./data/` 아래에 바인드 마운트됩니다.
+
+**참고:** Docker 배포의 경우 먼저 프론트엔드를 빌드해야 합니다:
+```bash
+cd frontend && npm run build
+```
 
 ### 개발 전용 데이터베이스
-Gradle을 통해 앱을 실행하는 동안 MySQL만 필요하신가요? 헬퍼 스택을 사용하세요:
+백엔드/프론트엔드를 별도로 실행하는 동안 MySQL만 필요하신가요? 헬퍼 스택을 사용하세요:
 
 ```bash
 cd dutypark_dev_db
 docker compose up -d   # localhost:3307에 MySQL 노출
 ```
 
-`application-dev.yml`(이미 구성됨) 또는 `.env`를 `jdbc:mysql://localhost:3307/dutypark`로 지정하세요.
+`application-dev.yml`(이미 구성됨)을 `jdbc:mysql://localhost:3307/dutypark`로 지정하세요.
 
-### 프로덕션 배포 체크리스트
-1. 도메인 + TLS 인증서(Let's Encrypt) 프로비저닝.
-2. 프로덕션 시크릿(DB, JWT, OAuth, Slack, Gemini 등)으로 `.env` 업데이트.
-3. `docker compose up -d` 실행(기본값은 HTTPS를 가정하는 `data/nginx.conf`).
-4. Prometheus/Grafana를 통해 `/actuator/health` 및 `/actuator/prometheus` 모니터링.
-5. 시크릿 및 SSL 인증서를 주기적으로 갱신.
+### 프로덕션 배포
+
+**GitHub Actions를 통한 자동 CI/CD:**
+
+프로젝트에는 완전한 CI/CD 파이프라인(`.github/workflows/gradle.yml`)이 포함되어 있습니다:
+1. `main`/`stage` 푸시 시마다 백엔드 JAR 및 프론트엔드 dist 빌드
+2. 테스트 및 타입 체킹 실행
+3. SSH를 통해 프로덕션 서버에 배포
+4. 다운타임 최소화를 위한 원자적 롤오버 수행
+
+**수동 프로덕션 배포:**
+
+1. **아티팩트 빌드:**
+```bash
+# 백엔드
+./gradlew build                    # build/libs/dutypark.jar 생성
+
+# 프론트엔드
+cd frontend && npm run build       # frontend/dist/ 생성
+```
+
+2. **서버 준비:**
+```bash
+# 프로덕션 서버에서
+sudo certbot certonly --standalone -d yourdomain.com  # Let's Encrypt 인증서 획득
+cp .env.sample .env                                   # 프로덕션 시크릿 구성
+```
+
+3. **Docker Compose를 통한 배포:**
+```bash
+# 서버로 아티팩트 복사
+scp build/libs/*.jar user@server:/dutypark/build/libs/dutypark.jar
+scp -r frontend/dist/* user@server:/dutypark/frontend/dist/
+
+# 서버에서
+docker compose build app           # 앱 컨테이너 재빌드
+docker compose up -d               # 서비스 시작/재시작
+```
+
+4. **모니터링:**
+- 헬스 체크: `https://yourdomain.com/actuator/health`
+- 메트릭: `https://yourdomain.com/actuator/prometheus`
+- Grafana: `http://yourdomain.com:3000` (admin/admin)
+
+5. **유지보수:**
+- JWT 시크릿 및 리프레시 토큰 주기적 갱신
+- SSL 인증서 갱신: `sudo certbot renew`
+- MySQL 데이터 백업: `./data/db/`
+- 로그 모니터링: `./data/logs/dutypark.log`
 
 ### 모니터링(선택사항)
 Prometheus 및 Grafana 서비스는 기본 Compose 스택의 일부입니다. Grafana는 `http://localhost:3000`에서 수신 대기하며 자격 증명은 `admin/admin`이고, 데이터 디렉터리는 `./data/grafana`에 유지됩니다. Prometheus는 `data/prometheus/prometheus.yml`에 정의된 대로 `app:8080/actuator/prometheus`를 스크랩합니다.

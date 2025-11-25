@@ -84,8 +84,9 @@ A lightweight, Kotlin + Spring Boot web app for duty rosters, personal schedules
 ## 🧑‍💻 Local Development
 
 ### Requirements
-- JDK 21+
-- Docker & Docker Compose (optional but recommended for full-stack/local DB)
+- **Backend:** JDK 21+
+- **Frontend:** Node.js 20+ and npm
+- **Database:** Docker & Docker Compose (optional but recommended)
 - MySQL client (optional) for direct DB access
 
 ### Clone & configure
@@ -95,40 +96,130 @@ cd dutypark
 cp .env.sample .env   # fill in the placeholders before running the stack
 ```
 
-### Run with Gradle
+### Backend Development
+
+Run the Spring Boot application with hot reload:
+
 ```bash
-./gradlew bootRun          # launches the Spring Boot app (DevTools enabled via application-dev.yml)
+./gradlew bootRun          # launches backend on http://localhost:8080 (DevTools enabled)
 ./gradlew test             # runs fail-fast unit/integration tests on H2
-./gradlew build            # compiles + runs tests
+./gradlew build            # compiles + runs tests + creates bootJar
 ./gradlew asciidoctor      # generates Spring REST Docs into src/main/resources/static/docs
 ```
 
-### Run with Docker Compose
+**Note:** Backend requires MySQL running. Use `dutypark_dev_db` stack or configure your own MySQL instance.
+
+### Frontend Development
+
+Run the Vue 3 SPA with Vite dev server:
+
 ```bash
-# HTTP-only local stack (uses data/nginx.local.conf and skips TLS)
+cd frontend
+npm install                # install dependencies (first time only)
+npm run dev                # starts dev server at http://localhost:5173
+npm run build              # production build to dist/
+npm run type-check         # TypeScript type checking (vue-tsc)
+npm run preview            # preview production build locally
+```
+
+**Development Workflow:**
+
+1. Start MySQL: `cd dutypark_dev_db && docker compose up -d`
+2. Start backend: `./gradlew bootRun` (from project root)
+3. Start frontend: `cd frontend && npm run dev` (in separate terminal)
+4. Open browser: http://localhost:5173
+
+The Vite dev server automatically proxies API requests (`/api/*`, `/admin/api/*`) to `localhost:8080`, so you can develop frontend and backend independently.
+
+**Frontend Hot Reload:**
+- Vue components auto-reload on save (HMR)
+- Tailwind CSS changes apply instantly
+- API types in `src/types/index.ts` provide full IntelliSense
+
+### Full Stack with Docker Compose
+
+For production-like environment or if you prefer containerized development:
+
+```bash
+# HTTP-only local stack (uses docker-compose.local.yml overlay)
 docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
 
 # Production-style stack (HTTPS + nginx reverse proxy)
 docker compose up -d
 ```
-The Compose file spins up MySQL, the Spring Boot app, frontend build, nginx, Prometheus, and Grafana. Frontend is automatically built via Node.js container before nginx starts. App logs and attachment storage are bind-mounted under `./data/`.
+
+The Compose file spins up:
+- MySQL database
+- Spring Boot backend (built from Dockerfile)
+- nginx serving static frontend from `frontend/dist`
+- Prometheus + Grafana for monitoring
+
+App logs and attachment storage are bind-mounted under `./data/`.
+
+**Note:** For Docker deployment, you must build the frontend first:
+```bash
+cd frontend && npm run build
+```
 
 ### Development database only
-Need just MySQL while running the app via Gradle? Use the helper stack:
+Need just MySQL while running backend/frontend separately? Use the helper stack:
 
 ```bash
 cd dutypark_dev_db
 docker compose up -d   # exposes MySQL on localhost:3307
 ```
 
-Point `application-dev.yml` (already configured) or your `.env` to `jdbc:mysql://localhost:3307/dutypark`.
+Point `application-dev.yml` (already configured) to `jdbc:mysql://localhost:3307/dutypark`.
 
-### Production deployment checklist
-1. Provision a domain + TLS certificates (Let's Encrypt).  
-2. Update `.env` with production secrets (DB, JWT, OAuth, Slack, Gemini, etc.).  
-3. Run `docker compose up -d` (defaults to `data/nginx.conf` which assumes HTTPS).  
-4. Monitor `/actuator/health` and `/actuator/prometheus` via Prometheus/Grafana.  
-5. Rotate secrets and refresh SSL certs periodically.
+### Production Deployment
+
+**Automated CI/CD via GitHub Actions:**
+
+The project includes a complete CI/CD pipeline (`.github/workflows/gradle.yml`) that:
+1. Builds backend JAR and frontend dist on every push to `main`/`stage`
+2. Runs tests and type checking
+3. Deploys to production server via SSH
+4. Performs atomic rollover to minimize downtime
+
+**Manual Production Deployment:**
+
+1. **Build artifacts:**
+```bash
+# Backend
+./gradlew build                    # creates build/libs/dutypark.jar
+
+# Frontend
+cd frontend && npm run build       # creates frontend/dist/
+```
+
+2. **Prepare server:**
+```bash
+# On production server
+sudo certbot certonly --standalone -d yourdomain.com  # obtain Let's Encrypt cert
+cp .env.sample .env                                   # configure production secrets
+```
+
+3. **Deploy via Docker Compose:**
+```bash
+# Copy artifacts to server
+scp build/libs/*.jar user@server:/dutypark/build/libs/dutypark.jar
+scp -r frontend/dist/* user@server:/dutypark/frontend/dist/
+
+# On server
+docker compose build app           # rebuild app container
+docker compose up -d               # start/restart services
+```
+
+4. **Monitoring:**
+- Health check: `https://yourdomain.com/actuator/health`
+- Metrics: `https://yourdomain.com/actuator/prometheus`
+- Grafana: `http://yourdomain.com:3000` (admin/admin)
+
+5. **Maintenance:**
+- Rotate JWT secrets and refresh tokens periodically
+- Renew SSL certificates: `sudo certbot renew`
+- Backup MySQL data: `./data/db/`
+- Monitor logs: `./data/logs/dutypark.log`
 
 ### Monitoring (optional)
 Prometheus and Grafana services are part of the default Compose stack. Grafana listens on `http://localhost:3000` with credentials `admin/admin`, and its data directory persists in `./data/grafana`. Prometheus scrapes `app:8080/actuator/prometheus` as defined in `data/prometheus/prometheus.yml`.

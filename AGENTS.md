@@ -85,9 +85,9 @@ npm run type-check         # TypeScript type checking (vue-tsc)
 ### Docker
 
 ```bash
-docker compose up -d                               # full stack (nginx TLS)
-NGINX_CONF_NAME=nginx.local.conf docker compose up -d   # HTTP-only local stack
-cd dutypark_dev_db && docker compose up -d               # standalone MySQL on :3307
+docker compose up -d                                              # full stack (nginx TLS)
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d  # HTTP-only local stack
+cd dutypark_dev_db && docker compose up -d                              # standalone MySQL on :3307
 ```
 
 ### Build Guidelines
