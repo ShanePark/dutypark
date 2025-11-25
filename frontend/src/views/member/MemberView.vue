@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useThemeStore, type ThemeMode } from '@/stores/theme'
 import { memberApi, refreshTokenApi } from '@/api/member'
 import { authApi } from '@/api/auth'
 import { useSwal } from '@/composables/useSwal'
@@ -25,11 +26,26 @@ import {
   X,
   ChevronRight,
   Loader2,
+  Sun,
+  Moon,
+  MonitorSmartphone,
 } from 'lucide-vue-next'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const themeStore = useThemeStore()
 const { showSuccess, showError, showInfo, confirm } = useSwal()
+
+// Theme settings
+const themeOptions: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
+  { value: 'light', label: '라이트', icon: Sun },
+  { value: 'dark', label: '다크', icon: Moon },
+  { value: 'system', label: '시스템', icon: MonitorSmartphone },
+]
+
+function setTheme(mode: ThemeMode) {
+  themeStore.setTheme(mode)
+}
 
 // Loading states
 const loading = ref(false)
@@ -319,7 +335,7 @@ onMounted(async () => {
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-6">
-    <h1 class="text-2xl font-bold text-gray-900 mb-6">내 정보</h1>
+    <h1 class="text-2xl font-bold mb-6" :style="{ color: 'var(--dp-text-primary)' }">내 정보</h1>
 
     <!-- Loading State -->
     <div v-if="loading" class="flex items-center justify-center py-20">
@@ -328,50 +344,51 @@ onMounted(async () => {
 
     <template v-else>
       <!-- Profile Section -->
-      <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <User class="w-5 h-5 text-gray-500" />
+      <section class="rounded-xl shadow-sm p-6 mb-4" :style="{ backgroundColor: 'var(--dp-bg-card)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
+          <User class="w-5 h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
           기본 정보
         </h2>
         <div class="space-y-4">
-          <div class="flex flex-col md:flex-row md:items-center py-3 border-b border-gray-100">
-            <div class="w-full md:w-24 text-sm font-medium text-gray-500 flex items-center gap-2 mb-1 md:mb-0">
+          <div class="flex flex-col md:flex-row md:items-center py-3" :style="{ borderBottomWidth: '1px', borderColor: 'var(--dp-border-secondary)' }">
+            <div class="w-full md:w-24 text-sm font-medium flex items-center gap-2 mb-1 md:mb-0" :style="{ color: 'var(--dp-text-secondary)' }">
               <User class="w-4 h-4" />
               이름
             </div>
-            <div class="flex-1 text-gray-900">{{ memberInfo?.name }}</div>
+            <div class="flex-1" :style="{ color: 'var(--dp-text-primary)' }">{{ memberInfo?.name }}</div>
           </div>
-          <div class="flex flex-col md:flex-row md:items-center py-3 border-b border-gray-100">
-            <div class="w-full md:w-24 text-sm font-medium text-gray-500 flex items-center gap-2 mb-1 md:mb-0">
+          <div class="flex flex-col md:flex-row md:items-center py-3" :style="{ borderBottomWidth: '1px', borderColor: 'var(--dp-border-secondary)' }">
+            <div class="w-full md:w-24 text-sm font-medium flex items-center gap-2 mb-1 md:mb-0" :style="{ color: 'var(--dp-text-secondary)' }">
               <Building2 class="w-4 h-4" />
               소속
             </div>
-            <div class="flex-1 text-gray-900">{{ memberInfo?.team || '-' }}</div>
+            <div class="flex-1" :style="{ color: 'var(--dp-text-primary)' }">{{ memberInfo?.team || '-' }}</div>
           </div>
           <div v-if="memberInfo?.email" class="flex flex-col md:flex-row md:items-center py-3">
-            <div class="w-full md:w-24 text-sm font-medium text-gray-500 flex items-center gap-2 mb-1 md:mb-0">
+            <div class="w-full md:w-24 text-sm font-medium flex items-center gap-2 mb-1 md:mb-0" :style="{ color: 'var(--dp-text-secondary)' }">
               <Mail class="w-4 h-4" />
               이메일
             </div>
-            <div class="flex-1 text-gray-900">{{ memberInfo?.email }}</div>
+            <div class="flex-1" :style="{ color: 'var(--dp-text-primary)' }">{{ memberInfo?.email }}</div>
           </div>
         </div>
       </section>
 
       <!-- Privacy Settings Section -->
-      <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Eye class="w-5 h-5 text-gray-500" />
+      <section class="rounded-xl shadow-sm p-6 mb-4" :style="{ backgroundColor: 'var(--dp-bg-card)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
+          <Eye class="w-5 h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
           시간표 공개 설정
         </h2>
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <p class="text-gray-700">현재 공개 대상</p>
-            <p class="text-sm text-gray-500 mt-1">내 시간표를 볼 수 있는 사람을 설정합니다</p>
+            <p :style="{ color: 'var(--dp-text-primary)' }">현재 공개 대상</p>
+            <p class="text-sm mt-1" :style="{ color: 'var(--dp-text-secondary)' }">내 시간표를 볼 수 있는 사람을 설정합니다</p>
           </div>
           <button
             @click="showVisibilityModal = true"
-            class="px-4 py-3 sm:py-2 min-h-11 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition flex items-center justify-center gap-2"
+            class="px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium transition flex items-center justify-center gap-2 hover:brightness-95"
+            :style="{ cursor: 'pointer', backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-primary)' }"
           >
             <span
               class="w-2 h-2 rounded-full"
@@ -388,14 +405,44 @@ onMounted(async () => {
         </div>
       </section>
 
+      <!-- Theme Settings Section -->
+      <section class="rounded-xl shadow-sm p-6 mb-4" :style="{ backgroundColor: 'var(--dp-bg-card)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
+          <Sun class="w-5 h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
+          화면 테마 설정
+        </h2>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button
+            v-for="option in themeOptions"
+            :key="option.value"
+            @click="setTheme(option.value)"
+            class="flex-1 px-4 py-3 rounded-lg font-medium transition flex items-center justify-center gap-2 hover:brightness-95"
+            :class="{ 'hover:scale-[1.02]': themeStore.mode !== option.value }"
+            :style="{
+              cursor: 'pointer',
+              borderWidth: '2px',
+              borderColor: themeStore.mode === option.value ? '#3b82f6' : 'var(--dp-border-primary)',
+              backgroundColor: themeStore.mode === option.value ? (themeStore.isDark ? '#1e3a5f' : '#eff6ff') : 'var(--dp-bg-secondary)',
+              color: themeStore.mode === option.value ? '#3b82f6' : 'var(--dp-text-primary)'
+            }"
+          >
+            <component :is="option.icon" class="w-5 h-5" />
+            {{ option.label }}
+          </button>
+        </div>
+        <p class="text-sm mt-3" :style="{ color: 'var(--dp-text-muted)' }">
+          {{ themeStore.mode === 'system' ? '시스템 설정에 따라 자동으로 테마가 변경됩니다' : (themeStore.mode === 'dark' ? '다크 모드가 적용됩니다' : '라이트 모드가 적용됩니다') }}
+        </p>
+      </section>
+
       <!-- Manager Delegation Section -->
-      <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Shield class="w-5 h-5 text-gray-500" />
+      <section class="rounded-xl shadow-sm p-6 mb-4" :style="{ backgroundColor: 'var(--dp-bg-card)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
+          <Shield class="w-5 h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
           관리 권한 위임
         </h2>
         <div class="space-y-4">
-          <div class="flex items-center gap-2 text-sm text-gray-500">
+          <div class="flex items-center gap-2 text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
             <Info class="w-4 h-4" />
             <span>가족만 관리자로 추가할 수 있어요</span>
           </div>
@@ -406,7 +453,8 @@ onMounted(async () => {
               v-model="selectedManagerToAdd"
               @change="assignManager"
               :disabled="savingManager || availableFamilyMembers.length === 0"
-              class="flex-1 px-3 py-3 sm:py-2 min-h-11 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+              class="flex-1 px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+              :style="{ borderWidth: '1px', borderColor: 'var(--dp-border-primary)', backgroundColor: 'var(--dp-bg-secondary)', color: 'var(--dp-text-primary)' }"
             >
               <option value="">관리자 추가</option>
               <option v-for="member in availableFamilyMembers" :key="member.id ?? 'none'" :value="member.id">
@@ -421,25 +469,27 @@ onMounted(async () => {
             <div
               v-for="manager in managers"
               :key="manager.id ?? 'none'"
-              class="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg"
+              class="inline-flex items-center gap-2 px-3 py-2 rounded-lg"
+              :style="{ backgroundColor: 'var(--dp-bg-hover)' }"
             >
-              <span class="text-gray-700">{{ manager.name }}</span>
+              <span :style="{ color: 'var(--dp-text-primary)' }">{{ manager.name }}</span>
               <button
                 @click="unAssignManager(manager)"
-                class="text-gray-400 hover:text-red-500 transition"
+                class="hover:text-red-500 transition"
+                :style="{ color: 'var(--dp-text-muted)' }"
               >
                 <Trash2 class="w-4 h-4" />
               </button>
             </div>
           </div>
-          <p v-else class="text-sm text-gray-400">등록된 관리자가 없습니다</p>
+          <p v-else class="text-sm" :style="{ color: 'var(--dp-text-muted)' }">등록된 관리자가 없습니다</p>
         </div>
       </section>
 
       <!-- Session Management Section -->
-      <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Smartphone class="w-5 h-5 text-gray-500" />
+      <section class="rounded-xl shadow-sm p-6 mb-4" :style="{ backgroundColor: 'var(--dp-bg-card)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
+          <Smartphone class="w-5 h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
           접속 세션 관리
         </h2>
         <div v-if="tokensLoading" class="flex items-center justify-center py-8">
@@ -451,10 +501,11 @@ onMounted(async () => {
             <div
               v-for="token in tokens"
               :key="token.id"
-              class="p-4 bg-gray-50 rounded-lg border border-gray-200"
+              class="p-4 rounded-lg"
+              :style="{ backgroundColor: 'var(--dp-bg-secondary)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }"
             >
               <div class="flex items-center justify-between mb-3">
-                <span class="text-sm font-medium text-gray-700">{{ formatLastUsed(token.lastUsed) }}</span>
+                <span class="text-sm font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ formatLastUsed(token.lastUsed) }}</span>
                 <span
                   v-if="token.isCurrentLogin"
                   class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full"
@@ -470,28 +521,28 @@ onMounted(async () => {
                 </button>
               </div>
               <div class="space-y-2 text-sm">
-                <div class="flex items-center gap-2 text-gray-600">
-                  <span class="w-16 text-gray-500">IP</span>
+                <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
+                  <span class="w-16" :style="{ color: 'var(--dp-text-muted)' }">IP</span>
                   <span>{{ token.remoteAddr || '-' }}</span>
                 </div>
-                <div class="flex items-center gap-2 text-gray-600">
-                  <span class="w-16 text-gray-500">기기</span>
+                <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
+                  <span class="w-16" :style="{ color: 'var(--dp-text-muted)' }">기기</span>
                   <span class="flex items-center gap-1">
-                    <Monitor v-if="token.userAgent?.device === 'Other'" class="w-4 h-4 text-gray-400" />
-                    <Smartphone v-else class="w-4 h-4 text-gray-400" />
+                    <Monitor v-if="token.userAgent?.device === 'Other'" class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
+                    <Smartphone v-else class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
                     {{ token.userAgent?.device || '-' }}
                   </span>
                 </div>
-                <div class="flex items-center gap-2 text-gray-600">
-                  <span class="w-16 text-gray-500">브라우저</span>
+                <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
+                  <span class="w-16" :style="{ color: 'var(--dp-text-muted)' }">브라우저</span>
                   <span class="flex items-center gap-1">
-                    <Globe class="w-4 h-4 text-gray-400" />
+                    <Globe class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
                     {{ token.userAgent?.browser || '-' }}
                   </span>
                 </div>
               </div>
             </div>
-            <div v-if="tokens.length === 0" class="py-8 text-center text-gray-400">
+            <div v-if="tokens.length === 0" class="py-8 text-center" :style="{ color: 'var(--dp-text-muted)' }">
               세션 정보가 없습니다
             </div>
           </div>
@@ -499,28 +550,28 @@ onMounted(async () => {
           <div class="hidden sm:block overflow-x-auto">
             <table class="w-full text-sm">
               <thead>
-                <tr class="border-b border-gray-200">
-                  <th class="text-left py-3 px-2 font-medium text-gray-500">접속 시간</th>
-                  <th class="text-left py-3 px-2 font-medium text-gray-500">IP</th>
-                  <th class="text-left py-3 px-2 font-medium text-gray-500">기기</th>
-                  <th class="text-left py-3 px-2 font-medium text-gray-500">브라우저</th>
-                  <th class="text-center py-3 px-2 font-medium text-gray-500">관리</th>
+                <tr :style="{ borderBottomWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
+                  <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">접속 시간</th>
+                  <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">IP</th>
+                  <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">기기</th>
+                  <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">브라우저</th>
+                  <th class="text-center py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">관리</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="token in tokens" :key="token.id" class="border-b border-gray-100 hover:bg-gray-50">
-                  <td class="py-3 px-2 text-gray-700">{{ formatLastUsed(token.lastUsed) }}</td>
-                  <td class="py-3 px-2 text-gray-700">{{ token.remoteAddr || '-' }}</td>
+                <tr v-for="token in tokens" :key="token.id" class="hover:opacity-90" :style="{ borderBottomWidth: '1px', borderColor: 'var(--dp-border-secondary)' }">
+                  <td class="py-3 px-2" :style="{ color: 'var(--dp-text-primary)' }">{{ formatLastUsed(token.lastUsed) }}</td>
+                  <td class="py-3 px-2" :style="{ color: 'var(--dp-text-primary)' }">{{ token.remoteAddr || '-' }}</td>
                   <td class="py-3 px-2">
-                    <span class="flex items-center gap-1 text-gray-700">
-                      <Monitor v-if="token.userAgent?.device === 'Other'" class="w-4 h-4 text-gray-400" />
-                      <Smartphone v-else class="w-4 h-4 text-gray-400" />
+                    <span class="flex items-center gap-1" :style="{ color: 'var(--dp-text-primary)' }">
+                      <Monitor v-if="token.userAgent?.device === 'Other'" class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
+                      <Smartphone v-else class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
                       {{ token.userAgent?.device || '-' }}
                     </span>
                   </td>
                   <td class="py-3 px-2">
-                    <span class="flex items-center gap-1 text-gray-700">
-                      <Globe class="w-4 h-4 text-gray-400" />
+                    <span class="flex items-center gap-1" :style="{ color: 'var(--dp-text-primary)' }">
+                      <Globe class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
                       {{ token.userAgent?.browser || '-' }}
                     </span>
                   </td>
@@ -541,7 +592,7 @@ onMounted(async () => {
                   </td>
                 </tr>
                 <tr v-if="tokens.length === 0">
-                  <td colspan="5" class="py-8 text-center text-gray-400">
+                  <td colspan="5" class="py-8 text-center" :style="{ color: 'var(--dp-text-muted)' }">
                     세션 정보가 없습니다
                   </td>
                 </tr>
@@ -552,22 +603,23 @@ onMounted(async () => {
       </section>
 
       <!-- SSO Connections Section -->
-      <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Link class="w-5 h-5 text-gray-500" />
+      <section class="rounded-xl shadow-sm p-6 mb-4" :style="{ backgroundColor: 'var(--dp-bg-card)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
+          <Link class="w-5 h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
           소셜 계정 연동
         </h2>
         <div class="space-y-3">
           <div
             v-for="sso in ssoConnections"
             :key="sso.provider"
-            class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+            class="flex items-center justify-between p-3 rounded-lg"
+            :style="{ backgroundColor: 'var(--dp-bg-secondary)' }"
           >
             <div class="flex items-center gap-3">
               <img :src="sso.icon" :alt="sso.provider" class="w-8 h-8 rounded" />
               <div>
-                <p class="font-medium text-gray-900">{{ sso.provider }}</p>
-                <p v-if="sso.connected && sso.accountName" class="text-sm text-gray-500">
+                <p class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ sso.provider }}</p>
+                <p v-if="sso.connected && sso.accountName" class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
                   {{ sso.accountName }}
                 </p>
               </div>
@@ -590,9 +642,9 @@ onMounted(async () => {
       </section>
 
       <!-- Account Management Section -->
-      <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Lock class="w-5 h-5 text-gray-500" />
+      <section class="rounded-xl shadow-sm p-6 mb-4" :style="{ backgroundColor: 'var(--dp-bg-card)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
+          <Lock class="w-5 h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
           회원정보 관리
         </h2>
         <div class="flex flex-wrap gap-3">
@@ -600,6 +652,7 @@ onMounted(async () => {
             v-if="memberInfo?.hasPassword"
             @click="openPasswordModal"
             class="px-4 py-3 sm:py-2 min-h-11 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition flex items-center gap-2"
+            style="cursor: pointer;"
           >
             <Lock class="w-4 h-4" />
             비밀번호 변경
@@ -607,6 +660,7 @@ onMounted(async () => {
           <button
             @click="deleteAccount"
             class="px-4 py-3 sm:py-2 min-h-11 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition flex items-center gap-2"
+            style="cursor: pointer;"
           >
             <UserX class="w-4 h-4" />
             회원 탈퇴
@@ -615,10 +669,11 @@ onMounted(async () => {
       </section>
 
       <!-- Logout Section -->
-      <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+      <section class="rounded-xl shadow-sm p-4 sm:p-6" :style="{ backgroundColor: 'var(--dp-bg-card)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
         <button
           @click="logout"
           class="w-full px-4 py-3 min-h-12 text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-lg font-medium transition flex items-center justify-center gap-2"
+          style="cursor: pointer;"
         >
           <LogOut class="w-5 h-5" />
           로그아웃
@@ -633,49 +688,53 @@ onMounted(async () => {
         class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
         @click.self="showVisibilityModal = false"
       >
-        <div class="bg-white rounded-xl shadow-xl max-w-md w-full">
-          <div class="flex items-center justify-between p-4 border-b border-gray-200">
-            <h3 class="text-lg font-bold text-gray-900">시간표 공개 대상 설정</h3>
-            <button @click="showVisibilityModal = false" class="text-gray-400 hover:text-gray-600">
+        <div class="rounded-xl shadow-xl max-w-md w-full" :style="{ backgroundColor: 'var(--dp-bg-card)' }">
+          <div class="flex items-center justify-between p-4" :style="{ borderBottomWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
+            <h3 class="text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">시간표 공개 대상 설정</h3>
+            <button @click="showVisibilityModal = false" class="hover:opacity-70" :style="{ color: 'var(--dp-text-muted)' }">
               <X class="w-5 h-5" />
             </button>
           </div>
           <div class="p-4 sm:p-6">
-            <p class="text-gray-600 mb-4">내 달력을 공개할 범위를 설정하세요.</p>
-            <p class="text-sm text-gray-500 mb-4">선택시 변경사항이 즉시 저장됩니다.</p>
+            <p class="mb-4" :style="{ color: 'var(--dp-text-secondary)' }">내 달력을 공개할 범위를 설정하세요.</p>
+            <p class="text-sm mb-4" :style="{ color: 'var(--dp-text-muted)' }">선택시 변경사항이 즉시 저장됩니다.</p>
             <div class="space-y-2">
               <button
                 v-for="option in visibilityOptions"
                 :key="option.value"
                 @click="setVisibility(option.value)"
                 :disabled="savingVisibility"
-                class="w-full p-4 min-h-16 rounded-lg border-2 transition text-left disabled:opacity-50"
-                :class="
-                  calendarVisibility === option.value
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                "
+                class="w-full p-4 min-h-16 rounded-lg transition text-left disabled:opacity-50 hover:scale-[1.01]"
+                :class="{ 'hover:bg-opacity-80': calendarVisibility !== option.value }"
+                :style="{
+                  cursor: 'pointer',
+                  borderWidth: '2px',
+                  borderColor: calendarVisibility === option.value ? '#3b82f6' : 'var(--dp-border-primary)',
+                  backgroundColor: calendarVisibility === option.value ? (themeStore.isDark ? '#1e3a5f' : '#eff6ff') : 'var(--dp-bg-secondary)'
+                }"
               >
                 <div class="flex items-center gap-3">
                   <span class="w-3 h-3 rounded-full" :class="option.color"></span>
-                  <span class="font-medium text-gray-900">{{ option.label }}</span>
+                  <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ option.label }}</span>
                   <Check
                     v-if="calendarVisibility === option.value"
                     class="w-5 h-5 text-blue-500 ml-auto"
                   />
                   <Loader2
                     v-if="savingVisibility && calendarVisibility !== option.value"
-                    class="w-5 h-5 animate-spin text-gray-400 ml-auto"
+                    class="w-5 h-5 animate-spin ml-auto"
+                    :style="{ color: 'var(--dp-text-muted)' }"
                   />
                 </div>
-                <p class="text-sm text-gray-500 mt-1 ml-6">{{ option.description }}</p>
+                <p class="text-sm mt-1 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">{{ option.description }}</p>
               </button>
             </div>
           </div>
-          <div class="p-4 sm:p-6 border-t border-gray-200">
+          <div class="p-4 sm:p-6" :style="{ borderTopWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
             <button
               @click="showVisibilityModal = false"
-              class="w-full px-4 py-3 sm:py-2 min-h-11 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition"
+              class="w-full px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium transition hover:brightness-95"
+              :style="{ cursor: 'pointer', backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-primary)' }"
             >
               닫기
             </button>
@@ -691,21 +750,26 @@ onMounted(async () => {
         class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
         @click.self="showPasswordModal = false"
       >
-        <div class="bg-white rounded-xl shadow-xl max-w-md w-full">
-          <div class="flex items-center justify-between p-4 border-b border-gray-200">
-            <h3 class="text-lg font-bold text-gray-900">비밀번호 변경</h3>
-            <button @click="showPasswordModal = false" class="text-gray-400 hover:text-gray-600">
+        <div class="rounded-xl shadow-xl max-w-md w-full" :style="{ backgroundColor: 'var(--dp-bg-card)' }">
+          <div class="flex items-center justify-between p-4" :style="{ borderBottomWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
+            <h3 class="text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">비밀번호 변경</h3>
+            <button @click="showPasswordModal = false" class="hover:opacity-70" :style="{ color: 'var(--dp-text-muted)' }">
               <X class="w-5 h-5" />
             </button>
           </div>
           <div class="p-4 sm:p-6 space-y-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">현재 비밀번호</label>
+              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-primary)' }">현재 비밀번호</label>
               <input
                 v-model="passwordForm.currentPassword"
                 type="password"
-                class="w-full px-3 py-3 sm:py-2 min-h-11 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                :class="passwordErrors.currentPassword ? 'border-red-500' : 'border-gray-300'"
+                class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                :style="{
+                  borderWidth: '1px',
+                  borderColor: passwordErrors.currentPassword ? '#ef4444' : 'var(--dp-border-primary)',
+                  backgroundColor: 'var(--dp-bg-primary)',
+                  color: 'var(--dp-text-primary)'
+                }"
                 placeholder="현재 비밀번호"
               />
               <p v-if="passwordErrors.currentPassword" class="text-sm text-red-500 mt-1">
@@ -713,12 +777,17 @@ onMounted(async () => {
               </p>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">새 비밀번호</label>
+              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-primary)' }">새 비밀번호</label>
               <input
                 v-model="passwordForm.newPassword"
                 type="password"
-                class="w-full px-3 py-3 sm:py-2 min-h-11 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                :class="passwordErrors.newPassword ? 'border-red-500' : 'border-gray-300'"
+                class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                :style="{
+                  borderWidth: '1px',
+                  borderColor: passwordErrors.newPassword ? '#ef4444' : 'var(--dp-border-primary)',
+                  backgroundColor: 'var(--dp-bg-primary)',
+                  color: 'var(--dp-text-primary)'
+                }"
                 placeholder="새 비밀번호 (8자 이상)"
               />
               <p v-if="passwordErrors.newPassword" class="text-sm text-red-500 mt-1">
@@ -726,12 +795,17 @@ onMounted(async () => {
               </p>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">새 비밀번호 확인</label>
+              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-primary)' }">새 비밀번호 확인</label>
               <input
                 v-model="passwordForm.confirmPassword"
                 type="password"
-                class="w-full px-3 py-3 sm:py-2 min-h-11 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                :class="passwordErrors.confirmPassword ? 'border-red-500' : 'border-gray-300'"
+                class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                :style="{
+                  borderWidth: '1px',
+                  borderColor: passwordErrors.confirmPassword ? '#ef4444' : 'var(--dp-border-primary)',
+                  backgroundColor: 'var(--dp-bg-primary)',
+                  color: 'var(--dp-text-primary)'
+                }"
                 placeholder="새 비밀번호 확인"
               />
               <p v-if="passwordErrors.confirmPassword" class="text-sm text-red-500 mt-1">
@@ -739,11 +813,12 @@ onMounted(async () => {
               </p>
             </div>
           </div>
-          <div class="p-4 sm:p-6 border-t border-gray-200 flex gap-2">
+          <div class="p-4 sm:p-6 flex gap-2" :style="{ borderTopWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
             <button
               @click="showPasswordModal = false"
               :disabled="changingPassword"
-              class="flex-1 px-4 py-3 sm:py-2 min-h-11 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium transition disabled:opacity-50"
+              class="flex-1 px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium transition disabled:opacity-50"
+              :style="{ backgroundColor: 'var(--dp-bg-hover)', color: 'var(--dp-text-primary)' }"
             >
               취소
             </button>

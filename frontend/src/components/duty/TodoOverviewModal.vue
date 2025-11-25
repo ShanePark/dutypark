@@ -204,11 +204,11 @@ function handleTodoClick(todo: Todo) {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="emit('close')"
     >
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4">
+      <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
         <!-- Header -->
-        <div class="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
+        <div class="flex items-center justify-between p-3 sm:p-4" :style="{ borderBottom: '1px solid var(--dp-border-primary)' }">
           <div class="flex items-center gap-3">
-            <h2 class="text-base sm:text-lg font-bold">Todo List</h2>
+            <h2 class="text-base sm:text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">Todo List</h2>
             <span class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full">
               {{ todos.length }}
             </span>
@@ -221,15 +221,15 @@ function handleTodoClick(todo: Todo) {
               <Plus class="w-4 h-4" />
               <span class="hidden sm:inline">추가</span>
             </button>
-            <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition">
-              <X class="w-6 h-6" />
+            <button @click="emit('close')" class="p-2 rounded-full transition">
+              <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
             </button>
           </div>
         </div>
 
         <!-- Filters -->
-        <div class="px-3 sm:px-4 py-2 border-b border-gray-100 flex items-center gap-1.5 sm:gap-2 overflow-x-auto">
-          <Filter class="w-4 h-4 text-gray-500 flex-shrink-0" />
+        <div class="px-3 sm:px-4 py-2 flex items-center gap-1.5 sm:gap-2 overflow-x-auto" :style="{ borderBottom: '1px solid var(--dp-border-primary)' }">
+          <Filter class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }" />
           <button
             @click="toggleFilter('all')"
             class="px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-full transition whitespace-nowrap"
@@ -267,7 +267,7 @@ function handleTodoClick(todo: Todo) {
 
         <!-- Content -->
         <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(90dvh-180px)] sm:max-h-[calc(90vh-180px)]">
-          <div v-if="filteredTodos.length === 0" class="text-center py-12 text-gray-400">
+          <div v-if="filteredTodos.length === 0" class="text-center py-12" :style="{ color: 'var(--dp-text-muted)' }">
             <Circle class="w-12 h-12 mx-auto mb-3 opacity-30" />
             <p>표시할 할 일이 없습니다.</p>
           </div>
@@ -277,10 +277,14 @@ function handleTodoClick(todo: Todo) {
               v-for="todo in filteredTodos"
               :key="todo.id"
               :data-id="todo.id"
-              class="border rounded-xl overflow-hidden transition-all cursor-pointer group"
+              class="rounded-xl overflow-hidden transition-all cursor-pointer group"
               :class="{
                 'bg-green-50 border-green-200': todo.status === 'COMPLETED',
-                'bg-white border-gray-200 hover:border-blue-300 hover:shadow-md todo-item-active': todo.status === 'ACTIVE'
+                'hover:border-blue-300 hover:shadow-md todo-item-active': todo.status === 'ACTIVE'
+              }"
+              :style="{
+                backgroundColor: todo.status === 'ACTIVE' ? 'var(--dp-bg-card)' : undefined,
+                border: todo.status === 'ACTIVE' ? '1px solid var(--dp-border-primary)' : undefined
               }"
               @click="handleTodoClick(todo)"
             >
@@ -289,8 +293,10 @@ function handleTodoClick(todo: Todo) {
                 <div
                   class="flex-shrink-0 w-10 sm:w-12 flex items-center justify-center"
                   :class="{
-                    'bg-green-100': todo.status === 'COMPLETED',
-                    'bg-gray-50': todo.status === 'ACTIVE'
+                    'bg-green-100': todo.status === 'COMPLETED'
+                  }"
+                  :style="{
+                    backgroundColor: todo.status === 'ACTIVE' ? 'var(--dp-bg-secondary)' : undefined
                   }"
                 >
                   <!-- Completed: check icon -->
@@ -301,14 +307,15 @@ function handleTodoClick(todo: Todo) {
                   <!-- Active + sortable: drag handle -->
                   <div
                     v-else-if="isSortingEnabled"
-                    class="drag-handle cursor-grab active:cursor-grabbing text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded p-1.5 transition-colors"
+                    class="drag-handle cursor-grab active:cursor-grabbing hover:text-blue-600 hover:bg-blue-50 rounded p-1.5 transition-colors"
+                    :style="{ color: 'var(--dp-text-muted)' }"
                     @click.stop
                     title="드래그하여 순서 변경"
                   >
                     <GripVertical class="w-5 h-5" />
                   </div>
                   <!-- Active + not sortable: empty circle -->
-                  <Circle v-else class="w-5 h-5 text-gray-300" />
+                  <Circle v-else class="w-5 h-5" :style="{ color: 'var(--dp-text-muted)' }" />
                 </div>
 
                 <!-- Main content -->
@@ -318,13 +325,15 @@ function handleTodoClick(todo: Todo) {
                       <h3
                         class="font-semibold text-sm sm:text-base truncate"
                         :class="{
-                          'text-green-700 line-through': todo.status === 'COMPLETED',
-                          'text-gray-800': todo.status === 'ACTIVE'
+                          'text-green-700 line-through': todo.status === 'COMPLETED'
+                        }"
+                        :style="{
+                          color: todo.status === 'ACTIVE' ? 'var(--dp-text-primary)' : undefined
                         }"
                       >
                         {{ todo.title }}
                       </h3>
-                      <div class="flex items-center gap-2 mt-1 text-xs text-gray-500">
+                      <div class="flex items-center gap-2 mt-1 text-xs" :style="{ color: 'var(--dp-text-secondary)' }">
                         <span class="flex items-center gap-1">
                           <Calendar class="w-3 h-3" />
                           {{ formatDate(todo.createdDate) }}

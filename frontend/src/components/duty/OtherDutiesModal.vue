@@ -40,6 +40,16 @@ function handleToggle(friendId: number) {
 }
 </script>
 
+<style scoped>
+.hover-bg:hover {
+  background-color: var(--dp-bg-secondary);
+}
+
+.friend-item:hover {
+  background-color: var(--dp-bg-tertiary);
+}
+</style>
+
 <template>
   <Teleport to="body">
     <div
@@ -47,15 +57,15 @@ function handleToggle(friendId: number) {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="emit('close')"
     >
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-md max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4">
+      <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-md max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
         <!-- Header -->
-        <div class="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
+        <div class="flex items-center justify-between p-3 sm:p-4 border-b" :style="{ borderColor: 'var(--dp-border-primary)' }">
           <div class="flex items-center gap-2">
             <Users class="w-5 h-5 text-blue-600" />
-            <h2 class="text-base sm:text-lg font-bold">함께보기</h2>
+            <h2 class="text-base sm:text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">함께보기</h2>
           </div>
-          <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition">
-            <X class="w-6 h-6" />
+          <button @click="emit('close')" class="p-2 rounded-full transition hover-bg">
+            <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
           </button>
         </div>
 
@@ -66,7 +76,7 @@ function handleToggle(friendId: number) {
 
         <!-- Content -->
         <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(90dvh-180px)] sm:max-h-[calc(90vh-180px)]">
-          <div v-if="friends.length === 0" class="text-center py-8 text-gray-400">
+          <div v-if="friends.length === 0" class="text-center py-8" :style="{ color: 'var(--dp-text-muted)' }">
             친구 목록이 없습니다.
           </div>
 
@@ -78,15 +88,17 @@ function handleToggle(friendId: number) {
               class="flex items-center gap-2 p-2 rounded-lg cursor-pointer transition"
               :class="{
                 'bg-blue-50 border-2 border-blue-500': isSelected(friend.id),
-                'bg-gray-50 hover:bg-gray-100 border-2 border-transparent':
+                'border-2 border-transparent friend-item':
                   !isSelected(friend.id) && canSelectMore,
-                'bg-gray-50 opacity-50 cursor-not-allowed border-2 border-transparent':
+                'opacity-50 cursor-not-allowed border-2 border-transparent':
                   !isSelected(friend.id) && !canSelectMore,
               }"
+              :style="!isSelected(friend.id) && canSelectMore ? { backgroundColor: 'var(--dp-bg-secondary)' } : {}"
             >
               <!-- Profile Image -->
               <div
-                class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0"
+                class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
               >
                 <img
                   v-if="friend.profileImage"
@@ -94,14 +106,14 @@ function handleToggle(friendId: number) {
                   :alt="friend.name"
                   class="w-8 h-8 rounded-full object-cover"
                 />
-                <span v-else class="text-gray-500 font-medium text-sm">
+                <span v-else class="font-medium text-sm" :style="{ color: 'var(--dp-text-muted)' }">
                   {{ friend.name.charAt(0) }}
                 </span>
               </div>
 
               <!-- Name -->
               <div class="flex-1 min-w-0">
-                <span class="font-medium text-sm truncate block">{{ friend.name }}</span>
+                <span class="font-medium text-sm truncate block" :style="{ color: 'var(--dp-text-primary)' }">{{ friend.name }}</span>
               </div>
 
               <!-- Check icon -->
@@ -116,9 +128,9 @@ function handleToggle(friendId: number) {
         </div>
 
         <!-- Footer -->
-        <div class="p-3 sm:p-4 border-t border-gray-200">
+        <div class="p-3 sm:p-4 border-t" :style="{ borderColor: 'var(--dp-border-primary)' }">
           <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-between gap-2">
-            <span class="text-sm text-gray-500 text-center sm:text-left">
+            <span class="text-sm text-center sm:text-left" :style="{ color: 'var(--dp-text-muted)' }">
               {{ selectedFriendIds.length }} / {{ maxSelections }}명 선택됨
             </span>
             <button

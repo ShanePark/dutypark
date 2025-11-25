@@ -563,16 +563,16 @@ async function loadExistingImages() {
   justify-content: center;
   gap: 0.5rem;
   padding: 1.5rem;
-  border: 2px dashed var(--color-border, #e5e7eb);
+  border: 2px dashed var(--dp-border-primary);
   border-radius: 0.5rem;
-  background-color: var(--color-bg-secondary, #f9fafb);
+  background-color: var(--dp-bg-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .drop-zone:hover:not(.disabled) {
   border-color: var(--color-primary, #3b82f6);
-  background-color: var(--color-bg-hover, #f3f4f6);
+  background-color: var(--dp-bg-tertiary);
 }
 
 .drop-zone.drag-over {
@@ -586,17 +586,17 @@ async function loadExistingImages() {
 }
 
 .upload-icon {
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--dp-text-secondary);
 }
 
 .drop-text {
   font-size: 0.875rem;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--dp-text-secondary);
 }
 
 .drop-hint {
   font-size: 0.75rem;
-  color: var(--color-text-tertiary, #9ca3af);
+  color: var(--dp-text-muted);
 }
 
 .hidden {
@@ -614,9 +614,9 @@ async function loadExistingImages() {
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem;
-  border: 1px solid var(--color-border, #e5e7eb);
+  border: 1px solid var(--dp-border-primary);
   border-radius: 0.375rem;
-  background-color: var(--color-bg, #ffffff);
+  background-color: var(--dp-bg-card);
 }
 
 .attachment-preview {
@@ -627,7 +627,7 @@ async function loadExistingImages() {
   align-items: center;
   justify-content: center;
   border-radius: 0.25rem;
-  background-color: var(--color-bg-secondary, #f9fafb);
+  background-color: var(--dp-bg-secondary);
   overflow: hidden;
 }
 
@@ -638,7 +638,7 @@ async function loadExistingImages() {
 }
 
 .file-icon {
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--dp-text-secondary);
 }
 
 .attachment-info {
@@ -651,7 +651,7 @@ async function loadExistingImages() {
 
 .attachment-name {
   font-size: 0.875rem;
-  color: var(--color-text, #1f2937);
+  color: var(--dp-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -659,7 +659,7 @@ async function loadExistingImages() {
 
 .attachment-size {
   font-size: 0.75rem;
-  color: var(--color-text-tertiary, #9ca3af);
+  color: var(--dp-text-muted);
 }
 
 .attachment-actions {
@@ -688,7 +688,7 @@ async function loadExistingImages() {
 
 .progress-text {
   font-size: 0.75rem;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--dp-text-secondary);
   min-width: 2.5rem;
 }
 
@@ -700,7 +700,7 @@ async function loadExistingImages() {
   border: none;
   border-radius: 0.25rem;
   background: transparent;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--dp-text-secondary);
   cursor: pointer;
   transition: all 0.15s ease;
 }

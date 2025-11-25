@@ -181,6 +181,34 @@ function navigateToTeams() {
   router.push('/admin/teams')
 }
 
+function setHoverBg(e: Event) {
+  if (e.currentTarget) {
+    (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--dp-bg-hover)'
+  }
+}
+
+function clearHoverBg(e: Event, bgColor = 'var(--dp-bg-card)') {
+  if (e.currentTarget) {
+    (e.currentTarget as HTMLElement).style.backgroundColor = bgColor
+  }
+}
+
+function setHoverBgWithColor(e: Event, bgColor: string, textColor: string) {
+  if (e.currentTarget) {
+    const el = e.currentTarget as HTMLElement
+    el.style.backgroundColor = bgColor
+    el.style.color = textColor
+  }
+}
+
+function clearHoverBgWithColor(e: Event, bgColor: string, textColor: string) {
+  if (e.currentTarget) {
+    const el = e.currentTarget as HTMLElement
+    el.style.backgroundColor = bgColor
+    el.style.color = textColor
+  }
+}
+
 
 onMounted(async () => {
   if (!authStore.isAdmin) {
@@ -192,9 +220,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
     <!-- Admin Header -->
-    <div class="bg-white border-b border-gray-200">
+    <div :style="{ backgroundColor: 'var(--dp-bg-primary)', borderBottom: '1px solid var(--dp-border-primary)' }">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
@@ -202,19 +230,27 @@ onMounted(async () => {
               <Shield class="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 class="text-xl font-bold text-gray-900">회원 관리</h1>
-              <p class="text-sm text-gray-500">회원 및 세션 관리</p>
+              <h1 class="text-xl font-bold" :style="{ color: 'var(--dp-text-primary)' }">회원 관리</h1>
+              <p class="text-sm" :style="{ color: 'var(--dp-text-muted)' }">회원 및 세션 관리</p>
             </div>
           </div>
           <div class="flex items-center gap-2 flex-wrap">
             <button
               @click="refreshData"
-              class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
+              class="p-2 rounded-lg transition"
               :class="{ 'animate-spin': isLoading }"
+              :style="{ color: 'var(--dp-text-muted)', backgroundColor: isLoading ? '' : 'transparent' }"
+              @mouseover="(e: Event) => !isLoading && setHoverBgWithColor(e, 'var(--dp-bg-hover)', 'var(--dp-text-secondary)')"
+              @mouseleave="(e: Event) => !isLoading && clearHoverBgWithColor(e, 'transparent', 'var(--dp-text-muted)')"
             >
               <RefreshCw class="w-5 h-5" />
             </button>
-            <button class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition">
+            <button
+              class="p-2 rounded-lg transition"
+              :style="{ color: 'var(--dp-text-muted)' }"
+              @mouseover="(e: Event) => setHoverBgWithColor(e, 'var(--dp-bg-hover)', 'var(--dp-text-secondary)')"
+              @mouseleave="(e: Event) => clearHoverBgWithColor(e, 'transparent', 'var(--dp-text-muted)')"
+            >
               <Settings class="w-5 h-5" />
             </button>
           </div>
@@ -224,7 +260,7 @@ onMounted(async () => {
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div v-if="loading" class="flex items-center justify-center py-20">
-        <Loader2 class="w-8 h-8 animate-spin text-gray-500" />
+        <Loader2 class="w-8 h-8 animate-spin" :style="{ color: 'var(--dp-text-muted)' }" />
       </div>
 
       <template v-else>
@@ -239,95 +275,105 @@ onMounted(async () => {
           </router-link>
           <router-link
             to="/admin/teams"
-            class="bg-white border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition"
+            class="rounded-xl p-4 transition"
+            :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }"
+            @mouseover="(e: Event) => setHoverBg(e)"
+            @mouseleave="(e: Event) => clearHoverBg(e)"
           >
-            <Building2 class="w-6 h-6 mb-2 text-gray-600" />
-            <span class="font-medium text-gray-700">팀 관리</span>
+            <Building2 class="w-6 h-6 mb-2" :style="{ color: 'var(--dp-text-secondary)' }" />
+            <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">팀 관리</span>
           </router-link>
           <a
             href="/docs/index.html"
             target="_blank"
-            class="bg-white border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition"
+            class="rounded-xl p-4 transition"
+            :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }"
+            @mouseover="(e: Event) => setHoverBg(e)"
+            @mouseleave="(e: Event) => clearHoverBg(e)"
           >
             <div class="flex items-center gap-1 mb-2">
-              <FileText class="w-6 h-6 text-gray-600" />
-              <ExternalLink class="w-3 h-3 text-gray-400" />
+              <FileText class="w-6 h-6" :style="{ color: 'var(--dp-text-secondary)' }" />
+              <ExternalLink class="w-3 h-3" :style="{ color: 'var(--dp-text-muted)' }" />
             </div>
-            <span class="font-medium text-gray-700">API 문서</span>
+            <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">API 문서</span>
           </a>
-          <div class="bg-white border border-gray-200 rounded-xl p-4 opacity-50 cursor-not-allowed">
-            <Settings class="w-6 h-6 mb-2 text-gray-400" />
-            <span class="font-medium text-gray-400">설정</span>
+          <div class="rounded-xl p-4 opacity-50 cursor-not-allowed" :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }">
+            <Settings class="w-6 h-6 mb-2" :style="{ color: 'var(--dp-text-muted)' }" />
+            <span class="font-medium" :style="{ color: 'var(--dp-text-muted)' }">설정</span>
           </div>
         </div>
 
         <!-- Stats Cards -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div class="bg-white rounded-xl border border-gray-200 p-4">
+          <div class="rounded-xl p-4" :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }">
             <div class="flex items-center justify-between mb-2">
-              <Users class="w-5 h-5 text-gray-400" />
-              <span class="text-xs text-gray-400">전체</span>
+              <Users class="w-5 h-5" :style="{ color: 'var(--dp-text-muted)' }" />
+              <span class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">전체</span>
             </div>
-            <p class="text-2xl font-bold text-gray-900">{{ stats.totalMembers }}</p>
-            <p class="text-sm text-gray-500">등록 회원</p>
+            <p class="text-2xl font-bold" :style="{ color: 'var(--dp-text-primary)' }">{{ stats.totalMembers }}</p>
+            <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">등록 회원</p>
           </div>
-          <div class="bg-white rounded-xl border border-gray-200 p-4">
+          <div class="rounded-xl p-4" :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }">
             <div class="flex items-center justify-between mb-2">
-              <Building2 class="w-5 h-5 text-gray-400" />
-              <span class="text-xs text-gray-400">활성</span>
+              <Building2 class="w-5 h-5" :style="{ color: 'var(--dp-text-muted)' }" />
+              <span class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">활성</span>
             </div>
-            <p class="text-2xl font-bold text-gray-900">{{ stats.totalTeams }}</p>
-            <p class="text-sm text-gray-500">등록 팀</p>
+            <p class="text-2xl font-bold" :style="{ color: 'var(--dp-text-primary)' }">{{ stats.totalTeams }}</p>
+            <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">등록 팀</p>
           </div>
-          <div class="bg-white rounded-xl border border-gray-200 p-4">
+          <div class="rounded-xl p-4" :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }">
             <div class="flex items-center justify-between mb-2">
-              <Key class="w-5 h-5 text-gray-400" />
-              <span class="text-xs text-gray-400">유효</span>
+              <Key class="w-5 h-5" :style="{ color: 'var(--dp-text-muted)' }" />
+              <span class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">유효</span>
             </div>
-            <p class="text-2xl font-bold text-gray-900">{{ stats.activeTokens }}</p>
-            <p class="text-sm text-gray-500">활성 토큰</p>
+            <p class="text-2xl font-bold" :style="{ color: 'var(--dp-text-primary)' }">{{ stats.activeTokens }}</p>
+            <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">활성 토큰</p>
           </div>
-          <div class="bg-white rounded-xl border border-gray-200 p-4">
+          <div class="rounded-xl p-4" :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }">
             <div class="flex items-center justify-between mb-2">
-              <Clock class="w-5 h-5 text-gray-400" />
-              <span class="text-xs text-gray-400">오늘</span>
+              <Clock class="w-5 h-5" :style="{ color: 'var(--dp-text-muted)' }" />
+              <span class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">오늘</span>
             </div>
-            <p class="text-2xl font-bold text-gray-900">{{ stats.todayLogins }}</p>
-            <p class="text-sm text-gray-500">접속 횟수</p>
+            <p class="text-2xl font-bold" :style="{ color: 'var(--dp-text-primary)' }">{{ stats.todayLogins }}</p>
+            <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">접속 횟수</p>
           </div>
         </div>
 
         <!-- Member Management Section -->
-        <div class="bg-white rounded-xl border border-gray-200">
-          <div class="p-4 border-b border-gray-200">
+        <div class="rounded-xl" :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }">
+          <div class="p-4" :style="{ borderBottom: '1px solid var(--dp-border-primary)' }">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <h2 class="text-lg font-semibold text-gray-900">회원 관리</h2>
+              <h2 class="text-lg font-semibold" :style="{ color: 'var(--dp-text-primary)' }">회원 관리</h2>
               <div class="relative w-full sm:w-auto">
-                <Search class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <Search class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2" :style="{ color: 'var(--dp-text-muted)' }" />
                 <input
                   v-model="searchKeyword"
                   type="text"
                   placeholder="회원 검색..."
-                  class="w-full sm:w-auto pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                  class="w-full sm:w-auto pl-9 pr-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                  :style="{ backgroundColor: 'var(--dp-bg-input)', border: '1px solid var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
                 />
               </div>
             </div>
           </div>
 
-          <div class="divide-y divide-gray-100">
+          <div :style="{ borderTop: '1px solid var(--dp-border-secondary)' }">
             <div
               v-for="member in filteredMembers"
               :key="member.id"
-              class="p-4 hover:bg-gray-50 transition"
+              class="p-4 transition"
+              :style="{ borderBottom: '1px solid var(--dp-border-secondary)' }"
+              @mouseover="(e: Event) => setHoverBg(e)"
+              @mouseleave="(e: Event) => clearHoverBg(e, 'transparent')"
             >
               <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
                 <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span class="text-sm font-medium text-gray-600">{{ member.name.charAt(0) }}</span>
+                  <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }">
+                    <span class="text-sm font-medium" :style="{ color: 'var(--dp-text-secondary)' }">{{ member.name.charAt(0) }}</span>
                   </div>
                   <div class="min-w-0">
-                    <p class="font-medium text-gray-900 truncate">{{ member.name }}</p>
-                    <p class="text-sm text-gray-500">
+                    <p class="font-medium truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ member.name }}</p>
+                    <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
                       {{ member.tokens.length > 0 ? `${member.tokens.length}개의 활성 세션` : '활성 세션 없음' }}
                     </p>
                   </div>
@@ -344,32 +390,33 @@ onMounted(async () => {
                 <div
                   v-for="(token, index) in member.tokens"
                   :key="index"
-                  class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm bg-gray-50 rounded-lg p-3"
+                  class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm rounded-lg p-3"
+                  :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
                 >
-                  <div class="flex items-center gap-2 text-gray-600">
-                    <Clock class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
+                    <Clock class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
                     <span class="truncate">{{ formatRelativeTime(token.lastUsed) }}</span>
                   </div>
-                  <div class="flex items-center gap-2 text-gray-600">
-                    <Globe class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
+                    <Globe class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
                     <span class="truncate">{{ token.remoteAddr }}</span>
                   </div>
-                  <div class="flex items-center gap-2 text-gray-600">
-                    <Monitor class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
+                    <Monitor class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
                     <span class="truncate">{{ token.userAgent?.device || '-' }}</span>
                   </div>
-                  <div class="text-gray-500 truncate">
+                  <div class="truncate" :style="{ color: 'var(--dp-text-muted)' }">
                     {{ token.userAgent?.browser || '-' }}
                   </div>
                 </div>
               </div>
-              <div v-else class="ml-0 sm:ml-13 text-sm text-gray-400 py-2">
+              <div v-else class="ml-0 sm:ml-13 text-sm py-2" :style="{ color: 'var(--dp-text-muted)' }">
                 현재 활성화된 세션이 없습니다
               </div>
             </div>
           </div>
 
-          <div v-if="filteredMembers.length === 0" class="p-8 text-center text-gray-500">
+          <div v-if="filteredMembers.length === 0" class="p-8 text-center" :style="{ color: 'var(--dp-text-muted)' }">
             검색 결과가 없습니다
           </div>
         </div>
@@ -382,37 +429,42 @@ onMounted(async () => {
       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
       @click.self="closePasswordModal"
     >
-      <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
-        <div class="p-4 border-b border-gray-200">
-          <h3 class="text-lg font-semibold text-gray-900">비밀번호 변경</h3>
-          <p class="text-sm text-gray-500">{{ selectedMember?.name }}님의 비밀번호를 변경합니다</p>
+      <div class="rounded-xl shadow-xl w-full max-w-md mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
+        <div class="p-4" :style="{ borderBottom: '1px solid var(--dp-border-primary)' }">
+          <h3 class="text-lg font-semibold" :style="{ color: 'var(--dp-text-primary)' }">비밀번호 변경</h3>
+          <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">{{ selectedMember?.name }}님의 비밀번호를 변경합니다</p>
         </div>
         <div class="p-4 space-y-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">새 비밀번호</label>
+            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">새 비밀번호</label>
             <input
               v-model="newPassword"
               type="password"
-              class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+              class="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+              :style="{ backgroundColor: 'var(--dp-bg-input)', border: '1px solid var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
               placeholder="새 비밀번호 입력"
             />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">비밀번호 확인</label>
+            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">비밀번호 확인</label>
             <input
               v-model="confirmPassword"
               type="password"
-              class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+              class="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+              :style="{ backgroundColor: 'var(--dp-bg-input)', border: '1px solid var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
               placeholder="비밀번호 다시 입력"
             />
           </div>
           <p v-if="passwordError" class="text-sm text-red-500">{{ passwordError }}</p>
         </div>
-        <div class="p-4 border-t border-gray-200 flex justify-end gap-2">
+        <div class="p-4 flex justify-end gap-2" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
           <button
             @click="closePasswordModal"
             :disabled="changingPassword"
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition disabled:opacity-50"
+            class="px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50"
+            :style="{ color: 'var(--dp-text-primary)', backgroundColor: 'var(--dp-bg-tertiary)' }"
+            @mouseover="(e: Event) => !changingPassword && setHoverBg(e)"
+            @mouseleave="(e: Event) => !changingPassword && clearHoverBg(e, 'var(--dp-bg-tertiary)')"
           >
             취소
           </button>

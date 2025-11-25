@@ -527,10 +527,11 @@ onUnmounted(() => {
 
     <template v-else-if="team">
       <!-- Header -->
-      <div class="bg-gray-600 text-white font-bold text-xl py-3 rounded-t-lg flex items-center justify-between px-4">
+      <div class="font-bold text-xl py-3 rounded-t-lg flex items-center justify-between px-4" :style="{ backgroundColor: '#4b5563', color: 'white' }">
         <button
           @click="router.back()"
-          class="px-3 py-1 bg-gray-500 text-white text-sm rounded-lg hover:bg-gray-400 transition flex items-center gap-1"
+          class="px-3 py-1 text-white text-sm rounded-lg hover:bg-gray-400 transition flex items-center gap-1"
+          :style="{ backgroundColor: '#6b7280' }"
         >
           <ChevronLeft class="w-4 h-4" />
           뒤로
@@ -547,23 +548,23 @@ onUnmounted(() => {
       </div>
 
     <!-- Team Info Card -->
-    <div class="bg-white border border-gray-200 rounded-b-lg overflow-hidden mb-4">
+    <div class="border rounded-b-lg overflow-hidden mb-4" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }">
       <div class="overflow-x-auto">
       <table class="w-full min-w-[300px]">
-        <tbody class="divide-y divide-gray-200">
-          <tr>
-            <th class="px-4 py-3 text-left bg-gray-50 w-1/4 font-medium text-gray-700">
+        <tbody :style="{ borderColor: 'var(--dp-border-primary)' }">
+          <tr :style="{ borderBottomWidth: '1px', borderBottomStyle: 'solid', borderBottomColor: 'var(--dp-border-primary)' }">
+            <th class="px-4 py-3 text-left w-1/4 font-medium" :style="{ backgroundColor: 'var(--dp-bg-secondary)', color: 'var(--dp-text-secondary)' }">
               팀 설명
             </th>
-            <td class="px-4 py-3 text-gray-800">
+            <td class="px-4 py-3" :style="{ color: 'var(--dp-text-primary)' }">
               {{ team.description }}
             </td>
           </tr>
-          <tr v-if="isAdmin">
-            <th class="px-4 py-3 text-left bg-gray-50 font-medium text-gray-700">
+          <tr v-if="isAdmin" :style="{ borderBottomWidth: '1px', borderBottomStyle: 'solid', borderBottomColor: 'var(--dp-border-primary)' }">
+            <th class="px-4 py-3 text-left font-medium" :style="{ backgroundColor: 'var(--dp-bg-secondary)', color: 'var(--dp-text-secondary)' }">
               팀 대표
             </th>
-            <td class="px-4 py-3 text-gray-800">
+            <td class="px-4 py-3" :style="{ color: 'var(--dp-text-primary)' }">
               <div class="flex items-center gap-2">
                 <span class="font-bold">{{ team.adminName || 'N/A' }}</span>
                 <button
@@ -577,15 +578,16 @@ onUnmounted(() => {
               </div>
             </td>
           </tr>
-          <tr>
-            <th class="px-4 py-3 text-left bg-gray-50 font-medium text-gray-700">
+          <tr :style="{ borderBottomWidth: '1px', borderBottomStyle: 'solid', borderBottomColor: 'var(--dp-border-primary)' }">
+            <th class="px-4 py-3 text-left font-medium" :style="{ backgroundColor: 'var(--dp-bg-secondary)', color: 'var(--dp-text-secondary)' }">
               근무 형태
             </th>
             <td class="px-4 py-3">
               <select
                 :value="team.workType"
                 @change="updateWorkType(($event.target as HTMLSelectElement).value)"
-                class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
               >
                 <option v-for="wt in workTypes" :key="wt.value" :value="wt.value">
                   {{ wt.label }}
@@ -593,15 +595,16 @@ onUnmounted(() => {
               </select>
             </td>
           </tr>
-          <tr>
-            <th class="px-4 py-3 text-left bg-gray-50 font-medium text-gray-700">
+          <tr :style="{ borderBottomWidth: '1px', borderBottomStyle: 'solid', borderBottomColor: 'var(--dp-border-primary)' }">
+            <th class="px-4 py-3 text-left font-medium" :style="{ backgroundColor: 'var(--dp-bg-secondary)', color: 'var(--dp-text-secondary)' }">
               근무 반입 양식
             </th>
             <td class="px-4 py-3">
               <select
                 :value="team.dutyBatchTemplate?.name || ''"
                 @change="updateBatchTemplate(($event.target as HTMLSelectElement).value)"
-                class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
               >
                 <option value="">없음</option>
                 <option v-for="template in dutyBatchTemplates" :key="template.name" :value="template.name">
@@ -611,7 +614,7 @@ onUnmounted(() => {
             </td>
           </tr>
           <tr v-if="team.dutyBatchTemplate">
-            <th class="px-4 py-3 text-left bg-gray-50 font-medium text-gray-700">
+            <th class="px-4 py-3 text-left font-medium" :style="{ backgroundColor: 'var(--dp-bg-secondary)', color: 'var(--dp-text-secondary)' }">
               근무표 업로드
             </th>
             <td class="px-4 py-3">
@@ -630,8 +633,8 @@ onUnmounted(() => {
     </div>
 
     <!-- Members Section -->
-    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden mb-4">
-      <div class="bg-gray-600 text-white px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+    <div class="border rounded-lg overflow-hidden mb-4" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }">
+      <div class="text-white px-4 py-3 flex flex-wrap items-center justify-between gap-2" :style="{ backgroundColor: '#4b5563' }">
         <h3 class="font-bold">팀 멤버</h3>
         <button
           @click="openMemberSearchModal"
@@ -645,7 +648,7 @@ onUnmounted(() => {
       <!-- Desktop Table View -->
       <div v-if="hasMember" class="hidden sm:block overflow-x-auto">
         <table class="w-full">
-          <thead class="bg-gray-800 text-white">
+          <thead class="text-white" :style="{ backgroundColor: '#1f2937' }">
             <tr>
               <th class="px-4 py-2 text-center w-12">#</th>
               <th class="px-4 py-2 text-left">이름</th>
@@ -653,10 +656,10 @@ onUnmounted(() => {
               <th class="px-4 py-2 text-center">도구</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-200">
-            <tr v-for="(member, index) in team.members" :key="member.id" class="hover:bg-gray-50">
-              <td class="px-4 py-3 text-center text-gray-600">{{ index + 1 }}</td>
-              <td class="px-4 py-3 font-medium text-gray-800">{{ member.name }}</td>
+          <tbody :style="{ borderColor: 'var(--dp-border-primary)' }">
+            <tr v-for="(member, index) in team.members" :key="member.id" :style="{ borderBottomWidth: '1px', borderBottomStyle: 'solid', borderBottomColor: 'var(--dp-border-primary)' }" class="hover-bg-light">
+              <td class="px-4 py-3 text-center" :style="{ color: 'var(--dp-text-muted)' }">{{ index + 1 }}</td>
+              <td class="px-4 py-3 font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ member.name }}</td>
               <td class="px-4 py-3 text-center">
                 <template v-if="!isAdmin">
                   <Check v-if="member.isManager" class="w-5 h-5 text-green-500 mx-auto" />
@@ -685,7 +688,7 @@ onUnmounted(() => {
                       대표 위임
                     </button>
                   </div>
-                  <span v-else-if="member.isAdmin" class="text-gray-400">-</span>
+                  <span v-else-if="member.isAdmin" :style="{ color: 'var(--dp-text-muted)' }">-</span>
                 </template>
               </td>
               <td class="px-4 py-3 text-center">
@@ -703,16 +706,17 @@ onUnmounted(() => {
       </div>
 
       <!-- Mobile Card View -->
-      <div v-if="hasMember" class="sm:hidden divide-y divide-gray-200">
+      <div v-if="hasMember" class="sm:hidden" :style="{ borderColor: 'var(--dp-border-primary)' }">
         <div
           v-for="(member, index) in team.members"
           :key="member.id"
-          class="p-3 hover:bg-gray-50"
+          class="p-3 hover-bg-light"
+          :style="{ borderBottomWidth: '1px', borderBottomStyle: 'solid', borderBottomColor: 'var(--dp-border-primary)' }"
         >
           <div class="flex items-center justify-between mb-2">
             <div class="flex items-center gap-2">
-              <span class="text-sm text-gray-500">{{ index + 1 }}</span>
-              <span class="font-medium text-gray-800">{{ member.name }}</span>
+              <span class="text-sm" :style="{ color: 'var(--dp-text-muted)' }">{{ index + 1 }}</span>
+              <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ member.name }}</span>
               <Check v-if="member.isManager" class="w-4 h-4 text-green-500" />
             </div>
             <button
@@ -751,18 +755,19 @@ onUnmounted(() => {
           </div>
         </div>
       </div>
-      <div v-else class="p-6 text-center text-gray-500">
+      <div v-else class="p-6 text-center" :style="{ color: 'var(--dp-text-muted)' }">
         이 팀에 멤버가 없습니다.
       </div>
     </div>
 
     <!-- Duty Types Section -->
-    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
-      <div class="bg-gray-600 text-white px-4 py-3 flex items-center justify-between">
+    <div class="border rounded-lg overflow-hidden" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }">
+      <div class="text-white px-4 py-3 flex items-center justify-between" :style="{ backgroundColor: '#4b5563' }">
         <h3 class="font-bold">근무 유형</h3>
         <button
           @click="openAddDutyTypeModal"
-          class="px-3 py-1.5 bg-white text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-100 transition flex items-center gap-1"
+          class="px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1"
+          :style="{ backgroundColor: 'var(--dp-bg-card)', color: 'var(--dp-text-primary)' }"
         >
           <Plus class="w-4 h-4" />
           추가
@@ -771,7 +776,7 @@ onUnmounted(() => {
 
       <div v-if="hasDutyType" class="overflow-x-auto">
         <table class="w-full">
-          <thead class="bg-gray-800 text-white">
+          <thead class="text-white" :style="{ backgroundColor: '#1f2937' }">
             <tr>
               <th class="px-4 py-2 text-center w-12">#</th>
               <th class="px-4 py-2 text-left">근무명</th>
@@ -779,18 +784,18 @@ onUnmounted(() => {
               <th class="px-4 py-2 text-center">도구</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-200">
-            <tr v-for="(dutyType, index) in team.dutyTypes" :key="dutyType.id || 'default'" class="hover:bg-gray-50">
-              <td class="px-4 py-3 text-center text-gray-600">{{ index + 1 }}</td>
-              <td class="px-4 py-3 font-bold text-gray-800">
+          <tbody :style="{ borderColor: 'var(--dp-border-primary)' }">
+            <tr v-for="(dutyType, index) in team.dutyTypes" :key="dutyType.id || 'default'" class="hover-bg-light" :style="{ borderBottomWidth: '1px', borderBottomStyle: 'solid', borderBottomColor: 'var(--dp-border-primary)' }">
+              <td class="px-4 py-3 text-center" :style="{ color: 'var(--dp-text-muted)' }">{{ index + 1 }}</td>
+              <td class="px-4 py-3 font-bold" :style="{ color: 'var(--dp-text-primary)' }">
                 {{ dutyType.name }}
-                <span v-if="dutyType.id === null" class="text-xs text-gray-400 font-normal">(휴무)</span>
+                <span v-if="dutyType.id === null" class="text-xs font-normal" :style="{ color: 'var(--dp-text-muted)' }">(휴무)</span>
               </td>
               <td class="px-4 py-3 text-center">
                 <span
                   @click="openEditDutyTypeModal(dutyType)"
-                  class="inline-block w-6 h-6 rounded-full border-2 border-gray-200 cursor-pointer hover:ring-2 hover:ring-offset-1 hover:ring-gray-400 transition"
-                  :style="{ backgroundColor: dutyType.color || '#e8e8e8' }"
+                  class="inline-block w-6 h-6 rounded-full border-2 cursor-pointer hover:ring-2 hover:ring-offset-1 hover:ring-gray-400 transition"
+                  :style="{ backgroundColor: dutyType.color || '#e8e8e8', borderColor: 'var(--dp-border-primary)' }"
                 ></span>
               </td>
               <td class="px-4 py-3">
@@ -799,7 +804,8 @@ onUnmounted(() => {
                     v-if="dutyType.id"
                     :disabled="index === 0 || index === team.dutyTypes.length - 1"
                     @click="swapPosition(index, index + 1)"
-                    class="p-1 sm:p-1.5 border border-gray-300 rounded hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="p-1 sm:p-1.5 border rounded hover-bg-light transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    :style="{ borderColor: 'var(--dp-border-secondary)' }"
                   >
                     <ArrowDown class="w-3 h-3 sm:w-4 sm:h-4" />
                   </button>
@@ -807,7 +813,8 @@ onUnmounted(() => {
                     v-if="dutyType.id"
                     :disabled="index <= 1"
                     @click="swapPosition(index, index - 1)"
-                    class="p-1 sm:p-1.5 border border-gray-300 rounded hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="p-1 sm:p-1.5 border rounded hover-bg-light transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    :style="{ borderColor: 'var(--dp-border-secondary)' }"
                   >
                     <ArrowUp class="w-3 h-3 sm:w-4 sm:h-4" />
                   </button>
@@ -830,7 +837,7 @@ onUnmounted(() => {
           </tbody>
         </table>
       </div>
-      <div v-else class="p-6 text-center text-gray-500">
+      <div v-else class="p-6 text-center" :style="{ color: 'var(--dp-text-muted)' }">
         근무 유형이 없습니다.
       </div>
     </div>
@@ -842,12 +849,12 @@ onUnmounted(() => {
       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
       @click.self="closeMemberSearchModal"
     >
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-lg">
-        <div class="flex items-center justify-between p-4 border-b">
-          <h3 class="text-lg font-bold">멤버 추가</h3>
+      <div class="rounded-lg shadow-xl w-full max-w-lg" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
+        <div class="flex items-center justify-between p-4 border-b" :style="{ borderColor: 'var(--dp-border-primary)' }">
+          <h3 class="text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">멤버 추가</h3>
           <button
             @click="closeMemberSearchModal"
-            class="p-1 hover:bg-gray-100 rounded transition"
+            class="p-1 rounded transition hover-bg-light"
           >
             <X class="w-5 h-5" />
           </button>
@@ -860,12 +867,14 @@ onUnmounted(() => {
               v-model="searchKeyword"
               type="text"
               placeholder="이름 또는 이메일로 검색"
-              class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
               @keyup.enter="searchMembers"
             />
             <button
               @click="searchMembers"
-              class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
+              class="px-4 py-2 text-white rounded-lg hover:bg-gray-700 transition"
+              :style="{ backgroundColor: '#4b5563' }"
             >
               <Search class="w-5 h-5" />
             </button>
@@ -877,21 +886,21 @@ onUnmounted(() => {
           </div>
           <div v-else-if="searchResult.length > 0" class="overflow-x-auto">
             <table class="w-full">
-              <thead class="bg-gray-100">
+              <thead :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
                 <tr>
-                  <th class="px-3 py-2 text-left text-sm">#</th>
-                  <th class="px-3 py-2 text-left text-sm">이름</th>
-                  <th class="px-3 py-2 text-left text-sm">이메일</th>
-                  <th class="px-3 py-2 text-center text-sm">추가</th>
+                  <th class="px-3 py-2 text-left text-sm" :style="{ color: 'var(--dp-text-secondary)' }">#</th>
+                  <th class="px-3 py-2 text-left text-sm" :style="{ color: 'var(--dp-text-secondary)' }">이름</th>
+                  <th class="px-3 py-2 text-left text-sm" :style="{ color: 'var(--dp-text-secondary)' }">이메일</th>
+                  <th class="px-3 py-2 text-center text-sm" :style="{ color: 'var(--dp-text-secondary)' }">추가</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-gray-200">
-                <tr v-for="(member, index) in searchResult" :key="member.id ?? index" class="hover:bg-gray-50">
-                  <td class="px-3 py-2 text-sm text-gray-600">
+              <tbody :style="{ borderColor: 'var(--dp-border-primary)' }">
+                <tr v-for="(member, index) in searchResult" :key="member.id ?? index" class="hover-bg-light" :style="{ borderBottomWidth: '1px', borderBottomStyle: 'solid', borderBottomColor: 'var(--dp-border-primary)' }">
+                  <td class="px-3 py-2 text-sm" :style="{ color: 'var(--dp-text-muted)' }">
                     {{ currentPage * pageSize + index + 1 }}
                   </td>
-                  <td class="px-3 py-2 text-sm font-medium">{{ member.name }}</td>
-                  <td class="px-3 py-2 text-sm text-gray-600">{{ member.email }}</td>
+                  <td class="px-3 py-2 text-sm font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ member.name }}</td>
+                  <td class="px-3 py-2 text-sm" :style="{ color: 'var(--dp-text-muted)' }">{{ member.email }}</td>
                   <td class="px-3 py-2 text-center">
                     <button
                       @click="addMember(member)"
@@ -905,20 +914,21 @@ onUnmounted(() => {
               </tbody>
             </table>
           </div>
-          <div v-else class="text-center text-gray-500 py-4">
+          <div v-else class="text-center py-4" :style="{ color: 'var(--dp-text-muted)' }">
             검색 결과가 없습니다.
           </div>
 
           <!-- Pagination -->
           <div v-if="searchResult.length > 0" class="mt-4">
-            <div class="text-sm text-gray-600 mb-2">
+            <div class="text-sm mb-2" :style="{ color: 'var(--dp-text-muted)' }">
               Page {{ currentPage + 1 }} of {{ totalPages }} | Total: {{ totalElements }}
             </div>
             <div class="flex flex-wrap items-center gap-1">
               <button
                 @click="prevPage"
                 :disabled="currentPage === 0"
-                class="px-2 sm:px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition disabled:opacity-50"
+                class="px-2 sm:px-3 py-1 border rounded hover-bg-light transition disabled:opacity-50"
+                :style="{ borderColor: 'var(--dp-border-secondary)' }"
               >
                 <ChevronLeft class="w-4 h-4" />
               </button>
@@ -927,14 +937,16 @@ onUnmounted(() => {
                 :key="i"
                 @click="goToPage(i - 1)"
                 class="px-2 sm:px-3 py-1 text-sm border rounded transition"
-                :class="i - 1 === currentPage ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-300 hover:bg-gray-100'"
+                :class="i - 1 === currentPage ? 'bg-blue-500 text-white border-blue-500' : ''"
+                :style="i - 1 !== currentPage ? { borderColor: 'var(--dp-border-secondary)' } : {}"
               >
                 {{ i }}
               </button>
               <button
                 @click="nextPage"
                 :disabled="currentPage >= totalPages - 1"
-                class="px-2 sm:px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition disabled:opacity-50"
+                class="px-2 sm:px-3 py-1 border rounded hover-bg-light transition disabled:opacity-50"
+                :style="{ borderColor: 'var(--dp-border-secondary)' }"
               >
                 <ChevronRight class="w-4 h-4" />
               </button>
@@ -942,10 +954,11 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div class="flex justify-end p-4 border-t">
+        <div class="flex justify-end p-4 border-t" :style="{ borderColor: 'var(--dp-border-primary)' }">
           <button
             @click="closeMemberSearchModal"
-            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition"
+            class="px-4 py-2 rounded-lg font-medium transition"
+            :style="{ backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-secondary)' }"
           >
             닫기
           </button>
@@ -959,21 +972,21 @@ onUnmounted(() => {
       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
       @click.self="closeDutyTypeModal"
     >
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
-        <div class="flex items-center justify-between p-4 border-b">
-          <h3 class="text-lg font-bold">
+      <div class="rounded-lg shadow-xl w-full max-w-md" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
+        <div class="flex items-center justify-between p-4 border-b" :style="{ borderColor: 'var(--dp-border-primary)' }">
+          <h3 class="text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">
             {{ dutyTypeForm.id !== null || dutyTypeForm.isDefault ? '근무 유형 수정' : '근무 유형 추가' }}
           </h3>
           <button
             @click="closeDutyTypeModal"
-            class="p-1 hover:bg-gray-100 rounded transition"
+            class="p-1 rounded transition hover-bg-light"
           >
             <X class="w-5 h-5" />
           </button>
         </div>
 
         <div class="p-4 space-y-4">
-          <p class="text-sm text-gray-600">
+          <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
             해당 근무유형의 명칭 및 색상을 선택해주세요.
           </p>
 
@@ -985,7 +998,7 @@ onUnmounted(() => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
               근무명
             </label>
             <input
@@ -993,12 +1006,13 @@ onUnmounted(() => {
               type="text"
               maxlength="10"
               placeholder="근무명"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
             />
           </div>
 
           <div class="color-picker-container">
-            <label class="block text-sm font-medium text-gray-700 mb-2">
+            <label class="block text-sm font-medium mb-2" :style="{ color: 'var(--dp-text-secondary)' }">
               색상 선택
             </label>
             <div class="color-picker-wrapper flex justify-center items-center">
@@ -1007,19 +1021,19 @@ onUnmounted(() => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
               미리보기
             </label>
             <div
               class="inline-block px-4 py-2 rounded-lg border font-medium"
-              :style="{ backgroundColor: dutyTypeForm.color }"
+              :style="{ backgroundColor: dutyTypeForm.color, borderColor: 'var(--dp-border-primary)' }"
             >
               {{ dutyTypeForm.name || '근무명 입력' }}
             </div>
           </div>
         </div>
 
-        <div class="flex justify-end gap-2 p-4 border-t">
+        <div class="flex justify-end gap-2 p-4 border-t" :style="{ borderColor: 'var(--dp-border-primary)' }">
           <button
             @click="saveDutyType"
             :disabled="!dutyTypeForm.name.trim()"
@@ -1029,7 +1043,8 @@ onUnmounted(() => {
           </button>
           <button
             @click="closeDutyTypeModal"
-            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition"
+            class="px-4 py-2 rounded-lg font-medium transition"
+            :style="{ backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-secondary)' }"
           >
             취소
           </button>
@@ -1043,12 +1058,12 @@ onUnmounted(() => {
       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
       @click.self="closeBatchUploadModal"
     >
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
-        <div class="flex items-center justify-between p-4 border-b">
-          <h3 class="text-lg font-bold">근무표 업로드</h3>
+      <div class="rounded-lg shadow-xl w-full max-w-md" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
+        <div class="flex items-center justify-between p-4 border-b" :style="{ borderColor: 'var(--dp-border-primary)' }">
+          <h3 class="text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">근무표 업로드</h3>
           <button
             @click="closeBatchUploadModal"
-            class="p-1 hover:bg-gray-100 rounded transition"
+            class="p-1 rounded transition hover-bg-light"
           >
             <X class="w-5 h-5" />
           </button>
@@ -1056,20 +1071,21 @@ onUnmounted(() => {
 
         <div class="p-4 space-y-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
               근무표 파일 업로드 (.xlsx)
             </label>
             <input
               type="file"
               accept=".xlsx"
               @change="handleFileChange"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
             />
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
                 연도
               </label>
               <input
@@ -1077,11 +1093,12 @@ onUnmounted(() => {
                 type="number"
                 :min="new Date().getFullYear()"
                 :max="new Date().getFullYear() + 1"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
               />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
                 월
               </label>
               <input
@@ -1089,13 +1106,14 @@ onUnmounted(() => {
                 type="number"
                 min="1"
                 max="12"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
               />
             </div>
           </div>
         </div>
 
-        <div class="flex justify-end gap-2 p-4 border-t">
+        <div class="flex justify-end gap-2 p-4 border-t" :style="{ borderColor: 'var(--dp-border-primary)' }">
           <button
             @click="uploadBatch"
             :disabled="saving || !batchForm.file"
@@ -1106,7 +1124,8 @@ onUnmounted(() => {
           </button>
           <button
             @click="closeBatchUploadModal"
-            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition"
+            class="px-4 py-2 rounded-lg font-medium transition"
+            :style="{ backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-secondary)' }"
           >
             취소
           </button>

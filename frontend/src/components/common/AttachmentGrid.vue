@@ -189,7 +189,11 @@ const gridColsClass = {
 
 <template>
   <div v-if="attachments.length > 0">
-    <div v-if="showLabel" class="flex items-center gap-1 text-sm text-gray-500 mb-2">
+    <div
+      v-if="showLabel"
+      class="flex items-center gap-1 text-sm mb-2"
+      :style="{ color: 'var(--dp-text-muted)' }"
+    >
       <Paperclip class="w-3 h-3" />
       첨부파일 ({{ attachments.length }})
     </div>
@@ -197,12 +201,16 @@ const gridColsClass = {
       <div
         v-for="(attachment, idx) in attachments"
         :key="attachment.id"
-        class="relative border border-gray-200 rounded-lg overflow-hidden group"
+        class="relative rounded-lg overflow-hidden group"
         :class="{ 'cursor-pointer': attachment.contentType?.startsWith('image/') }"
+        :style="{ border: `1px solid var(--dp-border-primary)` }"
         @click="handleAttachmentClick(idx)"
       >
         <!-- Thumbnail or Icon -->
-        <div class="aspect-square bg-gray-100 flex items-center justify-center relative">
+        <div
+          class="aspect-square flex items-center justify-center relative"
+          :style="{ backgroundColor: 'var(--dp-bg-secondary)' }"
+        >
           <img
             v-if="getThumbnailUrl(attachment.id)"
             :src="getThumbnailUrl(attachment.id)!"
@@ -212,7 +220,8 @@ const gridColsClass = {
           <component
             v-else
             :is="getFileIconComponent(attachment)"
-            class="w-12 h-12 text-gray-400"
+            class="w-12 h-12"
+            :style="{ color: 'var(--dp-text-muted)' }"
           />
 
           <!-- Zoom overlay for images - shown on hover -->
@@ -235,11 +244,11 @@ const gridColsClass = {
         </button>
 
         <!-- File info -->
-        <div class="p-2">
-          <p class="text-sm truncate" :title="attachment.originalFilename">
+        <div class="p-2" :style="{ backgroundColor: 'var(--dp-bg-card)' }">
+          <p class="text-sm truncate" :title="attachment.originalFilename" :style="{ color: 'var(--dp-text-primary)' }">
             {{ attachment.originalFilename }}
           </p>
-          <p class="text-xs text-gray-500">{{ formatBytes(attachment.size) }}</p>
+          <p class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">{{ formatBytes(attachment.size) }}</p>
         </div>
       </div>
     </div>

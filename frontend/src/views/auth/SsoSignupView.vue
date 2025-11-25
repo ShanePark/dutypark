@@ -126,18 +126,18 @@ const termsContent = `1. 서론
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-50 px-4 pb-safe pt-safe">
+  <div class="min-h-screen flex items-center justify-center px-4 pb-safe pt-safe" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
     <div class="max-w-md w-full">
       <div class="text-center mb-6 sm:mb-8">
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">회원가입</h1>
-        <p class="text-gray-600 mt-2">Dutypark에 오신 것을 환영합니다</p>
+        <h1 class="text-2xl sm:text-3xl font-bold" :style="{ color: 'var(--dp-text-primary)' }">회원가입</h1>
+        <p class="mt-2" :style="{ color: 'var(--dp-text-secondary)' }">Dutypark에 오신 것을 환영합니다</p>
       </div>
 
-      <div class="bg-white rounded-lg shadow-md p-5 sm:p-6">
+      <div class="rounded-lg shadow-md p-5 sm:p-6" :style="{ backgroundColor: 'var(--dp-bg-card)' }">
         <form class="space-y-4 sm:space-y-5" @submit.prevent="handleSubmit">
           <!-- Username input -->
           <div>
-            <label for="username" class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="username" class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
               사용자명
             </label>
             <input
@@ -147,7 +147,12 @@ const termsContent = `1. 서론
               required
               maxlength="10"
               :disabled="isLoading"
-              class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+              class="w-full px-3 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:cursor-not-allowed"
+              :style="{
+                border: '1px solid var(--dp-border-input)',
+                backgroundColor: isLoading ? 'var(--dp-bg-tertiary)' : 'var(--dp-bg-input)',
+                color: 'var(--dp-text-primary)'
+              }"
               placeholder="사용자명을 입력하세요 (1-10자)"
             />
             <p v-if="usernameError" class="mt-1 text-sm text-red-600">
@@ -157,11 +162,16 @@ const termsContent = `1. 서론
 
           <!-- Terms of Service -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
+            <label class="block text-sm font-medium mb-2" :style="{ color: 'var(--dp-text-secondary)' }">
               이용약관
             </label>
             <div
-              class="w-full h-48 px-3 py-3 border border-gray-300 rounded-lg bg-gray-50 overflow-y-auto text-sm text-gray-600 whitespace-pre-wrap"
+              class="w-full h-48 px-3 py-3 rounded-lg overflow-y-auto text-sm whitespace-pre-wrap"
+              :style="{
+                border: '1px solid var(--dp-border-input)',
+                backgroundColor: 'var(--dp-bg-tertiary)',
+                color: 'var(--dp-text-secondary)'
+              }"
             >
               {{ termsContent }}
             </div>
@@ -175,9 +185,10 @@ const termsContent = `1. 서론
               type="checkbox"
               required
               :disabled="isLoading"
-              class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer disabled:cursor-not-allowed"
+              class="h-5 w-5 text-blue-600 focus:ring-blue-500 rounded cursor-pointer disabled:cursor-not-allowed"
+              :style="{ borderColor: 'var(--dp-border-input)' }"
             />
-            <label for="termAgree" class="ml-2 text-sm text-gray-600 cursor-pointer">
+            <label for="termAgree" class="ml-2 text-sm cursor-pointer" :style="{ color: 'var(--dp-text-secondary)' }">
               위 이용약관에 동의합니다
             </label>
           </div>

@@ -44,17 +44,17 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-100">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 max-w-md w-full mx-4">
+  <div class="min-h-screen flex items-center justify-center" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
+    <div class="rounded-xl shadow-sm p-8 max-w-md w-full mx-4" :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }">
       <div v-if="isLoading" class="text-center">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p class="text-gray-600">로그인 처리 중...</p>
+        <p :style="{ color: 'var(--dp-text-secondary)' }">로그인 처리 중...</p>
       </div>
 
       <div v-else-if="error" class="text-center">
         <div class="text-red-500 text-5xl mb-4">!</div>
-        <h2 class="text-xl font-bold text-gray-900 mb-2">로그인 실패</h2>
-        <p class="text-gray-600 mb-4">{{ error }}</p>
+        <h2 class="text-xl font-bold mb-2" :style="{ color: 'var(--dp-text-primary)' }">로그인 실패</h2>
+        <p class="mb-4" :style="{ color: 'var(--dp-text-secondary)' }">{{ error }}</p>
         <router-link
           to="/auth/login"
           class="inline-block bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition"

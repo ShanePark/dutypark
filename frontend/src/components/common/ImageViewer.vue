@@ -102,15 +102,19 @@ function handleKeydown(e: KeyboardEvent) {
 
 // Touch handlers for swipe navigation
 function handleTouchStart(e: TouchEvent) {
-  touchStartX.value = e.touches[0].clientX
-  touchStartY.value = e.touches[0].clientY
+  const touch = e.touches[0]
+  if (!touch) return
+  touchStartX.value = touch.clientX
+  touchStartY.value = touch.clientY
   isSwiping.value = true
 }
 
 function handleTouchMove(e: TouchEvent) {
   if (!isSwiping.value) return
-  touchEndX.value = e.touches[0].clientX
-  touchEndY.value = e.touches[0].clientY
+  const touch = e.touches[0]
+  if (!touch) return
+  touchEndX.value = touch.clientX
+  touchEndY.value = touch.clientY
 }
 
 function handleTouchEnd() {
@@ -186,7 +190,7 @@ onUnmounted(() => {
         <!-- Image info -->
         <div class="mt-4 text-white text-center">
           <div class="text-sm">{{ images[currentIndex]?.originalFilename }}</div>
-          <div class="text-xs text-gray-400 mt-1">
+          <div class="text-xs mt-1" style="color: rgba(255, 255, 255, 0.7)">
             {{ currentIndex + 1 }} / {{ images.length }}
           </div>
         </div>

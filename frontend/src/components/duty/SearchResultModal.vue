@@ -73,6 +73,16 @@ function formatDateRange(start: string, end: string) {
 }
 </script>
 
+<style scoped>
+.hover-bg:hover {
+  background-color: var(--dp-bg-secondary);
+}
+
+.result-item:hover {
+  background-color: var(--dp-bg-secondary);
+}
+</style>
+
 <template>
   <Teleport to="body">
     <div
@@ -80,23 +90,23 @@ function formatDateRange(start: string, end: string) {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="emit('close')"
     >
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4">
+      <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
         <!-- Header -->
-        <div class="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
+        <div class="flex items-center justify-between p-3 sm:p-4 border-b" :style="{ borderColor: 'var(--dp-border-primary)' }">
           <div class="min-w-0 flex-1 mr-2">
-            <h2 class="text-base sm:text-lg font-bold">검색 결과</h2>
-            <p class="text-sm text-gray-500 truncate">
+            <h2 class="text-base sm:text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">검색 결과</h2>
+            <p class="text-sm truncate" :style="{ color: 'var(--dp-text-muted)' }">
               "{{ query }}" 검색 결과 {{ pageInfo.totalElements }}건
             </p>
           </div>
-          <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition flex-shrink-0">
-            <X class="w-6 h-6" />
+          <button @click="emit('close')" class="p-2 rounded-full transition flex-shrink-0 hover-bg">
+            <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
           </button>
         </div>
 
         <!-- Content -->
         <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(90dvh-180px)] sm:max-h-[calc(90vh-180px)]">
-          <div v-if="results.length === 0" class="text-center py-8 text-gray-400">
+          <div v-if="results.length === 0" class="text-center py-8" :style="{ color: 'var(--dp-text-muted)' }">
             검색 결과가 없습니다.
           </div>
 
@@ -105,24 +115,27 @@ function formatDateRange(start: string, end: string) {
               v-for="result in results"
               :key="result.id"
               @click="emit('goToDate', result)"
-              class="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition"
+              class="p-4 border rounded-lg cursor-pointer transition result-item"
+              :style="{ borderColor: 'var(--dp-border-primary)' }"
             >
               <div class="flex items-start justify-between">
                 <div class="flex-1">
                   <div class="flex items-center gap-2">
-                    <span class="font-medium">{{ result.content }}</span>
+                    <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ result.content }}</span>
                     <Paperclip
                       v-if="result.hasAttachments"
-                      class="w-4 h-4 text-gray-400"
+                      class="w-4 h-4"
+                      :style="{ color: 'var(--dp-text-muted)' }"
                     />
                   </div>
                   <p
                     v-if="result.description"
-                    class="text-sm text-gray-600 mt-1 line-clamp-2"
+                    class="text-sm mt-1 line-clamp-2"
+                    :style="{ color: 'var(--dp-text-secondary)' }"
                   >
                     {{ result.description }}
                   </p>
-                  <div class="flex items-center gap-1 mt-2 text-sm text-gray-500">
+                  <div class="flex items-center gap-1 mt-2 text-sm" :style="{ color: 'var(--dp-text-muted)' }">
                     <Calendar class="w-4 h-4" />
                     {{ formatDateRange(result.startDateTime, result.endDateTime) }}
                   </div>
@@ -135,12 +148,14 @@ function formatDateRange(start: string, end: string) {
         <!-- Pagination -->
         <div
           v-if="pageInfo.totalPages > 1"
-          class="p-3 sm:p-4 border-t border-gray-200 flex items-center justify-center gap-0.5 sm:gap-1 overflow-x-auto"
+          class="p-3 sm:p-4 border-t flex items-center justify-center gap-0.5 sm:gap-1 overflow-x-auto"
+          :style="{ borderColor: 'var(--dp-border-primary)' }"
         >
           <button
             @click="emit('changePage', currentPage - 2)"
             :disabled="currentPage === 1"
-            class="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            class="p-2 rounded disabled:opacity-50 disabled:cursor-not-allowed transition hover-bg"
+            :style="{ color: 'var(--dp-text-primary)' }"
           >
             <ChevronLeft class="w-5 h-5 sm:w-4 sm:h-4" />
           </button>
@@ -150,11 +165,12 @@ function formatDateRange(start: string, end: string) {
             :key="page"
             @click="emit('changePage', page - 1)"
             class="px-2 sm:px-3 py-1 text-sm rounded transition"
-            :class="
+            :class="[
               page === currentPage
                 ? 'bg-blue-600 text-white'
-                : 'hover:bg-gray-100'
-            "
+                : 'hover-bg'
+            ]"
+            :style="page !== currentPage ? { color: 'var(--dp-text-primary)' } : {}"
           >
             {{ page }}
           </button>
@@ -162,7 +178,8 @@ function formatDateRange(start: string, end: string) {
           <button
             @click="emit('changePage', currentPage)"
             :disabled="currentPage === pageInfo.totalPages"
-            class="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            class="p-2 rounded disabled:opacity-50 disabled:cursor-not-allowed transition hover-bg"
+            :style="{ color: 'var(--dp-text-primary)' }"
           >
             <ChevronRight class="w-5 h-5 sm:w-4 sm:h-4" />
           </button>

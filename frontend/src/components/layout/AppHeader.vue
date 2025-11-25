@@ -14,18 +14,24 @@ const handleLogout = async () => {
 </script>
 
 <template>
-  <header class="bg-white shadow-sm border-b border-gray-200">
+  <header
+    class="shadow-sm border-b header-bg"
+  >
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between items-center h-14">
-        <router-link to="/" class="text-xl font-bold text-gray-900">
+        <router-link to="/" class="text-xl font-bold header-title">
           Dutypark
         </router-link>
         <nav class="flex items-center gap-2 sm:gap-4">
           <template v-if="authStore.isLoggedIn">
-            <span class="text-xs sm:text-sm text-gray-600 max-w-[80px] sm:max-w-[120px] truncate">{{ authStore.user?.name }}</span>
+            <span
+              class="text-xs sm:text-sm max-w-[80px] sm:max-w-[120px] truncate header-username"
+            >
+              {{ authStore.user?.name }}
+            </span>
             <button
               @click="handleLogout"
-              class="text-xs sm:text-sm text-gray-500 hover:text-gray-700 px-2 sm:px-3 py-2 rounded-md hover:bg-gray-100 transition-colors min-h-[44px] flex items-center"
+              class="logout-btn text-xs sm:text-sm px-2 sm:px-3 py-2 rounded-md transition-colors min-h-[44px] flex items-center"
             >
               로그아웃
             </button>
@@ -43,3 +49,27 @@ const handleLogout = async () => {
     </div>
   </header>
 </template>
+
+<style scoped>
+.header-bg {
+  background-color: var(--dp-bg-card);
+  border-color: var(--dp-border-primary);
+}
+
+.header-title {
+  color: var(--dp-text-primary);
+}
+
+.header-username {
+  color: var(--dp-text-secondary);
+}
+
+.logout-btn {
+  color: var(--dp-text-muted);
+}
+
+.logout-btn:hover {
+  color: var(--dp-text-primary);
+  background-color: var(--dp-bg-hover);
+}
+</style>

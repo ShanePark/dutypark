@@ -115,12 +115,12 @@ function onUploadError(message: string) {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="handleClose"
     >
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-md max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4">
+      <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-md max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
         <!-- Header -->
-        <div class="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
-          <h2 class="text-base sm:text-lg font-bold">할 일 추가</h2>
+        <div class="flex items-center justify-between p-3 sm:p-4" :style="{ borderBottom: '1px solid var(--dp-border-primary)' }">
+          <h2 class="text-base sm:text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">할 일 추가</h2>
           <button @click="handleClose" class="p-2 hover:bg-gray-100 rounded-full transition">
-            <X class="w-6 h-6" />
+            <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
           </button>
         </div>
 
@@ -128,30 +128,30 @@ function onUploadError(message: string) {
         <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(90dvh-130px)] sm:max-h-[calc(90vh-130px)]">
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
                 제목 <span class="text-red-500">*</span>
               </label>
               <input
                 v-model="title"
                 type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
                 placeholder="할 일 제목을 입력하세요"
               />
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">내용</label>
+              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">내용</label>
               <textarea
                 v-model="content"
                 rows="4"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
                 placeholder="상세 내용을 입력하세요 (선택사항)"
               ></textarea>
             </div>
 
             <!-- Attachment Upload -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">첨부파일</label>
+              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">첨부파일</label>
               <FileUploader
                 v-if="isOpen"
                 ref="fileUploaderRef"
@@ -167,10 +167,10 @@ function onUploadError(message: string) {
         </div>
 
         <!-- Footer -->
-        <div class="p-3 sm:p-4 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+        <div class="p-3 sm:p-4 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
           <button
             @click="handleClose"
-            class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+            class="w-full sm:w-auto px-4 py-2 rounded-lg transition btn-outline"
           >
             취소
           </button>

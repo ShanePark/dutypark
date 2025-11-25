@@ -62,6 +62,16 @@ function downloadUrl(attachmentId: string): string {
 }
 </script>
 
+<style scoped>
+.hover-bg:hover {
+  background-color: var(--dp-bg-secondary);
+}
+
+.hover-border:hover {
+  background-color: var(--dp-bg-secondary);
+}
+</style>
+
 <template>
   <Teleport to="body">
     <div
@@ -69,15 +79,15 @@ function downloadUrl(attachmentId: string): string {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="emit('close')"
     >
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4">
+      <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
         <!-- Header -->
-        <div class="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
+        <div class="flex items-center justify-between p-3 sm:p-4 border-b" :style="{ borderColor: 'var(--dp-border-primary)' }">
           <div class="flex items-center gap-2 min-w-0 flex-1 mr-2">
-            <Lock v-if="schedule.visibility === 'PRIVATE'" class="w-4 h-4 text-gray-500 flex-shrink-0" />
-            <h2 class="text-base sm:text-lg font-bold truncate">{{ schedule.content }}</h2>
+            <Lock v-if="schedule.visibility === 'PRIVATE'" class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+            <h2 class="text-base sm:text-lg font-bold truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ schedule.content }}</h2>
           </div>
-          <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition flex-shrink-0">
-            <X class="w-6 h-6" />
+          <button @click="emit('close')" class="p-2 rounded-full transition flex-shrink-0 hover-bg">
+            <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
           </button>
         </div>
 
@@ -85,16 +95,17 @@ function downloadUrl(attachmentId: string): string {
         <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(90dvh-130px)] sm:max-h-[calc(90vh-130px)]">
           <!-- Description -->
           <div v-if="schedule.description" class="mb-6">
-            <h3 class="text-sm font-medium text-gray-700 mb-2">상세 내용</h3>
+            <h3 class="text-sm font-medium mb-2" :style="{ color: 'var(--dp-text-secondary)' }">상세 내용</h3>
             <div
-              class="p-4 bg-gray-50 rounded-lg text-gray-700"
+              class="p-4 rounded-lg"
+              :style="{ backgroundColor: 'var(--dp-bg-secondary)', color: 'var(--dp-text-secondary)' }"
               v-html="formattedDescription"
             ></div>
           </div>
 
           <!-- Attachments -->
           <div v-if="schedule.attachments?.length" class="space-y-3">
-            <h3 class="text-sm font-medium text-gray-700 flex items-center gap-2">
+            <h3 class="text-sm font-medium flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
               <Paperclip class="w-4 h-4" />
               첨부파일 ({{ schedule.attachments.length }})
             </h3>
@@ -102,10 +113,11 @@ function downloadUrl(attachmentId: string): string {
               <div
                 v-for="attachment in schedule.attachments"
                 :key="attachment.id"
-                class="relative border border-gray-200 rounded-lg overflow-hidden group"
+                class="relative border rounded-lg overflow-hidden group"
+                :style="{ borderColor: 'var(--dp-border-primary)' }"
               >
                 <!-- Thumbnail or Icon -->
-                <div class="aspect-square bg-gray-100 flex items-center justify-center">
+                <div class="aspect-square flex items-center justify-center" :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }">
                   <img
                     v-if="attachment.hasThumbnail && attachment.thumbnailUrl"
                     :src="attachment.thumbnailUrl"
@@ -114,7 +126,8 @@ function downloadUrl(attachmentId: string): string {
                   />
                   <span
                     v-else
-                    class="text-sm font-bold text-gray-400"
+                    class="text-sm font-bold"
+                    :style="{ color: 'var(--dp-text-muted)' }"
                   >{{ getAttachmentIcon(attachment) }}</span>
                 </div>
 
@@ -130,10 +143,10 @@ function downloadUrl(attachmentId: string): string {
 
                 <!-- File info -->
                 <div class="p-2">
-                  <p class="text-sm truncate" :title="attachment.originalFilename">
+                  <p class="text-sm truncate" :title="attachment.originalFilename" :style="{ color: 'var(--dp-text-primary)' }">
                     {{ attachment.originalFilename }}
                   </p>
-                  <p class="text-xs text-gray-500">{{ formatBytes(attachment.size) }}</p>
+                  <p class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">{{ formatBytes(attachment.size) }}</p>
                 </div>
               </div>
             </div>
@@ -142,17 +155,19 @@ function downloadUrl(attachmentId: string): string {
           <!-- Empty state -->
           <div
             v-if="!schedule.description && !schedule.attachments?.length"
-            class="text-center py-8 text-gray-400"
+            class="text-center py-8"
+            :style="{ color: 'var(--dp-text-muted)' }"
           >
             상세 내용이 없습니다.
           </div>
         </div>
 
         <!-- Footer -->
-        <div class="p-3 sm:p-4 border-t border-gray-200 flex justify-end">
+        <div class="p-3 sm:p-4 border-t flex justify-end" :style="{ borderColor: 'var(--dp-border-primary)' }">
           <button
             @click="emit('close')"
-            class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+            class="w-full sm:w-auto px-4 py-2 border rounded-lg transition hover-border"
+            :style="{ borderColor: 'var(--dp-border-secondary)', color: 'var(--dp-text-primary)' }"
           >
             닫기
           </button>

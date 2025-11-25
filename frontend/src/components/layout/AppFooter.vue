@@ -32,7 +32,13 @@ const isActive = (path: string) => {
 <template>
   <footer
     class="fixed bottom-0 left-0 right-0 border-t z-50"
-    style="background-color: #1f2937; border-color: #374151; padding-bottom: env(safe-area-inset-bottom); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);"
+    :style="{
+      backgroundColor: 'var(--dp-bg-footer)',
+      borderColor: 'var(--dp-border-secondary)',
+      paddingBottom: 'env(safe-area-inset-bottom)',
+      paddingLeft: 'env(safe-area-inset-left)',
+      paddingRight: 'env(safe-area-inset-right)'
+    }"
   >
     <nav class="max-w-lg mx-auto px-2 sm:px-4">
       <ul class="flex justify-around py-1 sm:py-2">
@@ -40,10 +46,7 @@ const isActive = (path: string) => {
           <router-link
             :to="item.path"
             class="flex flex-col items-center px-2 sm:px-3 py-2 sm:py-3 text-xs sm:text-sm rounded-xl transition-colors min-h-[56px] sm:min-h-[64px]"
-            :style="{
-              backgroundColor: isActive(item.path) ? '#4b5563' : 'transparent',
-              color: isActive(item.path) ? '#ffffff' : '#9ca3af'
-            }"
+            :class="isActive(item.path) ? 'footer-nav-active' : 'footer-nav-inactive'"
           >
             <svg
               v-if="item.icon === 'home'"

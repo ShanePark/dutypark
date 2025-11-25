@@ -208,13 +208,17 @@ function onUploadError(message: string) {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="handleClose"
     >
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-lg max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4">
+      <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-lg max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
         <!-- Header -->
-        <div class="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
+        <div class="flex items-center justify-between p-3 sm:p-4" :style="{ borderBottom: '1px solid var(--dp-border-primary)' }">
           <div class="flex items-center gap-2 min-w-0 flex-1">
             <button
               @click="emit('backToList')"
-              class="flex items-center gap-1 px-2 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition text-gray-600 hover:text-gray-800 flex-shrink-0"
+              class="flex items-center gap-1 px-2 py-1.5 rounded-lg transition flex-shrink-0"
+              :style="{
+                backgroundColor: 'var(--dp-bg-tertiary)',
+                color: 'var(--dp-text-secondary)'
+              }"
               title="목록으로 돌아가기"
             >
               <List class="w-4 h-4" />
@@ -222,7 +226,7 @@ function onUploadError(message: string) {
             </button>
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-2">
-                <h2 class="text-base sm:text-lg font-bold truncate">{{ todo.title }}</h2>
+                <h2 class="text-base sm:text-lg font-bold truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ todo.title }}</h2>
                 <span
                   :class="[
                     'px-2 py-0.5 text-xs rounded-full flex-shrink-0',
@@ -234,14 +238,14 @@ function onUploadError(message: string) {
                   {{ isActive ? '진행중' : '완료' }}
                 </span>
               </div>
-              <p class="text-xs text-gray-400">
+              <p class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">
                 {{ formatDate(todo.createdDate) }}
                 <span v-if="todo.completedDate"> · 완료 {{ formatDate(todo.completedDate) }}</span>
               </p>
             </div>
           </div>
-          <button @click="handleClose" class="p-2 hover:bg-gray-100 rounded-full transition flex-shrink-0">
-            <X class="w-6 h-6" />
+          <button @click="handleClose" class="p-2 rounded-full transition flex-shrink-0">
+            <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
           </button>
         </div>
 
@@ -251,11 +255,11 @@ function onUploadError(message: string) {
           <template v-if="!isEditMode">
             <div class="space-y-4">
               <div v-if="todo.content">
-                <p class="text-gray-700 whitespace-pre-wrap">{{ todo.content }}</p>
+                <p class="whitespace-pre-wrap" :style="{ color: 'var(--dp-text-primary)' }">{{ todo.content }}</p>
               </div>
 
               <!-- Attachments (View Mode) -->
-              <div v-if="isLoadingAttachments" class="text-sm text-gray-500">
+              <div v-if="isLoadingAttachments" class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
                 첨부파일 로딩 중...
               </div>
               <AttachmentGrid
@@ -270,28 +274,28 @@ function onUploadError(message: string) {
           <template v-else>
             <div class="space-y-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">
+                <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
                   제목 <span class="text-red-500">*</span>
                 </label>
                 <input
                   v-model="editTitle"
                   type="text"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
                 />
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">내용</label>
+                <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">내용</label>
                 <textarea
                   v-model="editContent"
                   rows="4"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
                 ></textarea>
               </div>
 
               <!-- Attachments (Edit Mode) -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">첨부파일</label>
+                <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">첨부파일</label>
                 <FileUploader
                   v-if="isEditMode"
                   ref="fileUploaderRef"
@@ -310,7 +314,7 @@ function onUploadError(message: string) {
         </div>
 
         <!-- Footer -->
-        <div class="p-3 sm:p-4 border-t border-gray-200">
+        <div class="p-3 sm:p-4" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
           <template v-if="!isEditMode">
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-between gap-2">
               <div class="flex gap-2 order-2 sm:order-1">
@@ -334,7 +338,7 @@ function onUploadError(message: string) {
               <div class="flex gap-2 order-1 sm:order-2">
                 <button
                   @click="enterEditMode"
-                  class="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                  class="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-3 py-2 rounded-lg transition btn-outline"
                 >
                   <Pencil class="w-4 h-4" />
                   수정
@@ -353,7 +357,7 @@ function onUploadError(message: string) {
             <div class="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
               <button
                 @click="cancelEdit"
-                class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                class="w-full sm:w-auto px-4 py-2 rounded-lg transition btn-outline"
               >
                 취소
               </button>

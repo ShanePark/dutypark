@@ -390,12 +390,12 @@ onMounted(() => {
 
     <!-- No Team State -->
     <template v-else-if="!hasTeam">
-      <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div class="rounded-lg shadow overflow-hidden" :style="{ backgroundColor: 'var(--dp-bg-card)' }">
         <div class="bg-gray-600 text-white font-bold text-xl text-center py-3">
           내 팀
         </div>
-        <div class="flex flex-col items-center justify-center p-12 text-gray-500">
-          <Building2 class="w-16 h-16 mb-4 text-gray-300" />
+        <div class="flex flex-col items-center justify-center p-12" :style="{ color: 'var(--dp-text-secondary)' }">
+          <Building2 class="w-16 h-16 mb-4" :style="{ color: 'var(--dp-text-muted)' }" />
           <p class="text-xl font-bold mb-2">어느 팀에도 속해있지 않습니다.</p>
           <p class="text-lg">팀 관리자에게 가입을 요청해주세요.</p>
         </div>
@@ -410,27 +410,33 @@ onMounted(() => {
       </div>
 
       <!-- Month Controls -->
-      <div class="flex flex-col sm:flex-row items-center justify-between gap-2 bg-white p-2 border-x border-gray-200">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-2 p-2 border-x" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }">
         <div class="hidden sm:block w-20"></div>
 
         <div class="flex items-center gap-2">
           <button
             @click="prevMonth"
-            class="p-2 hover:bg-gray-100 rounded-full transition"
+            class="p-2 rounded-full transition"
+            @mouseenter="($event.currentTarget as HTMLElement).style.backgroundColor = 'var(--dp-bg-hover)'"
+            @mouseleave="($event.currentTarget as HTMLElement).style.backgroundColor = ''"
           >
             <ChevronLeft class="w-5 h-5" />
           </button>
 
           <button
             @click="isYearMonthPickerOpen = true"
-            class="px-3 py-1 text-lg font-bold hover:bg-gray-100 rounded transition min-w-[120px]"
+            class="px-3 py-1 text-lg font-bold rounded transition min-w-[120px]"
+            @mouseenter="($event.currentTarget as HTMLElement).style.backgroundColor = 'var(--dp-bg-hover)'"
+            @mouseleave="($event.currentTarget as HTMLElement).style.backgroundColor = ''"
           >
             {{ currentYear }}-{{ String(currentMonth).padStart(2, '0') }}
           </button>
 
           <button
             @click="nextMonth"
-            class="p-2 hover:bg-gray-100 rounded-full transition"
+            class="p-2 rounded-full transition"
+            @mouseenter="($event.currentTarget as HTMLElement).style.backgroundColor = 'var(--dp-bg-hover)'"
+            @mouseleave="($event.currentTarget as HTMLElement).style.backgroundColor = ''"
           >
             <ChevronRight class="w-5 h-5" />
           </button>
@@ -439,7 +445,10 @@ onMounted(() => {
         <button
           v-if="isTeamManager"
           @click="goToTeamManage"
-          class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition flex items-center gap-1 w-full sm:w-auto justify-center"
+          class="px-3 py-2 border rounded-lg transition flex items-center gap-1 w-full sm:w-auto justify-center"
+          :style="{ borderColor: 'var(--dp-border-secondary)' }"
+          @mouseenter="($event.currentTarget as HTMLElement).style.backgroundColor = 'var(--dp-bg-hover)'"
+          @mouseleave="($event.currentTarget as HTMLElement).style.backgroundColor = ''"
         >
           <Settings class="w-4 h-4" />
           팀 관리
@@ -448,9 +457,9 @@ onMounted(() => {
       </div>
 
       <!-- Calendar -->
-      <div class="bg-white border border-gray-200">
+      <div class="border" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }">
         <!-- Week Days Header -->
-        <div class="grid grid-cols-7 bg-gray-100 border-b-2 border-gray-800">
+        <div class="grid grid-cols-7 border-b-2 border-gray-800" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
           <div
             v-for="(day, idx) in weekDays"
             :key="day"
@@ -470,12 +479,17 @@ onMounted(() => {
             v-for="(day, idx) in teamDays"
             :key="idx"
             @click="selectDay(day, idx)"
-            class="min-h-[70px] sm:min-h-[90px] border border-gray-300 p-1 cursor-pointer hover:bg-gray-50 transition relative"
+            class="min-h-[70px] sm:min-h-[90px] border p-1 cursor-pointer transition relative"
             :class="{
               'opacity-60': !day.isCurrentMonth,
               'ring-2 ring-inset ring-blue-500': isSelectedDay(day),
             }"
-            :style="{ backgroundColor: day.isCurrentMonth && getDutyColor(day) ? getDutyColor(day) ?? '' : '' }"
+            :style="{
+              backgroundColor: day.isCurrentMonth && getDutyColor(day) ? getDutyColor(day) ?? '' : '',
+              borderColor: 'var(--dp-border-secondary)'
+            }"
+            @mouseenter="!getDutyColor(day) ? ($event.currentTarget as HTMLElement).style.backgroundColor = 'var(--dp-bg-hover)' : null"
+            @mouseleave="!getDutyColor(day) ? ($event.currentTarget as HTMLElement).style.backgroundColor = '' : null"
           >
             <!-- Today indicator -->
             <div
@@ -503,16 +517,18 @@ onMounted(() => {
               <div
                 v-for="schedule in teamSchedules[idx].slice(0, 2)"
                 :key="schedule.id"
-                class="text-xs text-gray-600 truncate px-0.5"
+                class="text-xs truncate px-0.5"
+                :style="{ color: 'var(--dp-text-secondary)' }"
               >
                 {{ schedule.content }}
-                <span v-if="schedule.totalDays && schedule.totalDays > 1" class="text-gray-400">
+                <span v-if="schedule.totalDays && schedule.totalDays > 1" :style="{ color: 'var(--dp-text-muted)' }">
                   ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})
                 </span>
               </div>
               <div
                 v-if="teamSchedules[idx].length > 2"
-                class="text-xs text-gray-400 px-0.5"
+                class="text-xs px-0.5"
+                :style="{ color: 'var(--dp-text-muted)' }"
               >
                 +{{ teamSchedules[idx].length - 2 }} more
               </div>
@@ -522,7 +538,7 @@ onMounted(() => {
       </div>
 
       <!-- Selected Day Schedule -->
-      <div class="bg-white border-x border-b border-gray-200 p-3">
+      <div class="border-x border-b p-3" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
           <h3 class="text-lg font-bold">
             {{ selectedDay.year }}년 {{ selectedDay.month }}월 {{ selectedDay.day }}일
@@ -545,17 +561,18 @@ onMounted(() => {
           <div
             v-for="schedule in teamSchedules[selectedDay.index]"
             :key="schedule.id"
-            class="bg-gray-50 rounded-lg p-3 border border-gray-200"
+            class="rounded-lg p-3 border"
+            :style="{ backgroundColor: 'var(--dp-bg-secondary)', borderColor: 'var(--dp-border-primary)' }"
           >
             <div class="flex items-start justify-between">
               <div class="flex-1">
-                <div class="font-bold text-gray-800 mb-1">
+                <div class="font-bold mb-1" :style="{ color: 'var(--dp-text-primary)' }">
                   {{ schedule.content }}
-                  <span class="text-sm font-normal text-gray-500">
+                  <span class="text-sm font-normal" :style="{ color: 'var(--dp-text-secondary)' }">
                     (by: <strong>{{ schedule.createMember }}</strong>)
                   </span>
                 </div>
-                <div v-if="schedule.description" class="text-sm text-gray-600">
+                <div v-if="schedule.description" class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
                   {{ schedule.description }}
                 </div>
               </div>
@@ -578,7 +595,7 @@ onMounted(() => {
             </div>
           </div>
         </div>
-        <div v-else class="text-center text-gray-400 py-4">
+        <div v-else class="text-center py-4" :style="{ color: 'var(--dp-text-muted)' }">
           이 날의 팀 일정이 없습니다.
         </div>
       </div>
@@ -591,8 +608,12 @@ onMounted(() => {
         <template v-for="group in shift" :key="group.dutyType.id">
           <div
             v-if="group.members.length > 0"
-            class="bg-white rounded-lg border overflow-hidden"
-            :class="{ 'border-2 border-gray-800': group.isMyGroup, 'border-gray-200': !group.isMyGroup }"
+            class="rounded-lg border overflow-hidden"
+            :class="{ 'border-2 border-gray-800': group.isMyGroup }"
+            :style="{
+              backgroundColor: 'var(--dp-bg-card)',
+              borderColor: group.isMyGroup ? '' : 'var(--dp-border-primary)'
+            }"
           >
             <!-- Duty Type Header -->
             <div
@@ -611,11 +632,14 @@ onMounted(() => {
                 v-for="member in group.members"
                 :key="member.id"
                 @click="goToMemberDuty(member.id)"
-                class="flex flex-col items-center p-2 border rounded-lg cursor-pointer hover:bg-gray-50 transition"
-                :class="{ 'border-2 border-gray-800': member.id === loginMemberId, 'border-gray-200': member.id !== loginMemberId }"
+                class="flex flex-col items-center p-2 border rounded-lg cursor-pointer transition"
+                :class="{ 'border-2 border-gray-800': member.id === loginMemberId }"
+                :style="{ borderColor: member.id !== loginMemberId ? 'var(--dp-border-primary)' : '' }"
+                @mouseenter="($event.currentTarget as HTMLElement).style.backgroundColor = 'var(--dp-bg-hover)'"
+                @mouseleave="($event.currentTarget as HTMLElement).style.backgroundColor = ''"
               >
-                <User class="w-5 h-5 text-gray-500 mb-1" />
-                <span class="text-sm font-medium text-gray-700 truncate w-full text-center">
+                <User class="w-5 h-5 mb-1" :style="{ color: 'var(--dp-text-secondary)' }" />
+                <span class="text-sm font-medium truncate w-full text-center" :style="{ color: 'var(--dp-text-primary)' }">
                   {{ member.name }}
                 </span>
               </div>
@@ -631,12 +655,14 @@ onMounted(() => {
       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
       @click.self="closeScheduleModal"
     >
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-lg">
-        <div class="flex items-center justify-between p-4 border-b">
+      <div class="rounded-lg shadow-xl w-full max-w-lg" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
+        <div class="flex items-center justify-between p-4 border-b" :style="{ borderColor: 'var(--dp-border-primary)' }">
           <h3 class="text-lg font-bold">팀 일정 저장</h3>
           <button
             @click="closeScheduleModal"
-            class="p-1 hover:bg-gray-100 rounded transition"
+            class="p-1 rounded transition"
+            @mouseenter="($event.currentTarget as HTMLElement).style.backgroundColor = 'var(--dp-bg-hover)'"
+            @mouseleave="($event.currentTarget as HTMLElement).style.backgroundColor = ''"
           >
             <X class="w-5 h-5" />
           </button>
@@ -644,57 +670,77 @@ onMounted(() => {
 
         <div class="p-4 space-y-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-primary)' }">
               제목(필수)
             </label>
             <input
               v-model="scheduleForm.content"
               type="text"
               maxlength="50"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              :style="{
+                backgroundColor: 'var(--dp-bg-input)',
+                borderColor: 'var(--dp-border-input)',
+                color: 'var(--dp-text-primary)'
+              }"
               placeholder="일정 제목을 입력하세요"
             />
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-primary)' }">
               상세(옵션)
             </label>
             <textarea
               v-model="scheduleForm.description"
               rows="4"
               maxlength="4096"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              :style="{
+                backgroundColor: 'var(--dp-bg-input)',
+                borderColor: 'var(--dp-border-input)',
+                color: 'var(--dp-text-primary)'
+              }"
               placeholder="상세 내용을 입력하세요"
             ></textarea>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-primary)' }">
                 시작일
               </label>
               <input
                 v-model="scheduleForm.startDate"
                 type="date"
                 readonly
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100"
+                class="w-full px-3 py-2 border rounded-lg"
+                :style="{
+                  backgroundColor: 'var(--dp-bg-tertiary)',
+                  borderColor: 'var(--dp-border-input)',
+                  color: 'var(--dp-text-primary)'
+                }"
               />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-primary)' }">
                 종료일
               </label>
               <input
                 v-model="scheduleForm.endDate"
                 type="date"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                :style="{
+                  backgroundColor: 'var(--dp-bg-input)',
+                  borderColor: 'var(--dp-border-input)',
+                  color: 'var(--dp-text-primary)'
+                }"
               />
             </div>
           </div>
         </div>
 
-        <div class="flex justify-end gap-2 p-4 border-t">
+        <div class="flex justify-end gap-2 p-4 border-t" :style="{ borderColor: 'var(--dp-border-primary)' }">
           <button
             @click="saveSchedule"
             :disabled="saving || !scheduleForm.content.trim()"
@@ -705,7 +751,13 @@ onMounted(() => {
           </button>
           <button
             @click="closeScheduleModal"
-            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition"
+            class="px-4 py-2 rounded-lg font-medium transition"
+            :style="{
+              backgroundColor: 'var(--dp-bg-tertiary)',
+              color: 'var(--dp-text-primary)'
+            }"
+            @mouseenter="($event.currentTarget as HTMLElement).style.opacity = '0.8'"
+            @mouseleave="($event.currentTarget as HTMLElement).style.opacity = '1'"
           >
             닫기
           </button>

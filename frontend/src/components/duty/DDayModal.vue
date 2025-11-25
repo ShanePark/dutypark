@@ -82,37 +82,37 @@ const isEditMode = props.dday !== null && props.dday !== undefined
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="handleClose"
     >
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-md max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4">
+      <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-md max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
         <!-- Header -->
-        <div class="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
-          <h2 class="text-base sm:text-lg font-bold">{{ dday ? '디데이 수정' : '디데이 추가' }}</h2>
-          <button @click="handleClose" class="p-2 hover:bg-gray-100 rounded-full transition">
-            <X class="w-6 h-6" />
+        <div class="flex items-center justify-between p-3 sm:p-4" :style="{ borderBottom: '1px solid var(--dp-border-primary)' }">
+          <h2 class="text-base sm:text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">{{ dday ? '디데이 수정' : '디데이 추가' }}</h2>
+          <button @click="handleClose" class="p-2 rounded-full transition">
+            <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
           </button>
         </div>
 
         <!-- Content -->
         <div class="p-3 sm:p-4 space-y-4 overflow-y-auto max-h-[calc(90dvh-130px)] sm:max-h-[calc(90vh-130px)]">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
               제목 <span class="text-red-500">*</span>
             </label>
             <input
               v-model="title"
               type="text"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
               placeholder="디데이 제목을 입력하세요"
             />
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
               날짜 <span class="text-red-500">*</span>
             </label>
             <input
               v-model="date"
               type="date"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
             />
           </div>
 
@@ -120,21 +120,33 @@ const isEditMode = props.dday !== null && props.dday !== undefined
           <div class="flex flex-wrap gap-2">
             <button
               @click="addDays(-30)"
-              class="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition"
+              class="flex items-center gap-1 px-2 py-1 text-xs rounded transition"
+              :style="{
+                backgroundColor: 'var(--dp-bg-tertiary)',
+                color: 'var(--dp-text-primary)'
+              }"
             >
               <Minus class="w-3 h-3" />
               30일
             </button>
             <button
               @click="addDays(-7)"
-              class="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition"
+              class="flex items-center gap-1 px-2 py-1 text-xs rounded transition"
+              :style="{
+                backgroundColor: 'var(--dp-bg-tertiary)',
+                color: 'var(--dp-text-primary)'
+              }"
             >
               <Minus class="w-3 h-3" />
               7일
             </button>
             <button
               @click="addDays(-1)"
-              class="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition"
+              class="flex items-center gap-1 px-2 py-1 text-xs rounded transition"
+              :style="{
+                backgroundColor: 'var(--dp-bg-tertiary)',
+                color: 'var(--dp-text-primary)'
+              }"
             >
               <Minus class="w-3 h-3" />
               1일
@@ -148,21 +160,33 @@ const isEditMode = props.dday !== null && props.dday !== undefined
             </button>
             <button
               @click="addDays(1)"
-              class="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition"
+              class="flex items-center gap-1 px-2 py-1 text-xs rounded transition"
+              :style="{
+                backgroundColor: 'var(--dp-bg-tertiary)',
+                color: 'var(--dp-text-primary)'
+              }"
             >
               <Plus class="w-3 h-3" />
               1일
             </button>
             <button
               @click="addDays(7)"
-              class="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition"
+              class="flex items-center gap-1 px-2 py-1 text-xs rounded transition"
+              :style="{
+                backgroundColor: 'var(--dp-bg-tertiary)',
+                color: 'var(--dp-text-primary)'
+              }"
             >
               <Plus class="w-3 h-3" />
               7일
             </button>
             <button
               @click="addDays(30)"
-              class="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition"
+              class="flex items-center gap-1 px-2 py-1 text-xs rounded transition"
+              :style="{
+                backgroundColor: 'var(--dp-bg-tertiary)',
+                color: 'var(--dp-text-primary)'
+              }"
             >
               <Plus class="w-3 h-3" />
               30일
@@ -170,10 +194,10 @@ const isEditMode = props.dday !== null && props.dday !== undefined
           </div>
 
           <!-- Privacy Toggle -->
-          <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+          <div class="flex items-center justify-between p-3 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
             <div class="flex items-center gap-2">
-              <component :is="isPrivate ? Lock : Unlock" class="w-5 h-5 text-gray-500" />
-              <span class="text-sm text-gray-700">비공개</span>
+              <component :is="isPrivate ? Lock : Unlock" class="w-5 h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
+              <span class="text-sm" :style="{ color: 'var(--dp-text-primary)' }">비공개</span>
             </div>
             <button
               @click="isPrivate = !isPrivate"
@@ -189,10 +213,10 @@ const isEditMode = props.dday !== null && props.dday !== undefined
         </div>
 
         <!-- Footer -->
-        <div class="p-3 sm:p-4 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+        <div class="p-3 sm:p-4 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
           <button
             @click="handleClose"
-            class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+            class="w-full sm:w-auto px-4 py-2 rounded-lg transition btn-outline"
           >
             취소
           </button>

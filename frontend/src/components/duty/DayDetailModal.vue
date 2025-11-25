@@ -438,17 +438,17 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
       class="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/50 pt-2 sm:pt-0 pb-16 sm:pb-0"
       @click.self="emit('close')"
     >
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[calc(100dvh-5rem)] sm:max-h-[90vh] mx-2 sm:mx-4 flex flex-col">
+      <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[calc(100dvh-5rem)] sm:max-h-[90vh] mx-2 sm:mx-4 flex flex-col" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
         <!-- Header -->
-        <div class="p-3 sm:p-4 border-b border-gray-200 flex-shrink-0">
+        <div class="p-3 sm:p-4 flex-shrink-0" :style="{ borderBottom: '1px solid var(--dp-border-primary)' }">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <span v-if="isCreateMode" class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">일정 추가</span>
               <span v-else-if="isEditMode" class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">일정 수정</span>
-              <h2 class="text-base sm:text-lg font-bold">{{ formattedDate }}</h2>
+              <h2 class="text-base sm:text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">{{ formattedDate }}</h2>
             </div>
             <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition flex-shrink-0">
-              <X class="w-6 h-6" />
+              <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
             </button>
           </div>
           <!-- Duty Type Selection (my calendar only, hidden in add/edit mode) -->
@@ -457,13 +457,14 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
               v-for="dutyType in dutyTypes"
               :key="dutyType.id ?? 'off'"
               @click="handleDutyTypeChange(dutyType.id, dutyType.name)"
-              class="px-2.5 py-1 rounded-md border text-xs font-medium transition flex items-center gap-1.5"
+              class="px-2.5 py-1 rounded-md text-xs font-medium transition flex items-center gap-1.5"
               :class="{
                 'border-blue-500 ring-1 ring-blue-200': selectedDutyType === dutyType.name,
-                'border-gray-200 hover:border-gray-400': selectedDutyType !== dutyType.name,
               }"
               :style="{
-                backgroundColor: selectedDutyType === dutyType.name && dutyType.color ? dutyType.color + '30' : undefined,
+                border: selectedDutyType === dutyType.name ? undefined : '1px solid var(--dp-border-primary)',
+                color: 'var(--dp-text-primary)',
+                backgroundColor: selectedDutyType === dutyType.name && dutyType.color ? dutyType.color + '30' : undefined
               }"
             >
               <span
@@ -489,7 +490,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
 
           <!-- Schedules List (hidden during create/edit mode) -->
           <div v-if="!isCreateMode && !isEditMode" class="space-y-3">
-            <div v-if="schedules.length === 0" class="text-center py-6 text-gray-400">
+            <div v-if="schedules.length === 0" class="text-center py-6" :style="{ color: 'var(--dp-text-muted)' }">
               등록된 일정이 없습니다.
             </div>
 
@@ -499,14 +500,19 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                 :key="schedule.id"
                 :data-schedule-id="schedule.id"
                 :class="[
-                  'schedule-item border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition',
+                  'schedule-item rounded-lg p-3 transition',
                   { 'schedule-tagged': schedule.isTagged }
                 ]"
+                :style="{
+                  border: '1px solid var(--dp-border-primary)',
+                  backgroundColor: 'var(--dp-bg-card)'
+                }"
               >
                 <div class="flex items-start justify-between">
                   <div
                     v-if="hasDraggableSchedules && canEdit && !schedule.isTagged"
-                    class="schedule-drag-handle flex items-center pr-2 cursor-grab text-gray-400 hover:text-gray-600"
+                    class="schedule-drag-handle flex items-center pr-2 cursor-grab"
+                    :style="{ color: 'var(--dp-text-muted)' }"
                     title="드래그하여 순서 변경"
                   >
                     <GripVertical class="w-5 h-5" />
@@ -515,22 +521,25 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                     <div class="flex items-center gap-2 flex-wrap">
                     <Lock
                       v-if="schedule.visibility === 'PRIVATE'"
-                      class="w-4 h-4 text-gray-400"
+                      class="w-4 h-4"
+                      :style="{ color: 'var(--dp-text-muted)' }"
                       :title="getVisibilityLabel(schedule.visibility)"
                     />
-                    <span class="font-medium">{{ schedule.content }}</span>
-                    <span v-if="formatScheduleTime(schedule)" class="text-sm text-gray-500">
+                    <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ schedule.content }}</span>
+                    <span v-if="formatScheduleTime(schedule)" class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
                       {{ formatScheduleTime(schedule) }}
                     </span>
                     <component
                       v-if="schedule.visibility !== 'PRIVATE'"
                       :is="getVisibilityIcon(schedule.visibility)"
-                      class="w-4 h-4 text-gray-400"
+                      class="w-4 h-4"
+                      :style="{ color: 'var(--dp-text-muted)' }"
                       :title="getVisibilityLabel(schedule.visibility)"
                     />
                     <span
                       v-if="schedule.attachments?.length"
-                      class="flex items-center gap-1 text-gray-400 text-sm"
+                      class="flex items-center gap-1 text-sm"
+                      :style="{ color: 'var(--dp-text-muted)' }"
                     >
                       <Paperclip class="w-3 h-3" />
                       {{ schedule.attachments.length }}
@@ -563,8 +572,12 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                       <button
                         v-if="friends.length > 0"
                         @click.stop="openTagPanel(schedule.id)"
-                        class="inline-flex items-center gap-1 px-2 py-0.5 border border-dashed border-gray-300 text-gray-500 text-xs rounded-full hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition"
+                        class="inline-flex items-center gap-1 px-2 py-0.5 border border-dashed text-xs rounded-full hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition"
                         :class="{ 'border-blue-400 text-blue-500 bg-blue-50': taggingScheduleId === schedule.id }"
+                        :style="{
+                          borderColor: taggingScheduleId === schedule.id ? undefined : 'var(--dp-border-secondary)',
+                          color: taggingScheduleId === schedule.id ? undefined : 'var(--dp-text-secondary)'
+                        }"
                         title="친구 태그"
                       >
                         <UserPlus class="w-3 h-3" />
@@ -591,7 +604,11 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                           v-for="friend in getUntaggedFriends(schedule)"
                           :key="friend.id"
                           @click.stop="emit('addTag', schedule.id, friend.id)"
-                          class="inline-flex items-center gap-1 px-2 py-1 bg-white border border-blue-200 text-gray-700 text-xs rounded-full hover:border-blue-400 hover:bg-blue-100 transition"
+                          class="inline-flex items-center gap-1 px-2 py-1 border border-blue-200 text-xs rounded-full hover:border-blue-400 hover:bg-blue-100 transition"
+                          :style="{
+                            backgroundColor: 'var(--dp-bg-primary)',
+                            color: 'var(--dp-text-primary)'
+                          }"
                         >
                           <User class="w-3 h-3" />
                           {{ friend.name }}
@@ -625,12 +642,12 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                   </div>
 
                   <!-- Description -->
-                  <div v-if="schedule.description" class="mt-2 pt-2 border-t border-gray-100">
-                    <div class="text-sm text-gray-600 whitespace-pre-wrap">{{ schedule.description }}</div>
+                  <div v-if="schedule.description" class="mt-2 pt-2" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
+                    <div class="text-sm whitespace-pre-wrap" :style="{ color: 'var(--dp-text-secondary)' }">{{ schedule.description }}</div>
                   </div>
 
                   <!-- Attachments -->
-                  <div v-if="schedule.attachments?.length" class="mt-2 pt-2 border-t border-gray-100">
+                  <div v-if="schedule.attachments?.length" class="mt-2 pt-2" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
                     <AttachmentGrid
                       :attachments="toNormalizedAttachments(schedule.attachments)"
                       :columns="4"
@@ -669,49 +686,49 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
           <div v-if="isCreateMode || isEditMode">
             <div class="space-y-3">
               <div>
-                <label class="block text-sm text-gray-600 mb-1">내용</label>
+                <label class="block text-sm mb-1" :style="{ color: 'var(--dp-text-secondary)' }">내용</label>
                 <input
                   v-model="newSchedule.content"
                   type="text"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
                   placeholder="일정 내용을 입력하세요"
                 />
               </div>
 
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-sm text-gray-600 mb-1">시작 시간</label>
+                  <label class="block text-sm mb-1" :style="{ color: 'var(--dp-text-secondary)' }">시작 시간</label>
                   <input
                     v-model="newSchedule.startTime"
                     type="time"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
                   />
                 </div>
                 <div>
-                  <label class="block text-sm text-gray-600 mb-1">종료 일시</label>
+                  <label class="block text-sm mb-1" :style="{ color: 'var(--dp-text-secondary)' }">종료 일시</label>
                   <input
                     v-model="newSchedule.endDateTime"
                     type="datetime-local"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
                   />
                 </div>
               </div>
 
               <div>
-                <label class="block text-sm text-gray-600 mb-1">설명</label>
+                <label class="block text-sm mb-1" :style="{ color: 'var(--dp-text-secondary)' }">설명</label>
                 <textarea
                   v-model="newSchedule.description"
                   rows="3"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
                   placeholder="설명 (선택사항)"
                 ></textarea>
               </div>
 
               <div>
-                <label class="block text-sm text-gray-600 mb-1">공개 범위</label>
+                <label class="block text-sm mb-1" :style="{ color: 'var(--dp-text-secondary)' }">공개 범위</label>
                 <select
                   v-model="newSchedule.visibility"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
                 >
                   <option value="PUBLIC">전체공개</option>
                   <option value="FRIENDS">친구공개</option>
@@ -722,7 +739,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
 
               <!-- Attachment Upload Area -->
               <div>
-                <label class="block text-sm text-gray-600 mb-1">첨부파일</label>
+                <label class="block text-sm mb-1" :style="{ color: 'var(--dp-text-secondary)' }">첨부파일</label>
                 <FileUploader
                   ref="fileUploaderRef"
                   context-type="SCHEDULE"
@@ -736,7 +753,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
               <div class="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
                 <button
                   @click="cancelEdit"
-                  class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                  class="w-full sm:w-auto px-4 py-2 rounded-lg transition btn-outline"
                 >
                   취소
                 </button>
@@ -753,7 +770,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
         </div>
 
         <!-- Footer -->
-        <div class="p-3 sm:p-4 border-t border-gray-200 flex justify-end flex-shrink-0">
+        <div class="p-3 sm:p-4 flex justify-end flex-shrink-0" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
           <button
             v-if="!isCreateMode && !isEditMode && canEdit"
             @click="startCreateMode"

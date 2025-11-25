@@ -52,20 +52,20 @@ function handleKakaoLogin() {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-50 px-4 pb-safe pt-safe">
+  <div class="min-h-screen flex items-center justify-center px-4 pb-safe pt-safe" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
     <div class="w-full max-w-md">
       <!-- Logo -->
       <div class="text-center mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">Dutypark</h1>
-        <p class="text-gray-500 mt-2">로그인하여 시작하세요</p>
+        <h1 class="text-3xl font-bold" :style="{ color: 'var(--dp-text-primary)' }">Dutypark</h1>
+        <p class="mt-2" :style="{ color: 'var(--dp-text-muted)' }">로그인하여 시작하세요</p>
       </div>
 
       <!-- Login Card -->
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+      <div class="rounded-2xl shadow-sm p-8" :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }">
         <form @submit.prevent="handleLogin" class="space-y-5">
           <!-- Email Field -->
           <div>
-            <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+            <label for="email" class="block text-sm font-medium mb-2" :style="{ color: 'var(--dp-text-secondary)' }">
               이메일
             </label>
             <input
@@ -73,7 +73,12 @@ function handleKakaoLogin() {
               v-model="email"
               type="text"
               autocomplete="email"
-              class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent transition bg-gray-50 focus:bg-white"
+              class="w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent transition"
+              :style="{
+                border: '1px solid var(--dp-border-input)',
+                backgroundColor: 'var(--dp-bg-input)',
+                color: 'var(--dp-text-primary)'
+              }"
               placeholder="이메일 주소"
             />
             <div class="flex items-center mt-3">
@@ -81,9 +86,10 @@ function handleKakaoLogin() {
                 id="rememberMe"
                 v-model="rememberMe"
                 type="checkbox"
-                class="h-4 w-4 text-gray-900 focus:ring-gray-500 border-gray-300 rounded cursor-pointer"
+                class="h-4 w-4 text-gray-900 focus:ring-gray-500 rounded cursor-pointer"
+                :style="{ borderColor: 'var(--dp-border-input)' }"
               />
-              <label for="rememberMe" class="ml-2 text-sm text-gray-600 cursor-pointer">
+              <label for="rememberMe" class="ml-2 text-sm cursor-pointer" :style="{ color: 'var(--dp-text-secondary)' }">
                 아이디 저장
               </label>
             </div>
@@ -91,7 +97,7 @@ function handleKakaoLogin() {
 
           <!-- Password Field -->
           <div>
-            <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+            <label for="password" class="block text-sm font-medium mb-2" :style="{ color: 'var(--dp-text-secondary)' }">
               비밀번호
             </label>
             <input
@@ -101,7 +107,12 @@ function handleKakaoLogin() {
               required
               maxlength="16"
               autocomplete="current-password"
-              class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent transition bg-gray-50 focus:bg-white"
+              class="w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent transition"
+              :style="{
+                border: '1px solid var(--dp-border-input)',
+                backgroundColor: 'var(--dp-bg-input)',
+                color: 'var(--dp-text-primary)'
+              }"
               placeholder="비밀번호"
             />
           </div>
@@ -123,10 +134,10 @@ function handleKakaoLogin() {
           <!-- Divider -->
           <div class="relative my-6">
             <div class="absolute inset-0 flex items-center">
-              <div class="w-full border-t border-gray-200"></div>
+              <div class="w-full border-t" :style="{ borderColor: 'var(--dp-border-primary)' }"></div>
             </div>
             <div class="relative flex justify-center text-sm">
-              <span class="px-4 bg-white text-gray-400">또는</span>
+              <span class="px-4" :style="{ backgroundColor: 'var(--dp-bg-card)', color: 'var(--dp-text-muted)' }">또는</span>
             </div>
           </div>
 
@@ -145,7 +156,7 @@ function handleKakaoLogin() {
 
       <!-- Back to Home -->
       <div class="text-center mt-6">
-        <router-link to="/" class="text-sm text-gray-500 hover:text-gray-700 transition">
+        <router-link to="/" class="text-sm transition" :style="{ color: 'var(--dp-text-muted)' }">
           홈으로 돌아가기
         </router-link>
       </div>
