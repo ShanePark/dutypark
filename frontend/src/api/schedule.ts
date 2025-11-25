@@ -130,6 +130,13 @@ export const scheduleApi = {
   },
 
   /**
+   * Reorder schedule positions (for drag and drop)
+   */
+  reorderSchedulePositions: async (scheduleIds: string[]): Promise<void> => {
+    await apiClient.patch('/schedules/positions', scheduleIds)
+  },
+
+  /**
    * Tag a friend to a schedule
    */
   tagFriend: async (scheduleId: string, friendId: number): Promise<void> => {

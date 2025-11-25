@@ -15,6 +15,7 @@ import {
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { teamApi } from '@/api/team'
+import { dutyApi } from '@/api/duty'
 import { useSwal } from '@/composables/useSwal'
 import YearMonthPicker from '@/components/common/YearMonthPicker.vue'
 import type {
@@ -22,6 +23,7 @@ import type {
   TeamScheduleDto,
   DutyByShift,
   SimpleMemberDto,
+  DutyCalendarDay,
 } from '@/types'
 
 const router = useRouter()
@@ -77,8 +79,8 @@ const teamSchedules = ref<TeamScheduleDto[][]>([])
 // Shift data from API
 const shift = ref<(DutyByShift & { isMyGroup: boolean })[]>([])
 
-// My duty data - indexed by calendar position (fetched from API via team summary)
-const myDutyDays = ref<Set<string>>(new Set())
+// My duty data - fetched from duty API (same as DutyView)
+const myDuties = ref<DutyCalendarDay[]>([])
 
 // Schedule Modal
 const showScheduleModal = ref(false)
@@ -156,13 +158,11 @@ async function fetchTeamSummary() {
       team.value = data.team
       isTeamManager.value = data.isTeamManager
 
-      // Build duty days set
-      myDutyDays.value = new Set(
-        data.teamDays.map(d => `${d.year}-${d.month}-${d.day}`)
-      )
-
-      // Fetch schedules for the team
-      await fetchTeamSchedules()
+      // Fetch my duties and team schedules in parallel
+      await Promise.all([
+        fetchMyDuties(),
+        fetchTeamSchedules(),
+      ])
     } else {
       hasTeam.value = false
       team.value = null
@@ -219,19 +219,29 @@ async function fetchShift() {
   }
 }
 
+// Fetch my duty data
+async function fetchMyDuties() {
+  if (!loginMemberId.value) return
+
+  try {
+    myDuties.value = await dutyApi.getDuties(
+      loginMemberId.value,
+      currentYear.value,
+      currentMonth.value
+    )
+  } catch (error) {
+    console.error('Failed to fetch my duties:', error)
+    myDuties.value = []
+  }
+}
+
 // Get duty color for a day
 function getDutyColor(day: { year: number; month: number; day: number }): string | null {
-  if (!team.value) return null
-
-  // Find duty type for this member on this day
-  // For now, use a default color if the day is in teamDays
-  const key = `${day.year}-${day.month}-${day.day}`
-  if (myDutyDays.value.has(key)) {
-    // Return default duty color from team
-    const defaultDuty = team.value.dutyTypes.find(dt => dt.position === -1)
-    return defaultDuty?.color ?? '#e8e8e8'
-  }
-  return null
+  // Find duty from fetched data
+  const duty = myDuties.value.find(
+    d => d.year === day.year && d.month === day.month && d.day === day.day
+  )
+  return duty?.dutyColor ?? null
 }
 
 // Find selected day index

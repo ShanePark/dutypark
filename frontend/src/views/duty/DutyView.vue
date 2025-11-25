@@ -1107,12 +1107,12 @@ async function handleDeleteSchedule(scheduleId: string) {
   }
 }
 
-async function handleSwapSchedule(id1: string, id2: string) {
+async function handleReorderSchedules(scheduleIds: string[]) {
   try {
-    await scheduleApi.swapSchedulePosition(id1, id2)
+    await scheduleApi.reorderSchedulePositions(scheduleIds)
     await loadSchedules()
   } catch (error) {
-    console.error('Failed to swap schedules:', error)
+    console.error('Failed to reorder schedules:', error)
     showError('일정 순서 변경에 실패했습니다.')
   }
 }
@@ -1479,7 +1479,7 @@ async function showExcelUploadModal() {
             'opacity-50': !day.isCurrentMonth,
             'ring-2 ring-red-500 ring-inset': day.isToday || (searchDay && searchDay.year === day.year && searchDay.month === day.month && searchDay.day === day.day),
           }"
-          :style="duties[idx]?.dutyColor ? { backgroundColor: duties[idx].dutyColor + (day.isCurrentMonth ? '80' : '40') } : (!day.isCurrentMonth ? { backgroundColor: '#f9fafb' } : {})"
+          :style="duties[idx]?.dutyColor ? { backgroundColor: duties[idx].dutyColor } : (!day.isCurrentMonth ? { backgroundColor: '#f9fafb' } : {})"
         >
           <!-- Day Number -->
           <div class="flex items-center justify-between">
@@ -1570,11 +1570,11 @@ async function showExcelUploadModal() {
                 <span
                   v-for="tag in schedule.tags?.filter(t => t.id !== memberId)"
                   :key="tag.id"
-                  class="text-[8px] sm:text-xs px-1 py-px bg-amber-50 border border-gray-400 rounded-full whitespace-nowrap"
+                  class="schedule-tag"
                 >{{ tag.name }}</span>
                 <span
                   v-if="schedule.isTagged"
-                  class="text-[8px] sm:text-xs px-1 py-px bg-amber-50 border border-gray-400 rounded-full whitespace-nowrap"
+                  class="schedule-tag"
                 ><span class="text-[6px] sm:text-[10px]">by</span> {{ schedule.owner }}</span>
               </div>
             </div>
@@ -1676,7 +1676,7 @@ async function showExcelUploadModal() {
       @create-schedule="handleCreateSchedule"
       @edit-schedule="handleEditSchedule"
       @delete-schedule="handleDeleteSchedule"
-      @swap-schedule="handleSwapSchedule"
+      @reorder-schedules="handleReorderSchedules"
       @add-tag="handleAddTag"
       @remove-tag="handleRemoveTag"
       @change-duty-type="handleChangeDutyType"

@@ -174,6 +174,29 @@ class ScheduleService(
         schedule1.position = schedule2.position.also { schedule2.position = schedule1.position }
     }
 
+    fun reorderSchedulePositions(loginMember: LoginMember, scheduleIds: List<UUID>) {
+        if (scheduleIds.isEmpty()) return
+
+        val schedules = scheduleIds.mapNotNull { scheduleRepository.findById(it).orElse(null) }
+        if (schedules.size != scheduleIds.size) {
+            throw IllegalArgumentException("Some schedules not found")
+        }
+
+        val firstDate = schedules.first().startDateTime.toLocalDate()
+        if (!schedules.all { it.startDateTime.toLocalDate() == firstDate }) {
+            throw IllegalArgumentException("All schedules must have same date")
+        }
+
+        schedules.forEach { schedule ->
+            schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
+        }
+
+        scheduleIds.forEachIndexed { index, scheduleId ->
+            val schedule = schedules.find { it.id == scheduleId }!!
+            schedule.position = index
+        }
+    }
+
     fun deleteSchedule(loginMember: LoginMember, id: UUID) {
         val schedule = scheduleRepository.findById(id).orElseThrow()
         schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)

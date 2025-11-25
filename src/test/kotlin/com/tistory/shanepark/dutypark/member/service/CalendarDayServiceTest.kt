@@ -40,7 +40,7 @@ class CalendarDayServiceTest : DutyparkIntegrationTest() {
     fun `Create fail if login Member has Problem`() {
         assertThrows<NoSuchElementException> {
             dDayService.createDDay(
-                loginMember = LoginMember(id = -1, email = "", name = "", "team", isAdmin = false),
+                loginMember = LoginMember(id = -1, email = "", name = "", team = "team", isAdmin = false),
                 dDaySaveDto = DDaySaveDto(
                     title = "test",
                     date = LocalDate.now().plusDays(3),

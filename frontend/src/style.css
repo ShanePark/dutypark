@@ -285,7 +285,11 @@ a:hover {
 
 /* Schedule Tags */
 .schedule-tag {
-  @apply text-xs px-1 rounded-full mx-0.5 border border-black bg-orange-50 whitespace-nowrap inline-block;
+  @apply text-[8px] sm:text-xs px-1.5 py-px rounded-full whitespace-nowrap inline-block;
+  @apply bg-gradient-to-b from-white to-gray-100;
+  @apply border border-gray-300;
+  @apply shadow-sm;
+  @apply text-gray-700 font-medium;
 }
 
 /* Duty Type Indicator */

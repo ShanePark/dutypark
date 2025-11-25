@@ -163,7 +163,10 @@ class TeamService(
 
         val dutyMemberMap = dutyRepository.findByDutyDateAndMemberIn(localDate, teamMembers)
             .associateBy({ it }, { it.member })
-        val offMembers = teamMembers.filterNot { m -> dutyMemberMap.containsValue(m) }
+
+        // OFF members: no duty record OR duty record with null dutyType
+        val membersWithDutyType = dutyMemberMap.filter { (duty, _) -> duty.dutyType != null }.values.toSet()
+        val offMembers = teamMembers.filterNot { m -> membersWithDutyType.contains(m) }
 
         val dutyTypes = dutyTypeRepository.findAllByTeam(team)
         val dutyTypeMembers = TeamDto.of(team, teamMembers, dutyTypes)

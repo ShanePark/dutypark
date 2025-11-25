@@ -35,6 +35,8 @@ import {
   CalendarDays,
   ListTodo,
   UserCheck,
+  Flag,
+  Sun,
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -118,11 +120,13 @@ let isDragging = false
 
 // Features for guest view
 const features = [
-  { icon: 'calendar', text: '일정 관리 (등록, 검색, 공개 설정)', color: 'blue' },
-  { icon: 'check', text: '할일 관리로 까먹지 않는 일상', color: 'green' },
-  { icon: 'clock', text: '근무 관리 및 시간표 등록', color: 'purple' },
-  { icon: 'users', text: '팀원들의 시간표와 일정 공유', color: 'amber' },
-  { icon: 'heart', text: '친구 및 가족의 일정 조회와 태그 기능', color: 'rose' },
+  { icon: 'calendar', text: '일정 관리 - 등록, 검색, 공개 설정' },
+  { icon: 'check', text: '할일 관리로 까먹지 않는 일상' },
+  { icon: 'clock', text: '근무 관리 및 시간표 등록' },
+  { icon: 'users', text: '팀원들의 시간표와 일정 공유' },
+  { icon: 'heart', text: '친구 및 가족의 일정 조회와 태그 기능' },
+  { icon: 'flag', text: 'D-Day 관리 - 기념일, 중요한 날 카운트다운' },
+  { icon: 'sun', text: '공휴일 자동 표시 - 대한민국 공휴일 연동' },
 ]
 
 // Computed: sorted friends (pinned first)
@@ -543,11 +547,13 @@ watch(
     <template v-if="authStore.isLoggedIn">
       <!-- My Info Section -->
       <div
-        class="group bg-white rounded-2xl shadow-sm border border-gray-200 mb-6 cursor-pointer hover:shadow-lg hover:border-gray-300 transition-all duration-200 overflow-hidden"
-        @click="moveTo()"
+        class="bg-white rounded-2xl shadow-sm border border-gray-200 mb-6 overflow-hidden"
       >
         <!-- Header -->
-        <div class="px-5 py-3 bg-gradient-to-r from-gray-700 to-gray-800 flex items-center justify-between">
+        <div
+          class="group px-5 py-3 bg-gradient-to-r from-gray-700 to-gray-800 flex items-center justify-between cursor-pointer hover:from-gray-600 hover:to-gray-700 transition-all"
+          @click="moveTo()"
+        >
           <div class="flex items-center gap-3">
             <div class="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center">
               <User class="w-5 h-5 text-white" />
@@ -844,24 +850,16 @@ watch(
     <!-- Guest Dashboard -->
     <template v-else>
       <!-- Hero Section -->
-      <div class="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-zinc-900 rounded-3xl shadow-2xl p-8 sm:p-12 text-center mb-8">
-        <!-- Decorative elements -->
-        <div class="absolute top-0 left-0 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl -ml-36 -mt-36"></div>
-        <div class="absolute bottom-0 right-0 w-72 h-72 bg-purple-500/20 rounded-full blur-3xl -mr-36 -mb-36"></div>
-
+      <div class="relative overflow-hidden bg-white rounded-3xl shadow-sm border border-gray-200 p-8 sm:p-12 text-center mb-8">
         <div class="relative">
-          <div class="inline-flex items-center gap-2 px-4 py-2 bg-white/10 rounded-full mb-6">
-            <Sparkles class="w-4 h-4 text-amber-400" />
-            <span class="text-sm text-gray-300">스마트한 일정 관리</span>
-          </div>
-
-          <h1 class="text-4xl sm:text-5xl font-bold text-white mb-4">Dutypark</h1>
-          <p class="text-gray-400 mb-8 max-w-lg mx-auto leading-relaxed">
+          <h1 class="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">Dutypark</h1>
+          <p class="text-gray-600 mb-8 max-w-lg mx-auto leading-relaxed">
             근무 관리, 시간표 등록, 일정 관리, 할일 관리 및 팀원들의 시간표 조회, 친구 및 가족의 일정 공유 등 다양한 기능을 통해 여러분의 일상을 도와줍니다.
           </p>
           <router-link
             to="/auth/login"
-            class="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-8 py-3.5 rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40"
+            class="inline-flex items-center gap-2 bg-gray-800 px-8 py-3.5 rounded-xl font-semibold hover:bg-gray-700 transition-all shadow-lg"
+            style="color: white;"
           >
             로그인 / 회원가입
             <ChevronRight class="w-5 h-5" />
@@ -872,7 +870,7 @@ watch(
       <!-- Features Section -->
       <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
         <h2 class="text-2xl font-bold text-gray-900 mb-8 flex items-center gap-3">
-          <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+          <div class="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center">
             <Sparkles class="w-5 h-5 text-white" />
           </div>
           주요 기능
@@ -881,33 +879,26 @@ watch(
           <div
             v-for="feature in features"
             :key="feature.text"
-            class="flex items-start gap-4 p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:shadow-md transition-shadow"
+            class="flex items-start gap-4 p-4 rounded-xl bg-gray-50 border border-gray-100 hover:shadow-md transition-shadow"
           >
-            <div
-              class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-              :class="{
-                'bg-blue-100': feature.color === 'blue',
-                'bg-green-100': feature.color === 'green',
-                'bg-purple-100': feature.color === 'purple',
-                'bg-amber-100': feature.color === 'amber',
-                'bg-rose-100': feature.color === 'rose',
-              }"
-            >
-              <CalendarDays v-if="feature.icon === 'calendar'" class="w-5 h-5 text-blue-600" />
-              <ListTodo v-else-if="feature.icon === 'check'" class="w-5 h-5 text-green-600" />
-              <Clock v-else-if="feature.icon === 'clock'" class="w-5 h-5 text-purple-600" />
-              <Users v-else-if="feature.icon === 'users'" class="w-5 h-5 text-amber-600" />
-              <Heart v-else-if="feature.icon === 'heart'" class="w-5 h-5 text-rose-600" />
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-gray-200">
+              <CalendarDays v-if="feature.icon === 'calendar'" class="w-5 h-5 text-gray-700" />
+              <ListTodo v-else-if="feature.icon === 'check'" class="w-5 h-5 text-gray-700" />
+              <Clock v-else-if="feature.icon === 'clock'" class="w-5 h-5 text-gray-700" />
+              <Users v-else-if="feature.icon === 'users'" class="w-5 h-5 text-gray-700" />
+              <Heart v-else-if="feature.icon === 'heart'" class="w-5 h-5 text-gray-700" />
+              <Flag v-else-if="feature.icon === 'flag'" class="w-5 h-5 text-gray-700" />
+              <Sun v-else-if="feature.icon === 'sun'" class="w-5 h-5 text-gray-700" />
             </div>
             <span class="text-gray-700 font-medium pt-2">{{ feature.text }}</span>
           </div>
         </div>
-        <div class="mt-8 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+        <div class="mt-8 text-center">
           <p class="text-gray-700">
             지금 바로 Dutypark을 사용해보세요!
           </p>
-          <p class="text-sm text-gray-500 mt-1">
-            (현재 회원가입은 카카오톡 로그인을 지원합니다.)
+          <p class="text-sm text-gray-400 mt-1">
+            회원가입은 카카오톡 아이디로 로그인만 가능합니다.
           </p>
         </div>
       </div>

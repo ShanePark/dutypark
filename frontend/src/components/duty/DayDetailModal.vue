@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
+import Sortable from 'sortablejs'
 import {
   X,
   Plus,
   Trash2,
   Pencil,
-  ChevronUp,
-  ChevronDown,
+  GripVertical,
   Paperclip,
   Eye,
   Lock,
@@ -84,7 +84,7 @@ const emit = defineEmits<{
   (e: 'createSchedule', data: ScheduleSaveData): void
   (e: 'editSchedule', data: ScheduleSaveData): void
   (e: 'deleteSchedule', scheduleId: string): void
-  (e: 'swapSchedule', schedule1Id: string, schedule2Id: string): void
+  (e: 'reorderSchedules', scheduleIds: string[]): void
   (e: 'addTag', scheduleId: string, friendId: number): void
   (e: 'removeTag', scheduleId: string, friendId: number): void
 }>()
@@ -94,6 +94,9 @@ const isEditMode = ref(false)
 const editingScheduleId = ref<string | null>(null)
 const fileUploaderRef = ref<InstanceType<typeof FileUploader> | null>(null)
 const isUploading = ref(false)
+const scheduleListRef = ref<HTMLElement | null>(null)
+const contentRef = ref<HTMLElement | null>(null)
+let sortableInstance: Sortable | null = null
 
 // Local duty state for immediate UI feedback
 const selectedDutyType = ref<string | null>(null)
@@ -133,6 +136,40 @@ const formattedDate = computed(() => {
   return `${year}년 ${month}월 ${day}일 (${dayOfWeek})`
 })
 
+const hasDraggableSchedules = computed(() => {
+  return props.canEdit && props.schedules.filter(s => !s.isTagged).length > 1
+})
+
+function initSortable() {
+  if (!scheduleListRef.value || !props.canEdit) return
+  destroySortable()
+  if (!hasDraggableSchedules.value) return
+
+  sortableInstance = new Sortable(scheduleListRef.value, {
+    animation: 150,
+    handle: '.schedule-drag-handle',
+    draggable: '.schedule-item:not(.schedule-tagged)',
+    ghostClass: 'schedule-ghost',
+    chosenClass: 'schedule-chosen',
+    dragClass: 'schedule-dragging',
+    onEnd: () => {
+      const items = scheduleListRef.value?.querySelectorAll('.schedule-item:not(.schedule-tagged)')
+      if (!items) return
+      const ids = Array.from(items).map(el => el.getAttribute('data-schedule-id')).filter(Boolean) as string[]
+      if (ids.length > 0) {
+        emit('reorderSchedules', ids)
+      }
+    },
+  })
+}
+
+function destroySortable() {
+  if (sortableInstance) {
+    sortableInstance.destroy()
+    sortableInstance = null
+  }
+}
+
 watch(
   () => props.isOpen,
   (open) => {
@@ -144,9 +181,37 @@ watch(
       const { year, month, day } = props.date
       newSchedule.value.startDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
       newSchedule.value.endDateTime = `${newSchedule.value.startDate}T00:00`
+      nextTick(() => initSortable())
     } else {
       // Cleanup when modal closes
       fileUploaderRef.value?.cleanup()
+      destroySortable()
+    }
+  }
+)
+
+watch(
+  () => props.schedules,
+  () => {
+    if (props.isOpen && !isCreateMode.value && !isEditMode.value) {
+      nextTick(() => initSortable())
+    }
+  }
+)
+
+onUnmounted(() => {
+  destroySortable()
+})
+
+// Auto-adjust endDateTime when startTime changes
+watch(
+  () => [newSchedule.value.startDate, newSchedule.value.startTime],
+  ([startDate, startTime]) => {
+    if (!startDate || !startTime) return
+    const startDateTime = `${startDate}T${startTime}`
+    const endDateTime = newSchedule.value.endDateTime
+    if (endDateTime && endDateTime < startDateTime) {
+      newSchedule.value.endDateTime = startDateTime
     }
   }
 )
@@ -165,6 +230,12 @@ function startCreateMode() {
     endDateTime: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00`,
     visibility: 'FAMILY',
   }
+  // Scroll to top when entering create mode
+  nextTick(() => {
+    if (contentRef.value) {
+      contentRef.value.scrollTop = 0
+    }
+  })
 }
 
 function startEditMode(schedule: Schedule) {
@@ -200,6 +271,13 @@ function startEditMode(schedule: Schedule) {
       createdBy: 0,
     })
   )
+
+  // Scroll to top when entering edit mode
+  nextTick(() => {
+    if (contentRef.value) {
+      contentRef.value.scrollTop = 0
+    }
+  })
 }
 
 function cancelEdit() {
@@ -352,69 +430,84 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
   <Teleport to="body">
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      class="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/50 pt-2 sm:pt-0 pb-16 sm:pb-0"
       @click.self="emit('close')"
     >
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[calc(100dvh-5rem)] sm:max-h-[90vh] mx-2 sm:mx-4 flex flex-col">
         <!-- Header -->
-        <div class="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
-          <div class="flex items-center gap-3 flex-wrap">
-            <h2 class="text-base sm:text-lg font-bold">{{ formattedDate }}</h2>
-            <!-- Duty Type Selection (my calendar only, hidden in add/edit mode) -->
-            <div v-if="!isCreateMode && !isEditMode && canEdit && dutyTypes.length > 0" class="flex flex-wrap gap-1.5">
-              <button
-                v-for="dutyType in dutyTypes"
-                :key="dutyType.id ?? 'off'"
-                @click="handleDutyTypeChange(dutyType.id, dutyType.name)"
-                class="px-2.5 py-1 rounded-md border text-xs font-medium transition flex items-center gap-1.5"
-                :class="{
-                  'border-blue-500 ring-1 ring-blue-200': selectedDutyType === dutyType.name,
-                  'border-gray-200 hover:border-gray-400': selectedDutyType !== dutyType.name,
-                }"
-                :style="{
-                  backgroundColor: selectedDutyType === dutyType.name && dutyType.color ? dutyType.color + '30' : undefined,
-                }"
-              >
-                <span
-                  class="inline-block w-3 h-3 rounded"
-                  :style="{ backgroundColor: dutyType.color || '#6c757d' }"
-                ></span>
-                {{ dutyType.name }}
-              </button>
+        <div class="p-3 sm:p-4 border-b border-gray-200 flex-shrink-0">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span v-if="isCreateMode" class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">일정 추가</span>
+              <span v-else-if="isEditMode" class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">일정 수정</span>
+              <h2 class="text-base sm:text-lg font-bold">{{ formattedDate }}</h2>
             </div>
-            <!-- Current Duty (other's calendar only) -->
+            <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition flex-shrink-0">
+              <X class="w-6 h-6" />
+            </button>
+          </div>
+          <!-- Duty Type Selection (my calendar only, hidden in add/edit mode) -->
+          <div v-if="!isCreateMode && !isEditMode && canEdit && dutyTypes.length > 0" class="flex flex-wrap gap-1.5 mt-2">
+            <button
+              v-for="dutyType in dutyTypes"
+              :key="dutyType.id ?? 'off'"
+              @click="handleDutyTypeChange(dutyType.id, dutyType.name)"
+              class="px-2.5 py-1 rounded-md border text-xs font-medium transition flex items-center gap-1.5"
+              :class="{
+                'border-blue-500 ring-1 ring-blue-200': selectedDutyType === dutyType.name,
+                'border-gray-200 hover:border-gray-400': selectedDutyType !== dutyType.name,
+              }"
+              :style="{
+                backgroundColor: selectedDutyType === dutyType.name && dutyType.color ? dutyType.color + '30' : undefined,
+              }"
+            >
+              <span
+                class="inline-block w-3 h-3 rounded"
+                :style="{ backgroundColor: dutyType.color || '#6c757d' }"
+              ></span>
+              {{ dutyType.name }}
+            </button>
+          </div>
+          <!-- Current Duty (other's calendar only) -->
+          <div v-else-if="duty && !canEdit" class="mt-2">
             <span
-              v-else-if="duty && !canEdit"
               class="px-2.5 py-1 rounded-md text-xs font-medium text-white"
               :style="{ backgroundColor: duty.dutyColor || '#6c757d' }"
             >
               {{ duty.dutyType || 'OFF' }}
             </span>
           </div>
-          <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition flex-shrink-0">
-            <X class="w-6 h-6" />
-          </button>
         </div>
 
         <!-- Content -->
-        <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(90dvh-130px)] sm:max-h-[calc(90vh-130px)]">
+        <div ref="contentRef" class="p-3 sm:p-4 overflow-y-auto flex-1 min-h-0">
 
           <!-- Schedules List (hidden during create/edit mode) -->
           <div v-if="!isCreateMode && !isEditMode" class="space-y-3">
-            <h3 class="text-sm font-medium text-gray-700">일정 목록</h3>
-
             <div v-if="schedules.length === 0" class="text-center py-6 text-gray-400">
               등록된 일정이 없습니다.
             </div>
 
-            <div
-              v-for="(schedule, idx) in schedules"
-              :key="schedule.id"
-              class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition"
-            >
-              <div class="flex items-start justify-between">
-                <div class="flex-1">
-                  <div class="flex items-center gap-2 flex-wrap">
+            <div ref="scheduleListRef" class="space-y-2">
+              <div
+                v-for="(schedule, idx) in schedules"
+                :key="schedule.id"
+                :data-schedule-id="schedule.id"
+                :class="[
+                  'schedule-item border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition',
+                  { 'schedule-tagged': schedule.isTagged }
+                ]"
+              >
+                <div class="flex items-start justify-between">
+                  <div
+                    v-if="hasDraggableSchedules && canEdit && !schedule.isTagged"
+                    class="schedule-drag-handle flex items-center pr-2 cursor-grab text-gray-400 hover:text-gray-600"
+                    title="드래그하여 순서 변경"
+                  >
+                    <GripVertical class="w-5 h-5" />
+                  </div>
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2 flex-wrap">
                     <Lock
                       v-if="schedule.visibility === 'PRIVATE'"
                       class="w-4 h-4 text-gray-400"
@@ -542,24 +635,6 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
 
                 <!-- Actions -->
                 <div class="flex items-center gap-1 ml-2">
-                  <!-- Reorder buttons -->
-                  <button
-                    v-if="idx > 0 && canEdit && schedules[idx - 1]"
-                    @click="emit('swapSchedule', schedule.id, schedules[idx - 1]!.id)"
-                    class="p-1 hover:bg-gray-200 rounded transition"
-                    title="위로"
-                  >
-                    <ChevronUp class="w-4 h-4" />
-                  </button>
-                  <button
-                    v-if="idx < schedules.length - 1 && canEdit && schedules[idx + 1]"
-                    @click="emit('swapSchedule', schedule.id, schedules[idx + 1]!.id)"
-                    class="p-1 hover:bg-gray-200 rounded transition"
-                    title="아래로"
-                  >
-                    <ChevronDown class="w-4 h-4" />
-                  </button>
-
                   <!-- Edit -->
                   <button
                     v-if="schedule.isMine || canEdit"
@@ -582,11 +657,11 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                 </div>
               </div>
             </div>
+            </div>
           </div>
 
           <!-- Create/Edit Schedule Form -->
-          <div v-if="isCreateMode || isEditMode" class="mt-4 border-t border-gray-200 pt-4">
-            <h3 class="text-sm font-medium text-gray-700 mb-3">{{ isEditMode ? '일정 수정' : '일정 추가' }}</h3>
+          <div v-if="isCreateMode || isEditMode">
             <div class="space-y-3">
               <div>
                 <label class="block text-sm text-gray-600 mb-1">내용</label>
@@ -673,7 +748,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
         </div>
 
         <!-- Footer -->
-        <div class="p-3 sm:p-4 border-t border-gray-200 flex justify-end">
+        <div class="p-3 sm:p-4 border-t border-gray-200 flex justify-end flex-shrink-0">
           <button
             v-if="!isCreateMode && !isEditMode && canEdit"
             @click="startCreateMode"
@@ -687,3 +762,32 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
     </div>
   </Teleport>
 </template>
+
+<style scoped>
+.schedule-ghost {
+  opacity: 0.4;
+  background-color: #e0e7ff;
+}
+
+.schedule-chosen {
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Show only title when dragging */
+.schedule-dragging .flex-1 > *:not(:first-child),
+.schedule-dragging .flex.items-center.gap-1 {
+  display: none !important;
+}
+
+.schedule-dragging {
+  opacity: 0.95;
+  background: white;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.schedule-drag-handle:active {
+  cursor: grabbing;
+}
+</style>

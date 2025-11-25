@@ -70,12 +70,12 @@ function handleToggle(friendId: number) {
             친구 목록이 없습니다.
           </div>
 
-          <div v-else class="space-y-2">
+          <div v-else class="grid grid-cols-2 gap-2">
             <div
               v-for="friend in friends"
               :key="friend.id"
               @click="handleToggle(friend.id)"
-              class="flex items-center gap-3 p-3 rounded-lg cursor-pointer transition"
+              class="flex items-center gap-2 p-2 rounded-lg cursor-pointer transition"
               :class="{
                 'bg-blue-50 border-2 border-blue-500': isSelected(friend.id),
                 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent':
@@ -86,30 +86,30 @@ function handleToggle(friendId: number) {
             >
               <!-- Profile Image -->
               <div
-                class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0"
+                class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0"
               >
                 <img
                   v-if="friend.profileImage"
                   :src="friend.profileImage"
                   :alt="friend.name"
-                  class="w-10 h-10 rounded-full object-cover"
+                  class="w-8 h-8 rounded-full object-cover"
                 />
-                <span v-else class="text-gray-500 font-medium">
+                <span v-else class="text-gray-500 font-medium text-sm">
                   {{ friend.name.charAt(0) }}
                 </span>
               </div>
 
               <!-- Name -->
-              <div class="flex-1">
-                <span class="font-medium">{{ friend.name }}</span>
+              <div class="flex-1 min-w-0">
+                <span class="font-medium text-sm truncate block">{{ friend.name }}</span>
               </div>
 
               <!-- Check icon -->
               <div
                 v-if="isSelected(friend.id)"
-                class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center"
+                class="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0"
               >
-                <Check class="w-4 h-4 text-white" />
+                <Check class="w-3 h-3 text-white" />
               </div>
             </div>
           </div>

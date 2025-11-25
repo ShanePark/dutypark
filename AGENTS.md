@@ -125,6 +125,21 @@ cd dutypark_dev_db && docker compose up -d               # standalone MySQL on :
 - **Commands:** use `./gradlew test --tests "ClassName"` or `./gradlew clean test --tests "*ControllerTest"` for targeted runs; `./gradlew test jacocoTestReport` for coverage.
 - **REST Docs:** `./gradlew asciidoctor` depends on tests; output copied to `src/main/resources/static/docs`. Keep docs build passing when editing controllers.
 
+### Playwright MCP Usage
+
+**Use Playwright MCP only when necessary.** Do not use it for routine verification.
+
+- **When to use:**
+  - Complex UI interactions that cannot be verified by code inspection alone (drag-and-drop, multi-step workflows)
+  - Debugging visual regressions or layout issues reported by user
+  - Verifying OAuth/SSO flows that require actual browser state
+  - User explicitly requests browser-based testing
+- **When NOT to use:**
+  - Simple CRUD operations verifiable via API or unit tests
+  - Styling changes (verify in browser manually or trust Tailwind classes)
+  - Routine feature implementation (trust the code, verify via existing tests)
+  - When `./gradlew test` or manual browser refresh suffices
+
 ---
 
 ## 6. Collaboration Preferences
