@@ -3,7 +3,6 @@ package com.tistory.shanepark.dutypark.team.controller
 import com.tistory.shanepark.dutypark.RestDocsTest
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
-import jakarta.servlet.http.Cookie
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
@@ -62,7 +61,7 @@ class TeamControllerTest : RestDocsTest() {
                 .param("year", today.year.toString())
                 .param("month", today.monthValue.toString())
                 .accept(MediaType.APPLICATION_JSON)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
@@ -111,7 +110,7 @@ class TeamControllerTest : RestDocsTest() {
                 .param("month", today.monthValue.toString())
                 .param("day", today.dayOfMonth.toString())
                 .accept(MediaType.APPLICATION_JSON)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())

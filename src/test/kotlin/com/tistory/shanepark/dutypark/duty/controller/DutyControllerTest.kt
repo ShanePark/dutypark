@@ -3,7 +3,6 @@ package com.tistory.shanepark.dutypark.duty.controller
 import com.tistory.shanepark.dutypark.RestDocsTest
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
-import jakarta.servlet.http.Cookie
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
@@ -39,7 +38,7 @@ class DutyControllerTest : RestDocsTest() {
                 .param("month", today.monthValue.toString())
                 .param("memberId", TestData.member.id.toString())
                 .accept(MediaType.APPLICATION_JSON)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
@@ -82,7 +81,7 @@ class DutyControllerTest : RestDocsTest() {
                 .param("month", today.monthValue.toString())
                 .param("memberIds", TestData.member2.id.toString())
                 .accept(MediaType.APPLICATION_JSON)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
@@ -126,7 +125,7 @@ class DutyControllerTest : RestDocsTest() {
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$").value(true))
@@ -162,7 +161,7 @@ class DutyControllerTest : RestDocsTest() {
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$").value(true))

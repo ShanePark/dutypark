@@ -5,9 +5,6 @@ import com.tistory.shanepark.dutypark.common.datagokr.DataGoKrApi
 import com.tistory.shanepark.dutypark.holiday.service.HolidayService
 import com.tistory.shanepark.dutypark.holiday.service.holidayAPI.HolidayAPIDataGoKr
 import com.tistory.shanepark.dutypark.holiday.service.holidayAPI.HolidayAPIDataGoKrTest
-import com.tistory.shanepark.dutypark.security.config.JwtConfig
-import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
-import jakarta.servlet.http.Cookie
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mock
@@ -49,7 +46,7 @@ class HolidayControllerTest : RestDocsTest() {
         ReflectionTestUtils.setField(holidayService, "holidayAPI", holidayAPIDataGoKr)
     }
 
-    @Test
+        @Test
     fun getHolidays() {
         mockMvc.perform(
             get("/api/holidays")
@@ -77,19 +74,12 @@ class HolidayControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun resetHolidays(@Autowired jwtConfig: JwtConfig) {
-        val loginDto = LoginDto(email = TestData.admin.email, password = TestData.testPass)
-        val loginJson = objectMapper.writeValueAsString(loginDto)
-        val accessToken = mockMvc.perform(
-            MockMvcRequestBuilders.post("/api/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(loginJson)
-        ).andReturn().response.getCookie(jwtConfig.cookieName)?.let { it.value }
+    fun resetHolidays() {
 
         mockMvc.perform(
             delete("/api/holidays")
                 .accept("application/json")
-                .cookie(Cookie(jwtConfig.cookieName, accessToken))
+                .withAuth(TestData.admin)
         ).andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
             .andDo(document("holiday/reset"))

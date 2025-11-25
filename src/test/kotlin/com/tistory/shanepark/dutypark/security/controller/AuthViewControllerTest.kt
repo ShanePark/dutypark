@@ -3,12 +3,8 @@ package com.tistory.shanepark.dutypark.security.controller
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
-import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
-import jakarta.servlet.http.Cookie
 import org.junit.jupiter.api.Test
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.http.MediaType
@@ -23,32 +19,31 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
     @Autowired
     lateinit var mockMvc: MockMvc
 
-    @Autowired
-    lateinit var jwtConfig: JwtConfig
-
     private val log = logger()
     private val testPass = TestData.testPass
 
     @Test
     fun `login Success`() {
-        val loginDto = LoginDto(TestData.member.email, testPass)
+        val loginDto = LoginDto(TestData.member.email, testPass, false)
         val json = objectMapper.writeValueAsString(loginDto)
 
         mockMvc.perform(
-            MockMvcRequestBuilders.post("/api/auth/login")
+            MockMvcRequestBuilders.post("/api/auth/token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
         ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.accessToken").exists())
+            .andExpect(jsonPath("$.refreshToken").exists())
             .andDo(MockMvcResultHandlers.print())
     }
 
     @Test
     fun `login Failed`() {
-        val loginDto = LoginDto(TestData.member.email, "wrongPass")
+        val loginDto = LoginDto(TestData.member.email, "wrongPass", false)
         val json = objectMapper.writeValueAsString(loginDto)
 
         mockMvc.perform(
-            MockMvcRequestBuilders.post("/api/auth/login")
+            MockMvcRequestBuilders.post("/api/auth/token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
         ).andExpect(status().isUnauthorized)
@@ -60,16 +55,18 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
         // Given
         val email = TestData.member.email
 
-        val loginDto = LoginDto(email, testPass)
+        val loginDto = LoginDto(email, testPass, false)
         val json = objectMapper.writeValueAsString(loginDto)
 
         // When
         mockMvc.perform(
-            MockMvcRequestBuilders.post("/api/auth/login")
+            MockMvcRequestBuilders.post("/api/auth/token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
         ).andExpect(status().isOk)
-            .andExpect(cookie().exists(jwtConfig.cookieName))
+            .andExpect(jsonPath("$.accessToken").exists())
+            .andExpect(jsonPath("$.refreshToken").exists())
+            .andExpect(jsonPath("$.tokenType").value("Bearer"))
             .andDo(MockMvcResultHandlers.print())
     }
 
@@ -111,16 +108,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
         val json = objectMapper.writeValueAsString(dutyUpdateDto)
         val anotherMember = memberRepository.findByEmail(TestData.member2.email).orElseThrow()
 
-        val loginDto = LoginDto(anotherMember.email, testPass)
-        val loginJson = objectMapper.writeValueAsString(loginDto)
-
-        // save login session token on variable
-        val accessToken = mockMvc.perform(
-            MockMvcRequestBuilders.post("/api/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(loginJson)
-        ).andReturn().response.getCookie(jwtConfig.cookieName)?.let { it.value }
-
+        val accessToken = getJwt(anotherMember)
         log.info("accessToken: $accessToken")
 
         // Therefore
@@ -128,8 +116,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
             MockMvcRequestBuilders.put("/api/duty/change")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
-                .cookie(Cookie(jwtConfig.cookieName, accessToken))
-
+                .header("Authorization", "Bearer $accessToken")
         ).andExpect(status().isUnauthorized)
             .andDo(MockMvcResultHandlers.print())
     }
@@ -148,16 +135,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
             )
         val json = objectMapper.writeValueAsString(dutyUpdateDto)
 
-        val loginDto = LoginDto(email = TestData.member.email, password = testPass)
-        val loginJson = objectMapper.writeValueAsString(loginDto)
-
-        // save login session token on variable
-        val accessToken = mockMvc.perform(
-            MockMvcRequestBuilders.post("/api/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(loginJson)
-        ).andReturn().response.getCookie(jwtConfig.cookieName)?.let { it.value }
-
+        val accessToken = getJwt(member)
         log.info("accessToken: $accessToken")
 
         // Therefore
@@ -165,7 +143,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
             MockMvcRequestBuilders.put("/api/duty/change")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
-                .cookie(Cookie(jwtConfig.cookieName, accessToken))
+                .header("Authorization", "Bearer $accessToken")
         ).andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
     }
@@ -175,14 +153,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
     fun `if login Member, health point returns login info`() {
         // Given
         val member = memberRepository.findByEmail(TestData.member.email).orElseThrow()
-        val loginDto = LoginDto(email = TestData.member.email, password = testPass)
-
-        // save login session token on variable
-        val accessToken = mockMvc.perform(
-            MockMvcRequestBuilders.post("/api/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(loginDto))
-        ).andReturn().response.getCookie(jwtConfig.cookieName)?.let { it.value }
+        val accessToken = getJwt(member)
 
         log.info("accessToken: $accessToken")
 
@@ -190,7 +161,7 @@ class AuthViewControllerTest : DutyparkIntegrationTest() {
         mockMvc.perform(
             MockMvcRequestBuilders.get("/api/auth/status")
                 .contentType(MediaType.APPLICATION_JSON)
-                .cookie(Cookie(jwtConfig.cookieName, accessToken))
+                .header("Authorization", "Bearer $accessToken")
         ).andExpect(status().isOk)
             .andExpect(jsonPath("$.id").value(member.id))
             .andExpect(jsonPath("$.email").value(member.email))

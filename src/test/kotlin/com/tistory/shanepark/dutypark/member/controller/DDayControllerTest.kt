@@ -3,7 +3,6 @@ package com.tistory.shanepark.dutypark.member.controller
 import com.tistory.shanepark.dutypark.RestDocsTest
 import com.tistory.shanepark.dutypark.member.domain.entity.DDayEvent
 import com.tistory.shanepark.dutypark.member.repository.DDayRepository
-import jakarta.servlet.http.Cookie
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
@@ -37,7 +36,7 @@ class DDayControllerTest : RestDocsTest() {
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.title").value("Birthday"))
@@ -89,7 +88,7 @@ class DDayControllerTest : RestDocsTest() {
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.title").value("Updated Birthday"))
@@ -129,7 +128,7 @@ class DDayControllerTest : RestDocsTest() {
         mockMvc.perform(
             RestDocumentationRequestBuilders.get("/api/dday")
                 .accept(MediaType.APPLICATION_JSON)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$").isArray)
@@ -163,7 +162,7 @@ class DDayControllerTest : RestDocsTest() {
         mockMvc.perform(
             RestDocumentationRequestBuilders.get("/api/dday/{id}", TestData.member2.id)
                 .accept(MediaType.APPLICATION_JSON)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
@@ -201,7 +200,7 @@ class DDayControllerTest : RestDocsTest() {
         mockMvc.perform(
             RestDocumentationRequestBuilders.delete("/api/dday/{id}", saved.id)
                 .accept(MediaType.APPLICATION_JSON)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())

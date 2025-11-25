@@ -48,51 +48,14 @@ class OAuthController(
                 .build()
         }
 
-        // SPA 모드: Bearer 토큰을 URL 프래그먼트로 전달
-        val spa = (state["spa"] as Boolean?) ?: false
-        if (spa) {
-            val spaCallbackUrl = (state["spaCallbackUrl"] as String?) ?: "http://localhost:5173/auth/oauth-callback"
-            val originalRedirectUri = (state["redirectUri"] as String?) ?: redirectUrl
-            return kakaoLoginService.loginForSpa(
-                req = httpServletRequest,
-                code = code,
-                redirectUrl = originalRedirectUri,
-                spaCallbackUrl = spaCallbackUrl
-            )
-        }
-
-        return kakaoLoginService.login(
-            code = code,
-            redirectUrl = redirectUrl,
-            referer = referer,
-            req = httpServletRequest
-        )
-    }
-
-    @PostMapping("sso/signup")
-    @SlackNotification
-    fun ssoSignup(
-        @RequestParam uuid: String,
-        @RequestParam(value = "username") username: String,
-        @RequestParam(value = "term_agree") termAgree: Boolean,
-        httpServletRequest: HttpServletRequest
-    ): ResponseEntity<Void> {
-        if (!termAgree) {
-            return ResponseEntity.badRequest().build()
-        }
-
-        val member = memberService.createSsoMember(username = username, memberSsoRegisterUUID = uuid)
-
-        val loginCookieHeaders = authService.getLoginCookieHeaders(
-            memberId = member.id,
+        val spaCallbackUrl = (state["spaCallbackUrl"] as String?) ?: "http://localhost:5173/auth/oauth-callback"
+        val originalRedirectUri = (state["redirectUri"] as String?) ?: redirectUrl
+        return kakaoLoginService.loginForSpa(
             req = httpServletRequest,
+            code = code,
+            redirectUrl = originalRedirectUri,
+            spaCallbackUrl = spaCallbackUrl
         )
-
-        return ResponseEntity
-            .status(HttpStatus.FOUND)
-            .headers(loginCookieHeaders)
-            .location(URI.create("/auth/sso-congrats"))
-            .build()
     }
 
     @PostMapping("sso/signup/token")

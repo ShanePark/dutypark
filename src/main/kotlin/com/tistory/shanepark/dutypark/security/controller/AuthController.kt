@@ -9,9 +9,7 @@ import com.tistory.shanepark.dutypark.security.domain.dto.PasswordChangeDto
 import com.tistory.shanepark.dutypark.security.domain.dto.TokenResponse
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
 import org.springframework.http.ResponseEntity
-import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
 
 @RestController
@@ -20,27 +18,6 @@ class AuthController(
     private val authService: AuthService,
 ) {
     private val log = logger()
-
-    @PostMapping("login")
-    fun login(
-        @RequestBody loginDto: LoginDto,
-        model: Model,
-        req: HttpServletRequest,
-        @RequestParam(name = "referer", required = false) urlReferer: String?,
-        @SessionAttribute(name = "referer", required = false) referer: String?
-    ): ResponseEntity<String> {
-        var refererValue = urlReferer ?: referer ?: "/"
-        if (refererValue.contains("/login")) {
-            refererValue = "/"
-        }
-        return try {
-            val headers = authService.getLoginCookieHeaders(login = loginDto, req = req, referer = refererValue)
-            ResponseEntity.ok().headers(headers).body(refererValue)
-        } catch (e: AuthException) {
-            ResponseEntity.status(401).body(e.message)
-        }
-    }
-
 
     @PutMapping("password")
     fun changePassword(

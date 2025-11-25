@@ -1,7 +1,6 @@
 package com.tistory.shanepark.dutypark.security.controller
 
 import com.tistory.shanepark.dutypark.RestDocsTest
-import jakarta.servlet.http.Cookie
 import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
@@ -91,7 +90,7 @@ class AuthControllerTest : RestDocsTest() {
         mockMvc.perform(
             RestDocumentationRequestBuilders.get("/api/auth/status")
                 .accept(MediaType.APPLICATION_JSON)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.id").value(TestData.member.id))
@@ -140,7 +139,7 @@ class AuthControllerTest : RestDocsTest() {
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())

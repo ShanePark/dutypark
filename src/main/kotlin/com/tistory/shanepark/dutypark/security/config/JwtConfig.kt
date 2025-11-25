@@ -7,5 +7,4 @@ data class JwtConfig(
     val secret: String,
     val tokenValidityInSeconds: Long,
     val refreshTokenValidityInDays: Long,
-    val cookieName: String
 )

@@ -7,7 +7,6 @@ import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSaveDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
-import jakarta.servlet.http.Cookie
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -48,7 +47,7 @@ class ScheduleControllerTest : RestDocsTest() {
                 .accept("application/json")
                 .contentType("application/json")
                 .content(json)
-                .cookie(Cookie(jwtConfig.cookieName, jwt))
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
             .andDo(
@@ -131,7 +130,7 @@ class ScheduleControllerTest : RestDocsTest() {
                 .accept("application/json")
                 .contentType("application/json")
                 .content(json)
-                .cookie(Cookie(jwtConfig.cookieName, jwt))
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
             .andDo(
@@ -189,7 +188,7 @@ class ScheduleControllerTest : RestDocsTest() {
             patch("/api/schedules/{id}/position?id2={id2}", schedule1.id, schedule2.id)
                 .accept("application/json")
                 .contentType("application/json")
-                .cookie(Cookie(jwtConfig.cookieName, jwt))
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
             .andDo(
@@ -227,7 +226,7 @@ class ScheduleControllerTest : RestDocsTest() {
             delete("/api/schedules/{id}", oldSchedule.id)
                 .accept("application/json")
                 .contentType("application/json")
-                .cookie(Cookie(jwtConfig.cookieName, jwt))
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
             .andDo(
@@ -265,7 +264,7 @@ class ScheduleControllerTest : RestDocsTest() {
                 .param("year", "2024")
                 .param("month", "3")
                 .accept("application/json")
-                .cookie(Cookie(jwtConfig.cookieName, jwt))
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
     }
@@ -332,7 +331,7 @@ class ScheduleControllerTest : RestDocsTest() {
                 .accept("application/json")
                 .contentType("application/json")
                 .content(json)
-                .cookie(Cookie(jwtConfig.cookieName, jwt))
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().isOk)
 
         em.flush()

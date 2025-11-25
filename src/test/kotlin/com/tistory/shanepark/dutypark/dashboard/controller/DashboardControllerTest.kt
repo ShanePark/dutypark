@@ -5,7 +5,6 @@ import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
-import jakarta.servlet.http.Cookie
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
@@ -51,7 +50,7 @@ class DashboardControllerTest : RestDocsTest() {
         mockMvc.perform(
             RestDocumentationRequestBuilders.get("/api/dashboard/my")
                 .accept(MediaType.APPLICATION_JSON)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.member").exists())
@@ -117,7 +116,7 @@ class DashboardControllerTest : RestDocsTest() {
         mockMvc.perform(
             RestDocumentationRequestBuilders.get("/api/dashboard/friends")
                 .accept(MediaType.APPLICATION_JSON)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.friends").isArray)

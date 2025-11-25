@@ -30,29 +30,6 @@ class KakaoLoginService(
 ) {
     private val log = logger()
 
-    fun login(req: HttpServletRequest, code: String, redirectUrl: String, referer: String): ResponseEntity<Void> {
-        val kakaoId = getKakaoId(redirectUrl, code)
-
-        val member = memberRepository.findMemberByKakaoId(kakaoId)
-        if (member != null) {
-            log.info("Kakao Login Success: ${member.name}, $kakaoId")
-            val headers = authService.getLoginCookieHeaders(
-                memberId = member.id,
-                req = req,
-            )
-            return ResponseEntity
-                .status(HttpStatus.FOUND)
-                .headers(headers)
-                .location(getLocation(referer)).build()
-        }
-
-        val ssoRegister = MemberSsoRegisterRepository.save(MemberSsoRegister(ssoId = kakaoId, ssoType = SsoType.KAKAO))
-
-        return ResponseEntity.status(HttpStatus.FOUND)
-            .location(URI.create("/auth/sso-signup?uuid=${ssoRegister.uuid}"))
-            .build()
-    }
-
     private fun getKakaoId(redirectUrl: String, code: String): String {
         val kakaoTokenResponse = kakaoTokenApi.getAccessToken(
             grantType = "authorization_code",
@@ -67,23 +44,12 @@ class KakaoLoginService(
         return kakaoId
     }
 
-    private fun getLocation(referer: String): URI {
-        var refererValue = referer.ifEmpty { "/" }
-        if (refererValue.contains("/login")) {
-            refererValue = "/"
-        }
-        return URI.create(refererValue)
-    }
-
     fun setKakaoIdToMember(code: String, redirectUrl: String, loginMember: LoginMember) {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
         val kakaoId = getKakaoId(redirectUrl, code)
         member.kakaoId = kakaoId
     }
 
-    /**
-     * SPA용 카카오 로그인 - Bearer 토큰을 URL 프래그먼트로 전달
-     */
     fun loginForSpa(
         req: HttpServletRequest,
         code: String,

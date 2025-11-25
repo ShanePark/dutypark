@@ -5,7 +5,6 @@ import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestType
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
-import jakarta.servlet.http.Cookie
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
@@ -29,7 +28,7 @@ class FriendControllerTest : RestDocsTest() {
         mockMvc.perform(
             RestDocumentationRequestBuilders.get("/api/friends")
                 .accept(MediaType.APPLICATION_JSON)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$").isArray)
@@ -55,7 +54,7 @@ class FriendControllerTest : RestDocsTest() {
                 .param("page", "0")
                 .param("size", "10")
                 .accept(MediaType.APPLICATION_JSON)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
@@ -98,7 +97,7 @@ class FriendControllerTest : RestDocsTest() {
         mockMvc.perform(
             RestDocumentationRequestBuilders.post("/api/friends/request/send/{toMemberId}", TestData.member2.id)
                 .accept(MediaType.APPLICATION_JSON)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
@@ -128,7 +127,7 @@ class FriendControllerTest : RestDocsTest() {
         mockMvc.perform(
             RestDocumentationRequestBuilders.post("/api/friends/request/accept/{fromMemberId}", TestData.member2.id)
                 .accept(MediaType.APPLICATION_JSON)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
@@ -158,7 +157,7 @@ class FriendControllerTest : RestDocsTest() {
         mockMvc.perform(
             RestDocumentationRequestBuilders.post("/api/friends/request/reject/{fromMemberId}", TestData.member2.id)
                 .accept(MediaType.APPLICATION_JSON)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
@@ -188,7 +187,7 @@ class FriendControllerTest : RestDocsTest() {
         mockMvc.perform(
             RestDocumentationRequestBuilders.delete("/api/friends/request/cancel/{toMemberId}", TestData.member2.id)
                 .accept(MediaType.APPLICATION_JSON)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
@@ -211,7 +210,7 @@ class FriendControllerTest : RestDocsTest() {
         mockMvc.perform(
             RestDocumentationRequestBuilders.delete("/api/friends/{deleteMemberId}", TestData.member2.id)
                 .accept(MediaType.APPLICATION_JSON)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
@@ -234,7 +233,7 @@ class FriendControllerTest : RestDocsTest() {
         mockMvc.perform(
             RestDocumentationRequestBuilders.patch("/api/friends/pin/{friendId}", TestData.member2.id)
                 .accept(MediaType.APPLICATION_JSON)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
@@ -257,7 +256,7 @@ class FriendControllerTest : RestDocsTest() {
         mockMvc.perform(
             RestDocumentationRequestBuilders.patch("/api/friends/unpin/{friendId}", TestData.member2.id)
                 .accept(MediaType.APPLICATION_JSON)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
@@ -284,7 +283,7 @@ class FriendControllerTest : RestDocsTest() {
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
@@ -307,7 +306,7 @@ class FriendControllerTest : RestDocsTest() {
         mockMvc.perform(
             RestDocumentationRequestBuilders.put("/api/friends/family/{toMemberId}", TestData.member2.id)
                 .accept(MediaType.APPLICATION_JSON)
-                .cookie(Cookie(jwtConfig.cookieName, getJwt(TestData.member)))
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
