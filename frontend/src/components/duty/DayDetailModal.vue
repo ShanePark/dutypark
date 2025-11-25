@@ -96,6 +96,7 @@ const fileUploaderRef = ref<InstanceType<typeof FileUploader> | null>(null)
 const isUploading = ref(false)
 const scheduleListRef = ref<HTMLElement | null>(null)
 const contentRef = ref<HTMLElement | null>(null)
+const isDragging = ref(false)
 let sortableInstance: Sortable | null = null
 
 // Local duty state for immediate UI feedback
@@ -152,7 +153,11 @@ function initSortable() {
     ghostClass: 'schedule-ghost',
     chosenClass: 'schedule-chosen',
     dragClass: 'schedule-dragging',
+    onStart: () => {
+      isDragging.value = true
+    },
     onEnd: () => {
+      isDragging.value = false
       const items = scheduleListRef.value?.querySelectorAll('.schedule-item:not(.schedule-tagged)')
       if (!items) return
       const ids = Array.from(items).map(el => el.getAttribute('data-schedule-id')).filter(Boolean) as string[]
@@ -488,7 +493,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
               등록된 일정이 없습니다.
             </div>
 
-            <div ref="scheduleListRef" class="space-y-2">
+            <div ref="scheduleListRef" :class="['space-y-2', { 'is-dragging': isDragging }]">
               <div
                 v-for="(schedule, idx) in schedules"
                 :key="schedule.id"
@@ -773,17 +778,22 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
-/* Show only title when dragging */
-.schedule-dragging .flex-1 > *:not(:first-child),
-.schedule-dragging .flex.items-center.gap-1 {
+/* Show only title when dragging - applies to all items in drag mode */
+.is-dragging .schedule-item .flex-1 > *:not(:first-child),
+.is-dragging .schedule-item .flex.items-center.gap-1.ml-2 {
   display: none !important;
+}
+
+.is-dragging .schedule-item {
+  padding: 0.5rem 0.75rem;
+  transition: padding 0.15s ease;
 }
 
 .schedule-dragging {
   opacity: 0.95;
   background: white;
   border-radius: 0.5rem;
-  padding: 0.75rem;
+  padding: 0.5rem 0.75rem;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
