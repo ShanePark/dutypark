@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Swal from 'sweetalert2'
-import Sortable from 'sortablejs'
 import { useSwal } from '@/composables/useSwal'
 import {
   Plus,
@@ -20,8 +19,7 @@ import {
   Lock,
   CalendarCheck,
   FileSpreadsheet,
-  GripVertical,
-  AlignLeft,
+  MessageSquare,
 } from 'lucide-vue-next'
 
 // Modal Components
@@ -209,54 +207,7 @@ const todos = ref<LocalTodo[]>([])
 const completedTodos = ref<LocalTodo[]>([])
 const isLoadingTodos = ref(false)
 
-// Todo bubble sortable
-const todoBubbleListRef = ref<HTMLElement | null>(null)
-let todoBubbleSortable: Sortable | null = null
-let isTodoBubbleDragging = false
-
-function initTodoBubbleSortable() {
-  if (!todoBubbleListRef.value) return
-  destroyTodoBubbleSortable()
-
-  todoBubbleSortable = Sortable.create(todoBubbleListRef.value, {
-    animation: 200,
-    handle: '.todo-bubble-handle',
-    draggable: '.todo-bubble-item',
-    direction: 'horizontal',
-    ghostClass: 'sortable-ghost-bubble',
-    chosenClass: 'sortable-chosen-bubble',
-    forceFallback: true,
-    onStart: () => {
-      isTodoBubbleDragging = true
-    },
-    onEnd: () => {
-      setTimeout(() => {
-        isTodoBubbleDragging = false
-      }, 100)
-
-      if (!todoBubbleListRef.value) return
-      const elements = todoBubbleListRef.value.querySelectorAll('[data-todo-id]')
-      const newOrderIds: string[] = []
-      elements.forEach((el) => {
-        const id = el.getAttribute('data-todo-id')
-        if (id) newOrderIds.push(id)
-      })
-      if (newOrderIds.length > 0) {
-        handleTodoPositionUpdate(newOrderIds)
-      }
-    },
-  })
-}
-
-function destroyTodoBubbleSortable() {
-  if (todoBubbleSortable) {
-    todoBubbleSortable.destroy()
-    todoBubbleSortable = null
-  }
-}
-
 function handleTodoBubbleClick(todo: LocalTodo) {
-  if (isTodoBubbleDragging) return
   openTodoDetail(todo)
 }
 
@@ -647,24 +598,7 @@ onMounted(async () => {
   } finally {
     isLoading.value = false
   }
-
-  // Initialize todo bubble sortable after DOM is ready
-  await nextTick()
-  initTodoBubbleSortable()
 })
-
-onBeforeUnmount(() => {
-  destroyTodoBubbleSortable()
-})
-
-// Reinitialize sortable when todos change
-watch(
-  () => todos.value,
-  async () => {
-    await nextTick()
-    initTodoBubbleSortable()
-  }
-)
 
 // Watch for month changes to reload data
 watch(
@@ -1253,6 +1187,15 @@ function isLightColor(color: string | null | undefined): boolean {
   return luminance > 0.5
 }
 
+// Get adaptive border color based on background brightness
+function getAdaptiveBorderColor(backgroundColor: string | null | undefined): string {
+  if (!backgroundColor) return 'var(--dp-border-secondary)'
+
+  const isLight = isLightColor(backgroundColor)
+  // For light backgrounds, use darker border; for dark backgrounds, use lighter border
+  return isLight ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.2)'
+}
+
 // Batch update modal - update all days in current month to a single duty type
 async function showBatchUpdateModal() {
   if (!memberId.value || dutyTypes.value.length === 0) return
@@ -1369,55 +1312,41 @@ async function showExcelUploadModal() {
 
     <!-- Main Content -->
     <template v-else>
-    <!-- Todo List Section (Bubble Style - Monochrome) -->
-    <div v-if="isMyCalendar" class="mb-2 flex items-center gap-2 rounded-2xl p-2 border" :style="{ backgroundColor: 'var(--dp-bg-secondary)', borderColor: 'var(--dp-border-primary)' }">
-      <!-- Add Todo Bubble Button -->
+    <!-- Todo List Section -->
+    <div v-if="isMyCalendar" class="mb-1 flex items-center gap-1.5 px-1">
+      <!-- Add Todo Button -->
       <button
         @click="isTodoAddModalOpen = true"
-        class="flex-shrink-0 w-10 h-10 sm:w-11 sm:h-11 bg-gray-800 text-white rounded-full flex items-center justify-center shadow-md hover:bg-gray-700 hover:shadow-lg transition-all duration-200"
+        class="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center transition-all duration-150 hover:scale-105"
+        :style="{ backgroundColor: 'var(--dp-text-secondary)', color: 'var(--dp-bg-primary)' }"
       >
-        <Plus class="w-5 h-5" />
+        <Plus class="w-4 h-4" />
       </button>
 
-      <!-- Todo Items Bubbles -->
-      <div class="flex-1 min-w-0 overflow-x-auto">
-        <div ref="todoBubbleListRef" class="flex gap-2 py-1">
-          <div
+      <!-- Todo Items -->
+      <div class="flex-1 min-w-0 overflow-x-auto scrollbar-hide">
+        <div class="flex gap-1">
+          <button
             v-for="todo in todos"
             :key="todo.id"
-            :data-todo-id="todo.id"
-            class="todo-bubble-item flex-shrink-0 max-w-[140px] sm:max-w-[200px] flex items-center gap-1 px-1 sm:px-1.5 py-1 rounded-full cursor-pointer transition-all duration-200 hover:shadow-md border shadow-sm"
-            :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }"
+            @click="handleTodoBubbleClick(todo)"
+            class="flex-shrink-0 max-w-[120px] sm:max-w-[160px] flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] sm:text-xs cursor-pointer transition-all duration-150 hover:opacity-80 border"
+            :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderColor: 'var(--dp-border-secondary)', color: 'var(--dp-text-primary)' }"
           >
-            <div
-              class="todo-bubble-handle flex-shrink-0 p-1 hover:text-blue-600 hover:bg-blue-50 rounded-full cursor-grab active:cursor-grabbing transition-colors"
-              :style="{ color: 'var(--dp-text-muted)' }"
-              @click.stop
-              title="드래그하여 순서 변경"
-            >
-              <GripVertical class="w-3.5 h-3.5" />
-            </div>
-            <div
-              @click="handleTodoBubbleClick(todo)"
-              class="flex items-center gap-1 pr-2 min-w-0"
-            >
-              <span class="text-xs sm:text-sm font-medium truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ todo.title }}</span>
-              <FileText v-if="todo.content || todo.hasAttachments" class="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
-            </div>
-          </div>
+            <span class="truncate">{{ todo.title }}</span>
+            <FileText v-if="todo.content || todo.hasAttachments" class="w-2.5 h-2.5 flex-shrink-0 opacity-50" />
+          </button>
         </div>
       </div>
 
-      <!-- Todo Count Bubble -->
+      <!-- Todo List Button -->
       <button
         @click="isTodoOverviewModalOpen = true"
-        class="flex-shrink-0 h-10 sm:h-11 px-3 sm:px-4 flex items-center gap-1.5 rounded-full shadow-sm hover:shadow-md transition-all duration-200 border cursor-pointer hover-bg-light"
-        :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }"
+        class="flex-shrink-0 h-7 px-2 flex items-center gap-1 rounded-md transition-all duration-150 cursor-pointer border hover:opacity-80"
+        :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderColor: 'var(--dp-border-secondary)' }"
       >
-        <ClipboardList class="w-4 h-4 sm:w-5 sm:h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
-        <span class="bg-gray-800 text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full">
-          {{ todos.length }}
-        </span>
+        <ClipboardList class="w-3.5 h-3.5" :style="{ color: 'var(--dp-text-secondary)' }" />
+        <span class="text-[11px] font-medium" :style="{ color: 'var(--dp-text-secondary)' }">{{ todos.length }}</span>
       </button>
     </div>
 
@@ -1556,7 +1485,7 @@ async function showExcelUploadModal() {
           @click="handleDayClick(day, idx)"
           class="min-h-[70px] sm:min-h-[80px] md:min-h-[100px] border-b border-r p-0.5 sm:p-1 transition-all duration-150 relative cursor-pointer hover:brightness-95 hover:shadow-inner"
           :style="{
-            borderColor: 'var(--dp-border-secondary)',
+            borderColor: getAdaptiveBorderColor(duties[idx]?.dutyColor),
             backgroundColor: duties[idx]?.dutyColor || (!day.isCurrentMonth ? 'var(--dp-calendar-cell-prev-next)' : 'var(--dp-calendar-cell-bg)'),
             opacity: !day.isCurrentMonth ? 0.5 : 1
           }"
@@ -1640,14 +1569,14 @@ async function showExcelUploadModal() {
               :key="dday.id"
               class="text-[10px] sm:text-sm leading-snug px-0.5 break-words"
               :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#1f2937' : '#ffffff') : 'var(--dp-text-primary)' }"
-            ><Lock v-if="dday.isPrivate" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" /><CalendarCheck v-else class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" />{{ dday.title }}</div>
+            ><CalendarCheck class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" />{{ dday.title }}</div>
 
             <div
               v-for="schedule in schedulesByDays[idx]?.slice(0, 3)"
               :key="schedule.id"
               class="text-[10px] sm:text-sm leading-snug px-0.5 border-t-2 border-dashed break-words"
               :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#1f2937' : '#ffffff') : 'var(--dp-text-primary)', borderColor: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.3)') : 'var(--dp-border-primary)' }"
-            ><Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }" />{{ schedule.contentWithoutTime || schedule.content }}<AlignLeft
+            ><Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }" />{{ schedule.contentWithoutTime || schedule.content }}<MessageSquare
                 v-if="schedule.description || schedule.attachments?.length"
                 class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px] ml-0.5"
                 :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#9ca3af' : 'rgba(255,255,255,0.5)') : 'var(--dp-text-muted)' }"
@@ -1840,16 +1769,3 @@ async function showExcelUploadModal() {
     />
   </div>
 </template>
-
-<style>
-/* Todo bubble sortable styles */
-.sortable-ghost-bubble {
-  opacity: 0.4 !important;
-  background-color: rgb(219 234 254) !important;
-  border-color: rgb(147 197 253) !important;
-}
-
-.sortable-chosen-bubble {
-  box-shadow: 0 0 0 2px rgb(96 165 250), 0 4px 6px -1px rgb(0 0 0 / 0.1) !important;
-}
-</style>

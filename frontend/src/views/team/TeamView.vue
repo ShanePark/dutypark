@@ -24,6 +24,7 @@ import type {
   DutyByShift,
   SimpleMemberDto,
   DutyCalendarDay,
+  HolidayDto,
 } from '@/types'
 
 const router = useRouter()
@@ -81,6 +82,9 @@ const shift = ref<(DutyByShift & { isMyGroup: boolean })[]>([])
 
 // My duty data - fetched from duty API (same as DutyView)
 const myDuties = ref<DutyCalendarDay[]>([])
+
+// Holidays by day index
+const holidaysByDays = ref<HolidayDto[][]>([])
 
 // Schedule Modal
 const showScheduleModal = ref(false)
@@ -158,10 +162,11 @@ async function fetchTeamSummary() {
       team.value = data.team
       isTeamManager.value = data.isTeamManager
 
-      // Fetch my duties and team schedules in parallel
+      // Fetch my duties, team schedules, and holidays in parallel
       await Promise.all([
         fetchMyDuties(),
         fetchTeamSchedules(),
+        loadHolidays(),
       ])
     } else {
       hasTeam.value = false
@@ -242,6 +247,38 @@ function getDutyColor(day: { year: number; month: number; day: number }): string
     d => d.year === day.year && d.month === day.month && d.day === day.day
   )
   return duty?.dutyColor ?? null
+}
+
+// Check if a color is light (for text contrast)
+function isLightColor(color: string | null | undefined): boolean {
+  if (!color) return false
+  const hex = color.replace('#', '')
+  if (hex.length !== 6) return false
+  const r = parseInt(hex.substring(0, 2), 16)
+  const g = parseInt(hex.substring(2, 4), 16)
+  const b = parseInt(hex.substring(4, 6), 16)
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return luminance > 0.5
+}
+
+// Get adaptive border color based on background brightness
+function getAdaptiveBorderColor(backgroundColor: string | null | undefined): string {
+  if (!backgroundColor) return 'var(--dp-border-secondary)'
+  const isLight = isLightColor(backgroundColor)
+  return isLight ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.2)'
+}
+
+// Load holidays from API
+async function loadHolidays() {
+  try {
+    holidaysByDays.value = await dutyApi.getHolidays(
+      currentYear.value,
+      currentMonth.value
+    )
+  } catch (error) {
+    console.error('Failed to load holidays:', error)
+    holidaysByDays.value = []
+  }
 }
 
 // Find selected day index
@@ -404,133 +441,130 @@ onMounted(() => {
 
     <!-- Team View -->
     <template v-else-if="team">
-      <!-- Team Header -->
-      <div class="bg-gray-600 text-white font-bold text-xl text-center py-3 rounded-t-lg">
-        {{ team.name }}
-      </div>
+      <!-- Team Header & Month Controls -->
+      <div class="flex items-center justify-between gap-1 mb-1">
+        <!-- Left: Team name -->
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <span class="text-sm sm:text-base font-bold" :style="{ color: 'var(--dp-text-primary)' }">{{ team.name }}</span>
+        </div>
 
-      <!-- Month Controls -->
-      <div class="flex flex-col sm:flex-row items-center justify-between gap-2 p-2 border-x" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }">
-        <div class="hidden sm:block w-20"></div>
-
-        <div class="flex items-center gap-2">
-          <button
-            @click="prevMonth"
-            class="p-2 rounded-full transition"
-            @mouseenter="($event.currentTarget as HTMLElement).style.backgroundColor = 'var(--dp-bg-hover)'"
-            @mouseleave="($event.currentTarget as HTMLElement).style.backgroundColor = ''"
-          >
-            <ChevronLeft class="w-5 h-5" />
+        <!-- Center: Year-Month Navigation -->
+        <div class="flex items-center justify-center">
+          <button @click="prevMonth" class="p-1 sm:p-2 rounded-full transition flex items-center justify-center flex-shrink-0 hover-bg-light">
+            <ChevronLeft class="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
-
           <button
             @click="isYearMonthPickerOpen = true"
-            class="px-3 py-1 text-lg font-bold rounded transition min-w-[120px]"
-            @mouseenter="($event.currentTarget as HTMLElement).style.backgroundColor = 'var(--dp-bg-hover)'"
-            @mouseleave="($event.currentTarget as HTMLElement).style.backgroundColor = ''"
+            class="px-1 sm:px-3 py-1 text-lg sm:text-2xl font-semibold rounded transition whitespace-nowrap hover-bg-light"
           >
             {{ currentYear }}-{{ String(currentMonth).padStart(2, '0') }}
           </button>
-
-          <button
-            @click="nextMonth"
-            class="p-2 rounded-full transition"
-            @mouseenter="($event.currentTarget as HTMLElement).style.backgroundColor = 'var(--dp-bg-hover)'"
-            @mouseleave="($event.currentTarget as HTMLElement).style.backgroundColor = ''"
-          >
-            <ChevronRight class="w-5 h-5" />
+          <button @click="nextMonth" class="p-1 sm:p-2 rounded-full transition flex items-center justify-center flex-shrink-0 hover-bg-light">
+            <ChevronRight class="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>
 
-        <button
-          v-if="isTeamManager"
-          @click="goToTeamManage"
-          class="px-3 py-2 border rounded-lg transition flex items-center gap-1 w-full sm:w-auto justify-center"
-          :style="{ borderColor: 'var(--dp-border-secondary)' }"
-          @mouseenter="($event.currentTarget as HTMLElement).style.backgroundColor = 'var(--dp-bg-hover)'"
-          @mouseleave="($event.currentTarget as HTMLElement).style.backgroundColor = ''"
-        >
-          <Settings class="w-4 h-4" />
-          팀 관리
-        </button>
-        <div v-else class="hidden sm:block w-20"></div>
+        <!-- Right: Team manage button -->
+        <div class="flex-shrink-0">
+          <button
+            v-if="isTeamManager"
+            @click="goToTeamManage"
+            class="px-3 py-2 border rounded-lg transition flex items-center gap-1 hover-bg-light"
+            :style="{ borderColor: 'var(--dp-border-secondary)' }"
+          >
+            <Settings class="w-4 h-4" />
+            <span class="hidden sm:inline">팀 관리</span>
+          </button>
+          <div v-else class="w-16 sm:w-20"></div>
+        </div>
       </div>
 
-      <!-- Calendar -->
-      <div class="border" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }">
+      <!-- Calendar Grid -->
+      <div class="rounded-lg border overflow-hidden mb-2 shadow-sm" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)' }">
         <!-- Week Days Header -->
-        <div class="grid grid-cols-7 border-b-2 border-gray-800" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
+        <div class="grid grid-cols-7" :style="{ backgroundColor: 'var(--dp-calendar-header-bg)' }">
           <div
             v-for="(day, idx) in weekDays"
             :key="day"
-            class="py-2 text-center font-bold text-sm border-x border-gray-800 first:border-l-0 last:border-r-0"
+            class="py-2 text-center font-bold border-b-2 text-sm"
+            :style="{ borderBottomColor: 'var(--dp-border-secondary)', color: idx === 0 ? '#dc2626' : idx === 6 ? '#2563eb' : 'var(--dp-text-primary)' }"
             :class="{
-              'text-red-500': idx === 0,
-              'text-blue-500': idx === 6,
+              'border-r': idx < 6,
             }"
           >
             {{ day }}
           </div>
         </div>
 
-        <!-- Calendar Grid -->
+        <!-- Calendar Days -->
         <div class="grid grid-cols-7">
           <div
             v-for="(day, idx) in teamDays"
             :key="idx"
             @click="selectDay(day, idx)"
-            class="min-h-[70px] sm:min-h-[90px] border p-1 cursor-pointer transition relative"
-            :class="{
-              'opacity-60': !day.isCurrentMonth,
-              'ring-2 ring-inset ring-blue-500': isSelectedDay(day),
-            }"
+            class="min-h-[70px] sm:min-h-[80px] md:min-h-[100px] border-b border-r p-0.5 sm:p-1 transition-all duration-150 relative cursor-pointer hover:brightness-95 hover:shadow-inner"
             :style="{
-              backgroundColor: day.isCurrentMonth && getDutyColor(day) ? getDutyColor(day) ?? '' : '',
-              borderColor: 'var(--dp-border-secondary)'
+              borderColor: getAdaptiveBorderColor(getDutyColor(day)),
+              backgroundColor: getDutyColor(day) || (!day.isCurrentMonth ? 'var(--dp-calendar-cell-prev-next)' : 'var(--dp-calendar-cell-bg)'),
+              opacity: !day.isCurrentMonth ? 0.5 : 1
             }"
-            @mouseenter="!getDutyColor(day) ? ($event.currentTarget as HTMLElement).style.backgroundColor = 'var(--dp-bg-hover)' : null"
-            @mouseleave="!getDutyColor(day) ? ($event.currentTarget as HTMLElement).style.backgroundColor = '' : null"
+            :class="{
+              'ring-2 ring-red-500 ring-inset': isToday(day),
+              'ring-2 ring-blue-500 ring-inset': isSelectedDay(day) && !isToday(day),
+            }"
           >
-            <!-- Today indicator -->
-            <div
-              v-if="isToday(day)"
-              class="absolute inset-0 ring-2 ring-red-500 pointer-events-none"
-            ></div>
-
-            <div
-              class="text-center"
-              :class="{
-                'text-red-500': idx % 7 === 0,
-                'text-blue-500': idx % 7 === 6,
-              }"
-            >
+            <!-- Day Number -->
+            <div class="flex items-center justify-between">
               <span
-                class="text-sm font-bold"
-                :class="{ 'underline decoration-red-500 decoration-2': isToday(day) }"
+                class="text-xs sm:text-sm font-medium"
+                :class="{
+                  'font-bold': isToday(day),
+                }"
+                :style="{
+                  color: idx % 7 === 0 ? '#dc2626' : idx % 7 === 6 ? '#2563eb' : (getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? '#1f2937' : '#ffffff') : 'var(--dp-text-primary)')
+                }"
               >
                 {{ day.day }}
               </span>
             </div>
 
+            <!-- Holidays -->
+            <div
+              v-for="holiday in holidaysByDays[idx] ?? []"
+              :key="holiday.localDate + holiday.dateName"
+              class="text-[10px] sm:text-sm leading-snug px-0.5"
+              :class="holiday.isHoliday ? 'text-red-600 font-semibold' : ''"
+              :style="!holiday.isHoliday ? { color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' } : {}"
+            >
+              {{ holiday.dateName }}
+            </div>
+
             <!-- Team Schedules -->
-            <div v-if="teamSchedules[idx]?.length" class="mt-0.5 space-y-0.5">
+            <div v-if="teamSchedules[idx]?.length" class="mt-0.5">
               <div
                 v-for="schedule in teamSchedules[idx].slice(0, 2)"
                 :key="schedule.id"
-                class="text-xs truncate px-0.5"
-                :style="{ color: 'var(--dp-text-secondary)' }"
+                class="text-[10px] sm:text-sm leading-snug px-0.5 border-t-2 border-dashed break-words"
+                :style="{
+                  color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? '#1f2937' : '#ffffff') : 'var(--dp-text-primary)',
+                  borderColor: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.3)') : 'var(--dp-border-primary)'
+                }"
               >
                 {{ schedule.content }}
-                <span v-if="schedule.totalDays && schedule.totalDays > 1" :style="{ color: 'var(--dp-text-muted)' }">
+                <span
+                  v-if="schedule.totalDays && schedule.totalDays > 1"
+                  class="text-[9px] sm:text-xs"
+                  :style="{ color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }"
+                >
                   ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})
                 </span>
               </div>
               <div
                 v-if="teamSchedules[idx].length > 2"
-                class="text-xs px-0.5"
-                :style="{ color: 'var(--dp-text-muted)' }"
+                class="text-[10px] font-medium"
+                :style="{ color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? '#6b7280' : 'rgba(255,255,255,0.8)') : 'var(--dp-text-muted)' }"
               >
-                +{{ teamSchedules[idx].length - 2 }} more
+                +{{ teamSchedules[idx].length - 2 }}
               </div>
             </div>
           </div>
@@ -538,9 +572,9 @@ onMounted(() => {
       </div>
 
       <!-- Selected Day Schedule -->
-      <div class="border-x border-b p-3" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }">
+      <div class="rounded-lg border shadow-sm p-3" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)' }">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-          <h3 class="text-lg font-bold">
+          <h3 class="text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">
             {{ selectedDay.year }}년 {{ selectedDay.month }}월 {{ selectedDay.day }}일
           </h3>
           <button
@@ -556,63 +590,64 @@ onMounted(() => {
         <!-- Schedule List -->
         <div
           v-if="selectedDay.index >= 0 && teamSchedules[selectedDay.index]?.length"
-          class="space-y-3"
+          class="space-y-2"
         >
           <div
             v-for="schedule in teamSchedules[selectedDay.index]"
             :key="schedule.id"
-            class="rounded-lg p-3 border"
+            class="rounded-lg p-3 border transition-all duration-150 hover:shadow-md"
             :style="{ backgroundColor: 'var(--dp-bg-secondary)', borderColor: 'var(--dp-border-primary)' }"
           >
             <div class="flex items-start justify-between">
-              <div class="flex-1">
+              <div class="flex-1 min-w-0">
                 <div class="font-bold mb-1" :style="{ color: 'var(--dp-text-primary)' }">
                   {{ schedule.content }}
                   <span class="text-sm font-normal" :style="{ color: 'var(--dp-text-secondary)' }">
                     (by: <strong>{{ schedule.createMember }}</strong>)
                   </span>
                 </div>
-                <div v-if="schedule.description" class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
+                <div v-if="schedule.description" class="text-sm whitespace-pre-wrap break-words" :style="{ color: 'var(--dp-text-secondary)' }">
                   {{ schedule.description }}
                 </div>
               </div>
-              <div v-if="isTeamManager" class="flex gap-2 ml-3">
+              <div v-if="isTeamManager" class="flex gap-1 ml-2 flex-shrink-0">
                 <button
                   @click="openEditScheduleModal(schedule)"
-                  class="px-2 py-1 text-sm border border-blue-500 text-blue-500 rounded hover:bg-blue-50 transition flex items-center gap-1"
+                  class="p-1.5 text-blue-500 rounded-lg hover:bg-blue-100 transition"
+                  title="수정"
                 >
-                  <Pencil class="w-3 h-3" />
-                  수정
+                  <Pencil class="w-4 h-4" />
                 </button>
                 <button
                   @click="deleteSchedule(schedule.id)"
-                  class="px-2 py-1 text-sm border border-red-500 text-red-500 rounded hover:bg-red-50 transition flex items-center gap-1"
+                  class="p-1.5 text-red-500 rounded-lg hover:bg-red-100 transition"
+                  title="삭제"
                 >
-                  <Trash2 class="w-3 h-3" />
-                  삭제
+                  <Trash2 class="w-4 h-4" />
                 </button>
               </div>
             </div>
           </div>
         </div>
-        <div v-else class="text-center py-4" :style="{ color: 'var(--dp-text-muted)' }">
+        <div v-else class="text-center py-6" :style="{ color: 'var(--dp-text-muted)' }">
           이 날의 팀 일정이 없습니다.
         </div>
       </div>
 
       <!-- Shift Groups -->
-      <div v-if="shiftLoading" class="mt-4 flex items-center justify-center py-8">
+      <div v-if="shiftLoading" class="mt-3 flex items-center justify-center py-8">
         <Loader2 class="w-6 h-6 animate-spin text-blue-500" />
       </div>
-      <div v-else-if="shift.length > 0" class="mt-4 space-y-4">
+      <div v-else-if="shift.length > 0" class="mt-3 space-y-3">
         <template v-for="group in shift" :key="group.dutyType.id">
           <div
             v-if="group.members.length > 0"
-            class="rounded-lg border overflow-hidden"
-            :class="{ 'border-2 border-gray-800': group.isMyGroup }"
+            class="rounded-lg border overflow-hidden shadow-sm"
+            :class="{ 'ring-2': group.isMyGroup }"
             :style="{
               backgroundColor: 'var(--dp-bg-card)',
-              borderColor: group.isMyGroup ? '' : 'var(--dp-border-primary)'
+              borderColor: 'var(--dp-border-secondary)',
+              '--tw-ring-color': 'var(--dp-text-primary)'
             }"
           >
             <!-- Duty Type Header -->
@@ -620,9 +655,9 @@ onMounted(() => {
               class="p-3 flex items-center justify-between"
               :style="{ backgroundColor: group.dutyType.color ?? '#e8e8e8' }"
             >
-              <span class="font-bold text-gray-800">{{ group.dutyType.name }}</span>
-              <span class="bg-white text-gray-800 px-2 py-0.5 rounded-full text-sm font-medium">
-                {{ group.members.length }}
+              <span class="font-bold" :style="{ color: isLightColor(group.dutyType.color) ? '#1f2937' : '#ffffff' }">{{ group.dutyType.name }}</span>
+              <span class="px-2 py-0.5 rounded-full text-sm font-medium" :style="{ backgroundColor: 'rgba(255,255,255,0.9)', color: '#1f2937' }">
+                {{ group.members.length }}명
               </span>
             </div>
 
@@ -632,11 +667,13 @@ onMounted(() => {
                 v-for="member in group.members"
                 :key="member.id"
                 @click="goToMemberDuty(member.id)"
-                class="flex flex-col items-center p-2 border rounded-lg cursor-pointer transition"
-                :class="{ 'border-2 border-gray-800': member.id === loginMemberId }"
-                :style="{ borderColor: member.id !== loginMemberId ? 'var(--dp-border-primary)' : '' }"
-                @mouseenter="($event.currentTarget as HTMLElement).style.backgroundColor = 'var(--dp-bg-hover)'"
-                @mouseleave="($event.currentTarget as HTMLElement).style.backgroundColor = ''"
+                class="flex flex-col items-center p-2 border rounded-lg cursor-pointer transition-all duration-150 hover:shadow-md"
+                :class="{ 'ring-2': member.id === loginMemberId }"
+                :style="{
+                  borderColor: 'var(--dp-border-secondary)',
+                  backgroundColor: 'var(--dp-bg-secondary)',
+                  '--tw-ring-color': 'var(--dp-text-primary)'
+                }"
               >
                 <User class="w-5 h-5 mb-1" :style="{ color: 'var(--dp-text-secondary)' }" />
                 <span class="text-sm font-medium truncate w-full text-center" :style="{ color: 'var(--dp-text-primary)' }">

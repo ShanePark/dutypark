@@ -38,7 +38,6 @@ class AuthController(
         @Login(required = false)
         loginMember: LoginMember?
     ): LoginMember? {
-        log.info("Login Member: $loginMember")
         return loginMember
     }
 

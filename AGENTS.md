@@ -92,18 +92,9 @@ cd dutypark_dev_db && docker compose up -d                              # standa
 
 ### Build Guidelines
 
-**Backend changes** (Kotlin/Java, dependencies, configuration):
-- Run `./gradlew build` (or at least `./gradlew test`) to compile and catch regressions
-- Examples: Controllers, Services, Repositories, Entity classes, configuration files
-
-**Frontend changes** (Vue/TypeScript/CSS under `frontend/`):
-- Run `npm run type-check` to verify TypeScript types
-- Run `npm run build` for production build verification
-- Dev server auto-reloads on file changes
-
-**API/testing work**:
-- Prefer `./gradlew test` for quick feedback
-- Rerun `./gradlew asciidoctor` when controller contract changes impact docs
+- **Backend:** `./gradlew build` or `./gradlew test`
+- **Frontend:** `npm run type-check` and `npm run build`
+- **REST Docs:** `./gradlew asciidoctor` after controller changes
 
 ### Configuration Essentials
 
@@ -112,6 +103,14 @@ cd dutypark_dev_db && docker compose up -d                              # standa
 - `application-dev.yml`: points to `localhost:3307`, enables DevTools & LiveReload, disables SSL, seeds fake secrets, logs to local path.
 - Storage is centralized under `dutypark.storage.root` (permanent) and `<root>/_tmp` (sessions). Update `StoragePathResolver` + cleanup scheduler if adding contexts.
 - AI parsing auto-disables when `GEMINI_API_KEY` is blank—preserve this behavior when touching `schedule/timeparsing`.
+
+### Git Configuration for Development
+
+Ignore local deletion of `frontend/dist/.gitkeep` (required for deployment, but deleted during dev builds):
+
+```bash
+git update-index --assume-unchanged frontend/dist/.gitkeep
+```
 
 ---
 
@@ -169,11 +168,7 @@ frontend/
 
 ### Authentication Flow
 
-1. User logs in via `LoginView.vue` → calls `authApi.loginWithToken()`
-2. Receives JWT tokens → stored in `localStorage` via `tokenManager`
-3. Axios request interceptor adds `Authorization: Bearer {token}` header
-4. On 401 response → auto-refresh via response interceptor with request queue
-5. Router guards check `authStore.isLoggedIn` before navigation
+Login → JWT tokens in localStorage → Bearer header via interceptor → 401 auto-refresh → router guards
 
 ### API Client Pattern
 
@@ -241,31 +236,14 @@ export const exampleApi = {
 
 ### Dark Mode & Responsive Design (CRITICAL)
 
-**Every UI change must consider both dark mode and responsive design.**
-
-- **Dark mode:** Use CSS variables (`--dp-*`) from `style.css` instead of hardcoded colors. For hover states, use utility classes like `hover-bg-light` that respect the current theme.
-- **Avoid hardcoded colors:** Don't use `bg-gray-50`, `hover:bg-gray-100`, etc. directly. Instead use theme-aware variables or utility classes.
-- **Interactive elements:** All clickable elements must have:
-  - `cursor-pointer` for visual feedback
-  - Hover state that works in both light and dark modes
-  - Appropriate touch targets for mobile (min 44px)
-- **Responsive breakpoints:** Always test with mobile-first approach. Use Tailwind's responsive prefixes (`sm:`, `md:`, `lg:`) consistently.
-- **Common patterns:**
-  ```css
-  /* Good: Theme-aware hover */
-  class="hover-bg-light cursor-pointer"
-  :style="{ backgroundColor: 'var(--dp-bg-card)' }"
-
-  /* Bad: Hardcoded colors that break in dark mode */
-  class="bg-white hover:bg-gray-50"
-  ```
+- Use `--dp-*` CSS variables from `style.css`, NOT hardcoded colors (`bg-gray-50`, `hover:bg-gray-100`)
+- Interactive elements: `cursor-pointer` + theme-aware hover (e.g., `hover-bg-light`) + min 44px touch targets
+- Mobile-first: use Tailwind responsive prefixes (`sm:`, `md:`, `lg:`)
 
 ### Code Comments Policy
 
-- Prefer self-documenting code; only comment when explaining non-obvious reasoning, workarounds, or subtle edge cases.
-- Document "why" not "what"; avoid comments that restate simple logic or variable names.
-- If you must work around third-party quirks (e.g., Vue reactivity), note it briefly so future changes don't regress.
-- **All code comments must be written in English only.** No Korean comments in source code—this includes HTML comments (`<!-- -->`), TypeScript comments (`//`, `/* */`), and any other comment syntax.
+- Comment "why", not "what"; only for non-obvious reasoning or workarounds
+- **English only** (no Korean in any comment syntax)
 
 ---
 
@@ -279,14 +257,11 @@ export const exampleApi = {
 
 ### REST Docs Requirements
 
-**When adding new API endpoints, REST Docs tests are mandatory.**
-
-- Every new controller endpoint must have a corresponding test in `*ControllerTest.kt` that extends `RestDocsTest`.
-- Document all path parameters, query parameters, request fields, and response fields.
-- For empty/optional arrays, use `subsectionWithPath()` instead of `fieldWithPath()` to avoid type inference errors.
-- Update `src/docs/asciidoc/index.adoc` to include new endpoint documentation.
-- Run `./gradlew asciidoctor` after adding tests to verify documentation generates correctly.
-- Reference: See `FriendControllerTest.kt` or `TeamControllerTest.kt` for comprehensive examples.
+**New endpoints require REST Docs tests** (`*ControllerTest.kt` extending `RestDocsTest`):
+- Document all parameters/fields; use `subsectionWithPath()` for optional arrays
+- Update `src/docs/asciidoc/index.adoc`
+- Run `./gradlew asciidoctor` to verify
+- Reference: `FriendControllerTest.kt`, `TeamControllerTest.kt`
 
 ### Frontend Testing
 
@@ -295,18 +270,9 @@ export const exampleApi = {
 
 ### Playwright MCP Usage
 
-**Use Playwright MCP only when necessary.** Do not use it for routine verification.
-
-- **When to use:**
-  - Complex UI interactions that cannot be verified by code inspection alone (drag-and-drop, multi-step workflows)
-  - Debugging visual regressions or layout issues reported by user
-  - Verifying OAuth/SSO flows that require actual browser state
-  - User explicitly requests browser-based testing
-- **When NOT to use:**
-  - Simple CRUD operations verifiable via API or unit tests
-  - Styling changes (verify in browser manually or trust Tailwind classes)
-  - Routine feature implementation (trust the code, verify via existing tests)
-  - When `./gradlew test` or manual browser refresh suffices
+**Use only when necessary:**
+- Complex UI (drag-drop, multi-step), visual regressions, OAuth/SSO flows, or user request
+- **NOT for:** CRUD, styling, routine features verifiable via tests or manual refresh
 
 ---
 
@@ -329,20 +295,10 @@ export const exampleApi = {
 
 ### Parallel Execution & Sub-agent Strategy
 
-**Before starting any task, always evaluate opportunities for safe parallel execution.**
-
-- **Assess parallelizability first:** Identify independent subtasks that don't share mutable state or have dependencies on each other.
-- **Use sub-agents proactively:** When multiple independent operations exist (e.g., searching different modules, reading unrelated files, running independent tests), spawn sub-agents in parallel to maximize throughput.
-- **Safe parallel patterns:**
-  - Reading multiple unrelated files simultaneously
-  - Searching across different directories or modules
-  - Running independent validation checks
-  - Exploring codebase structure from multiple angles
-- **Avoid parallel execution when:**
-  - Tasks have sequential dependencies (e.g., create file → edit file)
-  - Operations modify shared state or the same files
-  - Order of execution affects correctness
-- **Always prefer parallel sub-agents** for exploration, research, and information gathering tasks—these are inherently safe to parallelize and significantly reduce response time.
+**Evaluate parallelizability first:**
+- **Safe:** reading unrelated files, searching different modules, independent validation, exploration
+- **Unsafe:** sequential dependencies (create → edit), shared state/file modifications
+- Always prefer parallel sub-agents for research/exploration tasks
 
 ---
 
@@ -350,26 +306,17 @@ export const exampleApi = {
 
 ### GitHub CLI Usage
 
-**Always use `gh` CLI for GitHub-related operations.**
-
-- Creating issues: `gh issue create --title "..." --body "..."`
-- Viewing issues: `gh issue view <number>`
-- Creating pull requests: `gh pr create --title "..." --body "..."`
-- Viewing pull requests: `gh pr view <number>`
-- All GitHub issue titles and descriptions **must be written in English only**.
+Use `gh` CLI: `gh issue create/view`, `gh pr create/view`
+**English only** for all GitHub titles/descriptions.
 
 ### Git Commit Policy & Convention
 
-**Absolutely do not commit unless the user explicitly asks.**
+**Never commit unless explicitly asked.**
 
-- No proactive commits, even if the task feels done. Never suggest committing unless requested.
-- When asked to commit:
-  - Analyze only the code diff since the last commit; ignore conversation history.
-  - Format: `type: summary`, where `type ∈ {feat, fix, chore, refactor}`.
-  - Summary must be concise, imperative, **English only**, no trailing period, no mixed languages.
-  - Optional body: blank line after summary, wrap at ~72 chars; mention issues only when relevant.
-  - Run `git log --oneline -10` first to ensure message aligns with recent style; amend if needed.
-- **All commit messages must be written in English only**.
+When committing:
+- Format: `type: summary` where `type ∈ {feat, fix, chore, refactor}`
+- Analyze diff only (not conversation); run `git log --oneline -10` for style check
+- **English only**, imperative, no trailing period
 
 ---
 
