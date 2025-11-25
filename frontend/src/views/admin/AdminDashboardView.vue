@@ -22,6 +22,8 @@ import {
   Loader2,
   TrendingUp,
   Zap,
+  FileText,
+  ExternalLink,
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -241,10 +243,17 @@ onMounted(async () => {
             <Building2 class="w-6 h-6 mb-2 text-gray-600" />
             <span class="font-medium text-gray-700">팀 관리</span>
           </router-link>
-          <div class="bg-white border border-gray-200 rounded-xl p-4 opacity-50 cursor-not-allowed">
-            <Shield class="w-6 h-6 mb-2 text-gray-400" />
-            <span class="font-medium text-gray-400">시스템 로그</span>
-          </div>
+          <a
+            href="/docs/index.html"
+            target="_blank"
+            class="bg-white border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition"
+          >
+            <div class="flex items-center gap-1 mb-2">
+              <FileText class="w-6 h-6 text-gray-600" />
+              <ExternalLink class="w-3 h-3 text-gray-400" />
+            </div>
+            <span class="font-medium text-gray-700">API 문서</span>
+          </a>
           <div class="bg-white border border-gray-200 rounded-xl p-4 opacity-50 cursor-not-allowed">
             <Settings class="w-6 h-6 mb-2 text-gray-400" />
             <span class="font-medium text-gray-400">설정</span>
