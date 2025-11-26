@@ -274,6 +274,10 @@ export const exampleApi = {
 - Complex UI (drag-drop, multi-step), visual regressions, OAuth/SSO flows, or user request
 - **NOT for:** CRUD, styling, routine features verifiable via tests or manual refresh
 
+**Development credentials:**
+- Email: `test@duty.park`
+- Password: `12345678`
+
 ---
 
 ## 7. Collaboration Preferences

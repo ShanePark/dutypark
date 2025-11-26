@@ -490,7 +490,7 @@ onMounted(() => {
             v-for="(day, idx) in weekDays"
             :key="day"
             class="py-2 text-center font-bold border-b-2 text-sm"
-            :style="{ borderBottomColor: 'var(--dp-border-secondary)', color: idx === 0 ? '#dc2626' : idx === 6 ? '#2563eb' : 'var(--dp-text-primary)' }"
+            :style="{ borderColor: 'var(--dp-border-secondary)', color: idx === 0 ? '#dc2626' : idx === 6 ? '#2563eb' : 'var(--dp-text-primary)' }"
             :class="{
               'border-r': idx < 6,
             }"
