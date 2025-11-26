@@ -6,15 +6,8 @@
 
 @font-face {
   font-family: 'NexonMaplestory';
-  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@2.1/NexonMaplestory-Light.woff') format('woff');
+  src: url('./assets/fonts/MaplestoryOTFLight.woff') format('woff');
   font-weight: 300;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'NexonMaplestory';
-  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@2.1/NexonMaplestory-Bold.woff') format('woff');
-  font-weight: 700;
   font-style: normal;
 }
 
