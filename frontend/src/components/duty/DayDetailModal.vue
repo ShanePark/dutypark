@@ -457,14 +457,14 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
     >
       <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[calc(100dvh-5rem)] sm:max-h-[90vh] mx-2 sm:mx-4 flex flex-col" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
         <!-- Header -->
-        <div class="p-3 sm:p-4 flex-shrink-0" :style="{ borderBottom: '1px solid var(--dp-border-primary)' }">
+        <div class="p-3 sm:p-4 flex-shrink-0" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderBottom: '1px solid var(--dp-border-primary)' }">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <span v-if="isCreateMode" class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">일정 추가</span>
               <span v-else-if="isEditMode" class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">일정 수정</span>
               <h2 class="text-base sm:text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">{{ formattedDate }}</h2>
             </div>
-            <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition flex-shrink-0">
+            <button @click="emit('close')" class="p-2 hover-bg-light rounded-full transition flex-shrink-0">
               <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
             </button>
           </div>

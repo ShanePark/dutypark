@@ -84,9 +84,9 @@ const isEditMode = props.dday !== null && props.dday !== undefined
     >
       <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-md max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
         <!-- Header -->
-        <div class="flex items-center justify-between p-3 sm:p-4" :style="{ borderBottom: '1px solid var(--dp-border-primary)' }">
-          <h2 class="text-base sm:text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">{{ dday ? '디데이 수정' : '디데이 추가' }}</h2>
-          <button @click="handleClose" class="p-2 rounded-full transition">
+        <div class="modal-header">
+          <h2>{{ dday ? '디데이 수정' : '디데이 추가' }}</h2>
+          <button @click="handleClose" class="p-2 rounded-full transition hover-bg-light">
             <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
           </button>
         </div>

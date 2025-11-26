@@ -94,13 +94,8 @@ const ddayBadgeClass = computed(() => {
         :style="{ backgroundColor: 'var(--dp-bg-modal)' }"
       >
         <!-- Header -->
-        <div
-          class="flex items-center justify-between p-4"
-          :style="{ borderBottom: '1px solid var(--dp-border-primary)' }"
-        >
-          <h2 class="text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">
-            디데이 상세
-          </h2>
+        <div class="modal-header">
+          <h2>디데이 상세</h2>
           <button
             @click="handleClose"
             class="p-2 rounded-full transition hover-bg-light"
@@ -126,7 +121,7 @@ const ddayBadgeClass = computed(() => {
             <label class="block text-xs font-medium mb-1" :style="{ color: 'var(--dp-text-muted)' }">
               제목
             </label>
-            <p class="text-lg font-semibold flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
+            <p class="text-lg flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
               <Lock v-if="dday.isPrivate" class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
               {{ dday.title }}
             </p>

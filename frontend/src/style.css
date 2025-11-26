@@ -7,7 +7,14 @@
 @font-face {
   font-family: 'NexonMaplestory';
   src: url('./assets/fonts/MaplestoryOTFLight.woff') format('woff');
-  font-weight: 300;
+  font-weight: 100 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'NexonMaplestory';
+  src: url('./assets/fonts/MaplestoryOTFBold.woff') format('woff');
+  font-weight: 600 900;
   font-style: normal;
 }
 
@@ -485,8 +492,61 @@ html.dark {
 }
 
 /* Modal */
+.modal-header {
+  @apply flex items-center justify-between px-4 py-3 sm:px-5 sm:py-4;
+  background-color: var(--dp-bg-tertiary);
+  border-bottom: 1px solid var(--dp-border-primary);
+}
+
+.modal-header h2 {
+  @apply text-base sm:text-lg font-bold;
+  color: var(--dp-text-primary);
+}
+
 .modal-body {
   @apply max-h-[580px] overflow-y-auto;
+}
+
+/* Todo Button Group */
+.todo-btn-list:hover {
+  background-color: #eff6ff !important;
+}
+
+.todo-btn-list:hover svg,
+.todo-btn-list:hover span {
+  color: #3b82f6 !important;
+}
+
+.todo-btn-add:hover {
+  background-color: #f0fdf4 !important;
+  color: #22c55e !important;
+}
+
+.dark .todo-btn-list:hover {
+  background-color: #1e3a5f !important;
+}
+
+.dark .todo-btn-list:hover svg,
+.dark .todo-btn-list:hover span {
+  color: #60a5fa !important;
+}
+
+.dark .todo-btn-add:hover {
+  background-color: #14532d !important;
+  color: #4ade80 !important;
+}
+
+.todo-item-bubble:hover {
+  border-color: #93c5fd !important;
+  background-color: #eff6ff !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.15);
+}
+
+.dark .todo-item-bubble:hover {
+  border-color: #3b82f6 !important;
+  background-color: #1e3a5f !important;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.25);
 }
 
 /* Footer Navigation */

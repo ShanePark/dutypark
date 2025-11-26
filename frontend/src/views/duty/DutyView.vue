@@ -1372,40 +1372,42 @@ async function showExcelUploadModal() {
     <template v-else>
     <!-- Todo List Section -->
     <div v-if="isMyCalendar" class="mb-1 flex items-center gap-1.5 px-1">
-      <!-- Add Todo Button -->
-      <button
-        @click="isTodoAddModalOpen = true"
-        class="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center transition-all duration-150 hover:scale-105"
-        :style="{ backgroundColor: 'var(--dp-text-secondary)', color: 'var(--dp-bg-primary)' }"
-      >
-        <Plus class="w-4 h-4" />
-      </button>
+      <!-- Button Group: List + Add -->
+      <div class="flex-shrink-0 inline-flex rounded-lg border overflow-hidden" :style="{ borderColor: 'var(--dp-border-secondary)' }">
+        <!-- Todo List Button -->
+        <button
+          @click="isTodoOverviewModalOpen = true"
+          class="todo-btn-list h-7 px-2.5 flex items-center gap-1.5 transition-all duration-150 cursor-pointer"
+          :style="{ backgroundColor: 'var(--dp-bg-card)' }"
+        >
+          <ClipboardList class="w-3.5 h-3.5 transition-colors" :style="{ color: 'var(--dp-text-muted)' }" />
+          <span class="text-xs font-medium transition-colors" :style="{ color: 'var(--dp-text-secondary)' }">{{ todos.length }}</span>
+        </button>
+        <!-- Add Todo Button -->
+        <button
+          @click="isTodoAddModalOpen = true"
+          class="todo-btn-add h-7 px-2 flex items-center justify-center transition-all duration-150 cursor-pointer border-l"
+          :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)', color: 'var(--dp-text-secondary)' }"
+        >
+          <Plus class="w-4 h-4" />
+        </button>
+      </div>
 
       <!-- Todo Items -->
-      <div class="flex-1 min-w-0 overflow-x-auto scrollbar-hide">
-        <div class="flex gap-1">
+      <div class="flex-1 min-w-0 overflow-x-auto scrollbar-hide py-0.5">
+        <div class="flex gap-1.5">
           <button
             v-for="todo in todos"
             :key="todo.id"
             @click="handleTodoBubbleClick(todo)"
-            class="flex-shrink-0 max-w-[120px] sm:max-w-[160px] flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] sm:text-xs cursor-pointer transition-all duration-150 hover:opacity-80 border"
-            :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderColor: 'var(--dp-border-secondary)', color: 'var(--dp-text-primary)' }"
+            class="todo-item-bubble flex-shrink-0 max-w-[120px] sm:max-w-[160px] flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] sm:text-xs cursor-pointer transition-all duration-150 border"
+            :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)', color: 'var(--dp-text-primary)' }"
           >
             <span class="truncate">{{ todo.title }}</span>
             <FileText v-if="todo.content || todo.hasAttachments" class="w-2.5 h-2.5 flex-shrink-0 opacity-50" />
           </button>
         </div>
       </div>
-
-      <!-- Todo List Button -->
-      <button
-        @click="isTodoOverviewModalOpen = true"
-        class="flex-shrink-0 h-7 px-2 flex items-center gap-1 rounded-md transition-all duration-150 cursor-pointer border hover:opacity-80"
-        :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderColor: 'var(--dp-border-secondary)' }"
-      >
-        <ClipboardList class="w-3.5 h-3.5" :style="{ color: 'var(--dp-text-secondary)' }" />
-        <span class="text-[11px] font-medium" :style="{ color: 'var(--dp-text-secondary)' }">{{ todos.length }}</span>
-      </button>
     </div>
 
     <!-- Month Control -->
@@ -1608,7 +1610,7 @@ async function showExcelUploadModal() {
                   color: isLightColor(getOtherDutyForDay(day, otherDuty)?.dutyColor) ? '#000' : '#fff',
                 }"
               >
-                <span class="font-bold">{{ otherDuty.memberName }}</span><template v-if="getOtherDutyForDay(day, otherDuty)?.dutyType">:<span class="font-normal">{{ getOtherDutyForDay(day, otherDuty)?.dutyType?.slice(0, 4) }}</span></template>
+                {{ otherDuty.memberName }}<template v-if="getOtherDutyForDay(day, otherDuty)?.dutyType">:{{ getOtherDutyForDay(day, otherDuty)?.dutyType?.slice(0, 4) }}</template>
               </div>
             </div>
 
@@ -1704,7 +1706,7 @@ async function showExcelUploadModal() {
           </div>
 
           <!-- Title -->
-          <p class="text-sm sm:text-base font-semibold mb-1 sm:mb-2 flex items-start gap-1 sm:gap-1.5" :style="{ color: 'var(--dp-text-primary)' }">
+          <p class="text-sm sm:text-base font-medium mb-1 sm:mb-2 flex items-start gap-1 sm:gap-1.5" :style="{ color: 'var(--dp-text-primary)' }">
             <Lock v-if="dday.isPrivate" class="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 mt-0.5" :style="{ color: 'var(--dp-text-muted)' }" />
             <span class="line-clamp-2">{{ dday.title }}</span>
           </p>

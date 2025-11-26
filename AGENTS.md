@@ -240,6 +240,14 @@ export const exampleApi = {
 - Interactive elements: `cursor-pointer` + theme-aware hover (e.g., `hover-bg-light`) + min 44px touch targets
 - Mobile-first: use Tailwind responsive prefixes (`sm:`, `md:`, `lg:`)
 
+### Hover & Interaction Design
+
+- Add hover effects to all clickable elements for better UX feedback
+- Use `transition-all duration-150` for smooth animations
+- Hover styles: background color change, border color change, subtle transform (`translateY(-1px)`), box-shadow
+- For theme compatibility, define hover styles in `style.css` with `.dark` variants (not inline Tailwind classes like `hover:bg-blue-50`)
+- Example pattern: add a class (e.g., `.todo-item-bubble`) and define hover in CSS with light/dark variants
+
 ### Code Comments Policy
 
 - Comment "why", not "what"; only for non-obvious reasoning or workarounds

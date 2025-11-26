@@ -566,7 +566,7 @@ onUnmounted(() => {
             </th>
             <td class="px-4 py-3" :style="{ color: 'var(--dp-text-primary)' }">
               <div class="flex items-center gap-2">
-                <span class="font-bold">{{ team.adminName || 'N/A' }}</span>
+                <span class="font-medium">{{ team.adminName || 'N/A' }}</span>
                 <button
                   v-if="team.adminId && loginId !== team.adminId"
                   @click="changeAdmin()"
@@ -787,7 +787,7 @@ onUnmounted(() => {
           <tbody :style="{ borderColor: 'var(--dp-border-primary)' }">
             <tr v-for="(dutyType, index) in team.dutyTypes" :key="dutyType.id || 'default'" class="hover-bg-light" :style="{ borderBottomWidth: '1px', borderBottomStyle: 'solid', borderBottomColor: 'var(--dp-border-primary)' }">
               <td class="px-4 py-3 text-center" :style="{ color: 'var(--dp-text-muted)' }">{{ index + 1 }}</td>
-              <td class="px-4 py-3 font-bold" :style="{ color: 'var(--dp-text-primary)' }">
+              <td class="px-4 py-3 font-medium" :style="{ color: 'var(--dp-text-primary)' }">
                 {{ dutyType.name }}
                 <span v-if="dutyType.id === null" class="text-xs font-normal" :style="{ color: 'var(--dp-text-muted)' }">(휴무)</span>
               </td>

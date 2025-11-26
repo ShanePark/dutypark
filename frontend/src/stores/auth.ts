@@ -36,6 +36,13 @@ export const useAuthStore = defineStore('auth', () => {
 
     isLoading.value = true
     try {
+      // Try to refresh access token first (in case only refresh token exists)
+      try {
+        await authApi.refresh()
+      } catch {
+        // Ignore refresh failure - user may not have refresh token
+      }
+
       // Check auth status via cookie (sent automatically)
       try {
         user.value = await authApi.getStatus()

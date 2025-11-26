@@ -210,7 +210,7 @@ function onUploadError(message: string) {
     >
       <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-xl max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
         <!-- Header -->
-        <div class="flex items-center justify-between p-3 sm:p-4" :style="{ borderBottom: '1px solid var(--dp-border-primary)' }">
+        <div class="flex items-center justify-between p-3 sm:p-4" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderBottom: '1px solid var(--dp-border-primary)' }">
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-2">
               <h2 class="text-base sm:text-lg font-bold truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ todo.title }}</h2>
@@ -230,7 +230,7 @@ function onUploadError(message: string) {
               <span v-if="todo.completedDate"> · 완료 {{ formatDate(todo.completedDate) }}</span>
             </p>
           </div>
-          <button @click="handleClose" class="p-2 rounded-full transition flex-shrink-0">
+          <button @click="handleClose" class="p-2 hover-bg-light rounded-full transition flex-shrink-0">
             <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
           </button>
         </div>
