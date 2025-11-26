@@ -195,10 +195,8 @@ export const refreshTokenApi = {
    * Get all refresh tokens (sessions)
    */
   getRefreshTokens(validOnly = true) {
-    const currentRefreshToken = localStorage.getItem('refreshToken')
-    return apiClient.get<RefreshTokenDto[]>('/refresh-tokens', {
+    return apiClient.get<RefreshTokenDto[]>('/auth/refresh-tokens', {
       params: { validOnly },
-      headers: currentRefreshToken ? { 'X-Current-Token': currentRefreshToken } : {},
     })
   },
 
@@ -206,7 +204,7 @@ export const refreshTokenApi = {
    * Delete a refresh token (logout from device)
    */
   deleteRefreshToken(id: number) {
-    return apiClient.delete(`/refresh-tokens/${id}`)
+    return apiClient.delete(`/auth/refresh-tokens/${id}`)
   },
 }
 

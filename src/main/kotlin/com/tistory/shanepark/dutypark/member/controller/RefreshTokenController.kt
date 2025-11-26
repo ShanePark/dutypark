@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@RequestMapping("/api/refresh-tokens")
+@RequestMapping("/api/auth/refresh-tokens")
 class RefreshTokenController(
     private val refreshTokenService: RefreshTokenService,
     private val cookieService: CookieService,
