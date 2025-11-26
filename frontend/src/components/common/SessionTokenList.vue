@@ -1,0 +1,248 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import type { RefreshTokenDto } from '@/types'
+import {
+  Clock,
+  Monitor,
+  Globe,
+  Smartphone,
+  Loader2,
+} from 'lucide-vue-next'
+
+const props = withDefaults(defineProps<{
+  tokens: RefreshTokenDto[]
+  loading?: boolean
+  showDeleteButton?: boolean
+  compact?: boolean
+}>(), {
+  loading: false,
+  showDeleteButton: true,
+  compact: false,
+})
+
+const emit = defineEmits<{
+  delete: [tokenId: number]
+}>()
+
+const sortedTokens = computed(() => {
+  return [...props.tokens].sort((a, b) => {
+    if (a.isCurrentLogin) return -1
+    if (b.isCurrentLogin) return 1
+    const aTime = a.lastUsed ? new Date(a.lastUsed).getTime() : 0
+    const bTime = b.lastUsed ? new Date(b.lastUsed).getTime() : 0
+    return bTime - aTime
+  })
+})
+
+function formatLastUsed(lastUsed: string | null): string {
+  if (!lastUsed) return '-'
+
+  const date = new Date(lastUsed)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+
+  if (diffMins < 1) return '방금 전'
+  if (diffMins < 60) return `${diffMins}분 전`
+  if (diffHours < 24) return `${diffHours}시간 전`
+  if (diffDays < 7) return `${diffDays}일 전`
+  return date.toLocaleDateString('ko-KR')
+}
+
+function isDesktopDevice(device: string | undefined): boolean {
+  return device === 'Other'
+}
+
+function handleDelete(tokenId: number) {
+  emit('delete', tokenId)
+}
+</script>
+
+<template>
+  <div>
+    <!-- Loading State -->
+    <div v-if="loading" class="flex items-center justify-center py-8">
+      <Loader2 class="w-6 h-6 animate-spin text-blue-500" />
+    </div>
+
+    <template v-else-if="sortedTokens.length === 0">
+      <div class="py-8 text-center text-sm" :style="{ color: 'var(--dp-text-muted)' }">
+        세션 정보가 없습니다
+      </div>
+    </template>
+
+    <template v-else>
+      <!-- Compact Mode -->
+      <template v-if="compact">
+        <!-- Mobile -->
+        <div class="sm:hidden space-y-2">
+          <div
+            v-for="token in sortedTokens"
+            :key="token.id"
+            class="text-sm rounded-lg p-3"
+            :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
+          >
+            <div class="flex items-center gap-2 mb-2" :style="{ color: 'var(--dp-text-secondary)' }">
+              <Clock class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+              <span>{{ formatLastUsed(token.lastUsed) }}</span>
+            </div>
+            <div class="space-y-1">
+              <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
+                <Globe class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+                <span>{{ token.remoteAddr || '-' }}</span>
+              </div>
+              <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
+                <component :is="isDesktopDevice(token.userAgent?.device) ? Monitor : Smartphone" class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+                <span>{{ token.userAgent?.device || '-' }}</span>
+                <span :style="{ color: 'var(--dp-text-muted)' }">{{ token.userAgent?.browser || '-' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Desktop -->
+        <div class="hidden sm:block space-y-2">
+          <div
+            v-for="token in sortedTokens"
+            :key="token.id"
+            class="grid text-sm rounded-lg p-3"
+            :class="showDeleteButton ? 'grid-cols-[1fr_1fr_1fr_1fr_auto]' : 'grid-cols-[1fr_1fr_1fr_1fr]'"
+            :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
+          >
+            <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
+              <Clock class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+              <span>{{ formatLastUsed(token.lastUsed) }}</span>
+            </div>
+            <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
+              <Globe class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+              <span class="truncate">{{ token.remoteAddr || '-' }}</span>
+            </div>
+            <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
+              <component :is="isDesktopDevice(token.userAgent?.device) ? Monitor : Smartphone" class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+              <span class="truncate">{{ token.userAgent?.device || '-' }}</span>
+            </div>
+            <div class="truncate flex items-center" :style="{ color: 'var(--dp-text-muted)' }">
+              {{ token.userAgent?.browser || '-' }}
+            </div>
+            <div v-if="showDeleteButton" class="flex items-center justify-end">
+              <button
+                v-if="!token.isCurrentLogin"
+                @click="handleDelete(token.id)"
+                class="px-3 py-1 text-xs font-medium text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-full transition cursor-pointer"
+              >
+                접속 종료
+              </button>
+              <span v-else class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
+                현재 접속
+              </span>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- Full Mode (with table headers) -->
+      <template v-else>
+        <!-- Mobile -->
+        <div class="sm:hidden space-y-3">
+          <div
+            v-for="token in sortedTokens"
+            :key="token.id"
+            class="p-4 rounded-lg"
+            :style="{ backgroundColor: 'var(--dp-bg-secondary)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }"
+          >
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-sm font-medium" :style="{ color: 'var(--dp-text-primary)' }">
+                {{ formatLastUsed(token.lastUsed) }}
+              </span>
+              <span v-if="token.isCurrentLogin" class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
+                현재 접속
+              </span>
+              <button
+                v-else-if="showDeleteButton"
+                @click="handleDelete(token.id)"
+                class="px-3 py-2 min-h-11 text-xs font-medium text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-full transition cursor-pointer"
+              >
+                접속 종료
+              </button>
+            </div>
+            <div class="space-y-2 text-sm">
+              <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
+                <span class="w-16" :style="{ color: 'var(--dp-text-muted)' }">IP</span>
+                <span>{{ token.remoteAddr || '-' }}</span>
+              </div>
+              <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
+                <span class="w-16" :style="{ color: 'var(--dp-text-muted)' }">기기</span>
+                <span class="flex items-center gap-1">
+                  <component :is="isDesktopDevice(token.userAgent?.device) ? Monitor : Smartphone" class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
+                  {{ token.userAgent?.device || '-' }}
+                </span>
+              </div>
+              <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
+                <span class="w-16" :style="{ color: 'var(--dp-text-muted)' }">브라우저</span>
+                <span class="flex items-center gap-1">
+                  <Globe class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
+                  {{ token.userAgent?.browser || '-' }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Desktop -->
+        <div class="hidden sm:block overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr :style="{ borderBottomWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
+                <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">접속 시간</th>
+                <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">IP</th>
+                <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">기기</th>
+                <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">브라우저</th>
+                <th v-if="showDeleteButton" class="text-center py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">관리</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="token in sortedTokens"
+                :key="token.id"
+                class="hover:opacity-90"
+                :style="{ borderBottomWidth: '1px', borderColor: 'var(--dp-border-secondary)' }"
+              >
+                <td class="py-3 px-2" :style="{ color: 'var(--dp-text-primary)' }">
+                  {{ formatLastUsed(token.lastUsed) }}
+                </td>
+                <td class="py-3 px-2" :style="{ color: 'var(--dp-text-primary)' }">
+                  {{ token.remoteAddr || '-' }}
+                </td>
+                <td class="py-3 px-2">
+                  <span class="flex items-center gap-1" :style="{ color: 'var(--dp-text-primary)' }">
+                    <component :is="isDesktopDevice(token.userAgent?.device) ? Monitor : Smartphone" class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
+                    {{ token.userAgent?.device || '-' }}
+                  </span>
+                </td>
+                <td class="py-3 px-2">
+                  <span class="flex items-center gap-1" :style="{ color: 'var(--dp-text-primary)' }">
+                    <Globe class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
+                    {{ token.userAgent?.browser || '-' }}
+                  </span>
+                </td>
+                <td v-if="showDeleteButton" class="py-3 px-2 text-center">
+                  <button
+                    v-if="!token.isCurrentLogin"
+                    @click="handleDelete(token.id)"
+                    class="px-3 py-1 text-xs font-medium text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-full transition cursor-pointer"
+                  >
+                    접속 종료
+                  </button>
+                  <span v-else class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
+                    현재 접속
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </template>
+    </template>
+  </div>
+</template>

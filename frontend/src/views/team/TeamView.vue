@@ -444,8 +444,11 @@ onMounted(() => {
       <!-- Team Header & Month Controls -->
       <div class="flex items-center justify-between gap-1 mb-1">
         <!-- Left: Team name -->
-        <div class="flex items-center gap-2 flex-shrink-0">
-          <span class="text-sm sm:text-base font-bold" :style="{ color: 'var(--dp-text-primary)' }">{{ team.name }}</span>
+        <div class="w-20 sm:w-24 flex-shrink-0 flex items-center justify-start">
+          <div class="flex items-center gap-1.5 px-2 py-1 rounded-full border" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderColor: 'var(--dp-border-secondary)' }">
+            <Building2 class="w-3.5 h-3.5 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }" />
+            <span class="text-xs sm:text-sm font-semibold truncate max-w-[60px] sm:max-w-[72px]" :style="{ color: 'var(--dp-text-primary)' }">{{ team.name }}</span>
+          </div>
         </div>
 
         <!-- Center: Year-Month Navigation -->

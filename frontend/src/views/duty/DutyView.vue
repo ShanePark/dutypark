@@ -9,8 +9,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
-  Pencil,
-  Trash2,
   Users,
   User,
   FileText,
@@ -28,6 +26,7 @@ import TodoAddModal from '@/components/duty/TodoAddModal.vue'
 import TodoDetailModal from '@/components/duty/TodoDetailModal.vue'
 import TodoOverviewModal from '@/components/duty/TodoOverviewModal.vue'
 import DDayModal from '@/components/duty/DDayModal.vue'
+import DDayDetailModal from '@/components/duty/DDayDetailModal.vue'
 import SearchResultModal from '@/components/duty/SearchResultModal.vue'
 import OtherDutiesModal from '@/components/duty/OtherDutiesModal.vue'
 import YearMonthPicker from '@/components/common/YearMonthPicker.vue'
@@ -181,6 +180,8 @@ const isTodoAddFromOverview = ref(false)
 const isTodoDetailModalOpen = ref(false)
 const isTodoOverviewModalOpen = ref(false)
 const isDDayModalOpen = ref(false)
+const isDDayDetailModalOpen = ref(false)
+const isDDayEditFromDetail = ref(false)
 const isSearchResultModalOpen = ref(false)
 const isOtherDutiesModalOpen = ref(false)
 
@@ -257,6 +258,13 @@ async function loadTodos() {
   }
 }
 
+// Sort D-Days by date ascending (same as backend: OrderByDate)
+function sortDDays() {
+  dDays.value.sort((a, b) => {
+    return new Date(a.date).getTime() - new Date(b.date).getTime()
+  })
+}
+
 // Load D-Days from API
 async function loadDDays() {
   isLoadingDDays.value = true
@@ -268,6 +276,8 @@ async function loadDDays() {
       apiDDays = (await ddayApi.getDDaysByMemberId(memberId.value)).data
     }
     dDays.value = apiDDays.map(mapToLocalDDay)
+    // Sort D-Days after loading
+    sortDDays()
   } catch (error) {
     console.error('Failed to load D-Days:', error)
   } finally {
@@ -723,9 +733,46 @@ function togglePinnedDDay(dday: LocalDDay) {
   }
 }
 
+function openDDayDetail(dday: LocalDDay) {
+  selectedDDay.value = dday
+  isDDayDetailModalOpen.value = true
+}
+
 function openDDayModal(dday?: LocalDDay) {
   selectedDDay.value = dday || null
   isDDayModalOpen.value = true
+}
+
+function handleDDayEdit(dday: LocalDDay) {
+  isDDayDetailModalOpen.value = false
+  isDDayEditFromDetail.value = true
+  openDDayModal(dday)
+}
+
+async function handleDDayDeleteFromDetail(dday: LocalDDay) {
+  isDDayDetailModalOpen.value = false
+  await deleteDDay(dday)
+}
+
+function handleDDayTogglePin(dday: LocalDDay) {
+  togglePinnedDDay(dday)
+}
+
+// Get D-Day badge class based on calc value
+function getDDayBadgeClass(calc: number): string {
+  if (calc === 0) {
+    return 'dday-badge-today'
+  } else if (calc < 0) {
+    return 'dday-badge-past'
+  } else if (calc === 1) {
+    return 'dday-badge-upcoming-1'
+  } else if (calc === 2) {
+    return 'dday-badge-upcoming-2'
+  } else if (calc === 3) {
+    return 'dday-badge-upcoming-3'
+  } else {
+    return 'dday-badge-future'
+  }
 }
 
 async function handleDDaySave(dday: { id?: number; title: string; date: string; isPrivate: boolean }) {
@@ -749,15 +796,24 @@ async function handleDDaySave(dday: { id?: number; title: string; date: string; 
       if (pinnedDDay.value?.id === dday.id) {
         pinnedDDay.value = localDDay
       }
+      // Update selectedDDay for detail modal
+      selectedDDay.value = localDDay
     } else {
       // Add new to local list
       dDays.value.push(localDDay)
     }
+    // Re-sort after add/update
+    sortDDays()
   } catch (error) {
     console.error('Failed to save D-Day:', error)
     showError('D-Day 저장에 실패했습니다.')
   }
   isDDayModalOpen.value = false
+  // Return to detail modal if editing from there
+  if (isDDayEditFromDetail.value) {
+    isDDayDetailModalOpen.value = true
+    isDDayEditFromDetail.value = false
+  }
 }
 
 async function deleteDDay(dday: LocalDDay) {
@@ -1139,6 +1195,16 @@ async function handleRemoveTag(scheduleId: string, friendId: number) {
   }
 }
 
+async function handleUntagSelf(scheduleId: string) {
+  try {
+    await scheduleApi.untagSelf(scheduleId)
+    await loadSchedules()
+  } catch (error) {
+    console.error('Failed to untag self:', error)
+    showError('태그 해제에 실패했습니다.')
+  }
+}
+
 async function handleChangeDutyType(dutyTypeId: number | null) {
   if (!memberId.value || !selectedDay.value) return
   // Allow if viewing own calendar OR if user has manager permission
@@ -1352,8 +1418,13 @@ async function showExcelUploadModal() {
 
     <!-- Month Control -->
     <div class="flex items-center justify-between gap-1 mb-1">
-      <!-- Left spacer for balance -->
-      <div class="w-20 sm:w-24 flex-shrink-0"></div>
+      <!-- Left: Calendar Owner Name -->
+      <div class="w-20 sm:w-24 flex-shrink-0 flex items-center justify-start">
+        <div class="flex items-center gap-1.5 px-2 py-1 rounded-full border" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderColor: 'var(--dp-border-secondary)' }">
+          <User class="w-3.5 h-3.5 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }" />
+          <span class="text-xs sm:text-sm font-semibold truncate max-w-[60px] sm:max-w-[72px]" :style="{ color: 'var(--dp-text-primary)' }">{{ memberName }}</span>
+        </div>
+      </div>
 
       <!-- Center: Year-Month Navigation -->
       <div class="flex items-center justify-center">
@@ -1378,7 +1449,7 @@ async function showExcelUploadModal() {
           <input
             v-model="searchQuery"
             type="text"
-            :placeholder="isMyCalendar ? '검색' : memberName || '검색'"
+            placeholder="검색"
             @keyup.enter="handleSearch()"
             class="px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none w-14 sm:w-20 border-none"
             :style="{ backgroundColor: 'var(--dp-bg-input)', color: 'var(--dp-text-primary)' }"
@@ -1389,11 +1460,6 @@ async function showExcelUploadModal() {
           >
             <Search class="w-4 h-4" />
           </button>
-        </div>
-        <!-- No search + other's calendar: show name only -->
-        <div v-else-if="!isMyCalendar && memberName" class="flex items-center gap-1 px-2 py-1 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }">
-          <User class="w-4 h-4" :style="{ color: 'var(--dp-text-secondary)' }" />
-          <span class="text-sm font-bold" :style="{ color: 'var(--dp-text-primary)' }">{{ memberName }}</span>
         </div>
       </div>
     </div>
@@ -1422,9 +1488,9 @@ async function showExcelUploadModal() {
       <div class="inline-flex rounded-lg border overflow-hidden" :style="{ borderColor: 'var(--dp-border-secondary)' }">
         <button
           @click="handleToggleOtherDuties"
-          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition flex items-center gap-1 border-r cursor-pointer"
+          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1 border-r cursor-pointer"
           :style="{ borderColor: 'var(--dp-border-secondary)' }"
-          :class="(selectedFriendIds.length > 0 || showMyDuties) ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'hover-bg-light'"
+          :class="(selectedFriendIds.length > 0 || showMyDuties) ? 'bg-blue-50/70 text-blue-700 hover:bg-blue-50' : 'hover:bg-gray-500/10 dark:hover:bg-gray-400/10'"
         >
           <Users class="w-4 h-4" />
           <span class="hidden xs:inline">함께보기</span>
@@ -1435,16 +1501,16 @@ async function showExcelUploadModal() {
         <button
           v-if="canEdit"
           @click="batchEditMode = !batchEditMode"
-          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition border-r cursor-pointer"
+          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 border-r cursor-pointer"
           :style="{ borderColor: 'var(--dp-border-secondary)' }"
-          :class="batchEditMode ? 'bg-orange-50 text-orange-700 hover:bg-orange-100' : 'hover-bg-light'"
+          :class="batchEditMode ? 'bg-orange-50/70 text-orange-700 hover:bg-orange-50' : 'hover:bg-gray-500/10 dark:hover:bg-gray-400/10'"
         >
           편집모드
         </button>
         <button
           v-if="canEdit && isMyCalendar"
           @click="showBatchUpdateModal"
-          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition border-r last:border-r-0 cursor-pointer hover-bg-light"
+          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 border-r last:border-r-0 cursor-pointer hover:bg-gray-500/10 dark:hover:bg-gray-400/10"
           :style="{ borderColor: 'var(--dp-border-secondary)' }"
         >
           일괄수정
@@ -1452,7 +1518,7 @@ async function showExcelUploadModal() {
         <button
           v-if="canEdit && isMyCalendar && team?.dutyBatchTemplate"
           @click="showExcelUploadModal"
-          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition flex items-center gap-1 cursor-pointer hover-bg-light"
+          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1 cursor-pointer hover:bg-gray-500/10 dark:hover:bg-gray-400/10"
         >
           <FileSpreadsheet class="w-4 h-4" />
           <span class="hidden sm:inline">엑셀</span>
@@ -1614,44 +1680,35 @@ async function showExcelUploadModal() {
         class="relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-lg border"
         :class="[
           pinnedDDay?.id === dday.id
-            ? 'ring-2 ring-blue-500 shadow-md'
+            ? 'ring-2 ring-amber-400 shadow-md'
             : 'shadow-sm',
           dday.calc <= 0
             ? 'dday-card-past'
             : 'dday-card-future'
         ]"
-        @click="togglePinnedDDay(dday)"
+        @click="openDDayDetail(dday)"
       >
         <div class="p-4">
-          <!-- D-Day badge and actions -->
+          <!-- D-Day badge and pin star -->
           <div class="flex justify-between items-start mb-3">
-            <div class="flex items-center gap-1.5">
-              <div
-                class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold shadow-sm"
-                :class="dday.calc <= 0
-                  ? 'bg-gray-500 text-white'
-                  : 'bg-blue-600 text-white'"
-              >
-                {{ dday.dDayText }}
-              </div>
-              <Star v-if="pinnedDDay?.id === dday.id" class="w-5 h-5 text-amber-500 fill-amber-500" />
+            <div
+              class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold shadow-sm"
+              :class="getDDayBadgeClass(dday.calc)"
+            >
+              {{ dday.dDayText }}
             </div>
-            <div v-if="isMyCalendar" class="flex gap-0.5">
-              <button
-                @click.stop="openDDayModal(dday)"
-                class="p-2 rounded-full hover:bg-white/50 transition"
-                :style="{ color: 'var(--dp-text-muted)' }"
-              >
-                <Pencil class="w-4 h-4" />
-              </button>
-              <button
-                @click.stop="deleteDDay(dday)"
-                class="p-2 rounded-full hover:bg-red-100/50 transition hover:text-red-600"
-                :style="{ color: 'var(--dp-text-muted)' }"
-              >
-                <Trash2 class="w-4 h-4" />
-              </button>
-            </div>
+            <!-- Pin star (always visible as placeholder) -->
+            <button
+              @click.stop="togglePinnedDDay(dday)"
+              class="p-1.5 rounded-full transition hover:scale-110"
+              :class="pinnedDDay?.id === dday.id ? 'hover:bg-amber-100' : 'hover:bg-gray-100'"
+              :title="pinnedDDay?.id === dday.id ? '고정 해제' : '캘린더에 고정'"
+            >
+              <Star
+                class="w-5 h-5 transition-colors"
+                :class="pinnedDDay?.id === dday.id ? 'text-amber-500 fill-amber-500' : 'text-gray-300 hover:text-amber-400'"
+              />
+            </button>
           </div>
 
           <!-- Title -->
@@ -1699,6 +1756,7 @@ async function showExcelUploadModal() {
       @reorder-schedules="handleReorderSchedules"
       @add-tag="handleAddTag"
       @remove-tag="handleRemoveTag"
+      @untag-self="handleUntagSelf"
       @change-duty-type="handleChangeDutyType"
     />
 
@@ -1735,8 +1793,19 @@ async function showExcelUploadModal() {
     <DDayModal
       :is-open="isDDayModalOpen"
       :dday="selectedDDay"
-      @close="isDDayModalOpen = false"
+      @close="isDDayModalOpen = false; if (isDDayEditFromDetail) { isDDayDetailModalOpen = true; isDDayEditFromDetail = false; }"
       @save="handleDDaySave"
+    />
+
+    <DDayDetailModal
+      :is-open="isDDayDetailModalOpen"
+      :dday="selectedDDay"
+      :is-pinned="pinnedDDay?.id === selectedDDay?.id"
+      :can-edit="isMyCalendar"
+      @close="isDDayDetailModalOpen = false"
+      @edit="handleDDayEdit"
+      @delete="handleDDayDeleteFromDetail"
+      @toggle-pin="handleDDayTogglePin"
     />
 
     <SearchResultModal

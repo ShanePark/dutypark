@@ -6,24 +6,20 @@ import { adminApi } from '@/api/admin'
 import { authApi } from '@/api/auth'
 import { useSwal } from '@/composables/useSwal'
 import type { MemberDto, RefreshTokenDto } from '@/types'
+import SessionTokenList from '@/components/common/SessionTokenList.vue'
 import {
   Users,
   Building2,
   Shield,
-  Clock,
-  Monitor,
-  Globe,
   Key,
   ChevronRight,
   Search,
   RefreshCw,
   Settings,
-  Activity,
   Loader2,
-  TrendingUp,
-  Zap,
   FileText,
   ExternalLink,
+  Clock,
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -87,21 +83,6 @@ const filteredMembers = computed(() => {
   return members.value.filter((member) => member.name.toLowerCase().includes(keyword))
 })
 
-function formatRelativeTime(dateString: string | null): string {
-  if (!dateString) return '-'
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMs / 3600000)
-  const diffDays = Math.floor(diffMs / 86400000)
-
-  if (diffMins < 1) return '방금 전'
-  if (diffMins < 60) return `${diffMins}분 전`
-  if (diffHours < 24) return `${diffHours}시간 전`
-  if (diffDays < 7) return `${diffDays}일 전`
-  return date.toLocaleDateString('ko-KR')
-}
 
 const showPasswordModal = ref(false)
 const selectedMember = ref<{ id: number; name: string } | null>(null)
@@ -386,29 +367,13 @@ onMounted(async () => {
                 </button>
               </div>
 
-              <div v-if="member.tokens.length > 0" class="ml-0 sm:ml-13 space-y-2">
-                <div
-                  v-for="(token, index) in member.tokens"
-                  :key="index"
-                  class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm rounded-lg p-3"
-                  :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
-                >
-                  <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
-                    <Clock class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
-                    <span class="truncate">{{ formatRelativeTime(token.lastUsed) }}</span>
-                  </div>
-                  <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
-                    <Globe class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
-                    <span class="truncate">{{ token.remoteAddr }}</span>
-                  </div>
-                  <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
-                    <Monitor class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
-                    <span class="truncate">{{ token.userAgent?.device || '-' }}</span>
-                  </div>
-                  <div class="truncate" :style="{ color: 'var(--dp-text-muted)' }">
-                    {{ token.userAgent?.browser || '-' }}
-                  </div>
-                </div>
+              <div v-if="member.tokens.length > 0" class="ml-0 sm:ml-13 mt-2">
+                <SessionTokenList
+                  :tokens="member.tokens"
+                  :loading="false"
+                  :show-delete-button="false"
+                  :compact="true"
+                />
               </div>
               <div v-else class="ml-0 sm:ml-13 text-sm py-2" :style="{ color: 'var(--dp-text-muted)' }">
                 현재 활성화된 세션이 없습니다

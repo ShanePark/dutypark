@@ -115,7 +115,7 @@ function onUploadError(message: string) {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="handleClose"
     >
-      <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-md max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
+      <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-xl max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
         <!-- Header -->
         <div class="flex items-center justify-between p-3 sm:p-4" :style="{ borderBottom: '1px solid var(--dp-border-primary)' }">
           <h2 class="text-base sm:text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">할 일 추가</h2>
@@ -143,7 +143,7 @@ function onUploadError(message: string) {
               <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">내용</label>
               <textarea
                 v-model="content"
-                rows="4"
+                rows="6"
                 class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
                 placeholder="상세 내용을 입력하세요 (선택사항)"
               ></textarea>

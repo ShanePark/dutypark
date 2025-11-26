@@ -7,6 +7,7 @@ import { memberApi, refreshTokenApi } from '@/api/member'
 import { authApi } from '@/api/auth'
 import { useSwal } from '@/composables/useSwal'
 import type { FriendDto, MemberDto, RefreshTokenDto, CalendarVisibility } from '@/types'
+import SessionTokenList from '@/components/common/SessionTokenList.vue'
 import {
   User,
   Building2,
@@ -14,8 +15,6 @@ import {
   Eye,
   Shield,
   Smartphone,
-  Globe,
-  Monitor,
   Link,
   Lock,
   UserX,
@@ -166,23 +165,6 @@ async function deleteToken(tokenId: number) {
     console.error('Failed to delete token:', error)
     showError('세션 종료에 실패했습니다.')
   }
-}
-
-function formatLastUsed(lastUsed: string | null): string {
-  if (!lastUsed) return '-'
-
-  const date = new Date(lastUsed)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMs / 3600000)
-  const diffDays = Math.floor(diffMs / 86400000)
-
-  if (diffMins < 1) return '방금 전'
-  if (diffMins < 60) return `${diffMins}분 전`
-  if (diffHours < 24) return `${diffHours}시간 전`
-  if (diffDays < 7) return `${diffDays}일 전`
-  return date.toLocaleDateString()
 }
 
 // SSO connections
@@ -490,114 +472,12 @@ onMounted(async () => {
           <Smartphone class="w-5 h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
           접속 세션 관리
         </h2>
-        <div v-if="tokensLoading" class="flex items-center justify-center py-8">
-          <Loader2 class="w-6 h-6 animate-spin text-blue-500" />
-        </div>
-        <div v-else>
-          <!-- Mobile Card Layout -->
-          <div class="sm:hidden space-y-3">
-            <div
-              v-for="token in tokens"
-              :key="token.id"
-              class="p-4 rounded-lg"
-              :style="{ backgroundColor: 'var(--dp-bg-secondary)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }"
-            >
-              <div class="flex items-center justify-between mb-3">
-                <span class="text-sm font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ formatLastUsed(token.lastUsed) }}</span>
-                <span
-                  v-if="token.isCurrentLogin"
-                  class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full"
-                >
-                  현재 접속
-                </span>
-                <button
-                  v-else
-                  @click="deleteToken(token.id)"
-                  class="px-3 py-2 min-h-11 text-xs font-medium text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-full transition"
-                >
-                  접속 종료
-                </button>
-              </div>
-              <div class="space-y-2 text-sm">
-                <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
-                  <span class="w-16" :style="{ color: 'var(--dp-text-muted)' }">IP</span>
-                  <span>{{ token.remoteAddr || '-' }}</span>
-                </div>
-                <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
-                  <span class="w-16" :style="{ color: 'var(--dp-text-muted)' }">기기</span>
-                  <span class="flex items-center gap-1">
-                    <Monitor v-if="token.userAgent?.device === 'Other'" class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
-                    <Smartphone v-else class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
-                    {{ token.userAgent?.device || '-' }}
-                  </span>
-                </div>
-                <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
-                  <span class="w-16" :style="{ color: 'var(--dp-text-muted)' }">브라우저</span>
-                  <span class="flex items-center gap-1">
-                    <Globe class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
-                    {{ token.userAgent?.browser || '-' }}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div v-if="tokens.length === 0" class="py-8 text-center" :style="{ color: 'var(--dp-text-muted)' }">
-              세션 정보가 없습니다
-            </div>
-          </div>
-          <!-- Desktop Table Layout -->
-          <div class="hidden sm:block overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead>
-                <tr :style="{ borderBottomWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
-                  <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">접속 시간</th>
-                  <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">IP</th>
-                  <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">기기</th>
-                  <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">브라우저</th>
-                  <th class="text-center py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">관리</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="token in tokens" :key="token.id" class="hover:opacity-90" :style="{ borderBottomWidth: '1px', borderColor: 'var(--dp-border-secondary)' }">
-                  <td class="py-3 px-2" :style="{ color: 'var(--dp-text-primary)' }">{{ formatLastUsed(token.lastUsed) }}</td>
-                  <td class="py-3 px-2" :style="{ color: 'var(--dp-text-primary)' }">{{ token.remoteAddr || '-' }}</td>
-                  <td class="py-3 px-2">
-                    <span class="flex items-center gap-1" :style="{ color: 'var(--dp-text-primary)' }">
-                      <Monitor v-if="token.userAgent?.device === 'Other'" class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
-                      <Smartphone v-else class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
-                      {{ token.userAgent?.device || '-' }}
-                    </span>
-                  </td>
-                  <td class="py-3 px-2">
-                    <span class="flex items-center gap-1" :style="{ color: 'var(--dp-text-primary)' }">
-                      <Globe class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
-                      {{ token.userAgent?.browser || '-' }}
-                    </span>
-                  </td>
-                  <td class="py-3 px-2 text-center">
-                    <button
-                      v-if="!token.isCurrentLogin"
-                      @click="deleteToken(token.id)"
-                      class="px-3 py-1 text-xs font-medium text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-full transition"
-                    >
-                      접속 종료
-                    </button>
-                    <span
-                      v-else
-                      class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full"
-                    >
-                      현재 접속
-                    </span>
-                  </td>
-                </tr>
-                <tr v-if="tokens.length === 0">
-                  <td colspan="5" class="py-8 text-center" :style="{ color: 'var(--dp-text-muted)' }">
-                    세션 정보가 없습니다
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <SessionTokenList
+          :tokens="tokens"
+          :loading="tokensLoading"
+          :show-delete-button="true"
+          @delete="deleteToken"
+        />
       </section>
 
       <!-- SSO Connections Section -->

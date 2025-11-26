@@ -87,6 +87,7 @@ const emit = defineEmits<{
   (e: 'reorderSchedules', scheduleIds: string[]): void
   (e: 'addTag', scheduleId: string, friendId: number): void
   (e: 'removeTag', scheduleId: string, friendId: number): void
+  (e: 'untagSelf', scheduleId: string): void
 }>()
 
 const isCreateMode = ref(false)
@@ -128,6 +129,22 @@ const newSchedule = ref({
 const editAttachments = ref<NormalizedAttachment[]>([])
 
 const taggingScheduleId = ref<string | null>(null)
+const untagConfirmScheduleId = ref<string | null>(null)
+
+function openUntagConfirmModal(scheduleId: string) {
+  untagConfirmScheduleId.value = scheduleId
+}
+
+function closeUntagConfirmModal() {
+  untagConfirmScheduleId.value = null
+}
+
+function confirmUntag() {
+  if (untagConfirmScheduleId.value) {
+    emit('untagSelf', untagConfirmScheduleId.value)
+    untagConfirmScheduleId.value = null
+  }
+}
 
 const formattedDate = computed(() => {
   const { year, month, day } = props.date
@@ -657,24 +674,33 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
 
                 <!-- Actions -->
                 <div class="flex items-center gap-1 ml-2">
-                  <!-- Edit -->
-                  <button
-                    v-if="schedule.isMine || canEdit"
-                    @click="startEditMode(schedule)"
-                    class="p-1 hover:bg-gray-200 rounded transition text-blue-600"
-                    title="수정"
-                  >
-                    <Pencil class="w-4 h-4" />
-                  </button>
+                  <!-- Edit/Delete for own schedules or manager -->
+                  <template v-if="!schedule.isTagged && (schedule.isMine || canEdit)">
+                    <button
+                      @click="startEditMode(schedule)"
+                      class="p-1 hover:bg-gray-200 rounded transition text-blue-600"
+                      title="수정"
+                    >
+                      <Pencil class="w-4 h-4" />
+                    </button>
+                    <button
+                      @click="emit('deleteSchedule', schedule.id)"
+                      class="p-1 hover:bg-gray-200 rounded transition text-red-600"
+                      title="삭제"
+                    >
+                      <Trash2 class="w-4 h-4" />
+                    </button>
+                  </template>
 
-                  <!-- Delete -->
+                  <!-- Untag for tagged schedules -->
                   <button
-                    v-if="schedule.isMine || canEdit"
-                    @click="emit('deleteSchedule', schedule.id)"
-                    class="p-1 hover:bg-gray-200 rounded transition text-red-600"
-                    title="삭제"
+                    v-if="schedule.isTagged"
+                    @click="openUntagConfirmModal(schedule.id)"
+                    class="px-2 py-1 hover:bg-orange-100 rounded transition text-orange-600 text-xs font-medium flex items-center gap-1"
+                    title="태그 제거"
                   >
-                    <Trash2 class="w-4 h-4" />
+                    <X class="w-3.5 h-3.5" />
+                    태그 제거
                   </button>
                 </div>
               </div>
@@ -778,6 +804,51 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
           >
             <Plus class="w-4 h-4" />
             일정 추가
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
+  <!-- Untag Confirm Modal -->
+  <Teleport to="body">
+    <div
+      v-if="untagConfirmScheduleId"
+      class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+      @click.self="closeUntagConfirmModal"
+    >
+      <div
+        class="rounded-lg shadow-xl w-full max-w-sm"
+        :style="{ backgroundColor: 'var(--dp-bg-modal)' }"
+      >
+        <div class="p-4" :style="{ borderBottom: '1px solid var(--dp-border-primary)' }">
+          <h3 class="text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">태그 제거</h3>
+        </div>
+        <div class="p-4 space-y-3">
+          <p :style="{ color: 'var(--dp-text-primary)' }">
+            이 일정에서 태그를 제거하시겠습니까?
+          </p>
+          <div
+            class="p-3 rounded-lg text-sm space-y-1"
+            :style="{ backgroundColor: 'var(--dp-bg-secondary)', color: 'var(--dp-text-secondary)' }"
+          >
+            <p>• 태그를 제거하면 이 일정이 내 달력에서 사라집니다.</p>
+            <p>• 태그 복원은 불가능하며, 다시 태그하려면 해당 사용자에게 요청해야 합니다.</p>
+          </div>
+        </div>
+        <div class="p-4 flex gap-2" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
+          <button
+            @click="closeUntagConfirmModal"
+            class="flex-1 px-4 py-2 rounded-lg font-medium transition"
+            :style="{ backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-primary)' }"
+          >
+            취소
+          </button>
+          <button
+            @click="confirmUntag"
+            class="flex-1 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition"
+          >
+            태그 제거
           </button>
         </div>
       </div>

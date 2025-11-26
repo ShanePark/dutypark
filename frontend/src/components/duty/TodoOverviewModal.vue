@@ -15,6 +15,7 @@ import {
   Paperclip,
   Calendar,
   Plus,
+  Pencil,
 } from 'lucide-vue-next'
 
 interface Todo {
@@ -364,6 +365,14 @@ function handleTodoClick(todo: Todo) {
                         title="재오픈"
                       >
                         <RotateCcw class="w-5 h-5" />
+                      </button>
+                      <button
+                        @click="emit('showDetail', todo)"
+                        class="p-2 hover:bg-blue-100 rounded-lg transition"
+                        :style="{ color: 'var(--dp-text-muted)' }"
+                        title="수정"
+                      >
+                        <Pencil class="w-5 h-5" />
                       </button>
                       <button
                         @click="emit('delete', todo.id)"

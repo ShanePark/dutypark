@@ -598,7 +598,7 @@ watch(
                     {{ myInfo.duty.dutyType || '휴무' }}
                   </span>
                 </template>
-                <span :style="{ color: 'var(--dp-text-muted)' }">없음</span>
+                <span v-else :style="{ color: 'var(--dp-text-muted)' }">없음</span>
               </div>
             </div>
 
