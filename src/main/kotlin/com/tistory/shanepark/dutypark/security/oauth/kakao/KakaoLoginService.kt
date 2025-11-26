@@ -6,17 +6,16 @@ import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
-import com.tistory.shanepark.dutypark.security.domain.dto.TokenResponse
 import com.tistory.shanepark.dutypark.security.service.AuthService
+import com.tistory.shanepark.dutypark.security.service.CookieService
 import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.net.URI
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 @Service
 @Transactional
@@ -26,6 +25,7 @@ class KakaoLoginService(
     private val memberRepository: MemberRepository,
     private val authService: AuthService,
     private val memberSsoRegisterRepository: MemberSsoRegisterRepository,
+    private val cookieService: CookieService,
     @param:Value("\${oauth.kakao.rest-api-key}") private val restApiKey: String
 ) {
     private val log = logger()
@@ -52,6 +52,7 @@ class KakaoLoginService(
 
     fun login(
         req: HttpServletRequest,
+        resp: HttpServletResponse,
         code: String,
         redirectUrl: String,
         callbackUrl: String
@@ -63,10 +64,11 @@ class KakaoLoginService(
             log.info("Kakao Login Success (SPA): ${member.name}, $kakaoId")
             val tokenResponse = authService.getTokenResponseByMemberId(member.id!!, req)
 
-            val fragmentParams = buildFragmentParams(tokenResponse)
+            cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)
+
             return ResponseEntity
                 .status(HttpStatus.FOUND)
-                .location(URI.create("$callbackUrl#$fragmentParams"))
+                .location(URI.create("$callbackUrl#login=success"))
                 .build()
         }
 
@@ -77,17 +79,6 @@ class KakaoLoginService(
             .status(HttpStatus.FOUND)
             .location(URI.create("$callbackUrl#$errorFragment"))
             .build()
-    }
-
-    private fun buildFragmentParams(tokenResponse: TokenResponse): String {
-        return listOf(
-            "access_token" to tokenResponse.accessToken,
-            "refresh_token" to tokenResponse.refreshToken,
-            "expires_in" to tokenResponse.expiresIn.toString(),
-            "token_type" to tokenResponse.tokenType
-        ).joinToString("&") { (key, value) ->
-            "$key=${URLEncoder.encode(value, StandardCharsets.UTF_8)}"
-        }
     }
 
 }

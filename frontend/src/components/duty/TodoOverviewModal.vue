@@ -376,7 +376,7 @@ function handleTodoClick(todo: Todo) {
                       </button>
                       <button
                         @click="emit('delete', todo.id)"
-                        class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-100 rounded-lg transition"
+                        class="p-2 text-red-600 hover:bg-red-100 rounded-lg transition"
                         title="삭제"
                       >
                         <Trash2 class="w-5 h-5" />

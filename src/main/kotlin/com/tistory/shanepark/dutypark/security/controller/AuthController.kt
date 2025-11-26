@@ -3,12 +3,15 @@ package com.tistory.shanepark.dutypark.security.controller
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
+import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.PasswordChangeDto
 import com.tistory.shanepark.dutypark.security.domain.dto.TokenResponse
 import com.tistory.shanepark.dutypark.security.service.AuthService
+import com.tistory.shanepark.dutypark.security.service.CookieService
 import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -16,6 +19,8 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/api/auth")
 class AuthController(
     private val authService: AuthService,
+    private val cookieService: CookieService,
+    private val refreshTokenService: RefreshTokenService,
 ) {
     private val log = logger()
 
@@ -27,7 +32,6 @@ class AuthController(
         if (loginMember.id != param.memberId && !loginMember.isAdmin) {
             throw AuthException("You are not authorized to change this password")
         }
-        // 자기 자신의 비밀번호 변경 시에는 admin이라도 현재 비밀번호 검증 필요
         val byAdmin = loginMember.isAdmin && loginMember.id != param.memberId
         authService.changePassword(param, byAdmin)
         return ResponseEntity.ok().body("Password Changed")
@@ -42,39 +46,67 @@ class AuthController(
     }
 
     /**
-     * SPA용 Bearer 토큰 로그인 API
-     * 쿠키 대신 JSON body로 토큰을 반환합니다.
+     * SPA login API with HttpOnly cookies
      */
     @PostMapping("/token")
     fun loginForToken(
         @RequestBody loginDto: LoginDto,
-        req: HttpServletRequest
+        req: HttpServletRequest,
+        resp: HttpServletResponse
     ): ResponseEntity<*> {
         return try {
             val tokenResponse = authService.getTokenResponse(loginDto, req)
-            ResponseEntity.ok(tokenResponse)
+            cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)
+            ResponseEntity.ok(tokenResponse.toPublicResponse())
         } catch (e: AuthException) {
             ResponseEntity.status(401).body(mapOf("error" to (e.message ?: "로그인에 실패했습니다.")))
         }
     }
 
     /**
-     * SPA용 토큰 갱신 API
-     * Refresh token으로 새 Access token을 발급받습니다.
+     * Token refresh API - reads refresh token from HttpOnly cookie
      */
     @PostMapping("/refresh")
     fun refreshToken(
-        @RequestBody body: Map<String, String>,
-        req: HttpServletRequest
-    ): ResponseEntity<TokenResponse> {
-        val refreshToken = body["refreshToken"]
-            ?: return ResponseEntity.badRequest().build()
+        req: HttpServletRequest,
+        resp: HttpServletResponse
+    ): ResponseEntity<Map<String, Any>> {
+        val refreshToken = cookieService.extractRefreshToken(req.cookies)
+            ?: return ResponseEntity.status(401).build()
         return try {
             val tokenResponse = authService.refreshAccessToken(refreshToken, req)
-            ResponseEntity.ok(tokenResponse)
+            cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)
+            ResponseEntity.ok(tokenResponse.toPublicResponse())
         } catch (e: AuthException) {
+            cookieService.clearTokenCookies(resp)
             ResponseEntity.status(401).build()
         }
+    }
+
+    /**
+     * Logout API - clears cookies and invalidates refresh token
+     */
+    @PostMapping("/logout")
+    fun logout(
+        @Login loginMember: LoginMember,
+        req: HttpServletRequest,
+        resp: HttpServletResponse
+    ): ResponseEntity<Void> {
+        val refreshToken = cookieService.extractRefreshToken(req.cookies)
+        if (refreshToken != null) {
+            val token = refreshTokenService.findByToken(refreshToken)
+            if (token != null && token.member.id == loginMember.id) {
+                refreshTokenService.deleteByToken(refreshToken)
+            }
+        }
+        cookieService.clearTokenCookies(resp)
+        return ResponseEntity.noContent().build()
+    }
+
+    private fun TokenResponse.toPublicResponse(): Map<String, Any> {
+        return mapOf(
+            "expiresIn" to expiresIn
+        )
     }
 
 }

@@ -5,6 +5,7 @@ import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus.NOT_EXIST
 import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus.VALID
 import com.tistory.shanepark.dutypark.security.service.AuthService
+import com.tistory.shanepark.dutypark.security.service.CookieService
 import jakarta.servlet.Filter
 import jakarta.servlet.FilterChain
 import jakarta.servlet.ServletRequest
@@ -16,6 +17,7 @@ import org.springframework.util.AntPathMatcher
 
 class JwtAuthFilter(
     private val authService: AuthService,
+    private val cookieService: CookieService,
 ) : Filter {
     private val log = logger()
     private val antPathMatcher = AntPathMatcher()
@@ -31,7 +33,9 @@ class JwtAuthFilter(
         var jwt = ""
         var status = NOT_EXIST
 
-        extractBearerToken(request)?.let {
+        // Try Bearer token first, then fall back to cookie
+        val token = extractBearerToken(request) ?: cookieService.extractAccessToken(request.cookies)
+        token?.let {
             status = authService.validateToken(it)
             jwt = it
         }

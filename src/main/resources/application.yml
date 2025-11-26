@@ -50,7 +50,7 @@ jwt:
 cookie:
   secure: ${COOKIE_SSL_ENABLED:true}
   same-site: Lax
-  domain: ${COOKIE_DOMAIN:}
+  domain: ${DOMAIN_NAME:}
 
 dutypark:
   adminEmails:
@@ -80,3 +80,7 @@ decorator:
   datasource:
     p6spy:
       enable-logging: false
+
+logging:
+  level:
+    nl.basjes.parse.useragent: WARN

@@ -2,7 +2,6 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { tokenManager } from '@/api/client'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -21,23 +20,18 @@ onMounted(async () => {
     return
   }
 
-  const accessToken = params.get('access_token')
-  const refreshToken = params.get('refresh_token')
-
-  if (!accessToken || !refreshToken) {
+  const loginSuccess = params.get('login')
+  if (loginSuccess !== 'success') {
     error.value = '인증 정보를 받지 못했습니다.'
     isLoading.value = false
     return
   }
-
-  tokenManager.setTokens(accessToken, refreshToken)
 
   try {
     await authStore.checkAuth()
     router.replace('/')
   } catch {
     error.value = '인증에 실패했습니다.'
-    tokenManager.clearTokens()
     isLoading.value = false
   }
 })

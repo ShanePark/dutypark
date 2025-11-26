@@ -1253,14 +1253,6 @@ function isLightColor(color: string | null | undefined): boolean {
   return luminance > 0.5
 }
 
-// Get adaptive border color based on background brightness
-function getAdaptiveBorderColor(backgroundColor: string | null | undefined): string {
-  if (!backgroundColor) return 'var(--dp-border-secondary)'
-
-  const isLight = isLightColor(backgroundColor)
-  // For light backgrounds, use darker border; for dark backgrounds, use lighter border
-  return isLight ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.2)'
-}
 
 // Batch update modal - update all days in current month to a single duty type
 async function showBatchUpdateModal() {
@@ -1534,7 +1526,7 @@ async function showExcelUploadModal() {
           v-for="(day, idx) in weekDays"
           :key="day"
           class="py-2 text-center font-bold border-b-2 text-sm"
-          :style="{ borderBottomColor: 'var(--dp-border-secondary)', color: idx === 0 ? '#dc2626' : idx === 6 ? '#2563eb' : 'var(--dp-text-primary)' }"
+          :style="{ borderColor: 'var(--dp-border-secondary)', color: idx === 0 ? '#dc2626' : idx === 6 ? '#2563eb' : 'var(--dp-text-primary)' }"
           :class="{
             'border-r': idx < 6,
           }"
@@ -1551,7 +1543,7 @@ async function showExcelUploadModal() {
           @click="handleDayClick(day, idx)"
           class="min-h-[70px] sm:min-h-[80px] md:min-h-[100px] border-b border-r p-0.5 sm:p-1 transition-all duration-150 relative cursor-pointer hover:brightness-95 hover:shadow-inner"
           :style="{
-            borderColor: getAdaptiveBorderColor(duties[idx]?.dutyColor),
+            borderColor: 'var(--dp-border-secondary)',
             backgroundColor: duties[idx]?.dutyColor || (!day.isCurrentMonth ? 'var(--dp-calendar-cell-prev-next)' : 'var(--dp-calendar-cell-bg)'),
             opacity: !day.isCurrentMonth ? 0.5 : 1
           }"

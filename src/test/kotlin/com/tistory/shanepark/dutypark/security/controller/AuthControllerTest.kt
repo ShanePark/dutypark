@@ -32,8 +32,10 @@ class AuthControllerTest : DutyparkIntegrationTest() {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
         ).andExpect(status().isOk)
-            .andExpect(jsonPath("$.accessToken").exists())
-            .andExpect(jsonPath("$.refreshToken").exists())
+            .andExpect(jsonPath("$.expiresIn").exists())
+            .andExpect(jsonPath("$.tokenType").doesNotExist())
+            .andExpect(cookie().exists("access_token"))
+            .andExpect(cookie().exists("refresh_token"))
             .andDo(MockMvcResultHandlers.print())
     }
 
@@ -51,7 +53,7 @@ class AuthControllerTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `login Success and return proper token`() {
+    fun `login Success and return proper token via cookie`() {
         // Given
         val email = TestData.member.email
 
@@ -64,9 +66,12 @@ class AuthControllerTest : DutyparkIntegrationTest() {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
         ).andExpect(status().isOk)
-            .andExpect(jsonPath("$.accessToken").exists())
-            .andExpect(jsonPath("$.refreshToken").exists())
-            .andExpect(jsonPath("$.tokenType").value("Bearer"))
+            .andExpect(jsonPath("$.expiresIn").exists())
+            .andExpect(jsonPath("$.tokenType").doesNotExist())
+            .andExpect(cookie().exists("access_token"))
+            .andExpect(cookie().exists("refresh_token"))
+            .andExpect(cookie().httpOnly("access_token", true))
+            .andExpect(cookie().httpOnly("refresh_token", true))
             .andDo(MockMvcResultHandlers.print())
     }
 

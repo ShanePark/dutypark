@@ -113,7 +113,7 @@ class AuthService(
             jwtConfig.refreshTokenValidityInDays
         )
 
-        log.info("Token refresh succeed (Bearer). member:${member.email}")
+        log.info("Token refresh succeed. member:${member}")
 
         return TokenResponse(
             accessToken = newJwt,

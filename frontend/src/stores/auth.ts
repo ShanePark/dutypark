@@ -3,7 +3,6 @@ import { ref, computed } from 'vue'
 import type { AxiosError } from 'axios'
 import type { LoginMember, LoginDto } from '@/types'
 import { authApi } from '@/api/auth'
-import { tokenManager } from '@/api/client'
 
 const USER_CACHE_KEY = 'dp-login-member'
 
@@ -25,12 +24,11 @@ function saveCachedUser(member: LoginMember | null) {
 }
 
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref<LoginMember | null>(tokenManager.hasTokens() ? loadCachedUser() : null)
+  const user = ref<LoginMember | null>(loadCachedUser())
   const isLoading = ref(false)
   const isInitialized = ref(false)
 
   const isLoggedIn = computed(() => user.value !== null)
-  const hasTokens = computed(() => tokenManager.hasTokens())
   const isAdmin = computed(() => user.value?.isAdmin ?? false)
 
   async function initialize() {
@@ -38,44 +36,17 @@ export const useAuthStore = defineStore('auth', () => {
 
     isLoading.value = true
     try {
-      const refreshToken = tokenManager.getRefreshToken()
-      if (hasTokens.value || refreshToken) {
-        try {
-          user.value = await authApi.getStatus()
-          saveCachedUser(user.value)
-        } catch (error) {
-          const status = (error as AxiosError)?.response?.status
-          if (status === 401 || status === 403) {
-            tokenManager.clearTokens()
-            user.value = null
-            saveCachedUser(null)
-          } else {
-            console.warn('로그인 상태 확인 실패: 서버 오류 또는 네트워크 문제로 토큰을 유지합니다.', error)
-          }
-          return
-        }
-
-        if (!user.value && refreshToken) {
-          try {
-            await authApi.refresh(refreshToken)
-            user.value = await authApi.getStatus()
-            saveCachedUser(user.value)
-          } catch (error) {
-            const status = (error as AxiosError)?.response?.status
-            if (status === 401 || status === 403) {
-              tokenManager.clearTokens()
-              user.value = null
-              saveCachedUser(null)
-            } else {
-              console.warn('토큰 갱신 실패: 서버 오류 또는 네트워크 문제로 토큰을 유지합니다.', error)
-            }
-            return
-          }
-        }
-
-        if (!user.value) {
-          tokenManager.clearTokens()
+      // Check auth status via cookie (sent automatically)
+      try {
+        user.value = await authApi.getStatus()
+        saveCachedUser(user.value)
+      } catch (error) {
+        const status = (error as AxiosError)?.response?.status
+        if (status === 401 || status === 403) {
+          user.value = null
           saveCachedUser(null)
+        } else {
+          console.warn('Failed to check login status, keeping cached user', error)
         }
       }
     } finally {
@@ -87,7 +58,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(data: LoginDto): Promise<void> {
     isLoading.value = true
     try {
-      await authApi.loginWithToken(data)
+      await authApi.login(data)
       user.value = await authApi.getStatus()
       saveCachedUser(user.value)
     } finally {
@@ -103,11 +74,11 @@ export const useAuthStore = defineStore('auth', () => {
 
   function setUser(member: LoginMember | null) {
     user.value = member
+    saveCachedUser(member)
   }
 
   function clearAuth() {
     user.value = null
-    tokenManager.clearTokens()
     saveCachedUser(null)
     isInitialized.value = false
   }
@@ -121,7 +92,6 @@ export const useAuthStore = defineStore('auth', () => {
     } catch (error) {
       const status = (error as AxiosError)?.response?.status
       if (status === 401 || status === 403) {
-        tokenManager.clearTokens()
         user.value = null
         saveCachedUser(null)
       }
@@ -136,7 +106,6 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading,
     isInitialized,
     isLoggedIn,
-    hasTokens,
     isAdmin,
     initialize,
     login,

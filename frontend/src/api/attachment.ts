@@ -1,4 +1,4 @@
-import apiClient, { tokenManager } from './client'
+import apiClient from './client'
 import type {
   AttachmentContextType,
   AttachmentDto,
@@ -143,9 +143,7 @@ export function validateFile(file: File): { valid: boolean; message?: string } {
 // Fetch image with authentication and return blob URL
 export async function fetchAuthenticatedImage(url: string): Promise<string | null> {
   try {
-    const token = tokenManager.getAccessToken()
     const response = await fetch(url, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
       credentials: 'include',
     })
     if (!response.ok) return null
@@ -200,14 +198,4 @@ export const attachmentApi = {
     await apiClient.post('/attachments/reorder', request)
   },
 
-  /**
-   * Get auth headers for Uppy XHR upload
-   */
-  getAuthHeaders: (): Record<string, string> => {
-    const token = tokenManager.getAccessToken()
-    if (token) {
-      return { Authorization: `Bearer ${token}` }
-    }
-    return {}
-  },
 }

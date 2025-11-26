@@ -49,7 +49,7 @@ async function handleSubmit() {
 
   isLoading.value = true
   try {
-    await authApi.ssoSignupWithToken({
+    await authApi.ssoSignup({
       uuid: uuid.value,
       username: username.value,
       termAgree: termAgree.value,
