@@ -59,12 +59,12 @@ function handleToggle(friendId: number) {
     >
       <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-md max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
         <!-- Header -->
-        <div class="flex items-center justify-between p-3 sm:p-4 border-b" :style="{ borderColor: 'var(--dp-border-primary)' }">
+        <div class="flex items-center justify-between p-3 sm:p-4" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderBottom: '1px solid var(--dp-border-primary)' }">
           <div class="flex items-center gap-2">
             <Users class="w-5 h-5 text-blue-600" />
             <h2 class="text-base sm:text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">함께보기</h2>
           </div>
-          <button @click="emit('close')" class="p-2 rounded-full transition hover-bg">
+          <button @click="emit('close')" class="p-2 rounded-full transition hover-bg-light">
             <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
           </button>
         </div>

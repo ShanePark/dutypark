@@ -90,7 +90,7 @@ router.beforeEach(async (to, _from, next) => {
   }
 
   // Check authentication requirements
-  if (to.meta.requiresAuth && !authStore.isLoggedIn && !authStore.hasTokens) {
+  if (to.meta.requiresAuth && !authStore.isLoggedIn) {
     next({ name: 'login', query: { redirect: to.fullPath } })
     return
   }

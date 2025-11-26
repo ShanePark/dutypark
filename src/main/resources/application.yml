@@ -1,9 +1,4 @@
 spring:
-  web.resources.cache.period: PT720H # 30 days
-  web.resources:
-    chain.strategy.content:
-      enabled: true
-      paths: /**
   servlet:
     multipart:
       max-file-size: 50MB
@@ -52,6 +47,11 @@ jwt:
   token-validity-in-seconds: 1800
   refresh-token-validity-in-days: 7
 
+cookie:
+  secure: ${COOKIE_SSL_ENABLED:true}
+  same-site: Lax
+  domain: ${DOMAIN_NAME:}
+
 dutypark:
   adminEmails:
     - ${ADMIN_EMAIL:ADMIN@EMAIL.HERE}
@@ -80,3 +80,7 @@ decorator:
   datasource:
     p6spy:
       enable-logging: false
+
+logging:
+  level:
+    nl.basjes.parse.useragent: WARN

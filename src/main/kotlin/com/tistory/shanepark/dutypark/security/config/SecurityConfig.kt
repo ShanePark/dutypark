@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.security.filters.AdminAuthFilter
 import com.tistory.shanepark.dutypark.security.filters.JwtAuthFilter
 import com.tistory.shanepark.dutypark.security.service.AuthService
+import com.tistory.shanepark.dutypark.security.service.CookieService
 import jakarta.servlet.Filter
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.web.servlet.FilterRegistrationBean
@@ -21,6 +22,7 @@ import org.springframework.web.filter.ForwardedHeaderFilter
 @Configuration
 class SecurityConfig(
     private val authService: AuthService,
+    private val cookieService: CookieService,
     @param:Value("\${dutypark.cors.allowed-origins:}") private val corsAllowedOrigins: String
 ) {
 
@@ -32,7 +34,7 @@ class SecurityConfig(
 
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
-        val jwtAuthFilter = JwtAuthFilter(authService)
+        val jwtAuthFilter = JwtAuthFilter(authService, cookieService)
         http.addFilterBefore(jwtAuthFilter, AuthorizationFilter::class.java)
 
         return http

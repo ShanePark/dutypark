@@ -1,5 +1,4 @@
 import axios from 'axios'
-import { tokenManager } from './client'
 import type {
   PageResponse,
   SimpleTeam,
@@ -11,6 +10,7 @@ import type {
 } from '@/types'
 
 // Separate axios instance for admin API (different base path)
+// Cookies are sent automatically via withCredentials
 const adminClient = axios.create({
   baseURL: '/admin/api',
   timeout: 30000,
@@ -18,15 +18,6 @@ const adminClient = axios.create({
     'Content-Type': 'application/json',
   },
   withCredentials: true,
-})
-
-// Add auth header
-adminClient.interceptors.request.use((config) => {
-  const token = tokenManager.getAccessToken()
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
 })
 
 /**

@@ -1253,14 +1253,6 @@ function isLightColor(color: string | null | undefined): boolean {
   return luminance > 0.5
 }
 
-// Get adaptive border color based on background brightness
-function getAdaptiveBorderColor(backgroundColor: string | null | undefined): string {
-  if (!backgroundColor) return 'var(--dp-border-secondary)'
-
-  const isLight = isLightColor(backgroundColor)
-  // For light backgrounds, use darker border; for dark backgrounds, use lighter border
-  return isLight ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.2)'
-}
 
 // Batch update modal - update all days in current month to a single duty type
 async function showBatchUpdateModal() {
@@ -1380,40 +1372,42 @@ async function showExcelUploadModal() {
     <template v-else>
     <!-- Todo List Section -->
     <div v-if="isMyCalendar" class="mb-1 flex items-center gap-1.5 px-1">
-      <!-- Add Todo Button -->
-      <button
-        @click="isTodoAddModalOpen = true"
-        class="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center transition-all duration-150 hover:scale-105"
-        :style="{ backgroundColor: 'var(--dp-text-secondary)', color: 'var(--dp-bg-primary)' }"
-      >
-        <Plus class="w-4 h-4" />
-      </button>
+      <!-- Button Group: List + Add -->
+      <div class="flex-shrink-0 inline-flex rounded-lg border overflow-hidden" :style="{ borderColor: 'var(--dp-border-secondary)' }">
+        <!-- Todo List Button -->
+        <button
+          @click="isTodoOverviewModalOpen = true"
+          class="todo-btn-list h-7 px-2.5 flex items-center gap-1.5 transition-all duration-150 cursor-pointer"
+          :style="{ backgroundColor: 'var(--dp-bg-card)' }"
+        >
+          <ClipboardList class="w-3.5 h-3.5 transition-colors" :style="{ color: 'var(--dp-text-muted)' }" />
+          <span class="text-xs font-medium transition-colors" :style="{ color: 'var(--dp-text-secondary)' }">{{ todos.length }}</span>
+        </button>
+        <!-- Add Todo Button -->
+        <button
+          @click="isTodoAddModalOpen = true"
+          class="todo-btn-add h-7 px-2 flex items-center justify-center transition-all duration-150 cursor-pointer border-l"
+          :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)', color: 'var(--dp-text-secondary)' }"
+        >
+          <Plus class="w-4 h-4" />
+        </button>
+      </div>
 
       <!-- Todo Items -->
-      <div class="flex-1 min-w-0 overflow-x-auto scrollbar-hide">
-        <div class="flex gap-1">
+      <div class="flex-1 min-w-0 overflow-x-auto scrollbar-hide py-0.5">
+        <div class="flex gap-1.5">
           <button
             v-for="todo in todos"
             :key="todo.id"
             @click="handleTodoBubbleClick(todo)"
-            class="flex-shrink-0 max-w-[120px] sm:max-w-[160px] flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] sm:text-xs cursor-pointer transition-all duration-150 hover:opacity-80 border"
-            :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderColor: 'var(--dp-border-secondary)', color: 'var(--dp-text-primary)' }"
+            class="todo-item-bubble flex-shrink-0 max-w-[120px] sm:max-w-[160px] flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] sm:text-xs cursor-pointer transition-all duration-150 border"
+            :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)', color: 'var(--dp-text-primary)' }"
           >
             <span class="truncate">{{ todo.title }}</span>
             <FileText v-if="todo.content || todo.hasAttachments" class="w-2.5 h-2.5 flex-shrink-0 opacity-50" />
           </button>
         </div>
       </div>
-
-      <!-- Todo List Button -->
-      <button
-        @click="isTodoOverviewModalOpen = true"
-        class="flex-shrink-0 h-7 px-2 flex items-center gap-1 rounded-md transition-all duration-150 cursor-pointer border hover:opacity-80"
-        :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderColor: 'var(--dp-border-secondary)' }"
-      >
-        <ClipboardList class="w-3.5 h-3.5" :style="{ color: 'var(--dp-text-secondary)' }" />
-        <span class="text-[11px] font-medium" :style="{ color: 'var(--dp-text-secondary)' }">{{ todos.length }}</span>
-      </button>
     </div>
 
     <!-- Month Control -->
@@ -1534,7 +1528,7 @@ async function showExcelUploadModal() {
           v-for="(day, idx) in weekDays"
           :key="day"
           class="py-2 text-center font-bold border-b-2 text-sm"
-          :style="{ borderBottomColor: 'var(--dp-border-secondary)', color: idx === 0 ? '#dc2626' : idx === 6 ? '#2563eb' : 'var(--dp-text-primary)' }"
+          :style="{ borderColor: 'var(--dp-border-secondary)', color: idx === 0 ? '#dc2626' : idx === 6 ? '#2563eb' : 'var(--dp-text-primary)' }"
           :class="{
             'border-r': idx < 6,
           }"
@@ -1551,7 +1545,7 @@ async function showExcelUploadModal() {
           @click="handleDayClick(day, idx)"
           class="min-h-[70px] sm:min-h-[80px] md:min-h-[100px] border-b border-r p-0.5 sm:p-1 transition-all duration-150 relative cursor-pointer hover:brightness-95 hover:shadow-inner"
           :style="{
-            borderColor: getAdaptiveBorderColor(duties[idx]?.dutyColor),
+            borderColor: 'var(--dp-border-secondary)',
             backgroundColor: duties[idx]?.dutyColor || (!day.isCurrentMonth ? 'var(--dp-calendar-cell-prev-next)' : 'var(--dp-calendar-cell-bg)'),
             opacity: !day.isCurrentMonth ? 0.5 : 1
           }"
@@ -1616,7 +1610,7 @@ async function showExcelUploadModal() {
                   color: isLightColor(getOtherDutyForDay(day, otherDuty)?.dutyColor) ? '#000' : '#fff',
                 }"
               >
-                <span class="font-bold">{{ otherDuty.memberName }}</span><template v-if="getOtherDutyForDay(day, otherDuty)?.dutyType">:<span class="font-normal">{{ getOtherDutyForDay(day, otherDuty)?.dutyType?.slice(0, 4) }}</span></template>
+                {{ otherDuty.memberName }}<template v-if="getOtherDutyForDay(day, otherDuty)?.dutyType">:{{ getOtherDutyForDay(day, otherDuty)?.dutyType?.slice(0, 4) }}</template>
               </div>
             </div>
 
@@ -1624,7 +1618,7 @@ async function showExcelUploadModal() {
               v-for="holiday in holidaysByDays[idx] ?? []"
               :key="holiday.localDate + holiday.dateName"
               class="text-[10px] sm:text-sm leading-snug px-0.5"
-              :class="holiday.isHoliday ? 'text-red-600 font-semibold' : ''"
+              :class="holiday.isHoliday ? 'text-red-600' : ''"
               :style="!holiday.isHoliday ? { color: 'var(--dp-text-muted)' } : {}"
             >
               {{ holiday.dateName }}
@@ -1673,11 +1667,11 @@ async function showExcelUploadModal() {
     </div>
 
     <!-- D-Day List -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
       <div
         v-for="dday in dDays"
         :key="dday.id"
-        class="relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-lg border"
+        class="relative overflow-hidden rounded-xl sm:rounded-2xl cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-lg border"
         :class="[
           pinnedDDay?.id === dday.id
             ? 'ring-2 ring-amber-400 shadow-md'
@@ -1688,38 +1682,38 @@ async function showExcelUploadModal() {
         ]"
         @click="openDDayDetail(dday)"
       >
-        <div class="p-4">
+        <div class="p-2.5 sm:p-4">
           <!-- D-Day badge and pin star -->
-          <div class="flex justify-between items-start mb-3">
+          <div class="flex justify-between items-start mb-2 sm:mb-3">
             <div
-              class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold shadow-sm"
+              class="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold shadow-sm"
               :class="getDDayBadgeClass(dday.calc)"
             >
               {{ dday.dDayText }}
             </div>
-            <!-- Pin star (always visible as placeholder) -->
+            <!-- Pin star -->
             <button
               @click.stop="togglePinnedDDay(dday)"
-              class="p-1.5 rounded-full transition hover:scale-110"
+              class="p-1 sm:p-1.5 rounded-full transition hover:scale-110"
               :class="pinnedDDay?.id === dday.id ? 'hover:bg-amber-100' : 'hover:bg-gray-100'"
               :title="pinnedDDay?.id === dday.id ? '고정 해제' : '캘린더에 고정'"
             >
               <Star
-                class="w-5 h-5 transition-colors"
+                class="w-4 h-4 sm:w-5 sm:h-5 transition-colors"
                 :class="pinnedDDay?.id === dday.id ? 'text-amber-500 fill-amber-500' : 'text-gray-300 hover:text-amber-400'"
               />
             </button>
           </div>
 
           <!-- Title -->
-          <p class="text-base font-semibold mb-2 flex items-center gap-1.5" :style="{ color: 'var(--dp-text-primary)' }">
-            <Lock v-if="dday.isPrivate" class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
-            <span class="truncate">{{ dday.title }}</span>
+          <p class="text-sm sm:text-base font-medium mb-1 sm:mb-2 flex items-start gap-1 sm:gap-1.5" :style="{ color: 'var(--dp-text-primary)' }">
+            <Lock v-if="dday.isPrivate" class="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 mt-0.5" :style="{ color: 'var(--dp-text-muted)' }" />
+            <span class="line-clamp-2">{{ dday.title }}</span>
           </p>
 
           <!-- Date -->
-          <p class="text-sm flex items-center gap-1" :style="{ color: 'var(--dp-text-muted)' }">
-            <CalendarCheck class="w-4 h-4" />
+          <p class="text-xs sm:text-sm flex items-center gap-1" :style="{ color: 'var(--dp-text-muted)' }">
+            <CalendarCheck class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             {{ dday.date }}
           </p>
         </div>
@@ -1729,13 +1723,13 @@ async function showExcelUploadModal() {
       <div
         v-if="isMyCalendar"
         @click="openDDayModal()"
-        class="rounded-2xl border-2 border-dashed cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-all duration-300 flex flex-col items-center justify-center min-h-[120px] group"
+        class="rounded-xl sm:rounded-2xl border-2 border-dashed cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-all duration-300 flex flex-col items-center justify-center min-h-[100px] sm:min-h-[120px] group"
         :style="{ borderColor: 'var(--dp-border-secondary)' }"
       >
-        <div class="w-12 h-12 rounded-full group-hover:bg-blue-100 flex items-center justify-center mb-2 transition-colors" :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }">
-          <Plus class="w-6 h-6 group-hover:text-blue-500 transition-colors" :style="{ color: 'var(--dp-text-muted)' }" />
+        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full group-hover:bg-blue-100 flex items-center justify-center mb-1.5 sm:mb-2 transition-colors" :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }">
+          <Plus class="w-5 h-5 sm:w-6 sm:h-6 group-hover:text-blue-500 transition-colors" :style="{ color: 'var(--dp-text-muted)' }" />
         </div>
-        <span class="text-sm group-hover:text-blue-600 transition-colors font-medium" :style="{ color: 'var(--dp-text-muted)' }">디데이 추가</span>
+        <span class="text-xs sm:text-sm group-hover:text-blue-600 transition-colors font-medium" :style="{ color: 'var(--dp-text-muted)' }">디데이 추가</span>
       </div>
     </div>
 

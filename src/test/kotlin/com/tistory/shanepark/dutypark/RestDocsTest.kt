@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.security.filters.JwtAuthFilter
 import com.tistory.shanepark.dutypark.security.service.AuthService
+import com.tistory.shanepark.dutypark.security.service.CookieService
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
@@ -30,11 +31,14 @@ abstract class RestDocsTest : DutyparkIntegrationTest() {
     @Autowired
     lateinit var authService: AuthService
 
+    @Autowired
+    lateinit var cookieService: CookieService
+
     @BeforeEach
     fun setUp(webApplicationContext: WebApplicationContext, restDocumentation: RestDocumentationContextProvider) {
         this.mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
             .apply<DefaultMockMvcBuilder>(MockMvcRestDocumentation.documentationConfiguration(restDocumentation))
-            .addFilters<DefaultMockMvcBuilder>(JwtAuthFilter(authService))
+            .addFilters<DefaultMockMvcBuilder>(JwtAuthFilter(authService, cookieService))
             .build()
     }
 

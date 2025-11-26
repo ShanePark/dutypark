@@ -656,7 +656,7 @@ watch(
               class="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200"
             >
               <div class="flex justify-between items-center">
-                <div class="font-bold flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
+                <div class="font-medium flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
                   <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                     <Home v-if="req.requestType === 'FAMILY_REQUEST'" class="w-4 h-4 text-blue-600" />
                     <UserPlus v-else class="w-4 h-4 text-blue-600" />
@@ -688,7 +688,7 @@ watch(
               class="p-4 rounded-xl bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200"
             >
               <div class="flex justify-between items-center">
-                <div class="font-bold flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
+                <div class="font-medium flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
                   <div class="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
                     <Home v-if="req.requestType === 'FAMILY_REQUEST'" class="w-4 h-4 text-amber-600" />
                     <UserPlus v-else class="w-4 h-4 text-amber-600" />
@@ -755,7 +755,7 @@ watch(
                       <Home v-if="friend.isFamily" class="w-3 h-3 sm:w-4 sm:h-4" />
                       <User v-else class="w-3 h-3 sm:w-4 sm:h-4" />
                     </div>
-                    <span class="font-bold text-xs sm:text-sm truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ friend.member.name }}</span>
+                    <span class="font-medium text-xs sm:text-sm truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ friend.member.name }}</span>
                   </div>
                   <div class="flex items-center flex-shrink-0" @click.stop>
                     <!-- Pin/Unpin button -->

@@ -92,14 +92,14 @@ function formatDateRange(start: string, end: string) {
     >
       <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
         <!-- Header -->
-        <div class="flex items-center justify-between p-3 sm:p-4 border-b" :style="{ borderColor: 'var(--dp-border-primary)' }">
+        <div class="flex items-center justify-between p-3 sm:p-4" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderBottom: '1px solid var(--dp-border-primary)' }">
           <div class="min-w-0 flex-1 mr-2">
             <h2 class="text-base sm:text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">검색 결과</h2>
             <p class="text-sm truncate" :style="{ color: 'var(--dp-text-muted)' }">
               "{{ query }}" 검색 결과 {{ pageInfo.totalElements }}건
             </p>
           </div>
-          <button @click="emit('close')" class="p-2 rounded-full transition flex-shrink-0 hover-bg">
+          <button @click="emit('close')" class="p-2 rounded-full transition flex-shrink-0 hover-bg-light">
             <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
           </button>
         </div>

@@ -135,7 +135,7 @@ function setupUppy() {
     fieldName: 'file',
     formData: true,
     bundle: false,
-    headers: () => attachmentApi.getAuthHeaders(),
+    withCredentials: true,
   })
 
   // File added event

@@ -6,10 +6,11 @@ import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.SsoSignupRequest
-import com.tistory.shanepark.dutypark.security.domain.dto.TokenResponse
 import com.tistory.shanepark.dutypark.security.oauth.kakao.KakaoLoginService
 import com.tistory.shanepark.dutypark.security.service.AuthService
+import com.tistory.shanepark.dutypark.security.service.CookieService
 import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -21,6 +22,7 @@ class OAuthController(
     private val kakaoLoginService: KakaoLoginService,
     private val memberService: MemberService,
     private val authService: AuthService,
+    private val cookieService: CookieService,
 ) {
     private val objectMapper = ObjectMapper()
 
@@ -29,6 +31,7 @@ class OAuthController(
         @RequestParam code: String,
         @RequestParam(value = "state") stateString: String,
         httpServletRequest: HttpServletRequest,
+        httpServletResponse: HttpServletResponse,
         @Login(required = false) loginMember: LoginMember?
     ): ResponseEntity<Void> {
         val state = objectMapper.readValue(stateString, Map::class.java)
@@ -52,6 +55,7 @@ class OAuthController(
             ?: throw IllegalArgumentException("callbackUrl is required in state")
         return kakaoLoginService.login(
             req = httpServletRequest,
+            resp = httpServletResponse,
             code = code,
             redirectUrl = redirectUrl,
             callbackUrl = callbackUrl
@@ -62,8 +66,9 @@ class OAuthController(
     @SlackNotification
     fun ssoSignup(
         @RequestBody request: SsoSignupRequest,
-        httpServletRequest: HttpServletRequest
-    ): ResponseEntity<TokenResponse> {
+        httpServletRequest: HttpServletRequest,
+        httpServletResponse: HttpServletResponse
+    ): ResponseEntity<Map<String, Any>> {
         if (!request.termAgree) {
             return ResponseEntity.badRequest().build()
         }
@@ -78,7 +83,13 @@ class OAuthController(
             req = httpServletRequest
         )
 
-        return ResponseEntity.ok(tokenResponse)
+        cookieService.setTokenCookies(httpServletResponse, tokenResponse.accessToken, tokenResponse.refreshToken)
+
+        return ResponseEntity.ok(
+            mapOf(
+                "expiresIn" to tokenResponse.expiresIn
+            )
+        )
     }
 
 }
