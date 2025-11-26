@@ -1616,7 +1616,7 @@ async function showExcelUploadModal() {
               v-for="holiday in holidaysByDays[idx] ?? []"
               :key="holiday.localDate + holiday.dateName"
               class="text-[10px] sm:text-sm leading-snug px-0.5"
-              :class="holiday.isHoliday ? 'text-red-600 font-semibold' : ''"
+              :class="holiday.isHoliday ? 'text-red-600' : ''"
               :style="!holiday.isHoliday ? { color: 'var(--dp-text-muted)' } : {}"
             >
               {{ holiday.dateName }}

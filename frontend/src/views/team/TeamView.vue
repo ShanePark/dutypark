@@ -536,7 +536,7 @@ onMounted(() => {
               v-for="holiday in holidaysByDays[idx] ?? []"
               :key="holiday.localDate + holiday.dateName"
               class="text-[10px] sm:text-sm leading-snug px-0.5"
-              :class="holiday.isHoliday ? 'text-red-600 font-semibold' : ''"
+              :class="holiday.isHoliday ? 'text-red-600' : ''"
               :style="!holiday.isHoliday ? { color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' } : {}"
             >
               {{ holiday.dateName }}
