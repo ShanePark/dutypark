@@ -69,7 +69,7 @@ class DutyTypeServiceTest : DutyparkIntegrationTest() {
         em.flush()
 
         // When
-        val dutyTypeUpdateDto = DutyTypeUpdateDto(created.id!!, "changedName", "#f0f8ff")
+        val dutyTypeUpdateDto = DutyTypeUpdateDto(created.id!!, "changed", "#f0f8ff")
         dutyTypeService.update(dutyTypeUpdateDto)
         em.flush()
         em.clear()

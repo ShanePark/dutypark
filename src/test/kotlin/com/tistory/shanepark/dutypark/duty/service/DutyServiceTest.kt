@@ -478,7 +478,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
         // Given
         val member = TestData.member
         val weekdayTeam =
-            teamRepository.save(Team("weekday-team-${UUID.randomUUID()}").apply { workType = WorkType.WEEKDAY })
+            teamRepository.save(Team("wd-${UUID.randomUUID().toString().take(10)}").apply { workType = WorkType.WEEKDAY })
         weekdayTeam.addDutyType(dutyName = "근무", dutyColor = "#123456")
         weekdayTeam.addMember(member)
         memberRepository.save(member)
@@ -504,7 +504,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
         // Given
         val member = TestData.member
         val weekdayTeam =
-            teamRepository.save(Team("weekday-team-${UUID.randomUUID()}").apply { workType = WorkType.WEEKDAY })
+            teamRepository.save(Team("wd-${UUID.randomUUID().toString().take(10)}").apply { workType = WorkType.WEEKDAY })
         weekdayTeam.addDutyType(dutyName = "근무", dutyColor = "#123456")
         weekdayTeam.addMember(member)
         memberRepository.save(member)
