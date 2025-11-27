@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.security.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.service.MemberService
@@ -25,6 +26,7 @@ class OAuthController(
     private val cookieService: CookieService,
 ) {
     private val objectMapper = ObjectMapper()
+    private val log = logger()
 
     @GetMapping("Oauth2ClientCallback/kakao")
     fun kakaoLoginCallback(
@@ -46,6 +48,7 @@ class OAuthController(
                 redirectUrl = redirectUrl,
                 loginMember = loginMember,
             )
+            log.info("Kakao ID linked to member: $loginMember")
             return ResponseEntity.status(HttpStatus.FOUND)
                 .location(URI.create(referer))
                 .build()

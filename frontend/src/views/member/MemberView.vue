@@ -6,6 +6,7 @@ import { useThemeStore, type ThemeMode } from '@/stores/theme'
 import { memberApi, refreshTokenApi } from '@/api/member'
 import { authApi } from '@/api/auth'
 import { useSwal } from '@/composables/useSwal'
+import { useKakao } from '@/composables/useKakao'
 import type { FriendDto, MemberDto, RefreshTokenDto, CalendarVisibility } from '@/types'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
 import {
@@ -33,6 +34,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const themeStore = useThemeStore()
 const { showSuccess, showError, showInfo, confirm } = useSwal()
+const { kakaoLink } = useKakao()
 
 // Theme settings
 const themeOptions: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
@@ -177,9 +179,15 @@ interface SsoConnection {
 
 const ssoConnections = ref<SsoConnection[]>([])
 
-function connectSso(provider: string) {
+async function connectSso(provider: string) {
   if (provider === 'Kakao') {
-    window.location.href = '/oauth2/authorization/kakao'
+    const confirmed = await confirm(
+      '카카오 계정을 연동하면 카카오 로그인으로 간편하게 접속할 수 있습니다. 카카오 로그인 페이지로 이동합니다.',
+      '카카오 계정 연동',
+    )
+    if (confirmed) {
+      kakaoLink()
+    }
     return
   }
 }

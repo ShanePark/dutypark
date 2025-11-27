@@ -5,6 +5,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useKakao } from '@/composables/useKakao'
 import { AxiosError } from 'axios'
 
+const REMEMBER_EMAIL_KEY = 'dp-remember-email'
+
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
@@ -18,6 +20,12 @@ const error = ref('')
 
 onMounted(() => {
   initKakao()
+
+  const savedEmail = localStorage.getItem(REMEMBER_EMAIL_KEY)
+  if (savedEmail) {
+    email.value = savedEmail
+    rememberMe.value = true
+  }
 })
 
 async function handleLogin() {
@@ -30,6 +38,12 @@ async function handleLogin() {
       password: password.value,
       rememberMe: rememberMe.value,
     })
+
+    if (rememberMe.value) {
+      localStorage.setItem(REMEMBER_EMAIL_KEY, email.value)
+    } else {
+      localStorage.removeItem(REMEMBER_EMAIL_KEY)
+    }
 
     const redirect = (route.query.redirect as string) || '/'
     router.push(redirect)
