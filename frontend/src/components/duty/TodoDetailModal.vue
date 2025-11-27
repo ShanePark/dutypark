@@ -14,6 +14,7 @@ import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import { attachmentApi } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { formatDateKorean } from '@/utils/date'
 import type { NormalizedAttachment } from '@/types'
 
 const { showWarning, showError } = useSwal()
@@ -109,19 +110,6 @@ async function loadAttachments() {
 
 const isActive = computed(() => props.todo?.status === 'ACTIVE')
 
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr)
-  const year = date.getFullYear()
-  const month = date.getMonth() + 1
-  const day = date.getDate()
-  const hours = date.getHours()
-  const minutes = date.getMinutes()
-
-  if (hours === 0 && minutes === 0) {
-    return `${year}년 ${month}월 ${day}일`
-  }
-  return `${year}년 ${month}월 ${day}일 ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
-}
 
 function enterEditMode() {
   if (!props.todo) return
@@ -230,8 +218,8 @@ function onUploadError(message: string) {
               </span>
             </div>
             <p class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">
-              {{ formatDate(todo.createdDate) }}
-              <span v-if="todo.completedDate"> · 완료 {{ formatDate(todo.completedDate) }}</span>
+              {{ formatDateKorean(todo.createdDate) }}
+              <span v-if="todo.completedDate"> · 완료 {{ formatDateKorean(todo.completedDate) }}</span>
             </p>
           </div>
           <button @click="handleClose" class="p-2 hover-bg-light rounded-full transition flex-shrink-0">

@@ -617,8 +617,87 @@ html.dark {
 }
 
 /* Utility Classes */
+.hover-bg-light {
+  transition: all 0.15s ease;
+}
+
 .hover-bg-light:hover {
   background-color: var(--dp-bg-hover);
+}
+
+/* Interactive hover effect for clickable items */
+.hover-interactive {
+  transition: all 0.15s ease;
+}
+
+.hover-interactive:hover {
+  background-color: var(--dp-bg-hover);
+  transform: translateY(-1px);
+}
+
+.hover-interactive:active {
+  transform: translateY(0);
+}
+
+/* Close button hover effect */
+.hover-close-btn {
+  transition: all 0.15s ease;
+  border-radius: 9999px;
+}
+
+.hover-close-btn:hover {
+  background-color: var(--dp-bg-hover);
+  color: var(--dp-text-primary);
+}
+
+/* Icon button hover effect */
+.hover-icon-btn {
+  transition: all 0.15s ease;
+}
+
+.hover-icon-btn:hover {
+  background-color: var(--dp-bg-hover);
+  color: var(--dp-text-primary);
+}
+
+.hover-icon-btn:active {
+  transform: scale(0.95);
+}
+
+/* Card selection hover effect */
+.hover-card-select {
+  transition: all 0.15s ease;
+}
+
+.hover-card-select:hover {
+  background-color: var(--dp-bg-hover);
+  border-color: var(--dp-border-secondary);
+  box-shadow: var(--dp-shadow-md);
+}
+
+/* Danger hover effect (for delete buttons) */
+.hover-danger {
+  transition: all 0.15s ease;
+}
+
+.hover-danger:hover {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.dark .hover-danger:hover {
+  background-color: rgba(220, 38, 38, 0.2);
+  color: #f87171;
+}
+
+/* Color picker swatch hover effect */
+.color-picker-swatch {
+  transition: all 0.15s ease;
+}
+
+.color-picker-swatch:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* Calendar Navigation Buttons */

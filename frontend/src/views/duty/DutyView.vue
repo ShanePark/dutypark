@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Swal from 'sweetalert2'
 import { useSwal } from '@/composables/useSwal'
+import { isLightColor } from '@/utils/color'
 import {
   Plus,
   ClipboardList,
@@ -1019,6 +1020,11 @@ function handleSearchPageChange(page: number) {
   handleSearch(page)
 }
 
+function handleSearchFromModal(query: string) {
+  searchQuery.value = query
+  handleSearch(0)
+}
+
 function handleSearchGoToDate(result: any) {
   const date = new Date(result.startDateTime)
   currentYear.value = date.getFullYear()
@@ -1253,19 +1259,6 @@ function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
   return memberDuties.duties.find((d) => d.day === day.day)
 }
 
-// Check if a color is light (for text contrast)
-function isLightColor(color: string | null | undefined): boolean {
-  if (!color) return false
-  // Remove # if present
-  const hex = color.replace('#', '')
-  if (hex.length !== 6) return false
-  const r = parseInt(hex.substring(0, 2), 16)
-  const g = parseInt(hex.substring(2, 4), 16)
-  const b = parseInt(hex.substring(4, 6), 16)
-  // Calculate relative luminance
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-  return luminance > 0.5
-}
 
 
 // Batch update modal - update all days in current month to a single duty type
@@ -1826,9 +1819,11 @@ async function showExcelUploadModal() {
       :query="searchQuery"
       :results="searchResults"
       :page-info="searchPageInfo"
+      :is-searching="isSearching"
       @close="isSearchResultModalOpen = false"
       @go-to-date="handleSearchGoToDate"
       @change-page="handleSearchPageChange"
+      @search="handleSearchFromModal"
     />
 
     <OtherDutiesModal

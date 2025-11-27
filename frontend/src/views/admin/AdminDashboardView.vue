@@ -6,6 +6,7 @@ import { adminApi } from '@/api/admin'
 import { authApi } from '@/api/auth'
 import { useSwal } from '@/composables/useSwal'
 import type { MemberDto, RefreshTokenDto } from '@/types'
+import { extractDatePart } from '@/utils/date'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
 import {
   Users,
@@ -31,7 +32,7 @@ const allMembers = ref<MemberDto[]>([])
 const allTokens = ref<RefreshTokenDto[]>([])
 
 const stats = computed(() => {
-  const today = new Date().toISOString().split('T')[0] ?? ''
+  const today = extractDatePart(new Date().toISOString())
   const todayTokens = allTokens.value.filter(t => t.lastUsed?.startsWith(today) ?? false)
 
   return {

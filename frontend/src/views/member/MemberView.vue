@@ -469,7 +469,7 @@ onMounted(async () => {
               <span :style="{ color: 'var(--dp-text-primary)' }">{{ manager.name }}</span>
               <button
                 @click="unAssignManager(manager)"
-                class="hover:text-red-500 transition"
+                class="p-1 rounded-full hover-danger cursor-pointer"
                 :style="{ color: 'var(--dp-text-muted)' }"
               >
                 <Trash2 class="w-4 h-4" />
@@ -584,7 +584,7 @@ onMounted(async () => {
         <div class="rounded-xl shadow-xl max-w-md w-full" :style="{ backgroundColor: 'var(--dp-bg-card)' }">
           <div class="flex items-center justify-between p-4" :style="{ borderBottomWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
             <h3 class="text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">시간표 공개 대상 설정</h3>
-            <button @click="showVisibilityModal = false" class="hover:opacity-70" :style="{ color: 'var(--dp-text-muted)' }">
+            <button @click="showVisibilityModal = false" class="p-1.5 rounded-full hover-close-btn cursor-pointer" :style="{ color: 'var(--dp-text-muted)' }">
               <X class="w-5 h-5" />
             </button>
           </div>
@@ -626,8 +626,8 @@ onMounted(async () => {
           <div class="p-4 sm:p-6" :style="{ borderTopWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
             <button
               @click="showVisibilityModal = false"
-              class="w-full px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium transition hover:brightness-95"
-              :style="{ cursor: 'pointer', backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-primary)' }"
+              class="w-full px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer"
+              :style="{ backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-primary)' }"
             >
               닫기
             </button>
@@ -646,7 +646,7 @@ onMounted(async () => {
         <div class="rounded-xl shadow-xl max-w-md w-full" :style="{ backgroundColor: 'var(--dp-bg-card)' }">
           <div class="flex items-center justify-between p-4" :style="{ borderBottomWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
             <h3 class="text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">비밀번호 변경</h3>
-            <button @click="showPasswordModal = false" class="hover:opacity-70" :style="{ color: 'var(--dp-text-muted)' }">
+            <button @click="showPasswordModal = false" class="p-1.5 rounded-full hover-close-btn cursor-pointer" :style="{ color: 'var(--dp-text-muted)' }">
               <X class="w-5 h-5" />
             </button>
           </div>
@@ -721,7 +721,7 @@ onMounted(async () => {
             <button
               @click="showPasswordModal = false"
               :disabled="changingPassword"
-              class="flex-1 px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium transition disabled:opacity-50"
+              class="flex-1 px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer disabled:opacity-50"
               :style="{ backgroundColor: 'var(--dp-bg-hover)', color: 'var(--dp-text-primary)' }"
             >
               취소

@@ -18,6 +18,7 @@ import {
   Pencil,
 } from 'lucide-vue-next'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { extractDatePart } from '@/utils/date'
 
 interface Todo {
   id: string
@@ -190,9 +191,6 @@ function toggleFilter(type: 'active' | 'completed' | 'all') {
   }
 }
 
-function formatDate(dateString: string) {
-  return dateString.split('T')[0]
-}
 
 function handleTodoClick(todo: Todo) {
   // Ignore click if we just finished dragging
@@ -343,11 +341,11 @@ function handleTodoClick(todo: Todo) {
                       <div class="flex items-center gap-2 mt-0.5 text-xs" :style="{ color: 'var(--dp-text-muted)' }">
                         <span class="flex items-center gap-1">
                           <Calendar class="w-3 h-3" />
-                          {{ formatDate(todo.createdDate) }}
+                          {{ extractDatePart(todo.createdDate) }}
                         </span>
                         <span v-if="todo.completedDate" class="flex items-center gap-1 text-green-500">
                           <Check class="w-3 h-3" />
-                          {{ formatDate(todo.completedDate) }}
+                          {{ extractDatePart(todo.completedDate) }}
                         </span>
                         <FileText v-if="todo.content" class="w-3.5 h-3.5 text-blue-400" title="메모 있음" />
                         <Paperclip v-if="todo.hasAttachments" class="w-3.5 h-3.5 text-purple-400" title="첨부파일 있음" />

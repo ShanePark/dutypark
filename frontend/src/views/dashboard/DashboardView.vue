@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import { dashboardApi } from '@/api/dashboard'
 import { friendApi } from '@/api/member'
 import { useSwal } from '@/composables/useSwal'
+import { isLightColor } from '@/utils/color'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import Sortable from 'sortablejs'
 import type {
@@ -173,17 +174,6 @@ function printSchedule(schedule: { content: string; totalDays: number; daysFromS
   return text
 }
 
-// Calculate if a color is light (for text contrast)
-function isLightColor(hexColor: string | null | undefined): boolean {
-  if (!hexColor) return false
-  const hex = hexColor.replace('#', '')
-  const r = parseInt(hex.substring(0, 2), 16)
-  const g = parseInt(hex.substring(2, 4), 16)
-  const b = parseInt(hex.substring(4, 6), 16)
-  // Using luminance formula
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-  return luminance > 0.6
-}
 
 function printScheduleTime(startDateTime: string) {
   const date = new Date(startDateTime)
@@ -943,7 +933,7 @@ watch(
               <h3 class="text-xl font-bold" :style="{ color: 'var(--dp-text-primary)' }">친구 추가</h3>
             </div>
             <button
-              class="p-2 rounded-xl transition hover:bg-opacity-80"
+              class="p-2 rounded-full hover-close-btn cursor-pointer"
               :style="{ color: 'var(--dp-text-muted)' }"
               @click="closeSearchModal"
             >
@@ -986,7 +976,7 @@ watch(
                 <div
                   v-for="(member, index) in searchResult"
                   :key="member.id ?? index"
-                  class="flex items-center justify-between p-4 rounded-xl transition hover:bg-opacity-80"
+                  class="flex items-center justify-between p-4 rounded-xl hover-bg-light"
                   :style="{ backgroundColor: 'var(--dp-bg-secondary)' }"
                 >
                   <div class="flex items-center gap-3">
@@ -1010,7 +1000,7 @@ watch(
               <!-- Pagination -->
               <div v-if="searchTotalPage > 1" class="flex justify-center items-center gap-2 mt-6">
                 <button
-                  class="p-2.5 rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed transition hover:bg-opacity-80"
+                  class="p-2.5 rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed hover-bg-light cursor-pointer"
                   :style="{ borderColor: 'var(--dp-border-primary)' }"
                   :disabled="searchPage === 0"
                   @click="prevPage"
@@ -1020,7 +1010,7 @@ watch(
 
                 <template v-for="i in searchTotalPage" :key="i">
                   <button
-                    class="w-10 h-10 rounded-xl border font-medium transition hover:bg-opacity-80"
+                    class="w-10 h-10 rounded-xl border font-medium hover-bg-light cursor-pointer"
                     :class="(i - 1) === searchPage ? 'bg-blue-600 text-white border-blue-600' : ''"
                     :style="(i - 1) !== searchPage ? { borderColor: 'var(--dp-border-primary)' } : {}"
                     @click="goToPage(i - 1)"
@@ -1030,7 +1020,7 @@ watch(
                 </template>
 
                 <button
-                  class="p-2.5 rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed transition hover:bg-opacity-80"
+                  class="p-2.5 rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed hover-bg-light cursor-pointer"
                   :style="{ borderColor: 'var(--dp-border-primary)' }"
                   :disabled="searchPage >= searchTotalPage - 1"
                   @click="nextPage"
@@ -1052,7 +1042,7 @@ watch(
           <!-- Footer -->
           <div class="flex justify-end p-5 border-t" :style="{ borderColor: 'var(--dp-border-primary)', backgroundColor: 'var(--dp-bg-secondary)' }">
             <button
-              class="px-5 py-2.5 rounded-xl transition font-medium hover:bg-opacity-80"
+              class="px-5 py-2.5 rounded-xl font-medium hover-interactive cursor-pointer"
               :style="{ backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-primary)' }"
               @click="closeSearchModal"
             >

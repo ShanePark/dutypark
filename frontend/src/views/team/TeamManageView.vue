@@ -767,7 +767,7 @@ onUnmounted(() => {
         <h3 class="font-bold">근무 유형</h3>
         <button
           @click="openAddDutyTypeModal"
-          class="px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1"
+          class="px-3 py-1.5 rounded-lg text-sm font-medium hover-interactive cursor-pointer flex items-center gap-1"
           :style="{ backgroundColor: 'var(--dp-bg-card)', color: 'var(--dp-text-primary)' }"
         >
           <Plus class="w-4 h-4" />
@@ -795,7 +795,7 @@ onUnmounted(() => {
               <td class="px-4 py-3 text-center">
                 <span
                   @click="openEditDutyTypeModal(dutyType)"
-                  class="inline-block w-6 h-6 rounded-full border-2 cursor-pointer hover:ring-2 hover:ring-offset-1 hover:ring-gray-400 transition"
+                  class="inline-block w-6 h-6 rounded-full border-2 cursor-pointer color-picker-swatch"
                   :style="{ backgroundColor: dutyType.color || '#e8e8e8', borderColor: 'var(--dp-border-primary)' }"
                 ></span>
               </td>
@@ -855,7 +855,7 @@ onUnmounted(() => {
           <h3 class="text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">멤버 추가</h3>
           <button
             @click="closeMemberSearchModal"
-            class="p-1 rounded transition hover-bg-light"
+            class="p-1.5 rounded-full hover-close-btn cursor-pointer"
           >
             <X class="w-5 h-5" />
           </button>
@@ -958,7 +958,7 @@ onUnmounted(() => {
         <div class="flex justify-end p-4 border-t" :style="{ borderColor: 'var(--dp-border-primary)' }">
           <button
             @click="closeMemberSearchModal"
-            class="px-4 py-2 rounded-lg font-medium transition"
+            class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer"
             :style="{ backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-secondary)' }"
           >
             닫기
@@ -980,7 +980,7 @@ onUnmounted(() => {
           </h3>
           <button
             @click="closeDutyTypeModal"
-            class="p-1 rounded transition hover-bg-light"
+            class="p-1.5 rounded-full hover-close-btn cursor-pointer"
           >
             <X class="w-5 h-5" />
           </button>
@@ -1045,7 +1045,7 @@ onUnmounted(() => {
           </button>
           <button
             @click="closeDutyTypeModal"
-            class="px-4 py-2 rounded-lg font-medium transition"
+            class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer"
             :style="{ backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-secondary)' }"
           >
             취소
@@ -1065,7 +1065,7 @@ onUnmounted(() => {
           <h3 class="text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">근무표 업로드</h3>
           <button
             @click="closeBatchUploadModal"
-            class="p-1 rounded transition hover-bg-light"
+            class="p-1.5 rounded-full hover-close-btn cursor-pointer"
           >
             <X class="w-5 h-5" />
           </button>
@@ -1126,7 +1126,7 @@ onUnmounted(() => {
           </button>
           <button
             @click="closeBatchUploadModal"
-            class="px-4 py-2 rounded-lg font-medium transition"
+            class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer"
             :style="{ backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-secondary)' }"
           >
             취소
