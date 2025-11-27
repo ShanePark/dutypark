@@ -97,7 +97,7 @@ class DutyService(
             start = calendarView.startDate,
             end = calendarView.endDate
         )
-        if (duties.size < calendarView.size && shouldLazyInitDuty(member = member)) {
+        if (duties.size < CalendarView.SIZE && shouldLazyInitDuty(member = member)) {
             duties = lazyInitDuty(member = member, calendarView = calendarView, duties = duties)
         }
 

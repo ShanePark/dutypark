@@ -90,7 +90,7 @@ class HolidayServiceTest {
     }
 
     private fun assert2023MayResult(result: Array<List<HolidayDto>>) {
-        assertThat(result.size).isEqualTo(35)
+        assertThat(result.size).isEqualTo(42)
         assertThat(result[0]).isEmpty()
         assertThat(result[1]).isEmpty()
         assertThat(result[2]).isEmpty()

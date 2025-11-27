@@ -241,8 +241,6 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
             scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member), member.id!!, 2023, 4)
 
         // Then
-        val calendarView = CalendarView(2023, 4)
-        assertThat(result).hasSize(calendarView.size)
         assertThat(result[6 + 9 - 1]).hasSize(0)
         assertThat(result[6 + 10 - 1]).hasSize(3)
         assertThat(result[6 + 11 - 1]).hasSize(2)
@@ -278,8 +276,6 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
             scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member), member.id!!, 2023, 4)
 
         // Then
-        val calendarView = CalendarView(2023, 4)
-        assertThat(result).hasSize(calendarView.size)
         val paddingBefore = 6
 
         val lastDayOfMarch = result[paddingBefore - 1]
@@ -306,7 +302,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
             assertThat(result[paddingBefore + i - 1]).isEmpty()
         }
 
-        val mayFirst = result[paddingBefore + calendarView.yearMonth.lengthOfMonth()]
+        val mayFirst = result[paddingBefore + YearMonth.of(2023, 4).lengthOfMonth()]
         assertThat(mayFirst).isEmpty()
     }
 
@@ -338,8 +334,6 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
             scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member), member.id!!, 2023, 12)
 
         // Then
-        val calendarView = CalendarView(2023, 12)
-        assertThat(result).hasSize(calendarView.size)
         assertThat(result[paddingBefore - 1 + 31][0].content).isEqualTo("schedule1")
         assertThat(result[paddingBefore - 1 + 31 + 1][0].content).isEqualTo("schedule2")
     }
