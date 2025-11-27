@@ -44,11 +44,21 @@ function handleToggle(friendId: number) {
 </script>
 
 <style scoped>
-.hover-bg:hover {
-  background-color: var(--dp-bg-secondary);
+.friend-item {
+  transition: all 0.15s ease;
 }
 
 .friend-item:hover {
+  background-color: var(--dp-bg-tertiary);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.friend-item-disabled {
+  transition: all 0.15s ease;
+}
+
+.friend-item-disabled:hover {
   background-color: var(--dp-bg-tertiary);
 }
 </style>
@@ -67,7 +77,7 @@ function handleToggle(friendId: number) {
             <Users class="w-5 h-5 text-blue-600" />
             <h2 class="text-base sm:text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">함께보기</h2>
           </div>
-          <button @click="emit('close')" class="p-2 rounded-full transition hover-bg-light">
+          <button @click="emit('close')" class="p-2 rounded-full hover-close-btn cursor-pointer">
             <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
           </button>
         </div>
@@ -93,7 +103,7 @@ function handleToggle(friendId: number) {
                 'bg-blue-50 border-2 border-blue-500': isSelected(friend.id),
                 'border-2 border-transparent friend-item':
                   !isSelected(friend.id) && canSelectMore,
-                'opacity-50 cursor-not-allowed border-2 border-transparent':
+                'opacity-50 cursor-not-allowed border-2 border-transparent friend-item-disabled':
                   !isSelected(friend.id) && !canSelectMore,
               }"
               :style="!isSelected(friend.id) && canSelectMore ? { backgroundColor: 'var(--dp-bg-secondary)' } : {}"

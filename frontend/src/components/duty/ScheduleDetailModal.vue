@@ -59,13 +59,7 @@ function downloadUrl(attachmentId: string): string {
 </script>
 
 <style scoped>
-.hover-bg:hover {
-  background-color: var(--dp-bg-secondary);
-}
-
-.hover-border:hover {
-  background-color: var(--dp-bg-secondary);
-}
+/* Scoped hover styles removed - using global utility classes */
 </style>
 
 <template>
@@ -82,7 +76,7 @@ function downloadUrl(attachmentId: string): string {
             <Lock v-if="schedule.visibility === 'PRIVATE'" class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
             <h2 class="text-base sm:text-lg font-bold truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ schedule.content }}</h2>
           </div>
-          <button @click="emit('close')" class="p-2 rounded-full transition flex-shrink-0 hover-bg-light">
+          <button @click="emit('close')" class="p-2 rounded-full flex-shrink-0 hover-close-btn cursor-pointer">
             <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
           </button>
         </div>
@@ -162,7 +156,7 @@ function downloadUrl(attachmentId: string): string {
         <div class="p-3 sm:p-4 border-t flex justify-end" :style="{ borderColor: 'var(--dp-border-primary)' }">
           <button
             @click="emit('close')"
-            class="w-full sm:w-auto px-4 py-2 border rounded-lg transition hover-border"
+            class="w-full sm:w-auto px-4 py-2 border rounded-lg hover-interactive cursor-pointer"
             :style="{ borderColor: 'var(--dp-border-secondary)', color: 'var(--dp-text-primary)' }"
           >
             닫기

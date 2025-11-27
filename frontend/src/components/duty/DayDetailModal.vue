@@ -440,7 +440,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
               <span v-else-if="isEditMode" class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">일정 수정</span>
               <h2 class="text-base sm:text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">{{ formattedDate }}</h2>
             </div>
-            <button @click="emit('close')" class="p-2 hover-bg-light rounded-full transition flex-shrink-0">
+            <button @click="emit('close')" class="p-2 rounded-full flex-shrink-0 hover-close-btn cursor-pointer">
               <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
             </button>
           </div>
@@ -654,14 +654,14 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                   <template v-if="!schedule.isTagged && (schedule.isMine || canEdit)">
                     <button
                       @click="startEditMode(schedule)"
-                      class="p-1 hover:bg-gray-200 rounded transition text-blue-600"
+                      class="p-1.5 rounded-lg hover-icon-btn cursor-pointer text-blue-600"
                       title="수정"
                     >
                       <Pencil class="w-4 h-4" />
                     </button>
                     <button
                       @click="emit('deleteSchedule', schedule.id)"
-                      class="p-1 hover:bg-gray-200 rounded transition text-red-600"
+                      class="p-1.5 rounded-lg hover-danger cursor-pointer text-red-600"
                       title="삭제"
                     >
                       <Trash2 class="w-4 h-4" />

@@ -436,7 +436,7 @@ onMounted(() => {
           <button
             v-if="isTeamManager"
             @click="goToTeamManage"
-            class="px-3 py-2 border rounded-lg transition flex items-center gap-1 hover-bg-light"
+            class="px-3 py-2 border rounded-lg flex items-center gap-1 hover-interactive cursor-pointer"
             :style="{ borderColor: 'var(--dp-border-secondary)' }"
           >
             <Settings class="w-4 h-4" />
@@ -634,7 +634,7 @@ onMounted(() => {
                 v-for="member in group.members"
                 :key="member.id"
                 @click="goToMemberDuty(member.id)"
-                class="flex flex-col items-center p-2 border rounded-lg cursor-pointer transition-all duration-150 hover:shadow-md"
+                class="flex flex-col items-center p-2 border rounded-lg cursor-pointer hover-card-select"
                 :class="{ 'ring-2': member.id === loginMemberId }"
                 :style="{
                   borderColor: 'var(--dp-border-secondary)',
@@ -664,9 +664,7 @@ onMounted(() => {
           <h3 class="text-lg font-bold">팀 일정 저장</h3>
           <button
             @click="closeScheduleModal"
-            class="p-1 rounded transition"
-            @mouseenter="($event.currentTarget as HTMLElement).style.backgroundColor = 'var(--dp-bg-hover)'"
-            @mouseleave="($event.currentTarget as HTMLElement).style.backgroundColor = ''"
+            class="p-1.5 rounded-full hover-close-btn cursor-pointer"
           >
             <X class="w-5 h-5" />
           </button>
@@ -755,13 +753,11 @@ onMounted(() => {
           </button>
           <button
             @click="closeScheduleModal"
-            class="px-4 py-2 rounded-lg font-medium transition"
+            class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer"
             :style="{
               backgroundColor: 'var(--dp-bg-tertiary)',
               color: 'var(--dp-text-primary)'
             }"
-            @mouseenter="($event.currentTarget as HTMLElement).style.opacity = '0.8'"
-            @mouseleave="($event.currentTarget as HTMLElement).style.opacity = '1'"
           >
             취소
           </button>
