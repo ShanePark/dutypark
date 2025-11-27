@@ -696,7 +696,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                   <button
                     v-if="schedule.isTagged"
                     @click="openUntagConfirmModal(schedule.id)"
-                    class="px-2 py-1 hover:bg-orange-100 rounded transition text-orange-600 text-xs font-medium flex items-center gap-1"
+                    class="px-2 py-1 border border-orange-300 hover:bg-orange-100 rounded transition text-orange-600 text-xs font-medium flex items-center gap-1"
                     title="태그 제거"
                   >
                     <X class="w-3.5 h-3.5" />
@@ -818,37 +818,54 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
       @click.self="closeUntagConfirmModal"
     >
       <div
-        class="rounded-lg shadow-xl w-full max-w-sm"
-        :style="{ backgroundColor: 'var(--dp-bg-modal)' }"
+        class="rounded-2xl w-full max-w-[340px] min-w-[280px] overflow-hidden border"
+        :style="{
+          backgroundColor: 'var(--dp-bg-modal)',
+          borderColor: 'var(--dp-border-primary)',
+          boxShadow: '0 20px 40px -8px rgba(0, 0, 0, 0.25), 0 8px 16px -4px rgba(0, 0, 0, 0.1)'
+        }"
       >
-        <div class="p-4" :style="{ borderBottom: '1px solid var(--dp-border-primary)' }">
-          <h3 class="text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">태그 제거</h3>
+        <div
+          class="py-2.5 px-4 text-sm font-semibold"
+          :style="{
+            backgroundColor: 'var(--dp-bg-tertiary)',
+            borderBottom: '1px solid var(--dp-border-primary)',
+            color: 'var(--dp-text-primary)'
+          }"
+        >
+          태그 제거
         </div>
-        <div class="p-4 space-y-3">
-          <p :style="{ color: 'var(--dp-text-primary)' }">
+        <div class="py-4 px-4 space-y-3">
+          <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
             이 일정에서 태그를 제거하시겠습니까?
           </p>
           <div
-            class="p-3 rounded-lg text-sm space-y-1"
-            :style="{ backgroundColor: 'var(--dp-bg-secondary)', color: 'var(--dp-text-secondary)' }"
+            class="p-3 rounded-lg text-xs space-y-1"
+            :style="{ backgroundColor: 'var(--dp-bg-secondary)', color: 'var(--dp-text-muted)' }"
           >
             <p>• 태그를 제거하면 이 일정이 내 달력에서 사라집니다.</p>
             <p>• 태그 복원은 불가능하며, 다시 태그하려면 해당 사용자에게 요청해야 합니다.</p>
           </div>
         </div>
-        <div class="p-4 flex gap-2" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
-          <button
-            @click="closeUntagConfirmModal"
-            class="flex-1 px-4 py-2 rounded-lg font-medium transition"
-            :style="{ backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-primary)' }"
-          >
-            취소
-          </button>
+        <div class="pb-4 flex justify-center gap-2">
           <button
             @click="confirmUntag"
-            class="flex-1 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition"
+            class="px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-all duration-200 hover:-translate-y-px"
+            style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);"
           >
             태그 제거
+          </button>
+          <button
+            @click="closeUntagConfirmModal"
+            class="px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 border hover:-translate-y-px"
+            :style="{
+              backgroundColor: 'var(--dp-bg-card)',
+              color: 'var(--dp-text-secondary)',
+              borderColor: 'var(--dp-border-primary)',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+            }"
+          >
+            취소
           </button>
         </div>
       </div>

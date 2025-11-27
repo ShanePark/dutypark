@@ -701,20 +701,20 @@ onMounted(async () => {
           </div>
           <div class="p-4 sm:p-6 flex gap-2" :style="{ borderTopWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
             <button
-              @click="showPasswordModal = false"
-              :disabled="changingPassword"
-              class="flex-1 px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium transition disabled:opacity-50"
-              :style="{ backgroundColor: 'var(--dp-bg-hover)', color: 'var(--dp-text-primary)' }"
-            >
-              취소
-            </button>
-            <button
               @click="changePassword"
               :disabled="changingPassword"
               class="flex-1 px-4 py-3 sm:py-2 min-h-11 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-medium transition disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Loader2 v-if="changingPassword" class="w-4 h-4 animate-spin" />
               {{ changingPassword ? '변경 중...' : '변경' }}
+            </button>
+            <button
+              @click="showPasswordModal = false"
+              :disabled="changingPassword"
+              class="flex-1 px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium transition disabled:opacity-50"
+              :style="{ backgroundColor: 'var(--dp-bg-hover)', color: 'var(--dp-text-primary)' }"
+            >
+              취소
             </button>
           </div>
         </div>

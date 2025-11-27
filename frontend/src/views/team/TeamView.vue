@@ -799,7 +799,7 @@ onMounted(() => {
             @mouseenter="($event.currentTarget as HTMLElement).style.opacity = '0.8'"
             @mouseleave="($event.currentTarget as HTMLElement).style.opacity = '1'"
           >
-            닫기
+            취소
           </button>
         </div>
       </div>

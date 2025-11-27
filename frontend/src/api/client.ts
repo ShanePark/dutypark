@@ -12,6 +12,13 @@ let failedQueue: Array<{
   reject: (reason?: unknown) => void
 }> = []
 
+// Callback for handling auth failure - set by auth store
+let onAuthFailure: (() => void) | null = null
+
+export function setAuthFailureHandler(handler: () => void) {
+  onAuthFailure = handler
+}
+
 const processQueue = (error: Error | null) => {
   failedQueue.forEach((prom) => {
     if (error) {
@@ -90,7 +97,11 @@ apiClient.interceptors.response.use(
         // Mark refresh as failed to prevent infinite loops
         refreshFailed = true
 
-        // Don't redirect, just reject - let the caller handle it
+        // Clear auth state and redirect to login
+        if (onAuthFailure) {
+          onAuthFailure()
+        }
+
         return Promise.reject(refreshError)
       } finally {
         isRefreshing = false

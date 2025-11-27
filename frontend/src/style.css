@@ -685,13 +685,18 @@ html.dark {
    ==================================== */
 
 .swal2-popup {
-  @apply rounded-2xl shadow-lg p-0 overflow-hidden;
+  @apply rounded-2xl p-0 overflow-hidden;
   font-family: var(--font-sans);
   width: auto !important;
   min-width: 280px;
   max-width: 340px;
   background-color: var(--dp-bg-modal);
   border: 1px solid var(--dp-border-primary);
+  box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.25), 0 8px 16px -4px rgba(0, 0, 0, 0.1);
+}
+
+.dark .swal2-popup {
+  box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.5), 0 8px 16px -4px rgba(0, 0, 0, 0.3);
 }
 
 .swal2-title {
@@ -715,25 +720,36 @@ html.dark {
 }
 
 .swal2-confirm {
-  @apply px-5 py-2 rounded-full font-medium text-sm transition-all duration-200 shadow-none;
+  @apply px-5 py-2 rounded-lg font-medium text-sm transition-all duration-200;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.swal2-confirm:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
 }
 
 .swal2-confirm:focus {
-  @apply shadow-none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3), 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .swal2-cancel {
-  @apply px-5 py-2 rounded-full font-medium text-sm transition-all duration-200;
-  background-color: var(--dp-bg-tertiary);
+  @apply px-5 py-2 rounded-lg font-medium text-sm transition-all duration-200;
+  background-color: var(--dp-bg-card);
   color: var(--dp-text-secondary);
+  border: 1px solid var(--dp-border-primary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .swal2-cancel:hover {
   background-color: var(--dp-bg-hover);
+  border-color: var(--dp-border-secondary);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
 }
 
 .swal2-cancel:focus {
-  @apply shadow-none;
+  box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.2), 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 /* Toast styles */

@@ -3,6 +3,8 @@ import { ref, computed } from 'vue'
 import type { AxiosError } from 'axios'
 import type { LoginMember, LoginDto } from '@/types'
 import { authApi } from '@/api/auth'
+import { setAuthFailureHandler } from '@/api/client'
+import router from '@/router'
 
 const USER_CACHE_KEY = 'dp-login-member'
 
@@ -89,6 +91,14 @@ export const useAuthStore = defineStore('auth', () => {
     saveCachedUser(null)
     isInitialized.value = false
   }
+
+  function handleAuthFailure() {
+    clearAuth()
+    router.push('/auth/login')
+  }
+
+  // Register auth failure handler with API client
+  setAuthFailureHandler(handleAuthFailure)
 
   async function checkAuth(): Promise<void> {
     isLoading.value = true

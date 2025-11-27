@@ -301,6 +301,14 @@ onMounted(() => {
               >
                 검색
               </button>
+              <button
+                @click="openNewTeamModal"
+                class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition"
+              >
+                <Plus class="w-4 h-4" />
+                <span class="hidden sm:inline">새 팀 추가</span>
+                <span class="sm:hidden">추가</span>
+              </button>
             </div>
           </div>
         </div>
@@ -390,18 +398,10 @@ onMounted(() => {
           검색 결과가 없습니다
         </div>
 
-        <!-- Footer with Button and Pagination -->
-        <div class="p-4 flex flex-col sm:flex-row items-center justify-between gap-4" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
-          <button
-            @click="openNewTeamModal"
-            class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition"
-          >
-            <Plus class="w-4 h-4" />
-            새 팀 추가
-          </button>
-
+        <!-- Footer with Pagination -->
+        <div v-if="totalPages > 1" class="p-4 flex justify-center" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
           <!-- Pagination -->
-          <nav v-if="totalPages > 1" class="flex items-center gap-1">
+          <nav class="flex items-center gap-1">
             <button
               :disabled="page === 0"
               class="p-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
@@ -515,6 +515,13 @@ onMounted(() => {
         </div>
         <div class="p-4 flex justify-end gap-2" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
           <button
+            @click="handleCreateTeam"
+            :disabled="nameCheckResult !== 'OK' || !newTeamDescription"
+            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            추가
+          </button>
+          <button
             @click="closeNewTeamModal"
             class="px-4 py-2 text-sm font-medium rounded-lg transition"
             :style="{ color: 'var(--dp-text-primary)', backgroundColor: 'var(--dp-bg-tertiary)' }"
@@ -522,13 +529,6 @@ onMounted(() => {
             @mouseleave="(e: Event) => clearHoverBg(e, 'var(--dp-bg-tertiary)')"
           >
             취소
-          </button>
-          <button
-            @click="handleCreateTeam"
-            :disabled="nameCheckResult !== 'OK' || !newTeamDescription"
-            class="px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            추가
           </button>
         </div>
       </div>
