@@ -51,6 +51,7 @@ const loading = ref(false)
 const tokensLoading = ref(false)
 const savingVisibility = ref(false)
 const savingManager = ref(false)
+const connectingSso = ref(false)
 
 // Visibility settings
 const calendarVisibility = ref<CalendarVisibility>('FRIENDS')
@@ -180,12 +181,15 @@ interface SsoConnection {
 const ssoConnections = ref<SsoConnection[]>([])
 
 async function connectSso(provider: string) {
+  if (connectingSso.value) return
+
   if (provider === 'Kakao') {
     const confirmed = await confirm(
       '카카오 계정을 연동하면 카카오 로그인으로 간편하게 접속할 수 있습니다. 카카오 로그인 페이지로 이동합니다.',
       '카카오 계정 연동',
     )
     if (confirmed) {
+      connectingSso.value = true
       kakaoLink()
     }
     return
@@ -518,9 +522,10 @@ onMounted(async () => {
               <button
                 v-else
                 @click="connectSso(sso.provider)"
-                class="px-4 py-2.5 sm:py-1.5 min-h-11 sm:min-h-0 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition"
+                :disabled="connectingSso"
+                class="px-4 py-2.5 sm:py-1.5 min-h-11 sm:min-h-0 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                연동하기
+                {{ connectingSso ? '연동 중...' : '연동하기' }}
               </button>
             </div>
           </div>
