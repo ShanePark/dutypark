@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import { dashboardApi } from '@/api/dashboard'
 import { friendApi } from '@/api/member'
 import { useSwal } from '@/composables/useSwal'
+import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import Sortable from 'sortablejs'
 import type {
   DashboardMyDetail,
@@ -101,6 +102,7 @@ async function loadFriendsDashboard() {
 
 // Search modal state
 const showSearchModal = ref(false)
+useBodyScrollLock(showSearchModal)
 const searchKeyword = ref('')
 const searchResult = ref<FriendDto[]>([])
 const searchPage = ref(0)

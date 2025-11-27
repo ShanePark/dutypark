@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, toRef } from 'vue'
 import { X, Star, Pencil, Trash2, Lock, CalendarCheck } from 'lucide-vue-next'
+import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 
 interface DDay {
   id: number
@@ -19,6 +20,8 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+useBodyScrollLock(toRef(props, 'isOpen'))
 
 const emit = defineEmits<{
   (e: 'close'): void

@@ -889,6 +889,7 @@ async function handleTodoUpdate(data: {
 }
 
 async function handleTodoComplete(id: string) {
+  const fromDetailModal = isTodoDetailModalOpen.value
   try {
     const completedTodo = await todoApi.completeTodo(id)
     todos.value = todos.value.filter((t) => t.id !== id)
@@ -897,11 +898,14 @@ async function handleTodoComplete(id: string) {
     console.error('Failed to complete todo:', error)
     showError('할 일 완료 처리에 실패했습니다.')
   }
-  isTodoDetailModalOpen.value = false
-  isTodoOverviewModalOpen.value = true
+  // Only close detail modal and return to overview if called from detail modal
+  if (fromDetailModal) {
+    isTodoDetailModalOpen.value = false
+  }
 }
 
 async function handleTodoReopen(id: string) {
+  const fromDetailModal = isTodoDetailModalOpen.value
   try {
     const reopenedTodo = await todoApi.reopenTodo(id)
     completedTodos.value = completedTodos.value.filter((t) => t.id !== id)
@@ -910,12 +914,15 @@ async function handleTodoReopen(id: string) {
     console.error('Failed to reopen todo:', error)
     showError('할 일 재오픈에 실패했습니다.')
   }
-  isTodoDetailModalOpen.value = false
-  isTodoOverviewModalOpen.value = true
+  // Only close detail modal if called from detail modal
+  if (fromDetailModal) {
+    isTodoDetailModalOpen.value = false
+  }
 }
 
 async function handleTodoDelete(id: string) {
   if (!await confirmDelete('할 일을 삭제하시겠습니까?')) return
+  const fromDetailModal = isTodoDetailModalOpen.value
   try {
     await todoApi.deleteTodo(id)
     todos.value = todos.value.filter((t) => t.id !== id)
@@ -924,8 +931,10 @@ async function handleTodoDelete(id: string) {
     console.error('Failed to delete todo:', error)
     showError('할 일 삭제에 실패했습니다.')
   }
-  isTodoDetailModalOpen.value = false
-  isTodoOverviewModalOpen.value = true
+  // Only close detail modal if called from detail modal
+  if (fromDetailModal) {
+    isTodoDetailModalOpen.value = false
+  }
 }
 
 async function handleTodoAdd(data: {
@@ -947,7 +956,11 @@ async function handleTodoAdd(data: {
     showError('할 일 추가에 실패했습니다.')
   }
   isTodoAddModalOpen.value = false
-  isTodoOverviewModalOpen.value = true
+  // Only return to overview modal if added from overview
+  if (isTodoAddFromOverview.value) {
+    isTodoOverviewModalOpen.value = true
+    isTodoAddFromOverview.value = false
+  }
 }
 
 // Todo position update for drag-and-drop
@@ -1428,16 +1441,16 @@ async function showExcelUploadModal() {
 
       <!-- Center: Year-Month Navigation -->
       <div class="flex items-center justify-center">
-        <button @click="prevMonth" class="p-1 sm:p-2 rounded-full transition flex items-center justify-center flex-shrink-0 hover-bg-light">
+        <button @click="prevMonth" class="calendar-nav-btn p-1 sm:p-2 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer">
           <ChevronLeft class="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
         <button
           @click="isYearMonthPickerOpen = true"
-          class="px-1 sm:px-3 py-1 text-lg sm:text-2xl font-semibold rounded transition whitespace-nowrap hover-bg-light"
+          class="calendar-nav-btn px-2 sm:px-3 py-1 text-lg sm:text-2xl font-semibold rounded whitespace-nowrap cursor-pointer"
         >
           {{ currentYear }}-{{ String(currentMonth).padStart(2, '0') }}
         </button>
-        <button @click="nextMonth" class="p-1 sm:p-2 rounded-full transition flex items-center justify-center flex-shrink-0 hover-bg-light">
+        <button @click="nextMonth" class="calendar-nav-btn p-1 sm:p-2 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer">
           <ChevronRight class="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
       </div>
@@ -1642,7 +1655,7 @@ async function showExcelUploadModal() {
               :key="schedule.id"
               class="text-[10px] sm:text-sm leading-snug px-0.5 border-t-2 border-dashed break-words"
               :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#1f2937' : '#ffffff') : 'var(--dp-text-primary)', borderColor: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.3)') : 'var(--dp-border-primary)' }"
-            ><Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }" />{{ schedule.contentWithoutTime || schedule.content }}<MessageSquare
+            ><Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }" />{{ schedule.contentWithoutTime || schedule.content }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquare
                 v-if="schedule.description || schedule.attachments?.length"
                 class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px] ml-0.5"
                 :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#9ca3af' : 'rgba(255,255,255,0.5)') : 'var(--dp-text-muted)' }"

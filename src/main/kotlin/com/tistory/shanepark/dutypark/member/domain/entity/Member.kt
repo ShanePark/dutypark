@@ -7,7 +7,7 @@ import jakarta.persistence.*
 
 @Entity
 class Member(
-    @Column(nullable = false)
+    @Column(nullable = false, length = 10)
     var name: String,
 
     @Column

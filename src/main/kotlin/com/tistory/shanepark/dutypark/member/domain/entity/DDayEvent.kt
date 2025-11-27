@@ -10,6 +10,7 @@ class DDayEvent(
     @JoinColumn(name = "member_id")
     val member: Member,
 
+    @Column(length = 30)
     var title: String,
     var date: LocalDate,
     var isPrivate: Boolean = false,

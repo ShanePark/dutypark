@@ -6,6 +6,7 @@ import { useThemeStore, type ThemeMode } from '@/stores/theme'
 import { memberApi, refreshTokenApi } from '@/api/member'
 import { authApi } from '@/api/auth'
 import { useSwal } from '@/composables/useSwal'
+import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useKakao } from '@/composables/useKakao'
 import type { FriendDto, MemberDto, RefreshTokenDto, CalendarVisibility } from '@/types'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
@@ -56,6 +57,7 @@ const connectingSso = ref(false)
 // Visibility settings
 const calendarVisibility = ref<CalendarVisibility>('FRIENDS')
 const showVisibilityModal = ref(false)
+useBodyScrollLock(showVisibilityModal)
 
 const visibilityLabel = computed(() => {
   const labels: Record<CalendarVisibility, string> = {
@@ -227,8 +229,8 @@ function validatePasswordForm(): boolean {
   if (!passwordForm.value.newPassword) {
     passwordErrors.value.newPassword = '새 비밀번호를 입력해주세요'
     isValid = false
-  } else if (passwordForm.value.newPassword.length < 8) {
-    passwordErrors.value.newPassword = '비밀번호는 8자 이상이어야 합니다'
+  } else if (passwordForm.value.newPassword.length < 8 || passwordForm.value.newPassword.length > 20) {
+    passwordErrors.value.newPassword = '비밀번호는 8-20자여야 합니다'
     isValid = false
   } else if (passwordForm.value.currentPassword === passwordForm.value.newPassword) {
     passwordErrors.value.newPassword = '현재 비밀번호와 동일합니다'
@@ -654,6 +656,7 @@ onMounted(async () => {
               <input
                 v-model="passwordForm.currentPassword"
                 type="password"
+                maxlength="20"
                 class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 :style="{
                   borderWidth: '1px',
@@ -672,6 +675,7 @@ onMounted(async () => {
               <input
                 v-model="passwordForm.newPassword"
                 type="password"
+                maxlength="20"
                 class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 :style="{
                   borderWidth: '1px',
@@ -679,7 +683,7 @@ onMounted(async () => {
                   backgroundColor: 'var(--dp-bg-primary)',
                   color: 'var(--dp-text-primary)'
                 }"
-                placeholder="새 비밀번호 (8자 이상)"
+                placeholder="새 비밀번호 (8-20자)"
               />
               <p v-if="passwordErrors.newPassword" class="text-sm text-red-500 mt-1">
                 {{ passwordErrors.newPassword }}
@@ -690,6 +694,7 @@ onMounted(async () => {
               <input
                 v-model="passwordForm.confirmPassword"
                 type="password"
+                maxlength="20"
                 class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 :style="{
                   borderWidth: '1px',

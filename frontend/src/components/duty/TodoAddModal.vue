@@ -1,15 +1,19 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, toRef } from 'vue'
 import { X } from 'lucide-vue-next'
 import FileUploader from '@/components/common/FileUploader.vue'
+import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import type { NormalizedAttachment } from '@/types'
 import { useSwal } from '@/composables/useSwal'
+import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 
 interface Props {
   isOpen: boolean
 }
 
 const props = defineProps<Props>()
+
+useBodyScrollLock(toRef(props, 'isOpen'))
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -130,10 +134,12 @@ function onUploadError(message: string) {
             <div>
               <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
                 제목 <span class="text-red-500">*</span>
+                <CharacterCounter :current="title.length" :max="50" />
               </label>
               <input
                 v-model="title"
                 type="text"
+                maxlength="50"
                 class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
                 placeholder="할 일 제목을 입력하세요"
               />

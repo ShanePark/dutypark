@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onUnmounted, toRef } from 'vue'
 import Sortable from 'sortablejs'
 import {
   X,
@@ -17,9 +17,11 @@ import {
 } from 'lucide-vue-next'
 import FileUploader from '@/components/common/FileUploader.vue'
 import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
+import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import type { NormalizedAttachment } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
+import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 
 const { showWarning, showError } = useSwal()
 
@@ -42,6 +44,8 @@ interface Schedule {
     hasThumbnail: boolean
   }>
   tags?: Array<{ id: number; name: string }>
+  daysFromStart?: number
+  totalDays?: number
 }
 
 interface DutyType {
@@ -66,6 +70,8 @@ const props = withDefaults(defineProps<Props>(), {
   dutyTypes: () => [],
   friends: () => [],
 })
+
+useBodyScrollLock(toRef(props, 'isOpen'))
 
 interface ScheduleSaveData {
   id?: string
@@ -542,7 +548,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                       :style="{ color: 'var(--dp-text-muted)' }"
                       :title="getVisibilityLabel(schedule.visibility)"
                     />
-                    <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ schedule.content }}</span>
+                    <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ schedule.content }}<template v-if="schedule.totalDays && schedule.totalDays > 1"> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template></span>
                     <span v-if="formatScheduleTime(schedule)" class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
                       {{ formatScheduleTime(schedule) }}
                     </span>
@@ -712,10 +718,14 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
           <div v-if="isCreateMode || isEditMode">
             <div class="space-y-3">
               <div>
-                <label class="block text-sm mb-1" :style="{ color: 'var(--dp-text-secondary)' }">내용</label>
+                <label class="block text-sm mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
+                  내용 <span class="text-red-500">*</span>
+                  <CharacterCounter :current="newSchedule.content.length" :max="50" />
+                </label>
                 <input
                   v-model="newSchedule.content"
                   type="text"
+                  maxlength="50"
                   class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
                   placeholder="일정 내용을 입력하세요"
                 />

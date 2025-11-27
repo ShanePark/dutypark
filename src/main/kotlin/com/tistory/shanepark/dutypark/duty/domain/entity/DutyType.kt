@@ -6,6 +6,7 @@ import jakarta.persistence.*
 @Entity
 @Table(name = "duty_type")
 class DutyType(
+    @Column(length = 10)
     var name: String,
     var position: Int,
 

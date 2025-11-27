@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, toRef } from 'vue'
 import { X, Download, Lock, Paperclip } from 'lucide-vue-next'
+import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 
 interface Attachment {
   id: string
@@ -27,6 +28,8 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+useBodyScrollLock(toRef(props, 'isOpen'))
 
 const emit = defineEmits<{
   (e: 'close'): void

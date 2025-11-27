@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useSwal } from '@/composables/useSwal'
 import { useAuthStore } from '@/stores/auth'
 import { teamApi } from '@/api/team'
+import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import adminApi from '@/api/admin'
 import Pickr from '@simonwep/pickr'
 import '@simonwep/pickr/dist/themes/monolith.min.css'
@@ -1000,6 +1001,7 @@ onUnmounted(() => {
           <div>
             <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
               근무명
+              <CharacterCounter :current="dutyTypeForm.name.length" :max="10" />
             </label>
             <input
               v-model="dutyTypeForm.name"

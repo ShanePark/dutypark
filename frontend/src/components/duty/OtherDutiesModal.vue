@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, toRef } from 'vue'
 import { X, Users, Check } from 'lucide-vue-next'
+import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 
 interface Friend {
   id: number
@@ -18,6 +19,8 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   maxSelections: 3,
 })
+
+useBodyScrollLock(toRef(props, 'isOpen'))
 
 const emit = defineEmits<{
   (e: 'close'): void

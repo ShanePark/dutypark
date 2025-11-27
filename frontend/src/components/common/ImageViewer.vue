@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted, toRef } from 'vue'
 import { X, ChevronLeft, ChevronRight, Download } from 'lucide-vue-next'
 import { fetchAuthenticatedImage } from '@/api/attachment'
+import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 
 interface ImageItem {
   id: string
@@ -17,6 +18,8 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   initialIndex: 0,
 })
+
+useBodyScrollLock(toRef(props, 'isOpen'))
 
 const emit = defineEmits<{
   (e: 'close'): void

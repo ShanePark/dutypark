@@ -16,7 +16,8 @@ class Schedule(
     @Column(name = "content", nullable = false, length = 50)
     var content: String,
 
-    @Column(name = "description", nullable = false, length = 4096)
+    @Lob
+    @Column(name = "description", nullable = false, columnDefinition = "TEXT")
     var description: String = "",
 
     @Column(name = "start_date_time", nullable = false)

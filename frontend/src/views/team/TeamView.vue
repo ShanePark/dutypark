@@ -18,6 +18,7 @@ import { teamApi } from '@/api/team'
 import { dutyApi } from '@/api/duty'
 import { useSwal } from '@/composables/useSwal'
 import YearMonthPicker from '@/components/common/YearMonthPicker.vue'
+import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import type {
   TeamDto,
   TeamScheduleDto,
@@ -425,16 +426,16 @@ onMounted(() => {
 
         <!-- Center: Year-Month Navigation -->
         <div class="flex items-center justify-center">
-          <button @click="prevMonth" class="p-1 sm:p-2 rounded-full transition flex items-center justify-center flex-shrink-0 hover-bg-light">
+          <button @click="prevMonth" class="calendar-nav-btn p-1 sm:p-2 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer">
             <ChevronLeft class="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
           <button
             @click="isYearMonthPickerOpen = true"
-            class="px-1 sm:px-3 py-1 text-lg sm:text-2xl font-semibold rounded transition whitespace-nowrap hover-bg-light"
+            class="calendar-nav-btn px-2 sm:px-3 py-1 text-lg sm:text-2xl font-semibold rounded whitespace-nowrap cursor-pointer"
           >
             {{ currentYear }}-{{ String(currentMonth).padStart(2, '0') }}
           </button>
-          <button @click="nextMonth" class="p-1 sm:p-2 rounded-full transition flex items-center justify-center flex-shrink-0 hover-bg-light">
+          <button @click="nextMonth" class="calendar-nav-btn p-1 sm:p-2 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer">
             <ChevronRight class="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>
@@ -684,6 +685,7 @@ onMounted(() => {
           <div>
             <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-primary)' }">
               제목(필수)
+              <CharacterCounter :current="scheduleForm.content.length" :max="50" />
             </label>
             <input
               v-model="scheduleForm.content"
@@ -706,7 +708,6 @@ onMounted(() => {
             <textarea
               v-model="scheduleForm.description"
               rows="4"
-              maxlength="4096"
               class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               :style="{
                 backgroundColor: 'var(--dp-bg-input)',

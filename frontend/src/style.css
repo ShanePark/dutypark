@@ -621,6 +621,32 @@ html.dark {
   background-color: var(--dp-bg-hover);
 }
 
+/* Calendar Navigation Buttons */
+.calendar-nav-btn {
+  transition: all 0.15s ease;
+  color: var(--dp-text-secondary);
+}
+
+.calendar-nav-btn:hover {
+  background-color: var(--dp-bg-hover);
+  color: var(--dp-text-primary);
+  transform: scale(1.05);
+}
+
+.calendar-nav-btn:active {
+  transform: scale(0.95);
+}
+
+/* Month Selection Button */
+.month-btn:hover {
+  background-color: var(--dp-bg-hover);
+}
+
+/* Close Button */
+.close-btn:hover {
+  background-color: var(--dp-bg-hover);
+}
+
 .cursor-pointer {
   @apply cursor-pointer;
 }

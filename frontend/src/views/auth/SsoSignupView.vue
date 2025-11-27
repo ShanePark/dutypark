@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { authApi } from '@/api/auth'
 import { useAuthStore } from '@/stores/auth'
 import { useSwal } from '@/composables/useSwal'
+import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import type { AxiosError } from 'axios'
 
 const route = useRoute()
@@ -139,6 +140,7 @@ const termsContent = `1. 서론
           <div>
             <label for="username" class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
               사용자명
+              <CharacterCounter :current="username.length" :max="10" />
             </label>
             <input
               id="username"

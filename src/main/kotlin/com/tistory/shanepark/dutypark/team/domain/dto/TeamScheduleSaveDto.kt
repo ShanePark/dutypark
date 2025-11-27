@@ -13,7 +13,6 @@ data class TeamScheduleSaveDto(
     @field:Length(max = 50) @field:NotBlank
     val content: String,
 
-    @field:Length(max = 4096)
     val description: String = "",
 
     val startDateTime: LocalDateTime,

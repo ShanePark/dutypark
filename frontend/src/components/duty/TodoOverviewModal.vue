@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, watch, onBeforeUnmount, nextTick, toRef } from 'vue'
 import Sortable from 'sortablejs'
 import type { SortableEvent } from 'sortablejs'
 import {
@@ -17,6 +17,7 @@ import {
   Plus,
   Pencil,
 } from 'lucide-vue-next'
+import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 
 interface Todo {
   id: string
@@ -46,6 +47,8 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+useBodyScrollLock(toRef(props, 'isOpen'))
 
 const emit = defineEmits<{
   (e: 'close'): void

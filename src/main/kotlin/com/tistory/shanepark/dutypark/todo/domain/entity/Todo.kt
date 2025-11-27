@@ -14,7 +14,8 @@ class Todo(
     @Column(name = "title", nullable = false, length = 50)
     var title: String,
 
-    @Column(name = "content", nullable = false, length = 50)
+    @Lob
+    @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     var content: String,
 
     @Column(name = "position")

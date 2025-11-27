@@ -11,7 +11,7 @@ import jakarta.persistence.*
 @Entity
 @Table(name = "team")
 class Team(
-    @Column(unique = true)
+    @Column(unique = true, length = 20)
     var name: String,
 ) : BaseTimeEntity() {
 
@@ -20,6 +20,7 @@ class Team(
     var id: Long? = null
         protected set
 
+    @Column(length = 50)
     var description: String = ""
 
     @ManyToOne(fetch = FetchType.LAZY)

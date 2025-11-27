@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { adminApi } from '@/api/admin'
 import { useSwal } from '@/composables/useSwal'
+import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import type { SimpleTeam, TeamNameCheckResult } from '@/types'
 import {
   Shield,
@@ -472,7 +473,10 @@ onMounted(() => {
         </div>
         <div class="p-4 space-y-4">
           <div>
-            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">팀 이름</label>
+            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
+              팀 이름
+              <CharacterCounter :current="newTeamName.length" :max="20" />
+            </label>
             <div class="flex gap-2">
               <input
                 v-model="newTeamName"
@@ -502,7 +506,10 @@ onMounted(() => {
             </p>
           </div>
           <div>
-            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">설명</label>
+            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
+              설명
+              <CharacterCounter :current="newTeamDescription.length" :max="50" />
+            </label>
             <input
               v-model="newTeamDescription"
               type="text"

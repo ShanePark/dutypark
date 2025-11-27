@@ -122,7 +122,7 @@ function handleKakaoLogin() {
               v-model="password"
               type="password"
               required
-              maxlength="16"
+              maxlength="20"
               autocomplete="current-password"
               class="w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent transition"
               :style="{

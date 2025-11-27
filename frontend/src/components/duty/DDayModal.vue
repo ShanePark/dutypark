@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, toRef } from 'vue'
 import { X, Plus, Minus, RotateCcw, Lock, Unlock } from 'lucide-vue-next'
+import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import CharacterCounter from '@/components/common/CharacterCounter.vue'
 
 interface DDay {
   id?: number
@@ -17,6 +19,8 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+useBodyScrollLock(toRef(props, 'isOpen'))
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -96,10 +100,12 @@ const isEditMode = props.dday !== null && props.dday !== undefined
           <div>
             <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
               제목 <span class="text-red-500">*</span>
+              <CharacterCounter :current="title.length" :max="30" />
             </label>
             <input
               v-model="title"
               type="text"
+              maxlength="30"
               class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
               placeholder="디데이 제목을 입력하세요"
             />
