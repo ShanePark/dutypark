@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, toRef } from 'vue'
-import { X, ChevronLeft, ChevronRight, Calendar, Paperclip } from 'lucide-vue-next'
+import { computed, ref, toRef, watch } from 'vue'
+import { X, ChevronLeft, ChevronRight, Calendar, Paperclip, Search, Loader2 } from 'lucide-vue-next'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { formatDateTime, formatDateRange } from '@/utils/date'
 
@@ -25,6 +25,7 @@ interface Props {
   query: string
   results: SearchResult[]
   pageInfo: PageInfo
+  isSearching?: boolean
 }
 
 const props = defineProps<Props>()
@@ -35,7 +36,27 @@ const emit = defineEmits<{
   (e: 'close'): void
   (e: 'goToDate', result: SearchResult): void
   (e: 'changePage', page: number): void
+  (e: 'search', query: string): void
 }>()
+
+const localQuery = ref(props.query)
+
+watch(() => props.query, (newQuery) => {
+  localQuery.value = newQuery
+})
+
+watch(() => props.isOpen, (isOpen) => {
+  if (isOpen) {
+    localQuery.value = props.query
+  }
+})
+
+function handleSearch() {
+  const trimmed = localQuery.value.trim()
+  if (trimmed) {
+    emit('search', trimmed)
+  }
+}
 
 const currentPage = computed(() => props.pageInfo.pageNumber + 1)
 
@@ -68,22 +89,48 @@ const pagesToShow = computed(() => {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="emit('close')"
     >
-      <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
+      <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[85dvh] sm:max-h-[70vh] overflow-hidden mx-2 sm:mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
         <!-- Header -->
-        <div class="flex items-center justify-between p-3 sm:p-4" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderBottom: '1px solid var(--dp-border-primary)' }">
-          <div class="min-w-0 flex-1 mr-2">
+        <div class="p-3 sm:p-4" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderBottom: '1px solid var(--dp-border-primary)' }">
+          <div class="flex items-center justify-between mb-3">
             <h2 class="text-base sm:text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">검색 결과</h2>
-            <p class="text-sm truncate" :style="{ color: 'var(--dp-text-muted)' }">
-              "{{ query }}" 검색 결과 {{ pageInfo.totalElements }}건
-            </p>
+            <button @click="emit('close')" class="p-2 rounded-full transition flex-shrink-0 hover-bg-light">
+              <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
+            </button>
           </div>
-          <button @click="emit('close')" class="p-2 rounded-full transition flex-shrink-0 hover-bg-light">
-            <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
-          </button>
+          <!-- Search input -->
+          <form @submit.prevent="handleSearch" class="flex gap-2">
+            <div class="relative flex-1">
+              <input
+                v-model="localQuery"
+                type="text"
+                placeholder="검색어 입력..."
+                class="w-full pl-10 pr-4 py-2 rounded-lg border text-sm transition focus:outline-none focus:ring-2 focus:ring-blue-500"
+                :style="{
+                  backgroundColor: 'var(--dp-bg-primary)',
+                  borderColor: 'var(--dp-border-primary)',
+                  color: 'var(--dp-text-primary)'
+                }"
+                :disabled="isSearching"
+              />
+              <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
+            </div>
+            <button
+              type="submit"
+              :disabled="!localQuery.trim() || isSearching"
+              class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium transition hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <Loader2 v-if="isSearching" class="w-4 h-4 animate-spin" />
+              <span>검색</span>
+            </button>
+          </form>
+          <p class="text-sm mt-2" :style="{ color: 'var(--dp-text-muted)' }">
+            "{{ query }}" 검색 결과 {{ pageInfo.totalElements }}건
+          </p>
         </div>
 
         <!-- Content -->
-        <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(90dvh-180px)] sm:max-h-[calc(90vh-180px)]">
+        <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(85dvh-240px)] sm:max-h-[calc(70vh-240px)]">
           <div v-if="results.length === 0" class="text-center py-8" :style="{ color: 'var(--dp-text-muted)' }">
             검색 결과가 없습니다.
           </div>
@@ -126,7 +173,7 @@ const pagesToShow = computed(() => {
         <!-- Pagination -->
         <div
           v-if="pageInfo.totalPages > 1"
-          class="p-3 sm:p-4 border-t flex items-center justify-center gap-0.5 sm:gap-1 overflow-x-auto"
+          class="px-3 sm:px-4 pt-4 pb-8 border-t flex items-center justify-center gap-0.5 sm:gap-1 overflow-x-auto"
           :style="{ borderColor: 'var(--dp-border-primary)' }"
         >
           <button

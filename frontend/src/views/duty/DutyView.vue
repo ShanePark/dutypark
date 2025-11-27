@@ -1020,6 +1020,11 @@ function handleSearchPageChange(page: number) {
   handleSearch(page)
 }
 
+function handleSearchFromModal(query: string) {
+  searchQuery.value = query
+  handleSearch(0)
+}
+
 function handleSearchGoToDate(result: any) {
   const date = new Date(result.startDateTime)
   currentYear.value = date.getFullYear()
@@ -1814,9 +1819,11 @@ async function showExcelUploadModal() {
       :query="searchQuery"
       :results="searchResults"
       :page-info="searchPageInfo"
+      :is-searching="isSearching"
       @close="isSearchResultModalOpen = false"
       @go-to-date="handleSearchGoToDate"
       @change-page="handleSearchPageChange"
+      @search="handleSearchFromModal"
     />
 
     <OtherDutiesModal
