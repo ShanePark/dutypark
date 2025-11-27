@@ -2,6 +2,7 @@
 import { computed, toRef } from 'vue'
 import { X, Download, Lock, Paperclip } from 'lucide-vue-next'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { formatBytes } from '@/api/attachment'
 
 interface Attachment {
   id: string
@@ -39,14 +40,6 @@ const formattedDescription = computed(() => {
   if (!props.schedule?.description) return ''
   return props.schedule.description.replace(/\n/g, '<br>')
 })
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 Bytes'
-  const k = 1024
-  const sizes = ['Bytes', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-}
 
 function getAttachmentIcon(attachment: Attachment): string {
   const type = attachment.contentType || ''

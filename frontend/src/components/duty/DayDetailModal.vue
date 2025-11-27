@@ -8,9 +8,7 @@ import {
   Pencil,
   GripVertical,
   Paperclip,
-  Eye,
   Lock,
-  Users,
   User,
   UserPlus,
   Check,
@@ -22,6 +20,8 @@ import type { NormalizedAttachment } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { getVisibilityIcon, getVisibilityLabel } from '@/utils/visibility'
+import { extractDatePart } from '@/utils/date'
 
 const { showWarning, showError } = useSwal()
 
@@ -277,7 +277,7 @@ function startEditMode(schedule: Schedule) {
   newSchedule.value = {
     content: schedule.content,
     description: schedule.description || '',
-    startDate: schedule.startDateTime.split('T')[0] || '',
+    startDate: extractDatePart(schedule.startDateTime),
     startTime: `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`,
     endDateTime: `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}T${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`,
     visibility: schedule.visibility,
@@ -374,36 +374,6 @@ function handleUploadComplete() {
 
 function handleUploadError(message: string) {
   showError(message)
-}
-
-function getVisibilityIcon(visibility: string) {
-  switch (visibility) {
-    case 'PUBLIC':
-      return Eye
-    case 'FRIENDS':
-      return Users
-    case 'FAMILY':
-      return User
-    case 'PRIVATE':
-      return Lock
-    default:
-      return Eye
-  }
-}
-
-function getVisibilityLabel(visibility: string) {
-  switch (visibility) {
-    case 'PUBLIC':
-      return '전체공개'
-    case 'FRIENDS':
-      return '친구공개'
-    case 'FAMILY':
-      return '가족공개'
-    case 'PRIVATE':
-      return '나만보기'
-    default:
-      return visibility
-  }
 }
 
 function formatScheduleTime(schedule: Schedule) {

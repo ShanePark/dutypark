@@ -17,6 +17,7 @@ import { useAuthStore } from '@/stores/auth'
 import { teamApi } from '@/api/team'
 import { dutyApi } from '@/api/duty'
 import { useSwal } from '@/composables/useSwal'
+import { isLightColor } from '@/utils/color'
 import YearMonthPicker from '@/components/common/YearMonthPicker.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import type {
@@ -223,16 +224,6 @@ function getDutyColor(day: { year: number; month: number; day: number }): string
 }
 
 // Check if a color is light (for text contrast)
-function isLightColor(color: string | null | undefined): boolean {
-  if (!color) return false
-  const hex = color.replace('#', '')
-  if (hex.length !== 6) return false
-  const r = parseInt(hex.substring(0, 2), 16)
-  const g = parseInt(hex.substring(2, 4), 16)
-  const b = parseInt(hex.substring(4, 6), 16)
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-  return luminance > 0.5
-}
 
 // Get adaptive border color based on background brightness
 function getAdaptiveBorderColor(backgroundColor: string | null | undefined): string {

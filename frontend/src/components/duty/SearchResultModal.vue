@@ -2,6 +2,7 @@
 import { computed, toRef } from 'vue'
 import { X, ChevronLeft, ChevronRight, Calendar, Paperclip } from 'lucide-vue-next'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { formatDateTime, formatDateRange } from '@/utils/date'
 
 interface SearchResult {
   id: string
@@ -48,32 +49,6 @@ const pagesToShow = computed(() => {
   return pages
 })
 
-function formatDateTime(dateTimeStr: string) {
-  const date = new Date(dateTimeStr)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  return `${year}-${month}-${day} ${hours}:${minutes}`
-}
-
-function formatDateRange(start: string, end: string) {
-  const startDate = new Date(start)
-  const endDate = new Date(end)
-
-  const startStr = formatDateTime(start)
-
-  if (startDate.toDateString() === endDate.toDateString()) {
-    const endTime = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`
-    if (endTime === '00:00') {
-      return startStr
-    }
-    return `${startStr} ~ ${endTime}`
-  }
-
-  return `${startStr} ~ ${formatDateTime(end)}`
-}
 </script>
 
 <style scoped>
