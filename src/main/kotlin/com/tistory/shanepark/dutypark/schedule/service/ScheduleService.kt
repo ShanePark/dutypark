@@ -160,20 +160,6 @@ class ScheduleService(
         return schedule
     }
 
-    fun swapSchedulePosition(loginMember: LoginMember, schedule1Id: UUID, schedule2Id: UUID) {
-        val schedule1 = scheduleRepository.findById(schedule1Id).orElseThrow()
-        val schedule2 = scheduleRepository.findById(schedule2Id).orElseThrow()
-
-        if (schedule1.startDateTime.toLocalDate() != schedule2.startDateTime.toLocalDate()) {
-            throw IllegalArgumentException("Schedule must have same date")
-        }
-
-        schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule1, loginMember = loginMember)
-        schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule2, loginMember = loginMember)
-
-        schedule1.position = schedule2.position.also { schedule2.position = schedule1.position }
-    }
-
     fun reorderSchedulePositions(loginMember: LoginMember, scheduleIds: List<UUID>) {
         if (scheduleIds.isEmpty()) return
 

@@ -391,6 +391,9 @@ const schedulesByDays = ref<Schedule[][]>([])
 // Holidays by day index
 const holidaysByDays = ref<HolidayDto[][]>([])
 
+// Raw calendar days from backend API
+const rawCalendarDays = ref<Array<{ year: number; month: number; day: number }>>([])
+
 // Search results
 const searchResults = ref<any[]>([])
 const searchPageInfo = ref({
@@ -403,55 +406,37 @@ const searchPageInfo = ref({
 // Week days
 const weekDays = ['일', '월', '화', '수', '목', '금', '토']
 
-// Generate calendar days
+// Load calendar structure from backend API (cached)
+async function loadCalendar() {
+  try {
+    rawCalendarDays.value = await dutyApi.getCalendar(currentYear.value, currentMonth.value)
+  } catch (error) {
+    console.error('Failed to load calendar:', error)
+    rawCalendarDays.value = []
+  }
+}
+
+// Generate calendar days from backend data with additional UI properties
 const calendarDays = computed(() => {
-  const days: CalendarDay[] = []
-  const firstDay = new Date(currentYear.value, currentMonth.value - 1, 1)
-  const lastDay = new Date(currentYear.value, currentMonth.value, 0)
-  const startDayOfWeek = firstDay.getDay()
   const today = new Date()
 
-  // Previous month days
-  const prevMonthLastDay = new Date(currentYear.value, currentMonth.value - 1, 0).getDate()
-  for (let i = startDayOfWeek - 1; i >= 0; i--) {
-    const day = prevMonthLastDay - i
-    days.push({
-      year: currentMonth.value === 1 ? currentYear.value - 1 : currentYear.value,
-      month: currentMonth.value === 1 ? 12 : currentMonth.value - 1,
-      day,
-      isCurrentMonth: false,
-      isPrev: true,
-    })
-  }
-
-  // Current month days
-  for (let i = 1; i <= lastDay.getDate(); i++) {
+  return rawCalendarDays.value.map((raw) => {
+    const isCurrentMonth = raw.year === currentYear.value && raw.month === currentMonth.value
     const isToday =
-      i === today.getDate() &&
-      currentMonth.value === today.getMonth() + 1 &&
-      currentYear.value === today.getFullYear()
-    days.push({
-      year: currentYear.value,
-      month: currentMonth.value,
-      day: i,
-      isCurrentMonth: true,
+      raw.day === today.getDate() &&
+      raw.month === today.getMonth() + 1 &&
+      raw.year === today.getFullYear()
+
+    return {
+      year: raw.year,
+      month: raw.month,
+      day: raw.day,
+      isCurrentMonth,
+      isPrev: raw.month < currentMonth.value || (raw.month === 12 && currentMonth.value === 1),
+      isNext: raw.month > currentMonth.value || (raw.month === 1 && currentMonth.value === 12),
       isToday,
-    })
-  }
-
-  // Next month days
-  const remainingDays = 42 - days.length
-  for (let i = 1; i <= remainingDays; i++) {
-    days.push({
-      year: currentMonth.value === 12 ? currentYear.value + 1 : currentYear.value,
-      month: currentMonth.value === 12 ? 1 : currentMonth.value + 1,
-      day: i,
-      isCurrentMonth: false,
-      isNext: true,
-    })
-  }
-
-  return days
+    } as CalendarDay
+  })
 })
 
 // Duties computed from raw API data
@@ -577,7 +562,10 @@ onMounted(async () => {
   loadError.value = null
 
   try {
-    // Load member info first to get teamId
+    // Load calendar structure first (needed for index alignment with holidays)
+    await loadCalendar()
+
+    // Load member info to get teamId
     await loadMemberInfo()
 
     // Load data in parallel
@@ -614,6 +602,8 @@ onMounted(async () => {
 watch(
   () => [currentYear.value, currentMonth.value],
   async () => {
+    // Load calendar first to ensure index alignment
+    await loadCalendar()
     await Promise.all([loadDuties(), loadSchedules(), loadOtherDuties(), loadHolidays()])
   }
 )
@@ -632,6 +622,7 @@ watch(
     rawDuties.value = []
     schedulesByDays.value = []
     holidaysByDays.value = []
+    rawCalendarDays.value = []
     dutyTypes.value = []
     team.value = null
     pinnedDDay.value = null
@@ -641,6 +632,8 @@ watch(
     otherDuties.value = []
 
     try {
+      // Load calendar first to ensure index alignment
+      await loadCalendar()
       await loadMemberInfo()
       await Promise.all([
         loadTodos(),

@@ -364,15 +364,6 @@ export interface DutyBatchTemplateDto {
   fileExtensions: string[]
 }
 
-// Calendar response structure
-export interface DutyCalendarResponse {
-  year: number
-  month: number
-  day: number
-  isHoliday: boolean
-  holidayName: string | null
-}
-
 // Holiday API response
 export interface HolidayDto {
   dateName: string

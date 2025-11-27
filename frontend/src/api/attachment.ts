@@ -185,13 +185,6 @@ export const attachmentApi = {
   },
 
   /**
-   * Delete attachment
-   */
-  deleteAttachment: async (id: string): Promise<void> => {
-    await apiClient.delete(`/attachments/${id}`)
-  },
-
-  /**
    * Reorder attachments
    */
   reorderAttachments: async (request: ReorderAttachmentsRequest): Promise<void> => {

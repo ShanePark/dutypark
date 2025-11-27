@@ -63,15 +63,6 @@ class ScheduleController(
         return mapOf("id" to schedule.id)
     }
 
-    @PatchMapping("/{id1}/position")
-    fun swapSchedulePosition(
-        @PathVariable id1: UUID,
-        @RequestParam id2: UUID,
-        @Login loginMember: LoginMember,
-    ) {
-        scheduleService.swapSchedulePosition(loginMember, id1, id2)
-    }
-
     @PatchMapping("/positions")
     fun reorderSchedulePositions(
         @RequestBody scheduleIds: List<UUID>,

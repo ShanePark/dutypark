@@ -121,15 +121,6 @@ export const scheduleApi = {
   },
 
   /**
-   * Swap schedule positions
-   */
-  swapSchedulePosition: async (id1: string, id2: string): Promise<void> => {
-    await apiClient.patch(`/schedules/${id1}/position`, null, {
-      params: { id2 },
-    })
-  },
-
-  /**
    * Reorder schedule positions (for drag and drop)
    */
   reorderSchedulePositions: async (scheduleIds: string[]): Promise<void> => {
