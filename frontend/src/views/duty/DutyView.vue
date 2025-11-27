@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Swal from 'sweetalert2'
 import { useSwal } from '@/composables/useSwal'
@@ -561,6 +561,9 @@ onMounted(async () => {
   isLoading.value = true
   loadError.value = null
 
+  // Listen for "go to today" event from footer navigation
+  window.addEventListener('duty-go-to-today', goToToday)
+
   try {
     // Load calendar structure first (needed for index alignment with holidays)
     await loadCalendar()
@@ -596,6 +599,11 @@ onMounted(async () => {
   } finally {
     isLoading.value = false
   }
+})
+
+// Cleanup on unmount
+onUnmounted(() => {
+  window.removeEventListener('duty-go-to-today', goToToday)
 })
 
 // Watch for month changes to reload data
@@ -1405,12 +1413,17 @@ async function showExcelUploadModal() {
 
     <!-- Month Control -->
     <div class="flex items-center justify-between gap-1 mb-1">
-      <!-- Left: Calendar Owner Name -->
+      <!-- Left: Calendar Owner Name (click to go to current month) -->
       <div class="w-20 sm:w-24 flex-shrink-0 flex items-center justify-start">
-        <div class="flex items-center gap-1.5 px-2 py-1 rounded-full border" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderColor: 'var(--dp-border-secondary)' }">
+        <button
+          @click="goToToday"
+          class="flex items-center gap-1.5 px-2 py-1 rounded-full border cursor-pointer transition-all duration-150 hover:shadow-sm"
+          :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderColor: 'var(--dp-border-secondary)' }"
+          title="이번 달로 이동"
+        >
           <User class="w-3.5 h-3.5 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }" />
           <span class="text-xs sm:text-sm font-semibold truncate max-w-[60px] sm:max-w-[72px]" :style="{ color: 'var(--dp-text-primary)' }">{{ memberName }}</span>
-        </div>
+        </button>
       </div>
 
       <!-- Center: Year-Month Navigation -->
