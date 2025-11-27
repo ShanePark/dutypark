@@ -460,9 +460,10 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
         // When
         val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2025, 1, loginMember(member))
 
-        // Then
-        assertThat(duties.filter { it.dutyType == dutyName }).hasSize(20)
-        for (duty in duties) {
+        // Then - filter only January 2025 duties (CalendarView includes padding days)
+        val januaryDuties = duties.filter { it.year == 2025 && it.month == 1 }
+        assertThat(januaryDuties.filter { it.dutyType == dutyName }).hasSize(18) // 23 weekdays - 5 holidays = 18
+        for (duty in januaryDuties) {
             val date = LocalDate.of(duty.year, duty.month, duty.day)
             if (date.dayOfWeek.value > 5 || actualHolidays.any { it.localDate == date }) {
                 assertThat(duty.dutyType).isNull()

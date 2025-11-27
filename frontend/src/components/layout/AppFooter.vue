@@ -27,6 +27,13 @@ const isActive = (path: string) => {
   if (path === '/') return route.path === '/'
   return route.path.startsWith(path)
 }
+
+function handleNavClick(item: { path: string; icon: string; label: string }, event: MouseEvent) {
+  if (item.icon === 'calendar' && isActive(item.path)) {
+    event.preventDefault()
+    window.dispatchEvent(new CustomEvent('duty-go-to-today'))
+  }
+}
 </script>
 
 <template>
@@ -45,6 +52,7 @@ const isActive = (path: string) => {
         <li v-for="item in navItems" :key="item.path" class="flex-1">
           <router-link
               :to="item.path"
+              @click="handleNavClick(item, $event)"
               class="flex flex-col items-center px-2 sm:px-3 py-2 sm:py-3 text-xs sm:text-sm rounded-xl transition-colors min-h-[56px] sm:min-h-[64px]"
               :style="{
               backgroundColor: isActive(item.path) ? 'rgba(255, 255, 255, 0.25)' : 'transparent',

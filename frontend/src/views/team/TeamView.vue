@@ -86,6 +86,9 @@ const myDuties = ref<DutyCalendarDay[]>([])
 // Holidays by day index
 const holidaysByDays = ref<HolidayDto[][]>([])
 
+// Raw calendar days from backend API
+const rawCalendarDays = ref<Array<{ year: number; month: number; day: number }>>([])
+
 // Schedule Modal
 const showScheduleModal = ref(false)
 const scheduleForm = ref({
@@ -96,64 +99,33 @@ const scheduleForm = ref({
   endDate: '',
 })
 
-// Generate calendar days
+// Load calendar structure from backend API (cached)
+async function loadCalendar() {
+  try {
+    rawCalendarDays.value = await dutyApi.getCalendar(currentYear.value, currentMonth.value)
+  } catch (error) {
+    console.error('Failed to load calendar:', error)
+    rawCalendarDays.value = []
+  }
+}
+
+// Generate calendar days from backend data
 const teamDays = computed(() => {
-  const days: Array<{
-    year: number
-    month: number
-    day: number
-    isCurrentMonth: boolean
-  }> = []
-
-  const firstDay = new Date(currentYear.value, currentMonth.value - 1, 1)
-  const lastDay = new Date(currentYear.value, currentMonth.value, 0)
-  const startDayOfWeek = firstDay.getDay()
-
-  // Previous month days
-  const prevMonthLastDay = new Date(currentYear.value, currentMonth.value - 1, 0).getDate()
-  const prevMonth = currentMonth.value === 1 ? 12 : currentMonth.value - 1
-  const prevYear = currentMonth.value === 1 ? currentYear.value - 1 : currentYear.value
-
-  for (let i = startDayOfWeek - 1; i >= 0; i--) {
-    days.push({
-      year: prevYear,
-      month: prevMonth,
-      day: prevMonthLastDay - i,
-      isCurrentMonth: false,
-    })
-  }
-
-  // Current month days
-  for (let i = 1; i <= lastDay.getDate(); i++) {
-    days.push({
-      year: currentYear.value,
-      month: currentMonth.value,
-      day: i,
-      isCurrentMonth: true,
-    })
-  }
-
-  // Next month days
-  const nextMonth = currentMonth.value === 12 ? 1 : currentMonth.value + 1
-  const nextYear = currentMonth.value === 12 ? currentYear.value + 1 : currentYear.value
-  const remainingDays = 42 - days.length
-
-  for (let i = 1; i <= remainingDays; i++) {
-    days.push({
-      year: nextYear,
-      month: nextMonth,
-      day: i,
-      isCurrentMonth: false,
-    })
-  }
-
-  return days
+  return rawCalendarDays.value.map((raw) => ({
+    year: raw.year,
+    month: raw.month,
+    day: raw.day,
+    isCurrentMonth: raw.year === currentYear.value && raw.month === currentMonth.value,
+  }))
 })
 
 // Fetch team summary for the month
 async function fetchTeamSummary() {
   loading.value = true
   try {
+    // Load calendar first to ensure index alignment with holidays
+    await loadCalendar()
+
     const response = await teamApi.getMyTeamSummary(currentYear.value, currentMonth.value)
     const data = response.data
 

@@ -1,11 +1,11 @@
 import apiClient from './client'
 import type {
   DutyCalendarDay,
-  DutyCalendarResponse,
   OtherDutyResponse,
   TeamDto,
   HolidayDto,
   DutyBatchResult,
+  TeamDay,
 } from '@/types'
 
 export const dutyApi = {
@@ -88,13 +88,11 @@ export const dutyApi = {
   },
 
   /**
-   * Get calendar structure for a month
+   * Get calendar structure for a month (cached on server)
+   * Returns array of CalendarDay with year, month, day for each cell
    */
-  getCalendar: async (
-    year: number,
-    month: number
-  ): Promise<DutyCalendarResponse[][]> => {
-    const response = await apiClient.get<DutyCalendarResponse[][]>('/calendar', {
+  getCalendar: async (year: number, month: number): Promise<TeamDay[]> => {
+    const response = await apiClient.get<TeamDay[]>('/calendar', {
       params: { year, month },
     })
     return response.data

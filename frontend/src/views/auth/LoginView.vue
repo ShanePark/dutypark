@@ -16,6 +16,7 @@ const email = ref('')
 const password = ref('')
 const rememberMe = ref(false)
 const isLoading = ref(false)
+const isKakaoLoading = ref(false)
 const error = ref('')
 
 onMounted(() => {
@@ -59,6 +60,8 @@ async function handleLogin() {
 }
 
 function handleKakaoLogin() {
+  if (isKakaoLoading.value) return
+  isKakaoLoading.value = true
   const referer = (route.query.redirect as string) || '/'
   kakaoLogin(referer)
 }
@@ -159,11 +162,12 @@ function handleKakaoLogin() {
           <button
             type="button"
             @click="handleKakaoLogin"
-            class="w-full py-3.5 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-3 hover:opacity-90 cursor-pointer shadow-sm"
+            :disabled="isKakaoLoading"
+            class="w-full py-3.5 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-3 hover:opacity-90 cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
             style="background-color: #FEE500; color: #000000;"
           >
             <img src="/img/kakao.png" alt="Kakao" class="w-5 h-5" />
-            <span>카카오 로그인</span>
+            <span>{{ isKakaoLoading ? '로그인 중...' : '카카오 로그인' }}</span>
           </button>
         </form>
       </div>

@@ -5,20 +5,23 @@ import java.time.LocalDateTime
 import java.time.YearMonth
 
 class CalendarView(val year: Int, val month: Int) {
-    val yearMonth: YearMonth = YearMonth.of(year, month)
+    companion object {
+        const val SIZE: Int = 42
+    }
 
-    private val paddingBefore: Int = yearMonth.atDay(1).dayOfWeek.value % 7
-    private val paddingAfter: Int = 7 - (yearMonth.atEndOfMonth().dayOfWeek.value % 7 + 1)
-    val size: Int = paddingBefore + yearMonth.lengthOfMonth() + paddingAfter
+    private val yearMonth: YearMonth = YearMonth.of(year, month)
+
+    private val firstDayOfWeek: Int = yearMonth.atDay(1).dayOfWeek.value % 7
+    private val paddingBefore: Int = if (firstDayOfWeek == 0) 7 else firstDayOfWeek
 
     val startDate: LocalDate = yearMonth.atDay(1).minusDays(paddingBefore.toLong())
-    val endDate: LocalDate = yearMonth.atEndOfMonth().plusDays(paddingAfter.toLong())
+    val endDate: LocalDate = startDate.plusDays((SIZE - 1).toLong())
 
     val rangeFromDateTime: LocalDateTime = startDate.atStartOfDay()
     val rangeUntilDateTime: LocalDateTime = endDate.atTime(23, 59, 59)
 
     val dates: List<LocalDate> by lazy {
-        (0 until size).map { startDate.plusDays(it.toLong()) }
+        (0 until SIZE).map { startDate.plusDays(it.toLong()) }
     }
 
     fun isInRange(date: LocalDate): Boolean {
@@ -26,12 +29,11 @@ class CalendarView(val year: Int, val month: Int) {
     }
 
     fun getIndex(date: LocalDate): Int {
-        dates.forEachIndexed { index, d ->
-            if (d == date) {
-                return index
-            }
+        val index = dates.indexOf(date)
+        if (index == -1) {
+            throw IndexOutOfBoundsException("Date $date not found in calendar view")
         }
-        throw IndexOutOfBoundsException("Date $date not found in calendar view")
+        return index
     }
 
     fun validDays(startDate: LocalDate, endDate: LocalDate): List<LocalDate> {
@@ -41,7 +43,7 @@ class CalendarView(val year: Int, val month: Int) {
     }
 
     fun <T> makeCalendarArray(): Array<List<T>> {
-        return Array(size) { emptyList() }
+        return Array(SIZE) { emptyList() }
     }
 
     override fun toString(): String {

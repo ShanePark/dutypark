@@ -61,13 +61,6 @@ export const memberApi = {
   getManagers() {
     return apiClient.get<MemberDto[]>('/members/managers')
   },
-
-  /**
-   * Check if current user can manage the target member
-   */
-  canManage(memberId: number) {
-    return apiClient.get<boolean>(`/members/${memberId}/canManage`)
-  },
 }
 
 /**
