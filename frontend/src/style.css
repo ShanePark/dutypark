@@ -599,6 +599,22 @@ html.dark {
   border-color: var(--dp-border-primary);
 }
 
+/* Duty Type Button (in DayDetailModal) */
+.duty-type-btn {
+  transition: all 0.15s ease;
+}
+
+.duty-type-btn:not(.duty-type-btn-selected):hover {
+  background-color: var(--dp-bg-hover);
+  border-color: var(--dp-border-secondary);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dark .duty-type-btn:not(.duty-type-btn-selected):hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
 /* Badge */
 .badge {
   @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
@@ -908,4 +924,69 @@ html.dark {
 
 .swal2-popup.swal2-toast .swal2-icon.swal2-info .swal2-icon-content {
   @apply text-blue-500;
+}
+
+/* Toast container z-index */
+.swal2-container.swal2-top-end {
+  z-index: 99999 !important;
+  padding: 1rem !important;
+}
+
+/* Reset SweetAlert2 default toast backgrounds */
+div.swal2-popup.swal2-toast.colored-toast,
+div.swal2-popup.swal2-toast.colored-toast-success,
+div.swal2-popup.swal2-toast.colored-toast-error,
+div.swal2-popup.swal2-toast.colored-toast-info {
+  padding: 0.75rem 1rem !important;
+  min-width: auto !important;
+  max-width: 320px !important;
+  width: auto !important;
+  border-radius: 12px !important;
+  background: var(--dp-bg-card) !important;
+  border: 1px solid var(--dp-border-primary) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+}
+
+.dark div.swal2-popup.swal2-toast.colored-toast,
+.dark div.swal2-popup.swal2-toast.colored-toast-success,
+.dark div.swal2-popup.swal2-toast.colored-toast-error,
+.dark div.swal2-popup.swal2-toast.colored-toast-info {
+  background: var(--dp-bg-card) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+div.swal2-popup.swal2-toast.colored-toast .swal2-title,
+div.swal2-popup.swal2-toast.colored-toast-success .swal2-title,
+div.swal2-popup.swal2-toast.colored-toast-error .swal2-title,
+div.swal2-popup.swal2-toast.colored-toast-info .swal2-title {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  background: transparent !important;
+  border-bottom: none !important;
+  color: var(--dp-text-primary) !important;
+}
+
+div.swal2-popup.swal2-toast.colored-toast-success {
+  border-left: 3px solid #22c55e !important;
+}
+
+div.swal2-popup.swal2-toast.colored-toast-error {
+  border-left: 3px solid #ef4444 !important;
+}
+
+div.swal2-popup.swal2-toast.colored-toast-info {
+  border-left: 3px solid #3b82f6 !important;
+}
+
+.toast-with-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.625rem !important;
+}
+
+.toast-with-icon svg {
+  color: #22c55e !important;
+  flex-shrink: 0 !important;
 }

@@ -9,8 +9,17 @@ const Toast = Swal.mixin({
   toast: true,
   position: 'top-end',
   showConfirmButton: false,
-  timer: 3000,
-  timerProgressBar: true,
+  timer: 2000,
+  timerProgressBar: false,
+  showClass: {
+    popup: 'swal2-show',
+  },
+  hideClass: {
+    popup: 'swal2-hide',
+  },
+  customClass: {
+    popup: 'colored-toast',
+  },
 })
 
 export function useSwal() {
@@ -79,23 +88,33 @@ export function useSwal() {
   }
 
   const toastSuccess = (message: string) => {
+    const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`
     return Toast.fire({
-      icon: 'success',
-      title: message,
+      icon: undefined,
+      title: `<span class="toast-with-icon">${checkIcon}<span>${message}</span></span>`,
+      customClass: {
+        popup: 'colored-toast colored-toast-success',
+      },
     })
   }
 
   const toastError = (message: string) => {
     return Toast.fire({
-      icon: 'error',
+      icon: undefined,
       title: message,
+      customClass: {
+        popup: 'colored-toast colored-toast-error',
+      },
     })
   }
 
   const toastInfo = (message: string) => {
     return Toast.fire({
-      icon: 'info',
+      icon: undefined,
       title: message,
+      customClass: {
+        popup: 'colored-toast colored-toast-info',
+      },
     })
   }
 

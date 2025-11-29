@@ -450,9 +450,9 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
               v-for="dutyType in dutyTypes"
               :key="dutyType.id ?? 'off'"
               @click="handleDutyTypeChange(dutyType.id, dutyType.name)"
-              class="px-2.5 py-1 rounded-md text-xs font-medium transition flex items-center gap-1.5"
+              class="duty-type-btn px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 cursor-pointer"
               :class="{
-                'border-blue-500 ring-1 ring-blue-200': selectedDutyType === dutyType.name,
+                'border-blue-500 ring-1 ring-blue-200 duty-type-btn-selected': selectedDutyType === dutyType.name,
               }"
               :style="{
                 border: selectedDutyType === dutyType.name ? undefined : '1px solid var(--dp-border-primary)',
@@ -461,7 +461,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
               }"
             >
               <span
-                class="inline-block w-3 h-3 rounded"
+                class="inline-block w-3 h-3 rounded border border-gray-400"
                 :style="{ backgroundColor: dutyType.color || '#6c757d' }"
               ></span>
               {{ dutyType.name }}

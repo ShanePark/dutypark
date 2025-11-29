@@ -282,6 +282,7 @@ async function cancelRequest(req: { toMember: { id: number | null; name: string 
   try {
     await friendApi.cancelFriendRequest(req.toMember.id)
     await loadFriendsDashboard()
+    toastSuccess('친구 요청이 취소되었습니다.')
   } catch (error) {
     console.error('Failed to cancel friend request:', error)
     showWarning('친구 요청 취소에 실패했습니다.')

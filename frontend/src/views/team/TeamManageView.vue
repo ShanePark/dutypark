@@ -436,6 +436,7 @@ async function swapPosition(index1: number, index2: number) {
     // Swap locally for immediate feedback
     team.value.dutyTypes[index1] = dt2
     team.value.dutyTypes[index2] = dt1
+    toastSuccess('순서가 변경되었습니다.')
   } catch (error) {
     console.error('Failed to swap duty type positions:', error)
     showError('순서 변경에 실패했습니다.')

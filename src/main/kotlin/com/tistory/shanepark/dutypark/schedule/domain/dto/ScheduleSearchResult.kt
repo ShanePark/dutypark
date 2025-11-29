@@ -14,7 +14,7 @@ data class ScheduleSearchResult(
     companion object {
         fun of(schedule: Schedule): ScheduleSearchResult {
             return ScheduleSearchResult(
-                content = schedule.content,
+                content = schedule.content(),
                 startDateTime = schedule.startDateTime,
                 endDateTime = schedule.endDateTime,
                 visibility = schedule.visibility.name,

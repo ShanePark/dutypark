@@ -31,7 +31,7 @@ import type {
 
 const router = useRouter()
 const authStore = useAuthStore()
-const { showError, confirmDelete } = useSwal()
+const { showError, confirmDelete, toastSuccess } = useSwal()
 
 // Loading state
 const loading = ref(false)
@@ -342,6 +342,7 @@ async function saveSchedule() {
   if (!team.value || !scheduleForm.value.content.trim()) return
 
   saving.value = true
+  const isNew = !scheduleForm.value.id
   try {
     await teamApi.saveTeamSchedule({
       id: scheduleForm.value.id ?? undefined,
@@ -353,6 +354,7 @@ async function saveSchedule() {
     })
     showScheduleModal.value = false
     await fetchTeamSchedules()
+    toastSuccess(isNew ? '일정이 등록되었습니다.' : '일정이 수정되었습니다.')
   } catch (error) {
     console.error('Failed to save schedule:', error)
     showError('일정 저장에 실패했습니다.')
@@ -367,6 +369,7 @@ async function deleteSchedule(scheduleId: string) {
   try {
     await teamApi.deleteTeamSchedule(scheduleId)
     await fetchTeamSchedules()
+    toastSuccess('일정이 삭제되었습니다.')
   } catch (error) {
     console.error('Failed to delete schedule:', error)
     showError('일정 삭제에 실패했습니다.')

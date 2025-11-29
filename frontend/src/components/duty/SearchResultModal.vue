@@ -124,14 +124,19 @@ const pagesToShow = computed(() => {
               <span>검색</span>
             </button>
           </form>
-          <p class="text-sm mt-2" :style="{ color: 'var(--dp-text-muted)' }">
+          <p v-if="query" class="text-sm mt-2" :style="{ color: 'var(--dp-text-muted)' }">
             "{{ query }}" 검색 결과 {{ pageInfo.totalElements }}건
           </p>
         </div>
 
         <!-- Content -->
         <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(85dvh-240px)] sm:max-h-[calc(70vh-240px)]">
-          <div v-if="results.length === 0" class="text-center py-8" :style="{ color: 'var(--dp-text-muted)' }">
+          <!-- No query entered yet -->
+          <div v-if="!query" class="text-center py-8" :style="{ color: 'var(--dp-text-muted)' }">
+            검색어를 입력해주세요.
+          </div>
+          <!-- Query entered but no results -->
+          <div v-else-if="results.length === 0" class="text-center py-8" :style="{ color: 'var(--dp-text-muted)' }">
             검색 결과가 없습니다.
           </div>
 

@@ -18,7 +18,7 @@ import {
   Lock,
   CalendarCheck,
   FileSpreadsheet,
-  MessageSquare,
+  MessageSquareText,
 } from 'lucide-vue-next'
 
 // Modal Components
@@ -133,7 +133,7 @@ import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const authStore = useAuthStore()
-const { showError, showSuccess, confirmDelete } = useSwal()
+const { showError, confirmDelete, toastSuccess } = useSwal()
 
 // State
 const today = new Date()
@@ -883,6 +883,7 @@ async function handleTodoUpdate(data: {
     }
     // Update selectedTodo for the detail modal
     selectedTodo.value = localTodo
+    toastSuccess('할 일이 수정되었습니다.')
   } catch (error) {
     console.error('Failed to update todo:', error)
     showError('할 일 수정에 실패했습니다.')
@@ -952,6 +953,7 @@ async function handleTodoAdd(data: {
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
     todos.value.unshift(mapToLocalTodo(newTodo))
+    toastSuccess('할 일이 추가되었습니다.')
   } catch (error) {
     console.error('Failed to add todo:', error)
     showError('할 일 추가에 실패했습니다.')
@@ -981,6 +983,11 @@ async function handleTodoPositionUpdate(orderedIds: string[]) {
 
 // Search handler
 const isSearching = ref(false)
+
+function openSearchModal() {
+  // Open modal without searching - user can enter query in modal
+  isSearchResultModalOpen.value = true
+}
 
 async function handleSearch(page: number = 0) {
   if (!searchQuery.value.trim() || !memberId.value) return
@@ -1145,6 +1152,7 @@ async function handleCreateSchedule(data: ScheduleSaveData) {
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
     await loadSchedules()
+    toastSuccess('일정이 추가되었습니다.')
   } catch (error) {
     console.error('Failed to create schedule:', error)
     showError('일정 생성에 실패했습니다.')
@@ -1167,6 +1175,7 @@ async function handleEditSchedule(data: ScheduleSaveData) {
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
     await loadSchedules()
+    toastSuccess('일정이 수정되었습니다.')
   } catch (error) {
     console.error('Failed to update schedule:', error)
     showError('일정 수정에 실패했습니다.')
@@ -1179,6 +1188,7 @@ async function handleDeleteSchedule(scheduleId: string) {
   try {
     await scheduleApi.deleteSchedule(scheduleId)
     await loadSchedules()
+    toastSuccess('일정이 삭제되었습니다.')
   } catch (error) {
     console.error('Failed to delete schedule:', error)
     showError('일정 삭제에 실패했습니다.')
@@ -1189,6 +1199,7 @@ async function handleReorderSchedules(scheduleIds: string[]) {
   try {
     await scheduleApi.reorderSchedulePositions(scheduleIds)
     await loadSchedules()
+    toastSuccess('일정 순서가 변경되었습니다.')
   } catch (error) {
     console.error('Failed to reorder schedules:', error)
     showError('일정 순서 변경에 실패했습니다.')
@@ -1219,6 +1230,7 @@ async function handleUntagSelf(scheduleId: string) {
   try {
     await scheduleApi.untagSelf(scheduleId)
     await loadSchedules()
+    toastSuccess('태그가 해제되었습니다.')
   } catch (error) {
     console.error('Failed to untag self:', error)
     showError('태그 해제에 실패했습니다.')
@@ -1411,7 +1423,7 @@ async function showExcelUploadModal() {
             :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)', color: 'var(--dp-text-primary)' }"
           >
             <span class="truncate">{{ todo.title }}</span>
-            <FileText v-if="todo.content || todo.hasAttachments" class="w-2.5 h-2.5 flex-shrink-0 opacity-50" />
+            <FileText v-if="todo.content || todo.hasAttachments" class="w-2.5 h-2.5 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
           </button>
         </div>
       </div>
@@ -1461,8 +1473,8 @@ async function showExcelUploadModal() {
             :style="{ backgroundColor: 'var(--dp-bg-input)', color: 'var(--dp-text-primary)' }"
           />
           <button
-            @click="handleSearch()"
-            class="px-2 py-1.5 bg-gray-800 text-white hover:bg-gray-700 transition flex items-center justify-center"
+            @click="searchQuery.trim() ? handleSearch() : openSearchModal()"
+            class="px-2 py-1.5 bg-gray-800 text-white hover:bg-gray-700 transition flex items-center justify-center cursor-pointer"
           >
             <Search class="w-4 h-4" />
           </button>
@@ -1514,7 +1526,7 @@ async function showExcelUploadModal() {
           편집모드
         </button>
         <button
-          v-if="canEdit && isMyCalendar"
+          v-if="canEdit && isMyCalendar && batchEditMode"
           @click="showBatchUpdateModal"
           class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 border-r last:border-r-0 cursor-pointer hover:bg-gray-500/10 dark:hover:bg-gray-400/10"
           :style="{ borderColor: 'var(--dp-border-secondary)' }"
@@ -1563,6 +1575,8 @@ async function showExcelUploadModal() {
           }"
           :class="{
             'ring-2 ring-red-500 ring-inset': day.isToday || (searchDay && searchDay.year === day.year && searchDay.month === day.month && searchDay.day === day.day),
+            'rounded-bl-lg': idx === calendarDays.length - 7,
+            'rounded-br-lg': idx === calendarDays.length - 1,
           }"
         >
           <!-- Day Number -->
@@ -1648,10 +1662,10 @@ async function showExcelUploadModal() {
               :key="schedule.id"
               class="text-[10px] sm:text-sm leading-snug px-0.5 border-t-2 border-dashed break-words"
               :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#1f2937' : '#ffffff') : 'var(--dp-text-primary)', borderColor: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.3)') : 'var(--dp-border-primary)' }"
-            ><Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }" />{{ schedule.contentWithoutTime || schedule.content }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquare
+            ><Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }" />{{ schedule.contentWithoutTime || schedule.content }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
                 v-if="schedule.description || schedule.attachments?.length"
                 class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px] ml-0.5"
-                :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#9ca3af' : 'rgba(255,255,255,0.5)') : 'var(--dp-text-muted)' }"
+                :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#000000' : '#ffffff') : 'var(--dp-text-primary)' }"
               />
               <!-- Tags display -->
               <div v-if="schedule.tags?.length || schedule.isTagged" class="flex flex-wrap gap-0.5 justify-end">

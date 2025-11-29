@@ -34,7 +34,7 @@ import {
 const router = useRouter()
 const authStore = useAuthStore()
 const themeStore = useThemeStore()
-const { showSuccess, showError, showInfo, confirm } = useSwal()
+const { showSuccess, showError, showInfo, confirm, toastSuccess } = useSwal()
 const { kakaoLink } = useKakao()
 
 // Theme settings
@@ -125,6 +125,7 @@ async function assignManager() {
     await memberApi.assignManager(memberId)
     await fetchFamilyAndManagers()
     selectedManagerToAdd.value = ''
+    toastSuccess('관리자가 추가되었습니다.')
   } catch (error) {
     console.error('Failed to assign manager:', error)
     showError('관리자 추가에 실패했습니다.')
@@ -139,6 +140,7 @@ async function unAssignManager(manager: MemberDto) {
   try {
     await memberApi.unassignManager(manager.id!)
     await fetchFamilyAndManagers()
+    toastSuccess('관리자 권한이 해제되었습니다.')
   } catch (error) {
     console.error('Failed to unassign manager:', error)
     showError('관리자 권한 해제에 실패했습니다.')
@@ -166,6 +168,7 @@ async function deleteToken(tokenId: number) {
   try {
     await refreshTokenApi.deleteRefreshToken(tokenId)
     await fetchTokens()
+    toastSuccess('세션이 종료되었습니다.')
   } catch (error) {
     console.error('Failed to delete token:', error)
     showError('세션 종료에 실패했습니다.')
