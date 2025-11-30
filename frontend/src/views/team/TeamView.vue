@@ -17,6 +17,8 @@ import { useAuthStore } from '@/stores/auth'
 import { teamApi } from '@/api/team'
 import { dutyApi } from '@/api/duty'
 import { useSwal } from '@/composables/useSwal'
+import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { useEscapeKey } from '@/composables/useEscapeKey'
 import { isLightColor } from '@/utils/color'
 import YearMonthPicker from '@/components/common/YearMonthPicker.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
@@ -92,6 +94,8 @@ const rawCalendarDays = ref<Array<{ year: number; month: number; day: number }>>
 
 // Schedule Modal
 const showScheduleModal = ref(false)
+useBodyScrollLock(showScheduleModal)
+useEscapeKey(showScheduleModal, () => { showScheduleModal.value = false })
 const scheduleForm = ref({
   id: null as string | null,
   content: '',

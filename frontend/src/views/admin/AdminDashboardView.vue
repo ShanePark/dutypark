@@ -5,6 +5,8 @@ import { useAuthStore } from '@/stores/auth'
 import { adminApi } from '@/api/admin'
 import { authApi } from '@/api/auth'
 import { useSwal } from '@/composables/useSwal'
+import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { useEscapeKey } from '@/composables/useEscapeKey'
 import type { MemberDto, RefreshTokenDto } from '@/types'
 import { extractDatePart } from '@/utils/date'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
@@ -86,6 +88,8 @@ const filteredMembers = computed(() => {
 
 
 const showPasswordModal = ref(false)
+useBodyScrollLock(showPasswordModal)
+useEscapeKey(showPasswordModal, () => { showPasswordModal.value = false })
 const selectedMember = ref<{ id: number; name: string } | null>(null)
 const newPassword = ref('')
 const confirmPassword = ref('')

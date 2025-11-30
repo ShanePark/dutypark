@@ -20,6 +20,7 @@ import type { NormalizedAttachment } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { useEscapeKey } from '@/composables/useEscapeKey'
 import { getVisibilityIcon, getVisibilityLabel } from '@/utils/visibility'
 import { extractDatePart } from '@/utils/date'
 
@@ -95,6 +96,8 @@ const emit = defineEmits<{
   (e: 'removeTag', scheduleId: string, friendId: number): void
   (e: 'untagSelf', scheduleId: string): void
 }>()
+
+useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 
 const isCreateMode = ref(false)
 const isEditMode = ref(false)

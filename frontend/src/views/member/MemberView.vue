@@ -7,6 +7,7 @@ import { memberApi, refreshTokenApi } from '@/api/member'
 import { authApi } from '@/api/auth'
 import { useSwal } from '@/composables/useSwal'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { useEscapeKey } from '@/composables/useEscapeKey'
 import { useKakao } from '@/composables/useKakao'
 import type { FriendDto, MemberDto, RefreshTokenDto, CalendarVisibility } from '@/types'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
@@ -58,6 +59,7 @@ const connectingSso = ref(false)
 const calendarVisibility = ref<CalendarVisibility>('FRIENDS')
 const showVisibilityModal = ref(false)
 useBodyScrollLock(showVisibilityModal)
+useEscapeKey(showVisibilityModal, () => { showVisibilityModal.value = false })
 
 const visibilityLabel = computed(() => {
   const labels: Record<CalendarVisibility, string> = {
@@ -203,6 +205,8 @@ async function connectSso(provider: string) {
 
 // Password change
 const showPasswordModal = ref(false)
+useBodyScrollLock(showPasswordModal)
+useEscapeKey(showPasswordModal, () => { showPasswordModal.value = false })
 const passwordForm = ref({
   currentPassword: '',
   newPassword: '',

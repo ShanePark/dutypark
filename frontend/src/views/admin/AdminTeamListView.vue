@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { adminApi } from '@/api/admin'
 import { useSwal } from '@/composables/useSwal'
+import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { useEscapeKey } from '@/composables/useEscapeKey'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import type { SimpleTeam, TeamNameCheckResult } from '@/types'
 import {
@@ -40,6 +42,8 @@ const isLoading = ref(false)
 
 // New team modal state
 const showNewTeamModal = ref(false)
+useBodyScrollLock(showNewTeamModal)
+useEscapeKey(showNewTeamModal, () => { showNewTeamModal.value = false })
 const newTeamName = ref('')
 const newTeamDescription = ref('')
 const nameCheckResult = ref<TeamNameCheckResult | null>(null)

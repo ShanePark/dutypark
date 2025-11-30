@@ -2,6 +2,7 @@
 import { computed, toRef } from 'vue'
 import { X, Download, Lock, Paperclip } from 'lucide-vue-next'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { useEscapeKey } from '@/composables/useEscapeKey'
 import { formatBytes } from '@/api/attachment'
 
 interface Attachment {
@@ -35,6 +36,8 @@ useBodyScrollLock(toRef(props, 'isOpen'))
 const emit = defineEmits<{
   (e: 'close'): void
 }>()
+
+useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 
 const formattedDescription = computed(() => {
   if (!props.schedule?.description) return ''

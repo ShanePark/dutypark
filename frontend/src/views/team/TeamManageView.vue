@@ -2,6 +2,8 @@
 import { ref, computed, onMounted, nextTick, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSwal } from '@/composables/useSwal'
+import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { useEscapeKey } from '@/composables/useEscapeKey'
 import { useAuthStore } from '@/stores/auth'
 import { teamApi } from '@/api/team'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
@@ -68,6 +70,8 @@ const hasDutyType = computed(() => team.value?.dutyTypes && team.value.dutyTypes
 
 // Member Search Modal
 const showMemberSearchModal = ref(false)
+useBodyScrollLock(showMemberSearchModal)
+useEscapeKey(showMemberSearchModal, () => { showMemberSearchModal.value = false })
 const searchKeyword = ref('')
 const searchLoading = ref(false)
 const searchResult = ref<MemberDto[]>([])
@@ -78,6 +82,8 @@ const pageSize = 5
 
 // Duty Type Modal
 const showDutyTypeModal = ref(false)
+useBodyScrollLock(showDutyTypeModal)
+useEscapeKey(showDutyTypeModal, () => { showDutyTypeModal.value = false })
 const dutyTypeForm = ref({
   id: null as number | null,
   name: '',
@@ -87,6 +93,8 @@ const dutyTypeForm = ref({
 
 // Duty Batch Upload Modal
 const showBatchUploadModal = ref(false)
+useBodyScrollLock(showBatchUploadModal)
+useEscapeKey(showBatchUploadModal, () => { showBatchUploadModal.value = false })
 const batchForm = ref({
   file: null as File | null,
   year: new Date().getFullYear(),

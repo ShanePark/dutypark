@@ -18,6 +18,7 @@ import {
   Pencil,
 } from 'lucide-vue-next'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { useEscapeKey } from '@/composables/useEscapeKey'
 import { extractDatePart } from '@/utils/date'
 
 interface Todo {
@@ -61,6 +62,8 @@ const emit = defineEmits<{
   (e: 'reorder', todoIds: string[]): void
   (e: 'add'): void
 }>()
+
+useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 
 const filters = ref({
   active: true,

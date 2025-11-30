@@ -2,6 +2,7 @@
 import { ref, watch, toRef } from 'vue'
 import { X, Plus, Minus, RotateCcw, Lock, Unlock } from 'lucide-vue-next'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { useEscapeKey } from '@/composables/useEscapeKey'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 
 interface DDay {
@@ -26,6 +27,8 @@ const emit = defineEmits<{
   (e: 'close'): void
   (e: 'save', dday: DDay): void
 }>()
+
+useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 
 const title = ref('')
 const date = ref('')

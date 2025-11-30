@@ -2,6 +2,7 @@
 import { computed, ref, toRef, watch } from 'vue'
 import { X, ChevronLeft, ChevronRight, Calendar, Paperclip, Search, Loader2 } from 'lucide-vue-next'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { useEscapeKey } from '@/composables/useEscapeKey'
 import { formatDateTime, formatDateRange } from '@/utils/date'
 
 interface SearchResult {
@@ -38,6 +39,8 @@ const emit = defineEmits<{
   (e: 'changePage', page: number): void
   (e: 'search', query: string): void
 }>()
+
+useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 
 const localQuery = ref(props.query)
 

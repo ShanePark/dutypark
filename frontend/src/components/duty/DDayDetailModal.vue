@@ -2,6 +2,7 @@
 import { computed, toRef } from 'vue'
 import { X, Star, Pencil, Trash2, Lock, CalendarCheck } from 'lucide-vue-next'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { useEscapeKey } from '@/composables/useEscapeKey'
 
 interface DDay {
   id: number
@@ -29,6 +30,8 @@ const emit = defineEmits<{
   (e: 'delete', dday: DDay): void
   (e: 'toggle-pin', dday: DDay): void
 }>()
+
+useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 
 function handleClose() {
   emit('close')

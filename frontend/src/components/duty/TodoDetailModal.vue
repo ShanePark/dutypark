@@ -14,6 +14,7 @@ import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import { attachmentApi } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { useEscapeKey } from '@/composables/useEscapeKey'
 import { formatDateKorean } from '@/utils/date'
 import type { NormalizedAttachment } from '@/types'
 
@@ -54,6 +55,8 @@ const emit = defineEmits<{
   (e: 'delete', id: string): void
   (e: 'backToList'): void
 }>()
+
+useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 
 const isEditMode = ref(false)
 const editTitle = ref('')

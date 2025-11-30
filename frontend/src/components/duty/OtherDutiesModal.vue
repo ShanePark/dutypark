@@ -2,6 +2,7 @@
 import { computed, toRef } from 'vue'
 import { X, Users, Check } from 'lucide-vue-next'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { useEscapeKey } from '@/composables/useEscapeKey'
 
 interface Friend {
   id: number
@@ -26,6 +27,8 @@ const emit = defineEmits<{
   (e: 'close'): void
   (e: 'toggle', friendId: number): void
 }>()
+
+useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 
 const canSelectMore = computed(() => {
   return props.selectedFriendIds.length < props.maxSelections

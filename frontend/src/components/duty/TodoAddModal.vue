@@ -6,6 +6,7 @@ import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import type { NormalizedAttachment } from '@/types'
 import { useSwal } from '@/composables/useSwal'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { useEscapeKey } from '@/composables/useEscapeKey'
 
 interface Props {
   isOpen: boolean
@@ -24,6 +25,8 @@ const emit = defineEmits<{
     orderedAttachmentIds?: string[]
   }): void
 }>()
+
+useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 
 const title = ref('')
 const content = ref('')

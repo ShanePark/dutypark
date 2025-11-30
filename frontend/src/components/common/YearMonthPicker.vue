@@ -2,6 +2,7 @@
 import { ref, watch, toRef } from 'vue'
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { useEscapeKey } from '@/composables/useEscapeKey'
 
 const props = defineProps<{
   isOpen: boolean
@@ -19,6 +20,7 @@ const pickerYear = ref(props.currentYear)
 const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월']
 
 useBodyScrollLock(toRef(props, 'isOpen'))
+useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 
 // Sync pickerYear when modal opens
 watch(() => props.isOpen, (open) => {

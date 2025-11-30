@@ -7,6 +7,7 @@ import { friendApi } from '@/api/member'
 import { useSwal } from '@/composables/useSwal'
 import { isLightColor } from '@/utils/color'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { useEscapeKey } from '@/composables/useEscapeKey'
 import Sortable from 'sortablejs'
 import type {
   DashboardMyDetail,
@@ -104,6 +105,7 @@ async function loadFriendsDashboard() {
 // Search modal state
 const showSearchModal = ref(false)
 useBodyScrollLock(showSearchModal)
+useEscapeKey(showSearchModal, () => { showSearchModal.value = false })
 const searchKeyword = ref('')
 const searchResult = ref<FriendDto[]>([])
 const searchPage = ref(0)
