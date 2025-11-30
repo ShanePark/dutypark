@@ -3,6 +3,7 @@ import { ref, watch, onMounted, onUnmounted, toRef } from 'vue'
 import { X, ChevronLeft, ChevronRight, Download } from 'lucide-vue-next'
 import { fetchAuthenticatedImage } from '@/api/attachment'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { useEscapeKey } from '@/composables/useEscapeKey'
 
 interface ImageItem {
   id: string
@@ -24,6 +25,8 @@ useBodyScrollLock(toRef(props, 'isOpen'))
 const emit = defineEmits<{
   (e: 'close'): void
 }>()
+
+useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 
 const currentIndex = ref(0)
 const fullImageUrls = ref<Record<string, string>>({})
@@ -98,7 +101,6 @@ async function downloadImage() {
 
 function handleKeydown(e: KeyboardEvent) {
   if (!props.isOpen) return
-  if (e.key === 'Escape') emit('close')
   if (e.key === 'ArrowLeft') prevImage()
   if (e.key === 'ArrowRight') nextImage()
 }
