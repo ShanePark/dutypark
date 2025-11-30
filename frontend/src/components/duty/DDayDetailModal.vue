@@ -93,11 +93,11 @@ const ddayBadgeClass = computed(() => {
       @click.self="handleClose"
     >
       <div
-        class="rounded-2xl shadow-xl w-full max-w-[95vw] sm:max-w-md overflow-hidden mx-2 sm:mx-4"
+        class="rounded-2xl shadow-xl w-full max-w-[95vw] sm:max-w-md max-h-[90dvh] sm:max-h-[90vh] mx-2 sm:mx-4 flex flex-col"
         :style="{ backgroundColor: 'var(--dp-bg-modal)' }"
       >
         <!-- Header -->
-        <div class="modal-header">
+        <div class="modal-header flex-shrink-0">
           <h2>디데이 상세</h2>
           <button
             @click="handleClose"
@@ -108,7 +108,7 @@ const ddayBadgeClass = computed(() => {
         </div>
 
         <!-- Content -->
-        <div class="p-5">
+        <div class="p-5 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
           <!-- D-Day Badge -->
           <div class="flex items-center justify-center mb-5">
             <div
@@ -169,9 +169,9 @@ const ddayBadgeClass = computed(() => {
           </div>
         </div>
 
-        <!-- Footer -->
+        <!-- Footer (sticky at bottom) -->
         <div
-          class="p-4 flex justify-between gap-2"
+          class="p-4 flex-shrink-0 flex justify-between gap-2"
           :style="{ borderTop: '1px solid var(--dp-border-primary)' }"
         >
           <div class="flex gap-2">

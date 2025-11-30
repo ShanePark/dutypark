@@ -79,6 +79,14 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  scrollBehavior(_to, _from, savedPosition) {
+    // Restore scroll position for back/forward navigation
+    if (savedPosition) {
+      return savedPosition
+    }
+    // Scroll to top for new navigation
+    return { top: 0 }
+  },
 })
 
 router.beforeEach(async (to, _from, next) => {

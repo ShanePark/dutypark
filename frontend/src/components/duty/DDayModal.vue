@@ -86,9 +86,9 @@ const isEditMode = props.dday !== null && props.dday !== undefined
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="handleClose"
     >
-      <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-md max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
+      <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-md max-h-[90dvh] sm:max-h-[90vh] mx-2 sm:mx-4 flex flex-col" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
         <!-- Header -->
-        <div class="modal-header">
+        <div class="modal-header flex-shrink-0">
           <h2>{{ dday ? '디데이 수정' : '디데이 추가' }}</h2>
           <button @click="handleClose" class="p-2 rounded-full transition hover-bg-light">
             <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
@@ -96,7 +96,7 @@ const isEditMode = props.dday !== null && props.dday !== undefined
         </div>
 
         <!-- Content -->
-        <div class="p-3 sm:p-4 space-y-4 overflow-y-auto max-h-[calc(90dvh-130px)] sm:max-h-[calc(90vh-130px)]">
+        <div class="p-3 sm:p-4 space-y-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
           <div>
             <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
               제목 <span class="text-red-500">*</span>
@@ -180,18 +180,18 @@ const isEditMode = props.dday !== null && props.dday !== undefined
           </div>
         </div>
 
-        <!-- Footer -->
-        <div class="p-3 sm:p-4 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
+        <!-- Footer (sticky at bottom) -->
+        <div class="p-3 sm:p-4 flex-shrink-0 flex flex-row gap-2 justify-end" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
           <button
             @click="handleClose"
-            class="w-full sm:w-auto px-4 py-2 rounded-lg transition btn-outline"
+            class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline"
           >
             취소
           </button>
           <button
             @click="handleSave"
             :disabled="!title.trim() || !date"
-            class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            class="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             저장
           </button>

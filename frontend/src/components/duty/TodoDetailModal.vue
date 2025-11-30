@@ -200,9 +200,9 @@ function onUploadError(message: string) {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="handleClose"
     >
-      <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-xl max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
+      <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-xl max-h-[90dvh] sm:max-h-[90vh] mx-2 sm:mx-4 flex flex-col" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
         <!-- Header -->
-        <div class="flex items-center justify-between p-3 sm:p-4" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderBottom: '1px solid var(--dp-border-primary)' }">
+        <div class="flex items-center justify-between p-3 sm:p-4 flex-shrink-0" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderBottom: '1px solid var(--dp-border-primary)' }">
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-2">
               <h2 class="text-base sm:text-lg font-bold truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ todo.title }}</h2>
@@ -228,12 +228,12 @@ function onUploadError(message: string) {
         </div>
 
         <!-- Content -->
-        <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(90dvh-200px)] sm:max-h-[calc(90vh-200px)]">
+        <div class="p-3 sm:p-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
           <!-- View Mode -->
           <template v-if="!isEditMode">
             <div class="space-y-4">
               <div v-if="todo.content">
-                <p class="whitespace-pre-wrap" :style="{ color: 'var(--dp-text-primary)' }">{{ todo.content }}</p>
+                <p class="whitespace-pre-wrap break-all" :style="{ color: 'var(--dp-text-primary)' }">{{ todo.content }}</p>
               </div>
 
               <!-- Attachments (View Mode) -->
@@ -293,8 +293,8 @@ function onUploadError(message: string) {
           </template>
         </div>
 
-        <!-- Footer -->
-        <div class="p-3 sm:p-4" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
+        <!-- Footer (sticky at bottom) -->
+        <div class="p-3 sm:p-4 flex-shrink-0" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
           <template v-if="!isEditMode">
             <div class="flex items-center justify-between gap-2">
               <!-- Left: Back to list -->
@@ -343,17 +343,17 @@ function onUploadError(message: string) {
             </div>
           </template>
           <template v-else>
-            <div class="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+            <div class="flex flex-row gap-2 justify-end">
               <button
                 @click="cancelEdit"
-                class="w-full sm:w-auto px-4 py-2 rounded-lg transition btn-outline"
+                class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline"
               >
                 취소
               </button>
               <button
                 @click="saveEdit"
                 :disabled="!editTitle.trim() || isUploading"
-                class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                class="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
               >
                 {{ isUploading ? '업로드 중...' : '저장' }}
               </button>

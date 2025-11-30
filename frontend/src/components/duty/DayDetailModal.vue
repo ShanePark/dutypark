@@ -479,7 +479,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
         </div>
 
         <!-- Content -->
-        <div ref="contentRef" class="p-3 sm:p-4 overflow-y-auto flex-1 min-h-0">
+        <div ref="contentRef" class="p-3 sm:p-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
 
           <!-- Schedules List (hidden during create/edit mode) -->
           <div v-if="!isCreateMode && !isEditMode" class="space-y-3">
@@ -755,36 +755,38 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                   @error="handleUploadError"
                 />
               </div>
-
-              <div class="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
-                <button
-                  @click="cancelEdit"
-                  class="w-full sm:w-auto px-4 py-2 rounded-lg transition btn-outline"
-                >
-                  취소
-                </button>
-                <button
-                  @click="saveSchedule"
-                  :disabled="isUploading"
-                  class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {{ isUploading ? '업로드 중...' : (isEditMode ? '수정' : '저장') }}
-                </button>
-              </div>
             </div>
           </div>
         </div>
 
-        <!-- Footer -->
-        <div class="p-3 sm:p-4 flex justify-end flex-shrink-0" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
-          <button
-            v-if="!isCreateMode && !isEditMode && canEdit"
-            @click="startCreateMode"
-            class="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-          >
-            <Plus class="w-4 h-4" />
-            일정 추가
-          </button>
+        <!-- Footer (sticky at bottom) -->
+        <div class="p-3 sm:p-4 flex-shrink-0" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
+          <!-- List mode: Add schedule button -->
+          <div v-if="!isCreateMode && !isEditMode && canEdit" class="flex justify-end">
+            <button
+              @click="startCreateMode"
+              class="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+            >
+              <Plus class="w-4 h-4" />
+              일정 추가
+            </button>
+          </div>
+          <!-- Create/Edit mode: Save/Cancel buttons -->
+          <div v-else-if="isCreateMode || isEditMode" class="flex flex-row gap-2 justify-end">
+            <button
+              @click="cancelEdit"
+              class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline"
+            >
+              취소
+            </button>
+            <button
+              @click="saveSchedule"
+              :disabled="isUploading"
+              class="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {{ isUploading ? '업로드 중...' : (isEditMode ? '수정' : '저장') }}
+            </button>
+          </div>
         </div>
       </div>
     </div>

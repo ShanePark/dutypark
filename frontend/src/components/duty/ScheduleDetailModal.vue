@@ -69,9 +69,9 @@ function downloadUrl(attachmentId: string): string {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="emit('close')"
     >
-      <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[90dvh] sm:max-h-[90vh] overflow-hidden mx-2 sm:mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
+      <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[90dvh] sm:max-h-[90vh] mx-2 sm:mx-4 flex flex-col" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
         <!-- Header -->
-        <div class="flex items-center justify-between p-3 sm:p-4" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderBottom: '1px solid var(--dp-border-primary)' }">
+        <div class="flex items-center justify-between p-3 sm:p-4 flex-shrink-0" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderBottom: '1px solid var(--dp-border-primary)' }">
           <div class="flex items-center gap-2 min-w-0 flex-1 mr-2">
             <Lock v-if="schedule.visibility === 'PRIVATE'" class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
             <h2 class="text-base sm:text-lg font-bold truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ schedule.content }}</h2>
@@ -82,7 +82,7 @@ function downloadUrl(attachmentId: string): string {
         </div>
 
         <!-- Content -->
-        <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(90dvh-130px)] sm:max-h-[calc(90vh-130px)]">
+        <div class="p-3 sm:p-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
           <!-- Description -->
           <div v-if="schedule.description" class="mb-6">
             <h3 class="text-sm font-medium mb-2" :style="{ color: 'var(--dp-text-secondary)' }">상세 내용</h3>
@@ -152,8 +152,8 @@ function downloadUrl(attachmentId: string): string {
           </div>
         </div>
 
-        <!-- Footer -->
-        <div class="p-3 sm:p-4 border-t flex justify-end" :style="{ borderColor: 'var(--dp-border-primary)' }">
+        <!-- Footer (sticky at bottom) -->
+        <div class="p-3 sm:p-4 border-t flex-shrink-0 flex justify-end" :style="{ borderColor: 'var(--dp-border-primary)' }">
           <button
             @click="emit('close')"
             class="w-full sm:w-auto px-4 py-2 border rounded-lg hover-interactive cursor-pointer"
