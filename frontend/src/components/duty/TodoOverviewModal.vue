@@ -54,6 +54,7 @@ useBodyScrollLock(toRef(props, 'isOpen'))
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'showDetail', todo: Todo): void
+  (e: 'edit', todo: Todo): void
   (e: 'complete', id: string): void
   (e: 'reopen', id: string): void
   (e: 'delete', id: string): void
@@ -371,9 +372,8 @@ function handleTodoClick(todo: Todo) {
                         <RotateCcw class="w-4 h-4 sm:w-5 sm:h-5" />
                       </button>
                       <button
-                        @click="emit('showDetail', todo)"
-                        class="p-1.5 hover:bg-black/5 rounded-md transition cursor-pointer"
-                        :style="{ color: 'var(--dp-text-muted)' }"
+                        @click="emit('edit', todo)"
+                        class="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-md transition cursor-pointer"
                         title="수정"
                       >
                         <Pencil class="w-4 h-4 sm:w-5 sm:h-5" />

@@ -180,6 +180,7 @@ const isDayDetailModalOpen = ref(false)
 const isTodoAddModalOpen = ref(false)
 const isTodoAddFromOverview = ref(false)
 const isTodoDetailModalOpen = ref(false)
+const startTodoEditMode = ref(false)
 const isTodoOverviewModalOpen = ref(false)
 const isDDayModalOpen = ref(false)
 const isDDayDetailModalOpen = ref(false)
@@ -1752,12 +1753,13 @@ async function showExcelUploadModal() {
     <TodoDetailModal
       :is-open="isTodoDetailModalOpen"
       :todo="selectedTodo"
-      @close="isTodoDetailModalOpen = false"
+      :start-in-edit-mode="startTodoEditMode"
+      @close="isTodoDetailModalOpen = false; startTodoEditMode = false"
       @update="handleTodoUpdate"
       @complete="handleTodoComplete"
       @reopen="handleTodoReopen"
       @delete="handleTodoDelete"
-      @back-to-list="isTodoDetailModalOpen = false; isTodoOverviewModalOpen = true"
+      @back-to-list="isTodoDetailModalOpen = false; startTodoEditMode = false; isTodoOverviewModalOpen = true"
     />
 
     <TodoOverviewModal
@@ -1766,6 +1768,7 @@ async function showExcelUploadModal() {
       :completed-todos="completedTodos"
       @close="isTodoOverviewModalOpen = false"
       @show-detail="(todo: LocalTodo) => { selectedTodo = todo; isTodoDetailModalOpen = true; isTodoOverviewModalOpen = false; }"
+      @edit="(todo: LocalTodo) => { selectedTodo = todo; startTodoEditMode = true; isTodoDetailModalOpen = true; isTodoOverviewModalOpen = false; }"
       @complete="handleTodoComplete"
       @reopen="handleTodoReopen"
       @delete="handleTodoDelete"

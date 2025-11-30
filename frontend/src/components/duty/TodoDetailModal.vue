@@ -31,9 +31,12 @@ interface Todo {
 interface Props {
   isOpen: boolean
   todo: Todo | null
+  startInEditMode?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  startInEditMode: false,
+})
 
 useBodyScrollLock(toRef(props, 'isOpen'))
 
@@ -66,7 +69,6 @@ watch(
   () => props.isOpen,
   async (open) => {
     if (open && props.todo) {
-      isEditMode.value = false
       editTitle.value = props.todo.title
       editContent.value = props.todo.content
       sessionId.value = null
@@ -74,6 +76,13 @@ watch(
 
       // Load attachments from API
       await loadAttachments()
+
+      // Start in edit mode if requested
+      if (props.startInEditMode) {
+        isEditMode.value = true
+      } else {
+        isEditMode.value = false
+      }
     }
   }
 )
