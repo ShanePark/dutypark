@@ -22,4 +22,6 @@ interface RefreshTokenRepository : JpaRepository<RefreshToken, Long> {
 
     fun findAllByValidUntilIsBefore(now: LocalDateTime): List<RefreshToken>
 
+    fun findAllByMemberIdIn(memberIds: List<Long>): List<RefreshToken>
+
 }

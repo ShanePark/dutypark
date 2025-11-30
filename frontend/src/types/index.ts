@@ -280,22 +280,13 @@ export interface ApiError {
 }
 
 // Admin types
-export interface AdminMember {
+export interface AdminMemberDto {
   id: number
   name: string
-  tokens: RefreshToken[]
-}
-
-export interface RefreshToken {
-  memberId: number
-  lastUsed: string
-  remoteAddr: string
-  userAgent?: UserAgentInfo
-}
-
-export interface UserAgentInfo {
-  device: string
-  browser: string
+  email: string | null
+  teamId: number | null
+  teamName: string | null
+  tokens: RefreshTokenDto[]
 }
 
 export interface SimpleTeam {

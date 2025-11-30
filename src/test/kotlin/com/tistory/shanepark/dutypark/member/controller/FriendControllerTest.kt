@@ -202,7 +202,7 @@ class FriendControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `unfriend`() {
+    fun unfriend() {
         makeThemFriend(TestData.member, TestData.member2)
         em.flush()
         em.clear()

@@ -1,10 +1,8 @@
 package com.tistory.shanepark.dutypark.member.controller
 
 import com.tistory.shanepark.dutypark.common.domain.dto.PageResponse
-import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendDto
-import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.data.domain.Pageable

@@ -218,7 +218,7 @@ class FriendService(
         return when (targetMember.calendarVisibility) {
             Visibility.PUBLIC -> true
             Visibility.FRIENDS -> isFriend(loginMember, targetMember)
-            Visibility.FAMILY -> isFamily(member1 = loginMember, member2 = targetMember);
+            Visibility.FAMILY -> isFamily(member1 = loginMember, member2 = targetMember)
             Visibility.PRIVATE -> false
         }
     }
@@ -235,7 +235,7 @@ class FriendService(
         if (loginMember == null)
             return Visibility.publicOnly()
         if (loginMember.id == member.id || memberService.isManager(loginMember, member)) {
-            return Visibility.all();
+            return Visibility.all()
         }
         val login = loginMemberToMember(loginMember)
         if (isFamily(member1 = login, member2 = member)) {

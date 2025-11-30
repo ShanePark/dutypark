@@ -23,7 +23,7 @@ import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.kotlin.any
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.mock.mockito.SpyBean
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import java.time.LocalDate
 import java.util.UUID
 
@@ -41,7 +41,7 @@ internal class DutyServiceTest : DutyparkIntegrationTest() {
     @Autowired
     lateinit var friendService: FriendService
 
-    @SpyBean
+    @MockitoSpyBean
     lateinit var holidayServiceSpy: HolidayService
 
     @AfterEach

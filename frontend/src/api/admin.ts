@@ -5,7 +5,7 @@ import type {
   TeamCreateDto,
   TeamDto,
   TeamNameCheckResult,
-  MemberDto,
+  AdminMemberDto,
   RefreshTokenDto,
 } from '@/types'
 
@@ -27,10 +27,12 @@ export const adminApi = {
   // ========== Member Management ==========
 
   /**
-   * Get all members
+   * Get members with pagination
    */
-  getAllMembers() {
-    return adminClient.get<MemberDto[]>('/members-all')
+  getMembers(keyword: string = '', page: number = 0, size: number = 10) {
+    return adminClient.get<PageResponse<AdminMemberDto>>('/members', {
+      params: { keyword: keyword || undefined, page, size },
+    })
   },
 
   /**

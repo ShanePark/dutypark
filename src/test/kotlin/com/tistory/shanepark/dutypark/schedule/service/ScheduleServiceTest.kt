@@ -957,7 +957,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         val member = TestData.member
         val dateTime = LocalDateTime.of(2024, 3, 10, 0, 0)
 
-        val scheduleWithoutAttachment = scheduleService.createSchedule(
+        scheduleService.createSchedule(
             loginMember(member), ScheduleSaveDto(
                 memberId = member.id!!,
                 content = "schedule without attachment",
@@ -966,7 +966,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
             )
         )
 
-        val scheduleWithAttachment = scheduleService.createSchedule(
+        scheduleService.createSchedule(
             loginMember(member), ScheduleSaveDto(
                 memberId = member.id!!,
                 content = "schedule with attachment",
