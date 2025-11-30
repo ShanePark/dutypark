@@ -1387,7 +1387,7 @@ async function showExcelUploadModal() {
       <p class="text-red-700">{{ loadError }}</p>
       <button
         @click="loadDuties"
-        class="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
+        class="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition cursor-pointer"
       >
         다시 시도
       </button>
@@ -1579,7 +1579,7 @@ async function showExcelUploadModal() {
             v-for="dutyType in dutyTypes"
             :key="dutyType.id ?? 'off'"
             @click.stop="handleBatchDutyChange(day, dutyType.id)"
-            class="text-[10px] sm:text-xs px-1 py-1 rounded border transition-all min-h-[22px] sm:min-h-[26px] truncate"
+            class="text-[10px] sm:text-xs px-1 py-1 rounded border transition-all min-h-[22px] sm:min-h-[26px] truncate cursor-pointer"
             :class="{
               'ring-2 ring-gray-800 font-bold shadow-sm':
                 (duties[index]?.dutyType === dutyType.name) ||
@@ -1683,7 +1683,7 @@ async function showExcelUploadModal() {
             <!-- Pin star -->
             <button
               @click.stop="togglePinnedDDay(dday)"
-              class="p-1 sm:p-1.5 rounded-full transition hover:scale-110"
+              class="p-1 sm:p-1.5 rounded-full transition hover:scale-110 cursor-pointer"
               :class="pinnedDDay?.id === dday.id ? 'hover:bg-amber-100' : 'hover:bg-gray-100'"
               :title="pinnedDDay?.id === dday.id ? '고정 해제' : '캘린더에 고정'"
             >

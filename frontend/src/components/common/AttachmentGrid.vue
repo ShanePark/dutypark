@@ -236,7 +236,7 @@ const gridColsClass = {
 
         <!-- Download button - always visible, larger touch area on mobile -->
         <button
-          class="absolute top-1 right-1 p-2.5 sm:p-1.5 bg-black/50 rounded text-white hover:bg-black/70 active:bg-black/80 transition-colors"
+          class="absolute top-1 right-1 p-2.5 sm:p-1.5 bg-black/50 rounded text-white hover:bg-black/70 active:bg-black/80 transition-colors cursor-pointer"
           @click.stop="downloadAttachment(attachment.id, attachment.originalFilename)"
           title="다운로드"
         >

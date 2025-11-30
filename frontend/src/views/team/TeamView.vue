@@ -481,7 +481,7 @@ onMounted(() => {
           <button
             v-if="isTeamManager"
             @click="openNewScheduleModal"
-            class="px-3 py-1.5 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition flex items-center gap-1 w-full sm:w-auto justify-center"
+            class="px-3 py-1.5 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition flex items-center gap-1 w-full sm:w-auto justify-center cursor-pointer"
           >
             <CalendarPlus class="w-4 h-4" />
             팀 일정 추가
@@ -514,14 +514,14 @@ onMounted(() => {
               <div v-if="isTeamManager" class="flex gap-1 ml-2 flex-shrink-0">
                 <button
                   @click="openEditScheduleModal(schedule)"
-                  class="p-1.5 text-blue-500 rounded-lg hover:bg-blue-100 transition"
+                  class="p-1.5 text-blue-500 rounded-lg hover:bg-blue-100 transition cursor-pointer"
                   title="수정"
                 >
                   <Pencil class="w-4 h-4" />
                 </button>
                 <button
                   @click="deleteSchedule(schedule.id)"
-                  class="p-1.5 text-red-500 rounded-lg hover:bg-red-100 transition"
+                  class="p-1.5 text-red-500 rounded-lg hover:bg-red-100 transition cursor-pointer"
                   title="삭제"
                 >
                   <Trash2 class="w-4 h-4" />
@@ -680,7 +680,7 @@ onMounted(() => {
           <button
             @click="saveSchedule"
             :disabled="saving || !scheduleForm.content.trim()"
-            class="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            class="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
           >
             <Loader2 v-if="saving" class="w-4 h-4 animate-spin" />
             저장

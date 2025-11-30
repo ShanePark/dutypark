@@ -222,7 +222,7 @@ function onUploadError(message: string) {
               <span v-if="todo.completedDate"> · 완료 {{ formatDateKorean(todo.completedDate) }}</span>
             </p>
           </div>
-          <button @click="handleClose" class="p-2 hover-bg-light rounded-full transition flex-shrink-0">
+          <button @click="handleClose" class="p-2 hover-bg-light rounded-full transition flex-shrink-0 cursor-pointer">
             <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
           </button>
         </div>
@@ -300,7 +300,7 @@ function onUploadError(message: string) {
               <!-- Left: Back to list -->
               <button
                 @click="emit('backToList')"
-                class="flex items-center gap-1 px-3 py-2 rounded-lg transition btn-outline"
+                class="flex items-center gap-1 px-3 py-2 rounded-lg transition btn-outline cursor-pointer"
                 title="목록으로 돌아가기"
               >
                 <List class="w-4 h-4" />
@@ -311,14 +311,14 @@ function onUploadError(message: string) {
               <div class="flex gap-2">
                 <button
                   @click="enterEditMode"
-                  class="flex items-center justify-center gap-1 px-3 py-2 rounded-lg transition btn-outline"
+                  class="flex items-center justify-center gap-1 px-3 py-2 border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition cursor-pointer"
                 >
                   <Pencil class="w-4 h-4" />
                   <span class="hidden sm:inline">수정</span>
                 </button>
                 <button
                   @click="emit('delete', todo.id)"
-                  class="flex items-center justify-center gap-1 px-3 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition"
+                  class="flex items-center justify-center gap-1 px-3 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition cursor-pointer"
                 >
                   <Trash2 class="w-4 h-4" />
                   <span class="hidden sm:inline">삭제</span>
@@ -326,7 +326,7 @@ function onUploadError(message: string) {
                 <button
                   v-if="isActive"
                   @click="emit('complete', todo.id)"
-                  class="flex items-center justify-center gap-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                  class="flex items-center justify-center gap-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition cursor-pointer"
                 >
                   <Check class="w-4 h-4" />
                   <span class="hidden sm:inline">완료</span>
@@ -334,7 +334,7 @@ function onUploadError(message: string) {
                 <button
                   v-else
                   @click="emit('reopen', todo.id)"
-                  class="flex items-center justify-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                  class="flex items-center justify-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition cursor-pointer"
                 >
                   <RotateCcw class="w-4 h-4" />
                   <span class="hidden sm:inline">재오픈</span>
@@ -346,14 +346,14 @@ function onUploadError(message: string) {
             <div class="flex flex-row gap-2 justify-end">
               <button
                 @click="cancelEdit"
-                class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline"
+                class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
               >
                 취소
               </button>
               <button
                 @click="saveEdit"
                 :disabled="!editTitle.trim() || isUploading"
-                class="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                class="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 cursor-pointer"
               >
                 {{ isUploading ? '업로드 중...' : '저장' }}
               </button>

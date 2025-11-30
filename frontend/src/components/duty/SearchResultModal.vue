@@ -118,7 +118,7 @@ const pagesToShow = computed(() => {
             <button
               type="submit"
               :disabled="!localQuery.trim() || isSearching"
-              class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium transition hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium transition hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2"
             >
               <Loader2 v-if="isSearching" class="w-4 h-4 animate-spin" />
               <span>검색</span>
@@ -184,7 +184,7 @@ const pagesToShow = computed(() => {
           <button
             @click="emit('changePage', currentPage - 2)"
             :disabled="currentPage === 1"
-            class="p-2 rounded disabled:opacity-50 disabled:cursor-not-allowed transition hover-bg"
+            class="p-2 rounded disabled:opacity-50 disabled:cursor-not-allowed transition hover-bg cursor-pointer"
             :style="{ color: 'var(--dp-text-primary)' }"
           >
             <ChevronLeft class="w-5 h-5 sm:w-4 sm:h-4" />
@@ -194,7 +194,7 @@ const pagesToShow = computed(() => {
             v-for="page in pagesToShow"
             :key="page"
             @click="emit('changePage', page - 1)"
-            class="px-2 sm:px-3 py-1 text-sm rounded transition"
+            class="px-2 sm:px-3 py-1 text-sm rounded transition cursor-pointer"
             :class="[
               page === currentPage
                 ? 'bg-blue-600 text-white'
@@ -208,7 +208,7 @@ const pagesToShow = computed(() => {
           <button
             @click="emit('changePage', currentPage)"
             :disabled="currentPage === pageInfo.totalPages"
-            class="p-2 rounded disabled:opacity-50 disabled:cursor-not-allowed transition hover-bg"
+            class="p-2 rounded disabled:opacity-50 disabled:cursor-not-allowed transition hover-bg cursor-pointer"
             :style="{ color: 'var(--dp-text-primary)' }"
           >
             <ChevronRight class="w-5 h-5 sm:w-4 sm:h-4" />

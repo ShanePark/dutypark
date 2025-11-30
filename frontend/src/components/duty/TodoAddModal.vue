@@ -123,7 +123,7 @@ function onUploadError(message: string) {
         <!-- Header -->
         <div class="modal-header flex-shrink-0">
           <h2>할 일 추가</h2>
-          <button @click="handleClose" class="p-2 hover-bg-light rounded-full transition">
+          <button @click="handleClose" class="p-2 hover-bg-light rounded-full transition cursor-pointer">
             <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
           </button>
         </div>
@@ -176,14 +176,14 @@ function onUploadError(message: string) {
         <div class="p-3 sm:p-4 flex-shrink-0 flex flex-row gap-2 justify-end" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
           <button
             @click="handleClose"
-            class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline"
+            class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
           >
             취소
           </button>
           <button
             @click="handleSave"
             :disabled="!title.trim() || isUploading"
-            class="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            class="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {{ isUploading ? '업로드 중...' : '저장' }}
           </button>

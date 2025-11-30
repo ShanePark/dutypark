@@ -658,13 +658,13 @@ watch(
                 </div>
                 <div class="flex gap-2">
                   <button
-                    class="px-3 py-1.5 text-sm font-medium bg-green-500 text-white rounded-lg hover:bg-green-600 transition shadow-sm"
+                    class="px-3 py-1.5 text-sm font-medium bg-green-500 text-white rounded-lg hover:bg-green-600 transition shadow-sm cursor-pointer"
                     @click.stop="acceptFriendRequest(req)"
                   >
                     승인
                   </button>
                   <button
-                    class="px-3 py-1.5 text-sm font-medium border border-red-200 rounded-lg hover:bg-red-50 transition"
+                    class="px-3 py-1.5 text-sm font-medium border border-red-200 rounded-lg hover:bg-red-50 transition cursor-pointer"
                     :style="{ backgroundColor: 'var(--dp-bg-card)', color: '#dc3545' }"
                     @click.stop="rejectFriendRequest(req)"
                   >
@@ -689,7 +689,7 @@ watch(
                   {{ req.toMember.name }}
                 </div>
                 <button
-                  class="px-3 py-1.5 text-sm font-medium border border-amber-300 rounded-lg hover:bg-amber-50 transition"
+                  class="px-3 py-1.5 text-sm font-medium border border-amber-300 rounded-lg hover:bg-amber-50 transition cursor-pointer"
                   :style="{ backgroundColor: 'var(--dp-bg-card)', color: '#b45309' }"
                   @click.stop="cancelRequest(req)"
                 >
@@ -754,7 +754,7 @@ watch(
                     <!-- Pin/Unpin button -->
                     <button
                       v-if="friend.pinOrder"
-                      class="p-0.5 sm:p-1 text-amber-500 hover:text-amber-600 transition"
+                      class="p-0.5 sm:p-1 text-amber-500 hover:text-amber-600 transition cursor-pointer"
                       @click.stop="unpinFriend(friend.member)"
                       title="고정 해제"
                     >
@@ -762,7 +762,7 @@ watch(
                     </button>
                     <button
                       v-else
-                      class="p-0.5 sm:p-1 text-gray-300 hover:text-amber-500 transition"
+                      class="p-0.5 sm:p-1 text-gray-300 hover:text-amber-500 transition cursor-pointer"
                       @click.stop="pinFriend(friend.member)"
                       title="고정"
                     >
@@ -771,7 +771,7 @@ watch(
                     <!-- Dropdown toggle -->
                     <div v-if="friend.member.id" class="relative">
                       <button
-                        class="p-0.5 sm:p-1 rounded-lg transition hover:bg-opacity-80"
+                        class="p-0.5 sm:p-1 rounded-lg transition hover:bg-opacity-80 cursor-pointer"
                         :style="{ color: 'var(--dp-text-muted)' }"
                         @click="toggleDropdown(friend.member.id, $event)"
                       >
@@ -785,14 +785,14 @@ watch(
                       >
                         <button
                           v-if="!friend.isFamily"
-                          class="w-full px-2.5 py-2 sm:px-3 sm:py-2.5 text-left text-xs sm:text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 transition"
+                          class="w-full px-2.5 py-2 sm:px-3 sm:py-2.5 text-left text-xs sm:text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 transition cursor-pointer"
                           @click="addFamily(friend.member)"
                         >
                           <Home class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           가족 등록
                         </button>
                         <button
-                          class="w-full px-2.5 py-2 sm:px-3 sm:py-2.5 text-left text-xs sm:text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition"
+                          class="w-full px-2.5 py-2 sm:px-3 sm:py-2.5 text-left text-xs sm:text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition cursor-pointer"
                           @click="unfriend(friend.member)"
                         >
                           <Trash2 class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -958,7 +958,7 @@ watch(
                 />
               </div>
               <button
-                class="px-5 py-3 bg-gradient-to-r from-slate-700 to-slate-800 text-white rounded-xl hover:from-slate-800 hover:to-slate-900 transition-all shadow-lg flex items-center gap-2 font-medium"
+                class="px-5 py-3 bg-gradient-to-r from-slate-700 to-slate-800 text-white rounded-xl hover:from-slate-800 hover:to-slate-900 transition-all shadow-lg flex items-center gap-2 font-medium cursor-pointer"
                 @click="search"
               >
                 <Search class="w-4 h-4" />
@@ -990,7 +990,7 @@ watch(
                     </div>
                   </div>
                   <button
-                    class="px-4 py-2 text-sm font-medium bg-green-500 text-white rounded-xl hover:bg-green-600 transition shadow-sm"
+                    class="px-4 py-2 text-sm font-medium bg-green-500 text-white rounded-xl hover:bg-green-600 transition shadow-sm cursor-pointer"
                     @click="requestFriend(member)"
                   >
                     친구 요청

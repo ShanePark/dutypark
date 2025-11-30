@@ -101,7 +101,7 @@ const ddayBadgeClass = computed(() => {
           <h2>디데이 상세</h2>
           <button
             @click="handleClose"
-            class="p-2 rounded-full transition hover-bg-light"
+            class="p-2 rounded-full transition hover-bg-light cursor-pointer"
           >
             <X class="w-5 h-5" :style="{ color: 'var(--dp-text-primary)' }" />
           </button>
@@ -158,7 +158,7 @@ const ddayBadgeClass = computed(() => {
             </div>
             <button
               @click="handleTogglePin"
-              class="relative inline-flex h-6 w-11 items-center rounded-full transition cursor-pointer"
+              class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer"
               :class="isPinned ? 'bg-amber-500' : 'bg-gray-300'"
             >
               <span
@@ -178,7 +178,7 @@ const ddayBadgeClass = computed(() => {
             <button
               v-if="canEdit"
               @click="handleEdit"
-              class="flex items-center gap-1.5 px-3 py-2 rounded-lg transition btn-outline"
+              class="flex items-center gap-1.5 px-3 py-2 rounded-lg transition btn-outline cursor-pointer"
             >
               <Pencil class="w-4 h-4" />
               수정
@@ -186,7 +186,7 @@ const ddayBadgeClass = computed(() => {
             <button
               v-if="canEdit"
               @click="handleDelete"
-              class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-red-600 border border-red-200 hover:bg-red-50 transition"
+              class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-red-600 border border-red-200 hover:bg-red-50 transition cursor-pointer"
             >
               <Trash2 class="w-4 h-4" />
               삭제
@@ -194,7 +194,7 @@ const ddayBadgeClass = computed(() => {
           </div>
           <button
             @click="handleClose"
-            class="px-4 py-2 rounded-lg transition btn-outline"
+            class="px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
           >
             닫기
           </button>

@@ -475,7 +475,7 @@ async function loadExistingImages() {
     <!-- Drop zone -->
     <div
       ref="dropZoneRef"
-      class="drop-zone"
+      class="drop-zone cursor-pointer"
       :class="{ 'drag-over': isDragging, disabled: disabled }"
       @dragover="onDragOver"
       @dragleave="onDragLeave"
@@ -566,7 +566,6 @@ async function loadExistingImages() {
   border: 2px dashed var(--dp-border-primary);
   border-radius: 0.5rem;
   background-color: var(--dp-bg-secondary);
-  cursor: pointer;
   transition: all 0.2s ease;
 }
 

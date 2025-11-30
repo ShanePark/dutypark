@@ -554,7 +554,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                         {{ tag.name }}
                         <button
                           @click.stop="emit('removeTag', schedule.id, tag.id)"
-                          class="p-0.5 hover:bg-blue-200 rounded-full transition"
+                          class="p-0.5 hover:bg-blue-200 rounded-full transition cursor-pointer"
                           title="태그 삭제"
                         >
                           <X class="w-3 h-3" />
@@ -565,7 +565,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                       <button
                         v-if="friends.length > 0"
                         @click.stop="openTagPanel(schedule.id)"
-                        class="inline-flex items-center gap-1 px-2 py-0.5 border border-dashed text-xs rounded-full hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition"
+                        class="inline-flex items-center gap-1 px-2 py-0.5 border border-dashed text-xs rounded-full hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition cursor-pointer"
                         :class="{ 'border-blue-400 text-blue-500 bg-blue-50': taggingScheduleId === schedule.id }"
                         :style="{
                           borderColor: taggingScheduleId === schedule.id ? undefined : 'var(--dp-border-secondary)',
@@ -587,7 +587,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                         <span class="text-xs font-medium text-blue-700">친구 선택</span>
                         <button
                           @click.stop="closeTagPanel"
-                          class="p-0.5 hover:bg-blue-100 rounded transition"
+                          class="p-0.5 hover:bg-blue-100 rounded transition cursor-pointer"
                         >
                           <X class="w-3.5 h-3.5 text-blue-500" />
                         </button>
@@ -597,7 +597,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                           v-for="friend in getUntaggedFriends(schedule)"
                           :key="friend.id"
                           @click.stop="emit('addTag', schedule.id, friend.id)"
-                          class="inline-flex items-center gap-1 px-2 py-1 border border-blue-200 text-xs rounded-full hover:border-blue-400 hover:bg-blue-100 transition"
+                          class="inline-flex items-center gap-1 px-2 py-1 border border-blue-200 text-xs rounded-full hover:border-blue-400 hover:bg-blue-100 transition cursor-pointer"
                           :style="{
                             backgroundColor: 'var(--dp-bg-primary)',
                             color: 'var(--dp-text-primary)'
@@ -672,7 +672,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                   <button
                     v-if="schedule.isTagged"
                     @click="openUntagConfirmModal(schedule.id)"
-                    class="px-2 py-1 border border-orange-300 hover:bg-orange-100 rounded transition text-orange-600 text-xs font-medium flex items-center gap-1"
+                    class="px-2 py-1 border border-orange-300 hover:bg-orange-100 rounded transition text-orange-600 text-xs font-medium flex items-center gap-1 cursor-pointer"
                     title="태그 제거"
                   >
                     <X class="w-3.5 h-3.5" />
@@ -765,7 +765,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
           <div v-if="!isCreateMode && !isEditMode && canEdit" class="flex justify-end">
             <button
               @click="startCreateMode"
-              class="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+              class="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition cursor-pointer"
             >
               <Plus class="w-4 h-4" />
               일정 추가
@@ -775,14 +775,14 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
           <div v-else-if="isCreateMode || isEditMode" class="flex flex-row gap-2 justify-end">
             <button
               @click="cancelEdit"
-              class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline"
+              class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
             >
               취소
             </button>
             <button
               @click="saveSchedule"
               :disabled="isUploading"
-              class="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              class="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {{ isUploading ? '업로드 중...' : (isEditMode ? '수정' : '저장') }}
             </button>
@@ -832,14 +832,14 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
         <div class="pb-4 flex justify-center gap-2">
           <button
             @click="confirmUntag"
-            class="px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-all duration-200 hover:-translate-y-px"
+            class="px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-all duration-200 hover:-translate-y-px cursor-pointer"
             style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);"
           >
             태그 제거
           </button>
           <button
             @click="closeUntagConfirmModal"
-            class="px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 border hover:-translate-y-px"
+            class="px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 border hover:-translate-y-px cursor-pointer"
             :style="{
               backgroundColor: 'var(--dp-bg-card)',
               color: 'var(--dp-text-secondary)',

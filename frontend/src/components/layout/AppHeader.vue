@@ -31,7 +31,7 @@ const handleLogout = async () => {
             </span>
             <button
               @click="handleLogout"
-              class="logout-btn text-xs sm:text-sm px-2 sm:px-3 py-2 rounded-md transition-colors min-h-[44px] flex items-center"
+              class="logout-btn cursor-pointer text-xs sm:text-sm px-2 sm:px-3 py-2 rounded-md transition-colors min-h-[44px] flex items-center"
             >
               로그아웃
             </button>

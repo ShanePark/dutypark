@@ -218,12 +218,12 @@ function handleTodoClick(todo: Todo) {
           <div class="flex items-center gap-2">
             <button
               @click="emit('add')"
-              class="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition"
+              class="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition cursor-pointer"
             >
               <Plus class="w-4 h-4" />
               <span class="hidden sm:inline">추가</span>
             </button>
-            <button @click="emit('close')" class="p-1.5 rounded-lg transition hover:bg-black/10" :style="{ color: 'var(--dp-text-muted)' }">
+            <button @click="emit('close')" class="p-1.5 rounded-lg transition hover:bg-black/10 cursor-pointer" :style="{ color: 'var(--dp-text-muted)' }">
               <X class="w-5 h-5" />
             </button>
           </div>
@@ -234,7 +234,7 @@ function handleTodoClick(todo: Todo) {
           <Filter class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
           <button
             @click="toggleFilter('all')"
-            class="px-3 py-1 text-xs sm:text-sm rounded-full transition whitespace-nowrap"
+            class="px-3 py-1 text-xs sm:text-sm rounded-full transition whitespace-nowrap cursor-pointer"
             :class="
               filters.active && filters.completed
                 ? 'bg-slate-700 text-white'
@@ -246,7 +246,7 @@ function handleTodoClick(todo: Todo) {
           </button>
           <button
             @click="toggleFilter('active')"
-            class="px-3 py-1 text-xs sm:text-sm rounded-full transition whitespace-nowrap"
+            class="px-3 py-1 text-xs sm:text-sm rounded-full transition whitespace-nowrap cursor-pointer"
             :class="
               filters.active && !filters.completed
                 ? 'bg-blue-500 text-white'
@@ -258,7 +258,7 @@ function handleTodoClick(todo: Todo) {
           </button>
           <button
             @click="toggleFilter('completed')"
-            class="px-3 py-1 text-xs sm:text-sm rounded-full transition whitespace-nowrap"
+            class="px-3 py-1 text-xs sm:text-sm rounded-full transition whitespace-nowrap cursor-pointer"
             :class="
               !filters.active && filters.completed
                 ? 'bg-green-500 text-white'
@@ -357,7 +357,7 @@ function handleTodoClick(todo: Todo) {
                       <button
                         v-if="todo.status === 'ACTIVE'"
                         @click="emit('complete', todo.id)"
-                        class="p-1.5 text-green-500 hover:bg-green-500/10 rounded-md transition"
+                        class="p-1.5 text-green-500 hover:bg-green-500/10 rounded-md transition cursor-pointer"
                         title="완료"
                       >
                         <Check class="w-4 h-4 sm:w-5 sm:h-5" />
@@ -365,14 +365,14 @@ function handleTodoClick(todo: Todo) {
                       <button
                         v-else
                         @click="emit('reopen', todo.id)"
-                        class="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-md transition"
+                        class="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-md transition cursor-pointer"
                         title="재오픈"
                       >
                         <RotateCcw class="w-4 h-4 sm:w-5 sm:h-5" />
                       </button>
                       <button
                         @click="emit('showDetail', todo)"
-                        class="p-1.5 hover:bg-black/5 rounded-md transition"
+                        class="p-1.5 hover:bg-black/5 rounded-md transition cursor-pointer"
                         :style="{ color: 'var(--dp-text-muted)' }"
                         title="수정"
                       >
@@ -380,7 +380,7 @@ function handleTodoClick(todo: Todo) {
                       </button>
                       <button
                         @click="emit('delete', todo.id)"
-                        class="p-1.5 text-red-500 hover:bg-red-500/10 rounded-md transition"
+                        class="p-1.5 text-red-500 hover:bg-red-500/10 rounded-md transition cursor-pointer"
                         title="삭제"
                       >
                         <Trash2 class="w-4 h-4 sm:w-5 sm:h-5" />

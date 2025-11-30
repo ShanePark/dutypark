@@ -439,7 +439,7 @@ onMounted(() => {
             </template>
             <button
               :disabled="page === totalPages - 1"
-              class="p-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+              class="p-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               :style="{ color: 'var(--dp-text-muted)' }"
               @click="goToPage(page + 1)"
               @mouseover="(e: Event) => page !== totalPages - 1 && setHoverBgWithColor(e, 'var(--dp-bg-hover)', 'var(--dp-text-secondary)')"
@@ -463,7 +463,7 @@ onMounted(() => {
           <h3 class="text-lg font-semibold" :style="{ color: 'var(--dp-text-primary)' }">새 팀 추가</h3>
           <button
             @click="closeNewTeamModal"
-            class="p-1 rounded transition"
+            class="p-1 rounded transition cursor-pointer"
             :style="{ color: 'var(--dp-text-muted)' }"
             @mouseover="(e: Event) => { if (e.currentTarget) (e.currentTarget as HTMLElement).style.color = 'var(--dp-text-secondary)' }"
             @mouseleave="(e: Event) => { if (e.currentTarget) (e.currentTarget as HTMLElement).style.color = 'var(--dp-text-muted)' }"
@@ -490,7 +490,7 @@ onMounted(() => {
               />
               <button
                 @click="checkTeamName"
-                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition"
+                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition cursor-pointer"
               >
                 확인
               </button>
@@ -524,13 +524,13 @@ onMounted(() => {
           <button
             @click="handleCreateTeam"
             :disabled="nameCheckResult !== 'OK' || !newTeamDescription"
-            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             추가
           </button>
           <button
             @click="closeNewTeamModal"
-            class="px-4 py-2 text-sm font-medium rounded-lg transition"
+            class="px-4 py-2 text-sm font-medium rounded-lg transition cursor-pointer"
             :style="{ color: 'var(--dp-text-primary)', backgroundColor: 'var(--dp-bg-tertiary)' }"
             @mouseover="(e: Event) => setHoverBg(e)"
             @mouseleave="(e: Event) => clearHoverBg(e, 'var(--dp-bg-tertiary)')"

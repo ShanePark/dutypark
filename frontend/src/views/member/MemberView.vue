@@ -384,8 +384,8 @@ onMounted(async () => {
           </div>
           <button
             @click="showVisibilityModal = true"
-            class="px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium transition flex items-center justify-center gap-2 hover:brightness-95"
-            :style="{ cursor: 'pointer', backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-primary)' }"
+            class="px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium transition flex items-center justify-center gap-2 hover:brightness-95 cursor-pointer"
+            :style="{ backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-primary)' }"
           >
             <span
               class="w-2 h-2 rounded-full"
@@ -413,10 +413,9 @@ onMounted(async () => {
             v-for="option in themeOptions"
             :key="option.value"
             @click="setTheme(option.value)"
-            class="flex-1 px-4 py-3 rounded-lg font-medium transition flex items-center justify-center gap-2 hover:brightness-95"
+            class="flex-1 px-4 py-3 rounded-lg font-medium transition flex items-center justify-center gap-2 hover:brightness-95 cursor-pointer"
             :class="{ 'hover:scale-[1.02]': themeStore.mode !== option.value }"
             :style="{
-              cursor: 'pointer',
               borderWidth: '2px',
               borderColor: themeStore.mode === option.value ? '#3b82f6' : 'var(--dp-border-primary)',
               backgroundColor: themeStore.mode === option.value ? (themeStore.isDark ? '#1e3a5f' : '#eff6ff') : 'var(--dp-bg-secondary)',
@@ -528,7 +527,7 @@ onMounted(async () => {
                 v-else
                 @click="connectSso(sso.provider)"
                 :disabled="connectingSso"
-                class="px-4 py-2.5 sm:py-1.5 min-h-11 sm:min-h-0 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                class="px-4 py-2.5 sm:py-1.5 min-h-11 sm:min-h-0 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {{ connectingSso ? '연동 중...' : '연동하기' }}
               </button>
@@ -547,16 +546,14 @@ onMounted(async () => {
           <button
             v-if="memberInfo?.hasPassword"
             @click="openPasswordModal"
-            class="px-4 py-3 sm:py-2 min-h-11 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition flex items-center gap-2"
-            style="cursor: pointer;"
+            class="px-4 py-3 sm:py-2 min-h-11 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition flex items-center gap-2 cursor-pointer"
           >
             <Lock class="w-4 h-4" />
             비밀번호 변경
           </button>
           <button
             @click="deleteAccount"
-            class="px-4 py-3 sm:py-2 min-h-11 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition flex items-center gap-2"
-            style="cursor: pointer;"
+            class="px-4 py-3 sm:py-2 min-h-11 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition flex items-center gap-2 cursor-pointer"
           >
             <UserX class="w-4 h-4" />
             회원 탈퇴
@@ -568,8 +565,7 @@ onMounted(async () => {
       <section class="rounded-xl shadow-sm p-4 sm:p-6" :style="{ backgroundColor: 'var(--dp-bg-card)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
         <button
           @click="logout"
-          class="w-full px-4 py-3 min-h-12 text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-lg font-medium transition flex items-center justify-center gap-2"
-          style="cursor: pointer;"
+          class="w-full px-4 py-3 min-h-12 text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-lg font-medium transition flex items-center justify-center gap-2 cursor-pointer"
         >
           <LogOut class="w-5 h-5" />
           로그아웃
@@ -600,10 +596,9 @@ onMounted(async () => {
                 :key="option.value"
                 @click="setVisibility(option.value)"
                 :disabled="savingVisibility"
-                class="w-full p-4 min-h-16 rounded-lg transition text-left disabled:opacity-50 hover:scale-[1.01]"
+                class="w-full p-4 min-h-16 rounded-lg transition text-left disabled:opacity-50 hover:scale-[1.01] cursor-pointer"
                 :class="{ 'hover:bg-opacity-80': calendarVisibility !== option.value }"
                 :style="{
-                  cursor: 'pointer',
                   borderWidth: '2px',
                   borderColor: calendarVisibility === option.value ? '#3b82f6' : 'var(--dp-border-primary)',
                   backgroundColor: calendarVisibility === option.value ? (themeStore.isDark ? '#1e3a5f' : '#eff6ff') : 'var(--dp-bg-secondary)'

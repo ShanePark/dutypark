@@ -148,7 +148,7 @@ function handleToggle(friendId: number) {
             </span>
             <button
               @click="emit('close')"
-              class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition cursor-pointer"
             >
               확인
             </button>

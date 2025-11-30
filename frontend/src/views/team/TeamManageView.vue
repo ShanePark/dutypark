@@ -532,7 +532,7 @@ onUnmounted(() => {
       <div class="font-bold text-xl py-3 rounded-t-lg flex items-center justify-between px-4" :style="{ backgroundColor: '#4b5563', color: 'white' }">
         <button
           @click="router.back()"
-          class="px-3 py-1 text-white text-sm rounded-lg hover:bg-gray-400 transition flex items-center gap-1"
+          class="px-3 py-1 text-white text-sm rounded-lg hover:bg-gray-400 transition flex items-center gap-1 cursor-pointer"
           :style="{ backgroundColor: '#6b7280' }"
         >
           <ChevronLeft class="w-4 h-4" />
@@ -542,7 +542,7 @@ onUnmounted(() => {
         <button
           v-if="isAppAdmin && teamLoaded && !hasMember"
           @click="removeTeam"
-          class="px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition"
+          class="px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition cursor-pointer"
         >
           팀 삭제
         </button>
@@ -572,7 +572,7 @@ onUnmounted(() => {
                 <button
                   v-if="team.adminId && loginId !== team.adminId"
                   @click="changeAdmin()"
-                  class="px-2 py-1 text-sm border border-red-500 text-red-500 rounded hover:bg-red-50 transition flex items-center gap-1"
+                  class="px-2 py-1 text-sm border border-red-500 text-red-500 rounded hover:bg-red-50 transition flex items-center gap-1 cursor-pointer"
                 >
                   <Trash2 class="w-3 h-3" />
                   대표 취소
@@ -622,7 +622,7 @@ onUnmounted(() => {
             <td class="px-4 py-3">
               <button
                 @click="openBatchUploadModal"
-                class="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition flex items-center gap-1"
+                class="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition flex items-center gap-1 cursor-pointer"
               >
                 <Upload class="w-4 h-4" />
                 등록

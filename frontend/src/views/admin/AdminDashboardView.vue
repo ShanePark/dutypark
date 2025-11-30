@@ -219,7 +219,7 @@ onMounted(async () => {
           <div class="flex items-center gap-2 flex-wrap">
             <button
               @click="refreshData"
-              class="p-2 rounded-lg transition"
+              class="p-2 rounded-lg transition cursor-pointer"
               :class="{ 'animate-spin': isLoading }"
               :style="{ color: 'var(--dp-text-muted)', backgroundColor: isLoading ? '' : 'transparent' }"
               @mouseover="(e: Event) => !isLoading && setHoverBgWithColor(e, 'var(--dp-bg-hover)', 'var(--dp-text-secondary)')"
@@ -228,7 +228,7 @@ onMounted(async () => {
               <RefreshCw class="w-5 h-5" />
             </button>
             <button
-              class="p-2 rounded-lg transition"
+              class="p-2 rounded-lg transition cursor-pointer"
               :style="{ color: 'var(--dp-text-muted)' }"
               @mouseover="(e: Event) => setHoverBgWithColor(e, 'var(--dp-bg-hover)', 'var(--dp-text-secondary)')"
               @mouseleave="(e: Event) => clearHoverBgWithColor(e, 'transparent', 'var(--dp-text-muted)')"
@@ -362,7 +362,7 @@ onMounted(async () => {
                 </div>
                 <button
                   @click="openPasswordModal(member)"
-                  class="px-3 py-1.5 text-sm font-medium text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition flex-shrink-0 self-start sm:self-auto"
+                  class="px-3 py-1.5 text-sm font-medium text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition flex-shrink-0 self-start sm:self-auto cursor-pointer"
                 >
                   비밀번호 변경
                 </button>
@@ -427,7 +427,7 @@ onMounted(async () => {
           <button
             @click="closePasswordModal"
             :disabled="changingPassword"
-            class="px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50"
+            class="px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50 cursor-pointer"
             :style="{ color: 'var(--dp-text-primary)', backgroundColor: 'var(--dp-bg-tertiary)' }"
             @mouseover="(e: Event) => !changingPassword && setHoverBg(e)"
             @mouseleave="(e: Event) => !changingPassword && clearHoverBg(e, 'var(--dp-bg-tertiary)')"
@@ -437,7 +437,7 @@ onMounted(async () => {
           <button
             @click="handleChangePassword"
             :disabled="changingPassword"
-            class="px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-lg transition disabled:opacity-50 flex items-center gap-2"
+            class="px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-lg transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
           >
             <Loader2 v-if="changingPassword" class="w-4 h-4 animate-spin" />
             {{ changingPassword ? '변경 중...' : '변경' }}

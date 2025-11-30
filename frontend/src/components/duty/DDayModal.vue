@@ -90,7 +90,7 @@ const isEditMode = props.dday !== null && props.dday !== undefined
         <!-- Header -->
         <div class="modal-header flex-shrink-0">
           <h2>{{ dday ? '디데이 수정' : '디데이 추가' }}</h2>
-          <button @click="handleClose" class="p-2 rounded-full transition hover-bg-light">
+          <button @click="handleClose" class="p-2 rounded-full transition hover-bg-light cursor-pointer">
             <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
           </button>
         </div>
@@ -169,7 +169,7 @@ const isEditMode = props.dday !== null && props.dday !== undefined
             </div>
             <button
               @click="isPrivate = !isPrivate"
-              class="relative inline-flex h-6 w-11 items-center rounded-full transition"
+              class="relative inline-flex h-6 w-11 items-center rounded-full transition cursor-pointer"
               :class="isPrivate ? 'bg-blue-600' : 'bg-gray-300'"
             >
               <span
@@ -184,14 +184,14 @@ const isEditMode = props.dday !== null && props.dday !== undefined
         <div class="p-3 sm:p-4 flex-shrink-0 flex flex-row gap-2 justify-end" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
           <button
             @click="handleClose"
-            class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline"
+            class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
           >
             취소
           </button>
           <button
             @click="handleSave"
             :disabled="!title.trim() || !date"
-            class="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            class="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             저장
           </button>
