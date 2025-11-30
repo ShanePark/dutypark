@@ -396,7 +396,6 @@ class AttachmentService(
             return
         }
 
-        var finalizedSession = false
         if (attachmentSessionId != null) {
             val session = sessionService.findById(attachmentSessionId)
                 ?: throw IllegalArgumentException("Upload session not found: $attachmentSessionId")
@@ -417,13 +416,6 @@ class AttachmentService(
                 sessionService.deleteSession(attachmentSessionId)
                 log.info("Skipped finalizing empty session: sessionId={}", attachmentSessionId)
             }
-            finalizedSession = true
-        }
-
-        val shouldCleanupExisting =
-            finalizedSession || orderedAttachmentIds.isNotEmpty() || existingAttachments.isNotEmpty()
-        if (!shouldCleanupExisting) {
-            return
         }
 
         val attachmentsToDelete = existingAttachments.filter { it.id !in orderedAttachmentIds }

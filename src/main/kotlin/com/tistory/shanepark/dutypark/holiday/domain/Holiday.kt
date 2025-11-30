@@ -7,18 +7,10 @@ import java.time.LocalDate
 
 @Entity
 class Holiday(
-    dateName: String,
-    isHoliday: Boolean,
-    localDate: LocalDate
-) : EntityBase() {
-
     @Column(name = "date_name", nullable = false, length = 50)
-    val dateName = dateName
-
+    val dateName: String,
     @Column(name = "is_holiday", nullable = false)
-    val isHoliday = isHoliday
-
+    val isHoliday: Boolean,
     @Column(name = "local_date", nullable = false)
-    val localDate: LocalDate = localDate
-
-}
+    val localDate: LocalDate
+) : EntityBase()

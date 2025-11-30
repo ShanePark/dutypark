@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.member.controller
 
-import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.domain.dto.DDayDto
 import com.tistory.shanepark.dutypark.member.domain.dto.DDaySaveDto

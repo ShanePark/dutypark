@@ -16,7 +16,7 @@ class AsyncConfig {
         executor.corePoolSize = 2
         executor.maxPoolSize = 5
         executor.queueCapacity = 100
-        executor.setThreadNamePrefix("thumbnail-")
+        executor.threadNamePrefix = "thumbnail-"
         executor.setWaitForTasksToCompleteOnShutdown(true)
         executor.setAwaitTerminationSeconds(60)
         executor.initialize()

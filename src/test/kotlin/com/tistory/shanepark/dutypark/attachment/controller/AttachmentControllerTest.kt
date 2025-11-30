@@ -4,33 +4,30 @@ import com.tistory.shanepark.dutypark.RestDocsTest
 import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
 import com.tistory.shanepark.dutypark.attachment.domain.entity.AttachmentUploadSession
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
-import com.tistory.shanepark.dutypark.attachment.dto.FinalizeSessionRequest
 import com.tistory.shanepark.dutypark.attachment.dto.ReorderAttachmentsRequest
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentUploadSessionRepository
 import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
-import java.time.LocalDateTime
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpHeaders
+import org.springframework.http.MediaType
 import org.springframework.mock.web.MockMultipartFile
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.*
 import org.springframework.restdocs.payload.JsonFieldType
 import org.springframework.restdocs.payload.PayloadDocumentation.*
 import org.springframework.restdocs.request.RequestDocumentation.*
-import org.springframework.http.HttpHeaders
-import org.springframework.http.MediaType
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 import java.nio.file.Files
 import java.time.Clock
-import java.util.*
+import java.time.LocalDateTime
 
 class AttachmentControllerTest : RestDocsTest() {
 
@@ -101,12 +98,15 @@ class AttachmentControllerTest : RestDocsTest() {
                     responseFields(
                         fieldWithPath("id").type(JsonFieldType.STRING).description("Attachment ID"),
                         fieldWithPath("contextType").type(JsonFieldType.STRING).description("Context type"),
-                        fieldWithPath("contextId").type(JsonFieldType.STRING).description("Context ID (null during upload)").optional(),
+                        fieldWithPath("contextId").type(JsonFieldType.STRING)
+                            .description("Context ID (null during upload)").optional(),
                         fieldWithPath("originalFilename").type(JsonFieldType.STRING).description("Original filename"),
                         fieldWithPath("contentType").type(JsonFieldType.STRING).description("MIME content type"),
                         fieldWithPath("size").type(JsonFieldType.NUMBER).description("File size in bytes"),
-                        fieldWithPath("hasThumbnail").type(JsonFieldType.BOOLEAN).description("Whether thumbnail is available"),
-                        fieldWithPath("thumbnailUrl").type(JsonFieldType.STRING).description("Thumbnail URL if available").optional(),
+                        fieldWithPath("hasThumbnail").type(JsonFieldType.BOOLEAN)
+                            .description("Whether thumbnail is available"),
+                        fieldWithPath("thumbnailUrl").type(JsonFieldType.STRING)
+                            .description("Thumbnail URL if available").optional(),
                         fieldWithPath("orderIndex").type(JsonFieldType.NUMBER).description("Display order index"),
                         fieldWithPath("createdAt").type(JsonFieldType.STRING).description("Creation timestamp"),
                         fieldWithPath("createdBy").type(JsonFieldType.NUMBER).description("Creator member ID")
@@ -255,11 +255,14 @@ class AttachmentControllerTest : RestDocsTest() {
                         fieldWithPath("[].id").type(JsonFieldType.STRING).description("Attachment ID"),
                         fieldWithPath("[].contextType").type(JsonFieldType.STRING).description("Context type"),
                         fieldWithPath("[].contextId").type(JsonFieldType.STRING).description("Context ID"),
-                        fieldWithPath("[].originalFilename").type(JsonFieldType.STRING).description("Original filename"),
+                        fieldWithPath("[].originalFilename").type(JsonFieldType.STRING)
+                            .description("Original filename"),
                         fieldWithPath("[].contentType").type(JsonFieldType.STRING).description("MIME content type"),
                         fieldWithPath("[].size").type(JsonFieldType.NUMBER).description("File size in bytes"),
-                        fieldWithPath("[].hasThumbnail").type(JsonFieldType.BOOLEAN).description("Whether thumbnail is available"),
-                        fieldWithPath("[].thumbnailUrl").type(JsonFieldType.STRING).description("Thumbnail URL if available").optional(),
+                        fieldWithPath("[].hasThumbnail").type(JsonFieldType.BOOLEAN)
+                            .description("Whether thumbnail is available"),
+                        fieldWithPath("[].thumbnailUrl").type(JsonFieldType.STRING)
+                            .description("Thumbnail URL if available").optional(),
                         fieldWithPath("[].orderIndex").type(JsonFieldType.NUMBER).description("Display order index"),
                         fieldWithPath("[].createdAt").type(JsonFieldType.STRING).description("Creation timestamp"),
                         fieldWithPath("[].createdBy").type(JsonFieldType.NUMBER).description("Creator member ID")
@@ -333,7 +336,8 @@ class AttachmentControllerTest : RestDocsTest() {
                     requestFields(
                         fieldWithPath("contextType").type(JsonFieldType.STRING).description("Context type"),
                         fieldWithPath("contextId").type(JsonFieldType.STRING).description("Context ID"),
-                        fieldWithPath("orderedAttachmentIds").type(JsonFieldType.ARRAY).description("Ordered list of attachment IDs")
+                        fieldWithPath("orderedAttachmentIds").type(JsonFieldType.ARRAY)
+                            .description("Ordered list of attachment IDs")
                     )
                 )
             )
@@ -382,7 +386,12 @@ class AttachmentControllerTest : RestDocsTest() {
             get("/api/attachments/{id}/download", attachment.id)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
         ).andExpect(status().isOk)
-            .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"test-document.txt\"; filename*=UTF-8''test-document.txt"))
+            .andExpect(
+                header().string(
+                    HttpHeaders.CONTENT_DISPOSITION,
+                    "attachment; filename=\"test-document.txt\"; filename*=UTF-8''test-document.txt"
+                )
+            )
             .andExpect(content().contentType(MediaType.TEXT_PLAIN))
             .andExpect(content().string(testContent))
             .andDo(MockMvcResultHandlers.print())

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { adminApi } from '@/api/admin'
@@ -7,7 +7,7 @@ import { authApi } from '@/api/auth'
 import { useSwal } from '@/composables/useSwal'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEscapeKey } from '@/composables/useEscapeKey'
-import type { MemberDto, RefreshTokenDto } from '@/types'
+import type { AdminMemberDto, RefreshTokenDto } from '@/types'
 import { extractDatePart } from '@/utils/date'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
 import {
@@ -15,6 +15,7 @@ import {
   Building2,
   Shield,
   Key,
+  ChevronLeft,
   ChevronRight,
   Search,
   RefreshCw,
@@ -27,63 +28,41 @@ import {
 
 const router = useRouter()
 const authStore = useAuthStore()
-const { showSuccess, showError, confirm } = useSwal()
+const { showSuccess, showError } = useSwal()
 
 const loading = ref(true)
-const allMembers = ref<MemberDto[]>([])
+const members = ref<AdminMemberDto[]>([])
 const allTokens = ref<RefreshTokenDto[]>([])
+
+// Pagination state
+const currentPage = ref(0)
+const totalPages = ref(0)
+const totalElements = ref(0)
+const pageSize = 10
 
 const stats = computed(() => {
   const today = extractDatePart(new Date().toISOString())
   const todayTokens = allTokens.value.filter(t => t.lastUsed?.startsWith(today) ?? false)
 
   return {
-    totalMembers: allMembers.value.length,
-    totalTeams: new Set(allMembers.value.map(m => m.teamId).filter(Boolean)).size,
+    totalMembers: totalElements.value,
+    totalTeams: new Set(members.value.map(m => m.teamId).filter(Boolean)).size,
     activeTokens: allTokens.value.length,
     todayLogins: todayTokens.length,
   }
 })
 
-interface MemberWithTokens {
-  id: number
-  name: string
-  tokens: RefreshTokenDto[]
-}
-
-const members = computed<MemberWithTokens[]>(() => {
-  const tokensByMember = new Map<number, RefreshTokenDto[]>()
-
-  for (const token of allTokens.value) {
-    const memberId = token.memberId
-    if (!tokensByMember.has(memberId)) {
-      tokensByMember.set(memberId, [])
-    }
-    tokensByMember.get(memberId)!.push(token)
-  }
-
-  const getLatestTokenTime = (memberId: number): number => {
-    const tokens = tokensByMember.get(memberId) || []
-    if (tokens.length === 0) return 0
-    return Math.max(...tokens.map(t => t.lastUsed ? new Date(t.lastUsed).getTime() : 0))
-  }
-
-  return allMembers.value
-    .map(member => ({
-      id: member.id!,
-      name: member.name,
-      tokens: tokensByMember.get(member.id!) || [],
-    }))
-    .sort((a, b) => getLatestTokenTime(b.id) - getLatestTokenTime(a.id))
-})
-
 const searchKeyword = ref('')
 const isLoading = ref(false)
 
-const filteredMembers = computed(() => {
-  if (!searchKeyword.value) return members.value
-  const keyword = searchKeyword.value.toLowerCase()
-  return members.value.filter((member) => member.name.toLowerCase().includes(keyword))
+// Debounce search
+let searchTimeout: ReturnType<typeof setTimeout> | null = null
+watch(searchKeyword, () => {
+  if (searchTimeout) clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    currentPage.value = 0
+    fetchMembers()
+  }, 300)
 })
 
 
@@ -140,15 +119,34 @@ async function handleChangePassword() {
   }
 }
 
+async function fetchMembers() {
+  isLoading.value = true
+  try {
+    const res = await adminApi.getMembers(searchKeyword.value, currentPage.value, pageSize)
+    members.value = res.data.content
+    totalPages.value = res.data.totalPages
+    totalElements.value = res.data.totalElements
+  } catch (error) {
+    console.error('Failed to fetch members:', error)
+    showError('회원 목록을 불러오는데 실패했습니다.')
+  } finally {
+    isLoading.value = false
+  }
+}
+
+async function fetchTokens() {
+  try {
+    const res = await adminApi.getAllRefreshTokens()
+    allTokens.value = res.data
+  } catch (error) {
+    console.error('Failed to fetch tokens:', error)
+  }
+}
+
 async function fetchData() {
   loading.value = true
   try {
-    const [membersRes, tokensRes] = await Promise.all([
-      adminApi.getAllMembers(),
-      adminApi.getAllRefreshTokens(),
-    ])
-    allMembers.value = membersRes.data
-    allTokens.value = tokensRes.data
+    await Promise.all([fetchMembers(), fetchTokens()])
   } catch (error) {
     console.error('Failed to fetch admin data:', error)
     showError('데이터를 불러오는데 실패했습니다.')
@@ -158,13 +156,14 @@ async function fetchData() {
 }
 
 async function refreshData() {
-  isLoading.value = true
   await fetchData()
-  isLoading.value = false
 }
 
-function navigateToTeams() {
-  router.push('/admin/teams')
+function goToPage(page: number) {
+  if (page >= 0 && page < totalPages.value) {
+    currentPage.value = page
+    fetchMembers()
+  }
 }
 
 function setHoverBg(e: Event) {
@@ -344,50 +343,81 @@ onMounted(async () => {
           </div>
 
           <div :style="{ borderTop: '1px solid var(--dp-border-secondary)' }">
-            <div
-              v-for="member in filteredMembers"
-              :key="member.id"
-              class="p-4 transition"
-              :style="{ borderBottom: '1px solid var(--dp-border-secondary)' }"
-              @mouseover="(e: Event) => setHoverBg(e)"
-              @mouseleave="(e: Event) => clearHoverBg(e, 'transparent')"
-            >
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }">
-                    <span class="text-sm font-medium" :style="{ color: 'var(--dp-text-secondary)' }">{{ member.name.charAt(0) }}</span>
+            <div v-if="isLoading" class="flex items-center justify-center py-12">
+              <Loader2 class="w-6 h-6 animate-spin" :style="{ color: 'var(--dp-text-muted)' }" />
+            </div>
+
+            <template v-else>
+              <div
+                v-for="member in members"
+                :key="member.id"
+                class="p-4 transition"
+                :style="{ borderBottom: '1px solid var(--dp-border-secondary)' }"
+                @mouseover="(e: Event) => setHoverBg(e)"
+                @mouseleave="(e: Event) => clearHoverBg(e, 'transparent')"
+              >
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }">
+                      <span class="text-sm font-medium" :style="{ color: 'var(--dp-text-secondary)' }">{{ member.name.charAt(0) }}</span>
+                    </div>
+                    <div class="min-w-0">
+                      <p class="font-medium truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ member.name }}</p>
+                      <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
+                        {{ member.tokens.length > 0 ? `${member.tokens.length}개의 활성 세션` : '활성 세션 없음' }}
+                      </p>
+                    </div>
                   </div>
-                  <div class="min-w-0">
-                    <p class="font-medium truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ member.name }}</p>
-                    <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
-                      {{ member.tokens.length > 0 ? `${member.tokens.length}개의 활성 세션` : '활성 세션 없음' }}
-                    </p>
-                  </div>
+                  <button
+                    @click="openPasswordModal(member)"
+                    class="px-3 py-1.5 text-sm font-medium text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition flex-shrink-0 self-start sm:self-auto cursor-pointer"
+                  >
+                    비밀번호 변경
+                  </button>
                 </div>
-                <button
-                  @click="openPasswordModal(member)"
-                  class="px-3 py-1.5 text-sm font-medium text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition flex-shrink-0 self-start sm:self-auto cursor-pointer"
-                >
-                  비밀번호 변경
-                </button>
+
+                <div v-if="member.tokens.length > 0" class="ml-0 sm:ml-13 mt-2">
+                  <SessionTokenList
+                    :tokens="member.tokens"
+                    :loading="false"
+                    :show-delete-button="false"
+                    :compact="true"
+                  />
+                </div>
               </div>
 
-              <div v-if="member.tokens.length > 0" class="ml-0 sm:ml-13 mt-2">
-                <SessionTokenList
-                  :tokens="member.tokens"
-                  :loading="false"
-                  :show-delete-button="false"
-                  :compact="true"
-                />
+              <div v-if="members.length === 0" class="p-8 text-center" :style="{ color: 'var(--dp-text-muted)' }">
+                검색 결과가 없습니다
               </div>
-              <div v-else class="ml-0 sm:ml-13 text-sm py-2" :style="{ color: 'var(--dp-text-muted)' }">
-                현재 활성화된 세션이 없습니다
-              </div>
-            </div>
+            </template>
           </div>
 
-          <div v-if="filteredMembers.length === 0" class="p-8 text-center" :style="{ color: 'var(--dp-text-muted)' }">
-            검색 결과가 없습니다
+          <!-- Pagination -->
+          <div v-if="totalPages > 1" class="p-4 flex items-center justify-between" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
+            <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
+              총 {{ totalElements }}명 중 {{ currentPage * pageSize + 1 }}-{{ Math.min((currentPage + 1) * pageSize, totalElements) }}
+            </p>
+            <div class="flex items-center gap-2">
+              <button
+                @click="goToPage(currentPage - 1)"
+                :disabled="currentPage === 0"
+                class="p-2 rounded-lg transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
+              >
+                <ChevronLeft class="w-4 h-4" :style="{ color: 'var(--dp-text-secondary)' }" />
+              </button>
+              <span class="text-sm px-2" :style="{ color: 'var(--dp-text-primary)' }">
+                {{ currentPage + 1 }} / {{ totalPages }}
+              </span>
+              <button
+                @click="goToPage(currentPage + 1)"
+                :disabled="currentPage >= totalPages - 1"
+                class="p-2 rounded-lg transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
+              >
+                <ChevronRight class="w-4 h-4" :style="{ color: 'var(--dp-text-secondary)' }" />
+              </button>
+            </div>
           </div>
         </div>
       </template>

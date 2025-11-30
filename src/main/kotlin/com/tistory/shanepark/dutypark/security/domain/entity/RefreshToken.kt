@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.security.domain.entity
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.tistory.shanepark.dutypark.common.domain.entity.BaseTimeEntity
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.security.domain.dto.UserAgentInfo
 import jakarta.persistence.*
 import java.time.LocalDateTime
 import java.util.*
@@ -20,10 +21,13 @@ class RefreshToken(
 
     @Column(name = "remote_addr", nullable = true)
     var remoteAddr: String?,
-    @Column(name = "user_agent", nullable = true)
-    var userAgent: String?,
+
+    userAgent: String?,
 
     ) : BaseTimeEntity() {
+
+    @Column(name = "user_agent", nullable = true)
+    var userAgent: String? = UserAgentInfo.parse(userAgent)?.toJson()
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -48,7 +52,7 @@ class RefreshToken(
         validUntil = LocalDateTime.now().plusDays(validityDays)
         this.lastUsed = LocalDateTime.now()
         this.remoteAddr = remoteAddr
-        this.userAgent = userAgent
+        this.userAgent = UserAgentInfo.parse(userAgent)?.toJson()
     }
 
 }

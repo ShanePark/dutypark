@@ -36,7 +36,7 @@ class SlackApiConfiguration(
             log.info("Slack token is blank. Slack Notifier Logger registered instead.")
             return SlackNotifierLogger()
         }
-        log.info("Slack API registered. slackToken = ${slackToken}")
+        log.info("Slack API registered. slackToken = $slackToken")
         val slackApi = SlackApi("https://hooks.slack.com/services/$slackToken")
         return SlackNotifierSender(slackApi)
     }

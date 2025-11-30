@@ -11,7 +11,6 @@ import org.mockito.Mock
 import org.mockito.Mockito
 import org.mockito.kotlin.any
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.http.MediaType
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.delete
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.get
@@ -20,7 +19,6 @@ import org.springframework.restdocs.payload.PayloadDocumentation.responseFields
 import org.springframework.restdocs.request.RequestDocumentation
 import org.springframework.restdocs.request.RequestDocumentation.parameterWithName
 import org.springframework.test.util.ReflectionTestUtils
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
@@ -46,7 +44,7 @@ class HolidayControllerTest : RestDocsTest() {
         ReflectionTestUtils.setField(holidayService, "holidayAPI", holidayAPIDataGoKr)
     }
 
-        @Test
+    @Test
     fun getHolidays() {
         mockMvc.perform(
             get("/api/holidays")

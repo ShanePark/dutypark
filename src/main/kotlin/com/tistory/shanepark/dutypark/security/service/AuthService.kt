@@ -62,13 +62,6 @@ class AuthService(
         log.info("Member password changed. member:${param.memberId}")
     }
 
-    fun validateSsoRegister(uuid: String) {
-        val memberSsoRegister = memberSsoRegisterRepository.findByUuid(uuid).orElseThrow()
-        if (!memberSsoRegister.isValid()) {
-            throw IllegalArgumentException("만료된 요청 입니다.")
-        }
-    }
-
     fun getTokenResponse(login: LoginDto, req: HttpServletRequest): TokenResponse {
         val member = memberRepository.findByEmail(login.email).orElseThrow {
             log.info("Login failed. email not exist:${login.email}")

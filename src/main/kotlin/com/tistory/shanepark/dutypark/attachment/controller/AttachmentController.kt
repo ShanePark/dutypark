@@ -2,7 +2,6 @@ package com.tistory.shanepark.dutypark.attachment.controller
 
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.attachment.dto.AttachmentDto
-import com.tistory.shanepark.dutypark.attachment.dto.FinalizeSessionRequest
 import com.tistory.shanepark.dutypark.attachment.dto.ReorderAttachmentsRequest
 import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
@@ -72,8 +71,8 @@ class AttachmentController(
 
         val dispositionType = if (inline) "inline" else "attachment"
         val contentDispositionValue = "$dispositionType; " +
-            "filename=\"$asciiFallbackFilename\"; " +
-            "filename*=UTF-8''$encodedFilename"
+                "filename=\"$asciiFallbackFilename\"; " +
+                "filename*=UTF-8''$encodedFilename"
 
         return ResponseEntity.ok()
             .contentType(MediaType.parseMediaType(attachment.contentType))
