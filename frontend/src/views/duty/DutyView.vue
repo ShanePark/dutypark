@@ -31,6 +31,7 @@ import DDayDetailModal from '@/components/duty/DDayDetailModal.vue'
 import SearchResultModal from '@/components/duty/SearchResultModal.vue'
 import OtherDutiesModal from '@/components/duty/OtherDutiesModal.vue'
 import YearMonthPicker from '@/components/common/YearMonthPicker.vue'
+import CalendarGrid from '@/components/common/CalendarGrid.vue'
 
 // API
 import { todoApi } from '@/api/todo'
@@ -404,9 +405,6 @@ const searchPageInfo = ref({
   totalElements: 0,
 })
 
-// Week days
-const weekDays = ['일', '월', '화', '수', '목', '금', '토']
-
 // Load calendar structure from backend API (cached)
 async function loadCalendar() {
   try {
@@ -458,6 +456,14 @@ const duties = computed(() => {
     }
   })
 })
+
+// Get duty color for CalendarGrid component
+function getDutyColorForDay(day: CalendarDay): string | null {
+  const idx = calendarDays.value.findIndex(
+    (d) => d.year === day.year && d.month === day.month && d.day === day.day
+  )
+  return duties.value[idx]?.dutyColor ?? null
+}
 
 // Load team info and duty types
 async function loadTeam() {
@@ -1545,152 +1551,109 @@ async function showExcelUploadModal() {
     </div>
 
     <!-- Calendar Grid -->
-    <div class="rounded-lg border overflow-hidden mb-2 shadow-sm" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)' }">
-      <!-- Week Days Header -->
-      <div class="grid grid-cols-7" :style="{ backgroundColor: 'var(--dp-calendar-header-bg)' }">
-        <div
-          v-for="(day, idx) in weekDays"
-          :key="day"
-          class="py-2 text-center font-bold border-b-2 text-sm"
-          :style="{ borderColor: 'var(--dp-border-secondary)', color: idx === 0 ? '#dc2626' : idx === 6 ? '#2563eb' : 'var(--dp-text-primary)' }"
-          :class="{
-            'border-r': idx < 6,
-          }"
+    <CalendarGrid
+      :days="calendarDays"
+      :current-year="currentYear"
+      :current-month="currentMonth"
+      :holidays="holidaysByDays"
+      :get-duty-color="getDutyColorForDay"
+      :highlight-day="searchDay"
+      @day-click="handleDayClick"
+    >
+      <!-- D-Day indicator in header -->
+      <template #day-header="{ day, index }">
+        <span
+          v-if="pinnedDDay && day.isCurrentMonth && !batchEditMode"
+          class="text-[9px] sm:text-xs"
+          :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }"
         >
-          {{ day }}
+          {{ calcDDayForDay(day) }}
+        </span>
+      </template>
+
+      <!-- Day content slot -->
+      <template #day-content="{ day, index }">
+        <!-- Batch Edit Mode: Duty Type Buttons -->
+        <div v-if="batchEditMode && day.isCurrentMonth" class="mt-1 grid grid-cols-2 gap-0.5">
+          <button
+            v-for="dutyType in dutyTypes"
+            :key="dutyType.id ?? 'off'"
+            @click.stop="handleBatchDutyChange(day, dutyType.id)"
+            class="text-[10px] sm:text-xs px-1 py-1 rounded border transition-all min-h-[22px] sm:min-h-[26px] truncate"
+            :class="{
+              'ring-2 ring-gray-800 font-bold shadow-sm':
+                (duties[index]?.dutyType === dutyType.name) ||
+                (!duties[index]?.dutyType && dutyType.id === null),
+              'hover:opacity-80': true,
+            }"
+            :style="{
+              backgroundColor: dutyType.color || '#6c757d',
+              color: isLightColor(dutyType.color) ? '#000' : '#fff',
+              borderColor: dutyType.color || '#6c757d',
+            }"
+          >
+            {{ dutyType.name.length > 4 ? dutyType.name.substring(0, 4) : dutyType.name }}
+          </button>
         </div>
-      </div>
 
-      <!-- Calendar Days -->
-      <div class="grid grid-cols-7">
-        <div
-          v-for="(day, idx) in calendarDays"
-          :key="idx"
-          @click="handleDayClick(day, idx)"
-          class="min-h-[70px] sm:min-h-[80px] md:min-h-[100px] border-b border-r p-0.5 sm:p-1 transition-all duration-150 relative cursor-pointer hover:brightness-95 hover:shadow-inner"
-          :style="{
-            borderColor: 'var(--dp-border-secondary)',
-            backgroundColor: duties[idx]?.dutyColor || (!day.isCurrentMonth ? 'var(--dp-calendar-cell-prev-next)' : 'var(--dp-calendar-cell-bg)'),
-            opacity: !day.isCurrentMonth ? 0.5 : 1
-          }"
-          :class="{
-            'ring-2 ring-red-500 ring-inset': day.isToday || (searchDay && searchDay.year === day.year && searchDay.month === day.month && searchDay.day === day.day),
-            'rounded-bl-lg': idx === calendarDays.length - 7,
-            'rounded-br-lg': idx === calendarDays.length - 1,
-          }"
-        >
-          <!-- Day Number -->
-          <div class="flex items-center justify-between">
-            <span
-              class="text-xs sm:text-sm font-medium"
-              :class="{
-                'font-bold': day.isToday,
-              }"
+        <div v-if="!batchEditMode" class="mt-0.5">
+          <!-- Other duties -->
+          <div v-if="otherDuties.length > 0 && day.isCurrentMonth" class="flex flex-wrap justify-center gap-1 mb-1">
+            <div
+              v-for="otherDuty in otherDuties"
+              :key="otherDuty.memberId"
+              class="text-[10px] sm:text-sm px-1.5 py-0.5 rounded-full border border-white/50"
               :style="{
-                color: idx % 7 === 0 ? '#dc2626' : idx % 7 === 6 ? '#2563eb' : (duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#1f2937' : '#ffffff') : 'var(--dp-text-primary)')
+                backgroundColor: getOtherDutyForDay(day, otherDuty)?.dutyColor || '#6c757d',
+                color: isLightColor(getOtherDutyForDay(day, otherDuty)?.dutyColor) ? '#000' : '#fff',
               }"
             >
-              {{ day.day }}
-            </span>
-            <!-- D-Day indicator (compact) -->
-            <span
-              v-if="pinnedDDay && day.isCurrentMonth && !batchEditMode"
-              class="text-[9px] sm:text-xs"
-              :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }"
-            >
-              {{ calcDDayForDay(day) }}
-            </span>
+              {{ otherDuty.memberName }}<template v-if="getOtherDutyForDay(day, otherDuty)?.dutyType">:{{ getOtherDutyForDay(day, otherDuty)?.dutyType?.slice(0, 4) }}</template>
+            </div>
           </div>
 
-          <!-- Batch Edit Mode: Duty Type Buttons -->
-          <div v-if="batchEditMode && day.isCurrentMonth" class="mt-1 grid grid-cols-2 gap-0.5">
-            <button
-              v-for="dutyType in dutyTypes"
-              :key="dutyType.id ?? 'off'"
-              @click.stop="handleBatchDutyChange(day, dutyType.id)"
-              class="text-[10px] sm:text-xs px-1 py-1 rounded border transition-all min-h-[22px] sm:min-h-[26px] truncate"
-              :class="{
-                'ring-2 ring-gray-800 font-bold shadow-sm':
-                  (duties[idx]?.dutyType === dutyType.name) ||
-                  (!duties[idx]?.dutyType && dutyType.id === null),
-                'hover:opacity-80': true,
-              }"
-              :style="{
-                backgroundColor: dutyType.color || '#6c757d',
-                color: isLightColor(dutyType.color) ? '#000' : '#fff',
-                borderColor: dutyType.color || '#6c757d',
-              }"
-            >
-              {{ dutyType.name.length > 4 ? dutyType.name.substring(0, 4) : dutyType.name }}
-            </button>
+          <!-- D-Days -->
+          <div
+            v-for="dday in getDDaysForDay(day)"
+            :key="dday.id"
+            class="text-[10px] sm:text-sm leading-snug px-0.5 break-words"
+            :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? '#1f2937' : '#ffffff') : 'var(--dp-text-primary)' }"
+          ><CalendarCheck class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" />{{ dday.title }}</div>
+
+          <!-- Schedules -->
+          <div
+            v-for="schedule in schedulesByDays[index]?.slice(0, 3)"
+            :key="schedule.id"
+            class="text-[10px] sm:text-sm leading-snug px-0.5 border-t-2 border-dashed break-words"
+            :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? '#1f2937' : '#ffffff') : 'var(--dp-text-primary)', borderColor: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.3)') : 'var(--dp-border-primary)' }"
+          ><Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }" />{{ schedule.contentWithoutTime || schedule.content }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
+              v-if="schedule.description || schedule.attachments?.length"
+              class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px] ml-0.5"
+              :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? '#000000' : '#ffffff') : 'var(--dp-text-primary)' }"
+            />
+            <!-- Tags display -->
+            <div v-if="schedule.tags?.length || schedule.isTagged" class="flex flex-wrap gap-0.5 justify-end">
+              <span
+                v-for="tag in schedule.tags?.filter(t => t.id !== memberId)"
+                :key="tag.id"
+                class="schedule-tag"
+              >{{ tag.name }}</span>
+              <span
+                v-if="schedule.isTagged"
+                class="schedule-tag"
+              ><span class="text-[6px] sm:text-[10px]">by</span> {{ schedule.owner }}</span>
+            </div>
           </div>
-
-          <div v-if="!batchEditMode" class="mt-0.5">
-            <div v-if="otherDuties.length > 0 && day.isCurrentMonth" class="flex flex-wrap justify-center gap-1 mb-1">
-              <div
-                v-for="otherDuty in otherDuties"
-                :key="otherDuty.memberId"
-                class="text-[10px] sm:text-sm px-1.5 py-0.5 rounded-full border border-white/50"
-                :style="{
-                  backgroundColor: getOtherDutyForDay(day, otherDuty)?.dutyColor || '#6c757d',
-                  color: isLightColor(getOtherDutyForDay(day, otherDuty)?.dutyColor) ? '#000' : '#fff',
-                }"
-              >
-                {{ otherDuty.memberName }}<template v-if="getOtherDutyForDay(day, otherDuty)?.dutyType">:{{ getOtherDutyForDay(day, otherDuty)?.dutyType?.slice(0, 4) }}</template>
-              </div>
-            </div>
-
-            <div
-              v-for="holiday in holidaysByDays[idx] ?? []"
-              :key="holiday.localDate + holiday.dateName"
-              class="text-[10px] sm:text-sm leading-snug px-0.5"
-              :class="holiday.isHoliday ? 'text-red-600' : ''"
-              :style="!holiday.isHoliday ? { color: 'var(--dp-text-muted)' } : {}"
-            >
-              {{ holiday.dateName }}
-            </div>
-
-            <div
-              v-for="dday in getDDaysForDay(day)"
-              :key="dday.id"
-              class="text-[10px] sm:text-sm leading-snug px-0.5 break-words"
-              :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#1f2937' : '#ffffff') : 'var(--dp-text-primary)' }"
-            ><CalendarCheck class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" />{{ dday.title }}</div>
-
-            <div
-              v-for="schedule in schedulesByDays[idx]?.slice(0, 3)"
-              :key="schedule.id"
-              class="text-[10px] sm:text-sm leading-snug px-0.5 border-t-2 border-dashed break-words"
-              :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#1f2937' : '#ffffff') : 'var(--dp-text-primary)', borderColor: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.3)') : 'var(--dp-border-primary)' }"
-            ><Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }" />{{ schedule.contentWithoutTime || schedule.content }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
-                v-if="schedule.description || schedule.attachments?.length"
-                class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px] ml-0.5"
-                :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#000000' : '#ffffff') : 'var(--dp-text-primary)' }"
-              />
-              <!-- Tags display -->
-              <div v-if="schedule.tags?.length || schedule.isTagged" class="flex flex-wrap gap-0.5 justify-end">
-                <span
-                  v-for="tag in schedule.tags?.filter(t => t.id !== memberId)"
-                  :key="tag.id"
-                  class="schedule-tag"
-                >{{ tag.name }}</span>
-                <span
-                  v-if="schedule.isTagged"
-                  class="schedule-tag"
-                ><span class="text-[6px] sm:text-[10px]">by</span> {{ schedule.owner }}</span>
-              </div>
-            </div>
-            <div
-              v-if="(schedulesByDays[idx]?.length ?? 0) > 3"
-              class="text-[10px] font-medium"
-              :style="{ color: duties[idx]?.dutyColor ? (isLightColor(duties[idx]?.dutyColor) ? '#6b7280' : 'rgba(255,255,255,0.8)') : 'var(--dp-text-muted)' }"
-            >
-              +{{ (schedulesByDays[idx]?.length ?? 0) - 3 }}
-            </div>
+          <div
+            v-if="(schedulesByDays[index]?.length ?? 0) > 3"
+            class="text-[10px] font-medium"
+            :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? '#6b7280' : 'rgba(255,255,255,0.8)') : 'var(--dp-text-muted)' }"
+          >
+            +{{ (schedulesByDays[index]?.length ?? 0) - 3 }}
           </div>
         </div>
-      </div>
-    </div>
+      </template>
+    </CalendarGrid>
 
     <!-- D-Day List -->
     <div class="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">

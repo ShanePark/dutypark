@@ -20,6 +20,7 @@ import { useSwal } from '@/composables/useSwal'
 import { isLightColor } from '@/utils/color'
 import YearMonthPicker from '@/components/common/YearMonthPicker.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
+import CalendarGrid from '@/components/common/CalendarGrid.vue'
 import type {
   TeamDto,
   TeamScheduleDto,
@@ -73,8 +74,6 @@ const selectedDay = ref({
   day: today.day,
   index: -1,
 })
-
-const weekDays = ['일', '월', '화', '수', '목', '금', '토']
 
 // Team schedules from API - indexed by calendar position
 const teamSchedules = ref<TeamScheduleDto[][]>([])
@@ -223,15 +222,6 @@ function getDutyColor(day: { year: number; month: number; day: number }): string
   return duty?.dutyColor ?? null
 }
 
-// Check if a color is light (for text contrast)
-
-// Get adaptive border color based on background brightness
-function getAdaptiveBorderColor(backgroundColor: string | null | undefined): string {
-  if (!backgroundColor) return 'var(--dp-border-secondary)'
-  const isLight = isLightColor(backgroundColor)
-  return isLight ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.2)'
-}
-
 // Load holidays from API
 async function loadHolidays() {
   try {
@@ -253,16 +243,6 @@ function findSelectedDayIndex() {
     day.day === selectedDay.value.day
   )
   selectedDay.value.index = index
-}
-
-function isToday(day: { year: number; month: number; day: number }) {
-  return day.year === today.year && day.month === today.month && day.day === today.day
-}
-
-function isSelectedDay(day: { year: number; month: number; day: number }) {
-  return day.year === selectedDay.value.year &&
-         day.month === selectedDay.value.month &&
-         day.day === selectedDay.value.day
 }
 
 function selectDay(day: { year: number; month: number; day: number }, index: number) {
@@ -450,96 +430,47 @@ onMounted(() => {
       </div>
 
       <!-- Calendar Grid -->
-      <div class="rounded-lg border overflow-hidden mb-2 shadow-sm" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)' }">
-        <!-- Week Days Header -->
-        <div class="grid grid-cols-7" :style="{ backgroundColor: 'var(--dp-calendar-header-bg)' }">
-          <div
-            v-for="(day, idx) in weekDays"
-            :key="day"
-            class="py-2 text-center font-bold border-b-2 text-sm"
-            :style="{ borderColor: 'var(--dp-border-secondary)', color: idx === 0 ? '#dc2626' : idx === 6 ? '#2563eb' : 'var(--dp-text-primary)' }"
-            :class="{
-              'border-r': idx < 6,
-            }"
-          >
-            {{ day }}
-          </div>
-        </div>
-
-        <!-- Calendar Days -->
-        <div class="grid grid-cols-7">
-          <div
-            v-for="(day, idx) in teamDays"
-            :key="idx"
-            @click="selectDay(day, idx)"
-            class="min-h-[70px] sm:min-h-[80px] md:min-h-[100px] border-b border-r p-0.5 sm:p-1 transition-all duration-150 relative cursor-pointer hover:brightness-95 hover:shadow-inner"
-            :style="{
-              borderColor: getAdaptiveBorderColor(getDutyColor(day)),
-              backgroundColor: getDutyColor(day) || (!day.isCurrentMonth ? 'var(--dp-calendar-cell-prev-next)' : 'var(--dp-calendar-cell-bg)'),
-              opacity: !day.isCurrentMonth ? 0.5 : 1
-            }"
-            :class="{
-              'ring-2 ring-red-500 ring-inset': isToday(day),
-              'ring-2 ring-blue-500 ring-inset': isSelectedDay(day) && !isToday(day),
-            }"
-          >
-            <!-- Day Number -->
-            <div class="flex items-center justify-between">
+      <CalendarGrid
+        :days="teamDays"
+        :current-year="currentYear"
+        :current-month="currentMonth"
+        :holidays="holidaysByDays"
+        :get-duty-color="getDutyColor"
+        :selected-day="selectedDay"
+        :use-adaptive-border="true"
+        @day-click="selectDay"
+      >
+        <template #day-content="{ day, index }">
+          <!-- Team Schedules -->
+          <div v-if="teamSchedules[index]?.length" class="mt-0.5">
+            <div
+              v-for="schedule in teamSchedules[index].slice(0, 2)"
+              :key="schedule.id"
+              class="text-[10px] sm:text-sm leading-snug px-0.5 border-t-2 border-dashed break-words"
+              :style="{
+                color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? '#1f2937' : '#ffffff') : 'var(--dp-text-primary)',
+                borderColor: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.3)') : 'var(--dp-border-primary)'
+              }"
+            >
+              {{ schedule.content }}
               <span
-                class="text-xs sm:text-sm font-medium"
-                :class="{
-                  'font-bold': isToday(day),
-                }"
-                :style="{
-                  color: idx % 7 === 0 ? '#dc2626' : idx % 7 === 6 ? '#2563eb' : (getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? '#1f2937' : '#ffffff') : 'var(--dp-text-primary)')
-                }"
+                v-if="schedule.totalDays && schedule.totalDays > 1"
+                class="text-[9px] sm:text-xs"
+                :style="{ color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }"
               >
-                {{ day.day }}
+                ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})
               </span>
             </div>
-
-            <!-- Holidays -->
             <div
-              v-for="holiday in holidaysByDays[idx] ?? []"
-              :key="holiday.localDate + holiday.dateName"
-              class="text-[10px] sm:text-sm leading-snug px-0.5"
-              :class="holiday.isHoliday ? 'text-red-600' : ''"
-              :style="!holiday.isHoliday ? { color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' } : {}"
+              v-if="teamSchedules[index].length > 2"
+              class="text-[10px] font-medium"
+              :style="{ color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? '#6b7280' : 'rgba(255,255,255,0.8)') : 'var(--dp-text-muted)' }"
             >
-              {{ holiday.dateName }}
-            </div>
-
-            <!-- Team Schedules -->
-            <div v-if="teamSchedules[idx]?.length" class="mt-0.5">
-              <div
-                v-for="schedule in teamSchedules[idx].slice(0, 2)"
-                :key="schedule.id"
-                class="text-[10px] sm:text-sm leading-snug px-0.5 border-t-2 border-dashed break-words"
-                :style="{
-                  color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? '#1f2937' : '#ffffff') : 'var(--dp-text-primary)',
-                  borderColor: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.3)') : 'var(--dp-border-primary)'
-                }"
-              >
-                {{ schedule.content }}
-                <span
-                  v-if="schedule.totalDays && schedule.totalDays > 1"
-                  class="text-[9px] sm:text-xs"
-                  :style="{ color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }"
-                >
-                  ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})
-                </span>
-              </div>
-              <div
-                v-if="teamSchedules[idx].length > 2"
-                class="text-[10px] font-medium"
-                :style="{ color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? '#6b7280' : 'rgba(255,255,255,0.8)') : 'var(--dp-text-muted)' }"
-              >
-                +{{ teamSchedules[idx].length - 2 }}
-              </div>
+              +{{ teamSchedules[index].length - 2 }}
             </div>
           </div>
-        </div>
-      </div>
+        </template>
+      </CalendarGrid>
 
       <!-- Selected Day Schedule -->
       <div class="rounded-lg border shadow-sm p-3" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)' }">
