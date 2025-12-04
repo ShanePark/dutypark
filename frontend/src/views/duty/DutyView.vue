@@ -1260,16 +1260,34 @@ async function handleChangeDutyType(dutyTypeId: number | null) {
   }
 }
 
-// Get schedule time display
+// Get schedule time display - show start time on first day, end time on last day
 function formatScheduleTime(schedule: Schedule) {
   const start = new Date(schedule.startDateTime)
+  const end = new Date(schedule.endDateTime)
   const startHour = start.getHours().toString().padStart(2, '0')
   const startMin = start.getMinutes().toString().padStart(2, '0')
+  const endHour = end.getHours().toString().padStart(2, '0')
+  const endMin = end.getMinutes().toString().padStart(2, '0')
 
-  if (startHour === '00' && startMin === '00') {
-    return ''
+  const isStartMidnight = startHour === '00' && startMin === '00'
+  const isEndMidnight = endHour === '00' && endMin === '00'
+  const isSameDateTime = start.getTime() === end.getTime()
+
+  const showStartTime = schedule.daysFromStart === 1 && !isStartMidnight
+  const showEndTime = schedule.daysFromStart === schedule.totalDays &&
+    !isEndMidnight &&
+    !(schedule.totalDays === 1 && isSameDateTime)
+
+  if (showStartTime && showEndTime) {
+    return `(${startHour}:${startMin}~${endHour}:${endMin})`
   }
-  return `(${startHour}:${startMin})`
+  if (showStartTime) {
+    return `(${startHour}:${startMin})`
+  }
+  if (showEndTime) {
+    return `(~${endHour}:${endMin})`
+  }
+  return ''
 }
 
 // Get other duty for a specific day
@@ -1627,7 +1645,7 @@ async function showExcelUploadModal() {
             :key="schedule.id"
             class="text-[10px] sm:text-sm leading-snug px-0.5 border-t-2 border-dashed break-words"
             :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? '#1f2937' : '#ffffff') : 'var(--dp-text-primary)', borderColor: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.3)') : 'var(--dp-border-primary)' }"
-          ><Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }" />{{ schedule.contentWithoutTime || schedule.content }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
+          ><Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }" />{{ schedule.contentWithoutTime || schedule.content }}{{ formatScheduleTime(schedule) }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
               v-if="schedule.description || schedule.attachments?.length"
               class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px] ml-0.5"
               :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? '#000000' : '#ffffff') : 'var(--dp-text-primary)' }"
