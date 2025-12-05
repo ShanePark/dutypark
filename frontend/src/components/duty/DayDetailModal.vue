@@ -64,6 +64,7 @@ interface Props {
   canEdit: boolean
   batchEditMode: boolean
   friends: Array<{ id: number; name: string }>
+  memberId: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -630,8 +631,17 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                   <!-- Tagged by indicator (when I was tagged by someone) -->
                   <div
                     v-else-if="schedule.isTagged"
-                    class="mt-2"
+                    class="flex items-center gap-1.5 mt-2 flex-wrap"
                   >
+                    <!-- Show other tagged members (exclude calendar owner) -->
+                    <span
+                      v-for="tag in schedule.tags?.filter(t => t.id !== memberId)"
+                      :key="tag.id"
+                      class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full"
+                    >
+                      {{ tag.name }}
+                    </span>
+                    <!-- Show who tagged me -->
                     <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
                       by {{ schedule.taggedBy }}
                     </span>

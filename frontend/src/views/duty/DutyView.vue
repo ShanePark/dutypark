@@ -1751,6 +1751,7 @@ async function showExcelUploadModal() {
       :can-edit="canEdit"
       :batch-edit-mode="batchEditMode"
       :friends="friends"
+      :member-id="memberId"
       @close="isDayDetailModalOpen = false"
       @create-schedule="handleCreateSchedule"
       @edit-schedule="handleEditSchedule"
