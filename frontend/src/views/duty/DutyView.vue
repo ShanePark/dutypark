@@ -1582,7 +1582,7 @@ async function showExcelUploadModal() {
       <!-- D-Day indicator in header -->
       <template #day-header="{ day, index }">
         <span
-          v-if="pinnedDDay && day.isCurrentMonth && !batchEditMode"
+          v-if="pinnedDDay && !batchEditMode"
           class="text-[9px] sm:text-xs"
           :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }"
         >
