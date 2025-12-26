@@ -30,6 +30,7 @@ import DDayModal from '@/components/duty/DDayModal.vue'
 import DDayDetailModal from '@/components/duty/DDayDetailModal.vue'
 import SearchResultModal from '@/components/duty/SearchResultModal.vue'
 import OtherDutiesModal from '@/components/duty/OtherDutiesModal.vue'
+import ScheduleViewModal from '@/components/duty/ScheduleViewModal.vue'
 import YearMonthPicker from '@/components/common/YearMonthPicker.vue'
 import CalendarGrid from '@/components/common/CalendarGrid.vue'
 
@@ -187,6 +188,7 @@ const isDDayDetailModalOpen = ref(false)
 const isDDayEditFromDetail = ref(false)
 const isSearchResultModalOpen = ref(false)
 const isOtherDutiesModalOpen = ref(false)
+const isScheduleDetailModalOpen = ref(false)
 
 // Search highlight - tracks the date to highlight after search navigation
 const searchDay = ref<{ year: number; month: number; day: number } | null>(null)
@@ -204,6 +206,7 @@ const selectedDay = ref<CalendarDay | null>(null)
 const selectedDayDuty = ref<{ dutyType: string; dutyColor: string } | undefined>(undefined)
 const selectedTodo = ref<LocalTodo | null>(null)
 const selectedDDay = ref<LocalDDay | null>(null)
+const selectedSchedule = ref<Schedule | null>(null)
 const pinnedDDay = ref<LocalDDay | null>(null)
 
 // Data
@@ -713,6 +716,13 @@ function handleDayClick(day: CalendarDay, index: number) {
   selectedDay.value = day
   selectedDayDuty.value = duties.value[index] || undefined
   isDayDetailModalOpen.value = true
+}
+
+// Schedule click handler (for read-only view on other's calendar)
+function handleScheduleClick(schedule: Schedule, event: Event) {
+  event.stopPropagation() // Prevent day click
+  selectedSchedule.value = schedule
+  isScheduleDetailModalOpen.value = true
 }
 
 // Batch edit mode: change duty type directly on cell
@@ -1644,7 +1654,9 @@ async function showExcelUploadModal() {
             v-for="schedule in schedulesByDays[index]?.slice(0, 3)"
             :key="schedule.id"
             class="text-[10px] sm:text-sm leading-snug px-0.5 border-t-2 border-dashed break-words"
+            :class="{ 'cursor-pointer hover:underline': !canEdit && (schedule.description || schedule.attachments?.length) }"
             :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? '#1f2937' : '#ffffff') : 'var(--dp-text-primary)', borderColor: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.3)') : 'var(--dp-border-primary)' }"
+            @click="!canEdit && (schedule.description || schedule.attachments?.length) ? handleScheduleClick(schedule, $event) : null"
           ><Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }" />{{ schedule.contentWithoutTime || schedule.content }}{{ formatScheduleTime(schedule) }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
               v-if="schedule.description || schedule.attachments?.length"
               class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px] ml-0.5"
@@ -1831,6 +1843,13 @@ async function showExcelUploadModal() {
       :selected-friend-ids="selectedFriendIds"
       @close="isOtherDutiesModalOpen = false"
       @toggle="handleFriendToggle"
+    />
+
+    <ScheduleViewModal
+      :is-open="isScheduleDetailModalOpen"
+      :schedule="selectedSchedule"
+      :member-id="memberId"
+      @close="isScheduleDetailModalOpen = false"
     />
 
     </template>

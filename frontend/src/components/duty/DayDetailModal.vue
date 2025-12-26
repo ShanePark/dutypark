@@ -432,7 +432,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
   <Teleport to="body">
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/50 pt-2 sm:pt-0 pb-16 sm:pb-0"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 pb-16 sm:pb-0"
       @click.self="emit('close')"
     >
       <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[calc(100dvh-5rem)] sm:max-h-[90vh] mx-2 sm:mx-4 flex flex-col" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
