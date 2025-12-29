@@ -851,12 +851,13 @@ async function deleteDDay(dday: LocalDDay) {
   }
 }
 
-// Calculate D-Day for calendar cell
+// Calculate D-Day for calendar cell (Korean style: D-Day = 1st day, next day = D+2)
 function calcDDayForDay(day: CalendarDay) {
   if (!pinnedDDay.value) return null
-  const targetDate = new Date(pinnedDDay.value.date)
+  const [y, m, d] = pinnedDDay.value.date.split('-').map(Number) as [number, number, number]
+  const targetDate = new Date(y, m - 1, d)
   const cellDate = new Date(day.year, day.month - 1, day.day)
-  const diffDays = Math.ceil((cellDate.getTime() - targetDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+  const diffDays = Math.floor((cellDate.getTime() - targetDate.getTime()) / (1000 * 60 * 60 * 24))
   if (diffDays === 0) return 'D-Day'
   return diffDays < 0 ? `D${diffDays}` : `D+${diffDays + 1}`
 }
