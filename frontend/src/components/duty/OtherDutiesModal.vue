@@ -86,7 +86,7 @@ function handleToggle(friendId: number) {
         </div>
 
         <!-- Description -->
-        <div class="px-3 sm:px-4 py-2 bg-blue-50 text-xs sm:text-sm text-blue-700">
+        <div class="px-3 sm:px-4 py-2 text-xs sm:text-sm bg-blue-600/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
           친구의 근무표를 함께 볼 수 있습니다. (최대 {{ maxSelections }}명)
         </div>
 
@@ -103,7 +103,7 @@ function handleToggle(friendId: number) {
               @click="handleToggle(friend.id)"
               class="flex items-center gap-2 p-2 rounded-lg cursor-pointer transition"
               :class="{
-                'bg-blue-50 border-2 border-blue-500': isSelected(friend.id),
+                'bg-blue-600/15 dark:bg-blue-500/25 border-2 border-blue-500': isSelected(friend.id),
                 'border-2 border-transparent friend-item':
                   !isSelected(friend.id) && canSelectMore,
                 'opacity-50 cursor-not-allowed border-2 border-transparent friend-item-disabled':

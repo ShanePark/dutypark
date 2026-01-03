@@ -125,7 +125,6 @@ interface OtherDuty {
   memberId: number
   memberName: string
   duties: Array<{
-    day: number
     dutyType: string
     dutyColor: string
   }>
@@ -1108,12 +1107,11 @@ async function loadOtherDuties() {
       currentYear.value,
       currentMonth.value
     )
-    // Map API response to local OtherDuty format
+    // Map API response to local OtherDuty format (index-aligned with calendarDays)
     otherDuties.value = response.map((item, index) => ({
       memberId: memberIdsToFetch[index] || 0,
       memberName: item.name,
       duties: item.duties.map((d) => ({
-        day: d.day,
         dutyType: d.dutyType || 'OFF',
         dutyColor: d.dutyColor || '#6c757d',
       })),
@@ -1301,11 +1299,6 @@ function formatScheduleTime(schedule: Schedule) {
   return ''
 }
 
-// Get other duty for a specific day
-function getOtherDutyForDay(day: CalendarDay, memberDuties: OtherDuty) {
-  if (!day.isCurrentMonth) return null
-  return memberDuties.duties.find((d) => d.day === day.day)
-}
 
 
 
@@ -1628,17 +1621,17 @@ async function showExcelUploadModal() {
 
         <div v-if="!batchEditMode" class="mt-0.5">
           <!-- Other duties -->
-          <div v-if="otherDuties.length > 0 && day.isCurrentMonth" class="flex flex-wrap justify-center gap-1 mb-1">
+          <div v-if="otherDuties.length > 0" class="flex flex-wrap justify-center gap-1 mb-1">
             <div
               v-for="otherDuty in otherDuties"
               :key="otherDuty.memberId"
               class="text-[10px] sm:text-sm px-1.5 py-0.5 rounded-full border border-white/50"
               :style="{
-                backgroundColor: getOtherDutyForDay(day, otherDuty)?.dutyColor || '#6c757d',
-                color: isLightColor(getOtherDutyForDay(day, otherDuty)?.dutyColor) ? '#000' : '#fff',
+                backgroundColor: otherDuty.duties[index]?.dutyColor || '#6c757d',
+                color: isLightColor(otherDuty.duties[index]?.dutyColor) ? '#000' : '#fff',
               }"
             >
-              {{ otherDuty.memberName }}<template v-if="getOtherDutyForDay(day, otherDuty)?.dutyType">:{{ getOtherDutyForDay(day, otherDuty)?.dutyType?.slice(0, 4) }}</template>
+              {{ otherDuty.memberName }}<template v-if="otherDuty.duties[index]?.dutyType">:{{ otherDuty.duties[index].dutyType.slice(0, 4) }}</template>
             </div>
           </div>
 
