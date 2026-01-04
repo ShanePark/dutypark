@@ -32,9 +32,13 @@ class MemberService(
 
     @Transactional(readOnly = true)
     fun findAll(): List<MemberDto> {
-        return memberRepository.findAll()
+        val members = memberRepository.findAll()
             .sortedWith(compareBy({ it.team?.name }, { it.name }))
-            .map { MemberDto.of(it).withProfilePhoto(it.id) }
+
+        val memberIds = members.mapNotNull { it.id }
+        val profilePhotoUrls = profilePhotoService.getProfilePhotoUrls(memberIds)
+
+        return members.map { MemberDto.of(it).copy(profilePhotoUrl = profilePhotoUrls[it.id]) }
     }
 
     @Transactional(readOnly = true)
@@ -147,7 +151,12 @@ class MemberService(
 
     fun findAllManagers(loginMember: LoginMember): List<MemberDto> {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
-        return findAllManagers(member).map { MemberDto.of(it).withProfilePhoto(it.id) }
+        val managers = findAllManagers(member)
+
+        val managerIds = managers.mapNotNull { it.id }
+        val profilePhotoUrls = profilePhotoService.getProfilePhotoUrls(managerIds)
+
+        return managers.map { MemberDto.of(it).copy(profilePhotoUrl = profilePhotoUrls[it.id]) }
     }
 
     fun isManager(isManager: LoginMember, targetMemberId: Long): Boolean {

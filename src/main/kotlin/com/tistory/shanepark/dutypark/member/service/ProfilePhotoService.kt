@@ -33,6 +33,23 @@ class ProfilePhotoService(
         return buildThumbnailUrl(attachment.id)
     }
 
+    @Transactional(readOnly = true)
+    fun getProfilePhotoUrls(memberIds: List<Long>): Map<Long, String?> {
+        if (memberIds.isEmpty()) return emptyMap()
+
+        val contextIds = memberIds.map { it.toString() }
+        val attachments = attachmentRepository.findAllByContextTypeAndContextIdIn(
+            contextType = AttachmentContextType.PROFILE,
+            contextIds = contextIds
+        )
+
+        val attachmentByContextId = attachments.associateBy { it.contextId }
+
+        return memberIds.associateWith { memberId ->
+            attachmentByContextId[memberId.toString()]?.let { buildThumbnailUrl(it.id) }
+        }
+    }
+
     fun setProfilePhoto(
         loginMember: LoginMember,
         sessionId: UUID,

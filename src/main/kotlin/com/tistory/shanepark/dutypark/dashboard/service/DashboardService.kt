@@ -77,10 +77,15 @@ class DashboardService(
 
     fun friend(loginMember: LoginMember): DashboardFriendInfo {
         val member = memberRepository.findMemberWithTeam(loginMember.id).orElseThrow()
-        val friends = friendRelationRepository.findAllByMember(member)
+        val friendRelations = friendRelationRepository.findAllByMember(member)
+
+        val friendIds = friendRelations.mapNotNull { it.friend.id }
+        val profilePhotoUrls = profilePhotoService.getProfilePhotoUrls(friendIds)
+
+        val friends = friendRelations
             .map {
                 DashboardFriendDetail(
-                    member = FriendDto.of(it.friend).withProfilePhoto(it.friend.id),
+                    member = FriendDto.of(it.friend).copy(profilePhotoUrl = profilePhotoUrls[it.friend.id]),
                     duty = todayDuty(it.friend),
                     schedules = todaySchedules(loginMember = loginMember, member = it.friend),
                     isFamily = it.isFamily,
@@ -97,12 +102,6 @@ class DashboardService(
     }
 
     private fun MemberDto.withProfilePhoto(memberId: Long?): MemberDto {
-        if (memberId == null) return this
-        val photoUrl = profilePhotoService.getProfilePhotoUrl(memberId)
-        return this.copy(profilePhotoUrl = photoUrl)
-    }
-
-    private fun FriendDto.withProfilePhoto(memberId: Long?): FriendDto {
         if (memberId == null) return this
         val photoUrl = profilePhotoService.getProfilePhotoUrl(memberId)
         return this.copy(profilePhotoUrl = photoUrl)

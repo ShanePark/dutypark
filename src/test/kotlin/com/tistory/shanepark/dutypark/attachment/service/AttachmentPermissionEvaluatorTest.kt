@@ -115,6 +115,35 @@ class AttachmentPermissionEvaluatorTest {
     }
 
     @Test
+    fun `checkReadPermission succeeds for PROFILE context with null contextId - public access`() {
+        val attachment = createAttachment(contextType = AttachmentContextType.PROFILE, contextId = null)
+
+        assertThatCode {
+            evaluator.checkReadPermission(loginMember, attachment)
+        }.doesNotThrowAnyException()
+    }
+
+    @Test
+    fun `checkWritePermission throws for PROFILE context with null contextId`() {
+        val attachment = createAttachment(contextType = AttachmentContextType.PROFILE, contextId = null)
+
+        assertThatThrownBy {
+            evaluator.checkWritePermission(loginMember, attachment)
+        }.isInstanceOf(IllegalStateException::class.java)
+            .hasMessageContaining("has no contextId")
+    }
+
+    @Test
+    fun `checkWritePermission throws AuthException for PROFILE context when contextId does not match loginMember id`() {
+        val attachment = createAttachment(contextType = AttachmentContextType.PROFILE, contextId = "999")
+
+        assertThatThrownBy {
+            evaluator.checkWritePermission(loginMember, attachment)
+        }.isInstanceOf(AuthException::class.java)
+            .hasMessageContaining("does not belong to user")
+    }
+
+    @Test
     fun `checkWritePermission throws UnsupportedOperationException for TEAM context`() {
         val attachment = createAttachment(contextType = AttachmentContextType.TEAM, contextId = "1")
 

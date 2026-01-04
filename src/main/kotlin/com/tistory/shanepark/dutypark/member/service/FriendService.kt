@@ -32,10 +32,14 @@ class FriendService(
     @Transactional(readOnly = true)
     fun findAllFriends(loginMember: LoginMember): List<FriendDto> {
         val member = loginMemberToMember(loginMember)
-        return friendRelationRepository.findAllByMember(member)
+        val friends = friendRelationRepository.findAllByMember(member)
             .sortedWith(compareBy({ it.pinOrder ?: Long.MAX_VALUE }, { it.friend.name }))
             .map { it.friend }
-            .map { FriendDto.of(it).withProfilePhoto(it.id) }
+
+        val friendIds = friends.mapNotNull { it.id }
+        val profilePhotoUrls = profilePhotoService.getProfilePhotoUrls(friendIds)
+
+        return friends.map { FriendDto.of(it).copy(profilePhotoUrl = profilePhotoUrls[it.id]) }
     }
 
     @Transactional(readOnly = true)
@@ -185,8 +189,11 @@ class FriendService(
         val pendingRequestsFrom = getPendingRequestsFrom(member).map { it.toMember.id }
         val excludeIds = friends + pendingRequestsFrom + member.id
 
-        return memberRepository.findMembersByNameContainingIgnoreCaseAndIdNotIn(keyword, excludeIds, page)
-            .map { FriendDto.of(it).withProfilePhoto(it.id) }
+        val memberPage = memberRepository.findMembersByNameContainingIgnoreCaseAndIdNotIn(keyword, excludeIds, page)
+        val memberIds = memberPage.content.mapNotNull { it.id }
+        val profilePhotoUrls = profilePhotoService.getProfilePhotoUrls(memberIds)
+
+        return memberPage.map { FriendDto.of(it).copy(profilePhotoUrl = profilePhotoUrls[it.id]) }
     }
 
     private fun loginMemberToMember(login: LoginMember): Member {
@@ -281,17 +288,15 @@ class FriendService(
     @Transactional(readOnly = true)
     fun findAllFamilyMembers(id: Long): List<FriendDto> {
         val member = memberRepository.findById(id).orElseThrow()
-        return friendRelationRepository.findAllByMember(member)
+        val familyMembers = friendRelationRepository.findAllByMember(member)
             .filter { it.isFamily }
             .map { it.friend }
             .sortedBy { it.name }
-            .map { FriendDto.of(it).withProfilePhoto(it.id) }
-    }
 
-    private fun FriendDto.withProfilePhoto(memberId: Long?): FriendDto {
-        if (memberId == null) return this
-        val photoUrl = profilePhotoService.getProfilePhotoUrl(memberId)
-        return this.copy(profilePhotoUrl = photoUrl)
+        val memberIds = familyMembers.mapNotNull { it.id }
+        val profilePhotoUrls = profilePhotoService.getProfilePhotoUrls(memberIds)
+
+        return familyMembers.map { FriendDto.of(it).copy(profilePhotoUrl = profilePhotoUrls[it.id]) }
     }
 
 }

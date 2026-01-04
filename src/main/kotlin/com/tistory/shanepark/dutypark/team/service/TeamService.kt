@@ -249,8 +249,8 @@ class TeamService(
     }
 
     private fun buildProfilePhotoUrlMap(members: List<Member>): Map<Long, String?> {
-        return members.mapNotNull { it.id }
-            .associateWith { memberId -> profilePhotoService.getProfilePhotoUrl(memberId) }
+        val memberIds = members.mapNotNull { it.id }
+        return profilePhotoService.getProfilePhotoUrls(memberIds)
     }
 
 }

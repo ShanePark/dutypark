@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { User } from 'lucide-vue-next'
 import { fetchAuthenticatedImage } from '@/api/attachment'
 
@@ -80,6 +80,12 @@ watch(
 
 onMounted(() => {
   loadImage()
+})
+
+onUnmounted(() => {
+  if (imageBlobUrl.value) {
+    URL.revokeObjectURL(imageBlobUrl.value)
+  }
 })
 </script>
 
