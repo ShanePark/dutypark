@@ -9,15 +9,17 @@ data class TeamMemberDto(
     val email: String?,
     val isManager: Boolean,
     val isAdmin: Boolean,
+    val profilePhotoUrl: String? = null
 ) {
     companion object {
-        fun of(team: Team, member: Member): TeamMemberDto {
+        fun of(team: Team, member: Member, profilePhotoUrl: String? = null): TeamMemberDto {
             return TeamMemberDto(
                 id = member.id,
                 name = member.name,
                 email = member.email,
                 isManager = team.isManager(member.id),
                 isAdmin = team.isAdmin(member.id),
+                profilePhotoUrl = profilePhotoUrl
             )
         }
     }

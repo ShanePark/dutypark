@@ -13,6 +13,7 @@ import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import org.springframework.context.annotation.Lazy
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
@@ -24,7 +25,8 @@ class FriendService(
     private val friendRelationRepository: FriendRelationRepository,
     private val friendRequestRepository: FriendRequestRepository,
     private val memberService: MemberService,
-    private val memberRepository: MemberRepository
+    private val memberRepository: MemberRepository,
+    @Lazy private val profilePhotoService: ProfilePhotoService,
 ) {
 
     @Transactional(readOnly = true)
@@ -33,7 +35,7 @@ class FriendService(
         return friendRelationRepository.findAllByMember(member)
             .sortedWith(compareBy({ it.pinOrder ?: Long.MAX_VALUE }, { it.friend.name }))
             .map { it.friend }
-            .map { FriendDto.of(it) }
+            .map { FriendDto.of(it).withProfilePhoto(it.id) }
     }
 
     @Transactional(readOnly = true)
@@ -184,7 +186,7 @@ class FriendService(
         val excludeIds = friends + pendingRequestsFrom + member.id
 
         return memberRepository.findMembersByNameContainingIgnoreCaseAndIdNotIn(keyword, excludeIds, page)
-            .map { FriendDto.of(it) }
+            .map { FriendDto.of(it).withProfilePhoto(it.id) }
     }
 
     private fun loginMemberToMember(login: LoginMember): Member {
@@ -283,7 +285,13 @@ class FriendService(
             .filter { it.isFamily }
             .map { it.friend }
             .sortedBy { it.name }
-            .map { FriendDto.of(it) }
+            .map { FriendDto.of(it).withProfilePhoto(it.id) }
+    }
+
+    private fun FriendDto.withProfilePhoto(memberId: Long?): FriendDto {
+        if (memberId == null) return this
+        val photoUrl = profilePhotoService.getProfilePhotoUrl(memberId)
+        return this.copy(profilePhotoUrl = photoUrl)
     }
 
 }

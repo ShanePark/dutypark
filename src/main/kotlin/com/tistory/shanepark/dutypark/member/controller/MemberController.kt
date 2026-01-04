@@ -3,10 +3,14 @@ package com.tistory.shanepark.dutypark.member.controller
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
+import com.tistory.shanepark.dutypark.member.domain.dto.ProfilePhotoResponse
+import com.tistory.shanepark.dutypark.member.domain.dto.UpdateProfilePhotoRequest
 import com.tistory.shanepark.dutypark.member.domain.dto.VisibilityUpdateRequest
 import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.member.service.MemberService
+import com.tistory.shanepark.dutypark.member.service.ProfilePhotoService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
 
 @RestController
@@ -14,6 +18,7 @@ import org.springframework.web.bind.annotation.*
 class MemberController(
     private val memberService: MemberService,
     private val friendService: FriendService,
+    private val profilePhotoService: ProfilePhotoService,
 ) {
 
     @GetMapping("/me")
@@ -84,6 +89,26 @@ class MemberController(
     ): MemberDto {
         friendService.checkVisibility(loginMember, memberId)
         return memberService.findById(memberId)
+    }
+
+    @PutMapping("/profile-photo")
+    fun updateProfilePhoto(
+        @Login loginMember: LoginMember,
+        @RequestBody request: UpdateProfilePhotoRequest,
+    ): ProfilePhotoResponse {
+        return profilePhotoService.setProfilePhoto(
+            loginMember = loginMember,
+            sessionId = request.sessionId,
+            attachmentId = request.attachmentId
+        )
+    }
+
+    @DeleteMapping("/profile-photo")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun deleteProfilePhoto(
+        @Login loginMember: LoginMember,
+    ) {
+        profilePhotoService.deleteProfilePhoto(loginMember)
     }
 
 }

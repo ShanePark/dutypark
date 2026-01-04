@@ -31,6 +31,9 @@ class FriendServiceUnitTest {
     @Mock
     private lateinit var memberService: MemberService
 
+    @Mock
+    private lateinit var profilePhotoService: ProfilePhotoService
+
     private lateinit var friendService: FriendService
 
     @BeforeEach
@@ -40,6 +43,7 @@ class FriendServiceUnitTest {
             friendRequestRepository = friendRequestRepository,
             memberRepository = memberRepository,
             memberService = memberService,
+            profilePhotoService = profilePhotoService,
         )
     }
 

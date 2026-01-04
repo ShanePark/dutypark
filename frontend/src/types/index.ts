@@ -178,6 +178,7 @@ export interface DashboardMemberDto {
   calendarVisibility: CalendarVisibility
   kakaoId?: string | null
   hasPassword?: boolean
+  profilePhotoUrl?: string | null
 }
 
 export interface DashboardFriendDto {
@@ -185,6 +186,7 @@ export interface DashboardFriendDto {
   name: string
   teamId?: number | null
   team?: string | null
+  profilePhotoUrl?: string | null
 }
 
 export interface DashboardDutyDto {
@@ -287,6 +289,7 @@ export interface AdminMemberDto {
   teamId: number | null
   teamName: string | null
   tokens: RefreshTokenDto[]
+  profilePhotoUrl: string | null
 }
 
 export interface SimpleTeam {
@@ -347,6 +350,7 @@ export interface TeamMemberDto {
   email: string | null
   isManager: boolean
   isAdmin: boolean
+  profilePhotoUrl: string | null
 }
 
 export interface DutyBatchTemplateDto {
@@ -380,6 +384,7 @@ export interface MyTeamSummary {
 export interface SimpleMemberDto {
   id: number
   name: string
+  profilePhotoUrl: string | null
 }
 
 export interface DutyByShift {
@@ -423,6 +428,7 @@ export interface MemberDto {
   calendarVisibility: CalendarVisibility
   kakaoId: string | null
   hasPassword: boolean
+  profilePhotoUrl: string | null
 }
 
 export interface FriendDto {
@@ -430,6 +436,7 @@ export interface FriendDto {
   name: string
   teamId: number | null
   team: string | null
+  profilePhotoUrl: string | null
 }
 
 export interface DDayDto {
@@ -507,4 +514,14 @@ export interface DutyBatchTeamResult {
   year?: number
   month?: number
   processedCount?: number
+}
+
+// Profile Photo types
+export interface UpdateProfilePhotoRequest {
+  sessionId: string
+  attachmentId: string
+}
+
+export interface ProfilePhotoResponse {
+  profilePhotoUrl: string | null
 }

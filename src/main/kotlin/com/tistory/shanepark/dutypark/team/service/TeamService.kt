@@ -8,7 +8,9 @@ import com.tistory.shanepark.dutypark.duty.domain.dto.DutyByShift
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.domain.dto.SimpleMemberDto
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.member.service.ProfilePhotoService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.dto.*
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
@@ -26,7 +28,8 @@ class TeamService(
     private val teamRepository: TeamRepository,
     private val dutyTypeRepository: DutyTypeRepository,
     private val dutyRepository: DutyRepository,
-    private val memberRepository: MemberRepository
+    private val memberRepository: MemberRepository,
+    private val profilePhotoService: ProfilePhotoService,
 ) {
     val log = logger()
 
@@ -39,11 +42,13 @@ class TeamService(
     fun findByIdWithMembersAndDutyTypes(id: Long): TeamDto {
         val withMembers = teamRepository.findByIdWithMembers(id).orElseThrow()
         val withDutyTypes = teamRepository.findByIdWithDutyTypes(id).orElseThrow()
+        val profilePhotoUrls = buildProfilePhotoUrlMap(withMembers.members)
 
         return TeamDto.of(
             team = withMembers,
             members = withMembers.members,
-            dutyTypes = withDutyTypes.dutyTypes
+            dutyTypes = withDutyTypes.dutyTypes,
+            profilePhotoUrls = profilePhotoUrls
         )
     }
 
@@ -160,6 +165,7 @@ class TeamService(
 
     private fun loadShift(team: Team, localDate: LocalDate): List<DutyByShift> {
         val teamMembers = memberRepository.findMembersByTeam(team)
+        val profilePhotoUrls = buildProfilePhotoUrlMap(teamMembers)
 
         val dutyMemberMap = dutyRepository.findByDutyDateAndMemberIn(localDate, teamMembers)
             .associateBy({ it }, { it.member })
@@ -176,7 +182,7 @@ class TeamService(
                     dutyMemberMap.filter { (duty, _) -> duty.dutyType?.id == id }.values
                 } ?: offMembers
                 val members = sourceMembers
-                    .map { member -> SimpleMemberDto(member.id, member.name) }
+                    .map { member -> SimpleMemberDto(member.id, member.name, profilePhotoUrls[member.id]) }
                     .sortedBy { it.name }
                 DutyByShift(dutyTypeDto, members)
             }
@@ -240,6 +246,11 @@ class TeamService(
     fun updateWorkType(teamId: Long, workType: WorkType) {
         val team = teamRepository.findById(teamId).orElseThrow()
         team.workType = workType
+    }
+
+    private fun buildProfilePhotoUrlMap(members: List<Member>): Map<Long, String?> {
+        return members.mapNotNull { it.id }
+            .associateWith { memberId -> profilePhotoService.getProfilePhotoUrl(memberId) }
     }
 
 }

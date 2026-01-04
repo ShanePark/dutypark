@@ -13,6 +13,7 @@ import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
+import org.springframework.context.annotation.Lazy
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -26,19 +27,20 @@ class MemberService(
     private val passwordEncoder: PasswordEncoder,
     private val memberSsoRegisterRepository: MemberSsoRegisterRepository,
     private val memberManagerRepository: MemberManagerRepository,
+    @Lazy private val profilePhotoService: ProfilePhotoService,
 ) {
 
     @Transactional(readOnly = true)
     fun findAll(): List<MemberDto> {
         return memberRepository.findAll()
             .sortedWith(compareBy({ it.team?.name }, { it.name }))
-            .map { MemberDto.of(it) }
+            .map { MemberDto.of(it).withProfilePhoto(it.id) }
     }
 
     @Transactional(readOnly = true)
     fun findById(memberId: Long): MemberDto {
         val member = memberRepository.findById(memberId).orElseThrow()
-        return MemberDto.of(member)
+        return MemberDto.of(member).withProfilePhoto(memberId)
     }
 
     fun createMember(memberCreateDto: MemberCreateDto): Member {
@@ -145,12 +147,18 @@ class MemberService(
 
     fun findAllManagers(loginMember: LoginMember): List<MemberDto> {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
-        return findAllManagers(member).map { MemberDto.of(it) }
+        return findAllManagers(member).map { MemberDto.of(it).withProfilePhoto(it.id) }
     }
 
     fun isManager(isManager: LoginMember, targetMemberId: Long): Boolean {
         val target = memberRepository.findById(targetMemberId).orElseThrow()
         return isManager(isManager = isManager, target = target)
+    }
+
+    private fun MemberDto.withProfilePhoto(memberId: Long?): MemberDto {
+        if (memberId == null) return this
+        val photoUrl = profilePhotoService.getProfilePhotoUrl(memberId)
+        return this.copy(profilePhotoUrl = photoUrl)
     }
 
 }

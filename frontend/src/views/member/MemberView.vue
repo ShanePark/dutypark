@@ -11,6 +11,7 @@ import { useEscapeKey } from '@/composables/useEscapeKey'
 import { useKakao } from '@/composables/useKakao'
 import type { FriendDto, MemberDto, RefreshTokenDto, CalendarVisibility } from '@/types'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
+import ProfilePhotoUploader from '@/components/common/ProfilePhotoUploader.vue'
 import {
   User,
   Building2,
@@ -302,6 +303,13 @@ async function fetchMemberInfo() {
   memberInfo.value = response.data
 }
 
+// Profile photo handling
+function onProfilePhotoUpdate(photoUrl: string | null) {
+  if (memberInfo.value) {
+    memberInfo.value = { ...memberInfo.value, profilePhotoUrl: photoUrl }
+  }
+}
+
 // Initialize data
 onMounted(async () => {
   loading.value = true
@@ -350,27 +358,34 @@ onMounted(async () => {
           <User class="w-5 h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
           기본 정보
         </h2>
-        <div class="space-y-4">
-          <div class="flex flex-col md:flex-row md:items-center py-3" :style="{ borderBottomWidth: '1px', borderColor: 'var(--dp-border-secondary)' }">
-            <div class="w-full md:w-24 text-sm font-medium flex items-center gap-2 mb-1 md:mb-0" :style="{ color: 'var(--dp-text-secondary)' }">
-              <User class="w-4 h-4" />
-              이름
-            </div>
-            <div class="flex-1" :style="{ color: 'var(--dp-text-primary)' }">{{ memberInfo?.name }}</div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <!-- Profile Photo (Left) -->
+          <div class="flex flex-col items-center">
+            <h3 class="text-sm font-medium mb-3" :style="{ color: 'var(--dp-text-secondary)' }">프로필 사진</h3>
+            <ProfilePhotoUploader
+              :current-photo-url="memberInfo?.profilePhotoUrl"
+              @upload-complete="onProfilePhotoUpdate"
+            />
           </div>
-          <div class="flex flex-col md:flex-row md:items-center py-3" :style="{ borderBottomWidth: '1px', borderColor: 'var(--dp-border-secondary)' }">
-            <div class="w-full md:w-24 text-sm font-medium flex items-center gap-2 mb-1 md:mb-0" :style="{ color: 'var(--dp-text-secondary)' }">
-              <Building2 class="w-4 h-4" />
-              소속
+
+          <!-- Member Info (Right) -->
+          <div class="flex flex-col justify-center space-y-4">
+            <div class="flex items-center gap-3">
+              <User class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }" />
+              <span class="text-sm w-14 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }">이름</span>
+              <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ memberInfo?.name }}</span>
             </div>
-            <div class="flex-1" :style="{ color: 'var(--dp-text-primary)' }">{{ memberInfo?.team || '-' }}</div>
-          </div>
-          <div v-if="memberInfo?.email" class="flex flex-col md:flex-row md:items-center py-3">
-            <div class="w-full md:w-24 text-sm font-medium flex items-center gap-2 mb-1 md:mb-0" :style="{ color: 'var(--dp-text-secondary)' }">
-              <Mail class="w-4 h-4" />
-              이메일
+            <div class="flex items-center gap-3">
+              <Building2 class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }" />
+              <span class="text-sm w-14 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }">소속</span>
+              <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ memberInfo?.team || '-' }}</span>
             </div>
-            <div class="flex-1" :style="{ color: 'var(--dp-text-primary)' }">{{ memberInfo?.email }}</div>
+            <div v-if="memberInfo?.email" class="flex items-center gap-3">
+              <Mail class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }" />
+              <span class="text-sm w-14 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }">이메일</span>
+              <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ memberInfo?.email }}</span>
+            </div>
           </div>
         </div>
       </section>

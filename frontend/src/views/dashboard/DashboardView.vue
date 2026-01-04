@@ -15,6 +15,7 @@ import type {
   DashboardScheduleDto,
   FriendDto,
 } from '@/types'
+import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import {
   Calendar,
   Briefcase,
@@ -554,9 +555,11 @@ watch(
           @click="moveTo()"
         >
           <div class="flex items-center gap-3">
-            <div class="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center">
-              <User class="w-5 h-5 text-white" />
-            </div>
+            <ProfileAvatar
+              :photo-url="myInfo?.member.profilePhotoUrl"
+              :name="myInfo?.member.name"
+              size="md"
+            />
             <span class="text-lg font-bold text-white">{{ myInfo?.member.name || '로딩중...' }}</span>
           </div>
           <ChevronRight class="w-5 h-5 text-gray-400 group-hover:text-white group-hover:translate-x-1 transition-all" />
@@ -652,9 +655,12 @@ watch(
             >
               <div class="flex justify-between items-center">
                 <div class="font-medium flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                  <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Home v-if="req.requestType === 'FAMILY_REQUEST'" class="w-4 h-4 text-blue-600" />
-                    <UserPlus v-else class="w-4 h-4 text-blue-600" />
+                  <div class="relative">
+                    <ProfileAvatar :photo-url="req.fromMember.profilePhotoUrl" size="sm" />
+                    <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center bg-blue-500 ring-2 ring-white">
+                      <Home v-if="req.requestType === 'FAMILY_REQUEST'" class="w-2.5 h-2.5 text-white" />
+                      <UserPlus v-else class="w-2.5 h-2.5 text-white" />
+                    </div>
                   </div>
                   {{ req.fromMember.name }}
                 </div>
@@ -684,9 +690,12 @@ watch(
             >
               <div class="flex justify-between items-center">
                 <div class="font-medium flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                  <div class="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
-                    <Home v-if="req.requestType === 'FAMILY_REQUEST'" class="w-4 h-4 text-amber-600" />
-                    <UserPlus v-else class="w-4 h-4 text-amber-600" />
+                  <div class="relative">
+                    <ProfileAvatar :photo-url="req.toMember.profilePhotoUrl" size="sm" />
+                    <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center bg-amber-500 ring-2 ring-white">
+                      <Home v-if="req.requestType === 'FAMILY_REQUEST'" class="w-2.5 h-2.5 text-white" />
+                      <UserPlus v-else class="w-2.5 h-2.5 text-white" />
+                    </div>
                   </div>
                   {{ req.toMember.name }}
                 </div>
@@ -743,14 +752,13 @@ watch(
                 <!-- Header: Name & Actions -->
                 <div class="flex items-center justify-between mb-1.5 sm:mb-2">
                   <div class="flex items-center gap-1.5 min-w-0 flex-1">
-                    <div
-                      class="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                      :class="friend.isFamily ? 'friend-icon-family' : 'friend-icon-regular'"
-                    >
-                      <Home v-if="friend.isFamily" class="w-3 h-3 sm:w-4 sm:h-4" />
-                      <User v-else class="w-3 h-3 sm:w-4 sm:h-4" />
-                    </div>
+                    <ProfileAvatar
+                      :photo-url="friend.member.profilePhotoUrl"
+                      :name="friend.member.name"
+                      size="sm"
+                    />
                     <span class="font-medium text-xs sm:text-sm truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ friend.member.name }}</span>
+                    <Home v-if="friend.isFamily" class="w-3 h-3 flex-shrink-0 text-amber-500" title="Family member" />
                   </div>
                   <div class="flex items-center flex-shrink-0" @click.stop>
                     <!-- Pin/Unpin button -->

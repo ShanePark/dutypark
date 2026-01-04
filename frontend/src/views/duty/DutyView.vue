@@ -108,7 +108,7 @@ interface LocalDDay {
 interface Friend {
   id: number
   name: string
-  profileImage?: string
+  profilePhotoUrl?: string | null
 }
 
 interface CalendarDay {
@@ -1132,7 +1132,7 @@ async function loadFriends() {
     friends.value = response.data.map((f) => ({
       id: f.id ?? 0,
       name: f.name,
-      profileImage: undefined,
+      profilePhotoUrl: f.profilePhotoUrl,
     }))
   } catch (error) {
     console.error('Failed to load friends:', error)

@@ -12,6 +12,7 @@ import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
+import com.tistory.shanepark.dutypark.member.service.ProfilePhotoService
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -27,12 +28,13 @@ class DashboardService(
     private val scheduleRepository: ScheduleRepository,
     private val friendRelationRepository: FriendRelationRepository,
     private val friendService: FriendService,
+    private val profilePhotoService: ProfilePhotoService,
 ) {
 
     fun my(loginMember: LoginMember): DashboardMyDetail {
         val member = memberRepository.findMemberWithTeam(loginMember.id).orElseThrow()
         return DashboardMyDetail(
-            member = MemberDto.of(member),
+            member = MemberDto.of(member).withProfilePhoto(member.id),
             duty = todayDuty(member),
             schedules = todaySchedules(loginMember = loginMember, member = member),
         )
@@ -78,7 +80,7 @@ class DashboardService(
         val friends = friendRelationRepository.findAllByMember(member)
             .map {
                 DashboardFriendDetail(
-                    member = FriendDto.of(it.friend),
+                    member = FriendDto.of(it.friend).withProfilePhoto(it.friend.id),
                     duty = todayDuty(it.friend),
                     schedules = todaySchedules(loginMember = loginMember, member = it.friend),
                     isFamily = it.isFamily,
@@ -92,6 +94,18 @@ class DashboardService(
             pendingRequestsFrom = pendingRequestsFrom,
             pendingRequestsTo = pendingRequestsTo,
         )
+    }
+
+    private fun MemberDto.withProfilePhoto(memberId: Long?): MemberDto {
+        if (memberId == null) return this
+        val photoUrl = profilePhotoService.getProfilePhotoUrl(memberId)
+        return this.copy(profilePhotoUrl = photoUrl)
+    }
+
+    private fun FriendDto.withProfilePhoto(memberId: Long?): FriendDto {
+        if (memberId == null) return this
+        val photoUrl = profilePhotoService.getProfilePhotoUrl(memberId)
+        return this.copy(profilePhotoUrl = photoUrl)
     }
 
 }

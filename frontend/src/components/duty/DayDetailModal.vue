@@ -9,10 +9,10 @@ import {
   GripVertical,
   Paperclip,
   Lock,
-  User,
   UserPlus,
   Check,
 } from 'lucide-vue-next'
+import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import FileUploader from '@/components/common/FileUploader.vue'
 import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
@@ -63,7 +63,7 @@ interface Props {
   dutyTypes: DutyType[]
   canEdit: boolean
   batchEditMode: boolean
-  friends: Array<{ id: number; name: string }>
+  friends: Array<{ id: number; name: string; profilePhotoUrl?: string | null }>
   memberId: number
 }
 

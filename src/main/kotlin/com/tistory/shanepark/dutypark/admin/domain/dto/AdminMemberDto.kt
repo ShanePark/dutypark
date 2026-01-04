@@ -11,16 +11,18 @@ data class AdminMemberDto(
     val teamId: Long?,
     val teamName: String?,
     val tokens: List<RefreshTokenDto>,
+    val profilePhotoUrl: String? = null,
 ) {
     companion object {
-        fun of(member: Member, tokens: List<RefreshToken>): AdminMemberDto {
+        fun of(member: Member, tokens: List<RefreshToken>, profilePhotoUrl: String? = null): AdminMemberDto {
             return AdminMemberDto(
                 id = member.id!!,
                 name = member.name,
                 email = member.email,
                 teamId = member.team?.id,
                 teamName = member.team?.name,
-                tokens = tokens.filter { it.isValid() }.map { RefreshTokenDto.of(it) }
+                tokens = tokens.filter { it.isValid() }.map { RefreshTokenDto.of(it) },
+                profilePhotoUrl = profilePhotoUrl
             )
         }
     }

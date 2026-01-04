@@ -7,6 +7,8 @@ import type {
   RefreshTokenDto,
   CalendarVisibility,
   Page,
+  UpdateProfilePhotoRequest,
+  ProfilePhotoResponse,
 } from '@/types'
 
 /**
@@ -60,6 +62,20 @@ export const memberApi = {
    */
   getManagers() {
     return apiClient.get<MemberDto[]>('/members/managers')
+  },
+
+  /**
+   * Update profile photo
+   */
+  updateProfilePhoto(request: UpdateProfilePhotoRequest) {
+    return apiClient.put<ProfilePhotoResponse>('/members/profile-photo', request)
+  },
+
+  /**
+   * Delete profile photo
+   */
+  deleteProfilePhoto() {
+    return apiClient.delete('/members/profile-photo')
   },
 }
 
