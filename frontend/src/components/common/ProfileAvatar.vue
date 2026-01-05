@@ -113,7 +113,7 @@ onUnmounted(() => {
 <style scoped>
 .profile-avatar {
   background-color: var(--dp-bg-tertiary);
-  border: 1px solid var(--dp-border-primary);
+  border: 2px solid var(--dp-border-primary);
 }
 
 .profile-avatar-fallback {

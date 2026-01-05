@@ -787,11 +787,11 @@ watch(
                     <!-- Dropdown toggle -->
                     <div v-if="friend.member.id" class="relative">
                       <button
-                        class="p-1 rounded-lg transition hover:bg-opacity-80 cursor-pointer"
+                        class="p-1.5 rounded-lg transition hover:bg-opacity-80 cursor-pointer"
                         :style="{ color: 'var(--dp-text-muted)' }"
                         @click="toggleDropdown(friend.member.id, $event)"
                       >
-                        <MoreVertical class="w-4 h-4" />
+                        <MoreVertical class="w-5 h-5" />
                       </button>
                       <!-- Dropdown menu -->
                       <div
@@ -844,12 +844,12 @@ watch(
               </div>
 
               <!-- Drag handle for pinned friends -->
-              <div v-if="friend.pinOrder" class="absolute bottom-1.5 right-1.5 sm:bottom-2 sm:right-2" @click.stop>
+              <div v-if="friend.pinOrder" class="absolute bottom-2 right-2" @click.stop>
                 <div
-                  class="handle friend-drag-handle rounded-md sm:rounded-lg p-1 sm:p-1.5 transition hover:bg-black/10 !cursor-grab active:!cursor-grabbing"
+                  class="handle friend-drag-handle rounded-lg p-1.5 transition hover:bg-black/10 !cursor-grab active:!cursor-grabbing"
                   title="드래그하여 순서 변경"
                 >
-                  <GripVertical class="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                  <GripVertical class="w-4 h-4" />
                 </div>
               </div>
             </div>
