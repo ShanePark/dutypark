@@ -733,7 +733,7 @@ watch(
               <div class="w-8 h-8 border-3 rounded-full animate-spin" :style="{ borderColor: 'var(--dp-border-secondary)', borderTopColor: 'var(--dp-text-primary)' }"></div>
             </div>
           </template>
-          <div v-else ref="friendListRef" class="grid grid-cols-2 gap-2 sm:gap-3">
+          <div v-else ref="friendListRef" class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
             <!-- Friend Cards -->
             <div
               v-for="friend in sortedFriends"
@@ -748,9 +748,9 @@ watch(
               :style="!friend.pinOrder ? { backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' } : {}"
               @click="moveTo(friend.member.id)"
             >
-              <div class="flex p-2 sm:p-3">
+              <div class="flex p-3">
                 <!-- Left section: Large Profile -->
-                <div class="flex-shrink-0 mr-2.5 sm:mr-3">
+                <div class="flex-shrink-0 mr-3">
                   <ProfileAvatar
                     :photo-url="friend.member.profilePhotoUrl"
                     :name="friend.member.name"
@@ -762,36 +762,36 @@ watch(
                 <div class="flex-1 min-w-0">
                   <!-- Top: Name & Actions -->
                   <div class="flex items-center justify-between mb-1.5">
-                    <div class="flex items-center gap-1 min-w-0">
-                      <span class="font-medium text-xs sm:text-sm truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ friend.member.name }}</span>
-                      <Home v-if="friend.isFamily" class="w-3 h-3 flex-shrink-0 text-amber-500" title="Family member" />
+                    <div class="flex items-center gap-1.5 min-w-0">
+                      <span class="font-medium text-sm truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ friend.member.name }}</span>
+                      <Home v-if="friend.isFamily" class="w-3.5 h-3.5 flex-shrink-0 text-amber-500" title="Family member" />
                     </div>
                     <div class="flex items-center flex-shrink-0" @click.stop>
                     <!-- Pin/Unpin button -->
                     <button
                       v-if="friend.pinOrder"
-                      class="p-0.5 sm:p-1 text-amber-500 hover:text-amber-600 transition cursor-pointer"
+                      class="p-1 text-amber-500 hover:text-amber-600 transition cursor-pointer"
                       @click.stop="unpinFriend(friend.member)"
                       title="고정 해제"
                     >
-                      <Star class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" />
+                      <Star class="w-4 h-4" fill="currentColor" />
                     </button>
                     <button
                       v-else
-                      class="p-0.5 sm:p-1 text-gray-300 hover:text-amber-500 transition cursor-pointer"
+                      class="p-1 text-gray-300 hover:text-amber-500 transition cursor-pointer"
                       @click.stop="pinFriend(friend.member)"
                       title="고정"
                     >
-                      <Star class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <Star class="w-4 h-4" />
                     </button>
                     <!-- Dropdown toggle -->
                     <div v-if="friend.member.id" class="relative">
                       <button
-                        class="p-0.5 sm:p-1 rounded-lg transition hover:bg-opacity-80 cursor-pointer"
+                        class="p-1 rounded-lg transition hover:bg-opacity-80 cursor-pointer"
                         :style="{ color: 'var(--dp-text-muted)' }"
                         @click="toggleDropdown(friend.member.id, $event)"
                       >
-                        <MoreVertical class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <MoreVertical class="w-4 h-4" />
                       </button>
                       <!-- Dropdown menu -->
                       <div
@@ -821,10 +821,10 @@ watch(
 
                   <!-- Duty info -->
                   <div class="flex items-center gap-1.5 mb-1.5">
-                    <Briefcase class="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
-                    <span class="text-[10px] sm:text-xs" :style="{ color: 'var(--dp-text-secondary)' }">근무:</span>
-                    <span v-if="friend.duty" class="text-[10px] sm:text-xs font-medium truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ friend.duty.dutyType || '휴무' }}</span>
-                    <span v-else class="text-[10px] sm:text-xs" :style="{ color: 'var(--dp-text-muted)' }">-</span>
+                    <Briefcase class="w-3.5 h-3.5 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+                    <span class="text-xs" :style="{ color: 'var(--dp-text-secondary)' }">근무:</span>
+                    <span v-if="friend.duty" class="text-xs font-medium truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ friend.duty.dutyType || '휴무' }}</span>
+                    <span v-else class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">-</span>
                   </div>
 
                   <!-- Schedules -->
@@ -832,11 +832,11 @@ watch(
                     <div
                       v-for="schedule in friend.schedules.slice(0, 2)"
                       :key="schedule.id"
-                      class="text-[10px] sm:text-xs py-1 px-1.5 rounded-md truncate friend-schedule-item"
+                      class="text-xs py-1 px-1.5 rounded-md truncate friend-schedule-item"
                     >
                       {{ printSchedule(schedule) }}
                     </div>
-                    <div v-if="friend.schedules.length > 2" class="text-[10px] sm:text-xs pl-1" :style="{ color: 'var(--dp-text-muted)' }">
+                    <div v-if="friend.schedules.length > 2" class="text-xs pl-1" :style="{ color: 'var(--dp-text-muted)' }">
                       +{{ friend.schedules.length - 2 }}개 더보기
                     </div>
                   </div>
