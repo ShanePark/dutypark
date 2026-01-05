@@ -126,6 +126,7 @@ class AuthController(
 
     /**
      * Restore API - switch back to original account
+     * Reuses existing refresh token from cookie to avoid token accumulation
      */
     @PostMapping("/restore")
     fun restore(
@@ -134,7 +135,8 @@ class AuthController(
         resp: HttpServletResponse
     ): ResponseEntity<*> {
         return try {
-            val tokenResponse = authService.restore(loginMember, req)
+            val existingRefreshToken = cookieService.extractRefreshToken(req.cookies)
+            val tokenResponse = authService.restore(loginMember, existingRefreshToken, req)
             cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)
             ResponseEntity.ok(tokenResponse.toPublicResponse())
         } catch (e: AuthException) {

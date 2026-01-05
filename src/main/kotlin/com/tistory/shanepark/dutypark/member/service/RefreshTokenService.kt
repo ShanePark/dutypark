@@ -78,4 +78,12 @@ class RefreshTokenService(
         refreshTokenRepository.deleteAll(findAllByMember)
     }
 
+    fun deleteOtherRefreshTokens(memberId: Long, currentToken: String): Int {
+        val tokens = refreshTokenRepository.findAllByMemberIdOrderByLastUsedDesc(memberId)
+        val tokensToDelete = tokens.filter { it.token != currentToken }
+        refreshTokenRepository.deleteAll(tokensToDelete)
+        log.info("Deleted {} other refresh tokens for member {}", tokensToDelete.size, memberId)
+        return tokensToDelete.size
+    }
+
 }

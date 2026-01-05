@@ -221,6 +221,30 @@ async function deleteToken(tokenId: number) {
   }
 }
 
+const deletingOtherTokens = ref(false)
+
+async function deleteOtherTokens() {
+  const otherTokensCount = tokens.value.filter(t => !t.isCurrentLogin).length
+  if (otherTokensCount === 0) {
+    showInfo('현재 접속 외에 다른 세션이 없습니다.')
+    return
+  }
+
+  if (!await confirm(`현재 접속을 제외한 ${otherTokensCount}개의 다른 기기에서 모두 로그아웃 됩니다. 진행하시겠습니까?`, '전체 접속 종료')) return
+
+  deletingOtherTokens.value = true
+  try {
+    const response = await refreshTokenApi.deleteOtherRefreshTokens()
+    await fetchTokens()
+    toastSuccess(`${response.data.deletedCount}개의 세션이 종료되었습니다.`)
+  } catch (error) {
+    console.error('Failed to delete other tokens:', error)
+    showError('세션 종료에 실패했습니다.')
+  } finally {
+    deletingOtherTokens.value = false
+  }
+}
+
 // SSO connections
 interface SsoConnection {
   provider: string
@@ -573,10 +597,22 @@ onMounted(async () => {
 
       <!-- Session Management Section -->
       <section class="rounded-xl shadow-sm p-6 mb-4" :style="{ backgroundColor: 'var(--dp-bg-card)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
-        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-          <Smartphone class="w-5 h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
-          접속 세션 관리
-        </h2>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
+            <Smartphone class="w-5 h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
+            접속 세션 관리
+          </h2>
+          <button
+            v-if="tokens.filter(t => !t.isCurrentLogin).length > 0"
+            @click="deleteOtherTokens"
+            :disabled="deletingOtherTokens"
+            class="px-3 py-2 min-h-10 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+          >
+            <Loader2 v-if="deletingOtherTokens" class="w-4 h-4 animate-spin" />
+            <LogOut v-else class="w-4 h-4" />
+            전체 접속 종료
+          </button>
+        </div>
         <SessionTokenList
           :tokens="tokens"
           :loading="tokensLoading"

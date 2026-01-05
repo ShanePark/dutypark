@@ -222,6 +222,13 @@ export const refreshTokenApi = {
   deleteRefreshToken(id: number) {
     return apiClient.delete(`/auth/refresh-tokens/${id}`)
   },
+
+  /**
+   * Delete all other refresh tokens except current session
+   */
+  deleteOtherRefreshTokens() {
+    return apiClient.delete<{ deletedCount: number }>('/auth/refresh-tokens/others')
+  },
 }
 
 export default {

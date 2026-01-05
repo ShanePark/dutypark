@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { adminApi } from '@/api/admin'
 import { authApi } from '@/api/auth'
+import { refreshTokenApi } from '@/api/member'
 import { useSwal } from '@/composables/useSwal'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEscapeKey } from '@/composables/useEscapeKey'
@@ -29,7 +30,7 @@ import {
 
 const router = useRouter()
 const authStore = useAuthStore()
-const { showSuccess, showError } = useSwal()
+const { showSuccess, showError, confirm, toastSuccess } = useSwal()
 
 const loading = ref(true)
 const members = ref<AdminMemberDto[]>([])
@@ -117,6 +118,20 @@ async function handleChangePassword() {
     passwordError.value = message
   } finally {
     changingPassword.value = false
+  }
+}
+
+async function handleRevokeToken(tokenId: number, member: AdminMemberDto) {
+  if (!await confirm(`${member.name}님의 세션을 종료하시겠습니까?`, '세션 종료')) return
+
+  try {
+    await refreshTokenApi.deleteRefreshToken(tokenId)
+    toastSuccess(`${member.name}님의 세션이 종료되었습니다.`)
+    member.tokens = member.tokens.filter(t => t.id !== tokenId)
+    allTokens.value = allTokens.value.filter(t => t.id !== tokenId)
+  } catch (error) {
+    console.error('Failed to revoke token:', error)
+    showError('세션 종료에 실패했습니다.')
   }
 }
 
@@ -379,8 +394,9 @@ onMounted(async () => {
                   <SessionTokenList
                     :tokens="member.tokens"
                     :loading="false"
-                    :show-delete-button="false"
+                    :show-delete-button="true"
                     :compact="true"
+                    @delete="(tokenId: number) => handleRevokeToken(tokenId, member)"
                   />
                 </div>
               </div>
