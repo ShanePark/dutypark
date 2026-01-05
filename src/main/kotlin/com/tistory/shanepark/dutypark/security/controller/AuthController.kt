@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
+import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.PasswordChangeDto
@@ -21,6 +22,7 @@ class AuthController(
     private val authService: AuthService,
     private val cookieService: CookieService,
     private val refreshTokenService: RefreshTokenService,
+    private val jwtConfig: JwtConfig,
 ) {
     private val log = logger()
 
@@ -105,18 +107,18 @@ class AuthController(
 
     /**
      * Impersonate API - switch to managed account
+     * Only sets access token cookie (no refresh token) so impersonation auto-expires
      */
     @PostMapping("/impersonate/{targetMemberId}")
     fun impersonate(
         @Login loginMember: LoginMember,
         @PathVariable targetMemberId: Long,
-        req: HttpServletRequest,
         resp: HttpServletResponse
     ): ResponseEntity<*> {
         return try {
-            val tokenResponse = authService.impersonate(loginMember, targetMemberId, req)
-            cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)
-            ResponseEntity.ok(tokenResponse.toPublicResponse())
+            val accessToken = authService.impersonate(loginMember, targetMemberId)
+            cookieService.setAccessTokenCookie(resp, accessToken)
+            ResponseEntity.ok(mapOf("expiresIn" to jwtConfig.tokenValidityInSeconds))
         } catch (e: AuthException) {
             ResponseEntity.status(403).body(mapOf("error" to (e.message ?: "계정 전환에 실패했습니다.")))
         }

@@ -556,8 +556,9 @@ watch(
         >
           <div class="flex items-center gap-3">
             <ProfileAvatar
-              :photo-url="myInfo?.member.profilePhotoUrl"
+              :member-id="myInfo?.member.id"
               :name="myInfo?.member.name"
+              :has-profile-photo="myInfo?.member.hasProfilePhoto"
               size="md"
             />
             <span class="text-lg font-bold text-white">{{ myInfo?.member.name || '로딩중...' }}</span>
@@ -656,7 +657,7 @@ watch(
               <div class="flex justify-between items-center">
                 <div class="font-medium flex items-center gap-2 friend-request-name">
                   <div class="relative">
-                    <ProfileAvatar :photo-url="req.fromMember.profilePhotoUrl" size="sm" />
+                    <ProfileAvatar :member-id="req.fromMember.id" :has-profile-photo="req.fromMember.hasProfilePhoto" size="sm" />
                     <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center bg-blue-500 ring-2 ring-white">
                       <Home v-if="req.requestType === 'FAMILY_REQUEST'" class="w-2.5 h-2.5 text-white" />
                       <UserPlus v-else class="w-2.5 h-2.5 text-white" />
@@ -691,7 +692,7 @@ watch(
               <div class="flex justify-between items-center">
                 <div class="font-medium flex items-center gap-2 friend-request-name">
                   <div class="relative">
-                    <ProfileAvatar :photo-url="req.toMember.profilePhotoUrl" size="sm" />
+                    <ProfileAvatar :member-id="req.toMember.id" :has-profile-photo="req.toMember.hasProfilePhoto" size="sm" />
                     <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center bg-amber-500 ring-2 ring-white">
                       <Home v-if="req.requestType === 'FAMILY_REQUEST'" class="w-2.5 h-2.5 text-white" />
                       <UserPlus v-else class="w-2.5 h-2.5 text-white" />
@@ -752,8 +753,9 @@ watch(
                 <!-- Left section: Large Profile -->
                 <div class="flex-shrink-0 mr-3">
                   <ProfileAvatar
-                    :photo-url="friend.member.profilePhotoUrl"
+                    :member-id="friend.member.id"
                     :name="friend.member.name"
+                    :has-profile-photo="friend.member.hasProfilePhoto"
                     size="xl"
                   />
                 </div>
@@ -999,8 +1001,9 @@ watch(
                 >
                   <div class="flex items-center gap-3">
                     <ProfileAvatar
-                      :photo-url="member.profilePhotoUrl"
+                      :member-id="member.id"
                       :name="member.name"
+                      :has-profile-photo="member.hasProfilePhoto"
                       size="md"
                     />
                     <div>

@@ -11,7 +11,6 @@ import {
   ChevronRight,
   Search,
   Users,
-  User,
   FileText,
   Star,
   Loader2,
@@ -33,6 +32,7 @@ import OtherDutiesModal from '@/components/duty/OtherDutiesModal.vue'
 import ScheduleViewModal from '@/components/duty/ScheduleViewModal.vue'
 import YearMonthPicker from '@/components/common/YearMonthPicker.vue'
 import CalendarGrid from '@/components/common/CalendarGrid.vue'
+import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 
 // API
 import { todoApi } from '@/api/todo'
@@ -108,7 +108,6 @@ interface LocalDDay {
 interface Friend {
   id: number
   name: string
-  profilePhotoUrl?: string | null
 }
 
 interface CalendarDay {
@@ -141,6 +140,7 @@ const today = new Date()
 const currentYear = ref(today.getFullYear())
 const currentMonth = ref(today.getMonth() + 1)
 const memberName = ref('')
+const memberHasProfilePhoto = ref(false)
 const memberId = computed(() => {
   const paramId = route.params.id as string | undefined
   if (!paramId || paramId === 'me') {
@@ -546,22 +546,27 @@ async function checkCanManage() {
   }
 }
 
-// Load member info (for friend's calendar)
+// Load member info (for both own and friend's calendar)
 async function loadMemberInfo() {
-  if (isMyCalendar.value) {
-    // Use auth store for own calendar
-    if (authStore.user) {
-      memberName.value = authStore.user.name
-      teamId.value = authStore.user.teamId
-    }
-  } else {
-    // Fetch member info for friend's calendar
-    try {
+  try {
+    if (isMyCalendar.value) {
+      const response = await memberApi.getMyInfo()
+      memberName.value = response.data.name
+      teamId.value = response.data.teamId
+      memberHasProfilePhoto.value = response.data.hasProfilePhoto ?? false
+    } else {
       const response = await memberApi.getMemberById(memberId.value)
       memberName.value = response.data.name
       teamId.value = response.data.teamId
-    } catch (error) {
-      console.error('Failed to load member info:', error)
+      memberHasProfilePhoto.value = response.data.hasProfilePhoto ?? false
+    }
+  } catch (error) {
+    console.error('Failed to load member info:', error)
+    // Fallback to auth store for own calendar
+    if (isMyCalendar.value && authStore.user) {
+      memberName.value = authStore.user.name
+      teamId.value = authStore.user.teamId
+      memberHasProfilePhoto.value = false
     }
   }
 }
@@ -648,6 +653,8 @@ watch(
     selectedFriendIds.value = []
     showMyDuties.value = false
     otherDuties.value = []
+    memberName.value = ''
+    memberHasProfilePhoto.value = false
 
     try {
       // Load calendar first to ensure index alignment
@@ -1132,7 +1139,6 @@ async function loadFriends() {
     friends.value = response.data.map((f) => ({
       id: f.id ?? 0,
       name: f.name,
-      profilePhotoUrl: f.profilePhotoUrl,
     }))
   } catch (error) {
     console.error('Failed to load friends:', error)
@@ -1418,8 +1424,58 @@ async function showExcelUploadModal() {
 
     <!-- Main Content -->
     <template v-else>
-    <!-- Todo List Section -->
-    <div v-if="isMyCalendar" class="mb-1 flex items-center gap-1.5 px-1">
+    <!-- Header: Profile + Year-Month (centered) + Search -->
+    <div class="relative flex items-start justify-between mb-2 px-1">
+      <!-- Left: Profile Photo + Name -->
+      <div class="flex-shrink-0 flex items-center gap-2 z-10">
+        <!-- Profile Photo -->
+        <ProfileAvatar :member-id="memberId" :has-profile-photo="memberHasProfilePhoto" size="xl" :name="memberName" />
+        <!-- Name -->
+        <span
+          class="text-sm sm:text-base font-semibold max-w-[60px] sm:max-w-[80px] truncate"
+          :style="{ color: 'var(--dp-text-primary)' }"
+        >{{ memberName }}</span>
+      </div>
+
+      <!-- Center: Year-Month Navigation (absolute centered) -->
+      <div class="absolute left-1/2 -translate-x-1/2 top-2 sm:top-3 flex items-center">
+        <button @click="prevMonth" class="calendar-nav-btn p-1 sm:p-2 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer">
+          <ChevronLeft class="w-5 h-5 sm:w-6 sm:h-6" />
+        </button>
+        <button
+          @click="isYearMonthPickerOpen = true"
+          class="calendar-nav-btn px-2 sm:px-3 py-1 text-lg sm:text-2xl font-semibold rounded whitespace-nowrap cursor-pointer"
+        >
+          {{ currentYear }}-{{ String(currentMonth).padStart(2, '0') }}
+        </button>
+        <button @click="nextMonth" class="calendar-nav-btn p-1 sm:p-2 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer">
+          <ChevronRight class="w-5 h-5 sm:w-6 sm:h-6" />
+        </button>
+      </div>
+
+      <!-- Right: Search -->
+      <div v-if="canSearch" class="flex-shrink-0 flex items-stretch rounded-lg border overflow-hidden z-10 mt-2 sm:mt-3" :style="{ borderColor: 'var(--dp-border-secondary)' }">
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="검색"
+          @keyup.enter="handleSearch()"
+          class="px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none w-14 sm:w-20 border-none"
+          :style="{ backgroundColor: 'var(--dp-bg-input)', color: 'var(--dp-text-primary)' }"
+        />
+        <button
+          @click="searchQuery.trim() ? handleSearch() : openSearchModal()"
+          class="px-2 py-1.5 bg-gray-800 text-white hover:bg-gray-700 transition flex items-center justify-center cursor-pointer"
+        >
+          <Search class="w-4 h-4" />
+        </button>
+      </div>
+      <!-- Placeholder for right side when no search (to maintain layout) -->
+      <div v-else class="w-14 sm:w-20 flex-shrink-0"></div>
+    </div>
+
+    <!-- Todo row (only for my calendar) -->
+    <div v-if="isMyCalendar" class="flex items-center gap-1.5 mb-1 px-1">
       <!-- Button Group: List + Add -->
       <div class="flex-shrink-0 inline-flex rounded-lg border overflow-hidden" :style="{ borderColor: 'var(--dp-border-secondary)' }">
         <!-- Todo List Button -->
@@ -1453,59 +1509,6 @@ async function showExcelUploadModal() {
           >
             <span class="truncate">{{ todo.title }}</span>
             <FileText v-if="todo.content || todo.hasAttachments" class="w-2.5 h-2.5 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Month Control -->
-    <div class="flex items-center justify-between gap-1 mb-1">
-      <!-- Left: Calendar Owner Name (click to go to current month) -->
-      <div class="w-20 sm:w-24 flex-shrink-0 flex items-center justify-start">
-        <button
-          @click="goToToday"
-          class="flex items-center gap-1.5 px-2 py-1 rounded-full border cursor-pointer transition-all duration-150 hover:shadow-sm"
-          :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderColor: 'var(--dp-border-secondary)' }"
-          title="이번 달로 이동"
-        >
-          <User class="w-3.5 h-3.5 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }" />
-          <span class="text-xs sm:text-sm font-semibold truncate max-w-[60px] sm:max-w-[72px]" :style="{ color: 'var(--dp-text-primary)' }">{{ memberName }}</span>
-        </button>
-      </div>
-
-      <!-- Center: Year-Month Navigation -->
-      <div class="flex items-center justify-center">
-        <button @click="prevMonth" class="calendar-nav-btn p-1 sm:p-2 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer">
-          <ChevronLeft class="w-5 h-5 sm:w-6 sm:h-6" />
-        </button>
-        <button
-          @click="isYearMonthPickerOpen = true"
-          class="calendar-nav-btn px-2 sm:px-3 py-1 text-lg sm:text-2xl font-semibold rounded whitespace-nowrap cursor-pointer"
-        >
-          {{ currentYear }}-{{ String(currentMonth).padStart(2, '0') }}
-        </button>
-        <button @click="nextMonth" class="calendar-nav-btn p-1 sm:p-2 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer">
-          <ChevronRight class="w-5 h-5 sm:w-6 sm:h-6" />
-        </button>
-      </div>
-
-      <!-- Right: Search or Member Name -->
-      <div class="flex-shrink-0 flex justify-end">
-        <!-- Search available (my calendar or managed member) -->
-        <div v-if="canSearch" class="flex items-stretch rounded-lg border overflow-hidden" :style="{ borderColor: 'var(--dp-border-secondary)' }">
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="검색"
-            @keyup.enter="handleSearch()"
-            class="px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none w-14 sm:w-20 border-none"
-            :style="{ backgroundColor: 'var(--dp-bg-input)', color: 'var(--dp-text-primary)' }"
-          />
-          <button
-            @click="searchQuery.trim() ? handleSearch() : openSearchModal()"
-            class="px-2 py-1.5 bg-gray-800 text-white hover:bg-gray-700 transition flex items-center justify-center cursor-pointer"
-          >
-            <Search class="w-4 h-4" />
           </button>
         </div>
       </div>

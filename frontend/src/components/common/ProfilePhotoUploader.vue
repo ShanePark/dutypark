@@ -2,7 +2,7 @@
 import { ref, shallowRef, computed, onMounted, onUnmounted, watch } from 'vue'
 import Uppy from '@uppy/core'
 import XHRUpload from '@uppy/xhr-upload'
-import { Camera, Trash2, Loader2, Upload } from 'lucide-vue-next'
+import { Camera, Loader2, Upload } from 'lucide-vue-next'
 import { memberApi } from '@/api/member'
 import { attachmentApi, attachmentValidation, validateFile, fetchAuthenticatedImage } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
@@ -10,18 +10,16 @@ import ImageCropModal from '@/components/common/ImageCropModal.vue'
 import type { CreateSessionResponse, AttachmentDto } from '@/types'
 
 interface Props {
-  currentPhotoUrl?: string | null
+  memberId: number
   disabled?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  currentPhotoUrl: null,
   disabled: false,
 })
 
 const emit = defineEmits<{
-  (e: 'update:photoUrl', photoUrl: string | null): void
-  (e: 'upload-complete', photoUrl: string | null): void
+  (e: 'upload-complete'): void
 }>()
 
 const { showError, toastSuccess, confirm } = useSwal()
@@ -37,26 +35,22 @@ const showCropModal = ref(false)
 
 const hasPhoto = computed(() => !!displayPhotoUrl.value)
 
+const photoUrl = computed(() => {
+  return `/api/members/${props.memberId}/profile-photo`
+})
+
 async function loadCurrentPhoto() {
-  if (props.currentPhotoUrl) {
-    const blobUrl = await fetchAuthenticatedImage(props.currentPhotoUrl)
-    if (blobUrl) {
-      displayPhotoUrl.value = blobUrl
-    }
+  if (displayPhotoUrl.value?.startsWith('blob:')) {
+    URL.revokeObjectURL(displayPhotoUrl.value)
   }
+  const blobUrl = await fetchAuthenticatedImage(photoUrl.value)
+  displayPhotoUrl.value = blobUrl
 }
 
 watch(
-  () => props.currentPhotoUrl,
-  async (newUrl) => {
-    if (displayPhotoUrl.value?.startsWith('blob:')) {
-      URL.revokeObjectURL(displayPhotoUrl.value)
-    }
-    if (newUrl) {
-      await loadCurrentPhoto()
-    } else {
-      displayPhotoUrl.value = null
-    }
+  () => props.memberId,
+  async () => {
+    await loadCurrentPhoto()
   }
 )
 
@@ -152,13 +146,12 @@ function setupUppy() {
         throw new Error('Session or attachment ID missing')
       }
 
-      const result = await memberApi.updateProfilePhoto({
+      await memberApi.updateProfilePhoto({
         sessionId: sessionId.value,
         attachmentId: uploadedAttachmentId.value,
       })
 
-      emit('update:photoUrl', result.data.profilePhotoUrl)
-      emit('upload-complete', result.data.profilePhotoUrl)
+      emit('upload-complete')
       toastSuccess('프로필 사진이 업데이트되었습니다')
     } catch (error) {
       console.error('Failed to update profile photo:', error)
@@ -216,9 +209,6 @@ function onCropCancel() {
 async function deletePhoto() {
   if (!hasPhoto.value || isDeleting.value || props.disabled) return
 
-  const confirmed = await confirm('프로필 사진을 삭제하시겠습니까?', '사진 삭제')
-  if (!confirmed) return
-
   isDeleting.value = true
   try {
     await memberApi.deleteProfilePhoto()
@@ -226,14 +216,21 @@ async function deletePhoto() {
       URL.revokeObjectURL(displayPhotoUrl.value)
     }
     displayPhotoUrl.value = null
-    emit('update:photoUrl', null)
-    emit('upload-complete', null)
+    emit('upload-complete')
     toastSuccess('프로필 사진이 삭제되었습니다')
   } catch (error) {
     console.error('Failed to delete profile photo:', error)
     showError('프로필 사진 삭제에 실패했습니다')
   } finally {
     isDeleting.value = false
+    showCropModal.value = false
+  }
+}
+
+async function onCropDelete() {
+  const confirmed = await confirm('프로필 사진을 삭제하시겠습니까?', '사진 삭제')
+  if (confirmed) {
+    await deletePhoto()
   }
 }
 
@@ -274,29 +271,18 @@ onUnmounted(() => {
         <Upload class="w-8 h-8" />
         <span class="text-sm mt-1">Upload Photo</span>
       </div>
-      <div v-if="isUploading" class="upload-loading">
+      <div v-if="isUploading || isDeleting" class="upload-loading">
         <Loader2 class="w-8 h-8 animate-spin text-white" />
       </div>
     </div>
 
-    <div class="actions">
-      <button
-        v-if="hasPhoto"
-        type="button"
-        class="delete-btn"
-        :disabled="disabled || isDeleting || isUploading"
-        @click.stop="deletePhoto"
-      >
-        <Loader2 v-if="isDeleting" class="w-4 h-4 animate-spin" />
-        <Trash2 v-else class="w-4 h-4" />
-        <span>Delete</span>
-      </button>
-    </div>
-
     <ImageCropModal
       :is-open="showCropModal"
+      :initial-image-source="displayPhotoUrl"
+      :has-existing-photo="hasPhoto"
       @close="onCropCancel"
       @confirm="onCropConfirm"
+      @delete="onCropDelete"
     />
   </div>
 </template>
@@ -375,40 +361,5 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   background-color: rgba(0, 0, 0, 0.6);
-}
-
-.actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.delete-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  border-radius: 0.5rem;
-  border: none;
-  background-color: var(--dp-bg-tertiary);
-  color: var(--dp-text-secondary);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.delete-btn:hover:not(:disabled) {
-  background-color: #fee2e2;
-  color: #dc2626;
-}
-
-.dark .delete-btn:hover:not(:disabled) {
-  background-color: rgba(220, 38, 38, 0.2);
-  color: #f87171;
-}
-
-.delete-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 </style>

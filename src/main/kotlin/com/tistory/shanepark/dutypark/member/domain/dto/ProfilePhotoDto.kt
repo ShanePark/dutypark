@@ -6,7 +6,3 @@ data class UpdateProfilePhotoRequest(
     val sessionId: UUID,
     val attachmentId: UUID
 )
-
-data class ProfilePhotoResponse(
-    val profilePhotoUrl: String?
-)

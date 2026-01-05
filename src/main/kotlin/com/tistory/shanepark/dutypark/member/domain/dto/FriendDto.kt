@@ -7,15 +7,16 @@ data class FriendDto(
     val name: String,
     val teamId: Long? = null,
     val team: String? = null,
-    val profilePhotoUrl: String? = null
+    val hasProfilePhoto: Boolean = false,
 ) {
     companion object {
-        fun of(member: Member): FriendDto {
+        fun of(member: Member, hasProfilePhoto: Boolean = false): FriendDto {
             return FriendDto(
                 id = member.id!!,
                 name = member.name,
                 teamId = member.team?.id,
                 team = member.team?.name,
+                hasProfilePhoto = hasProfilePhoto,
             )
         }
     }

@@ -1,5 +1,7 @@
 package com.tistory.shanepark.dutypark.member.service
 
+import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
+import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberCreateDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
@@ -13,7 +15,6 @@ import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
-import org.springframework.context.annotation.Lazy
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -27,24 +28,24 @@ class MemberService(
     private val passwordEncoder: PasswordEncoder,
     private val memberSsoRegisterRepository: MemberSsoRegisterRepository,
     private val memberManagerRepository: MemberManagerRepository,
-    @Lazy private val profilePhotoService: ProfilePhotoService,
+    private val attachmentRepository: AttachmentRepository,
 ) {
 
     @Transactional(readOnly = true)
     fun findAll(): List<MemberDto> {
-        val members = memberRepository.findAll()
+        return memberRepository.findAll()
             .sortedWith(compareBy({ it.team?.name }, { it.name }))
-
-        val memberIds = members.mapNotNull { it.id }
-        val profilePhotoUrls = profilePhotoService.getProfilePhotoUrls(memberIds)
-
-        return members.map { MemberDto.of(it).copy(profilePhotoUrl = profilePhotoUrls[it.id]) }
+            .map { MemberDto.of(it) }
     }
 
     @Transactional(readOnly = true)
     fun findById(memberId: Long): MemberDto {
         val member = memberRepository.findById(memberId).orElseThrow()
-        return MemberDto.of(member).withProfilePhoto(memberId)
+        val hasProfilePhoto = attachmentRepository.existsByContextTypeAndContextId(
+            contextType = AttachmentContextType.PROFILE,
+            contextId = memberId.toString()
+        )
+        return MemberDto.of(member, hasProfilePhoto)
     }
 
     fun createMember(memberCreateDto: MemberCreateDto): Member {
@@ -151,12 +152,7 @@ class MemberService(
 
     fun findAllManagers(loginMember: LoginMember): List<MemberDto> {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
-        val managers = findAllManagers(member)
-
-        val managerIds = managers.mapNotNull { it.id }
-        val profilePhotoUrls = profilePhotoService.getProfilePhotoUrls(managerIds)
-
-        return managers.map { MemberDto.of(it).copy(profilePhotoUrl = profilePhotoUrls[it.id]) }
+        return findAllManagers(member).map { MemberDto.of(it) }
     }
 
     fun isManager(isManager: LoginMember, targetMemberId: Long): Boolean {
@@ -167,19 +163,18 @@ class MemberService(
     @Transactional(readOnly = true)
     fun findManagedMembers(loginMember: LoginMember): List<MemberDto> {
         val manager = memberRepository.findById(loginMember.id).orElseThrow()
-        val managedMembers = memberManagerRepository.findAllByManager(manager)
-            .map { it.managed }
-
+        val managedMembers = memberManagerRepository.findAllByManager(manager).map { it.managed }
         val memberIds = managedMembers.mapNotNull { it.id }
-        val profilePhotoUrls = profilePhotoService.getProfilePhotoUrls(memberIds)
-
-        return managedMembers.map { MemberDto.of(it).copy(profilePhotoUrl = profilePhotoUrls[it.id]) }
+        val membersWithPhoto = getMembersWithProfilePhoto(memberIds)
+        return managedMembers.map { MemberDto.of(it, it.id in membersWithPhoto) }
     }
 
-    private fun MemberDto.withProfilePhoto(memberId: Long?): MemberDto {
-        if (memberId == null) return this
-        val photoUrl = profilePhotoService.getProfilePhotoUrl(memberId)
-        return this.copy(profilePhotoUrl = photoUrl)
+    private fun getMembersWithProfilePhoto(memberIds: List<Long>): Set<Long> {
+        if (memberIds.isEmpty()) return emptySet()
+        return attachmentRepository.findAllByContextTypeAndContextIdIn(
+            contextType = AttachmentContextType.PROFILE,
+            contextIds = memberIds.map { it.toString() }
+        ).mapNotNull { it.contextId?.toLong() }.toSet()
     }
 
 }

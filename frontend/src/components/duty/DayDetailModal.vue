@@ -64,7 +64,7 @@ interface Props {
   dutyTypes: DutyType[]
   canEdit: boolean
   batchEditMode: boolean
-  friends: Array<{ id: number; name: string; profilePhotoUrl?: string | null }>
+  friends: Array<{ id: number; name: string }>
   memberId: number
 }
 

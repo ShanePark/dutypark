@@ -359,7 +359,7 @@ onMounted(async () => {
               >
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
                   <div class="flex items-center gap-3">
-                    <ProfileAvatar :photo-url="member.profilePhotoUrl" size="md" :name="member.name" />
+                    <ProfileAvatar :member-id="member.id" :has-profile-photo="member.hasProfilePhoto" size="md" :name="member.name" />
                     <div class="min-w-0">
                       <p class="font-medium truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ member.name }}</p>
                       <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">

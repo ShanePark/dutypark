@@ -28,4 +28,9 @@ interface AttachmentRepository : JpaRepository<Attachment, UUID> {
         contextType: AttachmentContextType,
         contextId: String
     ): Attachment?
+
+    fun existsByContextTypeAndContextId(
+        contextType: AttachmentContextType,
+        contextId: String
+    ): Boolean
 }

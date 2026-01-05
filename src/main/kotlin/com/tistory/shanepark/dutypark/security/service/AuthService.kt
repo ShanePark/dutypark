@@ -139,7 +139,7 @@ class AuthService(
         )
     }
 
-    fun impersonate(manager: LoginMember, targetMemberId: Long, req: HttpServletRequest): TokenResponse {
+    fun impersonate(manager: LoginMember, targetMemberId: Long): String {
         if (manager.isImpersonating) {
             throw AuthException("이미 다른 계정으로 전환된 상태입니다.")
         }
@@ -158,20 +158,9 @@ class AuthService(
             throw AuthException("관리 권한이 없습니다.")
         }
 
-        val jwt = jwtProvider.createImpersonationToken(targetEntity, manager.id)
-        val refreshToken = refreshTokenService.createRefreshToken(
-            memberId = targetMemberId,
-            remoteAddr = req.remoteAddr,
-            userAgent = req.getHeader(HttpHeaders.USER_AGENT)
-        )
-
         log.info("Impersonation started. manager:${manager.id} -> target:${targetMemberId}")
 
-        return TokenResponse(
-            accessToken = jwt,
-            refreshToken = refreshToken.token,
-            expiresIn = jwtConfig.tokenValidityInSeconds
-        )
+        return jwtProvider.createImpersonationToken(targetEntity, manager.id)
     }
 
     fun restore(currentLogin: LoginMember, req: HttpServletRequest): TokenResponse {

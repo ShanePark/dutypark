@@ -4,15 +4,22 @@ import { User } from 'lucide-vue-next'
 import { fetchAuthenticatedImage } from '@/api/attachment'
 
 interface Props {
-  photoUrl?: string | null
+  memberId?: number | null
   size?: 'sm' | 'md' | 'lg' | 'xl'
   name?: string
+  hasProfilePhoto?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  photoUrl: null,
+  memberId: null,
   size: 'md',
   name: '',
+  hasProfilePhoto: false,
+})
+
+const photoUrl = computed(() => {
+  if (!props.memberId) return null
+  return `/api/members/${props.memberId}/profile-photo`
 })
 
 const sizeClasses = computed(() => {
@@ -49,13 +56,13 @@ const imageError = ref(false)
 const imageBlobUrl = ref<string | null>(null)
 
 async function loadImage() {
-  if (!props.photoUrl) {
+  if (!photoUrl.value || !props.hasProfilePhoto) {
     imageBlobUrl.value = null
     return
   }
 
   imageError.value = false
-  const blobUrl = await fetchAuthenticatedImage(props.photoUrl)
+  const blobUrl = await fetchAuthenticatedImage(photoUrl.value)
   if (blobUrl) {
     imageBlobUrl.value = blobUrl
   } else {
@@ -68,7 +75,7 @@ function handleImageError() {
 }
 
 watch(
-  () => props.photoUrl,
+  () => [props.memberId, props.hasProfilePhoto],
   () => {
     if (imageBlobUrl.value) {
       URL.revokeObjectURL(imageBlobUrl.value)

@@ -12,6 +12,7 @@ import { useKakao } from '@/composables/useKakao'
 import type { FriendDto, MemberDto, RefreshTokenDto, CalendarVisibility, ManagedMemberDto } from '@/types'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
 import ProfilePhotoUploader from '@/components/common/ProfilePhotoUploader.vue'
+import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import {
   User,
   Building2,
@@ -343,13 +344,6 @@ async function fetchMemberInfo() {
   memberInfo.value = response.data
 }
 
-// Profile photo handling
-function onProfilePhotoUpdate(photoUrl: string | null) {
-  if (memberInfo.value) {
-    memberInfo.value = { ...memberInfo.value, profilePhotoUrl: photoUrl }
-  }
-}
-
 // Initialize data
 onMounted(async () => {
   loading.value = true
@@ -405,8 +399,8 @@ onMounted(async () => {
           <div class="flex flex-col items-center">
             <h3 class="text-sm font-medium mb-3" :style="{ color: 'var(--dp-text-secondary)' }">프로필 사진</h3>
             <ProfilePhotoUploader
-              :current-photo-url="memberInfo?.profilePhotoUrl"
-              @upload-complete="onProfilePhotoUpdate"
+              v-if="memberInfo?.id"
+              :member-id="memberInfo.id"
             />
           </div>
 
@@ -554,18 +548,7 @@ onMounted(async () => {
                 :style="{ backgroundColor: 'var(--dp-bg-secondary)' }"
               >
                 <div class="flex items-center gap-3">
-                  <div
-                    class="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden"
-                    :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
-                  >
-                    <img
-                      v-if="member.profilePhotoUrl"
-                      :src="member.profilePhotoUrl"
-                      :alt="member.name"
-                      class="w-full h-full object-cover"
-                    />
-                    <User v-else class="w-5 h-5" :style="{ color: 'var(--dp-text-muted)' }" />
-                  </div>
+                  <ProfileAvatar :member-id="member.id" :has-profile-photo="member.hasProfilePhoto" size="md" :name="member.name" />
                   <div>
                     <p class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ member.name }}</p>
                     <p v-if="member.team" class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">{{ member.team }}</p>

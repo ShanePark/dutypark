@@ -28,14 +28,13 @@ class AdminService(
         val memberIds = memberPage.content.mapNotNull { it.id }
         val tokensByMemberId = refreshTokenRepository.findAllByMemberIdIn(memberIds)
             .groupBy { it.member.id!! }
-
-        val profilePhotoUrls = profilePhotoService.getProfilePhotoUrls(memberIds)
+        val membersWithPhoto = profilePhotoService.getMembersWithProfilePhoto(memberIds)
 
         val adminMembers = memberPage.content.map { member ->
             AdminMemberDto.of(
                 member = member,
                 tokens = tokensByMemberId[member.id] ?: emptyList(),
-                profilePhotoUrl = profilePhotoUrls[member.id]
+                hasProfilePhoto = member.id in membersWithPhoto,
             )
         }
 

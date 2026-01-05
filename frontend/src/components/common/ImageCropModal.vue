@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, toRef, watch, computed } from 'vue'
-import { X, ZoomIn, ZoomOut, Upload, ImagePlus } from 'lucide-vue-next'
+import { X, ZoomIn, ZoomOut, Upload, ImagePlus, Trash2 } from 'lucide-vue-next'
 import { Cropper, CircleStencil } from 'vue-advanced-cropper'
 import 'vue-advanced-cropper/dist/style.css'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
@@ -11,15 +11,18 @@ import { useSwal } from '@/composables/useSwal'
 interface Props {
   isOpen: boolean
   initialImageSource?: string | null
+  hasExistingPhoto?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   initialImageSource: null,
+  hasExistingPhoto: false,
 })
 
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'confirm', croppedFile: File): void
+  (e: 'delete'): void
 }>()
 
 useBodyScrollLock(toRef(props, 'isOpen'))
@@ -35,7 +38,7 @@ const zoom = ref(1)
 const isProcessing = ref(false)
 const isDragging = ref(false)
 
-const minZoom = 0.5
+const minZoom = 1
 const maxZoom = 3
 const zoomStep = 0.1
 
@@ -170,6 +173,12 @@ function handleClose() {
   }
 }
 
+function handleDelete() {
+  if (!isProcessing.value) {
+    emit('delete')
+  }
+}
+
 function changeImage() {
   triggerFileInput()
 }
@@ -182,7 +191,7 @@ const zoomPercent = computed(() => Math.round(zoom.value * 100))
     <div
       v-if="isOpen"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      @click.self="handleClose"
+      @mousedown.self="handleClose"
     >
       <div
         class="crop-modal rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-xl max-h-[90dvh] sm:max-h-[90vh] mx-2 sm:mx-4 flex flex-col"
@@ -293,12 +302,22 @@ const zoomPercent = computed(() => Math.round(zoom.value * 100))
             취소
           </button>
           <button
+            v-if="hasExistingPhoto"
+            type="button"
+            @click="handleDelete"
+            class="btn-delete"
+            :disabled="isProcessing"
+          >
+            <Trash2 class="w-4 h-4" />
+            삭제
+          </button>
+          <button
             type="button"
             @click="handleConfirm"
             class="btn-confirm"
             :disabled="isProcessing || !hasImage"
           >
-            {{ isProcessing ? '처리 중...' : '확인' }}
+            {{ isProcessing ? '저장 중...' : '저장' }}
           </button>
         </div>
 
@@ -503,6 +522,7 @@ const zoomPercent = computed(() => Math.round(zoom.value * 100))
 }
 
 .btn-cancel,
+.btn-delete,
 .btn-confirm {
   min-width: 80px;
   min-height: 44px;
@@ -524,6 +544,28 @@ const zoomPercent = computed(() => Math.round(zoom.value * 100))
   background-color: var(--dp-bg-hover);
 }
 
+.btn-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.btn-delete:hover:not(:disabled) {
+  background-color: #fecaca;
+}
+
+.dark .btn-delete {
+  background-color: rgba(220, 38, 38, 0.2);
+  color: #f87171;
+}
+
+.dark .btn-delete:hover:not(:disabled) {
+  background-color: rgba(220, 38, 38, 0.3);
+}
+
 .btn-confirm {
   background-color: var(--color-primary, #3b82f6);
   color: white;
@@ -534,6 +576,7 @@ const zoomPercent = computed(() => Math.round(zoom.value * 100))
 }
 
 .btn-cancel:disabled,
+.btn-delete:disabled,
 .btn-confirm:disabled {
   opacity: 0.5;
   cursor: not-allowed;

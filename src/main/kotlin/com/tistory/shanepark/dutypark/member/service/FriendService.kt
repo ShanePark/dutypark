@@ -1,5 +1,7 @@
 package com.tistory.shanepark.dutypark.member.service
 
+import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
+import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendDto
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
@@ -13,7 +15,6 @@ import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
-import org.springframework.context.annotation.Lazy
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
@@ -26,20 +27,18 @@ class FriendService(
     private val friendRequestRepository: FriendRequestRepository,
     private val memberService: MemberService,
     private val memberRepository: MemberRepository,
-    @Lazy private val profilePhotoService: ProfilePhotoService,
+    private val attachmentRepository: AttachmentRepository,
 ) {
 
     @Transactional(readOnly = true)
     fun findAllFriends(loginMember: LoginMember): List<FriendDto> {
         val member = loginMemberToMember(loginMember)
-        val friends = friendRelationRepository.findAllByMember(member)
+        val relations = friendRelationRepository.findAllByMember(member)
+        val friendIds = relations.mapNotNull { it.friend.id }
+        val membersWithPhoto = getMembersWithProfilePhoto(friendIds)
+        return relations
             .sortedWith(compareBy({ it.pinOrder ?: Long.MAX_VALUE }, { it.friend.name }))
-            .map { it.friend }
-
-        val friendIds = friends.mapNotNull { it.id }
-        val profilePhotoUrls = profilePhotoService.getProfilePhotoUrls(friendIds)
-
-        return friends.map { FriendDto.of(it).copy(profilePhotoUrl = profilePhotoUrls[it.id]) }
+            .map { FriendDto.of(it.friend, it.friend.id in membersWithPhoto) }
     }
 
     @Transactional(readOnly = true)
@@ -189,11 +188,10 @@ class FriendService(
         val pendingRequestsFrom = getPendingRequestsFrom(member).map { it.toMember.id }
         val excludeIds = friends + pendingRequestsFrom + member.id
 
-        val memberPage = memberRepository.findMembersByNameContainingIgnoreCaseAndIdNotIn(keyword, excludeIds, page)
-        val memberIds = memberPage.content.mapNotNull { it.id }
-        val profilePhotoUrls = profilePhotoService.getProfilePhotoUrls(memberIds)
-
-        return memberPage.map { FriendDto.of(it).copy(profilePhotoUrl = profilePhotoUrls[it.id]) }
+        val result = memberRepository.findMembersByNameContainingIgnoreCaseAndIdNotIn(keyword, excludeIds, page)
+        val memberIds = result.content.mapNotNull { it.id }
+        val membersWithPhoto = getMembersWithProfilePhoto(memberIds)
+        return result.map { FriendDto.of(it, it.id in membersWithPhoto) }
     }
 
     private fun loginMemberToMember(login: LoginMember): Member {
@@ -288,15 +286,20 @@ class FriendService(
     @Transactional(readOnly = true)
     fun findAllFamilyMembers(id: Long): List<FriendDto> {
         val member = memberRepository.findById(id).orElseThrow()
-        val familyMembers = friendRelationRepository.findAllByMember(member)
-            .filter { it.isFamily }
-            .map { it.friend }
+        val familyRelations = friendRelationRepository.findAllByMember(member).filter { it.isFamily }
+        val familyIds = familyRelations.mapNotNull { it.friend.id }
+        val membersWithPhoto = getMembersWithProfilePhoto(familyIds)
+        return familyRelations
+            .map { FriendDto.of(it.friend, it.friend.id in membersWithPhoto) }
             .sortedBy { it.name }
+    }
 
-        val memberIds = familyMembers.mapNotNull { it.id }
-        val profilePhotoUrls = profilePhotoService.getProfilePhotoUrls(memberIds)
-
-        return familyMembers.map { FriendDto.of(it).copy(profilePhotoUrl = profilePhotoUrls[it.id]) }
+    private fun getMembersWithProfilePhoto(memberIds: List<Long>): Set<Long> {
+        if (memberIds.isEmpty()) return emptySet()
+        return attachmentRepository.findAllByContextTypeAndContextIdIn(
+            contextType = AttachmentContextType.PROFILE,
+            contextIds = memberIds.map { it.toString() }
+        ).mapNotNull { it.contextId?.toLong() }.toSet()
     }
 
 }

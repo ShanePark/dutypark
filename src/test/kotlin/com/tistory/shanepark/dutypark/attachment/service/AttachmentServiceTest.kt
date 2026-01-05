@@ -430,6 +430,13 @@ class AttachmentServiceTest {
             return attachments.values.firstOrNull { it.contextType == contextType && it.contextId == contextId }
         }
 
+        override fun existsByContextTypeAndContextId(
+            contextType: AttachmentContextType,
+            contextId: String
+        ): Boolean {
+            return attachments.values.any { it.contextType == contextType && it.contextId == contextId }
+        }
+
         override fun findById(id: UUID): Optional<Attachment> {
             return Optional.ofNullable(attachments[id])
         }

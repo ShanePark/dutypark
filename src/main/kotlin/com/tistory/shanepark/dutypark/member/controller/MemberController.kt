@@ -1,16 +1,20 @@
 package com.tistory.shanepark.dutypark.member.controller
 
+import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
-import com.tistory.shanepark.dutypark.member.domain.dto.ProfilePhotoResponse
 import com.tistory.shanepark.dutypark.member.domain.dto.UpdateProfilePhotoRequest
 import com.tistory.shanepark.dutypark.member.domain.dto.VisibilityUpdateRequest
 import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.member.service.ProfilePhotoService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import org.springframework.core.io.Resource
+import org.springframework.core.io.UrlResource
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 @RestController
@@ -19,6 +23,7 @@ class MemberController(
     private val memberService: MemberService,
     private val friendService: FriendService,
     private val profilePhotoService: ProfilePhotoService,
+    private val pathResolver: StoragePathResolver,
 ) {
 
     @GetMapping("/me")
@@ -99,11 +104,12 @@ class MemberController(
     }
 
     @PutMapping("/profile-photo")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     fun updateProfilePhoto(
         @Login loginMember: LoginMember,
         @RequestBody request: UpdateProfilePhotoRequest,
-    ): ProfilePhotoResponse {
-        return profilePhotoService.setProfilePhoto(
+    ) {
+        profilePhotoService.setProfilePhoto(
             loginMember = loginMember,
             sessionId = request.sessionId,
             attachmentId = request.attachmentId
@@ -116,6 +122,33 @@ class MemberController(
         @Login loginMember: LoginMember,
     ) {
         profilePhotoService.deleteProfilePhoto(loginMember)
+    }
+
+    @GetMapping("/{memberId}/profile-photo")
+    fun getProfilePhoto(
+        @PathVariable memberId: Long,
+    ): ResponseEntity<Resource> {
+        val attachment = profilePhotoService.getProfilePhoto(memberId)
+            ?: return ResponseEntity.notFound().build()
+
+        val thumbnailFilename = attachment.thumbnailFilename
+            ?: return ResponseEntity.notFound().build()
+
+        val thumbnailPath = pathResolver.resolveThumbnailPath(
+            attachment.contextType,
+            attachment.contextId,
+            attachment.uploadSessionId,
+            thumbnailFilename
+        )
+
+        val resource = UrlResource(thumbnailPath.toUri())
+        if (!resource.exists()) {
+            return ResponseEntity.notFound().build()
+        }
+
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType(attachment.thumbnailContentType ?: "image/png"))
+            .body(resource)
     }
 
 }

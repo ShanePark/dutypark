@@ -11,10 +11,10 @@ data class AdminMemberDto(
     val teamId: Long?,
     val teamName: String?,
     val tokens: List<RefreshTokenDto>,
-    val profilePhotoUrl: String? = null,
+    val hasProfilePhoto: Boolean = false,
 ) {
     companion object {
-        fun of(member: Member, tokens: List<RefreshToken>, profilePhotoUrl: String? = null): AdminMemberDto {
+        fun of(member: Member, tokens: List<RefreshToken>, hasProfilePhoto: Boolean = false): AdminMemberDto {
             return AdminMemberDto(
                 id = member.id!!,
                 name = member.name,
@@ -22,7 +22,7 @@ data class AdminMemberDto(
                 teamId = member.team?.id,
                 teamName = member.team?.name,
                 tokens = tokens.filter { it.isValid() }.map { RefreshTokenDto.of(it) },
-                profilePhotoUrl = profilePhotoUrl
+                hasProfilePhoto = hasProfilePhoto,
             )
         }
     }

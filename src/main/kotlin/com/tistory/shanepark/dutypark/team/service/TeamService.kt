@@ -8,7 +8,6 @@ import com.tistory.shanepark.dutypark.duty.domain.dto.DutyByShift
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.domain.dto.SimpleMemberDto
-import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.ProfilePhotoService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -42,13 +41,14 @@ class TeamService(
     fun findByIdWithMembersAndDutyTypes(id: Long): TeamDto {
         val withMembers = teamRepository.findByIdWithMembers(id).orElseThrow()
         val withDutyTypes = teamRepository.findByIdWithDutyTypes(id).orElseThrow()
-        val profilePhotoUrls = buildProfilePhotoUrlMap(withMembers.members)
+        val memberIds = withMembers.members.mapNotNull { it.id }
+        val membersWithPhoto = profilePhotoService.getMembersWithProfilePhoto(memberIds)
 
         return TeamDto.of(
             team = withMembers,
             members = withMembers.members,
             dutyTypes = withDutyTypes.dutyTypes,
-            profilePhotoUrls = profilePhotoUrls
+            membersWithPhoto = membersWithPhoto,
         )
     }
 
@@ -165,7 +165,6 @@ class TeamService(
 
     private fun loadShift(team: Team, localDate: LocalDate): List<DutyByShift> {
         val teamMembers = memberRepository.findMembersByTeam(team)
-        val profilePhotoUrls = buildProfilePhotoUrlMap(teamMembers)
 
         val dutyMemberMap = dutyRepository.findByDutyDateAndMemberIn(localDate, teamMembers)
             .associateBy({ it }, { it.member })
@@ -182,7 +181,7 @@ class TeamService(
                     dutyMemberMap.filter { (duty, _) -> duty.dutyType?.id == id }.values
                 } ?: offMembers
                 val members = sourceMembers
-                    .map { member -> SimpleMemberDto(member.id, member.name, profilePhotoUrls[member.id]) }
+                    .map { member -> SimpleMemberDto(member.id!!, member.name) }
                     .sortedBy { it.name }
                 DutyByShift(dutyTypeDto, members)
             }
@@ -246,11 +245,6 @@ class TeamService(
     fun updateWorkType(teamId: Long, workType: WorkType) {
         val team = teamRepository.findById(teamId).orElseThrow()
         team.workType = workType
-    }
-
-    private fun buildProfilePhotoUrlMap(members: List<Member>): Map<Long, String?> {
-        val memberIds = members.mapNotNull { it.id }
-        return profilePhotoService.getProfilePhotoUrls(memberIds)
     }
 
 }

@@ -6,6 +6,8 @@ export interface LoginMember {
   teamId: number | null
   team: string | null
   isAdmin: boolean
+  isImpersonating: boolean
+  originalMemberId: number | null
 }
 
 export interface LoginDto {
@@ -178,7 +180,7 @@ export interface DashboardMemberDto {
   calendarVisibility: CalendarVisibility
   kakaoId?: string | null
   hasPassword?: boolean
-  profilePhotoUrl?: string | null
+  hasProfilePhoto?: boolean
 }
 
 export interface DashboardFriendDto {
@@ -186,7 +188,7 @@ export interface DashboardFriendDto {
   name: string
   teamId?: number | null
   team?: string | null
-  profilePhotoUrl?: string | null
+  hasProfilePhoto?: boolean
 }
 
 export interface DashboardDutyDto {
@@ -289,7 +291,7 @@ export interface AdminMemberDto {
   teamId: number | null
   teamName: string | null
   tokens: RefreshTokenDto[]
-  profilePhotoUrl: string | null
+  hasProfilePhoto?: boolean
 }
 
 export interface SimpleTeam {
@@ -350,7 +352,7 @@ export interface TeamMemberDto {
   email: string | null
   isManager: boolean
   isAdmin: boolean
-  profilePhotoUrl: string | null
+  hasProfilePhoto?: boolean
 }
 
 export interface DutyBatchTemplateDto {
@@ -384,7 +386,7 @@ export interface MyTeamSummary {
 export interface SimpleMemberDto {
   id: number
   name: string
-  profilePhotoUrl: string | null
+  hasProfilePhoto?: boolean
 }
 
 export interface DutyByShift {
@@ -428,7 +430,7 @@ export interface MemberDto {
   calendarVisibility: CalendarVisibility
   kakaoId: string | null
   hasPassword: boolean
-  profilePhotoUrl: string | null
+  hasProfilePhoto?: boolean
 }
 
 export interface FriendDto {
@@ -436,7 +438,7 @@ export interface FriendDto {
   name: string
   teamId: number | null
   team: string | null
-  profilePhotoUrl: string | null
+  hasProfilePhoto?: boolean
 }
 
 export interface DDayDto {
@@ -522,20 +524,12 @@ export interface UpdateProfilePhotoRequest {
   attachmentId: string
 }
 
-export interface ProfilePhotoResponse {
-  profilePhotoUrl: string | null
-}
-
 // Impersonation types
-export interface ImpersonationState {
-  isImpersonating: boolean
-}
-
 export interface ManagedMemberDto {
   id: number
   name: string
   email: string | null
   teamId: number | null
   team: string | null
-  profilePhotoUrl: string | null
+  hasProfilePhoto?: boolean
 }

@@ -8,7 +8,6 @@ import type {
   CalendarVisibility,
   Page,
   UpdateProfilePhotoRequest,
-  ProfilePhotoResponse,
   ManagedMemberDto,
 } from '@/types'
 
@@ -69,7 +68,7 @@ export const memberApi = {
    * Update profile photo
    */
   updateProfilePhoto(request: UpdateProfilePhotoRequest) {
-    return apiClient.put<ProfilePhotoResponse>('/members/profile-photo', request)
+    return apiClient.put<void>('/members/profile-photo', request)
   },
 
   /**

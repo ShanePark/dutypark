@@ -5,7 +5,6 @@ import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextT
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.common.config.logger
-import com.tistory.shanepark.dutypark.member.domain.dto.ProfilePhotoResponse
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -28,33 +27,27 @@ class ProfilePhotoService(
     }
 
     @Transactional(readOnly = true)
-    fun getProfilePhotoUrl(memberId: Long): String? {
-        val attachment = getProfilePhoto(memberId) ?: return null
-        return buildThumbnailUrl(attachment.id)
+    fun hasProfilePhoto(memberId: Long): Boolean {
+        return attachmentRepository.existsByContextTypeAndContextId(
+            contextType = AttachmentContextType.PROFILE,
+            contextId = memberId.toString()
+        )
     }
 
     @Transactional(readOnly = true)
-    fun getProfilePhotoUrls(memberIds: List<Long>): Map<Long, String?> {
-        if (memberIds.isEmpty()) return emptyMap()
-
-        val contextIds = memberIds.map { it.toString() }
-        val attachments = attachmentRepository.findAllByContextTypeAndContextIdIn(
+    fun getMembersWithProfilePhoto(memberIds: List<Long>): Set<Long> {
+        if (memberIds.isEmpty()) return emptySet()
+        return attachmentRepository.findAllByContextTypeAndContextIdIn(
             contextType = AttachmentContextType.PROFILE,
-            contextIds = contextIds
-        )
-
-        val attachmentByContextId = attachments.associateBy { it.contextId }
-
-        return memberIds.associateWith { memberId ->
-            attachmentByContextId[memberId.toString()]?.let { buildThumbnailUrl(it.id) }
-        }
+            contextIds = memberIds.map { it.toString() }
+        ).mapNotNull { it.contextId?.toLong() }.toSet()
     }
 
     fun setProfilePhoto(
         loginMember: LoginMember,
         sessionId: UUID,
         attachmentId: UUID
-    ): ProfilePhotoResponse {
+    ) {
         val contextId = loginMember.id.toString()
 
         attachmentService.synchronizeContextAttachments(
@@ -66,9 +59,6 @@ class ProfilePhotoService(
         )
 
         log.info("Profile photo set: memberId={}, attachmentId={}", loginMember.id, attachmentId)
-
-        val profilePhotoUrl = getProfilePhotoUrl(loginMember.id)
-        return ProfilePhotoResponse(profilePhotoUrl = profilePhotoUrl)
     }
 
     fun deleteProfilePhoto(loginMember: LoginMember) {
@@ -83,9 +73,5 @@ class ProfilePhotoService(
         )
 
         log.info("Profile photo deleted: memberId={}", loginMember.id)
-    }
-
-    private fun buildThumbnailUrl(attachmentId: UUID): String {
-        return "/api/attachments/$attachmentId/thumbnail"
     }
 }

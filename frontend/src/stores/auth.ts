@@ -1,13 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { AxiosError } from 'axios'
-import type { LoginMember, LoginDto, ImpersonationState } from '@/types'
+import type { LoginMember, LoginDto } from '@/types'
 import { authApi } from '@/api/auth'
 import { setAuthFailureHandler } from '@/api/client'
 import router from '@/router'
 
 const USER_CACHE_KEY = 'dp-login-member'
-const IMPERSONATION_KEY = 'dp-impersonation-state'
 
 function loadCachedUser(): LoginMember | null {
   try {
@@ -26,36 +25,13 @@ function saveCachedUser(member: LoginMember | null) {
   localStorage.setItem(USER_CACHE_KEY, JSON.stringify(member))
 }
 
-function loadImpersonationState(): ImpersonationState {
-  try {
-    const cached = localStorage.getItem(IMPERSONATION_KEY)
-    if (cached) {
-      return JSON.parse(cached) as ImpersonationState
-    }
-  } catch {
-    // Ignore parse errors
-  }
-  return {
-    isImpersonating: false,
-  }
-}
-
-function saveImpersonationState(state: ImpersonationState) {
-  if (!state.isImpersonating) {
-    localStorage.removeItem(IMPERSONATION_KEY)
-    return
-  }
-  localStorage.setItem(IMPERSONATION_KEY, JSON.stringify(state))
-}
-
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<LoginMember | null>(loadCachedUser())
   const isLoading = ref(false)
   const isInitialized = ref(false)
 
-  // Impersonation state
-  const impersonationState = ref<ImpersonationState>(loadImpersonationState())
-  const isImpersonating = computed(() => impersonationState.value.isImpersonating)
+  // Impersonation state derived from user's JWT token
+  const isImpersonating = computed(() => user.value?.isImpersonating ?? false)
 
   const isLoggedIn = computed(() => user.value !== null)
   const isAdmin = computed(() => user.value?.isAdmin ?? false)
@@ -106,9 +82,6 @@ export const useAuthStore = defineStore('auth', () => {
     await authApi.logout()
     user.value = null
     saveCachedUser(null)
-    // Clear impersonation state on logout
-    impersonationState.value = { isImpersonating: false }
-    saveImpersonationState(impersonationState.value)
   }
 
   function setUser(member: LoginMember | null) {
@@ -120,9 +93,6 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
     saveCachedUser(null)
     isInitialized.value = false
-    // Clear impersonation state on auth clear
-    impersonationState.value = { isImpersonating: false }
-    saveImpersonationState(impersonationState.value)
   }
 
   function handleAuthFailure() {
@@ -156,11 +126,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       await authApi.impersonate(targetMemberId)
 
-      // Update impersonation state
-      impersonationState.value = { isImpersonating: true }
-      saveImpersonationState(impersonationState.value)
-
-      // Refresh user info after impersonation
+      // Refresh user info after impersonation (includes isImpersonating from JWT)
       user.value = await authApi.getStatus()
       saveCachedUser(user.value)
     } finally {
@@ -173,11 +139,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       await authApi.restore()
 
-      // Clear impersonation state
-      impersonationState.value = { isImpersonating: false }
-      saveImpersonationState(impersonationState.value)
-
-      // Refresh user info after restore
+      // Refresh user info after restore (isImpersonating will be false)
       user.value = await authApi.getStatus()
       saveCachedUser(user.value)
     } finally {

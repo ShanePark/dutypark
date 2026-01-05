@@ -8,6 +8,7 @@ import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendDto
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendRequestDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
+import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -33,8 +34,9 @@ class DashboardService(
 
     fun my(loginMember: LoginMember): DashboardMyDetail {
         val member = memberRepository.findMemberWithTeam(loginMember.id).orElseThrow()
+        val hasProfilePhoto = profilePhotoService.hasProfilePhoto(member.id!!)
         return DashboardMyDetail(
-            member = MemberDto.of(member).withProfilePhoto(member.id),
+            member = MemberDto.of(member, hasProfilePhoto),
             duty = todayDuty(member),
             schedules = todaySchedules(loginMember = loginMember, member = member),
         )
@@ -78,33 +80,44 @@ class DashboardService(
     fun friend(loginMember: LoginMember): DashboardFriendInfo {
         val member = memberRepository.findMemberWithTeam(loginMember.id).orElseThrow()
         val friendRelations = friendRelationRepository.findAllByMember(member)
+        val pendingRequestsTo = friendService.getPendingRequestsTo(member)
+        val pendingRequestsFrom = friendService.getPendingRequestsFrom(member)
 
-        val friendIds = friendRelations.mapNotNull { it.friend.id }
-        val profilePhotoUrls = profilePhotoService.getProfilePhotoUrls(friendIds)
+        val allMemberIds = mutableListOf<Long>()
+        allMemberIds.addAll(friendRelations.mapNotNull { it.friend.id })
+        allMemberIds.addAll(pendingRequestsTo.mapNotNull { it.fromMember.id })
+        allMemberIds.addAll(pendingRequestsTo.mapNotNull { it.toMember.id })
+        allMemberIds.addAll(pendingRequestsFrom.mapNotNull { it.fromMember.id })
+        allMemberIds.addAll(pendingRequestsFrom.mapNotNull { it.toMember.id })
+        val membersWithPhoto = profilePhotoService.getMembersWithProfilePhoto(allMemberIds)
 
         val friends = friendRelations
             .map {
                 DashboardFriendDetail(
-                    member = FriendDto.of(it.friend).copy(profilePhotoUrl = profilePhotoUrls[it.friend.id]),
+                    member = FriendDto.of(it.friend, it.friend.id in membersWithPhoto),
                     duty = todayDuty(it.friend),
                     schedules = todaySchedules(loginMember = loginMember, member = it.friend),
                     isFamily = it.isFamily,
                     pinOrder = it.pinOrder
                 )
             }.sorted()
-        val pendingRequestsTo = friendService.getPendingRequestsTo(member).map { FriendRequestDto.of(it) }
-        val pendingRequestsFrom = friendService.getPendingRequestsFrom(member).map { FriendRequestDto.of(it) }
+
         return DashboardFriendInfo(
             friends = friends,
-            pendingRequestsFrom = pendingRequestsFrom,
-            pendingRequestsTo = pendingRequestsTo,
+            pendingRequestsFrom = pendingRequestsFrom.map { toFriendRequestDto(it, membersWithPhoto) },
+            pendingRequestsTo = pendingRequestsTo.map { toFriendRequestDto(it, membersWithPhoto) },
         )
     }
 
-    private fun MemberDto.withProfilePhoto(memberId: Long?): MemberDto {
-        if (memberId == null) return this
-        val photoUrl = profilePhotoService.getProfilePhotoUrl(memberId)
-        return this.copy(profilePhotoUrl = photoUrl)
+    private fun toFriendRequestDto(request: FriendRequest, membersWithPhoto: Set<Long>): FriendRequestDto {
+        return FriendRequestDto(
+            id = request.id!!,
+            fromMember = FriendDto.of(request.fromMember, request.fromMember.id in membersWithPhoto),
+            toMember = FriendDto.of(request.toMember, request.toMember.id in membersWithPhoto),
+            status = request.status.name,
+            createdAt = request.createdDate,
+            requestType = request.requestType
+        )
     }
 
 }
