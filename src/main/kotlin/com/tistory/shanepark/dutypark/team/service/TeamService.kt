@@ -76,9 +76,7 @@ class TeamService(
     }
 
     fun isDuplicated(name: String): Boolean {
-        teamRepository.findByName(name).let {
-            return it != null
-        }
+        return teamRepository.findByName(name) != null
     }
 
     fun addMemberToTeam(teamId: Long, memberId: Long) {
@@ -176,7 +174,7 @@ class TeamService(
                     dutyMemberMap.filter { (duty, _) -> duty.dutyType?.id == id }.values
                 } ?: offMembers
                 val members = sourceMembers
-                    .map { member -> SimpleMemberDto(member.id!!, member.name) }
+                    .map { member -> SimpleMemberDto(member.id!!, member.name, member.hasProfilePhoto()) }
                     .sortedBy { it.name }
                 DutyByShift(dutyTypeDto, members)
             }

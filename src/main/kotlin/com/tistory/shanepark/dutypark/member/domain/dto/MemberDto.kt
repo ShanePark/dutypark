@@ -29,16 +29,5 @@ data class MemberDto(
             )
         }
 
-        fun ofSimple(member: Member): MemberDto {
-            return MemberDto(
-                id = member.id,
-                name = member.name,
-                email = member.email,
-                calendarVisibility = member.calendarVisibility,
-                kakaoId = member.kakaoId,
-                hasPassword = member.password != null,
-                hasProfilePhoto = member.hasProfilePhoto(),
-            )
-        }
     }
 }

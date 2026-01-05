@@ -1305,9 +1305,6 @@ function formatScheduleTime(schedule: Schedule) {
   return ''
 }
 
-
-
-
 // Batch update modal - update all days in current month to a single duty type
 async function showBatchUpdateModal() {
   if (!memberId.value || dutyTypes.value.length === 0) return

@@ -3,7 +3,6 @@ package com.tistory.shanepark.dutypark.schedule.domain.dto
 import com.tistory.shanepark.dutypark.attachment.dto.AttachmentDto
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
-import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto.Companion.ofSimple
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
@@ -56,7 +55,7 @@ data class ScheduleDto(
         fun of(calendarView: CalendarView, schedule: Schedule, isTagged: Boolean = false): List<ScheduleDto> {
             val startDate = schedule.startDateTime.toLocalDate()
             val endDate = schedule.endDateTime.toLocalDate()
-            val tags = schedule.tags.map { t -> ofSimple(t.member) }
+            val tags = schedule.tags.map { t -> MemberDto.of(t.member) }
 
             return calendarView.validDays(startDate = startDate, endDate = endDate)
                 .map {
