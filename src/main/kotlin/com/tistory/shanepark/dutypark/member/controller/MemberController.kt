@@ -10,12 +10,14 @@ import com.tistory.shanepark.dutypark.member.service.ProfilePhotoService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.core.io.Resource
 import org.springframework.core.io.UrlResource
+import org.springframework.http.CacheControl
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
 import java.nio.file.Files
+import java.util.concurrent.TimeUnit
 
 @RestController
 @RequestMapping("/api/members")
@@ -135,6 +137,7 @@ class MemberController(
         val contentType = Files.probeContentType(photoPath) ?: "image/png"
 
         return ResponseEntity.ok()
+            .cacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic())
             .contentType(MediaType.parseMediaType(contentType))
             .body(resource)
     }

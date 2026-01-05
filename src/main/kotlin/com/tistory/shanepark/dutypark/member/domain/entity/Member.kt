@@ -36,7 +36,14 @@ class Member(
     @Column(name = "profile_photo_path")
     var profilePhotoPath: String? = null
 
+    @Column(name = "profile_photo_version")
+    var profilePhotoVersion: Long = 0
+
     fun hasProfilePhoto(): Boolean = profilePhotoPath != null
+
+    fun incrementProfilePhotoVersion() {
+        profilePhotoVersion++
+    }
 
     override fun toString(): String {
         return "Member(name='$name', id=$id)"

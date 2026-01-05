@@ -174,7 +174,7 @@ class TeamService(
                     dutyMemberMap.filter { (duty, _) -> duty.dutyType?.id == id }.values
                 } ?: offMembers
                 val members = sourceMembers
-                    .map { member -> SimpleMemberDto(member.id!!, member.name, member.hasProfilePhoto()) }
+                    .map { member -> SimpleMemberDto(member.id!!, member.name, member.hasProfilePhoto(), member.profilePhotoVersion) }
                     .sortedBy { it.name }
                 DutyByShift(dutyTypeDto, members)
             }

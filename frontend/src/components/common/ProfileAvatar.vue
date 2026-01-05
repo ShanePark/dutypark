@@ -8,6 +8,7 @@ interface Props {
   size?: 'sm' | 'md' | 'lg' | 'xl'
   name?: string
   hasProfilePhoto?: boolean
+  profilePhotoVersion?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -15,11 +16,12 @@ const props = withDefaults(defineProps<Props>(), {
   size: 'md',
   name: '',
   hasProfilePhoto: false,
+  profilePhotoVersion: 0,
 })
 
 const photoUrl = computed(() => {
   if (!props.memberId) return null
-  return `/api/members/${props.memberId}/profile-photo?thumbnail=true`
+  return `/api/members/${props.memberId}/profile-photo?thumbnail=true&v=${props.profilePhotoVersion}`
 })
 
 const sizeClasses = computed(() => {
@@ -75,7 +77,7 @@ function handleImageError() {
 }
 
 watch(
-  () => [props.memberId, props.hasProfilePhoto],
+  () => [props.memberId, props.hasProfilePhoto, props.profilePhotoVersion],
   () => {
     if (imageBlobUrl.value) {
       URL.revokeObjectURL(imageBlobUrl.value)

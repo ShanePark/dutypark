@@ -64,8 +64,9 @@ class ProfilePhotoService(
 
         val relativePath = "PROFILE/${loginMember.id}/$originalFilename"
         member.profilePhotoPath = relativePath
+        member.incrementProfilePhotoVersion()
 
-        log.info("Profile photo set: memberId={}, path={}", loginMember.id, relativePath)
+        log.info("Profile photo set: memberId={}, path={}, version={}", loginMember.id, relativePath, member.profilePhotoVersion)
     }
 
     fun deleteProfilePhoto(loginMember: LoginMember) {
@@ -73,8 +74,9 @@ class ProfilePhotoService(
 
         deleteExistingPhotos(member.profilePhotoPath)
         member.profilePhotoPath = null
+        member.incrementProfilePhotoVersion()
 
-        log.info("Profile photo deleted: memberId={}", loginMember.id)
+        log.info("Profile photo deleted: memberId={}, version={}", loginMember.id, member.profilePhotoVersion)
     }
 
     private fun deleteExistingPhotos(photoPath: String?) {

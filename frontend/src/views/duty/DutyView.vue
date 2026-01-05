@@ -141,6 +141,7 @@ const currentYear = ref(today.getFullYear())
 const currentMonth = ref(today.getMonth() + 1)
 const memberName = ref('')
 const memberHasProfilePhoto = ref(false)
+const memberProfilePhotoVersion = ref(0)
 const memberId = computed(() => {
   const paramId = route.params.id as string | undefined
   if (!paramId || paramId === 'me') {
@@ -554,11 +555,13 @@ async function loadMemberInfo() {
       memberName.value = response.data.name
       teamId.value = response.data.teamId
       memberHasProfilePhoto.value = response.data.hasProfilePhoto ?? false
+      memberProfilePhotoVersion.value = response.data.profilePhotoVersion ?? 0
     } else {
       const response = await memberApi.getMemberById(memberId.value)
       memberName.value = response.data.name
       teamId.value = response.data.teamId
       memberHasProfilePhoto.value = response.data.hasProfilePhoto ?? false
+      memberProfilePhotoVersion.value = response.data.profilePhotoVersion ?? 0
     }
   } catch (error) {
     console.error('Failed to load member info:', error)
@@ -567,6 +570,7 @@ async function loadMemberInfo() {
       memberName.value = authStore.user.name
       teamId.value = authStore.user.teamId
       memberHasProfilePhoto.value = false
+      memberProfilePhotoVersion.value = 0
     }
   }
 }
@@ -655,6 +659,7 @@ watch(
     otherDuties.value = []
     memberName.value = ''
     memberHasProfilePhoto.value = false
+    memberProfilePhotoVersion.value = 0
 
     try {
       // Load calendar first to ensure index alignment
@@ -1426,7 +1431,7 @@ async function showExcelUploadModal() {
       <!-- Left: Profile Photo + Name -->
       <div class="flex-shrink-0 flex items-center gap-2 z-10">
         <!-- Profile Photo -->
-        <ProfileAvatar :member-id="memberId" :has-profile-photo="memberHasProfilePhoto" size="xl" :name="memberName" />
+        <ProfileAvatar :member-id="memberId" :has-profile-photo="memberHasProfilePhoto" :profile-photo-version="memberProfilePhotoVersion" size="xl" :name="memberName" />
         <!-- Name -->
         <span
           class="text-sm sm:text-base font-semibold max-w-[60px] sm:max-w-[80px] truncate"

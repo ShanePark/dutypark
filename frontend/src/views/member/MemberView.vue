@@ -427,6 +427,8 @@ onMounted(async () => {
             <ProfilePhotoUploader
               v-if="memberInfo?.id"
               :member-id="memberInfo.id"
+              :profile-photo-version="memberInfo.profilePhotoVersion"
+              @upload-complete="fetchMemberInfo"
             />
           </div>
 
@@ -574,7 +576,7 @@ onMounted(async () => {
                 :style="{ backgroundColor: 'var(--dp-bg-secondary)' }"
               >
                 <div class="flex items-center gap-3">
-                  <ProfileAvatar :member-id="member.id" :has-profile-photo="member.hasProfilePhoto" size="md" :name="member.name" />
+                  <ProfileAvatar :member-id="member.id" :has-profile-photo="member.hasProfilePhoto" :profile-photo-version="member.profilePhotoVersion" size="md" :name="member.name" />
                   <div>
                     <p class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ member.name }}</p>
                     <p v-if="member.team" class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">{{ member.team }}</p>

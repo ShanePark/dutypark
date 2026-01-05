@@ -134,6 +134,69 @@ class ProfilePhotoServiceTest : DutyparkIntegrationTest() {
     }
 
     @Test
+    fun `setProfilePhoto increments profilePhotoVersion`() {
+        // Given
+        val member = TestData.member
+        member.profilePhotoPath = null
+        member.profilePhotoVersion = 0
+        memberRepository.save(member)
+        em.flush()
+        em.clear()
+
+        val loginMember = loginMember(member)
+        val profileDir = storagePathResolver.getStorageRoot().resolve("PROFILE/${member.id}")
+        createdDirectories.add(profileDir)
+
+        // When
+        val imageBytes = createTestPngImage()
+        val file = MockMultipartFile("file", "test.png", "image/png", imageBytes)
+        profilePhotoService.setProfilePhoto(loginMember, file)
+        em.flush()
+        em.clear()
+
+        // Then
+        val updatedMember = memberRepository.findById(member.id!!).orElseThrow()
+        assertThat(updatedMember.profilePhotoVersion).isEqualTo(1)
+    }
+
+    @Test
+    fun `setProfilePhoto increments version on each upload`() {
+        // Given
+        val member = TestData.member
+        member.profilePhotoPath = null
+        member.profilePhotoVersion = 5
+        memberRepository.save(member)
+        em.flush()
+        em.clear()
+
+        val loginMember = loginMember(member)
+        val profileDir = storagePathResolver.getStorageRoot().resolve("PROFILE/${member.id}")
+        createdDirectories.add(profileDir)
+
+        // When - First upload
+        val firstImage = createTestPngImage()
+        val firstFile = MockMultipartFile("file", "first.png", "image/png", firstImage)
+        profilePhotoService.setProfilePhoto(loginMember, firstFile)
+        em.flush()
+        em.clear()
+
+        // Then
+        var updatedMember = memberRepository.findById(member.id!!).orElseThrow()
+        assertThat(updatedMember.profilePhotoVersion).isEqualTo(6)
+
+        // When - Second upload
+        val secondImage = createTestPngImage()
+        val secondFile = MockMultipartFile("file", "second.png", "image/png", secondImage)
+        profilePhotoService.setProfilePhoto(loginMember, secondFile)
+        em.flush()
+        em.clear()
+
+        // Then
+        updatedMember = memberRepository.findById(member.id!!).orElseThrow()
+        assertThat(updatedMember.profilePhotoVersion).isEqualTo(7)
+    }
+
+    @Test
     fun `setProfilePhoto replaces existing photo`() {
         // Given
         val member = TestData.member
@@ -211,6 +274,41 @@ class ProfilePhotoServiceTest : DutyparkIntegrationTest() {
         val updatedMember = memberRepository.findById(member.id!!).orElseThrow()
         assertThat(updatedMember.profilePhotoPath).isNull()
         assertThat(Files.exists(originalPath)).isFalse()
+    }
+
+    @Test
+    fun `deleteProfilePhoto increments profilePhotoVersion`() {
+        // Given
+        val member = TestData.member
+        member.profilePhotoPath = null
+        member.profilePhotoVersion = 0
+        memberRepository.save(member)
+        em.flush()
+        em.clear()
+
+        val loginMember = loginMember(member)
+        val profileDir = storagePathResolver.getStorageRoot().resolve("PROFILE/${member.id}")
+        createdDirectories.add(profileDir)
+
+        // Upload photo first (version becomes 1)
+        val imageBytes = createTestPngImage()
+        val file = MockMultipartFile("file", "test.png", "image/png", imageBytes)
+        profilePhotoService.setProfilePhoto(loginMember, file)
+        em.flush()
+        em.clear()
+
+        val memberWithPhoto = memberRepository.findById(member.id!!).orElseThrow()
+        assertThat(memberWithPhoto.profilePhotoVersion).isEqualTo(1)
+
+        // When - delete photo (version becomes 2)
+        profilePhotoService.deleteProfilePhoto(loginMember)
+        em.flush()
+        em.clear()
+
+        // Then
+        val updatedMember = memberRepository.findById(member.id!!).orElseThrow()
+        assertThat(updatedMember.profilePhotoPath).isNull()
+        assertThat(updatedMember.profilePhotoVersion).isEqualTo(2)
     }
 
     @Test

@@ -181,6 +181,7 @@ export interface DashboardMemberDto {
   kakaoId?: string | null
   hasPassword?: boolean
   hasProfilePhoto?: boolean
+  profilePhotoVersion?: number
 }
 
 export interface DashboardFriendDto {
@@ -189,6 +190,7 @@ export interface DashboardFriendDto {
   teamId?: number | null
   team?: string | null
   hasProfilePhoto?: boolean
+  profilePhotoVersion?: number
 }
 
 export interface DashboardDutyDto {
@@ -292,6 +294,7 @@ export interface AdminMemberDto {
   teamName: string | null
   tokens: RefreshTokenDto[]
   hasProfilePhoto?: boolean
+  profilePhotoVersion?: number
 }
 
 export interface SimpleTeam {
@@ -353,6 +356,7 @@ export interface TeamMemberDto {
   isManager: boolean
   isAdmin: boolean
   hasProfilePhoto?: boolean
+  profilePhotoVersion?: number
 }
 
 export interface DutyBatchTemplateDto {
@@ -387,6 +391,7 @@ export interface SimpleMemberDto {
   id: number
   name: string
   hasProfilePhoto?: boolean
+  profilePhotoVersion?: number
 }
 
 export interface DutyByShift {
@@ -431,6 +436,7 @@ export interface MemberDto {
   kakaoId: string | null
   hasPassword: boolean
   hasProfilePhoto?: boolean
+  profilePhotoVersion?: number
 }
 
 export interface FriendDto {
@@ -439,6 +445,7 @@ export interface FriendDto {
   teamId: number | null
   team: string | null
   hasProfilePhoto?: boolean
+  profilePhotoVersion?: number
 }
 
 export interface DDayDto {
