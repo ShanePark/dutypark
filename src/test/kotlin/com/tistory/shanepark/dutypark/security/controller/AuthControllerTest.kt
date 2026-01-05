@@ -185,4 +185,161 @@ class AuthControllerTest : DutyparkIntegrationTest() {
             .andDo(MockMvcResultHandlers.print())
     }
 
+    @Test
+    fun `impersonate succeeds when manager has permission`() {
+        // Given
+        val manager = memberRepository.findByEmail(TestData.member.email).orElseThrow()
+        val managed = memberRepository.findByEmail(TestData.member2.email).orElseThrow()
+        makeManagerRelation(manager, managed)
+        em.flush()
+        em.clear()
+
+        val accessToken = getJwt(manager)
+
+        // When & Then
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/impersonate/${managed.id}")
+                .header("Authorization", "Bearer $accessToken")
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.expiresIn").exists())
+            .andExpect(cookie().exists("access_token"))
+            .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
+    fun `impersonate fails when manager has no permission`() {
+        // Given
+        val manager = memberRepository.findByEmail(TestData.member.email).orElseThrow()
+        val notManaged = memberRepository.findByEmail(TestData.member2.email).orElseThrow()
+
+        val accessToken = getJwt(manager)
+
+        // When & Then
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/impersonate/${notManaged.id}")
+                .header("Authorization", "Bearer $accessToken")
+        ).andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error").exists())
+            .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
+    fun `impersonate fails without login`() {
+        // Given
+        val targetId = TestData.member.id
+
+        // When & Then
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/impersonate/$targetId")
+        ).andExpect(status().isUnauthorized)
+            .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
+    fun `impersonate and status shows impersonated state`() {
+        // Given
+        val manager = memberRepository.findByEmail(TestData.member.email).orElseThrow()
+        val managed = memberRepository.findByEmail(TestData.member2.email).orElseThrow()
+        makeManagerRelation(manager, managed)
+        em.flush()
+        em.clear()
+
+        val accessToken = getJwt(manager)
+
+        // When - Impersonate
+        val impersonateResult = mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/impersonate/${managed.id}")
+                .header("Authorization", "Bearer $accessToken")
+        ).andExpect(status().isOk)
+            .andReturn()
+
+        val impersonatedToken = impersonateResult.response.getCookie("access_token")?.value
+
+        // Then - Check status shows impersonated state
+        mockMvc.perform(
+            MockMvcRequestBuilders.get("/api/auth/status")
+                .header("Authorization", "Bearer $impersonatedToken")
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(managed.id))
+            .andExpect(jsonPath("$.name").value(managed.name))
+            .andExpect(jsonPath("$.isImpersonating").value(true))
+            .andExpect(jsonPath("$.originalMemberId").value(manager.id))
+            .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
+    fun `restore succeeds when impersonating`() {
+        // Given
+        val manager = memberRepository.findByEmail(TestData.member.email).orElseThrow()
+        val managed = memberRepository.findByEmail(TestData.member2.email).orElseThrow()
+        makeManagerRelation(manager, managed)
+        em.flush()
+        em.clear()
+
+        val accessToken = getJwt(manager)
+
+        // Impersonate first
+        val impersonateResult = mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/impersonate/${managed.id}")
+                .header("Authorization", "Bearer $accessToken")
+        ).andExpect(status().isOk)
+            .andReturn()
+
+        val impersonatedToken = impersonateResult.response.getCookie("access_token")?.value
+
+        // When - Restore
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/restore")
+                .header("Authorization", "Bearer $impersonatedToken")
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.expiresIn").exists())
+            .andExpect(cookie().exists("access_token"))
+            .andExpect(cookie().exists("refresh_token"))
+            .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
+    fun `restore fails when not impersonating`() {
+        // Given
+        val member = memberRepository.findByEmail(TestData.member.email).orElseThrow()
+        val accessToken = getJwt(member)
+
+        // When & Then
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/restore")
+                .header("Authorization", "Bearer $accessToken")
+        ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error").exists())
+            .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
+    fun `double impersonation is not allowed`() {
+        // Given
+        val manager = memberRepository.findByEmail(TestData.member.email).orElseThrow()
+        val managed = memberRepository.findByEmail(TestData.member2.email).orElseThrow()
+        makeManagerRelation(manager, managed)
+        em.flush()
+        em.clear()
+
+        val accessToken = getJwt(manager)
+
+        // First impersonation
+        val impersonateResult = mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/impersonate/${managed.id}")
+                .header("Authorization", "Bearer $accessToken")
+        ).andExpect(status().isOk)
+            .andReturn()
+
+        val impersonatedToken = impersonateResult.response.getCookie("access_token")?.value
+
+        // When - Try second impersonation
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/impersonate/${managed.id}")
+                .header("Authorization", "Bearer $impersonatedToken")
+        ).andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error").exists())
+            .andDo(MockMvcResultHandlers.print())
+    }
+
 }
