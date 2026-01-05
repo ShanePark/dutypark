@@ -9,6 +9,7 @@ import {
   GripVertical,
   Paperclip,
   Lock,
+  User,
   UserPlus,
   Check,
 } from 'lucide-vue-next'
