@@ -990,3 +990,37 @@ div.swal2-popup.swal2-toast.colored-toast-info {
     color: #22c55e !important;
     flex-shrink: 0 !important;
 }
+
+/* ====================================
+   Friend Request Cards
+   ==================================== */
+
+/* Received friend request card (blue theme) */
+.friend-request-received {
+    background: linear-gradient(to bottom right, #eff6ff, #eef2ff);
+    border: 1px solid #bfdbfe;
+}
+
+.dark .friend-request-received {
+    background: linear-gradient(to bottom right, #1e3a5f, #1e293b);
+    border-color: #3b82f6;
+}
+
+.friend-request-received .friend-request-name {
+    color: var(--dp-text-primary);
+}
+
+/* Sent friend request card (amber theme) */
+.friend-request-sent {
+    background: linear-gradient(to bottom right, #fffbeb, #fef9c3);
+    border: 1px solid #fcd34d;
+}
+
+.dark .friend-request-sent {
+    background: linear-gradient(to bottom right, #451a03, #1c1917);
+    border-color: #f59e0b;
+}
+
+.friend-request-sent .friend-request-name {
+    color: var(--dp-text-primary);
+}

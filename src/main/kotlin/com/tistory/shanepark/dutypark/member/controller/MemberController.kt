@@ -71,6 +71,13 @@ class MemberController(
         return memberService.findAllManagers(loginMember)
     }
 
+    @GetMapping("/managed")
+    fun getManagedMembers(
+        @Login loginMember: LoginMember,
+    ): List<MemberDto> {
+        return memberService.findManagedMembers(loginMember)
+    }
+
     @GetMapping("/{memberId}/canManage")
     fun amIManager(
         @Login(required = false) loginMember: LoginMember?,

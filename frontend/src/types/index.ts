@@ -525,3 +525,17 @@ export interface UpdateProfilePhotoRequest {
 export interface ProfilePhotoResponse {
   profilePhotoUrl: string | null
 }
+
+// Impersonation types
+export interface ImpersonationState {
+  isImpersonating: boolean
+}
+
+export interface ManagedMemberDto {
+  id: number
+  name: string
+  email: string | null
+  teamId: number | null
+  team: string | null
+  profilePhotoUrl: string | null
+}

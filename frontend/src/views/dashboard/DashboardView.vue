@@ -651,10 +651,10 @@ watch(
             <div
               v-for="req in friendInfo.pendingRequestsTo"
               :key="'to-' + req.fromMember.id"
-              class="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200"
+              class="p-4 rounded-xl friend-request-received"
             >
               <div class="flex justify-between items-center">
-                <div class="font-medium flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
+                <div class="font-medium flex items-center gap-2 friend-request-name">
                   <div class="relative">
                     <ProfileAvatar :photo-url="req.fromMember.profilePhotoUrl" size="sm" />
                     <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center bg-blue-500 ring-2 ring-white">
@@ -686,10 +686,10 @@ watch(
             <div
               v-for="req in friendInfo.pendingRequestsFrom"
               :key="'from-' + req.toMember.id"
-              class="p-4 rounded-xl bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200"
+              class="p-4 rounded-xl friend-request-sent"
             >
               <div class="flex justify-between items-center">
-                <div class="font-medium flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
+                <div class="font-medium flex items-center gap-2 friend-request-name">
                   <div class="relative">
                     <ProfileAvatar :photo-url="req.toMember.profilePhotoUrl" size="sm" />
                     <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center bg-amber-500 ring-2 ring-white">

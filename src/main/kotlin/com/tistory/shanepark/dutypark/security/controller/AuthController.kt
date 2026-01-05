@@ -103,6 +103,43 @@ class AuthController(
         return ResponseEntity.noContent().build()
     }
 
+    /**
+     * Impersonate API - switch to managed account
+     */
+    @PostMapping("/impersonate/{targetMemberId}")
+    fun impersonate(
+        @Login loginMember: LoginMember,
+        @PathVariable targetMemberId: Long,
+        req: HttpServletRequest,
+        resp: HttpServletResponse
+    ): ResponseEntity<*> {
+        return try {
+            val tokenResponse = authService.impersonate(loginMember, targetMemberId, req)
+            cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)
+            ResponseEntity.ok(tokenResponse.toPublicResponse())
+        } catch (e: AuthException) {
+            ResponseEntity.status(403).body(mapOf("error" to (e.message ?: "계정 전환에 실패했습니다.")))
+        }
+    }
+
+    /**
+     * Restore API - switch back to original account
+     */
+    @PostMapping("/restore")
+    fun restore(
+        @Login loginMember: LoginMember,
+        req: HttpServletRequest,
+        resp: HttpServletResponse
+    ): ResponseEntity<*> {
+        return try {
+            val tokenResponse = authService.restore(loginMember, req)
+            cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)
+            ResponseEntity.ok(tokenResponse.toPublicResponse())
+        } catch (e: AuthException) {
+            ResponseEntity.status(400).body(mapOf("error" to (e.message ?: "계정 복원에 실패했습니다.")))
+        }
+    }
+
     private fun TokenResponse.toPublicResponse(): Map<String, Any> {
         return mapOf(
             "expiresIn" to expiresIn

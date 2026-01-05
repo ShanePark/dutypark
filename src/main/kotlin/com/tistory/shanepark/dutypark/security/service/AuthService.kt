@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.security.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.member.repository.MemberManagerRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
 import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
@@ -22,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional
 class AuthService(
     private val memberRepository: MemberRepository,
     private val memberSsoRegisterRepository: MemberSsoRegisterRepository,
+    private val memberManagerRepository: MemberManagerRepository,
     private val passwordEncoder: PasswordEncoder,
     private val refreshTokenService: RefreshTokenService,
     private val jwtProvider: JwtProvider,
@@ -129,6 +131,69 @@ class AuthService(
         )
 
         log.info("OAuth Login Success (Bearer): ${member.name}")
+
+        return TokenResponse(
+            accessToken = jwt,
+            refreshToken = refreshToken.token,
+            expiresIn = jwtConfig.tokenValidityInSeconds
+        )
+    }
+
+    fun impersonate(manager: LoginMember, targetMemberId: Long, req: HttpServletRequest): TokenResponse {
+        if (manager.isImpersonating) {
+            throw AuthException("이미 다른 계정으로 전환된 상태입니다.")
+        }
+
+        val managerEntity = memberRepository.findById(manager.id).orElseThrow {
+            AuthException("관리자 계정을 찾을 수 없습니다.")
+        }
+
+        val targetEntity = memberRepository.findById(targetMemberId).orElseThrow {
+            AuthException("대상 계정을 찾을 수 없습니다.")
+        }
+
+        val isManager = memberManagerRepository.findAllByManagerAndManaged(managerEntity, targetEntity).isNotEmpty()
+        if (!isManager) {
+            log.warn("Impersonation denied. manager:${manager.id} is not managing target:${targetMemberId}")
+            throw AuthException("관리 권한이 없습니다.")
+        }
+
+        val jwt = jwtProvider.createImpersonationToken(targetEntity, manager.id)
+        val refreshToken = refreshTokenService.createRefreshToken(
+            memberId = targetMemberId,
+            remoteAddr = req.remoteAddr,
+            userAgent = req.getHeader(HttpHeaders.USER_AGENT)
+        )
+
+        log.info("Impersonation started. manager:${manager.id} -> target:${targetMemberId}")
+
+        return TokenResponse(
+            accessToken = jwt,
+            refreshToken = refreshToken.token,
+            expiresIn = jwtConfig.tokenValidityInSeconds
+        )
+    }
+
+    fun restore(currentLogin: LoginMember, req: HttpServletRequest): TokenResponse {
+        if (!currentLogin.isImpersonating) {
+            throw AuthException("전환된 계정 상태가 아닙니다.")
+        }
+
+        val originalMemberId = currentLogin.originalMemberId
+            ?: throw AuthException("원래 계정 정보가 없습니다.")
+
+        val originalMember = memberRepository.findById(originalMemberId).orElseThrow {
+            AuthException("원래 계정을 찾을 수 없습니다.")
+        }
+
+        val jwt = jwtProvider.createToken(originalMember)
+        val refreshToken = refreshTokenService.createRefreshToken(
+            memberId = originalMemberId,
+            remoteAddr = req.remoteAddr,
+            userAgent = req.getHeader(HttpHeaders.USER_AGENT)
+        )
+
+        log.info("Impersonation ended. restored to:${originalMemberId} from:${currentLogin.id}")
 
         return TokenResponse(
             accessToken = jwt,

@@ -11,6 +11,7 @@ export interface AuthResponse {
   expiresIn: number
 }
 
+
 export const authApi = {
   /**
    * Login with HttpOnly cookie
@@ -59,6 +60,22 @@ export const authApi = {
    */
   ssoSignup: async (data: SsoSignupDto): Promise<AuthResponse> => {
     const response = await apiClient.post<AuthResponse>('/auth/sso/signup/token', data)
+    return response.data
+  },
+
+  /**
+   * Impersonate - switch to managed account
+   */
+  impersonate: async (targetMemberId: number): Promise<AuthResponse> => {
+    const response = await apiClient.post<AuthResponse>(`/auth/impersonate/${targetMemberId}`)
+    return response.data
+  },
+
+  /**
+   * Restore - return to original account from impersonation
+   */
+  restore: async (): Promise<AuthResponse> => {
+    const response = await apiClient.post<AuthResponse>('/auth/restore')
     return response.data
   },
 }

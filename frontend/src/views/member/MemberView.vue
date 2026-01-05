@@ -9,7 +9,7 @@ import { useSwal } from '@/composables/useSwal'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEscapeKey } from '@/composables/useEscapeKey'
 import { useKakao } from '@/composables/useKakao'
-import type { FriendDto, MemberDto, RefreshTokenDto, CalendarVisibility } from '@/types'
+import type { FriendDto, MemberDto, RefreshTokenDto, CalendarVisibility, ManagedMemberDto } from '@/types'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
 import ProfilePhotoUploader from '@/components/common/ProfilePhotoUploader.vue'
 import {
@@ -31,12 +31,52 @@ import {
   Loader2,
   Sun,
   Moon,
+  Users,
+  LogIn,
 } from 'lucide-vue-next'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const themeStore = useThemeStore()
 const { showSuccess, showError, showInfo, confirm, toastSuccess } = useSwal()
+
+// Managed members (accounts I manage)
+const managedMembers = ref<ManagedMemberDto[]>([])
+const managedMembersLoading = ref(false)
+const impersonating = ref<number | null>(null)
+
+async function fetchManagedMembers() {
+  managedMembersLoading.value = true
+  try {
+    const response = await memberApi.getManagedMembers()
+    managedMembers.value = response.data
+  } catch (error) {
+    console.error('Failed to fetch managed members:', error)
+  } finally {
+    managedMembersLoading.value = false
+  }
+}
+
+async function handleImpersonate(member: ManagedMemberDto) {
+  const confirmed = await confirm(
+    `${member.name} 계정으로 전환하시겠습니까?\n\n전환 후에는 해당 계정의 모든 기능을 사용할 수 있습니다.`,
+    '계정 전환'
+  )
+
+  if (!confirmed) return
+
+  impersonating.value = member.id
+  try {
+    await authStore.impersonate(member.id)
+    router.push('/')
+  } catch (error: any) {
+    console.error('Failed to impersonate:', error)
+    const errorMessage = error.response?.data?.error || '계정 전환에 실패했습니다.'
+    showError(errorMessage)
+  } finally {
+    impersonating.value = null
+  }
+}
 const { kakaoLink } = useKakao()
 
 // Theme settings
@@ -318,6 +358,7 @@ onMounted(async () => {
     await Promise.all([
       fetchMemberInfo(),
       fetchFamilyAndManagers(),
+      fetchManagedMembers(),
       fetchTokens(),
     ])
 
@@ -498,6 +539,50 @@ onMounted(async () => {
             </div>
           </div>
           <p v-else class="text-sm" :style="{ color: 'var(--dp-text-muted)' }">등록된 관리자가 없습니다</p>
+
+          <!-- Managed Members (accounts I manage) -->
+          <div v-if="managedMembers.length > 0" class="mt-6 pt-4" :style="{ borderTopWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
+            <div class="flex items-center gap-2 mb-3">
+              <Users class="w-4 h-4" :style="{ color: 'var(--dp-text-secondary)' }" />
+              <h3 class="text-sm font-medium" :style="{ color: 'var(--dp-text-primary)' }">내가 관리 중인 계정</h3>
+            </div>
+            <div class="space-y-2">
+              <div
+                v-for="member in managedMembers"
+                :key="member.id"
+                class="flex items-center justify-between p-3 rounded-lg"
+                :style="{ backgroundColor: 'var(--dp-bg-secondary)' }"
+              >
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden"
+                    :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
+                  >
+                    <img
+                      v-if="member.profilePhotoUrl"
+                      :src="member.profilePhotoUrl"
+                      :alt="member.name"
+                      class="w-full h-full object-cover"
+                    />
+                    <User v-else class="w-5 h-5" :style="{ color: 'var(--dp-text-muted)' }" />
+                  </div>
+                  <div>
+                    <p class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ member.name }}</p>
+                    <p v-if="member.team" class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">{{ member.team }}</p>
+                  </div>
+                </div>
+                <button
+                  @click="handleImpersonate(member)"
+                  :disabled="impersonating === member.id"
+                  class="flex items-center gap-1.5 px-3 py-2 min-h-10 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <Loader2 v-if="impersonating === member.id" class="w-4 h-4 animate-spin" />
+                  <LogIn v-else class="w-4 h-4" />
+                  <span class="hidden sm:inline">로그인하기</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

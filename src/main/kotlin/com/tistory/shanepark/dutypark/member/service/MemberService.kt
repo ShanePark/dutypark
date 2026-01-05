@@ -164,6 +164,18 @@ class MemberService(
         return isManager(isManager = isManager, target = target)
     }
 
+    @Transactional(readOnly = true)
+    fun findManagedMembers(loginMember: LoginMember): List<MemberDto> {
+        val manager = memberRepository.findById(loginMember.id).orElseThrow()
+        val managedMembers = memberManagerRepository.findAllByManager(manager)
+            .map { it.managed }
+
+        val memberIds = managedMembers.mapNotNull { it.id }
+        val profilePhotoUrls = profilePhotoService.getProfilePhotoUrls(memberIds)
+
+        return managedMembers.map { MemberDto.of(it).copy(profilePhotoUrl = profilePhotoUrls[it.id]) }
+    }
+
     private fun MemberDto.withProfilePhoto(memberId: Long?): MemberDto {
         if (memberId == null) return this
         val photoUrl = profilePhotoService.getProfilePhotoUrl(memberId)

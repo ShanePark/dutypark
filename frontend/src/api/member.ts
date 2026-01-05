@@ -9,6 +9,7 @@ import type {
   Page,
   UpdateProfilePhotoRequest,
   ProfilePhotoResponse,
+  ManagedMemberDto,
 } from '@/types'
 
 /**
@@ -76,6 +77,13 @@ export const memberApi = {
    */
   deleteProfilePhoto() {
     return apiClient.delete('/members/profile-photo')
+  },
+
+  /**
+   * Get managed members (accounts I manage)
+   */
+  getManagedMembers() {
+    return apiClient.get<ManagedMemberDto[]>('/members/managed')
   },
 }
 
