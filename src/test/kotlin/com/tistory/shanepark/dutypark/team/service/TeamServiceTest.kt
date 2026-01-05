@@ -6,6 +6,7 @@ import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.member.service.ProfilePhotoService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import com.tistory.shanepark.dutypark.team.repository.TeamRepository
@@ -38,6 +39,8 @@ class TeamServiceTest {
     @Mock
     lateinit var memberRepository: MemberRepository
 
+    @Mock
+    lateinit var profilePhotoService: ProfilePhotoService
 
     @Test
     fun `loadShift should return empty shift if member is not in any team`() {

@@ -10,6 +10,7 @@ import { useEscapeKey } from '@/composables/useEscapeKey'
 import type { AdminMemberDto, RefreshTokenDto } from '@/types'
 import { extractDatePart } from '@/utils/date'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
+import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import {
   Users,
   Building2,
@@ -358,9 +359,7 @@ onMounted(async () => {
               >
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
                   <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }">
-                      <span class="text-sm font-medium" :style="{ color: 'var(--dp-text-secondary)' }">{{ member.name.charAt(0) }}</span>
-                    </div>
+                    <ProfileAvatar :member-id="member.id" :has-profile-photo="member.hasProfilePhoto" size="md" :name="member.name" />
                     <div class="min-w-0">
                       <p class="font-medium truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ member.name }}</p>
                       <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">

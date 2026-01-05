@@ -153,4 +153,11 @@ class MemberService(
         return isManager(isManager = isManager, target = target)
     }
 
+    @Transactional(readOnly = true)
+    fun findManagedMembers(loginMember: LoginMember): List<MemberDto> {
+        val manager = memberRepository.findById(loginMember.id).orElseThrow()
+        val managedMembers = memberManagerRepository.findAllByManager(manager).map { it.managed }
+        return managedMembers.map { MemberDto.of(it) }
+    }
+
 }

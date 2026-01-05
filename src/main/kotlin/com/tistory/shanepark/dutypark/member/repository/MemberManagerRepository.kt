@@ -9,4 +9,5 @@ interface MemberManagerRepository : JpaRepository<MemberManager, UUID> {
 
     fun findAllByManagerAndManaged(manager: Member, managed: Member): List<MemberManager>
     fun findAllByManaged(member: Member): List<MemberManager>
+    fun findAllByManager(manager: Member): List<MemberManager>
 }

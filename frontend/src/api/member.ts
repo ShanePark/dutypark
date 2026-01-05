@@ -7,6 +7,7 @@ import type {
   RefreshTokenDto,
   CalendarVisibility,
   Page,
+  ManagedMemberDto,
 } from '@/types'
 
 /**
@@ -60,6 +61,29 @@ export const memberApi = {
    */
   getManagers() {
     return apiClient.get<MemberDto[]>('/members/managers')
+  },
+
+  /**
+   * Update profile photo
+   */
+  updateProfilePhoto(file: File) {
+    const formData = new FormData()
+    formData.append('file', file)
+    return apiClient.put<void>('/members/profile-photo', formData)
+  },
+
+  /**
+   * Delete profile photo
+   */
+  deleteProfilePhoto() {
+    return apiClient.delete('/members/profile-photo')
+  },
+
+  /**
+   * Get managed members (accounts I manage)
+   */
+  getManagedMembers() {
+    return apiClient.get<ManagedMemberDto[]>('/members/managed')
   },
 }
 

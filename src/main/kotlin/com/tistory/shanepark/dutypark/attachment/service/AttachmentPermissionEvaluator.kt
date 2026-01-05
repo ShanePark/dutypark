@@ -19,7 +19,7 @@ class AttachmentPermissionEvaluator(
         when (attachment.contextType) {
             AttachmentContextType.SCHEDULE -> checkScheduleReadPermission(loginMember, attachment)
             AttachmentContextType.TODO -> checkTodoPermission(loginMember, attachment)
-            AttachmentContextType.PROFILE,
+            AttachmentContextType.PROFILE -> { /* Public read - no auth required */ }
             AttachmentContextType.TEAM -> throw UnsupportedOperationException("Context type ${attachment.contextType} not yet implemented")
         }
     }
@@ -28,7 +28,7 @@ class AttachmentPermissionEvaluator(
         when (attachment.contextType) {
             AttachmentContextType.SCHEDULE -> checkScheduleWritePermission(loginMember, attachment)
             AttachmentContextType.TODO -> checkTodoPermission(loginMember, attachment)
-            AttachmentContextType.PROFILE,
+            AttachmentContextType.PROFILE -> checkProfileWritePermission(loginMember, attachment)
             AttachmentContextType.TEAM -> throw UnsupportedOperationException("Context type ${attachment.contextType} not yet implemented")
         }
     }
@@ -49,7 +49,7 @@ class AttachmentPermissionEvaluator(
                     UUID.fromString(session.targetContextId)
                 )
                 AttachmentContextType.TODO -> checkTodoSessionPermission(loginMember, session)
-                AttachmentContextType.PROFILE,
+                AttachmentContextType.PROFILE -> checkProfileSessionPermission(loginMember, session)
                 AttachmentContextType.TEAM -> throw UnsupportedOperationException("Context type ${session.contextType} not yet implemented")
             }
         }
@@ -100,6 +100,24 @@ class AttachmentPermissionEvaluator(
 
         if (todo.member.id != requester.id) {
             throw AuthException("Todo $todoId does not belong to user ${requester.id}")
+        }
+    }
+
+    private fun checkProfileWritePermission(loginMember: LoginMember, attachment: Attachment) {
+        val contextId = attachment.contextId
+            ?: throw IllegalStateException("Attachment ${attachment.id} has no contextId")
+
+        if (contextId != loginMember.id.toString()) {
+            throw AuthException("Profile photo does not belong to user ${loginMember.id}")
+        }
+    }
+
+    private fun checkProfileSessionPermission(loginMember: LoginMember, session: AttachmentUploadSession) {
+        val targetContextId = session.targetContextId
+            ?: throw IllegalStateException("Session ${session.id} has no targetContextId for PROFILE context")
+
+        if (targetContextId != loginMember.id.toString()) {
+            throw AuthException("Profile session does not belong to user ${loginMember.id}")
         }
     }
 

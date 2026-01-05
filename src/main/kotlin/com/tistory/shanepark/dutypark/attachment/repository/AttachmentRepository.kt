@@ -23,4 +23,14 @@ interface AttachmentRepository : JpaRepository<Attachment, UUID> {
     ): List<Attachment>
 
     fun findAllByUploadSessionId(uploadSessionId: UUID): List<Attachment>
+
+    fun findFirstByContextTypeAndContextId(
+        contextType: AttachmentContextType,
+        contextId: String
+    ): Attachment?
+
+    fun existsByContextTypeAndContextId(
+        contextType: AttachmentContextType,
+        contextId: String
+    ): Boolean
 }

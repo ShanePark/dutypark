@@ -30,6 +30,9 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoading = ref(false)
   const isInitialized = ref(false)
 
+  // Impersonation state derived from user's JWT token
+  const isImpersonating = computed(() => user.value?.isImpersonating ?? false)
+
   const isLoggedIn = computed(() => user.value !== null)
   const isAdmin = computed(() => user.value?.isAdmin ?? false)
 
@@ -118,17 +121,46 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function impersonate(targetMemberId: number): Promise<void> {
+    isLoading.value = true
+    try {
+      await authApi.impersonate(targetMemberId)
+
+      // Refresh user info after impersonation (includes isImpersonating from JWT)
+      user.value = await authApi.getStatus()
+      saveCachedUser(user.value)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  async function restore(): Promise<void> {
+    isLoading.value = true
+    try {
+      await authApi.restore()
+
+      // Refresh user info after restore (isImpersonating will be false)
+      user.value = await authApi.getStatus()
+      saveCachedUser(user.value)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   return {
     user,
     isLoading,
     isInitialized,
     isLoggedIn,
     isAdmin,
+    isImpersonating,
     initialize,
     login,
     logout,
     setUser,
     clearAuth,
     checkAuth,
+    impersonate,
+    restore,
   }
 })

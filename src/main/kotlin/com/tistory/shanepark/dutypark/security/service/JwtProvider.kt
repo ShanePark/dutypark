@@ -39,6 +39,23 @@ class JwtProvider(
             .compact()
     }
 
+    fun createImpersonationToken(target: Member, originalMemberId: Long): String {
+        val validity = Date(Date().time + tokenValidityInMilliseconds)
+
+        val team = target.team
+        return Jwts.builder()
+            .subject(target.id.toString())
+            .claim("email", target.email)
+            .claim("name", target.name)
+            .claim("teamId", team?.id)
+            .claim("teamName", team?.name)
+            .claim("originalSub", originalMemberId.toString())
+            .claim("impersonated", true)
+            .signWith(key)
+            .expiration(validity)
+            .compact()
+    }
+
     fun parseToken(token: String): LoginMember {
         val claims = Jwts
             .parser()
@@ -49,6 +66,8 @@ class JwtProvider(
 
         val email = claims["email"] as String?
         val teamId = (claims["teamId"] as? Number)?.toLong()
+        val isImpersonated = claims["impersonated"] as? Boolean ?: false
+        val originalSub = claims["originalSub"] as? String
 
         val loginMember = LoginMember(
             id = claims.subject.toLong(),
@@ -57,6 +76,8 @@ class JwtProvider(
             teamId = teamId,
             team = claims["teamName"] as String?,
             isAdmin = dutyparkProperties.adminEmails.contains(email),
+            isImpersonating = isImpersonated,
+            originalMemberId = originalSub?.toLongOrNull()
         )
         return loginMember
     }

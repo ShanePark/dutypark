@@ -75,14 +75,8 @@ class AttachmentService(
 
             val savedAttachment = attachmentRepository.save(attachment)
 
-            if (attachment.thumbnailStatus == ThumbnailStatus.PENDING) {
-                eventPublisher.publishEvent(
-                    AttachmentUploadedEvent(
-                        attachmentId = savedAttachment.id,
-                        filePath = temporaryFilePath
-                    )
-                )
-            }
+            // Thumbnail generation will be triggered after session finalization
+            // when the file is moved to the permanent location
 
             log.info(
                 "File uploaded successfully: sessionId={}, filename={}, size={}, orderIndex={}",
@@ -226,6 +220,16 @@ class AttachmentService(
                 attachment.contextId = request.contextId
                 attachment.uploadSessionId = null
                 attachment.storagePath = finalDir.toString()
+
+                // Trigger thumbnail generation for pending attachments after file is moved
+                if (attachment.thumbnailStatus == ThumbnailStatus.PENDING) {
+                    eventPublisher.publishEvent(
+                        AttachmentUploadedEvent(
+                            attachmentId = attachment.id,
+                            filePath = finalFilePath
+                        )
+                    )
+                }
             }
 
             orderedIds.forEachIndexed { index, attachmentId ->

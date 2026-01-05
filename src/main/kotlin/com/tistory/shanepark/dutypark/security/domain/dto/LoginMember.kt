@@ -6,7 +6,9 @@ data class LoginMember(
     val name: String,
     val teamId: Long? = null,
     val team: String? = null,
-    var isAdmin: Boolean = false
+    var isAdmin: Boolean = false,
+    val isImpersonating: Boolean = false,
+    val originalMemberId: Long? = null
 ) {
     companion object {
         const val ATTR_NAME: String = "loginMember"

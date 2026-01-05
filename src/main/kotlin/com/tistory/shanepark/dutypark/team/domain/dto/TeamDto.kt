@@ -35,7 +35,11 @@ data class TeamDto(
             return of(team, mutableListOf(), mutableListOf())
         }
 
-        fun of(team: Team, members: List<Member>, dutyTypes: List<DutyType>): TeamDto {
+        fun of(
+            team: Team,
+            members: List<Member>,
+            dutyTypes: List<DutyType>,
+        ): TeamDto {
             val sortedTypes = dutyTypes.sortedBy { it.position }
                 .map {
                     DutyTypeDto(
@@ -60,7 +64,9 @@ data class TeamDto(
                 description = team.description,
                 workType = team.workType.name,
                 dutyTypes = sortedTypes,
-                members = members.map { TeamMemberDto.of(team, it) },
+                members = members.map { member ->
+                    TeamMemberDto.of(team, member)
+                },
                 createdDate = team.createdDate.toString(),
                 lastModifiedDate = team.lastModifiedDate.toString(),
                 adminName = team.admin?.name,

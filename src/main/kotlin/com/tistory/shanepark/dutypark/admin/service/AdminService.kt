@@ -30,7 +30,7 @@ class AdminService(
         val adminMembers = memberPage.content.map { member ->
             AdminMemberDto.of(
                 member = member,
-                tokens = tokensByMemberId[member.id] ?: emptyList()
+                tokens = tokensByMemberId[member.id] ?: emptyList(),
             )
         }
 

@@ -15,6 +15,7 @@ import type {
   DashboardScheduleDto,
   FriendDto,
 } from '@/types'
+import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import {
   Calendar,
   Briefcase,
@@ -554,9 +555,12 @@ watch(
           @click="moveTo()"
         >
           <div class="flex items-center gap-3">
-            <div class="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center">
-              <User class="w-5 h-5 text-white" />
-            </div>
+            <ProfileAvatar
+              :member-id="myInfo?.member.id"
+              :name="myInfo?.member.name"
+              :has-profile-photo="myInfo?.member.hasProfilePhoto"
+              size="md"
+            />
             <span class="text-lg font-bold text-white">{{ myInfo?.member.name || '로딩중...' }}</span>
           </div>
           <ChevronRight class="w-5 h-5 text-gray-400 group-hover:text-white group-hover:translate-x-1 transition-all" />
@@ -648,13 +652,16 @@ watch(
             <div
               v-for="req in friendInfo.pendingRequestsTo"
               :key="'to-' + req.fromMember.id"
-              class="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200"
+              class="p-4 rounded-xl friend-request-received"
             >
               <div class="flex justify-between items-center">
-                <div class="font-medium flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                  <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Home v-if="req.requestType === 'FAMILY_REQUEST'" class="w-4 h-4 text-blue-600" />
-                    <UserPlus v-else class="w-4 h-4 text-blue-600" />
+                <div class="font-medium flex items-center gap-2 friend-request-name">
+                  <div class="relative">
+                    <ProfileAvatar :member-id="req.fromMember.id" :has-profile-photo="req.fromMember.hasProfilePhoto" size="sm" />
+                    <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center bg-blue-500 ring-2 ring-white">
+                      <Home v-if="req.requestType === 'FAMILY_REQUEST'" class="w-2.5 h-2.5 text-white" />
+                      <UserPlus v-else class="w-2.5 h-2.5 text-white" />
+                    </div>
                   </div>
                   {{ req.fromMember.name }}
                 </div>
@@ -680,13 +687,16 @@ watch(
             <div
               v-for="req in friendInfo.pendingRequestsFrom"
               :key="'from-' + req.toMember.id"
-              class="p-4 rounded-xl bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200"
+              class="p-4 rounded-xl friend-request-sent"
             >
               <div class="flex justify-between items-center">
-                <div class="font-medium flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                  <div class="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
-                    <Home v-if="req.requestType === 'FAMILY_REQUEST'" class="w-4 h-4 text-amber-600" />
-                    <UserPlus v-else class="w-4 h-4 text-amber-600" />
+                <div class="font-medium flex items-center gap-2 friend-request-name">
+                  <div class="relative">
+                    <ProfileAvatar :member-id="req.toMember.id" :has-profile-photo="req.toMember.hasProfilePhoto" size="sm" />
+                    <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center bg-amber-500 ring-2 ring-white">
+                      <Home v-if="req.requestType === 'FAMILY_REQUEST'" class="w-2.5 h-2.5 text-white" />
+                      <UserPlus v-else class="w-2.5 h-2.5 text-white" />
+                    </div>
                   </div>
                   {{ req.toMember.name }}
                 </div>
@@ -724,7 +734,7 @@ watch(
               <div class="w-8 h-8 border-3 rounded-full animate-spin" :style="{ borderColor: 'var(--dp-border-secondary)', borderTopColor: 'var(--dp-text-primary)' }"></div>
             </div>
           </template>
-          <div v-else ref="friendListRef" class="grid grid-cols-2 gap-2 sm:gap-3">
+          <div v-else ref="friendListRef" class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
             <!-- Friend Cards -->
             <div
               v-for="friend in sortedFriends"
@@ -739,45 +749,51 @@ watch(
               :style="!friend.pinOrder ? { backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' } : {}"
               @click="moveTo(friend.member.id)"
             >
-              <div class="p-2 sm:p-4">
-                <!-- Header: Name & Actions -->
-                <div class="flex items-center justify-between mb-1.5 sm:mb-2">
-                  <div class="flex items-center gap-1.5 min-w-0 flex-1">
-                    <div
-                      class="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                      :class="friend.isFamily ? 'friend-icon-family' : 'friend-icon-regular'"
-                    >
-                      <Home v-if="friend.isFamily" class="w-3 h-3 sm:w-4 sm:h-4" />
-                      <User v-else class="w-3 h-3 sm:w-4 sm:h-4" />
+              <div class="flex p-3">
+                <!-- Left section: Large Profile -->
+                <div class="flex-shrink-0 mr-3">
+                  <ProfileAvatar
+                    :member-id="friend.member.id"
+                    :name="friend.member.name"
+                    :has-profile-photo="friend.member.hasProfilePhoto"
+                    size="xl"
+                  />
+                </div>
+
+                <!-- Right section: Info & Actions -->
+                <div class="flex-1 min-w-0">
+                  <!-- Top: Name & Actions -->
+                  <div class="flex items-center justify-between mb-1.5">
+                    <div class="flex items-center gap-1.5 min-w-0">
+                      <span class="font-medium text-sm truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ friend.member.name }}</span>
+                      <Home v-if="friend.isFamily" class="w-3.5 h-3.5 flex-shrink-0 text-amber-500" title="Family member" />
                     </div>
-                    <span class="font-medium text-xs sm:text-sm truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ friend.member.name }}</span>
-                  </div>
-                  <div class="flex items-center flex-shrink-0" @click.stop>
+                    <div class="flex items-center flex-shrink-0" @click.stop>
                     <!-- Pin/Unpin button -->
                     <button
                       v-if="friend.pinOrder"
-                      class="p-0.5 sm:p-1 text-amber-500 hover:text-amber-600 transition cursor-pointer"
+                      class="p-1 text-amber-500 hover:text-amber-600 transition cursor-pointer"
                       @click.stop="unpinFriend(friend.member)"
                       title="고정 해제"
                     >
-                      <Star class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" />
+                      <Star class="w-4 h-4" fill="currentColor" />
                     </button>
                     <button
                       v-else
-                      class="p-0.5 sm:p-1 text-gray-300 hover:text-amber-500 transition cursor-pointer"
+                      class="p-1 text-gray-300 hover:text-amber-500 transition cursor-pointer"
                       @click.stop="pinFriend(friend.member)"
                       title="고정"
                     >
-                      <Star class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <Star class="w-4 h-4" />
                     </button>
                     <!-- Dropdown toggle -->
                     <div v-if="friend.member.id" class="relative">
                       <button
-                        class="p-0.5 sm:p-1 rounded-lg transition hover:bg-opacity-80 cursor-pointer"
+                        class="p-1.5 rounded-lg transition hover:bg-opacity-80 cursor-pointer"
                         :style="{ color: 'var(--dp-text-muted)' }"
                         @click="toggleDropdown(friend.member.id, $event)"
                       >
-                        <MoreVertical class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <MoreVertical class="w-5 h-5" />
                       </button>
                       <!-- Dropdown menu -->
                       <div
@@ -803,38 +819,39 @@ watch(
                       </div>
                     </div>
                   </div>
-                </div>
-
-                <!-- Duty info -->
-                <div class="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
-                  <Briefcase class="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
-                  <span class="text-[11px] sm:text-sm" :style="{ color: 'var(--dp-text-secondary)' }">근무:</span>
-                  <span v-if="friend.duty" class="text-[11px] sm:text-sm font-medium truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ friend.duty.dutyType || '휴무' }}</span>
-                  <span v-else class="text-[11px] sm:text-sm" :style="{ color: 'var(--dp-text-muted)' }">-</span>
-                </div>
-
-                <!-- Schedules (hidden on mobile to save space) -->
-                <div v-if="friend.schedules && friend.schedules.length" class="hidden sm:block mt-2 space-y-1">
-                  <div
-                    v-for="schedule in friend.schedules.slice(0, 2)"
-                    :key="schedule.id"
-                    class="text-xs sm:text-sm py-1.5 px-2 rounded-lg truncate friend-schedule-item"
-                  >
-                    {{ printSchedule(schedule) }}
                   </div>
-                  <div v-if="friend.schedules.length > 2" class="text-xs pl-2" :style="{ color: 'var(--dp-text-muted)' }">
-                    +{{ friend.schedules.length - 2 }}개 더보기
+
+                  <!-- Duty info -->
+                  <div class="flex items-center gap-1.5 mb-1.5">
+                    <Briefcase class="w-3.5 h-3.5 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+                    <span class="text-xs" :style="{ color: 'var(--dp-text-secondary)' }">근무:</span>
+                    <span v-if="friend.duty" class="text-xs font-medium truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ friend.duty.dutyType || '휴무' }}</span>
+                    <span v-else class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">-</span>
+                  </div>
+
+                  <!-- Schedules -->
+                  <div v-if="friend.schedules && friend.schedules.length" class="space-y-1">
+                    <div
+                      v-for="schedule in friend.schedules.slice(0, 2)"
+                      :key="schedule.id"
+                      class="text-xs py-1 px-1.5 rounded-md truncate friend-schedule-item"
+                    >
+                      {{ printSchedule(schedule) }}
+                    </div>
+                    <div v-if="friend.schedules.length > 2" class="text-xs pl-1" :style="{ color: 'var(--dp-text-muted)' }">
+                      +{{ friend.schedules.length - 2 }}개 더보기
+                    </div>
                   </div>
                 </div>
               </div>
 
               <!-- Drag handle for pinned friends -->
-              <div v-if="friend.pinOrder" class="absolute bottom-1.5 right-1.5 sm:bottom-2 sm:right-2" @click.stop>
+              <div v-if="friend.pinOrder" class="absolute bottom-2 right-2" @click.stop>
                 <div
-                  class="handle friend-drag-handle rounded-md sm:rounded-lg p-1 sm:p-1.5 transition hover:bg-black/10 !cursor-grab active:!cursor-grabbing"
+                  class="handle friend-drag-handle rounded-lg p-1.5 transition hover:bg-black/10 !cursor-grab active:!cursor-grabbing"
                   title="드래그하여 순서 변경"
                 >
-                  <GripVertical class="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                  <GripVertical class="w-4 h-4" />
                 </div>
               </div>
             </div>
@@ -928,7 +945,7 @@ watch(
         <!-- Modal Content -->
         <div class="relative rounded-2xl shadow-2xl w-full max-w-2xl mx-2 sm:mx-4 max-h-[90vh] overflow-hidden" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
           <!-- Header -->
-          <div class="flex items-center justify-between p-5 border-b bg-gradient-to-r from-gray-50 to-white" :style="{ borderColor: 'var(--dp-border-primary)' }">
+          <div class="flex items-center justify-between p-5 border-b" :style="{ borderColor: 'var(--dp-border-primary)', backgroundColor: 'var(--dp-bg-secondary)' }">
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
                 <UserPlus class="w-5 h-5 text-white" />
@@ -983,9 +1000,12 @@ watch(
                   :style="{ backgroundColor: 'var(--dp-bg-secondary)' }"
                 >
                   <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center">
-                      <span class="text-sm font-bold text-gray-600">{{ member.name.charAt(0) }}</span>
-                    </div>
+                    <ProfileAvatar
+                      :member-id="member.id"
+                      :name="member.name"
+                      :has-profile-photo="member.hasProfilePhoto"
+                      size="md"
+                    />
                     <div>
                       <p class="font-semibold" :style="{ color: 'var(--dp-text-primary)' }">{{ member.name }}</p>
                       <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">{{ member.team ?? '팀 없음' }}</p>

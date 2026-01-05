@@ -68,13 +68,21 @@ class AttachmentPermissionEvaluatorTest {
     }
 
     @Test
-    fun `checkReadPermission throws UnsupportedOperationException for PROFILE context`() {
+    fun `checkReadPermission succeeds for PROFILE context without login (public)`() {
         val attachment = createAttachment(contextType = AttachmentContextType.PROFILE, contextId = "1")
 
-        assertThatThrownBy {
+        assertThatCode {
+            evaluator.checkReadPermission(null, attachment)
+        }.doesNotThrowAnyException()
+    }
+
+    @Test
+    fun `checkReadPermission succeeds for PROFILE context with login`() {
+        val attachment = createAttachment(contextType = AttachmentContextType.PROFILE, contextId = "1")
+
+        assertThatCode {
             evaluator.checkReadPermission(loginMember, attachment)
-        }.isInstanceOf(UnsupportedOperationException::class.java)
-            .hasMessageContaining("PROFILE not yet implemented")
+        }.doesNotThrowAnyException()
     }
 
     @Test
@@ -88,13 +96,51 @@ class AttachmentPermissionEvaluatorTest {
     }
 
     @Test
-    fun `checkWritePermission throws UnsupportedOperationException for PROFILE context`() {
-        val attachment = createAttachment(contextType = AttachmentContextType.PROFILE, contextId = "1")
+    fun `checkWritePermission succeeds for PROFILE context when owner`() {
+        val attachment = createAttachment(contextType = AttachmentContextType.PROFILE, contextId = loginMember.id.toString())
+
+        assertThatCode {
+            evaluator.checkWritePermission(loginMember, attachment)
+        }.doesNotThrowAnyException()
+    }
+
+    @Test
+    fun `checkWritePermission throws AuthException for PROFILE context when not owner`() {
+        val attachment = createAttachment(contextType = AttachmentContextType.PROFILE, contextId = otherMember.id.toString())
 
         assertThatThrownBy {
             evaluator.checkWritePermission(loginMember, attachment)
-        }.isInstanceOf(UnsupportedOperationException::class.java)
-            .hasMessageContaining("PROFILE not yet implemented")
+        }.isInstanceOf(AuthException::class.java)
+            .hasMessageContaining("does not belong to user")
+    }
+
+    @Test
+    fun `checkReadPermission succeeds for PROFILE context with null contextId - public access`() {
+        val attachment = createAttachment(contextType = AttachmentContextType.PROFILE, contextId = null)
+
+        assertThatCode {
+            evaluator.checkReadPermission(loginMember, attachment)
+        }.doesNotThrowAnyException()
+    }
+
+    @Test
+    fun `checkWritePermission throws for PROFILE context with null contextId`() {
+        val attachment = createAttachment(contextType = AttachmentContextType.PROFILE, contextId = null)
+
+        assertThatThrownBy {
+            evaluator.checkWritePermission(loginMember, attachment)
+        }.isInstanceOf(IllegalStateException::class.java)
+            .hasMessageContaining("has no contextId")
+    }
+
+    @Test
+    fun `checkWritePermission throws AuthException for PROFILE context when contextId does not match loginMember id`() {
+        val attachment = createAttachment(contextType = AttachmentContextType.PROFILE, contextId = "999")
+
+        assertThatThrownBy {
+            evaluator.checkWritePermission(loginMember, attachment)
+        }.isInstanceOf(AuthException::class.java)
+            .hasMessageContaining("does not belong to user")
     }
 
     @Test
@@ -142,17 +188,30 @@ class AttachmentPermissionEvaluatorTest {
     }
 
     @Test
-    fun `checkSessionWritePermission throws UnsupportedOperationException for PROFILE context with targetContextId`() {
+    fun `checkSessionWritePermission succeeds for PROFILE context when owner`() {
         val session = createSession(
             ownerId = loginMember.id,
             contextType = AttachmentContextType.PROFILE,
-            targetContextId = "1"
+            targetContextId = loginMember.id.toString()
+        )
+
+        assertThatCode {
+            evaluator.checkSessionWritePermission(loginMember, session)
+        }.doesNotThrowAnyException()
+    }
+
+    @Test
+    fun `checkSessionWritePermission throws AuthException for PROFILE context when not owner`() {
+        val session = createSession(
+            ownerId = loginMember.id,
+            contextType = AttachmentContextType.PROFILE,
+            targetContextId = otherMember.id.toString()
         )
 
         assertThatThrownBy {
             evaluator.checkSessionWritePermission(loginMember, session)
-        }.isInstanceOf(UnsupportedOperationException::class.java)
-            .hasMessageContaining("PROFILE not yet implemented")
+        }.isInstanceOf(AuthException::class.java)
+            .hasMessageContaining("does not belong to user")
     }
 
     @Test

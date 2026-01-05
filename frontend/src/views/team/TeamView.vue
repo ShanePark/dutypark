@@ -8,11 +8,11 @@ import {
   CalendarPlus,
   Pencil,
   Trash2,
-  User,
   Building2,
   X,
   Loader2,
 } from 'lucide-vue-next'
+import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import { useAuthStore } from '@/stores/auth'
 import { teamApi } from '@/api/team'
 import { dutyApi } from '@/api/duty'
@@ -580,7 +580,7 @@ onMounted(() => {
                   '--tw-ring-color': 'var(--dp-text-primary)'
                 }"
               >
-                <User class="w-5 h-5 mb-1" :style="{ color: 'var(--dp-text-secondary)' }" />
+                <ProfileAvatar :member-id="member.id" :has-profile-photo="member.hasProfilePhoto" size="sm" class="mb-1" />
                 <span class="text-sm font-medium truncate w-full text-center" :style="{ color: 'var(--dp-text-primary)' }">
                   {{ member.name }}
                 </span>

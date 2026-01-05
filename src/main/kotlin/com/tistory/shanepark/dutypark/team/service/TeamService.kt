@@ -26,7 +26,7 @@ class TeamService(
     private val teamRepository: TeamRepository,
     private val dutyTypeRepository: DutyTypeRepository,
     private val dutyRepository: DutyRepository,
-    private val memberRepository: MemberRepository
+    private val memberRepository: MemberRepository,
 ) {
     val log = logger()
 
@@ -43,7 +43,7 @@ class TeamService(
         return TeamDto.of(
             team = withMembers,
             members = withMembers.members,
-            dutyTypes = withDutyTypes.dutyTypes
+            dutyTypes = withDutyTypes.dutyTypes,
         )
     }
 
@@ -176,7 +176,7 @@ class TeamService(
                     dutyMemberMap.filter { (duty, _) -> duty.dutyType?.id == id }.values
                 } ?: offMembers
                 val members = sourceMembers
-                    .map { member -> SimpleMemberDto(member.id, member.name) }
+                    .map { member -> SimpleMemberDto(member.id!!, member.name) }
                     .sortedBy { it.name }
                 DutyByShift(dutyTypeDto, members)
             }
