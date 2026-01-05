@@ -3,7 +3,6 @@ package com.tistory.shanepark.dutypark.admin.service
 import com.tistory.shanepark.dutypark.admin.domain.dto.AdminMemberDto
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
-import com.tistory.shanepark.dutypark.member.service.ProfilePhotoService
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
@@ -15,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional
 class AdminService(
     private val memberRepository: MemberRepository,
     private val refreshTokenRepository: RefreshTokenRepository,
-    private val profilePhotoService: ProfilePhotoService,
 ) {
 
     fun findAllMembersWithTokens(keyword: String?, pageable: Pageable): Page<AdminMemberDto> {
@@ -28,13 +26,11 @@ class AdminService(
         val memberIds = memberPage.content.mapNotNull { it.id }
         val tokensByMemberId = refreshTokenRepository.findAllByMemberIdIn(memberIds)
             .groupBy { it.member.id!! }
-        val membersWithPhoto = profilePhotoService.getMembersWithProfilePhoto(memberIds)
 
         val adminMembers = memberPage.content.map { member ->
             AdminMemberDto.of(
                 member = member,
                 tokens = tokensByMemberId[member.id] ?: emptyList(),
-                hasProfilePhoto = member.id in membersWithPhoto,
             )
         }
 

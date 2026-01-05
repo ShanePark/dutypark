@@ -7,7 +7,6 @@ import type {
   RefreshTokenDto,
   CalendarVisibility,
   Page,
-  UpdateProfilePhotoRequest,
   ManagedMemberDto,
 } from '@/types'
 
@@ -67,8 +66,10 @@ export const memberApi = {
   /**
    * Update profile photo
    */
-  updateProfilePhoto(request: UpdateProfilePhotoRequest) {
-    return apiClient.put<void>('/members/profile-photo', request)
+  updateProfilePhoto(file: File) {
+    const formData = new FormData()
+    formData.append('file', file)
+    return apiClient.put<void>('/members/profile-photo', formData)
   },
 
   /**

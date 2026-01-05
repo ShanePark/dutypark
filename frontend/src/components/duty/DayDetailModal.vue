@@ -13,7 +13,6 @@ import {
   UserPlus,
   Check,
 } from 'lucide-vue-next'
-import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import FileUploader from '@/components/common/FileUploader.vue'
 import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'

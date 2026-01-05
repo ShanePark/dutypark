@@ -1,7 +1,5 @@
 package com.tistory.shanepark.dutypark.member.service
 
-import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
-import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberCreateDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
@@ -28,7 +26,6 @@ class MemberService(
     private val passwordEncoder: PasswordEncoder,
     private val memberSsoRegisterRepository: MemberSsoRegisterRepository,
     private val memberManagerRepository: MemberManagerRepository,
-    private val attachmentRepository: AttachmentRepository,
 ) {
 
     @Transactional(readOnly = true)
@@ -41,11 +38,7 @@ class MemberService(
     @Transactional(readOnly = true)
     fun findById(memberId: Long): MemberDto {
         val member = memberRepository.findById(memberId).orElseThrow()
-        val hasProfilePhoto = attachmentRepository.existsByContextTypeAndContextId(
-            contextType = AttachmentContextType.PROFILE,
-            contextId = memberId.toString()
-        )
-        return MemberDto.of(member, hasProfilePhoto)
+        return MemberDto.of(member)
     }
 
     fun createMember(memberCreateDto: MemberCreateDto): Member {
@@ -164,17 +157,7 @@ class MemberService(
     fun findManagedMembers(loginMember: LoginMember): List<MemberDto> {
         val manager = memberRepository.findById(loginMember.id).orElseThrow()
         val managedMembers = memberManagerRepository.findAllByManager(manager).map { it.managed }
-        val memberIds = managedMembers.mapNotNull { it.id }
-        val membersWithPhoto = getMembersWithProfilePhoto(memberIds)
-        return managedMembers.map { MemberDto.of(it, it.id in membersWithPhoto) }
-    }
-
-    private fun getMembersWithProfilePhoto(memberIds: List<Long>): Set<Long> {
-        if (memberIds.isEmpty()) return emptySet()
-        return attachmentRepository.findAllByContextTypeAndContextIdIn(
-            contextType = AttachmentContextType.PROFILE,
-            contextIds = memberIds.map { it.toString() }
-        ).mapNotNull { it.contextId?.toLong() }.toSet()
+        return managedMembers.map { MemberDto.of(it) }
     }
 
 }

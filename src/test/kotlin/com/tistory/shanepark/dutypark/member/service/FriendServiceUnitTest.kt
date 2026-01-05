@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.member.service
 
-import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
@@ -32,9 +31,6 @@ class FriendServiceUnitTest {
     @Mock
     private lateinit var memberService: MemberService
 
-    @Mock
-    private lateinit var attachmentRepository: AttachmentRepository
-
     private lateinit var friendService: FriendService
 
     @BeforeEach
@@ -44,7 +40,6 @@ class FriendServiceUnitTest {
             friendRequestRepository = friendRequestRepository,
             memberRepository = memberRepository,
             memberService = memberService,
-            attachmentRepository = attachmentRepository,
         )
     }
 

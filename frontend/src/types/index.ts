@@ -518,12 +518,6 @@ export interface DutyBatchTeamResult {
   processedCount?: number
 }
 
-// Profile Photo types
-export interface UpdateProfilePhotoRequest {
-  sessionId: string
-  attachmentId: string
-}
-
 // Impersonation types
 export interface ManagedMemberDto {
   id: number

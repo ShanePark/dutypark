@@ -9,7 +9,6 @@ import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.domain.dto.SimpleMemberDto
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
-import com.tistory.shanepark.dutypark.member.service.ProfilePhotoService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.dto.*
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
@@ -28,7 +27,6 @@ class TeamService(
     private val dutyTypeRepository: DutyTypeRepository,
     private val dutyRepository: DutyRepository,
     private val memberRepository: MemberRepository,
-    private val profilePhotoService: ProfilePhotoService,
 ) {
     val log = logger()
 
@@ -41,14 +39,11 @@ class TeamService(
     fun findByIdWithMembersAndDutyTypes(id: Long): TeamDto {
         val withMembers = teamRepository.findByIdWithMembers(id).orElseThrow()
         val withDutyTypes = teamRepository.findByIdWithDutyTypes(id).orElseThrow()
-        val memberIds = withMembers.members.mapNotNull { it.id }
-        val membersWithPhoto = profilePhotoService.getMembersWithProfilePhoto(memberIds)
 
         return TeamDto.of(
             team = withMembers,
             members = withMembers.members,
             dutyTypes = withDutyTypes.dutyTypes,
-            membersWithPhoto = membersWithPhoto,
         )
     }
 

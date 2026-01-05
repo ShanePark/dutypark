@@ -33,6 +33,11 @@ class Member(
     @Column(name = "oauth_kakao_id")
     var kakaoId: String? = null
 
+    @Column(name = "profile_photo_path")
+    var profilePhotoPath: String? = null
+
+    fun hasProfilePhoto(): Boolean = profilePhotoPath != null
+
     override fun toString(): String {
         return "Member(name='$name', id=$id)"
     }

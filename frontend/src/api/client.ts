@@ -39,6 +39,14 @@ const apiClient: AxiosInstance = axios.create({
   withCredentials: true,
 })
 
+// Request interceptor - handle FormData content type
+apiClient.interceptors.request.use((config) => {
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type']
+  }
+  return config
+})
+
 // Response interceptor - handle 401 and refresh token via HttpOnly cookies
 apiClient.interceptors.response.use(
   (response) => response,

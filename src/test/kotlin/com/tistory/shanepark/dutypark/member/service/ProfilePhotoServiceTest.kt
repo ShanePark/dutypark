@@ -1,61 +1,66 @@
 package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
-import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
-import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
-import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import java.util.*
 
 class ProfilePhotoServiceTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var profilePhotoService: ProfilePhotoService
 
-    @Autowired
-    lateinit var attachmentRepository: AttachmentRepository
-
     @Test
-    fun `getProfilePhoto returns attachment when profile photo exists`() {
+    fun `getProfilePhotoPath returns original path when thumbnail is false`() {
         // Given
         val member = TestData.member
-        val attachment = createProfileAttachment(member.id!!)
+        member.profilePhotoPath = "PROFILE/${member.id}/test-photo.png"
+        memberRepository.save(member)
 
         // When
-        val result = profilePhotoService.getProfilePhoto(member.id!!)
+        val result = profilePhotoService.getProfilePhotoPath(member.id!!, thumbnail = false)
 
         // Then
         assertThat(result).isNotNull
-        assertThat(result!!.id).isEqualTo(attachment.id)
+        assertThat(result.toString()).contains("PROFILE/${member.id}/test-photo.png")
+        assertThat(result.toString()).doesNotContain("_thumb")
     }
 
     @Test
-    fun `getProfilePhoto returns null when no profile photo exists`() {
+    fun `getProfilePhotoPath returns thumbnail path when thumbnail is true`() {
         // Given
         val member = TestData.member
+        member.profilePhotoPath = "PROFILE/${member.id}/test-photo.png"
+        memberRepository.save(member)
 
         // When
-        val result = profilePhotoService.getProfilePhoto(member.id!!)
+        val result = profilePhotoService.getProfilePhotoPath(member.id!!, thumbnail = true)
+
+        // Then
+        assertThat(result).isNotNull
+        assertThat(result.toString()).contains("PROFILE/${member.id}/test-photo_thumb.png")
+    }
+
+    @Test
+    fun `getProfilePhotoPath returns null when no profile photo exists`() {
+        // Given
+        val member = TestData.member
+        member.profilePhotoPath = null
+        memberRepository.save(member)
+
+        // When
+        val result = profilePhotoService.getProfilePhotoPath(member.id!!)
 
         // Then
         assertThat(result).isNull()
     }
 
-    private fun createProfileAttachment(memberId: Long): Attachment {
-        val storedFilename = UUID.randomUUID().toString() + ".jpg"
-        val attachment = Attachment(
-            contextType = AttachmentContextType.PROFILE,
-            contextId = memberId.toString(),
-            originalFilename = "profile.jpg",
-            storedFilename = storedFilename,
-            contentType = "image/jpeg",
-            size = 1024L,
-            storagePath = "profile/$storedFilename",
-            createdBy = memberId,
-            orderIndex = 0
-        )
-        return attachmentRepository.save(attachment)
+    @Test
+    fun `getProfilePhotoPath returns null when member does not exist`() {
+        // When
+        val result = profilePhotoService.getProfilePhotoPath(999999L)
+
+        // Then
+        assertThat(result).isNull()
     }
 }

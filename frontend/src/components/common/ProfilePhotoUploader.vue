@@ -1,13 +1,10 @@
 <script setup lang="ts">
-import { ref, shallowRef, computed, onMounted, onUnmounted, watch } from 'vue'
-import Uppy from '@uppy/core'
-import XHRUpload from '@uppy/xhr-upload'
+import { ref, computed, onMounted, watch } from 'vue'
 import { Camera, Loader2, Upload } from 'lucide-vue-next'
 import { memberApi } from '@/api/member'
-import { attachmentApi, attachmentValidation, validateFile, fetchAuthenticatedImage } from '@/api/attachment'
+import { fetchAuthenticatedImage } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
 import ImageCropModal from '@/components/common/ImageCropModal.vue'
-import type { CreateSessionResponse, AttachmentDto } from '@/types'
 
 interface Props {
   memberId: number
@@ -27,9 +24,6 @@ const { showError, toastSuccess, confirm } = useSwal()
 const displayPhotoUrl = ref<string | null>(null)
 const isUploading = ref(false)
 const isDeleting = ref(false)
-const sessionId = ref<string | null>(null)
-const uploadedAttachmentId = ref<string | null>(null)
-const uppy = shallowRef<Uppy | null>(null)
 
 const showCropModal = ref(false)
 
@@ -54,151 +48,34 @@ watch(
   }
 )
 
-function setupUppy() {
-  if (uppy.value) {
-    try {
-      uppy.value.cancelAll()
-    } catch (e) {
-      console.warn('Failed to cancel uppy:', e)
-    }
-  }
-
-  const uppyInstance = new Uppy({
-    restrictions: {
-      maxFileSize: attachmentValidation.maxFileSizeBytes,
-      maxNumberOfFiles: 1,
-      allowedFileTypes: ['image/*'],
-    },
-    autoProceed: true,
-  }).use(XHRUpload, {
-    endpoint: '/api/attachments',
-    fieldName: 'file',
-    formData: true,
-    bundle: false,
-    withCredentials: true,
-  })
-
-  uppyInstance.on('file-added', async (file) => {
-    const fileData = file.data as File
-    const validation = validateFile(fileData)
-    if (!validation.valid) {
-      uppyInstance.removeFile(file.id)
-      showError(validation.message || 'File validation failed')
-      return
-    }
-
-    if (!fileData.type.startsWith('image/')) {
-      uppyInstance.removeFile(file.id)
-      showError('이미지 파일만 업로드할 수 있습니다')
-      return
-    }
-
-    isUploading.value = true
-  })
-
-  uppyInstance.addPreProcessor(async (fileIDs: string[]) => {
-    if (!fileIDs || fileIDs.length === 0) return
-
-    try {
-      const response: CreateSessionResponse = await attachmentApi.createSession({
-        contextType: 'PROFILE',
-        targetContextId: null,
-      })
-      sessionId.value = response.sessionId
-
-      fileIDs.forEach((fileId) => {
-        const file = uppyInstance.getFile(fileId)
-        if (file) {
-          uppyInstance.setFileMeta(fileId, {
-            ...file.meta,
-            sessionId: String(sessionId.value),
-          })
-        }
-      })
-    } catch (error) {
-      showError('업로드 세션 생성에 실패했습니다')
-      fileIDs.forEach((fileId) => {
-        uppyInstance.removeFile(fileId)
-      })
-      isUploading.value = false
-      throw error
-    }
-  })
-
-  uppyInstance.on('upload-success', async (file, response) => {
-    if (!file) return
-    const dto = response.body as unknown as AttachmentDto
-    if (!dto || !dto.id) {
-      isUploading.value = false
-      return
-    }
-
-    uploadedAttachmentId.value = dto.id
-
-    if (displayPhotoUrl.value?.startsWith('blob:')) {
-      URL.revokeObjectURL(displayPhotoUrl.value)
-    }
-    const fileData = file.data as File
-    displayPhotoUrl.value = URL.createObjectURL(fileData)
-
-    try {
-      if (!sessionId.value || !uploadedAttachmentId.value) {
-        throw new Error('Session or attachment ID missing')
-      }
-
-      await memberApi.updateProfilePhoto({
-        sessionId: sessionId.value,
-        attachmentId: uploadedAttachmentId.value,
-      })
-
-      emit('upload-complete')
-      toastSuccess('프로필 사진이 업데이트되었습니다')
-    } catch (error) {
-      console.error('Failed to update profile photo:', error)
-      showError('프로필 사진 저장에 실패했습니다')
-    } finally {
-      isUploading.value = false
-      sessionId.value = null
-      uploadedAttachmentId.value = null
-    }
-  })
-
-  uppyInstance.on('upload-error', (file, error) => {
-    console.error('Upload error:', error)
-    isUploading.value = false
-    showError('파일 업로드에 실패했습니다')
-  })
-
-  uppyInstance.on('restriction-failed', (file, error) => {
-    if (error && /maximum allowed size/i.test(error.message || '')) {
-      showError(attachmentValidation.tooLargeMessage(file?.name))
-    } else if (error && /allowed file types/i.test(error.message || '')) {
-      showError('이미지 파일만 업로드할 수 있습니다')
-    } else {
-      showError('파일 업로드가 허용되지 않습니다')
-    }
-  })
-
-  uppy.value = uppyInstance
-}
-
 function openCropModal() {
   if (props.disabled || isUploading.value) return
   showCropModal.value = true
 }
 
-function onCropConfirm(croppedFile: File) {
+async function onCropConfirm(croppedFile: File) {
   showCropModal.value = false
+  await uploadFile(croppedFile)
+}
+
+async function uploadFile(file: File) {
+  isUploading.value = true
 
   try {
-    uppy.value?.addFile({
-      name: croppedFile.name,
-      type: croppedFile.type,
-      data: croppedFile,
-    })
-  } catch (e) {
-    console.error('Failed to add cropped file:', e)
-    showError('크롭된 이미지 처리에 실패했습니다')
+    await memberApi.updateProfilePhoto(file)
+
+    if (displayPhotoUrl.value?.startsWith('blob:')) {
+      URL.revokeObjectURL(displayPhotoUrl.value)
+    }
+    displayPhotoUrl.value = URL.createObjectURL(file)
+
+    emit('upload-complete')
+    toastSuccess('프로필 사진이 업데이트되었습니다')
+  } catch (error) {
+    console.error('Failed to upload profile photo:', error)
+    showError('프로필 사진 업로드에 실패했습니다')
+  } finally {
+    isUploading.value = false
   }
 }
 
@@ -234,27 +111,8 @@ async function onCropDelete() {
   }
 }
 
-function cleanup() {
-  if (uppy.value) {
-    try {
-      uppy.value.cancelAll()
-    } catch (e) {
-      console.warn('Failed to cleanup uppy:', e)
-    }
-    uppy.value = null
-  }
-  if (displayPhotoUrl.value?.startsWith('blob:')) {
-    URL.revokeObjectURL(displayPhotoUrl.value)
-  }
-}
-
 onMounted(() => {
-  setupUppy()
   loadCurrentPhoto()
-})
-
-onUnmounted(() => {
-  cleanup()
 })
 </script>
 

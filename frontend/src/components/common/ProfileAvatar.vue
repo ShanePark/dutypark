@@ -19,7 +19,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const photoUrl = computed(() => {
   if (!props.memberId) return null
-  return `/api/members/${props.memberId}/profile-photo`
+  return `/api/members/${props.memberId}/profile-photo?thumbnail=true`
 })
 
 const sizeClasses = computed(() => {

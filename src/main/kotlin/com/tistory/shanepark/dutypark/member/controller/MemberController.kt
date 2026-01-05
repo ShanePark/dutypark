@@ -1,10 +1,8 @@
 package com.tistory.shanepark.dutypark.member.controller
 
-import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
-import com.tistory.shanepark.dutypark.member.domain.dto.UpdateProfilePhotoRequest
 import com.tistory.shanepark.dutypark.member.domain.dto.VisibilityUpdateRequest
 import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.member.service.MemberService
@@ -16,6 +14,8 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.multipart.MultipartFile
+import java.nio.file.Files
 
 @RestController
 @RequestMapping("/api/members")
@@ -23,7 +23,6 @@ class MemberController(
     private val memberService: MemberService,
     private val friendService: FriendService,
     private val profilePhotoService: ProfilePhotoService,
-    private val pathResolver: StoragePathResolver,
 ) {
 
     @GetMapping("/me")
@@ -107,13 +106,9 @@ class MemberController(
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun updateProfilePhoto(
         @Login loginMember: LoginMember,
-        @RequestBody request: UpdateProfilePhotoRequest,
+        @RequestParam("file") file: MultipartFile,
     ) {
-        profilePhotoService.setProfilePhoto(
-            loginMember = loginMember,
-            sessionId = request.sessionId,
-            attachmentId = request.attachmentId
-        )
+        profilePhotoService.setProfilePhoto(loginMember, file)
     }
 
     @DeleteMapping("/profile-photo")
@@ -127,27 +122,20 @@ class MemberController(
     @GetMapping("/{memberId}/profile-photo")
     fun getProfilePhoto(
         @PathVariable memberId: Long,
+        @RequestParam(defaultValue = "false") thumbnail: Boolean,
     ): ResponseEntity<Resource> {
-        val attachment = profilePhotoService.getProfilePhoto(memberId)
+        val photoPath = profilePhotoService.getProfilePhotoPath(memberId, thumbnail)
             ?: return ResponseEntity.notFound().build()
 
-        val thumbnailFilename = attachment.thumbnailFilename
-            ?: return ResponseEntity.notFound().build()
-
-        val thumbnailPath = pathResolver.resolveThumbnailPath(
-            attachment.contextType,
-            attachment.contextId,
-            attachment.uploadSessionId,
-            thumbnailFilename
-        )
-
-        val resource = UrlResource(thumbnailPath.toUri())
-        if (!resource.exists()) {
+        if (!Files.exists(photoPath)) {
             return ResponseEntity.notFound().build()
         }
 
+        val resource = UrlResource(photoPath.toUri())
+        val contentType = Files.probeContentType(photoPath) ?: "image/png"
+
         return ResponseEntity.ok()
-            .contentType(MediaType.parseMediaType(attachment.thumbnailContentType ?: "image/png"))
+            .contentType(MediaType.parseMediaType(contentType))
             .body(resource)
     }
 

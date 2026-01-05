@@ -39,7 +39,6 @@ data class TeamDto(
             team: Team,
             members: List<Member>,
             dutyTypes: List<DutyType>,
-            membersWithPhoto: Set<Long> = emptySet(),
         ): TeamDto {
             val sortedTypes = dutyTypes.sortedBy { it.position }
                 .map {
@@ -66,7 +65,7 @@ data class TeamDto(
                 workType = team.workType.name,
                 dutyTypes = sortedTypes,
                 members = members.map { member ->
-                    TeamMemberDto.of(team, member, member.id in membersWithPhoto)
+                    TeamMemberDto.of(team, member)
                 },
                 createdDate = team.createdDate.toString(),
                 lastModifiedDate = team.lastModifiedDate.toString(),
