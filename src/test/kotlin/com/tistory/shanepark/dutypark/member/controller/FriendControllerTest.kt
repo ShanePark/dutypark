@@ -41,7 +41,8 @@ class FriendControllerTest : RestDocsTest() {
                         fieldWithPath("[].name").description("Friend name"),
                         fieldWithPath("[].teamId").description("Friend team ID (nullable)"),
                         fieldWithPath("[].team").description("Friend team name (nullable)"),
-                        fieldWithPath("[].hasProfilePhoto").description("Whether friend has profile photo")
+                        fieldWithPath("[].hasProfilePhoto").description("Whether friend has profile photo"),
+                        fieldWithPath("[].profilePhotoVersion").description("Profile photo version for cache busting")
                     )
                 )
             )

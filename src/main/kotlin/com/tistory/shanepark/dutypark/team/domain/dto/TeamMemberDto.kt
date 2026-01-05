@@ -10,6 +10,7 @@ data class TeamMemberDto(
     val isManager: Boolean,
     val isAdmin: Boolean,
     val hasProfilePhoto: Boolean = false,
+    val profilePhotoVersion: Long = 0,
 ) {
     companion object {
         fun of(team: Team, member: Member): TeamMemberDto {
@@ -20,6 +21,7 @@ data class TeamMemberDto(
                 isManager = team.isManager(member.id),
                 isAdmin = team.isAdmin(member.id),
                 hasProfilePhoto = member.hasProfilePhoto(),
+                profilePhotoVersion = member.profilePhotoVersion,
             )
         }
     }

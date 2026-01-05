@@ -9,10 +9,12 @@ import ImageCropModal from '@/components/common/ImageCropModal.vue'
 interface Props {
   memberId: number
   disabled?: boolean
+  profilePhotoVersion?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
   disabled: false,
+  profilePhotoVersion: 0,
 })
 
 const emit = defineEmits<{
@@ -30,7 +32,7 @@ const showCropModal = ref(false)
 const hasPhoto = computed(() => !!displayPhotoUrl.value)
 
 const photoUrl = computed(() => {
-  return `/api/members/${props.memberId}/profile-photo`
+  return `/api/members/${props.memberId}/profile-photo?v=${props.profilePhotoVersion}`
 })
 
 async function loadCurrentPhoto() {
@@ -42,7 +44,7 @@ async function loadCurrentPhoto() {
 }
 
 watch(
-  () => props.memberId,
+  () => [props.memberId, props.profilePhotoVersion],
   async () => {
     await loadCurrentPhoto()
   }

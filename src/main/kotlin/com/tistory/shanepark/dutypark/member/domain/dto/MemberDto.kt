@@ -13,6 +13,7 @@ data class MemberDto(
     val kakaoId: String?,
     val hasPassword: Boolean = false,
     val hasProfilePhoto: Boolean = false,
+    val profilePhotoVersion: Long = 0,
 ) {
     companion object {
         fun of(member: Member): MemberDto {
@@ -26,6 +27,7 @@ data class MemberDto(
                 kakaoId = member.kakaoId,
                 hasPassword = member.password != null,
                 hasProfilePhoto = member.hasProfilePhoto(),
+                profilePhotoVersion = member.profilePhotoVersion,
             )
         }
 

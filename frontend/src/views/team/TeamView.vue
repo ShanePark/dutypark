@@ -580,7 +580,7 @@ onMounted(() => {
                   '--tw-ring-color': 'var(--dp-text-primary)'
                 }"
               >
-                <ProfileAvatar :member-id="member.id" :has-profile-photo="member.hasProfilePhoto" size="sm" class="mb-1" />
+                <ProfileAvatar :member-id="member.id" :has-profile-photo="member.hasProfilePhoto" :profile-photo-version="member.profilePhotoVersion" size="sm" class="mb-1" />
                 <span class="text-sm font-medium truncate w-full text-center" :style="{ color: 'var(--dp-text-primary)' }">
                   {{ member.name }}
                 </span>
