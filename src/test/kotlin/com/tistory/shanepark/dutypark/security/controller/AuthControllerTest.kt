@@ -3,7 +3,10 @@ package com.tistory.shanepark.dutypark.security.controller
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
+import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
+import jakarta.servlet.http.Cookie
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
@@ -18,6 +21,9 @@ class AuthControllerTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var mockMvc: MockMvc
+
+    @Autowired
+    lateinit var refreshTokenService: RefreshTokenService
 
     private val log = logger()
     private val testPass = TestData.testPass
@@ -340,6 +346,130 @@ class AuthControllerTest : DutyparkIntegrationTest() {
         ).andExpect(status().isForbidden)
             .andExpect(jsonPath("$.error").exists())
             .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
+    fun `restore reuses existing refresh token from cookie`() {
+        // Given
+        val manager = memberRepository.findByEmail(TestData.member.email).orElseThrow()
+        val managed = memberRepository.findByEmail(TestData.member2.email).orElseThrow()
+        makeManagerRelation(manager, managed)
+
+        val originalRefreshToken = refreshTokenService.createRefreshToken(
+            memberId = manager.id!!,
+            remoteAddr = "127.0.0.1",
+            userAgent = "test-agent"
+        )
+        em.flush()
+        em.clear()
+
+        val accessToken = getJwt(manager)
+        val tokenCountBefore = refreshTokenService.findRefreshTokens(manager.id!!, false).size
+
+        // Impersonate
+        val impersonateResult = mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/impersonate/${managed.id}")
+                .header("Authorization", "Bearer $accessToken")
+                .cookie(Cookie("refresh_token", originalRefreshToken.token))
+        ).andExpect(status().isOk)
+            .andReturn()
+
+        val impersonatedToken = impersonateResult.response.getCookie("access_token")?.value
+
+        // When - Restore with existing refresh token in cookie
+        val restoreResult = mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/restore")
+                .header("Authorization", "Bearer $impersonatedToken")
+                .cookie(Cookie("refresh_token", originalRefreshToken.token))
+        ).andExpect(status().isOk)
+            .andExpect(cookie().exists("refresh_token"))
+            .andReturn()
+
+        // Then - Should reuse the same refresh token, not create a new one
+        val returnedRefreshToken = restoreResult.response.getCookie("refresh_token")?.value
+        assertThat(returnedRefreshToken).isEqualTo(originalRefreshToken.token)
+
+        val tokenCountAfter = refreshTokenService.findRefreshTokens(manager.id!!, false).size
+        assertThat(tokenCountAfter).isEqualTo(tokenCountBefore)
+    }
+
+    @Test
+    fun `restore creates new refresh token when cookie token is missing`() {
+        // Given
+        val manager = memberRepository.findByEmail(TestData.member.email).orElseThrow()
+        val managed = memberRepository.findByEmail(TestData.member2.email).orElseThrow()
+        makeManagerRelation(manager, managed)
+        em.flush()
+        em.clear()
+
+        val accessToken = getJwt(manager)
+        val tokenCountBefore = refreshTokenService.findRefreshTokens(manager.id!!, false).size
+
+        // Impersonate
+        val impersonateResult = mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/impersonate/${managed.id}")
+                .header("Authorization", "Bearer $accessToken")
+        ).andExpect(status().isOk)
+            .andReturn()
+
+        val impersonatedToken = impersonateResult.response.getCookie("access_token")?.value
+
+        // When - Restore without refresh token cookie
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/restore")
+                .header("Authorization", "Bearer $impersonatedToken")
+        ).andExpect(status().isOk)
+            .andExpect(cookie().exists("refresh_token"))
+            .andDo(MockMvcResultHandlers.print())
+
+        // Then - Should create a new refresh token
+        val tokenCountAfter = refreshTokenService.findRefreshTokens(manager.id!!, false).size
+        assertThat(tokenCountAfter).isEqualTo(tokenCountBefore + 1)
+    }
+
+    @Test
+    fun `restore creates new refresh token when cookie token belongs to different member`() {
+        // Given
+        val manager = memberRepository.findByEmail(TestData.member.email).orElseThrow()
+        val managed = memberRepository.findByEmail(TestData.member2.email).orElseThrow()
+        makeManagerRelation(manager, managed)
+
+        // Create refresh token for different member (managed)
+        val differentMemberToken = refreshTokenService.createRefreshToken(
+            memberId = managed.id!!,
+            remoteAddr = "127.0.0.1",
+            userAgent = "test-agent"
+        )
+        em.flush()
+        em.clear()
+
+        val accessToken = getJwt(manager)
+        val tokenCountBefore = refreshTokenService.findRefreshTokens(manager.id!!, false).size
+
+        // Impersonate
+        val impersonateResult = mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/impersonate/${managed.id}")
+                .header("Authorization", "Bearer $accessToken")
+        ).andExpect(status().isOk)
+            .andReturn()
+
+        val impersonatedToken = impersonateResult.response.getCookie("access_token")?.value
+
+        // When - Restore with refresh token belonging to different member
+        val restoreResult = mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/restore")
+                .header("Authorization", "Bearer $impersonatedToken")
+                .cookie(Cookie("refresh_token", differentMemberToken.token))
+        ).andExpect(status().isOk)
+            .andExpect(cookie().exists("refresh_token"))
+            .andReturn()
+
+        // Then - Should create a new refresh token (not reuse the wrong one)
+        val returnedRefreshToken = restoreResult.response.getCookie("refresh_token")?.value
+        assertThat(returnedRefreshToken).isNotEqualTo(differentMemberToken.token)
+
+        val tokenCountAfter = refreshTokenService.findRefreshTokens(manager.id!!, false).size
+        assertThat(tokenCountAfter).isEqualTo(tokenCountBefore + 1)
     }
 
 }

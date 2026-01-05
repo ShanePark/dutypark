@@ -41,4 +41,15 @@ class RefreshTokenController(
         return ResponseEntity.noContent().build()
     }
 
+    @DeleteMapping("/others")
+    fun deleteOtherRefreshTokens(
+        @Login loginMember: LoginMember,
+        request: HttpServletRequest,
+    ): ResponseEntity<Map<String, Int>> {
+        val currentToken = cookieService.extractRefreshToken(request.cookies)
+            ?: return ResponseEntity.badRequest().build()
+        val deletedCount = refreshTokenService.deleteOtherRefreshTokens(loginMember.id, currentToken)
+        return ResponseEntity.ok(mapOf("deletedCount" to deletedCount))
+    }
+
 }

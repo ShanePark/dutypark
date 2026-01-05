@@ -163,7 +163,7 @@ class AuthService(
         return jwtProvider.createImpersonationToken(targetEntity, manager.id)
     }
 
-    fun restore(currentLogin: LoginMember, req: HttpServletRequest): TokenResponse {
+    fun restore(currentLogin: LoginMember, existingRefreshToken: String?, req: HttpServletRequest): TokenResponse {
         if (!currentLogin.isImpersonating) {
             throw AuthException("전환된 계정 상태가 아닙니다.")
         }
@@ -176,7 +176,18 @@ class AuthService(
         }
 
         val jwt = jwtProvider.createToken(originalMember)
-        val refreshToken = refreshTokenService.createRefreshToken(
+
+        val refreshToken = existingRefreshToken?.let { token ->
+            refreshTokenService.findByToken(token)?.takeIf {
+                it.member.id == originalMemberId && it.isValid()
+            }?.also {
+                it.slideValidUntil(
+                    req.remoteAddr,
+                    req.getHeader(HttpHeaders.USER_AGENT),
+                    jwtConfig.refreshTokenValidityInDays
+                )
+            }
+        } ?: refreshTokenService.createRefreshToken(
             memberId = originalMemberId,
             remoteAddr = req.remoteAddr,
             userAgent = req.getHeader(HttpHeaders.USER_AGENT)
