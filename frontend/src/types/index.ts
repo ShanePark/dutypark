@@ -518,12 +518,3 @@ export interface DutyBatchTeamResult {
   processedCount?: number
 }
 
-// Impersonation types
-export interface ManagedMemberDto {
-  id: number
-  name: string
-  email: string | null
-  teamId: number | null
-  team: string | null
-  hasProfilePhoto?: boolean
-}

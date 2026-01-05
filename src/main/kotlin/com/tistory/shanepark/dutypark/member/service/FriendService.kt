@@ -91,34 +91,33 @@ class FriendService(
         )
     }
 
-    fun cancelFriendRequest(login: LoginMember, targetId: Long) {
-        val fromMember = loginMemberToMember(login)
+    fun cancelFriendRequest(loginMember: LoginMember, targetId: Long) {
+        val fromMember = loginMemberToMember(loginMember)
         val targetMember = memberRepository.findById(targetId).orElseThrow()
 
         val friendRequest = findPendingFriendRequestOrThrow(fromMember, targetMember)
         friendRequestRepository.delete(friendRequest)
     }
 
-    fun rejectFriendRequest(login: LoginMember, toMemberId: Long) {
+    fun rejectFriendRequest(loginMember: LoginMember, toMemberId: Long) {
         val fromMember = memberRepository.findById(toMemberId).orElseThrow()
-        val loginMember = loginMemberToMember(login)
+        val member = loginMemberToMember(loginMember)
 
-        val friendRequest = findPendingFriendRequestOrThrow(fromMember, loginMember)
+        val friendRequest = findPendingFriendRequestOrThrow(fromMember, member)
         friendRequest.status = REJECTED
     }
 
-
-    fun acceptFriendRequest(login: LoginMember, friendId: Long) {
-        val loginMember = loginMemberToMember(login)
+    fun acceptFriendRequest(loginMember: LoginMember, friendId: Long) {
+        val member = loginMemberToMember(loginMember)
         val friend = memberRepository.findById(friendId).orElseThrow()
 
-        val friendRequest = findPendingFriendRequestOrThrow(friend, loginMember)
-        deleteViceVersaRequestIfPresent(loginMember, friend)
+        val friendRequest = findPendingFriendRequestOrThrow(friend, member)
+        deleteViceVersaRequestIfPresent(member, friend)
         friendRequest.accepted()
 
         when (friendRequest.requestType) {
-            FriendRequestType.FRIEND_REQUEST -> setFriend(loginMember, friend)
-            FriendRequestType.FAMILY_REQUEST -> setFamily(loginMember, friend)
+            FriendRequestType.FRIEND_REQUEST -> setFriend(member, friend)
+            FriendRequestType.FAMILY_REQUEST -> setFamily(member, friend)
         }
     }
 
@@ -128,10 +127,12 @@ class FriendService(
     }
 
     private fun setFamily(member1: Member, member2: Member) {
-        friendRelationRepository.findByMemberAndFriend(member1, member2)?.let {
-            it.isFamily = true
-        } ?: throw IllegalArgumentException("Not friend")
-        friendRelationRepository.findByMemberAndFriend(member2, member1)?.let {
+        updateFamilyStatus(member1, member2)
+        updateFamilyStatus(member2, member1)
+    }
+
+    private fun updateFamilyStatus(member: Member, friend: Member) {
+        friendRelationRepository.findByMemberAndFriend(member, friend)?.let {
             it.isFamily = true
         } ?: throw IllegalArgumentException("Not friend")
     }

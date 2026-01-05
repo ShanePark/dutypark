@@ -9,7 +9,7 @@ import { useSwal } from '@/composables/useSwal'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEscapeKey } from '@/composables/useEscapeKey'
 import { useKakao } from '@/composables/useKakao'
-import type { FriendDto, MemberDto, RefreshTokenDto, CalendarVisibility, ManagedMemberDto } from '@/types'
+import type { FriendDto, MemberDto, RefreshTokenDto, CalendarVisibility } from '@/types'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
 import ProfilePhotoUploader from '@/components/common/ProfilePhotoUploader.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
@@ -42,7 +42,7 @@ const themeStore = useThemeStore()
 const { showSuccess, showError, showInfo, confirm, toastSuccess } = useSwal()
 
 // Managed members (accounts I manage)
-const managedMembers = ref<ManagedMemberDto[]>([])
+const managedMembers = ref<MemberDto[]>([])
 const managedMembersLoading = ref(false)
 const impersonating = ref<number | null>(null)
 
@@ -58,7 +58,9 @@ async function fetchManagedMembers() {
   }
 }
 
-async function handleImpersonate(member: ManagedMemberDto) {
+async function handleImpersonate(member: MemberDto) {
+  if (!member.id) return
+
   const confirmed = await confirm(
     `${member.name} 계정으로 전환하시겠습니까?\n\n전환 후에는 해당 계정의 모든 기능을 사용할 수 있습니다.`,
     '계정 전환'
@@ -543,7 +545,7 @@ onMounted(async () => {
             <div class="space-y-2">
               <div
                 v-for="member in managedMembers"
-                :key="member.id"
+                :key="member.id ?? 'unknown'"
                 class="flex items-center justify-between p-3 rounded-lg"
                 :style="{ backgroundColor: 'var(--dp-bg-secondary)' }"
               >

@@ -7,7 +7,6 @@ import type {
   RefreshTokenDto,
   CalendarVisibility,
   Page,
-  ManagedMemberDto,
 } from '@/types'
 
 /**
@@ -83,7 +82,7 @@ export const memberApi = {
    * Get managed members (accounts I manage)
    */
   getManagedMembers() {
-    return apiClient.get<ManagedMemberDto[]>('/members/managed')
+    return apiClient.get<MemberDto[]>('/members/managed')
   },
 }
 
