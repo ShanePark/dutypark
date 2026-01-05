@@ -748,19 +748,25 @@ watch(
               :style="!friend.pinOrder ? { backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' } : {}"
               @click="moveTo(friend.member.id)"
             >
-              <div class="p-2 sm:p-4">
-                <!-- Header: Name & Actions -->
-                <div class="flex items-center justify-between mb-1.5 sm:mb-2">
-                  <div class="flex items-center gap-1.5 min-w-0 flex-1">
-                    <ProfileAvatar
-                      :photo-url="friend.member.profilePhotoUrl"
-                      :name="friend.member.name"
-                      size="sm"
-                    />
-                    <span class="font-medium text-xs sm:text-sm truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ friend.member.name }}</span>
-                    <Home v-if="friend.isFamily" class="w-3 h-3 flex-shrink-0 text-amber-500" title="Family member" />
-                  </div>
-                  <div class="flex items-center flex-shrink-0" @click.stop>
+              <div class="flex p-2 sm:p-3">
+                <!-- Left section: Large Profile -->
+                <div class="flex-shrink-0 mr-2.5 sm:mr-3">
+                  <ProfileAvatar
+                    :photo-url="friend.member.profilePhotoUrl"
+                    :name="friend.member.name"
+                    size="xl"
+                  />
+                </div>
+
+                <!-- Right section: Info & Actions -->
+                <div class="flex-1 min-w-0">
+                  <!-- Top: Name & Actions -->
+                  <div class="flex items-center justify-between mb-1.5">
+                    <div class="flex items-center gap-1 min-w-0">
+                      <span class="font-medium text-xs sm:text-sm truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ friend.member.name }}</span>
+                      <Home v-if="friend.isFamily" class="w-3 h-3 flex-shrink-0 text-amber-500" title="Family member" />
+                    </div>
+                    <div class="flex items-center flex-shrink-0" @click.stop>
                     <!-- Pin/Unpin button -->
                     <button
                       v-if="friend.pinOrder"
@@ -811,27 +817,28 @@ watch(
                       </div>
                     </div>
                   </div>
-                </div>
-
-                <!-- Duty info -->
-                <div class="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
-                  <Briefcase class="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
-                  <span class="text-[11px] sm:text-sm" :style="{ color: 'var(--dp-text-secondary)' }">근무:</span>
-                  <span v-if="friend.duty" class="text-[11px] sm:text-sm font-medium truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ friend.duty.dutyType || '휴무' }}</span>
-                  <span v-else class="text-[11px] sm:text-sm" :style="{ color: 'var(--dp-text-muted)' }">-</span>
-                </div>
-
-                <!-- Schedules (hidden on mobile to save space) -->
-                <div v-if="friend.schedules && friend.schedules.length" class="hidden sm:block mt-2 space-y-1">
-                  <div
-                    v-for="schedule in friend.schedules.slice(0, 2)"
-                    :key="schedule.id"
-                    class="text-xs sm:text-sm py-1.5 px-2 rounded-lg truncate friend-schedule-item"
-                  >
-                    {{ printSchedule(schedule) }}
                   </div>
-                  <div v-if="friend.schedules.length > 2" class="text-xs pl-2" :style="{ color: 'var(--dp-text-muted)' }">
-                    +{{ friend.schedules.length - 2 }}개 더보기
+
+                  <!-- Duty info -->
+                  <div class="flex items-center gap-1.5 mb-1.5">
+                    <Briefcase class="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+                    <span class="text-[10px] sm:text-xs" :style="{ color: 'var(--dp-text-secondary)' }">근무:</span>
+                    <span v-if="friend.duty" class="text-[10px] sm:text-xs font-medium truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ friend.duty.dutyType || '휴무' }}</span>
+                    <span v-else class="text-[10px] sm:text-xs" :style="{ color: 'var(--dp-text-muted)' }">-</span>
+                  </div>
+
+                  <!-- Schedules -->
+                  <div v-if="friend.schedules && friend.schedules.length" class="space-y-1">
+                    <div
+                      v-for="schedule in friend.schedules.slice(0, 2)"
+                      :key="schedule.id"
+                      class="text-[10px] sm:text-xs py-1 px-1.5 rounded-md truncate friend-schedule-item"
+                    >
+                      {{ printSchedule(schedule) }}
+                    </div>
+                    <div v-if="friend.schedules.length > 2" class="text-[10px] sm:text-xs pl-1" :style="{ color: 'var(--dp-text-muted)' }">
+                      +{{ friend.schedules.length - 2 }}개 더보기
+                    </div>
                   </div>
                 </div>
               </div>
@@ -936,7 +943,7 @@ watch(
         <!-- Modal Content -->
         <div class="relative rounded-2xl shadow-2xl w-full max-w-2xl mx-2 sm:mx-4 max-h-[90vh] overflow-hidden" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
           <!-- Header -->
-          <div class="flex items-center justify-between p-5 border-b bg-gradient-to-r from-gray-50 to-white" :style="{ borderColor: 'var(--dp-border-primary)' }">
+          <div class="flex items-center justify-between p-5 border-b" :style="{ borderColor: 'var(--dp-border-primary)', backgroundColor: 'var(--dp-bg-secondary)' }">
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
                 <UserPlus class="w-5 h-5 text-white" />
@@ -991,9 +998,11 @@ watch(
                   :style="{ backgroundColor: 'var(--dp-bg-secondary)' }"
                 >
                   <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center">
-                      <span class="text-sm font-bold text-gray-600">{{ member.name.charAt(0) }}</span>
-                    </div>
+                    <ProfileAvatar
+                      :photo-url="member.profilePhotoUrl"
+                      :name="member.name"
+                      size="md"
+                    />
                     <div>
                       <p class="font-semibold" :style="{ color: 'var(--dp-text-primary)' }">{{ member.name }}</p>
                       <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">{{ member.team ?? '팀 없음' }}</p>
