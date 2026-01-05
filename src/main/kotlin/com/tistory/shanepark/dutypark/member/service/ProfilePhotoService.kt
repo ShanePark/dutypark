@@ -74,8 +74,9 @@ class ProfilePhotoService(
 
         deleteExistingPhotos(member.profilePhotoPath)
         member.profilePhotoPath = null
+        member.incrementProfilePhotoVersion()
 
-        log.info("Profile photo deleted: memberId={}", loginMember.id)
+        log.info("Profile photo deleted: memberId={}, version={}", loginMember.id, member.profilePhotoVersion)
     }
 
     private fun deleteExistingPhotos(photoPath: String?) {

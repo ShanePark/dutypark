@@ -277,6 +277,41 @@ class ProfilePhotoServiceTest : DutyparkIntegrationTest() {
     }
 
     @Test
+    fun `deleteProfilePhoto increments profilePhotoVersion`() {
+        // Given
+        val member = TestData.member
+        member.profilePhotoPath = null
+        member.profilePhotoVersion = 0
+        memberRepository.save(member)
+        em.flush()
+        em.clear()
+
+        val loginMember = loginMember(member)
+        val profileDir = storagePathResolver.getStorageRoot().resolve("PROFILE/${member.id}")
+        createdDirectories.add(profileDir)
+
+        // Upload photo first (version becomes 1)
+        val imageBytes = createTestPngImage()
+        val file = MockMultipartFile("file", "test.png", "image/png", imageBytes)
+        profilePhotoService.setProfilePhoto(loginMember, file)
+        em.flush()
+        em.clear()
+
+        val memberWithPhoto = memberRepository.findById(member.id!!).orElseThrow()
+        assertThat(memberWithPhoto.profilePhotoVersion).isEqualTo(1)
+
+        // When - delete photo (version becomes 2)
+        profilePhotoService.deleteProfilePhoto(loginMember)
+        em.flush()
+        em.clear()
+
+        // Then
+        val updatedMember = memberRepository.findById(member.id!!).orElseThrow()
+        assertThat(updatedMember.profilePhotoPath).isNull()
+        assertThat(updatedMember.profilePhotoVersion).isEqualTo(2)
+    }
+
+    @Test
     fun `setProfilePhoto rejects non-image files`() {
         // Given
         val member = TestData.member
