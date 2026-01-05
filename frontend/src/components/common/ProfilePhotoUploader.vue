@@ -6,6 +6,7 @@ import { Camera, Trash2, Loader2, Upload } from 'lucide-vue-next'
 import { memberApi } from '@/api/member'
 import { attachmentApi, attachmentValidation, validateFile, fetchAuthenticatedImage } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
+import ImageCropModal from '@/components/common/ImageCropModal.vue'
 import type { CreateSessionResponse, AttachmentDto } from '@/types'
 
 interface Props {
@@ -30,8 +31,9 @@ const isUploading = ref(false)
 const isDeleting = ref(false)
 const sessionId = ref<string | null>(null)
 const uploadedAttachmentId = ref<string | null>(null)
-const fileInputRef = ref<HTMLInputElement | null>(null)
 const uppy = shallowRef<Uppy | null>(null)
+
+const showCropModal = ref(false)
 
 const hasPhoto = computed(() => !!displayPhotoUrl.value)
 
@@ -93,7 +95,7 @@ function setupUppy() {
 
     if (!fileData.type.startsWith('image/')) {
       uppyInstance.removeFile(file.id)
-      showError('Only image files are allowed for profile photos')
+      showError('이미지 파일만 업로드할 수 있습니다')
       return
     }
 
@@ -120,7 +122,7 @@ function setupUppy() {
         }
       })
     } catch (error) {
-      showError('Failed to create upload session')
+      showError('업로드 세션 생성에 실패했습니다')
       fileIDs.forEach((fileId) => {
         uppyInstance.removeFile(fileId)
       })
@@ -157,10 +159,10 @@ function setupUppy() {
 
       emit('update:photoUrl', result.data.profilePhotoUrl)
       emit('upload-complete', result.data.profilePhotoUrl)
-      toastSuccess('Profile photo updated')
+      toastSuccess('프로필 사진이 업데이트되었습니다')
     } catch (error) {
       console.error('Failed to update profile photo:', error)
-      showError('Failed to save profile photo')
+      showError('프로필 사진 저장에 실패했습니다')
     } finally {
       isUploading.value = false
       sessionId.value = null
@@ -171,49 +173,50 @@ function setupUppy() {
   uppyInstance.on('upload-error', (file, error) => {
     console.error('Upload error:', error)
     isUploading.value = false
-    showError('Failed to upload file')
+    showError('파일 업로드에 실패했습니다')
   })
 
   uppyInstance.on('restriction-failed', (file, error) => {
     if (error && /maximum allowed size/i.test(error.message || '')) {
       showError(attachmentValidation.tooLargeMessage(file?.name))
     } else if (error && /allowed file types/i.test(error.message || '')) {
-      showError('Only image files are allowed')
+      showError('이미지 파일만 업로드할 수 있습니다')
     } else {
-      showError('File upload not allowed')
+      showError('파일 업로드가 허용되지 않습니다')
     }
   })
 
   uppy.value = uppyInstance
 }
 
-function triggerFileInput() {
+function openCropModal() {
   if (props.disabled || isUploading.value) return
-  fileInputRef.value?.click()
+  showCropModal.value = true
 }
 
-function onFileSelect(event: Event) {
-  const input = event.target as HTMLInputElement
-  const files = Array.from(input.files || [])
-  if (files.length > 0 && files[0]) {
-    const file = files[0]
-    try {
-      uppy.value?.addFile({
-        name: file.name,
-        type: file.type,
-        data: file as File,
-      })
-    } catch (e) {
-      console.error('Failed to add file:', e)
-    }
+function onCropConfirm(croppedFile: File) {
+  showCropModal.value = false
+
+  try {
+    uppy.value?.addFile({
+      name: croppedFile.name,
+      type: croppedFile.type,
+      data: croppedFile,
+    })
+  } catch (e) {
+    console.error('Failed to add cropped file:', e)
+    showError('크롭된 이미지 처리에 실패했습니다')
   }
-  input.value = ''
+}
+
+function onCropCancel() {
+  showCropModal.value = false
 }
 
 async function deletePhoto() {
   if (!hasPhoto.value || isDeleting.value || props.disabled) return
 
-  const confirmed = await confirm('Are you sure you want to delete your profile photo?', 'Delete Photo')
+  const confirmed = await confirm('프로필 사진을 삭제하시겠습니까?', '사진 삭제')
   if (!confirmed) return
 
   isDeleting.value = true
@@ -225,10 +228,10 @@ async function deletePhoto() {
     displayPhotoUrl.value = null
     emit('update:photoUrl', null)
     emit('upload-complete', null)
-    toastSuccess('Profile photo deleted')
+    toastSuccess('프로필 사진이 삭제되었습니다')
   } catch (error) {
     console.error('Failed to delete profile photo:', error)
-    showError('Failed to delete profile photo')
+    showError('프로필 사진 삭제에 실패했습니다')
   } finally {
     isDeleting.value = false
   }
@@ -260,7 +263,7 @@ onUnmounted(() => {
 
 <template>
   <div class="profile-photo-uploader">
-    <div class="photo-container" @click="triggerFileInput">
+    <div class="photo-container" @click="openCropModal">
       <div v-if="hasPhoto" class="photo-preview">
         <img :src="displayPhotoUrl!" alt="Profile" class="photo-image" />
         <div class="photo-overlay">
@@ -276,15 +279,6 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <input
-      ref="fileInputRef"
-      type="file"
-      accept="image/*"
-      class="hidden"
-      :disabled="disabled || isUploading"
-      @change="onFileSelect"
-    />
-
     <div class="actions">
       <button
         v-if="hasPhoto"
@@ -298,6 +292,12 @@ onUnmounted(() => {
         <span>Delete</span>
       </button>
     </div>
+
+    <ImageCropModal
+      :is-open="showCropModal"
+      @close="onCropCancel"
+      @confirm="onCropConfirm"
+    />
   </div>
 </template>
 
@@ -410,9 +410,5 @@ onUnmounted(() => {
 .delete-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.hidden {
-  display: none;
 }
 </style>
