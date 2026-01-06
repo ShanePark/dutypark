@@ -1427,53 +1427,54 @@ async function showExcelUploadModal() {
     <!-- Main Content -->
     <template v-else>
     <!-- Header: Profile + Year-Month (centered) + Search -->
-    <div class="relative flex items-start justify-between mb-2 px-1">
+    <div class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center mb-2 px-1 gap-1">
       <!-- Left: Profile Photo + Name -->
-      <div class="flex-shrink-0 flex items-center gap-2 z-10">
-        <!-- Profile Photo -->
-        <ProfileAvatar :member-id="memberId" :has-profile-photo="memberHasProfilePhoto" :profile-photo-version="memberProfilePhotoVersion" size="xl" :name="memberName" />
+      <div class="flex items-center gap-1.5 min-w-0">
+        <!-- Profile Photo (smaller on mobile) -->
+        <ProfileAvatar :member-id="memberId" :has-profile-photo="memberHasProfilePhoto" :profile-photo-version="memberProfilePhotoVersion" size="lg" class="flex-shrink-0 sm:hidden" :name="memberName" />
+        <ProfileAvatar :member-id="memberId" :has-profile-photo="memberHasProfilePhoto" :profile-photo-version="memberProfilePhotoVersion" size="xl" class="flex-shrink-0 hidden sm:block" :name="memberName" />
         <!-- Name -->
         <span
-          class="text-sm sm:text-base font-semibold max-w-[60px] sm:max-w-[80px] truncate"
+          class="text-xs sm:text-sm font-semibold truncate"
           :style="{ color: 'var(--dp-text-primary)' }"
         >{{ memberName }}</span>
       </div>
 
-      <!-- Center: Year-Month Navigation (absolute centered) -->
-      <div class="absolute left-1/2 -translate-x-1/2 top-2 sm:top-3 flex items-center">
-        <button @click="prevMonth" class="calendar-nav-btn p-1 sm:p-2 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer">
+      <!-- Center: Year-Month Navigation -->
+      <div class="flex items-center justify-center">
+        <button @click="prevMonth" class="calendar-nav-btn p-0.5 sm:p-2 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer">
           <ChevronLeft class="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
         <button
           @click="isYearMonthPickerOpen = true"
-          class="calendar-nav-btn px-2 sm:px-3 py-1 text-lg sm:text-2xl font-semibold rounded whitespace-nowrap cursor-pointer"
+          class="calendar-nav-btn px-1 sm:px-3 py-1 text-lg sm:text-2xl font-semibold rounded whitespace-nowrap cursor-pointer"
         >
           {{ currentYear }}-{{ String(currentMonth).padStart(2, '0') }}
         </button>
-        <button @click="nextMonth" class="calendar-nav-btn p-1 sm:p-2 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer">
+        <button @click="nextMonth" class="calendar-nav-btn p-0.5 sm:p-2 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer">
           <ChevronRight class="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
       </div>
 
       <!-- Right: Search -->
-      <div v-if="canSearch" class="flex-shrink-0 flex items-stretch rounded-lg border overflow-hidden z-10 mt-2 sm:mt-3" :style="{ borderColor: 'var(--dp-border-secondary)' }">
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="검색"
-          @keyup.enter="handleSearch()"
-          class="px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none w-14 sm:w-20 border-none"
-          :style="{ backgroundColor: 'var(--dp-bg-input)', color: 'var(--dp-text-primary)' }"
-        />
-        <button
-          @click="searchQuery.trim() ? handleSearch() : openSearchModal()"
-          class="px-2 py-1.5 bg-gray-800 text-white hover:bg-gray-700 transition flex items-center justify-center cursor-pointer"
-        >
-          <Search class="w-4 h-4" />
-        </button>
+      <div class="flex justify-end">
+        <div v-if="canSearch" class="flex items-stretch rounded-lg border overflow-hidden" :style="{ borderColor: 'var(--dp-border-secondary)' }">
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="검색"
+            @keyup.enter="handleSearch()"
+            class="px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none w-12 sm:w-20 border-none"
+            :style="{ backgroundColor: 'var(--dp-bg-input)', color: 'var(--dp-text-primary)' }"
+          />
+          <button
+            @click="searchQuery.trim() ? handleSearch() : openSearchModal()"
+            class="px-2 py-1.5 bg-gray-800 text-white hover:bg-gray-700 transition flex items-center justify-center cursor-pointer"
+          >
+            <Search class="w-4 h-4" />
+          </button>
+        </div>
       </div>
-      <!-- Placeholder for right side when no search (to maintain layout) -->
-      <div v-else class="w-14 sm:w-20 flex-shrink-0"></div>
     </div>
 
     <!-- Todo row (only for my calendar) -->
