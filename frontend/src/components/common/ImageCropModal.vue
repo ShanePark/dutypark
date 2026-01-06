@@ -230,7 +230,13 @@ const zoomPercent = computed(() => Math.round(zoom.value * 100))
 
           <!-- Cropper (when image exists) -->
           <template v-else>
-            <div class="cropper-wrapper">
+            <div
+              class="cropper-wrapper"
+              :class="{ 'cropper-wrapper-dragging': isDragging }"
+              @dragover="onDragOver"
+              @dragleave="onDragLeave"
+              @drop="onDrop"
+            >
               <Cropper
                 ref="cropperRef"
                 :src="imageSource!"
@@ -243,6 +249,13 @@ const zoomPercent = computed(() => Math.round(zoom.value * 100))
                 }"
                 class="cropper"
               />
+              <!-- Drag overlay -->
+              <Transition name="fade">
+                <div v-if="isDragging" class="drag-overlay">
+                  <ImagePlus class="w-12 h-12" />
+                  <span>이미지 변경</span>
+                </div>
+              </Transition>
             </div>
 
             <!-- Zoom Controls -->
@@ -391,6 +404,39 @@ const zoomPercent = computed(() => Math.round(zoom.value * 100))
   border-radius: 0.5rem;
   overflow: hidden;
   background-color: var(--dp-bg-tertiary);
+  position: relative;
+  transition: outline 0.15s ease;
+}
+
+.cropper-wrapper-dragging {
+  outline: 3px dashed var(--color-primary, #3b82f6);
+  outline-offset: -3px;
+}
+
+.drag-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: rgba(59, 130, 246, 0.85);
+  color: white;
+  font-size: 1rem;
+  font-weight: 500;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 
 @media (min-width: 640px) {
