@@ -178,6 +178,17 @@ function handleKakaoLogin() {
           홈으로 돌아가기
         </router-link>
       </div>
+
+      <!-- Policy Links -->
+      <div class="text-center mt-4">
+        <router-link to="/terms" class="text-xs transition hover:underline" :style="{ color: 'var(--dp-text-muted)' }">
+          이용약관
+        </router-link>
+        <span class="mx-2 text-xs" :style="{ color: 'var(--dp-text-muted)' }">|</span>
+        <router-link to="/privacy" class="text-xs transition hover:underline" :style="{ color: 'var(--dp-text-muted)' }">
+          개인정보 처리방침
+        </router-link>
+      </div>
     </div>
   </div>
 </template>

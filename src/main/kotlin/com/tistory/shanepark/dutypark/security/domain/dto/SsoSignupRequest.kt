@@ -11,5 +11,8 @@ data class SsoSignupRequest(
     @field:NotBlank
     @field:Size(min = 1, max = 10, message = "사용자명은 1-10자로 입력해주세요.")
     val username: String,
-    val termAgree: Boolean
+    val termAgree: Boolean,
+    val privacyAgree: Boolean,
+    val termsVersion: String? = null,
+    val privacyVersion: String? = null
 )

@@ -1104,3 +1104,51 @@ div.swal2-popup.swal2-toast.colored-toast-info {
         inset 0 -2px 0 rgba(0, 0, 0, 0.1),
         0 0 0 3px #f97316;
 }
+
+/* ====================================
+   Markdown Prose Styles
+   ==================================== */
+
+.prose p {
+    @apply my-3;
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4 {
+    @apply mt-6 mb-3;
+}
+
+.prose ul, .prose ol {
+    @apply my-2 pl-5;
+}
+
+.prose li {
+    @apply my-1;
+}
+
+.prose table {
+    @apply w-full border-collapse text-sm my-4;
+}
+
+.prose thead {
+    background-color: var(--dp-bg-tertiary);
+}
+
+.prose th {
+    @apply px-3 py-2 text-left font-semibold;
+    border: 1px solid var(--dp-border-primary);
+    color: var(--dp-text-primary);
+}
+
+.prose td {
+    @apply px-3 py-2;
+    border: 1px solid var(--dp-border-primary);
+    color: var(--dp-text-secondary);
+}
+
+.prose tbody tr:nth-child(even) {
+    background-color: var(--dp-bg-secondary);
+}
+
+.prose tbody tr:hover {
+    background-color: var(--dp-bg-hover);
+}
