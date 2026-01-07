@@ -1540,6 +1540,7 @@ async function showExcelUploadModal() {
       </div>
       <div class="inline-flex rounded-lg border overflow-hidden" :style="{ borderColor: 'var(--dp-border-secondary)' }">
         <button
+          v-if="!batchEditMode"
           @click="handleToggleOtherDuties"
           class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1 border-r cursor-pointer"
           :style="{ borderColor: 'var(--dp-border-secondary)' }"
@@ -1552,24 +1553,24 @@ async function showExcelUploadModal() {
           </span>
         </button>
         <button
+          v-if="canEdit && isMyCalendar && batchEditMode"
+          @click="showBatchUpdateModal"
+          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 border-r cursor-pointer hover:bg-gray-500/10 dark:hover:bg-gray-400/10"
+          :style="{ borderColor: 'var(--dp-border-secondary)' }"
+        >
+          일괄수정
+        </button>
+        <button
           v-if="canEdit"
           @click="batchEditMode = !batchEditMode"
-          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 border-r cursor-pointer"
+          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 border-r last:border-r-0 cursor-pointer"
           :style="{ borderColor: 'var(--dp-border-secondary)' }"
           :class="batchEditMode ? 'bg-orange-50/70 text-orange-700 hover:bg-orange-50' : 'hover:bg-gray-500/10 dark:hover:bg-gray-400/10'"
         >
           편집모드
         </button>
         <button
-          v-if="canEdit && isMyCalendar && batchEditMode"
-          @click="showBatchUpdateModal"
-          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 border-r last:border-r-0 cursor-pointer hover:bg-gray-500/10 dark:hover:bg-gray-400/10"
-          :style="{ borderColor: 'var(--dp-border-secondary)' }"
-        >
-          일괄수정
-        </button>
-        <button
-          v-if="canEdit && isMyCalendar && team?.dutyBatchTemplate"
+          v-if="canEdit && isMyCalendar && team?.dutyBatchTemplate && !batchEditMode"
           @click="showExcelUploadModal"
           class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1 cursor-pointer hover:bg-gray-500/10 dark:hover:bg-gray-400/10"
         >
@@ -1584,7 +1585,7 @@ async function showExcelUploadModal() {
       :days="calendarDays"
       :current-year="currentYear"
       :current-month="currentMonth"
-      :holidays="holidaysByDays"
+      :holidays="batchEditMode ? [] : holidaysByDays"
       :get-duty-color="getDutyColorForDay"
       :highlight-day="searchDay"
       @day-click="handleDayClick"
@@ -1608,7 +1609,7 @@ async function showExcelUploadModal() {
             v-for="dutyType in dutyTypes"
             :key="dutyType.id ?? 'off'"
             @click.stop="handleBatchDutyChange(day, dutyType.id)"
-            class="text-[10px] sm:text-xs px-1 py-1 rounded border transition-all min-h-[22px] sm:min-h-[26px] truncate cursor-pointer"
+            class="text-[10px] sm:text-xs px-1 py-1 rounded border transition-all min-h-[22px] sm:min-h-[26px] cursor-pointer"
             :class="{
               'ring-2 ring-gray-800 font-bold shadow-sm':
                 (duties[index]?.dutyType === dutyType.name) ||
@@ -1621,7 +1622,8 @@ async function showExcelUploadModal() {
               borderColor: dutyType.color || '#6c757d',
             }"
           >
-            {{ dutyType.name.length > 4 ? dutyType.name.substring(0, 4) : dutyType.name }}
+            <span class="sm:hidden">{{ dutyType.name.charAt(0) }}</span>
+            <span class="hidden sm:inline">{{ dutyType.name.length > 4 ? dutyType.name.substring(0, 4) : dutyType.name }}</span>
           </button>
         </div>
 
