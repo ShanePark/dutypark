@@ -472,7 +472,7 @@ async function loadExistingImages() {
 
 <template>
   <div class="file-uploader">
-    <!-- Drop zone -->
+    <!-- Drop zone - Desktop: full area, Mobile: compact button -->
     <div
       ref="dropZoneRef"
       class="drop-zone cursor-pointer"
@@ -482,9 +482,10 @@ async function loadExistingImages() {
       @drop="onDrop"
       @click="fileInputRef?.click()"
     >
-      <Upload class="upload-icon" :size="24" />
-      <span class="drop-text">파일을 드래그하거나 클릭하여 업로드</span>
-      <span class="drop-hint">최대 {{ attachmentValidation.maxFileSizeLabel }}</span>
+      <Upload class="upload-icon" :size="20" />
+      <span class="drop-text-desktop">파일을 드래그하거나 클릭하여 업로드</span>
+      <span class="drop-text-mobile">파일 추가</span>
+      <span class="drop-hint-desktop">최대 {{ attachmentValidation.maxFileSizeLabel }}</span>
     </div>
 
     <input
@@ -558,15 +559,22 @@ async function loadExistingImages() {
 
 .drop-zone {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 1.5rem;
+  padding: 0.625rem 1rem;
   border: 2px dashed var(--dp-border-primary);
   border-radius: 0.5rem;
   background-color: var(--dp-bg-secondary);
   transition: all 0.2s ease;
+}
+
+@media (min-width: 640px) {
+  .drop-zone {
+    flex-direction: column;
+    padding: 1.5rem;
+  }
 }
 
 .drop-zone:hover:not(.disabled) {
@@ -588,14 +596,34 @@ async function loadExistingImages() {
   color: var(--dp-text-secondary);
 }
 
-.drop-text {
+.drop-text-desktop {
+  display: none;
   font-size: 0.875rem;
   color: var(--dp-text-secondary);
 }
 
-.drop-hint {
+.drop-text-mobile {
+  display: inline;
+  font-size: 0.875rem;
+  color: var(--dp-text-secondary);
+}
+
+.drop-hint-desktop {
+  display: none;
   font-size: 0.75rem;
   color: var(--dp-text-muted);
+}
+
+@media (min-width: 640px) {
+  .drop-text-desktop {
+    display: inline;
+  }
+  .drop-text-mobile {
+    display: none;
+  }
+  .drop-hint-desktop {
+    display: inline;
+  }
 }
 
 .hidden {

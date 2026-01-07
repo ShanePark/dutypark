@@ -21,7 +21,7 @@ import { normalizeAttachment } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEscapeKey } from '@/composables/useEscapeKey'
-import { getVisibilityIcon, getVisibilityLabel } from '@/utils/visibility'
+import { getVisibilityIcon, getVisibilityLabel, VISIBILITY_ICONS, type CalendarVisibility } from '@/utils/visibility'
 import { extractDatePart } from '@/utils/date'
 
 const { showWarning, showError } = useSwal()
@@ -163,6 +163,33 @@ const formattedDate = computed(() => {
   const dayOfWeek = weekDays[date.getDay()]
   return `${year}년 ${month}월 ${day}일 (${dayOfWeek})`
 })
+
+const visibilityOptions = computed(() => [
+  {
+    value: 'PUBLIC' as CalendarVisibility,
+    label: '전체공개',
+    description: '모든 사람에게 공개',
+    icon: VISIBILITY_ICONS.PUBLIC,
+  },
+  {
+    value: 'FRIENDS' as CalendarVisibility,
+    label: '친구공개',
+    description: '친구에게만 공개',
+    icon: VISIBILITY_ICONS.FRIENDS,
+  },
+  {
+    value: 'FAMILY' as CalendarVisibility,
+    label: '가족공개',
+    description: '가족에게만 공개',
+    icon: VISIBILITY_ICONS.FAMILY,
+  },
+  {
+    value: 'PRIVATE' as CalendarVisibility,
+    label: '나만보기',
+    description: '나만 볼 수 있음',
+    icon: VISIBILITY_ICONS.PRIVATE,
+  },
+])
 
 const hasDraggableSchedules = computed(() => {
   return props.canEdit && props.schedules.filter(s => !s.isTagged).length > 1
@@ -699,7 +726,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
 
           <!-- Create/Edit Schedule Form -->
           <div v-if="isCreateMode || isEditMode">
-            <div class="space-y-3">
+            <div class="space-y-2 sm:space-y-3">
               <div>
                 <label class="block text-sm mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
                   내용 <span class="text-red-500">*</span>
@@ -709,18 +736,18 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                   v-model="newSchedule.content"
                   type="text"
                   maxlength="50"
-                  class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
+                  class="w-full px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
                   placeholder="일정 내용을 입력하세요"
                 />
               </div>
 
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="grid grid-cols-2 gap-2 sm:gap-3">
                 <div>
                   <label class="block text-sm mb-1" :style="{ color: 'var(--dp-text-secondary)' }">시작 시간</label>
                   <input
                     v-model="newSchedule.startTime"
                     type="time"
-                    class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
+                    class="w-full px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
                   />
                 </div>
                 <div>
@@ -728,7 +755,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                   <input
                     v-model="newSchedule.endDateTime"
                     type="datetime-local"
-                    class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
+                    class="w-full px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
                   />
                 </div>
               </div>
@@ -737,23 +764,58 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                 <label class="block text-sm mb-1" :style="{ color: 'var(--dp-text-secondary)' }">설명</label>
                 <textarea
                   v-model="newSchedule.description"
-                  rows="3"
-                  class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
+                  rows="2"
+                  class="w-full px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
                   placeholder="설명 (선택사항)"
                 ></textarea>
               </div>
 
               <div>
                 <label class="block text-sm mb-1" :style="{ color: 'var(--dp-text-secondary)' }">공개 범위</label>
-                <select
-                  v-model="newSchedule.visibility"
-                  class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
-                >
-                  <option value="PUBLIC">전체공개</option>
-                  <option value="FRIENDS">친구공개</option>
-                  <option value="FAMILY">가족공개</option>
-                  <option value="PRIVATE">나만보기</option>
-                </select>
+                <div class="grid grid-cols-2 gap-1.5 sm:gap-2">
+                  <button
+                    v-for="option in visibilityOptions"
+                    :key="option.value"
+                    type="button"
+                    @click="newSchedule.visibility = option.value"
+                    class="visibility-card relative flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border-2 transition-all duration-150 cursor-pointer text-left"
+                    :class="{
+                      'visibility-card-selected': newSchedule.visibility === option.value,
+                      'visibility-card-unselected': newSchedule.visibility !== option.value
+                    }"
+                  >
+                    <!-- Check badge -->
+                    <div
+                      v-if="newSchedule.visibility === option.value"
+                      class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center shadow-sm"
+                    >
+                      <Check class="w-3 h-3 text-white" />
+                    </div>
+                    <div class="flex-shrink-0 w-7 h-7 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-blue-500">
+                      <component
+                        :is="option.icon"
+                        class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white"
+                      />
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <div
+                        class="font-medium text-xs sm:text-sm truncate"
+                        :class="{
+                          'text-blue-700 dark:text-blue-400': newSchedule.visibility === option.value
+                        }"
+                        :style="newSchedule.visibility !== option.value ? { color: 'var(--dp-text-primary)' } : undefined"
+                      >
+                        {{ option.label }}
+                      </div>
+                      <div
+                        class="text-[10px] sm:text-xs truncate hidden sm:block"
+                        :style="{ color: 'var(--dp-text-muted)' }"
+                      >
+                        {{ option.description }}
+                      </div>
+                    </div>
+                  </button>
+                </div>
               </div>
 
               <!-- Attachment Upload Area -->
@@ -899,5 +961,28 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
 
 .schedule-drag-handle:active {
   cursor: grabbing;
+}
+
+/* Visibility card styles */
+.visibility-card-selected {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+  box-shadow: 0 0 0 1px #3b82f6, 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+
+.dark .visibility-card-selected {
+  background-color: rgba(59, 130, 246, 0.15);
+}
+
+.visibility-card-unselected {
+  border-color: var(--dp-border-primary);
+  background-color: var(--dp-bg-card);
+  opacity: 0.5;
+}
+
+.visibility-card-unselected:hover {
+  border-color: #93c5fd;
+  background-color: var(--dp-bg-secondary);
+  opacity: 0.85;
 }
 </style>
