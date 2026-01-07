@@ -2,7 +2,7 @@
 import { ref, provide } from 'vue'
 import '@/styles/intro.css'
 import IntroHero from './IntroHero.vue'
-import IntroFeature, { type Feature } from './IntroFeature.vue'
+import IntroShowcase, { type Feature } from './IntroShowcase.vue'
 import IntroCTA from './IntroCTA.vue'
 
 const containerRef = ref<HTMLElement | null>(null)
@@ -65,13 +65,7 @@ const features: Feature[] = [
   <div ref="containerRef" class="intro-container">
     <IntroHero />
 
-    <IntroFeature
-      v-for="(feature, index) in features"
-      :key="feature.id"
-      :feature="feature"
-      :index="index"
-      :reverse="index % 2 === 1"
-    />
+    <IntroShowcase :features="features" />
 
     <IntroCTA />
   </div>
@@ -82,6 +76,6 @@ const features: Feature[] = [
   height: 100vh;
   overflow-x: hidden;
   overflow-y: auto;
-  /* Smooth scroll for better parallax animation experience */
+  scroll-behavior: smooth;
 }
 </style>
