@@ -174,6 +174,7 @@ const loadError = ref<string | null>(null)
 
 // Edit mode states
 const batchEditMode = ref(false)
+const focusedDay = ref<number | null>(null)  // Focused day for quick duty input (1~lastDay)
 const searchQuery = ref('')
 
 // Modal states
@@ -461,6 +462,14 @@ const duties = computed(() => {
   })
 })
 
+// Get duty for the currently focused day (for highlighting quick input buttons)
+const focusedDayDuty = computed(() => {
+  if (!focusedDay.value) return null
+  const dayIndex = calendarDays.value.findIndex(d => d.day === focusedDay.value && d.isCurrentMonth)
+  if (dayIndex === -1) return null
+  return duties.value[dayIndex]
+})
+
 // Get duty color for CalendarGrid component
 function getDutyColorForDay(day: CalendarDay): string | null {
   const idx = calendarDays.value.findIndex(
@@ -635,6 +644,15 @@ watch(
   }
 )
 
+// Watch for batch edit mode changes to initialize/reset focused day
+watch(batchEditMode, (newVal) => {
+  if (newVal) {
+    focusedDay.value = 1  // Start from day 1 when entering edit mode
+  } else {
+    focusedDay.value = null  // Clear focus when exiting edit mode
+  }
+})
+
 // Watch for route params changes (when navigating between calendars)
 watch(
   () => route.params.id,
@@ -723,7 +741,15 @@ function goToToday() {
 // Day click handler
 function handleDayClick(day: CalendarDay, index: number) {
   if (!canEdit.value) return // Disable click if no edit permission
-  if (batchEditMode.value) return // In edit mode, clicks are handled by duty type buttons
+
+  // In batch edit mode, clicking a day moves the focus to that day
+  if (batchEditMode.value) {
+    if (day.isCurrentMonth) {
+      focusedDay.value = day.day
+    }
+    return
+  }
+
   selectedDay.value = day
   selectedDayDuty.value = duties.value[index] || undefined
   isDayDetailModalOpen.value = true
@@ -750,6 +776,72 @@ async function handleBatchDutyChange(day: CalendarDay, dutyTypeId: number | null
     console.error('Failed to change duty type:', error)
     showError('근무 변경에 실패했습니다.')
   }
+}
+
+// Debounced duty reload to avoid multiple rapid reloads
+let dutyReloadTimeout: ReturnType<typeof setTimeout> | null = null
+function debouncedLoadDuties() {
+  if (dutyReloadTimeout) clearTimeout(dutyReloadTimeout)
+  dutyReloadTimeout = setTimeout(() => {
+    loadDuties()
+  }, 300)
+}
+
+// Quick duty change: apply to focused day and move to next day
+function handleQuickDutyChange(dutyTypeId: number | null) {
+  if (!focusedDay.value || !memberId.value || !canEdit.value) return
+
+  // Capture current day before incrementing
+  const currentDay = focusedDay.value
+  const year = currentYear.value
+  const month = currentMonth.value
+
+  // Move to next day immediately (stop at last day of month)
+  const lastDay = new Date(year, month, 0).getDate()
+  if (focusedDay.value < lastDay) {
+    focusedDay.value++
+  }
+
+  // Find the duty type info for optimistic update
+  const dutyType = dutyTypes.value.find(dt => dt.id === dutyTypeId)
+  const newDutyType = dutyType?.name || null
+  const newDutyColor = dutyType?.color || null
+
+  // Optimistic update: immediately update rawDuties
+  const dutyIndex = rawDuties.value.findIndex(
+    d => d.year === year && d.month === month && d.day === currentDay
+  )
+  const existingDuty = dutyIndex !== -1 ? rawDuties.value[dutyIndex] : null
+  const previousDuty = existingDuty ? {
+    year: existingDuty.year,
+    month: existingDuty.month,
+    day: existingDuty.day,
+    dutyType: existingDuty.dutyType,
+    dutyColor: existingDuty.dutyColor,
+    isOff: existingDuty.isOff,
+  } : null
+
+  if (dutyIndex !== -1 && existingDuty) {
+    rawDuties.value[dutyIndex] = {
+      year: existingDuty.year,
+      month: existingDuty.month,
+      day: existingDuty.day,
+      dutyType: newDutyType,
+      dutyColor: newDutyColor,
+      isOff: dutyTypeId === null,
+    }
+  }
+
+  // Fire API call - rollback on failure
+  dutyApi.updateDuty(memberId.value, year, month, currentDay, dutyTypeId)
+    .then(() => debouncedLoadDuties())
+    .catch((error) => {
+      console.error('Failed to change duty type:', error)
+      // Rollback on failure
+      if (previousDuty && dutyIndex !== -1) {
+        rawDuties.value[dutyIndex] = previousDuty
+      }
+    })
 }
 
 // D-Day handlers
@@ -1519,8 +1611,46 @@ async function showExcelUploadModal() {
 
     <!-- Duty Types & Buttons -->
     <div class="flex flex-wrap items-center justify-between gap-1 mb-1.5">
-      <div class="flex flex-wrap items-center gap-2 sm:gap-4">
-        <template v-if="dutyTypes.length > 0">
+      <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+        <!-- Edit mode: Clickable duty type buttons for quick input -->
+        <template v-if="batchEditMode && dutyTypes.length > 0">
+          <!-- Current focus indicator with navigation -->
+          <div class="flex items-center rounded-md border" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderColor: 'var(--dp-border-secondary)' }">
+            <button
+              @click="focusedDay = Math.max(1, (focusedDay || 1) - 1)"
+              :disabled="focusedDay === 1"
+              class="p-1 rounded-l-md transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-500/10"
+            >
+              <ChevronLeft class="w-4 h-4" :style="{ color: 'var(--dp-text-secondary)' }" />
+            </button>
+            <span class="px-1 text-xs sm:text-sm font-bold text-orange-500">{{ focusedDay }}일</span>
+            <button
+              @click="focusedDay = Math.min(new Date(currentYear, currentMonth, 0).getDate(), (focusedDay || 1) + 1)"
+              :disabled="focusedDay === new Date(currentYear, currentMonth, 0).getDate()"
+              class="p-1 rounded-r-md transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-500/10"
+            >
+              <ChevronRight class="w-4 h-4" :style="{ color: 'var(--dp-text-secondary)' }" />
+            </button>
+          </div>
+          <button
+            v-for="dutyType in dutyTypes"
+            :key="dutyType.id ?? 'off'"
+            @click="handleQuickDutyChange(dutyType.id)"
+            class="duty-quick-btn"
+            :class="{ 'duty-quick-btn-active': focusedDayDuty?.dutyType === dutyType.name || (!focusedDayDuty?.dutyType && dutyType.id === null) }"
+            :style="{
+              '--duty-color': dutyType.color || '#6c757d',
+              '--duty-text': isLightColor(dutyType.color) ? '#000' : '#fff'
+            } as any"
+          >
+            <span class="duty-quick-btn-inner">
+              {{ dutyType.name }}
+            </span>
+          </button>
+        </template>
+
+        <!-- Normal mode: Duty type badges with counts -->
+        <template v-else-if="dutyTypes.length > 0">
           <div v-for="dutyType in dutyTypes" :key="dutyType.name" class="flex items-center gap-1">
             <span
               class="w-4 h-4 rounded border-2"
@@ -1538,7 +1668,7 @@ async function showExcelUploadModal() {
           근무 타입 정보 없음
         </span>
       </div>
-      <div class="inline-flex rounded-lg border overflow-hidden" :style="{ borderColor: 'var(--dp-border-secondary)' }">
+      <div class="inline-flex rounded-lg border overflow-hidden ml-auto" :style="{ borderColor: 'var(--dp-border-secondary)' }">
         <button
           v-if="!batchEditMode"
           @click="handleToggleOtherDuties"
@@ -1588,6 +1718,7 @@ async function showExcelUploadModal() {
       :holidays="batchEditMode ? [] : holidaysByDays"
       :get-duty-color="getDutyColorForDay"
       :highlight-day="searchDay"
+      :focused-day="batchEditMode && focusedDay ? { year: currentYear, month: currentMonth, day: focusedDay } : null"
       @day-click="handleDayClick"
     >
       <!-- D-Day indicator in header -->
@@ -1603,8 +1734,8 @@ async function showExcelUploadModal() {
 
       <!-- Day content slot -->
       <template #day-content="{ day, index }">
-        <!-- Batch Edit Mode: Duty Type Buttons -->
-        <div v-if="batchEditMode && day.isCurrentMonth" class="mt-1 grid grid-cols-2 gap-0.5">
+        <!-- Batch Edit Mode: Duty Type Buttons (hidden on mobile, use top bar instead) -->
+        <div v-if="batchEditMode && day.isCurrentMonth" class="mt-1 hidden sm:grid grid-cols-2 gap-0.5">
           <button
             v-for="dutyType in dutyTypes"
             :key="dutyType.id ?? 'off'"
@@ -1688,8 +1819,8 @@ async function showExcelUploadModal() {
       </template>
     </CalendarGrid>
 
-    <!-- D-Day List -->
-    <div class="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+    <!-- D-Day List (hidden in edit mode) -->
+    <div v-if="!batchEditMode" class="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
       <div
         v-for="dday in dDays"
         :key="dday.id"
