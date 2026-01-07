@@ -2,16 +2,17 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { marked } from 'marked'
-
-marked.setOptions({
-  breaks: true,
-})
 import { authApi } from '@/api/auth'
 import { policyApi, type CurrentPoliciesDto } from '@/api/policy'
 import { useAuthStore } from '@/stores/auth'
 import { useSwal } from '@/composables/useSwal'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
+import PolicyModal from '@/components/common/PolicyModal.vue'
 import type { AxiosError } from 'axios'
+
+marked.setOptions({
+  breaks: true,
+})
 
 const route = useRoute()
 const router = useRouter()
@@ -37,20 +38,8 @@ const renderedPrivacy = computed(() => {
   return marked(policies.value.privacy.content) as string
 })
 
-const modalTitle = computed(() => {
-  return policyModal.value === 'terms' ? '이용약관' : '개인정보 처리방침'
-})
-
-const modalContent = computed(() => {
-  return policyModal.value === 'terms' ? renderedTerms.value : renderedPrivacy.value
-})
-
 function openPolicyModal(type: 'terms' | 'privacy') {
   policyModal.value = type
-}
-
-function closePolicyModal() {
-  policyModal.value = null
 }
 
 // Validation
@@ -346,54 +335,6 @@ async function handleSubmit() {
       </div>
     </div>
 
-    <!-- Policy Modal -->
-    <Teleport to="body">
-      <div
-        v-if="policyModal"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4"
-        @click.self="closePolicyModal"
-      >
-        <div class="fixed inset-0 bg-black/50" @click="closePolicyModal"></div>
-        <div
-          class="relative w-full max-w-3xl max-h-[90vh] rounded-xl shadow-xl overflow-hidden flex flex-col"
-          :style="{ backgroundColor: 'var(--dp-bg-modal)' }"
-        >
-          <!-- Modal Header -->
-          <div class="modal-header flex-shrink-0">
-            <h2>{{ modalTitle }}</h2>
-            <button
-              type="button"
-              class="p-2 rounded-full hover-close-btn"
-              @click="closePolicyModal"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          <!-- Modal Body -->
-          <div
-            class="flex-1 overflow-y-auto p-6 prose prose-sm sm:prose-base max-w-none"
-            :style="{ color: 'var(--dp-text-secondary)' }"
-            v-html="modalContent"
-          >
-          </div>
-          <!-- Modal Footer -->
-          <div class="flex-shrink-0 p-4 border-t" :style="{ borderColor: 'var(--dp-border-primary)' }">
-            <button
-              type="button"
-              class="w-full py-2.5 px-4 rounded-lg font-medium transition"
-              :style="{
-                backgroundColor: 'var(--dp-bg-tertiary)',
-                color: 'var(--dp-text-primary)'
-              }"
-              @click="closePolicyModal"
-            >
-              닫기
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <PolicyModal :type="policyModal" :policies="policies" @close="policyModal = null" />
   </div>
 </template>
