@@ -39,7 +39,7 @@ class TeamControllerTest : RestDocsTest() {
                         fieldWithPath("id").description("Team ID"),
                         fieldWithPath("name").description("Team name"),
                         fieldWithPath("description").description("Team description"),
-                        fieldWithPath("workType").description("Work type (WEEKDAY, WEEKEND, FIXED, FLEXIBLE)"),
+                        fieldWithPath("workType").description("Work type (WEEKDAY, FLEXIBLE)"),
                         subsectionWithPath("dutyTypes").description("List of duty types"),
                         fieldWithPath("members").description("Team members"),
                         fieldWithPath("createdDate").description("Created date"),

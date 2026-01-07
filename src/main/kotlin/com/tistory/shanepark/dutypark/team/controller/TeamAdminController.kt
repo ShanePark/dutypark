@@ -2,7 +2,6 @@ package com.tistory.shanepark.dutypark.team.controller
 
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.domain.dto.PageResponse
-import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.team.domain.dto.SimpleTeamDto
 import com.tistory.shanepark.dutypark.team.domain.dto.TeamCreateDto
 import com.tistory.shanepark.dutypark.team.domain.dto.TeamDto
@@ -18,7 +17,6 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/admin/api/teams")
 class TeamAdminController(
     val teamService: TeamService,
-    val memberRepository: MemberRepository,
 ) {
 
     private val log = logger()
