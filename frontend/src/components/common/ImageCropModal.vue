@@ -43,6 +43,7 @@ const maxZoom = 3
 const zoomStep = 0.1
 
 const hasImage = computed(() => !!imageSource.value)
+const isEditingExistingPhoto = ref(false)
 
 watch(
   () => props.isOpen,
@@ -51,9 +52,11 @@ watch(
       zoom.value = 1
       isProcessing.value = false
       imageSource.value = props.initialImageSource || null
+      isEditingExistingPhoto.value = !!props.initialImageSource
     } else {
       imageSource.value = null
       fileName.value = 'profile.png'
+      isEditingExistingPhoto.value = false
     }
   }
 )
@@ -84,6 +87,7 @@ function processFile(file: File) {
   }
 
   fileName.value = file.name
+  isEditingExistingPhoto.value = false
   const reader = new FileReader()
   reader.onload = (e) => {
     imageSource.value = e.target?.result as string
@@ -184,6 +188,14 @@ function changeImage() {
 }
 
 const zoomPercent = computed(() => Math.round(zoom.value * 100))
+
+function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: number } }) {
+  const size = Math.min(imageSize.width, imageSize.height)
+  return {
+    width: size,
+    height: size,
+  }
+}
 </script>
 
 <template>
@@ -247,6 +259,7 @@ const zoomPercent = computed(() => Math.round(zoom.value * 100))
                 :resize-image="{
                   adjustStencil: false,
                 }"
+                :default-size="isEditingExistingPhoto ? maxSizeDefault : undefined"
                 class="cropper"
               />
               <!-- Drag overlay -->
