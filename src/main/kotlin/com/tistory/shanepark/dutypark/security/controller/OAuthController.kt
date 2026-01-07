@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
+import com.tistory.shanepark.dutypark.policy.domain.enums.PolicyType
+import com.tistory.shanepark.dutypark.member.service.ConsentService
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.SsoSignupRequest
@@ -24,6 +26,7 @@ class OAuthController(
     private val memberService: MemberService,
     private val authService: AuthService,
     private val cookieService: CookieService,
+    private val consentService: ConsentService,
 ) {
     private val objectMapper = ObjectMapper()
     private val log = logger()
@@ -72,13 +75,34 @@ class OAuthController(
         httpServletRequest: HttpServletRequest,
         httpServletResponse: HttpServletResponse
     ): ResponseEntity<Map<String, Any>> {
-        if (!request.termAgree) {
+        if (!request.termAgree || !request.privacyAgree) {
             return ResponseEntity.badRequest().build()
         }
 
         val member = memberService.createSsoMember(
             username = request.username,
             memberSsoRegisterUUID = request.uuid
+        )
+
+        val ipAddress = httpServletRequest.remoteAddr
+        val userAgent = httpServletRequest.getHeader("User-Agent")
+
+        val termsVersion = request.termsVersion ?: "2025-01-15"
+        val privacyVersion = request.privacyVersion ?: "2025-01-15"
+
+        consentService.recordConsent(
+            member = member,
+            policyType = PolicyType.TERMS,
+            consentVersion = termsVersion,
+            ipAddress = ipAddress,
+            userAgent = userAgent
+        )
+        consentService.recordConsent(
+            member = member,
+            policyType = PolicyType.PRIVACY,
+            consentVersion = privacyVersion,
+            ipAddress = ipAddress,
+            userAgent = userAgent
         )
 
         val tokenResponse = authService.getTokenResponseByMemberId(

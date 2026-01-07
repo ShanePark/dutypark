@@ -16,12 +16,11 @@ import type {
   FriendDto,
 } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
+import IntroSection from '@/components/intro/IntroSection.vue'
 import {
   Calendar,
   Briefcase,
   ClipboardList,
-  Heart,
-  CheckCircle,
   Clock,
   Users,
   Star,
@@ -34,13 +33,7 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  User,
-  Sparkles,
-  CalendarDays,
-  ListTodo,
   UserCheck,
-  Flag,
-  Sun,
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -123,17 +116,6 @@ let friendSortable: Sortable | null = null
 const friendListRef = ref<HTMLElement | null>(null)
 const friendSectionRef = ref<HTMLElement | null>(null)
 let isDragging = false
-
-// Features for guest view
-const features = [
-  { icon: 'calendar', text: '일정 관리 - 등록, 검색, 공개 설정' },
-  { icon: 'check', text: '할일 관리로 까먹지 않는 일상' },
-  { icon: 'clock', text: '근무 관리 및 시간표 등록' },
-  { icon: 'users', text: '팀원들의 시간표와 일정 공유' },
-  { icon: 'heart', text: '친구 및 가족의 일정 조회와 태그 기능' },
-  { icon: 'flag', text: 'D-Day 관리 - 기념일, 중요한 날 카운트다운' },
-  { icon: 'sun', text: '공휴일 자동 표시 - 대한민국 공휴일 연동' },
-]
 
 // Computed: sorted friends (pinned first)
 const sortedFriends = computed(() => {
@@ -538,9 +520,11 @@ watch(
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto px-4 py-6">
-    <!-- Logged-in Dashboard -->
-    <template v-if="authStore.isLoggedIn">
+  <!-- Guest Dashboard - Full width -->
+  <IntroSection v-if="!authStore.isLoggedIn" />
+
+  <!-- Logged-in Dashboard -->
+  <div v-else class="max-w-4xl mx-auto px-4 py-6">
       <!-- My Info Section -->
       <div
         class="rounded-2xl shadow-sm border mb-6 overflow-hidden"
@@ -873,66 +857,6 @@ watch(
           </div>
         </div>
       </div>
-
-    </template>
-
-    <!-- Guest Dashboard -->
-    <template v-else>
-      <!-- Hero Section -->
-      <div class="relative overflow-hidden rounded-3xl shadow-sm border p-8 sm:p-12 text-center mb-8" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }">
-        <div class="relative">
-          <h1 class="text-4xl sm:text-5xl font-bold mb-4" :style="{ color: 'var(--dp-text-primary)' }">Dutypark</h1>
-          <p class="mb-8 max-w-lg mx-auto leading-relaxed" :style="{ color: 'var(--dp-text-secondary)' }">
-            근무 관리, 시간표 등록, 일정 관리, 할일 관리 및 팀원들의 시간표 조회, 친구 및 가족의 일정 공유 등 다양한 기능을 통해 여러분의 일상을 도와줍니다.
-          </p>
-          <router-link
-            to="/auth/login"
-            class="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl font-semibold transition-all shadow-lg border-2 bg-blue-600 hover:bg-blue-700 border-blue-700"
-            style="color: white;"
-          >
-            로그인 / 회원가입
-            <ChevronRight class="w-5 h-5" />
-          </router-link>
-        </div>
-      </div>
-
-      <!-- Features Section -->
-      <div class="rounded-2xl shadow-sm border p-6 sm:p-8" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }">
-        <h2 class="text-2xl font-bold mb-8 flex items-center gap-3" :style="{ color: 'var(--dp-text-primary)' }">
-          <div class="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center">
-            <Sparkles class="w-5 h-5 text-white" />
-          </div>
-          주요 기능
-        </h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div
-            v-for="feature in features"
-            :key="feature.text"
-            class="flex items-start gap-4 p-4 rounded-xl border hover:shadow-md transition-shadow"
-            :style="{ backgroundColor: 'var(--dp-bg-secondary)', borderColor: 'var(--dp-border-primary)' }"
-          >
-            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }">
-              <CalendarDays v-if="feature.icon === 'calendar'" class="w-5 h-5" :style="{ color: 'var(--dp-text-primary)' }" />
-              <ListTodo v-else-if="feature.icon === 'check'" class="w-5 h-5" :style="{ color: 'var(--dp-text-primary)' }" />
-              <Clock v-else-if="feature.icon === 'clock'" class="w-5 h-5" :style="{ color: 'var(--dp-text-primary)' }" />
-              <Users v-else-if="feature.icon === 'users'" class="w-5 h-5" :style="{ color: 'var(--dp-text-primary)' }" />
-              <Heart v-else-if="feature.icon === 'heart'" class="w-5 h-5" :style="{ color: 'var(--dp-text-primary)' }" />
-              <Flag v-else-if="feature.icon === 'flag'" class="w-5 h-5" :style="{ color: 'var(--dp-text-primary)' }" />
-              <Sun v-else-if="feature.icon === 'sun'" class="w-5 h-5" :style="{ color: 'var(--dp-text-primary)' }" />
-            </div>
-            <span class="font-medium pt-2" :style="{ color: 'var(--dp-text-primary)' }">{{ feature.text }}</span>
-          </div>
-        </div>
-        <div class="mt-8 text-center">
-          <p :style="{ color: 'var(--dp-text-primary)' }">
-            지금 바로 Dutypark을 사용해보세요!
-          </p>
-          <p class="text-sm mt-1" :style="{ color: 'var(--dp-text-muted)' }">
-            회원가입은 카카오톡 아이디로 로그인만 가능합니다.
-          </p>
-        </div>
-      </div>
-    </template>
 
     <!-- Search Modal -->
     <Teleport to="body">

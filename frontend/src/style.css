@@ -1104,3 +1104,121 @@ div.swal2-popup.swal2-toast.colored-toast-info {
         inset 0 -2px 0 rgba(0, 0, 0, 0.1),
         0 0 0 3px #f97316;
 }
+
+/* ====================================
+   Markdown Prose Styles
+   ==================================== */
+
+.prose p {
+    @apply my-3;
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4 {
+    @apply mt-6 mb-3;
+}
+
+.prose ul, .prose ol {
+    @apply my-2 pl-5;
+}
+
+.prose li {
+    @apply my-1;
+}
+
+.prose table {
+    @apply w-full border-collapse text-sm my-4;
+}
+
+.prose thead {
+    background-color: var(--dp-bg-tertiary);
+}
+
+.prose th {
+    @apply px-3 py-2 text-left font-semibold;
+    border: 1px solid var(--dp-border-primary);
+    color: var(--dp-text-primary);
+}
+
+.prose td {
+    @apply px-3 py-2;
+    border: 1px solid var(--dp-border-primary);
+    color: var(--dp-text-secondary);
+}
+
+.prose tbody tr:nth-child(even) {
+    background-color: var(--dp-bg-secondary);
+}
+
+.prose tbody tr:hover {
+    background-color: var(--dp-bg-hover);
+}
+
+/* ====================================
+   Scroll Animation Classes
+   ==================================== */
+
+.scroll-hidden {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scroll-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.scroll-fade-left {
+    opacity: 0;
+    transform: translateX(-60px);
+    transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scroll-fade-left.scroll-visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.scroll-fade-right {
+    opacity: 0;
+    transform: translateX(60px);
+    transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scroll-fade-right.scroll-visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.scroll-scale {
+    opacity: 0;
+    transform: scale(0.9);
+    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scroll-scale.scroll-visible {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.stagger-1 { transition-delay: 0.1s; }
+.stagger-2 { transition-delay: 0.2s; }
+.stagger-3 { transition-delay: 0.3s; }
+.stagger-4 { transition-delay: 0.4s; }
+.stagger-5 { transition-delay: 0.5s; }
+.stagger-6 { transition-delay: 0.6s; }
+
+@media (prefers-reduced-motion: reduce) {
+    .scroll-hidden,
+    .scroll-fade-left,
+    .scroll-fade-right,
+    .scroll-scale {
+        transition: none;
+        opacity: 1;
+        transform: none;
+    }
+}

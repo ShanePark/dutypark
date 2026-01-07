@@ -5,6 +5,9 @@ export interface SsoSignupDto {
   uuid: string
   username: string
   termAgree: boolean
+  privacyAgree: boolean
+  termsVersion?: string
+  privacyVersion?: string
 }
 
 export interface AuthResponse {

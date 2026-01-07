@@ -69,6 +69,19 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/admin/AdminTeamListView.vue'),
     meta: { requiresAuth: true, requiresAdmin: true },
   },
+  // Policy pages
+  {
+    path: '/terms',
+    name: 'terms',
+    component: () => import('@/views/policy/TermsView.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/privacy',
+    name: 'privacy',
+    component: () => import('@/views/policy/PrivacyView.vue'),
+    meta: { requiresAuth: false },
+  },
   {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
