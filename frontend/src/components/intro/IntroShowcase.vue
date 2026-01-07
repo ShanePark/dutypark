@@ -286,7 +286,7 @@ function scrollToFeature(index: number) {
           :key="index"
           class="progress-dot"
           :class="{ active: dot.isActive, passed: dot.isPassed }"
-          :aria-label="`${features[index].title}로 이동`"
+          :aria-label="`${features[index]?.title ?? '기능'}으로 이동`"
           @click="scrollToFeature(index)"
         />
       </div>

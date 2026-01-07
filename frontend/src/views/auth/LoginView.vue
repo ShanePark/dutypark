@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useKakao } from '@/composables/useKakao'
 import { AxiosError } from 'axios'
+import PolicyModal from '@/components/common/PolicyModal.vue'
 
 const REMEMBER_EMAIL_KEY = 'dp-remember-email'
 
@@ -18,6 +19,7 @@ const rememberMe = ref(false)
 const isLoading = ref(false)
 const isKakaoLoading = ref(false)
 const error = ref('')
+const policyModal = ref<'terms' | 'privacy' | null>(null)
 
 onMounted(() => {
   initKakao()
@@ -181,14 +183,26 @@ function handleKakaoLogin() {
 
       <!-- Policy Links -->
       <div class="text-center mt-4">
-        <router-link to="/terms" class="text-xs transition hover:underline" :style="{ color: 'var(--dp-text-muted)' }">
+        <button
+          type="button"
+          class="text-xs transition hover:underline"
+          :style="{ color: 'var(--dp-text-muted)' }"
+          @click="policyModal = 'terms'"
+        >
           이용약관
-        </router-link>
+        </button>
         <span class="mx-2 text-xs" :style="{ color: 'var(--dp-text-muted)' }">|</span>
-        <router-link to="/privacy" class="text-xs transition hover:underline" :style="{ color: 'var(--dp-text-muted)' }">
+        <button
+          type="button"
+          class="text-xs transition hover:underline"
+          :style="{ color: 'var(--dp-text-muted)' }"
+          @click="policyModal = 'privacy'"
+        >
           개인정보 처리방침
-        </router-link>
+        </button>
       </div>
     </div>
+
+    <PolicyModal :type="policyModal" @close="policyModal = null" />
   </div>
 </template>
