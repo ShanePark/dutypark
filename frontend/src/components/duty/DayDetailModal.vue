@@ -21,7 +21,7 @@ import { normalizeAttachment } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEscapeKey } from '@/composables/useEscapeKey'
-import { getVisibilityIcon, getVisibilityLabel, VISIBILITY_ICONS, type CalendarVisibility } from '@/utils/visibility'
+import { getVisibilityIcon, getVisibilityLabel, VISIBILITY_ICONS, VISIBILITY_COLORS, type CalendarVisibility } from '@/utils/visibility'
 import { extractDatePart } from '@/utils/date'
 
 const { showWarning, showError } = useSwal()
@@ -170,24 +170,28 @@ const visibilityOptions = computed(() => [
     label: '전체공개',
     description: '모든 사람에게 공개',
     icon: VISIBILITY_ICONS.PUBLIC,
+    color: VISIBILITY_COLORS.PUBLIC,
   },
   {
     value: 'FRIENDS' as CalendarVisibility,
     label: '친구공개',
     description: '친구에게만 공개',
     icon: VISIBILITY_ICONS.FRIENDS,
+    color: VISIBILITY_COLORS.FRIENDS,
   },
   {
     value: 'FAMILY' as CalendarVisibility,
     label: '가족공개',
     description: '가족에게만 공개',
     icon: VISIBILITY_ICONS.FAMILY,
+    color: VISIBILITY_COLORS.FAMILY,
   },
   {
     value: 'PRIVATE' as CalendarVisibility,
-    label: '나만보기',
+    label: '비공개',
     description: '나만 볼 수 있음',
     icon: VISIBILITY_ICONS.PRIVATE,
+    color: VISIBILITY_COLORS.PRIVATE,
   },
 ])
 
@@ -791,7 +795,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                     >
                       <Check class="w-3 h-3 text-white" />
                     </div>
-                    <div class="flex-shrink-0 w-7 h-7 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-blue-500">
+                    <div class="flex-shrink-0 w-7 h-7 sm:w-9 sm:h-9 rounded-full flex items-center justify-center" :class="option.color">
                       <component
                         :is="option.icon"
                         class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white"
