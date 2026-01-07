@@ -1,11 +1,11 @@
-import { Eye, Users, User, Lock, type LucideIcon } from 'lucide-vue-next'
+import { Eye, Users, House, Lock, type LucideIcon } from 'lucide-vue-next'
 
 export type CalendarVisibility = 'PUBLIC' | 'FRIENDS' | 'FAMILY' | 'PRIVATE'
 
 export const VISIBILITY_ICONS: Record<CalendarVisibility, LucideIcon> = {
   PUBLIC: Eye,
   FRIENDS: Users,
-  FAMILY: User,
+  FAMILY: House,
   PRIVATE: Lock,
 }
 

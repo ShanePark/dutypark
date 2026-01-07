@@ -19,6 +19,7 @@ interface Props {
   getDutyColor?: (day: CalendarDay) => string | null
   highlightDay?: { year: number; month: number; day: number } | null
   selectedDay?: { year: number; month: number; day: number } | null
+  focusedDay?: { year: number; month: number; day: number } | null
   useAdaptiveBorder?: boolean
 }
 
@@ -27,6 +28,7 @@ const props = withDefaults(defineProps<Props>(), {
   getDutyColor: () => null,
   highlightDay: null,
   selectedDay: null,
+  focusedDay: null,
   useAdaptiveBorder: false,
 })
 
@@ -70,6 +72,16 @@ function isSelected(day: CalendarDay): boolean {
     day.year === props.selectedDay.year &&
     day.month === props.selectedDay.month &&
     day.day === props.selectedDay.day
+  )
+}
+
+// Check if a day is focused (for quick duty input)
+function isFocused(day: CalendarDay): boolean {
+  if (!props.focusedDay) return false
+  return (
+    day.year === props.focusedDay.year &&
+    day.month === props.focusedDay.month &&
+    day.day === props.focusedDay.day
   )
 }
 
@@ -142,8 +154,9 @@ function handleDayClick(day: CalendarDay, index: number) {
           opacity: isCurrentMonth(day) ? 1 : 0.5
         }"
         :class="{
-          'ring-2 ring-red-500 ring-inset': isToday(day) || isHighlighted(day),
-          'ring-2 ring-blue-500 ring-inset': isSelected(day) && !isToday(day),
+          'ring-2 ring-red-500 ring-inset': !focusedDay && (isToday(day) || isHighlighted(day)),
+          'ring-2 ring-blue-500 ring-inset': !focusedDay && isSelected(day) && !isToday(day),
+          'duty-day-focused': isFocused(day),
           'rounded-bl-lg': idx === days.length - 7,
           'rounded-br-lg': idx === days.length - 1,
         }"

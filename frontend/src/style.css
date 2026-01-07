@@ -1024,3 +1024,83 @@ div.swal2-popup.swal2-toast.colored-toast-info {
 .friend-request-sent .friend-request-name {
     color: var(--dp-text-primary);
 }
+
+/* ====================================
+   Duty Calendar Focus Animation
+   ==================================== */
+
+@keyframes focus-pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(251, 146, 60, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 4px rgba(251, 146, 60, 0.2);
+    }
+}
+
+.duty-day-focused {
+    outline: 3px solid #f97316 !important;
+    outline-offset: -3px;
+    animation: focus-pulse 1.5s ease-in-out infinite;
+}
+
+.dark .duty-day-focused {
+    outline-color: #fb923c !important;
+}
+
+/* ====================================
+   Duty Quick Input Buttons
+   ==================================== */
+
+.duty-quick-btn {
+    position: relative;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.duty-quick-btn-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    min-height: 32px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 8px;
+    background-color: var(--duty-color);
+    color: var(--duty-text);
+    box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.1),
+        0 4px 8px rgba(0, 0, 0, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (min-width: 640px) {
+    .duty-quick-btn-inner {
+        padding: 8px 14px;
+        min-height: 38px;
+        font-size: 14px;
+        border-radius: 10px;
+    }
+}
+
+.duty-quick-btn:hover .duty-quick-btn-inner {
+    filter: brightness(1.1);
+}
+
+/* Current duty type for focused day - only style */
+.duty-quick-btn-active .duty-quick-btn-inner {
+    box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.1),
+        0 4px 8px rgba(0, 0, 0, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.1),
+        0 0 0 3px #f97316;
+}
