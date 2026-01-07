@@ -17,7 +17,8 @@ const features: Feature[] = [
       '일정을 등록하고 검색하세요.',
       '공개 설정으로 원하는 사람에게만 공유할 수 있습니다.',
     ],
-    mockupType: 'placeholder',
+    mockupType: 'image',
+    mockupSrc: '/img/intro/schedule.png',
   },
   {
     id: 'todo',
@@ -27,7 +28,8 @@ const features: Feature[] = [
       '까먹지 않는 일상을 위한 할일 관리.',
       '드래그로 순서 변경, 완료 체크까지.',
     ],
-    mockupType: 'placeholder',
+    mockupType: 'image',
+    mockupSrc: '/img/intro/todo.png',
   },
   {
     id: 'duty',
@@ -37,7 +39,8 @@ const features: Feature[] = [
       '나의 근무 일정을 한눈에.',
       '시간표를 등록하고 팀원들과 공유하세요.',
     ],
-    mockupType: 'placeholder',
+    mockupType: 'image',
+    mockupSrc: '/img/intro/duty.png',
   },
   {
     id: 'team',
@@ -67,7 +70,8 @@ const features: Feature[] = [
       '기념일, 중요한 날을 카운트다운.',
       '놓치지 않도록 알려드립니다.',
     ],
-    mockupType: 'placeholder',
+    mockupType: 'image',
+    mockupSrc: '/img/intro/dday.png',
   },
   {
     id: 'holiday',
@@ -77,7 +81,8 @@ const features: Feature[] = [
       '대한민국 공휴일이 자동으로 표시됩니다.',
       '일정 계획이 더 쉬워집니다.',
     ],
-    mockupType: 'placeholder',
+    mockupType: 'image',
+    mockupSrc: '/img/intro/holiday.png',
   },
 ]
 </script>
