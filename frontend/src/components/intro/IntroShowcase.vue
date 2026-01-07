@@ -14,7 +14,7 @@ export interface Feature {
   id: string
   icon: string
   title: string
-  description: string
+  descriptionLines: string[]
   mockupType: 'placeholder' | 'image'
   mockupSrc?: string
 }
@@ -32,6 +32,87 @@ const scrollProgress = ref(0)
 const activeIndex = ref(0)
 // Progress within the current feature (0 to 1)
 const featureProgress = ref(0)
+
+// Typing animation phases within 0-80% of feature progress
+// 0-15%: icon + title + mockup appear together
+// 15-40%: first description line typing
+// 40-65%: second description line typing
+// 65-80%: complete state
+// 80-100%: transition to next feature
+
+interface TypingState {
+  iconOpacity: number
+  titleText: string
+  titleComplete: boolean
+  descriptionLines: { text: string; complete: boolean }[]
+  mockupOpacity: number
+}
+
+function getTypingState(featureIndex: number, progress: number, feature: Feature): TypingState {
+  const diff = featureIndex - activeIndex.value
+
+  // Not the active feature - show nothing or full content
+  if (diff !== 0) {
+    if (diff < 0) {
+      // Already passed - show full content
+      return {
+        iconOpacity: 0,
+        titleText: feature.title,
+        titleComplete: true,
+        descriptionLines: feature.descriptionLines.map(line => ({ text: line, complete: true })),
+        mockupOpacity: 0,
+      }
+    }
+    // Future feature - show nothing
+    return {
+      iconOpacity: 0,
+      titleText: '',
+      titleComplete: false,
+      descriptionLines: feature.descriptionLines.map(() => ({ text: '', complete: false })),
+      mockupOpacity: 0,
+    }
+  }
+
+  // Active feature - calculate typing state based on progress
+  const p = progress // 0 to 1 within this feature
+
+  // Icon + Title + Mockup: 0-15% (appear together)
+  const initialOpacity = Math.min(1, p / 0.15)
+  const iconOpacity = initialOpacity
+
+  // Title appears all at once (no typing)
+  const titleText = initialOpacity > 0.3 ? feature.title : ''
+  const titleComplete = initialOpacity >= 1
+
+  // Mockup appears with title
+  const mockupOpacity = initialOpacity
+
+  // Description lines
+  const descriptionLines = feature.descriptionLines.map((line, idx) => {
+    // Line 0: 15-40%, Line 1: 40-65%
+    const lineStart = 0.15 + idx * 0.25
+    const lineEnd = lineStart + 0.25
+
+    if (p < lineStart) {
+      return { text: '', complete: false }
+    }
+
+    const lineProgress = Math.min(1, (p - lineStart) / (lineEnd - lineStart))
+    const chars = Math.floor(lineProgress * line.length)
+    return {
+      text: line.slice(0, chars),
+      complete: lineProgress >= 1,
+    }
+  })
+
+  return {
+    iconOpacity,
+    titleText,
+    titleComplete,
+    descriptionLines,
+    mockupOpacity,
+  }
+}
 
 const iconComponents: Record<string, typeof CalendarDays> = {
   calendar: CalendarDays,
@@ -302,21 +383,46 @@ function scrollToFeature(index: number) {
           <div class="intro-showcase-content">
             <!-- Text side -->
             <div class="intro-showcase-text">
-              <div class="intro-showcase-icon" :style="getIconStyle(index)">
+              <div
+                class="intro-showcase-icon"
+                :style="{
+                  ...getIconStyle(index),
+                  opacity: getTypingState(index, featureProgress, feature).iconOpacity
+                }"
+              >
                 <component :is="iconComponents[feature.icon]" />
               </div>
 
-              <h2 class="intro-showcase-title">
-                {{ feature.title }}
+              <h2
+                class="intro-showcase-title"
+                :style="{ opacity: getTypingState(index, featureProgress, feature).titleText ? 1 : 0 }"
+              >
+                {{ getTypingState(index, featureProgress, feature).titleText }}
               </h2>
 
-              <p class="intro-showcase-description">
-                {{ feature.description }}
-              </p>
+              <div class="intro-showcase-description">
+                <p
+                  v-for="(line, lineIdx) in getTypingState(index, featureProgress, feature).descriptionLines"
+                  :key="lineIdx"
+                  class="description-line"
+                >
+                  <span class="typing-text">{{ line.text }}</span>
+                  <span
+                    v-if="!line.complete && line.text.length > 0"
+                    class="typing-cursor"
+                  >|</span>
+                </p>
+              </div>
             </div>
 
             <!-- Mockup side -->
-            <div class="intro-showcase-mockup" :style="getMockupStyle(index)">
+            <div
+              class="intro-showcase-mockup"
+              :style="{
+                ...getMockupStyle(index),
+                opacity: index === activeIndex ? getTypingState(index, featureProgress, feature).mockupOpacity : getMockupStyle(index).opacity
+              }"
+            >
               <div class="intro-mockup-frame">
                 <img
                   v-if="feature.mockupType === 'image' && feature.mockupSrc"
@@ -554,5 +660,36 @@ function scrollToFeature(index: number) {
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--dp-text-muted);
+}
+
+/* Typing animation styles */
+.intro-showcase-title {
+  min-height: 1.2em;
+}
+
+.description-line {
+  min-height: 1.8em;
+  margin: 0;
+}
+
+.typing-text {
+  white-space: pre-wrap;
+}
+
+.typing-cursor {
+  display: inline-block;
+  color: var(--dp-primary);
+  font-weight: 400;
+  animation: blink 0.8s ease-in-out infinite;
+  margin-left: 2px;
+}
+
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
 }
 </style>

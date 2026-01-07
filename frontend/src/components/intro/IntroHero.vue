@@ -30,7 +30,7 @@ function scrollToFeatures() {
         class="intro-hero-subtitle hero-stagger-1"
         :class="{ 'hero-loaded': isLoaded }"
       >
-        근무 관리, 일정 관리, 할일 관리 및 팀원, 친구, 가족과의 일정 공유까지.
+        근무 관리, 일정 관리, 할일 관리 및 팀원, 친구, 가족과의 일정 공유까지.<br>
         여러분의 일상을 더 스마트하게 관리하세요.
       </p>
 
