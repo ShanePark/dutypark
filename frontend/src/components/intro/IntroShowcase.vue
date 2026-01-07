@@ -237,7 +237,7 @@ const getFeatureStyle = (index: number) => {
   }
 }
 
-// Mockup animation (slightly delayed for stagger effect)
+// Mockup animation - opacity only for stable positioning
 const getMockupStyle = (index: number) => {
   const diff = index - activeIndex.value
   const progress = featureProgress.value
@@ -246,41 +246,19 @@ const getMockupStyle = (index: number) => {
     // Mockup exits at 80-100% (same as text)
     const exitProgress = Math.max(0, progress - 0.8) / 0.2
     const opacity = 1 - exitProgress
-    const translateY = exitProgress * -30
-    const scale = 1 - exitProgress * 0.05
-    const rotateY = exitProgress * 8
 
-    return {
-      opacity,
-      transform: `translateY(${translateY}px) scale(${scale}) perspective(1000px) rotateY(${rotateY}deg)`,
-    }
+    return { opacity }
   }
 
   if (diff === 1) {
     // Mockup enters at 80-100% (same as text)
     const enterProgress = Math.max(0, progress - 0.8) / 0.2
     const opacity = enterProgress
-    const translateY = (1 - enterProgress) * 40
-    const scale = 0.95 + enterProgress * 0.05
-    const rotateY = (1 - enterProgress) * -8
 
-    return {
-      opacity,
-      transform: `translateY(${translateY}px) scale(${scale}) perspective(1000px) rotateY(${rotateY}deg)`,
-    }
+    return { opacity }
   }
 
-  if (diff < 0) {
-    return {
-      opacity: 0,
-      transform: 'translateY(-30px) scale(0.95)',
-    }
-  }
-
-  return {
-    opacity: 0,
-    transform: 'translateY(40px) scale(0.95)',
-  }
+  return { opacity: 0 }
 }
 
 // Icon animation with bounce
@@ -548,11 +526,17 @@ function scrollToFeature(index: number) {
 .intro-showcase-text {
   flex: 1;
   text-align: center;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 @media (min-width: 768px) {
   .intro-showcase-text {
     text-align: left;
+    min-height: auto;
+    align-items: flex-start;
   }
 }
 
@@ -600,13 +584,12 @@ function scrollToFeature(index: number) {
   flex: 1;
   display: flex;
   justify-content: center;
-  will-change: transform, opacity;
+  will-change: opacity;
 }
 
 .intro-mockup-frame {
   position: relative;
-  width: 100%;
-  max-width: 220px;
+  width: 200px;
   aspect-ratio: 9/19.5;
   border-radius: 1.75rem;
   overflow: hidden;
@@ -640,7 +623,7 @@ function scrollToFeature(index: number) {
 
 @media (min-width: 768px) {
   .intro-mockup-frame {
-    max-width: 260px;
+    width: 260px;
   }
 }
 
