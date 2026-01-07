@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, provide } from 'vue'
+import '@/styles/intro.css'
 import IntroHero from './IntroHero.vue'
 import IntroFeature, { type Feature } from './IntroFeature.vue'
 import IntroCTA from './IntroCTA.vue'
