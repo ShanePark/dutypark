@@ -11,8 +11,8 @@ onMounted(() => {
 })
 
 function scrollToFeatures() {
-  const firstFeature = document.querySelector('.intro-feature-section')
-  firstFeature?.scrollIntoView({ behavior: 'smooth' })
+  const showcase = document.querySelector('.intro-showcase')
+  showcase?.scrollIntoView({ behavior: 'smooth' })
 }
 </script>
 

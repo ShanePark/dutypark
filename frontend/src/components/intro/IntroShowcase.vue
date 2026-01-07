@@ -248,6 +248,31 @@ const progressDots = computed(() => {
     return { isActive, isPassed }
   })
 })
+
+// Navigate to specific feature when clicking progress dot
+function scrollToFeature(index: number) {
+  if (!showcaseRef.value || !containerRef?.value) return
+
+  const container = containerRef.value
+  const showcase = showcaseRef.value
+  const showcaseRect = showcase.getBoundingClientRect()
+  const containerRect = container.getBoundingClientRect()
+
+  // Calculate showcase's top position relative to scroll
+  const showcaseTop = showcase.offsetTop - container.offsetTop
+  const showcaseHeight = showcaseRect.height
+  const viewportHeight = containerRect.height
+  const scrollableDistance = showcaseHeight - viewportHeight
+
+  // Target scroll position for this feature
+  const targetProgress = index / props.features.length
+  const targetScroll = showcaseTop + targetProgress * scrollableDistance
+
+  container.scrollTo({
+    top: targetScroll,
+    behavior: 'smooth'
+  })
+}
 </script>
 
 <template>
@@ -256,11 +281,13 @@ const progressDots = computed(() => {
     <div class="intro-showcase-viewport">
       <!-- Progress dots on the side -->
       <div class="intro-showcase-progress">
-        <div
+        <button
           v-for="(dot, index) in progressDots"
           :key="index"
           class="progress-dot"
           :class="{ active: dot.isActive, passed: dot.isPassed }"
+          :aria-label="`${features[index].title}로 이동`"
+          @click="scrollToFeature(index)"
         />
       </div>
 
@@ -347,9 +374,17 @@ const progressDots = computed(() => {
 .progress-dot {
   width: 8px;
   height: 8px;
+  padding: 0;
+  border: none;
   border-radius: 50%;
   background: var(--dp-border-primary);
+  cursor: pointer;
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.progress-dot:hover {
+  background: var(--dp-text-secondary);
+  transform: scale(1.3);
 }
 
 .progress-dot.active {
