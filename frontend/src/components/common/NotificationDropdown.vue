@@ -6,8 +6,8 @@ import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/ko'
 import { useNotificationStore } from '@/stores/notification'
-import { scheduleApi } from '@/api/schedule'
-import type { NotificationDto, NotificationReferenceType } from '@/types'
+import { useNotificationNavigation } from '@/composables/useNotificationNavigation'
+import type { NotificationDto } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 
 dayjs.extend(relativeTime)
@@ -26,6 +26,7 @@ const emit = defineEmits<{
 
 const router = useRouter()
 const notificationStore = useNotificationStore()
+const { navigateToNotification } = useNotificationNavigation()
 
 const displayNotifications = computed(() => {
   return notificationStore.recentNotifications.slice(0, 10)
@@ -35,23 +36,6 @@ function formatTimeAgo(dateString: string): string {
   return dayjs(dateString).fromNow()
 }
 
-function getNavigationPath(notification: NotificationDto): string | null {
-  const { referenceType, referenceId } = notification
-
-  if (!referenceType) return null
-
-  // SCHEDULE type is handled separately in handleNotificationClick
-  if (referenceType === 'SCHEDULE') return null
-
-  const typeRoutes: Record<NotificationReferenceType, string | null> = {
-    FRIEND_REQUEST: '/friends',
-    SCHEDULE: null,
-    MEMBER: referenceId ? `/duty/${referenceId}` : null,
-  }
-
-  return typeRoutes[referenceType] || null
-}
-
 async function handleNotificationClick(notification: NotificationDto) {
   try {
     await notificationStore.markAsRead(notification.id)
@@ -59,29 +43,15 @@ async function handleNotificationClick(notification: NotificationDto) {
     // Continue with navigation even if mark as read fails
   }
 
-  // Handle SCHEDULE type separately - fetch schedule info and navigate to own calendar with date params
-  if (notification.referenceType === 'SCHEDULE' && notification.referenceId) {
-    try {
-      const scheduleInfo = await scheduleApi.getScheduleById(notification.referenceId)
-      const date = new Date(scheduleInfo.startDateTime)
-      const year = date.getFullYear()
-      const month = date.getMonth() + 1
-      const day = date.getDate()
-      router.push({
-        path: '/duty/me',
-        query: { year: String(year), month: String(month), day: String(day) }
-      })
-      emit('navigate')
-    } catch (error) {
-      console.error('Failed to fetch schedule info:', error)
+  const navigated = await navigateToNotification(notification, {
+    onSamePage: () => {
+      if (notification.referenceType === 'FRIEND_REQUEST') {
+        notificationStore.triggerFriendsRefresh()
+      }
     }
-    emit('close')
-    return
-  }
+  })
 
-  const path = getNavigationPath(notification)
-  if (path) {
-    router.push(path)
+  if (navigated) {
     emit('navigate')
   }
   emit('close')
@@ -108,11 +78,13 @@ function handleOverlayClick() {
 <template>
   <Teleport to="body">
     <!-- Overlay for closing on outside click -->
-    <div
-      v-if="visible"
-      class="fixed inset-0 z-40"
-      @click="handleOverlayClick"
-    />
+    <Transition name="overlay">
+      <div
+        v-if="visible"
+        class="notification-overlay fixed inset-0 z-40"
+        @click="handleOverlayClick"
+      />
+    </Transition>
   </Teleport>
 
   <Transition name="dropdown">
@@ -198,10 +170,31 @@ function handleOverlayClick() {
 </template>
 
 <style scoped>
+/* Overlay for mobile - adds dim background to make dropdown stand out */
+.notification-overlay {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+@media (min-width: 640px) {
+  .notification-overlay {
+    background-color: transparent;
+  }
+}
+
 .notification-dropdown {
   background-color: var(--dp-bg-card);
-  border: 1px solid var(--dp-border-primary);
-  box-shadow: var(--dp-shadow-lg);
+  border: 1px solid var(--dp-border-secondary);
+  box-shadow:
+    0 10px 40px -5px rgba(0, 0, 0, 0.25),
+    0 4px 12px -2px rgba(0, 0, 0, 0.15);
+}
+
+/* Stronger shadow for dark mode */
+:global(.dark) .notification-dropdown {
+  box-shadow:
+    0 10px 40px -5px rgba(0, 0, 0, 0.5),
+    0 4px 12px -2px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .notification-dropdown-header {
@@ -275,6 +268,17 @@ function handleOverlayClick() {
 .notification-view-all-btn:hover {
   color: var(--dp-text-primary);
   background-color: var(--dp-bg-hover);
+}
+
+/* Overlay transition */
+.overlay-enter-active,
+.overlay-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.overlay-enter-from,
+.overlay-leave-to {
+  opacity: 0;
 }
 
 /* Dropdown transition */

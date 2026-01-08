@@ -40,7 +40,14 @@ class NotificationController(
     fun getNotificationCount(
         @Login loginMember: LoginMember
     ): NotificationCountDto {
-        return notificationService.getUnreadCount(loginMember.id)
+        return notificationService.getUnreadCountSimple(loginMember.id)
+    }
+
+    @GetMapping("/friend-request-count")
+    fun getFriendRequestCount(
+        @Login loginMember: LoginMember
+    ): Map<String, Int> {
+        return mapOf("count" to notificationService.getFriendRequestCount(loginMember.id))
     }
 
     @PatchMapping("/{id}/read")

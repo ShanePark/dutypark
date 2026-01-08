@@ -1,15 +1,28 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useNotificationStore } from '@/stores/notification'
 import { useSwal } from '@/composables/useSwal'
 import { Menu, Home, Calendar, Users, UserPlus, Bell, Shield, Settings, LogOut } from 'lucide-vue-next'
 import NotificationBell from '@/components/common/NotificationBell.vue'
 import NotificationDropdown from '@/components/common/NotificationDropdown.vue'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
 const { confirm } = useSwal()
+
+function isActiveRoute(path: string): boolean {
+  if (path === '/') {
+    return route.path === '/'
+  }
+  if (path.startsWith('/duty/')) {
+    return route.path.startsWith('/duty/')
+  }
+  return route.path.startsWith(path)
+}
 
 const isNotificationDropdownVisible = ref(false)
 const isMenuDropdownVisible = ref(false)
@@ -110,35 +123,41 @@ onUnmounted(() => {
               >
                 <!-- Navigation -->
                 <button
-                  class="menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer"
+                  :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute('/') }]"
                   @click="navigateTo('/')"
                 >
                   <Home class="w-4 h-4" />
                   홈
                 </button>
                 <button
-                  class="menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer"
+                  :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute(myDutyPath) }]"
                   @click="navigateTo(myDutyPath)"
                 >
                   <Calendar class="w-4 h-4" />
                   내 달력
                 </button>
                 <button
-                  class="menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer"
+                  :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute('/team') }]"
                   @click="navigateTo('/team')"
                 >
                   <Users class="w-4 h-4" />
                   내 팀
                 </button>
                 <button
-                  class="menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer"
+                  :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute('/friends') }]"
                   @click="navigateTo('/friends')"
                 >
                   <UserPlus class="w-4 h-4" />
                   친구 관리
+                  <span
+                    v-if="notificationStore.hasFriendRequests"
+                    class="ml-auto px-1.5 py-0.5 text-xs font-bold bg-red-500 text-white rounded-full min-w-[18px] text-center"
+                  >
+                    {{ notificationStore.friendRequestCountDisplay }}
+                  </span>
                 </button>
                 <button
-                  class="menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer"
+                  :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute('/notifications') }]"
                   @click="navigateTo('/notifications')"
                 >
                   <Bell class="w-4 h-4" />
@@ -151,7 +170,7 @@ onUnmounted(() => {
                 <!-- Admin (conditional) -->
                 <button
                   v-if="authStore.isAdmin"
-                  class="menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer"
+                  :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute('/admin') }]"
                   @click="navigateTo('/admin')"
                 >
                   <Shield class="w-4 h-4" />
@@ -159,7 +178,7 @@ onUnmounted(() => {
                 </button>
 
                 <button
-                  class="menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer"
+                  :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute('/member') }]"
                   @click="navigateTo('/member')"
                 >
                   <Settings class="w-4 h-4" />
@@ -224,6 +243,30 @@ onUnmounted(() => {
 .menu-item:hover {
   background-color: var(--dp-bg-hover);
   color: var(--dp-text-primary);
+}
+
+.menu-item-active {
+  background-color: #eff6ff;
+  color: #2563eb;
+  font-weight: 600;
+  border-left: 3px solid #2563eb;
+  padding-left: calc(1rem - 3px);
+}
+
+.menu-item-active:hover {
+  background-color: #dbeafe;
+  color: #2563eb;
+}
+
+.dark .menu-item-active {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border-left-color: #60a5fa;
+}
+
+.dark .menu-item-active:hover {
+  background-color: rgba(59, 130, 246, 0.25);
+  color: #60a5fa;
 }
 
 .menu-item-danger {

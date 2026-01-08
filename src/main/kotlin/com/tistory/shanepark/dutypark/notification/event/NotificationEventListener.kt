@@ -47,8 +47,8 @@ class NotificationEventListener(
                 memberId = event.fromMemberId,
                 type = NotificationType.FRIEND_REQUEST_ACCEPTED,
                 actorId = event.toMemberId,
-                referenceType = NotificationReferenceType.MEMBER,
-                referenceId = event.toMemberId.toString(),
+                referenceType = NotificationReferenceType.FRIEND_REQUEST,
+                referenceId = null,
                 content = null
             )
             log.info("Created friend accepted notification for member {}", event.fromMemberId)
@@ -87,8 +87,8 @@ class NotificationEventListener(
                 memberId = event.fromMemberId,
                 type = NotificationType.FAMILY_REQUEST_ACCEPTED,
                 actorId = event.toMemberId,
-                referenceType = NotificationReferenceType.MEMBER,
-                referenceId = event.toMemberId.toString(),
+                referenceType = NotificationReferenceType.FRIEND_REQUEST,
+                referenceId = null,
                 content = null
             )
             log.info("Created family accepted notification for member {}", event.fromMemberId)

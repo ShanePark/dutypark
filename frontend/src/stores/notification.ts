@@ -10,28 +10,69 @@ export const useNotificationStore = defineStore('notification', () => {
   const unreadNotifications = ref<NotificationDto[]>([])
   const recentNotifications = ref<NotificationDto[]>([])
   const unreadCount = ref(0)
+  const friendRequestCount = ref(0)
   const isLoading = ref(false)
   const pollingIntervalId = ref<number | null>(null)
   const consecutiveFailures = ref(0)
   const isPollingPaused = ref(false)
+  const friendsRefreshTrigger = ref(0)
 
   // Getters
   const hasUnread = computed(() => unreadCount.value > 0)
+  const hasFriendRequests = computed(() => friendRequestCount.value > 0)
   const unreadCountDisplay = computed(() =>
     unreadCount.value > 99 ? '99+' : String(unreadCount.value)
+  )
+  const friendRequestCountDisplay = computed(() =>
+    friendRequestCount.value > 99 ? '99+' : String(friendRequestCount.value)
   )
 
   /**
    * Fetch only unread count (lightweight for polling)
+   * Does NOT update friendRequestCount - that's only updated on specific events
    */
   async function fetchUnreadCount(): Promise<void> {
     try {
+      const prevUnreadCount = unreadCount.value
       const countData = await notificationApi.getCount()
       unreadCount.value = countData.unreadCount
       consecutiveFailures.value = 0
+
+      // If new notifications arrived, check if any are friend requests
+      if (countData.unreadCount > prevUnreadCount) {
+        checkForNewFriendRequests()
+      }
     } catch (error) {
       consecutiveFailures.value++
       console.warn('Failed to fetch notification count:', error)
+    }
+  }
+
+  /**
+   * Fetch friend request count (called on app start and when friend-related notifications arrive)
+   */
+  async function fetchFriendRequestCount(): Promise<void> {
+    try {
+      friendRequestCount.value = await notificationApi.getFriendRequestCount()
+    } catch (error) {
+      console.warn('Failed to fetch friend request count:', error)
+    }
+  }
+
+  /**
+   * Check if new notifications include friend requests
+   */
+  async function checkForNewFriendRequests(): Promise<void> {
+    try {
+      const notifications = await notificationApi.getUnreadNotifications()
+      const hasFriendRequestNotification = notifications.some(n =>
+        n.type === 'FRIEND_REQUEST_RECEIVED' || n.type === 'FAMILY_REQUEST_RECEIVED'
+      )
+      if (hasFriendRequestNotification) {
+        await fetchFriendRequestCount()
+      }
+    } catch (error) {
+      console.warn('Failed to check for friend request notifications:', error)
     }
   }
 
@@ -84,6 +125,10 @@ export const useNotificationStore = defineStore('notification', () => {
       // Update local state - recent list
       const recentNotification = recentNotifications.value.find(n => n.id === id)
       if (recentNotification) {
+        // Decrease count if unread and not already handled above
+        if (!recentNotification.isRead && unreadIndex === -1) {
+          unreadCount.value = Math.max(0, unreadCount.value - 1)
+        }
         recentNotification.isRead = true
       }
     } catch (error) {
@@ -145,8 +190,9 @@ export const useNotificationStore = defineStore('notification', () => {
     // Stop any existing polling
     stopPolling()
 
-    // Initial fetch
+    // Initial fetch - includes friend request count on app start
     fetchUnreadCount()
+    fetchFriendRequestCount()
 
     // Add visibility change listener
     document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -183,8 +229,16 @@ export const useNotificationStore = defineStore('notification', () => {
     unreadNotifications.value = []
     recentNotifications.value = []
     unreadCount.value = 0
+    friendRequestCount.value = 0
     isLoading.value = false
     consecutiveFailures.value = 0
+  }
+
+  /**
+   * Trigger friends page to refresh data
+   */
+  function triggerFriendsRefresh(): void {
+    friendsRefreshTrigger.value++
   }
 
   return {
@@ -192,18 +246,24 @@ export const useNotificationStore = defineStore('notification', () => {
     unreadNotifications,
     recentNotifications,
     unreadCount,
+    friendRequestCount,
     isLoading,
+    friendsRefreshTrigger,
     // Getters
     hasUnread,
+    hasFriendRequests,
     unreadCountDisplay,
+    friendRequestCountDisplay,
     // Actions
     fetchUnreadCount,
+    fetchFriendRequestCount,
     fetchUnreadNotifications,
     fetchRecentNotifications,
     markAsRead,
     markAllAsRead,
     startPolling,
     stopPolling,
+    triggerFriendsRefresh,
     $reset,
   }
 })

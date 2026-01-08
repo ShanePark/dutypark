@@ -21,11 +21,19 @@ export const notificationApi = {
   },
 
   /**
-   * Get notification counts
+   * Get notification counts (unread, total)
    */
   getCount: async (): Promise<NotificationCountDto> => {
     const response = await apiClient.get<NotificationCountDto>('/notifications/count')
     return response.data
+  },
+
+  /**
+   * Get friend request count only
+   */
+  getFriendRequestCount: async (): Promise<number> => {
+    const response = await apiClient.get<{ count: number }>('/notifications/friend-request-count')
+    return response.data.count
   },
 
   /**

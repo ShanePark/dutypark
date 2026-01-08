@@ -1,6 +1,8 @@
 package com.tistory.shanepark.dutypark.notification.service
 
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus
+import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.notification.domain.entity.Notification
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationReferenceType
@@ -28,6 +30,9 @@ class NotificationServiceTest {
     @Mock
     private lateinit var memberRepository: MemberRepository
 
+    @Mock
+    private lateinit var friendRequestRepository: FriendRequestRepository
+
     private lateinit var notificationService: NotificationService
 
     private lateinit var testMember: Member
@@ -35,7 +40,7 @@ class NotificationServiceTest {
 
     @BeforeEach
     fun setUp() {
-        notificationService = NotificationService(notificationRepository, memberRepository)
+        notificationService = NotificationService(notificationRepository, memberRepository, friendRequestRepository)
 
         testMember = Member(name = "testUser", email = "test@test.com", password = "password")
         ReflectionTestUtils.setField(testMember, "id", 1L)
@@ -99,7 +104,7 @@ class NotificationServiceTest {
     }
 
     @Test
-    fun `getUnreadCount returns correct counts`() {
+    fun `getUnreadCountSimple returns correct counts`() {
         // Given
         whenever(notificationRepository.countByMemberIdAndIsReadFalse(testMember.id!!))
             .thenReturn(5L)
@@ -107,11 +112,24 @@ class NotificationServiceTest {
             .thenReturn(10L)
 
         // When
-        val result = notificationService.getUnreadCount(testMember.id!!)
+        val result = notificationService.getUnreadCountSimple(testMember.id!!)
 
         // Then
         assertThat(result.unreadCount).isEqualTo(5)
         assertThat(result.totalCount).isEqualTo(10)
+    }
+
+    @Test
+    fun `getFriendRequestCount returns correct count`() {
+        // Given
+        whenever(friendRequestRepository.countByToMemberIdAndStatus(testMember.id!!, FriendRequestStatus.PENDING))
+            .thenReturn(3L)
+
+        // When
+        val result = notificationService.getFriendRequestCount(testMember.id!!)
+
+        // Then
+        assertThat(result).isEqualTo(3)
     }
 
     @Test

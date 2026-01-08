@@ -1,22 +1,21 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { Bell, Trash2, CheckCheck } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/ko'
 import { notificationApi } from '@/api/notification'
-import { scheduleApi } from '@/api/schedule'
 import { useNotificationStore } from '@/stores/notification'
+import { useNotificationNavigation } from '@/composables/useNotificationNavigation'
 import { useSwal } from '@/composables/useSwal'
-import type { NotificationDto, NotificationReferenceType, Page } from '@/types'
+import type { NotificationDto, Page } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 
 dayjs.extend(relativeTime)
 dayjs.locale('ko')
 
-const router = useRouter()
 const notificationStore = useNotificationStore()
+const { navigateToNotification } = useNotificationNavigation()
 const { toastSuccess, toastError, showInfo, confirm } = useSwal()
 
 const notifications = ref<NotificationDto[]>([])
@@ -60,59 +59,23 @@ function formatDate(dateString: string): string {
   return dayjs(dateString).format('YYYY.MM.DD HH:mm')
 }
 
-function getNavigationPath(notification: NotificationDto): string | null {
-  const { referenceType, referenceId } = notification
-
-  if (!referenceType) return null
-
-  // SCHEDULE type is handled separately in handleNotificationClick
-  if (referenceType === 'SCHEDULE') return null
-
-  const typeRoutes: Record<NotificationReferenceType, string | null> = {
-    FRIEND_REQUEST: '/member',
-    SCHEDULE: null,
-    MEMBER: referenceId ? `/duty/${referenceId}` : null,
-  }
-
-  return typeRoutes[referenceType] || null
-}
-
 async function handleNotificationClick(notification: NotificationDto) {
   // Mark as read if not already
   if (!notification.isRead) {
     try {
       await notificationApi.markAsRead(notification.id)
       notification.isRead = true
-      // Update store count
       notificationStore.fetchUnreadCount()
     } catch {
       // Continue with navigation
     }
   }
 
-  // Handle SCHEDULE type separately - fetch schedule info and navigate to own calendar with date params
-  if (notification.referenceType === 'SCHEDULE' && notification.referenceId) {
-    try {
-      const scheduleInfo = await scheduleApi.getScheduleById(notification.referenceId)
-      const date = new Date(scheduleInfo.startDateTime)
-      const year = date.getFullYear()
-      const month = date.getMonth() + 1
-      const day = date.getDate()
-      router.push({
-        path: '/duty/me',
-        query: { year: String(year), month: String(month), day: String(day) }
-      })
-    } catch (error) {
-      console.error('Failed to fetch schedule info:', error)
+  await navigateToNotification(notification, {
+    onScheduleError: () => {
       toastError('스케줄 정보를 불러오는데 실패했습니다')
     }
-    return
-  }
-
-  const path = getNavigationPath(notification)
-  if (path) {
-    router.push(path)
-  }
+  })
 }
 
 async function handleDeleteNotification(notification: NotificationDto, event: Event) {

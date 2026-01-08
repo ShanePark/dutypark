@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { dashboardApi } from '@/api/dashboard'
 import { friendApi } from '@/api/member'
 import { useSwal } from '@/composables/useSwal'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEscapeKey } from '@/composables/useEscapeKey'
+import { useNotificationStore } from '@/stores/notification'
 import Sortable from 'sortablejs'
 import type { DashboardFriendInfo, FriendDto } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
@@ -25,7 +26,15 @@ import {
 } from 'lucide-vue-next'
 
 const router = useRouter()
+const notificationStore = useNotificationStore()
 const { showWarning, confirm, confirmDelete, toastSuccess } = useSwal()
+
+// Watch for notification-triggered refresh
+watch(() => notificationStore.friendsRefreshTrigger, (newValue) => {
+  if (newValue > 0) {
+    loadFriendInfo()
+  }
+})
 
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -33,6 +42,7 @@ const friendInfo = ref<DashboardFriendInfo | null>(null)
 
 // Dropdown state for friend management
 const openDropdownId = ref<number | null>(null)
+const dropdownPosition = ref({ top: 0, left: 0 })
 
 // Sortable instance
 let friendSortable: Sortable | null = null
@@ -72,6 +82,11 @@ const sortedFriends = computed(() => {
   })
 })
 
+const openDropdownFriend = computed(() => {
+  if (!openDropdownId.value || !friendInfo.value) return null
+  return friendInfo.value.friends.find(f => f.member.id === openDropdownId.value) || null
+})
+
 async function loadFriendInfo() {
   loading.value = true
   error.value = null
@@ -94,6 +109,7 @@ async function acceptFriendRequest(req: { fromMember: { id: number | null; name:
   try {
     await friendApi.acceptFriendRequest(req.fromMember.id)
     await loadFriendInfo()
+    notificationStore.fetchFriendRequestCount()
     toastSuccess(`${req.fromMember.name}님의 친구 요청을 수락했습니다.`)
   } catch (e) {
     console.error('Failed to accept friend request:', e)
@@ -103,11 +119,13 @@ async function acceptFriendRequest(req: { fromMember: { id: number | null; name:
 
 async function rejectFriendRequest(req: { fromMember: { id: number | null; name: string } }) {
   if (!friendInfo.value || !req.fromMember.id) return
+  if (!await confirm(`${req.fromMember.name}님의 친구 요청을 거절하시겠습니까?`, '요청 거절')) return
   try {
     await friendApi.rejectFriendRequest(req.fromMember.id)
     friendInfo.value.pendingRequestsTo = friendInfo.value.pendingRequestsTo.filter(
       (r) => r.fromMember.id !== req.fromMember.id
     )
+    notificationStore.fetchFriendRequestCount()
     toastSuccess(`${req.fromMember.name}님의 친구 요청을 거절했습니다.`)
   } catch (e) {
     console.error('Failed to reject friend request:', e)
@@ -225,7 +243,17 @@ async function unfriend(member: { id: number | null; name: string }) {
 // Dropdown management
 function toggleDropdown(memberId: number, event: Event) {
   event.stopPropagation()
-  openDropdownId.value = openDropdownId.value === memberId ? null : memberId
+  if (openDropdownId.value === memberId) {
+    openDropdownId.value = null
+  } else {
+    openDropdownId.value = memberId
+    const button = event.currentTarget as HTMLElement
+    const rect = button.getBoundingClientRect()
+    dropdownPosition.value = {
+      top: rect.bottom + window.scrollY + 4,
+      left: rect.right + window.scrollX - 128 // 128px = dropdown width (w-32)
+    }
+  }
 }
 
 function closeDropdown() {
@@ -391,9 +419,12 @@ function destroyFriendSortable() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   document.addEventListener('click', closeDropdown)
-  loadFriendInfo()
+  await loadFriendInfo()
+  nextTick(() => {
+    initFriendSortable()
+  })
 })
 
 onUnmounted(() => {
@@ -535,7 +566,7 @@ onUnmounted(() => {
       <!-- Friends List Section -->
       <div
         ref="friendSectionRef"
-        class="friend-section rounded-2xl shadow-sm border overflow-hidden"
+        class="friend-section rounded-2xl shadow-sm border"
         :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }"
       >
         <div class="bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-3">
@@ -565,7 +596,7 @@ onUnmounted(() => {
               v-for="friend in sortedFriends"
               :key="friend.member.id ?? 'unknown'"
               :data-member-id="friend.member.id"
-              class="friend-card relative overflow-hidden rounded-xl sm:rounded-2xl cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
+              class="friend-card relative rounded-xl sm:rounded-2xl cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
               :class="[
                 friend.pinOrder
                   ? 'pinned-friend pinned-friend-highlight border-2 shadow-md'
@@ -613,37 +644,14 @@ onUnmounted(() => {
                         <Star class="w-4 h-4" />
                       </button>
                       <!-- Dropdown toggle -->
-                      <div v-if="friend.member.id" class="relative">
-                        <button
-                          class="p-1.5 rounded-lg transition hover:bg-opacity-80 cursor-pointer"
-                          :style="{ color: 'var(--dp-text-muted)' }"
-                          @click="toggleDropdown(friend.member.id, $event)"
-                        >
-                          <MoreVertical class="w-5 h-5" />
-                        </button>
-                        <!-- Dropdown menu -->
-                        <div
-                          v-if="openDropdownId === friend.member.id"
-                          class="absolute right-0 mt-1 w-28 sm:w-32 border rounded-xl shadow-xl z-10 overflow-hidden"
-                          :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }"
-                        >
-                          <button
-                            v-if="!friend.isFamily"
-                            class="w-full px-2.5 py-2 sm:px-3 sm:py-2.5 text-left text-xs sm:text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 transition cursor-pointer"
-                            @click="addFamily(friend.member)"
-                          >
-                            <Home class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                            가족 등록
-                          </button>
-                          <button
-                            class="w-full px-2.5 py-2 sm:px-3 sm:py-2.5 text-left text-xs sm:text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition cursor-pointer"
-                            @click="unfriend(friend.member)"
-                          >
-                            <Trash2 class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                            친구 삭제
-                          </button>
-                        </div>
-                      </div>
+                      <button
+                        v-if="friend.member.id"
+                        class="p-1.5 rounded-lg transition hover:bg-opacity-80 cursor-pointer"
+                        :style="{ color: 'var(--dp-text-muted)' }"
+                        @click="toggleDropdown(friend.member.id, $event)"
+                      >
+                        <MoreVertical class="w-5 h-5" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -663,6 +671,37 @@ onUnmounted(() => {
         </div>
       </div>
     </template>
+
+    <!-- Friend Dropdown Menu (Teleported to body) -->
+    <Teleport to="body">
+      <div
+        v-if="openDropdownId && openDropdownFriend"
+        class="fixed w-32 border rounded-xl shadow-xl z-[9999] overflow-hidden"
+        :style="{
+          top: dropdownPosition.top + 'px',
+          left: dropdownPosition.left + 'px',
+          backgroundColor: 'var(--dp-bg-card)',
+          borderColor: 'var(--dp-border-primary)'
+        }"
+        @click.stop
+      >
+        <button
+          v-if="!openDropdownFriend.isFamily"
+          class="w-full px-3 py-2.5 text-left text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 transition cursor-pointer"
+          @click="addFamily(openDropdownFriend.member)"
+        >
+          <Home class="w-4 h-4" />
+          가족 등록
+        </button>
+        <button
+          class="w-full px-3 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition cursor-pointer"
+          @click="unfriend(openDropdownFriend.member)"
+        >
+          <Trash2 class="w-4 h-4" />
+          친구 삭제
+        </button>
+      </div>
+    </Teleport>
 
     <!-- Search Modal -->
     <Teleport to="body">

@@ -1,5 +1,7 @@
 package com.tistory.shanepark.dutypark.notification.service
 
+import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus
+import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.notification.domain.entity.Notification
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationReferenceType
@@ -18,7 +20,8 @@ import java.util.*
 @Transactional
 class NotificationService(
     private val notificationRepository: NotificationRepository,
-    private val memberRepository: MemberRepository
+    private val memberRepository: MemberRepository,
+    private val friendRequestRepository: FriendRequestRepository
 ) {
 
     @Transactional(readOnly = true)
@@ -38,7 +41,7 @@ class NotificationService(
     }
 
     @Transactional(readOnly = true)
-    fun getUnreadCount(memberId: Long): NotificationCountDto {
+    fun getUnreadCountSimple(memberId: Long): NotificationCountDto {
         val unreadCount = notificationRepository.countByMemberIdAndIsReadFalse(memberId)
         val totalCount = notificationRepository.countByMemberId(memberId)
 
@@ -46,6 +49,11 @@ class NotificationService(
             unreadCount = unreadCount.toInt(),
             totalCount = totalCount.toInt()
         )
+    }
+
+    @Transactional(readOnly = true)
+    fun getFriendRequestCount(memberId: Long): Int {
+        return friendRequestRepository.countByToMemberIdAndStatus(memberId, FriendRequestStatus.PENDING).toInt()
     }
 
     fun markAsRead(memberId: Long, notificationId: UUID): NotificationDto {
