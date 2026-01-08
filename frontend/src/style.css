@@ -1222,3 +1222,15 @@ div.swal2-popup.swal2-toast.colored-toast-info {
         transform: none;
     }
 }
+
+/* ====================================
+   Notification System Styles
+   ==================================== */
+
+/* Line clamp utility for notification content */
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}

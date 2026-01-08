@@ -71,7 +71,25 @@ export interface ScheduleSearchResult {
   hasAttachments: boolean
 }
 
+// Basic info response for schedule lookup
+export interface ScheduleBasicInfo {
+  id: string
+  memberId: number
+  memberName: string
+  startDateTime: string
+  content: string
+}
+
 export const scheduleApi = {
+  /**
+   * Get basic schedule info by ID
+   * Used for notification navigation to schedule
+   */
+  getScheduleById: async (scheduleId: string): Promise<ScheduleBasicInfo> => {
+    const response = await apiClient.get<ScheduleBasicInfo>(`/schedules/${scheduleId}`)
+    return response.data
+  },
+
   /**
    * Get schedules for a member for a specific month
    * Returns array indexed by day of month (0-based, matching calendar view)

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import AppHeader from './AppHeader.vue'
 import AppFooter from './AppFooter.vue'
 import ImpersonationBanner from '@/components/common/ImpersonationBanner.vue'
 
@@ -17,6 +18,8 @@ const showLayout = computed(() => {
   <div class="min-h-screen flex flex-col" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
     <!-- Impersonation Banner -->
     <ImpersonationBanner v-if="authStore.isImpersonating" />
+    <!-- Header -->
+    <AppHeader v-if="showLayout && authStore.isLoggedIn" />
     <!-- pb-20: 80px for footer (64px) + safe area (~34px on iPhone), only when logged in -->
     <main
       class="flex-1"

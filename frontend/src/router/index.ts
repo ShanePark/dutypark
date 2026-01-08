@@ -56,6 +56,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/team/TeamManageView.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/notifications',
+    name: 'notifications',
+    component: () => import('@/views/notification/NotificationListView.vue'),
+    meta: { requiresAuth: true },
+  },
   // Admin routes
   {
     path: '/admin',

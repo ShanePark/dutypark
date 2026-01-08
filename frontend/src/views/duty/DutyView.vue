@@ -621,6 +621,24 @@ onMounted(async () => {
       const id = parseInt(storedDDay)
       pinnedDDay.value = dDays.value.find((d) => d.id === id) || null
     }
+
+    // Handle query parameters for date highlighting (from notification navigation)
+    const year = route.query.year as string | undefined
+    const month = route.query.month as string | undefined
+    const day = route.query.day as string | undefined
+    if (year && month && day) {
+      const y = parseInt(year)
+      const m = parseInt(month)
+      const d = parseInt(day)
+      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+        currentYear.value = y
+        currentMonth.value = m
+        searchDay.value = { year: y, month: m, day: d }
+        // Reload data for the target month
+        await loadCalendar()
+        await Promise.all([loadDuties(), loadSchedules(), loadOtherDuties(), loadHolidays()])
+      }
+    }
   } catch (error) {
     console.error('Failed to initialize duty view:', error)
     loadError.value = '데이터를 불러오는데 실패했습니다.'

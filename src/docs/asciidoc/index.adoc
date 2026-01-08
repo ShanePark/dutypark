@@ -195,6 +195,36 @@ operation::friends/update-pin-order[]
 
 operation::friends/send-family-request[]
 
+== Notifications
+
+=== Get Notifications (Paginated)
+
+operation::notifications/get-list[]
+
+=== Get Unread Notifications
+
+operation::notifications/get-unread[]
+
+=== Get Notification Count
+
+operation::notifications/get-count[]
+
+=== Mark as Read
+
+operation::notifications/mark-as-read[]
+
+=== Mark All as Read
+
+operation::notifications/mark-all-as-read[]
+
+=== Delete Notification
+
+operation::notifications/delete[]
+
+=== Delete All Read Notifications
+
+operation::notifications/delete-all-read[]
+
 == Teams
 
 === Get Team by ID

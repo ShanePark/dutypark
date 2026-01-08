@@ -12,7 +12,12 @@ import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.notification.event.FamilyRequestAcceptedEvent
+import com.tistory.shanepark.dutypark.notification.event.FamilyRequestSentEvent
+import com.tistory.shanepark.dutypark.notification.event.FriendRequestAcceptedEvent
+import com.tistory.shanepark.dutypark.notification.event.FriendRequestSentEvent
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
@@ -25,6 +30,7 @@ class FriendService(
     private val friendRequestRepository: FriendRequestRepository,
     private val memberService: MemberService,
     private val memberRepository: MemberRepository,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
 
     @Transactional(readOnly = true)
@@ -62,7 +68,14 @@ class FriendService(
         if (pending.isNotEmpty())
             throw IllegalArgumentException("Already requested")
 
-        friendRequestRepository.save(FriendRequest(fromMember, toMember))
+        val savedRequest = friendRequestRepository.save(FriendRequest(fromMember, toMember))
+        eventPublisher.publishEvent(
+            FriendRequestSentEvent(
+                requestId = savedRequest.id!!,
+                fromMemberId = fromMember.id!!,
+                toMemberId = toMember.id!!
+            )
+        )
     }
 
 
@@ -82,11 +95,18 @@ class FriendService(
         if (pending.isNotEmpty())
             throw IllegalArgumentException("Already requested")
 
-        friendRequestRepository.save(
+        val savedRequest = friendRequestRepository.save(
             FriendRequest(
                 fromMember = fromMember,
                 toMember = toMember,
                 requestType = FriendRequestType.FAMILY_REQUEST
+            )
+        )
+        eventPublisher.publishEvent(
+            FamilyRequestSentEvent(
+                requestId = savedRequest.id!!,
+                fromMemberId = fromMember.id!!,
+                toMemberId = toMember.id!!
             )
         )
     }
@@ -116,8 +136,26 @@ class FriendService(
         friendRequest.accepted()
 
         when (friendRequest.requestType) {
-            FriendRequestType.FRIEND_REQUEST -> setFriend(member, friend)
-            FriendRequestType.FAMILY_REQUEST -> setFamily(member, friend)
+            FriendRequestType.FRIEND_REQUEST -> {
+                setFriend(member, friend)
+                eventPublisher.publishEvent(
+                    FriendRequestAcceptedEvent(
+                        requestId = friendRequest.id!!,
+                        fromMemberId = friend.id!!,
+                        toMemberId = member.id!!
+                    )
+                )
+            }
+            FriendRequestType.FAMILY_REQUEST -> {
+                setFamily(member, friend)
+                eventPublisher.publishEvent(
+                    FamilyRequestAcceptedEvent(
+                        requestId = friendRequest.id!!,
+                        fromMemberId = friend.id!!,
+                        toMemberId = member.id!!
+                    )
+                )
+            }
         }
     }
 

@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.whenever
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.test.util.ReflectionTestUtils
 import java.util.*
 
@@ -31,6 +32,9 @@ class FriendServiceUnitTest {
     @Mock
     private lateinit var memberService: MemberService
 
+    @Mock
+    private lateinit var eventPublisher: ApplicationEventPublisher
+
     private lateinit var friendService: FriendService
 
     @BeforeEach
@@ -40,6 +44,7 @@ class FriendServiceUnitTest {
             friendRequestRepository = friendRequestRepository,
             memberRepository = memberRepository,
             memberService = memberService,
+            eventPublisher = eventPublisher,
         )
     }
 

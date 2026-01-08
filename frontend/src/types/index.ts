@@ -500,3 +500,33 @@ export interface DutyBatchTeamResult {
   processedCount?: number
 }
 
+// Notification Types
+export type NotificationType =
+  | 'FRIEND_REQUEST_RECEIVED'
+  | 'FRIEND_REQUEST_ACCEPTED'
+  | 'FAMILY_REQUEST_RECEIVED'
+  | 'FAMILY_REQUEST_ACCEPTED'
+  | 'SCHEDULE_TAGGED'
+
+export type NotificationReferenceType = 'FRIEND_REQUEST' | 'SCHEDULE' | 'MEMBER'
+
+export interface NotificationDto {
+  id: string
+  type: NotificationType
+  title: string
+  content: string | null
+  referenceType: NotificationReferenceType | null
+  referenceId: string | null
+  actorId: number | null
+  actorName: string | null
+  actorHasProfilePhoto: boolean | null
+  actorProfilePhotoVersion: number | null
+  isRead: boolean
+  createdAt: string
+}
+
+export interface NotificationCountDto {
+  unreadCount: number
+  totalCount: number
+}
+
