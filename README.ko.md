@@ -36,15 +36,20 @@
 | **모니터링 및 운영** | Prometheus + Grafana | Micrometer 메트릭이 `/actuator/prometheus`에 노출되고, 번들 Prometheus 구성으로 스크랩되며 Grafana를 통해 시각화(기본 `admin/admin`). |
 | **보안** | OAuth 로그인 | 가입/동의 화면 및 `MemberSsoRegister` 유효성 검사가 포함된 카카오 SSO 플로우. |
 |  | JWT + 리프레시 쿠키 | HttpOnly 세션 쿠키 + 슬라이딩 리프레시 토큰, 관리자 필터링, HTTPS 배포를 위한 쿠키 보안 토글. |
+| **알림** | 인앱 알림 | 친구/가족 요청, 일정 태그에 대한 폴링 기반 업데이트 실시간 알림 시스템; 읽지 않은 배지, 드롭다운 미리보기, 페이지네이션된 목록 뷰 포함. |
+|  | 알림 정리 | 매일 02:30에 예약 실행되어 30일 이상 지난 알림을 자동 삭제하며 최적화된 데이터베이스 인덱싱 적용. |
+| **정책 및 동의** | 이용약관 및 개인정보처리방침 | 적용일 기반의 버전 관리 정책 시스템, 마크다운 콘텐츠 렌더링, `/terms` 및 `/privacy` 전용 페이지. |
+|  | 사용자 동의 추적 | `MemberConsent` 엔티티를 통한 멤버별 정책 수락 추적이 포함된 SSO 가입 동의 플로우. |
+| **사용자 안내** | 사용자 가이드 페이지 | 대시보드, 캘린더, 팀, 친구, 설정을 다루는 접을 수 있는 섹션이 포함된 `/guide` 종합 도움말 문서. |
 
 ---
 
 ## 🧱 기술 스택
 
-- **백엔드:** Kotlin 2.1.10, Spring Boot 3.5.6 (Data JPA, Web, WebFlux, Validation, Security, Actuator, DevTools), Java 21 툴체인.
+- **백엔드:** Kotlin 2.1.10, Spring Boot 3.5.6 (Data JPA, Web, WebFlux, Validation, Security, Actuator, DevTools, Scheduling, Caching), Java 21 툴체인.
 - **데이터:** MySQL 8.0 + Flyway 마이그레이션(`db/migration/v1`, `v2`), JPA 감사, ULID 엔티티, 선택적 P6Spy SQL 추적.
 - **AI 및 메시징:** Spring AI 스타터(OpenAI 호환 엔드포인트를 통한 Gemini 2.0 Flash Lite) 및 Slack 웹훅 통합.
-- **프론트엔드:** Vue 3 SPA (Vite + TypeScript + Pinia + Tailwind CSS), 백엔드와 완전 분리된 JWT Bearer 토큰 인증.
+- **프론트엔드:** Vue 3.5 SPA (Vite 7 + TypeScript 5.9 + Pinia 3 + Tailwind CSS 4), 백엔드와 완전 분리된 JWT Bearer 토큰 인증.
 - **빌드 및 문서화:** Gradle Kotlin DSL, `org.asciidoctor.jvm.convert` 및 git-properties 플러그인(Slack + `/actuator/info`에 표시).
 - **관찰 가능성 및 운영:** Micrometer Prometheus 레지스트리, Grafana 대시보드, Logback 롤링 파일, Docker Compose 오케스트레이션.
 - **테스팅:** JUnit 5, H2 인메모리 DB, Mockito-Kotlin, fail-fast Gradle 테스트 실행.
@@ -58,23 +63,27 @@
 - `schedule/` — 태그 지정, 캘린더 집계, 검색 서비스, 첨부 파일 오케스트레이션이 포함된 일정 서비스; AI 시간 파싱 큐 포함.
 - `todo/` — UUID 기반 할 일 엔티티, 순서 조정 가능한 위치, 다시 열기/완료 플로우, 개요 쿼리.
 - `attachment/` — 업로드 세션, 유효성 검사, 이미지 썸네일 생성(비동기 실행기), 정리 스케줄러, 파일시스템 추상화.
-- `member/` — 친구/가족 관계, 디데이 관리, 공개 설정 적용, 리프레시 토큰, SSO 온보딩.
+- `member/` — 친구/가족 관계, 디데이 관리, 공개 설정 적용, 리프레시 토큰, 프로필 사진, SSO 온보딩.
 - `team/` — 팀 CRUD, 관리자 역할, 근무 유형 구성, 작업 유형 프리셋, 공유 팀 일정.
 - `dashboard/` — 근무, 일정, 친구 요청 데이터로 구성된 "나 + 친구" 집계 보기.
 - `holiday/` — `WebClientAdapter` + 캐싱, 잠금, DB 지속성/재설정 API로 구축된 DataGoKr 클라이언트.
+- `notification/` — `@TransactionalEventListener`를 사용한 이벤트 기반 비동기 처리, 폴링 API, 읽음/안읽음 추적, 예약 정리(30일 보관) 기능이 포함된 인앱 알림 시스템.
+- `policy/` — 적용일 기반 배포 및 멤버 동의 추적이 포함된 이용약관 및 개인정보처리방침 버전 관리.
 - `security/` — JWT 제공자, 쿠키, 카카오 OAuth, `@Login` 인수 리졸버, 관리자 필터, 전달 헤더 지원.
 - `common/` — 레이아웃 헬퍼, 캐시된 `/api/calendar` 그리드, Slack 알림 인프라, 비동기/스로틀 구성, 사용자 정의 로깅 구성.
 
 ### 프론트엔드 레이어
-- Vue 3 SPA, Composition API (`<script setup lang="ts">`) 및 TypeScript로 타입 안전성 확보.
-- Pinia를 통한 상태 관리 (JWT 토큰 처리 포함 인증 스토어).
-- Vue Router의 지연 로딩 라우트 및 인증용 네비게이션 가드.
-- Axios 요청/응답 인터셉터를 통한 자동 JWT 갱신.
-- Tailwind CSS 기반 스타일링 및 커스텀 디자인 토큰.
+- Vue 3.5 SPA, Composition API (`<script setup lang="ts">`) 및 TypeScript로 타입 안전성 확보.
+- Pinia를 통한 상태 관리 (auth, notification, theme 스토어).
+- Vue Router의 지연 로딩 라우트 및 인증/관리자 역할용 네비게이션 가드.
+- Axios 요청/응답 인터셉터를 통한 자동 JWT 갱신 및 401 재시도 큐.
+- Tailwind CSS 4 기반 스타일링, 커스텀 디자인 토큰 및 다크 모드 지원.
 - SortableJS 드래그 드롭 정렬, Uppy 파일 업로드, SweetAlert2 알림.
+- Lucide 아이콘, 이미지 편집용 vue-advanced-cropper, 마크다운 렌더링용 marked.
 
 ### 통합 및 자동화
-- Spring Scheduling은 첨부 파일 세션 정리(오전 2시) 및 AI 파싱 큐를 지원; 캘린더/공휴일에 대한 캐싱 활성화.
+- Spring Scheduling은 첨부 파일 세션 정리(02:00), 알림 정리(02:30), 리프레시 토큰 정리(00:00), AI 파싱 큐를 지원; 캘린더/공휴일에 대한 캐싱 활성화.
+- `@TransactionalEventListener`를 사용한 이벤트 기반 알림 시스템으로 친구 요청, 가족 요청, 일정 태그의 비동기 처리.
 - Slack notifier는 시작/종료/이벤트 및 선택적 `@SlackNotification` aspect 메시지를 전송.
 - `DataGoKrConfig`는 사용자 정의 시간 초과를 사용하여 탄력적인 API 호출을 위해 WebFlux를 사용.
 - 첨부 파일 썸네일은 업로드 요청을 빠르게 유지하기 위해 전용 비동기 실행기에서 실행.
@@ -283,11 +292,13 @@ management.endpoints.web.exposure.include: health,metrics,prometheus
 | `src/main/kotlin/com/tistory/shanepark/dutypark/schedule` | 일정 CRUD, 태그 지정, 검색, 첨부 파일 훅, AI 파싱 큐. |
 | `src/main/kotlin/com/tistory/shanepark/dutypark/todo` | 할 일 컨트롤러/서비스/엔티티 DTO. |
 | `src/main/kotlin/com/tistory/shanepark/dutypark/attachment` | 업로드 세션, 유효성 검사, 파일시스템 헬퍼, 썸네일 서비스, 정리 스케줄러. |
-| `src/main/kotlin/com/tistory/shanepark/dutypark/member` | 친구 관계, 디데이 API, 리프레시 토큰, SSO 플로우, `@Login` 어노테이션. |
+| `src/main/kotlin/com/tistory/shanepark/dutypark/member` | 친구 관계, 디데이 API, 리프레시 토큰, 프로필 사진, SSO 플로우, `@Login` 어노테이션. |
 | `src/main/kotlin/com/tistory/shanepark/dutypark/team` | 팀/도메인 로직(관리자, 일정, 작업 유형, 근무 유형). |
+| `src/main/kotlin/com/tistory/shanepark/dutypark/notification` | 인앱 알림 시스템: 엔티티, 이벤트 리스너, REST API, 정리 스케줄러. |
+| `src/main/kotlin/com/tistory/shanepark/dutypark/policy` | 동의 추적이 포함된 이용약관 및 개인정보처리방침 버전 관리. |
 | `src/main/kotlin/com/tistory/shanepark/dutypark/security` | JWT 인증, 필터, 카카오 OAuth, 관리자 라우팅, 쿠키 구성. |
 | `src/main/kotlin/com/tistory/shanepark/dutypark/dashboard` | 근무 + 일정을 집계하는 대시보드 컨트롤러/서비스. |
-| `frontend/` | Vue 3 SPA 소스 코드 (Vite + TypeScript + Pinia + Tailwind CSS). |
+| `frontend/` | Vue 3.5 SPA 소스 코드 (Vite 7 + TypeScript + Pinia + Tailwind CSS 4). |
 | `src/main/resources/db/migration` | 스키마를 정의/업그레이드하는 Flyway SQL 스크립트(`v1`, `v2`). |
 | `src/docs/asciidoc` | Spring REST Docs용 소스; 빌드 출력은 `static/docs`로 복사. |
 | `data/` | Docker 볼륨: MySQL 데이터, 로그, nginx 템플릿, Prometheus, Grafana, 저장소. |
@@ -342,11 +353,15 @@ management.endpoints.web.exposure.include: health,metrics,prometheus
 
 ## 🎨 프론트엔드 경험
 
-- Vue 3 SPA, TypeScript와 Composition API로 타입 안전하고 유지보수 가능한 코드.
-- Tailwind CSS 기반 반응형 디자인, 모바일 디바이스 최적화.
+- Vue 3.5 SPA, TypeScript와 Composition API로 타입 안전하고 유지보수 가능한 코드.
+- Tailwind CSS 4 기반 반응형 디자인, 모바일 디바이스 최적화 및 다크 모드 지원.
+- 폴링 기반 업데이트, 읽지 않은 배지, 드롭다운 미리보기, 전체 목록 뷰가 포함된 인앱 알림 시스템.
 - SweetAlert 팝업과 localStorage를 활용한 디데이 관리.
 - SortableJS 드래그 드롭 정렬과 인라인 토스트를 활용한 할 일 보드.
 - Uppy를 통한 실시간 진행률 표시줄과 썸네일 미리보기가 포함된 일정 상세 모달.
+- vue-advanced-cropper를 활용한 이미지 편집이 포함된 프로필 사진 관리.
+- 고정/해제, 드래그 드롭 재정렬, 관계 관리 기능이 있는 전용 친구 관리 페이지.
+- 온보딩을 위한 접을 수 있는 도움말 섹션이 포함된 사용자 가이드 페이지.
 - Axios 인터셉터를 통한 자동 갱신 처리가 포함된 JWT Bearer 토큰 인증.
 
 ---
