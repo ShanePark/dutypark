@@ -92,12 +92,12 @@ const pagesToShow = computed(() => {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="emit('close')"
     >
-      <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[85dvh] sm:max-h-[70vh] overflow-hidden mx-2 sm:mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
+      <div class="modal-container max-w-[95vw] sm:max-w-2xl max-h-[85dvh] sm:max-h-[70vh]">
         <!-- Header -->
-        <div class="p-3 sm:p-4" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderBottom: '1px solid var(--dp-border-primary)' }">
+        <div class="p-3 sm:p-4 flex-shrink-0" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderBottom: '1px solid var(--dp-border-primary)' }">
           <div class="flex items-center justify-between mb-3">
             <h2 class="text-base sm:text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">검색 결과</h2>
-            <button @click="emit('close')" class="p-2 rounded-full transition flex-shrink-0 hover-bg-light">
+            <button @click="emit('close')" class="p-2 rounded-full flex-shrink-0 hover-close-btn cursor-pointer">
               <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
             </button>
           </div>
@@ -133,7 +133,7 @@ const pagesToShow = computed(() => {
         </div>
 
         <!-- Content -->
-        <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(85dvh-240px)] sm:max-h-[calc(70vh-240px)]">
+        <div class="p-3 sm:p-4 overflow-y-auto flex-1 min-h-0">
           <!-- No query entered yet -->
           <div v-if="!query" class="text-center py-8" :style="{ color: 'var(--dp-text-muted)' }">
             검색어를 입력해주세요.
@@ -181,8 +181,8 @@ const pagesToShow = computed(() => {
         <!-- Pagination -->
         <div
           v-if="pageInfo.totalPages > 1"
-          class="px-3 sm:px-4 pt-4 pb-8 border-t flex items-center justify-center gap-0.5 sm:gap-1 overflow-x-auto"
-          :style="{ borderColor: 'var(--dp-border-primary)' }"
+          class="px-3 sm:px-4 pt-4 pb-8 flex items-center justify-center gap-0.5 sm:gap-1 overflow-x-auto flex-shrink-0"
+          :style="{ borderTop: '1px solid var(--dp-border-primary)' }"
         >
           <button
             @click="emit('changePage', currentPage - 2)"

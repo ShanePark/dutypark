@@ -466,7 +466,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 pb-16 sm:pb-0"
       @click.self="emit('close')"
     >
-      <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[calc(100dvh-5rem)] sm:max-h-[90vh] mx-2 sm:mx-4 flex flex-col" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
+      <div class="modal-container max-w-[95vw] sm:max-w-2xl max-h-[calc(100dvh-5rem)] sm:max-h-[90vh]">
         <!-- Header -->
         <div class="p-3 sm:p-4 flex-shrink-0" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderBottom: '1px solid var(--dp-border-primary)' }">
           <div class="flex items-center justify-between">
@@ -731,52 +731,56 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
           <!-- Create/Edit Schedule Form -->
           <div v-if="isCreateMode || isEditMode">
             <div class="space-y-2 sm:space-y-3">
-              <div>
-                <label class="block text-sm mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
-                  내용 <span class="text-red-500">*</span>
-                  <CharacterCounter :current="newSchedule.content.length" :max="50" />
+              <div class="flex items-center gap-2">
+                <label class="text-sm flex-shrink-0 w-16" :style="{ color: 'var(--dp-text-secondary)' }">
+                  제목 <span class="text-red-500">*</span>
                 </label>
-                <input
-                  v-model="newSchedule.content"
-                  type="text"
-                  maxlength="50"
-                  class="w-full px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
-                  placeholder="일정 내용을 입력하세요"
-                />
+                <div class="flex-1 min-w-0 relative">
+                  <input
+                    v-model="newSchedule.content"
+                    type="text"
+                    maxlength="50"
+                    class="w-full px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
+                    placeholder="일정 제목을 입력하세요"
+                  />
+                  <div class="absolute right-2 top-1/2 -translate-y-1/2">
+                    <CharacterCounter :current="newSchedule.content.length" :max="50" />
+                  </div>
+                </div>
               </div>
 
-              <div class="grid grid-cols-2 gap-2 sm:gap-3">
-                <div>
-                  <label class="block text-sm mb-1" :style="{ color: 'var(--dp-text-secondary)' }">시작 시간</label>
+              <div class="space-y-2">
+                <div class="flex items-center gap-2">
+                  <label class="text-sm flex-shrink-0 w-16" :style="{ color: 'var(--dp-text-secondary)' }">시작 시간</label>
                   <input
                     v-model="newSchedule.startTime"
                     type="time"
-                    class="w-full px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
+                    class="flex-1 min-w-0 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
                   />
                 </div>
-                <div>
-                  <label class="block text-sm mb-1" :style="{ color: 'var(--dp-text-secondary)' }">종료 일시</label>
+                <div class="flex items-center gap-2">
+                  <label class="text-sm flex-shrink-0 w-16" :style="{ color: 'var(--dp-text-secondary)' }">종료 일시</label>
                   <input
                     v-model="newSchedule.endDateTime"
                     type="datetime-local"
-                    class="w-full px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
+                    class="flex-1 min-w-0 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
                   />
                 </div>
               </div>
 
-              <div>
-                <label class="block text-sm mb-1" :style="{ color: 'var(--dp-text-secondary)' }">설명</label>
+              <div class="flex items-start gap-2">
+                <label class="text-sm flex-shrink-0 w-16 pt-2" :style="{ color: 'var(--dp-text-secondary)' }">설명</label>
                 <textarea
                   v-model="newSchedule.description"
                   rows="2"
-                  class="w-full px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
+                  class="flex-1 min-w-0 px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
                   placeholder="설명 (선택사항)"
                 ></textarea>
               </div>
 
-              <div>
-                <label class="block text-sm mb-1" :style="{ color: 'var(--dp-text-secondary)' }">공개 범위</label>
-                <div class="grid grid-cols-2 gap-1.5 sm:gap-2">
+              <div class="flex items-start gap-2">
+                <label class="text-sm flex-shrink-0 w-16 pt-2" :style="{ color: 'var(--dp-text-secondary)' }">공개 범위</label>
+                <div class="flex-1 min-w-0 grid grid-cols-2 gap-1.5 sm:gap-2">
                   <button
                     v-for="option in visibilityOptions"
                     :key="option.value"
@@ -823,9 +827,10 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
               </div>
 
               <!-- Attachment Upload Area -->
-              <div>
-                <label class="block text-sm mb-1" :style="{ color: 'var(--dp-text-secondary)' }">첨부파일</label>
+              <div class="flex items-start gap-2">
+                <label class="text-sm flex-shrink-0 w-16 pt-2" :style="{ color: 'var(--dp-text-secondary)' }">첨부파일</label>
                 <FileUploader
+                  class="flex-1 min-w-0"
                   ref="fileUploaderRef"
                   context-type="SCHEDULE"
                   :existing-attachments="editAttachments"

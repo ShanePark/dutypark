@@ -36,15 +36,20 @@ A lightweight, Kotlin + Spring Boot web app for duty rosters, personal schedules
 | **Monitoring & Ops** | Prometheus + Grafana | Micrometer metrics exposed under `/actuator/prometheus`, scraped by the bundled Prometheus config and visualized via Grafana (default `admin/admin`). |
 | **Security** | OAuth Login | Kakao SSO flow with signup/consent screens and `MemberSsoRegister` validation. |
 |  | JWT + Refresh Cookies | HttpOnly session cookie plus sliding refresh tokens, admin filtering, and cookie security toggles for HTTPS deployments. |
+| **Notifications** | In-App Notifications | Real-time notification system with polling-based updates for friend/family requests, schedule tags; includes unread badge, dropdown preview, and paginated list view. |
+|  | Notification Cleanup | Scheduled daily cleanup (02:30) auto-deletes notifications older than 30 days with optimized database indexing. |
+| **Policy & Consent** | Terms & Privacy Policy | Versioned policy management with effective dates, markdown content rendering, and dedicated `/terms` and `/privacy` pages. |
+|  | User Consent Tracking | SSO signup consent flow with `MemberConsent` entity tracking policy acceptance per member. |
+| **User Guidance** | User Guide Page | Comprehensive help documentation at `/guide` with collapsible sections covering Dashboard, Calendar, Team, Friends, and Settings. |
 
 ---
 
 ## 🧱 Tech Stack
 
-- **Backend:** Kotlin 2.1.10, Spring Boot 3.5.6 (Data JPA, Web, WebFlux, Validation, Security, Actuator, DevTools), Java 21 toolchain.
+- **Backend:** Kotlin 2.1.10, Spring Boot 3.5.6 (Data JPA, Web, WebFlux, Validation, Security, Actuator, DevTools, Scheduling, Caching), Java 21 toolchain.
 - **Data:** MySQL 8.0 + Flyway migrations (`db/migration/v1`, `v2`), JPA auditing, ULID entities, optional P6Spy SQL tracing.
 - **AI & Messaging:** Spring AI starter (Gemini 2.0 Flash Lite via OpenAI-compatible endpoint) and Slack webhook integrations.
-- **Frontend:** Vue 3 SPA (Vite + TypeScript + Pinia + Tailwind CSS), fully separated from backend with JWT Bearer token authentication.
+- **Frontend:** Vue 3.5 SPA (Vite 7 + TypeScript 5.9 + Pinia 3 + Tailwind CSS 4), fully separated from backend with JWT Bearer token authentication.
 - **Build & Docs:** Gradle Kotlin DSL with `org.asciidoctor.jvm.convert` and git-properties plugin (surfaced in Slack + `/actuator/info`).
 - **Observability & Ops:** Micrometer Prometheus registry, Grafana dashboards, Logback rolling files, Docker Compose orchestration.
 - **Testing:** JUnit 5, H2 in-memory DB, Mockito-Kotlin, fail-fast Gradle test runs.
@@ -58,23 +63,27 @@ A lightweight, Kotlin + Spring Boot web app for duty rosters, personal schedules
 - `schedule/` — Schedule service with tagging, calendar aggregation, search service, and attachment orchestration; includes the AI time parsing queue.
 - `todo/` — UUID-based todo entities with reorderable positions, reopen/complete flows, and overview queries.
 - `attachment/` — Upload sessions, validation, image thumbnail generation (async executor), cleanup scheduler, and filesystem abstraction.
-- `member/` — Friend/family relationships, D-Day management, visibility enforcement, refresh tokens, and SSO onboarding.
+- `member/` — Friend/family relationships, D-Day management, visibility enforcement, refresh tokens, profile photos, and SSO onboarding.
 - `team/` — Team CRUD, manager roles, duty type configuration, work-type presets, and shared team schedules.
 - `dashboard/` — Aggregated "my + friends" view composed of duty, schedule, and friend request data.
 - `holiday/` — DataGoKr client built with `WebClientAdapter` + caching, locking, and DB persistence/reset APIs.
+- `notification/` — In-app notification system with event-driven async handling (`@TransactionalEventListener`), polling API, read/unread tracking, and scheduled cleanup (30-day retention).
+- `policy/` — Versioned terms of service and privacy policy management with effective date-based rollout and member consent tracking.
 - `security/` — JWT provider, cookies, Kakao OAuth, `@Login` argument resolver, admin filter, and forwarded-header support.
 - `common/` — Layout helpers, cached `/api/calendar` grids, Slack notification infrastructure, async/throttle configs, and custom logging configuration.
 
 ### Frontend layers
-- Vue 3 SPA with Composition API (`<script setup lang="ts">`) and TypeScript for type safety.
-- Pinia for state management (auth store with JWT token handling).
-- Vue Router with lazy-loaded routes and navigation guards for authentication.
-- Axios with request/response interceptors for automatic JWT refresh.
-- Tailwind CSS for styling with custom design tokens.
+- Vue 3.5 SPA with Composition API (`<script setup lang="ts">`) and TypeScript for type safety.
+- Pinia for state management (auth, notification, and theme stores).
+- Vue Router with lazy-loaded routes and navigation guards for authentication/admin roles.
+- Axios with request/response interceptors for automatic JWT refresh and 401 retry queue.
+- Tailwind CSS 4 for styling with custom design tokens and dark mode support.
 - SortableJS for drag-drop reordering, Uppy for file uploads, SweetAlert2 for notifications.
+- Lucide icons, vue-advanced-cropper for image editing, and marked for markdown rendering.
 
 ### Integrations & automation
-- Spring Scheduling powers attachment session cleanup (2am) and AI parsing queues; caching is enabled for calendars/holidays.
+- Spring Scheduling powers attachment session cleanup (02:00), notification cleanup (02:30), refresh token cleanup (00:00), and AI parsing queues; caching is enabled for calendars/holidays.
+- Event-driven notification system using `@TransactionalEventListener` for async handling of friend requests, family requests, and schedule tags.
 - Slack notifier sends startup/shutdown/events plus opt-in `@SlackNotification` aspect messages.
 - `DataGoKrConfig` uses WebFlux for resilient API calls with custom timeouts.
 - Attachment thumbnails run in a dedicated async executor to keep upload requests snappy.
@@ -283,11 +292,13 @@ management.endpoints.web.exposure.include: health,metrics,prometheus
 | `src/main/kotlin/com/tistory/shanepark/dutypark/schedule` | Schedule CRUD, tagging, search, attachments hook, AI parsing queue. |
 | `src/main/kotlin/com/tistory/shanepark/dutypark/todo` | Todo controller/service/entity DTOs. |
 | `src/main/kotlin/com/tistory/shanepark/dutypark/attachment` | Upload sessions, validation, filesystem helpers, thumbnail services, cleanup scheduler. |
-| `src/main/kotlin/com/tistory/shanepark/dutypark/member` | Friend relations, D-Day APIs, refresh tokens, SSO flows, `@Login` annotation. |
+| `src/main/kotlin/com/tistory/shanepark/dutypark/member` | Friend relations, D-Day APIs, refresh tokens, profile photos, SSO flows, `@Login` annotation. |
 | `src/main/kotlin/com/tistory/shanepark/dutypark/team` | Team/domain logic (managers, schedules, work types, duty types). |
+| `src/main/kotlin/com/tistory/shanepark/dutypark/notification` | In-app notification system: entities, event listeners, REST API, cleanup scheduler. |
+| `src/main/kotlin/com/tistory/shanepark/dutypark/policy` | Terms of service and privacy policy versioning with consent tracking. |
 | `src/main/kotlin/com/tistory/shanepark/dutypark/security` | JWT auth, filters, Kakao OAuth, admin routing, cookie configuration. |
 | `src/main/kotlin/com/tistory/shanepark/dutypark/dashboard` | Dashboard controller/service aggregating duties + schedules. |
-| `frontend/` | Vue 3 SPA source code (Vite + TypeScript + Pinia + Tailwind CSS). |
+| `frontend/` | Vue 3.5 SPA source code (Vite 7 + TypeScript + Pinia + Tailwind CSS 4). |
 | `src/main/resources/db/migration` | Flyway SQL scripts (`v1`, `v2`) that define/upgrade the schema. |
 | `src/docs/asciidoc` | Source for Spring REST Docs; build output copied to `static/docs`. |
 | `data/` | Docker volumes: MySQL data, logs, nginx templates, Prometheus, Grafana, storage. |
@@ -342,11 +353,15 @@ management.endpoints.web.exposure.include: health,metrics,prometheus
 
 ## 🎨 Frontend Experience
 
-- Vue 3 SPA with TypeScript and Composition API for type-safe, maintainable code.
-- Responsive design with Tailwind CSS, optimized for mobile devices.
+- Vue 3.5 SPA with TypeScript and Composition API for type-safe, maintainable code.
+- Responsive design with Tailwind CSS 4, optimized for mobile devices with dark mode support.
+- In-app notification system with polling-based updates, unread badge, dropdown preview, and full list view.
 - D-Day management with SweetAlert popups and localStorage for quick selection.
 - Todo board with SortableJS drag-drop reordering and inline toasts.
 - Schedule detail modal integrates Uppy for uploads with real-time progress bars and thumbnail previews.
+- Profile photo management with vue-advanced-cropper for image editing.
+- Dedicated friends management page with pin/unpin, drag-drop reordering, and relationship controls.
+- User guide page with collapsible help sections for onboarding.
 - JWT Bearer token authentication with automatic refresh handling via Axios interceptors.
 
 ---

@@ -312,7 +312,7 @@ async function requestFriend(member: FriendDto) {
   if (!await confirm(`${member.name}님에게 친구 요청을 보내시겠습니까?`, '친구 요청')) return
   try {
     await friendApi.sendFriendRequest(member.id)
-    searchResult.value = searchResult.value.filter((m) => m.id !== member.id)
+    closeSearchModal()
     await loadFriendInfo()
     toastSuccess(`${member.name}님에게 친구 요청을 보냈습니다.`)
   } catch (e) {
@@ -667,6 +667,18 @@ onUnmounted(() => {
                 </div>
               </div>
             </div>
+
+            <!-- Add Friend Card -->
+            <div
+              class="group rounded-xl sm:rounded-2xl border-2 border-dashed cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all duration-300 flex flex-col items-center justify-center min-h-[80px] sm:min-h-[120px]"
+              :style="{ borderColor: 'var(--dp-border-secondary)' }"
+              @click="openSearchModal"
+            >
+              <div class="w-8 h-8 sm:w-12 sm:h-12 group-hover:bg-blue-100 rounded-full flex items-center justify-center mb-1 sm:mb-2 transition-colors" :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }">
+                <UserPlus class="w-4 h-4 sm:w-6 sm:h-6 group-hover:text-blue-500 transition-colors" :style="{ color: 'var(--dp-text-muted)' }" />
+              </div>
+              <span class="font-semibold text-xs sm:text-sm group-hover:text-blue-600 transition-colors" :style="{ color: 'var(--dp-text-muted)' }">친구 추가</span>
+            </div>
           </div>
         </div>
       </div>
@@ -736,7 +748,7 @@ onUnmounted(() => {
           <div class="p-5 overflow-y-auto max-h-[calc(90vh-180px)]">
             <!-- Search Input -->
             <div class="flex gap-2 mb-5">
-              <div class="flex-grow relative">
+              <div class="flex-grow relative min-w-0">
                 <Search class="w-5 h-5 absolute left-3.5 top-1/2 transform -translate-y-1/2" :style="{ color: 'var(--dp-text-muted)' }" />
                 <input
                   v-model="searchKeyword"
@@ -748,11 +760,11 @@ onUnmounted(() => {
                 />
               </div>
               <button
-                class="px-5 py-3 bg-gradient-to-r from-slate-700 to-slate-800 text-white rounded-xl hover:from-slate-800 hover:to-slate-900 transition-all shadow-lg flex items-center gap-2 font-medium cursor-pointer"
+                class="flex-shrink-0 px-4 sm:px-5 py-3 bg-gradient-to-r from-slate-700 to-slate-800 text-white rounded-xl hover:from-slate-800 hover:to-slate-900 transition-all shadow-lg flex items-center gap-2 font-medium cursor-pointer whitespace-nowrap"
                 @click="search"
               >
                 <Search class="w-4 h-4" />
-                검색
+                <span class="hidden sm:inline">검색</span>
               </button>
             </div>
 

@@ -141,7 +141,7 @@ onMounted(() => {
 <template>
   <div class="notification-list-view max-w-2xl mx-auto px-4 py-6">
     <!-- Header -->
-    <div class="notification-list-header flex items-center justify-between mb-6">
+    <div class="notification-list-header flex items-center justify-between mb-4">
       <div class="flex items-center gap-3">
         <Bell class="w-6 h-6" />
         <h1 class="text-xl font-bold">알림</h1>
@@ -165,6 +165,11 @@ onMounted(() => {
         </button>
       </div>
     </div>
+
+    <!-- Retention Notice -->
+    <p class="notification-retention-notice text-xs mb-4">
+      알림은 30일간 보관됩니다.
+    </p>
 
     <!-- Notification List -->
     <div class="notification-list-container card">
@@ -240,6 +245,10 @@ onMounted(() => {
 <style scoped>
 .notification-list-header {
   color: var(--dp-text-primary);
+}
+
+.notification-retention-notice {
+  color: var(--dp-text-muted);
 }
 
 .notification-action-btn {

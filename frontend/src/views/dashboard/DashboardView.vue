@@ -524,7 +524,7 @@ watch(
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <Users class="w-5 h-5 text-white" />
-              <span class="text-white font-bold">친구 목록</span>
+              <span class="text-white font-bold">친구관리</span>
               <span v-if="friendInfo?.friends.length" class="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs text-white">
                 {{ friendInfo.friends.length }}
               </span>
@@ -633,18 +633,6 @@ watch(
               </div>
             </div>
 
-            <!-- Add Friend Card -->
-            <div
-              v-if="friendInfoInitialized"
-              class="group rounded-xl sm:rounded-2xl border-2 border-dashed cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all duration-300 flex flex-col items-center justify-center min-h-[80px] sm:min-h-[120px]"
-              :style="{ borderColor: 'var(--dp-border-secondary)' }"
-              @click="openSearchModal"
-            >
-              <div class="w-8 h-8 sm:w-12 sm:h-12 group-hover:bg-blue-100 rounded-full flex items-center justify-center mb-1 sm:mb-2 transition-colors" :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }">
-                <UserPlus class="w-4 h-4 sm:w-6 sm:h-6 group-hover:text-blue-500 transition-colors" :style="{ color: 'var(--dp-text-muted)' }" />
-              </div>
-              <span class="font-semibold text-xs sm:text-sm group-hover:text-blue-600 transition-colors" :style="{ color: 'var(--dp-text-muted)' }">친구 추가</span>
-            </div>
           </div>
         </div>
       </div>

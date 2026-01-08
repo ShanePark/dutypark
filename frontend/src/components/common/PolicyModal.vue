@@ -59,12 +59,9 @@ function close() {
       @click.self="close"
     >
       <div class="fixed inset-0 bg-black/50" @click="close"></div>
-      <div
-        class="relative w-full max-w-3xl max-h-[90vh] rounded-xl shadow-xl overflow-hidden flex flex-col"
-        :style="{ backgroundColor: 'var(--dp-bg-modal)' }"
-      >
+      <div class="modal-container relative max-w-[95vw] sm:max-w-3xl max-h-[90vh]">
         <!-- Modal Header -->
-        <div class="modal-header flex-shrink-0">
+        <div class="modal-header">
           <h2>{{ modalTitle }}</h2>
           <button
             type="button"

@@ -1737,6 +1737,7 @@ async function showExcelUploadModal() {
       :get-duty-color="getDutyColorForDay"
       :highlight-day="searchDay"
       :focused-day="batchEditMode && focusedDay ? { year: currentYear, month: currentMonth, day: focusedDay } : null"
+      :clickable="canEdit"
       @day-click="handleDayClick"
     >
       <!-- D-Day indicator in header -->

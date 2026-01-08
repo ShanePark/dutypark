@@ -21,6 +21,7 @@ interface Props {
   selectedDay?: { year: number; month: number; day: number } | null
   focusedDay?: { year: number; month: number; day: number } | null
   useAdaptiveBorder?: boolean
+  clickable?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -30,6 +31,7 @@ const props = withDefaults(defineProps<Props>(), {
   selectedDay: null,
   focusedDay: null,
   useAdaptiveBorder: false,
+  clickable: true,
 })
 
 const emit = defineEmits<{
@@ -147,18 +149,21 @@ function handleDayClick(day: CalendarDay, index: number) {
         v-for="(day, idx) in days"
         :key="idx"
         @click="handleDayClick(day, idx)"
-        class="min-h-[70px] sm:min-h-[80px] md:min-h-[100px] border-b border-r p-0.5 sm:p-1 transition-all duration-150 relative cursor-pointer hover:brightness-95 hover:shadow-inner"
+        class="min-h-[70px] sm:min-h-[80px] md:min-h-[100px] border-b border-r p-0.5 sm:p-1 transition-all duration-150 relative"
+        :class="[
+          clickable ? 'cursor-pointer hover:brightness-95 hover:shadow-inner' : '',
+          {
+            'ring-2 ring-red-500 ring-inset': !focusedDay && (isToday(day) || isHighlighted(day)),
+            'ring-2 ring-blue-500 ring-inset': !focusedDay && isSelected(day) && !isToday(day),
+            'duty-day-focused': isFocused(day),
+            'rounded-bl-lg': idx === days.length - 7,
+            'rounded-br-lg': idx === days.length - 1,
+          }
+        ]"
         :style="{
           borderColor: getBorderColor(day),
           backgroundColor: getBackgroundColor(day),
           opacity: isCurrentMonth(day) ? 1 : 0.5
-        }"
-        :class="{
-          'ring-2 ring-red-500 ring-inset': !focusedDay && (isToday(day) || isHighlighted(day)),
-          'ring-2 ring-blue-500 ring-inset': !focusedDay && isSelected(day) && !isToday(day),
-          'duty-day-focused': isFocused(day),
-          'rounded-bl-lg': idx === days.length - 7,
-          'rounded-br-lg': idx === days.length - 1,
         }"
       >
         <!-- Day Number -->

@@ -4,7 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import { useSwal } from '@/composables/useSwal'
-import { Menu, Home, Calendar, Users, UserPlus, Bell, Shield, Settings, LogOut, Sun, Moon } from 'lucide-vue-next'
+import { Menu, Home, Calendar, Users, UserPlus, Bell, Shield, Settings, LogOut, Sun, Moon, BookOpen } from 'lucide-vue-next'
 import NotificationBell from '@/components/common/NotificationBell.vue'
 import NotificationDropdown from '@/components/common/NotificationDropdown.vue'
 import { useThemeStore } from '@/stores/theme'
@@ -191,6 +191,13 @@ onUnmounted(() => {
                 </button>
 
                 <button
+                  :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute('/guide') }]"
+                  @click="navigateTo('/guide')"
+                >
+                  <BookOpen class="w-4 h-4" />
+                  이용 안내
+                </button>
+                <button
                   :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute('/member') }]"
                   @click="navigateTo('/member')"
                 >
@@ -212,6 +219,12 @@ onUnmounted(() => {
             </div>
           </template>
           <template v-else>
+            <router-link
+              to="/guide"
+              class="guide-link text-xs sm:text-sm px-2 py-2 rounded-md transition-colors min-h-[44px] flex items-center"
+            >
+              이용 안내
+            </router-link>
             <router-link
               to="/auth/login"
               class="login-link text-xs sm:text-sm px-3 py-2 rounded-md transition-colors min-h-[44px] flex items-center"
@@ -307,6 +320,15 @@ onUnmounted(() => {
 .menu-divider {
   height: 1px;
   background-color: var(--dp-border-primary);
+}
+
+.guide-link {
+  color: var(--dp-text-secondary);
+}
+
+.guide-link:hover {
+  background-color: var(--dp-bg-hover);
+  color: var(--dp-text-primary);
 }
 
 .login-link {

@@ -19,7 +19,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
-  Settings,
+  Code2,
   Loader2,
   FileText,
   ExternalLink,
@@ -227,6 +227,16 @@ onMounted(async () => {
             <Building2 class="w-6 h-6 mb-2" :style="{ color: 'var(--dp-text-secondary)' }" />
             <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">팀 관리</span>
           </router-link>
+          <router-link
+            to="/admin/dev"
+            class="rounded-xl p-4 transition"
+            :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }"
+            @mouseover="(e: Event) => setHoverBg(e)"
+            @mouseleave="(e: Event) => clearHoverBg(e)"
+          >
+            <Code2 class="w-6 h-6 mb-2" :style="{ color: 'var(--dp-text-secondary)' }" />
+            <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">개발</span>
+          </router-link>
           <a
             href="/docs/index.html"
             target="_blank"
@@ -241,10 +251,6 @@ onMounted(async () => {
             </div>
             <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">API 문서</span>
           </a>
-          <div class="rounded-xl p-4 opacity-50 cursor-not-allowed" :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }">
-            <Settings class="w-6 h-6 mb-2" :style="{ color: 'var(--dp-text-muted)' }" />
-            <span class="font-medium" :style="{ color: 'var(--dp-text-muted)' }">설정</span>
-          </div>
         </div>
 
         <!-- Stats Cards -->
