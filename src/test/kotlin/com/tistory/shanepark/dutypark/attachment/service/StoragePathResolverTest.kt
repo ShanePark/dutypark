@@ -55,20 +55,6 @@ class StoragePathResolverTest {
     }
 
     @Test
-    fun `should resolve permanent file path`() {
-        val contextId = "schedule-123"
-        val storedFilename = "${UUID.randomUUID()}.png"
-
-        val path = pathResolver.resolvePermanentFilePath(
-            AttachmentContextType.SCHEDULE,
-            contextId,
-            storedFilename
-        )
-
-        assertThat(path).isEqualTo(Paths.get("test-storage", "SCHEDULE", contextId, storedFilename))
-    }
-
-    @Test
     fun `should resolve thumbnail path with correct naming`() {
         val storedFilename = "${UUID.randomUUID()}.png"
         val filePath = Paths.get("test-storage", "SCHEDULE", "schedule-123", storedFilename)

@@ -7,20 +7,6 @@ class BatchParseResult(
     val endDate: LocalDate,
     private val offDayResult: Map<String, Set<LocalDate>>
 ) {
-    private val _workTimeTable: LinkedHashMap<LocalDate, List<String>> = LinkedHashMap()
-    val workTimeTable: Map<LocalDate, List<String>> = _workTimeTable.toMap()
-
-    private val _offTimeTable: LinkedHashMap<LocalDate, List<String>> = LinkedHashMap()
-    val offTimeTable: Map<LocalDate, List<String>> = _offTimeTable.toMap()
-
-    init {
-        val dateRange = startDate.datesUntil(endDate.plusDays(1)).toList()
-        dateRange.forEach { date ->
-            val names = offDayResult.filter { it.value.contains(date) }.keys.toList()
-            _offTimeTable[date] = names
-            _workTimeTable[date] = offDayResult.keys.toList() - names.toSet()
-        }
-    }
 
     fun getNames(): List<String> {
         return offDayResult.keys.toList()

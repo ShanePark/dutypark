@@ -28,14 +28,6 @@ class StoragePathResolver(
         return resolveTemporaryDirectory(sessionId).resolve(storedFilename)
     }
 
-    fun resolvePermanentFilePath(
-        contextType: AttachmentContextType,
-        contextId: String,
-        storedFilename: String
-    ): Path {
-        return resolvePermanentDirectory(contextType, contextId).resolve(storedFilename)
-    }
-
     fun resolveFilePath(
         contextType: AttachmentContextType,
         contextId: String?,
@@ -43,7 +35,7 @@ class StoragePathResolver(
         storedFilename: String
     ): Path {
         return if (contextId != null) {
-            resolvePermanentFilePath(contextType, contextId, storedFilename)
+            resolvePermanentDirectory(contextType, contextId).resolve(storedFilename)
         } else if (uploadSessionId != null) {
             resolveTemporaryFilePath(uploadSessionId, storedFilename)
         } else {

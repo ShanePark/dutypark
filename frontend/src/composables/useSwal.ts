@@ -108,16 +108,6 @@ export function useSwal() {
     })
   }
 
-  const toastInfo = (message: string) => {
-    return Toast.fire({
-      icon: undefined,
-      title: message,
-      customClass: {
-        popup: 'colored-toast colored-toast-info',
-      },
-    })
-  }
-
   return {
     showError,
     showWarning,
@@ -127,6 +117,5 @@ export function useSwal() {
     confirmDelete,
     toastSuccess,
     toastError,
-    toastInfo,
   }
 }

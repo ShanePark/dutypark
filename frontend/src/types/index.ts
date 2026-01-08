@@ -16,11 +16,6 @@ export interface LoginDto {
   rememberMe: boolean
 }
 
-export interface LoginResponse {
-  token?: string
-  member: LoginMember
-}
-
 // Member types
 export interface Member {
   id: number
@@ -163,13 +158,6 @@ export interface Friend {
   isPinned: boolean
 }
 
-export interface FriendRequest {
-  id: number
-  name: string
-  team?: string
-  createdAt: string
-}
-
 // Dashboard types - matches backend DTOs
 export interface DashboardMemberDto {
   id: number | null
@@ -252,19 +240,6 @@ export interface DashboardFriendInfo {
   friends: DashboardFriendDetail[]
   pendingRequestsTo: DashboardFriendRequestDto[]
   pendingRequestsFrom: DashboardFriendRequestDto[]
-}
-
-// Legacy Dashboard types (kept for compatibility)
-export interface DashboardMyInfo {
-  member: Member
-  duty?: Duty
-  todaySchedules: Schedule[]
-}
-
-export interface DashboardFriendsInfo {
-  friends: Friend[]
-  pendingRequests: FriendRequest[]
-  receivedRequests: FriendRequest[]
 }
 
 // Pagination types
