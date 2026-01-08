@@ -95,12 +95,9 @@ const ddayBadgeClass = computed(() => {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="handleClose"
     >
-      <div
-        class="rounded-2xl shadow-xl w-full max-w-[95vw] sm:max-w-md max-h-[90dvh] sm:max-h-[90vh] mx-2 sm:mx-4 flex flex-col"
-        :style="{ backgroundColor: 'var(--dp-bg-modal)' }"
-      >
+      <div class="modal-container modal-container-rounded max-w-[95vw] sm:max-w-md max-h-[90dvh] sm:max-h-[90vh]">
         <!-- Header -->
-        <div class="modal-header flex-shrink-0">
+        <div class="modal-header">
           <h2>디데이 상세</h2>
           <button
             @click="handleClose"

@@ -122,9 +122,9 @@ function onUploadError(message: string) {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="handleClose"
     >
-      <div class="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-xl max-h-[90dvh] sm:max-h-[90vh] mx-2 sm:mx-4 flex flex-col" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
+      <div class="modal-container max-w-[95vw] sm:max-w-xl max-h-[90dvh] sm:max-h-[90vh]">
         <!-- Header -->
-        <div class="modal-header flex-shrink-0">
+        <div class="modal-header">
           <h2>할 일 추가</h2>
           <button @click="handleClose" class="p-2 hover-bg-light rounded-full transition cursor-pointer">
             <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />

@@ -492,8 +492,17 @@ html.dark {
 }
 
 /* Modal */
+.modal-container {
+    @apply rounded-lg shadow-xl overflow-hidden w-full mx-2 sm:mx-4 flex flex-col;
+    background-color: var(--dp-bg-modal);
+}
+
+.modal-container-rounded {
+    @apply rounded-2xl;
+}
+
 .modal-header {
-    @apply flex items-center justify-between px-4 py-3 sm:px-5 sm:py-4;
+    @apply flex items-center justify-between px-4 py-3 sm:px-5 sm:py-4 flex-shrink-0;
     background-color: var(--dp-bg-tertiary);
     border-bottom: 1px solid var(--dp-border-primary);
 }
@@ -501,6 +510,11 @@ html.dark {
 .modal-header h2 {
     @apply text-base sm:text-lg font-bold;
     color: var(--dp-text-primary);
+}
+
+.modal-footer {
+    @apply p-4 flex-shrink-0;
+    border-top: 1px solid var(--dp-border-primary);
 }
 
 .modal-body {

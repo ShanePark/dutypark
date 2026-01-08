@@ -210,7 +210,7 @@ function handleTodoClick(todo: Todo) {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="emit('close')"
     >
-      <div class="rounded-2xl shadow-xl w-full max-w-[95vw] sm:max-w-xl max-h-[90dvh] sm:max-h-[85vh] overflow-hidden mx-2 sm:mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
+      <div class="modal-container modal-container-rounded max-w-[95vw] sm:max-w-xl max-h-[90dvh] sm:max-h-[85vh]">
         <!-- Header -->
         <div class="flex items-center justify-between px-4 py-3 sm:px-5 sm:py-4" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderBottom: '1px solid var(--dp-border-primary)' }">
           <div class="flex items-center gap-2">
