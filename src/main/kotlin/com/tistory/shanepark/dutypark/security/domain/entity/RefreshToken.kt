@@ -40,10 +40,6 @@ class RefreshToken(
     @Column(name = "last_used", nullable = false)
     var lastUsed: LocalDateTime = LocalDateTime.now()
 
-    fun validation(remoteAddr: String?, userAgent: String?): Boolean {
-        return validUntil.isAfter(LocalDateTime.now())
-    }
-
     fun isValid(): Boolean {
         return this.validUntil.isAfter(LocalDateTime.now())
     }

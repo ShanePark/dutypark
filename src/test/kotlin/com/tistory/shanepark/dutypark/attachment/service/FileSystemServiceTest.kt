@@ -57,36 +57,6 @@ class FileSystemServiceTest {
     }
 
     @Test
-    fun `should move file successfully`() {
-        val content = "test content".toByteArray()
-        val sourcePath = tempDir.resolve("source.txt")
-        Files.write(sourcePath, content)
-
-        val targetPath = tempDir.resolve("target.txt")
-
-        val result = fileSystemService.moveFile(sourcePath, targetPath)
-
-        assertThat(Files.exists(result)).isTrue()
-        assertThat(Files.exists(sourcePath)).isFalse()
-        assertThat(Files.readAllBytes(result)).isEqualTo(content)
-    }
-
-    @Test
-    fun `should move file to different directory`() {
-        val content = "test content".toByteArray()
-        val sourcePath = tempDir.resolve("source.txt")
-        Files.write(sourcePath, content)
-
-        val targetPath = tempDir.resolve("subdir").resolve("target.txt")
-
-        val result = fileSystemService.moveFile(sourcePath, targetPath)
-
-        assertThat(Files.exists(result)).isTrue()
-        assertThat(Files.exists(sourcePath)).isFalse()
-        assertThat(Files.readAllBytes(result)).isEqualTo(content)
-    }
-
-    @Test
     fun `should delete file successfully`() {
         val content = "test content".toByteArray()
         val filePath = tempDir.resolve("test.txt")

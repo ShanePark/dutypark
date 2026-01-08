@@ -20,10 +20,6 @@ export const attachmentValidation = {
     const target = filename ? `${filename} 파일은` : '이 파일은'
     return `${target} 업로드할 수 없는 확장자입니다.`
   },
-  duplicateFileMessage(filename?: string): string {
-    const target = filename ? `${filename} 파일은` : '이 파일은'
-    return `${target} 이미 추가되어 있습니다.`
-  },
 }
 
 // Normalize AttachmentDto to frontend representation

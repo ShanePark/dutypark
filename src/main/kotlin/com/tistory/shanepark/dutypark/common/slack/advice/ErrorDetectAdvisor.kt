@@ -47,7 +47,6 @@ class ErrorDetectAdvisor(
         slackAttachment.setTitle("Error Detect")
         slackAttachment.setTitleLink(req.contextPath)
         slackAttachment.setText(e.stackTraceToString())
-        slackAttachment.setColor("danger")
 
         val parameters = req.parameterMap.map { (key, value) -> "$key: ${value.joinToString(",")}" }
         val body: String =

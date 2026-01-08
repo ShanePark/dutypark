@@ -124,11 +124,4 @@ apiClient.interceptors.response.use(
   }
 )
 
-// Reset refresh failed flag when needed (e.g., after successful login)
-export function resetRefreshState() {
-  refreshFailed = false
-  isRefreshing = false
-  failedQueue = []
-}
-
 export default apiClient

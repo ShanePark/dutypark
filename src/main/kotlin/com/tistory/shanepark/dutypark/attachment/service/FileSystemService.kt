@@ -27,30 +27,6 @@ class FileSystemService {
         }
     }
 
-    fun moveFile(sourcePath: Path, targetPath: Path): Path {
-        try {
-            ensureDirectoryExists(targetPath.parent)
-
-            Files.move(sourcePath, targetPath, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
-
-            log.info("File moved successfully: {} -> {}", sourcePath, targetPath)
-            return targetPath
-        } catch (e: IOException) {
-            log.error("Failed to move file from {} to {}: {}", sourcePath, targetPath, e.message)
-
-            try {
-                Files.copy(sourcePath, targetPath, StandardCopyOption.REPLACE_EXISTING)
-                Files.delete(sourcePath)
-                log.warn("File moved using copy+delete fallback: {} -> {}", sourcePath, targetPath)
-                return targetPath
-            } catch (fallbackException: IOException) {
-                log.error("Fallback copy+delete also failed: {}", fallbackException.message)
-                cleanupFile(targetPath)
-                throw IOException("Failed to move file from ${sourcePath.fileName} to ${targetPath.fileName}", e)
-            }
-        }
-    }
-
     fun deleteFile(path: Path) {
         try {
             if (Files.exists(path)) {
