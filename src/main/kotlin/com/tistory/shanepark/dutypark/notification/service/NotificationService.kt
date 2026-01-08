@@ -101,7 +101,7 @@ class NotificationService(
             memberRepository.findById(id).orElse(null)?.name ?: "Unknown"
         } ?: "Unknown"
 
-        val title = type.generateTitle(actorName)
+        val title = type.generateTitle(actorName, content)
 
         val notification = Notification(
             member = member,

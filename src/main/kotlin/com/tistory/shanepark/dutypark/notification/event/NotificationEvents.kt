@@ -29,5 +29,6 @@ data class FamilyRequestAcceptedEvent(
 data class ScheduleTaggedEvent(
     val scheduleId: UUID,
     val ownerId: Long,
-    val taggedMemberId: Long
+    val taggedMemberId: Long,
+    val scheduleTitle: String
 )

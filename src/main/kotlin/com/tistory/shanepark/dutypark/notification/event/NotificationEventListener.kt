@@ -109,7 +109,7 @@ class NotificationEventListener(
                 actorId = event.ownerId,
                 referenceType = NotificationReferenceType.SCHEDULE,
                 referenceId = event.scheduleId.toString(),
-                content = null
+                content = event.scheduleTitle
             )
             log.info("Created schedule tagged notification for member {}", event.taggedMemberId)
         } catch (e: Exception) {
