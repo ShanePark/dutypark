@@ -420,34 +420,45 @@ onMounted(async () => {
           기본 정보
         </h2>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div class="flex items-center gap-4 sm:gap-6">
           <!-- Profile Photo (Left) -->
-          <div class="flex flex-col items-center">
-            <h3 class="text-sm font-medium mb-3" :style="{ color: 'var(--dp-text-secondary)' }">프로필 사진</h3>
-            <ProfilePhotoUploader
-              v-if="memberInfo?.id"
-              :member-id="memberInfo.id"
-              :profile-photo-version="memberInfo.profilePhotoVersion"
-              @upload-complete="fetchMemberInfo"
-            />
+          <div class="flex-shrink-0">
+            <div class="sm:hidden">
+              <ProfilePhotoUploader
+                v-if="memberInfo?.id"
+                :member-id="memberInfo.id"
+                :profile-photo-version="memberInfo.profilePhotoVersion"
+                size="sm"
+                @upload-complete="fetchMemberInfo"
+              />
+            </div>
+            <div class="hidden sm:block">
+              <ProfilePhotoUploader
+                v-if="memberInfo?.id"
+                :member-id="memberInfo.id"
+                :profile-photo-version="memberInfo.profilePhotoVersion"
+                size="lg"
+                @upload-complete="fetchMemberInfo"
+              />
+            </div>
           </div>
 
           <!-- Member Info (Right) -->
-          <div class="flex flex-col justify-center space-y-4">
-            <div class="flex items-center gap-3">
+          <div class="flex flex-col justify-center space-y-2 sm:space-y-3 min-w-0">
+            <div class="flex items-center gap-2 sm:gap-3">
               <User class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }" />
-              <span class="text-sm w-14 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }">이름</span>
-              <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ memberInfo?.name }}</span>
+              <span class="text-sm w-12 sm:w-14 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }">이름</span>
+              <span class="font-medium truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ memberInfo?.name }}</span>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 sm:gap-3">
               <Building2 class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }" />
-              <span class="text-sm w-14 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }">소속</span>
-              <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ memberInfo?.team || '-' }}</span>
+              <span class="text-sm w-12 sm:w-14 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }">소속</span>
+              <span class="font-medium truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ memberInfo?.team || '-' }}</span>
             </div>
-            <div v-if="memberInfo?.email" class="flex items-center gap-3">
+            <div v-if="memberInfo?.email" class="flex items-center gap-2 sm:gap-3">
               <Mail class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }" />
-              <span class="text-sm w-14 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }">이메일</span>
-              <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ memberInfo?.email }}</span>
+              <span class="text-sm w-12 sm:w-14 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }">이메일</span>
+              <span class="font-medium truncate text-sm sm:text-base" :style="{ color: 'var(--dp-text-primary)' }">{{ memberInfo?.email }}</span>
             </div>
           </div>
         </div>

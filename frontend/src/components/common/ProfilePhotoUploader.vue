@@ -10,12 +10,20 @@ interface Props {
   memberId: number
   disabled?: boolean
   profilePhotoVersion?: number
+  size?: 'sm' | 'md' | 'lg'
 }
 
 const props = withDefaults(defineProps<Props>(), {
   disabled: false,
   profilePhotoVersion: 0,
+  size: 'lg',
 })
+
+const sizeClasses: Record<string, string> = {
+  sm: 'photo-size-sm',
+  md: 'photo-size-md',
+  lg: 'photo-size-lg',
+}
 
 const emit = defineEmits<{
   (e: 'upload-complete'): void
@@ -120,16 +128,16 @@ onMounted(() => {
 
 <template>
   <div class="profile-photo-uploader">
-    <div class="photo-container" @click="openCropModal">
+    <div class="photo-container" :class="sizeClasses[props.size]" @click="openCropModal">
       <div v-if="hasPhoto" class="photo-preview">
         <img :src="displayPhotoUrl!" alt="Profile" class="photo-image" />
         <div class="photo-overlay">
-          <Camera class="w-6 h-6 text-white" />
+          <Camera :class="props.size === 'sm' ? 'w-4 h-4' : 'w-6 h-6'" class="text-white" />
         </div>
       </div>
       <div v-else class="photo-placeholder">
-        <Upload class="w-8 h-8" />
-        <span class="text-sm mt-1">Upload Photo</span>
+        <Upload :class="props.size === 'sm' ? 'w-5 h-5' : 'w-8 h-8'" />
+        <span v-if="props.size !== 'sm'" class="text-sm mt-1">Upload Photo</span>
       </div>
       <div v-if="isUploading || isDeleting" class="upload-loading">
         <Loader2 class="w-8 h-8 animate-spin text-white" />
@@ -157,12 +165,27 @@ onMounted(() => {
 
 .photo-container {
   position: relative;
-  width: 120px;
-  height: 120px;
   border-radius: 50%;
   cursor: pointer;
   overflow: hidden;
   transition: all 0.2s ease;
+  border: 3px solid var(--dp-border-secondary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.photo-size-sm {
+  width: 80px;
+  height: 80px;
+}
+
+.photo-size-md {
+  width: 100px;
+  height: 100px;
+}
+
+.photo-size-lg {
+  width: 120px;
+  height: 120px;
 }
 
 .photo-container:hover {
