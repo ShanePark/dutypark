@@ -81,6 +81,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/admin/AdminTeamListView.vue'),
     meta: { requiresAuth: true, requiresAdmin: true },
   },
+  {
+    path: '/admin/dev',
+    name: 'admin-dev',
+    component: () => import('@/views/admin/DevPlaygroundView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
   // Policy pages
   {
     path: '/terms',
