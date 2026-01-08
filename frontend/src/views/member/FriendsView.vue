@@ -1,32 +1,24 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 import { dashboardApi } from '@/api/dashboard'
 import { friendApi } from '@/api/member'
 import { useSwal } from '@/composables/useSwal'
-import { isLightColor } from '@/utils/color'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEscapeKey } from '@/composables/useEscapeKey'
+import { useNotificationStore } from '@/stores/notification'
 import Sortable from 'sortablejs'
-import type {
-  DashboardMyDetail,
-  DashboardFriendInfo,
-  DashboardScheduleDto,
-  FriendDto,
-} from '@/types'
+import type { DashboardFriendInfo, FriendDto } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
-import IntroSection from '@/components/intro/IntroSection.vue'
 import {
-  Calendar,
-  Briefcase,
-  ClipboardList,
-  Clock,
   Users,
-  Star,
-  GripVertical,
+  UserCheck,
   UserPlus,
   Home,
+  Star,
+  GripVertical,
+  MoreVertical,
+  Trash2,
   X,
   Search,
   ChevronLeft,
@@ -34,64 +26,29 @@ import {
 } from 'lucide-vue-next'
 
 const router = useRouter()
-const authStore = useAuthStore()
-const { showWarning, confirm, toastSuccess } = useSwal()
+const notificationStore = useNotificationStore()
+const { showWarning, confirm, confirmDelete, toastSuccess } = useSwal()
 
-// Loading states
-const myInfoLoading = ref(false)
-const friendInfoLoading = ref(false)
-const friendInfoInitialized = ref(false)
-
-// Error states
-const myInfoError = ref<string | null>(null)
-const friendInfoError = ref<string | null>(null)
-
-// Today's date formatted
-const today = computed(() => {
-  return new Date().toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'long',
-  })
+// Watch for notification-triggered refresh
+watch(() => notificationStore.friendsRefreshTrigger, (newValue) => {
+  if (newValue > 0) {
+    loadFriendInfo()
+  }
 })
 
-// API data
-const myInfo = ref<DashboardMyDetail | null>(null)
+const loading = ref(false)
+const error = ref<string | null>(null)
 const friendInfo = ref<DashboardFriendInfo | null>(null)
 
-// Load my dashboard data
-async function loadMyDashboard() {
-  if (!authStore.isLoggedIn) return
+// Dropdown state for friend management
+const openDropdownId = ref<number | null>(null)
+const dropdownPosition = ref({ top: 0, left: 0 })
 
-  myInfoLoading.value = true
-  myInfoError.value = null
-  try {
-    myInfo.value = await dashboardApi.getMyDashboard()
-  } catch (error) {
-    console.error('Failed to load my dashboard:', error)
-    myInfoError.value = '대시보드 정보를 불러오는데 실패했습니다.'
-  } finally {
-    myInfoLoading.value = false
-  }
-}
-
-// Load friends dashboard data
-async function loadFriendsDashboard() {
-  if (!authStore.isLoggedIn) return
-
-  friendInfoLoading.value = true
-  friendInfoError.value = null
-  try {
-    friendInfo.value = await dashboardApi.getFriendsDashboard()
-    friendInfoInitialized.value = true
-  } catch (error) {
-    console.error('Failed to load friends dashboard:', error)
-    friendInfoError.value = '친구 정보를 불러오는데 실패했습니다.'
-  } finally {
-    friendInfoLoading.value = false
-  }
-}
+// Sortable instance
+let friendSortable: Sortable | null = null
+const friendListRef = ref<HTMLElement | null>(null)
+const friendSectionRef = ref<HTMLElement | null>(null)
+let isDragging = false
 
 // Search modal state
 const showSearchModal = ref(false)
@@ -105,13 +62,11 @@ const searchTotalElements = ref(0)
 const searchPageSize = 5
 const searchLoading = ref(false)
 
-// Sortable instance
-let friendSortable: Sortable | null = null
-const friendListRef = ref<HTMLElement | null>(null)
-const friendSectionRef = ref<HTMLElement | null>(null)
-let isDragging = false
+const hasPendingRequests = computed(() => {
+  if (!friendInfo.value) return false
+  return friendInfo.value.pendingRequestsTo.length > 0 || friendInfo.value.pendingRequestsFrom.length > 0
+})
 
-// Computed: sorted friends (pinned first)
 const sortedFriends = computed(() => {
   if (!friendInfo.value) return []
   return [...friendInfo.value.friends].sort((a, b) => {
@@ -127,40 +82,68 @@ const sortedFriends = computed(() => {
   })
 })
 
-// Methods
-function moveTo(memberId?: number | null) {
-  // Prevent navigation if we just finished dragging
-  if (isDragging) return
-  const id = memberId || myInfo.value?.member.id
-  if (!id) return
-  router.push(`/duty/${id}`)
+const openDropdownFriend = computed(() => {
+  if (!openDropdownId.value || !friendInfo.value) return null
+  return friendInfo.value.friends.find(f => f.member.id === openDropdownId.value) || null
+})
+
+async function loadFriendInfo() {
+  loading.value = true
+  error.value = null
+  try {
+    friendInfo.value = await dashboardApi.getFriendsDashboard()
+    nextTick(() => {
+      initFriendSortable()
+    })
+  } catch (e) {
+    console.error('Failed to load friend info:', e)
+    error.value = '친구 정보를 불러오는데 실패했습니다.'
+  } finally {
+    loading.value = false
+  }
 }
 
-function printSchedule(schedule: { content: string; totalDays: number; daysFromStart: number; isTagged: boolean; owner: string }) {
-  let text = schedule.content
-  if (schedule.totalDays > 1) {
-    text = `${text} [${schedule.daysFromStart}/${schedule.totalDays}]`
+// Friend request actions
+async function acceptFriendRequest(req: { fromMember: { id: number | null; name: string } }) {
+  if (!friendInfo.value || !req.fromMember.id) return
+  try {
+    await friendApi.acceptFriendRequest(req.fromMember.id)
+    await loadFriendInfo()
+    notificationStore.fetchFriendRequestCount()
+    toastSuccess(`${req.fromMember.name}님의 친구 요청을 수락했습니다.`)
+  } catch (e) {
+    console.error('Failed to accept friend request:', e)
+    showWarning('친구 요청 수락에 실패했습니다.')
   }
-  if (schedule.isTagged) {
-    text = `${text} (by ${schedule.owner})`
-  }
-  return text
 }
 
+async function rejectFriendRequest(req: { fromMember: { id: number | null; name: string } }) {
+  if (!friendInfo.value || !req.fromMember.id) return
+  if (!await confirm(`${req.fromMember.name}님의 친구 요청을 거절하시겠습니까?`, '요청 거절')) return
+  try {
+    await friendApi.rejectFriendRequest(req.fromMember.id)
+    friendInfo.value.pendingRequestsTo = friendInfo.value.pendingRequestsTo.filter(
+      (r) => r.fromMember.id !== req.fromMember.id
+    )
+    notificationStore.fetchFriendRequestCount()
+    toastSuccess(`${req.fromMember.name}님의 친구 요청을 거절했습니다.`)
+  } catch (e) {
+    console.error('Failed to reject friend request:', e)
+    showWarning('친구 요청 거절에 실패했습니다.')
+  }
+}
 
-function printScheduleTime(startDateTime: string) {
-  const date = new Date(startDateTime)
-  const now = new Date()
-  if (date.toLocaleDateString() !== now.toLocaleDateString()) {
-    return ''
+async function cancelRequest(req: { toMember: { id: number | null; name: string } }) {
+  if (!friendInfo.value || !req.toMember.id) return
+  if (!await confirm(`${req.toMember.name}님에게 보낸 요청을 취소하시겠습니까?`, '요청 취소')) return
+  try {
+    await friendApi.cancelFriendRequest(req.toMember.id)
+    await loadFriendInfo()
+    toastSuccess('친구 요청이 취소되었습니다.')
+  } catch (e) {
+    console.error('Failed to cancel friend request:', e)
+    showWarning('친구 요청 취소에 실패했습니다.')
   }
-  if (date.getHours() === 0 && date.getMinutes() === 0) {
-    return ''
-  }
-  return date.toLocaleTimeString('ko-KR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }
 
 // Pin/Unpin friend
@@ -176,8 +159,8 @@ async function pinFriend(member: { id: number | null; name: string }) {
     })
     try {
       await friendApi.pinFriend(member.id)
-    } catch (error) {
-      console.error('Failed to pin friend:', error)
+    } catch (e) {
+      console.error('Failed to pin friend:', e)
       friend.pinOrder = null
       sortFriendsByPinOrder()
       showWarning('친구 고정에 실패했습니다.')
@@ -197,8 +180,8 @@ async function unpinFriend(member: { id: number | null; name: string }) {
     })
     try {
       await friendApi.unpinFriend(member.id)
-    } catch (error) {
-      console.error('Failed to unpin friend:', error)
+    } catch (e) {
+      console.error('Failed to unpin friend:', e)
       friend.pinOrder = oldPinOrder
       sortFriendsByPinOrder()
       showWarning('친구 고정 해제에 실패했습니다.')
@@ -206,7 +189,6 @@ async function unpinFriend(member: { id: number | null; name: string }) {
   }
 }
 
-// Sort friends by pin order
 function sortFriendsByPinOrder() {
   if (!friendInfo.value) return
   friendInfo.value.friends.sort((a, b) => {
@@ -220,6 +202,69 @@ function sortFriendsByPinOrder() {
     }
     return 0
   })
+}
+
+// Friend management actions
+async function addFamily(member: { id: number | null; name: string }) {
+  if (!friendInfo.value || !member.id) return
+  const alreadySent = friendInfo.value.pendingRequestsFrom.some((r) => r.toMember.id === member.id)
+  if (alreadySent) {
+    showWarning('이미 가족 요청을 보낸 상태입니다.')
+    return
+  }
+  closeDropdown()
+  try {
+    await friendApi.sendFamilyRequest(member.id)
+    await loadFriendInfo()
+    toastSuccess(`${member.name}님에게 가족 요청을 보냈습니다.`)
+  } catch (e) {
+    console.error('Failed to send family request:', e)
+    showWarning('가족 요청 전송에 실패했습니다.')
+  }
+}
+
+async function unfriend(member: { id: number | null; name: string }) {
+  if (!friendInfo.value || !member.id) return
+  if (await confirmDelete(`정말로 [${member.name}]님을 친구목록에서 삭제하시겠습니까?`)) {
+    closeDropdown()
+    try {
+      await friendApi.unfriend(member.id)
+      friendInfo.value.friends = friendInfo.value.friends.filter((f) => f.member.id !== member.id)
+      toastSuccess(`${member.name}님을 친구 목록에서 삭제했습니다.`)
+    } catch (e) {
+      console.error('Failed to unfriend:', e)
+      showWarning('친구 삭제에 실패했습니다.')
+    }
+  } else {
+    closeDropdown()
+  }
+}
+
+// Dropdown management
+function toggleDropdown(memberId: number, event: Event) {
+  event.stopPropagation()
+  if (openDropdownId.value === memberId) {
+    openDropdownId.value = null
+  } else {
+    openDropdownId.value = memberId
+    const button = event.currentTarget as HTMLElement
+    const rect = button.getBoundingClientRect()
+    dropdownPosition.value = {
+      top: rect.bottom + window.scrollY + 4,
+      left: rect.right + window.scrollX - 128 // 128px = dropdown width (w-32)
+    }
+  }
+}
+
+function closeDropdown() {
+  openDropdownId.value = null
+}
+
+// Navigate to friend's duty
+function moveTo(memberId?: number | null) {
+  if (isDragging) return
+  if (!memberId) return
+  router.push(`/duty/${memberId}`)
 }
 
 // Search modal
@@ -254,8 +299,8 @@ async function search() {
     searchResult.value = response.data.content
     searchTotalPage.value = response.data.totalPages
     searchTotalElements.value = response.data.totalElements
-  } catch (error) {
-    console.error('Failed to search friends:', error)
+  } catch (e) {
+    console.error('Failed to search friends:', e)
     searchResult.value = []
   } finally {
     searchLoading.value = false
@@ -267,13 +312,11 @@ async function requestFriend(member: FriendDto) {
   if (!await confirm(`${member.name}님에게 친구 요청을 보내시겠습니까?`, '친구 요청')) return
   try {
     await friendApi.sendFriendRequest(member.id)
-    // Remove from search results to show it's been requested
     searchResult.value = searchResult.value.filter((m) => m.id !== member.id)
-    // Refresh friend requests section
-    await loadFriendsDashboard()
+    await loadFriendInfo()
     toastSuccess(`${member.name}님에게 친구 요청을 보냈습니다.`)
-  } catch (error) {
-    console.error('Failed to send friend request:', error)
+  } catch (e) {
+    console.error('Failed to send friend request:', e)
     showWarning('친구 요청을 보내는데 실패했습니다.')
   }
 }
@@ -297,7 +340,7 @@ function goToPage(page: number) {
   search()
 }
 
-// Initialize SortableJS for friend list
+// Sortable
 function initFriendSortable() {
   if (!friendListRef.value) {
     if (friendSortable) {
@@ -327,7 +370,6 @@ function initFriendSortable() {
     onEnd: () => {
       friendSectionRef.value?.classList.remove('friend-section-sorting')
       updateFriendsPin()
-      // Delay resetting isDragging to prevent click event from firing
       setTimeout(() => {
         isDragging = false
       }, 100)
@@ -335,7 +377,6 @@ function initFriendSortable() {
   })
 }
 
-// Update friend pin order after drag
 async function updateFriendsPin() {
   if (!friendListRef.value || !friendInfo.value) return
 
@@ -354,13 +395,12 @@ async function updateFriendsPin() {
 
   try {
     await friendApi.updateFriendsPinOrder(friendIds)
-  } catch (error) {
-    console.error('Failed to update friend pin order:', error)
+  } catch (e) {
+    console.error('Failed to update friend pin order:', e)
     showWarning('친구 순서 변경에 실패했습니다.')
   }
 }
 
-// Apply friend order based on IDs
 function applyFriendOrder(friendIds: number[]) {
   if (!friendInfo.value || friendIds.length === 0) return
 
@@ -372,7 +412,6 @@ function applyFriendOrder(friendIds: number[]) {
   friendInfo.value.friends = [...pinnedFriends, ...unpinnedFriends] as typeof friendInfo.value.friends
 }
 
-// Destroy sortable on unmount
 function destroyFriendSortable() {
   if (friendSortable) {
     friendSortable.destroy()
@@ -380,175 +419,184 @@ function destroyFriendSortable() {
   }
 }
 
-// Load dashboard data when logged in
 onMounted(async () => {
-  if (authStore.isLoggedIn) {
-    // Load both APIs in parallel
-    await Promise.all([loadMyDashboard(), loadFriendsDashboard()])
-    // Initialize sortable after data is loaded
-    nextTick(() => {
-      initFriendSortable()
-    })
-  }
+  document.addEventListener('click', closeDropdown)
+  await loadFriendInfo()
+  nextTick(() => {
+    initFriendSortable()
+  })
 })
 
-// Cleanup on unmount
 onUnmounted(() => {
+  document.removeEventListener('click', closeDropdown)
   destroyFriendSortable()
 })
-
-// Watch for login state changes
-watch(
-  () => authStore.isLoggedIn,
-  async (isLoggedIn) => {
-    if (isLoggedIn) {
-      await Promise.all([loadMyDashboard(), loadFriendsDashboard()])
-      // Initialize sortable after data is loaded
-      nextTick(() => {
-        initFriendSortable()
-      })
-    } else {
-      // Clear data on logout
-      myInfo.value = null
-      friendInfo.value = null
-      friendInfoInitialized.value = false
-      destroyFriendSortable()
-    }
-  }
-)
 </script>
 
 <template>
-  <!-- Guest Dashboard - Full width -->
-  <IntroSection v-if="!authStore.isLoggedIn" />
-
-  <!-- Logged-in Dashboard -->
-  <div v-else class="max-w-4xl mx-auto px-4 py-6">
-      <!-- My Info Section -->
-      <div
-        class="rounded-2xl shadow-sm border mb-6 overflow-hidden"
-        :style="{
-          backgroundColor: 'var(--dp-bg-card)',
-          borderColor: 'var(--dp-border-primary)'
-        }"
-      >
-        <!-- Header -->
-        <div
-          class="group px-5 py-3 bg-gradient-to-r from-gray-700 to-gray-800 flex items-center justify-between cursor-pointer hover:from-gray-600 hover:to-gray-700 transition-all"
-          @click="moveTo()"
-        >
-          <div class="flex items-center gap-3">
-            <ProfileAvatar
-              :member-id="myInfo?.member.id"
-              :name="myInfo?.member.name"
-              :has-profile-photo="myInfo?.member.hasProfilePhoto"
-              :profile-photo-version="myInfo?.member.profilePhotoVersion"
-              size="md"
-            />
-            <span class="text-lg font-bold text-white">{{ myInfo?.member.name || '로딩중...' }}</span>
-          </div>
-          <ChevronRight class="w-5 h-5 text-gray-400 group-hover:text-white group-hover:translate-x-1 transition-all" />
+  <div class="max-w-4xl mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl flex items-center justify-center">
+          <Users class="w-5 h-5 text-white" />
         </div>
+        <h1 class="text-xl font-bold" :style="{ color: 'var(--dp-text-primary)' }">친구 관리</h1>
+      </div>
+      <button
+        class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-slate-700 to-slate-800 text-white rounded-xl hover:from-slate-800 hover:to-slate-900 transition-all shadow-lg font-medium cursor-pointer"
+        @click="openSearchModal"
+      >
+        <UserPlus class="w-4 h-4" />
+        친구 추가
+      </button>
+    </div>
 
-        <!-- Content -->
-        <div class="p-5">
-          <!-- Error state -->
-          <div v-if="myInfoError" class="text-center py-4 text-red-500">
-            {{ myInfoError }}
+    <!-- Loading -->
+    <div v-if="loading" class="flex justify-center py-16">
+      <div class="w-8 h-8 border-3 rounded-full animate-spin" :style="{ borderColor: 'var(--dp-border-secondary)', borderTopColor: 'var(--dp-text-primary)' }"></div>
+    </div>
+
+    <!-- Error -->
+    <div v-else-if="error" class="text-center py-16 text-red-500">
+      {{ error }}
+    </div>
+
+    <template v-else-if="friendInfo">
+      <!-- Friend Request Section -->
+      <div
+        v-if="hasPendingRequests"
+        class="rounded-2xl shadow-sm border mb-6 overflow-hidden"
+        :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }"
+      >
+        <div class="bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-3">
+          <div class="flex items-center gap-2">
+            <UserCheck class="w-5 h-5 text-white" />
+            <span class="text-white font-bold">친구 요청</span>
+            <span class="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs text-white">
+              {{ friendInfo.pendingRequestsTo.length + friendInfo.pendingRequestsFrom.length }}
+            </span>
           </div>
-          <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <!-- Left column: Date & Duty -->
-            <div class="space-y-3">
-              <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Calendar class="w-5 h-5" :style="{ color: 'var(--dp-text-muted)' }" />
-                <span class="font-medium">{{ today }}</span>
+        </div>
+        <div class="p-4 space-y-3">
+          <!-- Received Requests -->
+          <div
+            v-for="req in friendInfo.pendingRequestsTo"
+            :key="'to-' + req.fromMember.id"
+            class="p-4 rounded-xl friend-request-received"
+          >
+            <div class="flex justify-between items-center">
+              <div class="font-medium flex items-center gap-3 friend-request-name">
+                <div class="relative">
+                  <ProfileAvatar
+                    :member-id="req.fromMember.id"
+                    :has-profile-photo="req.fromMember.hasProfilePhoto"
+                    :profile-photo-version="req.fromMember.profilePhotoVersion"
+                    size="md"
+                  />
+                  <div class="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center ring-2 ring-white" :class="req.requestType === 'FAMILY_REQUEST' ? 'bg-amber-500' : 'bg-blue-500'">
+                    <Home v-if="req.requestType === 'FAMILY_REQUEST'" class="w-3 h-3 text-white" />
+                    <UserPlus v-else class="w-3 h-3 text-white" />
+                  </div>
+                </div>
+                <div>
+                  <p :style="{ color: 'var(--dp-text-primary)' }">{{ req.fromMember.name }}</p>
+                  <p class="text-xs" :style="{ color: 'var(--dp-text-secondary)' }">
+                    {{ req.requestType === 'FAMILY_REQUEST' ? '가족 요청' : '친구 요청' }}
+                  </p>
+                </div>
               </div>
-
-              <div class="flex items-center gap-2">
-                <Briefcase class="w-5 h-5" :style="{ color: 'var(--dp-text-muted)' }" />
-                <span :style="{ color: 'var(--dp-text-secondary)' }">근무:</span>
-                <template v-if="myInfoLoading">
-                  <div class="w-4 h-4 border-2 rounded-full animate-spin" :style="{ borderColor: 'var(--dp-border-secondary)', borderTopColor: 'var(--dp-text-primary)' }"></div>
-                </template>
-                <template v-else-if="myInfo?.duty">
-                  <span
-                    class="px-2.5 py-0.5 rounded-md font-semibold text-sm"
-                    :style="{
-                      backgroundColor: myInfo.duty.dutyColor || '#666',
-                      color: isLightColor(myInfo.duty.dutyColor) ? '#1f2937' : '#ffffff'
-                    }"
-                  >
-                    {{ myInfo.duty.dutyType || '휴무' }}
-                  </span>
-                </template>
-                <span v-else :style="{ color: 'var(--dp-text-muted)' }">없음</span>
+              <div class="flex gap-2">
+                <button
+                  class="px-4 py-2 text-sm font-medium bg-green-500 text-white rounded-lg hover:bg-green-600 transition shadow-sm cursor-pointer"
+                  @click="acceptFriendRequest(req)"
+                >
+                  승인
+                </button>
+                <button
+                  class="px-4 py-2 text-sm font-medium border border-red-200 rounded-lg hover:bg-red-50 transition cursor-pointer"
+                  :style="{ backgroundColor: 'var(--dp-bg-card)', color: '#dc3545' }"
+                  @click="rejectFriendRequest(req)"
+                >
+                  거절
+                </button>
               </div>
             </div>
+          </div>
 
-            <!-- Right column: Today's schedules -->
-            <div class="border-t pt-4 md:border-t-0 md:pt-0 md:border-l md:pl-5" :style="{ borderColor: 'var(--dp-border-primary)' }">
-              <div class="flex items-center gap-2 mb-2">
-                <ClipboardList class="w-5 h-5" :style="{ color: 'var(--dp-text-muted)' }" />
-                <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">오늘 일정</span>
-              </div>
-              <template v-if="myInfoLoading">
-                <div class="flex justify-center py-3">
-                  <div class="w-5 h-5 border-2 rounded-full animate-spin" :style="{ borderColor: 'var(--dp-border-secondary)', borderTopColor: 'var(--dp-text-primary)' }"></div>
+          <!-- Sent Requests -->
+          <div
+            v-for="req in friendInfo.pendingRequestsFrom"
+            :key="'from-' + req.toMember.id"
+            class="p-4 rounded-xl friend-request-sent"
+          >
+            <div class="flex justify-between items-center">
+              <div class="font-medium flex items-center gap-3 friend-request-name">
+                <div class="relative">
+                  <ProfileAvatar
+                    :member-id="req.toMember.id"
+                    :has-profile-photo="req.toMember.hasProfilePhoto"
+                    :profile-photo-version="req.toMember.profilePhotoVersion"
+                    size="md"
+                  />
+                  <div class="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center bg-amber-500 ring-2 ring-white">
+                    <Home v-if="req.requestType === 'FAMILY_REQUEST'" class="w-3 h-3 text-white" />
+                    <UserPlus v-else class="w-3 h-3 text-white" />
+                  </div>
                 </div>
-              </template>
-              <ul v-else class="space-y-1">
-                <li
-                  v-for="schedule in myInfo?.schedules || []"
-                  :key="schedule.id"
-                  class="py-1.5 border-b last:border-0 flex items-center justify-between"
-                  :style="{ borderColor: 'var(--dp-border-primary)', color: 'var(--dp-text-primary)' }"
-                >
-                  <span class="truncate">{{ printSchedule(schedule) }}</span>
-                  <span class="ml-2 text-sm flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }">{{ printScheduleTime(schedule.startDateTime) }}</span>
-                </li>
-                <li v-if="!myInfo?.schedules?.length" class="text-sm" :style="{ color: 'var(--dp-text-muted)' }">
-                  오늘의 일정이 없습니다.
-                </li>
-              </ul>
+                <div>
+                  <p :style="{ color: 'var(--dp-text-primary)' }">{{ req.toMember.name }}</p>
+                  <p class="text-xs" :style="{ color: 'var(--dp-text-secondary)' }">
+                    {{ req.requestType === 'FAMILY_REQUEST' ? '가족 요청' : '친구 요청' }} · 대기 중
+                  </p>
+                </div>
+              </div>
+              <button
+                class="px-4 py-2 text-sm font-medium border border-amber-300 rounded-lg hover:bg-amber-50 transition cursor-pointer"
+                :style="{ backgroundColor: 'var(--dp-bg-card)', color: '#b45309' }"
+                @click="cancelRequest(req)"
+              >
+                요청 취소
+              </button>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Friends List Section -->
-      <div ref="friendSectionRef" class="friend-section rounded-2xl shadow-sm border overflow-hidden" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }">
-        <div
-          class="group bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-3 cursor-pointer hover:from-slate-600 hover:to-slate-700 transition-all"
-          @click="router.push('/friends')"
-        >
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <Users class="w-5 h-5 text-white" />
-              <span class="text-white font-bold">친구 목록</span>
-              <span v-if="friendInfo?.friends.length" class="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs text-white">
-                {{ friendInfo.friends.length }}
-              </span>
-            </div>
-            <ChevronRight class="w-5 h-5 text-gray-400 group-hover:text-white group-hover:translate-x-1 transition-all" />
+      <div
+        ref="friendSectionRef"
+        class="friend-section rounded-2xl shadow-sm border"
+        :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }"
+      >
+        <div class="bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-3">
+          <div class="flex items-center gap-2">
+            <Users class="w-5 h-5 text-white" />
+            <span class="text-white font-bold">친구 목록</span>
+            <span v-if="friendInfo.friends.length" class="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs text-white">
+              {{ friendInfo.friends.length }}
+            </span>
           </div>
         </div>
         <div class="p-5">
-          <!-- Error state -->
-          <div v-if="friendInfoError" class="text-center py-4 text-red-500">
-            {{ friendInfoError }}
+          <div v-if="sortedFriends.length === 0" class="text-center py-8">
+            <Users class="w-12 h-12 mx-auto mb-3" :style="{ color: 'var(--dp-text-muted)' }" />
+            <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">아직 친구가 없습니다.</p>
+            <button
+              class="mt-4 px-4 py-2 text-sm font-medium bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition cursor-pointer"
+              @click="openSearchModal"
+            >
+              친구 추가하기
+            </button>
           </div>
-          <template v-else-if="friendInfoLoading">
-            <div class="flex justify-center py-10">
-              <div class="w-8 h-8 border-3 rounded-full animate-spin" :style="{ borderColor: 'var(--dp-border-secondary)', borderTopColor: 'var(--dp-text-primary)' }"></div>
-            </div>
-          </template>
+
           <div v-else ref="friendListRef" class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
             <!-- Friend Cards -->
             <div
               v-for="friend in sortedFriends"
               :key="friend.member.id ?? 'unknown'"
               :data-member-id="friend.member.id"
-              class="friend-card relative overflow-hidden rounded-xl sm:rounded-2xl cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
+              class="friend-card relative rounded-xl sm:rounded-2xl cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
               :class="[
                 friend.pinOrder
                   ? 'pinned-friend pinned-friend-highlight border-2 shadow-md'
@@ -558,7 +606,7 @@ watch(
               @click="moveTo(friend.member.id)"
             >
               <div class="flex p-3">
-                <!-- Left section: Large Profile -->
+                <!-- Left section: Profile -->
                 <div class="flex-shrink-0 mr-3">
                   <ProfileAvatar
                     :member-id="friend.member.id"
@@ -578,45 +626,32 @@ watch(
                       <Home v-if="friend.isFamily" class="w-3.5 h-3.5 flex-shrink-0 text-amber-500" title="Family member" />
                     </div>
                     <div class="flex items-center flex-shrink-0" @click.stop>
-                    <!-- Pin/Unpin button -->
-                    <button
-                      v-if="friend.pinOrder"
-                      class="p-1 text-amber-500 hover:text-amber-600 transition cursor-pointer"
-                      @click.stop="unpinFriend(friend.member)"
-                      title="고정 해제"
-                    >
-                      <Star class="w-4 h-4" fill="currentColor" />
-                    </button>
-                    <button
-                      v-else
-                      class="p-1 text-gray-300 hover:text-amber-500 transition cursor-pointer"
-                      @click.stop="pinFriend(friend.member)"
-                      title="고정"
-                    >
-                      <Star class="w-4 h-4" />
-                    </button>
-                  </div>
-                  </div>
-
-                  <!-- Duty info -->
-                  <div class="flex items-center gap-1.5 mb-1.5">
-                    <Briefcase class="w-3.5 h-3.5 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
-                    <span class="text-xs" :style="{ color: 'var(--dp-text-secondary)' }">근무:</span>
-                    <span v-if="friend.duty" class="text-xs font-medium truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ friend.duty.dutyType || '휴무' }}</span>
-                    <span v-else class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">-</span>
-                  </div>
-
-                  <!-- Schedules -->
-                  <div v-if="friend.schedules && friend.schedules.length" class="space-y-1">
-                    <div
-                      v-for="schedule in friend.schedules.slice(0, 2)"
-                      :key="schedule.id"
-                      class="text-xs py-1 px-1.5 rounded-md truncate friend-schedule-item"
-                    >
-                      {{ printSchedule(schedule) }}
-                    </div>
-                    <div v-if="friend.schedules.length > 2" class="text-xs pl-1" :style="{ color: 'var(--dp-text-muted)' }">
-                      +{{ friend.schedules.length - 2 }}개 더보기
+                      <!-- Pin/Unpin button -->
+                      <button
+                        v-if="friend.pinOrder"
+                        class="p-1 text-amber-500 hover:text-amber-600 transition cursor-pointer"
+                        @click.stop="unpinFriend(friend.member)"
+                        title="고정 해제"
+                      >
+                        <Star class="w-4 h-4" fill="currentColor" />
+                      </button>
+                      <button
+                        v-else
+                        class="p-1 text-gray-300 hover:text-amber-500 transition cursor-pointer"
+                        @click.stop="pinFriend(friend.member)"
+                        title="고정"
+                      >
+                        <Star class="w-4 h-4" />
+                      </button>
+                      <!-- Dropdown toggle -->
+                      <button
+                        v-if="friend.member.id"
+                        class="p-1.5 rounded-lg transition hover:bg-opacity-80 cursor-pointer"
+                        :style="{ color: 'var(--dp-text-muted)' }"
+                        @click="toggleDropdown(friend.member.id, $event)"
+                      >
+                        <MoreVertical class="w-5 h-5" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -632,22 +667,41 @@ watch(
                 </div>
               </div>
             </div>
-
-            <!-- Add Friend Card -->
-            <div
-              v-if="friendInfoInitialized"
-              class="group rounded-xl sm:rounded-2xl border-2 border-dashed cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all duration-300 flex flex-col items-center justify-center min-h-[80px] sm:min-h-[120px]"
-              :style="{ borderColor: 'var(--dp-border-secondary)' }"
-              @click="openSearchModal"
-            >
-              <div class="w-8 h-8 sm:w-12 sm:h-12 group-hover:bg-blue-100 rounded-full flex items-center justify-center mb-1 sm:mb-2 transition-colors" :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }">
-                <UserPlus class="w-4 h-4 sm:w-6 sm:h-6 group-hover:text-blue-500 transition-colors" :style="{ color: 'var(--dp-text-muted)' }" />
-              </div>
-              <span class="font-semibold text-xs sm:text-sm group-hover:text-blue-600 transition-colors" :style="{ color: 'var(--dp-text-muted)' }">친구 추가</span>
-            </div>
           </div>
         </div>
       </div>
+    </template>
+
+    <!-- Friend Dropdown Menu (Teleported to body) -->
+    <Teleport to="body">
+      <div
+        v-if="openDropdownId && openDropdownFriend"
+        class="fixed w-32 border rounded-xl shadow-xl z-[9999] overflow-hidden"
+        :style="{
+          top: dropdownPosition.top + 'px',
+          left: dropdownPosition.left + 'px',
+          backgroundColor: 'var(--dp-bg-card)',
+          borderColor: 'var(--dp-border-primary)'
+        }"
+        @click.stop
+      >
+        <button
+          v-if="!openDropdownFriend.isFamily"
+          class="w-full px-3 py-2.5 text-left text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 transition cursor-pointer"
+          @click="addFamily(openDropdownFriend.member)"
+        >
+          <Home class="w-4 h-4" />
+          가족 등록
+        </button>
+        <button
+          class="w-full px-3 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition cursor-pointer"
+          @click="unfriend(openDropdownFriend.member)"
+        >
+          <Trash2 class="w-4 h-4" />
+          친구 삭제
+        </button>
+      </div>
+    </Teleport>
 
     <!-- Search Modal -->
     <Teleport to="body">

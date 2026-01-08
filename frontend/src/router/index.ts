@@ -45,6 +45,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/friends',
+    name: 'friends',
+    component: () => import('@/views/member/FriendsView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/team',
     name: 'team',
     component: () => import('@/views/team/TeamView.vue'),
@@ -54,6 +60,12 @@ const routes: RouteRecordRaw[] = [
     path: '/team/manage/:teamId',
     name: 'team-manage',
     component: () => import('@/views/team/TeamManageView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/notifications',
+    name: 'notifications',
+    component: () => import('@/views/notification/NotificationListView.vue'),
     meta: { requiresAuth: true },
   },
   // Admin routes

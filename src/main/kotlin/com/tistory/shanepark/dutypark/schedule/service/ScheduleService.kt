@@ -11,6 +11,7 @@ import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
+import com.tistory.shanepark.dutypark.notification.event.ScheduleTaggedEvent
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSaveDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
@@ -18,6 +19,7 @@ import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.schedule.timeparsing.service.ScheduleTimeParsingQueueManager
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -35,6 +37,7 @@ class ScheduleService(
     private val attachmentService: AttachmentService,
     private val fileSystemService: FileSystemService,
     private val pathResolver: StoragePathResolver,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
     private val log = logger()
 
@@ -90,6 +93,25 @@ class ScheduleService(
             }
 
         return array
+    }
+
+    @Transactional(readOnly = true)
+    fun getScheduleBasicInfo(loginMember: LoginMember?, scheduleId: UUID): Map<String, Any> {
+        val schedule = scheduleRepository.findById(scheduleId).orElseThrow()
+        val owner = schedule.member
+        val isTagged = loginMember != null && schedule.tags.any { it.member.id == loginMember.id }
+
+        if (!isTagged) {
+            friendService.checkVisibility(loginMember, owner, scheduleVisibilityCheck = true)
+        }
+
+        return mapOf(
+            "id" to schedule.id.toString(),
+            "memberId" to owner.id!!,
+            "memberName" to owner.name,
+            "startDateTime" to schedule.startDateTime.toString(),
+            "content" to schedule.content
+        )
     }
 
     fun createSchedule(loginMember: LoginMember, scheduleSaveDto: ScheduleSaveDto): Schedule {
@@ -210,6 +232,13 @@ class ScheduleService(
         }
 
         schedule.addTag(friend)
+        eventPublisher.publishEvent(
+            ScheduleTaggedEvent(
+                scheduleId = schedule.id,
+                ownerId = schedule.member.id!!,
+                taggedMemberId = friend.id!!
+            )
+        )
     }
 
     fun untagFriend(loginMember: LoginMember, scheduleId: UUID, memberId: Long) {

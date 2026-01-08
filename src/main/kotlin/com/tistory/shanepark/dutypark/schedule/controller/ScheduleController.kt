@@ -40,6 +40,14 @@ class ScheduleController(
         )
     }
 
+    @GetMapping("/{id}")
+    fun getSchedule(
+        @Login(required = false) loginMember: LoginMember?,
+        @PathVariable id: UUID
+    ): Map<String, Any> {
+        return scheduleService.getScheduleBasicInfo(loginMember, id)
+    }
+
     @GetMapping("/{id}/search")
     fun searchSchedule(
         @Login(required = false) loginMember: LoginMember?,

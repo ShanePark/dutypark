@@ -9,14 +9,12 @@ import { useEscapeKey } from '@/composables/useEscapeKey'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import type { SimpleTeam, TeamNameCheckResult } from '@/types'
 import {
-  Shield,
   Building2,
   Users,
   Search,
   Plus,
   ChevronLeft,
   ChevronRight,
-  RefreshCw,
   Settings,
   X,
   Check,
@@ -196,46 +194,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
-    <!-- Admin Header -->
-    <div :style="{ backgroundColor: 'var(--dp-bg-primary)', borderBottom: '1px solid var(--dp-border-primary)' }">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center">
-              <Shield class="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 class="text-xl font-bold" :style="{ color: 'var(--dp-text-primary)' }">팀 관리</h1>
-              <p class="text-sm" :style="{ color: 'var(--dp-text-muted)' }">팀 생성 및 관리</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2 flex-wrap">
-            <button
-              @click="refreshData"
-              class="p-2 rounded-lg transition"
-              :class="{ 'animate-spin': isLoading }"
-              :style="{ color: 'var(--dp-text-muted)', backgroundColor: isLoading ? '' : 'transparent' }"
-              @mouseover="(e: Event) => !isLoading && setHoverBgWithColor(e, 'var(--dp-bg-hover)', 'var(--dp-text-secondary)')"
-              @mouseleave="(e: Event) => !isLoading && clearHoverBgWithColor(e, 'transparent', 'var(--dp-text-muted)')"
-            >
-              <RefreshCw class="w-5 h-5" />
-            </button>
-            <button
-              class="p-2 rounded-lg transition"
-              :style="{ color: 'var(--dp-text-muted)' }"
-              @mouseover="(e: Event) => setHoverBgWithColor(e, 'var(--dp-bg-hover)', 'var(--dp-text-secondary)')"
-              @mouseleave="(e: Event) => clearHoverBgWithColor(e, 'transparent', 'var(--dp-text-muted)')"
-            >
-              <Settings class="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <!-- Admin Navigation -->
+  <div class="max-w-4xl mx-auto px-4 py-6">
+    <!-- Admin Navigation -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <router-link
           to="/admin"
@@ -454,7 +414,6 @@ onMounted(() => {
           </nav>
         </div>
       </div>
-    </div>
 
     <!-- New Team Modal -->
     <div

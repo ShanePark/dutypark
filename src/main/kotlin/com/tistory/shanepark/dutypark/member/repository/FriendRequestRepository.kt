@@ -20,4 +20,6 @@ interface FriendRequestRepository : JpaRepository<FriendRequest, Long> {
     @EntityGraph(attributePaths = ["fromMember", "toMember"])
     fun findAllByFromMemberAndStatus(fromMember: Member, status: FriendRequestStatus): List<FriendRequest>
 
+    fun countByToMemberIdAndStatus(toMemberId: Long, status: FriendRequestStatus): Long
+
 }
