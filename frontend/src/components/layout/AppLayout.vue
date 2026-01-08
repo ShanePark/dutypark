@@ -20,10 +20,10 @@ const showLayout = computed(() => {
     <ImpersonationBanner v-if="authStore.isImpersonating" />
     <!-- Header -->
     <AppHeader v-if="showLayout && authStore.isLoggedIn" />
-    <!-- pb-20: 80px for footer (64px) + safe area (~34px on iPhone), only when logged in -->
+    <!-- pt-12/14: header height, pb-20: footer (64px) + safe area (~34px on iPhone), only when logged in -->
     <main
       class="flex-1"
-      :class="authStore.isLoggedIn ? 'pb-20 sm:pb-16' : ''"
+      :class="authStore.isLoggedIn ? 'pt-12 sm:pt-14 pb-20 sm:pb-16' : ''"
       :style="authStore.isLoggedIn ? { paddingBottom: 'max(5rem, calc(4rem + env(safe-area-inset-bottom)))' } : {}"
     >
       <slot />

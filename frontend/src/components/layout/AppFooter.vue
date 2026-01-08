@@ -15,11 +15,8 @@ const navItems = computed(() => {
       label: '내 달력',
     },
     {path: '/team', icon: 'users', label: '내 팀'},
+    {path: '/member', icon: 'settings', label: '설정'},
   ]
-  if (authStore.isAdmin) {
-    items.push({path: '/admin', icon: 'admin', label: '관리'})
-  }
-  items.push({path: '/member', icon: 'settings', label: '설정'})
   return items
 })
 

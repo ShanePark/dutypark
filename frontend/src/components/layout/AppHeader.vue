@@ -4,14 +4,16 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import { useSwal } from '@/composables/useSwal'
-import { Menu, Home, Calendar, Users, UserPlus, Bell, Shield, Settings, LogOut } from 'lucide-vue-next'
+import { Menu, Home, Calendar, Users, UserPlus, Bell, Shield, Settings, LogOut, Sun, Moon } from 'lucide-vue-next'
 import NotificationBell from '@/components/common/NotificationBell.vue'
 import NotificationDropdown from '@/components/common/NotificationDropdown.vue'
+import { useThemeStore } from '@/stores/theme'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
+const themeStore = useThemeStore()
 const { confirm } = useSwal()
 
 function isActiveRoute(path: string): boolean {
@@ -88,14 +90,25 @@ onUnmounted(() => {
 
 <template>
   <header
-    class="shadow-sm border-b header-bg"
+    class="fixed top-0 left-0 right-0 z-50 shadow-sm border-b header-bg"
   >
     <div class="max-w-4xl mx-auto px-4">
-      <div class="flex justify-between items-center h-14">
+      <div class="flex justify-between items-center h-12 sm:h-14">
         <router-link to="/" class="text-xl font-bold header-title">
           Dutypark
         </router-link>
         <nav class="flex items-center gap-1">
+          <!-- Theme Toggle (always visible) -->
+          <button
+            type="button"
+            class="theme-toggle-btn cursor-pointer p-2 rounded-full transition-all duration-150 min-h-[44px] min-w-[44px] flex items-center justify-center"
+            @click="themeStore.toggleTheme()"
+            :aria-label="themeStore.isDark ? '라이트 모드로 전환' : '다크 모드로 전환'"
+          >
+            <Moon v-if="!themeStore.isDark" class="w-5 h-5" />
+            <Sun v-else class="w-5 h-5 text-amber-400" />
+          </button>
+
           <template v-if="authStore.isLoggedIn">
             <div class="relative">
               <NotificationBell
@@ -220,6 +233,15 @@ onUnmounted(() => {
 
 .header-title {
   color: var(--dp-text-primary);
+}
+
+.theme-toggle-btn {
+  color: var(--dp-text-muted);
+}
+
+.theme-toggle-btn:hover {
+  color: var(--dp-text-primary);
+  background-color: var(--dp-bg-hover);
 }
 
 .menu-btn {

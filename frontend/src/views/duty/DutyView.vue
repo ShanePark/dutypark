@@ -1516,7 +1516,7 @@ async function showExcelUploadModal() {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto px-2 sm:px-4 py-4">
+  <div class="max-w-4xl mx-auto px-2 sm:px-4 py-2 sm:py-4">
     <!-- Loading State -->
     <div v-if="isLoading" class="flex items-center justify-center py-20">
       <Loader2 class="w-8 h-8 text-blue-500 animate-spin" />
