@@ -298,6 +298,33 @@ class NotificationServiceTest {
     }
 
     @Test
+    fun `createNotification for SCHEDULE_TAGGED includes schedule title in notification title`() {
+        // Given
+        val scheduleTitle = "팀 회의"
+        whenever(memberRepository.findById(testMember.id!!))
+            .thenReturn(Optional.of(testMember))
+        whenever(memberRepository.findById(actorMember.id!!))
+            .thenReturn(Optional.of(actorMember))
+        whenever(notificationRepository.save(any<Notification>()))
+            .thenAnswer { it.arguments[0] }
+
+        // When
+        val result = notificationService.createNotification(
+            memberId = testMember.id!!,
+            type = NotificationType.SCHEDULE_TAGGED,
+            actorId = actorMember.id,
+            referenceType = NotificationReferenceType.SCHEDULE,
+            referenceId = UUID.randomUUID().toString(),
+            content = scheduleTitle
+        )
+
+        // Then
+        assertThat(result.title).isEqualTo("actorUser님의 [팀 회의] 일정에 태그되었습니다")
+        assertThat(result.type).isEqualTo(NotificationType.SCHEDULE_TAGGED)
+        assertThat(result.content).isEqualTo(scheduleTitle)
+    }
+
+    @Test
     fun `enrichWithActorInfo handles empty actor list`() {
         // Given
         val notification = createNotification(testMember, actorId = null)

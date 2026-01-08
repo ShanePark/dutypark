@@ -6,6 +6,7 @@ import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/ko'
 import { useNotificationStore } from '@/stores/notification'
+import { useAuthStore } from '@/stores/auth'
 import { useNotificationNavigation } from '@/composables/useNotificationNavigation'
 import type { NotificationDto } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
@@ -26,6 +27,7 @@ const emit = defineEmits<{
 
 const router = useRouter()
 const notificationStore = useNotificationStore()
+const authStore = useAuthStore()
 const { navigateToNotification } = useNotificationNavigation()
 
 const displayNotifications = computed(() => {
@@ -87,12 +89,16 @@ function handleOverlayClick() {
     </Transition>
   </Teleport>
 
-  <Transition name="dropdown">
-    <div
-      v-if="visible"
-      class="notification-dropdown fixed sm:absolute right-4 sm:right-0 top-16 sm:top-full sm:mt-2 w-[calc(100vw-2rem)] sm:w-96 max-w-96 rounded-lg shadow-lg z-50 overflow-hidden"
-      @click.stop
-    >
+  <Teleport to="body">
+    <Transition name="dropdown">
+      <div
+        v-if="visible"
+        :class="[
+          'notification-dropdown fixed right-4 sm:right-4 md:right-auto md:left-1/2 md:translate-x-[min(calc(50vw-12rem),8rem)] w-[calc(100vw-2rem)] sm:w-96 max-w-96 rounded-lg shadow-lg z-50 overflow-hidden',
+          authStore.isImpersonating ? 'top-[6.5rem]' : 'top-16'
+        ]"
+        @click.stop
+      >
       <!-- Header -->
       <div class="notification-dropdown-header flex items-center justify-between px-4 py-3">
         <h3 class="text-sm font-semibold">알림</h3>
@@ -165,8 +171,9 @@ function handleOverlayClick() {
           <ChevronRight class="w-4 h-4" />
         </button>
       </div>
-    </div>
-  </Transition>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>

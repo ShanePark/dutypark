@@ -90,7 +90,7 @@ onUnmounted(() => {
 
 <template>
   <header
-    class="fixed top-0 left-0 right-0 z-50 shadow-sm border-b header-bg"
+    :class="['fixed left-0 right-0 z-40 shadow-sm border-b header-bg', authStore.isImpersonating ? 'top-10' : 'top-0']"
   >
     <div class="max-w-4xl mx-auto px-4">
       <div class="flex justify-between items-center h-12 sm:h-14">

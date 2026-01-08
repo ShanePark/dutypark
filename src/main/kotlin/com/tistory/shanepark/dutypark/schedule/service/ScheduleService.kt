@@ -236,7 +236,8 @@ class ScheduleService(
             ScheduleTaggedEvent(
                 scheduleId = schedule.id,
                 ownerId = schedule.member.id!!,
-                taggedMemberId = friend.id!!
+                taggedMemberId = friend.id!!,
+                scheduleTitle = schedule.content
             )
         )
     }
