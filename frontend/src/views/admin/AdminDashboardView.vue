@@ -15,12 +15,10 @@ import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import {
   Users,
   Building2,
-  Shield,
   Key,
   ChevronLeft,
   ChevronRight,
   Search,
-  RefreshCw,
   Settings,
   Loader2,
   FileText,
@@ -194,23 +192,6 @@ function clearHoverBg(e: Event, bgColor = 'var(--dp-bg-card)') {
   }
 }
 
-function setHoverBgWithColor(e: Event, bgColor: string, textColor: string) {
-  if (e.currentTarget) {
-    const el = e.currentTarget as HTMLElement
-    el.style.backgroundColor = bgColor
-    el.style.color = textColor
-  }
-}
-
-function clearHoverBgWithColor(e: Event, bgColor: string, textColor: string) {
-  if (e.currentTarget) {
-    const el = e.currentTarget as HTMLElement
-    el.style.backgroundColor = bgColor
-    el.style.color = textColor
-  }
-}
-
-
 onMounted(async () => {
   if (!authStore.isAdmin) {
     router.push('/')
@@ -221,45 +202,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
-    <!-- Admin Header -->
-    <div :style="{ backgroundColor: 'var(--dp-bg-primary)', borderBottom: '1px solid var(--dp-border-primary)' }">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center">
-              <Shield class="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 class="text-xl font-bold" :style="{ color: 'var(--dp-text-primary)' }">회원 관리</h1>
-              <p class="text-sm" :style="{ color: 'var(--dp-text-muted)' }">회원 및 세션 관리</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2 flex-wrap">
-            <button
-              @click="refreshData"
-              class="p-2 rounded-lg transition cursor-pointer"
-              :class="{ 'animate-spin': isLoading }"
-              :style="{ color: 'var(--dp-text-muted)', backgroundColor: isLoading ? '' : 'transparent' }"
-              @mouseover="(e: Event) => !isLoading && setHoverBgWithColor(e, 'var(--dp-bg-hover)', 'var(--dp-text-secondary)')"
-              @mouseleave="(e: Event) => !isLoading && clearHoverBgWithColor(e, 'transparent', 'var(--dp-text-muted)')"
-            >
-              <RefreshCw class="w-5 h-5" />
-            </button>
-            <button
-              class="p-2 rounded-lg transition cursor-pointer"
-              :style="{ color: 'var(--dp-text-muted)' }"
-              @mouseover="(e: Event) => setHoverBgWithColor(e, 'var(--dp-bg-hover)', 'var(--dp-text-secondary)')"
-              @mouseleave="(e: Event) => clearHoverBgWithColor(e, 'transparent', 'var(--dp-text-muted)')"
-            >
-              <Settings class="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+  <div class="max-w-4xl mx-auto px-4 py-6">
       <div v-if="loading" class="flex items-center justify-center py-20">
         <Loader2 class="w-8 h-8 animate-spin" :style="{ color: 'var(--dp-text-muted)' }" />
       </div>
@@ -436,7 +379,6 @@ onMounted(async () => {
           </div>
         </div>
       </template>
-    </div>
 
     <!-- Password Change Modal -->
     <div
@@ -494,6 +436,5 @@ onMounted(async () => {
         </div>
       </div>
     </div>
-
   </div>
 </template>

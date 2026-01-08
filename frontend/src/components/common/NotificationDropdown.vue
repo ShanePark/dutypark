@@ -44,7 +44,7 @@ function getNavigationPath(notification: NotificationDto): string | null {
   if (referenceType === 'SCHEDULE') return null
 
   const typeRoutes: Record<NotificationReferenceType, string | null> = {
-    FRIEND_REQUEST: '/member',
+    FRIEND_REQUEST: '/friends',
     SCHEDULE: null,
     MEMBER: referenceId ? `/duty/${referenceId}` : null,
   }
@@ -118,7 +118,7 @@ function handleOverlayClick() {
   <Transition name="dropdown">
     <div
       v-if="visible"
-      class="notification-dropdown absolute right-0 top-full mt-2 w-80 sm:w-96 rounded-lg shadow-lg z-50 overflow-hidden"
+      class="notification-dropdown fixed sm:absolute right-4 sm:right-0 top-16 sm:top-full sm:mt-2 w-[calc(100vw-2rem)] sm:w-96 max-w-96 rounded-lg shadow-lg z-50 overflow-hidden"
       @click.stop
     >
       <!-- Header -->

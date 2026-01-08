@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSwal } from '@/composables/useSwal'
-import { Menu, Home, Calendar, Users, Bell, Shield, Settings, LogOut } from 'lucide-vue-next'
+import { Menu, Home, Calendar, Users, UserPlus, Bell, Shield, Settings, LogOut } from 'lucide-vue-next'
 import NotificationBell from '@/components/common/NotificationBell.vue'
 import NotificationDropdown from '@/components/common/NotificationDropdown.vue'
 
@@ -17,7 +17,7 @@ const bellRef = ref<InstanceType<typeof NotificationBell> | null>(null)
 const menuRef = ref<HTMLDivElement | null>(null)
 
 const myDutyPath = computed(() => {
-  return authStore.user?.memberId ? `/duty/${authStore.user.memberId}` : '/duty'
+  return authStore.user?.id ? `/duty/${authStore.user.id}` : '/duty'
 })
 
 function handleNotificationToggle(visible: boolean) {
@@ -129,6 +129,13 @@ onUnmounted(() => {
                 >
                   <Users class="w-4 h-4" />
                   내 팀
+                </button>
+                <button
+                  class="menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer"
+                  @click="navigateTo('/friends')"
+                >
+                  <UserPlus class="w-4 h-4" />
+                  친구 관리
                 </button>
                 <button
                   class="menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer"

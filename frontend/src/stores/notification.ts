@@ -82,9 +82,9 @@ export const useNotificationStore = defineStore('notification', () => {
         unreadCount.value = Math.max(0, unreadCount.value - 1)
       }
       // Update local state - recent list
-      const recentIndex = recentNotifications.value.findIndex(n => n.id === id)
-      if (recentIndex !== -1) {
-        recentNotifications.value[recentIndex].isRead = true
+      const recentNotification = recentNotifications.value.find(n => n.id === id)
+      if (recentNotification) {
+        recentNotification.isRead = true
       }
     } catch (error) {
       console.error('Failed to mark notification as read:', error)
