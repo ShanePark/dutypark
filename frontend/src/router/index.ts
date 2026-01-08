@@ -87,6 +87,13 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/admin/DevPlaygroundView.vue'),
     meta: { requiresAuth: true, requiresAdmin: true },
   },
+  // Guide page
+  {
+    path: '/guide',
+    name: 'guide',
+    component: () => import('@/views/guide/GuideView.vue'),
+    meta: { requiresAuth: false },
+  },
   // Policy pages
   {
     path: '/terms',

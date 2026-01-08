@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, inject, computed, type Ref } from 'vue'
 import { useScrollProgress } from '@/composables/useScrollProgress'
-import { ChevronRight, Sparkles } from 'lucide-vue-next'
+import { ChevronRight, Sparkles, BookOpen } from 'lucide-vue-next'
 
 const sectionRef = ref<HTMLElement | null>(null)
 const containerRef = inject<Ref<HTMLElement | null>>('introContainer', ref(null))
@@ -52,6 +52,16 @@ const buttonStyle = computed(() => {
     opacity: Math.min(1, p * 1.3)
   }
 })
+
+const guideLinkStyle = computed(() => {
+  const p = progress.value
+  const translateY = (1 - p) * 15
+
+  return {
+    transform: `translateY(${translateY}px)`,
+    opacity: Math.min(1, p * 1.4)
+  }
+})
 </script>
 
 <template>
@@ -84,6 +94,15 @@ const buttonStyle = computed(() => {
       >
         로그인 / 회원가입
         <ChevronRight class="w-5 h-5" />
+      </router-link>
+
+      <router-link
+        to="/guide"
+        class="intro-guide-link"
+        :style="guideLinkStyle"
+      >
+        <BookOpen class="w-4 h-4" />
+        먼저 기능 둘러보기
       </router-link>
     </div>
   </section>
