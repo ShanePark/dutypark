@@ -55,6 +55,11 @@ cookie:
 dutypark:
   adminEmails:
     - ${ADMIN_EMAIL:ADMIN@EMAIL.HERE}
+  login:
+    rate-limit:
+      max-attempts: ${LOGIN_MAX_ATTEMPTS:5}
+      window-minutes: ${LOGIN_WINDOW_MINUTES:15}
+      cleanup-retention-days: ${LOGIN_CLEANUP_DAYS:7}
   slack:
     token: "${SLACK_TOKEN: }"
   data-go-kr:

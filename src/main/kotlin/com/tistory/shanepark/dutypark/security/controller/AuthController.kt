@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.security.controller
 
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.RateLimitException
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.security.config.JwtConfig
@@ -11,6 +12,7 @@ import com.tistory.shanepark.dutypark.security.domain.dto.PasswordChangeDto
 import com.tistory.shanepark.dutypark.security.domain.dto.TokenResponse
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import com.tistory.shanepark.dutypark.security.service.CookieService
+import com.tistory.shanepark.dutypark.security.service.LoginAttemptService
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.http.ResponseEntity
@@ -23,6 +25,7 @@ class AuthController(
     private val cookieService: CookieService,
     private val refreshTokenService: RefreshTokenService,
     private val jwtConfig: JwtConfig,
+    private val loginAttemptService: LoginAttemptService,
 ) {
     private val log = logger()
 
@@ -60,8 +63,18 @@ class AuthController(
             val tokenResponse = authService.getTokenResponse(loginDto, req)
             cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)
             ResponseEntity.ok(tokenResponse.toPublicResponse())
+        } catch (e: RateLimitException) {
+            ResponseEntity.status(429).body(mapOf("error" to e.message))
         } catch (e: AuthException) {
-            ResponseEntity.status(401).body(mapOf("error" to (e.message ?: "로그인에 실패했습니다.")))
+            val email = loginDto.email ?: ""
+            val ipAddress = req.remoteAddr ?: "unknown"
+            val remainingAttempts = loginAttemptService.getRemainingAttempts(ipAddress, email)
+            ResponseEntity.status(401).body(
+                mapOf(
+                    "error" to (e.message ?: "로그인에 실패했습니다."),
+                    "remainingAttempts" to remainingAttempts
+                )
+            )
         }
     }
 
