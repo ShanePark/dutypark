@@ -443,6 +443,7 @@ export interface RefreshTokenDto {
   memberName: string
   memberId: number
   validUntil: string
+  createdDate: string | null
   lastUsed: string | null
   remoteAddr: string | null
   id: number

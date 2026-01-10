@@ -51,10 +51,10 @@ const hiddenCount = computed(() => {
   return sortedTokens.value.length - 1
 })
 
-function formatLastUsed(lastUsed: string | null): string {
-  if (!lastUsed) return '-'
+function formatRelativeTime(dateStr: string | null): string {
+  if (!dateStr) return '-'
 
-  const date = new Date(lastUsed)
+  const date = new Date(dateStr)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffMins = Math.floor(diffMs / 60000)
@@ -66,6 +66,13 @@ function formatLastUsed(lastUsed: string | null): string {
   if (diffHours < 24) return `${diffHours}시간 전`
   if (diffDays < 7) return `${diffDays}일 전`
   return date.toLocaleDateString('ko-KR')
+}
+
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '-'
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return '-'
+  return date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 function isDesktopDevice(device: string | undefined): boolean {
@@ -102,9 +109,14 @@ function handleDelete(tokenId: number) {
             :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
           >
             <div class="flex items-center justify-between gap-2 mb-2">
-              <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
-                <Clock class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
-                <span>{{ formatLastUsed(token.lastUsed) }}</span>
+              <div class="flex flex-col" :style="{ color: 'var(--dp-text-secondary)' }">
+                <div class="flex items-center gap-1">
+                  <Clock class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+                  <span>{{ formatRelativeTime(token.lastUsed) }}</span>
+                </div>
+                <span class="text-xs ml-5" :style="{ color: 'var(--dp-text-muted)' }">
+                  최초: {{ formatDate(token.createdDate) }}
+                </span>
               </div>
               <div class="flex items-center gap-2">
                 <!-- Delete button or current login badge -->
@@ -119,15 +131,17 @@ function handleDelete(tokenId: number) {
                 >
                   <LogOut class="w-3.5 h-3.5" />
                 </button>
-                <!-- Expand/Collapse badge -->
-                <button
-                  v-if="collapsible && hiddenCount > 0 && idx === 0"
-                  @click="expanded = !expanded"
-                  class="w-6 h-6 flex items-center justify-center text-xs font-medium rounded-full cursor-pointer transition"
-                  :class="expanded ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'"
-                >
-                  {{ expanded ? '-' : `+${hiddenCount}` }}
-                </button>
+                <!-- Expand/Collapse badge (always reserve space when collapsible) -->
+                <div v-if="collapsible" class="w-6 h-6 flex items-center justify-center">
+                  <button
+                    v-if="idx === 0 && hiddenCount > 0"
+                    @click="expanded = !expanded"
+                    class="w-6 h-6 flex items-center justify-center text-xs font-medium rounded-full cursor-pointer transition"
+                    :class="expanded ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'"
+                  >
+                    {{ expanded ? '-' : `+${hiddenCount}` }}
+                  </button>
+                </div>
               </div>
             </div>
             <div class="space-y-1">
@@ -148,17 +162,22 @@ function handleDelete(tokenId: number) {
           <div
             v-for="(token, idx) in visibleTokens"
             :key="token.id"
-            class="grid text-sm rounded-lg p-3"
+            class="grid text-sm rounded-lg p-3 gap-x-2"
             :class="[
-              collapsible && hiddenCount > 0
-                ? (showDeleteButton ? 'grid-cols-[1fr_1fr_1fr_1fr_auto_auto]' : 'grid-cols-[1fr_1fr_1fr_1fr_auto]')
+              collapsible
+                ? (showDeleteButton ? 'grid-cols-[1fr_1fr_1fr_1fr_auto_28px]' : 'grid-cols-[1fr_1fr_1fr_1fr_28px]')
                 : (showDeleteButton ? 'grid-cols-[1fr_1fr_1fr_1fr_auto]' : 'grid-cols-[1fr_1fr_1fr_1fr]')
             ]"
             :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
           >
-            <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
-              <Clock class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
-              <span>{{ formatLastUsed(token.lastUsed) }}</span>
+            <div class="flex flex-col justify-center" :style="{ color: 'var(--dp-text-secondary)' }">
+              <div class="flex items-center gap-1">
+                <Clock class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+                <span>{{ formatRelativeTime(token.lastUsed) }}</span>
+              </div>
+              <span class="text-xs ml-5" :style="{ color: 'var(--dp-text-muted)' }">
+                최초: {{ formatDate(token.createdDate) }}
+              </span>
             </div>
             <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
               <Globe class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
@@ -184,10 +203,10 @@ function handleDelete(tokenId: number) {
                 현재 접속
               </span>
             </div>
-            <!-- Expand/Collapse on first row (Badge style) -->
-            <div v-if="collapsible && hiddenCount > 0" class="flex items-center justify-end pl-1">
+            <!-- Expand/Collapse column (always reserved when collapsible) -->
+            <div v-if="collapsible" class="flex items-center justify-end">
               <button
-                v-if="idx === 0"
+                v-if="idx === 0 && hiddenCount > 0"
                 @click="expanded = !expanded"
                 class="w-6 h-6 flex items-center justify-center text-xs font-medium rounded-full cursor-pointer transition"
                 :class="expanded ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'"
@@ -210,9 +229,14 @@ function handleDelete(tokenId: number) {
             :style="{ backgroundColor: 'var(--dp-bg-secondary)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }"
           >
             <div class="flex items-center justify-between mb-3">
-              <span class="text-sm font-medium" :style="{ color: 'var(--dp-text-primary)' }">
-                {{ formatLastUsed(token.lastUsed) }}
-              </span>
+              <div class="flex flex-col">
+                <span class="text-sm font-medium" :style="{ color: 'var(--dp-text-primary)' }">
+                  {{ formatRelativeTime(token.lastUsed) }}
+                </span>
+                <span class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">
+                  최초: {{ formatDate(token.createdDate) }}
+                </span>
+              </div>
               <span v-if="token.isCurrentLogin" class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
                 현재 접속
               </span>
@@ -253,7 +277,8 @@ function handleDelete(tokenId: number) {
           <table class="w-full text-sm">
             <thead>
               <tr :style="{ borderBottomWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
-                <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">접속 시간</th>
+                <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">최근 접속</th>
+                <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">최초 로그인</th>
                 <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">IP</th>
                 <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">기기</th>
                 <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">브라우저</th>
@@ -268,7 +293,10 @@ function handleDelete(tokenId: number) {
                 :style="{ borderBottomWidth: '1px', borderColor: 'var(--dp-border-secondary)' }"
               >
                 <td class="py-3 px-2" :style="{ color: 'var(--dp-text-primary)' }">
-                  {{ formatLastUsed(token.lastUsed) }}
+                  {{ formatRelativeTime(token.lastUsed) }}
+                </td>
+                <td class="py-3 px-2" :style="{ color: 'var(--dp-text-muted)' }">
+                  {{ formatDate(token.createdDate) }}
                 </td>
                 <td class="py-3 px-2" :style="{ color: 'var(--dp-text-primary)' }">
                   {{ token.remoteAddr || '-' }}
