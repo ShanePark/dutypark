@@ -15,7 +15,7 @@ import {
 const router = useRouter()
 const authStore = useAuthStore()
 
-const expandedSections = ref<Set<string>>(new Set(['example']))
+const expandedSections = ref<Set<string>>(new Set())
 
 function toggleSection(section: string) {
   if (expandedSections.value.has(section)) {
@@ -103,7 +103,7 @@ onMounted(() => {
 
     <!-- Example Section -->
     <div
-      class="rounded-xl mb-4"
+      class="rounded-xl"
       :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }"
     >
       <button
@@ -131,52 +131,6 @@ onMounted(() => {
           <code :style="{ color: 'var(--dp-text-primary)' }">
             &lt;YourComponent /&gt;
           </code>
-        </div>
-      </div>
-    </div>
-
-    <!-- Add more sections as needed -->
-    <div
-      class="rounded-xl"
-      :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }"
-    >
-      <button
-        class="w-full p-4 flex items-center justify-between cursor-pointer"
-        @click="toggleSection('buttons')"
-      >
-        <h2 class="text-lg font-semibold" :style="{ color: 'var(--dp-text-primary)' }">
-          버튼 스타일
-        </h2>
-        <component
-          :is="expandedSections.has('buttons') ? ChevronDown : ChevronRight"
-          class="w-5 h-5"
-          :style="{ color: 'var(--dp-text-muted)' }"
-        />
-      </button>
-      <div
-        v-if="expandedSections.has('buttons')"
-        class="p-4"
-        :style="{ borderTop: '1px solid var(--dp-border-primary)' }"
-      >
-        <div class="flex flex-wrap gap-3">
-          <button class="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition cursor-pointer">
-            Primary
-          </button>
-          <button
-            class="px-4 py-2 rounded-lg transition cursor-pointer"
-            :style="{ backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-primary)' }"
-          >
-            Secondary
-          </button>
-          <button class="px-4 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition cursor-pointer">
-            Danger
-          </button>
-          <button class="px-4 py-2 text-green-600 bg-green-50 hover:bg-green-100 rounded-lg transition cursor-pointer">
-            Success
-          </button>
-          <button class="px-4 py-2 text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition cursor-pointer">
-            Warning
-          </button>
         </div>
       </div>
     </div>

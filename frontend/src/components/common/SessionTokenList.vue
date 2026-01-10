@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import type { RefreshTokenDto } from '@/types'
 import {
   Clock,
@@ -7,6 +7,7 @@ import {
   Globe,
   Smartphone,
   Loader2,
+  LogOut,
 } from 'lucide-vue-next'
 
 const props = withDefaults(defineProps<{
@@ -14,15 +15,19 @@ const props = withDefaults(defineProps<{
   loading?: boolean
   showDeleteButton?: boolean
   compact?: boolean
+  collapsible?: boolean
 }>(), {
   loading: false,
   showDeleteButton: true,
   compact: false,
+  collapsible: false,
 })
 
 const emit = defineEmits<{
   delete: [tokenId: number]
 }>()
+
+const expanded = ref(false)
 
 const sortedTokens = computed(() => {
   return [...props.tokens].sort((a, b) => {
@@ -32,6 +37,18 @@ const sortedTokens = computed(() => {
     const bTime = b.lastUsed ? new Date(b.lastUsed).getTime() : 0
     return bTime - aTime
   })
+})
+
+const visibleTokens = computed(() => {
+  if (!props.collapsible || expanded.value) {
+    return sortedTokens.value
+  }
+  return sortedTokens.value.slice(0, 1)
+})
+
+const hiddenCount = computed(() => {
+  if (!props.collapsible) return 0
+  return sortedTokens.value.length - 1
 })
 
 function formatLastUsed(lastUsed: string | null): string {
@@ -79,14 +96,39 @@ function handleDelete(tokenId: number) {
         <!-- Mobile -->
         <div class="sm:hidden space-y-2">
           <div
-            v-for="token in sortedTokens"
+            v-for="(token, idx) in visibleTokens"
             :key="token.id"
             class="text-sm rounded-lg p-3"
             :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
           >
-            <div class="flex items-center gap-2 mb-2" :style="{ color: 'var(--dp-text-secondary)' }">
-              <Clock class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
-              <span>{{ formatLastUsed(token.lastUsed) }}</span>
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
+                <Clock class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+                <span>{{ formatLastUsed(token.lastUsed) }}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <!-- Delete button or current login badge -->
+                <span v-if="token.isCurrentLogin" class="px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded-full">
+                  현재
+                </span>
+                <button
+                  v-else-if="showDeleteButton"
+                  @click="handleDelete(token.id)"
+                  class="w-6 h-6 flex items-center justify-center text-red-500 hover:bg-red-100 rounded-full transition cursor-pointer"
+                  title="접속 종료"
+                >
+                  <LogOut class="w-3.5 h-3.5" />
+                </button>
+                <!-- Expand/Collapse badge -->
+                <button
+                  v-if="collapsible && hiddenCount > 0 && idx === 0"
+                  @click="expanded = !expanded"
+                  class="w-6 h-6 flex items-center justify-center text-xs font-medium rounded-full cursor-pointer transition"
+                  :class="expanded ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'"
+                >
+                  {{ expanded ? '-' : `+${hiddenCount}` }}
+                </button>
+              </div>
             </div>
             <div class="space-y-1">
               <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -104,10 +146,14 @@ function handleDelete(tokenId: number) {
         <!-- Desktop -->
         <div class="hidden sm:block space-y-2">
           <div
-            v-for="token in sortedTokens"
+            v-for="(token, idx) in visibleTokens"
             :key="token.id"
             class="grid text-sm rounded-lg p-3"
-            :class="showDeleteButton ? 'grid-cols-[1fr_1fr_1fr_1fr_auto]' : 'grid-cols-[1fr_1fr_1fr_1fr]'"
+            :class="[
+              collapsible && hiddenCount > 0
+                ? (showDeleteButton ? 'grid-cols-[1fr_1fr_1fr_1fr_auto_auto]' : 'grid-cols-[1fr_1fr_1fr_1fr_auto]')
+                : (showDeleteButton ? 'grid-cols-[1fr_1fr_1fr_1fr_auto]' : 'grid-cols-[1fr_1fr_1fr_1fr]')
+            ]"
             :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
           >
             <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -129,13 +175,25 @@ function handleDelete(tokenId: number) {
               <button
                 v-if="!token.isCurrentLogin"
                 @click="handleDelete(token.id)"
-                class="px-3 py-1 text-xs font-medium text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-full transition cursor-pointer"
+                class="w-6 h-6 flex items-center justify-center text-red-500 hover:bg-red-100 rounded-full transition cursor-pointer"
+                title="접속 종료"
               >
-                접속 종료
+                <LogOut class="w-3.5 h-3.5" />
               </button>
-              <span v-else class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
+              <span v-else class="px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded-full">
                 현재 접속
               </span>
+            </div>
+            <!-- Expand/Collapse on first row (Badge style) -->
+            <div v-if="collapsible && hiddenCount > 0" class="flex items-center justify-end pl-1">
+              <button
+                v-if="idx === 0"
+                @click="expanded = !expanded"
+                class="w-6 h-6 flex items-center justify-center text-xs font-medium rounded-full cursor-pointer transition"
+                :class="expanded ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'"
+              >
+                {{ expanded ? '-' : `+${hiddenCount}` }}
+              </button>
             </div>
           </div>
         </div>
@@ -161,9 +219,10 @@ function handleDelete(tokenId: number) {
               <button
                 v-else-if="showDeleteButton"
                 @click="handleDelete(token.id)"
-                class="px-3 py-2 min-h-11 text-xs font-medium text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-full transition cursor-pointer"
+                class="w-10 h-10 flex items-center justify-center text-red-500 hover:bg-red-100 rounded-full transition cursor-pointer"
+                title="접속 종료"
               >
-                접속 종료
+                <LogOut class="w-5 h-5" />
               </button>
             </div>
             <div class="space-y-2 text-sm">
@@ -230,9 +289,10 @@ function handleDelete(tokenId: number) {
                   <button
                     v-if="!token.isCurrentLogin"
                     @click="handleDelete(token.id)"
-                    class="px-3 py-1 text-xs font-medium text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-full transition cursor-pointer"
+                    class="w-8 h-8 inline-flex items-center justify-center text-red-500 hover:bg-red-100 rounded-full transition cursor-pointer"
+                    title="접속 종료"
                   >
-                    접속 종료
+                    <LogOut class="w-4 h-4" />
                   </button>
                   <span v-else class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
                     현재 접속
