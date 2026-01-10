@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import type { RefreshTokenDto } from '@/types'
 import {
   Clock,
@@ -7,6 +7,7 @@ import {
   Globe,
   Smartphone,
   Loader2,
+  LogOut,
 } from 'lucide-vue-next'
 
 const props = withDefaults(defineProps<{
@@ -14,15 +15,19 @@ const props = withDefaults(defineProps<{
   loading?: boolean
   showDeleteButton?: boolean
   compact?: boolean
+  collapsible?: boolean
 }>(), {
   loading: false,
   showDeleteButton: true,
   compact: false,
+  collapsible: false,
 })
 
 const emit = defineEmits<{
   delete: [tokenId: number]
 }>()
+
+const expanded = ref(false)
 
 const sortedTokens = computed(() => {
   return [...props.tokens].sort((a, b) => {
@@ -34,10 +39,22 @@ const sortedTokens = computed(() => {
   })
 })
 
-function formatLastUsed(lastUsed: string | null): string {
-  if (!lastUsed) return '-'
+const visibleTokens = computed(() => {
+  if (!props.collapsible || expanded.value) {
+    return sortedTokens.value
+  }
+  return sortedTokens.value.slice(0, 1)
+})
 
-  const date = new Date(lastUsed)
+const hiddenCount = computed(() => {
+  if (!props.collapsible) return 0
+  return sortedTokens.value.length - 1
+})
+
+function formatRelativeTime(dateStr: string | null): string {
+  if (!dateStr) return '-'
+
+  const date = new Date(dateStr)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffMins = Math.floor(diffMs / 60000)
@@ -49,6 +66,13 @@ function formatLastUsed(lastUsed: string | null): string {
   if (diffHours < 24) return `${diffHours}시간 전`
   if (diffDays < 7) return `${diffDays}일 전`
   return date.toLocaleDateString('ko-KR')
+}
+
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '-'
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return '-'
+  return date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 function isDesktopDevice(device: string | undefined): boolean {
@@ -79,14 +103,46 @@ function handleDelete(tokenId: number) {
         <!-- Mobile -->
         <div class="sm:hidden space-y-2">
           <div
-            v-for="token in sortedTokens"
+            v-for="(token, idx) in visibleTokens"
             :key="token.id"
             class="text-sm rounded-lg p-3"
             :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
           >
-            <div class="flex items-center gap-2 mb-2" :style="{ color: 'var(--dp-text-secondary)' }">
-              <Clock class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
-              <span>{{ formatLastUsed(token.lastUsed) }}</span>
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <div class="flex flex-col" :style="{ color: 'var(--dp-text-secondary)' }">
+                <div class="flex items-center gap-1">
+                  <Clock class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+                  <span>{{ formatRelativeTime(token.lastUsed) }}</span>
+                </div>
+                <span class="text-xs ml-5" :style="{ color: 'var(--dp-text-muted)' }">
+                  최초: {{ formatDate(token.createdDate) }}
+                </span>
+              </div>
+              <div class="flex items-center gap-2">
+                <!-- Delete button or current login badge -->
+                <span v-if="token.isCurrentLogin" class="px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded-full">
+                  현재
+                </span>
+                <button
+                  v-else-if="showDeleteButton"
+                  @click="handleDelete(token.id)"
+                  class="w-6 h-6 flex items-center justify-center text-red-500 hover:bg-red-100 rounded-full transition cursor-pointer"
+                  title="접속 종료"
+                >
+                  <LogOut class="w-3.5 h-3.5" />
+                </button>
+                <!-- Expand/Collapse badge (always reserve space when collapsible) -->
+                <div v-if="collapsible" class="w-6 h-6 flex items-center justify-center">
+                  <button
+                    v-if="idx === 0 && hiddenCount > 0"
+                    @click="expanded = !expanded"
+                    class="w-6 h-6 flex items-center justify-center text-xs font-medium rounded-full cursor-pointer transition"
+                    :class="expanded ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'"
+                  >
+                    {{ expanded ? '-' : `+${hiddenCount}` }}
+                  </button>
+                </div>
+              </div>
             </div>
             <div class="space-y-1">
               <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -104,15 +160,24 @@ function handleDelete(tokenId: number) {
         <!-- Desktop -->
         <div class="hidden sm:block space-y-2">
           <div
-            v-for="token in sortedTokens"
+            v-for="(token, idx) in visibleTokens"
             :key="token.id"
-            class="grid text-sm rounded-lg p-3"
-            :class="showDeleteButton ? 'grid-cols-[1fr_1fr_1fr_1fr_auto]' : 'grid-cols-[1fr_1fr_1fr_1fr]'"
+            class="grid text-sm rounded-lg p-3 gap-x-2"
+            :class="[
+              collapsible
+                ? (showDeleteButton ? 'grid-cols-[1fr_1fr_1fr_1fr_auto_28px]' : 'grid-cols-[1fr_1fr_1fr_1fr_28px]')
+                : (showDeleteButton ? 'grid-cols-[1fr_1fr_1fr_1fr_auto]' : 'grid-cols-[1fr_1fr_1fr_1fr]')
+            ]"
             :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
           >
-            <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
-              <Clock class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
-              <span>{{ formatLastUsed(token.lastUsed) }}</span>
+            <div class="flex flex-col justify-center" :style="{ color: 'var(--dp-text-secondary)' }">
+              <div class="flex items-center gap-1">
+                <Clock class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+                <span>{{ formatRelativeTime(token.lastUsed) }}</span>
+              </div>
+              <span class="text-xs ml-5" :style="{ color: 'var(--dp-text-muted)' }">
+                최초: {{ formatDate(token.createdDate) }}
+              </span>
             </div>
             <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
               <Globe class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
@@ -129,13 +194,25 @@ function handleDelete(tokenId: number) {
               <button
                 v-if="!token.isCurrentLogin"
                 @click="handleDelete(token.id)"
-                class="px-3 py-1 text-xs font-medium text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-full transition cursor-pointer"
+                class="w-6 h-6 flex items-center justify-center text-red-500 hover:bg-red-100 rounded-full transition cursor-pointer"
+                title="접속 종료"
               >
-                접속 종료
+                <LogOut class="w-3.5 h-3.5" />
               </button>
-              <span v-else class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
+              <span v-else class="px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded-full">
                 현재 접속
               </span>
+            </div>
+            <!-- Expand/Collapse column (always reserved when collapsible) -->
+            <div v-if="collapsible" class="flex items-center justify-end">
+              <button
+                v-if="idx === 0 && hiddenCount > 0"
+                @click="expanded = !expanded"
+                class="w-6 h-6 flex items-center justify-center text-xs font-medium rounded-full cursor-pointer transition"
+                :class="expanded ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'"
+              >
+                {{ expanded ? '-' : `+${hiddenCount}` }}
+              </button>
             </div>
           </div>
         </div>
@@ -152,18 +229,24 @@ function handleDelete(tokenId: number) {
             :style="{ backgroundColor: 'var(--dp-bg-secondary)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }"
           >
             <div class="flex items-center justify-between mb-3">
-              <span class="text-sm font-medium" :style="{ color: 'var(--dp-text-primary)' }">
-                {{ formatLastUsed(token.lastUsed) }}
-              </span>
+              <div class="flex flex-col">
+                <span class="text-sm font-medium" :style="{ color: 'var(--dp-text-primary)' }">
+                  {{ formatRelativeTime(token.lastUsed) }}
+                </span>
+                <span class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">
+                  최초: {{ formatDate(token.createdDate) }}
+                </span>
+              </div>
               <span v-if="token.isCurrentLogin" class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
                 현재 접속
               </span>
               <button
                 v-else-if="showDeleteButton"
                 @click="handleDelete(token.id)"
-                class="px-3 py-2 min-h-11 text-xs font-medium text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-full transition cursor-pointer"
+                class="w-10 h-10 flex items-center justify-center text-red-500 hover:bg-red-100 rounded-full transition cursor-pointer"
+                title="접속 종료"
               >
-                접속 종료
+                <LogOut class="w-5 h-5" />
               </button>
             </div>
             <div class="space-y-2 text-sm">
@@ -194,7 +277,8 @@ function handleDelete(tokenId: number) {
           <table class="w-full text-sm">
             <thead>
               <tr :style="{ borderBottomWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
-                <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">접속 시간</th>
+                <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">최근 접속</th>
+                <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">최초 로그인</th>
                 <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">IP</th>
                 <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">기기</th>
                 <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">브라우저</th>
@@ -209,7 +293,10 @@ function handleDelete(tokenId: number) {
                 :style="{ borderBottomWidth: '1px', borderColor: 'var(--dp-border-secondary)' }"
               >
                 <td class="py-3 px-2" :style="{ color: 'var(--dp-text-primary)' }">
-                  {{ formatLastUsed(token.lastUsed) }}
+                  {{ formatRelativeTime(token.lastUsed) }}
+                </td>
+                <td class="py-3 px-2" :style="{ color: 'var(--dp-text-muted)' }">
+                  {{ formatDate(token.createdDate) }}
                 </td>
                 <td class="py-3 px-2" :style="{ color: 'var(--dp-text-primary)' }">
                   {{ token.remoteAddr || '-' }}
@@ -230,9 +317,10 @@ function handleDelete(tokenId: number) {
                   <button
                     v-if="!token.isCurrentLogin"
                     @click="handleDelete(token.id)"
-                    class="px-3 py-1 text-xs font-medium text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-full transition cursor-pointer"
+                    class="w-8 h-8 inline-flex items-center justify-center text-red-500 hover:bg-red-100 rounded-full transition cursor-pointer"
+                    title="접속 종료"
                   >
-                    접속 종료
+                    <LogOut class="w-4 h-4" />
                   </button>
                   <span v-else class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
                     현재 접속

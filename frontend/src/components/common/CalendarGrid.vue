@@ -153,8 +153,9 @@ function handleDayClick(day: CalendarDay, index: number) {
         :class="[
           clickable ? 'cursor-pointer hover:brightness-95 hover:shadow-inner' : '',
           {
-            'ring-2 ring-red-500 ring-inset': !focusedDay && (isToday(day) || isHighlighted(day)),
-            'ring-2 ring-blue-500 ring-inset': !focusedDay && isSelected(day) && !isToday(day),
+            'highlight-pulse-glow': !focusedDay && isHighlighted(day),
+            'ring-2 ring-red-500 ring-inset': !focusedDay && isToday(day) && !isHighlighted(day),
+            'ring-2 ring-blue-500 ring-inset': !focusedDay && isSelected(day) && !isToday(day) && !isHighlighted(day),
             'duty-day-focused': isFocused(day),
             'rounded-bl-lg': idx === days.length - 7,
             'rounded-br-lg': idx === days.length - 1,

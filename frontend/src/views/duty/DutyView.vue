@@ -143,19 +143,12 @@ const memberName = ref('')
 const memberHasProfilePhoto = ref(false)
 const memberProfilePhotoVersion = ref(0)
 const memberId = computed(() => {
-  const paramId = route.params.id as string | undefined
-  if (!paramId || paramId === 'me') {
-    return authStore.user?.id ?? 0
-  }
-  return parseInt(paramId)
+  return parseInt(route.params.id as string)
 })
 const teamId = ref<number | null>(null)
 
-// isMyCalendar: true if viewing own calendar (no id param, or id matches logged-in user)
+// isMyCalendar: true if viewing own calendar (id matches logged-in user)
 const isMyCalendar = computed(() => {
-  const paramId = route.params.id as string | undefined
-  if (!paramId || paramId === 'me') return true
-  // Compare with logged-in user's ID
   const loggedInUserId = authStore.user?.id
   return loggedInUserId !== undefined && loggedInUserId === memberId.value
 })
@@ -624,18 +617,15 @@ onMounted(async () => {
       pinnedDDay.value = dDays.value.find((d) => d.id === id) || null
     }
 
-    // Handle query parameters for date highlighting (from notification navigation)
-    const year = route.query.year as string | undefined
-    const month = route.query.month as string | undefined
-    const day = route.query.day as string | undefined
-    if (year && month && day) {
-      const y = parseInt(year)
-      const m = parseInt(month)
-      const d = parseInt(day)
-      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
-        currentYear.value = y
-        currentMonth.value = m
-        searchDay.value = { year: y, month: m, day: d }
+    // Handle pending highlight date from notification navigation
+    const storedHighlight = sessionStorage.getItem('dutyHighlightDate')
+    if (storedHighlight) {
+      sessionStorage.removeItem('dutyHighlightDate')
+      const { year, month, day } = JSON.parse(storedHighlight)
+      if (year && month && day) {
+        currentYear.value = year
+        currentMonth.value = month
+        searchDay.value = { year, month, day }
         // Reload data for the target month
         await loadCalendar()
         await Promise.all([loadDuties(), loadSchedules(), loadOtherDuties(), loadHolidays()])

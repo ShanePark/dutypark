@@ -345,6 +345,7 @@ onMounted(async () => {
                     :loading="false"
                     :show-delete-button="true"
                     :compact="true"
+                    :collapsible="true"
                     @delete="(tokenId: number) => handleRevokeToken(tokenId, member)"
                   />
                 </div>
