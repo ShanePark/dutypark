@@ -259,7 +259,7 @@ function handleOverlayClick() {
 }
 
 .unread-dot {
-  background-color: #3b82f6;
+  background-color: var(--dp-accent);
   border: 2px solid var(--dp-bg-card);
 }
 

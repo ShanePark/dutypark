@@ -212,7 +212,7 @@ const ddayBadgeClass = computed(() => {
 }
 
 .dday-badge-past {
-  background-color: #6b7280;
+  background-color: var(--dp-text-muted);
   color: white;
 }
 

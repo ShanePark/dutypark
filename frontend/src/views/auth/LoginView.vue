@@ -166,7 +166,7 @@ function handleKakaoLogin() {
             @click="handleKakaoLogin"
             :disabled="isKakaoLoading"
             class="w-full py-3.5 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-3 hover:opacity-90 cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            style="background-color: #FEE500; color: #000000;"
+            :style="{ backgroundColor: 'var(--dp-kakao)', color: 'var(--dp-kakao-text)' }"
           >
             <img src="/img/kakao.png" alt="Kakao" class="w-5 h-5" />
             <span>{{ isKakaoLoading ? '로그인 중...' : '카카오 로그인' }}</span>

@@ -460,7 +460,7 @@ onMounted(() => {
               <span
                 v-if="schedule.totalDays && schedule.totalDays > 1"
                 class="text-[9px] sm:text-xs"
-                :style="{ color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }"
+                :style="{ color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? 'var(--dp-text-muted)' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }"
               >
                 ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})
               </span>
@@ -468,7 +468,7 @@ onMounted(() => {
             <div
               v-if="teamSchedules[index].length > 2"
               class="text-[10px] font-medium"
-              :style="{ color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? '#6b7280' : 'rgba(255,255,255,0.8)') : 'var(--dp-text-muted)' }"
+              :style="{ color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? 'var(--dp-text-muted)' : 'rgba(255,255,255,0.8)') : 'var(--dp-text-muted)' }"
             >
               +{{ teamSchedules[index].length - 2 }}
             </div>

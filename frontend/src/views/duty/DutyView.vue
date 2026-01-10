@@ -591,6 +591,8 @@ onMounted(async () => {
 
   // Listen for "go to today" event from footer navigation
   window.addEventListener('duty-go-to-today', goToToday)
+  // Listen for "go to date" event from notification navigation
+  window.addEventListener('duty-go-to-date', handleGoToDate)
 
   try {
     // Load calendar structure first (needed for index alignment with holidays)
@@ -650,6 +652,7 @@ onMounted(async () => {
 // Cleanup on unmount
 onUnmounted(() => {
   window.removeEventListener('duty-go-to-today', goToToday)
+  window.removeEventListener('duty-go-to-date', handleGoToDate)
 })
 
 // Watch for month changes to reload data
@@ -754,6 +757,20 @@ function goToToday() {
   const today = new Date()
   currentYear.value = today.getFullYear()
   currentMonth.value = today.getMonth() + 1
+}
+
+// Handle "go to date" event from notification navigation
+async function handleGoToDate(event: Event) {
+  const customEvent = event as CustomEvent<{ year: number; month: number; day: number }>
+  const { year, month, day } = customEvent.detail
+  const needsReload = year !== currentYear.value || month !== currentMonth.value
+  currentYear.value = year
+  currentMonth.value = month
+  searchDay.value = { year, month, day }
+  if (needsReload) {
+    await loadCalendar()
+    await Promise.all([loadDuties(), loadSchedules(), loadOtherDuties(), loadHolidays()])
+  }
 }
 
 // Day click handler
@@ -1524,7 +1541,7 @@ async function showExcelUploadModal() {
     </div>
 
     <!-- Error State -->
-    <div v-else-if="loadError" class="border rounded-lg p-4 mb-4" :style="{ backgroundColor: '#fef2f2', borderColor: '#fecaca' }">
+    <div v-else-if="loadError" class="border rounded-lg p-4 mb-4" :style="{ backgroundColor: 'var(--dp-danger-bg)', borderColor: 'var(--dp-danger-border)' }">
       <p class="text-red-700">{{ loadError }}</p>
       <button
         @click="loadDuties"
@@ -1745,7 +1762,7 @@ async function showExcelUploadModal() {
         <span
           v-if="pinnedDDay && !batchEditMode"
           class="text-[9px] sm:text-xs"
-          :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }"
+          :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? 'var(--dp-text-muted)' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }"
         >
           {{ calcDDayForDay(day) }}
         </span>
@@ -1809,7 +1826,7 @@ async function showExcelUploadModal() {
             :class="{ 'cursor-pointer hover:underline': !canEdit && (schedule.description || schedule.attachments?.length) }"
             :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? '#1f2937' : '#ffffff') : 'var(--dp-text-primary)', borderColor: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.3)') : 'var(--dp-border-primary)' }"
             @click="!canEdit && (schedule.description || schedule.attachments?.length) ? handleScheduleClick(schedule, $event) : null"
-          ><Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? '#6b7280' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }" />{{ schedule.contentWithoutTime || schedule.content }}{{ formatScheduleTime(schedule) }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
+          ><Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? 'var(--dp-text-muted)' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }" />{{ schedule.contentWithoutTime || schedule.content }}{{ formatScheduleTime(schedule) }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
               v-if="schedule.description || schedule.attachments?.length"
               class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px] ml-0.5"
               :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? '#000000' : '#ffffff') : 'var(--dp-text-primary)' }"
@@ -1830,7 +1847,7 @@ async function showExcelUploadModal() {
           <div
             v-if="(schedulesByDays[index]?.length ?? 0) > 3"
             class="text-[10px] font-medium"
-            :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? '#6b7280' : 'rgba(255,255,255,0.8)') : 'var(--dp-text-muted)' }"
+            :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? 'var(--dp-text-muted)' : 'rgba(255,255,255,0.8)') : 'var(--dp-text-muted)' }"
           >
             +{{ (schedulesByDays[index]?.length ?? 0) - 3 }}
           </div>

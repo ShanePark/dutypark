@@ -510,9 +510,9 @@ onMounted(async () => {
             :class="{ 'hover:scale-[1.02]': themeStore.mode !== option.value }"
             :style="{
               borderWidth: '2px',
-              borderColor: themeStore.mode === option.value ? '#3b82f6' : 'var(--dp-border-primary)',
-              backgroundColor: themeStore.mode === option.value ? (themeStore.isDark ? '#1e3a5f' : '#eff6ff') : 'var(--dp-bg-secondary)',
-              color: themeStore.mode === option.value ? '#3b82f6' : 'var(--dp-text-primary)'
+              borderColor: themeStore.mode === option.value ? 'var(--dp-accent)' : 'var(--dp-border-primary)',
+              backgroundColor: themeStore.mode === option.value ? 'var(--dp-accent-bg)' : 'var(--dp-bg-secondary)',
+              color: themeStore.mode === option.value ? 'var(--dp-accent)' : 'var(--dp-text-primary)'
             }"
           >
             <component :is="option.icon" class="w-5 h-5" />
@@ -738,8 +738,8 @@ onMounted(async () => {
                 :class="{ 'hover:bg-opacity-80': calendarVisibility !== option.value }"
                 :style="{
                   borderWidth: '2px',
-                  borderColor: calendarVisibility === option.value ? '#3b82f6' : 'var(--dp-border-primary)',
-                  backgroundColor: calendarVisibility === option.value ? (themeStore.isDark ? '#1e3a5f' : '#eff6ff') : 'var(--dp-bg-secondary)'
+                  borderColor: calendarVisibility === option.value ? 'var(--dp-accent)' : 'var(--dp-border-primary)',
+                  backgroundColor: calendarVisibility === option.value ? 'var(--dp-accent-bg)' : 'var(--dp-bg-secondary)'
                 }"
               >
                 <div class="flex items-center gap-3">
@@ -796,7 +796,7 @@ onMounted(async () => {
                 class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 :style="{
                   borderWidth: '1px',
-                  borderColor: passwordErrors.currentPassword ? '#ef4444' : 'var(--dp-border-primary)',
+                  borderColor: passwordErrors.currentPassword ? 'var(--dp-danger)' : 'var(--dp-border-primary)',
                   backgroundColor: 'var(--dp-bg-primary)',
                   color: 'var(--dp-text-primary)'
                 }"
@@ -815,7 +815,7 @@ onMounted(async () => {
                 class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 :style="{
                   borderWidth: '1px',
-                  borderColor: passwordErrors.newPassword ? '#ef4444' : 'var(--dp-border-primary)',
+                  borderColor: passwordErrors.newPassword ? 'var(--dp-danger)' : 'var(--dp-border-primary)',
                   backgroundColor: 'var(--dp-bg-primary)',
                   color: 'var(--dp-text-primary)'
                 }"
@@ -834,7 +834,7 @@ onMounted(async () => {
                 class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 :style="{
                   borderWidth: '1px',
-                  borderColor: passwordErrors.confirmPassword ? '#ef4444' : 'var(--dp-border-primary)',
+                  borderColor: passwordErrors.confirmPassword ? 'var(--dp-danger)' : 'var(--dp-border-primary)',
                   backgroundColor: 'var(--dp-bg-primary)',
                   color: 'var(--dp-text-primary)'
                 }"

@@ -487,17 +487,16 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
               @click="handleDutyTypeChange(dutyType.id, dutyType.name)"
               class="duty-type-btn px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 cursor-pointer"
               :class="{
-                'border-blue-500 ring-1 ring-blue-200 duty-type-btn-selected': selectedDutyType === dutyType.name,
+                'duty-type-btn-selected': selectedDutyType === dutyType.name,
               }"
               :style="{
-                border: selectedDutyType === dutyType.name ? undefined : '1px solid var(--dp-border-primary)',
                 color: 'var(--dp-text-primary)',
                 backgroundColor: selectedDutyType === dutyType.name && dutyType.color ? dutyType.color + '30' : undefined
               }"
             >
               <span
-                class="inline-block w-3 h-3 rounded border border-gray-400"
-                :style="{ backgroundColor: dutyType.color || '#6c757d' }"
+                class="inline-block w-3 h-3 rounded border"
+                :style="{ backgroundColor: dutyType.color || '#6c757d', borderColor: 'var(--dp-border-secondary)' }"
               ></span>
               {{ dutyType.name }}
             </button>
@@ -942,11 +941,11 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
 <style scoped>
 .schedule-ghost {
   opacity: 0.4;
-  background-color: #e0e7ff;
+  background-color: var(--dp-accent-bg);
 }
 
 .schedule-chosen {
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 12px var(--dp-accent-ring);
 }
 
 /* Show only title when dragging - applies to all items in drag mode */
@@ -974,13 +973,9 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
 
 /* Visibility card styles */
 .visibility-card-selected {
-  border-color: #3b82f6;
-  background-color: #eff6ff;
-  box-shadow: 0 0 0 1px #3b82f6, 0 2px 8px rgba(59, 130, 246, 0.15);
-}
-
-.dark .visibility-card-selected {
-  background-color: rgba(59, 130, 246, 0.15);
+  border-color: var(--dp-accent);
+  background-color: var(--dp-accent-bg);
+  box-shadow: 0 0 0 1px var(--dp-accent), 0 2px 8px var(--dp-accent-ring);
 }
 
 .visibility-card-unselected {
@@ -990,7 +985,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
 }
 
 .visibility-card-unselected:hover {
-  border-color: #93c5fd;
+  border-color: var(--dp-accent-border);
   background-color: var(--dp-bg-secondary);
   opacity: 0.85;
 }

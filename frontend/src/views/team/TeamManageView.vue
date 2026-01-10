@@ -537,11 +537,11 @@ onUnmounted(() => {
 
     <template v-else-if="team">
       <!-- Header -->
-      <div class="font-bold text-xl py-3 rounded-t-lg flex items-center justify-between px-4" :style="{ backgroundColor: '#4b5563', color: 'white' }">
+      <div class="font-bold text-xl py-3 rounded-t-lg flex items-center justify-between px-4" :style="{ backgroundColor: 'var(--dp-modal-header-bg)', color: 'white' }">
         <button
           @click="router.back()"
           class="px-3 py-1 text-white text-sm rounded-lg hover:bg-gray-400 transition flex items-center gap-1 cursor-pointer"
-          :style="{ backgroundColor: '#6b7280' }"
+          :style="{ backgroundColor: 'var(--dp-modal-header-bg-alt)' }"
         >
           <ChevronLeft class="w-4 h-4" />
           뒤로
@@ -644,7 +644,7 @@ onUnmounted(() => {
 
     <!-- Members Section -->
     <div class="border rounded-lg overflow-hidden mb-4" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }">
-      <div class="text-white px-4 py-3 flex flex-wrap items-center justify-between gap-2" :style="{ backgroundColor: '#4b5563' }">
+      <div class="text-white px-4 py-3 flex flex-wrap items-center justify-between gap-2" :style="{ backgroundColor: 'var(--dp-modal-header-bg)' }">
         <h3 class="font-bold">팀 멤버</h3>
         <button
           @click="openMemberSearchModal"
@@ -658,7 +658,7 @@ onUnmounted(() => {
       <!-- Desktop Table View -->
       <div v-if="hasMember" class="hidden sm:block overflow-x-auto">
         <table class="w-full">
-          <thead class="text-white" :style="{ backgroundColor: '#1f2937' }">
+          <thead class="text-white" :style="{ backgroundColor: 'var(--dp-bg-footer)' }">
             <tr>
               <th class="px-4 py-2 text-center w-12">#</th>
               <th class="px-4 py-2 text-left">이름</th>
@@ -772,7 +772,7 @@ onUnmounted(() => {
 
     <!-- Duty Types Section -->
     <div class="border rounded-lg overflow-hidden" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }">
-      <div class="text-white px-4 py-3 flex items-center justify-between" :style="{ backgroundColor: '#4b5563' }">
+      <div class="text-white px-4 py-3 flex items-center justify-between" :style="{ backgroundColor: 'var(--dp-modal-header-bg)' }">
         <h3 class="font-bold">근무 유형</h3>
         <button
           @click="openAddDutyTypeModal"
@@ -786,7 +786,7 @@ onUnmounted(() => {
 
       <div v-if="hasDutyType" class="overflow-x-auto">
         <table class="w-full">
-          <thead class="text-white" :style="{ backgroundColor: '#1f2937' }">
+          <thead class="text-white" :style="{ backgroundColor: 'var(--dp-bg-footer)' }">
             <tr>
               <th class="px-4 py-2 text-center w-12">#</th>
               <th class="px-4 py-2 text-left">근무명</th>
@@ -884,7 +884,7 @@ onUnmounted(() => {
             <button
               @click="searchMembers"
               class="px-4 py-2 text-white rounded-lg hover:bg-gray-700 transition"
-              :style="{ backgroundColor: '#4b5563' }"
+              :style="{ backgroundColor: 'var(--dp-modal-header-bg)' }"
             >
               <Search class="w-5 h-5" />
             </button>

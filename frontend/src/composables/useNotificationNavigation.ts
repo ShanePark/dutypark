@@ -37,10 +37,23 @@ export function useNotificationNavigation() {
         const year = date.getFullYear()
         const month = date.getMonth() + 1
         const day = date.getDate()
-        router.push({
-          path: '/duty/me',
-          query: { year: String(year), month: String(month), day: String(day) }
-        })
+
+        // Check if already on the duty calendar page
+        const currentPath = router.currentRoute.value.path
+        const isOnDutyPage = currentPath === '/duty/me' || currentPath.startsWith('/duty/')
+
+        if (isOnDutyPage) {
+          // Already on duty page - dispatch custom event to navigate to date
+          window.dispatchEvent(new CustomEvent('duty-go-to-date', {
+            detail: { year, month, day }
+          }))
+        } else {
+          // Navigate to duty page with query params
+          router.push({
+            path: '/duty/me',
+            query: { year: String(year), month: String(month), day: String(day) }
+          })
+        }
         return true
       } catch (error) {
         console.error('Failed to fetch schedule info:', error)

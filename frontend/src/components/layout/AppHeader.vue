@@ -281,40 +281,25 @@ onUnmounted(() => {
 }
 
 .menu-item-active {
-  background-color: #eff6ff;
-  color: #2563eb;
+  background-color: var(--dp-accent-bg);
+  color: var(--dp-accent-hover);
   font-weight: 600;
-  border-left: 3px solid #2563eb;
+  border-left: 3px solid var(--dp-accent-hover);
   padding-left: calc(1rem - 3px);
 }
 
 .menu-item-active:hover {
-  background-color: #dbeafe;
-  color: #2563eb;
-}
-
-.dark .menu-item-active {
-  background-color: rgba(59, 130, 246, 0.15);
-  color: #60a5fa;
-  border-left-color: #60a5fa;
-}
-
-.dark .menu-item-active:hover {
-  background-color: rgba(59, 130, 246, 0.25);
-  color: #60a5fa;
+  background-color: var(--dp-accent-bg-hover);
+  color: var(--dp-accent-hover);
 }
 
 .menu-item-danger {
-  color: #ef4444;
+  color: var(--dp-danger);
 }
 
 .menu-item-danger:hover {
-  background-color: #fef2f2;
-  color: #dc2626;
-}
-
-.dark .menu-item-danger:hover {
-  background-color: rgba(239, 68, 68, 0.1);
+  background-color: var(--dp-danger-bg);
+  color: var(--dp-danger-hover);
 }
 
 .menu-divider {
