@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.security.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.RateLimitException
 import com.tistory.shanepark.dutypark.member.repository.MemberManagerRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
@@ -28,8 +29,14 @@ class AuthService(
     private val refreshTokenService: RefreshTokenService,
     private val jwtProvider: JwtProvider,
     private val jwtConfig: JwtConfig,
+    private val loginAttemptService: LoginAttemptService,
 ) {
     private val log = logger()
+
+    companion object {
+        private const val LOGIN_FAILED_MESSAGE = "이메일 또는 비밀번호가 올바르지 않습니다."
+        private const val RATE_LIMIT_MESSAGE = "로그인 시도 횟수를 초과했습니다. 잠시 후 다시 시도해 주세요."
+    }
 
     @Transactional(readOnly = true)
     fun validateToken(token: String): TokenStatus {
@@ -65,20 +72,28 @@ class AuthService(
     }
 
     fun getTokenResponse(login: LoginDto, req: HttpServletRequest): TokenResponse {
-        val member = memberRepository.findByEmail(login.email).orElseThrow {
-            log.info("Login failed. email not exist:${login.email}")
-            AuthException("존재하지 않는 계정입니다.")
+        val ipAddress = req.remoteAddr ?: "unknown"
+        val email = login.email ?: throw AuthException(LOGIN_FAILED_MESSAGE)
+
+        if (loginAttemptService.isBlocked(ipAddress, email)) {
+            log.info("Login blocked due to rate limit: ip={}, email={}", ipAddress, email)
+            throw RateLimitException(RATE_LIMIT_MESSAGE)
         }
 
-        if (!passwordEncoder.matches(login.password, member.password)) {
-            log.info("Login failed. password not match:${login.email}")
-            throw AuthException("비밀번호가 일치하지 않습니다.")
+        val member = memberRepository.findByEmail(email).orElse(null)
+
+        if (member == null || !passwordEncoder.matches(login.password, member.password)) {
+            loginAttemptService.recordFailedAttempt(ipAddress, email)
+            log.info("Login failed: ip={}, email={}", ipAddress, email)
+            throw AuthException(LOGIN_FAILED_MESSAGE)
         }
+
+        loginAttemptService.recordSuccessfulAttempt(ipAddress, email)
 
         val jwt = jwtProvider.createToken(member)
         val refreshToken = refreshTokenService.createRefreshToken(
             memberId = member.id!!,
-            remoteAddr = req.remoteAddr,
+            remoteAddr = ipAddress,
             userAgent = req.getHeader(HttpHeaders.USER_AGENT)
         )
 

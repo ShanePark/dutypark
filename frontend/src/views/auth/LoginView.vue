@@ -19,6 +19,7 @@ const rememberMe = ref(false)
 const isLoading = ref(false)
 const isKakaoLoading = ref(false)
 const error = ref('')
+const remainingAttempts = ref<number | null>(null)
 const policyModal = ref<'terms' | 'privacy' | null>(null)
 
 onMounted(() => {
@@ -33,6 +34,7 @@ onMounted(() => {
 
 async function handleLogin() {
   error.value = ''
+  remainingAttempts.value = null
   isLoading.value = true
 
   try {
@@ -51,8 +53,11 @@ async function handleLogin() {
     const redirect = (route.query.redirect as string) || '/'
     router.push(redirect)
   } catch (e: unknown) {
-    if (e instanceof AxiosError && e.response?.data?.error) {
-      error.value = e.response.data.error
+    if (e instanceof AxiosError && e.response?.data) {
+      error.value = e.response.data.error || '로그인에 실패했습니다.'
+      if (typeof e.response.data.remainingAttempts === 'number') {
+        remainingAttempts.value = e.response.data.remainingAttempts
+      }
     } else {
       error.value = '로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.'
     }
@@ -137,8 +142,19 @@ function handleKakaoLogin() {
           </div>
 
           <!-- Error Message -->
-          <div v-if="error" class="text-red-600 text-sm bg-red-50 p-3 rounded-xl border border-red-100">
-            {{ error }}
+          <div v-if="error" class="text-sm p-3 rounded-xl border" :class="remainingAttempts !== null && remainingAttempts <= 1 ? 'text-orange-700 bg-orange-50 border-orange-200' : 'text-red-600 bg-red-50 border-red-100'">
+            <div>{{ error }}</div>
+            <div v-if="remainingAttempts !== null && remainingAttempts <= 3" class="mt-1 font-medium">
+              <template v-if="remainingAttempts === 0">
+                로그인이 차단되었습니다. 잠시 후 다시 시도해주세요.
+              </template>
+              <template v-else-if="remainingAttempts === 1">
+                주의: 마지막 시도입니다!
+              </template>
+              <template v-else>
+                남은 시도 횟수: {{ remainingAttempts }}회
+              </template>
+            </div>
           </div>
 
           <!-- Login Button -->
