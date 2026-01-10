@@ -616,6 +616,11 @@ html.dark {
 /* Duty Type Button (in DayDetailModal) */
 .duty-type-btn {
     transition: all 0.15s ease;
+    border: 1px solid var(--dp-border-secondary);
+}
+
+.dark .duty-type-btn {
+    border-color: #4b5563;
 }
 
 .duty-type-btn:not(.duty-type-btn-selected):hover {
@@ -626,7 +631,18 @@ html.dark {
 }
 
 .dark .duty-type-btn:not(.duty-type-btn-selected):hover {
+    border-color: #6b7280;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Selected state */
+.duty-type-btn-selected {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 1px #3b82f6, 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.dark .duty-type-btn-selected {
+    box-shadow: 0 0 0 1px #3b82f6, 0 0 0 3px rgba(59, 130, 246, 0.3);
 }
 
 /* Badge */

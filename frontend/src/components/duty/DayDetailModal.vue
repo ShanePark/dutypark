@@ -487,17 +487,16 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
               @click="handleDutyTypeChange(dutyType.id, dutyType.name)"
               class="duty-type-btn px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 cursor-pointer"
               :class="{
-                'border-blue-500 ring-1 ring-blue-200 duty-type-btn-selected': selectedDutyType === dutyType.name,
+                'duty-type-btn-selected': selectedDutyType === dutyType.name,
               }"
               :style="{
-                border: selectedDutyType === dutyType.name ? undefined : '1px solid var(--dp-border-primary)',
                 color: 'var(--dp-text-primary)',
                 backgroundColor: selectedDutyType === dutyType.name && dutyType.color ? dutyType.color + '30' : undefined
               }"
             >
               <span
-                class="inline-block w-3 h-3 rounded border border-gray-400"
-                :style="{ backgroundColor: dutyType.color || '#6c757d' }"
+                class="inline-block w-3 h-3 rounded border"
+                :style="{ backgroundColor: dutyType.color || '#6c757d', borderColor: 'var(--dp-border-secondary)' }"
               ></span>
               {{ dutyType.name }}
             </button>
