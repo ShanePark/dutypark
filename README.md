@@ -6,395 +6,227 @@
 
 <a href="#" target="_blank"><img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=Kotlin&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Spring Boot-6DB33F?style=flat-square&logo=Spring-Boot&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/JPA-ED2761?style=flat-square&logo=Spring&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=MySQL&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Vue.js-4FC08D?style=flat-square&logo=Vue.js&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=TypeScript&logoColor=white"/></a>
 
-> **Add your duties and schedules in a snap — then share with friends or family.**
-
-A lightweight, Kotlin + Spring Boot web app for duty rosters, personal schedules, todos, and D-Day counters. Dutypark combines a Vue-powered calendar UI, AI-assisted schedule parsing, media attachments, and team collaboration so both developers and non-technical users can coordinate shifts, events, and reminders from any device.
+> **A social calendar for you and the people you care about.**
 
 ---
 
-## 🚀 Features
+## Why Dutypark?
 
-| Category | Feature | Description |
-|:---------------------------|:------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Duty Management** | Duty Calendar | Color-coded duties/off-days with default off-type fallback plus cached calendar grids for quick month navigation. |
-|  | Excel Schedule Import | Bulk-upload shifts for a member or entire team via the `SungsimCake` parser; automatically maps names, auto-creates missing members, and overwrites the selected month safely. |
-| **Scheduling & Attachments** | Event Scheduling | Rich schedule editor with visibility controls, taggable participants, drag-ordering per day, and attachment-aware CRUD APIs. |
-|  | D-Day Countdown | Personal + shared D-Day events with privacy toggle, SweetAlert editor, and local storage selection for quick reference on the calendar. |
-|  | LLM Time Parsing Queue | Spring AI + Gemini extracts start/end times from natural-language titles with rate-limited workers and automatic status tracking (WAIT → PARSED/FAILED). |
-|  | Schedule Attachments | Session-based uploads powered by Uppy, resumable progress UI, thumbnail generation (Thumbnailator + TwelveMonkeys), and strict permission checks. |
-|  | Schedule Search Modal | Full-text search across schedules with pagination and jump-to-day navigation inside the duty calendar. |
-| **Todo & Dashboard** | Todo Board & Overview | Vue + SortableJS board for drag reordering, modal editing, reopen/complete actions, overview filters, and inline toasts. |
-|  | Dashboard Overview | Daily snapshot for me + friends: duties, schedules, pin ordering, friend/family toggles, and pending request management. |
-| **Sharing & Collaboration** | Friend & Family Sharing | Visibility-aware calendar sharing with `Visibility` enums plus family tagging that unlocks additional permissions. |
-|  | Schedule Tagging | Tag friends/family to notify them and surface shared schedules in their dashboard/day grid automatically. |
-|  | Multi-Account Management | Switch or manage multiple accounts, leveraging refresh tokens/remember-me cookies for frictionless sign-in. |
-| **Team & Organizations** | Team Calendars | Team view pulls every member’s roster with aggregated team schedules and default duty colors for empty slots. |
-|  | Team Manager Controls | Managers can invite/remove members, configure duty types/colors via Pickr, and manage work types + duty batch templates. |
-|  | Team Schedules & Templates | Dedicated team schedule board (`TeamScheduleService`) plus reusable templates for work types, duty defaults, and Excel batch processing. |
-| **Integrations & Automation** | Holiday Sync | Data.go.kr (공공데이터포털) integration with caching, DB persistence, and concurrency locks to prevent duplicate imports. |
-|  | Slack Ops Hooks | Startup/shutdown updates and exception digests are streamed to Slack via `SlackNotifier` and the `@SlackNotification` aspect. |
-| **Monitoring & Ops** | Prometheus + Grafana | Micrometer metrics exposed under `/actuator/prometheus`, scraped by the bundled Prometheus config and visualized via Grafana (default `admin/admin`). |
-| **Security** | OAuth Login | Kakao SSO flow with signup/consent screens and `MemberSsoRegister` validation. |
-|  | JWT + Refresh Cookies | HttpOnly session cookie plus sliding refresh tokens, admin filtering, and cookie security toggles for HTTPS deployments. |
-| **Notifications** | In-App Notifications | Real-time notification system with polling-based updates for friend/family requests, schedule tags; includes unread badge, dropdown preview, and paginated list view. |
-|  | Notification Cleanup | Scheduled daily cleanup (02:30) auto-deletes notifications older than 30 days with optimized database indexing. |
-| **Policy & Consent** | Terms & Privacy Policy | Versioned policy management with effective dates, markdown content rendering, and dedicated `/terms` and `/privacy` pages. |
-|  | User Consent Tracking | SSO signup consent flow with `MemberConsent` entity tracking policy acceptance per member. |
-| **User Guidance** | User Guide Page | Comprehensive help documentation at `/guide` with collapsible sections covering Dashboard, Calendar, Team, Friends, and Settings. |
+Your schedule isn't just about work. It's about the people around you — your partner who wants to plan a date, your family coordinating around everyone's calendars, your friends sharing their game-day schedules.
+
+**Dutypark connects your daily life with the people who matter most.** Share schedules, coordinate plans, and stay in sync — all in one place.
+
+### Who Uses Dutypark?
+
+| Who | What They Get |
+|:----|:--------------|
+| **Families** | Share schedules with spouse and kids, never miss daycare pickups or family events |
+| **Office Workers** | Track workdays and time-off, share with family so they know when you're free |
+| **Sports Fans** | Follow your team's schedule — home/away games, times, venues, opponents |
+| **Shift Workers** | Import rosters from Excel, share with family, coordinate with coworkers |
+| **Parents** | Manage daycare schedules, school events, weekend activities in one place |
 
 ---
 
-## 🧱 Tech Stack
+## Core Experience
 
-- **Backend:** Kotlin 2.1.10, Spring Boot 3.5.6 (Data JPA, Web, WebFlux, Validation, Security, Actuator, DevTools, Scheduling, Caching), Java 21 toolchain.
-- **Data:** MySQL 8.0 + Flyway migrations (`db/migration/v1`, `v2`), JPA auditing, ULID entities, optional P6Spy SQL tracing.
-- **AI & Messaging:** Spring AI starter (Gemini 2.0 Flash Lite via OpenAI-compatible endpoint) and Slack webhook integrations.
-- **Frontend:** Vue 3.5 SPA (Vite 7 + TypeScript 5.9 + Pinia 3 + Tailwind CSS 4), fully separated from backend with JWT Bearer token authentication.
-- **Build & Docs:** Gradle Kotlin DSL with `org.asciidoctor.jvm.convert` and git-properties plugin (surfaced in Slack + `/actuator/info`).
-- **Observability & Ops:** Micrometer Prometheus registry, Grafana dashboards, Logback rolling files, Docker Compose orchestration.
-- **Testing:** JUnit 5, H2 in-memory DB, Mockito-Kotlin, fail-fast Gradle test runs.
+### Share with Intention
 
----
+Not everyone needs to see everything. Dutypark gives you **four layers of privacy**:
 
-## 🗂 Architecture Highlights
+- **Public** — Visible to anyone
+- **Friends** — Only approved connections can see
+- **Family** — Reserved for your closest circle
+- **Private** — Just for you
 
-### Backend modules
-- `duty/` — Duty CRUD plus Excel batch ingestion (`DutyBatchSungsimService`) that validates templates, deduplicates names, and bulk-updates team members.
-- `schedule/` — Schedule service with tagging, calendar aggregation, search service, and attachment orchestration; includes the AI time parsing queue.
-- `todo/` — UUID-based todo entities with reorderable positions, reopen/complete flows, and overview queries.
-- `attachment/` — Upload sessions, validation, image thumbnail generation (async executor), cleanup scheduler, and filesystem abstraction.
-- `member/` — Friend/family relationships, D-Day management, visibility enforcement, refresh tokens, profile photos, and SSO onboarding.
-- `team/` — Team CRUD, manager roles, duty type configuration, work-type presets, and shared team schedules.
-- `dashboard/` — Aggregated "my + friends" view composed of duty, schedule, and friend request data.
-- `holiday/` — DataGoKr client built with `WebClientAdapter` + caching, locking, and DB persistence/reset APIs.
-- `notification/` — In-app notification system with event-driven async handling (`@TransactionalEventListener`), polling API, read/unread tracking, and scheduled cleanup (30-day retention).
-- `policy/` — Versioned terms of service and privacy policy management with effective date-based rollout and member consent tracking.
-- `security/` — JWT provider, cookies, Kakao OAuth, `@Login` argument resolver, admin filter, and forwarded-header support.
-- `common/` — Layout helpers, cached `/api/calendar` grids, Slack notification infrastructure, async/throttle configs, and custom logging configuration.
+Tag friends in your schedules. They'll see it on their dashboard instantly. No more "Did you get my text?"
 
-### Frontend layers
-- Vue 3.5 SPA with Composition API (`<script setup lang="ts">`) and TypeScript for type safety.
-- Pinia for state management (auth, notification, and theme stores).
-- Vue Router with lazy-loaded routes and navigation guards for authentication/admin roles.
-- Axios with request/response interceptors for automatic JWT refresh and 401 retry queue.
-- Tailwind CSS 4 for styling with custom design tokens and dark mode support.
-- SortableJS for drag-drop reordering, Uppy for file uploads, SweetAlert2 for notifications.
-- Lucide icons, vue-advanced-cropper for image editing, and marked for markdown rendering.
+### Your Calendar, Your Way
 
-### Integrations & automation
-- Spring Scheduling powers attachment session cleanup (02:00), notification cleanup (02:30), refresh token cleanup (00:00), and AI parsing queues; caching is enabled for calendars/holidays.
-- Event-driven notification system using `@TransactionalEventListener` for async handling of friend requests, family requests, and schedule tags.
-- Slack notifier sends startup/shutdown/events plus opt-in `@SlackNotification` aspect messages.
-- `DataGoKrConfig` uses WebFlux for resilient API calls with custom timeouts.
-- Attachment thumbnails run in a dedicated async executor to keep upload requests snappy.
+- **Duty Calendar** — Color-coded shifts with smart defaults for empty days
+- **Schedule Events** — Add appointments, meetups, reminders with optional time AI parsing
+- **Todo Board** — Drag-and-drop tasks that stay organized
+- **D-Day Countdown** — Never forget anniversaries, deadlines, or milestones
+
+### Stay Connected
+
+- **Dashboard** — See your day plus your friends' and family's schedules in one view
+- **Notifications** — Get alerted when someone tags you or sends a friend request
+- **Team View** — Aggregated roster for your whole team with manager controls
 
 ---
 
-## 🧑‍💻 Local Development
+## Features at a Glance
+
+### Scheduling & Sharing
+
+| Feature | Description |
+|:--------|:------------|
+| **Smart Visibility** | 4-level privacy (Public / Friends / Family / Private) with granular control per event |
+| **Friend Tagging** | Tag people in schedules — they'll see it on their dashboard automatically |
+| **Family Mode** | Special visibility tier for blood relatives and closest connections |
+| **Excel Import** | Bulk-upload shift rosters via the `SungsimCake` parser for healthcare and retail templates |
+| **AI Time Parsing** | Natural language like "Meeting 3-5pm" auto-extracts to structured times via Gemini |
+
+### Personal Productivity
+
+| Feature | Description |
+|:--------|:------------|
+| **D-Day Countdown** | Track anniversaries, deadlines, and milestones with privacy options |
+| **Todo Board** | Drag-and-drop reordering with SortableJS, reopen/complete actions |
+| **Schedule Search** | Full-text search with jump-to-day navigation |
+| **Attachments** | Upload files to schedules with resumable progress and auto-thumbnails |
+
+### Team Collaboration
+
+| Feature | Description |
+|:--------|:------------|
+| **Team Calendar** | Aggregated view of all members' duties with color-coded types |
+| **Manager Controls** | Invite/remove members, configure duty types and colors |
+| **Shift Templates** | Reusable work type presets for quick scheduling |
+| **Team Schedules** | Shared announcements and events visible to all team members |
+
+### Platform & Integration
+
+| Feature | Description |
+|:--------|:------------|
+| **Kakao OAuth** | One-click login with Korea's most popular messenger |
+| **Holiday Sync** | Korean public holidays auto-imported from Data.go.kr |
+| **Dark Mode** | Eye-friendly theme that respects your system preference |
+| **Mobile-First** | Responsive design optimized for phones and tablets |
+| **Real-time Notifications** | Polling-based alerts for tags, requests, and updates |
+
+---
+
+## Tech Stack
+
+- **Backend:** Kotlin 2.1, Spring Boot 3.5 (Data JPA, Security, WebFlux, Scheduling, Caching), Java 21
+- **Frontend:** Vue 3.5 SPA (Vite 7 + TypeScript + Pinia + Tailwind CSS 4)
+- **Database:** MySQL 8.0 + Flyway migrations
+- **AI:** Spring AI + Gemini 2.0 Flash Lite for schedule time parsing
+- **Auth:** JWT Bearer tokens + Kakao OAuth SSO
+- **Observability:** Prometheus, Grafana, Slack webhooks, rolling logs
+
+---
+
+## Quick Start
 
 ### Requirements
-- **Backend:** JDK 21+
-- **Frontend:** Node.js 20+ and npm
-- **Database:** Docker & Docker Compose (optional but recommended)
-- MySQL client (optional) for direct DB access
 
-### Clone & configure
+- JDK 21+, Node.js 20+, Docker (recommended)
+
+### Development Setup
+
 ```bash
+# Clone and configure
 git clone https://github.com/ShanePark/dutypark.git
 cd dutypark
-cp .env.sample .env   # fill in the placeholders before running the stack
+cp .env.sample .env  # fill in the placeholders
+
+# Start database
+cd dutypark_dev_db && docker compose up -d && cd ..
+
+# Start backend (terminal 1)
+./gradlew bootRun
+
+# Start frontend (terminal 2)
+cd frontend && npm install && npm run dev
 ```
 
-### Backend Development
-
-Run the Spring Boot application with hot reload:
-
-```bash
-./gradlew bootRun          # launches backend on http://localhost:8080 (DevTools enabled)
-./gradlew test             # runs fail-fast unit/integration tests on H2
-./gradlew build            # compiles + runs tests + creates bootJar
-./gradlew asciidoctor      # generates Spring REST Docs into src/main/resources/static/docs
-```
-
-**Note:** Backend requires MySQL running. Use `dutypark_dev_db` stack or configure your own MySQL instance.
-
-### Frontend Development
-
-Run the Vue 3 SPA with Vite dev server:
-
-```bash
-cd frontend
-npm install                # install dependencies (first time only)
-npm run dev                # starts dev server at http://localhost:5173
-npm run build              # production build to dist/
-npm run type-check         # TypeScript type checking (vue-tsc)
-npm run preview            # preview production build locally
-```
-
-**Development Workflow:**
-
-1. Start MySQL: `cd dutypark_dev_db && docker compose up -d`
-2. Start backend: `./gradlew bootRun` (from project root)
-3. Start frontend: `cd frontend && npm run dev` (in separate terminal)
-4. Open browser: http://localhost:5173
-
-The Vite dev server automatically proxies API requests (`/api/*`, `/admin/api/*`) to `localhost:8080`, so you can develop frontend and backend independently.
-
-**Frontend Hot Reload:**
-- Vue components auto-reload on save (HMR)
-- Tailwind CSS changes apply instantly
-- API types in `src/types/index.ts` provide full IntelliSense
-
-### Full Stack with Docker Compose
-
-For production-like environment or if you prefer containerized development:
-
-```bash
-# HTTP-only local stack (uses docker-compose.local.yml overlay)
-docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
-
-# Production-style stack (HTTPS + nginx reverse proxy)
-docker compose up -d
-```
-
-The Compose file spins up:
-- MySQL database
-- Spring Boot backend (built from Dockerfile)
-- nginx serving static frontend from `frontend/dist`
-- Prometheus + Grafana for monitoring
-
-App logs and attachment storage are bind-mounted under `./data/`.
-
-**Note:** For Docker deployment, you must build the frontend first:
-```bash
-cd frontend && npm run build
-```
-
-### Development database only
-Need just MySQL while running backend/frontend separately? Use the helper stack:
-
-```bash
-cd dutypark_dev_db
-docker compose up -d   # exposes MySQL on localhost:3307
-```
-
-Point `application-dev.yml` (already configured) to `jdbc:mysql://localhost:3307/dutypark`.
+Open http://localhost:5173 — the Vite dev server proxies API requests to the backend automatically.
 
 ### Production Deployment
 
-**Automated CI/CD via GitHub Actions:**
-
-The project includes a complete CI/CD pipeline (`.github/workflows/gradle.yml`) that:
-1. Builds backend JAR and frontend dist on every push to `main`/`stage`
-2. Runs tests and type checking
-3. Deploys to production server via SSH
-4. Performs atomic rollover to minimize downtime
-
-**Manual Production Deployment:**
-
-1. **Build artifacts:**
 ```bash
-# Backend
-./gradlew build                    # creates build/libs/dutypark.jar
+# Build artifacts
+./gradlew build
+cd frontend && npm run build && cd ..
 
-# Frontend
-cd frontend && npm run build       # creates frontend/dist/
+# Deploy with Docker Compose
+docker compose up -d
 ```
 
-2. **Prepare server:**
-```bash
-# On production server
-sudo certbot certonly --standalone -d yourdomain.com  # obtain Let's Encrypt cert
-cp .env.sample .env                                   # configure production secrets
+Full production setup (TLS, Prometheus, Grafana) is included in the Compose stack.
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────┐
+│      Vue 3 SPA (frontend/)              │
+│  Vite dev: http://localhost:5173        │
+└────────────┬────────────────────────────┘
+             │ /api/* proxy
+             ▼
+┌─────────────────────────────────────────┐
+│   Spring Boot Backend (:8080)           │
+│   REST API + JWT Auth                   │
+└────────────┬────────────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────────────┐
+│   MySQL 8.0 (:3306/3307)                │
+└─────────────────────────────────────────┘
 ```
 
-3. **Deploy via Docker Compose:**
-```bash
-# Copy artifacts to server
-scp build/libs/*.jar user@server:/dutypark/build/libs/dutypark.jar
-scp -r frontend/dist/* user@server:/dutypark/frontend/dist/
+### Backend Modules
 
-# On server
-docker compose build app           # rebuild app container
-docker compose up -d               # start/restart services
+| Module | Responsibility |
+|:-------|:---------------|
+| `duty/` | Duty CRUD, Excel batch import, calendar aggregation |
+| `schedule/` | Events, tagging, search, AI parsing queue, attachments |
+| `todo/` | Tasks with drag-reorder positions and completion tracking |
+| `member/` | Friends, family, D-Day, profiles, SSO onboarding |
+| `team/` | Teams, managers, duty types, shared schedules |
+| `dashboard/` | Aggregated "my + friends" daily view |
+| `notification/` | In-app alerts with event-driven async handling |
+| `security/` | JWT, OAuth, permissions, admin filtering |
+
+### Frontend Structure
+
+```
+frontend/src/
+├── api/           # Axios clients for each domain
+├── components/    # Reusable UI (FileUploader, Modals, Layout)
+├── composables/   # Shared logic (useSwal, useKakao)
+├── stores/        # Pinia (auth, notifications, theme)
+├── views/         # Page components (Dashboard, Duty, Member, Team)
+└── types/         # TypeScript interfaces
 ```
 
-4. **Monitoring:**
-- Health check: `https://yourdomain.com/actuator/health`
-- Metrics: `https://yourdomain.com/actuator/prometheus`
-- Grafana: `http://yourdomain.com:3000` (admin/admin)
+---
 
-5. **Maintenance:**
-- Rotate JWT secrets and refresh tokens periodically
-- Renew SSL certificates: `sudo certbot renew`
-- Backup MySQL data: `./data/db/`
-- Monitor logs: `./data/logs/dutypark.log`
+## Configuration
 
-### Monitoring (optional)
-Prometheus and Grafana services are part of the default Compose stack. Grafana listens on `http://localhost:3000` with credentials `admin/admin`, and its data directory persists in `./data/grafana`. Prometheus scrapes `app:8080/actuator/prometheus` as defined in `data/prometheus/prometheus.yml`.
+### Essential Environment Variables
+
+| Variable | Purpose |
+|:---------|:--------|
+| `JWT_SECRET` | Base64-encoded secret for token signing |
+| `KAKAO_REST_API_KEY` | Kakao OAuth client credential |
+| `GEMINI_API_KEY` | Google AI Studio key for schedule parsing |
+| `SLACK_TOKEN` | Ops notification bot token |
+| `DATA_GO_KR_SERVICE_KEY` | Korean public holiday API key |
+
+See `.env.sample` for the complete list.
 
 ---
 
-## ⚙️ Configuration
+## Contributing
 
-### Environment variables (`.env`)
-| Key | Purpose |
-|:------------------|:----------------------------------------------------------------------------|
-| `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD` | MySQL root/user credentials for the Compose DB container. |
-| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Override JDBC connection when deploying outside Compose. |
-| `JWT_SECRET` | Base64-encoded secret for signing access tokens (`jwt.secret`). |
-| `ADMIN_EMAIL` | Comma-separated admin emails injected into `dutypark.adminEmails`. |
-| `SLACK_TOKEN` | Slack bot token for ops notifications. |
-| `DATA_GO_KR_SERVICE_KEY` | Public holiday API key (decoded). |
-| `KAKAO_REST_API_KEY` | Kakao OAuth client credential. |
-| `GEMINI_API_KEY` | Google AI Studio (Gemini) key consumed by Spring AI. |
-| `DOMAIN_NAME` | Used by nginx templates + SSL volumes. |
-| `COOKIE_SSL_ENABLED` | Toggles Secure flag on cookies (`dutypark.ssl.enabled`). |
-| `NGINX_CONF_NAME` | Selects `nginx.conf` (TLS) or `nginx.local.conf` (HTTP). |
-| `TZ` | Container timezone (default Asia/Seoul). |
-| `UID`, `GID` | File ownership for mounted volumes (logs, Grafana, storage). |
-
-### Application settings
-`src/main/resources/application.yml` exposes the most important knobs:
-
-```yaml
-spring:
-  ai.openai:
-    api-key: "${GEMINI_API_KEY:EMPTY}"
-    chat:
-      base-url: https://generativelanguage.googleapis.com/v1beta/openai/
-      options:
-        model: gemini-2.0-flash-lite
-        temperature: 0.0
-dutypark:
-  storage:
-    root: /dutypark/storage
-    max-file-size: 50MB
-    thumbnail:
-      max-side: 200
-    session-expiration-hours: 24
-  slack.token: "${SLACK_TOKEN: }"
-  data-go-kr.service-key: "${DATA_GO_KR_SERVICE_KEY:DECODED_SERVICE_KEY_HERE}"
-jwt:
-  secret: "${JWT_SECRET:...}"
-management.endpoints.web.exposure.include: health,metrics,prometheus
-```
-
-`application-dev.yml` overrides DB credentials (port 3307), enables DevTools, disables SSL, logs to a local directory, and stubs Slack/API keys for safe local testing.
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ---
 
-## 📁 Directory Guide
-
-| Path | Purpose |
-|:--------------------------------------------|:----------------------------------------------------------------------------------------------|
-| `src/main/kotlin/com/tistory/shanepark/dutypark/duty` | Duty entities, controllers, services, and Excel batch import logic. |
-| `src/main/kotlin/com/tistory/shanepark/dutypark/schedule` | Schedule CRUD, tagging, search, attachments hook, AI parsing queue. |
-| `src/main/kotlin/com/tistory/shanepark/dutypark/todo` | Todo controller/service/entity DTOs. |
-| `src/main/kotlin/com/tistory/shanepark/dutypark/attachment` | Upload sessions, validation, filesystem helpers, thumbnail services, cleanup scheduler. |
-| `src/main/kotlin/com/tistory/shanepark/dutypark/member` | Friend relations, D-Day APIs, refresh tokens, profile photos, SSO flows, `@Login` annotation. |
-| `src/main/kotlin/com/tistory/shanepark/dutypark/team` | Team/domain logic (managers, schedules, work types, duty types). |
-| `src/main/kotlin/com/tistory/shanepark/dutypark/notification` | In-app notification system: entities, event listeners, REST API, cleanup scheduler. |
-| `src/main/kotlin/com/tistory/shanepark/dutypark/policy` | Terms of service and privacy policy versioning with consent tracking. |
-| `src/main/kotlin/com/tistory/shanepark/dutypark/security` | JWT auth, filters, Kakao OAuth, admin routing, cookie configuration. |
-| `src/main/kotlin/com/tistory/shanepark/dutypark/dashboard` | Dashboard controller/service aggregating duties + schedules. |
-| `frontend/` | Vue 3.5 SPA source code (Vite 7 + TypeScript + Pinia + Tailwind CSS 4). |
-| `src/main/resources/db/migration` | Flyway SQL scripts (`v1`, `v2`) that define/upgrade the schema. |
-| `src/docs/asciidoc` | Source for Spring REST Docs; build output copied to `static/docs`. |
-| `data/` | Docker volumes: MySQL data, logs, nginx templates, Prometheus, Grafana, storage. |
-| `dutypark_dev_db/` | Standalone MySQL docker-compose stack for local development. |
-| `README.assets/` | Images referenced in documentation (e.g., screenshots). |
-
----
-
-## 🗂 Attachments & Storage
-
-- Uploads target `AttachmentContextType` (`SCHEDULE`, `PROFILE`, `TEAM`, `TODO`) and start inside a temporary upload session (`AttachmentUploadSessionService`).
-- The Vue detail modal initializes Uppy dynamically, creates sessions on demand, enforces size limits (`dutypark.storage.max-file-size`), and tracks realtime progress with ETA + speed estimates.
-- `AttachmentService` persists metadata, enforces ownership through `AttachmentPermissionEvaluator`, and triggers thumbnails via `AttachmentUploadedEvent` + `ThumbnailService`.
-- Thumbnails are generated asynchronously on the `thumbnailExecutor` (`AsyncConfig`) using Thumbnailator + TwelveMonkeys codecs (JPEG/WebP support).
-- `AttachmentCleanupScheduler` runs nightly at 02:00, deletes expired sessions/files, and keeps orphaned uploads out of disk.
-- All filesystem paths are resolved through `StoragePathResolver` so you can relocate storage by changing `dutypark.storage.root`.
-
----
-
-## 🧠 AI-Assisted Scheduling
-
-- `ScheduleTimeParsingQueueManager` monitors schedules with `ParsingTimeStatus.WAIT`, enqueues them, and enforces Gemini limits (30 RPM, 1500 RPD).
-- Each task delays 10 seconds to ensure the originating DB transaction is committed, then `ScheduleTimeParsingWorker` skips entries that already have explicit times or lack time-related text.
-- `ScheduleTimeParsingService` crafts a JSON-only prompt, strips code fences, and deserializes responses into `ScheduleTimeParsingResponse`.
-- Worker outcomes update `ParsingTimeStatus` (`PARSED`, `FAILED`, `NO_TIME_INFO`, `ALREADY_HAVE_TIME_INFO`) and persist start/end times + `contentWithoutTime`.
-- Set `GEMINI_API_KEY` (or override `spring.ai.openai.*`) to enable the queue; leaving it blank automatically disables AI parsing without breaking schedule creation.
-
----
-
-## 🔒 Security & Access Control
-
-- `JwtAuthFilter` reads the HttpOnly session cookie, refreshes expired tokens via sliding refresh tokens (`RefreshTokenService`), and injects `LoginMember` attributes for controllers annotated with `@Login`.
-- `AuthService` issues remember-me cookies, revokes refresh tokens on password changes, and honors `dutypark.ssl.enabled` when toggling cookie security.
-- Kakao OAuth (`security/oauth/kakao`) handles token exchange + user info, while `/member/sso` pages complete onboarding with terms consent.
-- `DutyparkProperties.adminEmails` governs elevated access, and `AdminAuthFilter` restricts `/admin/**` + `/docs/**`.
-- Attachment APIs enforce session ownership + context-level permissions; schedule/todo/team controllers delegate to `FriendService` and `SchedulePermissionService` for visibility checks.
-- Visibility enums (`PUBLIC`, `FRIENDS`, `FAMILY`, `PRIVATE`) and friend/family relationships determine who can read schedules/duties.
-- `ForwardedHeaderFilter` plus nginx headers make deployments reverse-proxy friendly.
-
----
-
-## 📊 Monitoring & Ops
-
-- Spring Actuator exposes `/actuator/health`, `/actuator/info`, and `/actuator/prometheus` (enabled via `management.endpoints.web.exposure.include`).
-- Prometheus config (`data/prometheus/prometheus.yml`) scrapes both itself and the app; Grafana dashboards persist under `data/grafana`.
-- Slack alerts: `ApplicationStartupShutdownListener` posts lifecycle notifications (with branch + commit from `git.properties`), while `ErrorDetectAdvisor` sends exception payloads with request metadata.
-- Logback writes rolling daily logs to `dutypark.log.path` (default `/dutypark/logs`, mounted via Docker for persistence).
-- Micrometer + Prometheus registry capture JVM/app metrics; P6Spy can be toggled via `decorator.datasource.p6spy.enable-logging`.
-- `spy.log` (P6Spy output) and `data/logs` help troubleshoot SQL and app behavior.
-
----
-
-## 🎨 Frontend Experience
-
-- Vue 3.5 SPA with TypeScript and Composition API for type-safe, maintainable code.
-- Responsive design with Tailwind CSS 4, optimized for mobile devices with dark mode support.
-- In-app notification system with polling-based updates, unread badge, dropdown preview, and full list view.
-- D-Day management with SweetAlert popups and localStorage for quick selection.
-- Todo board with SortableJS drag-drop reordering and inline toasts.
-- Schedule detail modal integrates Uppy for uploads with real-time progress bars and thumbnail previews.
-- Profile photo management with vue-advanced-cropper for image editing.
-- Dedicated friends management page with pin/unpin, drag-drop reordering, and relationship controls.
-- User guide page with collapsible help sections for onboarding.
-- JWT Bearer token authentication with automatic refresh handling via Axios interceptors.
-
----
-
-## 🐳 Docker & Deployment
-
-- `docker-compose.yml` defines five services: `mysql`, `app`, `nginx`, `prometheus`, and `grafana`. App logs + attachment storage are bind-mounted to `./data/logs` and `./data/storage`.
-- nginx templates live in `data/nginx.conf` (HTTPS) and `data/nginx.local.conf` (HTTP). Choose them via `NGINX_CONF_NAME`.
-- TLS certificates are expected under `/etc/letsencrypt/...` on the host, mounted read-only into the nginx container.
-- `/actuator/**` routes are IP-restricted inside the nginx config (allow loopback + Docker networks).
-- `dutypark_dev_db/docker-compose.yml` is a trimmed stack for running only MySQL on port 3307.
-- `UID/GID` environment variables ensure mounted volumes remain writable on Linux hosts.
-- Prometheus + Grafana data directories persist under `./data/prometheus` and `./data/grafana` respectively.
-
----
-
-## 📄 API Docs & Testing
-
-- `./gradlew test` runs with `failFast = true`, using H2 + Mockito-Kotlin so suites complete quickly.
-- `./gradlew asciidoctor` depends on tests, then copies generated REST Docs into `src/main/resources/static/docs` (served under `/docs`, protected by `AdminAuthFilter`).
-- Build pipeline disables the plain `jar` task (Spring Boot fat jar only) and wires `build` → `asciidoctor`.
-- Use `./gradlew test --tests "SomeTestClass"` to target specific suites; `./gradlew clean build` for release builds.
-
----
-
-## 🖼 Sample Usage
-
-![eagles](./README.assets/eagles.png)
-
-Enjoy planning with **dutypark**.
-
----
-
-## 📄 License
+## License
 
 Released under the [MIT License](LICENSE).
+
+---
+
+**Dutypark** — *Because your schedule is more than just work.*

@@ -10,65 +10,55 @@ provide('introContainer', containerRef)
 
 const features: Feature[] = [
   {
-    id: 'schedule',
-    icon: 'calendar',
-    title: '일정 관리',
+    id: 'share',
+    icon: 'heart',
+    title: '일상을 함께',
     descriptionLines: [
-      '일정을 등록하고 검색하세요.',
-      '공개 설정으로 원하는 사람에게만 공유할 수 있습니다.',
+      '가족, 친구와 서로의 일정을 공유하세요.',
+      '"오늘 뭐 해?" 더 이상 물어볼 필요 없어요.',
     ],
     mockupType: 'image',
     mockupSrc: '/img/intro/schedule.png',
+  },
+  {
+    id: 'duty',
+    icon: 'clock',
+    title: '근무 & 연차 관리',
+    descriptionLines: [
+      '교대근무도, 평일 근무도 한눈에 정리.',
+      '연차는 휴무로 바꾸고, 팀원들과 공유하세요.',
+    ],
+    mockupType: 'image',
+    mockupSrc: '/img/intro/duty.png',
+  },
+  {
+    id: 'life',
+    icon: 'users',
+    title: '다양한 일상',
+    descriptionLines: [
+      '아이 등하원, 응원팀 경기 일정, 모임까지.',
+      '내 일상의 모든 것을 한 곳에서 관리하세요.',
+    ],
+    mockupType: 'placeholder',
   },
   {
     id: 'todo',
     icon: 'check',
     title: '할일 관리',
     descriptionLines: [
-      '까먹지 않는 일상을 위한 할일 관리.',
+      '까먹지 않는 일상을 위한 투두 보드.',
       '드래그로 순서 변경, 완료 체크까지.',
     ],
     mockupType: 'image',
     mockupSrc: '/img/intro/todo.png',
   },
   {
-    id: 'duty',
-    icon: 'clock',
-    title: '근무 관리',
-    descriptionLines: [
-      '나의 근무 일정을 한눈에.',
-      '시간표를 등록하고 팀원들과 공유하세요.',
-    ],
-    mockupType: 'image',
-    mockupSrc: '/img/intro/duty.png',
-  },
-  {
-    id: 'team',
-    icon: 'users',
-    title: '팀원 시간표',
-    descriptionLines: [
-      '팀원들의 시간표와 일정을 한눈에 조회.',
-      '업무 협업이 더 쉬워집니다.',
-    ],
-    mockupType: 'placeholder',
-  },
-  {
-    id: 'friends',
-    icon: 'heart',
-    title: '친구/가족 일정',
-    descriptionLines: [
-      '소중한 사람들의 일정을 확인하세요.',
-      '태그 기능으로 함께할 수 있습니다.',
-    ],
-    mockupType: 'placeholder',
-  },
-  {
     id: 'dday',
     icon: 'flag',
-    title: 'D-Day 관리',
+    title: 'D-Day 카운트다운',
     descriptionLines: [
-      '기념일, 중요한 날을 카운트다운.',
-      '놓치지 않도록 알려드립니다.',
+      '기념일, 마감일, 중요한 날.',
+      '함께 기다리고, 함께 기억해요.',
     ],
     mockupType: 'image',
     mockupSrc: '/img/intro/dday.png',
@@ -76,7 +66,7 @@ const features: Feature[] = [
   {
     id: 'holiday',
     icon: 'sun',
-    title: '공휴일 자동 표시',
+    title: '공휴일 자동 연동',
     descriptionLines: [
       '대한민국 공휴일이 자동으로 표시됩니다.',
       '일정 계획이 더 쉬워집니다.',

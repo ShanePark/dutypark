@@ -77,14 +77,15 @@ const guideLinkStyle = computed(() => {
       </div>
 
       <h2 class="intro-cta-title" :style="titleStyle">
-        지금 바로 Dutypark를 시작하세요
+        소중한 사람들과 연결되세요
       </h2>
 
       <p
         class="mb-8"
         :style="{ ...descStyle, color: 'var(--dp-text-secondary)' }"
       >
-        카카오톡 아이디로 간편하게 시작할 수 있습니다.
+        당신의 일정은 단순한 근무 그 이상이니까요.<br>
+        카카오톡으로 지금 바로 시작하세요.
       </p>
 
       <router-link

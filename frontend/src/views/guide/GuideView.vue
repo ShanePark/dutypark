@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import {
   BookOpen,
   Home,
+  ArrowLeft,
   Calendar,
   Users,
   UserPlus,
@@ -69,6 +70,16 @@ function closeAllSections() {
   <div class="max-w-4xl mx-auto px-4 py-6">
     <!-- Header -->
     <div class="mb-8">
+      <!-- Back to home -->
+      <router-link
+        to="/"
+        class="inline-flex items-center gap-1.5 mb-4 text-sm transition-colors hover:opacity-80"
+        :style="{ color: 'var(--dp-text-secondary)' }"
+      >
+        <ArrowLeft class="w-4 h-4" />
+        홈으로 돌아가기
+      </router-link>
+
       <div class="flex items-center gap-3 mb-4">
         <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
           <BookOpen class="w-6 h-6 text-white" />
