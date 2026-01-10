@@ -5,8 +5,10 @@ import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
+import com.tistory.shanepark.dutypark.security.repository.LoginAttemptRepository
 import jakarta.servlet.http.Cookie
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
@@ -25,8 +27,16 @@ class AuthControllerTest : DutyparkIntegrationTest() {
     @Autowired
     lateinit var refreshTokenService: RefreshTokenService
 
+    @Autowired
+    lateinit var loginAttemptRepository: LoginAttemptRepository
+
     private val log = logger()
     private val testPass = TestData.testPass
+
+    @BeforeEach
+    fun cleanup() {
+        loginAttemptRepository.deleteAll()
+    }
 
     @Test
     fun `login Success`() {
