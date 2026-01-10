@@ -1,9 +1,11 @@
 import { useRouter } from 'vue-router'
 import { scheduleApi } from '@/api/schedule'
+import { useAuthStore } from '@/stores/auth'
 import type { NotificationDto, NotificationReferenceType } from '@/types'
 
 export function useNotificationNavigation() {
   const router = useRouter()
+  const authStore = useAuthStore()
 
   function getNavigationPath(notification: NotificationDto): string | null {
     const { referenceType, referenceId } = notification
@@ -40,19 +42,18 @@ export function useNotificationNavigation() {
 
         // Check if already on the duty calendar page
         const currentPath = router.currentRoute.value.path
-        const isOnDutyPage = currentPath === '/duty/me' || currentPath.startsWith('/duty/')
+        const isOnDutyPage = currentPath.startsWith('/duty/')
+        const userId = authStore.user?.id
 
         if (isOnDutyPage) {
           // Already on duty page - dispatch custom event to navigate to date
           window.dispatchEvent(new CustomEvent('duty-go-to-date', {
             detail: { year, month, day }
           }))
-        } else {
-          // Navigate to duty page with query params
-          router.push({
-            path: '/duty/me',
-            query: { year: String(year), month: String(month), day: String(day) }
-          })
+        } else if (userId) {
+          // Store pending highlight date and navigate
+          sessionStorage.setItem('dutyHighlightDate', JSON.stringify({ year, month, day }))
+          router.push(`/duty/${userId}`)
         }
         return true
       } catch (error) {
