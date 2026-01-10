@@ -233,7 +233,7 @@ onMounted(() => {
 }
 
 .photo-placeholder:hover {
-  color: var(--color-primary, #3b82f6);
+  color: var(--dp-accent);
   background-color: var(--dp-bg-hover);
 }
 

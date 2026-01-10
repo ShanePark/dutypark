@@ -23,74 +23,12 @@
    ==================================== */
 
 @theme {
-    /* Colors - Primary */
-    --color-primary: #0d6efd;
-    --color-primary-hover: #0b5ed7;
-    --color-primary-light: #e7f1ff;
-
-    /* Colors - Secondary/Neutral */
-    --color-secondary: #6c757d;
-    --color-secondary-hover: #5c636a;
-
-    /* Colors - Success */
-    --color-success: #198754;
-    --color-success-hover: #157347;
-    --color-success-light: #e9f7f0;
-
-    /* Colors - Danger */
-    --color-danger: #dc3545;
-    --color-danger-hover: #bb2d3b;
-
-    /* Colors - Warning */
-    --color-warning: #ffc107;
-    --color-warning-hover: #ffca2c;
-
-    /* Colors - Backgrounds */
-    --color-bg-hover: #f8f9fa;
-    --color-bg-light: #f1f3f5;
-    --color-bg-muted: #e9ecef;
-    --color-bg-calendar: #eee;
-    --color-bg-footer: rgb(33, 37, 41);
-
-    /* Colors - Borders */
-    --color-border: #dee2e6;
-    --color-border-dark: #ced4da;
-
-    /* Colors - Text */
-    --color-text: #212529;
-    --color-text-muted: #6c757d;
-    --color-text-light: rgba(255, 255, 255, 0.87);
-
-    /* Colors - Special */
-    --color-sunday: #dc3545;
-    --color-saturday: #0d6efd;
-    --color-holiday: #dc3545;
-    --color-today-border: #dc3545;
-    --color-kakao: #fee500;
-    --color-kakao-text: #000000;
-
     /* Fonts */
     --font-sans: 'NexonMaplestory', system-ui, -apple-system, sans-serif;
 
-    /* Spacing */
-    --spacing-container: 64rem;
-
-    /* Border Radius */
-    --radius-sm: 0.25rem;
-    --radius-md: 0.5rem;
-    --radius-lg: 0.75rem;
-    --radius-xl: 1rem;
-    --radius-full: 9999px;
-
-    /* Shadows */
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-
-    /* Transitions */
-    --transition-fast: 150ms ease;
-    --transition-normal: 200ms ease;
-    --transition-slow: 300ms ease;
+    /* Kakao OAuth */
+    --color-kakao: #fee500;
+    --color-kakao-text: #000000;
 }
 
 /* ====================================
@@ -116,6 +54,30 @@
     --dp-border-primary: #e5e7eb;
     --dp-border-secondary: #d1d5db;
     --dp-border-input: #d1d5db;
+    --dp-border-hover: #9ca3af;
+
+    --dp-accent: #3b82f6;
+    --dp-accent-hover: #2563eb;
+    --dp-accent-light: #60a5fa;
+    --dp-accent-bg: #eff6ff;
+    --dp-accent-bg-hover: #dbeafe;
+    --dp-accent-border: #93c5fd;
+    --dp-accent-ring: rgba(59, 130, 246, 0.2);
+
+    --dp-success: #22c55e;
+    --dp-success-hover: #16a34a;
+    --dp-success-bg: #f0fdf4;
+    --dp-success-border: #86efac;
+
+    --dp-danger: #ef4444;
+    --dp-danger-hover: #dc2626;
+    --dp-danger-bg: #fef2f2;
+    --dp-danger-border: #fecaca;
+
+    --dp-warning: #f59e0b;
+    --dp-warning-hover: #d97706;
+    --dp-warning-bg: #fffbeb;
+    --dp-warning-border: #fcd34d;
 
     --dp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
     --dp-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -124,6 +86,15 @@
     --dp-calendar-cell-bg: #ffffff;
     --dp-calendar-cell-prev-next: #f9fafb;
     --dp-calendar-header-bg: #e5e7eb;
+
+    --dp-sunday: #dc2626;
+    --dp-saturday: #2563eb;
+
+    --dp-modal-header-bg: #4b5563;
+    --dp-modal-header-bg-alt: #6b7280;
+
+    --dp-kakao: #fee500;
+    --dp-kakao-text: #000000;
 }
 
 .dark {
@@ -145,6 +116,30 @@
     --dp-border-primary: #374151;
     --dp-border-secondary: #4b5563;
     --dp-border-input: #4b5563;
+    --dp-border-hover: #6b7280;
+
+    --dp-accent: #3b82f6;
+    --dp-accent-hover: #2563eb;
+    --dp-accent-light: #60a5fa;
+    --dp-accent-bg: #1e3a5f;
+    --dp-accent-bg-hover: #1e40af;
+    --dp-accent-border: #3b82f6;
+    --dp-accent-ring: rgba(59, 130, 246, 0.3);
+
+    --dp-success: #22c55e;
+    --dp-success-hover: #16a34a;
+    --dp-success-bg: #14532d;
+    --dp-success-border: #22c55e;
+
+    --dp-danger: #ef4444;
+    --dp-danger-hover: #dc2626;
+    --dp-danger-bg: #450a0a;
+    --dp-danger-border: #ef4444;
+
+    --dp-warning: #f59e0b;
+    --dp-warning-hover: #d97706;
+    --dp-warning-bg: #451a03;
+    --dp-warning-border: #f59e0b;
 
     --dp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
     --dp-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
@@ -153,6 +148,15 @@
     --dp-calendar-cell-bg: #1f2937;
     --dp-calendar-cell-prev-next: #111827;
     --dp-calendar-header-bg: #374151;
+
+    --dp-sunday: #f87171;
+    --dp-saturday: #60a5fa;
+
+    --dp-modal-header-bg: #374151;
+    --dp-modal-header-bg-alt: #4b5563;
+
+    --dp-kakao: #fee500;
+    --dp-kakao-text: #000000;
 }
 
 /* ====================================
@@ -404,7 +408,7 @@ html.dark {
 }
 
 .dday-badge-past {
-    background-color: #6b7280;
+    background-color: var(--dp-text-muted);
     color: white;
 }
 
@@ -440,21 +444,13 @@ html.dark {
 /* Sortable (Drag & Drop) */
 .sortable-ghost {
     @apply opacity-100 outline outline-2 outline-blue-500 -outline-offset-2 shadow-lg rounded-lg;
-    background-color: #eff6ff;
-}
-
-.dark .sortable-ghost {
-    background-color: #1e3a5f;
+    background-color: var(--dp-accent-bg);
 }
 
 .sortable-fallback {
     @apply fixed z-[1060] opacity-90 outline outline-2 outline-blue-500 -outline-offset-2 shadow-xl rounded-lg;
-    background-color: #eff6ff;
+    background-color: var(--dp-accent-bg);
     transition: none !important;
-}
-
-.dark .sortable-fallback {
-    background-color: #1e3a5f;
 }
 
 .sortable-chosen {
@@ -484,11 +480,7 @@ html.dark {
 
 .attachment-thumb.drag-over {
     @apply border-blue-500 border-2 scale-105;
-    background-color: #eff6ff;
-}
-
-.dark .attachment-thumb.drag-over {
-    background-color: #1e3a5f;
+    background-color: var(--dp-accent-bg);
 }
 
 /* Modal */
@@ -523,44 +515,24 @@ html.dark {
 
 /* Todo Button Group */
 .todo-btn-list:hover {
-    background-color: #eff6ff !important;
+    background-color: var(--dp-accent-bg) !important;
 }
 
 .todo-btn-list:hover svg,
 .todo-btn-list:hover span {
-    color: #3b82f6 !important;
+    color: var(--dp-accent) !important;
 }
 
 .todo-btn-add:hover {
-    background-color: #f0fdf4 !important;
-    color: #22c55e !important;
-}
-
-.dark .todo-btn-list:hover {
-    background-color: #1e3a5f !important;
-}
-
-.dark .todo-btn-list:hover svg,
-.dark .todo-btn-list:hover span {
-    color: #60a5fa !important;
-}
-
-.dark .todo-btn-add:hover {
-    background-color: #14532d !important;
-    color: #4ade80 !important;
+    background-color: var(--dp-success-bg) !important;
+    color: var(--dp-success) !important;
 }
 
 .todo-item-bubble:hover {
-    border-color: #93c5fd !important;
-    background-color: #eff6ff !important;
+    border-color: var(--dp-accent-border) !important;
+    background-color: var(--dp-accent-bg) !important;
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.15);
-}
-
-.dark .todo-item-bubble:hover {
-    border-color: #3b82f6 !important;
-    background-color: #1e3a5f !important;
-    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.25);
+    box-shadow: 0 2px 4px var(--dp-accent-ring);
 }
 
 /* Footer Navigation */
@@ -619,30 +591,17 @@ html.dark {
     border: 1px solid var(--dp-border-secondary);
 }
 
-.dark .duty-type-btn {
-    border-color: #4b5563;
-}
-
 .duty-type-btn:not(.duty-type-btn-selected):hover {
     background-color: var(--dp-bg-hover);
-    border-color: var(--dp-border-secondary);
+    border-color: var(--dp-border-hover);
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.dark .duty-type-btn:not(.duty-type-btn-selected):hover {
-    border-color: #6b7280;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--dp-shadow-sm);
 }
 
 /* Selected state */
 .duty-type-btn-selected {
-    border-color: #3b82f6 !important;
-    box-shadow: 0 0 0 1px #3b82f6, 0 0 0 3px rgba(59, 130, 246, 0.2);
-}
-
-.dark .duty-type-btn-selected {
-    box-shadow: 0 0 0 1px #3b82f6, 0 0 0 3px rgba(59, 130, 246, 0.3);
+    border-color: var(--dp-accent) !important;
+    box-shadow: 0 0 0 1px var(--dp-accent), 0 0 0 3px var(--dp-accent-ring);
 }
 
 /* Badge */
@@ -727,13 +686,8 @@ html.dark {
 }
 
 .hover-danger:hover {
-    background-color: #fee2e2;
-    color: #dc2626;
-}
-
-.dark .hover-danger:hover {
-    background-color: rgba(220, 38, 38, 0.2);
-    color: #f87171;
+    background-color: var(--dp-danger-bg);
+    color: var(--dp-danger-hover);
 }
 
 /* Color picker swatch hover effect */
@@ -999,15 +953,15 @@ div.swal2-popup.swal2-toast.colored-toast-info .swal2-title {
 }
 
 div.swal2-popup.swal2-toast.colored-toast-success {
-    border-left: 3px solid #22c55e !important;
+    border-left: 3px solid var(--dp-success) !important;
 }
 
 div.swal2-popup.swal2-toast.colored-toast-error {
-    border-left: 3px solid #ef4444 !important;
+    border-left: 3px solid var(--dp-danger) !important;
 }
 
 div.swal2-popup.swal2-toast.colored-toast-info {
-    border-left: 3px solid #3b82f6 !important;
+    border-left: 3px solid var(--dp-accent) !important;
 }
 
 .toast-with-icon {
@@ -1017,7 +971,7 @@ div.swal2-popup.swal2-toast.colored-toast-info {
 }
 
 .toast-with-icon svg {
-    color: #22c55e !important;
+    color: var(--dp-success) !important;
     flex-shrink: 0 !important;
 }
 
@@ -1027,13 +981,8 @@ div.swal2-popup.swal2-toast.colored-toast-info {
 
 /* Received friend request card (blue theme) */
 .friend-request-received {
-    background: linear-gradient(to bottom right, #eff6ff, #eef2ff);
-    border: 1px solid #bfdbfe;
-}
-
-.dark .friend-request-received {
-    background: linear-gradient(to bottom right, #1e3a5f, #1e293b);
-    border-color: #3b82f6;
+    background-color: var(--dp-accent-bg);
+    border: 1px solid var(--dp-accent-border);
 }
 
 .friend-request-received .friend-request-name {
@@ -1042,13 +991,8 @@ div.swal2-popup.swal2-toast.colored-toast-info {
 
 /* Sent friend request card (amber theme) */
 .friend-request-sent {
-    background: linear-gradient(to bottom right, #fffbeb, #fef9c3);
-    border: 1px solid #fcd34d;
-}
-
-.dark .friend-request-sent {
-    background: linear-gradient(to bottom right, #451a03, #1c1917);
-    border-color: #f59e0b;
+    background-color: var(--dp-warning-bg);
+    border: 1px solid var(--dp-warning-border);
 }
 
 .friend-request-sent .friend-request-name {

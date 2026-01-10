@@ -377,12 +377,12 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
 }
 
 .upload-area:hover {
-  border-color: var(--color-primary, #3b82f6);
+  border-color: var(--dp-accent);
   background-color: var(--dp-bg-hover);
 }
 
 .upload-area-dragging {
-  border-color: var(--color-primary, #3b82f6);
+  border-color: var(--dp-accent);
   background-color: var(--dp-bg-hover);
 }
 
@@ -420,7 +420,7 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
 }
 
 .cropper-wrapper-dragging {
-  outline: 3px dashed var(--color-primary, #3b82f6);
+  outline: 3px dashed var(--dp-accent);
   outline-offset: -3px;
 }
 
@@ -515,7 +515,7 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background-color: var(--color-primary, #3b82f6);
+  background-color: var(--dp-accent);
   cursor: pointer;
   transition: transform 0.15s ease;
 }
@@ -528,7 +528,7 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background-color: var(--color-primary, #3b82f6);
+  background-color: var(--dp-accent);
   border: none;
   cursor: pointer;
 }
@@ -606,30 +606,21 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
   align-items: center;
   justify-content: center;
   gap: 0.375rem;
-  background-color: #fee2e2;
-  color: #dc2626;
+  background-color: var(--dp-danger-bg);
+  color: var(--dp-danger-hover);
 }
 
 .btn-delete:hover:not(:disabled) {
-  background-color: #fecaca;
-}
-
-.dark .btn-delete {
-  background-color: rgba(220, 38, 38, 0.2);
-  color: #f87171;
-}
-
-.dark .btn-delete:hover:not(:disabled) {
-  background-color: rgba(220, 38, 38, 0.3);
+  background-color: var(--dp-danger-border);
 }
 
 .btn-confirm {
-  background-color: var(--color-primary, #3b82f6);
+  background-color: var(--dp-accent);
   color: white;
 }
 
 .btn-confirm:hover:not(:disabled) {
-  background-color: var(--color-primary-dark, #2563eb);
+  background-color: var(--dp-accent-hover);
 }
 
 .btn-cancel:disabled,

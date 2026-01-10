@@ -105,8 +105,8 @@ function getBackgroundColor(day: CalendarDay): string {
 // Get text color based on background and day of week
 function getDayNumberColor(day: CalendarDay, dayOfWeek: number): string {
   const bgColor = props.getDutyColor(day)
-  if (dayOfWeek === 0) return '#dc2626' // Sunday - red
-  if (dayOfWeek === 6) return '#2563eb' // Saturday - blue
+  if (dayOfWeek === 0) return 'var(--dp-sunday)'
+  if (dayOfWeek === 6) return 'var(--dp-saturday)'
   if (bgColor) {
     return isLightColor(bgColor) ? '#1f2937' : '#ffffff'
   }
@@ -115,10 +115,10 @@ function getDayNumberColor(day: CalendarDay, dayOfWeek: number): string {
 
 // Get holiday text color
 function getHolidayColor(day: CalendarDay, holiday: HolidayDto): string {
-  if (holiday.isHoliday) return '#dc2626'
+  if (holiday.isHoliday) return 'var(--dp-sunday)'
   const bgColor = props.getDutyColor(day)
   if (bgColor) {
-    return isLightColor(bgColor) ? '#6b7280' : 'rgba(255,255,255,0.7)'
+    return isLightColor(bgColor) ? 'var(--dp-text-muted)' : 'rgba(255,255,255,0.7)'
   }
   return 'var(--dp-text-muted)'
 }
@@ -136,7 +136,7 @@ function handleDayClick(day: CalendarDay, index: number) {
         v-for="(day, idx) in weekDays"
         :key="day"
         class="py-2 text-center font-bold border-b-2 text-sm"
-        :style="{ borderColor: 'var(--dp-border-secondary)', color: idx === 0 ? '#dc2626' : idx === 6 ? '#2563eb' : 'var(--dp-text-primary)' }"
+        :style="{ borderColor: 'var(--dp-border-secondary)', color: idx === 0 ? 'var(--dp-sunday)' : idx === 6 ? 'var(--dp-saturday)' : 'var(--dp-text-primary)' }"
         :class="{ 'border-r': idx < 6 }"
       >
         {{ day }}

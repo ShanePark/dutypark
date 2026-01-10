@@ -692,7 +692,7 @@ watch(
 
             <!-- Search Loading -->
             <div v-if="searchLoading" class="flex justify-center py-10">
-              <div class="w-8 h-8 border-3 rounded-full animate-spin" :style="{ borderColor: 'var(--dp-border-secondary)', borderTopColor: '#3b82f6' }"></div>
+              <div class="w-8 h-8 border-3 rounded-full animate-spin" :style="{ borderColor: 'var(--dp-border-secondary)', borderTopColor: 'var(--dp-accent)' }"></div>
             </div>
 
             <!-- Search Results -->

@@ -578,13 +578,13 @@ async function loadExistingImages() {
 }
 
 .drop-zone:hover:not(.disabled) {
-  border-color: var(--color-primary, #3b82f6);
+  border-color: var(--dp-accent);
   background-color: var(--dp-bg-tertiary);
 }
 
 .drop-zone.drag-over {
-  border-color: var(--color-primary, #3b82f6);
-  background-color: var(--color-primary-light, #eff6ff);
+  border-color: var(--dp-accent);
+  background-color: var(--dp-accent-bg);
 }
 
 .drop-zone.disabled {
@@ -701,7 +701,7 @@ async function loadExistingImages() {
 
 .spinner {
   animation: spin 1s linear infinite;
-  color: var(--color-primary, #3b82f6);
+  color: var(--dp-accent);
 }
 
 @keyframes spin {
@@ -733,8 +733,8 @@ async function loadExistingImages() {
 }
 
 .remove-btn:hover:not(:disabled) {
-  background-color: var(--color-danger-light, #fef2f2);
-  color: var(--color-danger, #ef4444);
+  background-color: var(--dp-danger-bg);
+  color: var(--dp-danger);
 }
 
 .remove-btn:disabled {

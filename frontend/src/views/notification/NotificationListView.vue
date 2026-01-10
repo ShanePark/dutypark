@@ -267,13 +267,8 @@ onMounted(() => {
 }
 
 .notification-delete-btn:hover {
-  color: #dc2626;
-  background-color: #fee2e2;
-}
-
-.dark .notification-delete-btn:hover {
-  color: #f87171;
-  background-color: rgba(220, 38, 38, 0.2);
+  color: var(--dp-danger-hover);
+  background-color: var(--dp-danger-bg);
 }
 
 .notification-list-container {
@@ -340,13 +335,8 @@ onMounted(() => {
 }
 
 .notification-delete-icon-btn:hover {
-  color: #dc2626;
-  background-color: #fee2e2;
-}
-
-.dark .notification-delete-icon-btn:hover {
-  color: #f87171;
-  background-color: rgba(220, 38, 38, 0.2);
+  color: var(--dp-danger-hover);
+  background-color: var(--dp-danger-bg);
 }
 
 .notification-list-footer {

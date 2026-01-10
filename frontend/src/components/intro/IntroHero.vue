@@ -90,9 +90,9 @@ function scrollToFeatures() {
   border-radius: 9999px;
   font-weight: 600;
   font-size: 1.125rem;
-  background-color: #3b82f6 !important;
+  background-color: var(--dp-accent) !important;
   color: white !important;
-  box-shadow: 0 10px 40px -10px rgba(59, 130, 246, 0.5);
+  box-shadow: 0 10px 40px -10px var(--dp-accent-ring);
   transform: translateY(20px);
   opacity: 0;
   transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
@@ -100,9 +100,9 @@ function scrollToFeatures() {
 }
 
 .intro-hero-cta:hover {
-  background-color: #2563eb !important;
+  background-color: var(--dp-accent-hover) !important;
   transform: translateY(-2px);
-  box-shadow: 0 20px 50px -10px rgba(59, 130, 246, 0.6);
+  box-shadow: 0 20px 50px -10px var(--dp-accent-ring);
 }
 
 .intro-hero-cta.hero-loaded {
