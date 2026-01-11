@@ -181,10 +181,7 @@ function focusStatus(status: TodoStatus, behavior: ScrollBehavior = 'smooth') {
   if (container.scrollWidth <= container.clientWidth) return
   const target = container.querySelector(`[data-column="${status}"]`)?.closest('.kanban-column') as HTMLElement | null
   if (!target) return
-  if (typeof target.scrollIntoView === 'function') {
-    target.scrollIntoView({ behavior, inline: 'center', block: 'nearest' })
-    return
-  }
+  // Use scrollTo instead of scrollIntoView to prevent unwanted Y-axis scrolling on mobile
   const left = target.offsetLeft - (container.clientWidth - target.clientWidth) / 2
   container.scrollTo({ left, behavior })
 }
