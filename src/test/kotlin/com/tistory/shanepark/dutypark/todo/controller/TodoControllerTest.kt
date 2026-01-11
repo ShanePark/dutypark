@@ -61,7 +61,10 @@ class TodoControllerTest : RestDocsTest() {
                         fieldWithPath("[].position").description("Todo Position"),
                         fieldWithPath("[].status").description("Todo Status"),
                         fieldWithPath("[].createdDate").description("createdDate"),
-                        fieldWithPath("[].completedDate").description("completedDate")
+                        fieldWithPath("[].completedDate").description("completedDate"),
+                        fieldWithPath("[].dueDate").description("Due date for the todo"),
+                        fieldWithPath("[].isOverdue").description("Whether the todo is overdue"),
+                        fieldWithPath("[].hasAttachments").description("Whether todo has attachments")
                     )
                 )
             )
@@ -73,6 +76,7 @@ class TodoControllerTest : RestDocsTest() {
             {
                 "title": "New Todo",
                 "content": "New Content",
+                "dueDate": "2025-12-31",
                 "attachmentSessionId": null,
                 "orderedAttachmentIds": []
             }
@@ -95,6 +99,7 @@ class TodoControllerTest : RestDocsTest() {
                     requestFields(
                         fieldWithPath("title").description("Todo Title"),
                         fieldWithPath("content").description("Todo Content"),
+                        fieldWithPath("dueDate").optional().description("Due date for the todo (YYYY-MM-DD)"),
                         fieldWithPath("attachmentSessionId").optional().description("첨부 업로드 세션 ID"),
                         fieldWithPath("orderedAttachmentIds").optional().description("저장 순서를 유지할 첨부 ID 배열")
                     ),
@@ -105,7 +110,10 @@ class TodoControllerTest : RestDocsTest() {
                         fieldWithPath("position").description("Todo Position"),
                         fieldWithPath("status").description("Todo Status"),
                         fieldWithPath("createdDate").description("createdDate"),
-                        fieldWithPath("completedDate").description("completedDate")
+                        fieldWithPath("completedDate").description("completedDate"),
+                        fieldWithPath("dueDate").description("Due date for the todo"),
+                        fieldWithPath("isOverdue").description("Whether the todo is overdue"),
+                        fieldWithPath("hasAttachments").description("Whether todo has attachments")
                     )
                 )
             )
@@ -127,6 +135,7 @@ class TodoControllerTest : RestDocsTest() {
             {
                 "title": "Updated Todo",
                 "content": "Updated Content",
+                "dueDate": "2025-12-31",
                 "attachmentSessionId": null,
                 "orderedAttachmentIds": []
             }
@@ -152,6 +161,7 @@ class TodoControllerTest : RestDocsTest() {
                     requestFields(
                         fieldWithPath("title").description("Todo Title"),
                         fieldWithPath("content").description("Todo Content"),
+                        fieldWithPath("dueDate").optional().description("Due date for the todo (YYYY-MM-DD)"),
                         fieldWithPath("attachmentSessionId").optional().description("첨부 업로드 세션 ID"),
                         fieldWithPath("orderedAttachmentIds").optional().description("저장 순서를 유지할 첨부 ID 배열")
                     ),
@@ -162,7 +172,10 @@ class TodoControllerTest : RestDocsTest() {
                         fieldWithPath("position").description("Todo Position"),
                         fieldWithPath("status").description("Todo Status"),
                         fieldWithPath("createdDate").description("createdDate"),
-                        fieldWithPath("completedDate").description("completedDate")
+                        fieldWithPath("completedDate").description("completedDate"),
+                        fieldWithPath("dueDate").description("Due date for the todo"),
+                        fieldWithPath("isOverdue").description("Whether the todo is overdue"),
+                        fieldWithPath("hasAttachments").description("Whether todo has attachments")
                     )
                 )
             )
@@ -253,7 +266,7 @@ class TodoControllerTest : RestDocsTest() {
             title = "Todo Completed",
             content = "Content Completed",
             position = null,
-            status = TodoStatus.COMPLETED
+            status = TodoStatus.DONE
         )
         completed.markCompleted()
         todoRepository.save(completed)
@@ -265,7 +278,7 @@ class TodoControllerTest : RestDocsTest() {
                 .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$[0].status").value("COMPLETED"))
+            .andExpect(jsonPath("$[0].status").value("DONE"))
             .andDo(MockMvcResultHandlers.print())
             .andDo(
                 document(
@@ -277,7 +290,10 @@ class TodoControllerTest : RestDocsTest() {
                         fieldWithPath("[].position").description("Todo Position"),
                         fieldWithPath("[].status").description("Todo Status"),
                         fieldWithPath("[].createdDate").description("createdDate"),
-                        fieldWithPath("[].completedDate").description("completedDate")
+                        fieldWithPath("[].completedDate").description("completedDate"),
+                        fieldWithPath("[].dueDate").description("Due date for the todo"),
+                        fieldWithPath("[].isOverdue").description("Whether the todo is overdue"),
+                        fieldWithPath("[].hasAttachments").description("Whether todo has attachments")
                     )
                 )
             )
@@ -301,7 +317,7 @@ class TodoControllerTest : RestDocsTest() {
                 .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.status").value("COMPLETED"))
+            .andExpect(jsonPath("$.status").value("DONE"))
             .andDo(MockMvcResultHandlers.print())
             .andDo(
                 document(
@@ -316,7 +332,10 @@ class TodoControllerTest : RestDocsTest() {
                         fieldWithPath("position").description("Todo Position"),
                         fieldWithPath("status").description("Todo Status"),
                         fieldWithPath("createdDate").description("createdDate"),
-                        fieldWithPath("completedDate").description("completedDate")
+                        fieldWithPath("completedDate").description("completedDate"),
+                        fieldWithPath("dueDate").description("Due date for the todo"),
+                        fieldWithPath("isOverdue").description("Whether the todo is overdue"),
+                        fieldWithPath("hasAttachments").description("Whether todo has attachments")
                     )
                 )
             )
@@ -330,7 +349,7 @@ class TodoControllerTest : RestDocsTest() {
                 title = "Todo",
                 content = "Content",
                 position = null,
-                status = TodoStatus.COMPLETED
+                status = TodoStatus.DONE
             ).apply { markCompleted() }
         )
 
@@ -341,7 +360,7 @@ class TodoControllerTest : RestDocsTest() {
                 .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.status").value("ACTIVE"))
+            .andExpect(jsonPath("$.status").value("TODO"))
             .andDo(MockMvcResultHandlers.print())
             .andDo(
                 document(
@@ -356,7 +375,10 @@ class TodoControllerTest : RestDocsTest() {
                         fieldWithPath("position").description("Todo Position"),
                         fieldWithPath("status").description("Todo Status"),
                         fieldWithPath("createdDate").description("createdDate"),
-                        fieldWithPath("completedDate").description("completedDate")
+                        fieldWithPath("completedDate").description("completedDate"),
+                        fieldWithPath("dueDate").description("Due date for the todo"),
+                        fieldWithPath("isOverdue").description("Whether the todo is overdue"),
+                        fieldWithPath("hasAttachments").description("Whether todo has attachments")
                     )
                 )
             )

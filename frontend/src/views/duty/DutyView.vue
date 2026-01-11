@@ -46,7 +46,7 @@ interface LocalTodo {
   id: string
   title: string
   content: string
-  status: 'ACTIVE' | 'COMPLETED'
+  status: 'TODO' | 'IN_PROGRESS' | 'DONE'
   createdDate: string
   completedDate?: string
   hasAttachments: boolean
@@ -213,7 +213,7 @@ function handleTodoBubbleClick(todo: LocalTodo) {
 }
 
 // Convert API Todo to LocalTodo
-function mapToLocalTodo(apiTodo: { id: string; title: string; content: string; position: number | null; status: 'ACTIVE' | 'COMPLETED'; createdDate: string; completedDate: string | null }): LocalTodo {
+function mapToLocalTodo(apiTodo: { id: string; title: string; content: string; position: number | null; status: 'TODO' | 'IN_PROGRESS' | 'DONE'; createdDate: string; completedDate: string | null }): LocalTodo {
   return {
     id: apiTodo.id,
     title: apiTodo.title,
@@ -1115,7 +1115,7 @@ async function handleTodoAdd(data: {
 // Todo position update for drag-and-drop
 async function handleTodoPositionUpdate(orderedIds: string[]) {
   try {
-    await todoApi.updatePositions(orderedIds)
+    await todoApi.updatePositionsLegacy(orderedIds)
     // Reorder local todos array to match the new order
     const todoMap = new Map(todos.value.map((t) => [t.id, t]))
     todos.value = orderedIds.map((id) => todoMap.get(id)).filter((t): t is LocalTodo => t !== undefined)

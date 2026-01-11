@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, toRef } from 'vue'
-import { X } from 'lucide-vue-next'
+import { X, Calendar } from 'lucide-vue-next'
 import FileUploader from '@/components/common/FileUploader.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import type { NormalizedAttachment } from '@/types'
@@ -21,6 +21,7 @@ const emit = defineEmits<{
   (e: 'save', data: {
     title: string
     content: string
+    dueDate?: string
     attachmentSessionId?: string
     orderedAttachmentIds?: string[]
   }): void
@@ -30,6 +31,7 @@ useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 
 const title = ref('')
 const content = ref('')
+const dueDate = ref('')
 const attachments = ref<NormalizedAttachment[]>([])
 const sessionId = ref<string | null>(null)
 const isUploading = ref(false)
@@ -44,6 +46,7 @@ watch(
       // Reset form when opening
       title.value = ''
       content.value = ''
+      dueDate.value = ''
       attachments.value = []
       sessionId.value = null
       isUploading.value = false
@@ -58,6 +61,7 @@ function handleClose() {
   }
   title.value = ''
   content.value = ''
+  dueDate.value = ''
   attachments.value = []
   sessionId.value = null
   isUploading.value = false
@@ -78,6 +82,7 @@ function handleSave() {
   emit('save', {
     title: title.value.trim(),
     content: content.value.trim(),
+    dueDate: dueDate.value || undefined,
     attachmentSessionId: sessionId.value || undefined,
     orderedAttachmentIds: orderedAttachmentIds.length > 0 ? orderedAttachmentIds : undefined,
   })
@@ -88,6 +93,7 @@ function handleSave() {
   }
   title.value = ''
   content.value = ''
+  dueDate.value = ''
   attachments.value = []
   sessionId.value = null
   isUploading.value = false
@@ -156,6 +162,18 @@ function onUploadError(message: string) {
                 class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
                 placeholder="상세 내용을 입력하세요 (선택사항)"
               ></textarea>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
+                <Calendar class="w-4 h-4 inline-block mr-1 -mt-0.5" />
+                마감일
+              </label>
+              <input
+                v-model="dueDate"
+                type="date"
+                class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
+              />
             </div>
 
             <!-- Attachment Upload -->

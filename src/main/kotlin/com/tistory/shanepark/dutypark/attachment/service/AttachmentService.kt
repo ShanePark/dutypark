@@ -446,6 +446,13 @@ class AttachmentService(
         }
     }
 
+    fun hasAttachments(
+        contextType: AttachmentContextType,
+        contextId: String
+    ): Boolean {
+        return attachmentRepository.existsByContextTypeAndContextId(contextType, contextId)
+    }
+
     private fun generateStoredFilename(originalFilename: String): String {
         val extension = originalFilename.substringAfterLast('.', "")
         val uuid = UUID.randomUUID()

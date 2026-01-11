@@ -42,7 +42,7 @@ class TodoServiceTest {
     fun `addTodo should save and return TodoResponse`() {
         // Given
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
-        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.ACTIVE)).thenReturn(0)
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.TODO)).thenReturn(0)
 
         val todo = Todo(member, "title", "content", 1)
         `when`(todoRepository.save(any(Todo::class.java))).thenReturn(todo)
@@ -133,7 +133,7 @@ class TodoServiceTest {
                     .id
             )
         ).thenReturn(Optional.of(member))
-        `when`(todoRepository.findAllByMemberAndStatusOrderByPosition(member, TodoStatus.ACTIVE)).thenReturn(
+        `when`(todoRepository.findAllByMemberAndStatusOrderByPosition(member, TodoStatus.TODO)).thenReturn(
             listOf(
                 Todo(member, "title1", "content1", 1),
                 Todo(member, "title2", "content2", 2)
@@ -176,15 +176,15 @@ class TodoServiceTest {
     @Test
     fun `completedTodoList should return completed todos`() {
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
-        val completedTodo = Todo(member, "title", "content", null, TodoStatus.COMPLETED)
+        val completedTodo = Todo(member, "title", "content", null, TodoStatus.DONE)
         `when`(
-            todoRepository.findAllByMemberAndStatusOrderByCompletedDateDesc(member, TodoStatus.COMPLETED)
+            todoRepository.findAllByMemberAndStatusOrderByCompletedDateDesc(member, TodoStatus.DONE)
         ).thenReturn(listOf(completedTodo))
 
         val response = todoService.completedTodoList(loginMember)
 
         assertEquals(1, response.size)
-        assertEquals(TodoStatus.COMPLETED, response.first().status)
+        assertEquals(TodoStatus.DONE, response.first().status)
     }
 
     @Test
@@ -197,7 +197,7 @@ class TodoServiceTest {
 
         val response = todoService.completeTodo(loginMember, todoId)
 
-        assertEquals(TodoStatus.COMPLETED, response.status)
+        assertEquals(TodoStatus.DONE, response.status)
     }
 
     @Test
@@ -208,11 +208,11 @@ class TodoServiceTest {
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
-        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.ACTIVE)).thenReturn(0)
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.TODO)).thenReturn(0)
 
         val response = todoService.reopenTodo(loginMember, todoId)
 
-        assertEquals(TodoStatus.ACTIVE, response.status)
+        assertEquals(TodoStatus.TODO, response.status)
         assertEquals(null, response.completedDate)
     }
 
@@ -223,14 +223,14 @@ class TodoServiceTest {
         val todoId = UUID.randomUUID()
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
-        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.ACTIVE)).thenReturn(0)
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.TODO)).thenReturn(0)
         `when`(todoRepository.save(any(Todo::class.java))).thenAnswer { invocation ->
             val savedTodo = invocation.getArgument<Todo>(0)
             ReflectionTestUtils.setField(savedTodo, "id", todoId)
             savedTodo
         }
 
-        todoService.addTodo(loginMember, "title", "content", sessionId, orderedAttachmentIds)
+        todoService.addTodo(loginMember, "title", "content", null, sessionId, orderedAttachmentIds)
 
         verify(attachmentService, times(1)).synchronizeContextAttachments(
             loginMember = loginMember,
@@ -251,7 +251,7 @@ class TodoServiceTest {
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
 
-        todoService.editTodo(loginMember, todoId, "new title", "new content", null, orderedAttachmentIds)
+        todoService.editTodo(loginMember, todoId, "new title", "new content", null, null, orderedAttachmentIds)
 
         verify(attachmentService, times(1)).synchronizeContextAttachments(
             loginMember = loginMember,
@@ -296,7 +296,7 @@ class TodoServiceTest {
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
 
         assertThrows<IllegalArgumentException> {
-            todoService.editTodo(loginMember, todoId, "new title", "new content", UUID.randomUUID(), listOf(UUID.randomUUID()))
+            todoService.editTodo(loginMember, todoId, "new title", "new content", null, UUID.randomUUID(), listOf(UUID.randomUUID()))
         }
         verifyNoInteractions(attachmentService)
     }

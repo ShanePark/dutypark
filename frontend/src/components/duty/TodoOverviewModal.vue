@@ -25,7 +25,7 @@ interface Todo {
   id: string
   title: string
   content: string
-  status: 'ACTIVE' | 'COMPLETED'
+  status: 'TODO' | 'IN_PROGRESS' | 'DONE'
   createdDate: string
   completedDate?: string
   hasAttachments: boolean
@@ -40,6 +40,15 @@ interface Todo {
     thumbnailUrl?: string
     downloadUrl: string
   }>
+}
+
+// Helper functions for status compatibility
+function isActive(status: string): boolean {
+  return status === 'TODO' || status === 'IN_PROGRESS'
+}
+
+function isDone(status: string): boolean {
+  return status === 'DONE'
 }
 
 interface Props {
@@ -288,12 +297,12 @@ function handleTodoClick(todo: Todo) {
               :data-id="todo.id"
               class="rounded-lg overflow-hidden transition-all cursor-pointer group border"
               :class="{
-                'todo-item-completed opacity-60 border-green-200': todo.status === 'COMPLETED',
-                'hover:shadow-md hover:border-blue-300 todo-item-active': todo.status === 'ACTIVE'
+                'todo-item-completed opacity-60 border-green-200': isDone(todo.status),
+                'hover:shadow-md hover:border-blue-300 todo-item-active': isActive(todo.status)
               }"
               :style="{
                 backgroundColor: 'var(--dp-bg-card)',
-                borderColor: todo.status === 'ACTIVE' ? 'var(--dp-border-primary)' : undefined
+                borderColor: isActive(todo.status) ? 'var(--dp-border-primary)' : undefined
               }"
               @click="handleTodoClick(todo)"
             >
@@ -302,15 +311,15 @@ function handleTodoClick(todo: Todo) {
                 <div
                   class="flex-shrink-0 w-9 sm:w-10 flex items-center justify-center"
                   :class="{
-                    'bg-green-500/10': todo.status === 'COMPLETED'
+                    'bg-green-500/10': isDone(todo.status)
                   }"
                   :style="{
-                    backgroundColor: todo.status === 'ACTIVE' ? 'var(--dp-bg-tertiary)' : undefined
+                    backgroundColor: isActive(todo.status) ? 'var(--dp-bg-tertiary)' : undefined
                   }"
                 >
                   <!-- Completed: check icon -->
                   <CheckCircle2
-                    v-if="todo.status === 'COMPLETED'"
+                    v-if="isDone(todo.status)"
                     class="w-5 h-5 text-green-500"
                   />
                   <!-- Active + sortable: drag handle -->
@@ -334,10 +343,10 @@ function handleTodoClick(todo: Todo) {
                       <h3
                         class="font-medium text-sm sm:text-base truncate"
                         :class="{
-                          'text-green-600 line-through': todo.status === 'COMPLETED'
+                          'text-green-600 line-through': isDone(todo.status)
                         }"
                         :style="{
-                          color: todo.status === 'ACTIVE' ? 'var(--dp-text-primary)' : undefined
+                          color: isActive(todo.status) ? 'var(--dp-text-primary)' : undefined
                         }"
                       >
                         {{ todo.title }}
@@ -359,7 +368,7 @@ function handleTodoClick(todo: Todo) {
                     <!-- Action buttons -->
                     <div class="flex items-center gap-0.5 flex-shrink-0" @click.stop>
                       <button
-                        v-if="todo.status === 'ACTIVE'"
+                        v-if="isActive(todo.status)"
                         @click="emit('complete', todo.id)"
                         class="p-1.5 text-green-500 hover:bg-green-500/10 rounded-md transition cursor-pointer"
                         title="완료"

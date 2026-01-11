@@ -7,6 +7,7 @@ import {
   Check,
   RotateCcw,
   List,
+  Calendar,
 } from 'lucide-vue-next'
 import FileUploader from '@/components/common/FileUploader.vue'
 import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
@@ -24,9 +25,33 @@ interface Todo {
   id: string
   title: string
   content: string
-  status: 'ACTIVE' | 'COMPLETED'
+  status: 'TODO' | 'IN_PROGRESS' | 'DONE'
   createdDate: string
-  completedDate?: string
+  completedDate?: string | null
+  dueDate?: string | null
+  isOverdue?: boolean
+}
+
+// Helper functions for status compatibility
+function isActiveTodo(status: string): boolean {
+  return status === 'TODO' || status === 'IN_PROGRESS'
+}
+
+function isDoneTodo(status: string): boolean {
+  return status === 'DONE'
+}
+
+function getStatusLabel(status: string): string {
+  switch (status) {
+    case 'TODO':
+      return 'TODO'
+    case 'IN_PROGRESS':
+      return '진행중'
+    case 'DONE':
+      return '완료'
+    default:
+      return status
+  }
 }
 
 interface Props {
@@ -47,6 +72,7 @@ const emit = defineEmits<{
     id: string
     title: string
     content: string
+    dueDate?: string | null
     attachmentSessionId?: string
     orderedAttachmentIds?: string[]
   }): void
@@ -61,6 +87,7 @@ useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 const isEditMode = ref(false)
 const editTitle = ref('')
 const editContent = ref('')
+const editDueDate = ref('')
 const editAttachments = ref<NormalizedAttachment[]>([])
 const sessionId = ref<string | null>(null)
 const isUploading = ref(false)
@@ -74,6 +101,7 @@ watch(
     if (open && props.todo) {
       editTitle.value = props.todo.title
       editContent.value = props.todo.content
+      editDueDate.value = props.todo.dueDate || ''
       sessionId.value = null
       isUploading.value = false
 
@@ -98,6 +126,7 @@ watch(
       // Same todo was updated, reload attachments and reset edit mode
       editTitle.value = newTodo.title
       editContent.value = newTodo.content
+      editDueDate.value = newTodo.dueDate || ''
       await loadAttachments()
     }
   },
@@ -120,7 +149,7 @@ async function loadAttachments() {
   }
 }
 
-const isActive = computed(() => props.todo?.status === 'ACTIVE')
+const isActive = computed(() => props.todo ? isActiveTodo(props.todo.status) : false)
 
 
 function enterEditMode() {
@@ -128,6 +157,7 @@ function enterEditMode() {
   isEditMode.value = true
   editTitle.value = props.todo.title
   editContent.value = props.todo.content
+  editDueDate.value = props.todo.dueDate || ''
   editAttachments.value = [...viewAttachments.value]
   sessionId.value = null
   isUploading.value = false
@@ -142,6 +172,7 @@ function cancelEdit() {
   if (props.todo) {
     editTitle.value = props.todo.title
     editContent.value = props.todo.content
+    editDueDate.value = props.todo.dueDate || ''
     editAttachments.value = [...viewAttachments.value]
   }
   sessionId.value = null
@@ -161,6 +192,7 @@ function saveEdit() {
     id: props.todo.id,
     title: editTitle.value.trim(),
     content: editContent.value.trim(),
+    dueDate: editDueDate.value || null,
     attachmentSessionId: sessionId.value || undefined,
     orderedAttachmentIds: orderedAttachmentIds.length > 0 ? orderedAttachmentIds : undefined,
   })
@@ -221,12 +253,12 @@ function onUploadError(message: string) {
               <span
                 :class="[
                   'px-2 py-0.5 text-xs rounded-full flex-shrink-0',
-                  isActive
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-gray-100 text-gray-600 line-through',
+                  todo.status === 'TODO' ? 'bg-slate-100 text-slate-700' : '',
+                  todo.status === 'IN_PROGRESS' ? 'bg-amber-100 text-amber-700' : '',
+                  todo.status === 'DONE' ? 'bg-green-100 text-green-700 line-through' : '',
                 ]"
               >
-                {{ isActive ? '진행중' : '완료' }}
+                {{ getStatusLabel(todo.status) }}
               </span>
             </div>
             <p class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">
@@ -244,6 +276,19 @@ function onUploadError(message: string) {
           <!-- View Mode -->
           <template v-if="!isEditMode">
             <div class="space-y-4">
+              <!-- Due Date Display -->
+              <div v-if="todo.dueDate" class="flex items-center gap-2">
+                <Calendar class="w-4 h-4" :class="todo.isOverdue ? 'text-red-500' : ''" :style="!todo.isOverdue ? { color: 'var(--dp-text-secondary)' } : undefined" />
+                <span
+                  class="text-sm"
+                  :class="todo.isOverdue ? 'text-red-500 font-medium' : ''"
+                  :style="!todo.isOverdue ? { color: 'var(--dp-text-secondary)' } : undefined"
+                >
+                  마감일: {{ formatDateKorean(todo.dueDate) }}
+                  <span v-if="todo.isOverdue" class="text-red-500">(기한 초과)</span>
+                </span>
+              </div>
+
               <div v-if="todo.content">
                 <p class="whitespace-pre-wrap break-all" :style="{ color: 'var(--dp-text-primary)' }">{{ todo.content }}</p>
               </div>
@@ -283,6 +328,18 @@ function onUploadError(message: string) {
                   rows="6"
                   class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
                 ></textarea>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
+                  <Calendar class="w-4 h-4 inline-block mr-1 -mt-0.5" />
+                  마감일
+                </label>
+                <input
+                  v-model="editDueDate"
+                  type="date"
+                  class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
+                />
               </div>
 
               <!-- Attachments (Edit Mode) -->
