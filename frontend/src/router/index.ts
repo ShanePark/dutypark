@@ -39,6 +39,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false },
   },
   {
+    path: '/todo',
+    name: 'todo',
+    component: () => import('@/views/todo/TodoBoardView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/member',
     name: 'member',
     component: () => import('@/views/member/MemberView.vue'),

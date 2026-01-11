@@ -48,7 +48,7 @@ onUnmounted(() => {
     @click="toggleDropdown"
     aria-label="알림"
   >
-    <Bell class="w-5 h-5" />
+    <Bell class="w-5 h-5 bell-icon" />
     <span
       v-if="notificationStore.hasUnread"
       class="notification-badge absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-xs font-bold rounded-full"
@@ -66,6 +66,20 @@ onUnmounted(() => {
 .notification-bell:hover {
   color: var(--dp-text-primary);
   background-color: var(--dp-bg-hover);
+}
+
+.notification-bell:hover .bell-icon {
+  animation: bell-ring 0.5s ease-in-out;
+  transform-origin: top center;
+}
+
+@keyframes bell-ring {
+  0% { transform: rotate(0deg); }
+  20% { transform: rotate(15deg); }
+  40% { transform: rotate(-15deg); }
+  60% { transform: rotate(10deg); }
+  80% { transform: rotate(-10deg); }
+  100% { transform: rotate(0deg); }
 }
 
 .notification-badge {

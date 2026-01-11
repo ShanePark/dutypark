@@ -1,8 +1,10 @@
 package com.tistory.shanepark.dutypark.todo.domain.dto
 
+import com.tistory.shanepark.dutypark.todo.domain.entity.TodoStatus
 import jakarta.validation.constraints.NotBlank
 import org.hibernate.validator.constraints.Length
 import org.springframework.validation.annotation.Validated
+import java.time.LocalDate
 import java.util.UUID
 
 @Validated
@@ -13,6 +15,8 @@ data class TodoRequest(
     val title: String,
 
     val content: String,
+    val status: TodoStatus? = null,
+    val dueDate: LocalDate? = null,
     val attachmentSessionId: UUID? = null,
     val orderedAttachmentIds: List<UUID> = emptyList()
 )

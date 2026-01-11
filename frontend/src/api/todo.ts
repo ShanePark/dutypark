@@ -1,7 +1,14 @@
 import apiClient from './client'
-import type { Todo } from '@/types'
+import type {
+  Todo,
+  TodoBoard,
+  TodoCreateRequest,
+  TodoUpdateRequest,
+  TodoStatusChangeRequest,
+  TodoPositionUpdateRequest,
+} from '@/types'
 
-export interface TodoRequest {
+export interface LegacyTodoRequest {
   title: string
   content: string
   attachmentSessionId?: string
@@ -9,8 +16,11 @@ export interface TodoRequest {
 }
 
 export const todoApi = {
+  // ===== Legacy API (backward compatible) =====
+
   /**
-   * 활성 Todo 목록 조회
+   * Get TODO status list (formerly ACTIVE)
+   * @deprecated Use getBoard() for kanban board
    */
   getActiveTodos: async (): Promise<Todo[]> => {
     const response = await apiClient.get<Todo[]>('/todos')
@@ -18,7 +28,8 @@ export const todoApi = {
   },
 
   /**
-   * 완료된 Todo 목록 조회
+   * Get DONE status list (formerly COMPLETED)
+   * @deprecated Use getBoard() for kanban board
    */
   getCompletedTodos: async (): Promise<Todo[]> => {
     const response = await apiClient.get<Todo[]>('/todos/completed')
@@ -26,30 +37,15 @@ export const todoApi = {
   },
 
   /**
-   * Todo 생성
+   * Update positions (legacy, TODO status only)
+   * @deprecated Use updatePositions() for kanban board
    */
-  createTodo: async (request: TodoRequest): Promise<Todo> => {
-    const response = await apiClient.post<Todo>('/todos', request)
-    return response.data
-  },
-
-  /**
-   * Todo 수정
-   */
-  updateTodo: async (id: string, request: TodoRequest): Promise<Todo> => {
-    const response = await apiClient.put<Todo>(`/todos/${id}`, request)
-    return response.data
-  },
-
-  /**
-   * Todo 순서 변경 (드래그 정렬)
-   */
-  updatePositions: async (ids: string[]): Promise<void> => {
+  updatePositionsLegacy: async (ids: string[]): Promise<void> => {
     await apiClient.patch('/todos/position', ids)
   },
 
   /**
-   * Todo 완료 처리
+   * Complete task (TODO/IN_PROGRESS -> DONE)
    */
   completeTodo: async (id: string): Promise<Todo> => {
     const response = await apiClient.patch<Todo>(`/todos/${id}/complete`)
@@ -57,15 +53,96 @@ export const todoApi = {
   },
 
   /**
-   * Todo 재오픈 (완료 취소)
+   * Reopen task (DONE -> TODO)
    */
   reopenTodo: async (id: string): Promise<Todo> => {
     const response = await apiClient.patch<Todo>(`/todos/${id}/reopen`)
     return response.data
   },
 
+  // ===== New API (for kanban board) =====
+
   /**
-   * Todo 삭제
+   * Get full kanban board
+   */
+  getBoard: async (): Promise<TodoBoard> => {
+    const response = await apiClient.get<TodoBoard>('/todos/board')
+    return response.data
+  },
+
+  /**
+   * Get list by specific status
+   */
+  getByStatus: async (status: string): Promise<Todo[]> => {
+    const response = await apiClient.get<Todo[]>(`/todos/status/${status}`)
+    return response.data
+  },
+
+  /**
+   * Change status (kanban column move)
+   */
+  changeStatus: async (id: string, request: TodoStatusChangeRequest): Promise<Todo> => {
+    const response = await apiClient.patch<Todo>(`/todos/${id}/status`, request)
+    return response.data
+  },
+
+  /**
+   * Update positions by status
+   */
+  updatePositions: async (request: TodoPositionUpdateRequest): Promise<void> => {
+    await apiClient.patch('/todos/positions', request)
+  },
+
+  // ===== Due Date API =====
+
+  /**
+   * Get todos by month (for calendar integration)
+   */
+  getTodosByMonth: async (year: number, month: number): Promise<Todo[]> => {
+    const response = await apiClient.get<Todo[]>('/todos/calendar', {
+      params: { year, month },
+    })
+    return response.data
+  },
+
+  /**
+   * Get todos by specific date
+   */
+  getTodosByDate: async (date: string): Promise<Todo[]> => {
+    const response = await apiClient.get<Todo[]>('/todos/due', {
+      params: { date },
+    })
+    return response.data
+  },
+
+  /**
+   * Get overdue todos
+   */
+  getOverdueTodos: async (): Promise<Todo[]> => {
+    const response = await apiClient.get<Todo[]>('/todos/overdue')
+    return response.data
+  },
+
+  // ===== Common API =====
+
+  /**
+   * Create todo
+   */
+  createTodo: async (request: TodoCreateRequest | LegacyTodoRequest): Promise<Todo> => {
+    const response = await apiClient.post<Todo>('/todos', request)
+    return response.data
+  },
+
+  /**
+   * Update todo
+   */
+  updateTodo: async (id: string, request: TodoUpdateRequest | LegacyTodoRequest): Promise<Todo> => {
+    const response = await apiClient.put<Todo>(`/todos/${id}`, request)
+    return response.data
+  },
+
+  /**
+   * Delete todo
    */
   deleteTodo: async (id: string): Promise<void> => {
     await apiClient.delete(`/todos/${id}`)

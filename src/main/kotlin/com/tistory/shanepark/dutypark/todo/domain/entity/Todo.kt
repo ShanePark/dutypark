@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.todo.domain.entity
 import com.tistory.shanepark.dutypark.common.domain.entity.EntityBase
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import jakarta.persistence.*
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 @Entity
@@ -23,10 +24,13 @@ class Todo(
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
-    var status: TodoStatus = TodoStatus.ACTIVE,
+    var status: TodoStatus = TodoStatus.TODO,
 
     @Column(name = "completed_date")
     var completedDate: LocalDateTime? = null,
+
+    @Column(name = "due_date")
+    var dueDate: LocalDate? = null,
 
     ) : EntityBase() {
 
@@ -35,14 +39,29 @@ class Todo(
         this.content = content
     }
 
-    fun markCompleted(completedAt: LocalDateTime = LocalDateTime.now()) {
-        status = TodoStatus.COMPLETED
+    fun changeStatus(newStatus: TodoStatus, newPosition: Int) {
+        val previousStatus = this.status
+        this.status = newStatus
+        this.position = newPosition
+
+        // Set completedDate when changing to DONE
+        if (newStatus == TodoStatus.DONE && previousStatus != TodoStatus.DONE) {
+            this.completedDate = LocalDateTime.now()
+        }
+        // Clear completedDate when changing from DONE to other status
+        if (newStatus != TodoStatus.DONE && previousStatus == TodoStatus.DONE) {
+            this.completedDate = null
+        }
+    }
+
+    fun markCompleted(newPosition: Int, completedAt: LocalDateTime = LocalDateTime.now()) {
+        status = TodoStatus.DONE
         completedDate = completedAt
-        position = null
+        position = newPosition
     }
 
     fun markActive(newPosition: Int) {
-        status = TodoStatus.ACTIVE
+        status = TodoStatus.TODO
         position = newPosition
         completedDate = null
     }

@@ -36,6 +36,16 @@ class ErrorDetectAdvisor(
         return ResponseEntity.status(404).build()
     }
 
+    @ExceptionHandler(IllegalArgumentException::class)
+    @ResponseBody
+    fun handleIllegalArgumentException(
+        req: HttpServletRequest,
+        e: IllegalArgumentException
+    ): ResponseEntity<Map<String, String>> {
+        log.info("IllegalArgumentException: ${e.message}, requestURI: ${req.requestURI}")
+        return ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Bad Request")))
+    }
+
     @ExceptionHandler(Exception::class)
     fun handleException(req: HttpServletRequest, e: Exception) {
         if (isNotNotify(e))

@@ -7,6 +7,10 @@ import {
   Check,
   RotateCcw,
   List,
+  Calendar,
+  ListTodo,
+  Clock,
+  CheckCircle2,
 } from 'lucide-vue-next'
 import FileUploader from '@/components/common/FileUploader.vue'
 import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
@@ -16,7 +20,7 @@ import { useSwal } from '@/composables/useSwal'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEscapeKey } from '@/composables/useEscapeKey'
 import { formatDateKorean } from '@/utils/date'
-import type { NormalizedAttachment } from '@/types'
+import type { NormalizedAttachment, TodoStatus } from '@/types'
 
 const { showWarning, showError } = useSwal()
 
@@ -24,9 +28,33 @@ interface Todo {
   id: string
   title: string
   content: string
-  status: 'ACTIVE' | 'COMPLETED'
+  status: 'TODO' | 'IN_PROGRESS' | 'DONE'
   createdDate: string
-  completedDate?: string
+  completedDate?: string | null
+  dueDate?: string | null
+  isOverdue?: boolean
+}
+
+// Helper functions for status compatibility
+function isActiveTodo(status: string): boolean {
+  return status === 'TODO' || status === 'IN_PROGRESS'
+}
+
+function isDoneTodo(status: string): boolean {
+  return status === 'DONE'
+}
+
+function getStatusLabel(status: string): string {
+  switch (status) {
+    case 'TODO':
+      return '할일'
+    case 'IN_PROGRESS':
+      return '진행중'
+    case 'DONE':
+      return '완료'
+    default:
+      return status
+  }
 }
 
 interface Props {
@@ -47,6 +75,8 @@ const emit = defineEmits<{
     id: string
     title: string
     content: string
+    status: TodoStatus
+    dueDate?: string | null
     attachmentSessionId?: string
     orderedAttachmentIds?: string[]
   }): void
@@ -61,6 +91,8 @@ useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 const isEditMode = ref(false)
 const editTitle = ref('')
 const editContent = ref('')
+const editStatus = ref<TodoStatus>('TODO')
+const editDueDate = ref('')
 const editAttachments = ref<NormalizedAttachment[]>([])
 const sessionId = ref<string | null>(null)
 const isUploading = ref(false)
@@ -68,12 +100,20 @@ const fileUploaderRef = ref<InstanceType<typeof FileUploader> | null>(null)
 const viewAttachments = ref<NormalizedAttachment[]>([])
 const isLoadingAttachments = ref(false)
 
+const statusOptions: Array<{ value: TodoStatus; label: string; icon: typeof ListTodo; colorClass: string }> = [
+  { value: 'TODO', label: '할일', icon: ListTodo, colorClass: 'status-card-todo' },
+  { value: 'IN_PROGRESS', label: '진행중', icon: Clock, colorClass: 'status-card-in-progress' },
+  { value: 'DONE', label: '완료', icon: CheckCircle2, colorClass: 'status-card-done' },
+]
+
 watch(
   () => props.isOpen,
   async (open) => {
     if (open && props.todo) {
       editTitle.value = props.todo.title
       editContent.value = props.todo.content
+      editStatus.value = props.todo.status
+      editDueDate.value = props.todo.dueDate || ''
       sessionId.value = null
       isUploading.value = false
 
@@ -98,6 +138,8 @@ watch(
       // Same todo was updated, reload attachments and reset edit mode
       editTitle.value = newTodo.title
       editContent.value = newTodo.content
+      editStatus.value = newTodo.status
+      editDueDate.value = newTodo.dueDate || ''
       await loadAttachments()
     }
   },
@@ -120,7 +162,7 @@ async function loadAttachments() {
   }
 }
 
-const isActive = computed(() => props.todo?.status === 'ACTIVE')
+const isActive = computed(() => props.todo ? isActiveTodo(props.todo.status) : false)
 
 
 function enterEditMode() {
@@ -128,6 +170,8 @@ function enterEditMode() {
   isEditMode.value = true
   editTitle.value = props.todo.title
   editContent.value = props.todo.content
+  editStatus.value = props.todo.status
+  editDueDate.value = props.todo.dueDate || ''
   editAttachments.value = [...viewAttachments.value]
   sessionId.value = null
   isUploading.value = false
@@ -142,6 +186,8 @@ function cancelEdit() {
   if (props.todo) {
     editTitle.value = props.todo.title
     editContent.value = props.todo.content
+    editStatus.value = props.todo.status
+    editDueDate.value = props.todo.dueDate || ''
     editAttachments.value = [...viewAttachments.value]
   }
   sessionId.value = null
@@ -161,8 +207,10 @@ function saveEdit() {
     id: props.todo.id,
     title: editTitle.value.trim(),
     content: editContent.value.trim(),
+    status: editStatus.value,
+    dueDate: editDueDate.value || null,
     attachmentSessionId: sessionId.value || undefined,
-    orderedAttachmentIds: orderedAttachmentIds.length > 0 ? orderedAttachmentIds : undefined,
+    orderedAttachmentIds: orderedAttachmentIds,
   })
 
   // Cleanup after save
@@ -214,19 +262,19 @@ function onUploadError(message: string) {
     >
       <div class="modal-container max-w-[95vw] sm:max-w-xl max-h-[90dvh] sm:max-h-[90vh]">
         <!-- Header -->
-        <div class="flex items-center justify-between p-3 sm:p-4 flex-shrink-0" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderBottom: '1px solid var(--dp-border-primary)' }">
+        <div class="flex items-center justify-between p-3 sm:p-4 flex-shrink-0" :style="{ backgroundColor: 'var(--dp-bg-card)', borderBottom: '1px solid var(--dp-border-primary)' }">
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-2">
               <h2 class="text-base sm:text-lg font-bold truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ todo.title }}</h2>
               <span
                 :class="[
                   'px-2 py-0.5 text-xs rounded-full flex-shrink-0',
-                  isActive
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-gray-100 text-gray-600 line-through',
+                  todo.status === 'TODO' ? 'bg-slate-100 text-slate-700' : '',
+                  todo.status === 'IN_PROGRESS' ? 'bg-amber-100 text-amber-700' : '',
+                  todo.status === 'DONE' ? 'bg-green-100 text-green-700 line-through' : '',
                 ]"
               >
-                {{ isActive ? '진행중' : '완료' }}
+                {{ getStatusLabel(todo.status) }}
               </span>
             </div>
             <p class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">
@@ -244,6 +292,19 @@ function onUploadError(message: string) {
           <!-- View Mode -->
           <template v-if="!isEditMode">
             <div class="space-y-4">
+              <!-- Due Date Display -->
+              <div v-if="todo.dueDate" class="flex items-center gap-2">
+                <Calendar class="w-4 h-4" :class="todo.isOverdue ? 'text-red-500' : ''" :style="!todo.isOverdue ? { color: 'var(--dp-text-secondary)' } : undefined" />
+                <span
+                  class="text-sm"
+                  :class="todo.isOverdue ? 'text-red-500 font-medium' : ''"
+                  :style="!todo.isOverdue ? { color: 'var(--dp-text-secondary)' } : undefined"
+                >
+                  마감일: {{ formatDateKorean(todo.dueDate) }}
+                  <span v-if="todo.isOverdue" class="text-red-500">(기한 초과)</span>
+                </span>
+              </div>
+
               <div v-if="todo.content">
                 <p class="whitespace-pre-wrap break-all" :style="{ color: 'var(--dp-text-primary)' }">{{ todo.content }}</p>
               </div>
@@ -263,6 +324,24 @@ function onUploadError(message: string) {
           <!-- Edit Mode -->
           <template v-else>
             <div class="space-y-4">
+              <!-- Status Selection -->
+              <div>
+                <label class="block text-sm font-medium mb-2" :style="{ color: 'var(--dp-text-secondary)' }">상태</label>
+                <div class="grid grid-cols-3 gap-2">
+                  <button
+                    v-for="option in statusOptions"
+                    :key="option.value"
+                    type="button"
+                    @click="editStatus = option.value"
+                    class="status-card cursor-pointer"
+                    :class="[option.colorClass, { 'status-card-selected': editStatus === option.value }]"
+                  >
+                    <component :is="option.icon" class="w-4 h-4" />
+                    <span class="text-xs font-medium">{{ option.label }}</span>
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
                   제목 <span class="text-red-500">*</span>
@@ -283,6 +362,18 @@ function onUploadError(message: string) {
                   rows="6"
                   class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
                 ></textarea>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
+                  <Calendar class="w-4 h-4 inline-block mr-1 -mt-0.5" />
+                  마감일
+                </label>
+                <input
+                  v-model="editDueDate"
+                  type="date"
+                  class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
+                />
               </div>
 
               <!-- Attachments (Edit Mode) -->
@@ -376,3 +467,63 @@ function onUploadError(message: string) {
     </div>
   </Teleport>
 </template>
+
+<style scoped>
+.status-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.75rem 0.5rem;
+  border-radius: 0.5rem;
+  border: 2px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.status-card:hover {
+  transform: translateY(-1px);
+}
+
+.status-card-todo {
+  background-color: var(--dp-bg-tertiary);
+  color: var(--dp-text-primary);
+}
+
+.status-card-todo:hover {
+  background-color: var(--dp-bg-hover);
+}
+
+.status-card-todo.status-card-selected {
+  border-color: var(--dp-text-primary);
+  background-color: var(--dp-bg-hover);
+}
+
+.status-card-in-progress {
+  background-color: color-mix(in srgb, var(--dp-warning) 15%, var(--dp-bg-tertiary));
+  color: var(--dp-warning);
+}
+
+.status-card-in-progress:hover {
+  background-color: color-mix(in srgb, var(--dp-warning) 25%, var(--dp-bg-tertiary));
+}
+
+.status-card-in-progress.status-card-selected {
+  border-color: var(--dp-warning);
+  background-color: color-mix(in srgb, var(--dp-warning) 25%, var(--dp-bg-tertiary));
+}
+
+.status-card-done {
+  background-color: color-mix(in srgb, var(--dp-success) 15%, var(--dp-bg-tertiary));
+  color: var(--dp-success);
+}
+
+.status-card-done:hover {
+  background-color: color-mix(in srgb, var(--dp-success) 25%, var(--dp-bg-tertiary));
+}
+
+.status-card-done.status-card-selected {
+  border-color: var(--dp-success);
+  background-color: color-mix(in srgb, var(--dp-success) 25%, var(--dp-bg-tertiary));
+}
+</style>

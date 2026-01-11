@@ -2,11 +2,17 @@ package com.tistory.shanepark.dutypark.todo.controller
 
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.todo.domain.dto.TodoBoardResponse
+import com.tistory.shanepark.dutypark.todo.domain.dto.TodoPositionUpdateRequest
 import com.tistory.shanepark.dutypark.todo.domain.dto.TodoRequest
 import com.tistory.shanepark.dutypark.todo.domain.dto.TodoResponse
+import com.tistory.shanepark.dutypark.todo.domain.dto.TodoStatusChangeRequest
+import com.tistory.shanepark.dutypark.todo.domain.entity.TodoStatus
 import com.tistory.shanepark.dutypark.todo.service.TodoService
+import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.*
+import java.time.LocalDate
 import java.util.*
 
 @RestController
@@ -29,6 +35,21 @@ class TodoController(
         return todoService.completedTodoList(loginMember)
     }
 
+    @GetMapping("/board")
+    fun getBoard(
+        @Login loginMember: LoginMember
+    ): TodoBoardResponse {
+        return todoService.getBoard(loginMember)
+    }
+
+    @GetMapping("/status/{status}")
+    fun getByStatus(
+        @Login loginMember: LoginMember,
+        @PathVariable status: TodoStatus
+    ): List<TodoResponse> {
+        return todoService.getByStatus(loginMember, status)
+    }
+
     @PostMapping
     fun addTodo(
         @Login loginMember: LoginMember,
@@ -38,6 +59,8 @@ class TodoController(
             loginMember = loginMember,
             title = todoRequest.title,
             content = todoRequest.content,
+            status = todoRequest.status,
+            dueDate = todoRequest.dueDate,
             attachmentSessionId = todoRequest.attachmentSessionId,
             orderedAttachmentIds = todoRequest.orderedAttachmentIds
         )
@@ -54,6 +77,8 @@ class TodoController(
             id = id,
             title = todoRequest.title,
             content = todoRequest.content,
+            status = todoRequest.status,
+            dueDate = todoRequest.dueDate,
             attachmentSessionId = todoRequest.attachmentSessionId,
             orderedAttachmentIds = todoRequest.orderedAttachmentIds
         )
@@ -65,6 +90,23 @@ class TodoController(
         @RequestBody ids: List<UUID>
     ) {
         todoService.updatePosition(loginMember, ids)
+    }
+
+    @PatchMapping("/positions")
+    fun updatePositionsByStatus(
+        @Login loginMember: LoginMember,
+        @RequestBody request: TodoPositionUpdateRequest
+    ) {
+        todoService.updatePositionsByStatus(loginMember, request.status, request.orderedIds)
+    }
+
+    @PatchMapping("/{id}/status")
+    fun changeStatus(
+        @Login loginMember: LoginMember,
+        @PathVariable id: UUID,
+        @RequestBody request: TodoStatusChangeRequest
+    ): TodoResponse {
+        return todoService.changeStatus(loginMember, id, request.status, request.position)
     }
 
     @PatchMapping("/{id}/complete")
@@ -89,6 +131,30 @@ class TodoController(
         @PathVariable id: UUID
     ) {
         todoService.deleteTodo(loginMember, id)
+    }
+
+    @GetMapping("/calendar")
+    fun getTodosByMonth(
+        @Login loginMember: LoginMember,
+        @RequestParam year: Int,
+        @RequestParam month: Int
+    ): List<TodoResponse> {
+        return todoService.getTodosByMonth(loginMember, year, month)
+    }
+
+    @GetMapping("/due")
+    fun getTodosByDate(
+        @Login loginMember: LoginMember,
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) date: LocalDate
+    ): List<TodoResponse> {
+        return todoService.getTodosByDate(loginMember, date)
+    }
+
+    @GetMapping("/overdue")
+    fun getOverdueTodos(
+        @Login loginMember: LoginMember
+    ): List<TodoResponse> {
+        return todoService.getOverdueTodos(loginMember)
     }
 
 }

@@ -24,4 +24,9 @@ interface AttachmentRepository : JpaRepository<Attachment, UUID> {
 
     fun findAllByUploadSessionId(uploadSessionId: UUID): List<Attachment>
 
+    fun existsByContextTypeAndContextId(
+        contextType: AttachmentContextType,
+        contextId: String
+    ): Boolean
+
 }

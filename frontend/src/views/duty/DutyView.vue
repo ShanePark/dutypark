@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import { useSwal } from '@/composables/useSwal'
 import { isLightColor } from '@/utils/color'
 import {
   Plus,
-  ClipboardList,
   ChevronLeft,
   ChevronRight,
   Search,
@@ -18,6 +17,9 @@ import {
   CalendarCheck,
   FileSpreadsheet,
   MessageSquareText,
+  Clock,
+  ListTodo,
+  ChevronRight as ChevronRightSmall,
 } from 'lucide-vue-next'
 
 // Modal Components
@@ -39,14 +41,14 @@ import { todoApi } from '@/api/todo'
 import { dutyApi } from '@/api/duty'
 import { ddayApi, memberApi, friendApi } from '@/api/member'
 import { scheduleApi, type ScheduleDto, type ScheduleSearchResult } from '@/api/schedule'
-import type { DutyCalendarDay, TeamDto, DDayDto, DDaySaveDto, CalendarVisibility, OtherDutyResponse, HolidayDto } from '@/types'
+import type { DutyCalendarDay, TeamDto, DDayDto, DDaySaveDto, CalendarVisibility, OtherDutyResponse, HolidayDto, TodoStatus } from '@/types'
 
 // Local interfaces for this view
 interface LocalTodo {
   id: string
   title: string
   content: string
-  status: 'ACTIVE' | 'COMPLETED'
+  status: 'TODO' | 'IN_PROGRESS' | 'DONE'
   createdDate: string
   completedDate?: string
   hasAttachments: boolean
@@ -132,6 +134,7 @@ interface OtherDuty {
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
+const router = useRouter()
 const authStore = useAuthStore()
 const { showError, confirmDelete, toastSuccess } = useSwal()
 
@@ -208,12 +211,62 @@ const todos = ref<LocalTodo[]>([])
 const completedTodos = ref<LocalTodo[]>([])
 const isLoadingTodos = ref(false)
 
+// Todo filter settings (stored in localStorage)
+const STORAGE_KEY_TODO_FILTER = 'dutyViewTodoFilter'
+const showTodoTodo = ref(false)
+const showTodoInProgress = ref(true)
+
+// Load todo filter settings from localStorage
+function loadTodoFilterSettings() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY_TODO_FILTER)
+    if (stored) {
+      const settings = JSON.parse(stored)
+      showTodoTodo.value = settings.showTodo ?? false
+      showTodoInProgress.value = settings.showInProgress ?? true
+    }
+  } catch (e) {
+    console.error('Failed to load todo filter settings:', e)
+  }
+}
+
+// Save todo filter settings to localStorage
+function saveTodoFilterSettings() {
+  try {
+    localStorage.setItem(STORAGE_KEY_TODO_FILTER, JSON.stringify({
+      showTodo: showTodoTodo.value,
+      showInProgress: showTodoInProgress.value,
+    }))
+  } catch (e) {
+    console.error('Failed to save todo filter settings:', e)
+  }
+}
+
+// Toggle todo filter and save to localStorage
+function toggleTodoFilter(filter: 'TODO' | 'IN_PROGRESS') {
+  if (filter === 'TODO') {
+    showTodoTodo.value = !showTodoTodo.value
+  } else {
+    showTodoInProgress.value = !showTodoInProgress.value
+  }
+  saveTodoFilterSettings()
+}
+
+// Filter todos based on selected filters
+const filteredTodos = computed(() => {
+  return todos.value.filter(t => {
+    if (t.status === 'TODO' && showTodoTodo.value) return true
+    if (t.status === 'IN_PROGRESS' && showTodoInProgress.value) return true
+    return false
+  })
+})
+
 function handleTodoBubbleClick(todo: LocalTodo) {
   openTodoDetail(todo)
 }
 
 // Convert API Todo to LocalTodo
-function mapToLocalTodo(apiTodo: { id: string; title: string; content: string; position: number | null; status: 'ACTIVE' | 'COMPLETED'; createdDate: string; completedDate: string | null }): LocalTodo {
+function mapToLocalTodo(apiTodo: { id: string; title: string; content: string; position: number | null; status: 'TODO' | 'IN_PROGRESS' | 'DONE'; createdDate: string; completedDate: string | null }): LocalTodo {
   return {
     id: apiTodo.id,
     title: apiTodo.title,
@@ -245,12 +298,10 @@ async function loadTodos() {
 
   isLoadingTodos.value = true
   try {
-    const [activeTodos, completed] = await Promise.all([
-      todoApi.getActiveTodos(),
-      todoApi.getCompletedTodos(),
-    ])
-    todos.value = activeTodos.map(mapToLocalTodo)
-    completedTodos.value = completed.map(mapToLocalTodo)
+    const board = await todoApi.getBoard()
+    // Combine TODO and IN_PROGRESS for active todos
+    todos.value = [...board.todo, ...board.inProgress].map(mapToLocalTodo)
+    completedTodos.value = board.done.map(mapToLocalTodo)
   } catch (error) {
     console.error('Failed to load todos:', error)
   } finally {
@@ -586,6 +637,9 @@ onMounted(async () => {
   window.addEventListener('duty-go-to-today', goToToday)
   // Listen for "go to date" event from notification navigation
   window.addEventListener('duty-go-to-date', handleGoToDate)
+
+  // Load todo filter settings from localStorage
+  loadTodoFilterSettings()
 
   try {
     // Load calendar structure first (needed for index alignment with holidays)
@@ -1012,6 +1066,7 @@ async function handleTodoUpdate(data: {
   id: string
   title: string
   content: string
+  status: TodoStatus
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }) {
@@ -1019,14 +1074,29 @@ async function handleTodoUpdate(data: {
     const updatedTodo = await todoApi.updateTodo(data.id, {
       title: data.title,
       content: data.content,
+      status: data.status,
       attachmentSessionId: data.attachmentSessionId,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
     const localTodo = mapToLocalTodo(updatedTodo)
-    const idx = todos.value.findIndex((t) => t.id === data.id)
-    if (idx >= 0) {
-      todos.value[idx] = localTodo
+
+    // Remove from both lists first
+    const activeIdx = todos.value.findIndex((t) => t.id === data.id)
+    if (activeIdx >= 0) {
+      todos.value.splice(activeIdx, 1)
     }
+    const completedIdx = completedTodos.value.findIndex((t) => t.id === data.id)
+    if (completedIdx >= 0) {
+      completedTodos.value.splice(completedIdx, 1)
+    }
+
+    // Add to appropriate list based on status
+    if (updatedTodo.status === 'DONE') {
+      completedTodos.value.unshift(localTodo)
+    } else {
+      todos.value.unshift(localTodo)
+    }
+
     // Update selectedTodo for the detail modal
     selectedTodo.value = localTodo
     toastSuccess('할 일이 수정되었습니다.')
@@ -1088,6 +1158,7 @@ async function handleTodoDelete(id: string) {
 async function handleTodoAdd(data: {
   title: string
   content: string
+  status: TodoStatus
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }) {
@@ -1095,10 +1166,16 @@ async function handleTodoAdd(data: {
     const newTodo = await todoApi.createTodo({
       title: data.title,
       content: data.content,
+      status: data.status,
       attachmentSessionId: data.attachmentSessionId,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
-    todos.value.unshift(mapToLocalTodo(newTodo))
+    // Only add to the list if it's not DONE (active todos)
+    if (newTodo.status === 'DONE') {
+      completedTodos.value.unshift(mapToLocalTodo(newTodo))
+    } else {
+      todos.value.unshift(mapToLocalTodo(newTodo))
+    }
     toastSuccess('할 일이 추가되었습니다.')
   } catch (error) {
     console.error('Failed to add todo:', error)
@@ -1115,7 +1192,7 @@ async function handleTodoAdd(data: {
 // Todo position update for drag-and-drop
 async function handleTodoPositionUpdate(orderedIds: string[]) {
   try {
-    await todoApi.updatePositions(orderedIds)
+    await todoApi.updatePositionsLegacy(orderedIds)
     // Reorder local todos array to match the new order
     const todoMap = new Map(todos.value.map((t) => [t.id, t]))
     todos.value = orderedIds.map((id) => todoMap.get(id)).filter((t): t is LocalTodo => t !== undefined)
@@ -1595,41 +1672,70 @@ async function showExcelUploadModal() {
     </div>
 
     <!-- Todo row (only for my calendar) -->
-    <div v-if="isMyCalendar" class="flex items-center gap-1.5 mb-1 px-1">
-      <!-- Button Group: List + Add -->
-      <div class="flex-shrink-0 inline-flex rounded-lg border overflow-hidden" :style="{ borderColor: 'var(--dp-border-secondary)' }">
-        <!-- Todo List Button -->
+    <div v-if="isMyCalendar" class="flex items-center gap-2 mb-1.5 px-1">
+      <!-- Left: Todo Management Button + Add -->
+      <div class="flex-shrink-0 inline-flex">
+        <!-- Todo Management Button - navigates to /todo -->
         <button
-          @click="isTodoOverviewModalOpen = true"
-          class="todo-btn-list h-7 px-2.5 flex items-center gap-1.5 transition-all duration-150 cursor-pointer"
-          :style="{ backgroundColor: 'var(--dp-bg-card)' }"
+          @click="router.push('/todo')"
+          class="todo-manage-btn h-7 px-2.5 flex items-center gap-1.5 transition-all duration-150 cursor-pointer rounded-l-lg border"
+          :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)' }"
         >
-          <ClipboardList class="w-3.5 h-3.5 transition-colors" :style="{ color: 'var(--dp-text-muted)' }" />
-          <span class="text-xs font-medium transition-colors" :style="{ color: 'var(--dp-text-secondary)' }">{{ todos.length }}</span>
+          <span class="text-xs font-medium" :style="{ color: 'var(--dp-text-secondary)' }">할일 관리</span>
+          <ChevronRightSmall class="w-3.5 h-3.5" :style="{ color: 'var(--dp-text-muted)' }" />
         </button>
         <!-- Add Todo Button -->
         <button
           @click="isTodoAddModalOpen = true"
-          class="todo-btn-add h-7 px-2 flex items-center justify-center transition-all duration-150 cursor-pointer border-l"
+          class="todo-btn-add h-7 px-2 flex items-center justify-center transition-all duration-150 cursor-pointer rounded-r-lg border border-l-0"
           :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)', color: 'var(--dp-text-secondary)' }"
+          title="새 할일 추가"
         >
-          <Plus class="w-4 h-4" />
+          <Plus class="todo-btn-add-icon w-4 h-4 transition-transform duration-200" />
         </button>
       </div>
 
-      <!-- Todo Items -->
-      <div class="flex-1 min-w-0 overflow-x-auto scrollbar-hide py-0.5">
-        <div class="flex gap-1.5">
+      <!-- Right: Todo Filter Icons + Items -->
+      <div class="flex-1 min-w-0 flex items-center gap-1.5">
+        <!-- Filter Toggle Icons -->
+        <div class="flex-shrink-0 flex items-center">
+          <!-- TODO filter -->
           <button
-            v-for="todo in todos"
-            :key="todo.id"
-            @click="handleTodoBubbleClick(todo)"
-            class="todo-item-bubble flex-shrink-0 max-w-[120px] sm:max-w-[160px] flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] sm:text-xs cursor-pointer transition-all duration-150 border"
-            :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)', color: 'var(--dp-text-primary)' }"
+            @click="toggleTodoFilter('TODO')"
+            class="todo-filter-btn h-7 w-7 flex items-center justify-center transition-all duration-150 cursor-pointer"
+            :class="showTodoTodo ? 'todo-filter-btn-active-todo' : 'todo-filter-btn-inactive'"
+            title="할일 표시"
           >
-            <span class="truncate">{{ todo.title }}</span>
-            <FileText v-if="todo.content || todo.hasAttachments" class="w-2.5 h-2.5 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+            <ListTodo class="w-4 h-4" />
           </button>
+          <!-- IN_PROGRESS filter -->
+          <button
+            @click="toggleTodoFilter('IN_PROGRESS')"
+            class="todo-filter-btn h-7 w-7 flex items-center justify-center transition-all duration-150 cursor-pointer"
+            :class="showTodoInProgress ? 'todo-filter-btn-active-progress' : 'todo-filter-btn-inactive'"
+            title="진행중 표시"
+          >
+            <Clock class="w-4 h-4" />
+          </button>
+        </div>
+        <!-- Filtered Todo Items -->
+        <div v-if="filteredTodos.length > 0" class="flex-1 min-w-0 overflow-x-auto scrollbar-hide">
+          <div class="flex gap-1.5">
+            <button
+              v-for="todo in filteredTodos"
+              :key="todo.id"
+              @click="handleTodoBubbleClick(todo)"
+              class="todo-item-bubble flex-shrink-0 max-w-[120px] sm:max-w-[160px] flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] sm:text-xs cursor-pointer transition-all duration-150 border"
+              :style="{
+                backgroundColor: todo.status === 'IN_PROGRESS' ? 'var(--dp-warning-bg)' : 'var(--dp-accent-bg)',
+                borderColor: todo.status === 'IN_PROGRESS' ? 'var(--dp-warning)' : 'var(--dp-accent)',
+                color: 'var(--dp-text-primary)'
+              }"
+            >
+              <span class="truncate">{{ todo.title }}</span>
+              <FileText v-if="todo.content || todo.hasAttachments" class="w-2.5 h-2.5 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1936,6 +2042,7 @@ async function showExcelUploadModal() {
 
     <TodoAddModal
       :is-open="isTodoAddModalOpen"
+      initial-status="IN_PROGRESS"
       @close="isTodoAddModalOpen = false; if (isTodoAddFromOverview) { isTodoOverviewModalOpen = true; isTodoAddFromOverview = false; }"
       @save="handleTodoAdd"
     />

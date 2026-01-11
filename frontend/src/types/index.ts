@@ -134,12 +134,58 @@ export interface Todo {
   status: TodoStatus
   createdDate: string
   completedDate: string | null
+  dueDate: string | null
+  isOverdue: boolean
   // Frontend-only computed fields (for backward compatibility with existing components)
   hasAttachments?: boolean
   attachments?: Attachment[]
 }
 
-export type TodoStatus = 'ACTIVE' | 'COMPLETED'
+export type TodoStatus = 'TODO' | 'IN_PROGRESS' | 'DONE'
+
+// For kanban board
+export interface TodoBoard {
+  todo: Todo[]
+  inProgress: Todo[]
+  done: Todo[]
+  counts: TodoCounts
+}
+
+export interface TodoCounts {
+  todo: number
+  inProgress: number
+  done: number
+  total: number
+}
+
+// API Request types
+export interface TodoCreateRequest {
+  title: string
+  content?: string
+  status?: TodoStatus
+  dueDate?: string
+  attachmentSessionId?: string
+  orderedAttachmentIds?: string[]
+}
+
+export interface TodoUpdateRequest {
+  title: string
+  content: string
+  status?: TodoStatus
+  dueDate?: string | null
+  attachmentSessionId?: string
+  orderedAttachmentIds?: string[]
+}
+
+export interface TodoStatusChangeRequest {
+  status: TodoStatus
+  position?: number
+}
+
+export interface TodoPositionUpdateRequest {
+  status: TodoStatus
+  orderedIds: string[]
+}
 
 // D-Day types
 export interface DDay {

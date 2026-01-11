@@ -119,7 +119,16 @@ function getFileIconComponent(attachment: NormalizedAttachment): Component {
 
 async function loadThumbnails() {
   for (const attachment of props.attachments) {
-    if (attachment.hasThumbnail && attachment.thumbnailUrl && !thumbnailBlobUrls[attachment.id]) {
+    if (thumbnailBlobUrls[attachment.id]) continue
+
+    // For images, always try to load thumbnail (backend falls back to original if thumbnail not ready)
+    if (attachment.isImage) {
+      const thumbnailUrl = attachment.thumbnailUrl || `/api/attachments/${attachment.id}/thumbnail`
+      const blobUrl = await fetchAuthenticatedImage(thumbnailUrl)
+      if (blobUrl) {
+        thumbnailBlobUrls[attachment.id] = blobUrl
+      }
+    } else if (attachment.hasThumbnail && attachment.thumbnailUrl) {
       const blobUrl = await fetchAuthenticatedImage(attachment.thumbnailUrl)
       if (blobUrl) {
         thumbnailBlobUrls[attachment.id] = blobUrl

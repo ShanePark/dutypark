@@ -96,23 +96,38 @@ class AttachmentController(
             ?: return ResponseEntity.notFound().build()
 
         val thumbnailFilename = attachment.thumbnailFilename
-            ?: return ResponseEntity.notFound().build()
+        if (thumbnailFilename != null) {
+            val thumbnailPath = pathResolver.resolveThumbnailPath(
+                attachment.contextType,
+                attachment.contextId,
+                attachment.uploadSessionId,
+                thumbnailFilename
+            )
 
-        val thumbnailPath = pathResolver.resolveThumbnailPath(
+            val resource = UrlResource(thumbnailPath.toUri())
+            if (resource.exists()) {
+                return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(attachment.thumbnailContentType ?: "image/png"))
+                    .body(resource)
+            }
+        }
+
+        // Fallback to original image if thumbnail is not available yet
+        val originalPath = pathResolver.resolveFilePath(
             attachment.contextType,
             attachment.contextId,
             attachment.uploadSessionId,
-            thumbnailFilename
+            attachment.storedFilename
         )
 
-        val resource = UrlResource(thumbnailPath.toUri())
-        if (!resource.exists()) {
+        val originalResource = UrlResource(originalPath.toUri())
+        if (!originalResource.exists()) {
             return ResponseEntity.notFound().build()
         }
 
         return ResponseEntity.ok()
-            .contentType(MediaType.parseMediaType(attachment.thumbnailContentType ?: "image/png"))
-            .body(resource)
+            .contentType(MediaType.parseMediaType(attachment.contentType))
+            .body(originalResource)
     }
 
     @DeleteMapping("/{id}")
