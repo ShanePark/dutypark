@@ -105,8 +105,8 @@ onUnmounted(() => {
             @click="themeStore.toggleTheme()"
             :aria-label="themeStore.isDark ? '라이트 모드로 전환' : '다크 모드로 전환'"
           >
-            <Moon v-if="!themeStore.isDark" class="w-5 h-5" />
-            <Sun v-else class="w-5 h-5 text-amber-400" />
+            <Moon v-if="!themeStore.isDark" class="w-5 h-5 theme-icon" />
+            <Sun v-else class="w-5 h-5 text-amber-400 theme-icon" />
           </button>
 
           <template v-if="authStore.isLoggedIn">
@@ -128,7 +128,7 @@ onUnmounted(() => {
                 @click.stop="toggleMenuDropdown"
                 aria-label="메뉴"
               >
-                <Menu class="w-5 h-5" />
+                <Menu class="w-5 h-5 menu-icon transition-transform duration-200" />
               </button>
               <div
                 v-if="isMenuDropdownVisible"
@@ -264,6 +264,16 @@ onUnmounted(() => {
   background-color: var(--dp-bg-hover);
 }
 
+.theme-toggle-btn:hover .theme-icon {
+  animation: theme-rotate 0.5s ease-in-out;
+}
+
+@keyframes theme-rotate {
+  0% { transform: rotate(0deg); }
+  50% { transform: rotate(-20deg); }
+  100% { transform: rotate(0deg); }
+}
+
 .menu-btn {
   color: var(--dp-text-muted);
 }
@@ -271,6 +281,17 @@ onUnmounted(() => {
 .menu-btn:hover {
   color: var(--dp-text-primary);
   background-color: var(--dp-bg-hover);
+}
+
+.menu-btn:hover .menu-icon {
+  animation: menu-wiggle 0.4s ease-in-out;
+}
+
+@keyframes menu-wiggle {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(-10deg); }
+  75% { transform: rotate(10deg); }
+  100% { transform: rotate(0deg); }
 }
 
 .menu-dropdown {

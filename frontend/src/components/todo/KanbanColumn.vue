@@ -92,7 +92,7 @@ const statusConfig: Record<TodoStatus, { label: string; bgClass: string; textCla
 }
 
 .kanban-column-todo {
-  background-color: var(--dp-bg-tertiary);
+  background-color: color-mix(in srgb, var(--dp-accent) 12%, var(--dp-bg-tertiary));
 }
 
 .kanban-column-in-progress {
@@ -134,7 +134,7 @@ const statusConfig: Record<TodoStatus, { label: string; bgClass: string; textCla
 }
 
 .kanban-title-todo {
-  color: var(--dp-text-primary);
+  color: var(--dp-accent);
 }
 
 .kanban-title-in-progress {

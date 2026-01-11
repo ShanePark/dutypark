@@ -18,6 +18,7 @@ import {
   FileSpreadsheet,
   MessageSquareText,
   Clock,
+  ListTodo,
   ChevronRight as ChevronRightSmall,
 } from 'lucide-vue-next'
 
@@ -210,8 +211,55 @@ const todos = ref<LocalTodo[]>([])
 const completedTodos = ref<LocalTodo[]>([])
 const isLoadingTodos = ref(false)
 
-// Filter only IN_PROGRESS todos for calendar display
-const inProgressTodos = computed(() => todos.value.filter(t => t.status === 'IN_PROGRESS'))
+// Todo filter settings (stored in localStorage)
+const STORAGE_KEY_TODO_FILTER = 'dutyViewTodoFilter'
+const showTodoTodo = ref(false)
+const showTodoInProgress = ref(true)
+
+// Load todo filter settings from localStorage
+function loadTodoFilterSettings() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY_TODO_FILTER)
+    if (stored) {
+      const settings = JSON.parse(stored)
+      showTodoTodo.value = settings.showTodo ?? false
+      showTodoInProgress.value = settings.showInProgress ?? true
+    }
+  } catch (e) {
+    console.error('Failed to load todo filter settings:', e)
+  }
+}
+
+// Save todo filter settings to localStorage
+function saveTodoFilterSettings() {
+  try {
+    localStorage.setItem(STORAGE_KEY_TODO_FILTER, JSON.stringify({
+      showTodo: showTodoTodo.value,
+      showInProgress: showTodoInProgress.value,
+    }))
+  } catch (e) {
+    console.error('Failed to save todo filter settings:', e)
+  }
+}
+
+// Toggle todo filter and save to localStorage
+function toggleTodoFilter(filter: 'TODO' | 'IN_PROGRESS') {
+  if (filter === 'TODO') {
+    showTodoTodo.value = !showTodoTodo.value
+  } else {
+    showTodoInProgress.value = !showTodoInProgress.value
+  }
+  saveTodoFilterSettings()
+}
+
+// Filter todos based on selected filters
+const filteredTodos = computed(() => {
+  return todos.value.filter(t => {
+    if (t.status === 'TODO' && showTodoTodo.value) return true
+    if (t.status === 'IN_PROGRESS' && showTodoInProgress.value) return true
+    return false
+  })
+})
 
 function handleTodoBubbleClick(todo: LocalTodo) {
   openTodoDetail(todo)
@@ -589,6 +637,9 @@ onMounted(async () => {
   window.addEventListener('duty-go-to-today', goToToday)
   // Listen for "go to date" event from notification navigation
   window.addEventListener('duty-go-to-date', handleGoToDate)
+
+  // Load todo filter settings from localStorage
+  loadTodoFilterSettings()
 
   try {
     // Load calendar structure first (needed for index alignment with holidays)
@@ -1623,12 +1674,12 @@ async function showExcelUploadModal() {
     <!-- Todo row (only for my calendar) -->
     <div v-if="isMyCalendar" class="flex items-center gap-2 mb-1.5 px-1">
       <!-- Left: Todo Management Button + Add -->
-      <div class="flex-shrink-0 inline-flex rounded-lg border overflow-hidden" :style="{ borderColor: 'var(--dp-border-secondary)' }">
+      <div class="flex-shrink-0 inline-flex">
         <!-- Todo Management Button - navigates to /todo -->
         <button
           @click="router.push('/todo')"
-          class="todo-manage-btn h-7 px-2.5 flex items-center gap-1.5 transition-all duration-150 cursor-pointer"
-          :style="{ backgroundColor: 'var(--dp-bg-card)' }"
+          class="todo-manage-btn h-7 px-2.5 flex items-center gap-1.5 transition-all duration-150 cursor-pointer rounded-l-lg border"
+          :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)' }"
         >
           <span class="text-xs font-medium" :style="{ color: 'var(--dp-text-secondary)' }">할일 관리</span>
           <ChevronRightSmall class="w-3.5 h-3.5" :style="{ color: 'var(--dp-text-muted)' }" />
@@ -1636,30 +1687,50 @@ async function showExcelUploadModal() {
         <!-- Add Todo Button -->
         <button
           @click="isTodoAddModalOpen = true"
-          class="todo-btn-add h-7 px-2 flex items-center justify-center transition-all duration-150 cursor-pointer border-l"
+          class="todo-btn-add h-7 px-2 flex items-center justify-center transition-all duration-150 cursor-pointer rounded-r-lg border border-l-0"
           :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)', color: 'var(--dp-text-secondary)' }"
           title="새 할일 추가"
         >
-          <Plus class="w-4 h-4" />
+          <Plus class="todo-btn-add-icon w-4 h-4 transition-transform duration-200" />
         </button>
       </div>
 
-      <!-- Right: In Progress Section -->
-      <div v-if="inProgressTodos.length > 0" class="flex-1 min-w-0 flex items-center gap-1.5">
-        <!-- In Progress Label -->
-        <div class="flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded-md" :style="{ backgroundColor: 'var(--dp-warning-bg)' }">
-          <Clock class="w-3.5 h-3.5" :style="{ color: 'var(--dp-warning)' }" />
-          <span class="text-[11px] font-semibold" :style="{ color: 'var(--dp-warning)' }">진행중</span>
+      <!-- Right: Todo Filter Icons + Items -->
+      <div class="flex-1 min-w-0 flex items-center gap-1.5">
+        <!-- Filter Toggle Icons -->
+        <div class="flex-shrink-0 flex items-center">
+          <!-- TODO filter -->
+          <button
+            @click="toggleTodoFilter('TODO')"
+            class="todo-filter-btn h-7 w-7 flex items-center justify-center transition-all duration-150 cursor-pointer"
+            :class="showTodoTodo ? 'todo-filter-btn-active-todo' : 'todo-filter-btn-inactive'"
+            title="할일 표시"
+          >
+            <ListTodo class="w-4 h-4" />
+          </button>
+          <!-- IN_PROGRESS filter -->
+          <button
+            @click="toggleTodoFilter('IN_PROGRESS')"
+            class="todo-filter-btn h-7 w-7 flex items-center justify-center transition-all duration-150 cursor-pointer"
+            :class="showTodoInProgress ? 'todo-filter-btn-active-progress' : 'todo-filter-btn-inactive'"
+            title="진행중 표시"
+          >
+            <Clock class="w-4 h-4" />
+          </button>
         </div>
-        <!-- In Progress Items -->
-        <div class="flex-1 min-w-0 overflow-x-auto scrollbar-hide">
+        <!-- Filtered Todo Items -->
+        <div v-if="filteredTodos.length > 0" class="flex-1 min-w-0 overflow-x-auto scrollbar-hide">
           <div class="flex gap-1.5">
             <button
-              v-for="todo in inProgressTodos"
+              v-for="todo in filteredTodos"
               :key="todo.id"
               @click="handleTodoBubbleClick(todo)"
               class="todo-item-bubble flex-shrink-0 max-w-[120px] sm:max-w-[160px] flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] sm:text-xs cursor-pointer transition-all duration-150 border"
-              :style="{ backgroundColor: 'var(--dp-warning-bg)', borderColor: 'var(--dp-warning)', color: 'var(--dp-text-primary)' }"
+              :style="{
+                backgroundColor: todo.status === 'IN_PROGRESS' ? 'var(--dp-warning-bg)' : 'var(--dp-accent-bg)',
+                borderColor: todo.status === 'IN_PROGRESS' ? 'var(--dp-warning)' : 'var(--dp-accent)',
+                color: 'var(--dp-text-primary)'
+              }"
             >
               <span class="truncate">{{ todo.title }}</span>
               <FileText v-if="todo.content || todo.hasAttachments" class="w-2.5 h-2.5 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
