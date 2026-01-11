@@ -23,7 +23,7 @@ class TeamControllerTest : RestDocsTest() {
     @Test
     fun `get team by id`() {
         mockMvc.perform(
-            RestDocumentationRequestBuilders.get("/api/teams/{id}", TestData.team.id)
+            RestDocumentationRequestBuilders.get("/api/teams/{id}", TestData.team.id!!)
                 .accept(MediaType.APPLICATION_JSON)
         )
             .andExpect(status().isOk)

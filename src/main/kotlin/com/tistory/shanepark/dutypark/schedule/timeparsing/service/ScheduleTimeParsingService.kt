@@ -1,18 +1,17 @@
 package com.tistory.shanepark.dutypark.schedule.timeparsing.service
 
-import com.fasterxml.jackson.core.JsonProcessingException
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingRequest
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingResponse
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.model.ChatModel
 import org.springframework.stereotype.Service
+import tools.jackson.databind.json.JsonMapper
 
 @Service
 class ScheduleTimeParsingService(
     chatModel: ChatModel,
-    private val objectMapper: ObjectMapper,
+    private val jsonMapper: JsonMapper,
 ) {
     private val chatClient = ChatClient.builder(chatModel).build()
     private val log = logger()
@@ -36,15 +35,15 @@ class ScheduleTimeParsingService(
             .filter { !it.contains("```") }
             .joinToString("\n")
         return try {
-            objectMapper.readValue(json, ScheduleTimeParsingResponse::class.java)
-        } catch (e: JsonProcessingException) {
+            jsonMapper.readValue(json, ScheduleTimeParsingResponse::class.java)
+        } catch (e: Exception) {
             log.warn("Failed to parse JSON:\n$json", e)
             ScheduleTimeParsingResponse(result = false)
         }
     }
 
     private fun generatePrompt(request: ScheduleTimeParsingRequest): String {
-        val jsonRequest = objectMapper.writeValueAsString(request)
+        val jsonRequest = jsonMapper.writeValueAsString(request)
         return """
               Task: Extract time from the text and return a JSON response.
  

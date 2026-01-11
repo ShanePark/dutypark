@@ -1,6 +1,6 @@
 package com.tistory.shanepark.dutypark.schedule.timeparsing.service
 
-import com.tistory.shanepark.dutypark.TestUtils.Companion.jsr310ObjectMapper
+import com.tistory.shanepark.dutypark.TestUtils.Companion.jsr310JsonMapper
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingRequest
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.Disabled
@@ -38,7 +38,7 @@ class ScheduleTimeParsingServiceTest {
 
         val service = ScheduleTimeParsingService(
             chatModel = chatModel,
-            objectMapper = jsr310ObjectMapper()
+            jsonMapper = jsr310JsonMapper()
         )
         return service
     }

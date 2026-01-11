@@ -1,16 +1,18 @@
 package com.tistory.shanepark.dutypark
 
 import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import tools.jackson.databind.json.JsonMapper
 
 class TestUtils {
 
     companion object {
-        fun jsr310ObjectMapper(): ObjectMapper {
-            return ObjectMapper()
-                .setSerializationInclusion(JsonInclude.Include.NON_NULL)
-                .registerModule(JavaTimeModule())
+        fun jsr310JsonMapper(): JsonMapper {
+            return JsonMapper.builder()
+                .changeDefaultPropertyInclusion { it
+                    .withValueInclusion(JsonInclude.Include.NON_NULL)
+                    .withContentInclusion(JsonInclude.Include.NON_NULL)
+                }
+                .build()
         }
     }
 

@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
+import tools.jackson.databind.json.JsonMapper
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberCreateDto
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
@@ -51,7 +51,7 @@ class DutyparkIntegrationTest {
     @Autowired
     lateinit var jwtProvider: JwtProvider
 
-    val objectMapper: ObjectMapper = TestUtils.jsr310ObjectMapper()
+    val objectMapper: JsonMapper = TestUtils.jsr310JsonMapper()
 
     @BeforeEach
     fun init() {

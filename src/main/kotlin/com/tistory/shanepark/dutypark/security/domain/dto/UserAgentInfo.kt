@@ -1,18 +1,18 @@
 package com.tistory.shanepark.dutypark.security.domain.dto
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import nl.basjes.parse.useragent.UserAgentAnalyzer
+import tools.jackson.module.kotlin.jacksonMapperBuilder
+import tools.jackson.module.kotlin.readValue
 
 data class UserAgentInfo(
     val os: String,
     val browser: String,
     val device: String,
 ) {
-    fun toJson(): String = objectMapper.writeValueAsString(this)
+    fun toJson(): String = jsonMapper.writeValueAsString(this)
 
     companion object {
-        private val objectMapper = jacksonObjectMapper()
+        private val jsonMapper = jacksonMapperBuilder().build()
 
         private val analyzer: UserAgentAnalyzer by lazy {
             UserAgentAnalyzer
@@ -40,7 +40,7 @@ data class UserAgentInfo(
         fun fromJson(json: String?): UserAgentInfo? {
             if (json == null) return null
             return try {
-                objectMapper.readValue<UserAgentInfo>(json)
+                jsonMapper.readValue<UserAgentInfo>(json)
             } catch (e: Exception) {
                 null
             }

@@ -7,9 +7,13 @@ import com.tistory.shanepark.dutypark.holiday.service.holidayAPI.HolidayAPIDataG
 import com.tistory.shanepark.dutypark.holiday.service.holidayAPI.HolidayAPIDataGoKrTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
 import org.mockito.Mockito
+import org.mockito.junit.jupiter.MockitoExtension
+import org.mockito.junit.jupiter.MockitoSettings
 import org.mockito.kotlin.any
+import org.mockito.quality.Strictness
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.delete
@@ -22,6 +26,8 @@ import org.springframework.test.util.ReflectionTestUtils
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
+@ExtendWith(MockitoExtension::class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class HolidayControllerTest : RestDocsTest() {
 
     @Autowired
