@@ -1,3 +1,5 @@
+import org.asciidoctor.gradle.jvm.AsciidoctorJExtension
+
 plugins {
     kotlin("jvm") version "2.3.0"
     kotlin("plugin.spring") version "2.3.0"
@@ -23,8 +25,14 @@ repositories {
 }
 
 extra["springAiVersion"] = "2.0.0-M1"
+extra["springRestDocsVersion"] = "4.0.0"
 
 val asciidoctorExt: Configuration by configurations.creating
+
+configure<AsciidoctorJExtension> {
+    setVersion("3.0.0")
+}
+
 dependencies {
     // Kotlin
     implementation("org.jetbrains.kotlin:kotlin-reflect")
@@ -53,8 +61,8 @@ dependencies {
     testImplementation("com.h2database:h2")
 
     // Spring Docs
-    testImplementation("org.springframework.restdocs:spring-restdocs-mockmvc")
-    asciidoctorExt("org.springframework.restdocs:spring-restdocs-asciidoctor")
+    testImplementation("org.springframework.restdocs:spring-restdocs-mockmvc:${property("springRestDocsVersion")}")
+    asciidoctorExt("org.springframework.restdocs:spring-restdocs-asciidoctor:${property("springRestDocsVersion")}")
 
     // Database
     runtimeOnly("com.mysql:mysql-connector-j")
