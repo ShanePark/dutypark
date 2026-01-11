@@ -205,17 +205,17 @@ function syncActiveStatusWithScroll() {
   const centerX = containerRect.left + container.clientWidth / 2
   let closest: { status: TodoStatus; distance: number } | null = null
 
-  columns.forEach((column) => {
+  for (const column of columns) {
     const dropZone = column.querySelector('[data-column]') as HTMLElement | null
     const status = dropZone?.getAttribute('data-column') as TodoStatus | null
-    if (!status) return
+    if (!status) continue
     const rect = column.getBoundingClientRect()
     const columnCenter = rect.left + rect.width / 2
     const distance = Math.abs(centerX - columnCenter)
     if (!closest || distance < closest.distance) {
       closest = { status, distance }
     }
-  })
+  }
 
   if (closest && closest.status !== activeStatus.value) {
     activeStatus.value = closest.status
