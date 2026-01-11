@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import type { AxiosError } from 'axios'
 import type { LoginMember, LoginDto } from '@/types'
 import { authApi } from '@/api/auth'
-import { setAuthFailureHandler } from '@/api/client'
+import { setAuthFailureHandler, resetRefreshState } from '@/api/client'
 import router from '@/router'
 
 const USER_CACHE_KEY = 'dp-login-member'
@@ -50,19 +50,36 @@ export const useAuthStore = defineStore('auth', () => {
   async function doInitialize() {
     isLoading.value = true
     try {
-      // Check auth status - if token expired, axios interceptor auto-refreshes
+      // First check status - may return null if access token expired
+      let status: LoginMember | null = null
+      let isServerUnavailable = false
+
       try {
-        user.value = await authApi.getStatus()
-        saveCachedUser(user.value)
+        status = await authApi.getStatus()
       } catch (error) {
-        const status = (error as AxiosError)?.response?.status
-        if (status === 401 || status === 403) {
-          user.value = null
-          saveCachedUser(null)
-        } else {
-          console.warn('Failed to check login status, keeping cached user', error)
+        const axiosError = error as AxiosError
+        const responseStatus = axiosError.response?.status
+        // Keep cached user on network errors or server errors (5xx)
+        isServerUnavailable = !axiosError.response || (responseStatus !== undefined && responseStatus >= 500)
+      }
+
+      // If not logged in but refresh token might exist, try refreshing
+      if (!status && !isServerUnavailable) {
+        try {
+          await authApi.refresh()
+          resetRefreshState()
+          status = await authApi.getStatus()
+        } catch {
+          // Refresh failed - no valid session
         }
       }
+
+      // Only update state if server responded properly
+      if (!isServerUnavailable) {
+        user.value = status
+        saveCachedUser(status)
+      }
+      // On server unavailable, keep cached user (already loaded from localStorage)
     } finally {
       isLoading.value = false
       isInitialized.value = true
@@ -74,6 +91,7 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true
     try {
       await authApi.login(data)
+      resetRefreshState()
       user.value = await authApi.getStatus()
       saveCachedUser(user.value)
     } finally {
