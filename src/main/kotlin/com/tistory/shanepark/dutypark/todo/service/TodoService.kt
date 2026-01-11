@@ -229,7 +229,8 @@ class TodoService(
         verifyOwnership(todo, member)
 
         if (todo.status == TodoStatus.TODO || todo.status == TodoStatus.IN_PROGRESS) {
-            todo.markCompleted()
+            val newPosition = todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.DONE) - 1
+            todo.markCompleted(newPosition)
         }
 
         val hasAttachments = attachmentService.hasAttachments(

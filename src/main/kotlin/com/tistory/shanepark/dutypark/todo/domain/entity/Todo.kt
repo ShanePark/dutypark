@@ -54,10 +54,10 @@ class Todo(
         }
     }
 
-    fun markCompleted(completedAt: LocalDateTime = LocalDateTime.now()) {
+    fun markCompleted(newPosition: Int, completedAt: LocalDateTime = LocalDateTime.now()) {
         status = TodoStatus.DONE
         completedDate = completedAt
-        position = null
+        position = newPosition
     }
 
     fun markActive(newPosition: Int) {
