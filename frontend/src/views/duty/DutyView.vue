@@ -20,6 +20,7 @@ import {
   Clock,
   ListTodo,
   ChevronRight as ChevronRightSmall,
+  CheckSquare,
 } from 'lucide-vue-next'
 
 // Modal Components
@@ -51,6 +52,8 @@ interface LocalTodo {
   status: 'TODO' | 'IN_PROGRESS' | 'DONE'
   createdDate: string
   completedDate?: string
+  dueDate?: string
+  isOverdue?: boolean
   hasAttachments: boolean
   attachments: Array<{
     id: string
@@ -211,6 +214,36 @@ const todos = ref<LocalTodo[]>([])
 const completedTodos = ref<LocalTodo[]>([])
 const isLoadingTodos = ref(false)
 
+// Todos with due dates computed from existing todos (respects filter settings)
+const todosDueByDays = computed(() => {
+  if (!isMyCalendar.value || !calendarDays.value.length) return []
+
+  // Build map by date from todos that have dueDate and match filter
+  const todoMap = new Map<string, Array<{ id: string; title: string; status: string }>>()
+  todos.value.forEach((todo) => {
+    if (!todo.dueDate) return
+    // Apply filter settings
+    if (todo.status === 'TODO' && !showTodoTodo.value) return
+    if (todo.status === 'IN_PROGRESS' && !showTodoInProgress.value) return
+
+    const key = todo.dueDate
+    if (!todoMap.has(key)) {
+      todoMap.set(key, [])
+    }
+    todoMap.get(key)!.push({
+      id: todo.id,
+      title: todo.title,
+      status: todo.status,
+    })
+  })
+
+  // Map to calendarDays structure
+  return calendarDays.value.map((day) => {
+    const key = `${day.year}-${String(day.month).padStart(2, '0')}-${String(day.day).padStart(2, '0')}`
+    return todoMap.get(key) || []
+  })
+})
+
 // Todo filter settings (stored in localStorage)
 const STORAGE_KEY_TODO_FILTER = 'dutyViewTodoFilter'
 const showTodoTodo = ref(false)
@@ -266,7 +299,7 @@ function handleTodoBubbleClick(todo: LocalTodo) {
 }
 
 // Convert API Todo to LocalTodo
-function mapToLocalTodo(apiTodo: { id: string; title: string; content: string; position: number | null; status: 'TODO' | 'IN_PROGRESS' | 'DONE'; createdDate: string; completedDate: string | null }): LocalTodo {
+function mapToLocalTodo(apiTodo: { id: string; title: string; content: string; position: number | null; status: 'TODO' | 'IN_PROGRESS' | 'DONE'; createdDate: string; completedDate: string | null; dueDate?: string | null; isOverdue?: boolean }): LocalTodo {
   return {
     id: apiTodo.id,
     title: apiTodo.title,
@@ -274,6 +307,8 @@ function mapToLocalTodo(apiTodo: { id: string; title: string; content: string; p
     status: apiTodo.status,
     createdDate: apiTodo.createdDate,
     completedDate: apiTodo.completedDate ?? undefined,
+    dueDate: apiTodo.dueDate ?? undefined,
+    isOverdue: apiTodo.isOverdue ?? false,
     hasAttachments: false,
     attachments: [],
   }
@@ -1067,6 +1102,7 @@ async function handleTodoUpdate(data: {
   title: string
   content: string
   status: TodoStatus
+  dueDate?: string | null
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }) {
@@ -1075,6 +1111,7 @@ async function handleTodoUpdate(data: {
       title: data.title,
       content: data.content,
       status: data.status,
+      dueDate: data.dueDate,
       attachmentSessionId: data.attachmentSessionId,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
@@ -1947,6 +1984,27 @@ async function showExcelUploadModal() {
           >
             +{{ (schedulesByDays[index]?.length ?? 0) - 3 }}
           </div>
+
+          <!-- Due Todos (마감일 할일) - 내 달력에서만 표시 -->
+          <template v-if="isMyCalendar && todosDueByDays[index]?.length">
+            <div
+              v-for="todo in todosDueByDays[index].slice(0, 2)"
+              :key="'due-' + todo.id"
+              @click.stop="router.push('/todo')"
+              class="todo-due-bubble text-[10px] sm:text-xs leading-snug px-1 py-0.5 rounded cursor-pointer truncate mt-0.5"
+              :class="todo.status === 'IN_PROGRESS' ? 'todo-due-progress' : 'todo-due-todo'"
+            >
+              <CheckSquare class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px]" />
+              {{ todo.title }}
+            </div>
+            <div
+              v-if="todosDueByDays[index].length > 2"
+              class="text-[10px] font-medium"
+              :style="{ color: 'var(--dp-text-muted)' }"
+            >
+              +{{ todosDueByDays[index].length - 2 }}
+            </div>
+          </template>
         </div>
       </template>
     </CalendarGrid>
