@@ -1,5 +1,5 @@
 # Runtime only
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 
 # Add non-root user
 RUN addgroup -g 1000 dutypark && \
