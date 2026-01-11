@@ -194,7 +194,7 @@ function saveEdit() {
     content: editContent.value.trim(),
     dueDate: editDueDate.value || null,
     attachmentSessionId: sessionId.value || undefined,
-    orderedAttachmentIds: orderedAttachmentIds.length > 0 ? orderedAttachmentIds : undefined,
+    orderedAttachmentIds: orderedAttachmentIds,
   })
 
   // Cleanup after save

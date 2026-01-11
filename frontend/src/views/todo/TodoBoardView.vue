@@ -181,8 +181,15 @@ async function handleUpdateTodo(data: {
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
     showSuccess('할 일이 수정되었습니다.')
-    closeDetailModal()
     await loadBoard()
+    // Update selectedTodo with fresh data from the board so modal shows updated content
+    if (selectedTodo.value && board.value) {
+      const allTodos = [...board.value.todo, ...board.value.inProgress, ...board.value.done]
+      const updatedTodo = allTodos.find(t => t.id === data.id)
+      if (updatedTodo) {
+        selectedTodo.value = updatedTodo
+      }
+    }
   } catch (error) {
     console.error('Failed to update todo:', error)
     showError('할 일 수정에 실패했습니다.')

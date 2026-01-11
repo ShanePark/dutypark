@@ -60,18 +60,32 @@ let tickerInterval: number | null = null
 const isUploading = computed(() => Object.keys(uploadMeta.value).length > 0)
 const hasAttachments = computed(() => uploadedAttachments.value.length > 0)
 
+// Track last emitted IDs to prevent infinite loops
+// Initialize with existing attachment IDs so removal triggers emit properly
+let lastEmittedIds = props.existingAttachments.map(a => a.id).join(',')
+
 // Watchers
 watch(
   () => props.existingAttachments,
   (newVal) => {
-    uploadedAttachments.value = [...newVal]
-    loadExistingImages()
+    const newIds = newVal.map(a => a.id).join(',')
+    // Only update if different from what we last emitted (external change)
+    if (newIds !== lastEmittedIds) {
+      uploadedAttachments.value = [...newVal]
+      lastEmittedIds = newIds
+      loadExistingImages()
+    }
   }
 )
 
 watch(uploadedAttachments, (newVal) => {
-  emit('update:attachments', newVal)
-}, { deep: true })
+  const currentIds = newVal.map(a => a.id).join(',')
+  // Only emit if actually different
+  if (currentIds !== lastEmittedIds) {
+    lastEmittedIds = currentIds
+    emit('update:attachments', [...newVal])
+  }
+})
 
 // Session management
 async function ensureSession(): Promise<string> {
@@ -236,7 +250,10 @@ function setupUppy() {
         imageBlobUrls.value[normalized.id] = oldPreviewUrl
       }
 
-      uploadedAttachments.value[index] = normalized
+      // Create new array reference to trigger watcher and emit updated attachment IDs
+      uploadedAttachments.value = uploadedAttachments.value.map((a, i) =>
+        i === index ? normalized : a
+      )
     }
 
     delete uploadProgress.value[file.id]
@@ -280,14 +297,13 @@ function setupUppy() {
 }
 
 function removeFileFromState(fileId: string) {
-  const index = uploadedAttachments.value.findIndex((a) => a.id === fileId)
-  if (index !== -1) {
-    const attachment = uploadedAttachments.value[index]
-    if (attachment && attachment.previewUrl?.startsWith('blob:')) {
-      URL.revokeObjectURL(attachment.previewUrl)
-    }
-    uploadedAttachments.value.splice(index, 1)
+  const attachment = uploadedAttachments.value.find((a) => a.id === fileId)
+  if (attachment && attachment.previewUrl?.startsWith('blob:')) {
+    URL.revokeObjectURL(attachment.previewUrl)
   }
+  // Use filter instead of splice to create a new array reference for proper reactivity
+  uploadedAttachments.value = uploadedAttachments.value.filter((a) => a.id !== fileId)
+
   delete uploadProgress.value[fileId]
   delete uploadMeta.value[fileId]
 
@@ -391,6 +407,7 @@ function cleanup() {
   uploadMeta.value = {}
   sessionId.value = null
   sessionCreationPromise.value = null
+  lastEmittedIds = ''
   stopTicker()
 }
 
