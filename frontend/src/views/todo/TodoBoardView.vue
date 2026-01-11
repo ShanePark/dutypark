@@ -15,12 +15,15 @@ const { showSuccess, showError, confirmDelete } = useSwal()
 const isHelpModalOpen = ref(false)
 
 const board = ref<TodoBoard | null>(null)
+const boardScroller = ref<HTMLElement | null>(null)
 const isLoading = ref(false)
 const isAddModalOpen = ref(false)
 const addModalInitialStatus = ref<TodoStatus>('TODO')
 const isDetailModalOpen = ref(false)
 const selectedTodo = ref<Todo | null>(null)
 const startInEditMode = ref(false)
+const activeStatus = ref<TodoStatus>('IN_PROGRESS')
+let scrollRafId: number | null = null
 
 // Sortable instances for each column
 let sortableInstances: Record<string, Sortable> = {}
@@ -30,6 +33,24 @@ const inProgressList = computed(() => board.value?.inProgress ?? [])
 const doneList = computed(() => board.value?.done ?? [])
 
 const counts = computed(() => board.value?.counts ?? { todo: 0, inProgress: 0, done: 0, total: 0 })
+const statusTabs: Array<{ status: TodoStatus; label: string; icon: typeof ListTodo }> = [
+  { status: 'TODO', label: '할일', icon: ListTodo },
+  { status: 'IN_PROGRESS', label: '진행중', icon: Clock },
+  { status: 'DONE', label: '완료', icon: CheckCircle2 },
+]
+
+function getStatusCount(status: TodoStatus): number {
+  switch (status) {
+    case 'TODO':
+      return counts.value.todo
+    case 'IN_PROGRESS':
+      return counts.value.inProgress
+    case 'DONE':
+      return counts.value.done
+    default:
+      return 0
+  }
+}
 
 async function loadBoard() {
   isLoading.value = true
@@ -37,6 +58,10 @@ async function loadBoard() {
     board.value = await todoApi.getBoard()
     await nextTick()
     initSortables()
+    if (counts.value.total > 0 && getStatusCount(activeStatus.value) === 0) {
+      activeStatus.value = getDefaultStatus()
+    }
+    focusStatus(activeStatus.value, 'auto')
   } catch (error) {
     console.error('Failed to load board:', error)
     showError('보드를 불러오는데 실패했습니다.')
@@ -68,6 +93,12 @@ function initSortables() {
       forceFallback: true,
       fallbackClass: 'kanban-fallback',
       fallbackOnBody: true,
+      delay: 150,
+      delayOnTouchOnly: true,
+      touchStartThreshold: 4,
+      scroll: true,
+      scrollSensitivity: 80,
+      scrollSpeed: 10,
       swapThreshold: 0.65,
       onEnd: handleDragEnd,
     })
@@ -119,6 +150,7 @@ async function handleDragEnd(evt: Sortable.SortableEvent) {
         status: toColumn,
         position: newPosition,
       })
+      focusStatus(toColumn, 'smooth')
       await loadBoard()
     } catch (error) {
       console.error('Failed to change status:', error)
@@ -131,6 +163,63 @@ async function handleDragEnd(evt: Sortable.SortableEvent) {
 function openAddModal(status: TodoStatus = 'TODO') {
   addModalInitialStatus.value = status
   isAddModalOpen.value = true
+}
+
+function getDefaultStatus(): TodoStatus {
+  if (board.value?.inProgress?.length) return 'IN_PROGRESS'
+  if (board.value?.todo?.length) return 'TODO'
+  return 'DONE'
+}
+
+function focusStatus(status: TodoStatus, behavior: ScrollBehavior = 'smooth') {
+  activeStatus.value = status
+  const container = boardScroller.value
+  if (!container) return
+  if (container.scrollWidth <= container.clientWidth) return
+  const target = container.querySelector(`[data-column="${status}"]`)?.closest('.kanban-column') as HTMLElement | null
+  if (!target) return
+  if (typeof target.scrollIntoView === 'function') {
+    target.scrollIntoView({ behavior, inline: 'center', block: 'nearest' })
+    return
+  }
+  const left = target.offsetLeft - (container.clientWidth - target.clientWidth) / 2
+  container.scrollTo({ left, behavior })
+}
+
+function handleBoardScroll() {
+  if (!boardScroller.value) return
+  if (boardScroller.value.scrollWidth <= boardScroller.value.clientWidth) return
+  if (scrollRafId !== null) return
+  scrollRafId = window.requestAnimationFrame(() => {
+    scrollRafId = null
+    syncActiveStatusWithScroll()
+  })
+}
+
+function syncActiveStatusWithScroll() {
+  const container = boardScroller.value
+  if (!container) return
+  const columns = Array.from(container.querySelectorAll('.kanban-column')) as HTMLElement[]
+  if (columns.length === 0) return
+  const containerRect = container.getBoundingClientRect()
+  const centerX = containerRect.left + container.clientWidth / 2
+  let closest: { status: TodoStatus; distance: number } | null = null
+
+  columns.forEach((column) => {
+    const dropZone = column.querySelector('[data-column]') as HTMLElement | null
+    const status = dropZone?.getAttribute('data-column') as TodoStatus | null
+    if (!status) return
+    const rect = column.getBoundingClientRect()
+    const columnCenter = rect.left + rect.width / 2
+    const distance = Math.abs(centerX - columnCenter)
+    if (!closest || distance < closest.distance) {
+      closest = { status, distance }
+    }
+  })
+
+  if (closest && closest.status !== activeStatus.value) {
+    activeStatus.value = closest.status
+  }
 }
 
 function openDetailModal(todo: Todo, editMode = false) {
@@ -253,6 +342,10 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  if (scrollRafId !== null) {
+    window.cancelAnimationFrame(scrollRafId)
+    scrollRafId = null
+  }
   destroySortables()
 })
 </script>
@@ -274,6 +367,22 @@ onBeforeUnmount(() => {
       </button>
     </div>
 
+    <div class="todo-board-tabs" role="tablist" aria-label="할일 상태">
+      <button
+        v-for="tab in statusTabs"
+        :key="tab.status"
+        type="button"
+        class="todo-board-tab"
+        :class="{ active: activeStatus === tab.status }"
+        @click="focusStatus(tab.status)"
+        :aria-pressed="activeStatus === tab.status"
+      >
+        <component :is="tab.icon" class="todo-board-tab-icon" />
+        <span class="todo-board-tab-label">{{ tab.label }}</span>
+        <span class="todo-board-tab-count">{{ getStatusCount(tab.status) }}</span>
+      </button>
+    </div>
+
     <!-- Loading State -->
     <div v-if="isLoading && !board" class="todo-board-loading">
       <div class="todo-board-spinner"></div>
@@ -281,7 +390,12 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- Board -->
-    <div v-else class="todo-board-content">
+    <div
+      v-else
+      ref="boardScroller"
+      class="todo-board-content"
+      @scroll.passive="handleBoardScroll"
+    >
       <div class="todo-board-columns">
         <!-- TODO Column -->
         <KanbanColumn status="TODO" :count="counts.todo" @add="openAddModal('TODO')">
@@ -498,6 +612,63 @@ onBeforeUnmount(() => {
   height: 1.25rem;
 }
 
+.todo-board-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.todo-board-tab {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.55rem 0.6rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--dp-border-primary);
+  background-color: var(--dp-bg-card);
+  color: var(--dp-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-height: 44px;
+}
+
+.todo-board-tab:hover {
+  background-color: var(--dp-bg-hover);
+  transform: translateY(-1px);
+}
+
+.todo-board-tab.active {
+  border-color: var(--dp-accent);
+  color: var(--dp-accent);
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.15);
+}
+
+.todo-board-tab-icon {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.todo-board-tab-label {
+  text-align: left;
+}
+
+.todo-board-tab-count {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background-color: var(--dp-bg-tertiary);
+  color: var(--dp-text-muted);
+}
+
+.todo-board-tab.active .todo-board-tab-count {
+  background-color: var(--dp-accent-bg);
+  color: var(--dp-accent);
+}
+
 .todo-board-title {
   font-size: 1.5rem;
   font-weight: 700;
@@ -505,6 +676,10 @@ onBeforeUnmount(() => {
 }
 
 @media (min-width: 640px) {
+  .todo-board-tabs {
+    display: none;
+  }
+
   .todo-board-title {
     font-size: 1.75rem;
   }
@@ -549,6 +724,8 @@ onBeforeUnmount(() => {
   padding-bottom: 1rem;
   -webkit-overflow-scrolling: touch;
   scroll-snap-type: x mandatory;
+  scroll-padding-inline-start: 0.5rem;
+  scroll-padding-inline-end: 0.5rem;
   scrollbar-width: none;
 }
 
@@ -560,22 +737,29 @@ onBeforeUnmount(() => {
   .todo-board-content {
     overflow: hidden;
     scroll-snap-type: none;
+    scroll-padding: 0;
   }
 }
 
 .todo-board-columns {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.65rem;
   min-height: calc(100dvh - 200px);
-  padding: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  padding-right: calc(100vw - 62vw - 0.5rem);
   box-sizing: border-box;
 }
 
 .todo-board-columns > * {
-  scroll-snap-align: start;
+  scroll-snap-align: center;
 }
 
 @media (min-width: 640px) {
+  .todo-board-columns {
+    gap: 0.75rem;
+    padding: 0.25rem;
+  }
+
   .todo-board-columns > * {
     scroll-snap-align: none;
   }

@@ -64,12 +64,22 @@ const statusConfig: Record<TodoStatus, { label: string; bgClass: string; textCla
 .kanban-column {
   display: flex;
   flex-direction: column;
-  min-width: 75vw;
-  max-width: 85vw;
+  min-width: 62vw;
+  max-width: 62vw;
   flex-shrink: 0;
   border-radius: 0.75rem;
   padding: 0.75rem;
   height: 100%;
+}
+
+/* First column snaps to start (no left padding) */
+.kanban-column:first-child {
+  scroll-snap-align: start;
+}
+
+/* Last column snaps to end */
+.kanban-column:last-child {
+  scroll-snap-align: end;
 }
 
 @media (min-width: 640px) {
