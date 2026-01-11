@@ -53,8 +53,8 @@ class ScheduleTimeParsingService(
                  - Remove the identified time from the text. The remaining text becomes `content`.
                  - If AM/PM is not specified, infer based on context (e.g., common schedules for activities like "진료", "회의", "수업" usually occur during the day).                 
                  - If no time is found, return:
-                   { "result": true, "hasTime": false }
-                 - If "오전" or "오후" appears without an accompanying number, do not treat it as a valid time. Return `{ "result": true, "hasTime": false }`.
+                   { "result": true, "hasTime": false, "content": "<original text>" }
+                 - If "오전" or "오후" appears without an accompanying number, do not treat it as a valid time. Return `{ "result": true, "hasTime": false, "content": "<original text>" }`.
                  - If there are two or more separate, distinct times (not a range), return:
                    { "result": false }
     

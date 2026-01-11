@@ -26,7 +26,7 @@ class ScheduleTimeParsingServiceTest {
 
         val chatOption = OpenAiChatOptions
             .builder()
-            .model("gemini-2.0-flash-lite")
+            .model("gemini-2.5-flash-lite")
             .temperature(0.0)
             .build()
 
