@@ -72,7 +72,6 @@ interface DutyType {
   id: number | null
   name: string
   color: string | null
-  cnt?: number
 }
 
 // Schedule interface for UI display (converted from ScheduleDto)
@@ -452,6 +451,29 @@ const dutyTypes = ref<DutyType[]>([])
 // Raw duty data from API
 const rawDuties = ref<DutyCalendarDay[]>([])
 
+// Computed duty types with count - reactive to both dutyTypes and rawDuties
+const dutyTypesWithCount = computed(() => {
+  if (dutyTypes.value.length === 0) return []
+
+  const daysInMonth = new Date(currentYear.value, currentMonth.value, 0).getDate()
+  let offCount = daysInMonth
+
+  const counts = new Map<string, number>()
+  rawDuties.value
+    .filter((d) => d.month === currentMonth.value)
+    .forEach((duty) => {
+      if (duty.dutyType) {
+        counts.set(duty.dutyType, (counts.get(duty.dutyType) || 0) + 1)
+        offCount--
+      }
+    })
+
+  return dutyTypes.value.map((dt) => ({
+    ...dt,
+    cnt: dt.id === null ? offCount : (counts.get(dt.name) || 0),
+  }))
+})
+
 const dDays = ref<LocalDDay[]>([])
 const isLoadingDDays = ref(false)
 
@@ -560,7 +582,6 @@ async function loadTeam() {
       id: dt.id,
       name: dt.name,
       color: dt.color,
-      cnt: 0,
     }))
   } catch (error) {
     console.error('Failed to load team:', error)
@@ -578,41 +599,11 @@ async function loadDuties() {
       currentYear.value,
       currentMonth.value
     )
-    // Update duty counts
-    updateDutyCounts()
   } catch (error) {
     console.error('Failed to load duties:', error)
     loadError.value = '근무 정보를 불러오는데 실패했습니다.'
   } finally {
     isLoadingDuties.value = false
-  }
-}
-
-// Update duty type counts for the current month
-function updateDutyCounts() {
-  const daysInMonth = new Date(currentYear.value, currentMonth.value, 0).getDate()
-  let offCount = daysInMonth
-
-  // Reset all counts
-  dutyTypes.value.forEach((dt) => {
-    dt.cnt = 0
-  })
-
-  // Count duties for current month only
-  rawDuties.value
-    .filter((d) => d.month === currentMonth.value)
-    .forEach((duty) => {
-      const dutyType = dutyTypes.value.find((dt) => dt.id !== null && dt.name === duty.dutyType)
-      if (dutyType) {
-        dutyType.cnt = (dutyType.cnt || 0) + 1
-        offCount--
-      }
-    })
-
-  // Set OFF count (id === null)
-  const offType = dutyTypes.value.find((dt) => dt.id === null)
-  if (offType) {
-    offType.cnt = offCount
   }
 }
 
@@ -1798,8 +1789,8 @@ async function showExcelUploadModal() {
         </template>
 
         <!-- Normal mode: Duty type badges with counts -->
-        <template v-else-if="dutyTypes.length > 0">
-          <div v-for="dutyType in dutyTypes" :key="dutyType.name" class="flex items-center gap-1">
+        <template v-else-if="dutyTypesWithCount.length > 0">
+          <div v-for="dutyType in dutyTypesWithCount" :key="dutyType.name" class="flex items-center gap-1">
             <span
               class="w-4 h-4 rounded border-2"
               :style="{ backgroundColor: dutyType.color || '#6c757d', borderColor: 'var(--dp-border-primary)' }"
