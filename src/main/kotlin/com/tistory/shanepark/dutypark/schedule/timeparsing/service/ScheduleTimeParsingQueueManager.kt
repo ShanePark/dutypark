@@ -29,8 +29,8 @@ class ScheduleTimeParsingQueueManager(
     private val completedTasks: Queue<LocalDateTime> = ConcurrentLinkedQueue()
     private val completedDailyTasks: Queue<LocalDateTime> = ConcurrentLinkedQueue()
 
-    private val rpmLimit = 30
-    private val rpdLimit = 1500
+    private val rpmLimit = 10
+    private val rpdLimit = 20
     private var doTask = true
 
     @PostConstruct

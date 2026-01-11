@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.security.controller
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.tistory.shanepark.dutypark.common.config.logger
+import tools.jackson.databind.json.JsonMapper
 import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.policy.domain.enums.PolicyType
@@ -28,7 +28,7 @@ class OAuthController(
     private val cookieService: CookieService,
     private val consentService: ConsentService,
 ) {
-    private val objectMapper = ObjectMapper()
+    private val jsonMapper = JsonMapper.builder().build()
     private val log = logger()
 
     @GetMapping("Oauth2ClientCallback/kakao")
@@ -39,7 +39,7 @@ class OAuthController(
         httpServletResponse: HttpServletResponse,
         @Login(required = false) loginMember: LoginMember?
     ): ResponseEntity<Void> {
-        val state = objectMapper.readValue(stateString, Map::class.java)
+        val state = jsonMapper.readValue(stateString, Map::class.java)
         val referer = (state["referer"] as String?) ?: "/"
 
         val redirectUrl = httpServletRequest.requestURL.toString()

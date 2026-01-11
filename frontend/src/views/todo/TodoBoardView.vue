@@ -181,10 +181,7 @@ function focusStatus(status: TodoStatus, behavior: ScrollBehavior = 'smooth') {
   if (container.scrollWidth <= container.clientWidth) return
   const target = container.querySelector(`[data-column="${status}"]`)?.closest('.kanban-column') as HTMLElement | null
   if (!target) return
-  if (typeof target.scrollIntoView === 'function') {
-    target.scrollIntoView({ behavior, inline: 'center', block: 'nearest' })
-    return
-  }
+  // Use scrollTo instead of scrollIntoView to prevent unwanted Y-axis scrolling on mobile
   const left = target.offsetLeft - (container.clientWidth - target.clientWidth) / 2
   container.scrollTo({ left, behavior })
 }
@@ -971,6 +968,12 @@ onBeforeUnmount(() => {
 
 <style>
 /* SortableJS drag-and-drop styles - must be unscoped for dynamic classes */
+
+/* Hide empty state when dragging item enters the column */
+.kanban-column-drop-zone:has(.kanban-ghost) .kanban-empty-state {
+  display: none;
+}
+
 .kanban-ghost {
   opacity: 0.5;
   background-color: var(--dp-accent-bg) !important;

@@ -1,18 +1,17 @@
 package com.tistory.shanepark.dutypark.schedule.timeparsing.service
 
-import com.fasterxml.jackson.core.JsonProcessingException
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingRequest
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingResponse
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.model.ChatModel
 import org.springframework.stereotype.Service
+import tools.jackson.databind.json.JsonMapper
 
 @Service
 class ScheduleTimeParsingService(
     chatModel: ChatModel,
-    private val objectMapper: ObjectMapper,
+    private val jsonMapper: JsonMapper,
 ) {
     private val chatClient = ChatClient.builder(chatModel).build()
     private val log = logger()
@@ -36,15 +35,15 @@ class ScheduleTimeParsingService(
             .filter { !it.contains("```") }
             .joinToString("\n")
         return try {
-            objectMapper.readValue(json, ScheduleTimeParsingResponse::class.java)
-        } catch (e: JsonProcessingException) {
+            jsonMapper.readValue(json, ScheduleTimeParsingResponse::class.java)
+        } catch (e: Exception) {
             log.warn("Failed to parse JSON:\n$json", e)
             ScheduleTimeParsingResponse(result = false)
         }
     }
 
     private fun generatePrompt(request: ScheduleTimeParsingRequest): String {
-        val jsonRequest = objectMapper.writeValueAsString(request)
+        val jsonRequest = jsonMapper.writeValueAsString(request)
         return """
               Task: Extract time from the text and return a JSON response.
  
@@ -54,8 +53,8 @@ class ScheduleTimeParsingService(
                  - Remove the identified time from the text. The remaining text becomes `content`.
                  - If AM/PM is not specified, infer based on context (e.g., common schedules for activities like "진료", "회의", "수업" usually occur during the day).                 
                  - If no time is found, return:
-                   { "result": true, "hasTime": false }
-                 - If "오전" or "오후" appears without an accompanying number, do not treat it as a valid time. Return `{ "result": true, "hasTime": false }`.
+                   { "result": true, "hasTime": false, "content": "<original text>" }
+                 - If "오전" or "오후" appears without an accompanying number, do not treat it as a valid time. Return `{ "result": true, "hasTime": false, "content": "<original text>" }`.
                  - If there are two or more separate, distinct times (not a range), return:
                    { "result": false }
     

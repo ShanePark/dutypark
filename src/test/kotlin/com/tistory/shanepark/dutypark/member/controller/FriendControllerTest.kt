@@ -97,7 +97,7 @@ class FriendControllerTest : RestDocsTest() {
     @Test
     fun `send friend request`() {
         mockMvc.perform(
-            RestDocumentationRequestBuilders.post("/api/friends/request/send/{toMemberId}", TestData.member2.id)
+            RestDocumentationRequestBuilders.post("/api/friends/request/send/{toMemberId}", TestData.member2.id!!)
                 .accept(MediaType.APPLICATION_JSON)
                 .withAuth(TestData.member)
         )
@@ -127,7 +127,7 @@ class FriendControllerTest : RestDocsTest() {
         em.clear()
 
         mockMvc.perform(
-            RestDocumentationRequestBuilders.post("/api/friends/request/accept/{fromMemberId}", TestData.member2.id)
+            RestDocumentationRequestBuilders.post("/api/friends/request/accept/{fromMemberId}", TestData.member2.id!!)
                 .accept(MediaType.APPLICATION_JSON)
                 .withAuth(TestData.member)
         )
@@ -157,7 +157,7 @@ class FriendControllerTest : RestDocsTest() {
         em.clear()
 
         mockMvc.perform(
-            RestDocumentationRequestBuilders.post("/api/friends/request/reject/{fromMemberId}", TestData.member2.id)
+            RestDocumentationRequestBuilders.post("/api/friends/request/reject/{fromMemberId}", TestData.member2.id!!)
                 .accept(MediaType.APPLICATION_JSON)
                 .withAuth(TestData.member)
         )
@@ -187,7 +187,7 @@ class FriendControllerTest : RestDocsTest() {
         em.clear()
 
         mockMvc.perform(
-            RestDocumentationRequestBuilders.delete("/api/friends/request/cancel/{toMemberId}", TestData.member2.id)
+            RestDocumentationRequestBuilders.delete("/api/friends/request/cancel/{toMemberId}", TestData.member2.id!!)
                 .accept(MediaType.APPLICATION_JSON)
                 .withAuth(TestData.member)
         )
@@ -210,7 +210,7 @@ class FriendControllerTest : RestDocsTest() {
         em.clear()
 
         mockMvc.perform(
-            RestDocumentationRequestBuilders.delete("/api/friends/{deleteMemberId}", TestData.member2.id)
+            RestDocumentationRequestBuilders.delete("/api/friends/{deleteMemberId}", TestData.member2.id!!)
                 .accept(MediaType.APPLICATION_JSON)
                 .withAuth(TestData.member)
         )
@@ -233,7 +233,7 @@ class FriendControllerTest : RestDocsTest() {
         em.clear()
 
         mockMvc.perform(
-            RestDocumentationRequestBuilders.patch("/api/friends/pin/{friendId}", TestData.member2.id)
+            RestDocumentationRequestBuilders.patch("/api/friends/pin/{friendId}", TestData.member2.id!!)
                 .accept(MediaType.APPLICATION_JSON)
                 .withAuth(TestData.member)
         )
@@ -256,7 +256,7 @@ class FriendControllerTest : RestDocsTest() {
         em.clear()
 
         mockMvc.perform(
-            RestDocumentationRequestBuilders.patch("/api/friends/unpin/{friendId}", TestData.member2.id)
+            RestDocumentationRequestBuilders.patch("/api/friends/unpin/{friendId}", TestData.member2.id!!)
                 .accept(MediaType.APPLICATION_JSON)
                 .withAuth(TestData.member)
         )
@@ -306,7 +306,7 @@ class FriendControllerTest : RestDocsTest() {
         em.clear()
 
         mockMvc.perform(
-            RestDocumentationRequestBuilders.put("/api/friends/family/{toMemberId}", TestData.member2.id)
+            RestDocumentationRequestBuilders.put("/api/friends/family/{toMemberId}", TestData.member2.id!!)
                 .accept(MediaType.APPLICATION_JSON)
                 .withAuth(TestData.member)
         )

@@ -13,10 +13,10 @@ class AsyncConfig {
     @Bean(name = ["thumbnailExecutor"])
     fun thumbnailExecutor(): Executor {
         val executor = ThreadPoolTaskExecutor()
-        executor.corePoolSize = 2
-        executor.maxPoolSize = 5
-        executor.queueCapacity = 100
-        executor.threadNamePrefix = "thumbnail-"
+        executor.setCorePoolSize(2)
+        executor.setMaxPoolSize(5)
+        executor.setQueueCapacity(100)
+        executor.setThreadNamePrefix("thumbnail-")
         executor.setWaitForTasksToCompleteOnShutdown(true)
         executor.setAwaitTerminationSeconds(60)
         executor.initialize()
@@ -26,10 +26,10 @@ class AsyncConfig {
     @Bean(name = ["notificationExecutor"])
     fun notificationExecutor(): Executor {
         val executor = ThreadPoolTaskExecutor()
-        executor.corePoolSize = 2
-        executor.maxPoolSize = 5
-        executor.queueCapacity = 100
-        executor.threadNamePrefix = "notification-"
+        executor.setCorePoolSize(2)
+        executor.setMaxPoolSize(5)
+        executor.setQueueCapacity(100)
+        executor.setThreadNamePrefix("notification-")
         executor.setWaitForTasksToCompleteOnShutdown(true)
         executor.setAwaitTerminationSeconds(60)
         executor.initialize()

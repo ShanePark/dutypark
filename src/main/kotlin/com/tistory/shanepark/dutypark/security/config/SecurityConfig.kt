@@ -66,18 +66,18 @@ class SecurityConfig(
     @Bean
     fun adminFilterBean(): FilterRegistrationBean<Filter> {
         val filterRegBean = FilterRegistrationBean<Filter>()
-        filterRegBean.filter = AdminAuthFilter()
+        filterRegBean.setFilter(AdminAuthFilter())
         filterRegBean.addUrlPatterns("/admin/*")
         filterRegBean.addUrlPatterns("/docs/*")
-        filterRegBean.order = Ordered.LOWEST_PRECEDENCE
+        filterRegBean.setOrder(Ordered.LOWEST_PRECEDENCE)
         return filterRegBean
     }
 
     @Bean
     fun forwardedHeaderFilter(): FilterRegistrationBean<ForwardedHeaderFilter> {
         val filterRegBean = FilterRegistrationBean<ForwardedHeaderFilter>()
-        filterRegBean.filter = ForwardedHeaderFilter()
-        filterRegBean.order = Ordered.HIGHEST_PRECEDENCE
+        filterRegBean.setFilter(ForwardedHeaderFilter())
+        filterRegBean.setOrder(Ordered.HIGHEST_PRECEDENCE)
         return filterRegBean
     }
 

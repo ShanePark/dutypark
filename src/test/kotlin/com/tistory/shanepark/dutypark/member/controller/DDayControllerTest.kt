@@ -160,7 +160,7 @@ class DDayControllerTest : RestDocsTest() {
         )
 
         mockMvc.perform(
-            RestDocumentationRequestBuilders.get("/api/dday/{id}", TestData.member2.id)
+            RestDocumentationRequestBuilders.get("/api/dday/{id}", TestData.member2.id!!)
                 .accept(MediaType.APPLICATION_JSON)
                 .withAuth(TestData.member)
         )
@@ -198,7 +198,7 @@ class DDayControllerTest : RestDocsTest() {
         em.clear()
 
         mockMvc.perform(
-            RestDocumentationRequestBuilders.delete("/api/dday/{id}", saved.id)
+            RestDocumentationRequestBuilders.delete("/api/dday/{id}", saved.id!!)
                 .accept(MediaType.APPLICATION_JSON)
                 .withAuth(TestData.member)
         )

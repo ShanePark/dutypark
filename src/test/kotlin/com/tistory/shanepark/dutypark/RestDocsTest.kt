@@ -7,11 +7,11 @@ import com.tistory.shanepark.dutypark.security.service.CookieService
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs
 import org.springframework.http.HttpHeaders
 import org.springframework.restdocs.RestDocumentationContextProvider
 import org.springframework.restdocs.RestDocumentationExtension
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation
+import org.springframework.restdocs.operation.preprocess.Preprocessors.prettyPrint
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
 import org.springframework.test.web.servlet.setup.DefaultMockMvcBuilder
@@ -19,11 +19,6 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import org.springframework.web.context.WebApplicationContext
 
 @ExtendWith(RestDocumentationExtension::class)
-@AutoConfigureRestDocs(
-    uriScheme = "https",
-    uriHost = "dutypark.kr",
-    uriPort = 443,
-)
 abstract class RestDocsTest : DutyparkIntegrationTest() {
 
     protected lateinit var mockMvc: MockMvc

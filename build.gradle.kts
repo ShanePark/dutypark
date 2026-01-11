@@ -1,8 +1,10 @@
+import org.asciidoctor.gradle.jvm.AsciidoctorJExtension
+
 plugins {
     kotlin("jvm") version "2.3.0"
     kotlin("plugin.spring") version "2.3.0"
     kotlin("plugin.jpa") version "2.3.0"
-    id("org.springframework.boot") version "3.5.6"
+    id("org.springframework.boot") version "4.0.1"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.asciidoctor.jvm.convert") version "4.0.5"
     id("com.gorylenko.gradle-git-properties") version "2.5.4"
@@ -19,24 +21,32 @@ java {
 
 repositories {
     mavenCentral()
+    maven { url = uri("https://repo.spring.io/milestone") }
 }
 
-extra["springAiVersion"] = "1.0.3"
+extra["springAiVersion"] = "2.0.0-M1"
+extra["springRestDocsVersion"] = "4.0.0"
 
 val asciidoctorExt: Configuration by configurations.creating
+
+configure<AsciidoctorJExtension> {
+    setVersion("3.0.0")
+}
+
 dependencies {
     // Kotlin
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("tools.jackson.module:jackson-module-kotlin")
 
     // Spring Boot
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-devtools")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
+    implementation("org.springframework.boot:spring-boot-starter-cache")
     runtimeOnly("io.netty:netty-resolver-dns-native-macos:4.1.93.Final:osx-aarch_64")
     implementation("org.springframework.ai:spring-ai-starter-model-openai")
 
@@ -45,12 +55,14 @@ dependencies {
 
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.mockito.kotlin:mockito-kotlin:4.1.0")
     testImplementation("com.h2database:h2")
 
     // Spring Docs
-    testImplementation("org.springframework.restdocs:spring-restdocs-mockmvc")
-    asciidoctorExt("org.springframework.restdocs:spring-restdocs-asciidoctor")
+    testImplementation("org.springframework.restdocs:spring-restdocs-mockmvc:${property("springRestDocsVersion")}")
+    asciidoctorExt("org.springframework.restdocs:spring-restdocs-asciidoctor:${property("springRestDocsVersion")}")
 
     // Database
     runtimeOnly("com.mysql:mysql-connector-j")
