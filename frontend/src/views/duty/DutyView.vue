@@ -222,9 +222,8 @@ const todosDueByDays = computed(() => {
   const todoMap = new Map<string, Array<{ id: string; title: string; status: string }>>()
   todos.value.forEach((todo) => {
     if (!todo.dueDate) return
-    // Apply filter settings
+    // Apply filter settings (IN_PROGRESS always shown)
     if (todo.status === 'TODO' && !showTodoTodo.value) return
-    if (todo.status === 'IN_PROGRESS' && !showTodoInProgress.value) return
 
     const key = todo.dueDate
     if (!todoMap.has(key)) {
@@ -247,7 +246,6 @@ const todosDueByDays = computed(() => {
 // Todo filter settings (stored in localStorage)
 const STORAGE_KEY_TODO_FILTER = 'dutyViewTodoFilter'
 const showTodoTodo = ref(false)
-const showTodoInProgress = ref(true)
 
 // Load todo filter settings from localStorage
 function loadTodoFilterSettings() {
@@ -256,7 +254,6 @@ function loadTodoFilterSettings() {
     if (stored) {
       const settings = JSON.parse(stored)
       showTodoTodo.value = settings.showTodo ?? false
-      showTodoInProgress.value = settings.showInProgress ?? true
     }
   } catch (e) {
     console.error('Failed to load todo filter settings:', e)
@@ -268,7 +265,6 @@ function saveTodoFilterSettings() {
   try {
     localStorage.setItem(STORAGE_KEY_TODO_FILTER, JSON.stringify({
       showTodo: showTodoTodo.value,
-      showInProgress: showTodoInProgress.value,
     }))
   } catch (e) {
     console.error('Failed to save todo filter settings:', e)
@@ -276,20 +272,16 @@ function saveTodoFilterSettings() {
 }
 
 // Toggle todo filter and save to localStorage
-function toggleTodoFilter(filter: 'TODO' | 'IN_PROGRESS') {
-  if (filter === 'TODO') {
-    showTodoTodo.value = !showTodoTodo.value
-  } else {
-    showTodoInProgress.value = !showTodoInProgress.value
-  }
+function toggleTodoFilter() {
+  showTodoTodo.value = !showTodoTodo.value
   saveTodoFilterSettings()
 }
 
-// Filter todos based on selected filters
+// Filter todos based on selected filters (IN_PROGRESS always shown)
 const filteredTodos = computed(() => {
   return todos.value.filter(t => {
+    if (t.status === 'IN_PROGRESS') return true
     if (t.status === 'TODO' && showTodoTodo.value) return true
-    if (t.status === 'IN_PROGRESS' && showTodoInProgress.value) return true
     return false
   })
 })
@@ -1715,11 +1707,11 @@ async function showExcelUploadModal() {
         <!-- Todo Management Button - navigates to /todo -->
         <button
           @click="router.push('/todo')"
-          class="todo-manage-btn h-7 px-2.5 flex items-center gap-1.5 transition-all duration-150 cursor-pointer rounded-l-lg border"
+          class="todo-manage-btn h-7 px-2 flex items-center gap-1 transition-all duration-150 cursor-pointer rounded-l-lg border"
           :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)' }"
         >
-          <span class="text-xs font-medium" :style="{ color: 'var(--dp-text-secondary)' }">할일 관리</span>
-          <ChevronRightSmall class="w-3.5 h-3.5" :style="{ color: 'var(--dp-text-muted)' }" />
+          <span class="text-xs font-medium" :style="{ color: 'var(--dp-text-secondary)' }">할일</span>
+          <ChevronRightSmall class="w-3 h-3" :style="{ color: 'var(--dp-text-muted)' }" />
         </button>
         <!-- Add Todo Button -->
         <button
@@ -1734,27 +1726,15 @@ async function showExcelUploadModal() {
 
       <!-- Right: Todo Filter Icons + Items -->
       <div class="flex-1 min-w-0 flex items-center gap-1.5">
-        <!-- Filter Toggle Icons -->
-        <div class="flex-shrink-0 flex items-center">
-          <!-- TODO filter -->
-          <button
-            @click="toggleTodoFilter('TODO')"
-            class="todo-filter-btn h-7 w-7 flex items-center justify-center transition-all duration-150 cursor-pointer"
-            :class="showTodoTodo ? 'todo-filter-btn-active-todo' : 'todo-filter-btn-inactive'"
-            title="할일 표시"
-          >
-            <ListTodo class="w-4 h-4" />
-          </button>
-          <!-- IN_PROGRESS filter -->
-          <button
-            @click="toggleTodoFilter('IN_PROGRESS')"
-            class="todo-filter-btn h-7 w-7 flex items-center justify-center transition-all duration-150 cursor-pointer"
-            :class="showTodoInProgress ? 'todo-filter-btn-active-progress' : 'todo-filter-btn-inactive'"
-            title="진행중 표시"
-          >
-            <Clock class="w-4 h-4" />
-          </button>
-        </div>
+        <!-- TODO Filter Toggle -->
+        <button
+          @click="toggleTodoFilter()"
+          class="todo-filter-btn flex-shrink-0 h-7 w-7 flex items-center justify-center transition-all duration-150 cursor-pointer rounded-md"
+          :class="showTodoTodo ? 'todo-filter-btn-active-todo' : 'todo-filter-btn-inactive'"
+          title="할일 표시"
+        >
+          <ListTodo class="w-4 h-4" />
+        </button>
         <!-- Filtered Todo Items -->
         <div v-if="filteredTodos.length > 0" class="flex-1 min-w-0 overflow-x-auto scrollbar-hide">
           <div class="flex gap-1.5">

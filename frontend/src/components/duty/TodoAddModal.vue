@@ -265,46 +265,52 @@ function onUploadError(message: string) {
   transform: translateY(-1px);
 }
 
+/* TODO status - Blue */
 .status-card-todo {
-  background-color: var(--dp-bg-tertiary);
-  color: var(--dp-text-primary);
+  background-color: color-mix(in srgb, var(--dp-accent) 8%, var(--dp-bg-tertiary));
+  color: var(--dp-accent);
 }
 
 .status-card-todo:hover {
-  background-color: var(--dp-bg-hover);
+  background-color: color-mix(in srgb, var(--dp-accent) 15%, var(--dp-bg-tertiary));
 }
 
 .status-card-todo.status-card-selected {
-  border-color: var(--dp-text-primary);
-  background-color: var(--dp-bg-hover);
+  border-color: var(--dp-accent);
+  background-color: color-mix(in srgb, var(--dp-accent) 25%, var(--dp-bg-tertiary));
+  box-shadow: 0 0 0 3px var(--dp-accent-ring);
 }
 
+/* IN_PROGRESS status - Orange/Warning */
 .status-card-in-progress {
-  background-color: color-mix(in srgb, var(--dp-warning) 15%, var(--dp-bg-tertiary));
+  background-color: color-mix(in srgb, var(--dp-warning) 8%, var(--dp-bg-tertiary));
   color: var(--dp-warning);
 }
 
 .status-card-in-progress:hover {
-  background-color: color-mix(in srgb, var(--dp-warning) 25%, var(--dp-bg-tertiary));
+  background-color: color-mix(in srgb, var(--dp-warning) 15%, var(--dp-bg-tertiary));
 }
 
 .status-card-in-progress.status-card-selected {
   border-color: var(--dp-warning);
   background-color: color-mix(in srgb, var(--dp-warning) 25%, var(--dp-bg-tertiary));
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
 }
 
+/* DONE status - Green/Success */
 .status-card-done {
-  background-color: color-mix(in srgb, var(--dp-success) 15%, var(--dp-bg-tertiary));
+  background-color: color-mix(in srgb, var(--dp-success) 8%, var(--dp-bg-tertiary));
   color: var(--dp-success);
 }
 
 .status-card-done:hover {
-  background-color: color-mix(in srgb, var(--dp-success) 25%, var(--dp-bg-tertiary));
+  background-color: color-mix(in srgb, var(--dp-success) 15%, var(--dp-bg-tertiary));
 }
 
 .status-card-done.status-card-selected {
   border-color: var(--dp-success);
   background-color: color-mix(in srgb, var(--dp-success) 25%, var(--dp-bg-tertiary));
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
 }
 
 .due-date-optional {
