@@ -1229,7 +1229,7 @@ async function handleTodoAdd(data: {
 // Todo position update for drag-and-drop
 async function handleTodoPositionUpdate(orderedIds: string[]) {
   try {
-    await todoApi.updatePositionsLegacy(orderedIds)
+    await todoApi.updatePositions({ status: 'TODO', orderedIds })
     // Reorder local todos array to match the new order
     const todoMap = new Map(todos.value.map((t) => [t.id, t]))
     todos.value = orderedIds.map((id) => todoMap.get(id)).filter((t): t is LocalTodo => t !== undefined)

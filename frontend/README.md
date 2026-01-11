@@ -62,7 +62,7 @@ src/
 │   │   ├── TodoOverviewModal.vue # Todo list with drag-drop
 │   │   ├── DDayModal.vue         # D-Day CRUD
 │   │   ├── OtherDutiesModal.vue  # Friend selection
-│   │   ├── ScheduleDetailModal.vue
+│   │   ├── ScheduleViewModal.vue # Schedule detail view
 │   │   └── SearchResultModal.vue
 │   └── layout/
 │       ├── AppLayout.vue         # Main layout wrapper

@@ -16,34 +16,6 @@ export interface LegacyTodoRequest {
 }
 
 export const todoApi = {
-  // ===== Legacy API (backward compatible) =====
-
-  /**
-   * Get TODO status list (formerly ACTIVE)
-   * @deprecated Use getBoard() for kanban board
-   */
-  getActiveTodos: async (): Promise<Todo[]> => {
-    const response = await apiClient.get<Todo[]>('/todos')
-    return response.data
-  },
-
-  /**
-   * Get DONE status list (formerly COMPLETED)
-   * @deprecated Use getBoard() for kanban board
-   */
-  getCompletedTodos: async (): Promise<Todo[]> => {
-    const response = await apiClient.get<Todo[]>('/todos/completed')
-    return response.data
-  },
-
-  /**
-   * Update positions (legacy, TODO status only)
-   * @deprecated Use updatePositions() for kanban board
-   */
-  updatePositionsLegacy: async (ids: string[]): Promise<void> => {
-    await apiClient.patch('/todos/position', ids)
-  },
-
   /**
    * Complete task (TODO/IN_PROGRESS -> DONE)
    */
@@ -60,21 +32,11 @@ export const todoApi = {
     return response.data
   },
 
-  // ===== New API (for kanban board) =====
-
   /**
    * Get full kanban board
    */
   getBoard: async (): Promise<TodoBoard> => {
     const response = await apiClient.get<TodoBoard>('/todos/board')
-    return response.data
-  },
-
-  /**
-   * Get list by specific status
-   */
-  getByStatus: async (status: string): Promise<Todo[]> => {
-    const response = await apiClient.get<Todo[]>(`/todos/status/${status}`)
     return response.data
   },
 
@@ -92,38 +54,6 @@ export const todoApi = {
   updatePositions: async (request: TodoPositionUpdateRequest): Promise<void> => {
     await apiClient.patch('/todos/positions', request)
   },
-
-  // ===== Due Date API =====
-
-  /**
-   * Get todos by month (for calendar integration)
-   */
-  getTodosByMonth: async (year: number, month: number): Promise<Todo[]> => {
-    const response = await apiClient.get<Todo[]>('/todos/calendar', {
-      params: { year, month },
-    })
-    return response.data
-  },
-
-  /**
-   * Get todos by specific date
-   */
-  getTodosByDate: async (date: string): Promise<Todo[]> => {
-    const response = await apiClient.get<Todo[]>('/todos/due', {
-      params: { date },
-    })
-    return response.data
-  },
-
-  /**
-   * Get overdue todos
-   */
-  getOverdueTodos: async (): Promise<Todo[]> => {
-    const response = await apiClient.get<Todo[]>('/todos/overdue')
-    return response.data
-  },
-
-  // ===== Common API =====
 
   /**
    * Create todo
