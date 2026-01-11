@@ -19,6 +19,10 @@ export function setAuthFailureHandler(handler: () => void) {
   onAuthFailure = handler
 }
 
+export function resetRefreshState() {
+  refreshFailed = false
+}
+
 const processQueue = (error: Error | null) => {
   failedQueue.forEach((prom) => {
     if (error) {
@@ -87,6 +91,8 @@ apiClient.interceptors.response.use(
         // Cookie is sent automatically via withCredentials
         await axios.post('/api/auth/refresh', {}, { withCredentials: true })
 
+        // Reset refresh failure flag on successful refresh
+        refreshFailed = false
         processQueue(null)
 
         return apiClient(originalRequest)
