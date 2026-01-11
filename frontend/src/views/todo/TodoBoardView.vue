@@ -968,6 +968,12 @@ onBeforeUnmount(() => {
 
 <style>
 /* SortableJS drag-and-drop styles - must be unscoped for dynamic classes */
+
+/* Hide empty state when dragging item enters the column */
+.kanban-column-drop-zone:has(.kanban-ghost) .kanban-empty-state {
+  display: none;
+}
+
 .kanban-ghost {
   opacity: 0.5;
   background-color: var(--dp-accent-bg) !important;
