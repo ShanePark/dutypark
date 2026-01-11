@@ -61,7 +61,10 @@ async function loadBoard() {
     if (counts.value.total > 0 && getStatusCount(activeStatus.value) === 0) {
       activeStatus.value = getDefaultStatus()
     }
-    focusStatus(activeStatus.value, 'auto')
+    // Use setTimeout to ensure DOM is fully rendered before scrolling on mobile
+    setTimeout(() => {
+      focusStatus(activeStatus.value, 'instant')
+    }, 50)
   } catch (error) {
     console.error('Failed to load board:', error)
     showError('보드를 불러오는데 실패했습니다.')

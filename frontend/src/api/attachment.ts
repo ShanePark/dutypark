@@ -5,7 +5,6 @@ import type {
   CreateSessionRequest,
   CreateSessionResponse,
   NormalizedAttachment,
-  ReorderAttachmentsRequest,
 } from '@/types'
 
 // Validation configuration
@@ -179,12 +178,4 @@ export const attachmentApi = {
     })
     return response.data.map(normalizeAttachment)
   },
-
-  /**
-   * Reorder attachments
-   */
-  reorderAttachments: async (request: ReorderAttachmentsRequest): Promise<void> => {
-    await apiClient.post('/attachments/reorder', request)
-  },
-
 }

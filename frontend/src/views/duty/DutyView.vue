@@ -20,6 +20,7 @@ import {
   Clock,
   ListTodo,
   ChevronRight as ChevronRightSmall,
+  CheckSquare,
 } from 'lucide-vue-next'
 
 // Modal Components
@@ -51,6 +52,8 @@ interface LocalTodo {
   status: 'TODO' | 'IN_PROGRESS' | 'DONE'
   createdDate: string
   completedDate?: string
+  dueDate?: string
+  isOverdue?: boolean
   hasAttachments: boolean
   attachments: Array<{
     id: string
@@ -69,7 +72,6 @@ interface DutyType {
   id: number | null
   name: string
   color: string | null
-  cnt?: number
 }
 
 // Schedule interface for UI display (converted from ScheduleDto)
@@ -211,10 +213,38 @@ const todos = ref<LocalTodo[]>([])
 const completedTodos = ref<LocalTodo[]>([])
 const isLoadingTodos = ref(false)
 
+// Todos with due dates computed from existing todos (respects filter settings)
+const todosDueByDays = computed(() => {
+  if (!isMyCalendar.value || !calendarDays.value.length) return []
+
+  // Build map by date from todos that have dueDate and match filter
+  const todoMap = new Map<string, Array<{ id: string; title: string; status: string }>>()
+  todos.value.forEach((todo) => {
+    if (!todo.dueDate) return
+    // Apply filter settings (IN_PROGRESS always shown)
+    if (todo.status === 'TODO' && !showTodoTodo.value) return
+
+    const key = todo.dueDate
+    if (!todoMap.has(key)) {
+      todoMap.set(key, [])
+    }
+    todoMap.get(key)!.push({
+      id: todo.id,
+      title: todo.title,
+      status: todo.status,
+    })
+  })
+
+  // Map to calendarDays structure
+  return calendarDays.value.map((day) => {
+    const key = `${day.year}-${String(day.month).padStart(2, '0')}-${String(day.day).padStart(2, '0')}`
+    return todoMap.get(key) || []
+  })
+})
+
 // Todo filter settings (stored in localStorage)
 const STORAGE_KEY_TODO_FILTER = 'dutyViewTodoFilter'
 const showTodoTodo = ref(false)
-const showTodoInProgress = ref(true)
 
 // Load todo filter settings from localStorage
 function loadTodoFilterSettings() {
@@ -223,7 +253,6 @@ function loadTodoFilterSettings() {
     if (stored) {
       const settings = JSON.parse(stored)
       showTodoTodo.value = settings.showTodo ?? false
-      showTodoInProgress.value = settings.showInProgress ?? true
     }
   } catch (e) {
     console.error('Failed to load todo filter settings:', e)
@@ -235,7 +264,6 @@ function saveTodoFilterSettings() {
   try {
     localStorage.setItem(STORAGE_KEY_TODO_FILTER, JSON.stringify({
       showTodo: showTodoTodo.value,
-      showInProgress: showTodoInProgress.value,
     }))
   } catch (e) {
     console.error('Failed to save todo filter settings:', e)
@@ -243,20 +271,16 @@ function saveTodoFilterSettings() {
 }
 
 // Toggle todo filter and save to localStorage
-function toggleTodoFilter(filter: 'TODO' | 'IN_PROGRESS') {
-  if (filter === 'TODO') {
-    showTodoTodo.value = !showTodoTodo.value
-  } else {
-    showTodoInProgress.value = !showTodoInProgress.value
-  }
+function toggleTodoFilter() {
+  showTodoTodo.value = !showTodoTodo.value
   saveTodoFilterSettings()
 }
 
-// Filter todos based on selected filters
+// Filter todos based on selected filters (IN_PROGRESS always shown)
 const filteredTodos = computed(() => {
   return todos.value.filter(t => {
+    if (t.status === 'IN_PROGRESS') return true
     if (t.status === 'TODO' && showTodoTodo.value) return true
-    if (t.status === 'IN_PROGRESS' && showTodoInProgress.value) return true
     return false
   })
 })
@@ -266,7 +290,7 @@ function handleTodoBubbleClick(todo: LocalTodo) {
 }
 
 // Convert API Todo to LocalTodo
-function mapToLocalTodo(apiTodo: { id: string; title: string; content: string; position: number | null; status: 'TODO' | 'IN_PROGRESS' | 'DONE'; createdDate: string; completedDate: string | null }): LocalTodo {
+function mapToLocalTodo(apiTodo: { id: string; title: string; content: string; position: number | null; status: 'TODO' | 'IN_PROGRESS' | 'DONE'; createdDate: string; completedDate: string | null; dueDate?: string | null; isOverdue?: boolean }): LocalTodo {
   return {
     id: apiTodo.id,
     title: apiTodo.title,
@@ -274,6 +298,8 @@ function mapToLocalTodo(apiTodo: { id: string; title: string; content: string; p
     status: apiTodo.status,
     createdDate: apiTodo.createdDate,
     completedDate: apiTodo.completedDate ?? undefined,
+    dueDate: apiTodo.dueDate ?? undefined,
+    isOverdue: apiTodo.isOverdue ?? false,
     hasAttachments: false,
     attachments: [],
   }
@@ -425,6 +451,29 @@ const dutyTypes = ref<DutyType[]>([])
 // Raw duty data from API
 const rawDuties = ref<DutyCalendarDay[]>([])
 
+// Computed duty types with count - reactive to both dutyTypes and rawDuties
+const dutyTypesWithCount = computed(() => {
+  if (dutyTypes.value.length === 0) return []
+
+  const daysInMonth = new Date(currentYear.value, currentMonth.value, 0).getDate()
+  let offCount = daysInMonth
+
+  const counts = new Map<string, number>()
+  rawDuties.value
+    .filter((d) => d.month === currentMonth.value)
+    .forEach((duty) => {
+      if (duty.dutyType) {
+        counts.set(duty.dutyType, (counts.get(duty.dutyType) || 0) + 1)
+        offCount--
+      }
+    })
+
+  return dutyTypes.value.map((dt) => ({
+    ...dt,
+    cnt: dt.id === null ? offCount : (counts.get(dt.name) || 0),
+  }))
+})
+
 const dDays = ref<LocalDDay[]>([])
 const isLoadingDDays = ref(false)
 
@@ -533,7 +582,6 @@ async function loadTeam() {
       id: dt.id,
       name: dt.name,
       color: dt.color,
-      cnt: 0,
     }))
   } catch (error) {
     console.error('Failed to load team:', error)
@@ -551,41 +599,11 @@ async function loadDuties() {
       currentYear.value,
       currentMonth.value
     )
-    // Update duty counts
-    updateDutyCounts()
   } catch (error) {
     console.error('Failed to load duties:', error)
     loadError.value = '근무 정보를 불러오는데 실패했습니다.'
   } finally {
     isLoadingDuties.value = false
-  }
-}
-
-// Update duty type counts for the current month
-function updateDutyCounts() {
-  const daysInMonth = new Date(currentYear.value, currentMonth.value, 0).getDate()
-  let offCount = daysInMonth
-
-  // Reset all counts
-  dutyTypes.value.forEach((dt) => {
-    dt.cnt = 0
-  })
-
-  // Count duties for current month only
-  rawDuties.value
-    .filter((d) => d.month === currentMonth.value)
-    .forEach((duty) => {
-      const dutyType = dutyTypes.value.find((dt) => dt.id !== null && dt.name === duty.dutyType)
-      if (dutyType) {
-        dutyType.cnt = (dutyType.cnt || 0) + 1
-        offCount--
-      }
-    })
-
-  // Set OFF count (id === null)
-  const offType = dutyTypes.value.find((dt) => dt.id === null)
-  if (offType) {
-    offType.cnt = offCount
   }
 }
 
@@ -1067,6 +1085,7 @@ async function handleTodoUpdate(data: {
   title: string
   content: string
   status: TodoStatus
+  dueDate?: string | null
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }) {
@@ -1075,6 +1094,7 @@ async function handleTodoUpdate(data: {
       title: data.title,
       content: data.content,
       status: data.status,
+      dueDate: data.dueDate,
       attachmentSessionId: data.attachmentSessionId,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
@@ -1192,7 +1212,7 @@ async function handleTodoAdd(data: {
 // Todo position update for drag-and-drop
 async function handleTodoPositionUpdate(orderedIds: string[]) {
   try {
-    await todoApi.updatePositionsLegacy(orderedIds)
+    await todoApi.updatePositions({ status: 'TODO', orderedIds })
     // Reorder local todos array to match the new order
     const todoMap = new Map(todos.value.map((t) => [t.id, t]))
     todos.value = orderedIds.map((id) => todoMap.get(id)).filter((t): t is LocalTodo => t !== undefined)
@@ -1678,11 +1698,11 @@ async function showExcelUploadModal() {
         <!-- Todo Management Button - navigates to /todo -->
         <button
           @click="router.push('/todo')"
-          class="todo-manage-btn h-7 px-2.5 flex items-center gap-1.5 transition-all duration-150 cursor-pointer rounded-l-lg border"
+          class="todo-manage-btn h-7 px-2 flex items-center gap-1 transition-all duration-150 cursor-pointer rounded-l-lg border"
           :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)' }"
         >
-          <span class="text-xs font-medium" :style="{ color: 'var(--dp-text-secondary)' }">할일 관리</span>
-          <ChevronRightSmall class="w-3.5 h-3.5" :style="{ color: 'var(--dp-text-muted)' }" />
+          <span class="text-xs font-medium" :style="{ color: 'var(--dp-text-secondary)' }">할일</span>
+          <ChevronRightSmall class="w-3 h-3" :style="{ color: 'var(--dp-text-muted)' }" />
         </button>
         <!-- Add Todo Button -->
         <button
@@ -1697,27 +1717,15 @@ async function showExcelUploadModal() {
 
       <!-- Right: Todo Filter Icons + Items -->
       <div class="flex-1 min-w-0 flex items-center gap-1.5">
-        <!-- Filter Toggle Icons -->
-        <div class="flex-shrink-0 flex items-center">
-          <!-- TODO filter -->
-          <button
-            @click="toggleTodoFilter('TODO')"
-            class="todo-filter-btn h-7 w-7 flex items-center justify-center transition-all duration-150 cursor-pointer"
-            :class="showTodoTodo ? 'todo-filter-btn-active-todo' : 'todo-filter-btn-inactive'"
-            title="할일 표시"
-          >
-            <ListTodo class="w-4 h-4" />
-          </button>
-          <!-- IN_PROGRESS filter -->
-          <button
-            @click="toggleTodoFilter('IN_PROGRESS')"
-            class="todo-filter-btn h-7 w-7 flex items-center justify-center transition-all duration-150 cursor-pointer"
-            :class="showTodoInProgress ? 'todo-filter-btn-active-progress' : 'todo-filter-btn-inactive'"
-            title="진행중 표시"
-          >
-            <Clock class="w-4 h-4" />
-          </button>
-        </div>
+        <!-- TODO Filter Toggle -->
+        <button
+          @click="toggleTodoFilter()"
+          class="todo-filter-btn flex-shrink-0 h-7 w-7 flex items-center justify-center transition-all duration-150 cursor-pointer rounded-md"
+          :class="showTodoTodo ? 'todo-filter-btn-active-todo' : 'todo-filter-btn-inactive'"
+          title="할일 표시"
+        >
+          <ListTodo class="w-4 h-4" />
+        </button>
         <!-- Filtered Todo Items -->
         <div v-if="filteredTodos.length > 0" class="flex-1 min-w-0 overflow-x-auto scrollbar-hide">
           <div class="flex gap-1.5">
@@ -1781,8 +1789,8 @@ async function showExcelUploadModal() {
         </template>
 
         <!-- Normal mode: Duty type badges with counts -->
-        <template v-else-if="dutyTypes.length > 0">
-          <div v-for="dutyType in dutyTypes" :key="dutyType.name" class="flex items-center gap-1">
+        <template v-else-if="dutyTypesWithCount.length > 0">
+          <div v-for="dutyType in dutyTypesWithCount" :key="dutyType.name" class="flex items-center gap-1">
             <span
               class="w-4 h-4 rounded border-2"
               :style="{ backgroundColor: dutyType.color || '#6c757d', borderColor: 'var(--dp-border-primary)' }"
@@ -1947,6 +1955,27 @@ async function showExcelUploadModal() {
           >
             +{{ (schedulesByDays[index]?.length ?? 0) - 3 }}
           </div>
+
+          <!-- Due Todos (마감일 할일) - 내 달력에서만 표시 -->
+          <template v-if="isMyCalendar && todosDueByDays[index]?.length">
+            <div
+              v-for="todo in todosDueByDays[index].slice(0, 2)"
+              :key="'due-' + todo.id"
+              @click.stop="router.push('/todo')"
+              class="todo-due-bubble text-[10px] sm:text-xs leading-snug px-1 py-0.5 rounded cursor-pointer truncate mt-0.5"
+              :class="todo.status === 'IN_PROGRESS' ? 'todo-due-progress' : 'todo-due-todo'"
+            >
+              <CheckSquare class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px]" />
+              {{ todo.title }}
+            </div>
+            <div
+              v-if="todosDueByDays[index].length > 2"
+              class="text-[10px] font-medium"
+              :style="{ color: 'var(--dp-text-muted)' }"
+            >
+              +{{ todosDueByDays[index].length - 2 }}
+            </div>
+          </template>
         </div>
       </template>
     </CalendarGrid>

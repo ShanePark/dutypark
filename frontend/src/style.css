@@ -1288,3 +1288,39 @@ div.swal2-popup.swal2-toast.colored-toast-info {
 .todo-btn-add:hover .todo-btn-add-icon {
     transform: rotate(90deg);
 }
+
+/* ====================================
+   Todo Due Date Bubbles (Calendar)
+   ==================================== */
+
+.todo-due-bubble {
+    transition: all 0.15s ease;
+    border: 1px solid transparent;
+}
+
+.todo-due-bubble:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--dp-shadow-sm);
+}
+
+/* TODO status - Blue */
+.todo-due-todo {
+    background-color: var(--dp-accent-bg);
+    border-color: var(--dp-accent-border);
+    color: var(--dp-accent);
+}
+
+.todo-due-todo:hover {
+    background-color: var(--dp-accent-bg-hover);
+}
+
+/* IN_PROGRESS status - Orange/Warning */
+.todo-due-progress {
+    background-color: var(--dp-warning-bg);
+    border-color: var(--dp-warning);
+    color: var(--dp-warning);
+}
+
+.todo-due-progress:hover {
+    background-color: color-mix(in srgb, var(--dp-warning) 25%, var(--dp-bg-card));
+}

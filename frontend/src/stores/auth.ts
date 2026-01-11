@@ -36,19 +36,21 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoggedIn = computed(() => user.value !== null)
   const isAdmin = computed(() => user.value?.isAdmin ?? false)
 
+  // Cache the initialization promise to prevent duplicate calls
+  let initializePromise: Promise<void> | null = null
+
   async function initialize() {
     if (isInitialized.value) return
+    if (initializePromise) return initializePromise
 
+    initializePromise = doInitialize()
+    return initializePromise
+  }
+
+  async function doInitialize() {
     isLoading.value = true
     try {
-      // Try to refresh access token first (in case only refresh token exists)
-      try {
-        await authApi.refresh()
-      } catch {
-        // Ignore refresh failure - user may not have refresh token
-      }
-
-      // Check auth status via cookie (sent automatically)
+      // Check auth status - if token expired, axios interceptor auto-refreshes
       try {
         user.value = await authApi.getStatus()
         saveCachedUser(user.value)
@@ -64,6 +66,7 @@ export const useAuthStore = defineStore('auth', () => {
     } finally {
       isLoading.value = false
       isInitialized.value = true
+      initializePromise = null
     }
   }
 

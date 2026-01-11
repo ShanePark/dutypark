@@ -102,12 +102,6 @@ export interface CreateSessionResponse {
   contextType: AttachmentContextType
 }
 
-export interface ReorderAttachmentsRequest {
-  contextType: AttachmentContextType
-  contextId: string
-  orderedAttachmentIds: string[]
-}
-
 // Frontend attachment representation (normalized for UI)
 export interface NormalizedAttachment {
   id: string
