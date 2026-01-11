@@ -4,7 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import { useSwal } from '@/composables/useSwal'
-import { Menu, Home, Calendar, Users, UserPlus, Bell, Shield, Settings, LogOut, Sun, Moon, BookOpen } from 'lucide-vue-next'
+import { Menu, Home, Calendar, Users, UserPlus, Bell, Shield, Settings, LogOut, Sun, Moon, BookOpen, ListTodo } from 'lucide-vue-next'
 import NotificationBell from '@/components/common/NotificationBell.vue'
 import NotificationDropdown from '@/components/common/NotificationDropdown.vue'
 import { useThemeStore } from '@/stores/theme'
@@ -168,6 +168,13 @@ onUnmounted(() => {
                   >
                     {{ notificationStore.friendRequestCountDisplay }}
                   </span>
+                </button>
+                <button
+                  :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute('/todo') }]"
+                  @click="navigateTo('/todo')"
+                >
+                  <ListTodo class="w-4 h-4" />
+                  할일
                 </button>
                 <button
                   :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute('/notifications') }]"

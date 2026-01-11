@@ -1386,4 +1386,353 @@ class TodoControllerTest : RestDocsTest() {
             .andExpect(jsonPath("$.dueDate").isEmpty)
     }
 
+    // ========== addTodo with Status Tests ==========
+
+    @Test
+    fun `addTodo with IN_PROGRESS status creates todo in IN_PROGRESS`() {
+        val json = """
+            {
+                "title": "In Progress Todo",
+                "content": "Content",
+                "status": "IN_PROGRESS"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/todos")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.title").value("In Progress Todo"))
+            .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+            .andExpect(jsonPath("$.completedDate").isEmpty)
+    }
+
+    @Test
+    fun `addTodo with DONE status creates todo with completedDate`() {
+        val json = """
+            {
+                "title": "Completed Todo",
+                "content": "Content",
+                "status": "DONE"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/todos")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.title").value("Completed Todo"))
+            .andExpect(jsonPath("$.status").value("DONE"))
+            .andExpect(jsonPath("$.completedDate").isNotEmpty)
+    }
+
+    @Test
+    fun `addTodo without status defaults to TODO`() {
+        val json = """
+            {
+                "title": "Default Status Todo",
+                "content": "Content"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/todos")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("TODO"))
+    }
+
+    @Test
+    fun `addTodo with status and dueDate`() {
+        val json = """
+            {
+                "title": "Scheduled In Progress",
+                "content": "Content",
+                "status": "IN_PROGRESS",
+                "dueDate": "2025-12-31"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/todos")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+            .andExpect(jsonPath("$.dueDate").value("2025-12-31"))
+    }
+
+    // ========== editTodo with Status Change Tests ==========
+
+    @Test
+    fun `editTodo with status change from TODO to IN_PROGRESS`() {
+        val saved = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Todo",
+                content = "Content",
+                position = 0,
+                status = TodoStatus.TODO
+            )
+        )
+
+        val json = """
+            {
+                "title": "Updated Todo",
+                "content": "Updated Content",
+                "status": "IN_PROGRESS"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/todos/{id}", saved.id)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+            .andExpect(jsonPath("$.completedDate").isEmpty)
+    }
+
+    @Test
+    fun `editTodo with status change from TODO to DONE sets completedDate`() {
+        val saved = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Todo",
+                content = "Content",
+                position = 0,
+                status = TodoStatus.TODO
+            )
+        )
+
+        val json = """
+            {
+                "title": "Completed Todo",
+                "content": "Content",
+                "status": "DONE"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/todos/{id}", saved.id)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("DONE"))
+            .andExpect(jsonPath("$.completedDate").isNotEmpty)
+    }
+
+    @Test
+    fun `editTodo with status change from DONE to TODO clears completedDate`() {
+        val saved = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Completed Todo",
+                content = "Content",
+                position = 0,
+                status = TodoStatus.DONE
+            ).apply { markCompleted(0) }
+        )
+
+        val json = """
+            {
+                "title": "Reopened Todo",
+                "content": "Content",
+                "status": "TODO"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/todos/{id}", saved.id)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("TODO"))
+            .andExpect(jsonPath("$.completedDate").isEmpty)
+    }
+
+    @Test
+    fun `editTodo with status change from DONE to IN_PROGRESS clears completedDate`() {
+        val saved = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Completed Todo",
+                content = "Content",
+                position = 0,
+                status = TodoStatus.DONE
+            ).apply { markCompleted(0) }
+        )
+
+        val json = """
+            {
+                "title": "In Progress Todo",
+                "content": "Content",
+                "status": "IN_PROGRESS"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/todos/{id}", saved.id)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+            .andExpect(jsonPath("$.completedDate").isEmpty)
+    }
+
+    @Test
+    fun `editTodo with status change from IN_PROGRESS to DONE sets completedDate`() {
+        val saved = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "In Progress Todo",
+                content = "Content",
+                position = 0,
+                status = TodoStatus.IN_PROGRESS
+            )
+        )
+
+        val json = """
+            {
+                "title": "Completed Todo",
+                "content": "Content",
+                "status": "DONE"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/todos/{id}", saved.id)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("DONE"))
+            .andExpect(jsonPath("$.completedDate").isNotEmpty)
+    }
+
+    @Test
+    fun `editTodo without status does not change existing status`() {
+        val saved = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "In Progress Todo",
+                content = "Content",
+                position = 0,
+                status = TodoStatus.IN_PROGRESS
+            )
+        )
+
+        val json = """
+            {
+                "title": "Updated Title",
+                "content": "Updated Content"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/todos/{id}", saved.id)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.title").value("Updated Title"))
+            .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+    }
+
+    @Test
+    fun `editTodo with same status does not change position`() {
+        val saved = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "In Progress Todo",
+                content = "Content",
+                position = 5,
+                status = TodoStatus.IN_PROGRESS
+            )
+        )
+
+        val json = """
+            {
+                "title": "Updated Title",
+                "content": "Updated Content",
+                "status": "IN_PROGRESS"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/todos/{id}", saved.id)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+            .andExpect(jsonPath("$.position").value(5))
+    }
+
+    @Test
+    fun `editTodo with status and dueDate together`() {
+        val saved = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Todo",
+                content = "Content",
+                position = 0,
+                status = TodoStatus.TODO
+            )
+        )
+
+        val json = """
+            {
+                "title": "Updated Todo",
+                "content": "Updated Content",
+                "status": "IN_PROGRESS",
+                "dueDate": "2025-12-31"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/todos/{id}", saved.id)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+            .andExpect(jsonPath("$.dueDate").value("2025-12-31"))
+    }
+
 }

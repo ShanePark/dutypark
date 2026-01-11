@@ -529,10 +529,9 @@ html.dark {
 }
 
 .todo-item-bubble:hover {
-    border-color: var(--dp-accent-border) !important;
-    background-color: var(--dp-accent-bg) !important;
+    background-color: color-mix(in srgb, var(--dp-warning) 25%, var(--dp-bg-card)) !important;
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px var(--dp-accent-ring);
+    box-shadow: 0 2px 4px var(--dp-warning-ring, rgba(217, 119, 6, 0.2));
 }
 
 /* Footer Navigation */

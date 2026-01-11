@@ -59,6 +59,7 @@ class TodoController(
             loginMember = loginMember,
             title = todoRequest.title,
             content = todoRequest.content,
+            status = todoRequest.status,
             dueDate = todoRequest.dueDate,
             attachmentSessionId = todoRequest.attachmentSessionId,
             orderedAttachmentIds = todoRequest.orderedAttachmentIds
@@ -76,6 +77,7 @@ class TodoController(
             id = id,
             title = todoRequest.title,
             content = todoRequest.content,
+            status = todoRequest.status,
             dueDate = todoRequest.dueDate,
             attachmentSessionId = todoRequest.attachmentSessionId,
             orderedAttachmentIds = todoRequest.orderedAttachmentIds

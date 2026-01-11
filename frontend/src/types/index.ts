@@ -171,6 +171,7 @@ export interface TodoCreateRequest {
 export interface TodoUpdateRequest {
   title: string
   content: string
+  status?: TodoStatus
   dueDate?: string | null
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]

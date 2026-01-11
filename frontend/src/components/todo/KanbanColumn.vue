@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { Plus } from 'lucide-vue-next'
+import { Plus, ListTodo, Clock, CheckCircle2 } from 'lucide-vue-next'
 import type { TodoStatus } from '@/types'
+import type { Component } from 'vue'
 
 interface Props {
   status: TodoStatus
   count: number
-  showAddButton?: boolean
 }
 
 defineProps<Props>()
@@ -14,21 +14,24 @@ const emit = defineEmits<{
   (e: 'add'): void
 }>()
 
-const statusConfig: Record<TodoStatus, { label: string; bgClass: string; textClass: string }> = {
+const statusConfig: Record<TodoStatus, { label: string; bgClass: string; textClass: string; icon: Component }> = {
   TODO: {
     label: '할일',
     bgClass: 'kanban-column-todo',
     textClass: 'kanban-title-todo',
+    icon: ListTodo,
   },
   IN_PROGRESS: {
     label: '진행중',
     bgClass: 'kanban-column-in-progress',
     textClass: 'kanban-title-in-progress',
+    icon: Clock,
   },
   DONE: {
     label: '완료',
     bgClass: 'kanban-column-done',
     textClass: 'kanban-title-done',
+    icon: CheckCircle2,
   },
 }
 </script>
@@ -37,12 +40,12 @@ const statusConfig: Record<TodoStatus, { label: string; bgClass: string; textCla
   <div class="kanban-column" :class="statusConfig[status].bgClass">
     <div class="kanban-column-header">
       <h3 class="kanban-column-title" :class="statusConfig[status].textClass">
+        <component :is="statusConfig[status].icon" class="kanban-column-icon" />
         {{ statusConfig[status].label }}
       </h3>
       <div class="kanban-column-header-right">
         <span class="kanban-column-count" :class="statusConfig[status].textClass">{{ count }}</span>
         <button
-          v-if="showAddButton"
           class="kanban-column-add-btn"
           @click="emit('add')"
           title="새 할일 추가"
@@ -107,8 +110,17 @@ const statusConfig: Record<TodoStatus, { label: string; bgClass: string; textCla
 }
 
 .kanban-column-title {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
   font-size: 0.875rem;
   font-weight: 700;
+}
+
+.kanban-column-icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
 }
 
 .kanban-title-todo {
@@ -156,6 +168,7 @@ const statusConfig: Record<TodoStatus, { label: string; bgClass: string; textCla
   gap: 0.5rem;
   min-height: 100px;
   overflow-y: auto;
+  padding-top: 0.125rem;
 }
 
 /* Scrollbar styling for column content */

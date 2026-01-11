@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import { useSwal } from '@/composables/useSwal'
 import { isLightColor } from '@/utils/color'
 import {
   Plus,
-  ClipboardList,
   ChevronLeft,
   ChevronRight,
   Search,
@@ -18,6 +17,8 @@ import {
   CalendarCheck,
   FileSpreadsheet,
   MessageSquareText,
+  Clock,
+  ChevronRight as ChevronRightSmall,
 } from 'lucide-vue-next'
 
 // Modal Components
@@ -39,7 +40,7 @@ import { todoApi } from '@/api/todo'
 import { dutyApi } from '@/api/duty'
 import { ddayApi, memberApi, friendApi } from '@/api/member'
 import { scheduleApi, type ScheduleDto, type ScheduleSearchResult } from '@/api/schedule'
-import type { DutyCalendarDay, TeamDto, DDayDto, DDaySaveDto, CalendarVisibility, OtherDutyResponse, HolidayDto } from '@/types'
+import type { DutyCalendarDay, TeamDto, DDayDto, DDaySaveDto, CalendarVisibility, OtherDutyResponse, HolidayDto, TodoStatus } from '@/types'
 
 // Local interfaces for this view
 interface LocalTodo {
@@ -132,6 +133,7 @@ interface OtherDuty {
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
+const router = useRouter()
 const authStore = useAuthStore()
 const { showError, confirmDelete, toastSuccess } = useSwal()
 
@@ -208,6 +210,9 @@ const todos = ref<LocalTodo[]>([])
 const completedTodos = ref<LocalTodo[]>([])
 const isLoadingTodos = ref(false)
 
+// Filter only IN_PROGRESS todos for calendar display
+const inProgressTodos = computed(() => todos.value.filter(t => t.status === 'IN_PROGRESS'))
+
 function handleTodoBubbleClick(todo: LocalTodo) {
   openTodoDetail(todo)
 }
@@ -245,12 +250,10 @@ async function loadTodos() {
 
   isLoadingTodos.value = true
   try {
-    const [activeTodos, completed] = await Promise.all([
-      todoApi.getActiveTodos(),
-      todoApi.getCompletedTodos(),
-    ])
-    todos.value = activeTodos.map(mapToLocalTodo)
-    completedTodos.value = completed.map(mapToLocalTodo)
+    const board = await todoApi.getBoard()
+    // Combine TODO and IN_PROGRESS for active todos
+    todos.value = [...board.todo, ...board.inProgress].map(mapToLocalTodo)
+    completedTodos.value = board.done.map(mapToLocalTodo)
   } catch (error) {
     console.error('Failed to load todos:', error)
   } finally {
@@ -1012,6 +1015,7 @@ async function handleTodoUpdate(data: {
   id: string
   title: string
   content: string
+  status: TodoStatus
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }) {
@@ -1019,14 +1023,29 @@ async function handleTodoUpdate(data: {
     const updatedTodo = await todoApi.updateTodo(data.id, {
       title: data.title,
       content: data.content,
+      status: data.status,
       attachmentSessionId: data.attachmentSessionId,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
     const localTodo = mapToLocalTodo(updatedTodo)
-    const idx = todos.value.findIndex((t) => t.id === data.id)
-    if (idx >= 0) {
-      todos.value[idx] = localTodo
+
+    // Remove from both lists first
+    const activeIdx = todos.value.findIndex((t) => t.id === data.id)
+    if (activeIdx >= 0) {
+      todos.value.splice(activeIdx, 1)
     }
+    const completedIdx = completedTodos.value.findIndex((t) => t.id === data.id)
+    if (completedIdx >= 0) {
+      completedTodos.value.splice(completedIdx, 1)
+    }
+
+    // Add to appropriate list based on status
+    if (updatedTodo.status === 'DONE') {
+      completedTodos.value.unshift(localTodo)
+    } else {
+      todos.value.unshift(localTodo)
+    }
+
     // Update selectedTodo for the detail modal
     selectedTodo.value = localTodo
     toastSuccess('할 일이 수정되었습니다.')
@@ -1088,6 +1107,7 @@ async function handleTodoDelete(id: string) {
 async function handleTodoAdd(data: {
   title: string
   content: string
+  status: TodoStatus
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }) {
@@ -1095,10 +1115,16 @@ async function handleTodoAdd(data: {
     const newTodo = await todoApi.createTodo({
       title: data.title,
       content: data.content,
+      status: data.status,
       attachmentSessionId: data.attachmentSessionId,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
-    todos.value.unshift(mapToLocalTodo(newTodo))
+    // Only add to the list if it's not DONE (active todos)
+    if (newTodo.status === 'DONE') {
+      completedTodos.value.unshift(mapToLocalTodo(newTodo))
+    } else {
+      todos.value.unshift(mapToLocalTodo(newTodo))
+    }
     toastSuccess('할 일이 추가되었습니다.')
   } catch (error) {
     console.error('Failed to add todo:', error)
@@ -1595,41 +1621,50 @@ async function showExcelUploadModal() {
     </div>
 
     <!-- Todo row (only for my calendar) -->
-    <div v-if="isMyCalendar" class="flex items-center gap-1.5 mb-1 px-1">
-      <!-- Button Group: List + Add -->
+    <div v-if="isMyCalendar" class="flex items-center gap-2 mb-1.5 px-1">
+      <!-- Left: Todo Management Button + Add -->
       <div class="flex-shrink-0 inline-flex rounded-lg border overflow-hidden" :style="{ borderColor: 'var(--dp-border-secondary)' }">
-        <!-- Todo List Button -->
+        <!-- Todo Management Button - navigates to /todo -->
         <button
-          @click="isTodoOverviewModalOpen = true"
-          class="todo-btn-list h-7 px-2.5 flex items-center gap-1.5 transition-all duration-150 cursor-pointer"
+          @click="router.push('/todo')"
+          class="todo-manage-btn h-7 px-2.5 flex items-center gap-1.5 transition-all duration-150 cursor-pointer"
           :style="{ backgroundColor: 'var(--dp-bg-card)' }"
         >
-          <ClipboardList class="w-3.5 h-3.5 transition-colors" :style="{ color: 'var(--dp-text-muted)' }" />
-          <span class="text-xs font-medium transition-colors" :style="{ color: 'var(--dp-text-secondary)' }">{{ todos.length }}</span>
+          <span class="text-xs font-medium" :style="{ color: 'var(--dp-text-secondary)' }">할일 관리</span>
+          <ChevronRightSmall class="w-3.5 h-3.5" :style="{ color: 'var(--dp-text-muted)' }" />
         </button>
         <!-- Add Todo Button -->
         <button
           @click="isTodoAddModalOpen = true"
           class="todo-btn-add h-7 px-2 flex items-center justify-center transition-all duration-150 cursor-pointer border-l"
           :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)', color: 'var(--dp-text-secondary)' }"
+          title="새 할일 추가"
         >
           <Plus class="w-4 h-4" />
         </button>
       </div>
 
-      <!-- Todo Items -->
-      <div class="flex-1 min-w-0 overflow-x-auto scrollbar-hide py-0.5">
-        <div class="flex gap-1.5">
-          <button
-            v-for="todo in todos"
-            :key="todo.id"
-            @click="handleTodoBubbleClick(todo)"
-            class="todo-item-bubble flex-shrink-0 max-w-[120px] sm:max-w-[160px] flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] sm:text-xs cursor-pointer transition-all duration-150 border"
-            :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)', color: 'var(--dp-text-primary)' }"
-          >
-            <span class="truncate">{{ todo.title }}</span>
-            <FileText v-if="todo.content || todo.hasAttachments" class="w-2.5 h-2.5 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
-          </button>
+      <!-- Right: In Progress Section -->
+      <div v-if="inProgressTodos.length > 0" class="flex-1 min-w-0 flex items-center gap-1.5">
+        <!-- In Progress Label -->
+        <div class="flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded-md" :style="{ backgroundColor: 'var(--dp-warning-bg)' }">
+          <Clock class="w-3.5 h-3.5" :style="{ color: 'var(--dp-warning)' }" />
+          <span class="text-[11px] font-semibold" :style="{ color: 'var(--dp-warning)' }">진행중</span>
+        </div>
+        <!-- In Progress Items -->
+        <div class="flex-1 min-w-0 overflow-x-auto scrollbar-hide">
+          <div class="flex gap-1.5">
+            <button
+              v-for="todo in inProgressTodos"
+              :key="todo.id"
+              @click="handleTodoBubbleClick(todo)"
+              class="todo-item-bubble flex-shrink-0 max-w-[120px] sm:max-w-[160px] flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] sm:text-xs cursor-pointer transition-all duration-150 border"
+              :style="{ backgroundColor: 'var(--dp-warning-bg)', borderColor: 'var(--dp-warning)', color: 'var(--dp-text-primary)' }"
+            >
+              <span class="truncate">{{ todo.title }}</span>
+              <FileText v-if="todo.content || todo.hasAttachments" class="w-2.5 h-2.5 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1936,6 +1971,7 @@ async function showExcelUploadModal() {
 
     <TodoAddModal
       :is-open="isTodoAddModalOpen"
+      initial-status="IN_PROGRESS"
       @close="isTodoAddModalOpen = false; if (isTodoAddFromOverview) { isTodoOverviewModalOpen = true; isTodoAddFromOverview = false; }"
       @save="handleTodoAdd"
     />

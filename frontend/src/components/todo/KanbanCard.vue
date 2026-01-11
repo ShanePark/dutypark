@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Paperclip, Calendar } from 'lucide-vue-next'
+import { Paperclip, CalendarCheck } from 'lucide-vue-next'
 import type { Todo } from '@/types'
 
 interface Props {
@@ -16,9 +16,10 @@ const emit = defineEmits<{
 const formattedDueDate = computed(() => {
   if (!props.todo.dueDate) return null
   const date = new Date(props.todo.dueDate)
+  const year = date.getFullYear()
   const month = date.getMonth() + 1
   const day = date.getDate()
-  return `${month}/${day}`
+  return `${year}/${month}/${day}`
 })
 </script>
 
@@ -45,7 +46,7 @@ const formattedDueDate = computed(() => {
       class="kanban-card-due-date"
       :class="{ 'kanban-card-due-date--overdue': todo.isOverdue }"
     >
-      <Calendar class="kanban-card-due-date-icon" />
+      <CalendarCheck class="kanban-card-due-date-icon" />
       <span>{{ formattedDueDate }}</span>
     </div>
   </div>

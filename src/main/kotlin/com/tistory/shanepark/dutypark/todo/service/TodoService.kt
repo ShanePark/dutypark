@@ -105,20 +105,22 @@ class TodoService(
         loginMember: LoginMember,
         title: String,
         content: String,
+        status: TodoStatus? = null,
         dueDate: LocalDate? = null,
         attachmentSessionId: UUID? = null,
         orderedAttachmentIds: List<UUID> = emptyList()
     ): TodoResponse {
         val member = findMember(loginMember)
-        val todoLastPosition = todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.TODO)
+        val targetStatus = status ?: TodoStatus.TODO
+        val todoLastPosition = todoRepository.findMinPositionByMemberAndStatus(member, targetStatus)
 
         val todo = Todo(
             member = member,
             title = title,
             content = content,
             position = todoLastPosition - 1,
-            status = TodoStatus.TODO,
-            completedDate = null,
+            status = targetStatus,
+            completedDate = if (targetStatus == TodoStatus.DONE) java.time.LocalDateTime.now() else null,
             dueDate = dueDate
         )
         todoRepository.save(todo)
@@ -143,6 +145,7 @@ class TodoService(
         id: UUID,
         title: String,
         content: String,
+        status: TodoStatus? = null,
         dueDate: LocalDate? = null,
         attachmentSessionId: UUID? = null,
         orderedAttachmentIds: List<UUID> = emptyList()
@@ -156,6 +159,12 @@ class TodoService(
 
         todo.update(title, content)
         todo.dueDate = dueDate
+
+        // Handle status change if provided and different from current
+        if (status != null && status != todo.status) {
+            val newPosition = todoRepository.findMinPositionByMemberAndStatus(member, status) - 1
+            todo.changeStatus(status, newPosition)
+        }
 
         attachmentService.synchronizeContextAttachments(
             loginMember = loginMember,

@@ -194,11 +194,22 @@ export const exampleApi = {
 | `/auth/sso-congrats` | SsoCongratsView | Required | |
 | `/auth/oauth-callback` | OAuthCallbackView | Optional | |
 | `/duty/:id` | DutyView | Optional | Visibility check |
+| `/todo` | TodoBoardView | Required | Kanban board |
 | `/member` | MemberView | Required | |
+| `/friends` | FriendsView | Required | |
 | `/team` | TeamView | Required | |
 | `/team/manage/:teamId` | TeamManageView | Required | Permission check |
 | `/admin` | AdminDashboardView | Admin | |
 | `/admin/teams` | AdminTeamListView | Admin | |
+
+### Hamburger Menu (AppHeader.vue)
+
+The hamburger menu in `AppHeader.vue` provides the main navigation for logged-in users.
+
+**IMPORTANT: When adding a new page/view, always check if it should be added to the hamburger menu.** Consider:
+1. Is this a user-facing feature that needs direct navigation?
+2. Should it be accessible from the main menu or only via in-page links?
+3. Update `AppHeader.vue` if the page should appear in the menu.
 
 ---
 

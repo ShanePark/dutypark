@@ -235,7 +235,15 @@ class TodoServiceTest {
             savedTodo
         }
 
-        todoService.addTodo(loginMember, "title", "content", null, sessionId, orderedAttachmentIds)
+        todoService.addTodo(
+            loginMember = loginMember,
+            title = "title",
+            content = "content",
+            status = null,
+            dueDate = null,
+            attachmentSessionId = sessionId,
+            orderedAttachmentIds = orderedAttachmentIds
+        )
 
         verify(attachmentService, times(1)).synchronizeContextAttachments(
             loginMember = loginMember,
@@ -256,7 +264,16 @@ class TodoServiceTest {
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
 
-        todoService.editTodo(loginMember, todoId, "new title", "new content", null, null, orderedAttachmentIds)
+        todoService.editTodo(
+            loginMember = loginMember,
+            id = todoId,
+            title = "new title",
+            content = "new content",
+            status = null,
+            dueDate = null,
+            attachmentSessionId = null,
+            orderedAttachmentIds = orderedAttachmentIds
+        )
 
         verify(attachmentService, times(1)).synchronizeContextAttachments(
             loginMember = loginMember,
@@ -301,7 +318,16 @@ class TodoServiceTest {
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
 
         assertThrows<IllegalArgumentException> {
-            todoService.editTodo(loginMember, todoId, "new title", "new content", null, UUID.randomUUID(), listOf(UUID.randomUUID()))
+            todoService.editTodo(
+                loginMember = loginMember,
+                id = todoId,
+                title = "new title",
+                content = "new content",
+                status = null,
+                dueDate = null,
+                attachmentSessionId = UUID.randomUUID(),
+                orderedAttachmentIds = listOf(UUID.randomUUID())
+            )
         }
         verifyNoInteractions(attachmentService)
     }
@@ -1043,7 +1069,12 @@ class TodoServiceTest {
             savedTodo
         }
 
-        todoService.addTodo(loginMember, "task with due date", "content", dueDate)
+        todoService.addTodo(
+            loginMember = loginMember,
+            title = "task with due date",
+            content = "content",
+            dueDate = dueDate
+        )
 
         verify(todoRepository).save(any(Todo::class.java))
     }
@@ -1058,7 +1089,12 @@ class TodoServiceTest {
             savedTodo
         }
 
-        todoService.addTodo(loginMember, "task without due date", "content", null)
+        todoService.addTodo(
+            loginMember = loginMember,
+            title = "task without due date",
+            content = "content",
+            dueDate = null
+        )
 
         verify(todoRepository).save(any(Todo::class.java))
     }
@@ -1075,7 +1111,13 @@ class TodoServiceTest {
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
 
-        todoService.editTodo(loginMember, todoId, "new title", "new content", newDueDate)
+        todoService.editTodo(
+            loginMember = loginMember,
+            id = todoId,
+            title = "new title",
+            content = "new content",
+            dueDate = newDueDate
+        )
 
         assertEquals(newDueDate, todo.dueDate)
     }
@@ -1090,7 +1132,13 @@ class TodoServiceTest {
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
 
-        todoService.editTodo(loginMember, todoId, "title", "content", null)
+        todoService.editTodo(
+            loginMember = loginMember,
+            id = todoId,
+            title = "title",
+            content = "content",
+            dueDate = null
+        )
 
         assertNull(todo.dueDate)
     }
@@ -1152,6 +1200,210 @@ class TodoServiceTest {
         todoService.reopenTodo(loginMember, todoId)
 
         assertNull(todo.completedDate)
+    }
+
+    // ========== addTodo with Status Tests ==========
+
+    @Test
+    fun `addTodo with IN_PROGRESS status should create todo in IN_PROGRESS`() {
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.IN_PROGRESS)).thenReturn(0)
+        `when`(todoRepository.save(any(Todo::class.java))).thenAnswer { invocation ->
+            val savedTodo = invocation.getArgument<Todo>(0)
+            assertEquals(TodoStatus.IN_PROGRESS, savedTodo.status)
+            assertNull(savedTodo.completedDate)
+            savedTodo
+        }
+
+        val response = todoService.addTodo(loginMember, "task", "content", TodoStatus.IN_PROGRESS)
+
+        assertEquals(TodoStatus.IN_PROGRESS, response.status)
+        verify(todoRepository).save(any(Todo::class.java))
+    }
+
+    @Test
+    fun `addTodo with DONE status should create todo with completedDate set`() {
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.DONE)).thenReturn(0)
+        `when`(todoRepository.save(any(Todo::class.java))).thenAnswer { invocation ->
+            val savedTodo = invocation.getArgument<Todo>(0)
+            assertEquals(TodoStatus.DONE, savedTodo.status)
+            assertNotNull(savedTodo.completedDate)
+            savedTodo
+        }
+
+        val response = todoService.addTodo(loginMember, "task", "content", TodoStatus.DONE)
+
+        assertEquals(TodoStatus.DONE, response.status)
+        assertNotNull(response.completedDate)
+        verify(todoRepository).save(any(Todo::class.java))
+    }
+
+    @Test
+    fun `addTodo with null status should default to TODO`() {
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.TODO)).thenReturn(0)
+        `when`(todoRepository.save(any(Todo::class.java))).thenAnswer { invocation ->
+            val savedTodo = invocation.getArgument<Todo>(0)
+            assertEquals(TodoStatus.TODO, savedTodo.status)
+            assertNull(savedTodo.completedDate)
+            savedTodo
+        }
+
+        val response = todoService.addTodo(loginMember, "task", "content", null)
+
+        assertEquals(TodoStatus.TODO, response.status)
+        verify(todoRepository).save(any(Todo::class.java))
+    }
+
+    @Test
+    fun `addTodo with status should use correct position query`() {
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.IN_PROGRESS)).thenReturn(5)
+        `when`(todoRepository.save(any(Todo::class.java))).thenAnswer { invocation ->
+            val savedTodo = invocation.getArgument<Todo>(0)
+            assertEquals(4, savedTodo.position)
+            savedTodo
+        }
+
+        todoService.addTodo(loginMember, "task", "content", TodoStatus.IN_PROGRESS)
+
+        verify(todoRepository).findMinPositionByMemberAndStatus(member, TodoStatus.IN_PROGRESS)
+    }
+
+    // ========== editTodo with Status Change Tests ==========
+
+    @Test
+    fun `editTodo with status change from TODO to IN_PROGRESS should update status and position`() {
+        val todoId = UUID.randomUUID()
+        val todo = createTodo("old title", TodoStatus.TODO, 5)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.IN_PROGRESS)).thenReturn(10)
+
+        val response = todoService.editTodo(loginMember, todoId, "new title", "new content", TodoStatus.IN_PROGRESS)
+
+        assertEquals(TodoStatus.IN_PROGRESS, response.status)
+        assertEquals(9, response.position)
+        assertNull(response.completedDate)
+    }
+
+    @Test
+    fun `editTodo with status change to DONE should set completedDate`() {
+        val todoId = UUID.randomUUID()
+        val todo = createTodo("title", TodoStatus.TODO, 0)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+        assertNull(todo.completedDate)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.DONE)).thenReturn(0)
+
+        val response = todoService.editTodo(loginMember, todoId, "title", "content", TodoStatus.DONE)
+
+        assertEquals(TodoStatus.DONE, response.status)
+        assertNotNull(response.completedDate)
+    }
+
+    @Test
+    fun `editTodo with status change from DONE to TODO should clear completedDate`() {
+        val todoId = UUID.randomUUID()
+        val todo = createTodo("title", TodoStatus.DONE, 0)
+        todo.markCompleted(0)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+        assertNotNull(todo.completedDate)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.TODO)).thenReturn(0)
+
+        val response = todoService.editTodo(loginMember, todoId, "title", "content", TodoStatus.TODO)
+
+        assertEquals(TodoStatus.TODO, response.status)
+        assertNull(response.completedDate)
+    }
+
+    @Test
+    fun `editTodo with status change from DONE to IN_PROGRESS should clear completedDate`() {
+        val todoId = UUID.randomUUID()
+        val todo = createTodo("title", TodoStatus.DONE, 0)
+        todo.markCompleted(0)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+        assertNotNull(todo.completedDate)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.IN_PROGRESS)).thenReturn(0)
+
+        val response = todoService.editTodo(loginMember, todoId, "title", "content", TodoStatus.IN_PROGRESS)
+
+        assertEquals(TodoStatus.IN_PROGRESS, response.status)
+        assertNull(response.completedDate)
+    }
+
+    @Test
+    fun `editTodo with same status should not change position`() {
+        val todoId = UUID.randomUUID()
+        val todo = createTodo("title", TodoStatus.IN_PROGRESS, 5)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+
+        val response = todoService.editTodo(loginMember, todoId, "updated title", "updated content", TodoStatus.IN_PROGRESS)
+
+        assertEquals(TodoStatus.IN_PROGRESS, response.status)
+        assertEquals(5, response.position)
+    }
+
+    @Test
+    fun `editTodo with null status should not change status`() {
+        val todoId = UUID.randomUUID()
+        val todo = createTodo("title", TodoStatus.IN_PROGRESS, 5)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+
+        val response = todoService.editTodo(loginMember, todoId, "updated title", "updated content", null)
+
+        assertEquals(TodoStatus.IN_PROGRESS, response.status)
+        assertEquals(5, response.position)
+    }
+
+    @Test
+    fun `editTodo with status change from IN_PROGRESS to DONE should set completedDate`() {
+        val todoId = UUID.randomUUID()
+        val todo = createTodo("title", TodoStatus.IN_PROGRESS, 0)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.DONE)).thenReturn(0)
+
+        val response = todoService.editTodo(loginMember, todoId, "title", "content", TodoStatus.DONE)
+
+        assertEquals(TodoStatus.DONE, response.status)
+        assertNotNull(response.completedDate)
+    }
+
+    @Test
+    fun `editTodo with status change from IN_PROGRESS to TODO should not affect completedDate`() {
+        val todoId = UUID.randomUUID()
+        val todo = createTodo("title", TodoStatus.IN_PROGRESS, 0)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+        assertNull(todo.completedDate)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.TODO)).thenReturn(0)
+
+        val response = todoService.editTodo(loginMember, todoId, "title", "content", TodoStatus.TODO)
+
+        assertEquals(TodoStatus.TODO, response.status)
+        assertNull(response.completedDate)
     }
 
     // ========== Helper Methods ==========
