@@ -42,9 +42,16 @@ export function formatDateRange(start: string, end: string): string {
 
 /**
  * Format date in Korean style (YYYY년 M월 D일)
- * Optionally includes time if not midnight
+ * Optionally includes time if the input contains time information
  */
 export function formatDateKorean(dateStr: string): string {
+  // Date-only format (YYYY-MM-DD) should not show time
+  // This avoids timezone issues where UTC midnight becomes 09:00 in KST
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [year, month, day] = dateStr.split('-').map(Number)
+    return `${year}년 ${month}월 ${day}일`
+  }
+
   const date = new Date(dateStr)
   const year = date.getFullYear()
   const month = date.getMonth() + 1
