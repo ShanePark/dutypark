@@ -35,7 +35,11 @@ class ScheduleTimeParsingQueueManager(
 
     @PostConstruct
     fun init() {
-        log.info("GeminiKey: $geminiApiKey")
+        val maskedKey = if (geminiApiKey.length > 8)
+            "${geminiApiKey.take(4)}...${geminiApiKey.takeLast(4)}"
+        else
+            "****"
+        log.info("GeminiKey: $maskedKey")
         if (geminiApiKey.isBlank() || geminiApiKey == "EMPTY") {
             log.info("do not add AI task as Gemini API key is not configured")
             doTask = false

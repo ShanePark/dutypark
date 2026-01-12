@@ -40,18 +40,22 @@ data class TeamDto(
             members: List<Member>,
             dutyTypes: List<DutyType>,
         ): TeamDto {
+            val teamId = team.id ?: -1L
             val sortedTypes = dutyTypes.sortedBy { it.position }
                 .map {
                     DutyTypeDto(
-                        it.id,
-                        it.name,
-                        it.position,
-                        it.color.toString()
+                        id = it.id,
+                        teamId = teamId,
+                        name = it.name,
+                        position = it.position,
+                        color = it.color.toString()
                     )
                 }.toMutableList()
             sortedTypes.add(
                 0,
                 DutyTypeDto(
+                    id = null,
+                    teamId = teamId,
                     name = team.defaultDutyName,
                     position = -1,
                     color = team.defaultDutyColor.toString()

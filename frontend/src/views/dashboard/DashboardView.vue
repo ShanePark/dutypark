@@ -542,6 +542,18 @@ watch(
               <div class="w-8 h-8 border-3 rounded-full animate-spin" :style="{ borderColor: 'var(--dp-border-secondary)', borderTopColor: 'var(--dp-text-primary)' }"></div>
             </div>
           </template>
+          <!-- Empty state -->
+          <div v-else-if="sortedFriends.length === 0" class="text-center py-8">
+            <Users class="w-12 h-12 mx-auto mb-3" :style="{ color: 'var(--dp-text-muted)' }" />
+            <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">아직 친구가 없습니다.</p>
+            <button
+              class="mt-4 px-4 py-2 text-sm font-medium bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition cursor-pointer"
+              @click="openSearchModal"
+            >
+              친구 추가하기
+            </button>
+          </div>
+
           <div v-else ref="friendListRef" class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
             <!-- Friend Cards -->
             <div
