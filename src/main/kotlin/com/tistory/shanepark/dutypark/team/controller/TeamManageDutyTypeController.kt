@@ -26,7 +26,7 @@ class TeamManageDutyTypeController(
         @PathVariable teamId: Long,
         @RequestBody @Valid dutyTypeCreateDto: DutyTypeCreateDto
     ) {
-        checkCanManage(login = loginMember, teamId = teamId)
+        checkCanManage(login = loginMember, teamId = dutyTypeCreateDto.teamId)
         dutyTypeService.addDutyType(dutyTypeCreateDto)
         log.info("DutyType $dutyTypeCreateDto created by $loginMember")
     }
@@ -38,7 +38,8 @@ class TeamManageDutyTypeController(
         @PathVariable teamId: Long,
         @RequestBody @Valid dutyTypeUpdateDto: DutyTypeUpdateDto
     ) {
-        checkCanManage(login = loginMember, teamId = teamId)
+        val dutyType = dutyTypeService.findById(dutyTypeUpdateDto.id)
+        checkCanManage(login = loginMember, teamId = dutyType.teamId)
         dutyTypeService.update(dutyTypeUpdateDto)
         log.info("DutyType $dutyTypeUpdateDto updated by $loginMember")
     }
@@ -49,7 +50,10 @@ class TeamManageDutyTypeController(
         @PathVariable teamId: Long,
         @RequestParam id1: Long, @RequestParam id2: Long
     ) {
-        checkCanManage(login = loginMember, teamId = teamId)
+        val dutyType1 = dutyTypeService.findById(id1)
+        val dutyType2 = dutyTypeService.findById(id2)
+        require(dutyType1.teamId == dutyType2.teamId) { "DutyTypes must belong to the same team" }
+        checkCanManage(login = loginMember, teamId = dutyType1.teamId)
         dutyTypeService.swapDutyTypePosition(id1, id2)
     }
 
@@ -60,8 +64,8 @@ class TeamManageDutyTypeController(
         @PathVariable teamId: Long,
         @PathVariable id: Long
     ) {
-        checkCanManage(login = loginMember, teamId = teamId)
         val dutyType = dutyTypeService.findById(id)
+        checkCanManage(login = loginMember, teamId = dutyType.teamId)
         dutyTypeService.delete(id)
         log.info("DutyType $dutyType deleted by $loginMember")
     }
