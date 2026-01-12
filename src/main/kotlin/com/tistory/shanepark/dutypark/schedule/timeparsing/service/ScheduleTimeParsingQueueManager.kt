@@ -19,7 +19,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 class ScheduleTimeParsingQueueManager(
     private val worker: ScheduleTimeParsingWorker,
     private val scheduleRepository: ScheduleRepository,
-    @param:Value("\${spring.ai.openai.api-key}") private val geminiApiKey: String
+    @param:Value("\${spring.ai.openai.api-key}") private val geminiApiKey: String,
+    @param:Value("\${spring.ai.rate-limit.rpm}") private val rpmLimit: Int,
+    @param:Value("\${spring.ai.rate-limit.rpd}") private val rpdLimit: Int,
 ) {
     private val log = logger()
     private val executorService = Executors.newSingleThreadExecutor()
@@ -29,8 +31,6 @@ class ScheduleTimeParsingQueueManager(
     private val completedTasks: Queue<LocalDateTime> = ConcurrentLinkedQueue()
     private val completedDailyTasks: Queue<LocalDateTime> = ConcurrentLinkedQueue()
 
-    private val rpmLimit = 10
-    private val rpdLimit = 20
     private var doTask = true
 
     @PostConstruct

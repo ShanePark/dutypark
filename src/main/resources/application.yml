@@ -29,6 +29,9 @@ spring:
           model: "gemma-3-27b-it"
           temperature: 0.0
         completions-path: "/chat/completions"
+    rate-limit:
+      rpm: 30
+      rpd: 14400
 
 server:
   port: 8080
