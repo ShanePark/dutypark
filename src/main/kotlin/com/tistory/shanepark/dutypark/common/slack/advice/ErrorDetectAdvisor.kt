@@ -59,8 +59,11 @@ class ErrorDetectAdvisor(
         slackAttachment.setText(e.stackTraceToString())
 
         val parameters = req.parameterMap.map { (key, value) -> "$key: ${value.joinToString(",")}" }
-        val body: String =
-            if (req.contentLength > 500) "" else req.reader.lines().reduce { acc, line -> "$acc\n$line" }.orElse("")
+        val body: String = when {
+            req.requestURI.startsWith("/api/auth/") -> "[REDACTED]"
+            req.contentLength > 500 -> ""
+            else -> req.reader.lines().reduce { acc, line -> "$acc\n$line" }.orElse("")
+        }
 
         slackAttachment.setFields(
             listOf(
