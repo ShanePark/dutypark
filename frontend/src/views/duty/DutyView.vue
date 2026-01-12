@@ -285,8 +285,11 @@ const filteredTodos = computed(() => {
   })
 })
 
-function handleTodoBubbleClick(todo: LocalTodo) {
-  openTodoDetail(todo)
+function handleTodoBubbleClick(todo: LocalTodo | { id: string }) {
+  const fullTodo = todos.value.find(t => t.id === todo.id)
+  if (fullTodo) {
+    openTodoDetail(fullTodo)
+  }
 }
 
 // Convert API Todo to LocalTodo
@@ -1961,7 +1964,7 @@ async function showExcelUploadModal() {
             <div
               v-for="todo in todosDueByDays[index].slice(0, 2)"
               :key="'due-' + todo.id"
-              @click.stop="router.push('/todo')"
+              @click.stop="handleTodoBubbleClick(todo)"
               class="todo-due-bubble text-[10px] sm:text-xs leading-snug px-1 py-0.5 rounded cursor-pointer truncate mt-0.5"
               :class="todo.status === 'IN_PROGRESS' ? 'todo-due-progress' : 'todo-due-todo'"
             >
