@@ -26,7 +26,7 @@ class ScheduleTimeParsingServiceTest {
 
         val chatOption = OpenAiChatOptions
             .builder()
-            .model("gemini-2.5-flash-lite")
+            .model("gemma-3-27b-it")
             .temperature(0.0)
             .build()
 
@@ -305,11 +305,11 @@ class ScheduleTimeParsingServiceTest {
     }
 
     @Test
-    fun `parseScheduleTime extract time from long sentence`() {
+    fun `parseScheduleTime ignore non-time numbers like floor`() {
         val response = service.parseScheduleTime(
             ScheduleTimeParsingRequest(
                 date = LocalDate.of(2025, 2, 28),
-                content = "내일은 바쁜 일정이 있어서 오전 10시에 잠깐 미팅을 하고 이후에는 자유시간을 가질 예정입니다."
+                content = "프로젝트 킥오프 미팅 오전 10시 강남역 스타벅스 3층"
             )
         )
 
@@ -318,6 +318,7 @@ class ScheduleTimeParsingServiceTest {
         Assertions.assertThat(response.startDateTime).isEqualTo("2025-02-28T10:00:00")
         Assertions.assertThat(response.endDateTime).isEqualTo("2025-02-28T10:00:00")
         Assertions.assertThat(response.content).doesNotContain("10시")
+        Assertions.assertThat(response.content).contains("3층")
     }
 
     @Test
