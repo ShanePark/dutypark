@@ -160,4 +160,23 @@ class MemberService(
         return managedMembers.map { MemberDto.of(it) }
     }
 
+    fun createAuxiliaryAccount(loginMember: LoginMember, name: String): MemberDto {
+        val member = Member(
+            name = name,
+            email = null,
+            password = null
+        )
+        memberRepository.save(member)
+
+        val parentMember = memberRepository.findById(loginMember.id).orElseThrow()
+        val managerEntity = MemberManager(
+            manager = parentMember,
+            managed = member,
+            role = ManagerRole.MANAGER
+        )
+        memberManagerRepository.save(managerEntity)
+
+        return MemberDto.of(member)
+    }
+
 }

@@ -84,6 +84,13 @@ export const memberApi = {
   getManagedMembers() {
     return apiClient.get<MemberDto[]>('/members/managed')
   },
+
+  /**
+   * Create an auxiliary account
+   */
+  createAuxiliaryAccount(name: string) {
+    return apiClient.post<MemberDto>('/members/auxiliary', { name })
+  },
 }
 
 /**

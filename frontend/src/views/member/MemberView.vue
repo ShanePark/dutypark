@@ -34,6 +34,7 @@ import {
   Moon,
   Users,
   LogIn,
+  Plus,
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -46,6 +47,13 @@ const managedMembers = ref<MemberDto[]>([])
 const managedMembersLoading = ref(false)
 const impersonating = ref<number | null>(null)
 
+// Auxiliary account creation
+const showAuxiliaryModal = ref(false)
+const auxiliaryName = ref('')
+const creatingAuxiliary = ref(false)
+useBodyScrollLock(showAuxiliaryModal)
+useEscapeKey(showAuxiliaryModal, () => { showAuxiliaryModal.value = false })
+
 async function fetchManagedMembers() {
   managedMembersLoading.value = true
   try {
@@ -55,6 +63,37 @@ async function fetchManagedMembers() {
     console.error('Failed to fetch managed members:', error)
   } finally {
     managedMembersLoading.value = false
+  }
+}
+
+function openAuxiliaryModal() {
+  auxiliaryName.value = ''
+  showAuxiliaryModal.value = true
+}
+
+async function createAuxiliaryAccount() {
+  const name = auxiliaryName.value.trim()
+  if (!name) {
+    showError('이름을 입력해주세요.')
+    return
+  }
+  if (name.length > 10) {
+    showError('이름은 10자 이내로 입력해주세요.')
+    return
+  }
+
+  creatingAuxiliary.value = true
+  try {
+    await memberApi.createAuxiliaryAccount(name)
+    await fetchManagedMembers()
+    showAuxiliaryModal.value = false
+    toastSuccess('보조 계정이 생성되었습니다.')
+  } catch (error: any) {
+    console.error('Failed to create auxiliary account:', error)
+    const errorMessage = error.response?.data?.message || '보조 계정 생성에 실패했습니다.'
+    showError(errorMessage)
+  } finally {
+    creatingAuxiliary.value = false
   }
 }
 
@@ -574,7 +613,7 @@ onMounted(async () => {
           <p v-else class="text-sm" :style="{ color: 'var(--dp-text-muted)' }">등록된 관리자가 없습니다</p>
 
           <!-- Managed Members (accounts I manage) -->
-          <div v-if="managedMembers.length > 0" class="mt-6 pt-4" :style="{ borderTopWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
+          <div class="mt-6 pt-4" :style="{ borderTopWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
             <div class="flex items-center gap-2 mb-3">
               <Users class="w-4 h-4" :style="{ color: 'var(--dp-text-secondary)' }" />
               <h3 class="text-sm font-medium" :style="{ color: 'var(--dp-text-primary)' }">내가 관리 중인 계정</h3>
@@ -603,6 +642,15 @@ onMounted(async () => {
                   <span class="hidden sm:inline">로그인하기</span>
                 </button>
               </div>
+              <!-- Add auxiliary account card -->
+              <button
+                @click="openAuxiliaryModal"
+                class="w-full flex items-center justify-center gap-2 p-3 rounded-lg border-2 border-dashed transition cursor-pointer hover:border-solid"
+                :style="{ borderColor: 'var(--dp-border-primary)', color: 'var(--dp-text-muted)' }"
+              >
+                <Plus class="w-5 h-5" />
+                <span class="text-sm font-medium">보조 계정 추가</span>
+              </button>
             </div>
           </div>
         </div>
@@ -857,6 +905,66 @@ onMounted(async () => {
             <button
               @click="showPasswordModal = false"
               :disabled="changingPassword"
+              class="flex-1 px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer disabled:opacity-50"
+              :style="{ backgroundColor: 'var(--dp-bg-hover)', color: 'var(--dp-text-primary)' }"
+            >
+              취소
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Auxiliary Account Modal -->
+    <Teleport to="body">
+      <div
+        v-if="showAuxiliaryModal"
+        class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        @click.self="showAuxiliaryModal = false"
+      >
+        <div class="rounded-xl shadow-xl max-w-md w-full" :style="{ backgroundColor: 'var(--dp-bg-card)' }">
+          <div class="flex items-center justify-between p-4" :style="{ borderBottomWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
+            <h3 class="text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">보조 계정 추가</h3>
+            <button @click="showAuxiliaryModal = false" class="p-1.5 rounded-full hover-close-btn cursor-pointer" :style="{ color: 'var(--dp-text-muted)' }">
+              <X class="w-5 h-5" />
+            </button>
+          </div>
+          <div class="p-4 sm:p-6 space-y-4">
+            <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
+              자녀, 부업 등 별도 시간표 관리용 계정을 만들 수 있습니다.<br>
+              이 화면에서 바로 전환하여 사용할 수 있습니다.
+            </p>
+            <div>
+              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-primary)' }">계정 이름</label>
+              <input
+                v-model="auxiliaryName"
+                type="text"
+                maxlength="10"
+                class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                :style="{
+                  borderWidth: '1px',
+                  borderColor: 'var(--dp-border-primary)',
+                  backgroundColor: 'var(--dp-bg-primary)',
+                  color: 'var(--dp-text-primary)'
+                }"
+                placeholder="예: 둘째 아이, 부업"
+                @keyup.enter="createAuxiliaryAccount"
+              />
+              <p class="text-xs mt-1" :style="{ color: 'var(--dp-text-muted)' }">최대 10자</p>
+            </div>
+          </div>
+          <div class="p-4 sm:p-6 flex gap-2" :style="{ borderTopWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
+            <button
+              @click="createAuxiliaryAccount"
+              :disabled="creatingAuxiliary || !auxiliaryName.trim()"
+              class="flex-1 px-4 py-3 sm:py-2 min-h-11 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-medium transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Loader2 v-if="creatingAuxiliary" class="w-4 h-4 animate-spin" />
+              {{ creatingAuxiliary ? '생성 중...' : '생성' }}
+            </button>
+            <button
+              @click="showAuxiliaryModal = false"
+              :disabled="creatingAuxiliary"
               class="flex-1 px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer disabled:opacity-50"
               :style="{ backgroundColor: 'var(--dp-bg-hover)', color: 'var(--dp-text-primary)' }"
             >

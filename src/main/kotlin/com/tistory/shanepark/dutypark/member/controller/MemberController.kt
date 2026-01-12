@@ -84,6 +84,15 @@ class MemberController(
         return memberService.findManagedMembers(loginMember)
     }
 
+    @PostMapping("/auxiliary")
+    fun createAuxiliaryAccount(
+        @Login loginMember: LoginMember,
+        @RequestBody request: Map<String, String>,
+    ): MemberDto {
+        val name = request["name"] ?: throw IllegalArgumentException("name is required")
+        return memberService.createAuxiliaryAccount(loginMember, name)
+    }
+
     @GetMapping("/{memberId}/canManage")
     fun amIManager(
         @Login(required = false) loginMember: LoginMember?,
