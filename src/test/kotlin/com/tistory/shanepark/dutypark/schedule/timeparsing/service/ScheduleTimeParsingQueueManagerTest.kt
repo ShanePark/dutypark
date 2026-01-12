@@ -34,6 +34,8 @@ class ScheduleTimeParsingQueueManagerTest {
             worker = worker,
             scheduleRepository = scheduleRepository,
             geminiApiKey = "GEMINI_KEY",
+            rpmLimit = 30,
+            rpdLimit = 14400,
         )
     }
 
