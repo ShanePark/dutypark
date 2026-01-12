@@ -7,6 +7,7 @@ import type { ApiError } from '@/types'
 
 let isRefreshing = false
 let refreshFailed = false
+let impersonationExpiredHandled = false
 let failedQueue: Array<{
   resolve: (value?: unknown) => void
   reject: (reason?: unknown) => void
@@ -15,12 +16,27 @@ let failedQueue: Array<{
 // Callback for handling auth failure - set by auth store
 let onAuthFailure: (() => void) | null = null
 
+// Callback for checking if currently impersonating - set by auth store
+let isImpersonatingChecker: (() => boolean) | null = null
+
+// Callback for handling impersonation session expiration
+let onImpersonationExpired: (() => void) | null = null
+
 export function setAuthFailureHandler(handler: () => void) {
   onAuthFailure = handler
 }
 
+export function setImpersonationHandlers(
+  checker: () => boolean,
+  onExpired: () => void
+) {
+  isImpersonatingChecker = checker
+  onImpersonationExpired = onExpired
+}
+
 export function resetRefreshState() {
   refreshFailed = false
+  impersonationExpiredHandled = false
 }
 
 const processQueue = (error: Error | null) => {
@@ -63,11 +79,22 @@ apiClient.interceptors.response.use(
     const isAuthEndpoint = originalRequest?.url?.includes('/auth/token') ||
                            originalRequest?.url?.includes('/auth/login') ||
                            originalRequest?.url?.includes('/auth/refresh') ||
-                           originalRequest?.url?.includes('/auth/logout')
+                           originalRequest?.url?.includes('/auth/logout') ||
+                           originalRequest?.url?.includes('/auth/restore') ||
+                           originalRequest?.url?.includes('/auth/impersonate')
 
     // Handle 401 - try to refresh token
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       if (isAuthEndpoint) {
+        return Promise.reject(error)
+      }
+
+      // If impersonating, don't try to refresh - trigger expiration handler instead
+      if (isImpersonatingChecker?.()) {
+        if (onImpersonationExpired && !impersonationExpiredHandled) {
+          impersonationExpiredHandled = true
+          onImpersonationExpired()
+        }
         return Promise.reject(error)
       }
 

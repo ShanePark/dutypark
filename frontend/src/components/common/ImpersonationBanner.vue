@@ -1,13 +1,71 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSwal } from '@/composables/useSwal'
-import { ArrowLeftCircle, AlertTriangle, Loader2 } from 'lucide-vue-next'
+import { ArrowLeftCircle, AlertTriangle, Loader2, Clock } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
-const { confirm, showError } = useSwal()
+const { confirm, showError, showInfo } = useSwal()
 
 const restoring = ref(false)
+const now = ref(Date.now())
+let timerInterval: ReturnType<typeof setInterval> | null = null
+
+const remainingSeconds = computed(() => {
+  if (!authStore.impersonationExpiresAt) return null
+  const remaining = Math.max(0, Math.floor((authStore.impersonationExpiresAt - now.value) / 1000))
+  return remaining
+})
+
+const remainingTimeText = computed(() => {
+  if (remainingSeconds.value === null) return null
+  const minutes = Math.floor(remainingSeconds.value / 60)
+  const seconds = remainingSeconds.value % 60
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+})
+
+const isExpiringSoon = computed(() => {
+  return remainingSeconds.value !== null && remainingSeconds.value <= 60
+})
+
+onMounted(() => {
+  timerInterval = setInterval(() => {
+    now.value = Date.now()
+    if (remainingSeconds.value !== null && remainingSeconds.value <= 0 && !restoring.value) {
+      handleAutoRestore()
+    }
+  }, 1000)
+})
+
+onUnmounted(() => {
+  if (timerInterval) {
+    clearInterval(timerInterval)
+    timerInterval = null
+  }
+})
+
+async function handleAutoRestore() {
+  if (restoring.value) return
+  restoring.value = true
+
+  // Stop the timer to prevent repeated calls
+  if (timerInterval) {
+    clearInterval(timerInterval)
+    timerInterval = null
+  }
+
+  try {
+    await authStore.restore()
+    showInfo('세션이 만료되어 원래 계정으로 돌아갑니다.')
+    window.location.href = '/'
+  } catch (error) {
+    console.error('Failed to auto-restore account:', error)
+    // Clear auth state and redirect to login on failure
+    authStore.clearAuth()
+    showError('세션이 만료되었습니다. 다시 로그인해주세요.')
+    window.location.href = '/auth/login'
+  }
+}
 
 async function handleRestore() {
   const confirmed = await confirm(
@@ -40,6 +98,14 @@ async function handleRestore() {
         <span class="font-semibold">{{ authStore.user?.name }}</span>
         <span class="hidden sm:inline"> 계정으로 활동 중</span>
         <span class="sm:hidden"> 계정</span>
+      </span>
+      <span
+        v-if="remainingTimeText"
+        class="flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded impersonation-timer"
+        :class="{ 'impersonation-timer-urgent': isExpiringSoon }"
+      >
+        <Clock class="w-3 h-3" />
+        <span>{{ remainingTimeText }}</span>
       </span>
     </div>
     <button
@@ -104,5 +170,35 @@ async function handleRestore() {
 .dark .impersonation-restore-btn:hover:not(:disabled) {
   background-color: rgba(254, 243, 199, 0.25);
   border-color: rgba(254, 243, 199, 0.5);
+}
+
+.impersonation-timer {
+  background-color: rgba(180, 83, 9, 0.1);
+  color: #92400e;
+}
+
+.impersonation-timer-urgent {
+  background-color: rgba(220, 38, 38, 0.15);
+  color: #dc2626;
+  animation: pulse-urgent 1s ease-in-out infinite;
+}
+
+.dark .impersonation-timer {
+  background-color: rgba(254, 243, 199, 0.1);
+  color: #fef3c7;
+}
+
+.dark .impersonation-timer-urgent {
+  background-color: rgba(248, 113, 113, 0.2);
+  color: #fca5a5;
+}
+
+@keyframes pulse-urgent {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 </style>

@@ -3,10 +3,11 @@ import { ref, computed } from 'vue'
 import type { AxiosError } from 'axios'
 import type { LoginMember, LoginDto } from '@/types'
 import { authApi } from '@/api/auth'
-import { setAuthFailureHandler, resetRefreshState } from '@/api/client'
+import { setAuthFailureHandler, setImpersonationHandlers, resetRefreshState } from '@/api/client'
 import router from '@/router'
 
 const USER_CACHE_KEY = 'dp-login-member'
+const IMPERSONATION_EXPIRES_KEY = 'dp-impersonation-expires'
 
 function loadCachedUser(): LoginMember | null {
   try {
@@ -25,10 +26,28 @@ function saveCachedUser(member: LoginMember | null) {
   localStorage.setItem(USER_CACHE_KEY, JSON.stringify(member))
 }
 
+function loadImpersonationExpiresAt(): number | null {
+  try {
+    const cached = localStorage.getItem(IMPERSONATION_EXPIRES_KEY)
+    return cached ? parseInt(cached, 10) : null
+  } catch {
+    return null
+  }
+}
+
+function saveImpersonationExpiresAt(expiresAt: number | null) {
+  if (expiresAt === null) {
+    localStorage.removeItem(IMPERSONATION_EXPIRES_KEY)
+    return
+  }
+  localStorage.setItem(IMPERSONATION_EXPIRES_KEY, expiresAt.toString())
+}
+
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<LoginMember | null>(loadCachedUser())
   const isLoading = ref(false)
   const isInitialized = ref(false)
+  const impersonationExpiresAt = ref<number | null>(loadImpersonationExpiresAt())
 
   // Impersonation state derived from user's JWT token
   const isImpersonating = computed(() => user.value?.isImpersonating ?? false)
@@ -103,6 +122,8 @@ export const useAuthStore = defineStore('auth', () => {
     await authApi.logout()
     user.value = null
     saveCachedUser(null)
+    impersonationExpiresAt.value = null
+    saveImpersonationExpiresAt(null)
   }
 
   function setUser(member: LoginMember | null) {
@@ -113,6 +134,8 @@ export const useAuthStore = defineStore('auth', () => {
   function clearAuth() {
     user.value = null
     saveCachedUser(null)
+    impersonationExpiresAt.value = null
+    saveImpersonationExpiresAt(null)
     isInitialized.value = false
   }
 
@@ -121,8 +144,23 @@ export const useAuthStore = defineStore('auth', () => {
     router.push('/auth/login')
   }
 
+  function handleImpersonationExpired() {
+    // Clear impersonation state and redirect to login
+    // The restore API requires valid access token which is already expired
+    impersonationExpiresAt.value = null
+    saveImpersonationExpiresAt(null)
+    clearAuth()
+    router.push('/auth/login')
+  }
+
   // Register auth failure handler with API client
   setAuthFailureHandler(handleAuthFailure)
+
+  // Register impersonation handlers with API client
+  setImpersonationHandlers(
+    () => isImpersonating.value,
+    handleImpersonationExpired
+  )
 
   async function checkAuth(): Promise<void> {
     isLoading.value = true
@@ -145,7 +183,12 @@ export const useAuthStore = defineStore('auth', () => {
   async function impersonate(targetMemberId: number): Promise<void> {
     isLoading.value = true
     try {
-      await authApi.impersonate(targetMemberId)
+      const response = await authApi.impersonate(targetMemberId)
+
+      // Calculate and save expiration time
+      const expiresAt = Date.now() + response.expiresIn * 1000
+      impersonationExpiresAt.value = expiresAt
+      saveImpersonationExpiresAt(expiresAt)
 
       // Refresh user info after impersonation (includes isImpersonating from JWT)
       user.value = await authApi.getStatus()
@@ -159,6 +202,10 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true
     try {
       await authApi.restore()
+
+      // Clear impersonation expiration
+      impersonationExpiresAt.value = null
+      saveImpersonationExpiresAt(null)
 
       // Refresh user info after restore (isImpersonating will be false)
       user.value = await authApi.getStatus()
@@ -175,6 +222,7 @@ export const useAuthStore = defineStore('auth', () => {
     isLoggedIn,
     isAdmin,
     isImpersonating,
+    impersonationExpiresAt,
     initialize,
     login,
     logout,
