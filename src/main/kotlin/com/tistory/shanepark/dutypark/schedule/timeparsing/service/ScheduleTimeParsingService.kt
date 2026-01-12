@@ -16,7 +16,22 @@ class ScheduleTimeParsingService(
     private val chatClient = ChatClient.builder(chatModel).build()
     private val log = logger()
 
+    companion object {
+        private val TIME_INDICATOR_PATTERN = Regex(
+            """[0-9]|한|두|세|네|다섯|여섯|일곱|여덟|아홉|열|정오|자정"""
+        )
+    }
+
     fun parseScheduleTime(request: ScheduleTimeParsingRequest): ScheduleTimeParsingResponse {
+        if (!hasAnyTimeIndicator(request.content)) {
+            log.info("ScheduleTimeParsing== No time indicator found, skipping LLM\n $request")
+            return ScheduleTimeParsingResponse(
+                result = true,
+                hasTime = false,
+                content = request.content
+            )
+        }
+
         val prompt = generatePrompt(request)
         val chatResponse = chatClient.prompt(prompt)
             .call()
@@ -28,6 +43,10 @@ class ScheduleTimeParsingService(
         val response = parseChatAnswer(chatAnswer)
         log.info("ScheduleTimeParsing==\n $request \nResponse:\n $response\n")
         return response
+    }
+
+    private fun hasAnyTimeIndicator(content: String): Boolean {
+        return TIME_INDICATOR_PATTERN.containsMatchIn(content)
     }
 
     private fun parseChatAnswer(chatAnswer: String): ScheduleTimeParsingResponse {
