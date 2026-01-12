@@ -14,6 +14,7 @@ import {
   Users,
   UserCheck,
   UserPlus,
+  UserMinus,
   Home,
   Star,
   GripVertical,
@@ -220,6 +221,23 @@ async function addFamily(member: { id: number | null; name: string }) {
   } catch (e) {
     console.error('Failed to send family request:', e)
     showWarning('가족 요청 전송에 실패했습니다.')
+  }
+}
+
+async function demoteFromFamily(member: { id: number | null; name: string }) {
+  if (!friendInfo.value || !member.id) return
+  if (!await confirm(`${member.name}님을 가족에서 제외하시겠습니까?\n친구 관계는 유지됩니다.`, '가족에서 제외')) return
+  closeDropdown()
+  try {
+    await friendApi.demoteFromFamily(member.id)
+    const friend = friendInfo.value.friends.find((f) => f.member.id === member.id)
+    if (friend) {
+      friend.isFamily = false
+    }
+    toastSuccess(`${member.name}님을 가족에서 제외했습니다.`)
+  } catch (e) {
+    console.error('Failed to demote from family:', e)
+    showWarning('가족에서 제외하는데 실패했습니다.')
   }
 }
 
@@ -704,6 +722,14 @@ onUnmounted(() => {
         >
           <Home class="w-4 h-4" />
           가족 등록
+        </button>
+        <button
+          v-if="openDropdownFriend.isFamily"
+          class="w-full px-3 py-2.5 text-left text-sm text-amber-600 hover:bg-amber-50 flex items-center gap-2 transition cursor-pointer"
+          @click="demoteFromFamily(openDropdownFriend.member)"
+        >
+          <UserMinus class="w-4 h-4" />
+          가족에서 제외
         </button>
         <button
           class="w-full px-3 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition cursor-pointer"

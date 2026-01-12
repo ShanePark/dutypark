@@ -142,6 +142,13 @@ export const friendApi = {
   },
 
   /**
+   * Demote family member to regular friend
+   */
+  demoteFromFamily(friendId: number) {
+    return apiClient.delete(`/friends/family/${friendId}`)
+  },
+
+  /**
    * Unfriend
    */
   unfriend(deleteMemberId: number) {

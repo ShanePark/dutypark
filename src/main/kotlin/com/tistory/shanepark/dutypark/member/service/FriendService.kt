@@ -175,6 +175,24 @@ class FriendService(
         } ?: throw IllegalArgumentException("Not friend")
     }
 
+    fun demoteFromFamily(loginMember: LoginMember, toMemberId: Long) {
+        val member = loginMemberToMember(loginMember)
+        val friend = memberRepository.findById(toMemberId).orElseThrow()
+
+        if (!isFamily(member, friend)) {
+            throw IllegalStateException("Not family")
+        }
+
+        removeFamilyStatus(member, friend)
+        removeFamilyStatus(friend, member)
+    }
+
+    private fun removeFamilyStatus(member: Member, friend: Member) {
+        friendRelationRepository.findByMemberAndFriend(member, friend)?.let {
+            it.isFamily = false
+        } ?: throw IllegalArgumentException("Not friend")
+    }
+
     private fun deleteViceVersaRequestIfPresent(loginMember: Member, friend: Member) {
         friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(
             fromMember = loginMember, toMember = friend, PENDING
