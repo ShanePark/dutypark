@@ -547,7 +547,7 @@ class TodoControllerTest : RestDocsTest() {
         val json = """
             {
                 "status": "IN_PROGRESS",
-                "position": 0
+                "orderedIds": ["${saved.id}"]
             }
         """.trimIndent()
 
@@ -570,7 +570,7 @@ class TodoControllerTest : RestDocsTest() {
                     ),
                     requestFields(
                         fieldWithPath("status").description("New status (TODO, IN_PROGRESS, DONE)"),
-                        fieldWithPath("position").optional().description("Target position in the new status column (null = add to top)")
+                        fieldWithPath("orderedIds").description("Ordered list of todo IDs in the target column after the move")
                     ),
                     responseFields(
                         fieldWithPath("id").description("Todo ID"),
@@ -1239,7 +1239,7 @@ class TodoControllerTest : RestDocsTest() {
             )
         )
 
-        val json = """{"status": "DONE", "position": 0}"""
+        val json = """{"status": "DONE", "orderedIds": ["${saved.id}"]}"""
 
         mockMvc.perform(
             RestDocumentationRequestBuilders.patch("/api/todos/{id}/status", saved.id)
@@ -1265,7 +1265,7 @@ class TodoControllerTest : RestDocsTest() {
             ).apply { markCompleted(0) }
         )
 
-        val json = """{"status": "TODO", "position": 0}"""
+        val json = """{"status": "TODO", "orderedIds": ["${saved.id}"]}"""
 
         mockMvc.perform(
             RestDocumentationRequestBuilders.patch("/api/todos/{id}/status", saved.id)
@@ -1280,7 +1280,7 @@ class TodoControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `changeStatus to same status returns current state`() {
+    fun `changeStatus to same status reorders positions`() {
         val saved = todoRepository.save(
             Todo(
                 member = TestData.member,
@@ -1291,7 +1291,7 @@ class TodoControllerTest : RestDocsTest() {
             )
         )
 
-        val json = """{"status": "IN_PROGRESS", "position": 0}"""
+        val json = """{"status": "IN_PROGRESS", "orderedIds": ["${saved.id}"]}"""
 
         mockMvc.perform(
             RestDocumentationRequestBuilders.patch("/api/todos/{id}/status", saved.id)
@@ -1302,7 +1302,7 @@ class TodoControllerTest : RestDocsTest() {
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
-            .andExpect(jsonPath("$.position").value(5))
+            .andExpect(jsonPath("$.position").value(0))
     }
 
     @Test

@@ -65,6 +65,7 @@ interface Props {
   batchEditMode: boolean
   friends: Array<{ id: number; name: string }>
   memberId: number
+  isMyCalendar: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -573,9 +574,9 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                     </span>
                   </div>
 
-                  <!-- Tags Section -->
+                  <!-- Tags Section (only shown on own calendar) -->
                   <div
-                    v-if="schedule.isMine && canEdit && (schedule.tags?.length || friends.length > 0)"
+                    v-if="isMyCalendar && schedule.isMine && canEdit && (schedule.tags?.length || friends.length > 0)"
                     class="mt-2"
                   >
                     <div class="flex items-center gap-1.5 flex-wrap">
@@ -711,9 +712,9 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                     </button>
                   </template>
 
-                  <!-- Untag for tagged schedules -->
+                  <!-- Untag for tagged schedules (only on own calendar) -->
                   <button
-                    v-if="schedule.isTagged"
+                    v-if="schedule.isTagged && isMyCalendar"
                     @click="openUntagConfirmModal(schedule.id)"
                     class="px-2 py-1 border border-orange-300 hover:bg-orange-100 rounded transition text-orange-600 text-xs font-medium flex items-center gap-1 cursor-pointer"
                     title="태그 제거"

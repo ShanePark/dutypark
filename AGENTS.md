@@ -293,6 +293,11 @@ The hamburger menu in `AppHeader.vue` provides the main navigation for logged-in
 - Complex UI (drag-drop, multi-step), visual regressions, OAuth/SSO flows, or user request
 - **NOT for:** CRUD, styling, routine features verifiable via tests or manual refresh
 
+**IMPORTANT: Do NOT start dev servers yourself.**
+- The developer will run `./gradlew bootRun` and `npm run dev` manually
+- Never execute commands to start backend or frontend servers
+- Assume servers are already running when using Playwright
+
 **Development credentials:**
 - Email: `test@duty.park`
 - Password: `12345678`

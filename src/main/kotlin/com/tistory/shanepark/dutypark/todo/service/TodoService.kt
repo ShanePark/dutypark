@@ -273,7 +273,7 @@ class TodoService(
         loginMember: LoginMember,
         id: UUID,
         newStatus: TodoStatus,
-        targetPosition: Int?
+        orderedIds: List<UUID>
     ): TodoResponse {
         val member = findMember(loginMember)
         val todo = todoRepository.findById(id)
@@ -281,20 +281,22 @@ class TodoService(
 
         verifyOwnership(todo, member)
 
-        // Ignore if same status
-        if (todo.status == newStatus) {
-            val hasAttachments = attachmentService.hasAttachments(
-                AttachmentContextType.TODO,
-                todo.id.toString()
-            )
-            return TodoResponse.from(todo, hasAttachments)
+        // Change status first
+        if (todo.status != newStatus) {
+            todo.changeStatus(newStatus, 0)
         }
 
-        // Calculate new position: if targetPosition is null, add to top (min - 1)
-        val newPosition = targetPosition
-            ?: (todoRepository.findMinPositionByMemberAndStatus(member, newStatus) - 1)
+        // Reorder all todos in target column based on orderedIds
+        val indexMap = orderedIds.mapIndexed { index, todoId -> todoId to index }.toMap()
+        val todos = todoRepository.findAllById(orderedIds)
 
-        todo.changeStatus(newStatus, newPosition)
+        todos.forEach { t ->
+            verifyOwnership(t, member)
+            if (t.status != newStatus) {
+                throw IllegalArgumentException("Todo ${t.id} is not in $newStatus status")
+            }
+            t.position = indexMap.getValue(t.id)
+        }
 
         val hasAttachments = attachmentService.hasAttachments(
             AttachmentContextType.TODO,

@@ -173,7 +173,7 @@ export interface TodoUpdateRequest {
 
 export interface TodoStatusChangeRequest {
   status: TodoStatus
-  position?: number
+  orderedIds: string[]
 }
 
 export interface TodoPositionUpdateRequest {
