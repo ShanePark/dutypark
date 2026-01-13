@@ -106,7 +106,7 @@ class TodoController(
         @PathVariable id: UUID,
         @RequestBody request: TodoStatusChangeRequest
     ): TodoResponse {
-        return todoService.changeStatus(loginMember, id, request.status, request.position)
+        return todoService.changeStatus(loginMember, id, request.status, request.orderedIds)
     }
 
     @PatchMapping("/{id}/complete")

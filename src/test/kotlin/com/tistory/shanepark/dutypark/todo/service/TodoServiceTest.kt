@@ -12,6 +12,7 @@ import com.tistory.shanepark.dutypark.todo.repository.TodoRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -461,12 +462,12 @@ class TodoServiceTest {
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
-        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.IN_PROGRESS)).thenReturn(0)
+        `when`(todoRepository.findAllById(listOf(todoId))).thenReturn(listOf(todo))
 
-        val result = todoService.changeStatus(loginMember, todoId, TodoStatus.IN_PROGRESS, null)
+        val result = todoService.changeStatus(loginMember, todoId, TodoStatus.IN_PROGRESS, listOf(todoId))
 
         assertEquals(TodoStatus.IN_PROGRESS, result.status)
-        assertEquals(-1, result.position)
+        assertEquals(0, result.position)
         assertNull(result.completedDate)
     }
 
@@ -478,9 +479,9 @@ class TodoServiceTest {
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
-        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.DONE)).thenReturn(0)
+        `when`(todoRepository.findAllById(listOf(todoId))).thenReturn(listOf(todo))
 
-        val result = todoService.changeStatus(loginMember, todoId, TodoStatus.DONE, null)
+        val result = todoService.changeStatus(loginMember, todoId, TodoStatus.DONE, listOf(todoId))
 
         assertEquals(TodoStatus.DONE, result.status)
         assertNotNull(result.completedDate)
@@ -494,9 +495,9 @@ class TodoServiceTest {
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
-        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.TODO)).thenReturn(0)
+        `when`(todoRepository.findAllById(listOf(todoId))).thenReturn(listOf(todo))
 
-        val result = todoService.changeStatus(loginMember, todoId, TodoStatus.TODO, null)
+        val result = todoService.changeStatus(loginMember, todoId, TodoStatus.TODO, listOf(todoId))
 
         assertEquals(TodoStatus.TODO, result.status)
         assertNull(result.completedDate)
@@ -510,9 +511,9 @@ class TodoServiceTest {
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
-        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.DONE)).thenReturn(0)
+        `when`(todoRepository.findAllById(listOf(todoId))).thenReturn(listOf(todo))
 
-        val result = todoService.changeStatus(loginMember, todoId, TodoStatus.DONE, null)
+        val result = todoService.changeStatus(loginMember, todoId, TodoStatus.DONE, listOf(todoId))
 
         assertEquals(TodoStatus.DONE, result.status)
         assertNotNull(result.completedDate)
@@ -527,11 +528,11 @@ class TodoServiceTest {
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
-        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.TODO)).thenReturn(0)
+        `when`(todoRepository.findAllById(listOf(todoId))).thenReturn(listOf(todo))
 
         assertNotNull(todo.completedDate)
 
-        val result = todoService.changeStatus(loginMember, todoId, TodoStatus.TODO, null)
+        val result = todoService.changeStatus(loginMember, todoId, TodoStatus.TODO, listOf(todoId))
 
         assertEquals(TodoStatus.TODO, result.status)
         assertNull(result.completedDate)
@@ -546,42 +547,52 @@ class TodoServiceTest {
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
-        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.IN_PROGRESS)).thenReturn(0)
+        `when`(todoRepository.findAllById(listOf(todoId))).thenReturn(listOf(todo))
 
-        val result = todoService.changeStatus(loginMember, todoId, TodoStatus.IN_PROGRESS, null)
+        val result = todoService.changeStatus(loginMember, todoId, TodoStatus.IN_PROGRESS, listOf(todoId))
 
         assertEquals(TodoStatus.IN_PROGRESS, result.status)
         assertNull(result.completedDate)
     }
 
     @Test
-    fun `changeStatus with same status should return unchanged todo`() {
+    fun `changeStatus with same status should reorder positions`() {
         val todoId = UUID.randomUUID()
         val todo = createTodo("task", TodoStatus.TODO, 5)
         ReflectionTestUtils.setField(todo, "id", todoId)
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findAllById(listOf(todoId))).thenReturn(listOf(todo))
 
-        val result = todoService.changeStatus(loginMember, todoId, TodoStatus.TODO, null)
+        val result = todoService.changeStatus(loginMember, todoId, TodoStatus.TODO, listOf(todoId))
 
         assertEquals(TodoStatus.TODO, result.status)
-        assertEquals(5, result.position)
+        assertEquals(0, result.position)
     }
 
     @Test
-    fun `changeStatus with explicit position should use provided position`() {
-        val todoId = UUID.randomUUID()
-        val todo = createTodo("task", TodoStatus.TODO, 0)
-        ReflectionTestUtils.setField(todo, "id", todoId)
+    fun `changeStatus with multiple items should reorder all positions`() {
+        val todoId1 = UUID.randomUUID()
+        val todoId2 = UUID.randomUUID()
+        val todoId3 = UUID.randomUUID()
+        val todo1 = createTodo("task1", TodoStatus.TODO, 5)
+        val todo2 = createTodo("task2", TodoStatus.IN_PROGRESS, 0)
+        val todo3 = createTodo("task3", TodoStatus.TODO, 10)
+        ReflectionTestUtils.setField(todo1, "id", todoId1)
+        ReflectionTestUtils.setField(todo2, "id", todoId2)
+        ReflectionTestUtils.setField(todo3, "id", todoId3)
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
-        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findById(todoId2)).thenReturn(Optional.of(todo2))
+        `when`(todoRepository.findAllById(listOf(todoId1, todoId2, todoId3))).thenReturn(listOf(todo1, todo2, todo3))
 
-        val result = todoService.changeStatus(loginMember, todoId, TodoStatus.IN_PROGRESS, 10)
+        val result = todoService.changeStatus(loginMember, todoId2, TodoStatus.TODO, listOf(todoId1, todoId2, todoId3))
 
-        assertEquals(TodoStatus.IN_PROGRESS, result.status)
-        assertEquals(10, result.position)
+        assertEquals(TodoStatus.TODO, result.status)
+        assertEquals(0, todo1.position)
+        assertEquals(1, todo2.position)
+        assertEquals(2, todo3.position)
     }
 
     @Test
@@ -596,7 +607,7 @@ class TodoServiceTest {
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
 
         val exception = assertThrows<IllegalArgumentException> {
-            todoService.changeStatus(loginMember, todoId, TodoStatus.IN_PROGRESS, null)
+            todoService.changeStatus(loginMember, todoId, TodoStatus.IN_PROGRESS, listOf(todoId))
         }
         assertEquals("Todo is not yours", exception.message)
     }
@@ -609,8 +620,89 @@ class TodoServiceTest {
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.empty())
 
         assertThrows<IllegalArgumentException> {
-            todoService.changeStatus(loginMember, todoId, TodoStatus.IN_PROGRESS, null)
+            todoService.changeStatus(loginMember, todoId, TodoStatus.IN_PROGRESS, listOf(todoId))
         }
+    }
+
+    @Test
+    fun `changeStatus should throw exception if orderedIds contains todo with different status`() {
+        val todoId1 = UUID.randomUUID()
+        val todoId2 = UUID.randomUUID()
+        val todo1 = createTodo("task1", TodoStatus.IN_PROGRESS, 0)
+        val todo2 = createTodo("task2", TodoStatus.TODO, 0)  // Different status
+        ReflectionTestUtils.setField(todo1, "id", todoId1)
+        ReflectionTestUtils.setField(todo2, "id", todoId2)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId1)).thenReturn(Optional.of(todo1))
+        `when`(todoRepository.findAllById(listOf(todoId1, todoId2))).thenReturn(listOf(todo1, todo2))
+
+        val exception = assertThrows<IllegalArgumentException> {
+            todoService.changeStatus(loginMember, todoId1, TodoStatus.IN_PROGRESS, listOf(todoId1, todoId2))
+        }
+        assertTrue(exception.message?.contains("is not in IN_PROGRESS status") == true)
+    }
+
+    @Test
+    fun `changeStatus should throw exception if orderedIds contains other users todo`() {
+        val todoId1 = UUID.randomUUID()
+        val todoId2 = UUID.randomUUID()
+        val otherUser = otherMember()
+        val todo1 = createTodo("task1", TodoStatus.IN_PROGRESS, 0)
+        val todo2 = createTodo("task2", TodoStatus.IN_PROGRESS, 1)
+        ReflectionTestUtils.setField(todo1, "id", todoId1)
+        ReflectionTestUtils.setField(todo2, "id", todoId2)
+        ReflectionTestUtils.setField(todo2, "member", otherUser)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId1)).thenReturn(Optional.of(todo1))
+        `when`(todoRepository.findAllById(listOf(todoId1, todoId2))).thenReturn(listOf(todo1, todo2))
+
+        val exception = assertThrows<IllegalArgumentException> {
+            todoService.changeStatus(loginMember, todoId1, TodoStatus.IN_PROGRESS, listOf(todoId1, todoId2))
+        }
+        assertEquals("Todo is not yours", exception.message)
+    }
+
+    @Test
+    fun `changeStatus with empty orderedIds should still change status`() {
+        val todoId = UUID.randomUUID()
+        val todo = createTodo("task", TodoStatus.TODO, 5)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findAllById(emptyList<UUID>())).thenReturn(emptyList())
+
+        val result = todoService.changeStatus(loginMember, todoId, TodoStatus.IN_PROGRESS, emptyList())
+
+        assertEquals(TodoStatus.IN_PROGRESS, result.status)
+        assertEquals(0, result.position)
+    }
+
+    @Test
+    fun `changeStatus should correctly insert todo in middle position`() {
+        val todoId1 = UUID.randomUUID()
+        val todoId2 = UUID.randomUUID()
+        val todoId3 = UUID.randomUUID()
+        val todo1 = createTodo("existing1", TodoStatus.TODO, 0)
+        val todo2 = createTodo("moving", TodoStatus.IN_PROGRESS, 0)
+        val todo3 = createTodo("existing2", TodoStatus.TODO, 1)
+        ReflectionTestUtils.setField(todo1, "id", todoId1)
+        ReflectionTestUtils.setField(todo2, "id", todoId2)
+        ReflectionTestUtils.setField(todo3, "id", todoId3)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId2)).thenReturn(Optional.of(todo2))
+        `when`(todoRepository.findAllById(listOf(todoId1, todoId2, todoId3))).thenReturn(listOf(todo1, todo2, todo3))
+
+        // Move todo2 (IN_PROGRESS) to TODO, placing it between todo1 and todo3
+        val result = todoService.changeStatus(loginMember, todoId2, TodoStatus.TODO, listOf(todoId1, todoId2, todoId3))
+
+        assertEquals(TodoStatus.TODO, result.status)
+        assertEquals(0, todo1.position)
+        assertEquals(1, todo2.position)
+        assertEquals(2, todo3.position)
     }
 
     // ========== updatePositionsByStatus Tests ==========

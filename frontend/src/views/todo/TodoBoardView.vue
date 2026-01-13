@@ -146,12 +146,18 @@ async function handleDragEnd(evt: Sortable.SortableEvent) {
     }
   } else {
     // Cross-column move (status change)
-    const newPosition = evt.newIndex ?? 0
+    // Extract full order from DOM after SortableJS has moved the item
+    const columnItems = evt.to.querySelectorAll('[data-id]')
+    const orderedIds: string[] = []
+    columnItems.forEach((item) => {
+      const id = item.getAttribute('data-id')
+      if (id) orderedIds.push(id)
+    })
 
     try {
       await todoApi.changeStatus(todoId, {
         status: toColumn,
-        position: newPosition,
+        orderedIds,
       })
       focusStatus(toColumn, 'smooth')
       await loadBoard()
