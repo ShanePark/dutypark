@@ -747,6 +747,9 @@ watch(
     loadError.value = null
 
     // Reset state
+    const now = new Date()
+    currentYear.value = now.getFullYear()
+    currentMonth.value = now.getMonth() + 1
     todos.value = []
     completedTodos.value = []
     dDays.value = []
@@ -2061,6 +2064,7 @@ async function showExcelUploadModal() {
       :batch-edit-mode="batchEditMode"
       :friends="friends"
       :member-id="memberId"
+      :is-my-calendar="isMyCalendar"
       @close="isDayDetailModalOpen = false"
       @create-schedule="handleCreateSchedule"
       @edit-schedule="handleEditSchedule"
