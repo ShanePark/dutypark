@@ -2,47 +2,65 @@ import SwiftUI
 
 struct DDayCard: View {
     let dday: DDayDto
+    let onEdit: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
-        HStack(spacing: 16) {
-            // D-Day badge
-            DDayBadge(daysLeft: dday.daysLeft)
+        Button(action: onEdit) {
+            HStack(spacing: 16) {
+                // D-Day badge
+                DDayBadge(daysLeft: dday.daysLeft)
 
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(dday.title)
-                        .font(.headline)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(dday.title)
+                            .font(.headline)
+                            .foregroundColor(.primary)
 
-                    if dday.isPrivate {
-                        Image(systemName: "lock.fill")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        if dday.isPrivate {
+                            Image(systemName: "lock.fill")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
+
+                    Text(formatDate(dday.date))
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                 }
 
-                Text(formatDate(dday.date))
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
+                Spacer()
 
-            Spacer()
+                // Edit button
+                Button {
+                    onEdit()
+                } label: {
+                    Image(systemName: "pencil")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                        .padding(8)
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(8)
+                }
 
-            Button {
-                onDelete()
-            } label: {
-                Image(systemName: "trash")
-                    .font(.caption)
-                    .foregroundColor(.red)
-                    .padding(8)
-                    .background(Color.red.opacity(0.1))
-                    .cornerRadius(8)
+                // Delete button
+                Button {
+                    onDelete()
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .padding(8)
+                        .background(Color.red.opacity(0.1))
+                        .cornerRadius(8)
+                }
             }
+            .padding()
+            .background(cardBackground)
+            .cornerRadius(12)
+            .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
         }
-        .padding()
-        .background(cardBackground)
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder
@@ -80,14 +98,17 @@ struct DDayCard: View {
     VStack(spacing: 12) {
         DDayCard(
             dday: DDayDto(id: 1, title: "생일", date: "2025-06-15", isPrivate: false, calc: 0, daysLeft: 0),
+            onEdit: {},
             onDelete: {}
         )
         DDayCard(
             dday: DDayDto(id: 2, title: "기념일", date: "2025-06-20", isPrivate: true, calc: 5, daysLeft: 5),
+            onEdit: {},
             onDelete: {}
         )
         DDayCard(
             dday: DDayDto(id: 3, title: "지난 이벤트", date: "2025-06-01", isPrivate: false, calc: -10, daysLeft: -10),
+            onEdit: {},
             onDelete: {}
         )
     }

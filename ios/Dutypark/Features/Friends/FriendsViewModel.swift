@@ -16,12 +16,11 @@ class FriendsViewModel: ObservableObject {
         error = nil
 
         do {
-            // Load friends list
-            let friendsResponse: [Friend] = try await APIClient.shared.request(.friends, responseType: [Friend].self)
-            friends = friendsResponse
-
-            // Load friend requests from dashboard
+            // Load all friend data from dashboard API (includes isFamily, pinOrder)
             let dashboardInfo: DashboardFriendInfo = try await APIClient.shared.request(.friendsDashboard, responseType: DashboardFriendInfo.self)
+
+            // Convert DashboardFriendDetail to Friend
+            friends = dashboardInfo.friends.map { Friend(from: $0) }
             receivedRequests = dashboardInfo.pendingRequestsFrom
             sentRequests = dashboardInfo.pendingRequestsTo
         } catch {

@@ -11,6 +11,7 @@ struct TodoBoardView: View {
 
     enum TodoFilterType: String, CaseIterable {
         case all = "모든 할일"
+        case todo = "할 일"
         case inProgress = "진행중"
         case completed = "완료"
     }
@@ -92,11 +93,20 @@ struct TodoBoardView: View {
             HStack(spacing: DesignSystem.Spacing.sm) {
                 FilterTabButton(
                     title: "모든 할일",
-                    count: viewModel.counts?.todo ?? 0,
+                    count: viewModel.counts?.total ?? 0,
                     isSelected: selectedFilter == .all,
                     color: .gray
                 ) {
                     selectedFilter = .all
+                }
+
+                FilterTabButton(
+                    title: "할 일",
+                    count: viewModel.counts?.todo ?? 0,
+                    isSelected: selectedFilter == .todo,
+                    color: .blue
+                ) {
+                    selectedFilter = .todo
                 }
 
                 FilterTabButton(
@@ -127,6 +137,25 @@ struct TodoBoardView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(alignment: .top, spacing: DesignSystem.Spacing.md) {
                 // TODO Column
+                if selectedFilter == .all || selectedFilter == .todo {
+                    KanbanColumn(
+                        title: "할 일",
+                        icon: "circle",
+                        color: .blue,
+                        items: viewModel.todoItems,
+                        count: viewModel.counts?.todo ?? 0
+                    ) {
+                        addTodoStatus = .todo
+                        showAddTodo = true
+                    } onTap: { todo in
+                        selectedTodo = todo
+                        showTodoDetail = true
+                    } onStatusChange: { todo, newStatus in
+                        Task { await viewModel.changeTodoStatus(id: todo.id, newStatus: newStatus) }
+                    }
+                }
+
+                // IN PROGRESS Column
                 if selectedFilter == .all || selectedFilter == .inProgress {
                     KanbanColumn(
                         title: "진행중",

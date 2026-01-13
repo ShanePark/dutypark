@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct SettingsView: View {
     @StateObject private var viewModel = SettingsViewModel()
@@ -10,6 +11,10 @@ struct SettingsView: View {
     @State private var showChangePassword = false
     @State private var showVisibilityPicker = false
     @State private var showManagersExpanded = false
+    @State private var showPhotoOptions = false
+    @State private var showPhotoPicker = false
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var showDeletePhotoConfirmation = false
 
     var body: some View {
         NavigationStack {
@@ -54,12 +59,14 @@ struct SettingsView: View {
                 .refreshable {
                     await viewModel.loadProfile()
                     await viewModel.loadRefreshTokens()
+                    await viewModel.loadManagers()
                 }
             }
             .navigationBarHidden(true)
             .task {
                 await viewModel.loadProfile()
                 await viewModel.loadRefreshTokens()
+                await viewModel.loadManagers()
             }
             .confirmationDialog("공개 범위 설정", isPresented: $showVisibilityPicker) {
                 Button("전체 공개") {
@@ -96,13 +103,35 @@ struct SettingsView: View {
             VStack(spacing: DesignSystem.Spacing.md) {
                 // Profile with avatar
                 HStack(spacing: DesignSystem.Spacing.lg) {
-                    ProfileAvatar(
-                        memberId: viewModel.profile?.id,
-                        name: viewModel.profile?.name ?? "?",
-                        hasProfilePhoto: viewModel.profile?.hasProfilePhoto ?? false,
-                        profilePhotoVersion: viewModel.profile?.profilePhotoVersion,
-                        size: 64
-                    )
+                    ZStack {
+                        Button {
+                            showPhotoOptions = true
+                        } label: {
+                            ProfileAvatar(
+                                memberId: viewModel.profile?.id,
+                                name: viewModel.profile?.name ?? "?",
+                                hasProfilePhoto: viewModel.profile?.hasProfilePhoto ?? false,
+                                profilePhotoVersion: viewModel.profile?.profilePhotoVersion,
+                                size: 64
+                            )
+                            .overlay(
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.black.opacity(0.3))
+                                    Image(systemName: "camera.fill")
+                                        .font(.system(size: 16))
+                                        .foregroundColor(.white)
+                                }
+                                .opacity(viewModel.isUploadingPhoto ? 0 : 1)
+                            )
+                        }
+                        .disabled(viewModel.isUploadingPhoto)
+
+                        if viewModel.isUploadingPhoto {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        }
+                    }
 
                     VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
                         Text(viewModel.profile?.name ?? "")
@@ -125,6 +154,38 @@ struct SettingsView: View {
                     Spacer()
                 }
             }
+        }
+        .confirmationDialog("프로필 사진", isPresented: $showPhotoOptions) {
+            Button("사진 선택") {
+                showPhotoPicker = true
+            }
+            if viewModel.profile?.hasProfilePhoto == true {
+                Button("사진 삭제", role: .destructive) {
+                    showDeletePhotoConfirmation = true
+                }
+            }
+            Button("취소", role: .cancel) { }
+        }
+        .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhotoItem, matching: .images)
+        .onChange(of: selectedPhotoItem) { _, newItem in
+            guard let newItem = newItem else { return }
+            Task {
+                if let data = try? await newItem.loadTransferable(type: Data.self) {
+                    if let image = UIImage(data: data),
+                       let jpegData = image.jpegData(compressionQuality: 0.8) {
+                        await viewModel.uploadProfilePhoto(imageData: jpegData)
+                    }
+                }
+                selectedPhotoItem = nil
+            }
+        }
+        .alert("프로필 사진 삭제", isPresented: $showDeletePhotoConfirmation) {
+            Button("취소", role: .cancel) { }
+            Button("삭제", role: .destructive) {
+                Task { await viewModel.deleteProfilePhoto() }
+            }
+        } message: {
+            Text("프로필 사진을 삭제하시겠습니까?")
         }
     }
 

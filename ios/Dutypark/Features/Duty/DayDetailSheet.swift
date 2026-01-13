@@ -5,7 +5,12 @@ struct DayDetailSheet: View {
     let day: Int
     @Environment(\.dismiss) private var dismiss
     @State private var showAddSchedule = false
+    @State private var scheduleToEdit: Schedule?
+    @State private var showEditSchedule = false
+    @State private var todoToEdit: Todo?
+    @State private var showTodoDetail = false
     @StateObject private var scheduleViewModel = ScheduleViewModel()
+    @StateObject private var todoViewModel = TodoViewModel()
 
     private var initialDate: Date {
         var components = DateComponents()
@@ -46,6 +51,22 @@ struct DayDetailSheet: View {
                     initialDate: initialDate
                 ) {
                     Task { await viewModel.loadDutyData() }
+                }
+            }
+            .sheet(isPresented: $showEditSchedule) {
+                if let schedule = scheduleToEdit {
+                    ScheduleEditView(
+                        viewModel: scheduleViewModel,
+                        schedule: schedule,
+                        initialDate: initialDate
+                    ) {
+                        Task { await viewModel.loadDutyData() }
+                    }
+                }
+            }
+            .sheet(isPresented: $showTodoDetail) {
+                if let todo = todoToEdit {
+                    TodoDetailSheet(viewModel: todoViewModel, todo: todo)
                 }
             }
         }
@@ -144,6 +165,10 @@ struct DayDetailSheet: View {
             if let schedules = viewModel.schedulesByDay[day], !schedules.isEmpty {
                 ForEach(schedules) { schedule in
                     ScheduleCard(schedule: schedule)
+                        .onTapGesture {
+                            scheduleToEdit = schedule
+                            showEditSchedule = true
+                        }
                 }
             } else {
                 Text("일정이 없습니다")
@@ -178,6 +203,10 @@ struct DayDetailSheet: View {
                 .padding()
                 .background(Color(.systemBackground))
                 .cornerRadius(8)
+                .onTapGesture {
+                    todoToEdit = todo
+                    showTodoDetail = true
+                }
             }
         }
     }

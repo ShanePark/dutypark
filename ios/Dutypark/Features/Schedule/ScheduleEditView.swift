@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct ScheduleEditView: View {
     @ObservedObject var viewModel: ScheduleViewModel
@@ -19,6 +20,13 @@ struct ScheduleEditView: View {
     @State private var selectedFriendIds: Set<Int>
     @State private var isSaving = false
     @State private var showFriendPicker = false
+
+    // Attachment states
+    @State private var selectedPhotoItems: [PhotosPickerItem] = []
+    @State private var uploadedAttachments: [AttachmentDto] = []
+    @State private var attachmentSessionId: String?
+    @State private var isUploadingAttachment = false
+    @State private var existingAttachmentIds: [String] = []
 
     var isEditing: Bool { existingSchedule != nil }
 
@@ -41,6 +49,7 @@ struct ScheduleEditView: View {
             _endTime = State(initialValue: Self.parseTimeToDate(schedule.endTime) ?? now)
             _visibility = State(initialValue: schedule.visibility ?? .friends)
             _selectedFriendIds = State(initialValue: Set(schedule.tags.map { $0.memberId }))
+            _existingAttachmentIds = State(initialValue: schedule.attachments.map { $0.id })
         } else {
             _content = State(initialValue: "")
             _description = State(initialValue: "")
@@ -51,6 +60,7 @@ struct ScheduleEditView: View {
             _endTime = State(initialValue: now)
             _visibility = State(initialValue: .private)
             _selectedFriendIds = State(initialValue: [])
+            _existingAttachmentIds = State(initialValue: [])
         }
     }
 
@@ -146,6 +156,57 @@ struct ScheduleEditView: View {
                         }
                     }
                 }
+
+                // Attachment Section
+                Section("첨부파일") {
+                    // Existing attachments
+                    if let schedule = existingSchedule, !schedule.attachments.isEmpty {
+                        ForEach(schedule.attachments, id: \.id) { attachment in
+                            HStack {
+                                Image(systemName: attachment.thumbnailAvailable ? "photo" : "doc")
+                                    .foregroundColor(.secondary)
+                                Text(attachment.originalFileName)
+                                    .font(.subheadline)
+                                    .lineLimit(1)
+                                Spacer()
+                            }
+                        }
+                    }
+
+                    // Uploaded attachments
+                    ForEach(uploadedAttachments, id: \.id) { attachment in
+                        HStack {
+                            Image(systemName: "photo")
+                                .foregroundColor(.green)
+                            Text(attachment.originalFilename)
+                                .font(.subheadline)
+                                .lineLimit(1)
+                            Spacer()
+                            Button {
+                                uploadedAttachments.removeAll { $0.id == attachment.id }
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.red)
+                            }
+                        }
+                    }
+
+                    // Photo picker
+                    PhotosPicker(selection: $selectedPhotoItems, maxSelectionCount: 10, matching: .images) {
+                        HStack {
+                            Image(systemName: "plus.circle")
+                            Text(isUploadingAttachment ? "업로드 중..." : "사진 추가")
+                        }
+                    }
+                    .disabled(isUploadingAttachment)
+                    .onChange(of: selectedPhotoItems) { _, newItems in
+                        guard !newItems.isEmpty else { return }
+                        Task {
+                            await uploadSelectedPhotos(newItems)
+                            selectedPhotoItems = []
+                        }
+                    }
+                }
             }
             .navigationTitle(isEditing ? "일정 수정" : "새 일정")
             .navigationBarTitleDisplayMode(.inline)
@@ -176,6 +237,11 @@ struct ScheduleEditView: View {
         isSaving = true
         Task {
             let success: Bool
+
+            // Collect all attachment IDs (existing + newly uploaded)
+            var allAttachmentIds = existingAttachmentIds
+            allAttachmentIds.append(contentsOf: uploadedAttachments.map { $0.id })
+
             if let schedule = existingSchedule {
                 success = await viewModel.updateSchedule(
                     id: schedule.id,
@@ -185,7 +251,9 @@ struct ScheduleEditView: View {
                     startTime: hasStartTime ? startTime : nil,
                     endTime: hasEndTime ? endTime : nil,
                     visibility: visibility,
-                    taggedFriendIds: Array(selectedFriendIds)
+                    taggedFriendIds: Array(selectedFriendIds),
+                    attachmentSessionId: attachmentSessionId,
+                    orderedAttachmentIds: allAttachmentIds.isEmpty ? nil : allAttachmentIds
                 )
             } else {
                 success = await viewModel.createSchedule(
@@ -195,7 +263,9 @@ struct ScheduleEditView: View {
                     startTime: hasStartTime ? startTime : nil,
                     endTime: hasEndTime ? endTime : nil,
                     visibility: visibility,
-                    taggedFriendIds: Array(selectedFriendIds)
+                    taggedFriendIds: Array(selectedFriendIds),
+                    attachmentSessionId: attachmentSessionId,
+                    orderedAttachmentIds: allAttachmentIds.isEmpty ? nil : allAttachmentIds
                 )
             }
             if success {
@@ -204,6 +274,35 @@ struct ScheduleEditView: View {
             }
             isSaving = false
         }
+    }
+
+    private func uploadSelectedPhotos(_ items: [PhotosPickerItem]) async {
+        isUploadingAttachment = true
+
+        // Create session if not exists
+        if attachmentSessionId == nil {
+            let targetId = existingSchedule?.id
+            attachmentSessionId = await viewModel.createAttachmentSession(targetContextId: targetId)
+        }
+
+        guard let sessionId = attachmentSessionId else {
+            isUploadingAttachment = false
+            return
+        }
+
+        for (index, item) in items.enumerated() {
+            if let data = try? await item.loadTransferable(type: Data.self) {
+                if let image = UIImage(data: data),
+                   let jpegData = image.jpegData(compressionQuality: 0.8) {
+                    let fileName = "photo_\(Date().timeIntervalSince1970)_\(index).jpg"
+                    if let attachment = await viewModel.uploadAttachment(sessionId: sessionId, imageData: jpegData, fileName: fileName) {
+                        uploadedAttachments.append(attachment)
+                    }
+                }
+            }
+        }
+
+        isUploadingAttachment = false
     }
 
     private static func parseDate(_ dateString: String) -> Date? {

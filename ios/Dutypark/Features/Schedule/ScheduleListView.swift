@@ -202,9 +202,7 @@ struct ScheduleListView: View {
     }
 
     private func getCurrentMemberId() -> Int {
-        // This should ideally come from AuthManager or a user profile store
-        // For now, we return a placeholder value
-        return 1
+        return AuthManager.shared.currentUser?.id ?? 0
     }
 }
 

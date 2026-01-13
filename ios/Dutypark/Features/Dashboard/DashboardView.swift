@@ -6,6 +6,9 @@ struct DashboardView: View {
     @Environment(\.colorScheme) var colorScheme
     @State private var showNotifications = false
     @State private var showMenu = false
+    @State private var showFriends = false
+    @State private var showScheduleList = false
+    @State private var showDDayList = false
 
     var body: some View {
         NavigationStack {
@@ -70,6 +73,44 @@ struct DashboardView: View {
             .loading(viewModel.isLoading && viewModel.myDetail == nil)
             .sheet(isPresented: $showNotifications) {
                 NotificationListView()
+            }
+            .confirmationDialog("메뉴", isPresented: $showMenu) {
+                Button("친구 관리") {
+                    showFriends = true
+                }
+
+                Button("일정 목록") {
+                    showScheduleList = true
+                }
+
+                Button("D-Day 관리") {
+                    showDDayList = true
+                }
+
+                Button("알림") {
+                    showNotifications = true
+                }
+
+                Button("로그아웃", role: .destructive) {
+                    authManager.logout()
+                }
+
+                Button("취소", role: .cancel) {}
+            }
+            .sheet(isPresented: $showFriends) {
+                NavigationStack {
+                    FriendsView()
+                }
+            }
+            .sheet(isPresented: $showScheduleList) {
+                NavigationStack {
+                    ScheduleListView()
+                }
+            }
+            .sheet(isPresented: $showDDayList) {
+                NavigationStack {
+                    DDayListView()
+                }
             }
         }
     }

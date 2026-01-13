@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import PhotosUI
 
 @MainActor
 class SettingsViewModel: ObservableObject {
@@ -7,6 +8,7 @@ class SettingsViewModel: ObservableObject {
     @Published var refreshTokens: [RefreshTokenDto] = []
     @Published var managers: [SimpleMemberDto] = []
     @Published var isLoading = false
+    @Published var isUploadingPhoto = false
     @Published var error: String?
 
     func loadProfile() async {
@@ -78,6 +80,40 @@ class SettingsViewModel: ObservableObject {
             return true
         } catch {
             self.error = error.localizedDescription
+            return false
+        }
+    }
+
+    func uploadProfilePhoto(imageData: Data) async -> Bool {
+        isUploadingPhoto = true
+        do {
+            try await APIClient.shared.uploadFile(
+                path: "/members/profile-photo",
+                method: .put,
+                fileData: imageData,
+                fileName: "profile.jpg",
+                mimeType: "image/jpeg"
+            )
+            await loadProfile()
+            isUploadingPhoto = false
+            return true
+        } catch {
+            self.error = error.localizedDescription
+            isUploadingPhoto = false
+            return false
+        }
+    }
+
+    func deleteProfilePhoto() async -> Bool {
+        isUploadingPhoto = true
+        do {
+            try await APIClient.shared.requestVoid(.deleteProfilePhoto)
+            await loadProfile()
+            isUploadingPhoto = false
+            return true
+        } catch {
+            self.error = error.localizedDescription
+            isUploadingPhoto = false
             return false
         }
     }

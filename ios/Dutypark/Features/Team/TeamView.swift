@@ -113,8 +113,9 @@ struct TeamView: View {
             Spacer()
 
             // Settings button
-            if viewModel.teamSummary?.isTeamManager == true {
-                NavigationLink(destination: TeamManageView()) {
+            if viewModel.teamSummary?.isTeamManager == true,
+               let teamId = viewModel.teamSummary?.team?.id {
+                NavigationLink(destination: TeamManageView(teamId: teamId)) {
                     Image(systemName: "gearshape")
                         .font(.subheadline)
                         .foregroundColor(colorScheme == .dark ? DesignSystem.Colors.Dark.textSecondary : DesignSystem.Colors.Light.textSecondary)

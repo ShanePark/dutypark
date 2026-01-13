@@ -5,6 +5,7 @@ struct DDayListView: View {
     @State private var showAddSheet = false
     @State private var ddayToDelete: DDayDto?
     @State private var showDeleteConfirmation = false
+    @State private var ddayToEdit: DDayDto?
 
     var body: some View {
         NavigationStack {
@@ -52,6 +53,9 @@ struct DDayListView: View {
             .sheet(isPresented: $showAddSheet) {
                 AddDDaySheet(viewModel: viewModel)
             }
+            .sheet(item: $ddayToEdit) { dday in
+                AddDDaySheet(viewModel: viewModel, ddayToEdit: dday)
+            }
             .alert("D-Day 삭제", isPresented: $showDeleteConfirmation) {
                 Button("취소", role: .cancel) { }
                 Button("삭제", role: .destructive) {
@@ -78,10 +82,16 @@ struct DDayListView: View {
                 .foregroundColor(.secondary)
 
             ForEach(ddays) { dday in
-                DDayCard(dday: dday) {
-                    ddayToDelete = dday
-                    showDeleteConfirmation = true
-                }
+                DDayCard(
+                    dday: dday,
+                    onEdit: {
+                        ddayToEdit = dday
+                    },
+                    onDelete: {
+                        ddayToDelete = dday
+                        showDeleteConfirmation = true
+                    }
+                )
             }
         }
     }

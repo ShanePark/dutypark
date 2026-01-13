@@ -68,7 +68,9 @@ final class ScheduleViewModel: ObservableObject {
         startTime: Date?,
         endTime: Date?,
         visibility: CalendarVisibility,
-        taggedFriendIds: [Int]
+        taggedFriendIds: [Int],
+        attachmentSessionId: String? = nil,
+        orderedAttachmentIds: [String]? = nil
     ) async -> Bool {
         let year = calendar.component(.year, from: date)
         let month = calendar.component(.month, from: date)
@@ -87,8 +89,8 @@ final class ScheduleViewModel: ObservableObject {
             endDateTime: endDateTime,
             visibility: visibility.rawValue,
             taggedMemberIds: taggedFriendIds.isEmpty ? nil : taggedFriendIds,
-            attachmentSessionId: nil,
-            orderedAttachmentIds: nil
+            attachmentSessionId: attachmentSessionId,
+            orderedAttachmentIds: orderedAttachmentIds
         )
 
         do {
@@ -112,7 +114,9 @@ final class ScheduleViewModel: ObservableObject {
         startTime: Date?,
         endTime: Date?,
         visibility: CalendarVisibility,
-        taggedFriendIds: [Int]
+        taggedFriendIds: [Int],
+        attachmentSessionId: String? = nil,
+        orderedAttachmentIds: [String]? = nil
     ) async -> Bool {
         let year = calendar.component(.year, from: date)
         let month = calendar.component(.month, from: date)
@@ -131,8 +135,8 @@ final class ScheduleViewModel: ObservableObject {
             endDateTime: endDateTime,
             visibility: visibility.rawValue,
             taggedMemberIds: taggedFriendIds.isEmpty ? nil : taggedFriendIds,
-            attachmentSessionId: nil,
-            orderedAttachmentIds: nil
+            attachmentSessionId: attachmentSessionId,
+            orderedAttachmentIds: orderedAttachmentIds
         )
 
         do {
@@ -224,6 +228,49 @@ final class ScheduleViewModel: ObservableObject {
             selectedMonth += 1
         }
         Task { await loadSchedules() }
+    }
+
+    // MARK: - Attachment Management
+
+    func createAttachmentSession(targetContextId: String? = nil) async -> String? {
+        let request = CreateSessionRequest(
+            contextType: AttachmentContextType.schedule.rawValue,
+            targetContextId: targetContextId
+        )
+
+        do {
+            let response = try await APIClient.shared.request(
+                .createAttachmentSession(request: request),
+                responseType: CreateSessionResponse.self
+            )
+            return response.sessionId
+        } catch {
+            self.error = error.localizedDescription
+            return nil
+        }
+    }
+
+    func uploadAttachment(sessionId: String, imageData: Data, fileName: String) async -> AttachmentDto? {
+        do {
+            let attachment = try await APIClient.shared.uploadAttachment(
+                sessionId: sessionId,
+                fileData: imageData,
+                fileName: fileName,
+                mimeType: "image/jpeg"
+            )
+            return attachment
+        } catch {
+            self.error = error.localizedDescription
+            return nil
+        }
+    }
+
+    func deleteAttachmentSession(_ sessionId: String) async {
+        do {
+            try await APIClient.shared.requestVoid(.deleteAttachmentSession(sessionId: sessionId))
+        } catch {
+            print("Failed to delete attachment session: \(error)")
+        }
     }
 
     private func buildDateTime(date: Date, time: Date?) -> String {

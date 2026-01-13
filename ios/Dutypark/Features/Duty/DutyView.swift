@@ -7,6 +7,7 @@ struct DutyView: View {
     @State private var showDayDetail = false
     @State private var selectedDay: Int = 0
     @State private var showAddDDay = false
+    @State private var selectedDDayForEdit: DDayDto?
     @State private var showSearch = false
 
     var body: some View {
@@ -54,7 +55,12 @@ struct DutyView: View {
                 DayDetailSheet(viewModel: viewModel, day: selectedDay)
             }
             .sheet(isPresented: $showAddDDay) {
-                AddDDaySheet(viewModel: ddayViewModel)
+                AddDDaySheet(viewModel: ddayViewModel, ddayToEdit: selectedDDayForEdit)
+            }
+            .onChange(of: showAddDDay) { _, isPresented in
+                if !isPresented {
+                    selectedDDayForEdit = nil
+                }
             }
         }
     }
@@ -266,7 +272,10 @@ struct DutyView: View {
             // D-Day cards in grid
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: DesignSystem.Spacing.md) {
                 ForEach(ddayViewModel.ddays) { dday in
-                    DDayCard(dday: dday, onDelete: {
+                    DDayCard(dday: dday, onEdit: {
+                        selectedDDayForEdit = dday
+                        showAddDDay = true
+                    }, onDelete: {
                         Task { await ddayViewModel.deleteDDay(dday.id) }
                     })
                 }

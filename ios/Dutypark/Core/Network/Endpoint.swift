@@ -160,11 +160,11 @@ extension Endpoint {
     }
 
     static func completeTodo(id: String) -> Endpoint {
-        Endpoint(path: "/todos/\(id)/complete", method: .post)
+        Endpoint(path: "/todos/\(id)/complete", method: .patch)
     }
 
     static func reopenTodo(id: String) -> Endpoint {
-        Endpoint(path: "/todos/\(id)/reopen", method: .post)
+        Endpoint(path: "/todos/\(id)/reopen", method: .patch)
     }
 
     // MARK: - Todo Extensions
@@ -228,6 +228,10 @@ extension Endpoint {
 
     static func removeManager(managerId: Int) -> Endpoint {
         Endpoint(path: "/members/manager/\(managerId)", method: .delete)
+    }
+
+    static var deleteProfilePhoto: Endpoint {
+        Endpoint(path: "/members/profile-photo", method: .delete)
     }
 
     // MARK: - Friends
@@ -355,6 +359,31 @@ extension Endpoint {
 
     static func deleteTeamSchedule(id: String) -> Endpoint {
         Endpoint(path: "/teams/schedules/\(id)", method: .delete)
+    }
+
+    // MARK: - Team Management
+    static func teamForManage(id: Int) -> Endpoint {
+        Endpoint(path: "/teams/manage/\(id)")
+    }
+
+    static func searchMembersToInvite(keyword: String, page: Int, size: Int) -> Endpoint {
+        Endpoint(path: "/teams/manage/members?keyword=\(keyword)&page=\(page)&size=\(size)")
+    }
+
+    static func addTeamMember(teamId: Int, memberId: Int) -> Endpoint {
+        Endpoint(path: "/teams/manage/\(teamId)/members?memberId=\(memberId)", method: .post)
+    }
+
+    static func removeTeamMember(teamId: Int, memberId: Int) -> Endpoint {
+        Endpoint(path: "/teams/manage/\(teamId)/members?memberId=\(memberId)", method: .delete)
+    }
+
+    static func addTeamManager(teamId: Int, memberId: Int) -> Endpoint {
+        Endpoint(path: "/teams/manage/\(teamId)/manager?memberId=\(memberId)", method: .post)
+    }
+
+    static func removeTeamManager(teamId: Int, memberId: Int) -> Endpoint {
+        Endpoint(path: "/teams/manage/\(teamId)/manager?memberId=\(memberId)", method: .delete)
     }
 
     // MARK: - Attachments
