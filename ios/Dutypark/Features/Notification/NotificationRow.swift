@@ -84,14 +84,22 @@ struct NotificationRow: View {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
 
-        guard let date = formatter.date(from: dateString) else {
+        let date = formatter.date(from: dateString) ?? {
             formatter.formatOptions = [.withInternetDateTime]
-            guard let date = formatter.date(from: dateString) else {
-                return dateString
-            }
-            return relativeDate(from: date)
-        }
-        return relativeDate(from: date)
+            return formatter.date(from: dateString)
+        }()
+
+        guard let date else { return dateString }
+        let relative = relativeDate(from: date)
+        let absolute = absoluteDate(from: date)
+        return "\(relative) (\(absolute))"
+    }
+
+    private func absoluteDate(from date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.dateFormat = "yyyy.MM.dd HH:mm"
+        return formatter.string(from: date)
     }
 
     private func relativeDate(from date: Date) -> String {

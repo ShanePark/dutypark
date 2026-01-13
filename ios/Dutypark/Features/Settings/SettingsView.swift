@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import UIKit
 
 struct SettingsView: View {
     @StateObject private var viewModel = SettingsViewModel()
@@ -14,6 +15,8 @@ struct SettingsView: View {
     @State private var showPhotoOptions = false
     @State private var showPhotoPicker = false
     @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var selectedCropImage: UIImage?
+    @State private var showCropSheet = false
     @State private var showDeletePhotoConfirmation = false
 
     var body: some View {
@@ -48,6 +51,16 @@ struct SettingsView: View {
 
                         // Social Account Section
                         socialAccountSection
+
+                        if authManager.currentUser?.isAdmin == true {
+                            adminSection
+                        }
+
+                        // Help Section
+                        helpSection
+
+                        // Policy Section
+                        policySection
 
                         // Account Management Section
                         accountManagementSection
@@ -171,12 +184,40 @@ struct SettingsView: View {
             guard let newItem = newItem else { return }
             Task {
                 if let data = try? await newItem.loadTransferable(type: Data.self) {
-                    if let image = UIImage(data: data),
-                       let jpegData = image.jpegData(compressionQuality: 0.8) {
-                        await viewModel.uploadProfilePhoto(imageData: jpegData)
+                    if let image = UIImage(data: data) {
+                        selectedCropImage = image
+                        showCropSheet = true
                     }
                 }
                 selectedPhotoItem = nil
+            }
+        }
+        .sheet(isPresented: $showCropSheet) {
+            if let selectedCropImage {
+                ProfilePhotoCropView(
+                    image: selectedCropImage,
+                    onSave: { cropped in
+                        Task {
+                            if let jpegData = cropped.jpegData(compressionQuality: 0.8) {
+                                await viewModel.uploadProfilePhoto(imageData: jpegData)
+                            }
+                        }
+                    },
+                    onDelete: viewModel.profile?.hasProfilePhoto == true ? {
+                        showDeletePhotoConfirmation = true
+                    } : nil,
+                    onSelectAnother: {
+                        Task { @MainActor in
+                            try? await Task.sleep(nanoseconds: 300_000_000)
+                            showPhotoPicker = true
+                        }
+                    }
+                )
+            }
+        }
+        .onChange(of: showCropSheet) { _, isPresented in
+            if !isPresented {
+                selectedCropImage = nil
             }
         }
         .alert("프로필 사진 삭제", isPresented: $showDeletePhotoConfirmation) {
@@ -386,6 +427,45 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Help Section
+    private var helpSection: some View {
+        SettingsSection(title: "도움말") {
+            NavigationLink {
+                GuideView()
+            } label: {
+                settingsRow(icon: "questionmark.circle", title: "이용 안내")
+            }
+        }
+    }
+
+    // MARK: - Admin Section
+    private var adminSection: some View {
+        SettingsSection(title: "관리자") {
+            NavigationLink {
+                AdminDashboardView()
+            } label: {
+                settingsRow(icon: "shield.lefthalf.filled", title: "관리자 대시보드")
+            }
+        }
+    }
+
+    // MARK: - Policy Section
+    private var policySection: some View {
+        SettingsSection(title: "약관 및 정책") {
+            NavigationLink {
+                PolicyDetailView(type: .terms)
+            } label: {
+                settingsRow(icon: "doc.text", title: "이용약관")
+            }
+
+            NavigationLink {
+                PolicyDetailView(type: .privacy)
+            } label: {
+                settingsRow(icon: "lock.shield", title: "개인정보 처리방침")
+            }
+        }
+    }
+
     // MARK: - Account Management Section
     private var accountManagementSection: some View {
         SettingsSection(title: "회원정보 관리") {
@@ -430,6 +510,22 @@ struct SettingsView: View {
                 }
             }
         }
+    }
+
+    private func settingsRow(icon: String, title: String) -> some View {
+        HStack {
+            Image(systemName: icon)
+                .font(.subheadline)
+            Text(title)
+                .font(.subheadline)
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.caption)
+        }
+        .foregroundColor(colorScheme == .dark ? DesignSystem.Colors.Dark.textPrimary : DesignSystem.Colors.Light.textPrimary)
+        .padding(DesignSystem.Spacing.lg)
+        .background(colorScheme == .dark ? DesignSystem.Colors.Dark.bgTertiary : DesignSystem.Colors.Light.bgTertiary)
+        .cornerRadius(DesignSystem.CornerRadius.sm)
     }
 
     private func setAppearance(isDark: Bool) {

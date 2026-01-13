@@ -41,6 +41,8 @@ struct Schedule: Decodable, Identifiable, Sendable {
     let visibility: CalendarVisibility?
     let dateToCompare: String?
     let attachments: [Attachment]
+    let daysFromStart: Int?
+    let totalDays: Int?
 
     // Computed property to extract time from startDateTime
     var startTime: String? {

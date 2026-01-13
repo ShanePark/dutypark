@@ -2,39 +2,49 @@ import SwiftUI
 
 struct DDayCard: View {
     let dday: DDayDto
-    let onEdit: () -> Void
-    let onDelete: () -> Void
+    let isPinned: Bool
+    let onSelect: () -> Void
+    let onTogglePin: () -> Void
+    let onEdit: (() -> Void)?
+    let onDelete: (() -> Void)?
 
     var body: some View {
-        Button(action: onEdit) {
-            HStack(spacing: 16) {
-                // D-Day badge
-                DDayBadge(daysLeft: dday.daysLeft)
+        HStack(spacing: 16) {
+            // D-Day badge
+            DDayBadge(daysLeft: dday.daysLeft)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text(dday.title)
-                            .font(.headline)
-                            .foregroundColor(.primary)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(dday.title)
+                        .font(.headline)
+                        .foregroundColor(.primary)
 
-                        if dday.isPrivate {
-                            Image(systemName: "lock.fill")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
+                    if dday.isPrivate {
+                        Image(systemName: "lock.fill")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
-
-                    Text(formatDate(dday.date))
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
                 }
 
-                Spacer()
+                Text(formatDate(dday.date))
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
 
-                // Edit button
-                Button {
-                    onEdit()
-                } label: {
+            Spacer()
+
+            Button(action: onTogglePin) {
+                Image(systemName: isPinned ? "star.fill" : "star")
+                    .font(.caption)
+                    .foregroundColor(isPinned ? Color(hex: "#F59E0B")! : Color.gray)
+                    .padding(8)
+                    .background((isPinned ? Color(hex: "#FDE68A")! : Color(.systemGray6)))
+                    .cornerRadius(8)
+            }
+            .buttonStyle(.plain)
+
+            if let onEdit {
+                Button(action: onEdit) {
                     Image(systemName: "pencil")
                         .font(.caption)
                         .foregroundColor(.blue)
@@ -42,11 +52,11 @@ struct DDayCard: View {
                         .background(Color.blue.opacity(0.1))
                         .cornerRadius(8)
                 }
+                .buttonStyle(.plain)
+            }
 
-                // Delete button
-                Button {
-                    onDelete()
-                } label: {
+            if let onDelete {
+                Button(action: onDelete) {
                     Image(systemName: "trash")
                         .font(.caption)
                         .foregroundColor(.red)
@@ -54,13 +64,17 @@ struct DDayCard: View {
                         .background(Color.red.opacity(0.1))
                         .cornerRadius(8)
                 }
+                .buttonStyle(.plain)
             }
-            .padding()
-            .background(cardBackground)
-            .cornerRadius(12)
-            .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
         }
-        .buttonStyle(.plain)
+        .padding()
+        .background(cardBackground)
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onSelect()
+        }
     }
 
     @ViewBuilder
@@ -98,16 +112,25 @@ struct DDayCard: View {
     VStack(spacing: 12) {
         DDayCard(
             dday: DDayDto(id: 1, title: "생일", date: "2025-06-15", isPrivate: false, calc: 0, daysLeft: 0),
+            isPinned: true,
+            onSelect: {},
+            onTogglePin: {},
             onEdit: {},
             onDelete: {}
         )
         DDayCard(
             dday: DDayDto(id: 2, title: "기념일", date: "2025-06-20", isPrivate: true, calc: 5, daysLeft: 5),
+            isPinned: false,
+            onSelect: {},
+            onTogglePin: {},
             onEdit: {},
             onDelete: {}
         )
         DDayCard(
             dday: DDayDto(id: 3, title: "지난 이벤트", date: "2025-06-01", isPrivate: false, calc: -10, daysLeft: -10),
+            isPinned: false,
+            onSelect: {},
+            onTogglePin: {},
             onEdit: {},
             onDelete: {}
         )

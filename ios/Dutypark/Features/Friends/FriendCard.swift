@@ -2,56 +2,52 @@ import SwiftUI
 
 struct FriendCard: View {
     let friend: Friend
-    let onTap: () -> Void
 
     var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: 12) {
-                ProfileAvatar(
-                    memberId: friend.id,
-                    name: friend.name,
-                    hasProfilePhoto: friend.hasProfilePhoto ?? false,
-                    profilePhotoVersion: friend.profilePhotoVersion,
-                    size: 48
-                )
+        HStack(spacing: 12) {
+            ProfileAvatar(
+                memberId: friend.id,
+                name: friend.name,
+                hasProfilePhoto: friend.hasProfilePhoto ?? false,
+                profilePhotoVersion: friend.profilePhotoVersion,
+                size: 48
+            )
 
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text(friend.name)
-                            .font(.headline)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(friend.name)
+                        .font(.headline)
 
-                        if friend.isFamily {
-                            Image(systemName: "house.fill")
-                                .font(.caption)
-                                .foregroundColor(.purple)
-                        }
-
-                        if friend.isPinned {
-                            Image(systemName: "pin.fill")
-                                .font(.caption)
-                                .foregroundColor(.orange)
-                        }
+                    if friend.isFamily {
+                        Image(systemName: "house.fill")
+                            .font(.caption)
+                            .foregroundColor(.purple)
                     }
 
-                    if let team = friend.team {
-                        Text(team)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+                    if friend.isPinned {
+                        Image(systemName: "pin.fill")
+                            .font(.caption)
+                            .foregroundColor(.orange)
                     }
                 }
 
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                if let team = friend.team {
+                    Text(team)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
             }
-            .padding()
-            .background(friend.isPinned ? Color.orange.opacity(0.05) : Color(.systemBackground))
-            .cornerRadius(12)
-            .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
-        .buttonStyle(.plain)
+        .padding()
+        .background(friend.isPinned ? Color.orange.opacity(0.05) : Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
     }
 }
 
@@ -67,9 +63,7 @@ struct FriendCard: View {
                 hasProfilePhoto: false,
                 profilePhotoVersion: nil
             )
-        ) {
-            print("Tapped")
-        }
+        )
 
         FriendCard(
             friend: Friend(
@@ -81,9 +75,7 @@ struct FriendCard: View {
                 hasProfilePhoto: false,
                 profilePhotoVersion: nil
             )
-        ) {
-            print("Tapped")
-        }
+        )
     }
     .padding()
 }

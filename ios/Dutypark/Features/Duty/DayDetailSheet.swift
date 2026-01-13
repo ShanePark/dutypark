@@ -3,14 +3,23 @@ import SwiftUI
 struct DayDetailSheet: View {
     @ObservedObject var viewModel: DutyViewModel
     let day: Int
+    let isReadOnly: Bool
     @Environment(\.dismiss) private var dismiss
     @State private var showAddSchedule = false
     @State private var scheduleToEdit: Schedule?
     @State private var showEditSchedule = false
     @State private var todoToEdit: Todo?
     @State private var showTodoDetail = false
+    @State private var scheduleToUntag: Schedule?
+    @State private var showUntagConfirmation = false
     @StateObject private var scheduleViewModel = ScheduleViewModel()
     @StateObject private var todoViewModel = TodoViewModel()
+
+    init(viewModel: DutyViewModel, day: Int, isReadOnly: Bool = false) {
+        self.viewModel = viewModel
+        self.day = day
+        self.isReadOnly = isReadOnly
+    }
 
     private var initialDate: Date {
         var components = DateComponents()
@@ -26,7 +35,7 @@ struct DayDetailSheet: View {
                 VStack(spacing: 20) {
                     dateHeader
 
-                    if viewModel.canManage {
+                    if viewModel.canManage && !isReadOnly {
                         dutyQuickButtons
                     }
 
@@ -46,15 +55,17 @@ struct DayDetailSheet: View {
                 }
             }
             .sheet(isPresented: $showAddSchedule) {
-                ScheduleEditView(
-                    viewModel: scheduleViewModel,
-                    initialDate: initialDate
-                ) {
-                    Task { await viewModel.loadDutyData() }
+                if !isReadOnly {
+                    ScheduleEditView(
+                        viewModel: scheduleViewModel,
+                        initialDate: initialDate
+                    ) {
+                        Task { await viewModel.loadDutyData() }
+                    }
                 }
             }
             .sheet(isPresented: $showEditSchedule) {
-                if let schedule = scheduleToEdit {
+                if !isReadOnly, let schedule = scheduleToEdit {
                     ScheduleEditView(
                         viewModel: scheduleViewModel,
                         schedule: schedule,
@@ -69,11 +80,28 @@ struct DayDetailSheet: View {
                     TodoDetailSheet(viewModel: todoViewModel, todo: todo)
                 }
             }
+            .alert("태그 제거", isPresented: $showUntagConfirmation, presenting: scheduleToUntag) { schedule in
+                Button("취소", role: .cancel) {}
+                Button("제거", role: .destructive) {
+                    Task {
+                        if await scheduleViewModel.untagSelf(scheduleId: schedule.id) {
+                            await viewModel.loadDutyData()
+                        }
+                    }
+                }
+            } message: { schedule in
+                Text("'\(schedule.content)' 일정에서 태그를 제거할까요?")
+            }
         }
     }
 
     private var dateHeader: some View {
         VStack(spacing: 8) {
+            Text(formattedDate)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
             if let duty = viewModel.duties[day] {
                 HStack {
                     Circle()
@@ -90,14 +118,18 @@ struct DayDetailSheet: View {
                 .cornerRadius(12)
             }
 
-            if let holidayName = viewModel.holidays[day] {
-                HStack {
-                    Image(systemName: "calendar")
-                        .foregroundColor(.red)
-                    Text(holidayName)
-                        .font(.subheadline)
-                        .foregroundColor(.red)
-                    Spacer()
+            if let holidays = viewModel.holidays[day], !holidays.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(Array(holidays.enumerated()), id: \.offset) { _, holiday in
+                        HStack {
+                            Image(systemName: "calendar")
+                                .foregroundColor(holiday.isHoliday ? .red : .secondary)
+                            Text(holiday.dateName)
+                                .font(.subheadline)
+                                .foregroundColor(holiday.isHoliday ? .red : .secondary)
+                            Spacer()
+                        }
+                    }
                 }
             }
         }
@@ -151,21 +183,17 @@ struct DayDetailSheet: View {
             HStack {
                 Text("일정")
                     .font(.headline)
-
                 Spacer()
-
-                Button {
-                    showAddSchedule = true
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .foregroundColor(.blue)
-                }
             }
 
             if let schedules = viewModel.schedulesByDay[day], !schedules.isEmpty {
                 ForEach(schedules) { schedule in
-                    ScheduleCard(schedule: schedule)
+                    ScheduleCard(schedule: schedule, onUntag: schedule.isTagged ? {
+                        scheduleToUntag = schedule
+                        showUntagConfirmation = true
+                    } : nil)
                         .onTapGesture {
+                            guard !isReadOnly, !schedule.isTagged else { return }
                             scheduleToEdit = schedule
                             showEditSchedule = true
                         }
@@ -176,6 +204,24 @@ struct DayDetailSheet: View {
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity)
                     .padding()
+            }
+
+            if !isReadOnly {
+                Button {
+                    showAddSchedule = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "plus")
+                        Text("일정 추가")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(DesignSystem.Colors.success)
+                    .cornerRadius(12)
+                }
             }
         }
     }
@@ -215,10 +261,18 @@ struct DayDetailSheet: View {
         guard let currentDuty = viewModel.duties[day] else { return false }
         return currentDuty.dutyType == dutyType.name
     }
+
+    private var formattedDate: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.dateFormat = "yyyy년 M월 d일 (EEE)"
+        return formatter.string(from: initialDate)
+    }
 }
 
 struct ScheduleCard: View {
     let schedule: Schedule
+    let onUntag: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -231,6 +285,43 @@ struct ScheduleCard: View {
 
                 if let visibility = schedule.visibility {
                     VisibilityBadge(visibility: visibility)
+                }
+            }
+
+            if schedule.isTagged, let owner = schedule.owner, !owner.isEmpty {
+                HStack(spacing: 4) {
+                    Text("by \(owner)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    Spacer()
+
+                    if let onUntag {
+                        Button(action: onUntag) {
+                            Label("태그 제거", systemImage: "xmark")
+                                .font(.caption2)
+                                .foregroundColor(.red)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.red.opacity(0.1))
+                                .cornerRadius(8)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            } else if schedule.isTagged, let onUntag {
+                HStack {
+                    Spacer()
+                    Button(action: onUntag) {
+                        Label("태그 제거", systemImage: "xmark")
+                            .font(.caption2)
+                            .foregroundColor(.red)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(8)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
 

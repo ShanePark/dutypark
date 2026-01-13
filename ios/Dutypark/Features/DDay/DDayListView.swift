@@ -3,9 +3,7 @@ import SwiftUI
 struct DDayListView: View {
     @StateObject private var viewModel = DDayViewModel()
     @State private var showAddSheet = false
-    @State private var ddayToDelete: DDayDto?
-    @State private var showDeleteConfirmation = false
-    @State private var ddayToEdit: DDayDto?
+    @State private var selectedDDay: DDayDto?
 
     var body: some View {
         NavigationStack {
@@ -48,28 +46,30 @@ struct DDayListView: View {
                 }
             }
             .refreshable {
-                await viewModel.loadDDays()
+                let memberId = AuthManager.shared.currentUser?.id
+                await viewModel.loadDDays(memberId: memberId)
+                if let memberId {
+                    viewModel.loadPinnedDDay(memberId: memberId)
+                }
             }
             .sheet(isPresented: $showAddSheet) {
                 AddDDaySheet(viewModel: viewModel)
             }
-            .sheet(item: $ddayToEdit) { dday in
-                AddDDaySheet(viewModel: viewModel, ddayToEdit: dday)
-            }
-            .alert("D-Day 삭제", isPresented: $showDeleteConfirmation) {
-                Button("취소", role: .cancel) { }
-                Button("삭제", role: .destructive) {
-                    if let dday = ddayToDelete {
-                        Task { await viewModel.deleteDDay(dday.id) }
-                    }
-                }
-            } message: {
-                if let dday = ddayToDelete {
-                    Text("'\(dday.title)'을(를) 삭제하시겠습니까?")
+            .sheet(item: $selectedDDay) { dday in
+                DDayDetailSheet(
+                    dday: dday,
+                    viewModel: viewModel,
+                    memberId: AuthManager.shared.currentUser?.id
+                ) {
+                    selectedDDay = nil
                 }
             }
             .task {
-                await viewModel.loadDDays()
+                let memberId = AuthManager.shared.currentUser?.id
+                await viewModel.loadDDays(memberId: memberId)
+                if let memberId {
+                    viewModel.loadPinnedDDay(memberId: memberId)
+                }
             }
             .loading(viewModel.isLoading)
         }
@@ -84,13 +84,17 @@ struct DDayListView: View {
             ForEach(ddays) { dday in
                 DDayCard(
                     dday: dday,
-                    onEdit: {
-                        ddayToEdit = dday
+                    isPinned: viewModel.pinnedDDayId == dday.id,
+                    onSelect: {
+                        selectedDDay = dday
                     },
-                    onDelete: {
-                        ddayToDelete = dday
-                        showDeleteConfirmation = true
-                    }
+                    onTogglePin: {
+                        if let memberId = AuthManager.shared.currentUser?.id {
+                            viewModel.togglePinnedDDay(dday, memberId: memberId)
+                        }
+                    },
+                    onEdit: nil,
+                    onDelete: nil
                 )
             }
         }

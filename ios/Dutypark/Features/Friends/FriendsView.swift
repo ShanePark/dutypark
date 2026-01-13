@@ -3,8 +3,7 @@ import SwiftUI
 struct FriendsView: View {
     @StateObject private var viewModel = FriendsViewModel()
     @State private var showAddFriendSheet = false
-    @State private var selectedFriend: Friend?
-    @State private var showFriendActionSheet = false
+    @State private var friendToDelete: Friend?
     @State private var showDeleteConfirmation = false
 
     var body: some View {
@@ -50,35 +49,10 @@ struct FriendsView: View {
             .sheet(isPresented: $showAddFriendSheet) {
                 AddFriendSheet(viewModel: viewModel)
             }
-            .confirmationDialog("친구 관리", isPresented: $showFriendActionSheet, presenting: selectedFriend) { friend in
-                if friend.isFamily {
-                    Button("친구로 변경") {
-                        Task { await viewModel.demoteFromFamily(friend.id) }
-                    }
-                } else {
-                    Button("가족으로 변경") {
-                        Task { await viewModel.upgradeToFamily(friend.id) }
-                    }
-                }
-
-                if friend.isPinned {
-                    Button("고정 해제") {
-                        Task { await viewModel.unpinFriend(friend.id) }
-                    }
-                } else {
-                    Button("상단 고정") {
-                        Task { await viewModel.pinFriend(friend.id) }
-                    }
-                }
-
-                Button("친구 삭제", role: .destructive) {
-                    showDeleteConfirmation = true
-                }
-            }
             .alert("친구 삭제", isPresented: $showDeleteConfirmation) {
                 Button("취소", role: .cancel) { }
                 Button("삭제", role: .destructive) {
-                    if let friend = selectedFriend {
+                    if let friend = friendToDelete {
                         Task { await viewModel.unfriend(friend.id) }
                     }
                 }
@@ -150,9 +124,36 @@ struct FriendsView: View {
                 let unpinnedFriends = viewModel.friends.filter { !$0.isPinned }
 
                 ForEach(pinnedFriends + unpinnedFriends) { friend in
-                    FriendCard(friend: friend) {
-                        selectedFriend = friend
-                        showFriendActionSheet = true
+                    NavigationLink {
+                        DutyView(member: friend)
+                    } label: {
+                        FriendCard(friend: friend)
+                    }
+                    .contextMenu {
+                        if friend.isFamily {
+                            Button("친구로 변경") {
+                                Task { await viewModel.demoteFromFamily(friend.id) }
+                            }
+                        } else {
+                            Button("가족으로 변경") {
+                                Task { await viewModel.upgradeToFamily(friend.id) }
+                            }
+                        }
+
+                        if friend.isPinned {
+                            Button("고정 해제") {
+                                Task { await viewModel.unpinFriend(friend.id) }
+                            }
+                        } else {
+                            Button("상단 고정") {
+                                Task { await viewModel.pinFriend(friend.id) }
+                            }
+                        }
+
+                        Button("친구 삭제", role: .destructive) {
+                            friendToDelete = friend
+                            showDeleteConfirmation = true
+                        }
                     }
                 }
             }

@@ -2,7 +2,8 @@ import Foundation
 
 // MARK: - Auth Requests
 struct ChangePasswordRequest: Encodable {
-    let currentPassword: String
+    let memberId: Int?
+    let currentPassword: String?
     let newPassword: String
 }
 

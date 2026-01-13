@@ -1,5 +1,13 @@
 import Foundation
 
+struct OtherDutySummary: Identifiable {
+    let id = UUID()
+    let name: String
+    let dutyType: String?
+    let dutyColor: String?
+    let isOff: Bool
+}
+
 @MainActor
 final class DutyViewModel: ObservableObject {
     @Published var duties: [Int: DutyCalendarDay] = [:]
@@ -11,9 +19,11 @@ final class DutyViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
     @Published var canManage = false
-    @Published var holidays: [Int: String] = [:]
+    @Published var holidays: [Int: [HolidayDto]] = [:]
     @Published var schedulesByDay: [Int: [Schedule]] = [:]
     @Published var todosByDay: [Int: [Todo]] = [:]
+    @Published var otherDutiesByDay: [Int: [OtherDutySummary]] = [:]
+    @Published var selectedCompareMemberIds: [Int] = []
 
     var memberId: Int?
 
@@ -63,25 +73,15 @@ final class DutyViewModel: ObservableObject {
         do {
             let response = try await APIClient.shared.request(
                 .duties(memberId: memberId, year: selectedYear, month: selectedMonth),
-                responseType: DutyResponse.self
+                responseType: [DutyCalendarDay].self
             )
 
             var byDay: [Int: DutyCalendarDay] = [:]
-            for (dayString, dutyInfo) in response.duties {
-                if let day = Int(dayString) {
-                    byDay[day] = DutyCalendarDay(
-                        year: selectedYear,
-                        month: selectedMonth,
-                        day: day,
-                        dutyType: dutyInfo.name,
-                        dutyColor: dutyInfo.color,
-                        isOff: false
-                    )
-                }
+            for duty in response where duty.year == selectedYear && duty.month == selectedMonth {
+                byDay[duty.day] = duty
             }
             duties = byDay
-            dutyTypes = response.dutyTypes
-            memberInfo = (response.memberId, response.memberName)
+            await loadDutyTypes()
 
             let canManageResponse = try await APIClient.shared.request(
                 .canManageMember(memberId: memberId),
@@ -92,6 +92,7 @@ final class DutyViewModel: ObservableObject {
             await loadHolidays()
             await loadSchedules()
             await loadTodos()
+            await loadOtherDuties()
         } catch {
             self.error = error.localizedDescription
         }
@@ -103,13 +104,14 @@ final class DutyViewModel: ObservableObject {
         do {
             let response = try await APIClient.shared.request(
                 .holidays(year: selectedYear, month: selectedMonth),
-                responseType: [HolidayDto].self
+                responseType: [[HolidayDto]].self
             )
-            var holidaysByDay: [Int: String] = [:]
-            for holiday in response {
-                let components = holiday.localDate.split(separator: "-")
-                if let day = Int(components.last ?? "") {
-                    holidaysByDay[day] = holiday.dateName
+            var holidaysByDay: [Int: [HolidayDto]] = [:]
+            for dayHolidays in response {
+                for holiday in dayHolidays {
+                    guard let components = parseLocalDate(holiday.localDate) else { continue }
+                    guard components.year == selectedYear, components.month == selectedMonth, let day = components.day else { continue }
+                    holidaysByDay[day, default: []].append(holiday)
                 }
             }
             holidays = holidaysByDay
@@ -119,14 +121,22 @@ final class DutyViewModel: ObservableObject {
     }
 
     func loadSchedules() async {
+        guard let memberId = memberId ?? AuthManager.shared.currentUser?.id else { return }
+
         do {
             let response = try await APIClient.shared.request(
-                .schedules(year: selectedYear, month: selectedMonth),
+                .schedules(memberId: memberId, year: selectedYear, month: selectedMonth),
                 responseType: [[Schedule]].self
             )
             var byDay: [Int: [Schedule]] = [:]
-            for (index, schedules) in response.enumerated() {
-                byDay[index + 1] = schedules
+            for schedules in response {
+                for schedule in schedules {
+                    guard schedule.year == selectedYear, schedule.month == selectedMonth else { continue }
+                    byDay[schedule.dayOfMonth, default: []].append(schedule)
+                }
+            }
+            for day in byDay.keys {
+                byDay[day]?.sort { $0.position < $1.position }
             }
             schedulesByDay = byDay
         } catch {
@@ -155,6 +165,42 @@ final class DutyViewModel: ObservableObject {
             todosByDay = byDay
         } catch {
             print("Failed to load todos: \(error)")
+        }
+    }
+
+    func updateCompareMembers(_ memberIds: [Int]) async {
+        selectedCompareMemberIds = memberIds
+        await loadOtherDuties()
+    }
+
+    func loadOtherDuties() async {
+        guard !selectedCompareMemberIds.isEmpty else {
+            otherDutiesByDay = [:]
+            return
+        }
+
+        do {
+            let response = try await APIClient.shared.request(
+                .otherDuties(memberIds: selectedCompareMemberIds, year: selectedYear, month: selectedMonth),
+                responseType: [OtherDutyResponse].self
+            )
+
+            var byDay: [Int: [OtherDutySummary]] = [:]
+            for friend in response {
+                for duty in friend.duties where duty.year == selectedYear && duty.month == selectedMonth {
+                    let summary = OtherDutySummary(
+                        name: friend.name,
+                        dutyType: duty.dutyType,
+                        dutyColor: duty.dutyColor,
+                        isOff: duty.isOff
+                    )
+                    byDay[duty.day, default: []].append(summary)
+                }
+            }
+
+            otherDutiesByDay = byDay
+        } catch {
+            otherDutiesByDay = [:]
         }
     }
 
@@ -212,5 +258,42 @@ final class DutyViewModel: ObservableObject {
         selectedYear = calendar.component(.year, from: date)
         selectedMonth = calendar.component(.month, from: date)
         await loadDutyData()
+    }
+
+    private func loadDutyTypes() async {
+        guard let teamId = AuthManager.shared.currentUser?.teamId else {
+            dutyTypes = []
+            return
+        }
+
+        do {
+            let team = try await APIClient.shared.request(
+                .team(id: teamId),
+                responseType: TeamDto.self
+            )
+            dutyTypes = team.dutyTypes.compactMap { type in
+                guard let id = type.id else { return nil }
+                return DutyType(
+                    id: id,
+                    name: type.name,
+                    color: type.color ?? "#9CA3AF",
+                    shortName: nil
+                )
+            }
+        } catch {
+            print("Failed to load duty types: \(error)")
+            dutyTypes = []
+        }
+    }
+
+    private func parseLocalDate(_ value: String) -> DateComponents? {
+        let parts = value.split(separator: "-")
+        guard parts.count == 3,
+              let year = Int(parts[0]),
+              let month = Int(parts[1]),
+              let day = Int(parts[2]) else {
+            return nil
+        }
+        return DateComponents(year: year, month: month, day: day)
     }
 }

@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct TodoBoardView: View {
     @StateObject private var viewModel = TodoViewModel()
@@ -8,6 +9,8 @@ struct TodoBoardView: View {
     @State private var selectedTodo: Todo?
     @State private var showTodoDetail = false
     @State private var selectedFilter: TodoFilterType = .all
+    @State private var draggingTodo: Todo?
+    @State private var showHelp = false
 
     enum TodoFilterType: String, CaseIterable {
         case all = "모든 할일"
@@ -45,6 +48,9 @@ struct TodoBoardView: View {
                     TodoDetailSheet(viewModel: viewModel, todo: todo)
                 }
             }
+            .sheet(isPresented: $showHelp) {
+                TodoHelpSheet()
+            }
             .task {
                 await viewModel.loadTodoBoard()
             }
@@ -76,7 +82,7 @@ struct TodoBoardView: View {
 
             // Help button
             Button {
-                // Show help
+                showHelp = true
             } label: {
                 Image(systemName: "questionmark.circle")
                     .font(.title3)
@@ -143,16 +149,22 @@ struct TodoBoardView: View {
                         icon: "circle",
                         color: .blue,
                         items: viewModel.todoItems,
-                        count: viewModel.counts?.todo ?? 0
-                    ) {
-                        addTodoStatus = .todo
-                        showAddTodo = true
-                    } onTap: { todo in
-                        selectedTodo = todo
-                        showTodoDetail = true
-                    } onStatusChange: { todo, newStatus in
-                        Task { await viewModel.changeTodoStatus(id: todo.id, newStatus: newStatus) }
-                    }
+                        count: viewModel.counts?.todo ?? 0,
+                        status: .todo,
+                        onAdd: {
+                            addTodoStatus = .todo
+                            showAddTodo = true
+                        },
+                        onTap: { todo in
+                            selectedTodo = todo
+                            showTodoDetail = true
+                        },
+                        onStatusChange: { todo, newStatus in
+                            Task { await viewModel.changeTodoStatus(id: todo.id, newStatus: newStatus) }
+                        },
+                        draggingTodo: $draggingTodo,
+                        onDrop: handleDrop
+                    )
                 }
 
                 // IN PROGRESS Column
@@ -162,16 +174,22 @@ struct TodoBoardView: View {
                         icon: "clock",
                         color: .orange,
                         items: viewModel.inProgressItems,
-                        count: viewModel.counts?.inProgress ?? 0
-                    ) {
-                        addTodoStatus = .inProgress
-                        showAddTodo = true
-                    } onTap: { todo in
-                        selectedTodo = todo
-                        showTodoDetail = true
-                    } onStatusChange: { todo, newStatus in
-                        Task { await viewModel.changeTodoStatus(id: todo.id, newStatus: newStatus) }
-                    }
+                        count: viewModel.counts?.inProgress ?? 0,
+                        status: .inProgress,
+                        onAdd: {
+                            addTodoStatus = .inProgress
+                            showAddTodo = true
+                        },
+                        onTap: { todo in
+                            selectedTodo = todo
+                            showTodoDetail = true
+                        },
+                        onStatusChange: { todo, newStatus in
+                            Task { await viewModel.changeTodoStatus(id: todo.id, newStatus: newStatus) }
+                        },
+                        draggingTodo: $draggingTodo,
+                        onDrop: handleDrop
+                    )
                 }
 
                 // DONE Column
@@ -181,20 +199,37 @@ struct TodoBoardView: View {
                         icon: "checkmark.circle",
                         color: .green,
                         items: viewModel.doneItems,
-                        count: viewModel.counts?.done ?? 0
-                    ) {
-                        addTodoStatus = .done
-                        showAddTodo = true
-                    } onTap: { todo in
-                        selectedTodo = todo
-                        showTodoDetail = true
-                    } onStatusChange: { todo, newStatus in
-                        Task { await viewModel.changeTodoStatus(id: todo.id, newStatus: newStatus) }
-                    }
+                        count: viewModel.counts?.done ?? 0,
+                        status: .done,
+                        onAdd: {
+                            addTodoStatus = .done
+                            showAddTodo = true
+                        },
+                        onTap: { todo in
+                            selectedTodo = todo
+                            showTodoDetail = true
+                        },
+                        onStatusChange: { todo, newStatus in
+                            Task { await viewModel.changeTodoStatus(id: todo.id, newStatus: newStatus) }
+                        },
+                        draggingTodo: $draggingTodo,
+                        onDrop: handleDrop
+                    )
                 }
             }
             .padding(.horizontal, DesignSystem.Spacing.lg)
             .padding(.bottom, 100)
+        }
+    }
+
+    private func handleDrop(_ todo: Todo, _ status: TodoStatus, _ orderedIds: [String]) {
+        Task {
+            if todo.status == status {
+                _ = await viewModel.updateTodoPositions(status: status, orderedIds: orderedIds)
+            } else {
+                _ = await viewModel.changeTodoStatus(id: todo.id, newStatus: status, orderedIds: orderedIds)
+            }
+            draggingTodo = nil
         }
     }
 }
@@ -248,9 +283,12 @@ struct KanbanColumn: View {
     let color: Color
     let items: [Todo]
     let count: Int
+    let status: TodoStatus
     let onAdd: () -> Void
     let onTap: (Todo) -> Void
     let onStatusChange: (Todo, TodoStatus) -> Void
+    @Binding var draggingTodo: Todo?
+    let onDrop: (Todo, TodoStatus, [String]) -> Void
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
@@ -296,6 +334,21 @@ struct KanbanColumn: View {
                         KanbanCard(todo: todo, columnColor: color) {
                             onTap(todo)
                         }
+                        .opacity(draggingTodo?.id == todo.id ? 0.4 : 1)
+                        .onDrag {
+                            draggingTodo = todo
+                            return NSItemProvider(object: todo.id as NSString)
+                        }
+                        .onDrop(
+                            of: [.text],
+                            delegate: TodoDropDelegate(
+                                targetTodo: todo,
+                                items: items,
+                                status: status,
+                                draggingTodo: $draggingTodo,
+                                onDrop: onDrop
+                            )
+                        )
                         .contextMenu {
                             if todo.status != .todo {
                                 Button {
@@ -335,12 +388,50 @@ struct KanbanColumn: View {
                     }
                 }
                 .padding(DesignSystem.Spacing.lg)
+                .onDrop(
+                    of: [.text],
+                    delegate: TodoDropDelegate(
+                        targetTodo: nil,
+                        items: items,
+                        status: status,
+                        draggingTodo: $draggingTodo,
+                        onDrop: onDrop
+                    )
+                )
             }
             .background(colorScheme == .dark ? DesignSystem.Colors.Dark.bgCard : DesignSystem.Colors.Light.bgCard)
             .cornerRadius(DesignSystem.CornerRadius.md, corners: [.bottomLeft, .bottomRight])
         }
         .frame(width: 300)
         .shadow(color: DesignSystem.Shadow.sm(colorScheme), radius: 4, x: 0, y: 2)
+    }
+}
+
+struct TodoDropDelegate: DropDelegate {
+    let targetTodo: Todo?
+    let items: [Todo]
+    let status: TodoStatus
+    @Binding var draggingTodo: Todo?
+    let onDrop: (Todo, TodoStatus, [String]) -> Void
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        guard let draggingTodo else { return false }
+
+        var newItems = items.filter { $0.id != draggingTodo.id }
+        if let targetTodo,
+           let index = newItems.firstIndex(where: { $0.id == targetTodo.id }) {
+            newItems.insert(draggingTodo, at: index)
+        } else {
+            newItems.append(draggingTodo)
+        }
+
+        onDrop(draggingTodo, status, newItems.map { $0.id })
+        self.draggingTodo = nil
+        return true
     }
 }
 
@@ -384,14 +475,10 @@ struct KanbanCard: View {
 
                     Spacer()
 
-                    if let attachments = todo.attachments, !attachments.isEmpty {
-                        HStack(spacing: DesignSystem.Spacing.xxs) {
-                            Image(systemName: "paperclip")
-                                .font(.caption2)
-                            Text("\(attachments.count)")
-                                .font(.caption2)
-                        }
-                        .foregroundColor(colorScheme == .dark ? DesignSystem.Colors.Dark.textMuted : DesignSystem.Colors.Light.textMuted)
+                    if todo.hasAttachments {
+                        Image(systemName: "paperclip")
+                            .font(.caption2)
+                            .foregroundColor(colorScheme == .dark ? DesignSystem.Colors.Dark.textMuted : DesignSystem.Colors.Light.textMuted)
                     }
                 }
             }

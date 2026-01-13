@@ -10,7 +10,7 @@ struct Todo: Decodable, Identifiable {
     let completedDate: String?
     let dueDate: String?
     let isOverdue: Bool
-    let attachments: [Attachment]?
+    let hasAttachments: Bool
 }
 
 enum TodoStatus: String, Decodable, CaseIterable {

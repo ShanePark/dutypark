@@ -65,12 +65,36 @@ struct DutyBatchResult: Decodable {
 }
 
 struct DutyBatchTeamResult: Decodable {
-    let success: Bool
-    let message: String
-    let teamId: Int?
-    let year: Int?
-    let month: Int?
-    let processedCount: Int?
+    let result: Bool
+    let errorMessage: String
+    let startDate: String?
+    let endDate: String?
+
+    var success: Bool { result }
+    var message: String { errorMessage }
+
+    private enum CodingKeys: String, CodingKey {
+        case result
+        case success
+        case errorMessage
+        case message
+        case startDate
+        case endDate
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if let value = try? container.decode(Bool.self, forKey: .result) {
+            result = value
+        } else {
+            result = (try? container.decode(Bool.self, forKey: .success)) ?? false
+        }
+        errorMessage = (try? container.decode(String.self, forKey: .errorMessage))
+            ?? (try? container.decode(String.self, forKey: .message))
+            ?? ""
+        startDate = try? container.decode(String.self, forKey: .startDate)
+        endDate = try? container.decode(String.self, forKey: .endDate)
+    }
 }
 
 // MARK: - Color Extension

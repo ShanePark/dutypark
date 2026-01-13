@@ -150,12 +150,14 @@ struct TeamView: View {
                 let dayInfo = days[index]
 
                 if dayInfo.day > 0 && dayInfo.isCurrentMonth {
+                    let holidays = viewModel.holidays[dayInfo.day] ?? []
                     TeamDayCell(
                         day: dayInfo.day,
                         isToday: isToday(dayInfo.day),
                         weekdayIndex: index % 7,
                         hasTeamSchedule: viewModel.teamSummary?.teamDays.contains(where: { $0.day == dayInfo.day }) ?? false,
-                        isSelected: selectedDay == dayInfo.day
+                        isSelected: selectedDay == dayInfo.day,
+                        holidays: holidays
                     )
                     .onTapGesture {
                         selectedDay = dayInfo.day
@@ -207,19 +209,22 @@ struct TeamView: View {
             }
 
             // Team schedules for selected day
-            if viewModel.teamSchedules.isEmpty {
-                Text("이 날의 팀 일정이 없습니다.")
-                    .font(.subheadline)
-                    .foregroundColor(colorScheme == .dark ? DesignSystem.Colors.Dark.textMuted : DesignSystem.Colors.Light.textMuted)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, DesignSystem.Spacing.xl)
-            } else {
-                ForEach(viewModel.teamSchedules) { schedule in
-                    TeamScheduleCard(
-                        schedule: schedule,
-                        canDelete: viewModel.teamSummary?.isTeamManager == true
-                    ) {
-                        Task { await viewModel.deleteTeamSchedule(schedule.id) }
+            if let day = selectedDay {
+                let schedules = viewModel.teamSchedules.filter { $0.dayOfMonth == day }
+                if schedules.isEmpty {
+                    Text("이 날의 팀 일정이 없습니다.")
+                        .font(.subheadline)
+                        .foregroundColor(colorScheme == .dark ? DesignSystem.Colors.Dark.textMuted : DesignSystem.Colors.Light.textMuted)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, DesignSystem.Spacing.xl)
+                } else {
+                    ForEach(schedules) { schedule in
+                        TeamScheduleCard(
+                            schedule: schedule,
+                            canDelete: viewModel.teamSummary?.isTeamManager == true
+                        ) {
+                            Task { await viewModel.deleteTeamSchedule(schedule.id) }
+                        }
                     }
                 }
             }
@@ -295,14 +300,30 @@ struct TeamDayCell: View {
     let weekdayIndex: Int
     let hasTeamSchedule: Bool
     let isSelected: Bool
+    let holidays: [HolidayDto]
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
-        VStack(spacing: DesignSystem.Spacing.xs) {
-            Text("\(day)")
-                .font(.subheadline)
-                .fontWeight(isToday ? .bold : .regular)
-                .foregroundColor(textColor)
+        VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+            HStack {
+                Text("\(day)")
+                    .font(.subheadline)
+                    .fontWeight(isToday ? .bold : .regular)
+                    .foregroundColor(textColor)
+
+                Spacer()
+            }
+
+            if !holidays.isEmpty {
+                VStack(alignment: .leading, spacing: 1) {
+                    ForEach(Array(holidays.enumerated()), id: \.offset) { _, holiday in
+                        Text(holiday.dateName)
+                            .font(.system(size: 8))
+                            .foregroundColor(holiday.isHoliday ? DesignSystem.Colors.sunday : mutedHolidayColor)
+                            .lineLimit(1)
+                    }
+                }
+            }
 
             if hasTeamSchedule {
                 Circle()
@@ -323,7 +344,7 @@ struct TeamDayCell: View {
     }
 
     private var textColor: Color {
-        if weekdayIndex == 0 {
+        if hasHoliday || weekdayIndex == 0 {
             return DesignSystem.Colors.sunday
         } else if weekdayIndex == 6 {
             return DesignSystem.Colors.saturday
@@ -335,10 +356,18 @@ struct TeamDayCell: View {
         if isSelected {
             return DesignSystem.Colors.accent.opacity(0.1)
         }
-        if weekdayIndex == 0 || weekdayIndex == 6 {
+        if weekdayIndex == 0 || weekdayIndex == 6 || hasHoliday {
             return colorScheme == .dark ? Color(hex: "#2D1F2F")! : Color(hex: "#FFF0F0")!
         }
         return colorScheme == .dark ? DesignSystem.Colors.Dark.bgCard : DesignSystem.Colors.Light.bgCard
+    }
+
+    private var hasHoliday: Bool {
+        holidays.contains { $0.isHoliday }
+    }
+
+    private var mutedHolidayColor: Color {
+        colorScheme == .dark ? DesignSystem.Colors.Dark.textMuted : DesignSystem.Colors.Light.textMuted
     }
 }
 

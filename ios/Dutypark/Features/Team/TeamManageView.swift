@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct TeamManageView: View {
     let teamId: Int
@@ -11,6 +12,16 @@ struct TeamManageView: View {
     @State private var memberToToggleManager: TeamMemberDto?
     @State private var showManagerToggleConfirmation = false
     @State private var isGrantingManager = true
+    @State private var showBatchFileImporter = false
+    @State private var selectedBatchFileURL: URL?
+    @State private var batchYear: Int = Calendar.current.component(.year, from: Date())
+    @State private var batchMonth: Int = Calendar.current.component(.month, from: Date())
+    @State private var showBatchResultAlert = false
+    @State private var batchResultMessage = ""
+    @State private var showDutyTypeSheet = false
+    @State private var editingDutyType: DutyTypeDto?
+    @State private var showDutyTypeDeleteConfirmation = false
+    @State private var dutyTypeToDelete: DutyTypeDto?
 
     init(teamId: Int) {
         self.teamId = teamId
@@ -26,6 +37,11 @@ struct TeamManageView: View {
                 VStack(spacing: 20) {
                     // Team Info Section
                     teamInfoSection(team: team)
+
+                    if viewModel.isCurrentUserManager() {
+                        // Duty Batch Upload Section
+                        batchUploadSection(team: team)
+                    }
 
                     // Members Section
                     membersSection(team: team)
@@ -91,6 +107,52 @@ struct TeamManageView: View {
                      : "\(member.name) 님의 매니저 권한을 취소하시겠습니까?")
             }
         }
+        .fileImporter(
+            isPresented: $showBatchFileImporter,
+            allowedContentTypes: [UTType(filenameExtension: "xlsx") ?? .data],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                selectedBatchFileURL = urls.first
+            case .failure(let error):
+                batchResultMessage = error.localizedDescription
+                showBatchResultAlert = true
+            }
+        }
+        .sheet(isPresented: $showDutyTypeSheet) {
+            DutyTypeEditorSheet(
+                dutyType: editingDutyType,
+                onSave: { name, colorHex in
+                    Task {
+                        if let dutyType = editingDutyType, let id = dutyType.id {
+                            _ = await viewModel.updateDutyType(id: id, name: name, color: colorHex)
+                        } else if let dutyType = editingDutyType, dutyType.id == nil {
+                            _ = await viewModel.updateDefaultDuty(name: name, color: colorHex)
+                        } else {
+                            _ = await viewModel.addDutyType(name: name, color: colorHex)
+                        }
+                    }
+                }
+            )
+        }
+        .alert("근무 유형 삭제", isPresented: $showDutyTypeDeleteConfirmation) {
+            Button("취소", role: .cancel) { }
+            Button("삭제", role: .destructive) {
+                if let dutyType = dutyTypeToDelete, let id = dutyType.id {
+                    Task { _ = await viewModel.deleteDutyType(id) }
+                }
+            }
+        } message: {
+            if let dutyType = dutyTypeToDelete {
+                Text("'\(dutyType.name)' 근무 유형을 삭제하시겠습니까?")
+            }
+        }
+        .alert("업로드 결과", isPresented: $showBatchResultAlert) {
+            Button("확인", role: .cancel) { }
+        } message: {
+            Text(batchResultMessage)
+        }
     }
 
     // MARK: - Team Info Section
@@ -106,9 +168,43 @@ struct TeamManageView: View {
                 Divider()
                 infoRow(label: "설명", value: team.description ?? "-")
                 Divider()
-                infoRow(label: "대표", value: team.adminName ?? "없음")
-                Divider()
-                infoRow(label: "근무 형태", value: workTypeLabel(team.workType))
+                if viewModel.isCurrentUserManager() {
+                    menuRow(label: "대표", value: team.adminName ?? "없음") {
+                        Button("대표 해제") {
+                            Task { await viewModel.changeAdmin(memberId: nil) }
+                        }
+                        ForEach(team.members.filter { $0.isManager }, id: \.id) { member in
+                            Button(member.name) {
+                                Task { await viewModel.changeAdmin(memberId: member.id) }
+                            }
+                        }
+                    }
+                    Divider()
+                    menuRow(label: "근무 형태", value: workTypeLabel(team.workType)) {
+                        ForEach(workTypeOptions, id: \.value) { option in
+                            Button(option.label) {
+                                Task { await viewModel.updateWorkType(option.value) }
+                            }
+                        }
+                    }
+                    Divider()
+                    menuRow(label: "배치 템플릿", value: team.dutyBatchTemplate?.label ?? "선택 안 함") {
+                        Button("선택 안 함") {
+                            Task { await viewModel.updateBatchTemplate(templateName: nil) }
+                        }
+                        ForEach(viewModel.dutyBatchTemplates, id: \.name) { template in
+                            Button(template.label) {
+                                Task { await viewModel.updateBatchTemplate(templateName: template.name) }
+                            }
+                        }
+                    }
+                } else {
+                    infoRow(label: "대표", value: team.adminName ?? "없음")
+                    Divider()
+                    infoRow(label: "근무 형태", value: workTypeLabel(team.workType))
+                    Divider()
+                    infoRow(label: "배치 템플릿", value: team.dutyBatchTemplate?.label ?? "선택 안 함")
+                }
             }
             .background(Color(.systemBackground))
             .cornerRadius(12)
@@ -128,6 +224,36 @@ struct TeamManageView: View {
         .padding()
     }
 
+    private func menuRow(label: String, value: String, @ViewBuilder menuItems: () -> some View) -> some View {
+        HStack {
+            Text(label)
+                .foregroundColor(.secondary)
+                .frame(width: 80, alignment: .leading)
+            Spacer()
+            Menu {
+                menuItems()
+            } label: {
+                HStack(spacing: 6) {
+                    Text(value)
+                        .foregroundColor(.primary)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .padding()
+    }
+
+    private var workTypeOptions: [(value: String, label: String)] {
+        [
+            ("WEEKDAY", "평일 근무"),
+            ("WEEKEND", "주말 근무"),
+            ("FIXED", "고정 근무"),
+            ("FLEXIBLE", "유연 근무")
+        ]
+    }
+
     private func workTypeLabel(_ workType: String) -> String {
         switch workType {
         case "WEEKDAY": return "평일 근무"
@@ -135,6 +261,90 @@ struct TeamManageView: View {
         case "FIXED": return "고정 근무"
         case "FLEXIBLE": return "유연 근무"
         default: return workType
+        }
+    }
+
+    private func uploadBatch() {
+        guard let fileURL = selectedBatchFileURL else { return }
+        Task {
+            if let result = await viewModel.uploadDutyBatch(fileURL: fileURL, year: batchYear, month: batchMonth) {
+                if result.success {
+                    batchResultMessage = "업로드가 완료되었습니다."
+                    selectedBatchFileURL = nil
+                } else {
+                    batchResultMessage = result.message.isEmpty ? "업로드에 실패했습니다." : result.message
+                }
+            } else {
+                batchResultMessage = viewModel.error ?? "업로드에 실패했습니다."
+            }
+            showBatchResultAlert = true
+        }
+    }
+
+    // MARK: - Batch Upload Section
+    private func batchUploadSection(team: TeamDto) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("근무표 업로드")
+                .font(.headline)
+                .foregroundColor(.secondary)
+
+            VStack(spacing: 12) {
+                HStack {
+                    Text(selectedBatchFileURL?.lastPathComponent ?? "파일을 선택해주세요")
+                        .font(.subheadline)
+                        .foregroundColor(selectedBatchFileURL == nil ? .secondary : .primary)
+                        .lineLimit(1)
+                    Spacer()
+                    Button("파일 선택") {
+                        showBatchFileImporter = true
+                    }
+                }
+
+                HStack(spacing: 12) {
+                    Picker("연도", selection: $batchYear) {
+                        ForEach((Calendar.current.component(.year, from: Date()) - 1)...(Calendar.current.component(.year, from: Date()) + 1), id: \.self) { year in
+                            Text("\(year)년").tag(year)
+                        }
+                    }
+                    .pickerStyle(.menu)
+
+                    Picker("월", selection: $batchMonth) {
+                        ForEach(1...12, id: \.self) { month in
+                            Text("\(month)월").tag(month)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                }
+
+                if team.dutyBatchTemplate == nil {
+                    Text("배치 템플릿을 먼저 선택해주세요.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Button {
+                    uploadBatch()
+                } label: {
+                    HStack {
+                        if viewModel.isUploadingBatch {
+                            ProgressView()
+                        }
+                        Text(viewModel.isUploadingBatch ? "업로드 중..." : "등록")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(viewModel.isUploadingBatch ? Color.gray.opacity(0.2) : DesignSystem.Colors.accent)
+                    .foregroundColor(viewModel.isUploadingBatch ? .secondary : .white)
+                    .cornerRadius(12)
+                }
+                .disabled(selectedBatchFileURL == nil || team.dutyBatchTemplate == nil || viewModel.isUploadingBatch)
+            }
+            .padding()
+            .background(Color(.systemBackground))
+            .cornerRadius(12)
+            .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
         }
     }
 
@@ -236,6 +446,12 @@ struct TeamManageView: View {
                         } label: {
                             Label("매니저 권한 취소", systemImage: "person.badge.minus")
                         }
+
+                        Button {
+                            Task { _ = await viewModel.changeAdmin(memberId: member.id) }
+                        } label: {
+                            Label("대표 위임", systemImage: "crown")
+                        }
                     } else {
                         Button {
                             memberToToggleManager = member
@@ -267,9 +483,23 @@ struct TeamManageView: View {
 
     private func dutyTypesSection(team: TeamDto) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("근무 유형")
-                .font(.headline)
-                .foregroundColor(.secondary)
+            HStack {
+                Text("근무 유형")
+                    .font(.headline)
+                    .foregroundColor(.secondary)
+
+                Spacer()
+
+                if viewModel.isCurrentUserManager() {
+                    Button {
+                        editingDutyType = nil
+                        showDutyTypeSheet = true
+                    } label: {
+                        Label("추가", systemImage: "plus")
+                            .font(.subheadline)
+                    }
+                }
+            }
 
             if team.dutyTypes.isEmpty {
                 Text("근무 유형이 없습니다")
@@ -280,8 +510,8 @@ struct TeamManageView: View {
                     .cornerRadius(12)
             } else {
                 VStack(spacing: 0) {
-                    ForEach(Array(team.dutyTypes.enumerated()), id: \.element.id) { index, dutyType in
-                        dutyTypeRow(dutyType: dutyType)
+                    ForEach(Array(team.dutyTypes.enumerated()), id: \.offset) { index, dutyType in
+                        dutyTypeRow(dutyType: dutyType, index: index, totalCount: team.dutyTypes.count, team: team)
 
                         if index < team.dutyTypes.count - 1 {
                             Divider()
@@ -295,24 +525,80 @@ struct TeamManageView: View {
         }
     }
 
-    private func dutyTypeRow(dutyType: DutyTypeDto) -> some View {
-        HStack {
+    private func dutyTypeRow(dutyType: DutyTypeDto, index: Int, totalCount: Int, team: TeamDto) -> some View {
+        let isDefault = dutyType.id == nil
+        let canMoveUp = !isDefault && index > 1
+        let canMoveDown = !isDefault && index < totalCount - 1
+
+        return HStack(spacing: 12) {
             Circle()
                 .fill(dutyType.swiftUIColor)
                 .frame(width: 24, height: 24)
 
-            Text(dutyType.name)
-                .font(.body)
-
-            if dutyType.id == nil {
-                Text("(기본)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(dutyType.name)
+                    .font(.body)
+                if isDefault {
+                    Text("휴무")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
 
             Spacer()
+
+            if viewModel.isCurrentUserManager() {
+                HStack(spacing: 8) {
+                    if dutyType.id != nil {
+                        Button {
+                            swapDutyTypePosition(team: team, index: index, targetIndex: index + 1)
+                        } label: {
+                            Image(systemName: "arrow.down")
+                                .font(.caption)
+                                .foregroundColor(canMoveDown ? .primary : .secondary)
+                        }
+                        .disabled(!canMoveDown)
+
+                        Button {
+                            swapDutyTypePosition(team: team, index: index, targetIndex: index - 1)
+                        } label: {
+                            Image(systemName: "arrow.up")
+                                .font(.caption)
+                                .foregroundColor(canMoveUp ? .primary : .secondary)
+                        }
+                        .disabled(!canMoveUp)
+                    }
+
+                    Button {
+                        editingDutyType = dutyType
+                        showDutyTypeSheet = true
+                    } label: {
+                        Image(systemName: "pencil")
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                    }
+
+                    if !isDefault, dutyType.id != nil {
+                        Button {
+                            dutyTypeToDelete = dutyType
+                            showDutyTypeDeleteConfirmation = true
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
         }
         .padding()
+    }
+
+    private func swapDutyTypePosition(team: TeamDto, index: Int, targetIndex: Int) {
+        guard targetIndex >= 0, targetIndex < team.dutyTypes.count else { return }
+        guard let id1 = team.dutyTypes[index].id, let id2 = team.dutyTypes[targetIndex].id else { return }
+        Task { _ = await viewModel.swapDutyTypePosition(id1: id1, id2: id2) }
     }
 }
 

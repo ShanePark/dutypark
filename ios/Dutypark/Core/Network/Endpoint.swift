@@ -59,8 +59,21 @@ extension Endpoint {
         Endpoint(path: "/auth/refresh-tokens/others", method: .delete)
     }
 
-    static func changePassword(currentPassword: String, newPassword: String) -> Endpoint {
-        Endpoint(path: "/auth/password", method: .put, body: ChangePasswordRequest(currentPassword: currentPassword, newPassword: newPassword))
+    static func changePassword(memberId: Int? = nil, currentPassword: String?, newPassword: String) -> Endpoint {
+        Endpoint(
+            path: "/auth/password",
+            method: .put,
+            body: ChangePasswordRequest(memberId: memberId, currentPassword: currentPassword, newPassword: newPassword)
+        )
+    }
+
+    // MARK: - Policy
+    static var currentPolicies: Endpoint {
+        Endpoint(path: "/policies/current")
+    }
+
+    static func policy(type: String) -> Endpoint {
+        Endpoint(path: "/policies/\(type.lowercased())")
     }
 
     // MARK: - Dashboard
@@ -74,7 +87,7 @@ extension Endpoint {
 
     // MARK: - Duty
     static func duties(memberId: Int, year: Int, month: Int) -> Endpoint {
-        Endpoint(path: "/duty/\(memberId)?year=\(year)&month=\(month)")
+        Endpoint(path: "/duty?memberId=\(memberId)&year=\(year)&month=\(month)")
     }
 
     // MARK: - Duty Extensions
@@ -100,8 +113,8 @@ extension Endpoint {
     }
 
     // MARK: - Schedule
-    static func schedules(year: Int, month: Int) -> Endpoint {
-        Endpoint(path: "/schedules?year=\(year)&month=\(month)")
+    static func schedules(memberId: Int, year: Int, month: Int) -> Endpoint {
+        Endpoint(path: "/schedules?memberId=\(memberId)&year=\(year)&month=\(month)")
     }
 
     static func schedule(id: String) -> Endpoint {
@@ -384,6 +397,55 @@ extension Endpoint {
 
     static func removeTeamManager(teamId: Int, memberId: Int) -> Endpoint {
         Endpoint(path: "/teams/manage/\(teamId)/manager?memberId=\(memberId)", method: .delete)
+    }
+
+    static func updateTeamAdmin(teamId: Int, memberId: Int?) -> Endpoint {
+        if let memberId {
+            return Endpoint(path: "/teams/manage/\(teamId)/admin?memberId=\(memberId)", method: .put)
+        }
+        return Endpoint(path: "/teams/manage/\(teamId)/admin", method: .put)
+    }
+
+    static func updateBatchTemplate(teamId: Int, templateName: String?) -> Endpoint {
+        if let templateName {
+            let templateParam = templateName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? templateName
+            return Endpoint(path: "/teams/manage/\(teamId)/batch-template?templateName=\(templateParam)", method: .patch)
+        }
+        return Endpoint(path: "/teams/manage/\(teamId)/batch-template", method: .patch)
+    }
+
+    static func updateWorkType(teamId: Int, workType: String) -> Endpoint {
+        Endpoint(path: "/teams/manage/\(teamId)/work-type?workType=\(workType)", method: .patch)
+    }
+
+    static func uploadDutyBatch(teamId: Int) -> Endpoint {
+        Endpoint(path: "/teams/manage/\(teamId)/duty", method: .post)
+    }
+
+    static func updateDefaultDuty(teamId: Int, name: String, color: String) -> Endpoint {
+        let encodedName = name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? name
+        let encodedColor = color.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? color
+        return Endpoint(path: "/teams/manage/\(teamId)/default-duty?name=\(encodedName)&color=\(encodedColor)", method: .patch)
+    }
+
+    static func addDutyType(teamId: Int, request: DutyTypeCreateDto) -> Endpoint {
+        Endpoint(path: "/teams/manage/\(teamId)/duty-types", method: .post, body: request)
+    }
+
+    static func updateDutyType(teamId: Int, request: DutyTypeUpdateDto) -> Endpoint {
+        Endpoint(path: "/teams/manage/\(teamId)/duty-types", method: .patch, body: request)
+    }
+
+    static func swapDutyTypePosition(teamId: Int, id1: Int, id2: Int) -> Endpoint {
+        Endpoint(path: "/teams/manage/\(teamId)/duty-types/swap-position?id1=\(id1)&id2=\(id2)", method: .patch)
+    }
+
+    static func deleteDutyType(teamId: Int, dutyTypeId: Int) -> Endpoint {
+        Endpoint(path: "/teams/manage/\(teamId)/duty-types/\(dutyTypeId)", method: .delete)
+    }
+
+    static var dutyBatchTemplates: Endpoint {
+        Endpoint(path: "/duty_batch/templates")
     }
 
     // MARK: - Attachments

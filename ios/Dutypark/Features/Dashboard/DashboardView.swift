@@ -9,6 +9,7 @@ struct DashboardView: View {
     @State private var showFriends = false
     @State private var showScheduleList = false
     @State private var showDDayList = false
+    @State private var showGuide = false
 
     var body: some View {
         NavigationStack {
@@ -55,10 +56,8 @@ struct DashboardView: View {
                     }
 
                     // Notification button
-                    Button(action: { showNotifications = true }) {
-                        Image(systemName: "bell")
-                            .foregroundColor(colorScheme == .dark ? DesignSystem.Colors.Dark.textSecondary : DesignSystem.Colors.Light.textSecondary)
-                    }
+                    NotificationBellButton(action: { showNotifications = true })
+                        .foregroundColor(colorScheme == .dark ? DesignSystem.Colors.Dark.textSecondary : DesignSystem.Colors.Light.textSecondary)
 
                     // Menu button
                     Button(action: { showMenu = true }) {
@@ -87,6 +86,10 @@ struct DashboardView: View {
                     showDDayList = true
                 }
 
+                Button("이용 안내") {
+                    showGuide = true
+                }
+
                 Button("알림") {
                     showNotifications = true
                 }
@@ -110,6 +113,11 @@ struct DashboardView: View {
             .sheet(isPresented: $showDDayList) {
                 NavigationStack {
                     DDayListView()
+                }
+            }
+            .sheet(isPresented: $showGuide) {
+                NavigationStack {
+                    GuideView()
                 }
             }
         }
@@ -266,18 +274,24 @@ struct DashboardView: View {
             // Friends List
             VStack(spacing: 0) {
                 ForEach(viewModel.allFriends, id: \.member.id) { friend in
-                    FriendListCard(
-                        friend: friend,
-                        onTogglePin: {
-                            Task {
-                                if friend.pinOrder != nil {
-                                    await viewModel.unpinFriend(memberId: friend.member.id ?? 0)
-                                } else {
-                                    await viewModel.pinFriend(memberId: friend.member.id ?? 0)
+                    let friendModel = Friend(from: friend)
+                    NavigationLink {
+                        DutyView(member: friendModel)
+                    } label: {
+                        FriendListCard(
+                            friend: friend,
+                            onTogglePin: {
+                                Task {
+                                    if friend.pinOrder != nil {
+                                        await viewModel.unpinFriend(memberId: friend.member.id ?? 0)
+                                    } else {
+                                        await viewModel.pinFriend(memberId: friend.member.id ?? 0)
+                                    }
                                 }
                             }
-                        }
-                    )
+                        )
+                    }
+                    .buttonStyle(.plain)
 
                     if friend.member.id != viewModel.allFriends.last?.member.id {
                         Divider()

@@ -68,6 +68,13 @@ struct NotificationListView: View {
 
     private var notificationList: some View {
         List {
+            Text("알림은 30일간 보관됩니다")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 8, trailing: 16))
+
             ForEach(viewModel.notifications) { notification in
                 NotificationRow(notification: notification) {
                     Task {

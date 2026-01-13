@@ -211,21 +211,46 @@ struct ScheduleListView: View {
 struct ScheduleSearchView: View {
     @StateObject private var viewModel = ScheduleViewModel()
     @State private var searchQuery = ""
+    @State private var hasSearched = false
     let memberId: Int
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                SearchBar(text: $searchQuery, placeholder: "일정 검색") {
-                    Task { await viewModel.searchSchedules(memberId: memberId, query: searchQuery) }
+                HStack(spacing: 8) {
+                    SearchBar(text: $searchQuery, placeholder: "검색어 입력...") {
+                        performSearch()
+                    }
+
+                    Button {
+                        performSearch()
+                    } label: {
+                        Text("검색")
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(DesignSystem.Colors.accent)
+                            .cornerRadius(10)
+                    }
                 }
                 .padding()
+
+                if hasSearched && !searchQuery.isEmpty {
+                    Text("\"\(searchQuery)\" 검색 결과 \(viewModel.searchResults.count)건")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal)
+                        .padding(.bottom, 8)
+                }
 
                 if viewModel.isSearching {
                     Spacer()
                     ProgressView()
                     Spacer()
-                } else if viewModel.searchResults.isEmpty && !searchQuery.isEmpty {
+                } else if viewModel.searchResults.isEmpty && !searchQuery.isEmpty && hasSearched {
                     Spacer()
                     EmptyStateView(
                         icon: "magnifyingglass",
@@ -233,32 +258,55 @@ struct ScheduleSearchView: View {
                         message: "다른 검색어로 시도해보세요"
                     )
                     Spacer()
-                } else if viewModel.searchResults.isEmpty {
+                } else if searchQuery.isEmpty {
                     Spacer()
                     EmptyStateView(
                         icon: "magnifyingglass",
-                        title: "일정을 검색하세요",
-                        message: "검색어를 입력하면 일정을 찾을 수 있습니다"
+                        title: "검색어를 입력해주세요",
+                        message: "검색어를 입력하면 일정을 찾을 수 있습니다."
                     )
                     Spacer()
                 } else {
-                    List(viewModel.searchResults) { schedule in
-                        ScheduleSearchResultRow(schedule: schedule)
+                    ScrollView {
+                        LazyVStack(spacing: 12) {
+                            ForEach(viewModel.searchResults) { schedule in
+                                ScheduleSearchResultRow(schedule: schedule)
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.bottom, 20)
                     }
-                    .listStyle(.plain)
                 }
             }
-            .navigationTitle("일정 검색")
+            .navigationTitle("검색 결과")
             .navigationBarTitleDisplayMode(.inline)
-            .onChange(of: searchQuery) { _, newValue in
-                Task { await viewModel.searchSchedules(memberId: memberId, query: newValue) }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.caption)
+                    }
+                }
             }
         }
+    }
+
+    private func performSearch() {
+        let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else {
+            hasSearched = false
+            return
+        }
+        hasSearched = true
+        Task { await viewModel.searchSchedules(memberId: memberId, query: query) }
     }
 }
 
 struct ScheduleSearchResultRow: View {
     let schedule: Schedule
+    @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -271,21 +319,9 @@ struct ScheduleSearchResultRow: View {
                 }
             }
 
-            HStack(spacing: 8) {
-                Text(formatDate(year: schedule.year, month: schedule.month, day: schedule.dayOfMonth))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                if let startTime = schedule.startTime {
-                    HStack(spacing: 2) {
-                        Image(systemName: "clock")
-                            .font(.caption2)
-                        Text(startTime)
-                            .font(.caption)
-                    }
-                    .foregroundColor(.secondary)
-                }
-            }
+            Text(formatDateTimeRange())
+                .font(.caption)
+                .foregroundColor(.secondary)
 
             if let description = schedule.description, !description.isEmpty {
                 Text(description)
@@ -304,11 +340,32 @@ struct ScheduleSearchResultRow: View {
                 .foregroundStyle(.secondary)
             }
         }
-        .padding(.vertical, 4)
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(colorScheme == .dark ? DesignSystem.Colors.Dark.bgCard : DesignSystem.Colors.Light.bgCard)
+        .cornerRadius(12)
+        .shadow(color: DesignSystem.Shadow.sm(colorScheme), radius: 2, x: 0, y: 1)
     }
 
-    private func formatDate(year: Int, month: Int, day: Int) -> String {
-        return "\(year).\(month).\(day)"
+    private func formatDateTimeRange() -> String {
+        let inputFormatter = DateFormatter()
+        inputFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "HH:mm"
+
+        guard let start = inputFormatter.date(from: schedule.startDateTime),
+              let end = inputFormatter.date(from: schedule.endDateTime) else {
+            return "\(schedule.year)-\(String(format: "%02d", schedule.month))-\(String(format: "%02d", schedule.dayOfMonth))"
+        }
+
+        let dateText = dateFormatter.string(from: start)
+        let startText = timeFormatter.string(from: start)
+        let endText = timeFormatter.string(from: end)
+        return "\(dateText) \(startText) ~ \(endText)"
     }
 }
 

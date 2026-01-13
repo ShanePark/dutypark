@@ -23,17 +23,30 @@ final class ScheduleViewModel: ObservableObject {
     func loadSchedules() async {
         isLoading = true
         error = nil
+        guard let memberId = AuthManager.shared.currentUser?.id else {
+            isLoading = false
+            return
+        }
 
         do {
             let response = try await APIClient.shared.request(
-                .schedules(year: selectedYear, month: selectedMonth),
-                responseType: ScheduleListResponse.self
+                .schedules(memberId: memberId, year: selectedYear, month: selectedMonth),
+                responseType: [[Schedule]].self
             )
-            schedules = response.schedules
+            let flattened = response
+                .flatMap { $0 }
+                .filter { $0.year == selectedYear && $0.month == selectedMonth }
+                .sorted {
+                    if $0.year != $1.year { return $0.year < $1.year }
+                    if $0.month != $1.month { return $0.month < $1.month }
+                    if $0.dayOfMonth != $1.dayOfMonth { return $0.dayOfMonth < $1.dayOfMonth }
+                    return $0.position < $1.position
+                }
+            schedules = flattened
 
             // Group schedules by day
             var byDay: [Int: [Schedule]] = [:]
-            for schedule in response.schedules {
+            for schedule in flattened {
                 if byDay[schedule.dayOfMonth] == nil {
                     byDay[schedule.dayOfMonth] = []
                 }
@@ -202,6 +215,17 @@ final class ScheduleViewModel: ObservableObject {
     func untagFriend(scheduleId: String, friendId: Int) async -> Bool {
         do {
             try await APIClient.shared.requestVoid(.untagFriend(scheduleId: scheduleId, friendId: friendId))
+            await loadSchedules()
+            return true
+        } catch {
+            self.error = error.localizedDescription
+            return false
+        }
+    }
+
+    func untagSelf(scheduleId: String) async -> Bool {
+        do {
+            try await APIClient.shared.requestVoid(.untagSelf(scheduleId: scheduleId))
             await loadSchedules()
             return true
         } catch {

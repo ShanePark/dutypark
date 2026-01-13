@@ -4,6 +4,16 @@ struct Attachment: Decodable, Identifiable, Sendable {
     let id: String
     let originalFileName: String
     let thumbnailAvailable: Bool
+    let contentType: String?
+    let thumbnailUrl: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case originalFileName = "originalFilename"
+        case thumbnailAvailable = "hasThumbnail"
+        case contentType
+        case thumbnailUrl
+    }
 }
 
 enum AttachmentContextType: String, Codable {

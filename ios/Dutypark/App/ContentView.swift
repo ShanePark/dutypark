@@ -8,7 +8,7 @@ struct ContentView: View {
             if authManager.isAuthenticated {
                 MainTabView()
             } else {
-                LoginView()
+                IntroView()
             }
         }
         .task {

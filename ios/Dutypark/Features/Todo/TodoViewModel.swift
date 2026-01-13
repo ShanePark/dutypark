@@ -24,7 +24,14 @@ class TodoViewModel: ObservableObject {
         isLoading = false
     }
 
-    func createTodo(title: String, content: String?, dueDate: Date?, status: TodoStatus = .todo) async -> Bool {
+    func createTodo(
+        title: String,
+        content: String?,
+        dueDate: Date?,
+        status: TodoStatus = .todo,
+        attachmentSessionId: String? = nil,
+        orderedAttachmentIds: [String]? = nil
+    ) async -> Bool {
         var dueDateString: String?
         if let dueDate = dueDate {
             let formatter = DateFormatter()
@@ -37,8 +44,8 @@ class TodoViewModel: ObservableObject {
             content: content,
             status: status.rawValue,
             dueDate: dueDateString,
-            attachmentSessionId: nil,
-            orderedAttachmentIds: nil
+            attachmentSessionId: attachmentSessionId,
+            orderedAttachmentIds: orderedAttachmentIds
         )
 
         do {
@@ -51,7 +58,14 @@ class TodoViewModel: ObservableObject {
         }
     }
 
-    func updateTodo(id: String, title: String, content: String?, dueDate: Date?) async -> Bool {
+    func updateTodo(
+        id: String,
+        title: String,
+        content: String?,
+        dueDate: Date?,
+        attachmentSessionId: String? = nil,
+        orderedAttachmentIds: [String]? = nil
+    ) async -> Bool {
         var dueDateString: String?
         if let dueDate = dueDate {
             let formatter = DateFormatter()
@@ -64,8 +78,8 @@ class TodoViewModel: ObservableObject {
             content: content ?? "",
             status: nil,
             dueDate: dueDateString,
-            attachmentSessionId: nil,
-            orderedAttachmentIds: nil
+            attachmentSessionId: attachmentSessionId,
+            orderedAttachmentIds: orderedAttachmentIds
         )
 
         do {
@@ -78,25 +92,38 @@ class TodoViewModel: ObservableObject {
         }
     }
 
-    func changeTodoStatus(id: String, newStatus: TodoStatus) async -> Bool {
-        var orderedIds: [String]
-        switch newStatus {
-        case .todo:
-            orderedIds = todoItems.map { $0.id }
-        case .inProgress:
-            orderedIds = inProgressItems.map { $0.id }
-        case .done:
-            orderedIds = doneItems.map { $0.id }
-        }
-        orderedIds.append(id)
+    func changeTodoStatus(id: String, newStatus: TodoStatus, orderedIds: [String]? = nil) async -> Bool {
+        let resolvedIds: [String] = {
+            if let orderedIds { return orderedIds }
+            switch newStatus {
+            case .todo:
+                return todoItems.map { $0.id } + [id]
+            case .inProgress:
+                return inProgressItems.map { $0.id } + [id]
+            case .done:
+                return doneItems.map { $0.id } + [id]
+            }
+        }()
 
         let request = TodoStatusChangeRequest(
             status: newStatus.rawValue,
-            orderedIds: orderedIds
+            orderedIds: resolvedIds
         )
 
         do {
             let _: Todo = try await APIClient.shared.request(.changeTodoStatus(id: id, request: request), responseType: Todo.self)
+            await loadTodoBoard()
+            return true
+        } catch {
+            self.error = error.localizedDescription
+            return false
+        }
+    }
+
+    func updateTodoPositions(status: TodoStatus, orderedIds: [String]) async -> Bool {
+        let request = TodoPositionUpdateRequest(status: status.rawValue, orderedIds: orderedIds)
+        do {
+            try await APIClient.shared.requestVoid(.updateTodoPositions(request: request))
             await loadTodoBoard()
             return true
         } catch {
@@ -135,6 +162,49 @@ class TodoViewModel: ObservableObject {
         } catch {
             self.error = error.localizedDescription
             return false
+        }
+    }
+
+    // MARK: - Attachment Management
+
+    func createAttachmentSession(targetContextId: String? = nil) async -> String? {
+        let request = CreateSessionRequest(
+            contextType: AttachmentContextType.todo.rawValue,
+            targetContextId: targetContextId
+        )
+
+        do {
+            let response = try await APIClient.shared.request(
+                .createAttachmentSession(request: request),
+                responseType: CreateSessionResponse.self
+            )
+            return response.sessionId
+        } catch {
+            self.error = error.localizedDescription
+            return nil
+        }
+    }
+
+    func uploadAttachment(sessionId: String, imageData: Data, fileName: String) async -> AttachmentDto? {
+        do {
+            let attachment = try await APIClient.shared.uploadAttachment(
+                sessionId: sessionId,
+                fileData: imageData,
+                fileName: fileName,
+                mimeType: "image/jpeg"
+            )
+            return attachment
+        } catch {
+            self.error = error.localizedDescription
+            return nil
+        }
+    }
+
+    func deleteAttachmentSession(_ sessionId: String) async {
+        do {
+            try await APIClient.shared.requestVoid(.deleteAttachmentSession(sessionId: sessionId))
+        } catch {
+            self.error = error.localizedDescription
         }
     }
 }

@@ -76,7 +76,7 @@ class SettingsViewModel: ObservableObject {
 
     func changePassword(currentPassword: String, newPassword: String) async -> Bool {
         do {
-            try await APIClient.shared.requestVoid(.changePassword(currentPassword: currentPassword, newPassword: newPassword))
+            try await APIClient.shared.requestVoid(.changePassword(memberId: nil, currentPassword: currentPassword, newPassword: newPassword))
             return true
         } catch {
             self.error = error.localizedDescription
