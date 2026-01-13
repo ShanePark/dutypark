@@ -70,6 +70,8 @@ const statusConfig: Record<TodoStatus, { label: string; bgClass: string; textCla
   border-radius: 0.75rem;
   padding: 0.75rem;
   height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* First column snaps to start (no left padding) */
@@ -87,7 +89,6 @@ const statusConfig: Record<TodoStatus, { label: string; bgClass: string; textCla
     min-width: 0;
     max-width: 100%;
     flex: 1 1 0;
-    overflow: hidden;
   }
 }
 
@@ -111,6 +112,7 @@ const statusConfig: Record<TodoStatus, { label: string; bgClass: string; textCla
   padding: 0.25rem 0.5rem;
   border-radius: 0.5rem;
   background-color: var(--dp-bg-card);
+  flex-shrink: 0;
 }
 
 .kanban-column-header-right {
@@ -176,9 +178,10 @@ const statusConfig: Record<TodoStatus, { label: string; bgClass: string; textCla
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  min-height: 100px;
+  min-height: 0;
   overflow-y: auto;
   padding-top: 0.125rem;
+  padding-bottom: 0.5rem;
 }
 
 /* Scrollbar styling for column content */

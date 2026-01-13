@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import Sortable from 'sortablejs'
-import { HelpCircle, X, ListTodo, Clock, CheckCircle2, Lightbulb, LayoutGrid } from 'lucide-vue-next'
+import { HelpCircle, X, ListTodo, Clock, CheckCircle2, Lightbulb, LayoutGrid, Plus } from 'lucide-vue-next'
 import { todoApi } from '@/api/todo'
 import { useSwal } from '@/composables/useSwal'
 import KanbanColumn from '@/components/todo/KanbanColumn.vue'
@@ -373,7 +373,10 @@ onBeforeUnmount(() => {
         :key="tab.status"
         type="button"
         class="todo-board-tab"
-        :class="{ active: activeStatus === tab.status }"
+        :class="[
+          `todo-board-tab-${tab.status.toLowerCase().replace('_', '-')}`,
+          { active: activeStatus === tab.status }
+        ]"
         @click="focusStatus(tab.status)"
         :aria-pressed="activeStatus === tab.status"
       >
@@ -408,9 +411,14 @@ onBeforeUnmount(() => {
             >
               <KanbanCard :todo="todo" @click="openDetailModal(todo)" />
             </div>
-            <div v-if="todoList.length === 0" class="kanban-empty-state">
-              할 일이 없습니다
-            </div>
+            <button
+              v-if="todoList.length === 0"
+              class="kanban-empty-state kanban-empty-state-clickable"
+              @click="openAddModal('TODO')"
+            >
+              <Plus class="kanban-empty-icon" />
+              <span>클릭하여 할 일 추가</span>
+            </button>
           </div>
         </KanbanColumn>
 
@@ -425,9 +433,14 @@ onBeforeUnmount(() => {
             >
               <KanbanCard :todo="todo" @click="openDetailModal(todo)" />
             </div>
-            <div v-if="inProgressList.length === 0" class="kanban-empty-state">
-              진행 중인 일이 없습니다
-            </div>
+            <button
+              v-if="inProgressList.length === 0"
+              class="kanban-empty-state kanban-empty-state-clickable"
+              @click="openAddModal('IN_PROGRESS')"
+            >
+              <Plus class="kanban-empty-icon" />
+              <span>클릭하여 할 일 추가</span>
+            </button>
           </div>
         </KanbanColumn>
 
@@ -442,9 +455,14 @@ onBeforeUnmount(() => {
             >
               <KanbanCard :todo="todo" @click="openDetailModal(todo)" />
             </div>
-            <div v-if="doneList.length === 0" class="kanban-empty-state">
-              완료된 일이 없습니다
-            </div>
+            <button
+              v-if="doneList.length === 0"
+              class="kanban-empty-state kanban-empty-state-clickable"
+              @click="openAddModal('DONE')"
+            >
+              <Plus class="kanban-empty-icon" />
+              <span>클릭하여 할 일 추가</span>
+            </button>
           </div>
         </KanbanColumn>
       </div>
@@ -558,19 +576,24 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .todo-board-container {
-  min-height: 100dvh;
+  /* Height calculation: 100dvh - header(48px) - footer(56px + safe-area) - extra buffer */
+  height: calc(100dvh - 3rem - 72px - env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
   padding: 0.5rem;
-  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  padding-bottom: 0;
   background-color: var(--dp-bg-secondary);
   max-width: 896px;
   margin: 0 auto;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 @media (min-width: 640px) {
   .todo-board-container {
+    /* Desktop: header(56px) + footer(64px + safe-area) + extra buffer */
+    height: calc(100dvh - 3.5rem - 100px - env(safe-area-inset-bottom));
     padding: 1rem;
-    padding-bottom: calc(100px + env(safe-area-inset-bottom));
+    padding-bottom: 0;
   }
 }
 
@@ -580,6 +603,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 0.5rem;
   margin-bottom: 1rem;
+  flex-shrink: 0;
 }
 
 .todo-board-header-left {
@@ -617,6 +641,7 @@ onBeforeUnmount(() => {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
   margin-bottom: 0.75rem;
+  flex-shrink: 0;
 }
 
 .todo-board-tab {
@@ -642,9 +667,33 @@ onBeforeUnmount(() => {
 }
 
 .todo-board-tab.active {
-  border-color: var(--dp-accent);
+  border-width: 2px;
+  background-color: var(--dp-bg-card);
+  box-shadow: var(--dp-shadow-sm);
+}
+
+.todo-board-tab-todo {
   color: var(--dp-accent);
-  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.15);
+}
+
+.todo-board-tab-todo.active {
+  border-color: var(--dp-accent);
+}
+
+.todo-board-tab-in-progress {
+  color: var(--dp-warning);
+}
+
+.todo-board-tab-in-progress.active {
+  border-color: var(--dp-warning);
+}
+
+.todo-board-tab-done {
+  color: var(--dp-success);
+}
+
+.todo-board-tab-done.active {
+  border-color: var(--dp-success);
 }
 
 .todo-board-tab-icon {
@@ -664,9 +713,19 @@ onBeforeUnmount(() => {
   color: var(--dp-text-muted);
 }
 
-.todo-board-tab.active .todo-board-tab-count {
-  background-color: var(--dp-accent-bg);
-  color: var(--dp-accent);
+.todo-board-tab-todo.active .todo-board-tab-count {
+  background-color: var(--dp-accent);
+  color: white;
+}
+
+.todo-board-tab-in-progress.active .todo-board-tab-count {
+  background-color: var(--dp-warning);
+  color: white;
+}
+
+.todo-board-tab-done.active .todo-board-tab-count {
+  background-color: var(--dp-success);
+  color: white;
 }
 
 .todo-board-title {
@@ -700,7 +759,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  padding: 4rem 0;
+  flex: 1;
   color: var(--dp-text-muted);
 }
 
@@ -720,8 +779,10 @@ onBeforeUnmount(() => {
 }
 
 .todo-board-content {
+  flex: 1;
+  min-height: 0;
   overflow-x: auto;
-  padding-bottom: 1rem;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   scroll-snap-type: x mandatory;
   scroll-padding-inline-start: 0.5rem;
@@ -735,7 +796,7 @@ onBeforeUnmount(() => {
 
 @media (min-width: 640px) {
   .todo-board-content {
-    overflow: hidden;
+    overflow-x: hidden;
     scroll-snap-type: none;
     scroll-padding: 0;
   }
@@ -744,7 +805,7 @@ onBeforeUnmount(() => {
 .todo-board-columns {
   display: flex;
   gap: 0.65rem;
-  min-height: calc(100dvh - 200px);
+  height: 100%;
   padding: 0.25rem 0.5rem;
   padding-right: calc(100vw - 62vw - 0.5rem);
   box-sizing: border-box;
@@ -791,8 +852,10 @@ onBeforeUnmount(() => {
 
 .kanban-empty-state {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 0.5rem;
   padding: 2rem 1rem;
   color: var(--dp-text-muted);
   font-size: 0.875rem;
@@ -800,6 +863,29 @@ onBeforeUnmount(() => {
   border: 2px dashed var(--dp-border-secondary);
   border-radius: 0.5rem;
   min-height: 80px;
+  width: 100%;
+  background: transparent;
+}
+
+.kanban-empty-state-clickable {
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kanban-empty-state-clickable:hover {
+  border-color: var(--dp-accent);
+  color: var(--dp-accent);
+  background-color: var(--dp-accent-bg);
+}
+
+.kanban-empty-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  opacity: 0.7;
+}
+
+.kanban-empty-state-clickable:hover .kanban-empty-icon {
+  opacity: 1;
 }
 
 /* Help Modal Styles */
