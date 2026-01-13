@@ -79,6 +79,32 @@ class AuthController(
     }
 
     /**
+     * Mobile login API - returns tokens in response body for Bearer auth
+     */
+    @PostMapping("/token/bearer")
+    fun loginForBearerToken(
+        @RequestBody loginDto: LoginDto,
+        req: HttpServletRequest
+    ): ResponseEntity<*> {
+        return try {
+            val tokenResponse = authService.getTokenResponse(loginDto, req)
+            ResponseEntity.ok(tokenResponse)
+        } catch (e: RateLimitException) {
+            ResponseEntity.status(429).body(mapOf("error" to e.message))
+        } catch (e: AuthException) {
+            val email = loginDto.email ?: ""
+            val ipAddress = req.remoteAddr ?: "unknown"
+            val remainingAttempts = loginAttemptService.getRemainingAttempts(ipAddress, email)
+            ResponseEntity.status(401).body(
+                mapOf(
+                    "error" to (e.message ?: "로그인에 실패했습니다."),
+                    "remainingAttempts" to remainingAttempts
+                )
+            )
+        }
+    }
+
+    /**
      * Token refresh API - reads refresh token from HttpOnly cookie
      */
     @PostMapping("/refresh")
@@ -95,6 +121,24 @@ class AuthController(
         } catch (e: AuthException) {
             cookieService.clearTokenCookies(resp)
             ResponseEntity.status(401).build()
+        }
+    }
+
+    /**
+     * Mobile token refresh API - reads refresh token from request body
+     */
+    @PostMapping("/refresh/bearer")
+    fun refreshBearerToken(
+        @RequestBody body: Map<String, String>,
+        req: HttpServletRequest
+    ): ResponseEntity<*> {
+        val refreshToken = body["refreshToken"]
+            ?: return ResponseEntity.status(401).body(mapOf("error" to "Refresh token required"))
+        return try {
+            val tokenResponse = authService.refreshAccessToken(refreshToken, req)
+            ResponseEntity.ok(tokenResponse)
+        } catch (e: AuthException) {
+            ResponseEntity.status(401).body(mapOf("error" to "Invalid refresh token"))
         }
     }
 
