@@ -3,26 +3,39 @@ import SwiftUI
 struct TodoListView: View {
     @StateObject private var viewModel = TodoViewModel()
     @State private var showingAddSheet = false
-    @State private var newTodoContent = ""
+    @State private var newTodoTitle = ""
 
     var body: some View {
         NavigationStack {
             List {
-                ForEach(TodoStatus.allCases, id: \.self) { status in
-                    let todos = viewModel.todos.filter { $0.status == status }
-                    if !todos.isEmpty {
-                        Section(status.displayName) {
-                            ForEach(todos) { todo in
-                                todoRow(todo)
-                            }
-                            .onDelete { indexSet in
-                                deleteTodos(at: indexSet, in: todos)
-                            }
+                // Todo Section
+                if !viewModel.todoItems.isEmpty {
+                    Section("할 일") {
+                        ForEach(viewModel.todoItems) { todo in
+                            todoRow(todo)
                         }
                     }
                 }
 
-                if viewModel.todos.isEmpty && !viewModel.isLoading {
+                // In Progress Section
+                if !viewModel.inProgressItems.isEmpty {
+                    Section("진행 중") {
+                        ForEach(viewModel.inProgressItems) { todo in
+                            todoRow(todo)
+                        }
+                    }
+                }
+
+                // Done Section
+                if !viewModel.doneItems.isEmpty {
+                    Section("완료") {
+                        ForEach(viewModel.doneItems) { todo in
+                            todoRow(todo)
+                        }
+                    }
+                }
+
+                if viewModel.todoItems.isEmpty && viewModel.inProgressItems.isEmpty && viewModel.doneItems.isEmpty && !viewModel.isLoading {
                     ContentUnavailableView(
                         "할 일이 없습니다",
                         systemImage: "checkmark.circle",
@@ -41,23 +54,24 @@ struct TodoListView: View {
                 }
             }
             .refreshable {
-                await viewModel.loadTodos()
+                await viewModel.loadTodoBoard()
             }
             .task {
-                await viewModel.loadTodos()
+                await viewModel.loadTodoBoard()
             }
             .alert("새 할 일", isPresented: $showingAddSheet) {
-                TextField("할 일 내용", text: $newTodoContent)
+                TextField("할 일 제목", text: $newTodoTitle)
                 Button("취소", role: .cancel) {
-                    newTodoContent = ""
+                    newTodoTitle = ""
                 }
                 Button("추가") {
                     Task {
-                        await viewModel.createTodo(content: newTodoContent)
-                        newTodoContent = ""
+                        _ = await viewModel.createTodo(title: newTodoTitle, content: nil, dueDate: nil)
+                        newTodoTitle = ""
                     }
                 }
             }
+            .loading(viewModel.isLoading && viewModel.todoBoard == nil)
         }
     }
 
@@ -66,39 +80,56 @@ struct TodoListView: View {
         HStack {
             Button {
                 Task {
-                    if todo.status == .completed {
-                        await viewModel.reopenTodo(todo)
+                    if todo.status == .done {
+                        _ = await viewModel.reopenTodo(todo.id)
                     } else {
-                        await viewModel.completeTodo(todo)
+                        _ = await viewModel.completeTodo(todo.id)
                     }
                 }
             } label: {
-                Image(systemName: todo.status == .completed ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(todo.status == .completed ? .green : .secondary)
+                Image(systemName: todo.status == .done ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(todo.status == .done ? .green : .secondary)
             }
             .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(todo.content)
-                    .strikethrough(todo.status == .completed)
-                    .foregroundStyle(todo.status == .completed ? .secondary : .primary)
+                Text(todo.title)
+                    .strikethrough(todo.status == .done)
+                    .foregroundStyle(todo.status == .done ? .secondary : .primary)
 
-                if let completedAt = todo.completedAt {
-                    Text("완료: \(formatDate(completedAt))")
+                if !todo.content.isEmpty {
+                    Text(todo.content)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                if let completedDate = todo.completedDate {
+                    Text("완료: \(formatDate(completedDate))")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                }
+
+                if let dueDate = todo.dueDate {
+                    HStack(spacing: 4) {
+                        Image(systemName: "calendar")
+                            .font(.caption2)
+                        Text("마감: \(formatDate(dueDate))")
+                            .font(.caption2)
+                    }
+                    .foregroundStyle(todo.isOverdue ? .red : .secondary)
                 }
             }
 
             Spacer()
 
-            if todo.status != .completed {
+            if todo.status != .done {
                 Menu {
-                    ForEach(TodoStatus.allCases.filter { $0 != .completed }, id: \.self) { status in
+                    ForEach(TodoStatus.allCases.filter { $0 != .done }, id: \.self) { status in
                         if status != todo.status {
                             Button(status.displayName) {
                                 Task {
-                                    await viewModel.updateTodoStatus(todo, to: status)
+                                    _ = await viewModel.changeTodoStatus(id: todo.id, newStatus: status)
                                 }
                             }
                         }
@@ -115,33 +146,46 @@ struct TodoListView: View {
             }
         }
         .padding(.vertical, 4)
-    }
-
-    private func deleteTodos(at indexSet: IndexSet, in todos: [Todo]) {
-        for index in indexSet {
-            let todo = todos[index]
-            Task {
-                await viewModel.deleteTodo(todo)
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive) {
+                Task {
+                    _ = await viewModel.deleteTodo(todo.id)
+                }
+            } label: {
+                Label("삭제", systemImage: "trash")
             }
         }
     }
 
     private func statusColor(_ status: TodoStatus) -> Color {
         switch status {
-        case .pending: return .orange
-        case .inProgress: return .blue
-        case .completed: return .green
+        case .todo: return .blue
+        case .inProgress: return .orange
+        case .done: return .green
         }
     }
 
     private func formatDate(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        guard let date = formatter.date(from: dateString) else { return dateString }
+        // Handle both ISO8601 and simple date formats
+        if dateString.contains("T") {
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            guard let date = formatter.date(from: dateString) else { return dateString }
 
-        let displayFormatter = DateFormatter()
-        displayFormatter.dateFormat = "M/d HH:mm"
-        return displayFormatter.string(from: date)
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateFormat = "M/d HH:mm"
+            return displayFormatter.string(from: date)
+        } else {
+            // Simple date format like "2025-01-13"
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            guard let date = formatter.date(from: dateString) else { return dateString }
+
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateFormat = "M월 d일"
+            displayFormatter.locale = Locale(identifier: "ko_KR")
+            return displayFormatter.string(from: date)
+        }
     }
 }
 

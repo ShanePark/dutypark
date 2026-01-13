@@ -26,6 +26,54 @@ struct DutyType: Decodable, Identifiable {
     }
 }
 
+// MARK: - Duty Calendar (matches Vue DutyCalendarDay)
+struct DutyCalendarDay: Decodable {
+    let year: Int
+    let month: Int
+    let day: Int
+    let dutyType: String?
+    let dutyColor: String?
+    let isOff: Bool
+
+    var swiftUIColor: Color? {
+        guard let dutyColor = dutyColor else { return nil }
+        return Color(hex: dutyColor)
+    }
+}
+
+// MARK: - Other Duties Response (for "view together" feature)
+struct OtherDutyResponse: Decodable {
+    let name: String
+    let duties: [DutyCalendarDay]
+}
+
+// MARK: - Holiday
+struct HolidayDto: Decodable {
+    let dateName: String
+    let isHoliday: Bool
+    let localDate: String
+}
+
+// MARK: - Duty Batch
+struct DutyBatchResult: Decodable {
+    let result: Bool
+    let errorMessage: String?
+    let startDate: String?
+    let endDate: String?
+    let workingDays: Int
+    let offDays: Int
+}
+
+struct DutyBatchTeamResult: Decodable {
+    let success: Bool
+    let message: String
+    let teamId: Int?
+    let year: Int?
+    let month: Int?
+    let processedCount: Int?
+}
+
+// MARK: - Color Extension
 extension Color {
     init?(hex: String) {
         var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)

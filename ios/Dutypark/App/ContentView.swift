@@ -27,17 +27,17 @@ struct MainTabView: View {
 
             DutyView()
                 .tabItem {
-                    Label("근무표", systemImage: "calendar")
+                    Label("내 달력", systemImage: "calendar")
                 }
 
-            ScheduleListView()
-                .tabItem {
-                    Label("일정", systemImage: "clock.fill")
-                }
-
-            TodoListView()
+            TodoBoardView()
                 .tabItem {
                     Label("할일", systemImage: "checklist")
+                }
+
+            TeamView()
+                .tabItem {
+                    Label("내 팀", systemImage: "person.3.fill")
                 }
 
             SettingsView()

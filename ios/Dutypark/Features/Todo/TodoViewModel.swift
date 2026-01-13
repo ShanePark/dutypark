@@ -1,90 +1,140 @@
 import Foundation
 
 @MainActor
-final class TodoViewModel: ObservableObject {
-    @Published var todos: [Todo] = []
+class TodoViewModel: ObservableObject {
+    @Published var todoBoard: TodoBoard?
     @Published var isLoading = false
-    @Published var error: Error?
+    @Published var error: String?
 
-    func loadTodos() async {
+    var todoItems: [Todo] { todoBoard?.todo ?? [] }
+    var inProgressItems: [Todo] { todoBoard?.inProgress ?? [] }
+    var doneItems: [Todo] { todoBoard?.done ?? [] }
+    var counts: TodoCounts? { todoBoard?.counts }
+
+    func loadTodoBoard() async {
         isLoading = true
-        defer { isLoading = false }
+        error = nil
 
         do {
-            let response = try await APIClient.shared.request(
-                .todos,
-                responseType: TodoListResponse.self
-            )
-            todos = response.todos
+            todoBoard = try await APIClient.shared.request(.todoBoard, responseType: TodoBoard.self)
         } catch {
-            self.error = error
+            self.error = error.localizedDescription
+        }
+
+        isLoading = false
+    }
+
+    func createTodo(title: String, content: String?, dueDate: Date?, status: TodoStatus = .todo) async -> Bool {
+        var dueDateString: String?
+        if let dueDate = dueDate {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            dueDateString = formatter.string(from: dueDate)
+        }
+
+        let request = TodoCreateRequest(
+            title: title,
+            content: content,
+            status: status.rawValue,
+            dueDate: dueDateString,
+            attachmentSessionId: nil,
+            orderedAttachmentIds: nil
+        )
+
+        do {
+            let _: Todo = try await APIClient.shared.request(.createTodo(request: request), responseType: Todo.self)
+            await loadTodoBoard()
+            return true
+        } catch {
+            self.error = error.localizedDescription
+            return false
         }
     }
 
-    func createTodo(content: String) async {
-        let request = CreateTodoRequest(content: content, status: "PENDING")
+    func updateTodo(id: String, title: String, content: String?, dueDate: Date?) async -> Bool {
+        var dueDateString: String?
+        if let dueDate = dueDate {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            dueDateString = formatter.string(from: dueDate)
+        }
+
+        let request = TodoUpdateRequest(
+            title: title,
+            content: content ?? "",
+            status: nil,
+            dueDate: dueDateString,
+            attachmentSessionId: nil,
+            orderedAttachmentIds: nil
+        )
 
         do {
-            let newTodo = try await APIClient.shared.request(
-                .createTodo(request: request),
-                responseType: Todo.self
-            )
-            todos.insert(newTodo, at: 0)
+            let _: Todo = try await APIClient.shared.request(.updateTodo(id: id, request: request), responseType: Todo.self)
+            await loadTodoBoard()
+            return true
         } catch {
-            self.error = error
+            self.error = error.localizedDescription
+            return false
         }
     }
 
-    func updateTodoStatus(_ todo: Todo, to status: TodoStatus) async {
-        let request = UpdateTodoRequest(content: nil, status: status.rawValue, position: nil)
+    func changeTodoStatus(id: String, newStatus: TodoStatus) async -> Bool {
+        var orderedIds: [String]
+        switch newStatus {
+        case .todo:
+            orderedIds = todoItems.map { $0.id }
+        case .inProgress:
+            orderedIds = inProgressItems.map { $0.id }
+        case .done:
+            orderedIds = doneItems.map { $0.id }
+        }
+        orderedIds.append(id)
+
+        let request = TodoStatusChangeRequest(
+            status: newStatus.rawValue,
+            orderedIds: orderedIds
+        )
 
         do {
-            let updatedTodo = try await APIClient.shared.request(
-                .updateTodo(id: todo.id, request: request),
-                responseType: Todo.self
-            )
-            if let index = todos.firstIndex(where: { $0.id == todo.id }) {
-                todos[index] = updatedTodo
-            }
+            let _: Todo = try await APIClient.shared.request(.changeTodoStatus(id: id, request: request), responseType: Todo.self)
+            await loadTodoBoard()
+            return true
         } catch {
-            self.error = error
+            self.error = error.localizedDescription
+            return false
         }
     }
 
-    func completeTodo(_ todo: Todo) async {
+    func completeTodo(_ id: String) async -> Bool {
         do {
-            let updatedTodo = try await APIClient.shared.request(
-                .completeTodo(id: todo.id),
-                responseType: Todo.self
-            )
-            if let index = todos.firstIndex(where: { $0.id == todo.id }) {
-                todos[index] = updatedTodo
-            }
+            let _: Todo = try await APIClient.shared.request(.completeTodo(id: id), responseType: Todo.self)
+            await loadTodoBoard()
+            return true
         } catch {
-            self.error = error
+            self.error = error.localizedDescription
+            return false
         }
     }
 
-    func reopenTodo(_ todo: Todo) async {
+    func reopenTodo(_ id: String) async -> Bool {
         do {
-            let updatedTodo = try await APIClient.shared.request(
-                .reopenTodo(id: todo.id),
-                responseType: Todo.self
-            )
-            if let index = todos.firstIndex(where: { $0.id == todo.id }) {
-                todos[index] = updatedTodo
-            }
+            let _: Todo = try await APIClient.shared.request(.reopenTodo(id: id), responseType: Todo.self)
+            await loadTodoBoard()
+            return true
         } catch {
-            self.error = error
+            self.error = error.localizedDescription
+            return false
         }
     }
 
-    func deleteTodo(_ todo: Todo) async {
+    func deleteTodo(_ id: String) async -> Bool {
         do {
-            try await APIClient.shared.requestVoid(.deleteTodo(id: todo.id))
-            todos.removeAll { $0.id == todo.id }
+            try await APIClient.shared.requestVoid(.deleteTodo(id: id))
+            await loadTodoBoard()
+            return true
         } catch {
-            self.error = error
+            self.error = error.localizedDescription
+            return false
         }
     }
 }

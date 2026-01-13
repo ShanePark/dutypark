@@ -1,24 +1,36 @@
 import Foundation
 
-struct DDay: Decodable, Identifiable {
+struct DDayDto: Decodable, Identifiable {
     let id: Int
     let title: String
-    let targetDate: String
+    let date: String
     let isPrivate: Bool
-    let isPinned: Bool
-    let daysRemaining: Int
+    let calc: Int
+    let daysLeft: Int
 
     var displayText: String {
-        if daysRemaining == 0 {
+        if daysLeft == 0 {
             return "D-Day"
-        } else if daysRemaining > 0 {
-            return "D-\(daysRemaining)"
+        } else if daysLeft > 0 {
+            return "D-\(daysLeft)"
         } else {
-            return "D+\(abs(daysRemaining))"
+            return "D+\(abs(daysLeft))"
         }
     }
 }
 
-struct DDayListResponse: Decodable {
-    let ddays: [DDay]
+// MARK: - Requests
+struct DDaySaveDto: Encodable {
+    let id: Int?
+    let title: String
+    let date: String
+    let isPrivate: Bool
 }
+
+// MARK: - Responses
+struct DDayListResponse: Decodable {
+    let ddays: [DDayDto]
+}
+
+// MARK: - Legacy support (can be removed after full migration)
+typealias DDay = DDayDto

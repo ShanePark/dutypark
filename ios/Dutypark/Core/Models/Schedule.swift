@@ -1,40 +1,101 @@
 import Foundation
 
-struct Schedule: Decodable, Identifiable {
+enum CalendarVisibility: String, Decodable, Sendable {
+    case `public` = "PUBLIC"
+    case friends = "FRIENDS"
+    case family = "FAMILY"
+    case `private` = "PRIVATE"
+
+    var displayName: String {
+        switch self {
+        case .public: return "전체 공개"
+        case .friends: return "친구에게만"
+        case .family: return "가족에게만"
+        case .private: return "비공개"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .public: return "globe"
+        case .friends: return "person.2"
+        case .family: return "house"
+        case .private: return "lock"
+        }
+    }
+}
+
+struct Schedule: Decodable, Identifiable, Sendable {
     let id: String
     let content: String
-    let contentWithoutTime: String?
-    let date: String
-    let startTime: String?
-    let endTime: String?
+    let description: String?
+    let position: Int
+    let year: Int
+    let month: Int
+    let dayOfMonth: Int
+    let startDateTime: String
+    let endDateTime: String
+    let isTagged: Bool
+    let owner: String?
+    let tags: [ScheduleTag]
+    let visibility: CalendarVisibility?
+    let dateToCompare: String?
+    let attachments: [Attachment]
+
+    // Computed property to extract time from startDateTime
+    var startTime: String? {
+        guard startDateTime.contains("T") else { return nil }
+        let parts = startDateTime.split(separator: "T")
+        guard parts.count == 2 else { return nil }
+        let timePart = String(parts[1].prefix(5)) // "HH:mm"
+        return timePart == "00:00" ? nil : timePart
+    }
+
+    // Computed property to extract time from endDateTime
+    var endTime: String? {
+        guard endDateTime.contains("T") else { return nil }
+        let parts = endDateTime.split(separator: "T")
+        guard parts.count == 2 else { return nil }
+        let timePart = String(parts[1].prefix(5)) // "HH:mm"
+        return timePart == "00:00" ? nil : timePart
+    }
+}
+
+struct ScheduleTag: Decodable, Identifiable, Sendable {
+    var id: Int { memberId }
     let memberId: Int
-    let memberName: String?
-    let attachmentCount: Int
-    let taggedFriends: [TaggedFriend]?
+    let memberName: String
 }
 
-struct TaggedFriend: Decodable, Identifiable {
-    let id: Int
-    let name: String
-}
-
-struct ScheduleListResponse: Decodable {
+struct ScheduleListResponse: Decodable, Sendable {
     let schedules: [Schedule]
 }
 
 // MARK: - Requests
 struct CreateScheduleRequest: Encodable {
     let content: String
-    let date: String
-    let startTime: String?
-    let endTime: String?
-    let taggedFriendIds: [Int]?
+    let description: String?
+    let year: Int
+    let month: Int
+    let dayOfMonth: Int
+    let startDateTime: String
+    let endDateTime: String
+    let visibility: String?
+    let taggedMemberIds: [Int]?
+    let attachmentSessionId: String?
+    let orderedAttachmentIds: [String]?
 }
 
 struct UpdateScheduleRequest: Encodable {
     let content: String
-    let date: String
-    let startTime: String?
-    let endTime: String?
-    let taggedFriendIds: [Int]?
+    let description: String?
+    let year: Int
+    let month: Int
+    let dayOfMonth: Int
+    let startDateTime: String
+    let endDateTime: String
+    let visibility: String?
+    let taggedMemberIds: [Int]?
+    let attachmentSessionId: String?
+    let orderedAttachmentIds: [String]?
 }

@@ -25,4 +25,6 @@ struct LoginMember: Decodable {
     let isAdmin: Bool
     let isImpersonating: Bool
     let originalMemberId: Int?
+    let hasProfilePhoto: Bool?
+    let profilePhotoVersion: Int?
 }
