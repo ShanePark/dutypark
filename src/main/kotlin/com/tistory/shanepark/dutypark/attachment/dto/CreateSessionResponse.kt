@@ -1,9 +1,9 @@
 package com.tistory.shanepark.dutypark.attachment.dto
 
-import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.attachment.domain.entity.AttachmentUploadSession
+import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 
 data class CreateSessionResponse(
     val sessionId: UUID,
@@ -13,7 +13,7 @@ data class CreateSessionResponse(
     companion object {
         fun from(session: AttachmentUploadSession): CreateSessionResponse {
             return CreateSessionResponse(
-                sessionId = session.id!!,
+                sessionId = session.id,
                 expiresAt = session.expiresAt,
                 contextType = session.contextType
             )

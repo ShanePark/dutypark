@@ -40,6 +40,29 @@ class RefreshToken(
     @Column(name = "last_used", nullable = false)
     var lastUsed: LocalDateTime = LocalDateTime.now()
 
+    @Column(name = "push_endpoint", length = 500, unique = true)
+    var pushEndpoint: String? = null
+
+    @Column(name = "push_p256dh", length = 255)
+    var pushP256dh: String? = null
+
+    @Column(name = "push_auth", length = 255)
+    var pushAuth: String? = null
+
+    fun hasPushSubscription(): Boolean = pushEndpoint != null
+
+    fun subscribePush(endpoint: String, p256dh: String, auth: String) {
+        this.pushEndpoint = endpoint
+        this.pushP256dh = p256dh
+        this.pushAuth = auth
+    }
+
+    fun unsubscribePush() {
+        this.pushEndpoint = null
+        this.pushP256dh = null
+        this.pushAuth = null
+    }
+
     fun isValid(): Boolean {
         return this.validUntil.isAfter(LocalDateTime.now())
     }

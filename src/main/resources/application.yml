@@ -58,6 +58,10 @@ cookie:
 dutypark:
   adminEmails:
     - ${ADMIN_EMAIL:ADMIN@EMAIL.HERE}
+  webpush:
+    vapid: # npx web-push generate-vapid-keys
+      public-key: "${VAPID_PUBLIC_KEY:}"
+      private-key: "${VAPID_PRIVATE_KEY:}"
   login:
     rate-limit:
       max-attempts: ${LOGIN_MAX_ATTEMPTS:5}

@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component
 @Component
 class SlackNotificationAspect(
     private val slackNotifier: SlackNotifier,
-    @Qualifier("slackTaskExecutor")
+    @param:Qualifier("slackTaskExecutor")
     private val taskExecutor: TaskExecutor,
 ) {
     val log = logger()
