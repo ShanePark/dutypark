@@ -4,7 +4,7 @@ import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import java.time.ZoneId
 import java.time.ZonedDateTime
-import java.util.UUID
+import java.util.*
 
 data class AttachmentDto(
     val id: UUID,
@@ -22,7 +22,7 @@ data class AttachmentDto(
     companion object {
         fun from(attachment: Attachment): AttachmentDto {
             return AttachmentDto(
-                id = attachment.id!!,
+                id = attachment.id,
                 contextType = attachment.contextType,
                 contextId = attachment.contextId,
                 originalFilename = attachment.originalFilename,

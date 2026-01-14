@@ -1,9 +1,12 @@
 package com.tistory.shanepark.dutypark.notification.event
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.notification.domain.entity.Notification
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationReferenceType
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationType
 import com.tistory.shanepark.dutypark.notification.service.NotificationService
+import com.tistory.shanepark.dutypark.push.dto.PushNotificationPayload
+import com.tistory.shanepark.dutypark.push.service.WebPushService
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Propagation
@@ -13,7 +16,8 @@ import org.springframework.transaction.event.TransactionalEventListener
 
 @Component
 class NotificationEventListener(
-    private val notificationService: NotificationService
+    private val notificationService: NotificationService,
+    private val webPushService: WebPushService
 ) {
     private val log = logger()
 
@@ -23,7 +27,7 @@ class NotificationEventListener(
     fun handleFriendRequestSent(event: FriendRequestSentEvent) {
         log.info("Handling FriendRequestSentEvent: from={} to={}", event.fromMemberId, event.toMemberId)
         try {
-            notificationService.createNotification(
+            val notification = notificationService.createNotification(
                 memberId = event.toMemberId,
                 type = NotificationType.FRIEND_REQUEST_RECEIVED,
                 actorId = event.fromMemberId,
@@ -31,6 +35,7 @@ class NotificationEventListener(
                 referenceId = event.requestId.toString(),
                 content = null
             )
+            sendPushNotification(notification)
             log.info("Created friend request notification for member {}", event.toMemberId)
         } catch (e: Exception) {
             log.error("Failed to create friend request notification: {}", e.message, e)
@@ -43,7 +48,7 @@ class NotificationEventListener(
     fun handleFriendRequestAccepted(event: FriendRequestAcceptedEvent) {
         log.info("Handling FriendRequestAcceptedEvent: from={} to={}", event.fromMemberId, event.toMemberId)
         try {
-            notificationService.createNotification(
+            val notification = notificationService.createNotification(
                 memberId = event.fromMemberId,
                 type = NotificationType.FRIEND_REQUEST_ACCEPTED,
                 actorId = event.toMemberId,
@@ -51,6 +56,7 @@ class NotificationEventListener(
                 referenceId = null,
                 content = null
             )
+            sendPushNotification(notification)
             log.info("Created friend accepted notification for member {}", event.fromMemberId)
         } catch (e: Exception) {
             log.error("Failed to create friend accepted notification: {}", e.message, e)
@@ -63,7 +69,7 @@ class NotificationEventListener(
     fun handleFamilyRequestSent(event: FamilyRequestSentEvent) {
         log.info("Handling FamilyRequestSentEvent: from={} to={}", event.fromMemberId, event.toMemberId)
         try {
-            notificationService.createNotification(
+            val notification = notificationService.createNotification(
                 memberId = event.toMemberId,
                 type = NotificationType.FAMILY_REQUEST_RECEIVED,
                 actorId = event.fromMemberId,
@@ -71,6 +77,7 @@ class NotificationEventListener(
                 referenceId = event.requestId.toString(),
                 content = null
             )
+            sendPushNotification(notification)
             log.info("Created family request notification for member {}", event.toMemberId)
         } catch (e: Exception) {
             log.error("Failed to create family request notification: {}", e.message, e)
@@ -83,7 +90,7 @@ class NotificationEventListener(
     fun handleFamilyRequestAccepted(event: FamilyRequestAcceptedEvent) {
         log.info("Handling FamilyRequestAcceptedEvent: from={} to={}", event.fromMemberId, event.toMemberId)
         try {
-            notificationService.createNotification(
+            val notification = notificationService.createNotification(
                 memberId = event.fromMemberId,
                 type = NotificationType.FAMILY_REQUEST_ACCEPTED,
                 actorId = event.toMemberId,
@@ -91,6 +98,7 @@ class NotificationEventListener(
                 referenceId = null,
                 content = null
             )
+            sendPushNotification(notification)
             log.info("Created family accepted notification for member {}", event.fromMemberId)
         } catch (e: Exception) {
             log.error("Failed to create family accepted notification: {}", e.message, e)
@@ -103,7 +111,7 @@ class NotificationEventListener(
     fun handleScheduleTagged(event: ScheduleTaggedEvent) {
         log.info("Handling ScheduleTaggedEvent: owner={} tagged={}", event.ownerId, event.taggedMemberId)
         try {
-            notificationService.createNotification(
+            val notification = notificationService.createNotification(
                 memberId = event.taggedMemberId,
                 type = NotificationType.SCHEDULE_TAGGED,
                 actorId = event.ownerId,
@@ -111,9 +119,31 @@ class NotificationEventListener(
                 referenceId = event.scheduleId.toString(),
                 content = event.scheduleTitle
             )
+            sendPushNotification(notification)
             log.info("Created schedule tagged notification for member {}", event.taggedMemberId)
         } catch (e: Exception) {
             log.error("Failed to create schedule tagged notification: {}", e.message, e)
+        }
+    }
+
+    private fun sendPushNotification(notification: Notification) {
+        webPushService.sendToMember(
+            memberId = notification.member.id!!,
+            payload = PushNotificationPayload(
+                title = "Dutypark",
+                body = notification.title,
+                url = getNotificationUrl(notification),
+                notificationId = notification.id.toString()
+            )
+        )
+    }
+
+    private fun getNotificationUrl(notification: Notification): String {
+        return when (notification.referenceType) {
+            NotificationReferenceType.FRIEND_REQUEST -> "/friends"
+            NotificationReferenceType.SCHEDULE -> "/duty/${notification.member.id}"
+            NotificationReferenceType.MEMBER -> "/duty/${notification.referenceId}"
+            else -> "/"
         }
     }
 }

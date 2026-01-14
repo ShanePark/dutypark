@@ -24,4 +24,8 @@ interface RefreshTokenRepository : JpaRepository<RefreshToken, Long> {
 
     fun findAllByMemberIdIn(memberIds: List<Long>): List<RefreshToken>
 
+    fun findAllByMemberIdAndPushEndpointIsNotNullAndValidUntilAfter(memberId: Long, now: LocalDateTime): List<RefreshToken>
+
+    fun findByPushEndpoint(pushEndpoint: String): RefreshToken?
+
 }

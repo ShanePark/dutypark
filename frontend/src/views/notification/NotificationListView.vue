@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { Bell, Trash2, CheckCheck } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
@@ -17,6 +18,8 @@ dayjs.locale('ko')
 const notificationStore = useNotificationStore()
 const { navigateToNotification } = useNotificationNavigation()
 const { toastSuccess, toastError, showInfo, confirm } = useSwal()
+const route = useRoute()
+const router = useRouter()
 
 const notifications = ref<NotificationDto[]>([])
 const isLoading = ref(false)
@@ -25,6 +28,48 @@ const totalPages = ref(0)
 const pageSize = 20
 
 const hasMorePages = computed(() => currentPage.value < totalPages.value - 1)
+
+const getPushId = () => {
+  const pushId = route.query.pushId
+  if (Array.isArray(pushId)) {
+    return pushId[0] ?? null
+  }
+  return typeof pushId === 'string' ? pushId : null
+}
+
+const clearPushQuery = async () => {
+  if (!route.query.pushId) return
+  const nextQuery = { ...route.query }
+  delete nextQuery.pushId
+  await router.replace({ query: nextQuery })
+}
+
+const handlePushRedirect = async (): Promise<boolean> => {
+  const pushId = getPushId()
+  if (!pushId) return false
+
+  try {
+    const notification = await notificationApi.markAsRead(pushId)
+    notificationStore.fetchUnreadCount()
+    const existing = notifications.value.find(item => item.id === notification.id)
+    if (existing) {
+      existing.isRead = true
+    }
+    await clearPushQuery()
+
+    const navigated = await navigateToNotification(notification, {
+      onScheduleError: () => {
+        toastError('스케줄 정보를 불러오는데 실패했습니다')
+      }
+    })
+    return navigated
+  } catch (error) {
+    console.error('Failed to handle push notification:', error)
+    toastError('푸시 알림을 열지 못했습니다')
+    await clearPushQuery()
+    return false
+  }
+}
 
 async function loadNotifications(page: number = 0) {
   isLoading.value = true
@@ -133,9 +178,23 @@ async function handleMarkAllAsRead() {
   }
 }
 
-onMounted(() => {
-  loadNotifications()
+onMounted(async () => {
+  const navigated = await handlePushRedirect()
+  if (!navigated) {
+    loadNotifications()
+  }
 })
+
+watch(
+  () => route.query.pushId,
+  async (pushId, previousPushId) => {
+    if (!pushId || pushId === previousPushId) return
+    const navigated = await handlePushRedirect()
+    if (!navigated && notifications.value.length === 0) {
+      loadNotifications()
+    }
+  }
+)
 </script>
 
 <template>

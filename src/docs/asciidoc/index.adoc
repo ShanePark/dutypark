@@ -225,6 +225,24 @@ operation::notifications/delete[]
 
 operation::notifications/delete-all-read[]
 
+== Push
+
+=== Push Enabled
+
+operation::push/enabled[]
+
+=== VAPID Public Key
+
+operation::push/vapid-public-key[]
+
+=== Subscribe
+
+operation::push/subscribe[]
+
+=== Unsubscribe
+
+operation::push/unsubscribe[]
+
 == Teams
 
 === Get Team by ID
