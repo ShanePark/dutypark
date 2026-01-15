@@ -26,5 +26,6 @@ data class PushNotificationPayload(
     val badge: String = "/android-chrome-192x192.png",
     val url: String? = null,
     val tag: String? = null,
-    val notificationId: String? = null
+    val notificationId: String? = null,
+    val unreadCount: Int? = null
 )

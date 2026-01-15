@@ -1,9 +1,11 @@
 package com.tistory.shanepark.dutypark.notification.event
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.notification.domain.entity.Notification
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationReferenceType
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationType
+import com.tistory.shanepark.dutypark.notification.domain.repository.NotificationRepository
 import com.tistory.shanepark.dutypark.notification.service.NotificationService
 import com.tistory.shanepark.dutypark.push.dto.PushNotificationPayload
 import com.tistory.shanepark.dutypark.push.service.WebPushService
@@ -17,6 +19,8 @@ import org.springframework.transaction.event.TransactionalEventListener
 @Component
 class NotificationEventListener(
     private val notificationService: NotificationService,
+    private val notificationRepository: NotificationRepository,
+    private val memberRepository: MemberRepository,
     private val webPushService: WebPushService
 ) {
     private val log = logger()
@@ -127,13 +131,22 @@ class NotificationEventListener(
     }
 
     private fun sendPushNotification(notification: Notification) {
+        val memberId = notification.member.id!!
+        val unreadCount = notificationRepository.countByMemberIdAndIsReadFalse(memberId).toInt()
+
+        val actorName = notification.actorId?.let { actorId ->
+            memberRepository.findById(actorId).orElse(null)?.name
+        }
+        val pushBody = notification.type.generatePushBody(notification.content)
+
         webPushService.sendToMember(
-            memberId = notification.member.id!!,
+            memberId = memberId,
             payload = PushNotificationPayload(
-                title = null,
-                body = notification.title,
+                title = actorName,
+                body = pushBody,
                 url = getNotificationUrl(notification),
-                notificationId = notification.id.toString()
+                notificationId = notification.id.toString(),
+                unreadCount = unreadCount
             )
         )
     }

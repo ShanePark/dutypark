@@ -23,6 +23,15 @@ self.addEventListener('push', (event) => {
   // Using empty string for title shows only the app name, avoiding "Dutypark from Dutypark".
   const title = data.title || ''
 
+  // Set app icon badge for iOS PWA (requires iOS 16.4+)
+  if ('setAppBadge' in navigator && typeof data.unreadCount === 'number') {
+    if (data.unreadCount > 0) {
+      navigator.setAppBadge(data.unreadCount)
+    } else {
+      navigator.clearAppBadge()
+    }
+  }
+
   event.waitUntil(
     self.registration.showNotification(title, options)
   )
