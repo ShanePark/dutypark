@@ -9,6 +9,7 @@ import { useSwal } from '@/composables/useSwal'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEscapeKey } from '@/composables/useEscapeKey'
 import { useKakao } from '@/composables/useKakao'
+import { usePushNotification } from '@/composables/usePushNotification'
 import type { FriendDto, MemberDto, RefreshTokenDto, CalendarVisibility } from '@/types'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
 import ProfilePhotoUploader from '@/components/common/ProfilePhotoUploader.vue'
@@ -35,6 +36,8 @@ import {
   Users,
   LogIn,
   Plus,
+  Bell,
+  BellOff,
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -120,6 +123,60 @@ async function handleImpersonate(member: MemberDto) {
   }
 }
 const { kakaoLink } = useKakao()
+
+// Push notification settings
+const pushNotification = usePushNotification()
+const togglingPush = ref(false)
+
+const isIOSPWA = computed(() => {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as any).standalone === true
+  return isIOS && isStandalone
+})
+
+const showPushSettings = computed(() => {
+  return pushNotification.isSupported.value && pushNotification.isEnabled.value
+})
+
+const pushStatusText = computed(() => {
+  if (!pushNotification.isSupported.value) return '이 기기에서 지원하지 않음'
+  if (!pushNotification.isEnabled.value) return '서버에서 비활성화됨'
+  if (pushNotification.permission.value === 'denied') return '차단됨 (브라우저 설정에서 변경 필요)'
+  if (pushNotification.permission.value === 'granted' && pushNotification.isSubscribed.value) return '활성화됨'
+  return '비활성화됨'
+})
+
+async function togglePushNotification() {
+  if (togglingPush.value) return
+  togglingPush.value = true
+
+  try {
+    if (pushNotification.permission.value === 'granted' && pushNotification.isSubscribed.value) {
+      await pushNotification.unsubscribe()
+      toastSuccess('알림이 해제되었습니다.')
+    } else {
+      const success = await pushNotification.subscribe()
+      if (success) {
+        toastSuccess('알림이 활성화되었습니다.')
+      } else if (pushNotification.permission.value === 'denied') {
+        showError('알림이 차단되어 있습니다. 브라우저 설정에서 알림을 허용해주세요.')
+      }
+    }
+  } catch (error) {
+    console.error('Failed to toggle push notification:', error)
+    showError('알림 설정 변경에 실패했습니다.')
+  } finally {
+    togglingPush.value = false
+  }
+}
+
+async function initPushNotification() {
+  pushNotification.checkSupport()
+  if (pushNotification.isSupported.value) {
+    await pushNotification.checkEnabled()
+  }
+}
 
 // Theme settings
 const themeOptions: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
@@ -419,6 +476,7 @@ onMounted(async () => {
       fetchFamilyAndManagers(),
       fetchManagedMembers(),
       fetchTokens(),
+      initPushNotification(),
     ])
 
     // Set initial visibility from user data
@@ -560,6 +618,43 @@ onMounted(async () => {
         </div>
         <p class="text-sm mt-3" :style="{ color: 'var(--dp-text-muted)' }">
           {{ themeStore.mode === 'dark' ? '다크 모드가 적용됩니다' : '라이트 모드가 적용됩니다' }}
+        </p>
+      </section>
+
+      <!-- Push Notification Settings Section -->
+      <section v-if="showPushSettings" class="rounded-xl shadow-sm p-6 mb-4" :style="{ backgroundColor: 'var(--dp-bg-card)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
+          <Bell class="w-5 h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
+          푸시 알림 설정
+        </h2>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p :style="{ color: 'var(--dp-text-primary)' }">알림 상태</p>
+            <p class="text-sm mt-1" :style="{ color: 'var(--dp-text-secondary)' }">{{ pushStatusText }}</p>
+          </div>
+          <button
+            @click="togglePushNotification"
+            :disabled="togglingPush || pushNotification.permission.value === 'denied'"
+            class="px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            :style="{
+              backgroundColor: pushNotification.permission.value === 'granted' && pushNotification.isSubscribed.value
+                ? 'var(--dp-bg-tertiary)'
+                : 'var(--dp-accent)',
+              color: pushNotification.permission.value === 'granted' && pushNotification.isSubscribed.value
+                ? 'var(--dp-text-primary)'
+                : 'white'
+            }"
+          >
+            <Loader2 v-if="togglingPush" class="w-4 h-4 animate-spin" />
+            <template v-else>
+              <BellOff v-if="pushNotification.permission.value === 'granted' && pushNotification.isSubscribed.value" class="w-4 h-4" />
+              <Bell v-else class="w-4 h-4" />
+            </template>
+            {{ pushNotification.permission.value === 'granted' && pushNotification.isSubscribed.value ? '알림 끄기' : '알림 허용' }}
+          </button>
+        </div>
+        <p v-if="isIOSPWA && pushNotification.permission.value === 'denied'" class="text-sm mt-3" :style="{ color: 'var(--dp-text-muted)' }">
+          알림을 다시 허용하려면 홈 화면에서 앱을 삭제 후 다시 추가해주세요.
         </p>
       </section>
 
