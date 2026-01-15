@@ -42,7 +42,7 @@ class WebPushService(
             auth = request.keys.auth
         )
         refreshTokenRepository.save(refreshToken)
-        log.info("Push subscription saved for member {} on token {}", refreshToken.member.id, refreshToken.id)
+        log.debug("Push subscription saved for member {} on token {}", refreshToken.member.id, refreshToken.id)
         return true
     }
 
@@ -102,7 +102,7 @@ class WebPushService(
             ?: throw IllegalStateException("Push service is not available")
 
         val statusCode = response.statusLine.statusCode
-        log.info("Push sent to token {}: status={}, endpoint={}", token.id, statusCode, token.pushEndpoint?.take(50))
+        log.debug("Push sent to token {}: status={}, endpoint={}", token.id, statusCode, token.pushEndpoint?.take(50))
 
         if (statusCode in listOf(404, 410)) {
             log.info("Push subscription expired, removing from token: {}", token.id)
