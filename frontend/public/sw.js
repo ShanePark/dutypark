@@ -19,8 +19,12 @@ self.addEventListener('push', (event) => {
     }
   }
 
+  // iOS PWA automatically appends "from [app name]" to notifications.
+  // Using empty string for title shows only the app name, avoiding "Dutypark from Dutypark".
+  const title = data.title || ''
+
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Dutypark', options)
+    self.registration.showNotification(title, options)
   )
 })
 
