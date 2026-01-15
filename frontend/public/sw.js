@@ -1,5 +1,14 @@
 // Service Worker for Push Notifications
 
+// Activate new service worker immediately without waiting
+self.addEventListener('install', () => {
+  self.skipWaiting()
+})
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(clients.claim())
+})
+
 self.addEventListener('push', (event) => {
   if (!event.data) {
     return
