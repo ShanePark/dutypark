@@ -189,39 +189,8 @@ class AttachmentService(
 
         try {
             attachmentsToKeep.forEach { attachment ->
-                val tempFilePath = tempDir.resolve(attachment.storedFilename)
-                val finalFilePath = finalDir.resolve(attachment.storedFilename)
+                val finalFilePath = moveAttachmentToFinalLocation(attachment, tempDir, finalDir, request.contextId)
 
-                if (!Files.exists(tempFilePath)) {
-                    throw IOException("Source file not found: ${attachment.storedFilename}")
-                }
-
-                Files.move(
-                    tempFilePath,
-                    finalFilePath,
-                    StandardCopyOption.ATOMIC_MOVE,
-                    StandardCopyOption.REPLACE_EXISTING
-                )
-
-                val thumbnailFilename = attachment.thumbnailFilename
-                if (thumbnailFilename != null) {
-                    val tempThumbnailPath = tempDir.resolve(thumbnailFilename)
-                    val finalThumbnailPath = finalDir.resolve(thumbnailFilename)
-                    if (Files.exists(tempThumbnailPath)) {
-                        Files.move(
-                            tempThumbnailPath,
-                            finalThumbnailPath,
-                            StandardCopyOption.ATOMIC_MOVE,
-                            StandardCopyOption.REPLACE_EXISTING
-                        )
-                    }
-                }
-
-                attachment.contextId = request.contextId
-                attachment.uploadSessionId = null
-                attachment.storagePath = finalDir.toString()
-
-                // Trigger thumbnail generation for pending attachments after file is moved
                 if (attachment.thumbnailStatus == ThumbnailStatus.PENDING) {
                     eventPublisher.publishEvent(
                         AttachmentUploadedEvent(
@@ -232,33 +201,10 @@ class AttachmentService(
                 }
             }
 
-            orderedIds.forEachIndexed { index, attachmentId ->
-                val attachment = attachmentsToKeep.find { it.id == attachmentId }
-                attachment?.orderIndex = index
-            }
-
-            val unorderedKeptAttachments = attachmentsToKeep.filter { it.id !in orderedIds }
-            unorderedKeptAttachments.forEachIndexed { index, attachment ->
-                attachment.orderIndex = orderedIds.size + index
-            }
-
+            updateAttachmentOrdering(attachmentsToKeep, orderedIds)
             attachmentRepository.saveAll(attachmentsToKeep)
 
-            attachmentsToDelete.forEach { attachment ->
-                log.info("Deleting attachment excluded from orderedIds: id={}, filename={}", attachment.id, attachment.originalFilename)
-                val tempFilePath = tempDir.resolve(attachment.storedFilename)
-                if (Files.exists(tempFilePath)) {
-                    Files.delete(tempFilePath)
-                }
-                val thumbnailFilename = attachment.thumbnailFilename
-                if (thumbnailFilename != null) {
-                    val tempThumbnailPath = tempDir.resolve(thumbnailFilename)
-                    if (Files.exists(tempThumbnailPath)) {
-                        Files.delete(tempThumbnailPath)
-                    }
-                }
-                attachmentRepository.delete(attachment)
-            }
+            attachmentsToDelete.forEach { deleteTempAttachment(it, tempDir) }
 
             if (Files.exists(tempDir)) {
                 fileSystemService.deleteDirectory(tempDir)
@@ -300,16 +246,7 @@ class AttachmentService(
         val firstAttachment = attachments.first()
         permissionEvaluator.checkWritePermission(loginMember, firstAttachment)
 
-        request.orderedAttachmentIds.forEachIndexed { index, attachmentId ->
-            val attachment = attachments.find { it.id == attachmentId }
-            attachment?.orderIndex = index
-        }
-
-        val unorderedAttachments = attachments.filter { it.id !in request.orderedAttachmentIds }
-        unorderedAttachments.forEachIndexed { index, attachment ->
-            attachment.orderIndex = request.orderedAttachmentIds.size + index
-        }
-
+        updateAttachmentOrdering(attachments, request.orderedAttachmentIds)
         attachmentRepository.saveAll(attachments)
 
         log.info(
@@ -348,30 +285,7 @@ class AttachmentService(
         permissionEvaluator.checkSessionOwnership(loginMember, session)
 
         val sessionAttachments = attachmentRepository.findAllByUploadSessionId(sessionId)
-
-        sessionAttachments.forEach { attachment ->
-            val filePath = pathResolver.resolveFilePath(
-                attachment.contextType,
-                attachment.contextId,
-                attachment.uploadSessionId,
-                attachment.storedFilename
-            )
-            fileSystemService.deleteFile(filePath)
-
-            val thumbnailFilename = attachment.thumbnailFilename
-            if (thumbnailFilename != null) {
-                val thumbnailPath = pathResolver.resolveThumbnailPath(
-                    attachment.contextType,
-                    attachment.contextId,
-                    attachment.uploadSessionId,
-                    thumbnailFilename
-                )
-                fileSystemService.deleteFile(thumbnailPath)
-            }
-
-            attachmentRepository.delete(attachment)
-            log.info("Deleted session attachment: id={}, filename={}", attachment.id, attachment.originalFilename)
-        }
+        sessionAttachments.forEach { deleteAttachment(it) }
 
         val tempDir = pathResolver.resolveTemporaryDirectory(sessionId)
         if (Files.exists(tempDir)) {
@@ -461,5 +375,80 @@ class AttachmentService(
         } else {
             uuid.toString()
         }
+    }
+
+    private fun moveAttachmentToFinalLocation(
+        attachment: Attachment,
+        tempDir: java.nio.file.Path,
+        finalDir: java.nio.file.Path,
+        contextId: String
+    ): java.nio.file.Path {
+        val tempFilePath = tempDir.resolve(attachment.storedFilename)
+        val finalFilePath = finalDir.resolve(attachment.storedFilename)
+
+        if (!Files.exists(tempFilePath)) {
+            throw IOException("Source file not found: ${attachment.storedFilename}")
+        }
+
+        Files.move(
+            tempFilePath,
+            finalFilePath,
+            StandardCopyOption.ATOMIC_MOVE,
+            StandardCopyOption.REPLACE_EXISTING
+        )
+
+        val thumbnailFilename = attachment.thumbnailFilename
+        if (thumbnailFilename != null) {
+            val tempThumbnailPath = tempDir.resolve(thumbnailFilename)
+            val finalThumbnailPath = finalDir.resolve(thumbnailFilename)
+            if (Files.exists(tempThumbnailPath)) {
+                Files.move(
+                    tempThumbnailPath,
+                    finalThumbnailPath,
+                    StandardCopyOption.ATOMIC_MOVE,
+                    StandardCopyOption.REPLACE_EXISTING
+                )
+            }
+        }
+
+        attachment.contextId = contextId
+        attachment.uploadSessionId = null
+        attachment.storagePath = finalDir.toString()
+
+        return finalFilePath
+    }
+
+    private fun updateAttachmentOrdering(
+        attachments: List<Attachment>,
+        orderedIds: List<UUID>
+    ) {
+        orderedIds.forEachIndexed { index, attachmentId ->
+            val attachment = attachments.find { it.id == attachmentId }
+            attachment?.orderIndex = index
+        }
+
+        val unorderedAttachments = attachments.filter { it.id !in orderedIds }
+        unorderedAttachments.forEachIndexed { index, attachment ->
+            attachment.orderIndex = orderedIds.size + index
+        }
+    }
+
+    private fun deleteTempAttachment(
+        attachment: Attachment,
+        tempDir: java.nio.file.Path
+    ) {
+        log.info("Deleting attachment excluded from orderedIds: id={}, filename={}", attachment.id, attachment.originalFilename)
+        val tempFilePath = tempDir.resolve(attachment.storedFilename)
+        if (Files.exists(tempFilePath)) {
+            Files.delete(tempFilePath)
+        }
+        val thumbnailFilename = attachment.thumbnailFilename
+        if (thumbnailFilename != null) {
+            val tempThumbnailPath = tempDir.resolve(thumbnailFilename)
+            if (Files.exists(tempThumbnailPath)) {
+                Files.delete(tempThumbnailPath)
+            }
+        }
+        attachmentRepository.delete(attachment)
     }
 }
