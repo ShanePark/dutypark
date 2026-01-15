@@ -6,7 +6,10 @@ import com.tistory.shanepark.dutypark.security.config.DutyparkProperties
 import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus
-import io.jsonwebtoken.*
+import io.jsonwebtoken.ExpiredJwtException
+import io.jsonwebtoken.Jwts
+import io.jsonwebtoken.MalformedJwtException
+import io.jsonwebtoken.UnsupportedJwtException
 import io.jsonwebtoken.io.Decoders
 import io.jsonwebtoken.security.Keys
 import io.jsonwebtoken.security.SecurityException
@@ -88,17 +91,14 @@ class JwtProvider(
         } catch (e: Exception) {
             when (e) {
                 is SecurityException -> {
-                    log.info("Invalid JWT signature.")
                     return TokenStatus.INVALID
                 }
 
                 is MalformedJwtException -> {
-                    log.info("Invalid JWT token.")
                     return TokenStatus.INVALID
                 }
 
                 is IllegalArgumentException -> {
-                    log.info("JWT token compact of handler are invalid.")
                     return TokenStatus.INVALID
                 }
 

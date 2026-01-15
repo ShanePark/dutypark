@@ -24,7 +24,6 @@ class RefreshTokenService(
     @Scheduled(cron = "0 0 0 * * *")
     fun revokeExpiredRefreshTokens() {
         val expiredTokens = refreshTokenRepository.findAllByValidUntilIsBefore(LocalDateTime.now())
-        log.info("Revoke expired refresh tokens. expiredTokensCount:${expiredTokens.size}")
         refreshTokenRepository.deleteAll(expiredTokens)
     }
 
@@ -39,7 +38,7 @@ class RefreshTokenService(
     fun deleteRefreshToken(loginMember: LoginMember, id: Long) {
         val refreshToken = refreshTokenRepository.findById(id).orElseThrow()
         if (!loginMember.isAdmin && refreshToken.member.id != loginMember.id) {
-            log.warn("No authority to delete refresh token. loginMemberId:$loginMember, refreshTokenId:$id")
+            log.warn("No authority to delete refresh token: loginMemberId={}, refreshTokenId={}", loginMember.id, id)
             throw AuthException("No authority to delete refresh token.")
         }
         refreshTokenRepository.delete(refreshToken)

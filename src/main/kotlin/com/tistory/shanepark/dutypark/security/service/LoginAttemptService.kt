@@ -40,7 +40,6 @@ class LoginAttemptService(
             success = false
         )
         loginAttemptRepository.save(attempt)
-        log.debug("Recorded failed login attempt for ip={}, email={}", ipAddress, email)
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -52,7 +51,6 @@ class LoginAttemptService(
             success = true
         )
         loginAttemptRepository.save(attempt)
-        log.debug("Recorded successful login for ip={}, email={}", ipAddress, email)
     }
 
     @Scheduled(cron = "0 0 3 * * *")
@@ -63,8 +61,6 @@ class LoginAttemptService(
 
         if (deletedCount > 0) {
             log.info("Cleaned up {} old login attempts before {}", deletedCount, threshold)
-        } else {
-            log.debug("No old login attempts to clean up")
         }
     }
 

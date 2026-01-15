@@ -353,7 +353,7 @@ class TodoService(
 
     private fun verifyOwnership(todoEntity: Todo, member: Member) {
         if (todoEntity.member.id != member.id) {
-            log.warn("$member tried to access todo ${todoEntity.id} which is not his")
+            log.warn("Unauthorized access attempt: memberId={} tried to access todo {} (owner={})", member.id, todoEntity.id, todoEntity.member.id)
             throw IllegalArgumentException("Todo is not yours")
         }
     }

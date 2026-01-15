@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.common.slack
 
-import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifier
 import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifierLogger
 import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifierSender
@@ -19,8 +18,6 @@ class SlackApiConfiguration(
     val slackToken: String
 ) {
 
-    private val log = logger()
-
     @Bean("slackTaskExecutor")
     fun threadPoolTaskExecutor(): TaskExecutor {
         val executor = ThreadPoolTaskExecutor()
@@ -33,10 +30,8 @@ class SlackApiConfiguration(
     @Bean
     fun slackNotifier(): SlackNotifier {
         if (slackToken.isBlank()) {
-            log.info("Slack token is blank. Slack Notifier Logger registered instead.")
             return SlackNotifierLogger()
         }
-        log.info("Slack API registered. slackToken = $slackToken")
         val slackApi = SlackApi("https://hooks.slack.com/services/$slackToken")
         return SlackNotifierSender(slackApi)
     }
@@ -44,7 +39,6 @@ class SlackApiConfiguration(
     @Bean
     @Profile("test")
     fun dummySlackNotifier(): SlackNotifier {
-        log.info("Dummy Slack Notifier registered.")
         return object : SlackNotifier {
             override fun call(slackMessage: SlackMessage) {
                 // do nothing

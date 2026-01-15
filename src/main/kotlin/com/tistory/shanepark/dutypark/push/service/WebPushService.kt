@@ -42,7 +42,6 @@ class WebPushService(
             auth = request.keys.auth
         )
         refreshTokenRepository.save(refreshToken)
-        log.debug("Push subscription saved for member {} on token {}", refreshToken.member.id, refreshToken.id)
         return true
     }
 
@@ -62,7 +61,6 @@ class WebPushService(
         val tokens = refreshTokenRepository
             .findAllByMemberIdAndPushEndpointIsNotNullAndValidUntilAfter(memberId, LocalDateTime.now())
         if (tokens.isEmpty()) {
-            log.debug("No push subscriptions for member {}", memberId)
             return
         }
 
@@ -82,7 +80,6 @@ class WebPushService(
                     return@forEach
                 }
                 sendNotification(token, payloadJson)
-                log.debug("Push notification sent to member {} via token {}", memberId, token.id)
             } catch (e: Exception) {
                 log.error("Failed to send push to token {}: {}", token.id, e.message)
                 handleSendError(token, e)
@@ -102,7 +99,6 @@ class WebPushService(
             ?: throw IllegalStateException("Push service is not available")
 
         val statusCode = response.statusLine.statusCode
-        log.debug("Push sent to token {}: status={}, endpoint={}", token.id, statusCode, token.pushEndpoint?.take(50))
 
         if (statusCode in listOf(404, 410)) {
             log.info("Push subscription expired, removing from token: {}", token.id)

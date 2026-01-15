@@ -53,14 +53,14 @@ class AuthService(
 
     fun changePassword(param: PasswordChangeDto, byAdmin: Boolean = false) {
         val member = memberRepository.findById(param.memberId).orElseThrow {
-            log.info("change password failed. member not exist:${param.memberId}")
+            log.warn("Change password failed: member not exist, memberId={}", param.memberId)
             throw AuthException("존재하지 않는 회원입니다.")
         }
 
         if (!byAdmin) {
             val passwordMatch = passwordEncoder.matches(param.currentPassword, member.password)
             if (!passwordMatch) {
-                log.info("change password failed. password not match:${param.memberId}")
+                log.warn("Change password failed: password not match, memberId={}", param.memberId)
                 throw AuthException("비밀번호가 일치하지 않습니다.")
             }
         }
@@ -68,7 +68,7 @@ class AuthService(
         member.password = passwordEncoder.encode(param.newPassword)
         refreshTokenService.revokeAllRefreshTokensByMember(member)
 
-        log.info("Member password changed. member:${param.memberId}")
+        log.info("Member password changed: memberId={}", param.memberId)
     }
 
     fun getTokenResponse(login: LoginDto, req: HttpServletRequest): TokenResponse {
@@ -97,8 +97,6 @@ class AuthService(
             userAgent = req.getHeader(HttpHeaders.USER_AGENT)
         )
 
-        log.info("Login Success (Bearer): ${member.name}")
-
         return TokenResponse(
             accessToken = jwt,
             refreshToken = refreshToken.token,
@@ -123,8 +121,6 @@ class AuthService(
             jwtConfig.refreshTokenValidityInDays
         )
 
-        log.debug("Token refresh succeed. member:${member}")
-
         return TokenResponse(
             accessToken = newJwt,
             refreshToken = refreshToken.token,
@@ -134,7 +130,7 @@ class AuthService(
 
     fun getTokenResponseByMemberId(memberId: Long, req: HttpServletRequest): TokenResponse {
         val member = memberRepository.findById(memberId).orElseThrow {
-            log.info("Token generation failed. member not exist:${memberId}")
+            log.warn("Token generation failed: member not exist, memberId={}", memberId)
             AuthException("존재하지 않는 계정입니다.")
         }
 
@@ -145,8 +141,6 @@ class AuthService(
             userAgent = req.getHeader(HttpHeaders.USER_AGENT)
         )
 
-        log.info("OAuth Login Success (Bearer): ${member.name}")
-
         return TokenResponse(
             accessToken = jwt,
             refreshToken = refreshToken.token,
@@ -156,6 +150,7 @@ class AuthService(
 
     fun impersonate(manager: LoginMember, targetMemberId: Long): String {
         if (manager.isImpersonating) {
+            log.warn("Impersonation denied: manager {} already impersonating another account", manager.id)
             throw AuthException("이미 다른 계정으로 전환된 상태입니다.")
         }
 
@@ -169,11 +164,11 @@ class AuthService(
 
         val isManager = memberManagerRepository.findAllByManagerAndManaged(managerEntity, targetEntity).isNotEmpty()
         if (!isManager) {
-            log.warn("Impersonation denied. manager:${manager.id} is not managing target:${targetMemberId}")
+            log.warn("Impersonation denied: manager={} is not managing target={}", manager.id, targetMemberId)
             throw AuthException("관리 권한이 없습니다.")
         }
 
-        log.info("Impersonation started. manager:${manager.id} -> target:${targetMemberId}")
+        log.info("Impersonation started: manager={} -> target={}", manager.id, targetMemberId)
 
         return jwtProvider.createImpersonationToken(targetEntity, manager.id)
     }
@@ -208,7 +203,7 @@ class AuthService(
             userAgent = req.getHeader(HttpHeaders.USER_AGENT)
         )
 
-        log.info("Impersonation ended. restored to:${originalMemberId} from:${currentLogin.id}")
+        log.info("Impersonation ended: restored to={} from={}", originalMemberId, currentLogin.id)
 
         return TokenResponse(
             accessToken = jwt,

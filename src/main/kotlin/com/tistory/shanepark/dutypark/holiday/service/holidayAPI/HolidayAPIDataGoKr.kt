@@ -24,15 +24,13 @@ class HolidayAPIDataGoKr(
     private val log = logger()
 
     override fun requestHolidays(year: Int): List<HolidayDto> {
-        log.info("Requesting holidays from DataGoKr API... year:{}", year)
         val stopWatch = StopWatch()
         stopWatch.start()
         val result = dataGoKrApi.getHolidays(serviceKey = serviceKey, year = year)
         stopWatch.stop()
-        log.info(
-            "Holidays from DataGoKr API has been received in {} ms",
-            stopWatch.totalTimeMillis
-        )
+        if (stopWatch.totalTimeMillis > 5000) {
+            log.warn("DataGoKr API call took {} ms for year {}", stopWatch.totalTimeMillis, year)
+        }
         return parse(result)
     }
 

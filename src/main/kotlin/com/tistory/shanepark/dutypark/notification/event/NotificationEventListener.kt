@@ -29,7 +29,6 @@ class NotificationEventListener(
     @Async("notificationExecutor")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun handleFriendRequestSent(event: FriendRequestSentEvent) {
-        log.debug("Handling FriendRequestSentEvent: from={} to={}", event.fromMemberId, event.toMemberId)
         try {
             val notification = notificationService.createNotification(
                 memberId = event.toMemberId,
@@ -40,7 +39,6 @@ class NotificationEventListener(
                 content = null
             )
             sendPushNotification(notification)
-            log.debug("Created friend request notification for member {}", event.toMemberId)
         } catch (e: Exception) {
             log.error("Failed to create friend request notification: {}", e.message, e)
         }
@@ -50,7 +48,6 @@ class NotificationEventListener(
     @Async("notificationExecutor")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun handleFriendRequestAccepted(event: FriendRequestAcceptedEvent) {
-        log.debug("Handling FriendRequestAcceptedEvent: from={} to={}", event.fromMemberId, event.toMemberId)
         try {
             val notification = notificationService.createNotification(
                 memberId = event.fromMemberId,
@@ -61,7 +58,6 @@ class NotificationEventListener(
                 content = null
             )
             sendPushNotification(notification)
-            log.debug("Created friend accepted notification for member {}", event.fromMemberId)
         } catch (e: Exception) {
             log.error("Failed to create friend accepted notification: {}", e.message, e)
         }
@@ -71,7 +67,6 @@ class NotificationEventListener(
     @Async("notificationExecutor")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun handleFamilyRequestSent(event: FamilyRequestSentEvent) {
-        log.debug("Handling FamilyRequestSentEvent: from={} to={}", event.fromMemberId, event.toMemberId)
         try {
             val notification = notificationService.createNotification(
                 memberId = event.toMemberId,
@@ -82,7 +77,6 @@ class NotificationEventListener(
                 content = null
             )
             sendPushNotification(notification)
-            log.debug("Created family request notification for member {}", event.toMemberId)
         } catch (e: Exception) {
             log.error("Failed to create family request notification: {}", e.message, e)
         }
@@ -92,7 +86,6 @@ class NotificationEventListener(
     @Async("notificationExecutor")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun handleFamilyRequestAccepted(event: FamilyRequestAcceptedEvent) {
-        log.debug("Handling FamilyRequestAcceptedEvent: from={} to={}", event.fromMemberId, event.toMemberId)
         try {
             val notification = notificationService.createNotification(
                 memberId = event.fromMemberId,
@@ -103,7 +96,6 @@ class NotificationEventListener(
                 content = null
             )
             sendPushNotification(notification)
-            log.debug("Created family accepted notification for member {}", event.fromMemberId)
         } catch (e: Exception) {
             log.error("Failed to create family accepted notification: {}", e.message, e)
         }
@@ -113,7 +105,6 @@ class NotificationEventListener(
     @Async("notificationExecutor")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun handleScheduleTagged(event: ScheduleTaggedEvent) {
-        log.debug("Handling ScheduleTaggedEvent: owner={} tagged={}", event.ownerId, event.taggedMemberId)
         try {
             val notification = notificationService.createNotification(
                 memberId = event.taggedMemberId,
@@ -124,7 +115,6 @@ class NotificationEventListener(
                 content = event.scheduleTitle
             )
             sendPushNotification(notification)
-            log.debug("Created schedule tagged notification for member {}", event.taggedMemberId)
         } catch (e: Exception) {
             log.error("Failed to create schedule tagged notification: {}", e.message, e)
         }

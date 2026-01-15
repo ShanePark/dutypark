@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.duty.service
 
-import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyBatchUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
@@ -36,7 +35,6 @@ class DutyService(
     private val memberService: MemberService,
     private val holidayService: HolidayService,
 ) {
-    private val log = logger()
 
     fun update(dutyUpdateDto: DutyUpdateDto) {
         val member = memberRepository.findById(dutyUpdateDto.memberId).orElseThrow()
@@ -127,7 +125,6 @@ class DutyService(
         calendarView: CalendarView,
         duties: List<Duty>
     ): List<Duty> {
-        log.info("Lazy initializing duties for member $member for $calendarView")
         val team = member.team ?: throw IllegalArgumentException("Member ${member.id} does not belong to any team")
         val dutyTypes = team.dutyTypes
         if (dutyTypes.isEmpty() || dutyTypes.size > 1) {

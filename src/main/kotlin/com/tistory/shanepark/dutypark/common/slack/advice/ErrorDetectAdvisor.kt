@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.common.slack.advice
 
-import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifier
 import jakarta.servlet.http.HttpServletRequest
 import net.gpedro.integrations.slack.SlackAttachment
@@ -21,7 +20,6 @@ import java.util.*
 class ErrorDetectAdvisor(
     private val slackNotifier: SlackNotifier,
 ) {
-    private val log = logger()
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException::class)
     @ResponseBody
@@ -29,10 +27,6 @@ class ErrorDetectAdvisor(
         req: HttpServletRequest,
         e: HttpRequestMethodNotSupportedException
     ): ResponseEntity<Void> {
-        val requestURI = req.requestURI
-        if (!requestURI.equals("/")) {
-            log.info("MethodNotSupportedException ${e.message}, requestURI: $requestURI")
-        }
         return ResponseEntity.status(404).build()
     }
 
@@ -42,7 +36,6 @@ class ErrorDetectAdvisor(
         req: HttpServletRequest,
         e: IllegalArgumentException
     ): ResponseEntity<Map<String, String>> {
-        log.info("IllegalArgumentException: ${e.message}, requestURI: ${req.requestURI}")
         return ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Bad Request")))
     }
 

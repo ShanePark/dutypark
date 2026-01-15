@@ -23,8 +23,6 @@ class NotificationCleanupScheduler(
 
         if (deletedCount > 0) {
             log.info("Cleaned up {} notifications older than {}", deletedCount, cutoffDate)
-        } else {
-            log.debug("No old notifications to clean up at {}", LocalDateTime.now(clock))
         }
     }
 }
