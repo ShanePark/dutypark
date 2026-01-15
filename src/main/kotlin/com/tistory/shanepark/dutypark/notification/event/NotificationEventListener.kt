@@ -130,7 +130,7 @@ class NotificationEventListener(
         webPushService.sendToMember(
             memberId = notification.member.id!!,
             payload = PushNotificationPayload(
-                title = "Dutypark",
+                title = null,
                 body = notification.title,
                 url = getNotificationUrl(notification),
                 notificationId = notification.id.toString()
