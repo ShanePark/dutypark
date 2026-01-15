@@ -190,6 +190,7 @@ class ThumbnailServiceTest {
         )
 
         whenever(mockAttachmentRepository.findById(attachmentId)).thenReturn(Optional.of(attachment))
+        whenever(mockAttachmentRepository.save(any())).thenReturn(attachment)
         whenever(mockPathResolver.resolveThumbnailPath(filePath, attachment.storedFilename)).thenReturn(thumbnailPath)
         whenever(mockGenerator.canGenerate("image/png")).thenReturn(true)
         whenever(mockFileSystemService.fileExists(thumbnailPath)).thenReturn(true)
