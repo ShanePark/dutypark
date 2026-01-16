@@ -24,6 +24,8 @@ import java.time.LocalDateTime
 
 class ScheduleControllerTest : RestDocsTest() {
 
+    private val fixedDateTime = LocalDateTime.of(2025, 1, 15, 12, 0, 0)
+
     @Autowired
     lateinit var scheduleRepository: ScheduleRepository
 
@@ -39,8 +41,8 @@ class ScheduleControllerTest : RestDocsTest() {
         val updateScheduleDto = ScheduleSaveDto(
             memberId = member.id!!,
             content = "test",
-            startDateTime = LocalDateTime.now(),
-            endDateTime = LocalDateTime.now().plusHours(1),
+            startDateTime = fixedDateTime,
+            endDateTime = fixedDateTime.plusHours(1),
         )
         val json = objectMapper.writeValueAsString(updateScheduleDto)
         val sizeBefore = scheduleRepository.findAll().size
@@ -81,8 +83,8 @@ class ScheduleControllerTest : RestDocsTest() {
         val updateScheduleDto = ScheduleSaveDto(
             memberId = 1234,
             content = "test",
-            startDateTime = LocalDateTime.now(),
-            endDateTime = LocalDateTime.now().plusHours(1)
+            startDateTime = fixedDateTime,
+            endDateTime = fixedDateTime.plusHours(1)
         )
         val json = objectMapper.writeValueAsString(updateScheduleDto)
 
@@ -112,8 +114,8 @@ class ScheduleControllerTest : RestDocsTest() {
             Schedule(
                 member = member,
                 content = "test",
-                startDateTime = LocalDateTime.now(),
-                endDateTime = LocalDateTime.now().plusHours(1),
+                startDateTime = fixedDateTime,
+                endDateTime = fixedDateTime.plusHours(1),
                 position = 0,
             )
         )
@@ -123,8 +125,8 @@ class ScheduleControllerTest : RestDocsTest() {
             id = oldSchedule.id,
             memberId = member.id!!,
             content = "test2",
-            startDateTime = LocalDateTime.now().plusHours(2),
-            endDateTime = LocalDateTime.now().plusHours(3)
+            startDateTime = fixedDateTime.plusHours(2),
+            endDateTime = fixedDateTime.plusHours(3)
         )
         val json = objectMapper.writeValueAsString(updateScheduleDto)
 
@@ -170,8 +172,8 @@ class ScheduleControllerTest : RestDocsTest() {
             Schedule(
                 member = member,
                 content = "test",
-                startDateTime = LocalDateTime.now(),
-                endDateTime = LocalDateTime.now().plusHours(1),
+                startDateTime = fixedDateTime,
+                endDateTime = fixedDateTime.plusHours(1),
                 position = 0
             )
         )
@@ -236,8 +238,8 @@ class ScheduleControllerTest : RestDocsTest() {
             Schedule(
                 member = member,
                 content = "test with attachments",
-                startDateTime = LocalDateTime.now(),
-                endDateTime = LocalDateTime.now().plusHours(1),
+                startDateTime = fixedDateTime,
+                endDateTime = fixedDateTime.plusHours(1),
                 position = 0
             )
         )
@@ -278,8 +280,8 @@ class ScheduleControllerTest : RestDocsTest() {
             id = schedule.id,
             memberId = member.id!!,
             content = "updated content",
-            startDateTime = LocalDateTime.now().plusHours(2),
-            endDateTime = LocalDateTime.now().plusHours(3),
+            startDateTime = fixedDateTime.plusHours(2),
+            endDateTime = fixedDateTime.plusHours(3),
             orderedAttachmentIds = listOf(attachment1.id)
         )
         val json = objectMapper.writeValueAsString(updateScheduleDto)
@@ -338,8 +340,8 @@ class ScheduleControllerTest : RestDocsTest() {
             Schedule(
                 member = member,
                 content = "detail",
-                startDateTime = LocalDateTime.now(),
-                endDateTime = LocalDateTime.now().plusHours(1),
+                startDateTime = fixedDateTime,
+                endDateTime = fixedDateTime.plusHours(1),
                 position = 0
             )
         )
@@ -361,8 +363,8 @@ class ScheduleControllerTest : RestDocsTest() {
             Schedule(
                 member = member,
                 content = "team sync",
-                startDateTime = LocalDateTime.now(),
-                endDateTime = LocalDateTime.now().plusHours(1),
+                startDateTime = fixedDateTime,
+                endDateTime = fixedDateTime.plusHours(1),
                 position = 0
             )
         )
@@ -386,8 +388,8 @@ class ScheduleControllerTest : RestDocsTest() {
             Schedule(
                 member = owner,
                 content = "tagged",
-                startDateTime = LocalDateTime.now(),
-                endDateTime = LocalDateTime.now().plusHours(1),
+                startDateTime = fixedDateTime,
+                endDateTime = fixedDateTime.plusHours(1),
                 position = 0
             )
         )
@@ -423,8 +425,8 @@ class ScheduleControllerTest : RestDocsTest() {
             Schedule(
                 member = owner,
                 content = "tagged",
-                startDateTime = LocalDateTime.now(),
-                endDateTime = LocalDateTime.now().plusHours(1),
+                startDateTime = fixedDateTime,
+                endDateTime = fixedDateTime.plusHours(1),
                 position = 0
             )
         )

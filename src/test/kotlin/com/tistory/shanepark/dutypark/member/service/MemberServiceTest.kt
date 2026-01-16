@@ -27,6 +27,8 @@ import java.util.*
 @ExtendWith(MockitoExtension::class)
 class MemberServiceTest {
 
+    private val fixedDateTime = LocalDateTime.of(2025, 1, 15, 12, 0, 0)
+
     @Mock
     private lateinit var memberRepository: MemberRepository
 
@@ -92,7 +94,7 @@ class MemberServiceTest {
         val uuid = UUID.randomUUID().toString()
         val ssoRegister = MemberSsoRegister(SsoType.KAKAO, "kakao_id")
         ReflectionTestUtils.setField(ssoRegister, "uuid", uuid)
-        ReflectionTestUtils.setField(ssoRegister, "createdDate", LocalDateTime.now().minusDays(2))
+        ReflectionTestUtils.setField(ssoRegister, "createdDate", fixedDateTime.minusDays(2))
 
         whenever(memberSsoRegisterRepository.findByUuid(uuid)).thenReturn(Optional.of(ssoRegister))
 

@@ -55,8 +55,10 @@ class ScheduleTimeParsingWorkerTest {
     fun `if the task is expired, skip`() {
         // Given
         val schedule = createSchedule()
-        schedule.lastModifiedDate = LocalDateTime.now().plusHours(1)
         val task = ScheduleTimeParsingTask(scheduleId = schedule.id)
+        // Set lastModifiedDate to far future (year 2099) so the task appears expired
+        // regardless of when the test runs
+        schedule.lastModifiedDate = LocalDateTime.of(2099, 12, 31, 23, 59, 59)
         `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
 
         // When

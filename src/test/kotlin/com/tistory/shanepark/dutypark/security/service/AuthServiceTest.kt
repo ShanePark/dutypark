@@ -35,6 +35,12 @@ import java.util.Optional
 @ExtendWith(org.mockito.junit.jupiter.MockitoExtension::class)
 class AuthServiceTest {
 
+    // RefreshToken validity is checked against LocalDateTime.now() in the service
+    // So we need dates relative to actual current time for valid/expired token tests
+    private val fixedDateTime = LocalDateTime.of(2025, 1, 15, 12, 0, 0)
+    private val futureDateTime = LocalDateTime.now().plusDays(30)
+    private val pastDateTime = LocalDateTime.now().minusDays(1)
+
     private val memberRepository: MemberRepository = mock()
     private val memberSsoRegisterRepository: MemberSsoRegisterRepository = mock()
     private val memberManagerRepository: MemberManagerRepository = mock()
@@ -166,7 +172,7 @@ class AuthServiceTest {
         whenever(jwtProvider.createToken(member)).thenReturn("jwt-token")
         val refreshToken = RefreshToken(
             member = member,
-            validUntil = LocalDateTime.now().plusDays(30),
+            validUntil = futureDateTime,
             remoteAddr = "127.0.0.1",
             userAgent = null
         )
@@ -196,7 +202,7 @@ class AuthServiceTest {
         val member = memberWithId(5L)
         val refreshToken = RefreshToken(
             member = member,
-            validUntil = LocalDateTime.now().minusDays(1),
+            validUntil = pastDateTime,
             remoteAddr = "127.0.0.1",
             userAgent = null
         )
@@ -213,7 +219,7 @@ class AuthServiceTest {
         val member = memberWithId(6L)
         val refreshToken = RefreshToken(
             member = member,
-            validUntil = LocalDateTime.now().plusDays(1),
+            validUntil = futureDateTime,
             remoteAddr = "127.0.0.1",
             userAgent = null
         )

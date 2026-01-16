@@ -16,6 +16,8 @@ import java.time.LocalDateTime
 @AutoConfigureMockMvc
 class AdminControllerTest : DutyparkIntegrationTest() {
 
+    private val fixedDateTime = LocalDateTime.of(2025, 1, 15, 12, 0, 0)
+
     @Autowired
     lateinit var mockMvc: MockMvc
 
@@ -46,7 +48,7 @@ class AdminControllerTest : DutyparkIntegrationTest() {
             remoteAddr = "127.0.0.1",
             userAgent = "Test-Agent"
         )
-        expiredToken.validUntil = LocalDateTime.now().minusDays(1)
+        expiredToken.validUntil = fixedDateTime.minusDays(1)
         refreshTokenRepository.save(expiredToken)
         em.flush()
         em.clear()
@@ -72,7 +74,7 @@ class AdminControllerTest : DutyparkIntegrationTest() {
             remoteAddr = "127.0.0.1",
             userAgent = "Test-Agent"
         )
-        expiredToken.validUntil = LocalDateTime.now().minusDays(1)
+        expiredToken.validUntil = fixedDateTime.minusDays(1)
         refreshTokenRepository.save(expiredToken)
         em.flush()
         em.clear()

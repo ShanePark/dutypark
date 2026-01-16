@@ -24,6 +24,8 @@ import java.util.*
 @ExtendWith(MockitoExtension::class)
 class RefreshTokenServiceTest {
 
+    private val fixedDateTime = LocalDateTime.of(2025, 1, 15, 12, 0, 0)
+
     @Mock
     private lateinit var memberRepository: MemberRepository
 
@@ -110,8 +112,8 @@ class RefreshTokenServiceTest {
     @Test
     fun `Revoke expired refreshTokens Test`() {
         val member = memberWithId(1L)
-        val expiredToken1 = refreshTokenWithId(1L, member, validUntil = LocalDateTime.now().minusDays(1))
-        val expiredToken2 = refreshTokenWithId(2L, member, validUntil = LocalDateTime.now().minusDays(2))
+        val expiredToken1 = refreshTokenWithId(1L, member, validUntil = fixedDateTime.minusDays(1))
+        val expiredToken2 = refreshTokenWithId(2L, member, validUntil = fixedDateTime.minusDays(2))
         val expiredTokens = listOf(expiredToken1, expiredToken2)
 
         whenever(refreshTokenRepository.findAllByValidUntilIsBefore(any())).thenReturn(expiredTokens)
@@ -163,7 +165,7 @@ class RefreshTokenServiceTest {
     private fun refreshTokenWithId(
         id: Long,
         member: Member,
-        validUntil: LocalDateTime = LocalDateTime.now().plusDays(30)
+        validUntil: LocalDateTime = fixedDateTime.plusDays(30)
     ): RefreshToken {
         val refreshToken = RefreshToken(
             member = member,

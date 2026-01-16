@@ -31,6 +31,8 @@ import java.util.*
 
 class AttachmentControllerEdgeCaseTest : RestDocsTest() {
 
+    private val fixedDateTime = LocalDateTime.of(2025, 1, 15, 12, 0, 0)
+
     @Autowired
     lateinit var attachmentRepository: AttachmentRepository
 
@@ -167,8 +169,8 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
             Schedule(
                 member = member,
                 content = "Test schedule",
-                startDateTime = LocalDateTime.now(),
-                endDateTime = LocalDateTime.now().plusHours(1)
+                startDateTime = fixedDateTime,
+                endDateTime = fixedDateTime.plusHours(1)
             )
         )
 

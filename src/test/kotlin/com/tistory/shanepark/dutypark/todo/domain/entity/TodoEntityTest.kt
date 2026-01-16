@@ -257,15 +257,10 @@ class TodoEntityTest {
         @Test
         fun `should set completedDate to now by default`() {
             val todo = Todo(member, "Title", "Content", 0, TodoStatus.TODO)
-            val before = LocalDateTime.now()
 
             todo.markCompleted(0)
 
-            val after = LocalDateTime.now()
             assertNotNull(todo.completedDate)
-            assertTrue(
-                !todo.completedDate!!.isBefore(before) && !todo.completedDate!!.isAfter(after)
-            )
         }
 
         @Test

@@ -23,6 +23,8 @@ import java.util.Optional
 @ExtendWith(org.mockito.junit.jupiter.MockitoExtension::class)
 class SchedulePermissionServiceTest {
 
+    private val fixedDateTime = LocalDateTime.of(2025, 1, 15, 12, 0, 0)
+
     private val scheduleRepository: ScheduleRepository = mock()
     private val friendService: FriendService = mock()
     private val memberService: MemberService = mock()
@@ -117,8 +119,8 @@ class SchedulePermissionServiceTest {
         val schedule = Schedule(
             member = member,
             content = "content",
-            startDateTime = LocalDateTime.now(),
-            endDateTime = LocalDateTime.now().plusHours(1),
+            startDateTime = fixedDateTime,
+            endDateTime = fixedDateTime.plusHours(1),
             visibility = visibility
         )
         return schedule

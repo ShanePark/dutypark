@@ -16,6 +16,8 @@ import java.time.LocalDateTime
 
 class RefreshTokenControllerTest : RestDocsTest() {
 
+    private val fixedDateTime = LocalDateTime.of(2025, 1, 15, 12, 0, 0)
+
     @Autowired
     lateinit var refreshTokenService: RefreshTokenService
 
@@ -29,7 +31,7 @@ class RefreshTokenControllerTest : RestDocsTest() {
             remoteAddr = "127.0.0.1",
             userAgent = "Test-Agent"
         )
-        expired.validUntil = LocalDateTime.now().minusDays(1)
+        expired.validUntil = fixedDateTime.minusDays(1)
         refreshTokenRepository.save(expired)
 
         val current = refreshTokenService.createRefreshToken(
@@ -59,7 +61,7 @@ class RefreshTokenControllerTest : RestDocsTest() {
             remoteAddr = "127.0.0.1",
             userAgent = "Test-Agent"
         )
-        expired.validUntil = LocalDateTime.now().minusDays(1)
+        expired.validUntil = fixedDateTime.minusDays(1)
         refreshTokenRepository.save(expired)
 
         val current = refreshTokenService.createRefreshToken(

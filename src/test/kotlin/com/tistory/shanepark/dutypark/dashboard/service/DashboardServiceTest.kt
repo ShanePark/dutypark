@@ -30,6 +30,8 @@ import java.util.Optional
 @ExtendWith(org.mockito.junit.jupiter.MockitoExtension::class)
 class DashboardServiceTest {
 
+    private val fixedDate = LocalDate.of(2025, 1, 15)
+
     private val memberRepository: MemberRepository = mock()
     private val dutyRepository: DutyRepository = mock()
     private val scheduleRepository: ScheduleRepository = mock()
@@ -59,7 +61,7 @@ class DashboardServiceTest {
             setOf(Visibility.FRIENDS)
         )
 
-        val today = LocalDate.now()
+        val today = fixedDate
         val personalSchedule = Schedule(
             member = member,
             content = "personal",

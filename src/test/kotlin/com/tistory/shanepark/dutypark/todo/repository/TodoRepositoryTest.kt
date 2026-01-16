@@ -27,6 +27,8 @@ class TodoRepositoryTest {
     private lateinit var member1: Member
     private lateinit var member2: Member
 
+    private val fixedDate = LocalDate.of(2025, 1, 15)
+
     @BeforeEach
     fun setUp() {
         member1 = entityManager.persist(Member(name = "user1", password = "pass", email = "user1@test.com"))
@@ -364,7 +366,7 @@ class TodoRepositoryTest {
 
         @Test
         fun `findAllByMemberAndDueDateLessThanAndStatusNot should return overdue non-DONE todos`() {
-            val today = LocalDate.now()
+            val today = fixedDate
 
             val overdueTodo = Todo(member1, "Overdue TODO", "Content", 0, TodoStatus.TODO)
             overdueTodo.dueDate = today.minusDays(1)
@@ -396,7 +398,7 @@ class TodoRepositoryTest {
 
         @Test
         fun `overdue query should exclude todos with null dueDate`() {
-            val today = LocalDate.now()
+            val today = fixedDate
 
             val todoWithNullDueDate = Todo(member1, "No due date", "Content", 0, TodoStatus.TODO)
 
@@ -415,7 +417,7 @@ class TodoRepositoryTest {
 
         @Test
         fun `overdue query boundary - dueDate equals today should not be returned`() {
-            val today = LocalDate.now()
+            val today = fixedDate
 
             val todayTodo = Todo(member1, "Due today", "Content", 0, TodoStatus.TODO)
             todayTodo.dueDate = today

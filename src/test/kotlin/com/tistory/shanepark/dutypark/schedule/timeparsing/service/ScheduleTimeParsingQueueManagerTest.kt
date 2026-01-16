@@ -20,6 +20,8 @@ import java.time.LocalDateTime
 @ExtendWith(MockitoExtension::class)
 class ScheduleTimeParsingQueueManagerTest {
 
+    private val fixedDateTime = LocalDateTime.of(2025, 1, 15, 12, 0, 0)
+
     @Mock
     lateinit var worker: ScheduleTimeParsingWorker
 
@@ -71,9 +73,8 @@ class ScheduleTimeParsingQueueManagerTest {
     }
 
     private fun makeSchedule(parsingTimeStatus: ParsingTimeStatus = WAIT): Schedule {
-        val now = LocalDateTime.now()
         val member = Member("")
-        val schedule = Schedule(member = member, content = "", startDateTime = now, endDateTime = now)
+        val schedule = Schedule(member = member, content = "", startDateTime = fixedDateTime, endDateTime = fixedDateTime)
         schedule.parsingTimeStatus = parsingTimeStatus
         return schedule
     }

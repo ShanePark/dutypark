@@ -27,7 +27,10 @@ class DashboardControllerTest : RestDocsTest() {
 
     @Test
     fun `get my dashboard`() {
+        // Dashboard endpoint returns data for "today" using LocalDate.now() internally
+        // So test data must use the actual current date for the response to include schedules
         val today = LocalDate.now()
+        val todayDateTime = today.atTime(12, 0)
         dutyRepository.save(
             Duty(
                 dutyDate = today,
@@ -41,8 +44,8 @@ class DashboardControllerTest : RestDocsTest() {
                 member = TestData.member,
                 content = "Test Schedule",
                 description = "Test Description",
-                startDateTime = LocalDateTime.now(),
-                endDateTime = LocalDateTime.now().plusHours(1),
+                startDateTime = todayDateTime,
+                endDateTime = todayDateTime.plusHours(1),
                 position = 0
             )
         )
@@ -106,6 +109,7 @@ class DashboardControllerTest : RestDocsTest() {
     fun `get friends dashboard`() {
         makeThemFriend(TestData.member, TestData.member2)
 
+        // Dashboard endpoint uses LocalDate.now() internally
         val today = LocalDate.now()
         dutyRepository.save(
             Duty(

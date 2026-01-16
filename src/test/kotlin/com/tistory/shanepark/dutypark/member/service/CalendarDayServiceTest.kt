@@ -24,6 +24,10 @@ import java.util.*
 @ExtendWith(MockitoExtension::class)
 class CalendarDayServiceTest {
 
+    // DDayDto calculates daysLeft using LocalDate.now() internally
+    // So we use today as the reference date for test data
+    private val today = LocalDate.now()
+
     @Mock
     private lateinit var memberRepository: MemberRepository
 
@@ -53,7 +57,7 @@ class CalendarDayServiceTest {
             loginMember = login,
             dDaySaveDto = DDaySaveDto(
                 title = "test",
-                date = LocalDate.now().plusDays(3),
+                date = today.plusDays(3),
                 isPrivate = false
             )
         )
@@ -73,7 +77,7 @@ class CalendarDayServiceTest {
                 loginMember = invalidLogin,
                 dDaySaveDto = DDaySaveDto(
                     title = "test",
-                    date = LocalDate.now().plusDays(3),
+                    date = today.plusDays(3),
                     isPrivate = false
                 )
             )
@@ -84,7 +88,7 @@ class CalendarDayServiceTest {
     fun findDDay() {
         val member = memberWithId(1L)
         val login = loginMember(member)
-        val eventDate = LocalDate.now().plusDays(3)
+        val eventDate = today.plusDays(3)
         val dDayEvent = dDayEventWithId(100L, member, "test", eventDate, false)
 
         whenever(dDayRepository.findById(100L)).thenReturn(Optional.of(dDayEvent))
@@ -94,7 +98,7 @@ class CalendarDayServiceTest {
         assertThat(findDDay.id).isEqualTo(100L)
         assertThat(findDDay.daysLeft).isEqualTo(3)
 
-        val todayEvent = dDayEventWithId(101L, member, "today", LocalDate.now(), false)
+        val todayEvent = dDayEventWithId(101L, member, "today", today, false)
         whenever(dDayRepository.findById(101L)).thenReturn(Optional.of(todayEvent))
 
         val findDDayToday = dDayService.findDDay(login, 101L)
@@ -106,7 +110,7 @@ class CalendarDayServiceTest {
         val member = memberWithId(1L)
         val member2 = memberWithId(2L)
         val loginMember2 = loginMember(member2)
-        val privateDDay = dDayEventWithId(100L, member, "test", LocalDate.now().plusDays(3), true)
+        val privateDDay = dDayEventWithId(100L, member, "test", today.plusDays(3), true)
 
         whenever(dDayRepository.findById(100L)).thenReturn(Optional.of(privateDDay))
 
@@ -119,8 +123,8 @@ class CalendarDayServiceTest {
     fun findDDays() {
         val member = memberWithId(1L)
         val login = loginMember(member)
-        val event1 = dDayEventWithId(100L, member, "test1", LocalDate.now().plusDays(3), false)
-        val event2 = dDayEventWithId(101L, member, "test2", LocalDate.now().plusDays(5), false)
+        val event1 = dDayEventWithId(100L, member, "test1", today.plusDays(3), false)
+        val event2 = dDayEventWithId(101L, member, "test2", today.plusDays(5), false)
 
         whenever(memberRepository.findById(member.id!!)).thenReturn(Optional.of(member))
         whenever(dDayRepository.findAllByMemberOrderByDate(member)).thenReturn(listOf(event1, event2))
@@ -137,8 +141,8 @@ class CalendarDayServiceTest {
         val member = memberWithId(1L)
         val member2 = memberWithId(2L)
         val loginMember2 = loginMember(member2)
-        val privateEvent = dDayEventWithId(100L, member, "private", LocalDate.now().plusDays(3), true)
-        val publicEvent = dDayEventWithId(101L, member, "public", LocalDate.now().plusDays(5), false)
+        val privateEvent = dDayEventWithId(100L, member, "private", today.plusDays(3), true)
+        val publicEvent = dDayEventWithId(101L, member, "public", today.plusDays(5), false)
 
         whenever(memberRepository.findById(member.id!!)).thenReturn(Optional.of(member))
         whenever(dDayRepository.findAllByMemberOrderByDate(member)).thenReturn(listOf(privateEvent, publicEvent))
@@ -154,14 +158,14 @@ class CalendarDayServiceTest {
     fun updateDDay() {
         val member = memberWithId(1L)
         val login = loginMember(member)
-        val dDayEvent = dDayEventWithId(100L, member, "test", LocalDate.now().plusDays(3), false)
+        val dDayEvent = dDayEventWithId(100L, member, "test", today.plusDays(3), false)
 
         whenever(dDayRepository.findById(100L)).thenReturn(Optional.of(dDayEvent))
 
         val updateDDayDto = DDaySaveDto(
             id = 100L,
             title = "test2",
-            date = LocalDate.now().plusDays(5),
+            date = today.plusDays(5),
             isPrivate = true
         )
 
@@ -171,7 +175,7 @@ class CalendarDayServiceTest {
         )
 
         assertThat(updateDDay.title).isEqualTo("test2")
-        assertThat(updateDDay.date).isEqualTo(LocalDate.now().plusDays(5))
+        assertThat(updateDDay.date).isEqualTo(today.plusDays(5))
         assertThat(updateDDay.isPrivate).isEqualTo(true)
     }
 
@@ -180,14 +184,14 @@ class CalendarDayServiceTest {
         val member = memberWithId(1L)
         val member2 = memberWithId(2L)
         val loginMember2 = loginMember(member2)
-        val dDayEvent = dDayEventWithId(100L, member, "test", LocalDate.now().plusDays(3), false)
+        val dDayEvent = dDayEventWithId(100L, member, "test", today.plusDays(3), false)
 
         whenever(dDayRepository.findById(100L)).thenReturn(Optional.of(dDayEvent))
 
         val updateDDayDto = DDaySaveDto(
             id = 100L,
             title = "test2",
-            date = LocalDate.now().plusDays(5),
+            date = today.plusDays(5),
             isPrivate = true
         )
 
@@ -203,7 +207,7 @@ class CalendarDayServiceTest {
     fun deleteDDay() {
         val member = memberWithId(1L)
         val login = loginMember(member)
-        val dDayEvent = dDayEventWithId(100L, member, "test", LocalDate.now().plusDays(3), false)
+        val dDayEvent = dDayEventWithId(100L, member, "test", today.plusDays(3), false)
 
         whenever(dDayRepository.findById(100L)).thenReturn(Optional.of(dDayEvent))
 
@@ -217,7 +221,7 @@ class CalendarDayServiceTest {
         val member = memberWithId(1L)
         val member2 = memberWithId(2L)
         val loginMember2 = loginMember(member2)
-        val dDayEvent = dDayEventWithId(100L, member, "test", LocalDate.now().plusDays(3), false)
+        val dDayEvent = dDayEventWithId(100L, member, "test", today.plusDays(3), false)
 
         whenever(dDayRepository.findById(100L)).thenReturn(Optional.of(dDayEvent))
 

@@ -1,25 +1,29 @@
 # Dutypark Refactoring Analysis
 
-> Generated: 2026-01-15
+> Generated: 2026-01-16
 
 ---
 
 ## 1. Backend (Kotlin) Issues
 
-### MEDIUM Priority
+### HIGH Priority
 
-#### 1.1 Inconsistent Error Handling (19+ occurrences)
+#### 1.1 Inconsistent Error Handling (116 occurrences)
 
 **Problem:** Mixed usage of:
-- `.orElseThrow()` (no message)
+- `.orElseThrow()` (no message) - 116 instances
 - `.orElseThrow { exception }` (with message)
 
 **Files:**
 - `SchedulePermissionService.kt` (lines 31, 36)
-- `FriendService.kt` (multiple lines)
-- Various other services
+- `FriendService.kt` (12+ instances)
+- `ScheduleService.kt` (8+ instances)
+- `AttachmentService.kt` (lines 98, 116 - inconsistent within same file)
+- `MemberService.kt` (10+ instances)
 
-**Recommendation:** Create utility function:
+**Impact:** Generic `NoSuchElementException` without context makes debugging difficult.
+
+**Recommendation:** Create utility extension and standardize exception types:
 ```kotlin
 fun <T> Optional<T>.orThrow(errorMessage: String): T =
     orElseThrow { IllegalArgumentException(errorMessage) }
@@ -27,25 +31,60 @@ fun <T> Optional<T>.orThrow(errorMessage: String): T =
 
 ---
 
-#### 1.2 N+1 Query Pattern
+#### 1.2 In-Memory Filtering Performance Issue
 
-**File:** `src/main/kotlin/com/tistory/shanepark/dutypark/schedule/service/ScheduleService.kt`
+**File:** `src/main/kotlin/com/tistory/shanepark/dutypark/member/service/FriendService.kt`
 
-**Lines:** 65-94
+**Lines:** 235-244
 
-**Problem:** In `findSchedulesByYearAndMonth()`, attachments are fetched separately then grouped.
+**Problem:** `searchPossibleFriends()` loads ALL friends and pending requests into memory, then filters:
+```kotlin
+val friends = findAllFriends(login).map { it.id }  // Loads ALL friends
+val pendingRequestsFrom = getPendingRequestsFrom(member).map { it.toMember.id }  // Loads ALL pending
+val excludeIds = friends + pendingRequestsFrom + member.id
+```
 
-**Recommendation:** Add repository method with JOIN FETCH for eager loading.
+**Recommendation:** Replace with repository query using JPA subqueries for pagination efficiency.
 
 ---
 
+### MEDIUM Priority
+
 #### 1.3 Large Service Classes
 
-| Service | Lines | Recommendation |
-|---------|-------|----------------|
-| `AttachmentService.kt` | 465 | Split into Upload/Permission/Session services |
-| `TodoService.kt` | 365 | Extract `TodoQueryService` |
-| `FriendService.kt` | 345 | Consider `FriendRelationService` + `FriendRequestService` |
+| Service | Lines | Status | Recommendation |
+|---------|-------|--------|----------------|
+| `AttachmentService.kt` | 454 | ⚠️ LARGEST | Extract `AttachmentSessionService`, `AttachmentFileService` |
+| `FriendService.kt` | 345 | MEDIUM | Extract `FriendRequestService` |
+| `TodoService.kt` | 313 | ACCEPTABLE | Current structure is reasonable |
+
+---
+
+#### ~~1.4 N+1 Query Pattern~~ (RESOLVED)
+
+**Status:** ✅ RESOLVED - Queries are properly optimized with `JOIN FETCH` and `@EntityGraph`:
+- `ScheduleRepository.kt`: Uses `JOIN FETCH` for member, tags, and tag.member
+- `FriendRelationRepository.kt`: Uses `@EntityGraph` for friend and friend.team
+
+---
+
+#### 1.5 Missing EntityGraph on FriendRelation Lookup
+
+**File:** `FriendRelationRepository.kt` (line 13)
+
+**Problem:** `findByMemberAndFriend()` lacks `@EntityGraph`, may cause lazy loading issues.
+
+**Recommendation:** Add `@EntityGraph(attributePaths = ["friend", "friend.team"])`.
+
+---
+
+#### 1.6 Repeated Member Lookups
+
+**File:** `FriendService.kt` (line 247)
+
+**Problem:** `loginMemberToMember()` called 12+ times in same service, each querying DB.
+
+**Recommendation:** Cache result or pass as parameter.
 
 ---
 
@@ -53,47 +92,66 @@ fun <T> Optional<T>.orThrow(errorMessage: String): T =
 
 ### HIGH Priority
 
-#### 2.1 Duplicate Local Interfaces
+#### 2.1 Duplicate Local Interfaces (5 files)
 
 **Problem:** Multiple components define local `Schedule`, `Duty`, `Todo` interfaces instead of using `@/types`.
 
-**Files:**
-- `src/views/duty/DutyView.vue` (lines 71-100)
-- `src/components/duty/DayDetailModal.vue` (lines 29-50, 52-56, 79-88)
-- `src/components/duty/ScheduleViewModal.vue` (lines 19-50)
-- `src/components/duty/TodoDetailModal.vue` (lines 27-36)
-- `src/components/duty/TodoOverviewModal.vue` (lines 24-36)
+| File | Local Interfaces | Should Use |
+|------|------------------|------------|
+| `DayDetailModal.vue` (lines 29-56) | Schedule, DutyType | `@/types` |
+| `ScheduleViewModal.vue` (lines 19-50) | Schedule, DutyType | `@/types` |
+| `TodoDetailModal.vue` (lines 27-36) | Todo | `@/types` |
+| `TodoOverviewModal.vue` (lines 24-43) | Todo, attachment | `@/types` |
 
-**Recommendation:** Extend centralized types in `types/index.ts` with all necessary fields (`taggedBy`, `daysFromStart`, `totalDays`, etc.)
+**Recommendation:** Remove local definitions and import from `@/types/index.ts`.
 
 ---
 
 #### 2.2 Large Components Needing Extraction
 
-| Component | Lines | Recommendation |
-|-----------|-------|----------------|
-| `DutyView.vue` | 2,168 | Extract: DutyCalendar, DutyToolbar, DutyStateManager composables |
-| `DayDetailModal.vue` | 993 | Extract: ScheduleList, TodoSection, DutySelector sub-components |
-| `TodoDetailModal.vue` | 529 | Extract: TodoForm, AttachmentSection sub-components |
+| Component | Lines | Severity | Recommendation |
+|-----------|-------|----------|----------------|
+| `DutyView.vue` | 2,168 | **CRITICAL** | Extract: DutyCalendar, DutyToolbar, TodoSection, DDaySection |
+| `DayDetailModal.vue` | 993 | LARGE | Split read-only view from create/edit form |
+| `TodoDetailModal.vue` | 529 | ACCEPTABLE | Within reasonable bounds |
+
+---
+
+#### 2.3 Type Inconsistencies in Attachment Types
+
+**File:** `src/types/index.ts`
+
+**Problem:** Confusing naming across attachment types:
+- `Attachment` (lines 71-75): Minimal properties
+- `AttachmentDto` (lines 80-92): Full backend DTO
+- `NormalizedAttachment` (lines 106-120): UI representation
+
+**Recommendation:** Rename for clarity:
+```typescript
+export interface ScheduleAttachmentSummary { ... }  // Simple reference
+export interface AttachmentDto { ... }              // Backend DTO
+export interface NormalizedAttachment { ... }       // UI-ready
+```
 
 ---
 
 ### MEDIUM Priority
 
-#### 2.3 Hardcoded Pagination Values
+#### 2.4 Hardcoded Pagination Values (6 occurrences)
 
-**Problem:** `size: 10` or `size: 20` scattered across API files without centralized constants.
+**Problem:** `size: 10` or `size: 20` scattered across API files.
 
-**Files:**
-- `src/api/schedule.ts` (line 115)
-- `src/api/admin.ts` (lines 32, 50)
-- `src/api/team.ts` (line 147)
-- `src/api/member.ts` (line 110)
-- `src/api/notification.ts` (line 8)
+| File | Line | Value |
+|------|------|-------|
+| `src/api/schedule.ts` | 115 | `size: 10` |
+| `src/api/admin.ts` | 32, 50 | `size: 10` |
+| `src/api/team.ts` | 147 | `size: 10` |
+| `src/api/member.ts` | 110 | `size: 10` |
+| `src/api/notification.ts` | 8 | `size: 20` |
 
-**Recommendation:** Create `src/constants/api.ts`:
+**Recommendation:** Create `src/config/pagination.ts`:
 ```typescript
-export const API_PAGINATION_DEFAULTS = {
+export const PAGINATION_DEFAULTS = {
   SEARCH_SIZE: 10,
   NOTIFICATIONS_SIZE: 20,
   ADMIN_PAGE_SIZE: 10,
@@ -102,42 +160,32 @@ export const API_PAGINATION_DEFAULTS = {
 
 ---
 
-#### 2.4 Scattered localStorage Usage
+#### 2.5 Scattered localStorage Usage
 
-**Files with direct localStorage/sessionStorage calls:**
-- `src/stores/theme.ts` (lines 10-16, 31)
-- `src/views/duty/DutyView.vue`
-- `src/composables/useNotificationNavigation.ts` (line 55)
-- `src/components/common/PWAInstallGuide.vue`
-- `src/components/common/PushPermissionGuide.vue`
-- `src/views/auth/LoginView.vue`
+**Status:** Partially centralized via Pinia stores, but still scattered in `DutyView.vue`.
 
-**Recommendation:** Create `src/utils/storage.ts` utility wrapper.
+**Centralized (Good):**
+- `auth.ts` store: User data, impersonation
+- `theme.ts` store: Theme preference
 
----
+**Scattered (Needs Refactoring):**
+- `DutyView.vue`: Todo filter settings, D-Day selection, session highlighting
 
-#### 2.5 Type Inconsistencies in Attachment DTO
-
-**File:** `src/types/index.ts`
-
-**Problem:**
-- `Attachment.originalFileName` vs `AttachmentDto.originalFilename` (casing)
-- `Attachment.thumbnailAvailable` vs `AttachmentDto.hasThumbnail` (naming)
-
-**Recommendation:** Standardize naming across interfaces.
+**Recommendation:** Create `src/composables/useLocalStorage.ts` for unified storage access.
 
 ---
 
-#### 2.6 Inconsistent API Client Patterns
+#### 2.6 Inconsistent API Client Export Patterns
 
-**Problem:** Mixed default export patterns.
+**Problem:** Three different export patterns in use:
 
-**Files:**
-- `src/api/member.ts` (lines 248-253): Exports object with multiple APIs
-- `src/api/admin.ts` (line 78): `export default adminApi`
-- `src/api/team.ts` (line 211): `export default teamApi`
+| Pattern | Files | Example |
+|---------|-------|---------|
+| Named export only | schedule, notification, auth, todo, duty, etc. | `export const scheduleApi = { ... }` |
+| Named + default export | admin, team | `export const adminApi = { ... }; export default adminApi` |
+| Multiple named + default | member | Multiple exports + default object |
 
-**Recommendation:** Standardize on named exports only.
+**Recommendation:** Standardize to named exports only.
 
 ---
 
@@ -147,60 +195,55 @@ export const API_PAGINATION_DEFAULTS = {
 
 #### 3.1 Spring AI Milestone Version
 
-**File:** `build.gradle.kts`
+**File:** `build.gradle.kts` (line 27)
 
-**Problem:** Using `springAiVersion = "2.0.0-M1"` (pre-release)
+**Problem:** Using `springAiVersion = "2.0.0-M1"` (pre-release milestone)
 
-**Risk:** Milestone versions may have breaking changes.
+**Risk:** Milestone versions may have breaking changes and are not production-ready.
 
-**Recommendation:** Upgrade to stable `2.0.0` when available or use latest `1.x` stable.
+**Recommendation:** Upgrade to stable `1.x` release or wait for `2.0.0` GA.
 
 ---
 
-#### 3.2 macOS-Specific Netty Dependency
+#### 3.2 AI Model Configuration Mismatch
 
-**File:** `build.gradle.kts`
+**File:** `src/main/resources/application.yml` (line 29)
 
-**Problem:** `io.netty:netty-resolver-dns-native-macos:4.1.93.Final:osx-aarch_64`
+**Problem:** Documentation (CLAUDE.md) states "Gemini 2.0 Flash Lite" but code uses `gemma-3-27b-it`.
 
-**Risk:** Will break on Linux/Windows servers.
-
-**Recommendation:** Remove or make conditional for dev environments only.
+**Recommendation:** Update documentation or configuration to be consistent.
 
 ---
 
 ### MEDIUM Priority
 
-#### 3.3 AI Rate Limit Configuration Mismatch
+#### 3.3 Misleading OpenAI Namespace for Gemini
 
-**File:** `src/main/resources/application.yml`
-
-**Problem:**
-```yaml
-rate-limit:
-  rpm: 30        # Requests per minute
-  rpd: 14400     # Requests per day (too high)
-```
-
-**Issue:** `rpd: 14400` conflicts with Gemini's typical 1500 RPD quota.
-
-**Recommendation:** Verify and align with actual Gemini API quota.
-
----
-
-#### 3.4 OpenAI Namespace for Gemini Config
-
-**File:** `src/main/resources/application.yml`
+**File:** `src/main/resources/application.yml` (lines 23-31)
 
 **Problem:**
 ```yaml
 spring:
   ai:
-    openai:                          # Using "openai" namespace
-      api-key: "${GEMINI_API_KEY:EMPTY}"  # But pointing to Gemini
+    openai:                          # Misleading namespace name
+      api-key: "${GEMINI_API_KEY:EMPTY}"
+      chat:
+        base-url: "https://generativelanguage.googleapis.com/v1beta/openai/"
 ```
 
-**Recommendation:** Add clarifying comments or restructure if Spring AI supports direct Gemini config.
+**Impact:** Confusing configuration; uses OpenAI-compatible protocol for Gemini.
+
+**Recommendation:** Add clarifying comments explaining the OpenAI-compatible endpoint pattern.
+
+---
+
+#### ~~3.4 macOS-Specific Netty Dependency~~ (RESOLVED)
+
+**Status:** ✅ CORRECTLY CONFIGURED
+
+**File:** `build.gradle.kts` (line 50)
+
+`io.netty:netty-resolver-dns-native-macos:4.1.93.Final:osx-aarch_64` is properly configured for Apple Silicon development.
 
 ---
 
@@ -210,7 +253,7 @@ spring:
 
 **File:** `frontend/package.json`
 
-- `@types/node`: `25.0.6` → `25.0.8` available
+- `@types/node`: `25.0.6` → `25.0.9` available
 
 ```bash
 npm update @types/node
@@ -222,38 +265,29 @@ npm update @types/node
 
 ### HIGH Priority
 
-#### 4.1 Missing Test Coverage (16 services/controllers)
+#### 4.1 Missing Test Coverage (2 controllers)
 
 **Controllers without tests:**
-- `OAuthController`
-- `AdminController`
-- `CommonController`
-- `RefreshTokenController`
-- `TeamAdminController`
-- `TeamManageController`
-- `TeamManageDutyTypeController`
-- `PolicyController`
+- `DutyBatchController`
+- `TeamScheduleController`
 
-**Services without tests:**
-- `KakaoLoginService`
-- `AuthService`
-- `DashboardService`
-- `DDayService`
-- `ConsentService`
-- `CookieService`
-- `WebPushService`
-- `SchedulePermissionService`
-- `PolicyService`
+**Note:** Test coverage significantly improved - 22 of 24 controllers now have tests.
 
 ---
 
-#### 4.2 REST Docs Coverage Gap
+#### ~~4.2 Flaky Time-Dependent Tests (18 files)~~ (RESOLVED)
 
-**Current:** ~56% (14/25 controllers documented)
+**Status:** ✅ RESOLVED - All test files now use fixed dates instead of `LocalDateTime.now()`.
 
-**Missing REST Docs:**
-- All 8 controllers listed above
-- Incomplete docs for: `ScheduleController`, `DashboardController`, `TodoController`
+**Fixed files:** All 18+ test files updated to use:
+- Fixed date constants (`fixedDate`, `fixedDateTime`)
+- Far future/past dates for time comparison tests (e.g., `2099-12-31` for "always after now")
+- Current date only where the service explicitly requires it (e.g., Dashboard endpoint returns "today's" data)
+
+**Exceptions (intentionally use current date):**
+- `DashboardControllerTest.kt`: Dashboard endpoint returns data for "today" internally
+- `CalendarDayServiceTest.kt`: DDayDto calculates `daysLeft` using `LocalDate.now()` internally
+- `AuthServiceTest.kt`: Token validity checked against current time
 
 ---
 
@@ -261,45 +295,28 @@ npm update @types/node
 
 #### 4.3 Factory Method Duplication
 
-**Problem:** `makeSchedule()` defined in 3 separate test files:
-- `ScheduleSearchServiceDBImplTest.kt`
-- `ScheduleServiceTest.kt`
-- `ScheduleTimeParsingQueueManagerTest.kt`
+**Problem:** `makeSchedule()` defined in 2 separate test files with different implementations:
+- `ScheduleServiceIntegrationTest.kt` (line 742) - Uses `scheduleService.createSchedule()`
+- `ScheduleTimeParsingQueueManagerTest.kt` (line 73) - Creates Schedule directly
 
-**Recommendation:** Extract to shared `TestFixtures.kt`
-
----
-
-#### 4.4 Flaky Time-Dependent Tests
-
-**Problem:** 12 files use `LocalDateTime.now()` directly
-
-**Files:**
-- `ScheduleTimeParsingQueueManagerTest.kt`
-- `TeamScheduleServiceTest.kt`
-- `BaseTimeEntityTest.kt`
-- `RefreshTokenTest.kt`
-- `TodoEntityTest.kt`
-- `AttachmentControllerTest.kt`
-- `AttachmentControllerEdgeCaseTest.kt`
-- `ScheduleControllerTest.kt`
-- `DashboardControllerTest.kt`
-
-**Recommendation:** Use fixed `Clock` instance (good pattern exists in `AttachmentServiceTest.kt`)
+**Recommendation:** Extract to shared `TestFixtures.kt`.
 
 ---
 
-### LOW Priority
+#### 4.4 Minimal Test Utilities
 
-#### 4.5 Missing Shared Test Utilities
+**Current:** `TestUtils.kt` exists but only provides `jsr310JsonMapper()` helper.
 
-**Recommendation:** Create test utilities package:
+**Missing:**
+- Entity factory methods (makeSchedule, makeMember, etc.)
+- Fixture builders
+- Test constants
+
+**Recommendation:** Expand `TestUtils.kt` or create separate `TestFixtures.kt`:
 ```
 src/test/kotlin/.../util/
 ├── TestFixtures.kt          (factory methods)
 ├── TestClock.kt             (fixed clock provider)
-├── FakeRepositories.kt      (all Fake* classes)
-├── RestDocumentationHelper.kt
 └── AssertionHelpers.kt
 ```
 
@@ -309,43 +326,61 @@ src/test/kotlin/.../util/
 
 ### Phase 1: Immediate (Critical)
 - [ ] Spring AI stable version migration
-- [ ] Remove macOS-specific Netty dependency
+- [ ] Fix documentation/config mismatch for AI model
 
-### Phase 2: Short-term (1-2 weeks)
+### Phase 2: Short-term
 - [x] ~~Extract `TodoService.toTodoResponse()` helper~~ (DONE)
 - [x] ~~Split `AttachmentService.finalizeSession()` into helper methods~~ (DONE)
 - [x] ~~Remove duplicate file deletion logic in `AttachmentService`~~ (DONE)
+- [x] ~~Resolve N+1 query patterns~~ (DONE - properly optimized)
 - [ ] Consolidate frontend types in `types/index.ts`
-- [ ] Fix AI rate limit configuration
+- [ ] Remove duplicate local interfaces from modals
+- [ ] Fix `FriendService.searchPossibleFriends()` performance
 
 ### Phase 3: Medium-term
-- [ ] Split large components (`DutyView.vue`, `DayDetailModal.vue`)
+- [ ] Split large components (`DutyView.vue` - 2,168 lines)
 - [ ] Split `AttachmentService` into focused services
-- [ ] Add missing REST Docs tests
+- [ ] Add missing controller tests (DutyBatchController, TeamScheduleController)
+- [x] ~~Fix time-dependent tests (18 files)~~ (DONE)
 
 ### Phase 4: Long-term
 - [ ] Create shared test utilities package
-- [ ] Standardize error handling patterns
-- [ ] Extract frontend constants and utilities
+- [ ] Standardize error handling patterns (116 instances)
+- [ ] Extract frontend constants and storage utilities
+- [ ] Standardize API client export patterns
 
 ---
 
 ## Summary Table
 
-| Area | HIGH | MEDIUM | LOW |
-|------|------|--------|-----|
-| Backend | 0 | 3 | 1 |
-| Frontend | 2 | 4 | 2 |
-| Config | 2 | 2 | 1 |
-| Tests | 2 | 2 | 1 |
-| **Total** | **6** | **11** | **5** |
+| Area | HIGH | MEDIUM | LOW | RESOLVED |
+|------|------|--------|-----|----------|
+| Backend | 2 | 4 | 0 | 1 |
+| Frontend | 3 | 3 | 0 | 0 |
+| Config | 2 | 1 | 1 | 1 |
+| Tests | 1 | 2 | 0 | 1 |
+| **Total** | **8** | **10** | **1** | **3** |
 
 ---
 
-## Completed Refactoring (2026-01-15)
+## Completed Refactoring
 
+### 2026-01-16
+- **Time-Dependent Tests**: Fixed all 18+ test files that used `LocalDateTime.now()` or `LocalDate.now()` directly
+  - Replaced with fixed date constants (`fixedDate = LocalDate.of(2025, 1, 15)`)
+  - Used far future/past dates for time comparison tests
+  - Documented exceptions where current date is intentionally required (Dashboard, DDayDto, token validity)
+
+### 2026-01-15
 - **TodoService**: Extracted `toResponse()` helper method, eliminating 52 lines of duplication
 - **AttachmentService**:
   - Extracted `moveAttachmentToFinalLocation()`, `updateAttachmentOrdering()`, `deleteTempAttachment()` helpers
   - `finalizeSession()` reduced from 125 lines to 71 lines
   - `discardSession()` now reuses `deleteAttachment()` method
+- **N+1 Query Patterns**: Verified resolved - queries properly use `JOIN FETCH` and `@EntityGraph`
+- **macOS Netty Dependency**: Verified correctly configured for Apple Silicon
+
+### Previous Improvements (Test Coverage)
+- REST Docs coverage improved to 22/24 controllers documented
+- Unit + integration test variants added for major services (Friend, Duty, Team, Member, Schedule)
+- Total service test files: 36 (excellent coverage)

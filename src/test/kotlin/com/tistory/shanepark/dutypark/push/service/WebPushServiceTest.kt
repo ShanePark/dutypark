@@ -32,6 +32,8 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider
 @ExtendWith(org.mockito.junit.jupiter.MockitoExtension::class)
 class WebPushServiceTest {
 
+    private val fixedDateTime = LocalDateTime.of(2025, 1, 15, 12, 0, 0)
+
     private val refreshTokenRepository: RefreshTokenRepository = mock()
     private val objectMapper: ObjectMapper = mock()
     private val pushService: PushService = mock()
@@ -241,7 +243,7 @@ class WebPushServiceTest {
     private fun refreshTokenWithId(id: Long, member: Member): RefreshToken {
         val token = RefreshToken(
             member = member,
-            validUntil = LocalDateTime.now().plusDays(1),
+            validUntil = fixedDateTime.plusDays(1),
             remoteAddr = "127.0.0.1",
             userAgent = null
         )

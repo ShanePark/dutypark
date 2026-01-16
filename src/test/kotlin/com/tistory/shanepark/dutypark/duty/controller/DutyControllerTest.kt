@@ -18,12 +18,14 @@ import java.time.LocalDate
 
 class DutyControllerTest : RestDocsTest() {
 
+    private val fixedDate = LocalDate.of(2025, 1, 15)
+
     @Autowired
     lateinit var dutyRepository: DutyRepository
 
     @Test
     fun `get duties for member`() {
-        val today = LocalDate.now()
+        val today = fixedDate
         dutyRepository.save(
             Duty(
                 dutyDate = today,
@@ -64,7 +66,7 @@ class DutyControllerTest : RestDocsTest() {
 
     @Test
     fun `get others duties`() {
-        val today = LocalDate.now()
+        val today = fixedDate
         makeThemFriend(TestData.member, TestData.member2)
 
         dutyRepository.save(
@@ -109,7 +111,7 @@ class DutyControllerTest : RestDocsTest() {
 
     @Test
     fun `update single duty`() {
-        val today = LocalDate.now()
+        val today = fixedDate
         val json = """
             {
                 "year": ${today.year},
@@ -146,7 +148,7 @@ class DutyControllerTest : RestDocsTest() {
 
     @Test
     fun `batch update duties for month`() {
-        val today = LocalDate.now()
+        val today = fixedDate
         val json = """
             {
                 "year": ${today.year},
@@ -181,7 +183,7 @@ class DutyControllerTest : RestDocsTest() {
 
     @Test
     fun `update duty unauthorized`() {
-        val today = LocalDate.now()
+        val today = fixedDate
         val json = """
             {
                 "year": ${today.year},
@@ -205,7 +207,7 @@ class DutyControllerTest : RestDocsTest() {
 
     @Test
     fun `update duty forbidden for other member`() {
-        val today = LocalDate.now()
+        val today = fixedDate
         val json = """
             {
                 "year": ${today.year},

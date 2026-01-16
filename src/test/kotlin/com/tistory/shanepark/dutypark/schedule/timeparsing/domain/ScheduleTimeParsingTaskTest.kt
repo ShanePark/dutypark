@@ -10,6 +10,12 @@ import java.util.UUID
 
 class ScheduleTimeParsingTaskTest {
 
+    // ScheduleTimeParsingTask captures LocalDateTime.now() as requestDateTime
+    // So test dates must be relative to the actual current time
+    private val fixedDateTime = LocalDateTime.of(2025, 1, 15, 12, 0, 0)
+    private val farFuture = LocalDateTime.of(2099, 12, 31, 23, 59, 59)
+    private val farPast = LocalDateTime.of(2000, 1, 1, 0, 0, 0)
+
     @Test
     fun `isExpired throws when schedule id mismatches`() {
         val schedule = scheduleWithMember()
@@ -24,7 +30,8 @@ class ScheduleTimeParsingTaskTest {
     fun `isExpired returns true when schedule updated after request`() {
         val schedule = scheduleWithMember()
         val task = ScheduleTimeParsingTask(schedule.getId())
-        schedule.lastModifiedDate = LocalDateTime.now().plusSeconds(5)
+        // Use far future date to ensure it's always after the task's requestDateTime
+        schedule.lastModifiedDate = farFuture
 
         val expired = task.isExpired(schedule)
 
@@ -35,7 +42,8 @@ class ScheduleTimeParsingTaskTest {
     fun `isExpired returns false when schedule unchanged`() {
         val schedule = scheduleWithMember()
         val task = ScheduleTimeParsingTask(schedule.getId())
-        schedule.lastModifiedDate = LocalDateTime.now().minusSeconds(5)
+        // Use far past date to ensure it's always before the task's requestDateTime
+        schedule.lastModifiedDate = farPast
 
         val expired = task.isExpired(schedule)
 
@@ -47,8 +55,8 @@ class ScheduleTimeParsingTaskTest {
         return Schedule(
             member = member,
             content = "content",
-            startDateTime = LocalDateTime.now(),
-            endDateTime = LocalDateTime.now().plusHours(1),
+            startDateTime = fixedDateTime,
+            endDateTime = fixedDateTime.plusHours(1),
             position = 0
         )
     }

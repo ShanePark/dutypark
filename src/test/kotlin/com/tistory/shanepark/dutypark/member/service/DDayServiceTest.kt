@@ -26,6 +26,8 @@ import java.util.*
 @ExtendWith(MockitoExtension::class)
 class DDayServiceTest {
 
+    private val fixedDate = LocalDate.of(2025, 1, 15)
+
     @Mock
     private lateinit var memberRepository: MemberRepository
 
@@ -65,7 +67,7 @@ class DDayServiceTest {
 
     @Test
     fun `createDDay stores event and returns dto`() {
-        val date = LocalDate.now().plusDays(5)
+        val date = fixedDate.plusDays(5)
         whenever(memberRepository.findById(member.id!!)).thenReturn(Optional.of(member))
         whenever(dDayRepository.save(any<DDayEvent>())).thenAnswer { invocation ->
             val event = invocation.getArgument<DDayEvent>(0)
@@ -97,7 +99,7 @@ class DDayServiceTest {
             id = 10L,
             member = member,
             title = "Private",
-            date = LocalDate.now().plusDays(1),
+            date = fixedDate.plusDays(1),
             isPrivate = true
         )
         whenever(dDayRepository.findById(event.id!!)).thenReturn(Optional.of(event))
@@ -114,7 +116,7 @@ class DDayServiceTest {
             id = 10L,
             member = member,
             title = "Private",
-            date = LocalDate.now().plusDays(1),
+            date = fixedDate.plusDays(1),
             isPrivate = true
         )
         whenever(dDayRepository.findById(event.id!!)).thenReturn(Optional.of(event))
@@ -130,14 +132,14 @@ class DDayServiceTest {
             id = 1L,
             member = member,
             title = "Public",
-            date = LocalDate.now().plusDays(2),
+            date = fixedDate.plusDays(2),
             isPrivate = false
         )
         val privateEvent = dDayEventWithId(
             id = 2L,
             member = member,
             title = "Private",
-            date = LocalDate.now().plusDays(3),
+            date = fixedDate.plusDays(3),
             isPrivate = true
         )
         whenever(memberRepository.findById(member.id!!)).thenReturn(Optional.of(member))
@@ -155,14 +157,14 @@ class DDayServiceTest {
             id = 1L,
             member = member,
             title = "Public",
-            date = LocalDate.now().plusDays(2),
+            date = fixedDate.plusDays(2),
             isPrivate = false
         )
         val privateEvent = dDayEventWithId(
             id = 2L,
             member = member,
             title = "Private",
-            date = LocalDate.now().plusDays(3),
+            date = fixedDate.plusDays(3),
             isPrivate = true
         )
         whenever(memberRepository.findById(member.id!!)).thenReturn(Optional.of(member))
@@ -181,7 +183,7 @@ class DDayServiceTest {
                 DDaySaveDto(
                     id = null,
                     title = "Update",
-                    date = LocalDate.now().plusDays(1),
+                    date = fixedDate.plusDays(1),
                     isPrivate = false
                 )
             )
@@ -194,10 +196,10 @@ class DDayServiceTest {
             id = 10L,
             member = member,
             title = "Before",
-            date = LocalDate.now().plusDays(1),
+            date = fixedDate.plusDays(1),
             isPrivate = false
         )
-        val newDate = LocalDate.now().plusDays(10)
+        val newDate = fixedDate.plusDays(10)
         whenever(dDayRepository.findById(event.id!!)).thenReturn(Optional.of(event))
 
         val result = dDayService.updateDDay(
@@ -222,7 +224,7 @@ class DDayServiceTest {
             id = 10L,
             member = member,
             title = "Before",
-            date = LocalDate.now().plusDays(1),
+            date = fixedDate.plusDays(1),
             isPrivate = false
         )
         whenever(dDayRepository.findById(event.id!!)).thenReturn(Optional.of(event))
@@ -233,7 +235,7 @@ class DDayServiceTest {
                 DDaySaveDto(
                     id = event.id,
                     title = "After",
-                    date = LocalDate.now().plusDays(10),
+                    date = fixedDate.plusDays(10),
                     isPrivate = true
                 )
             )
@@ -246,7 +248,7 @@ class DDayServiceTest {
             id = 10L,
             member = member,
             title = "Delete",
-            date = LocalDate.now().plusDays(1),
+            date = fixedDate.plusDays(1),
             isPrivate = false
         )
         whenever(dDayRepository.findById(event.id!!)).thenReturn(Optional.of(event))
@@ -262,7 +264,7 @@ class DDayServiceTest {
             id = 10L,
             member = member,
             title = "Delete",
-            date = LocalDate.now().plusDays(1),
+            date = fixedDate.plusDays(1),
             isPrivate = false
         )
         whenever(dDayRepository.findById(event.id!!)).thenReturn(Optional.of(event))
