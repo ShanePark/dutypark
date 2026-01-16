@@ -1,108 +1,190 @@
 package com.tistory.shanepark.dutypark.security.service
 
-import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
+import com.tistory.shanepark.dutypark.security.config.LoginRateLimitConfig
+import com.tistory.shanepark.dutypark.security.domain.entity.LoginAttempt
 import com.tistory.shanepark.dutypark.security.repository.LoginAttemptRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.annotation.Autowired
+import org.junit.jupiter.api.extension.ExtendWith
+import org.mockito.ArgumentCaptor
+import org.mockito.Captor
+import org.mockito.Mock
+import org.mockito.junit.jupiter.MockitoExtension
+import org.mockito.kotlin.any
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+import java.time.Clock
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
 
-class LoginAttemptServiceTest : DutyparkIntegrationTest() {
+@ExtendWith(MockitoExtension::class)
+class LoginAttemptServiceTest {
 
-    @Autowired
-    lateinit var loginAttemptService: LoginAttemptService
-
-    @Autowired
+    @Mock
     lateinit var loginAttemptRepository: LoginAttemptRepository
+
+    @Captor
+    lateinit var loginAttemptCaptor: ArgumentCaptor<LoginAttempt>
+
+    private lateinit var loginAttemptService: LoginAttemptService
+    private lateinit var config: LoginRateLimitConfig
+    private lateinit var clock: Clock
 
     private val testIp = "192.168.1.100"
     private val testEmail = "test@example.com"
+    private val fixedInstant = Instant.parse("2024-01-15T10:00:00Z")
+    private val zoneId = ZoneId.of("UTC")
 
     @BeforeEach
-    fun cleanup() {
-        loginAttemptRepository.deleteAll()
+    fun setup() {
+        config = LoginRateLimitConfig(maxAttempts = 5, windowMinutes = 15)
+        clock = Clock.fixed(fixedInstant, zoneId)
+        loginAttemptService = LoginAttemptService(loginAttemptRepository, config, clock)
     }
 
     @Test
     fun `should not be blocked with no failed attempts`() {
+        whenever(loginAttemptRepository.countRecentFailedAttempts(any(), any(), any())).thenReturn(0)
+
         assertThat(loginAttemptService.isBlocked(testIp, testEmail)).isFalse()
     }
 
     @Test
     fun `should not be blocked with less than max failed attempts`() {
-        repeat(4) {
-            loginAttemptService.recordFailedAttempt(testIp, testEmail)
-        }
+        whenever(loginAttemptRepository.countRecentFailedAttempts(any(), any(), any())).thenReturn(4)
+
         assertThat(loginAttemptService.isBlocked(testIp, testEmail)).isFalse()
     }
 
     @Test
     fun `should be blocked after max failed attempts`() {
-        repeat(5) {
-            loginAttemptService.recordFailedAttempt(testIp, testEmail)
-        }
+        whenever(loginAttemptRepository.countRecentFailedAttempts(any(), any(), any())).thenReturn(5)
+
         assertThat(loginAttemptService.isBlocked(testIp, testEmail)).isTrue()
     }
 
     @Test
     fun `different IP should not affect blocking`() {
-        repeat(5) {
-            loginAttemptService.recordFailedAttempt(testIp, testEmail)
-        }
-        assertThat(loginAttemptService.isBlocked("192.168.1.200", testEmail)).isFalse()
+        val differentIp = "192.168.1.200"
+        val expectedSince = LocalDateTime.now(clock).minusMinutes(config.windowMinutes)
+
+        whenever(
+            loginAttemptRepository.countRecentFailedAttempts(
+                ipAddress = differentIp,
+                email = testEmail,
+                since = expectedSince
+            )
+        ).thenReturn(0)
+
+        assertThat(loginAttemptService.isBlocked(differentIp, testEmail)).isFalse()
     }
 
     @Test
     fun `different email should not affect blocking`() {
-        repeat(5) {
-            loginAttemptService.recordFailedAttempt(testIp, testEmail)
-        }
-        assertThat(loginAttemptService.isBlocked(testIp, "other@example.com")).isFalse()
+        val differentEmail = "other@example.com"
+        val expectedSince = LocalDateTime.now(clock).minusMinutes(config.windowMinutes)
+
+        whenever(
+            loginAttemptRepository.countRecentFailedAttempts(
+                ipAddress = testIp,
+                email = differentEmail,
+                since = expectedSince
+            )
+        ).thenReturn(0)
+
+        assertThat(loginAttemptService.isBlocked(testIp, differentEmail)).isFalse()
     }
 
     @Test
     fun `email comparison should be case insensitive`() {
-        repeat(3) {
-            loginAttemptService.recordFailedAttempt(testIp, "Test@Example.COM")
-        }
-        repeat(2) {
-            loginAttemptService.recordFailedAttempt(testIp, "test@example.com")
-        }
-        assertThat(loginAttemptService.isBlocked(testIp, "TEST@EXAMPLE.com")).isTrue()
+        val mixedCaseEmail = "TEST@EXAMPLE.com"
+        val expectedSince = LocalDateTime.now(clock).minusMinutes(config.windowMinutes)
+
+        whenever(
+            loginAttemptRepository.countRecentFailedAttempts(
+                ipAddress = testIp,
+                email = mixedCaseEmail.lowercase(),
+                since = expectedSince
+            )
+        ).thenReturn(5)
+
+        assertThat(loginAttemptService.isBlocked(testIp, mixedCaseEmail)).isTrue()
     }
 
     @Test
-    fun `successful attempt should be recorded`() {
+    fun `successful attempt should be recorded with correct values`() {
         loginAttemptService.recordSuccessfulAttempt(testIp, testEmail)
-        val attempts = loginAttemptRepository.findAll()
-        assertThat(attempts).hasSize(1)
-        assertThat(attempts[0].success).isTrue()
+
+        verify(loginAttemptRepository).save(loginAttemptCaptor.capture())
+        val savedAttempt = loginAttemptCaptor.value
+
+        assertThat(savedAttempt.ipAddress).isEqualTo(testIp)
+        assertThat(savedAttempt.email).isEqualTo(testEmail.lowercase())
+        assertThat(savedAttempt.attemptTime).isEqualTo(LocalDateTime.now(clock))
+        assertThat(savedAttempt.success).isTrue()
+    }
+
+    @Test
+    fun `failed attempt should be recorded with correct values`() {
+        loginAttemptService.recordFailedAttempt(testIp, testEmail)
+
+        verify(loginAttemptRepository).save(loginAttemptCaptor.capture())
+        val savedAttempt = loginAttemptCaptor.value
+
+        assertThat(savedAttempt.ipAddress).isEqualTo(testIp)
+        assertThat(savedAttempt.email).isEqualTo(testEmail.lowercase())
+        assertThat(savedAttempt.attemptTime).isEqualTo(LocalDateTime.now(clock))
+        assertThat(savedAttempt.success).isFalse()
     }
 
     @Test
     fun `getRemainingAttempts should return correct count`() {
-        assertThat(loginAttemptService.getRemainingAttempts(testIp, testEmail)).isEqualTo(5)
+        whenever(loginAttemptRepository.countRecentFailedAttempts(any(), any(), any())).thenReturn(3)
 
-        repeat(3) {
-            loginAttemptService.recordFailedAttempt(testIp, testEmail)
-        }
         assertThat(loginAttemptService.getRemainingAttempts(testIp, testEmail)).isEqualTo(2)
     }
 
     @Test
     fun `getRemainingAttempts should return zero when blocked`() {
-        repeat(5) {
-            loginAttemptService.recordFailedAttempt(testIp, testEmail)
-        }
+        whenever(loginAttemptRepository.countRecentFailedAttempts(any(), any(), any())).thenReturn(5)
+
+        assertThat(loginAttemptService.getRemainingAttempts(testIp, testEmail)).isEqualTo(0)
+    }
+
+    @Test
+    fun `getRemainingAttempts should return zero when exceeded max attempts`() {
+        whenever(loginAttemptRepository.countRecentFailedAttempts(any(), any(), any())).thenReturn(7)
+
         assertThat(loginAttemptService.getRemainingAttempts(testIp, testEmail)).isEqualTo(0)
     }
 
     @Test
     fun `successful attempts should not count towards blocking`() {
-        repeat(5) {
-            loginAttemptService.recordSuccessfulAttempt(testIp, testEmail)
-        }
+        whenever(loginAttemptRepository.countRecentFailedAttempts(any(), any(), any())).thenReturn(0)
+
         assertThat(loginAttemptService.isBlocked(testIp, testEmail)).isFalse()
+    }
+
+    @Test
+    fun `recordFailedAttempt should convert email to lowercase`() {
+        val upperCaseEmail = "TEST@EXAMPLE.COM"
+
+        loginAttemptService.recordFailedAttempt(testIp, upperCaseEmail)
+
+        verify(loginAttemptRepository).save(loginAttemptCaptor.capture())
+        assertThat(loginAttemptCaptor.value.email).isEqualTo("test@example.com")
+    }
+
+    @Test
+    fun `recordSuccessfulAttempt should convert email to lowercase`() {
+        val upperCaseEmail = "TEST@EXAMPLE.COM"
+
+        loginAttemptService.recordSuccessfulAttempt(testIp, upperCaseEmail)
+
+        verify(loginAttemptRepository).save(loginAttemptCaptor.capture())
+        assertThat(loginAttemptCaptor.value.email).isEqualTo("test@example.com")
     }
 
 }

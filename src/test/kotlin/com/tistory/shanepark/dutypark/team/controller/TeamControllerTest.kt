@@ -20,6 +20,8 @@ class TeamControllerTest : RestDocsTest() {
     @Autowired
     lateinit var dutyRepository: DutyRepository
 
+    private val fixedDate = LocalDate.of(2025, 1, 15)
+
     @Test
     fun `get team by id`() {
         mockMvc.perform(
@@ -54,7 +56,7 @@ class TeamControllerTest : RestDocsTest() {
 
     @Test
     fun `get my team summary`() {
-        val today = LocalDate.now()
+        val today = fixedDate
 
         mockMvc.perform(
             RestDocumentationRequestBuilders.get("/api/teams/my")
@@ -88,7 +90,7 @@ class TeamControllerTest : RestDocsTest() {
 
     @Test
     fun `get shift for day`() {
-        val today = LocalDate.now()
+        val today = fixedDate
         dutyRepository.save(
             Duty(
                 dutyDate = today,

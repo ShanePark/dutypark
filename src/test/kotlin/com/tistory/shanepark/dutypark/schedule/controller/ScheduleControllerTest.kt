@@ -7,6 +7,7 @@ import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSaveDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
+import org.hamcrest.Matchers.hasItem
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -16,9 +17,14 @@ import org.springframework.restdocs.payload.PayloadDocumentation.*
 import org.springframework.restdocs.request.RequestDocumentation.*
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
+import org.springframework.http.MediaType
 import java.time.LocalDateTime
 
 class ScheduleControllerTest : RestDocsTest() {
+
+    private val fixedDateTime = LocalDateTime.of(2025, 1, 15, 12, 0, 0)
 
     @Autowired
     lateinit var scheduleRepository: ScheduleRepository
@@ -35,8 +41,8 @@ class ScheduleControllerTest : RestDocsTest() {
         val updateScheduleDto = ScheduleSaveDto(
             memberId = member.id!!,
             content = "test",
-            startDateTime = LocalDateTime.now(),
-            endDateTime = LocalDateTime.now().plusHours(1),
+            startDateTime = fixedDateTime,
+            endDateTime = fixedDateTime.plusHours(1),
         )
         val json = objectMapper.writeValueAsString(updateScheduleDto)
         val sizeBefore = scheduleRepository.findAll().size
@@ -77,8 +83,8 @@ class ScheduleControllerTest : RestDocsTest() {
         val updateScheduleDto = ScheduleSaveDto(
             memberId = 1234,
             content = "test",
-            startDateTime = LocalDateTime.now(),
-            endDateTime = LocalDateTime.now().plusHours(1)
+            startDateTime = fixedDateTime,
+            endDateTime = fixedDateTime.plusHours(1)
         )
         val json = objectMapper.writeValueAsString(updateScheduleDto)
 
@@ -108,8 +114,8 @@ class ScheduleControllerTest : RestDocsTest() {
             Schedule(
                 member = member,
                 content = "test",
-                startDateTime = LocalDateTime.now(),
-                endDateTime = LocalDateTime.now().plusHours(1),
+                startDateTime = fixedDateTime,
+                endDateTime = fixedDateTime.plusHours(1),
                 position = 0,
             )
         )
@@ -119,8 +125,8 @@ class ScheduleControllerTest : RestDocsTest() {
             id = oldSchedule.id,
             memberId = member.id!!,
             content = "test2",
-            startDateTime = LocalDateTime.now().plusHours(2),
-            endDateTime = LocalDateTime.now().plusHours(3)
+            startDateTime = fixedDateTime.plusHours(2),
+            endDateTime = fixedDateTime.plusHours(3)
         )
         val json = objectMapper.writeValueAsString(updateScheduleDto)
 
@@ -159,53 +165,6 @@ class ScheduleControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `swap schedule position test`() {
-        // Given
-        val member = TestData.member
-        val date = LocalDateTime.of(2021, 1, 1, 0, 0)
-        val schedule1 = scheduleRepository.save(
-            Schedule(
-                member = member,
-                content = "test",
-                startDateTime = date,
-                endDateTime = date,
-                position = 0
-            )
-        )
-        val schedule2 = scheduleRepository.save(
-            Schedule(
-                member = member,
-                content = "test2",
-                startDateTime = date,
-                endDateTime = date,
-                position = 1
-            )
-        )
-        val jwt = getJwt(member)
-
-        // When
-        mockMvc.perform(
-            patch("/api/schedules/{id}/position?id2={id2}", schedule1.id, schedule2.id)
-                .accept("application/json")
-                .contentType("application/json")
-                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
-        ).andExpect(status().isOk)
-            .andDo(MockMvcResultHandlers.print())
-            .andDo(
-                document(
-                    "schedules/position",
-                    pathParameters(
-                        parameterWithName("id").description("Schedule Id1")
-                    ),
-                    queryParameters(
-                        parameterWithName("id2").description("Schedule Id2")
-                    )
-                )
-            )
-
-    }
-
-    @Test
     fun `delete Test`() {
         // Given
         val member = TestData.member
@@ -213,8 +172,8 @@ class ScheduleControllerTest : RestDocsTest() {
             Schedule(
                 member = member,
                 content = "test",
-                startDateTime = LocalDateTime.now(),
-                endDateTime = LocalDateTime.now().plusHours(1),
+                startDateTime = fixedDateTime,
+                endDateTime = fixedDateTime.plusHours(1),
                 position = 0
             )
         )
@@ -237,7 +196,7 @@ class ScheduleControllerTest : RestDocsTest() {
 
         em.clear()
 
-        assertThat(scheduleRepository.findById(oldSchedule.id)).isEmpty
+        assertThat(scheduleRepository.findById(oldSchedule.id)).isEmpty()
     }
 
     @Test
@@ -266,6 +225,8 @@ class ScheduleControllerTest : RestDocsTest() {
                 .accept("application/json")
                 .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().isOk)
+            .andExpect(jsonPath("$..content").value(hasItem("test schedule")))
+            .andExpect(jsonPath("$..attachments").exists())
             .andDo(MockMvcResultHandlers.print())
     }
 
@@ -277,8 +238,8 @@ class ScheduleControllerTest : RestDocsTest() {
             Schedule(
                 member = member,
                 content = "test with attachments",
-                startDateTime = LocalDateTime.now(),
-                endDateTime = LocalDateTime.now().plusHours(1),
+                startDateTime = fixedDateTime,
+                endDateTime = fixedDateTime.plusHours(1),
                 position = 0
             )
         )
@@ -319,8 +280,8 @@ class ScheduleControllerTest : RestDocsTest() {
             id = schedule.id,
             memberId = member.id!!,
             content = "updated content",
-            startDateTime = LocalDateTime.now().plusHours(2),
-            endDateTime = LocalDateTime.now().plusHours(3),
+            startDateTime = fixedDateTime.plusHours(2),
+            endDateTime = fixedDateTime.plusHours(3),
             orderedAttachmentIds = listOf(attachment1.id)
         )
         val json = objectMapper.writeValueAsString(updateScheduleDto)
@@ -344,7 +305,193 @@ class ScheduleControllerTest : RestDocsTest() {
         )
         assertThat(attachments).hasSize(1)
         assertThat(attachments[0].id).isEqualTo(attachment1.id)
-        assertThat(attachmentRepository.findById(attachment2.id)).isEmpty
+        assertThat(attachmentRepository.findById(attachment2.id)).isEmpty()
+    }
+
+    @Test
+    fun `getSchedules returns empty when not visible`() {
+        val member = TestData.member
+        val other = TestData.member2
+        scheduleRepository.save(
+            Schedule(
+                member = member,
+                content = "private schedule",
+                startDateTime = LocalDateTime.of(2024, 3, 1, 0, 0),
+                endDateTime = LocalDateTime.of(2024, 3, 1, 1, 0),
+                position = 0
+            )
+        )
+
+        mockMvc.perform(
+            get("/api/schedules")
+                .param("memberId", member.id.toString())
+                .param("year", "2024")
+                .param("month", "3")
+                .accept("application/json")
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(other)}")
+        ).andExpect(status().isOk)
+            .andExpect(content().json("[]"))
+    }
+
+    @Test
+    fun `getSchedule returns basic info`() {
+        val member = TestData.member
+        val schedule = scheduleRepository.save(
+            Schedule(
+                member = member,
+                content = "detail",
+                startDateTime = fixedDateTime,
+                endDateTime = fixedDateTime.plusHours(1),
+                position = 0
+            )
+        )
+
+        mockMvc.perform(
+            get("/api/schedules/{id}", schedule.id)
+                .accept("application/json")
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(schedule.id.toString()))
+            .andExpect(jsonPath("$.memberId").value(member.id!!.toInt()))
+            .andExpect(jsonPath("$.content").value("detail"))
+    }
+
+    @Test
+    fun `searchSchedule returns results`() {
+        val member = TestData.member
+        scheduleRepository.save(
+            Schedule(
+                member = member,
+                content = "team sync",
+                startDateTime = fixedDateTime,
+                endDateTime = fixedDateTime.plusHours(1),
+                position = 0
+            )
+        )
+
+        mockMvc.perform(
+            get("/api/schedules/{id}/search", member.id!!)
+                .param("q", "team")
+                .accept("application/json")
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.content[0].content").value("team sync"))
+    }
+
+    @Test
+    fun `tag and untag friend endpoints`() {
+        val owner = TestData.member
+        val friend = TestData.member2
+        makeThemFriend(owner, friend)
+
+        val schedule = scheduleRepository.save(
+            Schedule(
+                member = owner,
+                content = "tagged",
+                startDateTime = fixedDateTime,
+                endDateTime = fixedDateTime.plusHours(1),
+                position = 0
+            )
+        )
+
+        mockMvc.perform(
+            post("/api/schedules/{scheduleId}/tags/{friendId}", schedule.id, friend.id!!)
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(owner)}")
+        ).andExpect(status().isOk)
+
+        em.flush()
+        em.clear()
+        val taggedSchedule = scheduleRepository.findById(schedule.id).orElseThrow()
+        assertThat(taggedSchedule.tags).hasSize(1)
+
+        mockMvc.perform(
+            delete("/api/schedules/{scheduleId}/tags/{friendId}", schedule.id, friend.id!!)
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(owner)}")
+        ).andExpect(status().isOk)
+
+        em.flush()
+        em.clear()
+        val untaggedSchedule = scheduleRepository.findById(schedule.id).orElseThrow()
+        assertThat(untaggedSchedule.tags).isEmpty()
+    }
+
+    @Test
+    fun `untagSelf removes own tag`() {
+        val owner = TestData.member
+        val friend = TestData.member2
+        makeThemFriend(owner, friend)
+
+        val schedule = scheduleRepository.save(
+            Schedule(
+                member = owner,
+                content = "tagged",
+                startDateTime = fixedDateTime,
+                endDateTime = fixedDateTime.plusHours(1),
+                position = 0
+            )
+        )
+        schedule.addTag(friend)
+        scheduleRepository.save(schedule)
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            delete("/api/schedules/{scheduleId}/tags", schedule.id)
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(friend)}")
+        ).andExpect(status().isOk)
+
+        em.flush()
+        em.clear()
+        val refreshed = scheduleRepository.findById(schedule.id).orElseThrow()
+        assertThat(refreshed.tags).isEmpty()
+    }
+
+    @Test
+    fun `reorderSchedulePositions updates order`() {
+        val member = TestData.member
+        val baseTime = LocalDateTime.of(2024, 1, 1, 0, 0)
+        val schedule1 = scheduleRepository.save(
+            Schedule(
+                member = member,
+                content = "first",
+                startDateTime = baseTime,
+                endDateTime = baseTime.plusHours(1),
+                position = 0
+            )
+        )
+        val schedule2 = scheduleRepository.save(
+            Schedule(
+                member = member,
+                content = "second",
+                startDateTime = baseTime,
+                endDateTime = baseTime.plusHours(1),
+                position = 1
+            )
+        )
+
+        val payload = objectMapper.writeValueAsString(listOf(schedule2.id, schedule1.id))
+
+        mockMvc.perform(
+            patch("/api/schedules/positions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload)
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
+        ).andExpect(status().isOk)
+            .andDo(
+                document(
+                    "schedules/positions",
+                    requestFields(
+                        fieldWithPath("[]").description("Ordered schedule ids")
+                    )
+                )
+            )
+
+        em.flush()
+        em.clear()
+        val updatedFirst = scheduleRepository.findById(schedule1.id).orElseThrow()
+        val updatedSecond = scheduleRepository.findById(schedule2.id).orElseThrow()
+        assertThat(updatedFirst.position).isEqualTo(1)
+        assertThat(updatedSecond.position).isEqualTo(0)
     }
 
 }

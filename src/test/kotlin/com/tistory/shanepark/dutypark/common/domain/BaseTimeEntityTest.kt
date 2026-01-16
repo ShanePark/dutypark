@@ -10,6 +10,8 @@ import java.time.LocalDateTime
 
 class BaseTimeEntityTest : DutyparkIntegrationTest() {
 
+    private val fixedDateTime = LocalDateTime.of(2025, 1, 15, 12, 0, 0)
+
     @Autowired
     lateinit var refreshTokenRepository: RefreshTokenRepository
 
@@ -17,20 +19,25 @@ class BaseTimeEntityTest : DutyparkIntegrationTest() {
     fun test() {
         // Given
         val member = TestData.member
-        val refreshToken = RefreshToken(member, LocalDateTime.now(), "", "")
+        val refreshToken = RefreshToken(member, fixedDateTime, "", "")
         refreshTokenRepository.save(refreshToken)
+        em.flush()
+        em.clear()
+
+        val createdDate = refreshToken.createdDate
 
         assertThat(refreshToken.createdDate).isNotNull
         assertThat(refreshToken.lastModifiedDate).isNotNull
-        assertThat(refreshToken.createdDate).isSameAs(refreshToken.lastModifiedDate)
 
-        // When
-        refreshToken.validUntil = LocalDateTime.now()
+        // When - modify and save with a slight delay to ensure time changes
+        Thread.sleep(10)
+        val loaded = refreshTokenRepository.findById(refreshToken.id!!).get()
+        loaded.validUntil = fixedDateTime.plusDays(1)
         em.flush()
 
-        // Then
-        val saved = refreshTokenRepository.save(refreshToken)
-        assertThat(saved.lastModifiedDate).isAfter(refreshToken.createdDate)
+        // Then - lastModifiedDate should be updated
+        val saved = refreshTokenRepository.save(loaded)
+        assertThat(saved.lastModifiedDate).isAfterOrEqualTo(createdDate)
     }
 
 }

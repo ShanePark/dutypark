@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.security.filters
 
-import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus.NOT_EXIST
 import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus.VALID
@@ -19,7 +18,6 @@ class JwtAuthFilter(
     private val authService: AuthService,
     private val cookieService: CookieService,
 ) : Filter {
-    private val log = logger()
     private val antPathMatcher = AntPathMatcher()
 
     override fun doFilter(req: ServletRequest, resp: ServletResponse, chain: FilterChain) {
@@ -43,8 +41,6 @@ class JwtAuthFilter(
         if (status == VALID) {
             val loginMember = authService.tokenToLoginMember(jwt)
             request.setAttribute(LoginMember.ATTR_NAME, loginMember)
-        } else if (status != NOT_EXIST) {
-            log.info("Token is invalid. status: $status")
         }
 
         chain.doFilter(req, response)

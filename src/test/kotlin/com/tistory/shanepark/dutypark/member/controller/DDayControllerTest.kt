@@ -21,12 +21,14 @@ class DDayControllerTest : RestDocsTest() {
     @Autowired
     lateinit var dDayRepository: DDayRepository
 
+    private val fixedDate = LocalDate.of(2025, 1, 15)
+
     @Test
     fun `create dday`() {
         val json = """
             {
                 "title": "Birthday",
-                "date": "${LocalDate.now().plusDays(30)}",
+                "date": "${fixedDate.plusDays(30)}",
                 "isPrivate": false
             }
         """.trimIndent()
@@ -67,7 +69,7 @@ class DDayControllerTest : RestDocsTest() {
             DDayEvent(
                 member = TestData.member,
                 title = "Original",
-                date = LocalDate.now().plusDays(10),
+                date = fixedDate.plusDays(10),
                 isPrivate = false
             )
         )
@@ -78,7 +80,7 @@ class DDayControllerTest : RestDocsTest() {
             {
                 "id": ${saved.id},
                 "title": "Updated Birthday",
-                "date": "${LocalDate.now().plusDays(60)}",
+                "date": "${fixedDate.plusDays(60)}",
                 "isPrivate": true
             }
         """.trimIndent()
@@ -120,7 +122,7 @@ class DDayControllerTest : RestDocsTest() {
             DDayEvent(
                 member = TestData.member,
                 title = "My Birthday",
-                date = LocalDate.now().plusDays(30),
+                date = fixedDate.plusDays(30),
                 isPrivate = false
             )
         )
@@ -154,7 +156,7 @@ class DDayControllerTest : RestDocsTest() {
             DDayEvent(
                 member = TestData.member2,
                 title = "Friend's Event",
-                date = LocalDate.now().plusDays(15),
+                date = fixedDate.plusDays(15),
                 isPrivate = false
             )
         )
@@ -190,7 +192,7 @@ class DDayControllerTest : RestDocsTest() {
             DDayEvent(
                 member = TestData.member,
                 title = "To Delete",
-                date = LocalDate.now().plusDays(5),
+                date = fixedDate.plusDays(5),
                 isPrivate = false
             )
         )

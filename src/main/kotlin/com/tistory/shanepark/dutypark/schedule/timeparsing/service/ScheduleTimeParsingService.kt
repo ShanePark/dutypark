@@ -24,7 +24,6 @@ class ScheduleTimeParsingService(
 
     fun parseScheduleTime(request: ScheduleTimeParsingRequest): ScheduleTimeParsingResponse {
         if (!hasAnyTimeIndicator(request.content)) {
-            log.info("ScheduleTimeParsing== No time indicator found, skipping LLM\n $request")
             return ScheduleTimeParsingResponse(
                 result = true,
                 hasTime = false,
@@ -41,7 +40,7 @@ class ScheduleTimeParsingService(
         }
         val chatAnswer = chatResponse.result.output.text
         val response = parseChatAnswer(chatAnswer)
-        log.info("ScheduleTimeParsing==\n $request \nResponse:\n $response\n")
+        log.info("Time parsing result: request={}, hasTime={}, result={}", request, response.hasTime, response.result)
         return response
     }
 
@@ -56,7 +55,7 @@ class ScheduleTimeParsingService(
         return try {
             jsonMapper.readValue(json, ScheduleTimeParsingResponse::class.java)
         } catch (e: Exception) {
-            log.warn("Failed to parse JSON:\n$json", e)
+            log.warn("Failed to parse JSON: {}", json, e)
             ScheduleTimeParsingResponse(result = false)
         }
     }

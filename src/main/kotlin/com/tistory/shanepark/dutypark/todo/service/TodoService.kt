@@ -31,26 +31,14 @@ class TodoService(
     fun todoList(loginMember: LoginMember): List<TodoResponse> {
         val member = findMember(loginMember)
         return todoRepository.findAllByMemberAndStatusOrderByPosition(member, TodoStatus.TODO)
-            .map { todo ->
-                val hasAttachments = attachmentService.hasAttachments(
-                    AttachmentContextType.TODO,
-                    todo.id.toString()
-                )
-                TodoResponse.from(todo, hasAttachments)
-            }
+            .map { toResponse(it) }
     }
 
     @Transactional(readOnly = true)
     fun completedTodoList(loginMember: LoginMember): List<TodoResponse> {
         val member = findMember(loginMember)
         return todoRepository.findAllByMemberAndStatusOrderByCompletedDateDesc(member, TodoStatus.DONE)
-            .map { todo ->
-                val hasAttachments = attachmentService.hasAttachments(
-                    AttachmentContextType.TODO,
-                    todo.id.toString()
-                )
-                TodoResponse.from(todo, hasAttachments)
-            }
+            .map { toResponse(it) }
     }
 
     @Transactional(readOnly = true)
@@ -63,11 +51,7 @@ class TodoService(
         val doneList = mutableListOf<TodoResponse>()
 
         allTodos.forEach { todo ->
-            val hasAttachments = attachmentService.hasAttachments(
-                AttachmentContextType.TODO,
-                todo.id.toString()
-            )
-            val response = TodoResponse.from(todo, hasAttachments)
+            val response = toResponse(todo)
             when (todo.status) {
                 TodoStatus.TODO -> todoList.add(response)
                 TodoStatus.IN_PROGRESS -> inProgressList.add(response)
@@ -92,13 +76,7 @@ class TodoService(
     fun getByStatus(loginMember: LoginMember, status: TodoStatus): List<TodoResponse> {
         val member = findMember(loginMember)
         return todoRepository.findAllByMemberAndStatusOrderByPositionAsc(member, status)
-            .map { todo ->
-                val hasAttachments = attachmentService.hasAttachments(
-                    AttachmentContextType.TODO,
-                    todo.id.toString()
-                )
-                TodoResponse.from(todo, hasAttachments)
-            }
+            .map { toResponse(it) }
     }
 
     fun addTodo(
@@ -133,11 +111,7 @@ class TodoService(
             orderedAttachmentIds = orderedAttachmentIds
         )
 
-        val hasAttachments = attachmentService.hasAttachments(
-            AttachmentContextType.TODO,
-            todo.id.toString()
-        )
-        return TodoResponse.from(todo, hasAttachments)
+        return toResponse(todo)
     }
 
     fun editTodo(
@@ -174,11 +148,7 @@ class TodoService(
             orderedAttachmentIds = orderedAttachmentIds
         )
 
-        val hasAttachments = attachmentService.hasAttachments(
-            AttachmentContextType.TODO,
-            todo.id.toString()
-        )
-        return TodoResponse.from(todo, hasAttachments)
+        return toResponse(todo)
     }
 
     fun updatePosition(loginMember: LoginMember, ids: List<UUID>) {
@@ -242,11 +212,7 @@ class TodoService(
             todo.markCompleted(newPosition)
         }
 
-        val hasAttachments = attachmentService.hasAttachments(
-            AttachmentContextType.TODO,
-            todo.id.toString()
-        )
-        return TodoResponse.from(todo, hasAttachments)
+        return toResponse(todo)
     }
 
     fun reopenTodo(loginMember: LoginMember, id: UUID): TodoResponse {
@@ -262,11 +228,7 @@ class TodoService(
             todo.markActive(todoLastPosition - 1)
         }
 
-        val hasAttachments = attachmentService.hasAttachments(
-            AttachmentContextType.TODO,
-            todo.id.toString()
-        )
-        return TodoResponse.from(todo, hasAttachments)
+        return toResponse(todo)
     }
 
     fun changeStatus(
@@ -298,11 +260,7 @@ class TodoService(
             t.position = indexMap.getValue(t.id)
         }
 
-        val hasAttachments = attachmentService.hasAttachments(
-            AttachmentContextType.TODO,
-            todo.id.toString()
-        )
-        return TodoResponse.from(todo, hasAttachments)
+        return toResponse(todo)
     }
 
     @Transactional(readOnly = true)
@@ -313,13 +271,7 @@ class TodoService(
         val endDate = yearMonth.atEndOfMonth()
 
         return todoRepository.findAllByMemberAndDueDateBetweenOrderByDueDateAsc(member, startDate, endDate)
-            .map { todo ->
-                val hasAttachments = attachmentService.hasAttachments(
-                    AttachmentContextType.TODO,
-                    todo.id.toString()
-                )
-                TodoResponse.from(todo, hasAttachments)
-            }
+            .map { toResponse(it) }
     }
 
     @Transactional(readOnly = true)
@@ -327,13 +279,7 @@ class TodoService(
         val member = findMember(loginMember)
 
         return todoRepository.findAllByMemberAndDueDateOrderByPositionAsc(member, date)
-            .map { todo ->
-                val hasAttachments = attachmentService.hasAttachments(
-                    AttachmentContextType.TODO,
-                    todo.id.toString()
-                )
-                TodoResponse.from(todo, hasAttachments)
-            }
+            .map { toResponse(it) }
     }
 
     @Transactional(readOnly = true)
@@ -342,18 +288,12 @@ class TodoService(
         val today = LocalDate.now()
 
         return todoRepository.findAllByMemberAndDueDateLessThanAndStatusNot(member, today, TodoStatus.DONE)
-            .map { todo ->
-                val hasAttachments = attachmentService.hasAttachments(
-                    AttachmentContextType.TODO,
-                    todo.id.toString()
-                )
-                TodoResponse.from(todo, hasAttachments)
-            }
+            .map { toResponse(it) }
     }
 
     private fun verifyOwnership(todoEntity: Todo, member: Member) {
         if (todoEntity.member.id != member.id) {
-            log.warn("$member tried to access todo ${todoEntity.id} which is not his")
+            log.warn("Unauthorized access attempt: memberId={} tried to access todo {} (owner={})", member.id, todoEntity.id, todoEntity.member.id)
             throw IllegalArgumentException("Todo is not yours")
         }
     }
@@ -361,5 +301,13 @@ class TodoService(
     private fun findMember(loginMember: LoginMember): Member =
         memberRepository.findById(loginMember.id)
             .orElseThrow { IllegalArgumentException("Member not found") }
+
+    private fun toResponse(todo: Todo): TodoResponse {
+        val hasAttachments = attachmentService.hasAttachments(
+            AttachmentContextType.TODO,
+            todo.id.toString()
+        )
+        return TodoResponse.from(todo, hasAttachments)
+    }
 
 }

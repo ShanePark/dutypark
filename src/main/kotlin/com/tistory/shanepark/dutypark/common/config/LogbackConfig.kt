@@ -52,6 +52,6 @@ class LogbackConfig(
         rootLogger.level = Level.INFO
         rootLogger.addAppender(fileAppender)
 
-        log.info("log file path: $logPath")
+        log.info("Log file path configured: {}", logPath)
     }
 }

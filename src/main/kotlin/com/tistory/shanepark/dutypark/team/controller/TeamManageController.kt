@@ -50,7 +50,7 @@ class TeamManageController(
     ) {
         checkCanManage(login = loginMember, teamId = teamId)
         teamService.changeTeamAdmin(teamId = teamId, memberId = memberId)
-        log.info("Team $teamId admin changed to $memberId by $loginMember")
+        log.info("Team admin changed: teamId={}, newAdminId={}, by={}", teamId, memberId, loginMember.id)
     }
 
     @PatchMapping("/{teamId}/batch-template")
@@ -61,7 +61,6 @@ class TeamManageController(
     ) {
         checkCanManage(login = loginMember, teamId = teamId)
         teamService.updateBatchTemplate(teamId, dutyBatchTemplate)
-        log.info("DutyBatchTemplate $dutyBatchTemplate updated by $loginMember")
     }
 
     @PatchMapping("/{teamId}/work-type")
@@ -72,7 +71,6 @@ class TeamManageController(
     ) {
         checkCanManage(login = loginMember, teamId = teamId)
         teamService.updateWorkType(teamId, workType)
-        log.info("Work type for team $teamId updated to $workType by $loginMember")
     }
 
     @PostMapping("/{teamId}/duty")
@@ -88,7 +86,7 @@ class TeamManageController(
         val batchTemplate = team.dutyBatchTemplate ?: throw IllegalArgumentException("templateName is required")
         val dutyBatchService = applicationContext.getBean(batchTemplate.batchServiceClass) as DutyBatchService
         return try {
-            log.info("batch duty upload by $loginMember for team ${team.name}(${team.id}) year=$year, month=$month")
+            log.info("Batch duty upload: teamId={}, year={}, month={}, by={}", team.id, year, month, loginMember.id)
             dutyBatchService.batchUploadTeam(
                 teamId = teamId,
                 file = file,
@@ -119,7 +117,6 @@ class TeamManageController(
         checkCanManage(login = loginMember, teamId = teamId)
         val member = memberService.findById(memberId)
         teamService.addMemberToTeam(teamId = teamId, memberId = memberId)
-        log.info("Member $member added to team $teamId by $loginMember")
     }
 
     @DeleteMapping("/{teamId}/members")
@@ -131,7 +128,6 @@ class TeamManageController(
         checkCanManage(login = loginMember, teamId = teamId)
         val member = memberService.findById(memberId)
         teamService.removeMemberFromTeam(teamId, memberId)
-        log.info("Member $member removed from team $teamId by $loginMember")
     }
 
     @GetMapping("/members")
@@ -153,7 +149,7 @@ class TeamManageController(
         checkCanAdmin(login = loginMember, teamId = teamId)
         val member = memberService.findById(memberId)
         teamService.addTeamManager(teamId = teamId, memberId = memberId)
-        log.info("Member $member added as manager to team $teamId by $loginMember")
+        log.info("Manager added to team: teamId={}, memberId={}, by={}", teamId, memberId, loginMember.id)
     }
 
     @DeleteMapping("/{teamId}/manager")
@@ -165,7 +161,7 @@ class TeamManageController(
         checkCanAdmin(login = loginMember, teamId = teamId)
         val member = memberService.findById(memberId)
         teamService.removeTeamManager(teamId = teamId, memberId = memberId)
-        log.info("Member $member removed as manager from team $teamId by $loginMember")
+        log.info("Manager removed from team: teamId={}, memberId={}, by={}", teamId, memberId, loginMember.id)
     }
 
     private fun checkCanManage(login: LoginMember, teamId: Long) {

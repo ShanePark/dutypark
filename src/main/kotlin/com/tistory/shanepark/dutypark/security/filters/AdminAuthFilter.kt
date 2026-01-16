@@ -21,10 +21,10 @@ class AdminAuthFilter : Filter {
             if (loginMember.isAdmin) {
                 return chain.doFilter(request, response)
             }
-            log.info("$loginMember is not admin.")
+            log.warn("Admin access denied for memberId={}", loginMember.id)
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED)
         }
-        log.info("LoginMember null try to access admin page. ip: ${request.remoteAddr}")
+        log.warn("Admin access denied: no login member. ip={}", request.remoteAddr)
     }
 
 

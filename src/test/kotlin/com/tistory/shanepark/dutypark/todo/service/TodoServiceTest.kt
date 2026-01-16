@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.*
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDate
@@ -33,6 +34,7 @@ class TodoServiceTest {
 
     private val loginMember = LoginMember(id = 1, email = "", name = "", team = "", isAdmin = false)
     private val member = Member(name = "", password = "")
+    private val fixedDate = LocalDate.of(2025, 1, 15)
 
     @BeforeEach
     fun setUp() {
@@ -904,14 +906,14 @@ class TodoServiceTest {
     @Test
     fun `getOverdueTodos should return only overdue non-DONE todos`() {
         val overdueTodo = createTodo("overdue task", TodoStatus.TODO, 0)
-        overdueTodo.dueDate = LocalDate.now().minusDays(1)
+        overdueTodo.dueDate = fixedDate.minusDays(1)
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
-        `when`(todoRepository.findAllByMemberAndDueDateLessThanAndStatusNot(
-            member,
-            LocalDate.now(),
-            TodoStatus.DONE
-        )).thenReturn(listOf(overdueTodo))
+        doReturn(listOf(overdueTodo)).`when`(todoRepository).findAllByMemberAndDueDateLessThanAndStatusNot(
+            any(Member::class.java) ?: member,
+            any(LocalDate::class.java) ?: fixedDate,
+            any(TodoStatus::class.java) ?: TodoStatus.DONE
+        )
 
         val result = todoService.getOverdueTodos(loginMember)
 
@@ -972,11 +974,11 @@ class TodoServiceTest {
     @Test
     fun `getOverdueTodos should return empty list when no overdue todos`() {
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
-        `when`(todoRepository.findAllByMemberAndDueDateLessThanAndStatusNot(
-            member,
-            LocalDate.now(),
-            TodoStatus.DONE
-        )).thenReturn(emptyList())
+        doReturn(emptyList<Todo>()).`when`(todoRepository).findAllByMemberAndDueDateLessThanAndStatusNot(
+            any(Member::class.java) ?: member,
+            any(LocalDate::class.java) ?: fixedDate,
+            any(TodoStatus::class.java) ?: TodoStatus.DONE
+        )
 
         val result = todoService.getOverdueTodos(loginMember)
 

@@ -36,11 +36,7 @@ class ThumbnailService(
     @Transactional
     fun generateThumbnailAsync(attachmentId: UUID, filePath: Path) {
         try {
-            val attachment = attachmentRepository.findById(attachmentId).orElse(null)
-            if (attachment == null) {
-                log.warn("Attachment not found for thumbnail generation: {}", attachmentId)
-                return
-            }
+            val attachment = attachmentRepository.findById(attachmentId).orElse(null) ?: return
 
             val thumbnailPath = pathResolver.resolveThumbnailPath(filePath, attachment.storedFilename)
             val success = generateThumbnail(filePath, thumbnailPath, attachment.contentType)
@@ -50,13 +46,11 @@ class ThumbnailService(
                 attachment.thumbnailContentType = "image/png"
                 attachment.thumbnailSize = thumbnailPath.toFile().length()
                 attachment.thumbnailStatus = ThumbnailStatus.COMPLETED
-
                 attachmentRepository.save(attachment)
-                log.info("Thumbnail generated successfully for attachment: {}", attachment.storedFilename)
             } else {
                 attachment.thumbnailStatus = ThumbnailStatus.FAILED
                 attachmentRepository.save(attachment)
-                log.warn("Thumbnail generation failed for attachment: {}", attachment.storedFilename)
+                log.error("Thumbnail generation failed for attachment: {}", attachment.storedFilename)
             }
         } catch (e: Exception) {
             log.error("Thumbnail generation error for attachment: {}", attachmentId, e)
@@ -69,12 +63,7 @@ class ThumbnailService(
     }
 
     fun generateThumbnail(sourcePath: Path, targetPath: Path, contentType: String): Boolean {
-        val generator = thumbnailGenerators.firstOrNull { it.canGenerate(contentType) }
-
-        if (generator == null) {
-            log.debug("No thumbnail generator found for content type: {}", contentType)
-            return false
-        }
+        val generator = thumbnailGenerators.firstOrNull { it.canGenerate(contentType) } ?: return false
 
         return try {
             generator.generate(sourcePath, targetPath, storageProperties.thumbnail.maxSide)

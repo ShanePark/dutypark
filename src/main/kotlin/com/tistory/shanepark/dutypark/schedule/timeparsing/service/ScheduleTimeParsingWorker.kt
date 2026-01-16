@@ -23,12 +23,10 @@ class ScheduleTimeParsingWorker(
     fun run(task: ScheduleTimeParsingTask) {
         val scheduleOption = scheduleRepository.findById(task.scheduleId)
         if (scheduleOption.isEmpty) {
-            log.info("Schedule not found. maybe already deleted. scheduleId: ${task.scheduleId}")
             return
         }
         val schedule = scheduleOption.get()
         if (task.isExpired(schedule)) {
-            log.info("Schedule is updated, skip parsing. scheduleId: ${task.scheduleId}")
             return
         }
 
@@ -48,7 +46,7 @@ class ScheduleTimeParsingWorker(
         try {
             response = scheduleTimeParsingService.parseScheduleTime(request)
         } catch (e: Exception) {
-            log.error("OpenAI API error", e)
+            log.error("AI parsing failed for schedule {}: {}", task.scheduleId, e.message, e)
             return
         }
 
@@ -66,7 +64,7 @@ class ScheduleTimeParsingWorker(
             // Do not use JPA dirty checking since it will be working on another thread.
             scheduleRepository.save(schedule)
         } catch (e: DateTimeParseException) {
-            log.warn("Failed to parse dateTime: $response")
+            log.warn("Failed to parse dateTime: {}", response)
             schedule.parsingTimeStatus = FAILED
             scheduleRepository.save(schedule)
         }

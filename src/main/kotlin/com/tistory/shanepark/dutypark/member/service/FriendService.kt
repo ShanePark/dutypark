@@ -234,13 +234,7 @@ class FriendService(
 
     @Transactional(readOnly = true)
     fun searchPossibleFriends(login: LoginMember, keyword: String, page: Pageable): Page<FriendDto> {
-        val member = loginMemberToMember(login)
-
-        val friends = findAllFriends(login).map { it.id }
-        val pendingRequestsFrom = getPendingRequestsFrom(member).map { it.toMember.id }
-        val excludeIds = friends + pendingRequestsFrom + member.id
-
-        val result = memberRepository.findMembersByNameContainingIgnoreCaseAndIdNotIn(keyword, excludeIds, page)
+        val result = memberRepository.searchPossibleFriends(keyword, login.id, page)
         return result.map { FriendDto.of(it) }
     }
 
