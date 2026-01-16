@@ -13,6 +13,7 @@ import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import com.tistory.shanepark.dutypark.team.domain.enums.WorkType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.Mockito.reset
@@ -40,6 +41,20 @@ internal class DutyServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @MockitoSpyBean
     lateinit var holidayServiceSpy: HolidayService
+
+    @BeforeEach
+    fun populateAllTestHolidays() {
+        // Pre-populate holidays for all years used in tests (2024-2028)
+        // This avoids repeated DB inserts across multiple test methods
+        (2024..2028).forEach { year ->
+            val holidays = generateSequence(LocalDate.of(year, 1, 1)) { it.plusDays(1) }
+                .takeWhile { it.year == year }
+                .filter { it.dayOfWeek.value <= 5 }
+                .map { Holiday("weekday", false, it) }
+                .toList()
+            holidayRepository.saveAll(holidays)
+        }
+    }
 
     @AfterEach
     fun clearHolidayCache() {
@@ -209,18 +224,7 @@ internal class DutyServiceIntegrationTest : DutyparkIntegrationTest() {
         team.addDutyType(dutyName = dutyName, dutyColor = "#f0f8ff")
         teamRepository.save(team)
 
-        // Populate holidays for the entire year to prevent external API calls
-        val holidays2024 = generateSequence(LocalDate.of(2024, 1, 1)) { it.plusDays(1) }
-            .takeWhile { it.year == 2024 }
-            .filter { it.dayOfWeek.value <= 5 }
-            .map { Holiday("weekday", false, it) }
-            .toList()
-        val holidays2025 = generateSequence(LocalDate.of(2025, 1, 1)) { it.plusDays(1) }
-            .takeWhile { it.year == 2025 }
-            .filter { it.dayOfWeek.value <= 5 }
-            .map { Holiday("weekday", false, it) }
-            .toList()
-
+        // Weekday holidays already populated in @BeforeEach; add actual public holidays
         val actualHolidays = listOf(
             Holiday("신정", true, LocalDate.of(2025, 1, 1)),
             Holiday("임시공휴일", true, LocalDate.of(2025, 1, 27)),
@@ -228,7 +232,7 @@ internal class DutyServiceIntegrationTest : DutyparkIntegrationTest() {
             Holiday("설날", true, LocalDate.of(2025, 1, 29)),
             Holiday("설날", true, LocalDate.of(2025, 1, 30))
         )
-        holidayRepository.saveAll(holidays2024 + holidays2025 + actualHolidays)
+        holidayRepository.saveAll(actualHolidays)
 
         // When
         val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2025, 1, loginMember(member))
@@ -283,10 +287,7 @@ internal class DutyServiceIntegrationTest : DutyparkIntegrationTest() {
         memberRepository.save(member)
         teamRepository.save(weekdayTeam)
 
-        populateHolidaysForYear(2025)
-        populateHolidaysForYear(2026)
-
-        // When
+        // When (holidays already populated in @BeforeEach)
         val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2026, 1, loginMember(member))
 
         // Then
@@ -307,9 +308,7 @@ internal class DutyServiceIntegrationTest : DutyparkIntegrationTest() {
         team.addDutyType(dutyName = dutyName, dutyColor = "#f0f8ff")
         teamRepository.save(team)
 
-        populateHolidaysForYear(2025)
-        populateHolidaysForYear(2026)
-
+        // Holidays already populated in @BeforeEach
         val saturdayHoliday = LocalDate.of(2026, 1, 3)
         val sundayHoliday = LocalDate.of(2026, 1, 4)
         holidayRepository.saveAll(
@@ -339,10 +338,7 @@ internal class DutyServiceIntegrationTest : DutyparkIntegrationTest() {
         team.addDutyType(dutyName = dutyName, dutyColor = "#f0f8ff")
         teamRepository.save(team)
 
-        populateHolidaysForYear(2025)
-        populateHolidaysForYear(2026)
-        populateHolidaysForYear(2027)
-
+        // Holidays already populated in @BeforeEach
         val previousMonthHoliday = LocalDate.of(2026, 12, 31)
         val nextMonthHoliday = LocalDate.of(2027, 2, 2)
         holidayRepository.saveAll(
@@ -373,9 +369,7 @@ internal class DutyServiceIntegrationTest : DutyparkIntegrationTest() {
         team.addDutyType(dutyName = dutyName, dutyColor = "#f0f8ff")
         teamRepository.save(team)
 
-        populateHolidaysForYear(2026)
-        populateHolidaysForYear(2027)
-
+        // Holidays already populated in @BeforeEach
         val allWeekdaysAsHolidays = generateSequence(LocalDate.of(2027, 2, 1)) { it.plusDays(1) }
             .takeWhile { it.month.value == 2 }
             .filter { it.dayOfWeek.value <= 5 }
@@ -404,9 +398,7 @@ internal class DutyServiceIntegrationTest : DutyparkIntegrationTest() {
         team.addDutyType(dutyName = dutyName, dutyColor = "#f0f8ff")
         teamRepository.save(team)
 
-        populateHolidaysForYear(2027)
-        populateHolidaysForYear(2028)
-
+        // Holidays already populated in @BeforeEach
         val customDutyType = TestData.dutyTypes[0]
         val existingDuty = Duty(
             dutyYear = 2028,
@@ -435,9 +427,7 @@ internal class DutyServiceIntegrationTest : DutyparkIntegrationTest() {
         team.addDutyType(dutyName = dutyName, dutyColor = "#f0f8ff")
         teamRepository.save(team)
 
-        populateHolidaysForYear(2027)
-        populateHolidaysForYear(2028)
-
+        // Holidays already populated in @BeforeEach
         val consecutiveHolidays = (10..14).map {
             Holiday("연휴 $it", true, LocalDate.of(2028, 4, it))
         }
@@ -449,15 +439,6 @@ internal class DutyServiceIntegrationTest : DutyparkIntegrationTest() {
         // Then
         val holidayDuties = duties.filter { it.day in 10..14 && it.month == 4 }
         assertThat(holidayDuties.all { it.dutyType == null }).isTrue()
-    }
-
-    private fun populateHolidaysForYear(year: Int) {
-        val holidays = generateSequence(LocalDate.of(year, 1, 1)) { it.plusDays(1) }
-            .takeWhile { it.year == year }
-            .filter { it.dayOfWeek.value <= 5 }
-            .map { Holiday("weekday", false, it) }
-            .toList()
-        holidayRepository.saveAll(holidays)
     }
 
 }
