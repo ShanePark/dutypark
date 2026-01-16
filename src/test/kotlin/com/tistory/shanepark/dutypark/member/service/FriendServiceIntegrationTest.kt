@@ -8,6 +8,7 @@ import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import org.assertj.core.api.Assertions.assertThat
+import org.hibernate.SessionFactory
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
@@ -25,6 +26,9 @@ class FriendServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var friendRequestRepository: FriendRequestRepository
+
+    @Autowired
+    lateinit var sessionFactory: SessionFactory
 
     @Test
     fun `find All Friends test`() {
@@ -113,6 +117,60 @@ class FriendServiceIntegrationTest : DutyparkIntegrationTest() {
 
         // Then no exception
         friendService.checkVisibility(login = loginMember, target = targetMember)
+    }
+
+    @Test
+    fun `searchPossibleFriends should not load all friends and pending requests into memory`() {
+        // Given: Create 20 friends and 10 pending requests for member1
+        val member = TestData.member
+        val loginMember = loginMember(member)
+
+        val friends = mutableListOf<Member>()
+        val pendingTargets = mutableListOf<Member>()
+
+        // Create friends
+        for (i in 1..20) {
+            val friend = memberRepository.save(Member("friend$i", "friend$i@test.com", "pass"))
+            friends.add(friend)
+            setFriend(member, friend)
+        }
+
+        // Create pending friend requests
+        for (i in 1..10) {
+            val target = memberRepository.save(Member("pending$i", "pending$i@test.com", "pass"))
+            pendingTargets.add(target)
+            friendRequestRepository.save(FriendRequest(fromMember = member, toMember = target))
+        }
+
+        // Create potential friends (should appear in search result)
+        val searchable = memberRepository.save(Member("searchable", "searchable@test.com", "pass"))
+
+        em.flush()
+        em.clear()
+
+        // Enable statistics
+        val statistics = sessionFactory.statistics
+        statistics.isStatisticsEnabled = true
+        statistics.clear()
+
+        // When
+        val page = Pageable.ofSize(10)
+        val searchResult = friendService.searchPossibleFriends(loginMember, "searchable", page)
+
+        // Then
+        // Expected: at most 2 queries (1 for search with subquery, 1 for count)
+        val queryCount = statistics.prepareStatementCount
+
+        // Verify functionality still works
+        assertThat(searchResult.content).hasSize(1)
+        assertThat(searchResult.content[0].name).isEqualTo("searchable")
+        assertThat(searchResult.content).noneMatch { it.id in friends.map { f -> f.id } }
+        assertThat(searchResult.content).noneMatch { it.id in pendingTargets.map { p -> p.id } }
+        assertThat(searchResult.content).noneMatch { it.id == member.id }
+
+        assertThat(queryCount)
+            .describedAs("Query count should be at most 2 (search with subquery + count)")
+            .isLessThanOrEqualTo(2)
     }
 
     private fun setFriend(
