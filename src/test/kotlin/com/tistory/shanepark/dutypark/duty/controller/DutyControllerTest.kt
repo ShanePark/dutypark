@@ -203,4 +203,28 @@ class DutyControllerTest : RestDocsTest() {
             .andDo(document("duty/update-unauthorized"))
     }
 
+    @Test
+    fun `update duty forbidden for other member`() {
+        val today = LocalDate.now()
+        val json = """
+            {
+                "year": ${today.year},
+                "month": ${today.monthValue},
+                "day": ${today.dayOfMonth},
+                "dutyTypeId": ${TestData.dutyTypes[0].id},
+                "memberId": ${TestData.member.id}
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/duty/change")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member2)
+        )
+            .andExpect(status().isUnauthorized)
+            .andDo(MockMvcResultHandlers.print())
+    }
+
 }

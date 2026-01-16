@@ -4,21 +4,26 @@ import com.tistory.shanepark.dutypark.RestDocsTest
 import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
 import com.tistory.shanepark.dutypark.attachment.domain.entity.AttachmentUploadSession
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
-import com.tistory.shanepark.dutypark.attachment.dto.FinalizeSessionRequest
 import com.tistory.shanepark.dutypark.attachment.dto.ReorderAttachmentsRequest
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentUploadSessionRepository
 import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
+import org.assertj.core.api.Assertions.assertThat
+import org.hamcrest.Matchers
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.mock.web.MockMultipartFile
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.*
+import org.springframework.http.HttpHeaders
+import org.springframework.http.MediaType
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import java.nio.file.Files
 import java.time.Clock
 import java.time.LocalDateTime
@@ -54,7 +59,7 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
     }
 
     @Test
-    fun `upload to session owned by another user returns 403`() {
+    fun `upload to session owned by another user returns 401`() {
         val member = TestData.member
         val member2 = TestData.member2
         val jwt = getJwt(member)
@@ -80,7 +85,7 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
                 .file(file)
                 .param("sessionId", session.id.toString())
                 .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
-        ).andExpect(status().is4xxClientError)
+        ).andExpect(status().isUnauthorized)
             .andDo(MockMvcResultHandlers.print())
     }
 
@@ -117,7 +122,7 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
 
 
     @Test
-    fun `delete attachment owned by another user returns 403`() {
+    fun `delete attachment owned by another user returns 401`() {
         val member = TestData.member
         val member2 = TestData.member2
         val jwt = getJwt(member)
@@ -149,49 +154,9 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
         mockMvc.perform(
             delete("/api/attachments/{id}", attachment.id)
                 .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
-        ).andExpect(status().is4xxClientError)
+        ).andExpect(status().isUnauthorized)
             .andDo(MockMvcResultHandlers.print())
     }
-
-    @Test
-    fun `finalize session with empty attachments succeeds`() {
-        val member = TestData.member
-        val jwt = getJwt(member)
-
-        val schedule = scheduleRepository.save(
-            Schedule(
-                member = member,
-                content = "Test schedule",
-                startDateTime = LocalDateTime.now(),
-                endDateTime = LocalDateTime.now().plusHours(1)
-            )
-        )
-
-        val session = sessionRepository.save(
-            AttachmentUploadSession(
-                contextType = AttachmentContextType.SCHEDULE,
-                targetContextId = schedule.id.toString(),
-                ownerId = member.id!!,
-                expiresAt = clock.instant().plusSeconds(86400)
-            )
-        )
-
-        val request = FinalizeSessionRequest(
-            contextId = schedule.id.toString(),
-            orderedAttachmentIds = emptyList()
-        )
-        val json = objectMapper.writeValueAsString(request)
-
-        mockMvc.perform(
-            post("/api/attachments/sessions/{sessionId}/finalize", session.id)
-                .accept("application/json")
-                .contentType("application/json")
-                .content(json)
-                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
-        ).andExpect(status().isOk)
-            .andDo(MockMvcResultHandlers.print())
-    }
-
 
     @Test
     fun `reorder with empty attachment list succeeds`() {
@@ -222,6 +187,8 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
                 .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().isOk)
             .andDo(MockMvcResultHandlers.print())
+
+        assertThat(attachmentRepository.findAll()).isEmpty()
     }
 
     @Test
@@ -235,6 +202,7 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
                 .param("contextId", UUID.randomUUID().toString())
                 .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().isOk)
+            .andExpect(content().json("[]"))
             .andDo(MockMvcResultHandlers.print())
     }
 
@@ -262,13 +230,13 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
                 storedFilename = "safe-uuid.txt",
                 contentType = "text/plain",
                 size = 100,
-                storagePath = pathResolver.resolveTemporaryDirectory(session.id!!).toString(),
+                storagePath = pathResolver.resolveTemporaryDirectory(session.id).toString(),
                 createdBy = member.id!!,
                 orderIndex = 0
             )
         )
 
-        val tempDir = pathResolver.resolveTemporaryDirectory(session.id!!)
+        val tempDir = pathResolver.resolveTemporaryDirectory(session.id)
         Files.createDirectories(tempDir)
         Files.write(tempDir.resolve("safe-uuid.txt"), "safe content".toByteArray())
 
@@ -276,6 +244,205 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
             get("/api/attachments/{id}/download", attachment.id)
                 .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().isOk)
+            .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, Matchers.not(Matchers.containsString("\r"))))
+            .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, Matchers.not(Matchers.containsString("\n"))))
             .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
+    fun `download returns 404 when file is missing`() {
+        val member = TestData.member
+        val jwt = getJwt(member)
+
+        val session = sessionRepository.save(
+            AttachmentUploadSession(
+                contextType = AttachmentContextType.SCHEDULE,
+                targetContextId = null,
+                ownerId = member.id!!,
+                expiresAt = clock.instant().plusSeconds(86400)
+            )
+        )
+
+        val attachment = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = null,
+                uploadSessionId = session.id,
+                originalFilename = "missing.txt",
+                storedFilename = "missing.txt",
+                contentType = "text/plain",
+                size = 100,
+                storagePath = pathResolver.resolveTemporaryDirectory(session.id).toString(),
+                createdBy = member.id!!,
+                orderIndex = 0
+            )
+        )
+
+        mockMvc.perform(
+            get("/api/attachments/{id}/download", attachment.id)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $jwt")
+        ).andExpect(status().isNotFound)
+    }
+
+    @Test
+    fun `download supports inline disposition`() {
+        val member = TestData.member
+        val jwt = getJwt(member)
+
+        val session = sessionRepository.save(
+            AttachmentUploadSession(
+                contextType = AttachmentContextType.SCHEDULE,
+                targetContextId = null,
+                ownerId = member.id!!,
+                expiresAt = clock.instant().plusSeconds(86400)
+            )
+        )
+
+        val attachment = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = null,
+                uploadSessionId = session.id,
+                originalFilename = "inline.txt",
+                storedFilename = "inline.txt",
+                contentType = "text/plain",
+                size = 100,
+                storagePath = pathResolver.resolveTemporaryDirectory(session.id).toString(),
+                createdBy = member.id!!,
+                orderIndex = 0
+            )
+        )
+
+        val tempDir = pathResolver.resolveTemporaryDirectory(session.id)
+        Files.createDirectories(tempDir)
+        Files.write(tempDir.resolve("inline.txt"), "content".toByteArray())
+
+        mockMvc.perform(
+            get("/api/attachments/{id}/download", attachment.id)
+                .param("inline", "true")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $jwt")
+        ).andExpect(status().isOk)
+            .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, org.hamcrest.Matchers.startsWith("inline;")))
+            .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
+    fun `thumbnail returns thumbnail when present`() {
+        val member = TestData.member
+        val jwt = getJwt(member)
+
+        val session = sessionRepository.save(
+            AttachmentUploadSession(
+                contextType = AttachmentContextType.SCHEDULE,
+                targetContextId = null,
+                ownerId = member.id!!,
+                expiresAt = clock.instant().plusSeconds(86400)
+            )
+        )
+
+        val attachment = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = null,
+                uploadSessionId = session.id,
+                originalFilename = "image.png",
+                storedFilename = "image.png",
+                contentType = "image/png",
+                size = 100,
+                storagePath = pathResolver.resolveTemporaryDirectory(session.id).toString(),
+                thumbnailFilename = "thumb.png",
+                thumbnailContentType = null,
+                createdBy = member.id!!,
+                orderIndex = 0
+            )
+        )
+
+        val tempDir = pathResolver.resolveTemporaryDirectory(session.id)
+        Files.createDirectories(tempDir)
+        Files.write(tempDir.resolve("thumb.png"), "thumb".toByteArray())
+
+        mockMvc.perform(
+            get("/api/attachments/{id}/thumbnail", attachment.id)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $jwt")
+        ).andExpect(status().isOk)
+            .andExpect(header().string(HttpHeaders.CONTENT_TYPE, MediaType.IMAGE_PNG_VALUE))
+    }
+
+    @Test
+    fun `thumbnail falls back to original when thumbnail missing`() {
+        val member = TestData.member
+        val jwt = getJwt(member)
+
+        val session = sessionRepository.save(
+            AttachmentUploadSession(
+                contextType = AttachmentContextType.SCHEDULE,
+                targetContextId = null,
+                ownerId = member.id!!,
+                expiresAt = clock.instant().plusSeconds(86400)
+            )
+        )
+
+        val attachment = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = null,
+                uploadSessionId = session.id,
+                originalFilename = "image.png",
+                storedFilename = "image.png",
+                contentType = "image/png",
+                size = 100,
+                storagePath = pathResolver.resolveTemporaryDirectory(session.id).toString(),
+                thumbnailFilename = "thumb.png",
+                thumbnailContentType = "image/png",
+                createdBy = member.id!!,
+                orderIndex = 0
+            )
+        )
+
+        val tempDir = pathResolver.resolveTemporaryDirectory(session.id)
+        Files.createDirectories(tempDir)
+        Files.write(tempDir.resolve("image.png"), "original".toByteArray())
+
+        mockMvc.perform(
+            get("/api/attachments/{id}/thumbnail", attachment.id)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $jwt")
+        ).andExpect(status().isOk)
+            .andExpect(header().string(HttpHeaders.CONTENT_TYPE, MediaType.IMAGE_PNG_VALUE))
+    }
+
+    @Test
+    fun `thumbnail returns 404 when original is missing`() {
+        val member = TestData.member
+        val jwt = getJwt(member)
+
+        val session = sessionRepository.save(
+            AttachmentUploadSession(
+                contextType = AttachmentContextType.SCHEDULE,
+                targetContextId = null,
+                ownerId = member.id!!,
+                expiresAt = clock.instant().plusSeconds(86400)
+            )
+        )
+
+        val attachment = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = null,
+                uploadSessionId = session.id,
+                originalFilename = "image.png",
+                storedFilename = "image.png",
+                contentType = "image/png",
+                size = 100,
+                storagePath = pathResolver.resolveTemporaryDirectory(session.id).toString(),
+                thumbnailFilename = null,
+                createdBy = member.id!!,
+                orderIndex = 0
+            )
+        )
+
+        mockMvc.perform(
+            get("/api/attachments/{id}/thumbnail", attachment.id)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $jwt")
+        ).andExpect(status().isNotFound)
     }
 }

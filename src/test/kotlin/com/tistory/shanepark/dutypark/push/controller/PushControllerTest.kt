@@ -156,4 +156,43 @@ class PushControllerTest : RestDocsTest() {
         val updatedToken = refreshTokenRepository.findByToken(refreshToken.token)
         assertThat(updatedToken?.pushEndpoint).isNull()
     }
+
+    @Test
+    fun `subscribe returns 401 when refresh token is missing`() {
+        val requestBody = """
+            {
+              "endpoint": "https://example.com/endpoint",
+              "keys": {
+                "p256dh": "test-p256dh",
+                "auth": "test-auth"
+              }
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/auth/push/subscribe")
+                .withAuth(TestData.member)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody)
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.success").value(false))
+    }
+
+    @Test
+    fun `unsubscribe returns 401 when refresh token belongs to another member`() {
+        val refreshToken = refreshTokenService.createRefreshToken(
+            memberId = TestData.member2.id!!,
+            remoteAddr = "127.0.0.1",
+            userAgent = "test-agent"
+        )
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/auth/push/unsubscribe")
+                .withAuth(TestData.member)
+                .cookie(Cookie("refresh_token", refreshToken.token))
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.success").value(false))
+    }
 }

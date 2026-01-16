@@ -13,6 +13,7 @@ import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
+import java.time.LocalDateTime
 
 class MemberServiceTest : DutyparkIntegrationTest() {
 
@@ -75,6 +76,30 @@ class MemberServiceTest : DutyparkIntegrationTest() {
         assertThat(member.name).isEqualTo("shane")
         assertThat(member.password).isEqualTo("")
         assertThat(member.kakaoId).isEqualTo("kakao_id")
+    }
+
+    @Test
+    fun `create Sso member fails when register expired`(@Autowired memberSsoRegisterRepository: MemberSsoRegisterRepository) {
+        memberSsoRegisterRepository.deleteAll()
+        val ssoRegister = MemberSsoRegister(SsoType.KAKAO, "kakao_id")
+        val createdDateField = MemberSsoRegister::class.java.getDeclaredField("createdDate")
+        createdDateField.isAccessible = true
+        createdDateField.set(ssoRegister, LocalDateTime.now().minusDays(2))
+        memberSsoRegisterRepository.save(ssoRegister)
+
+        assertThrows<IllegalArgumentException> {
+            memberService.createSsoMember("shane", ssoRegister.uuid)
+        }
+    }
+
+    @Test
+    fun `create Sso member for NAVER does not set kakaoId`(@Autowired memberSsoRegisterRepository: MemberSsoRegisterRepository) {
+        memberSsoRegisterRepository.deleteAll()
+        val ssoRegister = memberSsoRegisterRepository.save(MemberSsoRegister(SsoType.NAVER, "naver_id"))
+
+        val member = memberService.createSsoMember("shane", ssoRegister.uuid)
+
+        assertThat(member.kakaoId).isNull()
     }
 
     @Test
@@ -144,6 +169,47 @@ class MemberServiceTest : DutyparkIntegrationTest() {
         // Then
         assertThat(memberService.findAllManagers(loginMember(managed1))).containsExactly(MemberDto.of(manager))
         assertThat(memberService.findAllManagers(loginMember(managed2))).containsExactly(MemberDto.of(manager))
+    }
+
+    @Test
+    fun `canManageTeam returns false for null team`() {
+        val login = loginMember(TestData.member)
+
+        val result = memberService.canManageTeam(login, null)
+
+        assertThat(result).isFalse
+    }
+
+    @Test
+    fun `canManageTeam returns true for admin`() {
+        val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
+        val admin = memberRepository.findById(TestData.member.id!!).orElseThrow()
+        team.changeAdmin(admin)
+
+        val result = memberService.canManageTeam(loginMember(admin), team)
+
+        assertThat(result).isTrue
+    }
+
+    @Test
+    fun `canManageTeam returns true for manager`() {
+        val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
+        val manager = memberRepository.findById(TestData.member.id!!).orElseThrow()
+        team.addManager(manager)
+
+        val result = memberService.canManageTeam(loginMember(manager), team)
+
+        assertThat(result).isTrue
+    }
+
+    @Test
+    fun `createAuxiliaryAccount creates managed member`() {
+        val parent = memberRepository.findById(TestData.member.id!!).orElseThrow()
+        val result = memberService.createAuxiliaryAccount(loginMember(parent), "aux")
+
+        val created = memberRepository.findById(result.id!!).orElseThrow()
+        val managers = memberManagerRepository.findAllByManaged(created)
+        assertThat(managers).anyMatch { it.manager.id == parent.id }
     }
 
 }
