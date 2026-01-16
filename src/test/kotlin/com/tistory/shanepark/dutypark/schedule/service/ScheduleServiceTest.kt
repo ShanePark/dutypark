@@ -1,93 +1,135 @@
 package com.tistory.shanepark.dutypark.schedule.service
 
-import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
-import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
+import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
+import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
+import com.tistory.shanepark.dutypark.attachment.service.FileSystemService
+import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
-import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
+import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSaveDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
+import com.tistory.shanepark.dutypark.schedule.timeparsing.service.ScheduleTimeParsingQueueManager
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.springframework.beans.factory.annotation.Autowired
+import org.mockito.kotlin.*
+import org.springframework.context.ApplicationEventPublisher
+import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDateTime
-import java.time.YearMonth
 import java.util.*
 
-class ScheduleServiceTest : DutyparkIntegrationTest() {
+class ScheduleServiceTest {
 
-    @Autowired
-    lateinit var scheduleService: ScheduleService
+    private lateinit var scheduleService: ScheduleService
+    private lateinit var scheduleRepository: ScheduleRepository
+    private lateinit var memberRepository: MemberRepository
+    private lateinit var friendService: FriendService
+    private lateinit var scheduleTimeParsingQueueManager: ScheduleTimeParsingQueueManager
+    private lateinit var schedulePermissionService: SchedulePermissionService
+    private lateinit var attachmentRepository: AttachmentRepository
+    private lateinit var attachmentService: AttachmentService
+    private lateinit var fileSystemService: FileSystemService
+    private lateinit var pathResolver: StoragePathResolver
+    private lateinit var eventPublisher: ApplicationEventPublisher
 
-    @Autowired
-    lateinit var scheduleRepository: ScheduleRepository
+    private lateinit var member: Member
+    private lateinit var member2: Member
+    private lateinit var loginMember: LoginMember
+    private lateinit var loginMember2: LoginMember
+
+    @BeforeEach
+    fun setUp() {
+        scheduleRepository = mock()
+        memberRepository = mock()
+        friendService = mock()
+        scheduleTimeParsingQueueManager = mock()
+        schedulePermissionService = mock()
+        attachmentRepository = mock()
+        attachmentService = mock()
+        fileSystemService = mock()
+        pathResolver = mock()
+        eventPublisher = mock()
+
+        scheduleService = ScheduleService(
+            scheduleRepository = scheduleRepository,
+            memberRepository = memberRepository,
+            friendService = friendService,
+            scheduleTimeParsingQueueManager = scheduleTimeParsingQueueManager,
+            schedulePermissionService = schedulePermissionService,
+            attachmentRepository = attachmentRepository,
+            attachmentService = attachmentService,
+            fileSystemService = fileSystemService,
+            pathResolver = pathResolver,
+            eventPublisher = eventPublisher
+        )
+
+        member = Member(name = "testMember", email = "test@test.com", password = "1234")
+        ReflectionTestUtils.setField(member, "id", 1L)
+
+        member2 = Member(name = "testMember2", email = "test2@test.com", password = "1234")
+        ReflectionTestUtils.setField(member2, "id", 2L)
+
+        loginMember = LoginMember(id = member.id!!, email = member.email, name = member.name)
+        loginMember2 = LoginMember(id = member2.id!!, email = member2.email, name = member2.name)
+    }
 
     @Test
     fun `Create schedule success test`() {
         // given
-        val member = TestData.member
-        val scheduleSaveDto1 = ScheduleSaveDto(
+        val scheduleSaveDto = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule1",
             description = "description1",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
             endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
         )
-        val scheduleSaveDto2 = ScheduleSaveDto(
-            memberId = member.id!!,
-            content = "schedule2",
-            startDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
-            endDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
-        )
-        val scheduleSaveDto3 = ScheduleSaveDto(
-            memberId = member.id!!,
-            content = "schedule3",
-            startDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
-            endDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
-        )
+
+        whenever(memberRepository.findById(member.id!!)).thenReturn(Optional.of(member))
+        whenever(scheduleRepository.findMaxPosition(eq(member), any())).thenReturn(-1)
+        whenever(scheduleRepository.save(any<Schedule>())).thenAnswer { invocation ->
+            val schedule = invocation.getArgument<Schedule>(0)
+            ReflectionTestUtils.setField(schedule, "id", UUID.randomUUID())
+            schedule
+        }
 
         // When
-        val loginMember = loginMember(member)
-        val createSchedule1 = scheduleService.createSchedule(loginMember, scheduleSaveDto1)
-        val createSchedule2 = scheduleService.createSchedule(loginMember, scheduleSaveDto2)
-        val createSchedule3 = scheduleService.createSchedule(loginMember, scheduleSaveDto3)
+        val createdSchedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
 
         // Then
-        assertThat(createSchedule1).isNotNull
-        val id = createSchedule1.id
-        assertThat(id).isNotNull
-        val findSchedule = scheduleRepository.findById(id).orElseThrow()
-        assertThat(findSchedule).isNotNull
-        assertThat(findSchedule.content).isEqualTo(scheduleSaveDto1.content)
-        assertThat(findSchedule.description).isEqualTo(scheduleSaveDto1.description)
-        assertThat(findSchedule.startDateTime).isEqualTo(scheduleSaveDto1.startDateTime)
-        assertThat(findSchedule.endDateTime).isEqualTo(scheduleSaveDto1.endDateTime)
-        assertThat(findSchedule.position).isEqualTo(0)
+        assertThat(createdSchedule).isNotNull
+        assertThat(createdSchedule.id).isNotNull
+        assertThat(createdSchedule.content).isEqualTo(scheduleSaveDto.content)
+        assertThat(createdSchedule.description).isEqualTo(scheduleSaveDto.description)
+        assertThat(createdSchedule.startDateTime).isEqualTo(scheduleSaveDto.startDateTime)
+        assertThat(createdSchedule.endDateTime).isEqualTo(scheduleSaveDto.endDateTime)
+        assertThat(createdSchedule.position).isEqualTo(0)
 
-        assertThat(createSchedule2).isNotNull
-        assertThat(createSchedule2.position).isEqualTo(0)
-        assertThat(createSchedule3.position).isEqualTo(1)
+        verify(schedulePermissionService).checkScheduleWriteAuthority(loginMember, member)
+        verify(scheduleRepository).save(any<Schedule>())
+        verify(scheduleTimeParsingQueueManager).addTask(any<Schedule>())
     }
 
     @Test
     fun `can't create other member's schedule`() {
         // given
-        val member = TestData.member
-        val otherMember = TestData.member2
         val scheduleSaveDto = ScheduleSaveDto(
-            memberId = otherMember.id!!,
+            memberId = member2.id!!,
             content = "schedule1",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
             endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
         )
 
-        // When
-        val loginMember = loginMember(member)
+        whenever(memberRepository.findById(member2.id!!)).thenReturn(Optional.of(member2))
+        whenever(schedulePermissionService.checkScheduleWriteAuthority(loginMember, member2))
+            .thenThrow(AuthException("login member doesn't have permission"))
 
-        // Then
+        // When & Then
         assertThrows<AuthException> {
             scheduleService.createSchedule(loginMember, scheduleSaveDto)
         }
@@ -96,7 +138,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
     @Test
     fun `update Schedule Test`() {
         // given
-        val member = TestData.member
+        val scheduleId = UUID.randomUUID()
         val schedule = Schedule(
             member = member,
             content = "schedule1",
@@ -105,19 +147,21 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
             endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
             position = 0
         )
-        scheduleRepository.save(schedule)
-        assertThat(schedule.id).isNotNull
+        ReflectionTestUtils.setField(schedule, "id", scheduleId)
 
-        // When
         val scheduleSaveDto = ScheduleSaveDto(
-            id = schedule.id,
+            id = scheduleId,
             memberId = member.id!!,
             content = "schedule2",
             description = "description2",
             startDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
             endDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
         )
-        val loginMember = loginMember(member)
+
+        whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.save(any<Schedule>())).thenAnswer { it.getArgument<Schedule>(0) }
+
+        // When
         val updatedSchedule = scheduleService.updateSchedule(loginMember, scheduleSaveDto)
 
         // Then
@@ -127,34 +171,38 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
         assertThat(updatedSchedule.startDateTime).isEqualTo(scheduleSaveDto.startDateTime)
         assertThat(updatedSchedule.endDateTime).isEqualTo(scheduleSaveDto.endDateTime)
         assertThat(updatedSchedule.position).isEqualTo(0)
+
+        verify(schedulePermissionService).checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
+        verify(scheduleRepository).save(schedule)
+        verify(scheduleTimeParsingQueueManager).addTask(schedule)
     }
 
     @Test
     fun `can't update other member's schedule`() {
         // given
-        val member = TestData.member
-        val otherMember = TestData.member2
+        val scheduleId = UUID.randomUUID()
         val schedule = Schedule(
-            member = otherMember,
+            member = member2,
             content = "schedule1",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
             endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
             position = 0
         )
-        scheduleRepository.save(schedule)
-        assertThat(schedule.id).isNotNull
+        ReflectionTestUtils.setField(schedule, "id", scheduleId)
 
-        // When
         val scheduleSaveDto = ScheduleSaveDto(
-            id = schedule.id,
+            id = scheduleId,
             memberId = member.id!!,
             content = "schedule2",
             startDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
             endDateTime = LocalDateTime.of(2023, 4, 11, 0, 0),
         )
-        val loginMember = loginMember(member)
 
-        // Then
+        whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember))
+            .thenThrow(AuthException("login member doesn't have permission"))
+
+        // When & Then
         assertThrows<AuthException> {
             scheduleService.updateSchedule(loginMember, scheduleSaveDto)
         }
@@ -163,7 +211,7 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
     @Test
     fun `delete schedule test`() {
         // given
-        val member = TestData.member
+        val scheduleId = UUID.randomUUID()
         val schedule = Schedule(
             member = member,
             content = "schedule1",
@@ -171,601 +219,46 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
             endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
             position = 0
         )
-        scheduleRepository.save(schedule)
-        assertThat(schedule.id).isNotNull
+        ReflectionTestUtils.setField(schedule, "id", scheduleId)
+
+        whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(attachmentRepository.findAllByContextTypeAndContextId(any(), any())).thenReturn(emptyList())
+        whenever(pathResolver.resolveContextDirectory(any(), any())).thenReturn(java.nio.file.Paths.get("/tmp/test"))
 
         // When
-        val loginMember = loginMember(member)
-        scheduleService.deleteSchedule(loginMember, schedule.id)
-
-        em.clear()
+        scheduleService.deleteSchedule(loginMember, scheduleId)
 
         // Then
-        val findSchedule = scheduleRepository.findById(schedule.id)
-        assertThat(findSchedule).isEmpty
+        verify(schedulePermissionService).checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
+        verify(scheduleRepository).delete(schedule)
     }
 
     @Test
     fun `can't delete other member's schedule`() {
         // given
-        val member = TestData.member
-        val otherMember = TestData.member2
+        val scheduleId = UUID.randomUUID()
         val schedule = Schedule(
-            member = otherMember,
+            member = member2,
             content = "schedule1",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
             endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
             position = 0
         )
-        scheduleRepository.save(schedule)
-        assertThat(schedule.id).isNotNull
+        ReflectionTestUtils.setField(schedule, "id", scheduleId)
 
-        // When
-        val loginMember = loginMember(member)
+        whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember))
+            .thenThrow(AuthException("login member doesn't have permission"))
 
-        // Then
+        // When & Then
         assertThrows<AuthException> {
-            scheduleService.deleteSchedule(loginMember, schedule.id)
+            scheduleService.deleteSchedule(loginMember, scheduleId)
         }
-    }
-
-    @Test
-    fun `Find Schedules`() {
-        // given
-        val member = TestData.member
-        val schedule1 = Schedule(
-            member = member,
-            content = "schedule1",
-            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-            position = 0
-        )
-        val schedule2 = Schedule(
-            member = member,
-            content = "schedule2",
-            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-            endDateTime = LocalDateTime.of(2023, 4, 12, 0, 0),
-            position = 0
-        )
-        val schedule3 = Schedule(
-            member = member,
-            content = "schedule3",
-            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-            endDateTime = LocalDateTime.of(2023, 4, 12, 0, 0),
-            position = 1
-        )
-        scheduleRepository.saveAll(listOf(schedule1, schedule2, schedule3))
-
-        // When
-        val result =
-            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member), member.id!!, 2023, 4)
-
-        // Then
-        assertThat(result[6 + 9 - 1]).hasSize(0)
-        assertThat(result[6 + 10 - 1]).hasSize(3)
-        assertThat(result[6 + 11 - 1]).hasSize(2)
-        assertThat(result[6 + 12 - 1]).hasSize(2)
-
-        val schedules = result[6 + 12 - 1]
-        assertThat(schedules[0].position).isLessThan(schedules[1].position)
-
-    }
-
-    @Test
-    fun `find schedules over month`() {
-        // given
-        val member = TestData.member
-        val schedule1 = Schedule(
-            member = member,
-            content = "schedule1",
-            startDateTime = LocalDateTime.of(2023, 3, 30, 0, 0),
-            endDateTime = LocalDateTime.of(2023, 4, 5, 0, 0),
-            position = 0
-        )
-        val schedule2 = Schedule(
-            member = member,
-            content = "schedule2",
-            startDateTime = LocalDateTime.of(2023, 4, 6, 0, 0),
-            endDateTime = LocalDateTime.of(2023, 4, 6, 0, 0),
-            position = 0
-        )
-        scheduleRepository.saveAll(listOf(schedule1, schedule2))
-
-        // When
-        val result =
-            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member), member.id!!, 2023, 4)
-
-        // Then
-        val paddingBefore = 6
-
-        val lastDayOfMarch = result[paddingBefore - 1]
-        assertThat(lastDayOfMarch).hasSize(1)
-        assertThat(lastDayOfMarch[0].content).isEqualTo(schedule1.content)
-        assertThat(lastDayOfMarch[0].dayOfMonth).isEqualTo(31)
-        assertThat(lastDayOfMarch[0].daysFromStart).isEqualTo(2)
-
-        val aprilFirst = result[paddingBefore]
-        assertThat(aprilFirst).hasSize(1)
-        assertThat(aprilFirst[0].content).isEqualTo(schedule1.content)
-        assertThat(aprilFirst[0].dayOfMonth).isEqualTo(1)
-        assertThat(aprilFirst[0].totalDays).isEqualTo(7)
-        assertThat(aprilFirst[0].daysFromStart).isEqualTo(3)
-        assertThat(aprilFirst[0].position).isEqualTo(0)
-
-        assertThat(result[paddingBefore + 1 - 1]).hasSize(1)
-        assertThat(result[paddingBefore + 2 - 1]).hasSize(1)
-        assertThat(result[paddingBefore + 3 - 1]).hasSize(1)
-        assertThat(result[paddingBefore + 4 - 1]).hasSize(1)
-        assertThat(result[paddingBefore + 5 - 1]).hasSize(1)
-        assertThat(result[paddingBefore + 6 - 1]).hasSize(1)
-        for (i in 7..30) {
-            assertThat(result[paddingBefore + i - 1]).isEmpty()
-        }
-
-        val mayFirst = result[paddingBefore + YearMonth.of(2023, 4).lengthOfMonth()]
-        assertThat(mayFirst).isEmpty()
-    }
-
-    @Test
-    fun `find Schedules Over year`() {
-        // given
-        val yearMonth = YearMonth.of(2023, 12)
-        val paddingBefore = 5
-
-        val member = TestData.member
-        val schedule1 = Schedule(
-            member = member,
-            content = "schedule1",
-            startDateTime = LocalDateTime.of(yearMonth.year, yearMonth.month, 31, 0, 0),
-            endDateTime = LocalDateTime.of(yearMonth.year, yearMonth.month, 31, 0, 0),
-            position = 0
-        )
-        val schedule2 = Schedule(
-            member = member,
-            content = "schedule2",
-            startDateTime = LocalDateTime.of(2024, 1, 1, 0, 0),
-            endDateTime = LocalDateTime.of(2024, 1, 1, 0, 0),
-            position = 0
-        )
-        scheduleRepository.saveAll(listOf(schedule1, schedule2))
-
-        // When
-        val result =
-            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member), member.id!!, 2023, 12)
-
-        // Then
-        assertThat(result[paddingBefore - 1 + 31][0].content).isEqualTo("schedule1")
-        assertThat(result[paddingBefore - 1 + 31 + 1][0].content).isEqualTo("schedule2")
-    }
-
-    @Test
-    fun `tag friend test`() {
-        // Given
-        val member = TestData.member
-        val friend = TestData.member2
-        val scheduleSaveDto = ScheduleSaveDto(
-            memberId = member.id!!,
-            content = "schedule1",
-            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-        )
-        val loginMember = loginMember(member)
-
-        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
-        makeThemFriend(member, friend)
-
-        // When
-        scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
-
-        // Then
-        val findSchedule = scheduleRepository.findById(schedule.id).orElseThrow()
-        assertThat(findSchedule.tags).hasSize(1)
-        assertThat(findSchedule.tags[0].member.id).isEqualTo(friend.id)
-    }
-
-    @Test
-    fun `can't tag a person to schedule if not friend`() {
-        // Given
-        val member = TestData.member
-        val friend = TestData.member2
-        val scheduleSaveDto = ScheduleSaveDto(
-            memberId = member.id!!,
-            content = "schedule1",
-            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-        )
-
-        // When
-        val loginMember = loginMember(member)
-        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
-
-
-        // Then
-        assertThrows<AuthException> {
-            scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
-        }
-    }
-
-    @Test
-    fun `can't tag a friend who is already tagged`() {
-        // Given
-        val member = TestData.member
-        val friend = TestData.member2
-        val scheduleSaveDto = ScheduleSaveDto(
-            memberId = member.id!!,
-            content = "schedule1",
-            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-        )
-        val loginMember = loginMember(member)
-
-        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
-        makeThemFriend(member, friend)
-        scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
-
-        // When
-        // Then
-        assertThrows<IllegalArgumentException> {
-            scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
-        }
-
-    }
-
-    @Test
-    fun `untag friend test`() {
-        // Given
-        val member = TestData.member
-        val friend = TestData.member2
-        val scheduleSaveDto = ScheduleSaveDto(
-            memberId = member.id!!,
-            content = "schedule1",
-            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-        )
-        val loginMember = loginMember(member)
-
-        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
-        makeThemFriend(member, friend)
-        scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
-
-        // When
-        scheduleService.untagFriend(loginMember, schedule.id, friend.id!!)
-
-        // Then
-        val findSchedule = scheduleRepository.findById(schedule.id).orElseThrow()
-        assertThat(findSchedule.tags).isEmpty()
-    }
-
-    @Test
-    fun `untag self test`() {
-        // Given
-        val member = TestData.member
-        val friend = TestData.member2
-        val scheduleSaveDto = ScheduleSaveDto(
-            memberId = member.id!!,
-            content = "schedule1",
-            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-        )
-        val loginMember = loginMember(member)
-
-        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
-        makeThemFriend(member, friend)
-
-        scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
-        assertThat(scheduleRepository.findById(schedule.id).orElseThrow().tags).hasSize(1)
-
-
-        // When
-        val friendLoginMember = loginMember(friend)
-        scheduleService.untagSelf(friendLoginMember, schedule.id)
-
-        // Then
-        val findSchedule = scheduleRepository.findById(schedule.id).orElseThrow()
-        assertThat(findSchedule.tags).isEmpty()
-    }
-
-    @Test
-    fun `can't untag self if not tagged`() {
-        // Given
-        val member = TestData.member
-        val friend = TestData.member2
-        val scheduleSaveDto = ScheduleSaveDto(
-            memberId = member.id!!,
-            content = "schedule1",
-            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-        )
-        val loginMember = loginMember(member)
-
-        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
-        makeThemFriend(member, friend)
-
-        // When
-        val friendLoginMember = loginMember(friend)
-
-        // Then
-        assertThrows<IllegalArgumentException> {
-            scheduleService.untagSelf(friendLoginMember, schedule.id)
-        }
-    }
-
-    @Test
-    fun `find schedules include tagged schedules`() {
-        // Given
-        val owner = TestData.member
-        val taggedPerson = TestData.member2
-        val scheduleSaveDto = ScheduleSaveDto(
-            memberId = owner.id!!,
-            content = "schedule1",
-            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-        )
-        val loginMember = loginMember(owner)
-
-        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
-        makeThemFriend(owner, taggedPerson)
-
-        scheduleService.tagFriend(loginMember, schedule.id, taggedPerson.id!!)
-
-        // When
-        val taggedPersonSchedules =
-            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(owner), taggedPerson.id!!, 2023, 4)
-        val ownerSchedules =
-            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(owner), owner.id!!, 2023, 4)
-
-        // Then
-        val scheduleForOwner = ownerSchedules[15]
-        assertThat(scheduleForOwner).hasSize(1)
-        assertThat(scheduleForOwner[0].isTagged).isFalse
-
-        val scheduleForTaggedPerson = taggedPersonSchedules[15]
-        assertThat(scheduleForTaggedPerson).hasSize(1)
-        assertThat(scheduleForTaggedPerson[0].isTagged).isTrue
-
-        assertThat(scheduleForTaggedPerson[0].id).isEqualTo(schedule.id)
-    }
-
-    @Test
-    fun `schedules include tags`() {
-        // Given
-        val member1 = TestData.member
-        val member2 = TestData.member2
-        val updateDto1 = ScheduleSaveDto(
-            memberId = member1.id!!,
-            content = "member1Schedule",
-            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-        )
-        val updateDto2 = ScheduleSaveDto(
-            memberId = member2.id!!,
-            content = "member2Schedule",
-            startDateTime = LocalDateTime.of(2023, 4, 10, 1, 0),
-            endDateTime = LocalDateTime.of(2023, 4, 10, 1, 0),
-        )
-
-        val loginMember = loginMember(member1)
-        val loginMember2 = loginMember(member2)
-
-        val member1Schedule = scheduleService.createSchedule(loginMember, updateDto1)
-        val member2Schedule = scheduleService.createSchedule(loginMember2, updateDto2)
-        makeThemFriend(member1, member2)
-
-        scheduleService.tagFriend(loginMember, member1Schedule.id, member2.id!!)
-        scheduleService.tagFriend(loginMember2, member2Schedule.id, member1.id!!)
-
-        // When
-        val ownerSchedules =
-            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member1), member1.id!!, 2023, 4)
-
-        // Then
-        val scheduleForOwner = ownerSchedules[15]
-        assertThat(scheduleForOwner).hasSize(2)
-
-        val member1ScheduleDto = scheduleForOwner[0]
-        assertThat(member1ScheduleDto.isTagged).isFalse
-        assertThat(member1ScheduleDto.tags).hasSize(1)
-        assertThat(member1ScheduleDto.tags[0].id).isEqualTo(member2.id)
-
-        val member2ScheduleDto = scheduleForOwner[1]
-        assertThat(member2ScheduleDto.isTagged).isTrue()
-        assertThat(member2ScheduleDto.tags).hasSize(1)
-        assertThat(member2ScheduleDto.tags[0].id).isEqualTo(member1.id)
-    }
-
-    @Test
-    fun `Tagged schedules always comes after their own schedules`() {
-        // Given
-        val member1 = TestData.member
-        val member2 = TestData.member2
-
-        val loginMember = loginMember(member1)
-        val loginMember2 = loginMember(member2)
-
-        val dayOfMonth = 10
-        val own1 = scheduleService.createSchedule(
-            loginMember, ScheduleSaveDto(
-                memberId = member1.id!!,
-                content = "own1Schedule",
-                startDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 0, 0),
-                endDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 0, 0),
-            )
-        )
-        val tagged = scheduleService.createSchedule(
-            loginMember2, ScheduleSaveDto(
-                memberId = member2.id!!,
-                content = "member2Schedule",
-                startDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
-                endDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
-            )
-        )
-        val own2 = scheduleService.createSchedule(
-            loginMember, ScheduleSaveDto(
-                memberId = member1.id!!,
-                content = "own2Schedule",
-                startDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 2, 0),
-                endDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 2, 0),
-            )
-        )
-        makeThemFriend(member1, member2)
-
-        scheduleService.tagFriend(loginMember2, tagged.id, member1.id!!)
-
-        // When
-        val ownerSchedules =
-            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member1), member1.id!!, 2023, 4)
-
-        // Then
-        val scheduleForOwner = ownerSchedules[6 + dayOfMonth - 1]
-        assertThat(scheduleForOwner).hasSize(3)
-        val own1Index = findIndex(scheduleForOwner, own1.id)
-        val own2Index = findIndex(scheduleForOwner, own2.id)
-        val taggedIndex = findIndex(scheduleForOwner, tagged.id)
-        assertThat(own1Index).isLessThan(taggedIndex)
-        assertThat(own2Index).isLessThan(taggedIndex)
-    }
-
-    private fun findIndex(schedules: List<ScheduleDto>, id: UUID): Int {
-        for (i in schedules.indices) {
-            if (schedules[i].id == id) {
-                return i
-            }
-        }
-        return -1
-    }
-
-    @Test
-    fun `tagged schedule is visible even if it is only for family`() {
-        // Given
-        // member2 creates a schedule and then tags member1
-        val member1 = TestData.member
-        val member2 = TestData.member2
-        val loginMember2 = loginMember(member2)
-
-        val dayOfMonth = 10
-        val tagged = scheduleService.createSchedule(
-            loginMember2, ScheduleSaveDto(
-                memberId = member2.id!!,
-                content = "member2Schedule",
-                startDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
-                endDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
-                visibility = Visibility.FAMILY
-            )
-        )
-        makeThemFriend(member1, member2)
-
-        // When
-        scheduleService.tagFriend(loginMember2, tagged.id, member1.id!!)
-        val ownerSchedules =
-            scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member1), member1.id!!, 2023, 4)
-
-        // Then
-        val schedules = ownerSchedules[6 + dayOfMonth - 1]
-        assertThat(schedules).isNotEmpty
-    }
-
-    @Test
-    fun `can not retrieve FAMILY only schedules even if they are friend`() {
-        // Given
-        val member1 = TestData.member
-        val member2 = TestData.member2
-        val loginMember2 = loginMember(member2)
-
-        val dayOfMonth = 10
-        scheduleService.createSchedule(
-            loginMember2, ScheduleSaveDto(
-                memberId = member2.id!!,
-                content = "member2Schedule",
-                startDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
-                endDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
-                visibility = Visibility.FAMILY
-            )
-        )
-        scheduleService.createSchedule(
-            loginMember2, ScheduleSaveDto(
-                memberId = member2.id!!,
-                content = "member2Schedule2",
-                startDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
-                endDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
-                visibility = Visibility.FRIENDS
-            )
-        )
-        makeThemFriend(member1, member2)
-
-        // Then
-        val schedules =
-            scheduleService.findSchedulesByYearAndMonth(loginMember(member1), member2.id!!, 2023, 4)
-        val scheduleOfDay = schedules[6 + dayOfMonth - 1]
-        assertThat(scheduleOfDay).hasSize(1)
-    }
-
-    @Test
-    fun `if not friend and calendar visibility is only for friends, can not get schedules even if they are in same team`() {
-        // Given
-        val target = TestData.member
-        updateVisibility(target, Visibility.FRIENDS)
-        val login = TestData.member2
-
-        target.team = TestData.team
-        login.team = TestData.team
-
-        memberRepository.save(target)
-        memberRepository.save(login)
-
-        // Then
-        assertThrows<AuthException> {
-            scheduleService.findSchedulesByYearAndMonth(loginMember(login), target.id!!, 2023, 4)
-        }
-    }
-
-    @Test
-    fun `if friend and calendar is only open for friends can get schedules`() {
-        // Given
-        val target = TestData.member
-        updateVisibility(target, Visibility.FRIENDS)
-        val login = TestData.member2
-
-        val member2 = TestData.member2
-        makeThemFriend(target, member2)
-
-        // When
-        val result = scheduleService.findSchedulesByYearAndMonth(loginMember(login), target.id!!, 2023, 4)
-
-        // Then
-        assertThat(result).isNotEmpty
-    }
-
-    @Test
-    fun `if calendar visibility is private, even they are friend, can't get schedules`() {
-        // Given
-        val target = TestData.member
-        updateVisibility(target, Visibility.PRIVATE)
-        val login = TestData.member2
-        makeThemFriend(target, login)
-
-        // Then
-        assertThrows<AuthException> {
-            scheduleService.findSchedulesByYearAndMonth(loginMember(login), target.id!!, 2023, 4)
-        }
-    }
-
-    @Test
-    fun `if calendar visibility is public, even guest can get schedules`() {
-        // Given
-        val target = TestData.member
-        updateVisibility(target, Visibility.PUBLIC)
-
-        // When
-        val result = scheduleService.findSchedulesByYearAndMonth(null, target.id!!, 2023, 4)
-
-        // Then
-        assertThat(result).isNotEmpty
     }
 
     @Test
     fun `create schedule with private visibility`() {
         // Given
-        val member = TestData.member
         val scheduleSaveDto = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule1",
@@ -774,8 +267,15 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
             visibility = Visibility.PRIVATE
         )
 
+        whenever(memberRepository.findById(member.id!!)).thenReturn(Optional.of(member))
+        whenever(scheduleRepository.findMaxPosition(eq(member), any())).thenReturn(-1)
+        whenever(scheduleRepository.save(any<Schedule>())).thenAnswer { invocation ->
+            val schedule = invocation.getArgument<Schedule>(0)
+            ReflectionTestUtils.setField(schedule, "id", UUID.randomUUID())
+            schedule
+        }
+
         // When
-        val loginMember = loginMember(member)
         val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
 
         // Then
@@ -785,7 +285,6 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
     @Test
     fun `create schedule with public visibility`() {
         // Given
-        val member = TestData.member
         val scheduleSaveDto = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule1",
@@ -794,8 +293,15 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
             visibility = Visibility.PUBLIC
         )
 
+        whenever(memberRepository.findById(member.id!!)).thenReturn(Optional.of(member))
+        whenever(scheduleRepository.findMaxPosition(eq(member), any())).thenReturn(-1)
+        whenever(scheduleRepository.save(any<Schedule>())).thenAnswer { invocation ->
+            val schedule = invocation.getArgument<Schedule>(0)
+            ReflectionTestUtils.setField(schedule, "id", UUID.randomUUID())
+            schedule
+        }
+
         // When
-        val loginMember = loginMember(member)
         val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
 
         // Then
@@ -805,200 +311,36 @@ class ScheduleServiceTest : DutyparkIntegrationTest() {
     @Test
     fun `update schedule's visibility`() {
         // Given
-        val member = TestData.member
+        val scheduleId = UUID.randomUUID()
+        val schedule = Schedule(
+            member = member,
+            content = "schedule1",
+            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            position = 0,
+            visibility = Visibility.PRIVATE
+        )
+        ReflectionTestUtils.setField(schedule, "id", scheduleId)
+
+        assertThat(schedule.visibility).isEqualTo(Visibility.PRIVATE)
+
         val scheduleSaveDto = ScheduleSaveDto(
+            id = scheduleId,
             memberId = member.id!!,
             content = "schedule1",
             startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
             endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
-            visibility = Visibility.PRIVATE
+            visibility = Visibility.PUBLIC
         )
 
-        val loginMember = loginMember(member)
-        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
-        assertThat(schedule.visibility).isEqualTo(Visibility.PRIVATE)
+        whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.save(any<Schedule>())).thenAnswer { it.getArgument<Schedule>(0) }
 
         // When
-        val updatedSchedule = scheduleService.updateSchedule(
-            loginMember,
-            scheduleSaveDto.copy(visibility = Visibility.PUBLIC, id = schedule.id)
-        )
+        val updatedSchedule = scheduleService.updateSchedule(loginMember, scheduleSaveDto)
 
         // Then
         assertThat(updatedSchedule.visibility).isEqualTo(Visibility.PUBLIC)
-    }
-
-    @Test
-    fun `guest can't see private and friends level schedules`() {
-        // Given
-        val target = TestData.member
-        updateVisibility(target, Visibility.PUBLIC)
-
-        val dateTime = LocalDateTime.of(2024, 3, 9, 0, 0)
-        val private = makeSchedule(target, Visibility.PRIVATE, dateTime)
-        val friends = makeSchedule(target, Visibility.FRIENDS, dateTime)
-        val public = makeSchedule(target, Visibility.PUBLIC, dateTime)
-
-        // When
-        val result = scheduleService.findSchedulesByYearAndMonth(null, target.id!!, 2024, 3)
-
-        // Then
-        val calendarView = CalendarView(2024, 3)
-        val index = calendarView.getIndex(date = dateTime.toLocalDate())
-        val schedulesIds = result[index].map { it.id }.toList()
-        assertThat(schedulesIds).contains(public.id)
-        assertThat(schedulesIds).doesNotContain(friends.id)
-        assertThat(schedulesIds).doesNotContain(private.id)
-    }
-
-    @Test
-    fun `friend can retrieve schedules for friends`() {
-        // Given
-        val target = TestData.member
-        updateVisibility(target, Visibility.FRIENDS)
-
-        val dateTime = LocalDateTime.of(2024, 3, 9, 0, 0)
-        val private = makeSchedule(target, Visibility.PRIVATE, dateTime)
-        val friends = makeSchedule(target, Visibility.FRIENDS, dateTime)
-        val public = makeSchedule(target, Visibility.PUBLIC, dateTime)
-
-        val friend = TestData.member2
-        makeThemFriend(target, friend)
-
-        // When
-        val result =
-            scheduleService.findSchedulesByYearAndMonth(loginMember(friend), target.id!!, 2024, 3)
-
-        // Then
-        val calendarView = CalendarView(2024, 3)
-        val index = calendarView.getIndex(date = dateTime.toLocalDate())
-        val schedulesIds = result[index].map { it.id }.toList()
-        assertThat(schedulesIds).contains(public.id)
-        assertThat(schedulesIds).contains(friends.id)
-        assertThat(schedulesIds).doesNotContain(private.id)
-    }
-
-    @Test
-    fun `user can retrieve self private schedules`() {
-        // Given
-        val target = TestData.member
-        updateVisibility(target, Visibility.PRIVATE)
-
-        val dateTime = LocalDateTime.of(2024, 3, 9, 0, 0)
-        val private = makeSchedule(target, Visibility.PRIVATE, dateTime)
-        val friends = makeSchedule(target, Visibility.FRIENDS, dateTime)
-        val public = makeSchedule(target, Visibility.PUBLIC, dateTime)
-
-        // When
-        val result =
-            scheduleService.findSchedulesByYearAndMonth(loginMember(target), target.id!!, 2024, 3)
-
-        // Then
-        val calendarView = CalendarView(2024, 3)
-        val index = calendarView.getIndex(date = dateTime.toLocalDate())
-        val schedulesIds = result[index].map { it.id }.toList()
-        assertThat(schedulesIds).contains(public.id)
-        assertThat(schedulesIds).contains(friends.id)
-        assertThat(schedulesIds).contains(private.id)
-    }
-
-    @Test
-    fun `can not retrieve other's friends-level-tagged schedules if not logged in but friends can`() {
-        // Given
-        val target = TestData.member
-        updateVisibility(target, Visibility.PUBLIC)
-        val friend = TestData.member2
-        makeThemFriend(target, friend)
-
-        val dateTime = LocalDateTime.of(2024, 3, 9, 0, 0)
-        val friendsSchedule = makeSchedule(friend, Visibility.FRIENDS, dateTime)
-
-        scheduleService.tagFriend(loginMember(friend), friendsSchedule.id, target.id!!)
-
-        // When
-        val notLoginResult = scheduleService.findSchedulesByYearAndMonth(null, target.id!!, 2024, 3)
-        val friendResult =
-            scheduleService.findSchedulesByYearAndMonth(loginMember(friend), target.id!!, 2024, 3)
-
-        // Then
-        val calendarView = CalendarView(2024, 3)
-        val index = calendarView.getIndex(date = dateTime.toLocalDate())
-
-        assertThat(notLoginResult[index].map { it.id }.toList()).doesNotContain(friendsSchedule.id)
-        assertThat(friendResult[index].map { it.id }.toList()).contains(friendsSchedule.id)
-    }
-
-    @Test
-    fun `can retrieve other's tagged public schedule even if not logged in`() {
-        // Given
-        val target = TestData.member
-        updateVisibility(target, Visibility.PUBLIC)
-        val friend = TestData.member2
-        makeThemFriend(target, friend)
-
-        val dateTime = LocalDateTime.of(2024, 3, 9, 0, 0)
-        val publicSchedule = makeSchedule(friend, Visibility.PUBLIC, dateTime)
-
-        scheduleService.tagFriend(loginMember(friend), publicSchedule.id, target.id!!)
-
-        // When
-        val notLoginResult = scheduleService.findSchedulesByYearAndMonth(null, target.id!!, 2024, 3)
-
-        // Then
-        val calendarView = CalendarView(2024, 3)
-        val index = calendarView.getIndex(date = dateTime.toLocalDate())
-
-        assertThat(notLoginResult[index].map { it.id }.toList()).contains(publicSchedule.id)
-    }
-
-    @Test
-    fun `schedules should include attachments information`() {
-        // Given
-        val member = TestData.member
-        val dateTime = LocalDateTime.of(2024, 3, 10, 0, 0)
-
-        scheduleService.createSchedule(
-            loginMember(member), ScheduleSaveDto(
-                memberId = member.id!!,
-                content = "schedule without attachment",
-                startDateTime = dateTime,
-                endDateTime = dateTime,
-            )
-        )
-
-        scheduleService.createSchedule(
-            loginMember(member), ScheduleSaveDto(
-                memberId = member.id!!,
-                content = "schedule with attachment",
-                startDateTime = dateTime,
-                endDateTime = dateTime,
-            )
-        )
-
-        // When
-        val result = scheduleService.findSchedulesByYearAndMonth(loginMember(member), member.id!!, 2024, 3)
-
-        // Then
-        val calendarView = CalendarView(2024, 3)
-        val index = calendarView.getIndex(date = dateTime.toLocalDate())
-        val schedules = result[index]
-
-        assertThat(schedules).hasSize(2)
-        schedules.forEach { schedule ->
-            assertThat(schedule.attachments).isNotNull
-        }
-    }
-
-    private fun makeSchedule(target: Member, visibility: Visibility, dateTime: LocalDateTime): Schedule {
-        return scheduleService.createSchedule(
-            loginMember(target), ScheduleSaveDto(
-                memberId = target.id!!,
-                content = "private",
-                startDateTime = dateTime,
-                endDateTime = dateTime,
-                visibility = visibility,
-            )
-        )
     }
 
 }

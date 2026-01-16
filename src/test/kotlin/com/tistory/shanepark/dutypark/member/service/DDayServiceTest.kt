@@ -1,52 +1,108 @@
 package com.tistory.shanepark.dutypark.member.service
 
-import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.dto.DDaySaveDto
 import com.tistory.shanepark.dutypark.member.domain.entity.DDayEvent
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.DDayRepository
+import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.springframework.beans.factory.annotation.Autowired
+import org.junit.jupiter.api.extension.ExtendWith
+import org.mockito.ArgumentCaptor
+import org.mockito.Captor
+import org.mockito.Mock
+import org.mockito.junit.jupiter.MockitoExtension
+import org.mockito.kotlin.any
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDate
+import java.util.*
 
-class DDayServiceTest : DutyparkIntegrationTest() {
+@ExtendWith(MockitoExtension::class)
+class DDayServiceTest {
 
-    @Autowired
-    lateinit var dDayService: DDayService
+    @Mock
+    private lateinit var memberRepository: MemberRepository
 
-    @Autowired
-    lateinit var dDayRepository: DDayRepository
+    @Mock
+    private lateinit var dDayRepository: DDayRepository
+
+    @Captor
+    private lateinit var dDayEventCaptor: ArgumentCaptor<DDayEvent>
+
+    private lateinit var dDayService: DDayService
+
+    private lateinit var member: Member
+    private lateinit var member2: Member
+
+    @BeforeEach
+    fun setUp() {
+        dDayService = DDayService(memberRepository, dDayRepository)
+        member = memberWithId(1L)
+        member2 = memberWithId(2L)
+    }
+
+    private fun memberWithId(id: Long): Member {
+        val member = Member(name = "test$id", password = "")
+        ReflectionTestUtils.setField(member, "id", id)
+        return member
+    }
+
+    private fun loginMember(member: Member): LoginMember {
+        return LoginMember(id = member.id!!, email = "", name = member.name, team = "", isAdmin = false)
+    }
+
+    private fun dDayEventWithId(id: Long, member: Member, title: String, date: LocalDate, isPrivate: Boolean): DDayEvent {
+        val event = DDayEvent(member = member, title = title, date = date, isPrivate = isPrivate)
+        ReflectionTestUtils.setField(event, "id", id)
+        return event
+    }
 
     @Test
     fun `createDDay stores event and returns dto`() {
+        val date = LocalDate.now().plusDays(5)
+        whenever(memberRepository.findById(member.id!!)).thenReturn(Optional.of(member))
+        whenever(dDayRepository.save(any<DDayEvent>())).thenAnswer { invocation ->
+            val event = invocation.getArgument<DDayEvent>(0)
+            ReflectionTestUtils.setField(event, "id", 100L)
+            event
+        }
+
         val dto = dDayService.createDDay(
-            loginMember = loginMember(TestData.member),
+            loginMember = loginMember(member),
             dDaySaveDto = DDaySaveDto(
                 title = "Anniversary",
-                date = LocalDate.now().plusDays(5),
+                date = date,
                 isPrivate = false
             )
         )
 
-        val saved = dDayRepository.findById(dto.id).orElseThrow()
-        assertThat(saved.title).isEqualTo("Anniversary")
-        assertThat(saved.isPrivate).isFalse
+        verify(dDayRepository).save(dDayEventCaptor.capture())
+        val savedEvent = dDayEventCaptor.value
+        assertThat(savedEvent.title).isEqualTo("Anniversary")
+        assertThat(savedEvent.isPrivate).isFalse
+        assertThat(savedEvent.member).isEqualTo(member)
+        assertThat(dto.title).isEqualTo("Anniversary")
+        assertThat(dto.isPrivate).isFalse
     }
 
     @Test
     fun `findDDay allows owner for private event`() {
-        val event = dDayRepository.save(
-            DDayEvent(
-                member = TestData.member,
-                title = "Private",
-                date = LocalDate.now().plusDays(1),
-                isPrivate = true
-            )
+        val event = dDayEventWithId(
+            id = 10L,
+            member = member,
+            title = "Private",
+            date = LocalDate.now().plusDays(1),
+            isPrivate = true
         )
+        whenever(dDayRepository.findById(event.id!!)).thenReturn(Optional.of(event))
 
-        val result = dDayService.findDDay(loginMember(TestData.member), event.id!!)
+        val result = dDayService.findDDay(loginMember(member), event.id!!)
 
         assertThat(result.id).isEqualTo(event.id)
         assertThat(result.isPrivate).isTrue
@@ -54,40 +110,40 @@ class DDayServiceTest : DutyparkIntegrationTest() {
 
     @Test
     fun `findDDay blocks non-owner for private event`() {
-        val event = dDayRepository.save(
-            DDayEvent(
-                member = TestData.member,
-                title = "Private",
-                date = LocalDate.now().plusDays(1),
-                isPrivate = true
-            )
+        val event = dDayEventWithId(
+            id = 10L,
+            member = member,
+            title = "Private",
+            date = LocalDate.now().plusDays(1),
+            isPrivate = true
         )
+        whenever(dDayRepository.findById(event.id!!)).thenReturn(Optional.of(event))
 
         assertThrows<AuthException> {
-            dDayService.findDDay(loginMember(TestData.member2), event.id!!)
+            dDayService.findDDay(loginMember(member2), event.id!!)
         }
     }
 
     @Test
     fun `findDDays returns only public events for non-owner`() {
-        dDayRepository.save(
-            DDayEvent(
-                member = TestData.member,
-                title = "Public",
-                date = LocalDate.now().plusDays(2),
-                isPrivate = false
-            )
+        val publicEvent = dDayEventWithId(
+            id = 1L,
+            member = member,
+            title = "Public",
+            date = LocalDate.now().plusDays(2),
+            isPrivate = false
         )
-        dDayRepository.save(
-            DDayEvent(
-                member = TestData.member,
-                title = "Private",
-                date = LocalDate.now().plusDays(3),
-                isPrivate = true
-            )
+        val privateEvent = dDayEventWithId(
+            id = 2L,
+            member = member,
+            title = "Private",
+            date = LocalDate.now().plusDays(3),
+            isPrivate = true
         )
+        whenever(memberRepository.findById(member.id!!)).thenReturn(Optional.of(member))
+        whenever(dDayRepository.findAllByMemberOrderByDate(member)).thenReturn(listOf(publicEvent, privateEvent))
 
-        val result = dDayService.findDDays(loginMember(TestData.member2), TestData.member.id!!)
+        val result = dDayService.findDDays(loginMember(member2), member.id!!)
 
         assertThat(result).hasSize(1)
         assertThat(result.first().title).isEqualTo("Public")
@@ -95,24 +151,24 @@ class DDayServiceTest : DutyparkIntegrationTest() {
 
     @Test
     fun `findDDays returns all events for owner`() {
-        dDayRepository.save(
-            DDayEvent(
-                member = TestData.member,
-                title = "Public",
-                date = LocalDate.now().plusDays(2),
-                isPrivate = false
-            )
+        val publicEvent = dDayEventWithId(
+            id = 1L,
+            member = member,
+            title = "Public",
+            date = LocalDate.now().plusDays(2),
+            isPrivate = false
         )
-        dDayRepository.save(
-            DDayEvent(
-                member = TestData.member,
-                title = "Private",
-                date = LocalDate.now().plusDays(3),
-                isPrivate = true
-            )
+        val privateEvent = dDayEventWithId(
+            id = 2L,
+            member = member,
+            title = "Private",
+            date = LocalDate.now().plusDays(3),
+            isPrivate = true
         )
+        whenever(memberRepository.findById(member.id!!)).thenReturn(Optional.of(member))
+        whenever(dDayRepository.findAllByMemberOrderByDate(member)).thenReturn(listOf(publicEvent, privateEvent))
 
-        val result = dDayService.findDDays(loginMember(TestData.member), TestData.member.id!!)
+        val result = dDayService.findDDays(loginMember(member), member.id!!)
 
         assertThat(result).hasSize(2)
     }
@@ -121,7 +177,7 @@ class DDayServiceTest : DutyparkIntegrationTest() {
     fun `updateDDay requires id`() {
         assertThrows<IllegalArgumentException> {
             dDayService.updateDDay(
-                loginMember(TestData.member),
+                loginMember(member),
                 DDaySaveDto(
                     id = null,
                     title = "Update",
@@ -134,44 +190,46 @@ class DDayServiceTest : DutyparkIntegrationTest() {
 
     @Test
     fun `updateDDay updates fields for owner`() {
-        val event = dDayRepository.save(
-            DDayEvent(
-                member = TestData.member,
-                title = "Before",
-                date = LocalDate.now().plusDays(1),
-                isPrivate = false
-            )
+        val event = dDayEventWithId(
+            id = 10L,
+            member = member,
+            title = "Before",
+            date = LocalDate.now().plusDays(1),
+            isPrivate = false
         )
+        val newDate = LocalDate.now().plusDays(10)
+        whenever(dDayRepository.findById(event.id!!)).thenReturn(Optional.of(event))
 
         val result = dDayService.updateDDay(
-            loginMember(TestData.member),
+            loginMember(member),
             DDaySaveDto(
                 id = event.id,
                 title = "After",
-                date = LocalDate.now().plusDays(10),
+                date = newDate,
                 isPrivate = true
             )
         )
 
         assertThat(result.title).isEqualTo("After")
-        val updated = dDayRepository.findById(event.id!!).orElseThrow()
-        assertThat(updated.isPrivate).isTrue
+        assertThat(event.title).isEqualTo("After")
+        assertThat(event.date).isEqualTo(newDate)
+        assertThat(event.isPrivate).isTrue
     }
 
     @Test
     fun `updateDDay blocks non-owner`() {
-        val event = dDayRepository.save(
-            DDayEvent(
-                member = TestData.member,
-                title = "Before",
-                date = LocalDate.now().plusDays(1),
-                isPrivate = false
-            )
+        val event = dDayEventWithId(
+            id = 10L,
+            member = member,
+            title = "Before",
+            date = LocalDate.now().plusDays(1),
+            isPrivate = false
         )
+        whenever(dDayRepository.findById(event.id!!)).thenReturn(Optional.of(event))
 
         assertThrows<AuthException> {
             dDayService.updateDDay(
-                loginMember(TestData.member2),
+                loginMember(member2),
                 DDaySaveDto(
                     id = event.id,
                     title = "After",
@@ -184,33 +242,33 @@ class DDayServiceTest : DutyparkIntegrationTest() {
 
     @Test
     fun `deleteDDay removes event for owner`() {
-        val event = dDayRepository.save(
-            DDayEvent(
-                member = TestData.member,
-                title = "Delete",
-                date = LocalDate.now().plusDays(1),
-                isPrivate = false
-            )
+        val event = dDayEventWithId(
+            id = 10L,
+            member = member,
+            title = "Delete",
+            date = LocalDate.now().plusDays(1),
+            isPrivate = false
         )
+        whenever(dDayRepository.findById(event.id!!)).thenReturn(Optional.of(event))
 
-        dDayService.deleteDDay(loginMember(TestData.member), event.id!!)
+        dDayService.deleteDDay(loginMember(member), event.id!!)
 
-        assertThat(dDayRepository.findById(event.id!!)).isEmpty
+        verify(dDayRepository).delete(event)
     }
 
     @Test
     fun `deleteDDay blocks non-owner`() {
-        val event = dDayRepository.save(
-            DDayEvent(
-                member = TestData.member,
-                title = "Delete",
-                date = LocalDate.now().plusDays(1),
-                isPrivate = false
-            )
+        val event = dDayEventWithId(
+            id = 10L,
+            member = member,
+            title = "Delete",
+            date = LocalDate.now().plusDays(1),
+            isPrivate = false
         )
+        whenever(dDayRepository.findById(event.id!!)).thenReturn(Optional.of(event))
 
         assertThrows<AuthException> {
-            dDayService.deleteDDay(loginMember(TestData.member2), event.id!!)
+            dDayService.deleteDDay(loginMember(member2), event.id!!)
         }
     }
 }
