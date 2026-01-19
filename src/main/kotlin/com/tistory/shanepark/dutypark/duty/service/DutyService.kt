@@ -134,9 +134,7 @@ class DutyService(
         return when (team.workType) {
             WorkType.WEEKDAY -> initWeekDayDuties(member, dutyType, calendarView, duties)
             WorkType.FLEXIBLE -> throw IllegalArgumentException("Cannot lazy init flexible duties")
-            else -> {
-                duties
-            }
+            WorkType.WEEKEND, WorkType.FIXED -> duties
         }
     }
 

@@ -154,6 +154,14 @@ class MemberService(
     }
 
     @Transactional(readOnly = true)
+    fun findManagedMemberIds(loginMember: LoginMember): Set<Long> {
+        val manager = memberRepository.findById(loginMember.id).orElseThrow()
+        return memberManagerRepository.findAllByManager(manager)
+            .mapNotNull { it.managed.id }
+            .toSet()
+    }
+
+    @Transactional(readOnly = true)
     fun findManagedMembers(loginMember: LoginMember): List<MemberDto> {
         val manager = memberRepository.findById(loginMember.id).orElseThrow()
         val managedMembers = memberManagerRepository.findAllByManager(manager).map { it.managed }

@@ -101,10 +101,15 @@ class DashboardServiceTest {
         val loginMember = LoginMember(id = 1L, name = "user")
 
         whenever(memberRepository.findMemberWithTeam(1L)).thenReturn(Optional.of(member))
-        whenever(friendService.availableScheduleVisibilities(eq(loginMember), any())).thenReturn(setOf(Visibility.FRIENDS))
-        whenever(scheduleRepository.findSchedulesOfMemberRangeIn(any(), any(), any(), any())).thenReturn(emptyList())
-        whenever(scheduleRepository.findTaggedSchedulesOfRange(any(), any(), any(), any())).thenReturn(emptyList())
-        whenever(dutyRepository.findByMemberAndDutyDate(any(), any())).thenReturn(null)
+        whenever(friendService.buildScheduleVisibilityMap(eq(loginMember), any())).thenReturn(
+            mapOf(
+                friend1.id!! to Visibility.friends(),
+                friend2.id!! to Visibility.friends()
+            )
+        )
+        whenever(scheduleRepository.findSchedulesOfMembersRangeIn(any(), any(), any(), any())).thenReturn(emptyList())
+        whenever(scheduleRepository.findTaggedSchedulesOfMembersRangeIn(any(), any(), any(), any())).thenReturn(emptyList())
+        whenever(dutyRepository.findByDutyDateAndMemberIn(any(), any())).thenReturn(emptyList())
 
         val relation1 = FriendRelation(member, friend1).apply {
             isFamily = true
@@ -128,6 +133,62 @@ class DashboardServiceTest {
         assertThat(result.friends.map(DashboardFriendDetail::pinOrder)).containsExactly(1, 2)
         assertThat(result.pendingRequestsFrom.first().id).isEqualTo(10L)
         assertThat(result.pendingRequestsTo.first().id).isEqualTo(11L)
+    }
+
+    @Test
+    fun `friend hides tagged schedule when visibility is not allowed`() {
+        val team = Team("team")
+        val member = memberWithId(1L, team)
+        val family = memberWithId(2L, team)
+        val friend = memberWithId(3L, team)
+        val owner = memberWithId(4L, team)
+        val loginMember = LoginMember(id = 1L, name = "user")
+
+        whenever(memberRepository.findMemberWithTeam(1L)).thenReturn(Optional.of(member))
+        whenever(friendRelationRepository.findAllByMember(member)).thenReturn(
+            listOf(
+                FriendRelation(member, family).apply { isFamily = true },
+                FriendRelation(member, friend)
+            )
+        )
+        whenever(friendService.getPendingRequestsFrom(member)).thenReturn(emptyList())
+        whenever(friendService.getPendingRequestsTo(member)).thenReturn(emptyList())
+        whenever(friendService.buildScheduleVisibilityMap(eq(loginMember), any())).thenReturn(
+            mapOf(
+                family.id!! to Visibility.family(),
+                friend.id!! to Visibility.friends()
+            )
+        )
+
+        val taggedSchedule = Schedule(
+            member = owner,
+            content = "family only",
+            startDateTime = fixedDate.atStartOfDay(),
+            endDateTime = fixedDate.atTime(1, 0),
+            visibility = Visibility.FAMILY
+        ).apply {
+            addTag(family)
+            addTag(friend)
+        }
+
+        whenever(scheduleRepository.findSchedulesOfMembersRangeIn(any(), any(), any(), any())).thenReturn(emptyList())
+        whenever(scheduleRepository.findTaggedSchedulesOfMembersRangeIn(any(), any(), any(), any())).thenAnswer { invocation ->
+            val visibilities = invocation.getArgument<Collection<Visibility>>(3)
+            if (visibilities.contains(Visibility.FAMILY) && !visibilities.contains(Visibility.PRIVATE)) {
+                listOf(taggedSchedule)
+            } else {
+                emptyList()
+            }
+        }
+        whenever(dutyRepository.findByDutyDateAndMemberIn(any(), any())).thenReturn(emptyList())
+
+        val result = dashboardService.friend(loginMember)
+
+        val familyResult = result.friends.first { it.member.id == family.id }
+        val friendResult = result.friends.first { it.member.id == friend.id }
+
+        assertThat(familyResult.schedules).hasSize(1)
+        assertThat(friendResult.schedules).isEmpty()
     }
 
     private fun memberWithId(id: Long, team: Team?): Member {

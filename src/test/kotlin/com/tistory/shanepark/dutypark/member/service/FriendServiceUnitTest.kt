@@ -7,6 +7,7 @@ import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus
 import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -442,6 +443,31 @@ class FriendServiceUnitTest {
 
         // Then
         assertThat(isFriend).isFalse()
+    }
+
+    @Test
+    fun `build schedule visibility map respects family and manager overrides`() {
+        // Given
+        val login = createMember(1L, "login")
+        val family = createMember(2L, "family")
+        val friend = createMember(3L, "friend")
+        val managed = createMember(4L, "managed")
+
+        val relations = listOf(
+            FriendRelation(member = login, friend = family).apply { isFamily = true },
+            FriendRelation(member = login, friend = friend),
+            FriendRelation(member = login, friend = managed),
+        )
+
+        whenever(memberService.findManagedMemberIds(loginMember(login))).thenReturn(setOf(managed.id!!))
+
+        // When
+        val result = friendService.buildScheduleVisibilityMap(loginMember(login), relations)
+
+        // Then
+        assertThat(result[family.id]).isEqualTo(Visibility.family())
+        assertThat(result[friend.id]).isEqualTo(Visibility.friends())
+        assertThat(result[managed.id]).isEqualTo(Visibility.all())
     }
 
     private fun createMember(id: Long, name: String): Member {
