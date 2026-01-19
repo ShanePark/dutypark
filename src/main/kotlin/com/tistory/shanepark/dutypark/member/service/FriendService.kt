@@ -298,6 +298,29 @@ class FriendService(
         return Visibility.publicOnly()
     }
 
+    @Transactional(readOnly = true)
+    fun buildScheduleVisibilityMap(
+        loginMember: LoginMember,
+        friendRelations: List<FriendRelation>
+    ): Map<Long, Set<Visibility>> {
+        if (friendRelations.isEmpty()) {
+            return emptyMap()
+        }
+
+        val managedMemberIds = memberService.findManagedMemberIds(loginMember)
+
+        return friendRelations.associate { relation ->
+            val friendId = relation.friend.id ?: throw IllegalStateException("Friend id is null")
+            val visibilities = when {
+                friendId == loginMember.id -> Visibility.all()
+                managedMemberIds.contains(friendId) -> Visibility.all()
+                relation.isFamily -> Visibility.family()
+                else -> Visibility.friends()
+            }
+            friendId to visibilities
+        }
+    }
+
     fun pinFriend(loginMember: LoginMember, friendId: Long) {
         val login = loginMemberToMember(loginMember)
         val friend = memberRepository.findById(friendId).orElseThrow()

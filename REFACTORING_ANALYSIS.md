@@ -1,6 +1,146 @@
 # Dutypark Refactoring Analysis
 
-> Generated: 2026-01-16
+> Updated: 2026-01-19
+
+---
+
+## Active Refactoring Plan
+
+### P0 Backend 성능/쿼리
+
+#### Batch Dashboard Schedule Loading
+
+**Files:**
+- `src/main/kotlin/com/tistory/shanepark/dutypark/member/repository/MemberRepository.kt`
+- `src/main/kotlin/com/tistory/shanepark/dutypark/member/repository/FriendRelationRepository.kt`
+- `src/main/kotlin/com/tistory/shanepark/dutypark/duty/repository/DutyRepository.kt`
+- `src/main/kotlin/com/tistory/shanepark/dutypark/member/service/FriendService.kt`
+- `src/main/kotlin/com/tistory/shanepark/dutypark/duty/service/DutyService.kt`
+
+**Problem:** `getOtherDuties()` performs individual queries for each friend, causing N+1 pattern and poor performance when user has many friends.
+
+**Impact:** Dashboard load time scales linearly with friend count. Users with 10+ friends experience noticeable delay.
+
+**Recommendation:**
+- [ ] `MemberRepository.kt`: Add batch member lookup with team using `@EntityGraph`
+- [ ] `FriendRelationRepository.kt`: Add method to query relations for memberId + multiple friendIds
+- [ ] `DutyRepository.kt`: Add batch duty query for multiple members + date range with `@EntityGraph`
+- [ ] `FriendService.kt`: Add batch visibility filter method for `getOtherDuties()`
+- [ ] `DutyService.kt`: Refactor `getOtherDuties()` to use batch loading while preserving visibility rules and lazy init
+
+---
+
+### P0 Backend 구조 개선
+
+#### FriendRequest Service Extraction
+
+**File:** `src/main/kotlin/com/tistory/shanepark/dutypark/member/service/FriendService.kt`
+
+**Problem:** `FriendService` (345 lines) contains mixed responsibilities: friend relationship management and friend request handling with significant code duplication.
+
+**Impact:** Hard to test, harder to maintain. Request-related logic is tangled with relationship queries.
+
+**Recommendation:**
+- [ ] Extract `FriendRequestService` with: `sendRequest()`, `acceptRequest()`, `rejectRequest()`, `cancelRequest()`, `getPendingRequests()`
+- [ ] Keep `FriendService` focused on: `findAllFriends()`, `searchPossibleFriends()`, visibility checks
+
+---
+
+#### DutyBatchServiceFactory Extraction
+
+**Files:**
+- `src/main/kotlin/com/tistory/shanepark/dutypark/duty/controller/DutyBatchController.kt`
+- `src/main/kotlin/com/tistory/shanepark/dutypark/team/controller/TeamManageController.kt`
+
+**Problem:** Duty batch import logic is duplicated between controllers. Both handle Excel parsing, validation, and batch creation.
+
+**Impact:** Bug fixes must be applied in two places. Risk of behavior divergence.
+
+**Recommendation:**
+- [ ] Create `DutyBatchServiceFactory` to centralize batch import logic
+- [ ] Share validation rules and error handling between both controllers
+
+---
+
+### P1 Frontend 정리
+
+#### Type Consolidation
+
+**File:** `frontend/src/types/index.ts`
+
+**Problem:** `DutyType`, `Friend`, `DDay` types are defined locally in multiple views instead of using shared types.
+
+**Affected Files:**
+- `DayDetailModal.vue` (lines 29-56): Local Schedule, DutyType
+- `ScheduleViewModal.vue` (lines 19-50): Local Schedule, DutyType
+- `TodoDetailModal.vue` (lines 27-36): Local Todo
+- `TodoOverviewModal.vue` (lines 24-43): Local Todo, attachment
+
+**Impact:** Type drift between components. Changes must be made in multiple places.
+
+**Recommendation:**
+- [ ] Remove local interface definitions from modal components
+- [ ] Import all types from `@/types/index.ts`
+- [ ] Add any missing types to shared types file
+
+---
+
+#### Date Utilities
+
+**Problem:** `WEEK_DAYS_KO` array and `formatTime()` logic are duplicated across components.
+
+**Recommendation:**
+- [ ] Create `frontend/src/utils/date.ts`
+- [ ] Export `WEEK_DAYS_KO: ['일', '월', '화', '수', '목', '금', '토']`
+- [ ] Export `formatTime(hour: number, minute: number): string`
+
+---
+
+#### Pagination Constants
+
+**Problem:** `size: 10` or `size: 20` hardcoded across 6+ API files.
+
+| File | Line | Value |
+|------|------|-------|
+| `src/api/schedule.ts` | 115 | `size: 10` |
+| `src/api/admin.ts` | 32, 50 | `size: 10` |
+| `src/api/team.ts` | 147 | `size: 10` |
+| `src/api/member.ts` | 110 | `size: 10` |
+| `src/api/notification.ts` | 8 | `size: 20` |
+
+**Recommendation:**
+- [ ] Create `frontend/src/constants/pagination.ts`
+- [ ] Export `SEARCH_SIZE = 10`, `NOTIFICATIONS_SIZE = 20`, `ADMIN_PAGE_SIZE = 10`
+- [ ] Update all API modules to use constants
+
+---
+
+### P1 Test 개선
+
+#### Test Fixtures Extraction
+
+**Problem:** `makeSchedule()` defined in 2 separate test files with different implementations:
+- `ScheduleServiceIntegrationTest.kt` (line 742) - Uses `scheduleService.createSchedule()`
+- `ScheduleTimeParsingQueueManagerTest.kt` (line 73) - Creates Schedule directly
+
+**Impact:** Inconsistent test setup. Harder to maintain factory methods.
+
+**Recommendation:**
+- [ ] Create `src/test/kotlin/com/tistory/shanepark/dutypark/TestFixtures.kt`
+- [ ] Extract `makeSchedule()`, `makeMember()`, `makeTeam()`, `makeDuty()` factories
+- [ ] Standardize on consistent factory patterns
+
+---
+
+#### Test Constants
+
+**Problem:** Fixed dates/times repeated across test files.
+
+**Recommendation:**
+- [ ] Create `src/test/kotlin/com/tistory/shanepark/dutypark/TestConstants.kt`
+- [ ] Export `FIXED_DATE = LocalDate.of(2025, 1, 15)`
+- [ ] Export `FIXED_DATE_TIME = LocalDateTime.of(2025, 1, 15, 10, 0)`
+- [ ] Export `FAR_FUTURE_DATE = LocalDate.of(2099, 12, 31)`
 
 ---
 
@@ -43,6 +183,8 @@ val friends = findAllFriends(login).map { it.id }  // Loads ALL friends
 val pendingRequestsFrom = getPendingRequestsFrom(member).map { it.toMember.id }  // Loads ALL pending
 val excludeIds = friends + pendingRequestsFrom + member.id
 ```
+
+**Impact:** Memory and performance issues scale with user's social graph size.
 
 **Recommendation:** Replace with repository query using JPA subqueries for pagination efficiency.
 
@@ -253,7 +395,7 @@ spring:
 
 **File:** `frontend/package.json`
 
-- `@types/node`: `25.0.6` → `25.0.9` available
+- `@types/node`: Check for latest version
 
 ```bash
 npm update @types/node
@@ -328,23 +470,27 @@ src/test/kotlin/.../util/
 - [ ] Spring AI stable version migration
 - [ ] Fix documentation/config mismatch for AI model
 
-### Phase 2: Short-term
+### Phase 2: Short-term (P0 Active)
+- [ ] Batch dashboard schedule loading (5 repository/service changes)
+- [ ] FriendRequest service extraction
+- [ ] DutyBatchServiceFactory extraction
 - [x] ~~Extract `TodoService.toTodoResponse()` helper~~ (DONE)
 - [x] ~~Split `AttachmentService.finalizeSession()` into helper methods~~ (DONE)
 - [x] ~~Remove duplicate file deletion logic in `AttachmentService`~~ (DONE)
 - [x] ~~Resolve N+1 query patterns~~ (DONE - properly optimized)
+
+### Phase 3: Medium-term (P1)
 - [ ] Consolidate frontend types in `types/index.ts`
 - [ ] Remove duplicate local interfaces from modals
+- [ ] Create date utilities (`WEEK_DAYS_KO`, `formatTime()`)
+- [ ] Pagination constants extraction
 - [ ] Fix `FriendService.searchPossibleFriends()` performance
+- [ ] Extract test fixtures and constants
 
-### Phase 3: Medium-term
+### Phase 4: Long-term
 - [ ] Split large components (`DutyView.vue` - 2,168 lines)
 - [ ] Split `AttachmentService` into focused services
 - [ ] Add missing controller tests (DutyBatchController, TeamScheduleController)
-- [x] ~~Fix time-dependent tests (18 files)~~ (DONE)
-
-### Phase 4: Long-term
-- [ ] Create shared test utilities package
 - [ ] Standardize error handling patterns (116 instances)
 - [ ] Extract frontend constants and storage utilities
 - [ ] Standardize API client export patterns
@@ -364,6 +510,10 @@ src/test/kotlin/.../util/
 ---
 
 ## Completed Refactoring
+
+### 2026-01-19
+- **Dashboard Schedule Loading**: Refactored to batch loading for improved performance
+- **Team Manage / Day Detail UI**: Split into focused components
 
 ### 2026-01-16
 - **Time-Dependent Tests**: Fixed all 18+ test files that used `LocalDateTime.now()` or `LocalDate.now()` directly
