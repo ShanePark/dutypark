@@ -1,21 +1,18 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, onUnmounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSwal } from '@/composables/useSwal'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
 import { useAuthStore } from '@/stores/auth'
 import { teamApi } from '@/api/team'
-import CharacterCounter from '@/components/common/CharacterCounter.vue'
+import MemberSearchModal from '@/components/team/MemberSearchModal.vue'
+import BatchUploadModal from '@/components/team/BatchUploadModal.vue'
+import DutyTypeModal from '@/components/team/DutyTypeModal.vue'
 import adminApi from '@/api/admin'
-import Pickr from '@simonwep/pickr'
-import '@simonwep/pickr/dist/themes/monolith.min.css'
 import type {
   TeamDto,
   TeamMemberDto,
   DutyTypeDto,
   DutyBatchTemplateDto,
-  MemberDto,
 } from '@/types'
 import {
   UserPlus,
@@ -25,11 +22,8 @@ import {
   ArrowDown,
   Pencil,
   Check,
-  X,
   Upload,
-  Search,
   ChevronLeft,
-  ChevronRight,
   Shield,
   ShieldOff,
   Crown,
@@ -39,7 +33,7 @@ import {
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const { showWarning, showError, toastSuccess, confirmDelete, confirm } = useSwal()
+const { showError, toastSuccess, confirmDelete, confirm } = useSwal()
 const teamId = Number(route.params.teamId)
 
 // Loading state
@@ -70,40 +64,13 @@ const hasDutyType = computed(() => team.value?.dutyTypes && team.value.dutyTypes
 
 // Member Search Modal
 const showMemberSearchModal = ref(false)
-useBodyScrollLock(showMemberSearchModal)
-useEscapeKey(showMemberSearchModal, () => { showMemberSearchModal.value = false })
-const searchKeyword = ref('')
-const searchLoading = ref(false)
-const searchResult = ref<MemberDto[]>([])
-const currentPage = ref(0) // 0-indexed for API
-const totalPages = ref(1)
-const totalElements = ref(0)
-const pageSize = 5
 
 // Duty Type Modal
 const showDutyTypeModal = ref(false)
-useBodyScrollLock(showDutyTypeModal)
-useEscapeKey(showDutyTypeModal, () => { showDutyTypeModal.value = false })
-const dutyTypeForm = ref({
-  id: null as number | null,
-  name: '',
-  color: '#ffb3ba',
-  isDefault: false,
-})
+const dutyTypeModalTarget = ref<DutyTypeDto | null>(null)
 
 // Duty Batch Upload Modal
 const showBatchUploadModal = ref(false)
-useBodyScrollLock(showBatchUploadModal)
-useEscapeKey(showBatchUploadModal, () => { showBatchUploadModal.value = false })
-const batchForm = ref({
-  file: null as File | null,
-  year: new Date().getFullYear(),
-  month: new Date().getMonth() + 1,
-})
-
-// Pickr instance
-let pickrInstance: Pickr | null = null
-const colorPickerRef = ref<HTMLElement | null>(null)
 
 // Fetch team data
 async function fetchTeam() {
@@ -137,68 +104,10 @@ async function fetchDutyBatchTemplates() {
 // Methods
 function openMemberSearchModal() {
   showMemberSearchModal.value = true
-  searchKeyword.value = ''
-  currentPage.value = 0
-  searchMembers()
 }
 
 function closeMemberSearchModal() {
   showMemberSearchModal.value = false
-}
-
-async function searchMembers() {
-  searchLoading.value = true
-  try {
-    const response = await teamApi.searchMembersToInvite(
-      searchKeyword.value,
-      currentPage.value,
-      pageSize
-    )
-    searchResult.value = response.data.content
-    totalElements.value = response.data.totalElements
-    totalPages.value = response.data.totalPages || 1
-  } catch (error) {
-    console.error('Failed to search members:', error)
-  } finally {
-    searchLoading.value = false
-  }
-}
-
-function prevPage() {
-  if (currentPage.value > 0) {
-    currentPage.value--
-    searchMembers()
-  }
-}
-
-function nextPage() {
-  if (currentPage.value < totalPages.value - 1) {
-    currentPage.value++
-    searchMembers()
-  }
-}
-
-function goToPage(page: number) {
-  currentPage.value = page
-  searchMembers()
-}
-
-async function addMember(member: MemberDto) {
-  if (!member.id) return
-  if (!await confirm(`${member.name} 님을 팀에 추가하시겠습니까?`)) return
-
-  saving.value = true
-  try {
-    await teamApi.addMember(teamId, member.id)
-    toastSuccess(`${member.name} 님이 팀에 추가되었습니다.`)
-    closeMemberSearchModal()
-    await fetchTeam()
-  } catch (error) {
-    console.error('Failed to add member:', error)
-    showError('멤버 추가에 실패했습니다.')
-  } finally {
-    saving.value = false
-  }
 }
 
 async function removeMember(memberId: number) {
@@ -302,117 +211,18 @@ async function updateBatchTemplate(templateName: string) {
   }
 }
 
-// Duty Type Methods
-function initPickr(defaultColor: string) {
-  nextTick(() => {
-    if (colorPickerRef.value && !pickrInstance) {
-      pickrInstance = Pickr.create({
-        el: colorPickerRef.value,
-        theme: 'monolith',
-        default: defaultColor,
-        inline: true,
-        showAlways: true,
-        components: {
-          preview: true,
-          opacity: false,
-          hue: true,
-          interaction: {
-            hex: true,
-            rgba: false,
-            hsla: false,
-            hsva: false,
-            cmyk: false,
-            input: true,
-            save: false
-          }
-        }
-      })
-
-      pickrInstance.on('change', (color: Pickr.HSVaColor) => {
-        const hexColor = color.toHEXA().toString()
-        dutyTypeForm.value.color = hexColor
-      })
-    }
-  })
-}
-
-function destroyPickr() {
-  if (pickrInstance) {
-    pickrInstance.destroyAndRemove()
-    pickrInstance = null
-  }
-}
-
 function openAddDutyTypeModal() {
-  dutyTypeForm.value = {
-    id: null,
-    name: '',
-    color: '#ffb3ba',
-    isDefault: false,
-  }
+  dutyTypeModalTarget.value = null
   showDutyTypeModal.value = true
-  initPickr('#ffb3ba')
 }
 
 function openEditDutyTypeModal(dutyType: DutyTypeDto) {
-  dutyTypeForm.value = {
-    id: dutyType.id,
-    name: dutyType.name,
-    color: dutyType.color || '#ffb3ba',
-    isDefault: dutyType.position === -1,
-  }
+  dutyTypeModalTarget.value = dutyType
   showDutyTypeModal.value = true
-  initPickr(dutyType.color || '#ffb3ba')
 }
 
 function closeDutyTypeModal() {
-  destroyPickr()
   showDutyTypeModal.value = false
-}
-
-async function saveDutyType() {
-  if (!dutyTypeForm.value.name) {
-    showWarning('근무유형 이름을 입력해주세요.')
-    return
-  }
-
-  const exists = team.value?.dutyTypes.some(
-    dt => dt.name === dutyTypeForm.value.name && dt.id !== dutyTypeForm.value.id
-  )
-  if (exists) {
-    showWarning(`${dutyTypeForm.value.name} 이름의 근무유형이 이미 존재합니다.`)
-    return
-  }
-
-  saving.value = true
-  try {
-    if (dutyTypeForm.value.isDefault) {
-      // Update default duty (OFF)
-      await teamApi.updateDefaultDuty(teamId, dutyTypeForm.value.name, dutyTypeForm.value.color)
-    } else if (dutyTypeForm.value.id) {
-      // Update existing duty type
-      await teamApi.updateDutyType(teamId, {
-        id: dutyTypeForm.value.id,
-        name: dutyTypeForm.value.name,
-        color: dutyTypeForm.value.color,
-      })
-    } else {
-      // Create new duty type
-      await teamApi.addDutyType(teamId, {
-        teamId,
-        name: dutyTypeForm.value.name,
-        color: dutyTypeForm.value.color,
-      })
-    }
-    toastSuccess('근무 유형이 저장되었습니다.')
-    closeDutyTypeModal()
-    await fetchTeam()
-  } catch (error) {
-    console.error('Failed to save duty type:', error)
-    showError('근무 유형 저장에 실패했습니다.')
-  } finally {
-    saving.value = false
-  }
 }
 
 async function removeDutyType(dutyType: DutyTypeDto) {
@@ -456,52 +266,11 @@ async function swapPosition(index1: number, index2: number) {
 
 // Batch Upload Methods
 function openBatchUploadModal() {
-  batchForm.value = {
-    file: null,
-    year: new Date().getFullYear(),
-    month: new Date().getMonth() + 1,
-  }
   showBatchUploadModal.value = true
 }
 
 function closeBatchUploadModal() {
   showBatchUploadModal.value = false
-}
-
-function handleFileChange(event: Event) {
-  const target = event.target as HTMLInputElement
-  if (target.files && target.files[0]) {
-    batchForm.value.file = target.files[0]
-  }
-}
-
-async function uploadBatch() {
-  if (!batchForm.value.file) {
-    showWarning('파일을 선택해주세요.')
-    return
-  }
-
-  saving.value = true
-  try {
-    const result = await teamApi.uploadDutyBatch(
-      teamId,
-      batchForm.value.file,
-      batchForm.value.year,
-      batchForm.value.month
-    )
-    if (result.data.success) {
-      toastSuccess('근무표가 업로드되었습니다.')
-      closeBatchUploadModal()
-    } else {
-      showError(result.data.message || '근무표 업로드에 실패했습니다.')
-    }
-  } catch (error: any) {
-    console.error('Failed to upload batch:', error)
-    const message = error.response?.data?.message || '근무표 업로드에 실패했습니다.'
-    showError(message)
-  } finally {
-    saving.value = false
-  }
 }
 
 async function removeTeam() {
@@ -521,10 +290,6 @@ async function removeTeam() {
 onMounted(() => {
   fetchTeam()
   fetchDutyBatchTemplates()
-})
-
-onUnmounted(() => {
-  destroyPickr()
 })
 </script>
 
@@ -853,296 +618,30 @@ onUnmounted(() => {
     </div>
 
 
-    <!-- Member Search Modal -->
-    <div
-      v-if="showMemberSearchModal"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-      @click.self="closeMemberSearchModal"
-    >
-      <div class="rounded-lg shadow-xl w-full max-w-lg" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
-        <div class="flex items-center justify-between p-4 border-b" :style="{ borderColor: 'var(--dp-border-primary)' }">
-          <h3 class="text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">멤버 추가</h3>
-          <button
-            @click="closeMemberSearchModal"
-            class="p-1.5 rounded-full hover-close-btn cursor-pointer"
-          >
-            <X class="w-5 h-5" />
-          </button>
-        </div>
+    <MemberSearchModal
+      :is-open="showMemberSearchModal"
+      :team-id="teamId"
+      v-model:saving="saving"
+      @close="closeMemberSearchModal"
+      @member-added="fetchTeam"
+    />
 
-        <div class="p-4">
-          <!-- Search Input -->
-          <div class="flex gap-2 mb-4">
-            <input
-              v-model="searchKeyword"
-              type="text"
-              placeholder="이름 또는 이메일로 검색"
-              class="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
-              @keyup.enter="searchMembers"
-            />
-            <button
-              @click="searchMembers"
-              class="px-4 py-2 text-white rounded-lg hover:bg-gray-700 transition"
-              :style="{ backgroundColor: 'var(--dp-modal-header-bg)' }"
-            >
-              <Search class="w-5 h-5" />
-            </button>
-          </div>
+    <DutyTypeModal
+      :is-open="showDutyTypeModal"
+      :team-id="teamId"
+      :duty-type="dutyTypeModalTarget"
+      :duty-types="team?.dutyTypes ?? []"
+      v-model:saving="saving"
+      @close="closeDutyTypeModal"
+      @saved="fetchTeam"
+    />
 
-          <!-- Search Results -->
-          <div v-if="searchLoading" class="flex items-center justify-center py-8">
-            <Loader2 class="w-6 h-6 animate-spin text-blue-500" />
-          </div>
-          <div v-else-if="searchResult.length > 0" class="overflow-x-auto">
-            <table class="w-full">
-              <thead :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
-                <tr>
-                  <th class="px-3 py-2 text-left text-sm" :style="{ color: 'var(--dp-text-secondary)' }">#</th>
-                  <th class="px-3 py-2 text-left text-sm" :style="{ color: 'var(--dp-text-secondary)' }">이름</th>
-                  <th class="px-3 py-2 text-left text-sm" :style="{ color: 'var(--dp-text-secondary)' }">이메일</th>
-                  <th class="px-3 py-2 text-center text-sm" :style="{ color: 'var(--dp-text-secondary)' }">추가</th>
-                </tr>
-              </thead>
-              <tbody :style="{ borderColor: 'var(--dp-border-primary)' }">
-                <tr v-for="(member, index) in searchResult" :key="member.id ?? index" class="hover-bg-light" :style="{ borderBottomWidth: '1px', borderBottomStyle: 'solid', borderBottomColor: 'var(--dp-border-primary)' }">
-                  <td class="px-3 py-2 text-sm" :style="{ color: 'var(--dp-text-muted)' }">
-                    {{ currentPage * pageSize + index + 1 }}
-                  </td>
-                  <td class="px-3 py-2 text-sm font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ member.name }}</td>
-                  <td class="px-3 py-2 text-sm" :style="{ color: 'var(--dp-text-muted)' }">{{ member.email }}</td>
-                  <td class="px-3 py-2 text-center">
-                    <button
-                      @click="addMember(member)"
-                      :disabled="!!member.teamId || saving"
-                      class="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {{ member.teamId ? '소속 있음' : '추가' }}
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div v-else class="text-center py-4" :style="{ color: 'var(--dp-text-muted)' }">
-            검색 결과가 없습니다.
-          </div>
-
-          <!-- Pagination -->
-          <div v-if="searchResult.length > 0" class="mt-4">
-            <div class="text-sm mb-2" :style="{ color: 'var(--dp-text-muted)' }">
-              Page {{ currentPage + 1 }} of {{ totalPages }} | Total: {{ totalElements }}
-            </div>
-            <div class="flex flex-wrap items-center gap-1">
-              <button
-                @click="prevPage"
-                :disabled="currentPage === 0"
-                class="px-2 sm:px-3 py-1 border rounded hover-bg-light transition disabled:opacity-50"
-                :style="{ borderColor: 'var(--dp-border-secondary)' }"
-              >
-                <ChevronLeft class="w-4 h-4" />
-              </button>
-              <button
-                v-for="i in totalPages"
-                :key="i"
-                @click="goToPage(i - 1)"
-                class="px-2 sm:px-3 py-1 text-sm border rounded transition"
-                :class="i - 1 === currentPage ? 'bg-blue-500 text-white border-blue-500' : ''"
-                :style="i - 1 !== currentPage ? { borderColor: 'var(--dp-border-secondary)' } : {}"
-              >
-                {{ i }}
-              </button>
-              <button
-                @click="nextPage"
-                :disabled="currentPage >= totalPages - 1"
-                class="px-2 sm:px-3 py-1 border rounded hover-bg-light transition disabled:opacity-50"
-                :style="{ borderColor: 'var(--dp-border-secondary)' }"
-              >
-                <ChevronRight class="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="flex justify-end p-4 border-t" :style="{ borderColor: 'var(--dp-border-primary)' }">
-          <button
-            @click="closeMemberSearchModal"
-            class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer"
-            :style="{ backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-secondary)' }"
-          >
-            닫기
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Duty Type Modal -->
-    <div
-      v-if="showDutyTypeModal"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-      @click.self="closeDutyTypeModal"
-    >
-      <div class="rounded-lg shadow-xl w-full max-w-md" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
-        <div class="flex items-center justify-between p-4 border-b" :style="{ borderColor: 'var(--dp-border-primary)' }">
-          <h3 class="text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">
-            {{ dutyTypeForm.id !== null || dutyTypeForm.isDefault ? '근무 유형 수정' : '근무 유형 추가' }}
-          </h3>
-          <button
-            @click="closeDutyTypeModal"
-            class="p-1.5 rounded-full hover-close-btn cursor-pointer"
-          >
-            <X class="w-5 h-5" />
-          </button>
-        </div>
-
-        <div class="p-4 space-y-4">
-          <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
-            해당 근무유형의 명칭 및 색상을 선택해주세요.
-          </p>
-
-          <div
-            v-if="dutyTypeForm.isDefault"
-            class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700"
-          >
-            현재 선택한 근무 유형은 <strong>휴무일</strong>에 해당합니다.
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
-              근무명
-              <CharacterCounter :current="dutyTypeForm.name.length" :max="10" />
-            </label>
-            <input
-              v-model="dutyTypeForm.name"
-              type="text"
-              maxlength="10"
-              placeholder="근무명"
-              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
-            />
-          </div>
-
-          <div class="color-picker-container">
-            <label class="block text-sm font-medium mb-2" :style="{ color: 'var(--dp-text-secondary)' }">
-              색상 선택
-            </label>
-            <div class="color-picker-wrapper flex justify-center items-center">
-              <div ref="colorPickerRef" class="color-picker"></div>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
-              미리보기
-            </label>
-            <div
-              class="inline-block px-4 py-2 rounded-lg border font-medium"
-              :style="{ backgroundColor: dutyTypeForm.color, borderColor: 'var(--dp-border-primary)' }"
-            >
-              {{ dutyTypeForm.name || '근무명 입력' }}
-            </div>
-          </div>
-        </div>
-
-        <div class="flex justify-end gap-2 p-4 border-t" :style="{ borderColor: 'var(--dp-border-primary)' }">
-          <button
-            @click="saveDutyType"
-            :disabled="!dutyTypeForm.name.trim()"
-            class="px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {{ dutyTypeForm.id !== null || dutyTypeForm.isDefault ? '저장' : '추가' }}
-          </button>
-          <button
-            @click="closeDutyTypeModal"
-            class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer"
-            :style="{ backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-secondary)' }"
-          >
-            취소
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Batch Upload Modal -->
-    <div
-      v-if="showBatchUploadModal"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-      @click.self="closeBatchUploadModal"
-    >
-      <div class="rounded-lg shadow-xl w-full max-w-md" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
-        <div class="flex items-center justify-between p-4 border-b" :style="{ borderColor: 'var(--dp-border-primary)' }">
-          <h3 class="text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">근무표 업로드</h3>
-          <button
-            @click="closeBatchUploadModal"
-            class="p-1.5 rounded-full hover-close-btn cursor-pointer"
-          >
-            <X class="w-5 h-5" />
-          </button>
-        </div>
-
-        <div class="p-4 space-y-4">
-          <div>
-            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
-              근무표 파일 업로드 (.xlsx)
-            </label>
-            <input
-              type="file"
-              accept=".xlsx"
-              @change="handleFileChange"
-              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
-            />
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
-                연도
-              </label>
-              <input
-                v-model.number="batchForm.year"
-                type="number"
-                :min="new Date().getFullYear()"
-                :max="new Date().getFullYear() + 1"
-                class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
-                월
-              </label>
-              <input
-                v-model.number="batchForm.month"
-                type="number"
-                min="1"
-                max="12"
-                class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div class="flex justify-end gap-2 p-4 border-t" :style="{ borderColor: 'var(--dp-border-primary)' }">
-          <button
-            @click="uploadBatch"
-            :disabled="saving || !batchForm.file"
-            class="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            <Loader2 v-if="saving" class="w-4 h-4 animate-spin" />
-            업로드
-          </button>
-          <button
-            @click="closeBatchUploadModal"
-            class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer"
-            :style="{ backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-secondary)' }"
-          >
-            취소
-          </button>
-        </div>
-      </div>
-    </div>
+    <BatchUploadModal
+      :is-open="showBatchUploadModal"
+      :team-id="teamId"
+      v-model:saving="saving"
+      @close="closeBatchUploadModal"
+    />
     </template>
   </div>
 </template>
