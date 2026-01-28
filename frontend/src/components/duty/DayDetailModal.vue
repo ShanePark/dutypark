@@ -10,7 +10,6 @@ import { useSwal } from '@/composables/useSwal'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEscapeKey } from '@/composables/useEscapeKey'
 import { VISIBILITY_ICONS, VISIBILITY_COLORS, type CalendarVisibility } from '@/utils/visibility'
-import { extractDatePart } from '@/utils/date'
 
 const { showWarning, showError } = useSwal()
 
@@ -117,8 +116,7 @@ function handleDutyTypeChange(dutyTypeId: number | null, dutyTypeName: string) {
 const newSchedule = ref({
   content: '',
   description: '',
-  startDate: '',
-  startTime: '00:00',
+  startDateTime: '',
   endDateTime: '',
   visibility: 'FAMILY' as 'PUBLIC' | 'FRIENDS' | 'FAMILY' | 'PRIVATE',
 })
@@ -189,8 +187,9 @@ watch(
       editingScheduleId.value = null
       editAttachments.value = []
       const { year, month, day } = props.date
-      newSchedule.value.startDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-      newSchedule.value.endDateTime = `${newSchedule.value.startDate}T00:00`
+      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      newSchedule.value.startDateTime = `${dateStr}T00:00`
+      newSchedule.value.endDateTime = `${dateStr}T00:00`
     } else {
       // Cleanup when modal closes
       scheduleFormRef.value?.cleanup()
@@ -198,12 +197,11 @@ watch(
   }
 )
 
-// Auto-adjust endDateTime when startTime changes
+// Auto-adjust endDateTime when startDateTime changes
 watch(
-  () => [newSchedule.value.startDate, newSchedule.value.startTime],
-  ([startDate, startTime]) => {
-    if (!startDate || !startTime) return
-    const startDateTime = `${startDate}T${startTime}`
+  () => newSchedule.value.startDateTime,
+  (startDateTime) => {
+    if (!startDateTime) return
     const endDateTime = newSchedule.value.endDateTime
     if (endDateTime && endDateTime < startDateTime) {
       newSchedule.value.endDateTime = startDateTime
@@ -217,12 +215,12 @@ function startCreateMode() {
   editingScheduleId.value = null
   editAttachments.value = []
   const { year, month, day } = props.date
+  const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
   newSchedule.value = {
     content: '',
     description: '',
-    startDate: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
-    startTime: '00:00',
-    endDateTime: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00`,
+    startDateTime: `${dateStr}T00:00`,
+    endDateTime: `${dateStr}T00:00`,
     visibility: 'FAMILY',
   }
   // Scroll to top when entering create mode
@@ -241,12 +239,14 @@ function startEditMode(schedule: Schedule) {
   const start = new Date(schedule.startDateTime)
   const end = new Date(schedule.endDateTime)
 
+  const formatDateTime = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+
   newSchedule.value = {
     content: schedule.content,
     description: schedule.description || '',
-    startDate: extractDatePart(schedule.startDateTime),
-    startTime: `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`,
-    endDateTime: `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}T${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`,
+    startDateTime: formatDateTime(start),
+    endDateTime: formatDateTime(end),
     visibility: schedule.visibility,
   }
 
@@ -285,10 +285,14 @@ function cancelEdit() {
 
 function buildScheduleData(): ScheduleSaveData {
   const { year, month, day } = props.date
-  const startDateTime = `${newSchedule.value.startDate}T${newSchedule.value.startTime}:00`
+  const defaultDateTime = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00`
+
+  const startDateTime = newSchedule.value.startDateTime
+    ? `${newSchedule.value.startDateTime}:00`
+    : defaultDateTime
   const endDateTime = newSchedule.value.endDateTime
     ? `${newSchedule.value.endDateTime}:00`
-    : `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00`
+    : defaultDateTime
 
   const sessionId = scheduleFormRef.value?.getSessionId() || null
   const attachments = scheduleFormRef.value?.getAttachments() || []
@@ -422,6 +426,7 @@ function handleUploadError(message: string) {
             :form="newSchedule"
             :edit-attachments="editAttachments"
             :visibility-options="visibilityOptions"
+            :is-edit-mode="isEditMode"
             @upload-start="handleUploadStart"
             @upload-complete="handleUploadComplete"
             @error="handleUploadError"

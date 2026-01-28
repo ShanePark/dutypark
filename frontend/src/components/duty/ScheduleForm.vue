@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { Check } from 'lucide-vue-next'
 import FileUploader from '@/components/common/FileUploader.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
@@ -9,8 +9,7 @@ import type { CalendarVisibility } from '@/utils/visibility'
 interface ScheduleFormData {
   content: string
   description: string
-  startDate: string
-  startTime: string
+  startDateTime: string
   endDateTime: string
   visibility: CalendarVisibility
 }
@@ -23,11 +22,25 @@ interface VisibilityOption {
   color: string
 }
 
-defineProps<{
+const props = defineProps<{
   form: ScheduleFormData
   editAttachments: NormalizedAttachment[]
   visibilityOptions: VisibilityOption[]
+  isEditMode: boolean
 }>()
+
+// For create mode: extract time portion from startDateTime
+const startTime = computed({
+  get: () => {
+    if (!props.form.startDateTime) return '00:00'
+    const timePart = props.form.startDateTime.split('T')[1]
+    return timePart || '00:00'
+  },
+  set: (time: string) => {
+    const datePart = props.form.startDateTime.split('T')[0]
+    props.form.startDateTime = `${datePart}T${time}`
+  },
+})
 
 const emit = defineEmits<{
   (e: 'upload-start'): void
@@ -82,11 +95,21 @@ defineExpose({
     </div>
 
     <div class="space-y-2">
-      <div class="flex items-center gap-2">
+      <!-- Create mode: time only (date is already selected from calendar) -->
+      <div v-if="!isEditMode" class="flex items-center gap-2">
         <label class="text-sm flex-shrink-0 w-16" :style="{ color: 'var(--dp-text-secondary)' }">시작 시간</label>
         <input
-          v-model="form.startTime"
+          v-model="startTime"
           type="time"
+          class="flex-1 min-w-0 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
+        />
+      </div>
+      <!-- Edit mode: full datetime (allow changing date) -->
+      <div v-else class="flex items-center gap-2">
+        <label class="text-sm flex-shrink-0 w-16" :style="{ color: 'var(--dp-text-secondary)' }">시작 일시</label>
+        <input
+          v-model="form.startDateTime"
+          type="datetime-local"
           class="flex-1 min-w-0 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
         />
       </div>
