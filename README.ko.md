@@ -4,7 +4,7 @@
 
 [https://dutypark.o-r.kr](https://dutypark.o-r.kr)
 
-<a href="#" target="_blank"><img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=Kotlin&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Spring Boot-6DB33F?style=flat-square&logo=Spring-Boot&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/JPA-ED2761?style=flat-square&logo=Spring&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=MySQL&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Vue.js-4FC08D?style=flat-square&logo=Vue.js&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=TypeScript&logoColor=white"/></a>
+<a href="#" target="_blank"><img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=Kotlin&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Spring Boot-6DB33F?style=flat-square&logo=Spring-Boot&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/JPA-ED2761?style=flat-square&logo=Spring&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=MySQL&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/Vue.js-4FC08D?style=flat-square&logo=Vue.js&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=TypeScript&logoColor=white"/></a> <a href="#" target="_blank"><img src="https://img.shields.io/badge/PWA-5A0FC8?style=flat-square&logo=PWA&logoColor=white"/></a>
 
 > **나와 소중한 사람들을 위한 소셜 캘린더**
 
@@ -63,18 +63,20 @@
 | 기능 | 설명 |
 |:-----|:-----|
 | **스마트 공개 설정** | 4단계 프라이버시 (전체/친구/가족/나만) — 일정마다 세밀하게 조절 |
-| **친구 태그** | 일정에 친구를 태그하면 그들의 대시보드에 자동으로 표시 |
+| **친구 태그** | 일정에 친구를 태그하면 대시보드에 표시되고 알림 발송 |
 | **가족 모드** | 혈연관계와 가장 가까운 사람들을 위한 특별한 공개 설정 |
 | **엑셀 업로드** | 병원/매장 근무표 템플릿을 그대로 일괄 업로드 (SungsimCake 파서) |
-| **AI 시간 파싱** | "오후 3시~5시 회의" 같은 자연어에서 시간을 자동 추출 (Gemini) |
+| **AI 시간 파싱** | "오후 3시~5시 회의" 같은 자연어에서 비동기 Gemini 큐로 시간 자동 추출 |
+| **순서 재정렬** | 같은 날의 일정을 드래그로 재정렬, 순서 저장 |
 
 ### 개인 생산성
 
 | 기능 | 설명 |
 |:-----|:-----|
 | **디데이 카운트다운** | 기념일, 마감일, 중요한 날 — 공개 여부도 선택 가능 |
-| **투두 보드** | SortableJS 드래그 앤 드롭, 완료/다시열기 액션 |
-| **일정 검색** | 전체 텍스트 검색으로 원하는 날짜로 바로 이동 |
+| **칸반 투두 보드** | 다중 상태 컬럼 (BACKLOG/TODO/DOING/DONE/CLOSED) 드래그 앤 드롭 |
+| **일정 검색** | 전체 텍스트 검색으로 원하는 날짜로 바로 이동, 페이지네이션 지원 |
+| **프로필 사진** | 프로필 사진 업로드 및 크롭, 자동 썸네일 생성 |
 | **첨부파일** | 일정에 파일 첨부, 재개 가능한 업로드, 자동 썸네일 |
 
 ### 팀 협업
@@ -83,28 +85,32 @@
 |:-----|:-----|
 | **팀 캘린더** | 모든 팀원의 근무를 색상별로 한눈에 |
 | **관리자 컨트롤** | 멤버 초대/제거, 근무 유형과 색상 설정 |
-| **근무 템플릿** | 자주 쓰는 근무 패턴을 템플릿으로 저장 |
+| **일괄 업로드 템플릿** | 엑셀 업로드를 위한 설정 가능한 배치 템플릿 (SungsimCake 형식) |
 | **팀 일정** | 팀 전체에 보이는 공지사항과 이벤트 |
+| **시프트 보기** | 누가 어떤 근무인지 일별로 한눈에 확인 |
 
 ### 플랫폼 & 연동
 
 | 기능 | 설명 |
 |:-----|:-----|
 | **카카오 로그인** | 한 번의 클릭으로 로그인 |
-| **공휴일 동기화** | 공공데이터포털에서 한국 공휴일 자동 연동 |
+| **공휴일 동기화** | 공공데이터포털에서 한국 공휴일 자동 연동 (캐시 지원) |
 | **다크 모드** | 시스템 설정을 따르는 눈 편한 테마 |
 | **모바일 우선** | 스마트폰과 태블릿에 최적화된 반응형 디자인 |
-| **실시간 알림** | 태그, 요청, 업데이트에 대한 폴링 기반 알림 |
+| **웹 푸시** | 태그, 요청, 업데이트에 대한 네이티브 브라우저 푸시 알림 |
+| **PWA 지원** | iOS, Android 홈 화면에 설치 가능, 오프라인 지원 |
+| **계정 대리 로그인** | 관리자가 피관리 계정으로 전환하여 조회/편집 |
 
 ---
 
 ## 기술 스택
 
-- **백엔드:** Kotlin 2.1, Spring Boot 3.5 (Data JPA, Security, WebFlux, Scheduling, Caching), Java 21
+- **백엔드:** Kotlin 2.3, Spring Boot 4.0 (Data JPA, Security, WebFlux, Scheduling, Caching, AI), Java 21
 - **프론트엔드:** Vue 3.5 SPA (Vite 7 + TypeScript + Pinia + Tailwind CSS 4)
-- **데이터베이스:** MySQL 8.0 + Flyway 마이그레이션
-- **AI:** Spring AI + Gemini 2.0 Flash Lite (일정 시간 파싱)
-- **인증:** JWT Bearer 토큰 + 카카오 OAuth SSO
+- **데이터베이스:** MySQL 8.0 + Flyway 마이그레이션 (47개 이상의 버전 관리)
+- **AI:** Spring AI + Gemini (비동기 큐를 통한 일정 시간 파싱)
+- **인증:** JWT Bearer 토큰 + 슬라이딩 리프레시 + 카카오 OAuth SSO
+- **PWA:** VAPID 기반 웹 푸시 알림, iOS/Android 설치 가능
 - **관측성:** Prometheus, Grafana, Slack 웹훅, 롤링 로그
 
 ---
@@ -174,25 +180,29 @@ docker compose up -d
 
 | 모듈 | 역할 |
 |:-----|:-----|
-| `duty/` | 근무 CRUD, 엑셀 일괄 업로드, 캘린더 집계 |
-| `schedule/` | 일정, 태그, 검색, AI 파싱 큐, 첨부파일 |
-| `todo/` | 드래그 재정렬과 완료 추적이 가능한 할 일 |
-| `member/` | 친구, 가족, 디데이, 프로필, SSO 온보딩 |
-| `team/` | 팀, 관리자, 근무 유형, 공유 일정 |
-| `dashboard/` | "나 + 친구" 일일 집계 보기 |
-| `notification/` | 이벤트 기반 비동기 처리 인앱 알림 |
-| `security/` | JWT, OAuth, 권한, 관리자 필터링 |
+| `duty/` | 근무 CRUD, 엑셀 일괄 업로드 (`SungsimCakeParser`), 캘린더 집계 |
+| `schedule/` | 일정, 태그, 검색, AI 파싱 큐/워커, 첨부파일 |
+| `todo/` | 칸반 보드 (BACKLOG/TODO/DOING/DONE/CLOSED 상태) |
+| `member/` | 친구, 가족, 디데이, 프로필, SSO 온보딩, 보조 계정 |
+| `team/` | 팀, 관리자, 근무 유형, 공유 일정, 배치 템플릿 |
+| `dashboard/` | "나 + 친구" 일일 집계 보기 (배치 로딩) |
+| `notification/` | 이벤트 기반 비동기 처리 인앱 알림 (페이지네이션) |
+| `push/` | VAPID 기반 웹 푸시 알림, iOS PWA 지원 |
+| `attachment/` | 세션 기반 업로드, 썸네일, 야간 정리 스케줄러 |
+| `holiday/` | 공공데이터포털 공휴일 (동시성 안전 캐싱) |
+| `security/` | JWT, OAuth, 요청 제한, 권한, 관리자 필터링 |
 
 ### 프론트엔드 구조
 
 ```
 frontend/src/
-├── api/           # 각 도메인별 Axios 클라이언트
-├── components/    # 재사용 UI (FileUploader, Modal, Layout)
-├── composables/   # 공유 로직 (useSwal, useKakao)
-├── stores/        # Pinia (auth, notifications, theme)
-├── views/         # 페이지 컴포넌트 (Dashboard, Duty, Member, Team)
-└── types/         # TypeScript 인터페이스
+├── api/           # 13개 Axios 클라이언트 (duty, schedule, todo, team, member, notification, push 등)
+├── components/    # 45개 이상 Vue SFC (FileUploader, Modals, KanbanBoard, Layout 등)
+├── composables/   # 7개 훅 (useSwal, useKakao, usePushNotification, useEscapeKey 등)
+├── stores/        # Pinia 스토어 (auth, notification 폴링, theme)
+├── views/         # 19개 페이지 컴포넌트 (Dashboard, Duty, TodoBoard, Member, Team, Admin)
+├── utils/         # 헬퍼 (color, date, visibility)
+└── types/         # 50개 이상 TypeScript 인터페이스
 ```
 
 ---
@@ -205,11 +215,14 @@ frontend/src/
 |:-----|:-----|
 | `JWT_SECRET` | 토큰 서명용 Base64 인코딩 시크릿 |
 | `KAKAO_REST_API_KEY` | 카카오 OAuth 클라이언트 자격 증명 |
-| `GEMINI_API_KEY` | 일정 파싱용 Google AI Studio 키 |
+| `GEMINI_API_KEY` | 일정 파싱용 Google AI Studio 키 (선택) |
 | `SLACK_TOKEN` | 운영 알림 봇 토큰 |
 | `DATA_GO_KR_SERVICE_KEY` | 한국 공휴일 API 키 |
+| `VAPID_PUBLIC_KEY` | 웹 푸시 공개 키 (`npx web-push generate-vapid-keys`로 생성) |
+| `VAPID_PRIVATE_KEY` | 웹 푸시 비공개 키 |
+| `ADMIN_EMAIL` | 관리자 이메일 주소 |
 
-전체 목록은 `.env.sample`을 참조하세요.
+전체 목록은 `.env.sample`을 참조하세요 (DB 자격 증명, 도메인 설정, Docker 설정 포함).
 
 ---
 
