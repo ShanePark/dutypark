@@ -49,8 +49,7 @@ services:
     image: nginx:alpine
     container_name: dutypark-nginx
     restart: unless-stopped
-    ports:
-      - "443:443"
+    # ports removed - Caddy handles external traffic
     environment:
       TZ: ${TZ:-Asia/Seoul}
       DOMAIN_NAME: ${DOMAIN_NAME}
