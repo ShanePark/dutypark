@@ -12,10 +12,12 @@ interface DutyRepository : JpaRepository<Duty, Long> {
     @EntityGraph(attributePaths = ["dutyType"])
     fun findAllByMemberAndDutyDateBetween(member: Member, start: LocalDate, end: LocalDate): List<Duty>
 
+    @EntityGraph(attributePaths = ["dutyType"])
     fun findByMemberAndDutyDate(member: Member, dutyDate: LocalDate): Duty?
 
     fun deleteDutiesByMemberAndDutyDateBetween(member: Member, start: LocalDate, end: LocalDate)
 
+    @EntityGraph(attributePaths = ["dutyType"])
     fun findByDutyDateAndMemberIn(dutyDate: LocalDate, members: List<Member>): List<Duty>
 
     fun deleteAllByDutyTypeIn(dutyTypes: List<DutyType>)

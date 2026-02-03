@@ -300,13 +300,6 @@ function closeSearchModal() {
 }
 
 async function search() {
-  if (!searchKeyword.value.trim()) {
-    searchResult.value = []
-    searchTotalPage.value = 0
-    searchTotalElements.value = 0
-    return
-  }
-
   searchLoading.value = true
   try {
     const response = await friendApi.searchPossibleFriends(

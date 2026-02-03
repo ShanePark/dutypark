@@ -91,7 +91,6 @@ class ProfilePhotoService(
             val fullPath = storagePathResolver.getStorageRoot().resolve(relativePath)
             if (Files.exists(fullPath)) {
                 Files.delete(fullPath)
-                log.debug("Deleted file: {}", fullPath)
             }
         } catch (e: Exception) {
             log.warn("Failed to delete file: {}", relativePath, e)

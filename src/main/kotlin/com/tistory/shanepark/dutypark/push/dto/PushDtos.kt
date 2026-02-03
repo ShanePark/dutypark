@@ -20,11 +20,12 @@ data class PushSubscriptionKeys(
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class PushNotificationPayload(
-    val title: String,
+    val title: String? = null,
     val body: String,
     val icon: String = "/android-chrome-192x192.png",
     val badge: String = "/android-chrome-192x192.png",
     val url: String? = null,
     val tag: String? = null,
-    val notificationId: String? = null
+    val notificationId: String? = null,
+    val unreadCount: Int? = null
 )

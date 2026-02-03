@@ -56,7 +56,7 @@ class SlackNotificationAspect(
 
             result
         } catch (ex: Exception) {
-            log.warn("Does not send slack notification as exception occurred [{}]", ex.message)
+            log.error("Failed to send Slack notification for {}: {}", proceedingJoinPoint.signature.name, ex.message, ex)
             throw ex
         }
     }

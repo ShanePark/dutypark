@@ -8,6 +8,8 @@ import java.time.LocalDateTime
 
 class RefreshTokenTest {
 
+    private val fixedDateTime = LocalDateTime.of(2025, 1, 15, 12, 0, 0)
+
     private val team = Team("testTeam")
     private val member = Member(name = "", email = "", password = "")
 
@@ -22,7 +24,7 @@ class RefreshTokenTest {
 
     @Test
     fun `slideValidUntil update its remote Addr`() {
-        val refreshToken = RefreshToken(member, LocalDateTime.now().plusDays(1), "", chromeUserAgent)
+        val refreshToken = RefreshToken(member, fixedDateTime.plusDays(1), "", chromeUserAgent)
         refreshToken.slideValidUntil("127.0.0.1", chromeUserAgent, 7)
 
         Assertions.assertThat(refreshToken.remoteAddr).isEqualTo("127.0.0.1")
@@ -30,7 +32,7 @@ class RefreshTokenTest {
 
     @Test
     fun `slideValidUntil extends validUntil`() {
-        val validUntil = LocalDateTime.now().plusDays(1)
+        val validUntil = fixedDateTime.plusDays(1)
         val refreshToken = RefreshToken(member, validUntil, "", chromeUserAgent)
         refreshToken.slideValidUntil("", chromeUserAgent, 7)
 
@@ -39,7 +41,7 @@ class RefreshTokenTest {
 
     @Test
     fun `slideValidUntil updates userAgent`() {
-        val refreshToken = RefreshToken(member, LocalDateTime.now().plusDays(1), "", chromeUserAgent)
+        val refreshToken = RefreshToken(member, fixedDateTime.plusDays(1), "", chromeUserAgent)
         val originalUserAgent = refreshToken.userAgent
 
         refreshToken.slideValidUntil("", firefoxUserAgent, 7)

@@ -234,13 +234,7 @@ class FriendService(
 
     @Transactional(readOnly = true)
     fun searchPossibleFriends(login: LoginMember, keyword: String, page: Pageable): Page<FriendDto> {
-        val member = loginMemberToMember(login)
-
-        val friends = findAllFriends(login).map { it.id }
-        val pendingRequestsFrom = getPendingRequestsFrom(member).map { it.toMember.id }
-        val excludeIds = friends + pendingRequestsFrom + member.id
-
-        val result = memberRepository.findMembersByNameContainingIgnoreCaseAndIdNotIn(keyword, excludeIds, page)
+        val result = memberRepository.searchPossibleFriends(keyword, login.id, page)
         return result.map { FriendDto.of(it) }
     }
 
@@ -302,6 +296,29 @@ class FriendService(
             return Visibility.friends()
         }
         return Visibility.publicOnly()
+    }
+
+    @Transactional(readOnly = true)
+    fun buildScheduleVisibilityMap(
+        loginMember: LoginMember,
+        friendRelations: List<FriendRelation>
+    ): Map<Long, Set<Visibility>> {
+        if (friendRelations.isEmpty()) {
+            return emptyMap()
+        }
+
+        val managedMemberIds = memberService.findManagedMemberIds(loginMember)
+
+        return friendRelations.associate { relation ->
+            val friendId = relation.friend.id ?: throw IllegalStateException("Friend id is null")
+            val visibilities = when {
+                friendId == loginMember.id -> Visibility.all()
+                managedMemberIds.contains(friendId) -> Visibility.all()
+                relation.isFamily -> Visibility.family()
+                else -> Visibility.friends()
+            }
+            friendId to visibilities
+        }
     }
 
     fun pinFriend(loginMember: LoginMember, friendId: Long) {

@@ -5,7 +5,6 @@ import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.attachment.service.FileSystemService
 import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
-import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -39,7 +38,6 @@ class ScheduleService(
     private val pathResolver: StoragePathResolver,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
-    private val log = logger()
 
     @Transactional(readOnly = true)
     fun findSchedulesByYearAndMonth(
@@ -130,7 +128,6 @@ class ScheduleService(
             visibility = scheduleSaveDto.visibility
         )
 
-        log.info("create schedule: $scheduleSaveDto")
         scheduleRepository.save(schedule)
         scheduleTimeParsingQueueManager.addTask(schedule)
 
@@ -164,7 +161,6 @@ class ScheduleService(
         schedule.visibility = scheduleSaveDto.visibility
         schedule.parsingTimeStatus = ParsingTimeStatus.WAIT
 
-        log.info("update schedule: $scheduleSaveDto")
         scheduleRepository.save(schedule)
         scheduleTimeParsingQueueManager.addTask(schedule)
 

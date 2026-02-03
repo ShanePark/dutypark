@@ -27,7 +27,6 @@ class AttachmentCleanupScheduler(
         val expiredSessions = sessionRepository.findAllByExpiresAtBefore(now)
 
         if (expiredSessions.isEmpty()) {
-            log.debug("No expired attachment sessions to clean up at {}", now)
             return
         }
 
@@ -42,7 +41,7 @@ class AttachmentCleanupScheduler(
                     attachmentService.deleteAttachment(attachment)
                     attachmentsRemoved++
                 }.onFailure { ex ->
-                    log.warn(
+                    log.error(
                         "Failed to delete attachment {} for expired session {}: {}",
                         attachment.id,
                         sessionId,
@@ -55,7 +54,7 @@ class AttachmentCleanupScheduler(
             runCatching {
                 fileSystemService.deleteDirectory(tempDir)
             }.onFailure { ex ->
-                log.warn(
+                log.error(
                     "Failed to delete temporary directory {} for session {}: {}",
                     tempDir,
                     sessionId,
@@ -67,7 +66,7 @@ class AttachmentCleanupScheduler(
         runCatching {
             sessionRepository.deleteAll(expiredSessions)
         }.onFailure { ex ->
-            log.warn("Failed to delete expired sessions: {}", ex.message)
+            log.error("Failed to delete expired sessions: {}", ex.message)
         }
 
         log.info(

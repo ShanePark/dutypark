@@ -6,6 +6,7 @@ import AppHeader from './AppHeader.vue'
 import AppFooter from './AppFooter.vue'
 import ImpersonationBanner from '@/components/common/ImpersonationBanner.vue'
 import PWAInstallGuide from '@/components/common/PWAInstallGuide.vue'
+import PushPermissionGuide from '@/components/common/PushPermissionGuide.vue'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -36,5 +37,7 @@ const showLayout = computed(() => {
     <AppFooter v-if="showLayout && authStore.isLoggedIn" />
     <!-- PWA Install Guide - only for logged in users on mobile -->
     <PWAInstallGuide v-if="authStore.isLoggedIn" />
+    <!-- Push Permission Guide - only for iOS PWA users -->
+    <PushPermissionGuide v-if="authStore.isLoggedIn" />
   </div>
 </template>

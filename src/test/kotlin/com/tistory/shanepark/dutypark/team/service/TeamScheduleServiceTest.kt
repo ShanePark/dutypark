@@ -29,6 +29,8 @@ import java.util.*
 @ExtendWith(MockitoExtension::class)
 class TeamScheduleServiceTest {
 
+    private val fixedDateTime = LocalDateTime.of(2025, 1, 15, 12, 0, 0)
+
     @Mock
     lateinit var teamScheduleRepository: TeamScheduleRepository
 
@@ -128,7 +130,7 @@ class TeamScheduleServiceTest {
 
     @Test
     fun `create should throw exception when startDateTime is after endDateTime`() {
-        val now = LocalDateTime.now()
+        val now = fixedDateTime
         assertThrows<InvalidScheduleTimeRangeExeption> {
             TeamScheduleSaveDto(
                 teamId = 1L,
@@ -196,8 +198,8 @@ class TeamScheduleServiceTest {
             id = UUID.randomUUID(),
             teamId = 1L,
             content = "X",
-            startDateTime = LocalDateTime.now(),
-            endDateTime = LocalDateTime.now()
+            startDateTime = fixedDateTime,
+            endDateTime = fixedDateTime
         )
         val loginMember = LoginMember(id = 1L, name = "Editor")
 
@@ -362,8 +364,8 @@ class TeamScheduleServiceTest {
     }
 
     private fun createSchedule(
-        start: LocalDateTime = LocalDateTime.now(),
-        end: LocalDateTime = LocalDateTime.now()
+        start: LocalDateTime = fixedDateTime,
+        end: LocalDateTime = fixedDateTime
     ): TeamSchedule {
         return TeamSchedule(
             team = makeTeam("Test Team"),

@@ -15,10 +15,7 @@ class FileSystemService {
     fun writeFile(file: MultipartFile, targetPath: Path): Path {
         try {
             ensureDirectoryExists(targetPath.parent)
-
             Files.copy(file.inputStream, targetPath, StandardCopyOption.REPLACE_EXISTING)
-
-            log.info("File written successfully: {}", targetPath)
             return targetPath
         } catch (e: IOException) {
             log.error("Failed to write file to {}: {}", targetPath, e.message)
@@ -31,7 +28,6 @@ class FileSystemService {
         try {
             if (Files.exists(path)) {
                 Files.delete(path)
-                log.info("File deleted successfully: {}", path)
             }
         } catch (e: IOException) {
             log.error("Failed to delete file {}: {}", path, e.message)
@@ -45,7 +41,6 @@ class FileSystemService {
                 Files.walk(path)
                     .sorted(Comparator.reverseOrder())
                     .forEach { Files.deleteIfExists(it) }
-                log.info("Directory deleted successfully: {}", path)
             }
         } catch (e: IOException) {
             log.error("Failed to delete directory {}: {}", path, e.message)
@@ -60,7 +55,6 @@ class FileSystemService {
     private fun ensureDirectoryExists(directory: Path) {
         if (!Files.exists(directory)) {
             Files.createDirectories(directory)
-            log.debug("Created directory: {}", directory)
         }
     }
 
@@ -68,7 +62,6 @@ class FileSystemService {
         try {
             if (Files.exists(path)) {
                 Files.delete(path)
-                log.info("Cleaned up orphaned file: {}", path)
             }
         } catch (e: IOException) {
             log.warn("Failed to cleanup orphaned file {}: {}", path, e.message)

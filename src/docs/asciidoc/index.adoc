@@ -85,9 +85,9 @@ operation::schedules/create-unauthorized[]
 
 operation::schedules/update[]
 
-=== Position swap
+=== Position reorder
 
-operation::schedules/position[]
+operation::schedules/positions[]
 
 === Delete
 

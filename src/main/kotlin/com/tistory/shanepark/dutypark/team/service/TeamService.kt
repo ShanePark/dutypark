@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.team.service
 
-import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
@@ -28,7 +27,6 @@ class TeamService(
     private val dutyRepository: DutyRepository,
     private val memberRepository: MemberRepository,
 ) {
-    val log = logger()
 
     @Transactional(readOnly = true)
     fun findAllWithMemberCount(pageable: Pageable, keyword: String = ""): Page<SimpleTeamDto> {
@@ -115,7 +113,6 @@ class TeamService(
             throw IllegalStateException("Member does not belong to team")
         }
         if (team.isManager(memberId)) {
-            log.info("Already a team manager, team: $team, member: $member")
             return
         }
         team.addManager(member)
@@ -129,7 +126,6 @@ class TeamService(
             throw IllegalStateException("Member does not belong to team")
         }
         if (!team.isManager(memberId)) {
-            log.info("Already not a team manager, team: $team, member: $member")
             return
         }
         team.removeManager(member)

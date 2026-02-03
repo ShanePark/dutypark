@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.security.controller
 
-import com.tistory.shanepark.dutypark.common.config.logger
 import tools.jackson.databind.json.JsonMapper
 import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
@@ -29,7 +28,6 @@ class OAuthController(
     private val consentService: ConsentService,
 ) {
     private val jsonMapper = JsonMapper.builder().build()
-    private val log = logger()
 
     @GetMapping("Oauth2ClientCallback/kakao")
     fun kakaoLoginCallback(
@@ -51,7 +49,6 @@ class OAuthController(
                 redirectUrl = redirectUrl,
                 loginMember = loginMember,
             )
-            log.info("Kakao ID linked to member: $loginMember")
             return ResponseEntity.status(HttpStatus.FOUND)
                 .location(URI.create(referer))
                 .build()

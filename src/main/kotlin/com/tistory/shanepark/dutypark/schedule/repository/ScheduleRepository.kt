@@ -44,7 +44,7 @@ interface ScheduleRepository : JpaRepository<Schedule, UUID> {
     ): Page<Schedule>
 
     @Query(
-        "SELECT s" +
+        "SELECT DISTINCT s" +
                 " FROM Schedule s" +
                 " JOIN FETCH s.member m" +
                 " LEFT JOIN FETCH s.tags t" +
@@ -55,6 +55,23 @@ interface ScheduleRepository : JpaRepository<Schedule, UUID> {
     )
     fun findSchedulesOfMemberRangeIn(
         member: Member,
+        start: LocalDateTime,
+        end: LocalDateTime,
+        visibilities: Collection<Visibility>
+    ): List<Schedule>
+
+    @Query(
+        "SELECT DISTINCT s" +
+                " FROM Schedule s" +
+                " JOIN FETCH s.member m" +
+                " LEFT JOIN FETCH s.tags t" +
+                " LEFT JOIN FETCH t.member tm" +
+                " WHERE m IN :members " +
+                " AND s.startDateTime <= :end AND s.endDateTime >= :start" +
+                " AND s.visibility IN (:visibilities)"
+    )
+    fun findSchedulesOfMembersRangeIn(
+        members: Collection<Member>,
         start: LocalDateTime,
         end: LocalDateTime,
         visibilities: Collection<Visibility>
@@ -92,7 +109,31 @@ interface ScheduleRepository : JpaRepository<Schedule, UUID> {
         visibilities: Collection<Visibility>
     ): List<Schedule>
 
+    @Query(
+        """
+    SELECT DISTINCT s
+    FROM Schedule s
+    JOIN FETCH s.member m
+    LEFT JOIN FETCH s.tags t
+    LEFT JOIN FETCH t.member tm
+    WHERE s IN (
+        SELECT s2
+        FROM Schedule s2
+        JOIN s2.tags t2
+        WHERE t2.member IN :taggedMembers
+        AND s2.startDateTime <= :end
+        AND s2.endDateTime >= :start
+        AND s2.visibility IN :visibilities
+    )   
+    """
+    )
+    fun findTaggedSchedulesOfMembersRangeIn(
+        taggedMembers: Collection<Member>,
+        start: LocalDateTime,
+        end: LocalDateTime,
+        visibilities: Collection<Visibility>
+    ): List<Schedule>
+
     fun findAllByParsingTimeStatus(parsingTimeStatus: ParsingTimeStatus): List<Schedule>
 
 }
-

@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.common.advice
 
-import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.domain.dto.DutyParkErrorResponse
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import org.springframework.core.Ordered
@@ -14,7 +13,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 @RestControllerAdvice(annotations = [RestController::class])
 @Order(Ordered.HIGHEST_PRECEDENCE)
 class RestExceptionControllerAdvice {
-    val log = logger()
 
     @ResponseBody
     @ExceptionHandler
@@ -25,7 +23,6 @@ class RestExceptionControllerAdvice {
 
     @ExceptionHandler
     fun noSuchElementHandler(e: NoSuchElementException): ResponseEntity<Map<String, String>> {
-        log.warn("no such element: ${e.message}")
         return ResponseEntity.status(404)
             .body(mapOf("error" to "Not Found", "message" to (e.message ?: "Resource not found")))
     }

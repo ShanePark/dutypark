@@ -61,4 +61,25 @@ class NotificationTypeTest {
         assertThat(NotificationType.SCHEDULE_TAGGED.generateTitle(actorName, scheduleTitle))
             .isEqualTo("테스트유저님의 [스케줄 제목] 일정에 태그되었습니다")
     }
+
+    @Test
+    fun `generatePushBody replaces schedule title when provided`() {
+        val body = NotificationType.SCHEDULE_TAGGED.generatePushBody("팀 회의")
+
+        assertThat(body).isEqualTo("[팀 회의] 일정에 태그되었습니다")
+    }
+
+    @Test
+    fun `generatePushBody keeps placeholder when schedule title is null`() {
+        val body = NotificationType.SCHEDULE_TAGGED.generatePushBody(null)
+
+        assertThat(body).isEqualTo("[{scheduleTitle}] 일정에 태그되었습니다")
+    }
+
+    @Test
+    fun `generatePushBody ignores schedule title for non-schedule types`() {
+        val body = NotificationType.FRIEND_REQUEST_ACCEPTED.generatePushBody("무시")
+
+        assertThat(body).isEqualTo("친구 요청을 수락했습니다")
+    }
 }

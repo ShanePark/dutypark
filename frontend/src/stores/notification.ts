@@ -1,10 +1,23 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { NotificationDto } from '@/types'
 import { notificationApi } from '@/api/notification'
 
 const MAX_BACKOFF_MS = 5 * 60 * 1000 // 5 minutes
 const BASE_INTERVAL_MS = 10000 // 10 seconds
+
+/**
+ * Update app icon badge for iOS PWA (requires iOS 16.4+)
+ */
+function updateAppBadge(count: number): void {
+  if ('setAppBadge' in navigator) {
+    if (count > 0) {
+      navigator.setAppBadge(count)
+    } else {
+      navigator.clearAppBadge()
+    }
+  }
+}
 
 export const useNotificationStore = defineStore('notification', () => {
   const unreadNotifications = ref<NotificationDto[]>([])
@@ -240,6 +253,11 @@ export const useNotificationStore = defineStore('notification', () => {
   function triggerFriendsRefresh(): void {
     friendsRefreshTrigger.value++
   }
+
+  // Update app icon badge when unread count changes (iOS PWA)
+  watch(unreadCount, (count) => {
+    updateAppBadge(count)
+  })
 
   return {
     // State

@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.security.oauth.kakao
 
-import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberSsoRegister
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -28,7 +27,6 @@ class KakaoLoginService(
     private val cookieService: CookieService,
     @param:Value("\${oauth.kakao.rest-api-key}") private val restApiKey: String
 ) {
-    private val log = logger()
 
     private fun getKakaoId(redirectUrl: String, code: String): String {
         val kakaoTokenResponse = kakaoTokenApi.getAccessToken(
@@ -61,7 +59,6 @@ class KakaoLoginService(
 
         val member = memberRepository.findMemberByKakaoId(kakaoId)
         if (member != null) {
-            log.info("Kakao Login Success (SPA): ${member.name}, $kakaoId")
             val tokenResponse = authService.getTokenResponseByMemberId(member.id!!, req)
 
             cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)

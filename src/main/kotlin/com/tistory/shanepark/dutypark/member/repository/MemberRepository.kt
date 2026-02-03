@@ -23,13 +23,6 @@ interface MemberRepository : JpaRepository<Member, Long> {
     @Query("select m from Member m left join fetch m.team d  where m.id = :memberId")
     fun findMemberWithTeam(memberId: Long): Optional<Member>
 
-    @EntityGraph(attributePaths = ["team"])
-    fun findMembersByNameContainingIgnoreCaseAndIdNotIn(
-        name: String,
-        excludeIds: List<Long?>,
-        page: Pageable
-    ): Page<Member>
-
     fun findMemberByKakaoId(kakaoId: String): Member?
     fun findMembersByTeam(team: Team): List<Member>
 
@@ -55,4 +48,23 @@ interface MemberRepository : JpaRepository<Member, Long> {
         countQuery = "SELECT COUNT(m) FROM Member m WHERE LOWER(m.name) LIKE LOWER(CONCAT('%', :keyword, '%'))"
     )
     fun findByNameContainingOrderByLastTokenAccess(keyword: String, pageable: Pageable): Page<Member>
+
+    @EntityGraph(attributePaths = ["team"])
+    @Query(
+        """
+        SELECT m FROM Member m
+        WHERE LOWER(m.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+        AND m.id != :memberId
+        AND m.id NOT IN (SELECT fr.friend.id FROM FriendRelation fr WHERE fr.member.id = :memberId)
+        AND m.id NOT IN (SELECT req.toMember.id FROM FriendRequest req WHERE req.fromMember.id = :memberId AND req.status = 'PENDING')
+        """,
+        countQuery = """
+        SELECT COUNT(m) FROM Member m
+        WHERE LOWER(m.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+        AND m.id != :memberId
+        AND m.id NOT IN (SELECT fr.friend.id FROM FriendRelation fr WHERE fr.member.id = :memberId)
+        AND m.id NOT IN (SELECT req.toMember.id FROM FriendRequest req WHERE req.fromMember.id = :memberId AND req.status = 'PENDING')
+        """
+    )
+    fun searchPossibleFriends(keyword: String, memberId: Long, pageable: Pageable): Page<Member>
 }

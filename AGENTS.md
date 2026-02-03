@@ -6,11 +6,12 @@ Use this document whenever you change code in Dutypark. It distills everything a
 
 ## 1. Core Context
 
-- **Backend:** Kotlin 2.1, Spring Boot 3.5.x (Data JPA, Web, WebFlux, Security, Validation, Actuator, DevTools, Scheduling, Async, Caching)
+- **Backend:** Kotlin 2.3, Spring Boot 4.0.x (Data JPA, Web, WebFlux, Security, Validation, Actuator, DevTools, Scheduling, Async, Caching, AI)
 - **Frontend:** Vue 3 SPA (Vite + TypeScript + Pinia + Tailwind CSS), fully separated from backend
-- **Persistence:** MySQL 8.0 via Flyway migrations (`db/migration/v1`, `v2`); ULID entities for attachments/schedules/todos
-- **Auth:** JWT Bearer tokens + sliding refresh tokens (SPA), Kakao OAuth SSO, `@Login` argument resolver
-- **AI:** Spring AI + Gemini 2.0 Flash Lite for schedule time parsing (queue manager + worker in `schedule/timeparsing`)
+- **Persistence:** MySQL 8.0 via Flyway migrations (`db/migration/v1`, `v2`); ULID entities for attachments/schedules/todos/notifications
+- **Auth:** JWT Bearer tokens + sliding refresh tokens (SPA), Kakao OAuth SSO, `@Login` argument resolver, account impersonation
+- **AI:** Spring AI + Gemini for schedule time parsing (async queue manager + worker in `schedule/timeparsing`, rate-limited)
+- **PWA:** Web Push notifications with VAPID keys, installable on iOS/Android home screens
 - **Observability:** Micrometer Prometheus registry, Slack lifecycle/error hooks, rolling Logback files
 - **Deployment:** Docker Compose stack: app, mysql, nginx (TLS), Prometheus, Grafana (+ standalone MySQL stack in `dutypark_dev_db`)
 
@@ -36,27 +37,32 @@ Use this document whenever you change code in Dutypark. It distills everything a
 
 ### Key Modules & Responsibilities
 
-| Module        | Highlights                                                                                                                     |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `attachment/` | Upload sessions, validation/blacklist, filesystem abstraction, thumbnail generation, nightly cleanup, permission evaluator.    |
-| `schedule/`   | Schedule CRUD, tagging, search, AI parsing queue/worker, attachment orchestration, visibility enforcement via `FriendService`. |
-| `duty/`       | Calendar duties, Excel batch import (`SungsimCakeParser`) for members/teams, duty type management.                             |
-| `todo/`       | UUID todos, draggable ordering with SortableJS, reopen/complete logic.                                                         |
-| `team/`       | Teams, managers, duty types/colors, work-type presets, shared team schedules.                                                  |
-| `member/`     | Friends/family, D-Day events, refresh tokens, SSO onboarding, `@Login` annotation.                                             |
-| `dashboard/`  | Aggregated "my + friends" snapshot (duties, schedules, requests, pins).                                                        |
-| `security/`   | JWT provider/filter, Bearer token support, Kakao OAuth, admin filter, CORS configuration.                                      |
-| `common/`     | Core configs (async, clock, storage, logging), cached `/api/calendar`, Slack notifier, DataGoKr client, exception advisors.    |
+| Module          | Highlights                                                                                                                     |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `attachment/`   | Upload sessions, validation/blacklist, filesystem abstraction, thumbnail generation, nightly cleanup, permission evaluator.    |
+| `schedule/`     | Schedule CRUD, tagging, search, AI parsing queue/worker, attachment orchestration, visibility enforcement via `FriendService`. |
+| `duty/`         | Calendar duties, Excel batch import (`SungsimCakeParser`) for members/teams, duty type management.                             |
+| `todo/`         | Kanban board with 5 statuses (BACKLOG/TODO/DOING/DONE/CLOSED), draggable ordering with SortableJS, reopen/complete logic.      |
+| `team/`         | Teams, managers, duty types/colors, work-type presets, shared team schedules, batch templates.                                 |
+| `member/`       | Friends/family, D-Day events, refresh tokens, SSO onboarding, auxiliary accounts, `@Login` annotation.                         |
+| `dashboard/`    | Aggregated "my + friends" snapshot (duties, schedules, requests, pins) with batch loading.                                     |
+| `notification/` | In-app alerts with event-driven async handling, pagination, unread counts, mark-as-read.                                       |
+| `push/`         | Web Push notifications with VAPID keys, iOS PWA support, subscription management.                                              |
+| `holiday/`      | Korean public holidays from Data.go.kr with concurrency-safe caching and admin reset.                                          |
+| `security/`     | JWT provider/filter, Bearer token support, Kakao OAuth, rate limiting, impersonation, admin filter, CORS configuration.        |
+| `common/`       | Core configs (async, clock, storage, logging), Slack notifier, DataGoKr client, exception advisors.                            |
 
 ### High-Impact Features
 
 - Duty calendar with visibility-aware data, manager checks, Excel batch import, default off-type fallback.
 - Schedule editor with attachments (session-based Uppy uploads, thumbnails via Thumbnailator/TwelveMonkeys, cleanup scheduler).
-- AI-assisted time parsing queue that respects Gemini rate limits (30 RPM / 1500 RPD) and populates `contentWithoutTime`.
-- Todo management with SortableJS drag-drop reordering, reopen/complete logic.
+- AI-assisted time parsing queue that respects Gemini rate limits (30 RPM / 14400 RPD) and populates `contentWithoutTime`.
+- Kanban todo board with 5 statuses, SortableJS drag-drop reordering between columns, position persistence.
 - D-Day creation with privacy flag, localStorage selection for quick display.
 - Dashboard showing my duty + today's schedules plus friends/family insights and request management.
 - Team schedule board and templates, plus DataGoKr-powered holiday sync with caching and concurrency locks.
+- Web Push notifications for friend requests, schedule tags, and other events (VAPID-based, iOS PWA compatible).
+- Account impersonation allowing managers to switch to managed accounts for viewing/editing.
 - Slack notifications for startup/shutdown and error detections (request payload + metadata).
 
 ---
@@ -98,11 +104,12 @@ cd dutypark_dev_db && docker compose up -d                              # standa
 
 ### Configuration Essentials
 
-- Copy `.env.sample` → `.env`, then populate DB creds, JWT secret (base64), Slack token, DataGoKr key, Kakao key, Gemini key, domain, `COOKIE_SSL_ENABLED`, `NGINX_CONF_NAME`, `UID/GID`, `TZ`.
-- `application.yml`: toggles storage root/size/blacklist, Slack/DataGoKr keys, AI base URL/model/temperature, actuator exposure, Flyway, logging.
+- Copy `.env.sample` → `.env`, then populate DB creds, JWT secret (base64), Slack token, DataGoKr key, Kakao key, Gemini key, VAPID keys, domain, `COOKIE_SSL_ENABLED`, `NGINX_CONF_NAME`, `UID/GID`, `TZ`.
+- `application.yml`: toggles storage root/size/blacklist, Slack/DataGoKr keys, AI base URL/model/temperature, VAPID keys for push, actuator exposure, Flyway, logging.
 - `application-dev.yml`: points to `localhost:3307`, enables DevTools & LiveReload, disables SSL, seeds fake secrets, logs to local path.
 - Storage is centralized under `dutypark.storage.root` (permanent) and `<root>/_tmp` (sessions). Update `StoragePathResolver` + cleanup scheduler if adding contexts.
 - AI parsing auto-disables when `GEMINI_API_KEY` is blank—preserve this behavior when touching `schedule/timeparsing`.
+- Generate VAPID keys with `npx web-push generate-vapid-keys` for push notifications.
 
 ### Git Configuration for Development
 
@@ -131,22 +138,34 @@ frontend/
 │   │   ├── schedule.ts         # Schedule CRUD + tags + search
 │   │   ├── member.ts           # Member/friends/D-Day
 │   │   ├── team.ts             # Team management
-│   │   └── attachment.ts       # File upload sessions
+│   │   ├── attachment.ts       # File upload sessions
+│   │   ├── notification.ts     # Notification CRUD + polling
+│   │   ├── push.ts             # Web Push subscription management
+│   │   └── policy.ts           # Terms & privacy policy versions
 │   ├── components/
-│   │   ├── common/             # FileUploader, YearMonthPicker, AttachmentGrid, ImageViewer
+│   │   ├── common/             # FileUploader, YearMonthPicker, AttachmentGrid, ImageViewer, NotificationBell
 │   │   ├── duty/               # DayDetailModal, TodoModals, DDayModal, OtherDutiesModal, etc.
+│   │   ├── todo/               # KanbanColumn, KanbanCard
 │   │   └── layout/             # AppLayout, AppHeader, AppFooter
-│   ├── composables/            # useSwal, useKakao
-│   ├── stores/auth.ts          # Pinia authentication store
+│   ├── composables/            # useSwal, useKakao, usePushNotification, useNotificationNavigation, useEscapeKey
+│   ├── stores/
+│   │   ├── auth.ts             # Pinia authentication store (login, impersonation)
+│   │   ├── notification.ts     # Notification polling with exponential backoff
+│   │   └── theme.ts            # Dark/light mode persistence
 │   ├── views/                  # Page-level components
 │   │   ├── auth/               # LoginView, OAuthCallbackView, SsoSignupView, SsoCongratsView
 │   │   ├── dashboard/          # DashboardView
 │   │   ├── duty/               # DutyView
-│   │   ├── member/             # MemberView
+│   │   ├── todo/               # TodoBoardView (Kanban)
+│   │   ├── member/             # MemberView, FriendsView
 │   │   ├── team/               # TeamView, TeamManageView
-│   │   ├── admin/              # AdminDashboardView, AdminTeamListView
+│   │   ├── notification/       # NotificationListView
+│   │   ├── admin/              # AdminDashboardView, AdminTeamListView, DevPlaygroundView
+│   │   ├── policy/             # TermsView, PrivacyView
+│   │   ├── guide/              # GuideView
 │   │   └── NotFoundView.vue
-│   ├── types/index.ts          # TypeScript type definitions
+│   ├── utils/                  # Helpers (color, date, visibility)
+│   ├── types/index.ts          # TypeScript type definitions (50+ interfaces)
 │   ├── router/index.ts         # Vue Router configuration
 │   └── style.css               # Tailwind CSS + design tokens
 ├── vite.config.ts              # Vite config (proxy: /api → localhost:8080)
@@ -157,13 +176,15 @@ frontend/
 
 - **Vue 3** with Composition API (`<script setup>`)
 - **TypeScript** for type safety
-- **Pinia** for state management (auth store)
+- **Pinia** for state management (auth, notification, theme stores)
 - **Vue Router** with lazy-loaded routes and navigation guards
 - **Axios** with request/response interceptors for JWT handling
 - **Tailwind CSS** for styling (custom design tokens in `style.css`)
 - **SweetAlert2** via `useSwal` composable
-- **SortableJS** for drag-drop reordering
+- **SortableJS** for drag-drop reordering (todos, schedules)
 - **Uppy** for file uploads with progress tracking
+- **Vue Advanced Cropper** for profile photo editing
+- **Lucide Vue** for icons (500+ SVG icons)
 - **dayjs** for date handling
 
 ### Authentication Flow
@@ -199,8 +220,13 @@ export const exampleApi = {
 | `/friends` | FriendsView | Required | |
 | `/team` | TeamView | Required | |
 | `/team/manage/:teamId` | TeamManageView | Required | Permission check |
+| `/notifications` | NotificationListView | Required | Full notification history |
+| `/guide` | GuideView | Optional | User guide |
+| `/terms` | TermsView | Optional | Terms of service |
+| `/privacy` | PrivacyView | Optional | Privacy policy |
 | `/admin` | AdminDashboardView | Admin | |
 | `/admin/teams` | AdminTeamListView | Admin | |
+| `/admin/dev` | DevPlaygroundView | Admin | Development tools |
 
 ### Hamburger Menu (AppHeader.vue)
 
@@ -382,9 +408,15 @@ cd frontend && npm run type-check          # TypeScript verification
 |----------|--------|---------|
 | `/api/auth/token` | POST | Bearer token login (SPA) |
 | `/api/auth/refresh` | POST | Refresh access token |
+| `/api/auth/logout` | POST | Logout and invalidate refresh token |
 | `/api/auth/status` | GET | Check login status |
 | `/api/auth/password` | PUT | Change password |
 | `/api/auth/sso/signup/token` | POST | SSO signup (SPA) |
+| `/api/auth/impersonate/{id}` | POST | Switch to managed account |
+| `/api/auth/restore` | POST | Return from impersonation |
+| `/api/auth/push/vapid-public-key` | GET | Get VAPID public key |
+| `/api/auth/push/subscribe` | POST | Subscribe to push notifications |
+| `/api/auth/push/unsubscribe` | POST | Unsubscribe from push |
 
 ### Core Domain Endpoints
 
@@ -392,14 +424,16 @@ cd frontend && npm run type-check          # TypeScript verification
 |-----------|--------|----------------|
 | `/api/duty` | Duties | GET (monthly), PUT (change), PUT (batch) |
 | `/api/schedules` | Schedules | CRUD, search, tag friends, reorder |
-| `/api/todos` | Todos | CRUD, reorder, complete/reopen |
+| `/api/todos` | Todos | CRUD, reorder by status, complete/reopen |
 | `/api/dashboard` | Dashboard | GET /my, GET /friends |
-| `/api/members` | Members | Profile, visibility, managers |
-| `/api/friends` | Friends | CRUD, requests, pin/unpin |
+| `/api/members` | Members | Profile, visibility, managers, profile-photo |
+| `/api/friends` | Friends | CRUD, requests, pin/unpin, family |
 | `/api/dday` | D-Day | CRUD |
 | `/api/teams` | Teams | Read, schedules, shift view |
 | `/api/teams/manage` | Team Admin | Members, duty types, batch upload |
 | `/api/attachments` | Files | Upload, download, reorder, sessions |
+| `/api/notifications` | Notifications | GET, mark-read, delete, unread count |
+| `/api/holidays` | Holidays | GET (cached), DELETE (admin reset) |
 | `/admin/api` | Admin | Members, teams, refresh tokens |
 
 ---

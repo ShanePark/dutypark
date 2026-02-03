@@ -4,24 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import { useSwal } from '@/composables/useSwal'
 import { isLightColor } from '@/utils/color'
-import {
-  Plus,
-  ChevronLeft,
-  ChevronRight,
-  Search,
-  Users,
-  FileText,
-  Star,
-  Loader2,
-  Lock,
-  CalendarCheck,
-  FileSpreadsheet,
-  MessageSquareText,
-  Clock,
-  ListTodo,
-  ChevronRight as ChevronRightSmall,
-  CheckSquare,
-} from 'lucide-vue-next'
+import { Loader2 } from 'lucide-vue-next'
 
 // Modal Components
 import DayDetailModal from '@/components/duty/DayDetailModal.vue'
@@ -33,105 +16,20 @@ import DDayDetailModal from '@/components/duty/DDayDetailModal.vue'
 import SearchResultModal from '@/components/duty/SearchResultModal.vue'
 import OtherDutiesModal from '@/components/duty/OtherDutiesModal.vue'
 import ScheduleViewModal from '@/components/duty/ScheduleViewModal.vue'
+import DutyHeaderControls from '@/components/duty/DutyHeaderControls.vue'
+import DutyTodoRow from '@/components/duty/DutyTodoRow.vue'
+import DutyTypesBar from '@/components/duty/DutyTypesBar.vue'
+import DutyCalendarContent from '@/components/duty/DutyCalendarContent.vue'
+import DDayList from '@/components/duty/DDayList.vue'
 import YearMonthPicker from '@/components/common/YearMonthPicker.vue'
-import CalendarGrid from '@/components/common/CalendarGrid.vue'
-import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 
 // API
 import { todoApi } from '@/api/todo'
 import { dutyApi } from '@/api/duty'
 import { ddayApi, memberApi, friendApi } from '@/api/member'
-import { scheduleApi, type ScheduleDto, type ScheduleSearchResult } from '@/api/schedule'
-import type { DutyCalendarDay, TeamDto, DDayDto, DDaySaveDto, CalendarVisibility, OtherDutyResponse, HolidayDto, TodoStatus } from '@/types'
-
-// Local interfaces for this view
-interface LocalTodo {
-  id: string
-  title: string
-  content: string
-  status: 'TODO' | 'IN_PROGRESS' | 'DONE'
-  createdDate: string
-  completedDate?: string
-  dueDate?: string
-  isOverdue?: boolean
-  hasAttachments: boolean
-  attachments: Array<{
-    id: string
-    name: string
-    originalFilename: string
-    size: number
-    contentType: string
-    isImage: boolean
-    hasThumbnail: boolean
-    thumbnailUrl?: string
-    downloadUrl: string
-  }>
-}
-
-interface DutyType {
-  id: number | null
-  name: string
-  color: string | null
-}
-
-// Schedule interface for UI display (converted from ScheduleDto)
-interface Schedule {
-  id: string
-  content: string
-  contentWithoutTime?: string
-  description?: string
-  startDateTime: string
-  endDateTime: string
-  visibility: CalendarVisibility
-  isMine: boolean
-  isTagged: boolean
-  owner?: string
-  taggedBy?: string
-  attachments?: Array<{
-    id: string
-    originalFilename: string
-    contentType: string
-    size: number
-    thumbnailUrl?: string
-    hasThumbnail: boolean
-  }>
-  tags?: Array<{ id: number; name: string }>
-  daysFromStart: number
-  totalDays: number
-}
-
-interface LocalDDay {
-  id: number
-  title: string
-  date: string
-  isPrivate: boolean
-  calc: number
-  dDayText: string
-}
-
-interface Friend {
-  id: number
-  name: string
-}
-
-interface CalendarDay {
-  year: number
-  month: number
-  day: number
-  isCurrentMonth?: boolean
-  isPrev?: boolean
-  isNext?: boolean
-  isToday?: boolean
-}
-
-interface OtherDuty {
-  memberId: number
-  memberName: string
-  duties: Array<{
-    dutyType: string
-    dutyColor: string
-  }>
-}
+import { scheduleApi, type ScheduleDto } from '@/api/schedule'
+import type { DutyCalendarDay, TeamDto, DDayDto, DDaySaveDto, HolidayDto, TodoStatus } from '@/types'
+import type { LocalTodo, DutyType, Schedule, LocalDDay, Friend, CalendarDay, OtherDuty, DutyTypeWithCount, DutyDay, TodoDueItem } from './dutyViewTypes'
 
 import { useAuthStore } from '@/stores/auth'
 
@@ -161,9 +59,10 @@ const amIManager = ref(false)
 
 // canEdit: true if own calendar or manager of target member
 const canEdit = computed(() => isMyCalendar.value || amIManager.value)
+const canEditMyCalendar = computed(() => canEdit.value && isMyCalendar.value)
 
 // canSearch: true if can search schedules (same as canEdit)
-const canSearch = computed(() => isMyCalendar.value || amIManager.value)
+const canSearch = canEdit
 
 // Loading states
 const isLoading = ref(false)
@@ -174,6 +73,8 @@ const loadError = ref<string | null>(null)
 const batchEditMode = ref(false)
 const focusedDay = ref<number | null>(null)  // Focused day for quick duty input (1~lastDay)
 const searchQuery = ref('')
+
+const lastDayInMonth = computed(() => new Date(currentYear.value, currentMonth.value, 0).getDate())
 
 // Modal states
 const isDayDetailModalOpen = ref(false)
@@ -202,7 +103,7 @@ function handleYearMonthSelect(year: number, month: number) {
 
 // Selected items
 const selectedDay = ref<CalendarDay | null>(null)
-const selectedDayDuty = ref<{ dutyType: string; dutyColor: string } | undefined>(undefined)
+const selectedDayDuty = ref<DutyDay | undefined>(undefined)
 const selectedTodo = ref<LocalTodo | null>(null)
 const selectedDDay = ref<LocalDDay | null>(null)
 const selectedSchedule = ref<Schedule | null>(null)
@@ -218,7 +119,7 @@ const todosDueByDays = computed(() => {
   if (!isMyCalendar.value || !calendarDays.value.length) return []
 
   // Build map by date from todos that have dueDate and match filter
-  const todoMap = new Map<string, Array<{ id: string; title: string; status: string }>>()
+  const todoMap = new Map<string, TodoDueItem[]>()
   todos.value.forEach((todo) => {
     if (!todo.dueDate) return
     // Apply filter settings (IN_PROGRESS always shown)
@@ -450,12 +351,13 @@ async function loadHolidays() {
 // Team and duty types from API
 const team = ref<TeamDto | null>(null)
 const dutyTypes = ref<DutyType[]>([])
+const teamHasDutyBatchTemplate = computed(() => !!team.value?.dutyBatchTemplate)
 
 // Raw duty data from API
 const rawDuties = ref<DutyCalendarDay[]>([])
 
 // Computed duty types with count - reactive to both dutyTypes and rawDuties
-const dutyTypesWithCount = computed(() => {
+const dutyTypesWithCount = computed<DutyTypeWithCount[]>(() => {
   if (dutyTypes.value.length === 0) return []
 
   const daysInMonth = new Date(currentYear.value, currentMonth.value, 0).getDate()
@@ -485,6 +387,8 @@ const isLoadingFriends = ref(false)
 
 const selectedFriendIds = ref<number[]>([])
 const showMyDuties = ref(false)
+const otherDutyCount = computed(() => selectedFriendIds.value.length + (showMyDuties.value ? 1 : 0))
+const isOtherDutyActive = computed(() => otherDutyCount.value > 0)
 
 const otherDuties = ref<OtherDuty[]>([])
 
@@ -540,7 +444,7 @@ const calendarDays = computed(() => {
 })
 
 // Duties computed from raw API data
-const duties = computed(() => {
+const duties = computed<Array<DutyDay | null>>(() => {
   return calendarDays.value.map((day) => {
     // Find matching duty from raw data
     const duty = rawDuties.value.find(
@@ -565,6 +469,7 @@ const focusedDayDuty = computed(() => {
   if (dayIndex === -1) return null
   return duties.value[dayIndex]
 })
+const focusedDayDutyType = computed(() => focusedDayDuty.value?.dutyType ?? null)
 
 // Get duty color for CalendarGrid component
 function getDutyColorForDay(day: CalendarDay): string | null {
@@ -859,8 +764,7 @@ function handleDayClick(day: CalendarDay, index: number) {
 }
 
 // Schedule click handler (for read-only view on other's calendar)
-function handleScheduleClick(schedule: Schedule, event: Event) {
-  event.stopPropagation() // Prevent day click
+function handleScheduleClick(schedule: Schedule) {
   selectedSchedule.value = schedule
   isScheduleDetailModalOpen.value = true
 }
@@ -900,7 +804,7 @@ function handleQuickDutyChange(dutyTypeId: number | null) {
   const month = currentMonth.value
 
   // Move to next day immediately (stop at last day of month)
-  const lastDay = new Date(year, month, 0).getDate()
+  const lastDay = lastDayInMonth.value
   if (focusedDay.value < lastDay) {
     focusedDay.value++
   }
@@ -983,23 +887,6 @@ function handleDDayTogglePin(dday: LocalDDay) {
   togglePinnedDDay(dday)
 }
 
-// Get D-Day badge class based on calc value
-function getDDayBadgeClass(calc: number): string {
-  if (calc === 0) {
-    return 'dday-badge-today'
-  } else if (calc < 0) {
-    return 'dday-badge-past'
-  } else if (calc === 1) {
-    return 'dday-badge-upcoming-1'
-  } else if (calc === 2) {
-    return 'dday-badge-upcoming-2'
-  } else if (calc === 3) {
-    return 'dday-badge-upcoming-3'
-  } else {
-    return 'dday-badge-future'
-  }
-}
-
 async function handleDDaySave(dday: { id?: number; title: string; date: string; isPrivate: boolean }) {
   try {
     const saveDto: DDaySaveDto = {
@@ -1055,29 +942,6 @@ async function deleteDDay(dday: LocalDDay) {
     console.error('Failed to delete D-Day:', error)
     showError('D-Day 삭제에 실패했습니다.')
   }
-}
-
-// Calculate D-Day for calendar cell (Korean style: D-Day = 1st day, next day = D+2)
-function calcDDayForDay(day: CalendarDay) {
-  if (!pinnedDDay.value) return null
-  const [y, m, d] = pinnedDDay.value.date.split('-').map(Number) as [number, number, number]
-  const targetDate = new Date(y, m - 1, d)
-  const cellDate = new Date(day.year, day.month - 1, day.day)
-  const diffDays = Math.floor((cellDate.getTime() - targetDate.getTime()) / (1000 * 60 * 60 * 24))
-  if (diffDays === 0) return 'D-Day'
-  return diffDays < 0 ? `D${diffDays}` : `D+${diffDays + 1}`
-}
-
-// Get D-Days that fall on a specific day
-function getDDaysForDay(day: CalendarDay): LocalDDay[] {
-  return dDays.value.filter((dday) => {
-    const ddayDate = new Date(dday.date)
-    return (
-      ddayDate.getFullYear() === day.year &&
-      ddayDate.getMonth() + 1 === day.month &&
-      ddayDate.getDate() === day.day
-    )
-  })
 }
 
 // Todo handlers
@@ -1500,36 +1364,6 @@ async function handleChangeDutyType(dutyTypeId: number | null) {
   }
 }
 
-// Get schedule time display - show start time on first day, end time on last day
-function formatScheduleTime(schedule: Schedule) {
-  const start = new Date(schedule.startDateTime)
-  const end = new Date(schedule.endDateTime)
-  const startHour = start.getHours().toString().padStart(2, '0')
-  const startMin = start.getMinutes().toString().padStart(2, '0')
-  const endHour = end.getHours().toString().padStart(2, '0')
-  const endMin = end.getMinutes().toString().padStart(2, '0')
-
-  const isStartMidnight = startHour === '00' && startMin === '00'
-  const isEndMidnight = endHour === '00' && endMin === '00'
-  const isSameDateTime = start.getTime() === end.getTime()
-
-  const showStartTime = schedule.daysFromStart === 1 && !isStartMidnight
-  const showEndTime = schedule.daysFromStart === schedule.totalDays &&
-    !isEndMidnight &&
-    !(schedule.totalDays === 1 && isSameDateTime)
-
-  if (showStartTime && showEndTime) {
-    return `(${startHour}:${startMin}~${endHour}:${endMin})`
-  }
-  if (showStartTime) {
-    return `(${startHour}:${startMin})`
-  }
-  if (showEndTime) {
-    return `(~${endHour}:${endMin})`
-  }
-  return ''
-}
-
 // Batch update modal - update all days in current month to a single duty type
 async function showBatchUpdateModal() {
   if (!memberId.value || dutyTypes.value.length === 0) return
@@ -1646,412 +1480,88 @@ async function showExcelUploadModal() {
 
     <!-- Main Content -->
     <template v-else>
-    <!-- Header: Profile + Year-Month (centered) + Search -->
-    <div class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center mb-2 px-1 gap-1">
-      <!-- Left: Profile Photo + Name -->
-      <div class="flex items-center gap-1.5 min-w-0">
-        <!-- Profile Photo (smaller on mobile) -->
-        <ProfileAvatar :member-id="memberId" :has-profile-photo="memberHasProfilePhoto" :profile-photo-version="memberProfilePhotoVersion" size="lg" class="flex-shrink-0 sm:hidden" :name="memberName" />
-        <ProfileAvatar :member-id="memberId" :has-profile-photo="memberHasProfilePhoto" :profile-photo-version="memberProfilePhotoVersion" size="xl" class="flex-shrink-0 hidden sm:block" :name="memberName" />
-        <!-- Name -->
-        <span
-          class="text-xs sm:text-sm font-semibold truncate"
-          :style="{ color: 'var(--dp-text-primary)' }"
-        >{{ memberName }}</span>
-      </div>
+    <DutyHeaderControls
+      :member-id="memberId"
+      :member-name="memberName"
+      :member-has-profile-photo="memberHasProfilePhoto"
+      :member-profile-photo-version="memberProfilePhotoVersion"
+      :current-year="currentYear"
+      :current-month="currentMonth"
+      :can-search="canSearch"
+      v-model:searchQuery="searchQuery"
+      @prev-month="prevMonth"
+      @next-month="nextMonth"
+      @open-year-month-picker="isYearMonthPickerOpen = true"
+      @search="handleSearch()"
+      @open-search-modal="openSearchModal"
+    />
 
-      <!-- Center: Year-Month Navigation -->
-      <div class="flex items-center justify-center">
-        <button @click="prevMonth" class="calendar-nav-btn p-0.5 sm:p-2 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer">
-          <ChevronLeft class="w-5 h-5 sm:w-6 sm:h-6" />
-        </button>
-        <button
-          @click="isYearMonthPickerOpen = true"
-          class="calendar-nav-btn px-1 sm:px-3 py-1 text-lg sm:text-2xl font-semibold rounded whitespace-nowrap cursor-pointer"
-        >
-          {{ currentYear }}-{{ String(currentMonth).padStart(2, '0') }}
-        </button>
-        <button @click="nextMonth" class="calendar-nav-btn p-0.5 sm:p-2 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer">
-          <ChevronRight class="w-5 h-5 sm:w-6 sm:h-6" />
-        </button>
-      </div>
+    <DutyTodoRow
+      v-if="isMyCalendar"
+      :show-todo-todo="showTodoTodo"
+      :filtered-todos="filteredTodos"
+      @toggle-filter="toggleTodoFilter"
+      @open-todo-board="router.push('/todo')"
+      @add-todo="isTodoAddModalOpen = true"
+      @todo-click="handleTodoBubbleClick"
+    />
 
-      <!-- Right: Search -->
-      <div class="flex justify-end">
-        <div v-if="canSearch" class="flex items-stretch rounded-lg border overflow-hidden" :style="{ borderColor: 'var(--dp-border-secondary)' }">
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="검색"
-            @keyup.enter="handleSearch()"
-            class="px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none w-12 sm:w-20 border-none"
-            :style="{ backgroundColor: 'var(--dp-bg-input)', color: 'var(--dp-text-primary)' }"
-          />
-          <button
-            @click="searchQuery.trim() ? handleSearch() : openSearchModal()"
-            class="px-2 py-1.5 bg-gray-800 text-white hover:bg-gray-700 transition flex items-center justify-center cursor-pointer"
-          >
-            <Search class="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-    </div>
+    <DutyTypesBar
+      :batch-edit-mode="batchEditMode"
+      :duty-types="dutyTypes"
+      :duty-types-with-count="dutyTypesWithCount"
+      :is-loading-duties="isLoadingDuties"
+      :focused-day="focusedDay"
+      :focused-day-duty-type="focusedDayDutyType"
+      :last-day-in-month="lastDayInMonth"
+      :can-edit="canEdit"
+      :can-edit-my-calendar="canEditMyCalendar"
+      :other-duty-count="otherDutyCount"
+      :is-other-duty-active="isOtherDutyActive"
+      :team-has-duty-batch-template="teamHasDutyBatchTemplate"
+      @toggle-other-duties="handleToggleOtherDuties"
+      @show-batch-update-modal="showBatchUpdateModal"
+      @toggle-batch-edit="batchEditMode = $event"
+      @show-excel-upload-modal="showExcelUploadModal"
+      @quick-duty-change="handleQuickDutyChange"
+      @update:focusedDay="focusedDay = $event"
+    />
 
-    <!-- Todo row (only for my calendar) -->
-    <div v-if="isMyCalendar" class="flex items-center gap-2 mb-1.5 px-1">
-      <!-- Left: Todo Management Button + Add -->
-      <div class="flex-shrink-0 inline-flex">
-        <!-- Todo Management Button - navigates to /todo -->
-        <button
-          @click="router.push('/todo')"
-          class="todo-manage-btn h-7 px-2 flex items-center gap-1 transition-all duration-150 cursor-pointer rounded-l-lg border"
-          :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)' }"
-        >
-          <span class="text-xs font-medium" :style="{ color: 'var(--dp-text-secondary)' }">할일</span>
-          <ChevronRightSmall class="w-3 h-3" :style="{ color: 'var(--dp-text-muted)' }" />
-        </button>
-        <!-- Add Todo Button -->
-        <button
-          @click="isTodoAddModalOpen = true"
-          class="todo-btn-add h-7 px-2 flex items-center justify-center transition-all duration-150 cursor-pointer rounded-r-lg border border-l-0"
-          :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)', color: 'var(--dp-text-secondary)' }"
-          title="새 할일 추가"
-        >
-          <Plus class="todo-btn-add-icon w-4 h-4 transition-transform duration-200" />
-        </button>
-      </div>
-
-      <!-- Right: Todo Filter Icons + Items -->
-      <div class="flex-1 min-w-0 flex items-center gap-1.5">
-        <!-- TODO Filter Toggle -->
-        <button
-          @click="toggleTodoFilter()"
-          class="todo-filter-btn flex-shrink-0 h-7 w-7 flex items-center justify-center transition-all duration-150 cursor-pointer rounded-md"
-          :class="showTodoTodo ? 'todo-filter-btn-active-todo' : 'todo-filter-btn-inactive'"
-          title="할일 표시"
-        >
-          <ListTodo class="w-4 h-4" />
-        </button>
-        <!-- Filtered Todo Items -->
-        <div v-if="filteredTodos.length > 0" class="flex-1 min-w-0 overflow-x-auto scrollbar-hide">
-          <div class="flex gap-1.5">
-            <button
-              v-for="todo in filteredTodos"
-              :key="todo.id"
-              @click="handleTodoBubbleClick(todo)"
-              class="todo-item-bubble flex-shrink-0 max-w-[120px] sm:max-w-[160px] flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] sm:text-xs cursor-pointer transition-all duration-150 border"
-              :style="{
-                backgroundColor: todo.status === 'IN_PROGRESS' ? 'var(--dp-warning-bg)' : 'var(--dp-accent-bg)',
-                borderColor: todo.status === 'IN_PROGRESS' ? 'var(--dp-warning)' : 'var(--dp-accent)',
-                color: 'var(--dp-text-primary)'
-              }"
-            >
-              <span class="truncate">{{ todo.title }}</span>
-              <FileText v-if="todo.content || todo.hasAttachments" class="w-2.5 h-2.5 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Duty Types & Buttons -->
-    <div class="flex flex-wrap items-center justify-between gap-1 mb-1.5">
-      <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-        <!-- Edit mode: Clickable duty type buttons for quick input -->
-        <template v-if="batchEditMode && dutyTypes.length > 0">
-          <!-- Current focus indicator with navigation -->
-          <div class="flex items-center rounded-md border" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderColor: 'var(--dp-border-secondary)' }">
-            <button
-              @click="focusedDay = Math.max(1, (focusedDay || 1) - 1)"
-              :disabled="focusedDay === 1"
-              class="p-1 rounded-l-md transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-500/10"
-            >
-              <ChevronLeft class="w-4 h-4" :style="{ color: 'var(--dp-text-secondary)' }" />
-            </button>
-            <span class="px-1 text-xs sm:text-sm font-bold text-orange-500">{{ focusedDay }}일</span>
-            <button
-              @click="focusedDay = Math.min(new Date(currentYear, currentMonth, 0).getDate(), (focusedDay || 1) + 1)"
-              :disabled="focusedDay === new Date(currentYear, currentMonth, 0).getDate()"
-              class="p-1 rounded-r-md transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-500/10"
-            >
-              <ChevronRight class="w-4 h-4" :style="{ color: 'var(--dp-text-secondary)' }" />
-            </button>
-          </div>
-          <button
-            v-for="dutyType in dutyTypes"
-            :key="dutyType.id ?? 'off'"
-            @click="handleQuickDutyChange(dutyType.id)"
-            class="duty-quick-btn"
-            :class="{ 'duty-quick-btn-active': focusedDayDuty?.dutyType === dutyType.name || (!focusedDayDuty?.dutyType && dutyType.id === null) }"
-            :style="{
-              '--duty-color': dutyType.color || '#6c757d',
-              '--duty-text': isLightColor(dutyType.color) ? '#000' : '#fff'
-            } as any"
-          >
-            <span class="duty-quick-btn-inner">
-              {{ dutyType.name }}
-            </span>
-          </button>
-        </template>
-
-        <!-- Normal mode: Duty type badges with counts -->
-        <template v-else-if="dutyTypesWithCount.length > 0">
-          <div v-for="dutyType in dutyTypesWithCount" :key="dutyType.name" class="flex items-center gap-1">
-            <span
-              class="w-4 h-4 rounded border-2"
-              :style="{ backgroundColor: dutyType.color || '#6c757d', borderColor: 'var(--dp-border-primary)' }"
-            ></span>
-            <span class="text-xs sm:text-sm" :style="{ color: 'var(--dp-text-secondary)' }">{{ dutyType.name }}</span>
-            <span class="text-xs sm:text-sm font-bold" :style="{ color: 'var(--dp-text-primary)' }">{{ dutyType.cnt }}</span>
-          </div>
-        </template>
-        <span v-else-if="isLoadingDuties" class="text-sm" :style="{ color: 'var(--dp-text-muted)' }">
-          <Loader2 class="w-4 h-4 animate-spin inline mr-1" />
-          로딩 중...
-        </span>
-        <span v-else class="text-sm" :style="{ color: 'var(--dp-text-muted)' }">
-          근무 타입 정보 없음
-        </span>
-      </div>
-      <div class="inline-flex rounded-lg border overflow-hidden ml-auto" :style="{ borderColor: 'var(--dp-border-secondary)' }">
-        <button
-          v-if="!batchEditMode"
-          @click="handleToggleOtherDuties"
-          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1 border-r cursor-pointer"
-          :style="{ borderColor: 'var(--dp-border-secondary)' }"
-          :class="(selectedFriendIds.length > 0 || showMyDuties) ? 'bg-blue-50/70 text-blue-700 hover:bg-blue-50' : 'hover:bg-gray-500/10 dark:hover:bg-gray-400/10'"
-        >
-          <Users class="w-4 h-4" />
-          <span class="hidden xs:inline">함께보기</span>
-          <span v-if="selectedFriendIds.length > 0 || showMyDuties" class="text-xs">
-            ({{ selectedFriendIds.length + (showMyDuties ? 1 : 0) }})
-          </span>
-        </button>
-        <button
-          v-if="canEdit && isMyCalendar && batchEditMode"
-          @click="showBatchUpdateModal"
-          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 border-r cursor-pointer hover:bg-gray-500/10 dark:hover:bg-gray-400/10"
-          :style="{ borderColor: 'var(--dp-border-secondary)' }"
-        >
-          일괄수정
-        </button>
-        <button
-          v-if="canEdit"
-          @click="batchEditMode = !batchEditMode"
-          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 border-r last:border-r-0 cursor-pointer"
-          :style="{ borderColor: 'var(--dp-border-secondary)' }"
-          :class="batchEditMode ? 'bg-orange-50/70 text-orange-700 hover:bg-orange-50' : 'hover:bg-gray-500/10 dark:hover:bg-gray-400/10'"
-        >
-          편집모드
-        </button>
-        <button
-          v-if="canEdit && isMyCalendar && team?.dutyBatchTemplate && !batchEditMode"
-          @click="showExcelUploadModal"
-          class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1 cursor-pointer hover:bg-gray-500/10 dark:hover:bg-gray-400/10"
-        >
-          <FileSpreadsheet class="w-4 h-4" />
-          <span class="hidden sm:inline">엑셀</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Calendar Grid -->
-    <CalendarGrid
+    <DutyCalendarContent
       :days="calendarDays"
       :current-year="currentYear"
       :current-month="currentMonth"
-      :holidays="batchEditMode ? [] : holidaysByDays"
-      :get-duty-color="getDutyColorForDay"
+      :holidays="holidaysByDays"
+      :get-duty-color-for-day="getDutyColorForDay"
       :highlight-day="searchDay"
-      :focused-day="batchEditMode && focusedDay ? { year: currentYear, month: currentMonth, day: focusedDay } : null"
-      :clickable="canEdit"
+      :batch-edit-mode="batchEditMode"
+      :focused-day="focusedDay"
+      :can-edit="canEdit"
+      :duties="duties"
+      :duty-types="dutyTypes"
+      :other-duties="otherDuties"
+      :schedules-by-days="schedulesByDays"
+      :d-days="dDays"
+      :pinned-d-day="pinnedDDay"
+      :todos-due-by-days="todosDueByDays"
+      :is-my-calendar="isMyCalendar"
+      :member-id="memberId"
       @day-click="handleDayClick"
-    >
-      <!-- D-Day indicator in header -->
-      <template #day-header="{ day, index }">
-        <span
-          v-if="pinnedDDay && !batchEditMode"
-          class="text-[9px] sm:text-xs"
-          :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? 'var(--dp-text-muted)' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }"
-        >
-          {{ calcDDayForDay(day) }}
-        </span>
-      </template>
-
-      <!-- Day content slot -->
-      <template #day-content="{ day, index }">
-        <!-- Batch Edit Mode: Duty Type Buttons (hidden on mobile, use top bar instead) -->
-        <div v-if="batchEditMode && day.isCurrentMonth" class="mt-1 hidden sm:grid grid-cols-2 gap-0.5">
-          <button
-            v-for="dutyType in dutyTypes"
-            :key="dutyType.id ?? 'off'"
-            @click.stop="handleBatchDutyChange(day, dutyType.id)"
-            class="text-[10px] sm:text-xs px-1 py-1 rounded border transition-all min-h-[22px] sm:min-h-[26px] cursor-pointer"
-            :class="{
-              'ring-2 ring-gray-800 font-bold shadow-sm':
-                (duties[index]?.dutyType === dutyType.name) ||
-                (!duties[index]?.dutyType && dutyType.id === null),
-              'hover:opacity-80': true,
-            }"
-            :style="{
-              backgroundColor: dutyType.color || '#6c757d',
-              color: isLightColor(dutyType.color) ? '#000' : '#fff',
-              borderColor: dutyType.color || '#6c757d',
-            }"
-          >
-            <span class="sm:hidden">{{ dutyType.name.charAt(0) }}</span>
-            <span class="hidden sm:inline">{{ dutyType.name.length > 4 ? dutyType.name.substring(0, 4) : dutyType.name }}</span>
-          </button>
-        </div>
-
-        <div v-if="!batchEditMode" class="mt-0.5">
-          <!-- Other duties -->
-          <div v-if="otherDuties.length > 0" class="flex flex-wrap justify-center gap-1 mb-1">
-            <div
-              v-for="otherDuty in otherDuties"
-              :key="otherDuty.memberId"
-              class="text-[10px] sm:text-sm px-1.5 py-0.5 rounded-full border border-white/50"
-              :style="{
-                backgroundColor: otherDuty.duties[index]?.dutyColor || '#6c757d',
-                color: isLightColor(otherDuty.duties[index]?.dutyColor) ? '#000' : '#fff',
-              }"
-            >
-              {{ otherDuty.memberName }}<template v-if="otherDuty.duties[index]?.dutyType">:{{ otherDuty.duties[index].dutyType.slice(0, 4) }}</template>
-            </div>
-          </div>
-
-          <!-- D-Days -->
-          <div
-            v-for="dday in getDDaysForDay(day)"
-            :key="dday.id"
-            class="text-[10px] sm:text-sm leading-snug px-0.5 break-words"
-            :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? '#1f2937' : '#ffffff') : 'var(--dp-text-primary)' }"
-          ><CalendarCheck class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" />{{ dday.title }}</div>
-
-          <!-- Schedules -->
-          <div
-            v-for="schedule in schedulesByDays[index]?.slice(0, 3)"
-            :key="schedule.id"
-            class="text-[10px] sm:text-sm leading-snug px-0.5 border-t-2 border-dashed break-words"
-            :class="{ 'cursor-pointer hover:underline': !canEdit && (schedule.description || schedule.attachments?.length) }"
-            :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? '#1f2937' : '#ffffff') : 'var(--dp-text-primary)', borderColor: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.3)') : 'var(--dp-border-primary)' }"
-            @click="!canEdit && (schedule.description || schedule.attachments?.length) ? handleScheduleClick(schedule, $event) : null"
-          ><Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? 'var(--dp-text-muted)' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }" />{{ schedule.contentWithoutTime || schedule.content }}{{ formatScheduleTime(schedule) }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
-              v-if="schedule.description || schedule.attachments?.length"
-              class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px] ml-0.5"
-              :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? '#000000' : '#ffffff') : 'var(--dp-text-primary)' }"
-            />
-            <!-- Tags display -->
-            <div v-if="schedule.tags?.length || schedule.isTagged" class="flex flex-wrap gap-0.5 justify-end">
-              <span
-                v-for="tag in schedule.tags?.filter(t => t.id !== memberId)"
-                :key="tag.id"
-                class="schedule-tag"
-              >{{ tag.name }}</span>
-              <span
-                v-if="schedule.isTagged"
-                class="schedule-tag"
-              ><span class="text-[6px] sm:text-[10px]">by</span> {{ schedule.owner }}</span>
-            </div>
-          </div>
-          <div
-            v-if="(schedulesByDays[index]?.length ?? 0) > 3"
-            class="text-[10px] font-medium"
-            :style="{ color: duties[index]?.dutyColor ? (isLightColor(duties[index]?.dutyColor) ? 'var(--dp-text-muted)' : 'rgba(255,255,255,0.8)') : 'var(--dp-text-muted)' }"
-          >
-            +{{ (schedulesByDays[index]?.length ?? 0) - 3 }}
-          </div>
-
-          <!-- Due Todos (마감일 할일) - 내 달력에서만 표시 -->
-          <template v-if="isMyCalendar && todosDueByDays[index]?.length">
-            <div
-              v-for="todo in todosDueByDays[index].slice(0, 2)"
-              :key="'due-' + todo.id"
-              @click.stop="handleTodoBubbleClick(todo)"
-              class="todo-due-bubble text-[10px] sm:text-xs leading-snug px-1 py-0.5 rounded cursor-pointer truncate mt-0.5"
-              :class="todo.status === 'IN_PROGRESS' ? 'todo-due-progress' : 'todo-due-todo'"
-            >
-              <CheckSquare class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px]" />
-              {{ todo.title }}
-            </div>
-            <div
-              v-if="todosDueByDays[index].length > 2"
-              class="text-[10px] font-medium"
-              :style="{ color: 'var(--dp-text-muted)' }"
-            >
-              +{{ todosDueByDays[index].length - 2 }}
-            </div>
-          </template>
-        </div>
-      </template>
-    </CalendarGrid>
+      @batch-duty-change="handleBatchDutyChange"
+      @schedule-click="handleScheduleClick"
+      @todo-click="handleTodoBubbleClick"
+    />
 
     <!-- D-Day List (hidden in edit mode) -->
-    <div v-if="!batchEditMode" class="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
-      <div
-        v-for="dday in dDays"
-        :key="dday.id"
-        class="relative overflow-hidden rounded-xl sm:rounded-2xl cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-lg border"
-        :class="[
-          pinnedDDay?.id === dday.id
-            ? 'ring-2 ring-amber-400 shadow-md'
-            : 'shadow-sm',
-          dday.calc <= 0
-            ? 'dday-card-past'
-            : 'dday-card-future'
-        ]"
-        @click="openDDayDetail(dday)"
-      >
-        <div class="p-2.5 sm:p-4">
-          <!-- D-Day badge and pin star -->
-          <div class="flex justify-between items-start mb-2 sm:mb-3">
-            <div
-              class="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold shadow-sm"
-              :class="getDDayBadgeClass(dday.calc)"
-            >
-              {{ dday.dDayText }}
-            </div>
-            <!-- Pin star -->
-            <button
-              @click.stop="togglePinnedDDay(dday)"
-              class="p-1 sm:p-1.5 rounded-full transition hover:scale-110 cursor-pointer"
-              :class="pinnedDDay?.id === dday.id ? 'hover:bg-amber-100' : 'hover:bg-gray-100'"
-              :title="pinnedDDay?.id === dday.id ? '고정 해제' : '캘린더에 고정'"
-            >
-              <Star
-                class="w-4 h-4 sm:w-5 sm:h-5 transition-colors"
-                :class="pinnedDDay?.id === dday.id ? 'text-amber-500 fill-amber-500' : 'text-gray-300 hover:text-amber-400'"
-              />
-            </button>
-          </div>
-
-          <!-- Title -->
-          <p class="text-sm sm:text-base font-medium mb-1 sm:mb-2 flex items-start gap-1 sm:gap-1.5" :style="{ color: 'var(--dp-text-primary)' }">
-            <Lock v-if="dday.isPrivate" class="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 mt-0.5" :style="{ color: 'var(--dp-text-muted)' }" />
-            <span class="line-clamp-2">{{ dday.title }}</span>
-          </p>
-
-          <!-- Date -->
-          <p class="text-xs sm:text-sm flex items-center gap-1" :style="{ color: 'var(--dp-text-muted)' }">
-            <CalendarCheck class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            {{ dday.date }}
-          </p>
-        </div>
-      </div>
-
-      <!-- Add D-Day Button (only for my calendar) -->
-      <div
-        v-if="isMyCalendar"
-        @click="openDDayModal()"
-        class="rounded-xl sm:rounded-2xl border-2 border-dashed cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-all duration-300 flex flex-col items-center justify-center min-h-[100px] sm:min-h-[120px] group"
-        :style="{ borderColor: 'var(--dp-border-secondary)' }"
-      >
-        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full group-hover:bg-blue-100 flex items-center justify-center mb-1.5 sm:mb-2 transition-colors" :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }">
-          <Plus class="w-5 h-5 sm:w-6 sm:h-6 group-hover:text-blue-500 transition-colors" :style="{ color: 'var(--dp-text-muted)' }" />
-        </div>
-        <span class="text-xs sm:text-sm group-hover:text-blue-600 transition-colors font-medium" :style="{ color: 'var(--dp-text-muted)' }">디데이 추가</span>
-      </div>
-    </div>
+    <DDayList
+      v-if="!batchEditMode"
+      :d-days="dDays"
+      :pinned-d-day-id="pinnedDDay?.id ?? null"
+      :is-my-calendar="isMyCalendar"
+      @open-detail="openDDayDetail"
+      @toggle-pin="togglePinnedDDay"
+      @add="openDDayModal()"
+    />
 
     <!-- Modals -->
     <DayDetailModal

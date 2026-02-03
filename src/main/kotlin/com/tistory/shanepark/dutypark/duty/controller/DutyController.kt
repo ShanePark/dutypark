@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.duty.controller
 
-import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyBatchUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
@@ -17,7 +16,6 @@ import org.springframework.web.bind.annotation.*
 class DutyController(
     private val dutyService: DutyService,
 ) {
-    private val log = logger()
 
     @GetMapping
     fun getDuties(
@@ -56,7 +54,6 @@ class DutyController(
     ): ResponseEntity<Boolean> {
         checkAuthentication(loginMember, dutyUpdateDto.memberId)
         dutyService.update(dutyUpdateDto)
-        log.info("$loginMember update duty: $dutyUpdateDto")
         return ResponseEntity.ok(true)
     }
 
@@ -67,7 +64,6 @@ class DutyController(
     ): ResponseEntity<Boolean> {
         checkAuthentication(loginMember, dutyBatchUpdateDto.memberId)
         dutyService.update(dutyBatchUpdateDto)
-        log.info("$loginMember update duty batch: $dutyBatchUpdateDto")
         return ResponseEntity.ok(true)
     }
 
@@ -75,7 +71,6 @@ class DutyController(
         loginMember: LoginMember, dutyMemberId: Long
     ) {
         if (!dutyService.canEdit(loginMember, dutyMemberId)) {
-            log.warn("login member and request duty member does not match: login:$loginMember.id, dutyMemberId:${dutyMemberId}")
             throw AuthException("login member doesn't have permission to edit duty")
         }
     }

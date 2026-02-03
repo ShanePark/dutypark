@@ -28,7 +28,7 @@ class TeamManageDutyTypeController(
     ) {
         checkCanManage(login = loginMember, teamId = dutyTypeCreateDto.teamId)
         dutyTypeService.addDutyType(dutyTypeCreateDto)
-        log.info("DutyType $dutyTypeCreateDto created by $loginMember")
+        log.info("DutyType created: teamId={}, name={}, by={}", dutyTypeCreateDto.teamId, dutyTypeCreateDto.name, loginMember.id)
     }
 
     @PatchMapping("/{teamId}/duty-types")
@@ -41,7 +41,7 @@ class TeamManageDutyTypeController(
         val dutyType = dutyTypeService.findById(dutyTypeUpdateDto.id)
         checkCanManage(login = loginMember, teamId = dutyType.teamId)
         dutyTypeService.update(dutyTypeUpdateDto)
-        log.info("DutyType $dutyTypeUpdateDto updated by $loginMember")
+        log.info("DutyType updated: id={}, by={}", dutyTypeUpdateDto.id, loginMember.id)
     }
 
     @PatchMapping("/{teamId}/duty-types/swap-position")
@@ -67,7 +67,7 @@ class TeamManageDutyTypeController(
         val dutyType = dutyTypeService.findById(id)
         checkCanManage(login = loginMember, teamId = dutyType.teamId)
         dutyTypeService.delete(id)
-        log.info("DutyType $dutyType deleted by $loginMember")
+        log.info("DutyType deleted: id={}, by={}", id, loginMember.id)
     }
 
     private fun checkCanManage(login: LoginMember, teamId: Long) {

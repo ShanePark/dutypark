@@ -39,9 +39,9 @@ class ScheduleTimeParsingQueueManager(
             "${geminiApiKey.take(4)}...${geminiApiKey.takeLast(4)}"
         else
             "****"
-        log.info("GeminiKey: $maskedKey")
+        log.info("GeminiKey: {}", maskedKey)
         if (geminiApiKey.isBlank() || geminiApiKey == "EMPTY") {
-            log.info("do not add AI task as Gemini API key is not configured")
+            log.info("AI time parsing disabled: Gemini API key is not configured")
             doTask = false
             return
         }
@@ -49,7 +49,7 @@ class ScheduleTimeParsingQueueManager(
         val allWaitJobs = scheduleRepository.findAllByParsingTimeStatus(WAIT)
         allWaitJobs.forEach { schedule -> addTask(schedule) }
         if (allWaitJobs.isNotEmpty())
-            log.info("${allWaitJobs.size} pending schedules are added to the queue.")
+            log.info("Pending schedules added to queue: count={}", allWaitJobs.size)
 
     }
 
@@ -77,7 +77,7 @@ class ScheduleTimeParsingQueueManager(
     private fun run() {
         while (queue.isNotEmpty()) {
             while (shouldWait()) {
-                log.info("Waiting for API rate limit...")
+                log.info("Waiting for AI API rate limit (RPM/RPD check)")
                 TimeUnit.MINUTES.sleep(1)
             }
 

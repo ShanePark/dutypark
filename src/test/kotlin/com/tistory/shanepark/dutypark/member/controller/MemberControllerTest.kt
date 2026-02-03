@@ -15,6 +15,7 @@ import org.springframework.restdocs.payload.PayloadDocumentation.requestFields
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.imageio.ImageIO
@@ -103,6 +104,60 @@ class MemberControllerTest : RestDocsTest() {
         memberRepository.save(member)
 
         // When & Then
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/members/${member.id}/profile-photo")
+        )
+            .andExpect(status().isNotFound)
+    }
+
+    @Test
+    fun `updateCalendarVisibility fails for other member`() {
+        val member = TestData.member
+        val other = TestData.member2
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/members/${other.id}/visibility")
+                .accept("application/json")
+                .contentType("application/json")
+                .content("{\"visibility\": \"PRIVATE\"}")
+                .withAuth(member)
+        )
+            .andExpect(status().isBadRequest)
+    }
+
+    @Test
+    fun `createAuxiliaryAccount returns 400 when name missing`() {
+        val member = TestData.member
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/members/auxiliary")
+                .accept("application/json")
+                .contentType("application/json")
+                .content("{}")
+                .withAuth(member)
+        )
+            .andExpect(status().isBadRequest)
+    }
+
+    @Test
+    fun `amIManager returns false when not logged in`() {
+        val member = TestData.member
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/members/${member.id}/canManage")
+        )
+            .andExpect(status().isOk)
+            .andExpect(content().string("false"))
+    }
+
+    @Test
+    fun `getProfilePhoto returns 404 when file is missing`() {
+        val member = TestData.member
+        val missingPath = storagePathResolver.getStorageRoot().resolve("PROFILE/${member.id}/missing.png")
+        member.profilePhotoPath = "PROFILE/${member.id}/missing.png"
+        memberRepository.save(member)
+        createdDirectories.add(missingPath.parent)
+
         mockMvc.perform(
             RestDocumentationRequestBuilders.get("/api/members/${member.id}/profile-photo")
         )

@@ -16,11 +16,14 @@ import org.springframework.restdocs.request.RequestDocumentation.queryParameters
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.time.LocalDate
 
 class TodoControllerTest : RestDocsTest() {
 
     @Autowired
     lateinit var todoRepository: TodoRepository
+
+    private val fixedDate = LocalDate.of(2025, 1, 15)
 
     @Test
     fun `todoList test`() {
@@ -745,7 +748,7 @@ class TodoControllerTest : RestDocsTest() {
                 content = "Content",
                 position = 0,
                 status = TodoStatus.TODO
-            ).apply { dueDate = java.time.LocalDate.now().minusDays(1) }
+            ).apply { dueDate = fixedDate.minusDays(1) }
         )
 
         // Then

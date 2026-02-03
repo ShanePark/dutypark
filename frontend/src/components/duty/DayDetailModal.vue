@@ -1,28 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onUnmounted, toRef } from 'vue'
-import Sortable from 'sortablejs'
-import {
-  X,
-  Plus,
-  Trash2,
-  Pencil,
-  GripVertical,
-  Paperclip,
-  Lock,
-  User,
-  UserPlus,
-  Check,
-} from 'lucide-vue-next'
-import FileUploader from '@/components/common/FileUploader.vue'
-import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
-import CharacterCounter from '@/components/common/CharacterCounter.vue'
+import { ref, computed, watch, nextTick, toRef } from 'vue'
+import { X, Plus } from 'lucide-vue-next'
+import ScheduleList from '@/components/duty/ScheduleList.vue'
+import ScheduleForm from '@/components/duty/ScheduleForm.vue'
+import UntagConfirmModal from '@/components/duty/UntagConfirmModal.vue'
 import type { NormalizedAttachment } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEscapeKey } from '@/composables/useEscapeKey'
-import { getVisibilityIcon, getVisibilityLabel, VISIBILITY_ICONS, VISIBILITY_COLORS, type CalendarVisibility } from '@/utils/visibility'
-import { extractDatePart } from '@/utils/date'
+import { VISIBILITY_ICONS, VISIBILITY_COLORS, type CalendarVisibility } from '@/utils/visibility'
 
 const { showWarning, showError } = useSwal()
 
@@ -104,12 +91,9 @@ useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 const isCreateMode = ref(false)
 const isEditMode = ref(false)
 const editingScheduleId = ref<string | null>(null)
-const fileUploaderRef = ref<InstanceType<typeof FileUploader> | null>(null)
+const scheduleFormRef = ref<InstanceType<typeof ScheduleForm> | null>(null)
 const isUploading = ref(false)
-const scheduleListRef = ref<HTMLElement | null>(null)
 const contentRef = ref<HTMLElement | null>(null)
-const isDragging = ref(false)
-let sortableInstance: Sortable | null = null
 
 // Local duty state for immediate UI feedback
 const selectedDutyType = ref<string | null>(null)
@@ -132,14 +116,12 @@ function handleDutyTypeChange(dutyTypeId: number | null, dutyTypeName: string) {
 const newSchedule = ref({
   content: '',
   description: '',
-  startDate: '',
-  startTime: '00:00',
+  startDateTime: '',
   endDateTime: '',
   visibility: 'FAMILY' as 'PUBLIC' | 'FRIENDS' | 'FAMILY' | 'PRIVATE',
 })
 const editAttachments = ref<NormalizedAttachment[]>([])
 
-const taggingScheduleId = ref<string | null>(null)
 const untagConfirmScheduleId = ref<string | null>(null)
 
 function openUntagConfirmModal(scheduleId: string) {
@@ -196,44 +178,6 @@ const visibilityOptions = computed(() => [
   },
 ])
 
-const hasDraggableSchedules = computed(() => {
-  return props.canEdit && props.schedules.filter(s => !s.isTagged).length > 1
-})
-
-function initSortable() {
-  if (!scheduleListRef.value || !props.canEdit) return
-  destroySortable()
-  if (!hasDraggableSchedules.value) return
-
-  sortableInstance = new Sortable(scheduleListRef.value, {
-    animation: 150,
-    handle: '.schedule-drag-handle',
-    draggable: '.schedule-item:not(.schedule-tagged)',
-    ghostClass: 'schedule-ghost',
-    chosenClass: 'schedule-chosen',
-    dragClass: 'schedule-dragging',
-    onStart: () => {
-      isDragging.value = true
-    },
-    onEnd: () => {
-      isDragging.value = false
-      const items = scheduleListRef.value?.querySelectorAll('.schedule-item:not(.schedule-tagged)')
-      if (!items) return
-      const ids = Array.from(items).map(el => el.getAttribute('data-schedule-id')).filter(Boolean) as string[]
-      if (ids.length > 0) {
-        emit('reorderSchedules', ids)
-      }
-    },
-  })
-}
-
-function destroySortable() {
-  if (sortableInstance) {
-    sortableInstance.destroy()
-    sortableInstance = null
-  }
-}
-
 watch(
   () => props.isOpen,
   (open) => {
@@ -243,36 +187,21 @@ watch(
       editingScheduleId.value = null
       editAttachments.value = []
       const { year, month, day } = props.date
-      newSchedule.value.startDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-      newSchedule.value.endDateTime = `${newSchedule.value.startDate}T00:00`
-      nextTick(() => initSortable())
+      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      newSchedule.value.startDateTime = `${dateStr}T00:00`
+      newSchedule.value.endDateTime = `${dateStr}T00:00`
     } else {
       // Cleanup when modal closes
-      fileUploaderRef.value?.cleanup()
-      destroySortable()
+      scheduleFormRef.value?.cleanup()
     }
   }
 )
 
+// Auto-adjust endDateTime when startDateTime changes
 watch(
-  () => props.schedules,
-  () => {
-    if (props.isOpen && !isCreateMode.value && !isEditMode.value) {
-      nextTick(() => initSortable())
-    }
-  }
-)
-
-onUnmounted(() => {
-  destroySortable()
-})
-
-// Auto-adjust endDateTime when startTime changes
-watch(
-  () => [newSchedule.value.startDate, newSchedule.value.startTime],
-  ([startDate, startTime]) => {
-    if (!startDate || !startTime) return
-    const startDateTime = `${startDate}T${startTime}`
+  () => newSchedule.value.startDateTime,
+  (startDateTime) => {
+    if (!startDateTime) return
     const endDateTime = newSchedule.value.endDateTime
     if (endDateTime && endDateTime < startDateTime) {
       newSchedule.value.endDateTime = startDateTime
@@ -286,12 +215,12 @@ function startCreateMode() {
   editingScheduleId.value = null
   editAttachments.value = []
   const { year, month, day } = props.date
+  const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
   newSchedule.value = {
     content: '',
     description: '',
-    startDate: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
-    startTime: '00:00',
-    endDateTime: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00`,
+    startDateTime: `${dateStr}T00:00`,
+    endDateTime: `${dateStr}T00:00`,
     visibility: 'FAMILY',
   }
   // Scroll to top when entering create mode
@@ -310,12 +239,14 @@ function startEditMode(schedule: Schedule) {
   const start = new Date(schedule.startDateTime)
   const end = new Date(schedule.endDateTime)
 
+  const formatDateTime = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+
   newSchedule.value = {
     content: schedule.content,
     description: schedule.description || '',
-    startDate: extractDatePart(schedule.startDateTime),
-    startTime: `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`,
-    endDateTime: `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}T${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`,
+    startDateTime: formatDateTime(start),
+    endDateTime: formatDateTime(end),
     visibility: schedule.visibility,
   }
 
@@ -349,18 +280,22 @@ function cancelEdit() {
   isEditMode.value = false
   editingScheduleId.value = null
   editAttachments.value = []
-  fileUploaderRef.value?.cleanup()
+  scheduleFormRef.value?.cleanup()
 }
 
 function buildScheduleData(): ScheduleSaveData {
   const { year, month, day } = props.date
-  const startDateTime = `${newSchedule.value.startDate}T${newSchedule.value.startTime}:00`
+  const defaultDateTime = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00`
+
+  const startDateTime = newSchedule.value.startDateTime
+    ? `${newSchedule.value.startDateTime}:00`
+    : defaultDateTime
   const endDateTime = newSchedule.value.endDateTime
     ? `${newSchedule.value.endDateTime}:00`
-    : `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00`
+    : defaultDateTime
 
-  const sessionId = fileUploaderRef.value?.getSessionId() || null
-  const attachments = fileUploaderRef.value?.getAttachments() || []
+  const sessionId = scheduleFormRef.value?.getSessionId() || null
+  const attachments = scheduleFormRef.value?.getAttachments() || []
   const orderedIds = attachments.map((a) => a.id)
 
   return {
@@ -381,7 +316,7 @@ function saveSchedule() {
   }
 
   // Check if upload is in progress
-  if (fileUploaderRef.value?.isUploading()) {
+  if (scheduleFormRef.value?.isUploading()) {
     showWarning('파일 업로드가 진행 중입니다. 잠시 후 다시 시도해주세요.')
     return
   }
@@ -410,53 +345,6 @@ function handleUploadComplete() {
 
 function handleUploadError(message: string) {
   showError(message)
-}
-
-function formatScheduleTime(schedule: Schedule) {
-  const start = new Date(schedule.startDateTime)
-  const end = new Date(schedule.endDateTime)
-  const startTime = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`
-  const endTime = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`
-
-  if (startTime === '00:00' && endTime === '00:00') {
-    return ''
-  }
-  if (startTime !== '00:00' && endTime === '00:00') {
-    return `(${startTime})`
-  }
-  return `(${startTime}~${endTime})`
-}
-
-function openTagPanel(scheduleId: string) {
-  taggingScheduleId.value = scheduleId
-}
-
-function closeTagPanel() {
-  taggingScheduleId.value = null
-}
-
-function getUntaggedFriends(schedule: Schedule) {
-  const taggedIds = new Set(schedule.tags?.map((t) => t.id) || [])
-  return props.friends.filter((f) => !taggedIds.has(f.id))
-}
-
-function toNormalizedAttachments(attachments: Schedule['attachments']): NormalizedAttachment[] {
-  if (!attachments) return []
-  return attachments.map((a) =>
-    normalizeAttachment({
-      id: a.id,
-      contextType: 'SCHEDULE',
-      contextId: '',
-      originalFilename: a.originalFilename,
-      contentType: a.contentType,
-      size: a.size,
-      hasThumbnail: a.hasThumbnail,
-      thumbnailUrl: a.thumbnailUrl || null,
-      orderIndex: 0,
-      createdAt: '',
-      createdBy: 0,
-    })
-  )
 }
 </script>
 
@@ -516,331 +404,33 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
         <!-- Content -->
         <div ref="contentRef" class="p-3 sm:p-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
 
-          <!-- Schedules List (hidden during create/edit mode) -->
-          <div v-if="!isCreateMode && !isEditMode" class="space-y-3">
-            <div v-if="schedules.length === 0" class="text-center py-6" :style="{ color: 'var(--dp-text-muted)' }">
-              등록된 일정이 없습니다.
-            </div>
-
-            <div ref="scheduleListRef" :class="['space-y-2', { 'is-dragging': isDragging }]">
-              <div
-                v-for="(schedule, idx) in schedules"
-                :key="schedule.id"
-                :data-schedule-id="schedule.id"
-                :class="[
-                  'schedule-item rounded-lg p-3 transition',
-                  { 'schedule-tagged': schedule.isTagged }
-                ]"
-                :style="{
-                  border: '1px solid var(--dp-border-primary)',
-                  backgroundColor: 'var(--dp-bg-card)'
-                }"
-              >
-                <div class="flex items-start justify-between">
-                  <div
-                    v-if="hasDraggableSchedules && canEdit && !schedule.isTagged"
-                    class="schedule-drag-handle flex items-center pr-2 cursor-grab"
-                    :style="{ color: 'var(--dp-text-muted)' }"
-                    title="드래그하여 순서 변경"
-                  >
-                    <GripVertical class="w-5 h-5" />
-                  </div>
-                  <div class="flex-1">
-                    <div class="flex items-center gap-2 flex-wrap">
-                    <Lock
-                      v-if="schedule.visibility === 'PRIVATE'"
-                      class="w-4 h-4"
-                      :style="{ color: 'var(--dp-text-muted)' }"
-                      :title="getVisibilityLabel(schedule.visibility)"
-                    />
-                    <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ schedule.content }}<template v-if="schedule.totalDays && schedule.totalDays > 1"> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template></span>
-                    <span v-if="formatScheduleTime(schedule)" class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
-                      {{ formatScheduleTime(schedule) }}
-                    </span>
-                    <component
-                      v-if="schedule.visibility !== 'PRIVATE'"
-                      :is="getVisibilityIcon(schedule.visibility)"
-                      class="w-4 h-4"
-                      :style="{ color: 'var(--dp-text-muted)' }"
-                      :title="getVisibilityLabel(schedule.visibility)"
-                    />
-                    <span
-                      v-if="schedule.attachments?.length"
-                      class="flex items-center gap-1 text-sm"
-                      :style="{ color: 'var(--dp-text-muted)' }"
-                    >
-                      <Paperclip class="w-3 h-3" />
-                      {{ schedule.attachments.length }}
-                    </span>
-                  </div>
-
-                  <!-- Tags Section (only shown on own calendar) -->
-                  <div
-                    v-if="isMyCalendar && schedule.isMine && canEdit && (schedule.tags?.length || friends.length > 0)"
-                    class="mt-2"
-                  >
-                    <div class="flex items-center gap-1.5 flex-wrap">
-                      <!-- Existing tags -->
-                      <span
-                        v-for="tag in schedule.tags"
-                        :key="tag.id"
-                        class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full"
-                      >
-                        {{ tag.name }}
-                        <button
-                          @click.stop="emit('removeTag', schedule.id, tag.id)"
-                          class="p-0.5 hover:bg-blue-200 rounded-full transition cursor-pointer"
-                          title="태그 삭제"
-                        >
-                          <X class="w-3 h-3" />
-                        </button>
-                      </span>
-
-                      <!-- Add tag button -->
-                      <button
-                        v-if="friends.length > 0"
-                        @click.stop="openTagPanel(schedule.id)"
-                        class="inline-flex items-center gap-1 px-2 py-0.5 border border-dashed text-xs rounded-full hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition cursor-pointer"
-                        :class="{ 'border-blue-400 text-blue-500 bg-blue-50': taggingScheduleId === schedule.id }"
-                        :style="{
-                          borderColor: taggingScheduleId === schedule.id ? undefined : 'var(--dp-border-secondary)',
-                          color: taggingScheduleId === schedule.id ? undefined : 'var(--dp-text-secondary)'
-                        }"
-                        title="친구 태그"
-                      >
-                        <UserPlus class="w-3 h-3" />
-                        <span>태그</span>
-                      </button>
-                    </div>
-
-                    <!-- Inline tag selection (expanded below the button) -->
-                    <div
-                      v-if="taggingScheduleId === schedule.id && getUntaggedFriends(schedule).length > 0"
-                      class="mt-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg"
-                    >
-                      <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-medium text-blue-700">친구 선택</span>
-                        <button
-                          @click.stop="closeTagPanel"
-                          class="p-0.5 hover:bg-blue-100 rounded transition cursor-pointer"
-                        >
-                          <X class="w-3.5 h-3.5 text-blue-500" />
-                        </button>
-                      </div>
-                      <div class="flex flex-wrap gap-1.5">
-                        <button
-                          v-for="friend in getUntaggedFriends(schedule)"
-                          :key="friend.id"
-                          @click.stop="emit('addTag', schedule.id, friend.id)"
-                          class="inline-flex items-center gap-1 px-2 py-1 border border-blue-200 text-xs rounded-full hover:border-blue-400 hover:bg-blue-100 transition cursor-pointer"
-                          :style="{
-                            backgroundColor: 'var(--dp-bg-primary)',
-                            color: 'var(--dp-text-primary)'
-                          }"
-                        >
-                          <User class="w-3 h-3" />
-                          {{ friend.name }}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Tags display for non-owners (show tags list) -->
-                  <div
-                    v-else-if="!schedule.isTagged && schedule.tags?.length"
-                    class="flex items-center gap-1.5 mt-2 flex-wrap"
-                  >
-                    <span
-                      v-for="tag in schedule.tags"
-                      :key="tag.id"
-                      class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full"
-                    >
-                      {{ tag.name }}
-                    </span>
-                  </div>
-
-                  <!-- Tagged by indicator (when I was tagged by someone) -->
-                  <div
-                    v-else-if="schedule.isTagged"
-                    class="flex items-center gap-1.5 mt-2 flex-wrap"
-                  >
-                    <!-- Show other tagged members (exclude calendar owner) -->
-                    <span
-                      v-for="tag in schedule.tags?.filter(t => t.id !== memberId)"
-                      :key="tag.id"
-                      class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full"
-                    >
-                      {{ tag.name }}
-                    </span>
-                    <!-- Show who tagged me -->
-                    <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
-                      by {{ schedule.taggedBy }}
-                    </span>
-                  </div>
-
-                  <!-- Description -->
-                  <div v-if="schedule.description" class="mt-2 pt-2" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
-                    <div class="text-sm whitespace-pre-wrap" :style="{ color: 'var(--dp-text-secondary)' }">{{ schedule.description }}</div>
-                  </div>
-
-                  <!-- Attachments -->
-                  <div v-if="schedule.attachments?.length" class="mt-2 pt-2" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
-                    <AttachmentGrid
-                      :attachments="toNormalizedAttachments(schedule.attachments)"
-                      :columns="4"
-                    />
-                  </div>
-                </div>
-
-                <!-- Actions -->
-                <div class="flex items-center gap-1 ml-2">
-                  <!-- Edit/Delete for own schedules or manager -->
-                  <template v-if="!schedule.isTagged && (schedule.isMine || canEdit)">
-                    <button
-                      @click="startEditMode(schedule)"
-                      class="p-1.5 rounded-lg hover-icon-btn cursor-pointer text-blue-600"
-                      title="수정"
-                    >
-                      <Pencil class="w-4 h-4" />
-                    </button>
-                    <button
-                      @click="emit('deleteSchedule', schedule.id)"
-                      class="p-1.5 rounded-lg hover-danger cursor-pointer text-red-600"
-                      title="삭제"
-                    >
-                      <Trash2 class="w-4 h-4" />
-                    </button>
-                  </template>
-
-                  <!-- Untag for tagged schedules (only on own calendar) -->
-                  <button
-                    v-if="schedule.isTagged && isMyCalendar"
-                    @click="openUntagConfirmModal(schedule.id)"
-                    class="px-2 py-1 border border-orange-300 hover:bg-orange-100 rounded transition text-orange-600 text-xs font-medium flex items-center gap-1 cursor-pointer"
-                    title="태그 제거"
-                  >
-                    <X class="w-3.5 h-3.5" />
-                    태그 제거
-                  </button>
-                </div>
-              </div>
-            </div>
-            </div>
-          </div>
+          <ScheduleList
+            v-if="!isCreateMode && !isEditMode"
+            :schedules="schedules"
+            :can-edit="canEdit"
+            :friends="friends"
+            :is-my-calendar="isMyCalendar"
+            :member-id="memberId"
+            @edit="startEditMode"
+            @delete="(scheduleId) => emit('deleteSchedule', scheduleId)"
+            @reorder="(scheduleIds) => emit('reorderSchedules', scheduleIds)"
+            @add-tag="(scheduleId, friendId) => emit('addTag', scheduleId, friendId)"
+            @remove-tag="(scheduleId, friendId) => emit('removeTag', scheduleId, friendId)"
+            @request-untag="openUntagConfirmModal"
+          />
 
           <!-- Create/Edit Schedule Form -->
-          <div v-if="isCreateMode || isEditMode">
-            <div class="space-y-2 sm:space-y-3">
-              <div class="flex items-center gap-2">
-                <label class="text-sm flex-shrink-0 w-16" :style="{ color: 'var(--dp-text-secondary)' }">
-                  제목 <span class="text-red-500">*</span>
-                </label>
-                <div class="flex-1 min-w-0 relative">
-                  <input
-                    v-model="newSchedule.content"
-                    type="text"
-                    maxlength="50"
-                    class="w-full px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
-                    placeholder="일정 제목을 입력하세요"
-                  />
-                  <div class="absolute right-2 top-1/2 -translate-y-1/2">
-                    <CharacterCounter :current="newSchedule.content.length" :max="50" />
-                  </div>
-                </div>
-              </div>
-
-              <div class="space-y-2">
-                <div class="flex items-center gap-2">
-                  <label class="text-sm flex-shrink-0 w-16" :style="{ color: 'var(--dp-text-secondary)' }">시작 시간</label>
-                  <input
-                    v-model="newSchedule.startTime"
-                    type="time"
-                    class="flex-1 min-w-0 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
-                  />
-                </div>
-                <div class="flex items-center gap-2">
-                  <label class="text-sm flex-shrink-0 w-16" :style="{ color: 'var(--dp-text-secondary)' }">종료 일시</label>
-                  <input
-                    v-model="newSchedule.endDateTime"
-                    type="datetime-local"
-                    class="flex-1 min-w-0 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
-                  />
-                </div>
-              </div>
-
-              <div class="flex items-start gap-2">
-                <label class="text-sm flex-shrink-0 w-16 pt-2" :style="{ color: 'var(--dp-text-secondary)' }">설명</label>
-                <textarea
-                  v-model="newSchedule.description"
-                  rows="2"
-                  class="flex-1 min-w-0 px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
-                  placeholder="설명 (선택사항)"
-                ></textarea>
-              </div>
-
-              <div class="flex items-start gap-2">
-                <label class="text-sm flex-shrink-0 w-16 pt-2" :style="{ color: 'var(--dp-text-secondary)' }">공개 범위</label>
-                <div class="flex-1 min-w-0 grid grid-cols-2 gap-1.5 sm:gap-2">
-                  <button
-                    v-for="option in visibilityOptions"
-                    :key="option.value"
-                    type="button"
-                    @click="newSchedule.visibility = option.value"
-                    class="visibility-card relative flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border-2 transition-all duration-150 cursor-pointer text-left"
-                    :class="{
-                      'visibility-card-selected': newSchedule.visibility === option.value,
-                      'visibility-card-unselected': newSchedule.visibility !== option.value
-                    }"
-                  >
-                    <!-- Check badge -->
-                    <div
-                      v-if="newSchedule.visibility === option.value"
-                      class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center shadow-sm"
-                    >
-                      <Check class="w-3 h-3 text-white" />
-                    </div>
-                    <div class="flex-shrink-0 w-7 h-7 sm:w-9 sm:h-9 rounded-full flex items-center justify-center" :class="option.color">
-                      <component
-                        :is="option.icon"
-                        class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white"
-                      />
-                    </div>
-                    <div class="min-w-0 flex-1">
-                      <div
-                        class="font-medium text-xs sm:text-sm truncate"
-                        :class="{
-                          'text-blue-700 dark:text-blue-400': newSchedule.visibility === option.value
-                        }"
-                        :style="newSchedule.visibility !== option.value ? { color: 'var(--dp-text-primary)' } : undefined"
-                      >
-                        {{ option.label }}
-                      </div>
-                      <div
-                        class="text-[10px] sm:text-xs truncate hidden sm:block"
-                        :style="{ color: 'var(--dp-text-muted)' }"
-                      >
-                        {{ option.description }}
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              <!-- Attachment Upload Area -->
-              <div class="flex items-start gap-2">
-                <label class="text-sm flex-shrink-0 w-16 pt-2" :style="{ color: 'var(--dp-text-secondary)' }">첨부파일</label>
-                <FileUploader
-                  class="flex-1 min-w-0"
-                  ref="fileUploaderRef"
-                  context-type="SCHEDULE"
-                  :existing-attachments="editAttachments"
-                  @upload-start="handleUploadStart"
-                  @upload-complete="handleUploadComplete"
-                  @error="handleUploadError"
-                />
-              </div>
-            </div>
-          </div>
+          <ScheduleForm
+            v-if="isCreateMode || isEditMode"
+            ref="scheduleFormRef"
+            :form="newSchedule"
+            :edit-attachments="editAttachments"
+            :visibility-options="visibilityOptions"
+            :is-edit-mode="isEditMode"
+            @upload-start="handleUploadStart"
+            @upload-complete="handleUploadComplete"
+            @error="handleUploadError"
+          />
         </div>
 
         <!-- Footer (sticky at bottom) -->
@@ -877,117 +467,9 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
   </Teleport>
 
   <!-- Untag Confirm Modal -->
-  <Teleport to="body">
-    <div
-      v-if="untagConfirmScheduleId"
-      class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
-      @click.self="closeUntagConfirmModal"
-    >
-      <div
-        class="rounded-2xl w-full max-w-[340px] min-w-[280px] overflow-hidden border"
-        :style="{
-          backgroundColor: 'var(--dp-bg-modal)',
-          borderColor: 'var(--dp-border-primary)',
-          boxShadow: '0 20px 40px -8px rgba(0, 0, 0, 0.25), 0 8px 16px -4px rgba(0, 0, 0, 0.1)'
-        }"
-      >
-        <div
-          class="py-2.5 px-4 text-sm font-semibold"
-          :style="{
-            backgroundColor: 'var(--dp-bg-tertiary)',
-            borderBottom: '1px solid var(--dp-border-primary)',
-            color: 'var(--dp-text-primary)'
-          }"
-        >
-          태그 제거
-        </div>
-        <div class="py-4 px-4 space-y-3">
-          <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
-            이 일정에서 태그를 제거하시겠습니까?
-          </p>
-          <div
-            class="p-3 rounded-lg text-xs space-y-1"
-            :style="{ backgroundColor: 'var(--dp-bg-secondary)', color: 'var(--dp-text-muted)' }"
-          >
-            <p>• 태그를 제거하면 이 일정이 내 달력에서 사라집니다.</p>
-            <p>• 태그 복원은 불가능하며, 다시 태그하려면 해당 사용자에게 요청해야 합니다.</p>
-          </div>
-        </div>
-        <div class="pb-4 flex justify-center gap-2">
-          <button
-            @click="confirmUntag"
-            class="px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-all duration-200 hover:-translate-y-px cursor-pointer"
-            style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);"
-          >
-            태그 제거
-          </button>
-          <button
-            @click="closeUntagConfirmModal"
-            class="px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 border hover:-translate-y-px cursor-pointer"
-            :style="{
-              backgroundColor: 'var(--dp-bg-card)',
-              color: 'var(--dp-text-secondary)',
-              borderColor: 'var(--dp-border-primary)',
-              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
-            }"
-          >
-            취소
-          </button>
-        </div>
-      </div>
-    </div>
-  </Teleport>
+  <UntagConfirmModal
+    :is-open="!!untagConfirmScheduleId"
+    @close="closeUntagConfirmModal"
+    @confirm="confirmUntag"
+  />
 </template>
-
-<style scoped>
-.schedule-ghost {
-  opacity: 0.4;
-  background-color: var(--dp-accent-bg);
-}
-
-.schedule-chosen {
-  box-shadow: 0 4px 12px var(--dp-accent-ring);
-}
-
-/* Show only title when dragging - applies to all items in drag mode */
-.is-dragging .schedule-item .flex-1 > *:not(:first-child),
-.is-dragging .schedule-item .flex.items-center.gap-1.ml-2 {
-  display: none !important;
-}
-
-.is-dragging .schedule-item {
-  padding: 0.5rem 0.75rem;
-  transition: padding 0.15s ease;
-}
-
-.schedule-dragging {
-  opacity: 0.95;
-  background: white;
-  border-radius: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-}
-
-.schedule-drag-handle:active {
-  cursor: grabbing;
-}
-
-/* Visibility card styles */
-.visibility-card-selected {
-  border-color: var(--dp-accent);
-  background-color: var(--dp-accent-bg);
-  box-shadow: 0 0 0 1px var(--dp-accent), 0 2px 8px var(--dp-accent-ring);
-}
-
-.visibility-card-unselected {
-  border-color: var(--dp-border-primary);
-  background-color: var(--dp-bg-card);
-  opacity: 0.5;
-}
-
-.visibility-card-unselected:hover {
-  border-color: var(--dp-accent-border);
-  background-color: var(--dp-bg-secondary);
-  opacity: 0.85;
-}
-</style>

@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.team.controller
 
-import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.schedule.domain.dto.TeamScheduleDto
@@ -18,8 +17,6 @@ class TeamScheduleController(
     private val teamScheduleService: TeamScheduleService,
     private val teamService: TeamService,
 ) {
-    private val log = logger()
-
     @GetMapping
     fun getSchedules(
         @Login login: LoginMember,
@@ -41,13 +38,9 @@ class TeamScheduleController(
     ): TeamScheduleDto {
         checkCanManage(login = login, teamId = saveDto.teamId)
         if (saveDto.id == null) {
-            val saved = teamScheduleService.create(login = login, saveDto = saveDto)
-            log.info("$login created team schedule: $saved")
-            return saved
+            return teamScheduleService.create(login = login, saveDto = saveDto)
         }
-        val saved = teamScheduleService.update(login = login, saveDto = saveDto)
-        log.info("$login updated team schedule: $saved")
-        return saved
+        return teamScheduleService.update(login = login, saveDto = saveDto)
     }
 
     @DeleteMapping("/{scheduleId}")
@@ -58,7 +51,6 @@ class TeamScheduleController(
         val schedule = teamScheduleService.findById(scheduleId)
         checkCanManage(login = login, teamId = schedule.teamId)
         teamScheduleService.delete(id = scheduleId)
-        log.info("$login deleted team schedule: $schedule")
     }
 
     private fun checkCanRead(login: LoginMember, teamId: Long) {
