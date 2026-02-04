@@ -36,7 +36,10 @@ class ScheduleTimeParsingService(
             .call()
             .chatResponse()
         if (chatResponse == null) {
-            return ScheduleTimeParsingResponse(result = false)
+            return ScheduleTimeParsingResponse(
+                result = false,
+                errorMessage = "LLM API returned null response"
+            )
         }
         val chatAnswer = chatResponse.result.output.text
         val response = parseChatAnswer(chatAnswer)
@@ -56,7 +59,11 @@ class ScheduleTimeParsingService(
             jsonMapper.readValue(json, ScheduleTimeParsingResponse::class.java)
         } catch (e: Exception) {
             log.warn("Failed to parse JSON: {}", json, e)
-            ScheduleTimeParsingResponse(result = false)
+            ScheduleTimeParsingResponse(
+                result = false,
+                errorMessage = e.message,
+                rawResponse = json.take(500)
+            )
         }
     }
 
