@@ -6,4 +6,6 @@ data class ScheduleTimeParsingResponse(
     val startDateTime: String? = null,
     val endDateTime: String? = null,
     val content: String? = null,
+    val errorMessage: String? = null,
+    val rawResponse: String? = null,
 )

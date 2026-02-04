@@ -1,3 +1,4 @@
+import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifier
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus
@@ -6,14 +7,15 @@ import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimePa
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingTask
 import com.tistory.shanepark.dutypark.schedule.timeparsing.service.ScheduleTimeParsingService
 import com.tistory.shanepark.dutypark.schedule.timeparsing.service.ScheduleTimeParsingWorker
+import net.gpedro.integrations.slack.SlackMessage
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.ArgumentMatchers.any
 import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.Mockito.*
 import org.mockito.junit.jupiter.MockitoExtension
+import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import java.time.LocalDateTime
 import java.util.*
@@ -26,6 +28,9 @@ class ScheduleTimeParsingWorkerTest {
 
     @Mock
     lateinit var scheduleRepository: ScheduleRepository
+
+    @Mock
+    lateinit var slackNotifier: SlackNotifier
 
     @InjectMocks
     lateinit var worker: ScheduleTimeParsingWorker
@@ -262,6 +267,64 @@ class ScheduleTimeParsingWorkerTest {
         // Then
         verify(scheduleTimeParsingService).parseScheduleTime(anyOrNull())
         assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.NO_TIME_INFO)
+    }
+
+    @Test
+    fun `when exception is thrown during parsing, slack notification is sent`() {
+        // Given
+        val schedule = createSchedule()
+        val task = ScheduleTimeParsingTask(scheduleId = schedule.id)
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleTimeParsingService.parseScheduleTime(anyOrNull()))
+            .thenThrow(RuntimeException("API connection failed"))
+
+        // When
+        worker.run(task)
+
+        // Then
+        assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.FAILED)
+        verify(slackNotifier).call(any<SlackMessage>())
+    }
+
+    @Test
+    fun `when parsing fails with errorMessage, slack notification is sent`() {
+        // Given
+        val schedule = createSchedule()
+        val task = ScheduleTimeParsingTask(scheduleId = schedule.id)
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
+        val response = ScheduleTimeParsingResponse(
+            result = false,
+            errorMessage = "LLM returned invalid format"
+        )
+        `when`(scheduleTimeParsingService.parseScheduleTime(anyOrNull())).thenReturn(response)
+
+        // When
+        worker.run(task)
+
+        // Then
+        assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.FAILED)
+        verify(slackNotifier).call(any<SlackMessage>())
+    }
+
+    @Test
+    fun `when parsing fails without error info, slack notification is not sent`() {
+        // Given
+        val schedule = createSchedule()
+        val task = ScheduleTimeParsingTask(scheduleId = schedule.id)
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
+        val response = ScheduleTimeParsingResponse(
+            result = false,
+            errorMessage = null,
+            rawResponse = null
+        )
+        `when`(scheduleTimeParsingService.parseScheduleTime(anyOrNull())).thenReturn(response)
+
+        // When
+        worker.run(task)
+
+        // Then
+        assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.FAILED)
+        verify(slackNotifier, never()).call(any<SlackMessage>())
     }
 
 }
