@@ -160,13 +160,14 @@ function handleConfirm() {
         return
       }
 
-      const file = new File([blob], fileName.value, {
-        type: 'image/png',
+      const name = fileName.value.replace(/\.[^.]+$/, '.jpg')
+      const file = new File([blob], name, {
+        type: 'image/jpeg',
       })
       emit('confirm', file)
       isProcessing.value = false
     },
-    'image/png',
+    'image/jpeg',
     0.9
   )
 }
