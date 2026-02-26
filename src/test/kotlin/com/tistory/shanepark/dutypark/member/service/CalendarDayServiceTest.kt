@@ -34,11 +34,14 @@ class CalendarDayServiceTest {
     @Mock
     private lateinit var dDayRepository: DDayRepository
 
+    @Mock
+    private lateinit var friendService: FriendService
+
     private lateinit var dDayService: DDayService
 
     @BeforeEach
     fun setUp() {
-        dDayService = DDayService(memberRepository, dDayRepository)
+        dDayService = DDayService(memberRepository, dDayRepository, friendService)
     }
 
     @Test

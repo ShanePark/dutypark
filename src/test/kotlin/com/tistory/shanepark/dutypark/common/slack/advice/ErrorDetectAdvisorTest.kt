@@ -14,6 +14,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.springframework.http.HttpStatus
 import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException
 import org.apache.catalina.connector.ClientAbortException
 
@@ -102,6 +103,22 @@ class ErrorDetectAdvisorTest {
             advisor.handleException(request, ClientAbortException())
         }
 
+        verifyNoInteractions(slackNotifier)
+    }
+
+    @Test
+    fun `handleMethodArgumentTypeMismatch returns 400 and does not notify`() {
+        val mismatchException = MethodArgumentTypeMismatchException(
+            "NaN",
+            Long::class.javaObjectType,
+            "memberId",
+            mock(),
+            NumberFormatException("For input string: \"NaN\"")
+        )
+
+        val response = advisor.handleMethodArgumentTypeMismatch(mismatchException)
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
         verifyNoInteractions(slackNotifier)
     }
 

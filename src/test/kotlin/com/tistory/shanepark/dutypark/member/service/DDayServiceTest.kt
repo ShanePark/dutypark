@@ -17,6 +17,7 @@ import org.mockito.Captor
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
+import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.test.util.ReflectionTestUtils
@@ -34,6 +35,9 @@ class DDayServiceTest {
     @Mock
     private lateinit var dDayRepository: DDayRepository
 
+    @Mock
+    private lateinit var friendService: FriendService
+
     @Captor
     private lateinit var dDayEventCaptor: ArgumentCaptor<DDayEvent>
 
@@ -44,7 +48,7 @@ class DDayServiceTest {
 
     @BeforeEach
     fun setUp() {
-        dDayService = DDayService(memberRepository, dDayRepository)
+        dDayService = DDayService(memberRepository, dDayRepository, friendService)
         member = memberWithId(1L)
         member2 = memberWithId(2L)
     }
@@ -173,6 +177,19 @@ class DDayServiceTest {
         val result = dDayService.findDDays(loginMember(member), member.id!!)
 
         assertThat(result).hasSize(2)
+    }
+
+    @Test
+    fun `findDDays blocks when calendar is not visible`() {
+        val viewer = loginMember(member2)
+        whenever(memberRepository.findById(member.id!!)).thenReturn(Optional.of(member))
+        doThrow(AuthException("not visible"))
+            .whenever(friendService)
+            .checkVisibility(viewer, member)
+
+        assertThrows<AuthException> {
+            dDayService.findDDays(viewer, member.id!!)
+        }
     }
 
     @Test
