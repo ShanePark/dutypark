@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.member.controller
 
 import com.tistory.shanepark.dutypark.RestDocsTest
+import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.domain.entity.DDayEvent
 import com.tistory.shanepark.dutypark.member.repository.DDayRepository
 import org.junit.jupiter.api.Test
@@ -184,6 +185,25 @@ class DDayControllerTest : RestDocsTest() {
                     )
                 )
             )
+    }
+
+    @Test
+    fun `guest cannot get ddays by member id when calendar is not public`() {
+        updateVisibility(TestData.member2, Visibility.FRIENDS)
+        dDayRepository.save(
+            DDayEvent(
+                member = TestData.member2,
+                title = "Friend's Event",
+                date = fixedDate.plusDays(15),
+                isPrivate = false
+            )
+        )
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/dday/{id}", TestData.member2.id!!)
+                .accept(MediaType.APPLICATION_JSON)
+        )
+            .andExpect(status().isUnauthorized)
     }
 
     @Test

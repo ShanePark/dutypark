@@ -15,7 +15,8 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional
 class DDayService(
     private val memberRepository: MemberRepository,
-    private val dDayRepository: DDayRepository
+    private val dDayRepository: DDayRepository,
+    private val friendService: FriendService
 ) {
     val log = logger()
 
@@ -35,6 +36,7 @@ class DDayService(
     @Transactional(readOnly = true)
     fun findDDay(loginMember: LoginMember?, id: Long): DDayDto {
         val dDayEvent = dDayRepository.findById(id).orElseThrow()
+        friendService.checkVisibility(loginMember, dDayEvent.member)
         if (dDayEvent.isPrivate) {
             authenticationCheck(dDayEvent, loginMember)
         }
@@ -44,6 +46,7 @@ class DDayService(
     @Transactional(readOnly = true)
     fun findDDays(loginMember: LoginMember?, memberId: Long): List<DDayDto> {
         val member = memberRepository.findById(memberId).orElseThrow()
+        friendService.checkVisibility(loginMember, member)
         val isLoginMember = loginMember?.id == memberId
         return dDayRepository.findAllByMemberOrderByDate(member)
             .filter { isLoginMember || !it.isPrivate }
