@@ -12,6 +12,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException
 import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.ResponseBody
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException
 import org.springframework.web.servlet.resource.NoResourceFoundException
 import java.util.*
@@ -20,6 +21,15 @@ import java.util.*
 class ErrorDetectAdvisor(
     private val slackNotifier: SlackNotifier,
 ) {
+    private companion object {
+        private val NOT_NOTIFY_EXCEPTIONS: Set<Class<out Exception>> = setOf(
+            NoResourceFoundException::class.java,
+            ClientAbortException::class.java,
+            CloseNowException::class.java,
+            AsyncRequestNotUsableException::class.java,
+            MethodArgumentTypeMismatchException::class.java
+        )
+    }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException::class)
     @ResponseBody
@@ -80,7 +90,8 @@ class ErrorDetectAdvisor(
         throw e
     }
 
-    private fun isNotNotify(e: Exception) =
-        e is NoResourceFoundException || e is ClientAbortException || e is CloseNowException || e is AsyncRequestNotUsableException
+    private fun isNotNotify(e: Exception): Boolean {
+        return NOT_NOTIFY_EXCEPTIONS.any { exceptionType -> exceptionType.isInstance(e) }
+    }
 
 }
