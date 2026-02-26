@@ -26,8 +26,7 @@ class ErrorDetectAdvisor(
             NoResourceFoundException::class.java,
             ClientAbortException::class.java,
             CloseNowException::class.java,
-            AsyncRequestNotUsableException::class.java,
-            MethodArgumentTypeMismatchException::class.java
+            AsyncRequestNotUsableException::class.java
         )
     }
 
@@ -45,6 +44,14 @@ class ErrorDetectAdvisor(
     fun handleIllegalArgumentException(
         req: HttpServletRequest,
         e: IllegalArgumentException
+    ): ResponseEntity<Map<String, String>> {
+        return ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Bad Request")))
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException::class)
+    @ResponseBody
+    fun handleMethodArgumentTypeMismatch(
+        e: MethodArgumentTypeMismatchException
     ): ResponseEntity<Map<String, String>> {
         return ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Bad Request")))
     }

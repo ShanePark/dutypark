@@ -17,7 +17,6 @@ import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException
 import org.apache.catalina.connector.ClientAbortException
-import org.springframework.core.MethodParameter
 
 class ErrorDetectAdvisorTest {
 
@@ -108,27 +107,19 @@ class ErrorDetectAdvisorTest {
     }
 
     @Test
-    fun `handleException skips notify for method argument type mismatch`() {
-        val request = MockHttpServletRequest()
-        val method = javaClass.getDeclaredMethod("sampleMethodForTypeMismatch", Long::class.javaPrimitiveType)
-        val methodParameter = MethodParameter(method, 0)
+    fun `handleMethodArgumentTypeMismatch returns 400 and does not notify`() {
         val mismatchException = MethodArgumentTypeMismatchException(
             "NaN",
             Long::class.javaObjectType,
             "memberId",
-            methodParameter,
+            mock(),
             NumberFormatException("For input string: \"NaN\"")
         )
 
-        assertDoesNotThrow {
-            advisor.handleException(request, mismatchException)
-        }
+        val response = advisor.handleMethodArgumentTypeMismatch(mismatchException)
 
+        assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
         verifyNoInteractions(slackNotifier)
-    }
-
-    @Suppress("unused")
-    private fun sampleMethodForTypeMismatch(memberId: Long) {
     }
 
     private fun requestWithBody(uri: String, body: String): MockHttpServletRequest {
