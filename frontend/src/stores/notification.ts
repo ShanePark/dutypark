@@ -10,11 +10,11 @@ const BASE_INTERVAL_MS = 10000 // 10 seconds
  * Update app icon badge for iOS PWA (requires iOS 16.4+)
  */
 function updateAppBadge(count: number): void {
-  if ('setAppBadge' in navigator) {
+  if ('setAppBadge' in navigator && 'clearAppBadge' in navigator) {
     if (count > 0) {
-      navigator.setAppBadge(count)
+      void navigator.setAppBadge(count).catch(() => undefined)
     } else {
-      navigator.clearAppBadge()
+      void navigator.clearAppBadge().catch(() => undefined)
     }
   }
 }
@@ -49,6 +49,7 @@ export const useNotificationStore = defineStore('notification', () => {
       const prevUnreadCount = unreadCount.value
       const countData = await notificationApi.getCount()
       unreadCount.value = countData.unreadCount
+      updateAppBadge(countData.unreadCount)
       consecutiveFailures.value = 0
 
       // If new notifications arrived, check if any are friend requests
@@ -97,6 +98,7 @@ export const useNotificationStore = defineStore('notification', () => {
     try {
       unreadNotifications.value = await notificationApi.getUnreadNotifications()
       unreadCount.value = unreadNotifications.value.length
+      updateAppBadge(unreadCount.value)
       consecutiveFailures.value = 0
     } catch (error) {
       consecutiveFailures.value++
@@ -245,6 +247,7 @@ export const useNotificationStore = defineStore('notification', () => {
     friendRequestCount.value = 0
     isLoading.value = false
     consecutiveFailures.value = 0
+    updateAppBadge(0)
   }
 
   /**
