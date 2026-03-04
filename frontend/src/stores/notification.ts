@@ -5,18 +5,71 @@ import { notificationApi } from '@/api/notification'
 
 const MAX_BACKOFF_MS = 5 * 60 * 1000 // 5 minutes
 const BASE_INTERVAL_MS = 10000 // 10 seconds
+const RESUME_SYNC_DEBOUNCE_MS = 500
+
+type NavigatorBadgeApi = Navigator & {
+  setAppBadge?: (count?: number) => Promise<void>
+  clearAppBadge?: () => Promise<void>
+}
+
+type ServiceWorkerRegistrationBadgeApi = ServiceWorkerRegistration & {
+  setAppBadge?: (count?: number) => Promise<void>
+  clearAppBadge?: () => Promise<void>
+}
 
 /**
  * Update app icon badge for iOS PWA (requires iOS 16.4+)
  */
 function updateAppBadge(count: number): void {
-  if ('setAppBadge' in navigator && 'clearAppBadge' in navigator) {
-    if (count > 0) {
-      void navigator.setAppBadge(count).catch(() => undefined)
-    } else {
-      void navigator.clearAppBadge().catch(() => undefined)
-    }
+  const navBadge = navigator as NavigatorBadgeApi
+  const fallbackOnServiceWorker = () => {
+    if (!('serviceWorker' in navigator)) return
+    void navigator.serviceWorker.getRegistration()
+      .then((registration) => {
+        if (!registration) return
+        const registrationBadge = registration as ServiceWorkerRegistrationBadgeApi
+        if (count > 0) {
+          if (registrationBadge.setAppBadge) {
+            return registrationBadge.setAppBadge(count)
+          }
+          return undefined
+        }
+
+        if (registrationBadge.clearAppBadge) {
+          return registrationBadge.clearAppBadge()
+        }
+        if (registrationBadge.setAppBadge) {
+          return registrationBadge.setAppBadge(0)
+        }
+        return undefined
+      })
+      .catch(() => undefined)
   }
+
+  if (count > 0) {
+    if (navBadge.setAppBadge) {
+      void navBadge.setAppBadge(count).catch(() => {
+        fallbackOnServiceWorker()
+      })
+      return
+    }
+    fallbackOnServiceWorker()
+    return
+  }
+
+  if (navBadge.clearAppBadge) {
+    void navBadge.clearAppBadge().catch(() => {
+      fallbackOnServiceWorker()
+    })
+    return
+  }
+  if (navBadge.setAppBadge) {
+    void navBadge.setAppBadge(0).catch(() => {
+      fallbackOnServiceWorker()
+    })
+    return
+  }
+  fallbackOnServiceWorker()
 }
 
 export const useNotificationStore = defineStore('notification', () => {
@@ -29,6 +82,8 @@ export const useNotificationStore = defineStore('notification', () => {
   const consecutiveFailures = ref(0)
   const isPollingPaused = ref(false)
   const friendsRefreshTrigger = ref(0)
+  const isFetchingUnreadCount = ref(false)
+  const lastResumeSyncAt = ref(0)
 
   // Getters
   const hasUnread = computed(() => unreadCount.value > 0)
@@ -45,6 +100,11 @@ export const useNotificationStore = defineStore('notification', () => {
    * Does NOT update friendRequestCount - that's only updated on specific events
    */
   async function fetchUnreadCount(): Promise<void> {
+    if (isFetchingUnreadCount.value) {
+      return
+    }
+
+    isFetchingUnreadCount.value = true
     try {
       const prevUnreadCount = unreadCount.value
       const countData = await notificationApi.getCount()
@@ -59,6 +119,8 @@ export const useNotificationStore = defineStore('notification', () => {
     } catch (error) {
       consecutiveFailures.value++
       console.warn('Failed to fetch notification count:', error)
+    } finally {
+      isFetchingUnreadCount.value = false
     }
   }
 
@@ -190,12 +252,23 @@ export const useNotificationStore = defineStore('notification', () => {
    */
   function handleVisibilityChange(): void {
     if (document.visibilityState === 'visible') {
-      isPollingPaused.value = false
-      // Immediate fetch when tab becomes visible
-      fetchUnreadCount()
+      handleAppResume()
     } else {
       isPollingPaused.value = true
     }
+  }
+
+  /**
+   * Handle app resume for mobile PWA environments where visibility events can be inconsistent
+   */
+  function handleAppResume(): void {
+    const now = Date.now()
+    if (now - lastResumeSyncAt.value < RESUME_SYNC_DEBOUNCE_MS) {
+      return
+    }
+    lastResumeSyncAt.value = now
+    isPollingPaused.value = false
+    fetchUnreadCount()
   }
 
   /**
@@ -211,6 +284,8 @@ export const useNotificationStore = defineStore('notification', () => {
 
     // Add visibility change listener
     document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleAppResume)
+    window.addEventListener('pageshow', handleAppResume)
 
     // Start polling interval
     const poll = () => {
@@ -233,6 +308,8 @@ export const useNotificationStore = defineStore('notification', () => {
       pollingIntervalId.value = null
     }
     document.removeEventListener('visibilitychange', handleVisibilityChange)
+    window.removeEventListener('focus', handleAppResume)
+    window.removeEventListener('pageshow', handleAppResume)
     isPollingPaused.value = false
   }
 
