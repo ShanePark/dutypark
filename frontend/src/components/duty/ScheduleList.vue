@@ -190,7 +190,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
 
 <template>
   <div class="space-y-3">
-    <div v-if="schedules.length === 0" class="text-center py-6" :style="{ color: 'var(--dp-text-muted)' }">
+    <div v-if="schedules.length === 0" class="text-center py-6 text-dp-text-muted">
       등록된 일정이 없습니다.
     </div>
 
@@ -211,8 +211,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
         <div class="flex items-start justify-between">
           <div
             v-if="hasDraggableSchedules && canEdit && !schedule.isTagged"
-            class="schedule-drag-handle flex items-center pr-2 cursor-grab"
-            :style="{ color: 'var(--dp-text-muted)' }"
+            class="schedule-drag-handle flex items-center pr-2 cursor-grab text-dp-text-muted"
             title="드래그하여 순서 변경"
           >
             <GripVertical class="w-5 h-5" />
@@ -221,25 +220,22 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
             <div class="flex items-center gap-2 flex-wrap">
               <Lock
                 v-if="schedule.visibility === 'PRIVATE'"
-                class="w-4 h-4"
-                :style="{ color: 'var(--dp-text-muted)' }"
+                class="w-4 h-4 text-dp-text-muted"
                 :title="getVisibilityLabel(schedule.visibility)"
               />
-              <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ schedule.content }}<template v-if="schedule.totalDays && schedule.totalDays > 1"> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template></span>
-              <span v-if="formatScheduleTime(schedule)" class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
+              <span class="font-medium text-dp-text-primary">{{ schedule.content }}<template v-if="schedule.totalDays && schedule.totalDays > 1"> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template></span>
+              <span v-if="formatScheduleTime(schedule)" class="text-sm text-dp-text-secondary">
                 {{ formatScheduleTime(schedule) }}
               </span>
               <component
                 v-if="schedule.visibility !== 'PRIVATE'"
                 :is="getVisibilityIcon(schedule.visibility)"
-                class="w-4 h-4"
-                :style="{ color: 'var(--dp-text-muted)' }"
+                class="w-4 h-4 text-dp-text-muted"
                 :title="getVisibilityLabel(schedule.visibility)"
               />
               <span
                 v-if="schedule.attachments?.length"
-                class="flex items-center gap-1 text-sm"
-                :style="{ color: 'var(--dp-text-muted)' }"
+                class="flex items-center gap-1 text-sm text-dp-text-muted"
               >
                 <Paperclip class="w-3 h-3" />
                 {{ schedule.attachments.length }}
@@ -256,12 +252,12 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
               <span
                 v-for="tag in schedule.tags"
                 :key="tag.id"
-                class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full"
+                class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 bg-dp-accent-soft text-dp-accent-hover text-xs rounded-full"
               >
                 {{ tag.name }}
                 <button
                   @click.stop="emit('remove-tag', schedule.id, tag.id)"
-                  class="p-0.5 hover:bg-blue-200 rounded-full transition cursor-pointer"
+                  class="p-0.5 hover:bg-dp-accent-soft-hover rounded-full transition cursor-pointer"
                   title="태그 삭제"
                 >
                   <X class="w-3 h-3" />
@@ -272,8 +268,8 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
               <button
                 v-if="friends.length > 0"
                 @click.stop="openTagPanel(schedule.id)"
-                class="inline-flex items-center gap-1 px-2 py-0.5 border border-dashed text-xs rounded-full hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition cursor-pointer"
-                :class="{ 'border-blue-400 text-blue-500 bg-blue-50': taggingScheduleId === schedule.id }"
+                class="inline-flex items-center gap-1 px-2 py-0.5 border border-dashed text-xs rounded-full hover:border-dp-accent-border hover:text-dp-accent hover:bg-dp-accent-soft transition cursor-pointer"
+                :class="{ 'border-dp-accent-border text-dp-accent bg-dp-accent-soft': taggingScheduleId === schedule.id }"
                 :style="{
                   borderColor: taggingScheduleId === schedule.id ? undefined : 'var(--dp-border-secondary)',
                   color: taggingScheduleId === schedule.id ? undefined : 'var(--dp-text-secondary)'
@@ -288,15 +284,15 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
             <!-- Inline tag selection (expanded below the button) -->
             <div
               v-if="taggingScheduleId === schedule.id && getUntaggedFriends(schedule).length > 0"
-              class="mt-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg"
+              class="mt-2 p-2.5 bg-dp-accent-soft border border-dp-accent-border rounded-lg"
             >
               <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-medium text-blue-700">친구 선택</span>
+                <span class="text-xs font-medium text-dp-accent-hover">친구 선택</span>
                 <button
                   @click.stop="closeTagPanel"
-                  class="p-0.5 hover:bg-blue-100 rounded transition cursor-pointer"
+                  class="p-0.5 hover:bg-dp-accent-soft rounded transition cursor-pointer"
                 >
-                  <X class="w-3.5 h-3.5 text-blue-500" />
+                  <X class="w-3.5 h-3.5 text-dp-accent" />
                 </button>
               </div>
               <div class="flex flex-wrap gap-1.5">
@@ -304,7 +300,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                   v-for="friend in getUntaggedFriends(schedule)"
                   :key="friend.id"
                   @click.stop="emit('add-tag', schedule.id, friend.id)"
-                  class="inline-flex items-center gap-1 px-2 py-1 border border-blue-200 text-xs rounded-full hover:border-blue-400 hover:bg-blue-100 transition cursor-pointer"
+                  class="inline-flex items-center gap-1 px-2 py-1 border border-dp-accent-border text-xs rounded-full hover:border-dp-accent-border hover:bg-dp-accent-soft transition cursor-pointer"
                   :style="{
                     backgroundColor: 'var(--dp-bg-primary)',
                     color: 'var(--dp-text-primary)'
@@ -325,7 +321,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
             <span
               v-for="tag in schedule.tags"
               :key="tag.id"
-              class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full"
+              class="inline-flex items-center gap-1 px-2 py-0.5 bg-dp-accent-soft text-dp-accent-hover text-xs rounded-full"
             >
               {{ tag.name }}
             </span>
@@ -340,23 +336,23 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
             <span
               v-for="tag in schedule.tags?.filter(t => t.id !== memberId)"
               :key="tag.id"
-              class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full"
+              class="inline-flex items-center gap-1 px-2 py-0.5 bg-dp-accent-soft text-dp-accent-hover text-xs rounded-full"
             >
               {{ tag.name }}
             </span>
             <!-- Show who tagged me -->
-            <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-dp-bg-tertiary text-dp-text-secondary text-xs rounded-full">
               by {{ schedule.taggedBy }}
             </span>
           </div>
 
           <!-- Description -->
-          <div v-if="schedule.description" class="mt-2 pt-2" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
-            <div class="text-sm whitespace-pre-wrap" :style="{ color: 'var(--dp-text-secondary)' }">{{ schedule.description }}</div>
+          <div v-if="schedule.description" class="mt-2 pt-2 border-t border-dp-border-primary">
+            <div class="text-sm whitespace-pre-wrap text-dp-text-secondary">{{ schedule.description }}</div>
           </div>
 
           <!-- Attachments -->
-          <div v-if="schedule.attachments?.length" class="mt-2 pt-2" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
+          <div v-if="schedule.attachments?.length" class="mt-2 pt-2 border-t border-dp-border-primary">
             <AttachmentGrid
               :attachments="toNormalizedAttachments(schedule.attachments)"
               :columns="4"
@@ -370,14 +366,14 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
           <template v-if="!schedule.isTagged && (schedule.isMine || canEdit)">
             <button
               @click="emit('edit', schedule)"
-              class="p-1.5 rounded-lg hover-icon-btn cursor-pointer text-blue-600"
+              class="p-1.5 rounded-lg hover-icon-btn cursor-pointer text-dp-accent"
               title="수정"
             >
               <Pencil class="w-4 h-4" />
             </button>
             <button
               @click="emit('delete', schedule.id)"
-              class="p-1.5 rounded-lg hover-danger cursor-pointer text-red-600"
+              class="p-1.5 rounded-lg hover-danger cursor-pointer text-dp-danger"
               title="삭제"
             >
               <Trash2 class="w-4 h-4" />
@@ -388,7 +384,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
           <button
             v-if="schedule.isTagged && isMyCalendar"
             @click="emit('request-untag', schedule.id)"
-            class="px-2 py-1 border border-orange-300 hover:bg-orange-100 rounded transition text-orange-600 text-xs font-medium flex items-center gap-1 cursor-pointer"
+            class="px-2 py-1 border border-dp-warning-border hover:bg-dp-warning-soft rounded transition text-dp-warning text-xs font-medium flex items-center gap-1 cursor-pointer"
             title="태그 제거"
           >
             <X class="w-3.5 h-3.5" />
@@ -424,10 +420,10 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
 
 .schedule-dragging {
   opacity: 0.95;
-  background: white;
+  background: var(--dp-bg-card);
   border-radius: 0.5rem;
   padding: 0.5rem 0.75rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--dp-shadow-lg);
 }
 
 .schedule-drag-handle:active {

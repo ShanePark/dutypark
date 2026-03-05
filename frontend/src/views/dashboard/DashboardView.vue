@@ -434,7 +434,7 @@ watch(
       >
         <!-- Header -->
         <div
-          class="group px-5 py-3 bg-gradient-to-r from-gray-700 to-gray-800 flex items-center justify-between cursor-pointer hover:from-gray-600 hover:to-gray-700 transition-all"
+          class="group px-5 py-3 bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt flex items-center justify-between cursor-pointer hover:from-dp-surface-strong-alt hover:to-dp-surface-strong-hover transition-all"
           @click="moveTo()"
         >
           <div class="flex items-center gap-3">
@@ -445,28 +445,28 @@ watch(
               :profile-photo-version="myInfo?.member.profilePhotoVersion"
               size="md"
             />
-            <span class="text-lg font-bold text-white">{{ myInfo?.member.name || '로딩중...' }}</span>
+            <span class="text-lg font-bold text-dp-text-on-dark">{{ myInfo?.member.name || '로딩중...' }}</span>
           </div>
-          <ChevronRight class="w-5 h-5 text-gray-400 group-hover:text-white group-hover:translate-x-1 transition-all" />
+          <ChevronRight class="w-5 h-5 text-dp-text-muted group-hover:text-dp-text-on-dark group-hover:translate-x-1 transition-all" />
         </div>
 
         <!-- Content -->
         <div class="p-5">
           <!-- Error state -->
-          <div v-if="myInfoError" class="text-center py-4 text-red-500">
+          <div v-if="myInfoError" class="text-center py-4 text-dp-danger">
             {{ myInfoError }}
           </div>
           <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <!-- Left column: Date & Duty -->
             <div class="space-y-3">
-              <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Calendar class="w-5 h-5" :style="{ color: 'var(--dp-text-muted)' }" />
+              <div class="flex items-center gap-2 text-dp-text-primary">
+                <Calendar class="w-5 h-5 text-dp-text-muted" />
                 <span class="font-medium">{{ today }}</span>
               </div>
 
               <div class="flex items-center gap-2">
-                <Briefcase class="w-5 h-5" :style="{ color: 'var(--dp-text-muted)' }" />
-                <span :style="{ color: 'var(--dp-text-secondary)' }">근무:</span>
+                <Briefcase class="w-5 h-5 text-dp-text-muted" />
+                <span class="text-dp-text-secondary">근무:</span>
                 <template v-if="myInfoLoading">
                   <div class="w-4 h-4 border-2 rounded-full animate-spin" :style="{ borderColor: 'var(--dp-border-secondary)', borderTopColor: 'var(--dp-text-primary)' }"></div>
                 </template>
@@ -474,22 +474,22 @@ watch(
                   <span
                     class="px-2.5 py-0.5 rounded-md font-semibold text-sm"
                     :style="{
-                      backgroundColor: myInfo.duty.dutyColor || '#666',
-                      color: isLightColor(myInfo.duty.dutyColor) ? '#1f2937' : '#ffffff'
+                      backgroundColor: myInfo.duty.dutyColor || 'var(--dp-duty-fallback)',
+                      color: isLightColor(myInfo.duty.dutyColor) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
                     }"
                   >
                     {{ myInfo.duty.dutyType || '휴무' }}
                   </span>
                 </template>
-                <span v-else :style="{ color: 'var(--dp-text-muted)' }">없음</span>
+                <span class="text-dp-text-muted" v-else>없음</span>
               </div>
             </div>
 
             <!-- Right column: Today's schedules -->
-            <div class="border-t pt-4 md:border-t-0 md:pt-0 md:border-l md:pl-5" :style="{ borderColor: 'var(--dp-border-primary)' }">
+            <div class="border-t pt-4 md:border-t-0 md:pt-0 md:border-l md:pl-5 border-dp-border-primary">
               <div class="flex items-center gap-2 mb-2">
-                <ClipboardList class="w-5 h-5" :style="{ color: 'var(--dp-text-muted)' }" />
-                <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">오늘 일정</span>
+                <ClipboardList class="w-5 h-5 text-dp-text-muted" />
+                <span class="font-medium text-dp-text-primary">오늘 일정</span>
               </div>
               <template v-if="myInfoLoading">
                 <div class="flex justify-center py-3">
@@ -500,13 +500,12 @@ watch(
                 <li
                   v-for="schedule in myInfo?.schedules || []"
                   :key="schedule.id"
-                  class="py-1.5 border-b last:border-0 flex items-center justify-between"
-                  :style="{ borderColor: 'var(--dp-border-primary)', color: 'var(--dp-text-primary)' }"
+                  class="py-1.5 border-b last:border-0 flex items-center justify-between border-dp-border-primary text-dp-text-primary"
                 >
                   <span class="truncate">{{ printSchedule(schedule) }}</span>
-                  <span class="ml-2 text-sm flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }">{{ printScheduleTime(schedule.startDateTime) }}</span>
+                  <span class="ml-2 text-sm flex-shrink-0 text-dp-text-muted">{{ printScheduleTime(schedule.startDateTime) }}</span>
                 </li>
-                <li v-if="!myInfo?.schedules?.length" class="text-sm" :style="{ color: 'var(--dp-text-muted)' }">
+                <li v-if="!myInfo?.schedules?.length" class="text-sm text-dp-text-muted">
                   오늘의 일정이 없습니다.
                 </li>
               </ul>
@@ -516,25 +515,25 @@ watch(
       </div>
 
       <!-- Friends List Section -->
-      <div ref="friendSectionRef" class="friend-section rounded-2xl shadow-sm border overflow-hidden" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }">
+      <div ref="friendSectionRef" class="friend-section rounded-2xl shadow-sm border overflow-hidden bg-dp-bg-card border-dp-border-primary">
         <div
-          class="group bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-3 cursor-pointer hover:from-slate-600 hover:to-slate-700 transition-all"
+          class="group bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt px-6 py-3 cursor-pointer hover:from-dp-surface-strong-alt hover:to-dp-surface-strong-hover transition-all"
           @click="router.push('/friends')"
         >
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <Users class="w-5 h-5 text-white" />
-              <span class="text-white font-bold">친구관리</span>
-              <span v-if="friendInfo?.friends.length" class="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs text-white">
+              <Users class="w-5 h-5 text-dp-text-on-dark" />
+              <span class="text-dp-text-on-dark font-bold">친구관리</span>
+              <span v-if="friendInfo?.friends.length" class="ml-2 px-2 py-0.5 bg-dp-overlay-light/20 rounded-full text-xs text-dp-text-on-dark">
                 {{ friendInfo.friends.length }}
               </span>
             </div>
-            <ChevronRight class="w-5 h-5 text-gray-400 group-hover:text-white group-hover:translate-x-1 transition-all" />
+            <ChevronRight class="w-5 h-5 text-dp-text-muted group-hover:text-dp-text-on-dark group-hover:translate-x-1 transition-all" />
           </div>
         </div>
         <div class="p-5">
           <!-- Error state -->
-          <div v-if="friendInfoError" class="text-center py-4 text-red-500">
+          <div v-if="friendInfoError" class="text-center py-4 text-dp-danger">
             {{ friendInfoError }}
           </div>
           <template v-else-if="friendInfoLoading">
@@ -544,10 +543,10 @@ watch(
           </template>
           <!-- Empty state -->
           <div v-else-if="sortedFriends.length === 0" class="text-center py-8">
-            <Users class="w-12 h-12 mx-auto mb-3" :style="{ color: 'var(--dp-text-muted)' }" />
-            <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">아직 친구가 없습니다.</p>
+            <Users class="w-12 h-12 mx-auto mb-3 text-dp-text-muted" />
+            <p class="text-sm text-dp-text-secondary">아직 친구가 없습니다.</p>
             <button
-              class="mt-4 px-4 py-2 text-sm font-medium bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition cursor-pointer"
+              class="mt-4 px-4 py-2 text-sm font-medium bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
               @click="openSearchModal"
             >
               친구 추가하기
@@ -564,7 +563,7 @@ watch(
               :class="[
                 friend.pinOrder
                   ? 'pinned-friend pinned-friend-highlight border-2 shadow-md'
-                  : 'border hover:border-blue-300'
+                  : 'border hover:border-dp-accent-border'
               ]"
               :style="!friend.pinOrder ? { backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' } : {}"
               @click="moveTo(friend.member.id)"
@@ -586,14 +585,14 @@ watch(
                   <!-- Top: Name & Actions -->
                   <div class="flex items-center justify-between mb-1.5">
                     <div class="flex items-center gap-1.5 min-w-0">
-                      <span class="font-medium text-sm truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ friend.member.name }}</span>
-                      <Home v-if="friend.isFamily" class="w-3.5 h-3.5 flex-shrink-0 text-amber-500" title="Family member" />
+                      <span class="font-medium text-sm truncate text-dp-text-primary">{{ friend.member.name }}</span>
+                      <Home v-if="friend.isFamily" class="w-3.5 h-3.5 flex-shrink-0 text-dp-warning" title="Family member" />
                     </div>
                     <div class="flex items-center flex-shrink-0" @click.stop>
                     <!-- Pin/Unpin button -->
                     <button
                       v-if="friend.pinOrder"
-                      class="p-1 text-amber-500 hover:text-amber-600 transition cursor-pointer"
+                      class="p-1 text-dp-warning hover:text-dp-warning transition cursor-pointer"
                       @click.stop="unpinFriend(friend.member)"
                       title="고정 해제"
                     >
@@ -601,7 +600,7 @@ watch(
                     </button>
                     <button
                       v-else
-                      class="p-1 text-gray-300 hover:text-amber-500 transition cursor-pointer"
+                      class="p-1 text-dp-text-muted hover:text-dp-warning transition cursor-pointer"
                       @click.stop="pinFriend(friend.member)"
                       title="고정"
                     >
@@ -612,10 +611,10 @@ watch(
 
                   <!-- Duty info -->
                   <div class="flex items-center gap-1.5 mb-1.5">
-                    <Briefcase class="w-3.5 h-3.5 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
-                    <span class="text-xs" :style="{ color: 'var(--dp-text-secondary)' }">근무:</span>
-                    <span v-if="friend.duty" class="text-xs font-medium truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ friend.duty.dutyType || '휴무' }}</span>
-                    <span v-else class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">-</span>
+                    <Briefcase class="w-3.5 h-3.5 flex-shrink-0 text-dp-text-muted" />
+                    <span class="text-xs text-dp-text-secondary">근무:</span>
+                    <span v-if="friend.duty" class="text-xs font-medium truncate text-dp-text-primary">{{ friend.duty.dutyType || '휴무' }}</span>
+                    <span v-else class="text-xs text-dp-text-muted">-</span>
                   </div>
 
                   <!-- Schedules -->
@@ -637,7 +636,7 @@ watch(
               <!-- Drag handle for pinned friends -->
               <div v-if="friend.pinOrder" class="absolute bottom-2 right-2" @click.stop>
                 <div
-                  class="handle friend-drag-handle rounded-lg p-1.5 transition hover:bg-black/10 !cursor-grab active:!cursor-grabbing"
+                  class="handle friend-drag-handle rounded-lg p-1.5 transition hover:bg-dp-overlay-dark/10 !cursor-grab active:!cursor-grabbing"
                   title="드래그하여 순서 변경"
                 >
                   <GripVertical class="w-4 h-4" />
@@ -657,21 +656,20 @@ watch(
         @click.self="closeSearchModal"
       >
         <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="closeSearchModal"></div>
+        <div class="absolute inset-0 bg-dp-overlay-dark/60 backdrop-blur-sm" @click="closeSearchModal"></div>
 
         <!-- Modal Content -->
-        <div class="relative rounded-2xl shadow-2xl w-full max-w-2xl mx-2 sm:mx-4 max-h-[90vh] overflow-hidden" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
+        <div class="relative rounded-2xl shadow-2xl w-full max-w-2xl mx-2 sm:mx-4 max-h-[90vh] overflow-hidden bg-dp-bg-modal">
           <!-- Header -->
-          <div class="flex items-center justify-between p-5 border-b" :style="{ borderColor: 'var(--dp-border-primary)', backgroundColor: 'var(--dp-bg-secondary)' }">
+          <div class="flex items-center justify-between p-5 border-b bg-dp-bg-secondary border-dp-border-primary">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                <UserPlus class="w-5 h-5 text-white" />
+              <div class="w-10 h-10 bg-gradient-to-br from-dp-accent to-dp-accent-hover rounded-xl flex items-center justify-center">
+                <UserPlus class="w-5 h-5 text-dp-text-on-dark" />
               </div>
-              <h3 class="text-xl font-bold" :style="{ color: 'var(--dp-text-primary)' }">친구 추가</h3>
+              <h3 class="text-xl font-bold text-dp-text-primary">친구 추가</h3>
             </div>
             <button
-              class="p-2 rounded-full hover-close-btn cursor-pointer"
-              :style="{ color: 'var(--dp-text-muted)' }"
+              class="p-2 rounded-full hover-close-btn cursor-pointer text-dp-text-muted"
               @click="closeSearchModal"
             >
               <X class="w-5 h-5" />
@@ -683,18 +681,17 @@ watch(
             <!-- Search Input -->
             <div class="flex gap-2 mb-5">
               <div class="flex-grow relative">
-                <Search class="w-5 h-5 absolute left-3.5 top-1/2 transform -translate-y-1/2" :style="{ color: 'var(--dp-text-muted)' }" />
+                <Search class="w-5 h-5 absolute left-3.5 top-1/2 transform -translate-y-1/2 text-dp-text-muted" />
                 <input
                   v-model="searchKeyword"
                   type="text"
                   placeholder="이름 또는 팀 검색"
-                  class="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
-                  :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
+                  class="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-dp-accent/20 focus:border-dp-accent outline-none transition-all bg-dp-bg-input border-dp-border-input text-dp-text-primary"
                   @keyup.enter="search"
                 />
               </div>
               <button
-                class="px-5 py-3 bg-gradient-to-r from-slate-700 to-slate-800 text-white rounded-xl hover:from-slate-800 hover:to-slate-900 transition-all shadow-lg flex items-center gap-2 font-medium cursor-pointer"
+                class="px-5 py-3 bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt text-dp-text-on-dark rounded-xl hover:from-dp-surface-strong-alt hover:to-dp-surface-strong-hover transition-all shadow-lg flex items-center gap-2 font-medium cursor-pointer"
                 @click="search"
               >
                 <Search class="w-4 h-4" />
@@ -713,8 +710,7 @@ watch(
                 <div
                   v-for="(member, index) in searchResult"
                   :key="member.id ?? index"
-                  class="flex items-center justify-between p-4 rounded-xl hover-bg-light"
-                  :style="{ backgroundColor: 'var(--dp-bg-secondary)' }"
+                  class="flex items-center justify-between p-4 rounded-xl hover-bg-light bg-dp-bg-secondary"
                 >
                   <div class="flex items-center gap-3">
                     <ProfileAvatar
@@ -725,12 +721,12 @@ watch(
                       size="md"
                     />
                     <div>
-                      <p class="font-semibold" :style="{ color: 'var(--dp-text-primary)' }">{{ member.name }}</p>
-                      <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">{{ member.team ?? '팀 없음' }}</p>
+                      <p class="font-semibold text-dp-text-primary">{{ member.name }}</p>
+                      <p class="text-sm text-dp-text-secondary">{{ member.team ?? '팀 없음' }}</p>
                     </div>
                   </div>
                   <button
-                    class="px-4 py-2 text-sm font-medium bg-green-500 text-white rounded-xl hover:bg-green-600 transition shadow-sm cursor-pointer"
+                    class="px-4 py-2 text-sm font-medium bg-dp-success text-dp-text-on-dark rounded-xl hover:bg-dp-success-hover transition shadow-sm cursor-pointer"
                     @click="requestFriend(member)"
                   >
                     친구 요청
@@ -741,8 +737,7 @@ watch(
               <!-- Pagination -->
               <div v-if="searchTotalPage > 1" class="flex justify-center items-center gap-2 mt-6">
                 <button
-                  class="p-2.5 rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed hover-bg-light cursor-pointer"
-                  :style="{ borderColor: 'var(--dp-border-primary)' }"
+                  class="p-2.5 rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed hover-bg-light cursor-pointer border-dp-border-primary"
                   :disabled="searchPage === 0"
                   @click="prevPage"
                 >
@@ -752,7 +747,7 @@ watch(
                 <template v-for="i in searchTotalPage" :key="i">
                   <button
                     class="w-10 h-10 rounded-xl border font-medium hover-bg-light cursor-pointer"
-                    :class="(i - 1) === searchPage ? 'bg-blue-600 text-white border-blue-600' : ''"
+                    :class="(i - 1) === searchPage ? 'bg-dp-accent text-dp-text-on-dark border-dp-accent' : ''"
                     :style="(i - 1) !== searchPage ? { borderColor: 'var(--dp-border-primary)' } : {}"
                     @click="goToPage(i - 1)"
                   >
@@ -761,8 +756,7 @@ watch(
                 </template>
 
                 <button
-                  class="p-2.5 rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed hover-bg-light cursor-pointer"
-                  :style="{ borderColor: 'var(--dp-border-primary)' }"
+                  class="p-2.5 rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed hover-bg-light cursor-pointer border-dp-border-primary"
                   :disabled="searchPage >= searchTotalPage - 1"
                   @click="nextPage"
                 >
@@ -770,21 +764,20 @@ watch(
                 </button>
               </div>
 
-              <p class="text-center text-sm mt-4" :style="{ color: 'var(--dp-text-secondary)' }">
+              <p class="text-center text-sm mt-4 text-dp-text-secondary">
                 페이지 {{ searchPage + 1 }} / {{ searchTotalPage }} | 전체 결과: {{ searchTotalElements }}
               </p>
             </div>
             <div v-else class="text-center py-12">
-              <Search class="w-12 h-12 mx-auto mb-3" :style="{ color: 'var(--dp-border-secondary)' }" />
-              <p :style="{ color: 'var(--dp-text-secondary)' }">검색어를 입력하고 검색해주세요.</p>
+              <Search class="w-12 h-12 mx-auto mb-3 text-dp-border-secondary" />
+              <p class="text-dp-text-secondary">검색어를 입력하고 검색해주세요.</p>
             </div>
           </div>
 
           <!-- Footer -->
-          <div class="flex justify-end p-5 border-t" :style="{ borderColor: 'var(--dp-border-primary)', backgroundColor: 'var(--dp-bg-secondary)' }">
+          <div class="flex justify-end p-5 border-t bg-dp-bg-secondary border-dp-border-primary">
             <button
-              class="px-5 py-2.5 rounded-xl font-medium hover-interactive cursor-pointer"
-              :style="{ backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-primary)' }"
+              class="px-5 py-2.5 rounded-xl font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-primary"
               @click="closeSearchModal"
             >
               닫기

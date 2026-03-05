@@ -38,20 +38,20 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
-    <div class="rounded-xl shadow-sm p-8 max-w-md w-full mx-4" :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }">
+  <div class="min-h-screen flex items-center justify-center bg-dp-bg-secondary">
+    <div class="rounded-xl shadow-sm p-8 max-w-md w-full mx-4 bg-dp-bg-card border border-dp-border-primary">
       <div v-if="isLoading" class="text-center">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p :style="{ color: 'var(--dp-text-secondary)' }">로그인 처리 중...</p>
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-dp-accent mx-auto mb-4"></div>
+        <p class="text-dp-text-secondary">로그인 처리 중...</p>
       </div>
 
       <div v-else-if="error" class="text-center">
-        <div class="text-red-500 text-5xl mb-4">!</div>
-        <h2 class="text-xl font-bold mb-2" :style="{ color: 'var(--dp-text-primary)' }">로그인 실패</h2>
-        <p class="mb-4" :style="{ color: 'var(--dp-text-secondary)' }">{{ error }}</p>
+        <div class="text-dp-danger text-5xl mb-4">!</div>
+        <h2 class="text-xl font-bold mb-2 text-dp-text-primary">로그인 실패</h2>
+        <p class="mb-4 text-dp-text-secondary">{{ error }}</p>
         <router-link
           to="/auth/login"
-          class="inline-block bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition"
+          class="inline-block bg-dp-accent text-dp-text-on-dark py-2 px-4 rounded-lg hover:bg-dp-accent-hover transition"
         >
           로그인 페이지로 이동
         </router-link>

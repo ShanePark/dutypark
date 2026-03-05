@@ -226,6 +226,11 @@ function getDutyColor(day: { year: number; month: number; day: number }): string
   return duty?.dutyColor ?? null
 }
 
+function getDutyTypeHeaderTextColor(color: string | null | undefined): string {
+  if (!color) return 'var(--dp-text-primary)'
+  return isLightColor(color) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
+}
+
 // Load holidays from API
 async function loadHolidays() {
   try {
@@ -373,17 +378,17 @@ onMounted(() => {
   <div class="max-w-4xl mx-auto px-2 sm:px-4 py-4">
     <!-- Loading State -->
     <div v-if="loading" class="flex items-center justify-center py-20">
-      <Loader2 class="w-8 h-8 animate-spin text-blue-500" />
+      <Loader2 class="w-8 h-8 animate-spin text-dp-accent" />
     </div>
 
     <!-- No Team State -->
     <template v-else-if="!hasTeam">
-      <div class="rounded-lg shadow overflow-hidden" :style="{ backgroundColor: 'var(--dp-bg-card)' }">
-        <div class="bg-gray-600 text-white font-bold text-xl text-center py-3">
+      <div class="rounded-lg shadow overflow-hidden bg-dp-bg-card">
+        <div class="bg-dp-surface-strong text-dp-text-on-dark font-bold text-xl text-center py-3">
           내 팀
         </div>
-        <div class="flex flex-col items-center justify-center p-12" :style="{ color: 'var(--dp-text-secondary)' }">
-          <Building2 class="w-16 h-16 mb-4" :style="{ color: 'var(--dp-text-muted)' }" />
+        <div class="flex flex-col items-center justify-center p-12 text-dp-text-secondary">
+          <Building2 class="w-16 h-16 mb-4 text-dp-text-muted" />
           <p class="text-xl font-bold mb-2">어느 팀에도 속해있지 않습니다.</p>
           <p class="text-lg">팀 관리자에게 가입을 요청해주세요.</p>
         </div>
@@ -396,9 +401,9 @@ onMounted(() => {
       <div class="flex items-center justify-between gap-1 mb-1">
         <!-- Left: Team name -->
         <div class="w-20 sm:w-24 flex-shrink-0 flex items-center justify-start">
-          <div class="flex items-center gap-1.5 px-2 py-1 rounded-full border" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderColor: 'var(--dp-border-secondary)' }">
-            <Building2 class="w-3.5 h-3.5 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }" />
-            <span class="text-xs sm:text-sm font-semibold truncate max-w-[60px] sm:max-w-[72px]" :style="{ color: 'var(--dp-text-primary)' }">{{ team.name }}</span>
+          <div class="flex items-center gap-1.5 px-2 py-1 rounded-full border bg-dp-bg-tertiary border-dp-border-secondary">
+            <Building2 class="w-3.5 h-3.5 flex-shrink-0 text-dp-text-secondary" />
+            <span class="text-xs sm:text-sm font-semibold truncate max-w-[60px] sm:max-w-[72px] text-dp-text-primary">{{ team.name }}</span>
           </div>
         </div>
 
@@ -423,8 +428,7 @@ onMounted(() => {
           <button
             v-if="isTeamManager"
             @click="goToTeamManage"
-            class="px-3 py-2 border rounded-lg flex items-center gap-1 hover-interactive cursor-pointer"
-            :style="{ borderColor: 'var(--dp-border-secondary)' }"
+            class="px-3 py-2 border rounded-lg flex items-center gap-1 hover-interactive cursor-pointer border-dp-border-secondary"
           >
             <Settings class="w-4 h-4" />
             <span class="hidden sm:inline">팀 관리</span>
@@ -452,15 +456,15 @@ onMounted(() => {
               :key="schedule.id"
               class="text-[10px] sm:text-sm leading-snug px-0.5 border-t-2 border-dashed break-words"
               :style="{
-                color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? '#1f2937' : '#ffffff') : 'var(--dp-text-primary)',
-                borderColor: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.3)') : 'var(--dp-border-primary)'
+                color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)') : 'var(--dp-text-primary)',
+                borderColor: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? 'var(--dp-border-on-light)' : 'var(--dp-border-on-dark)') : 'var(--dp-border-primary)'
               }"
             >
               {{ schedule.content }}
               <span
                 v-if="schedule.totalDays && schedule.totalDays > 1"
                 class="text-[9px] sm:text-xs"
-                :style="{ color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? 'var(--dp-text-muted)' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }"
+                :style="{ color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? 'var(--dp-text-muted)' : 'var(--dp-text-on-dark-muted)') : 'var(--dp-text-muted)' }"
               >
                 ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})
               </span>
@@ -468,7 +472,7 @@ onMounted(() => {
             <div
               v-if="teamSchedules[index].length > 2"
               class="text-[10px] font-medium"
-              :style="{ color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? 'var(--dp-text-muted)' : 'rgba(255,255,255,0.8)') : 'var(--dp-text-muted)' }"
+              :style="{ color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? 'var(--dp-text-muted)' : 'var(--dp-text-on-dark-soft)') : 'var(--dp-text-muted)' }"
             >
               +{{ teamSchedules[index].length - 2 }}
             </div>
@@ -477,15 +481,15 @@ onMounted(() => {
       </CalendarGrid>
 
       <!-- Selected Day Schedule -->
-      <div class="rounded-lg border shadow-sm p-3" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)' }">
+      <div class="rounded-lg border shadow-sm p-3 bg-dp-bg-card border-dp-border-secondary">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-          <h3 class="text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">
+          <h3 class="text-lg font-bold text-dp-text-primary">
             {{ selectedDay.year }}년 {{ selectedDay.month }}월 {{ selectedDay.day }}일
           </h3>
           <button
             v-if="isTeamManager"
             @click="openNewScheduleModal"
-            class="px-3 py-1.5 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition flex items-center gap-1 w-full sm:w-auto justify-center cursor-pointer"
+            class="px-3 py-1.5 bg-dp-success text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-success-hover transition flex items-center gap-1 w-full sm:w-auto justify-center cursor-pointer"
           >
             <CalendarPlus class="w-4 h-4" />
             팀 일정 추가
@@ -500,32 +504,31 @@ onMounted(() => {
           <div
             v-for="schedule in teamSchedules[selectedDay.index]"
             :key="schedule.id"
-            class="rounded-lg p-3 border transition-all duration-150 hover:shadow-md"
-            :style="{ backgroundColor: 'var(--dp-bg-secondary)', borderColor: 'var(--dp-border-primary)' }"
+            class="rounded-lg p-3 border transition-all duration-150 hover:shadow-md bg-dp-bg-secondary border-dp-border-primary"
           >
             <div class="flex items-start justify-between">
               <div class="flex-1 min-w-0">
-                <div class="font-bold mb-1" :style="{ color: 'var(--dp-text-primary)' }">
+                <div class="font-bold mb-1 text-dp-text-primary">
                   {{ schedule.content }}
-                  <span class="text-sm font-normal" :style="{ color: 'var(--dp-text-secondary)' }">
+                  <span class="text-sm font-normal text-dp-text-secondary">
                     (by: <strong>{{ schedule.createMember }}</strong>)
                   </span>
                 </div>
-                <div v-if="schedule.description" class="text-sm whitespace-pre-wrap break-words" :style="{ color: 'var(--dp-text-secondary)' }">
+                <div v-if="schedule.description" class="text-sm whitespace-pre-wrap break-words text-dp-text-secondary">
                   {{ schedule.description }}
                 </div>
               </div>
               <div v-if="isTeamManager" class="flex gap-1 ml-2 flex-shrink-0">
                 <button
                   @click="openEditScheduleModal(schedule)"
-                  class="p-1.5 text-blue-500 rounded-lg hover:bg-blue-100 transition cursor-pointer"
+                  class="p-1.5 text-dp-accent rounded-lg hover:bg-dp-accent-soft transition cursor-pointer"
                   title="수정"
                 >
                   <Pencil class="w-4 h-4" />
                 </button>
                 <button
                   @click="deleteSchedule(schedule.id)"
-                  class="p-1.5 text-red-500 rounded-lg hover:bg-red-100 transition cursor-pointer"
+                  class="p-1.5 text-dp-danger rounded-lg hover:bg-dp-danger-soft transition cursor-pointer"
                   title="삭제"
                 >
                   <Trash2 class="w-4 h-4" />
@@ -534,14 +537,14 @@ onMounted(() => {
             </div>
           </div>
         </div>
-        <div v-else class="text-center py-6" :style="{ color: 'var(--dp-text-muted)' }">
+        <div v-else class="text-center py-6 text-dp-text-muted">
           이 날의 팀 일정이 없습니다.
         </div>
       </div>
 
       <!-- Shift Groups -->
       <div v-if="shiftLoading" class="mt-3 flex items-center justify-center py-8">
-        <Loader2 class="w-6 h-6 animate-spin text-blue-500" />
+        <Loader2 class="w-6 h-6 animate-spin text-dp-accent" />
       </div>
       <div v-else-if="shift.length > 0" class="mt-3 space-y-3">
         <template v-for="group in shift" :key="group.dutyType.id">
@@ -558,10 +561,10 @@ onMounted(() => {
             <!-- Duty Type Header -->
             <div
               class="p-3 flex items-center justify-between"
-              :style="{ backgroundColor: group.dutyType.color ?? '#e8e8e8' }"
+              :style="{ backgroundColor: group.dutyType.color ?? 'var(--dp-duty-type-fallback)' }"
             >
-              <span class="font-bold" :style="{ color: isLightColor(group.dutyType.color) ? '#1f2937' : '#ffffff' }">{{ group.dutyType.name }}</span>
-              <span class="px-2 py-0.5 rounded-full text-sm font-medium" :style="{ backgroundColor: 'rgba(255,255,255,0.9)', color: '#1f2937' }">
+              <span class="font-bold" :style="{ color: getDutyTypeHeaderTextColor(group.dutyType.color) }">{{ group.dutyType.name }}</span>
+              <span class="px-2 py-0.5 rounded-full text-sm font-medium" :style="{ backgroundColor: 'var(--dp-chip-on-dark-bg)', color: 'var(--dp-text-on-light)' }">
                 {{ group.members.length }}명
               </span>
             </div>
@@ -581,7 +584,7 @@ onMounted(() => {
                 }"
               >
                 <ProfileAvatar :member-id="member.id" :has-profile-photo="member.hasProfilePhoto" :profile-photo-version="member.profilePhotoVersion" size="sm" class="mb-1" />
-                <span class="text-sm font-medium truncate w-full text-center" :style="{ color: 'var(--dp-text-primary)' }">
+                <span class="text-sm font-medium truncate w-full text-center text-dp-text-primary">
                   {{ member.name }}
                 </span>
               </div>
@@ -594,11 +597,11 @@ onMounted(() => {
     <!-- Schedule Modal -->
     <div
       v-if="showScheduleModal"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
       @click.self="closeScheduleModal"
     >
-      <div class="rounded-lg shadow-xl w-full max-w-lg" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
-        <div class="flex items-center justify-between p-4 border-b" :style="{ borderColor: 'var(--dp-border-primary)' }">
+      <div class="rounded-lg shadow-xl w-full max-w-lg bg-dp-bg-modal">
+        <div class="flex items-center justify-between p-4 border-b border-dp-border-primary">
           <h3 class="text-lg font-bold">팀 일정 저장</h3>
           <button
             @click="closeScheduleModal"
@@ -610,7 +613,7 @@ onMounted(() => {
 
         <div class="p-4 space-y-4">
           <div>
-            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-primary)' }">
+            <label class="block text-sm font-medium mb-1 text-dp-text-primary">
               제목(필수)
               <CharacterCounter :current="scheduleForm.content.length" :max="50" />
             </label>
@@ -618,7 +621,7 @@ onMounted(() => {
               v-model="scheduleForm.content"
               type="text"
               maxlength="50"
-              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent"
               :style="{
                 backgroundColor: 'var(--dp-bg-input)',
                 borderColor: 'var(--dp-border-input)',
@@ -629,13 +632,13 @@ onMounted(() => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-primary)' }">
+            <label class="block text-sm font-medium mb-1 text-dp-text-primary">
               상세(옵션)
             </label>
             <textarea
               v-model="scheduleForm.description"
               rows="4"
-              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent resize-none"
               :style="{
                 backgroundColor: 'var(--dp-bg-input)',
                 borderColor: 'var(--dp-border-input)',
@@ -647,7 +650,7 @@ onMounted(() => {
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-primary)' }">
+              <label class="block text-sm font-medium mb-1 text-dp-text-primary">
                 시작일
               </label>
               <input
@@ -663,13 +666,13 @@ onMounted(() => {
               />
             </div>
             <div>
-              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-primary)' }">
+              <label class="block text-sm font-medium mb-1 text-dp-text-primary">
                 종료일
               </label>
               <input
                 v-model="scheduleForm.endDate"
                 type="date"
-                class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent"
                 :style="{
                   backgroundColor: 'var(--dp-bg-input)',
                   borderColor: 'var(--dp-border-input)',
@@ -680,11 +683,11 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="flex justify-end gap-2 p-4 border-t" :style="{ borderColor: 'var(--dp-border-primary)' }">
+        <div class="flex justify-end gap-2 p-4 border-t border-dp-border-primary">
           <button
             @click="saveSchedule"
             :disabled="saving || !scheduleForm.content.trim()"
-            class="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
+            class="px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
           >
             <Loader2 v-if="saving" class="w-4 h-4 animate-spin" />
             저장

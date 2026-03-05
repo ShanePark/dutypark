@@ -199,74 +199,69 @@ onMounted(() => {
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <router-link
           to="/admin"
-          class="rounded-xl p-4 transition"
-          :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }"
+          class="rounded-xl p-4 transition bg-dp-bg-card border border-dp-border-primary"
           @mouseover="(e: Event) => setHoverBg(e)"
           @mouseleave="(e: Event) => clearHoverBg(e)"
         >
-          <Users class="w-6 h-6 mb-2" :style="{ color: 'var(--dp-text-secondary)' }" />
-          <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">회원 관리</span>
+          <Users class="w-6 h-6 mb-2 text-dp-text-secondary" />
+          <span class="font-medium text-dp-text-primary">회원 관리</span>
         </router-link>
         <router-link
           to="/admin/teams"
-          class="bg-gray-700 text-white rounded-xl p-4 hover:bg-gray-800 transition"
+          class="bg-dp-surface-strong text-dp-text-on-dark rounded-xl p-4 hover:bg-dp-surface-strong-hover transition"
         >
-          <Building2 class="w-6 h-6 mb-2 text-white" />
-          <span class="font-medium text-white">팀 관리</span>
+          <Building2 class="w-6 h-6 mb-2 text-dp-text-on-dark" />
+          <span class="font-medium text-dp-text-on-dark">팀 관리</span>
         </router-link>
         <router-link
           to="/admin/dev"
-          class="rounded-xl p-4 transition"
-          :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }"
+          class="rounded-xl p-4 transition bg-dp-bg-card border border-dp-border-primary"
           @mouseover="(e: Event) => setHoverBg(e)"
           @mouseleave="(e: Event) => clearHoverBg(e)"
         >
-          <Code2 class="w-6 h-6 mb-2" :style="{ color: 'var(--dp-text-secondary)' }" />
-          <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">개발</span>
+          <Code2 class="w-6 h-6 mb-2 text-dp-text-secondary" />
+          <span class="font-medium text-dp-text-primary">개발</span>
         </router-link>
         <a
           href="/docs/index.html"
           target="_blank"
-          class="rounded-xl p-4 transition"
-          :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }"
+          class="rounded-xl p-4 transition bg-dp-bg-card border border-dp-border-primary"
           @mouseover="(e: Event) => setHoverBg(e)"
           @mouseleave="(e: Event) => clearHoverBg(e)"
         >
           <div class="flex items-center gap-1 mb-2">
-            <FileText class="w-6 h-6" :style="{ color: 'var(--dp-text-secondary)' }" />
-            <ExternalLink class="w-3 h-3" :style="{ color: 'var(--dp-text-muted)' }" />
+            <FileText class="w-6 h-6 text-dp-text-secondary" />
+            <ExternalLink class="w-3 h-3 text-dp-text-muted" />
           </div>
-          <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">API 문서</span>
+          <span class="font-medium text-dp-text-primary">API 문서</span>
         </a>
       </div>
 
       <!-- Team List Section -->
-      <div class="rounded-xl" :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }">
-        <div class="p-4" :style="{ borderBottom: '1px solid var(--dp-border-primary)' }">
+      <div class="rounded-xl bg-dp-bg-card border border-dp-border-primary">
+        <div class="p-4 border-b border-dp-border-primary">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 class="text-lg font-semibold" :style="{ color: 'var(--dp-text-primary)' }">팀 목록</h2>
-              <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
-                <span v-if="searchKeyword" class="text-blue-600">[{{ searchKeyword }}]</span>
+              <h2 class="text-lg font-semibold text-dp-text-primary">팀 목록</h2>
+              <p class="text-sm text-dp-text-secondary">
+                <span v-if="searchKeyword" class="text-dp-accent">[{{ searchKeyword }}]</span>
                 총 {{ totalElements }}개의 팀이 있습니다
               </p>
             </div>
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
               <div class="relative flex-1 sm:flex-initial">
-                <Search class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2" :style="{ color: 'var(--dp-text-muted)' }" />
+                <Search class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-dp-text-muted" />
                 <input
                   v-model="keyword"
                   type="text"
                   placeholder="팀 검색..."
-                  class="w-full pl-9 pr-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                  :style="{ backgroundColor: 'var(--dp-bg-input)', border: '1px solid var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
+                  class="w-full pl-9 pr-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-dp-text-primary focus:border-transparent bg-dp-bg-input border border-dp-border-input text-dp-text-primary"
                   @keyup.enter="handleSearch"
                 />
               </div>
               <button
                 @click="handleSearch"
-                class="px-4 py-2 text-sm font-medium rounded-lg transition"
-                :style="{ color: 'var(--dp-text-primary)', backgroundColor: 'var(--dp-bg-tertiary)' }"
+                class="px-4 py-2 text-sm font-medium rounded-lg transition bg-dp-bg-tertiary text-dp-text-primary"
                 @mouseover="(e: Event) => setHoverBg(e)"
                 @mouseleave="(e: Event) => clearHoverBg(e, 'var(--dp-bg-tertiary)')"
               >
@@ -274,7 +269,7 @@ onMounted(() => {
               </button>
               <button
                 @click="openNewTeamModal"
-                class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition"
+                class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-accent hover:bg-dp-accent-hover rounded-lg transition"
               >
                 <Plus class="w-4 h-4" />
                 <span class="hidden sm:inline">새 팀 추가</span>
@@ -287,48 +282,47 @@ onMounted(() => {
         <!-- Team Table (Desktop) -->
         <div class="hidden sm:block overflow-x-auto">
           <table class="w-full">
-            <thead :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }">
+            <thead class="bg-dp-bg-tertiary">
               <tr>
-                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-12" :style="{ color: 'var(--dp-text-muted)' }">
+                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-12 text-dp-text-muted">
                   #
                 </th>
-                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-40" :style="{ color: 'var(--dp-text-muted)' }">
+                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-40 text-dp-text-muted">
                   이름
                 </th>
-                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-24" :style="{ color: 'var(--dp-text-muted)' }">
+                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-24 text-dp-text-muted">
                   멤버
                 </th>
-                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider" :style="{ color: 'var(--dp-text-muted)' }">
+                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-dp-text-muted">
                   설명
                 </th>
               </tr>
             </thead>
-            <tbody :style="{ borderTop: '1px solid var(--dp-border-secondary)' }">
+            <tbody class="border-t border-dp-border-secondary">
               <tr
                 v-for="(team, index) in teams"
                 :key="team.id"
-                class="cursor-pointer transition"
-                :style="{ borderBottom: '1px solid var(--dp-border-secondary)' }"
+                class="cursor-pointer transition border-b border-dp-border-secondary"
                 @click="manageTeam(team.id)"
                 @mouseover="(e: Event) => setHoverBg(e)"
                 @mouseleave="(e: Event) => clearHoverBg(e, 'transparent')"
               >
-                <td class="px-4 py-4 text-sm" :style="{ color: 'var(--dp-text-muted)' }">
+                <td class="px-4 py-4 text-sm text-dp-text-muted">
                   {{ page * size + index + 1 }}
                 </td>
                 <td class="px-4 py-4">
                   <div class="flex items-center gap-2">
-                    <Building2 class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
-                    <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ team.name }}</span>
+                    <Building2 class="w-4 h-4 text-dp-text-muted" />
+                    <span class="font-medium text-dp-text-primary">{{ team.name }}</span>
                   </div>
                 </td>
                 <td class="px-4 py-4">
-                  <div class="flex items-center gap-1 text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
-                    <Users class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
+                  <div class="flex items-center gap-1 text-sm text-dp-text-secondary">
+                    <Users class="w-4 h-4 text-dp-text-muted" />
                     {{ team.memberCount }}명
                   </div>
                 </td>
-                <td class="px-4 py-4 text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
+                <td class="px-4 py-4 text-sm text-dp-text-secondary">
                   {{ team.description }}
                 </td>
               </tr>
@@ -337,35 +331,34 @@ onMounted(() => {
         </div>
 
         <!-- Team Cards (Mobile) -->
-        <div class="sm:hidden" :style="{ borderTop: '1px solid var(--dp-border-secondary)' }">
+        <div class="sm:hidden border-t border-dp-border-secondary">
           <div
             v-for="(team, index) in teams"
             :key="team.id"
-            class="p-4 cursor-pointer transition"
-            :style="{ borderBottom: '1px solid var(--dp-border-secondary)' }"
+            class="p-4 cursor-pointer transition border-b border-dp-border-secondary"
             @click="manageTeam(team.id)"
             @mouseover="(e: Event) => setHoverBg(e)"
             @mouseleave="(e: Event) => clearHoverBg(e, 'transparent')"
           >
             <div class="flex items-start justify-between gap-3">
               <div class="flex items-center gap-3 min-w-0">
-                <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }">
-                  <Building2 class="w-5 h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-dp-bg-tertiary">
+                  <Building2 class="w-5 h-5 text-dp-text-secondary" />
                 </div>
                 <div class="min-w-0">
-                  <p class="font-medium truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ team.name }}</p>
-                  <p class="text-sm truncate" :style="{ color: 'var(--dp-text-secondary)' }">{{ team.description }}</p>
+                  <p class="font-medium truncate text-dp-text-primary">{{ team.name }}</p>
+                  <p class="text-sm truncate text-dp-text-secondary">{{ team.description }}</p>
                 </div>
               </div>
-              <div class="flex items-center gap-1 text-sm flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }">
-                <Users class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
+              <div class="flex items-center gap-1 text-sm flex-shrink-0 text-dp-text-secondary">
+                <Users class="w-4 h-4 text-dp-text-muted" />
                 {{ team.memberCount }}명
               </div>
             </div>
           </div>
         </div>
 
-        <div v-if="teams.length === 0 && !isLoading" class="p-8 text-center" :style="{ color: 'var(--dp-text-muted)' }">
+        <div v-if="teams.length === 0 && !isLoading" class="p-8 text-center text-dp-text-muted">
           검색 결과가 없습니다
         </div>
 
@@ -375,8 +368,7 @@ onMounted(() => {
           <nav class="flex items-center gap-1">
             <button
               :disabled="page === 0"
-              class="p-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-              :style="{ color: 'var(--dp-text-muted)' }"
+              class="p-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed text-dp-text-muted"
               @click="goToPage(page - 1)"
               @mouseover="(e: Event) => page !== 0 && setHoverBgWithColor(e, 'var(--dp-bg-hover)', 'var(--dp-text-secondary)')"
               @mouseleave="(e: Event) => page !== 0 && clearHoverBgWithColor(e, 'transparent', 'var(--dp-text-muted)')"
@@ -388,7 +380,7 @@ onMounted(() => {
               <button
                 v-if="totalPages <= 5 || p === 1 || p === totalPages || (p >= page && p <= page + 2)"
                 class="px-3 py-1 text-sm rounded-lg transition"
-                :class="p - 1 === page ? 'bg-gray-900 text-white' : ''"
+                :class="p - 1 === page ? 'bg-dp-surface-strong text-dp-text-on-dark' : ''"
                 :style="p - 1 !== page ? { color: 'var(--dp-text-secondary)' } : {}"
                 @click="goToPage(p - 1)"
                 @mouseover="(e: Event) => p - 1 !== page && setHoverBg(e)"
@@ -403,14 +395,12 @@ onMounted(() => {
               >...</span>
               <span
                 v-else-if="p === totalPages - 1 && page < totalPages - 3"
-                class="px-1"
-                :style="{ color: 'var(--dp-text-muted)' }"
+                class="px-1 text-dp-text-muted"
               >...</span>
             </template>
             <button
               :disabled="page === totalPages - 1"
-              class="p-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              :style="{ color: 'var(--dp-text-muted)' }"
+              class="p-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-dp-text-muted"
               @click="goToPage(page + 1)"
               @mouseover="(e: Event) => page !== totalPages - 1 && setHoverBgWithColor(e, 'var(--dp-bg-hover)', 'var(--dp-text-secondary)')"
               @mouseleave="(e: Event) => page !== totalPages - 1 && clearHoverBgWithColor(e, 'transparent', 'var(--dp-text-muted)')"
@@ -424,16 +414,15 @@ onMounted(() => {
     <!-- New Team Modal -->
     <div
       v-if="showNewTeamModal"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50"
       @click.self="closeNewTeamModal"
     >
-      <div class="rounded-xl shadow-xl w-full max-w-md mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
-        <div class="p-4 flex items-center justify-between" :style="{ borderBottom: '1px solid var(--dp-border-primary)' }">
-          <h3 class="text-lg font-semibold" :style="{ color: 'var(--dp-text-primary)' }">새 팀 추가</h3>
+      <div class="rounded-xl shadow-xl w-full max-w-md mx-4 bg-dp-bg-modal">
+        <div class="p-4 flex items-center justify-between border-b border-dp-border-primary">
+          <h3 class="text-lg font-semibold text-dp-text-primary">새 팀 추가</h3>
           <button
             @click="closeNewTeamModal"
-            class="p-1 rounded transition cursor-pointer"
-            :style="{ color: 'var(--dp-text-muted)' }"
+            class="p-1 rounded transition cursor-pointer text-dp-text-muted"
             @mouseover="(e: Event) => { if (e.currentTarget) (e.currentTarget as HTMLElement).style.color = 'var(--dp-text-secondary)' }"
             @mouseleave="(e: Event) => { if (e.currentTarget) (e.currentTarget as HTMLElement).style.color = 'var(--dp-text-muted)' }"
           >
@@ -442,7 +431,7 @@ onMounted(() => {
         </div>
         <div class="p-4 space-y-4">
           <div>
-            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
+            <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
               팀 이름
               <CharacterCounter :current="newTeamName.length" :max="20" />
             </label>
@@ -452,14 +441,13 @@ onMounted(() => {
                 type="text"
                 maxlength="20"
                 minlength="2"
-                class="flex-1 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                :style="{ backgroundColor: 'var(--dp-bg-input)', border: '1px solid var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
+                class="flex-1 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-text-primary focus:border-transparent bg-dp-bg-input border border-dp-border-input text-dp-text-primary"
                 placeholder="팀 이름 입력"
                 @input="nameCheckResult = null"
               />
               <button
                 @click="checkTeamName"
-                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition cursor-pointer"
+                class="px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-accent hover:bg-dp-accent-hover rounded-lg transition cursor-pointer"
               >
                 확인
               </button>
@@ -467,7 +455,7 @@ onMounted(() => {
             <p
               v-if="nameCheckResult"
               class="mt-1 text-sm flex items-center gap-1"
-              :class="nameCheckResult === 'OK' ? 'text-green-600' : 'text-red-500'"
+              :class="nameCheckResult === 'OK' ? 'text-dp-success' : 'text-dp-danger'"
             >
               <Check v-if="nameCheckResult === 'OK'" class="w-4 h-4" />
               <AlertCircle v-else class="w-4 h-4" />
@@ -475,7 +463,7 @@ onMounted(() => {
             </p>
           </div>
           <div>
-            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
+            <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
               설명
               <CharacterCounter :current="newTeamDescription.length" :max="50" />
             </label>
@@ -483,24 +471,22 @@ onMounted(() => {
               v-model="newTeamDescription"
               type="text"
               maxlength="50"
-              class="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-              :style="{ backgroundColor: 'var(--dp-bg-input)', border: '1px solid var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
+              class="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-text-primary focus:border-transparent bg-dp-bg-input border border-dp-border-input text-dp-text-primary"
               placeholder="팀 설명 입력"
             />
           </div>
         </div>
-        <div class="p-4 flex justify-end gap-2" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
+        <div class="p-4 flex justify-end gap-2 border-t border-dp-border-primary">
           <button
             @click="handleCreateTeam"
             :disabled="nameCheckResult !== 'OK' || !newTeamDescription"
-            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            class="px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-accent hover:bg-dp-accent-hover rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             추가
           </button>
           <button
             @click="closeNewTeamModal"
-            class="px-4 py-2 text-sm font-medium rounded-lg transition cursor-pointer"
-            :style="{ color: 'var(--dp-text-primary)', backgroundColor: 'var(--dp-bg-tertiary)' }"
+            class="px-4 py-2 text-sm font-medium rounded-lg transition cursor-pointer bg-dp-bg-tertiary text-dp-text-primary"
             @mouseover="(e: Event) => setHoverBg(e)"
             @mouseleave="(e: Event) => clearHoverBg(e, 'var(--dp-bg-tertiary)')"
           >

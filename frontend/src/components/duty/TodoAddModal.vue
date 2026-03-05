@@ -140,7 +140,7 @@ function onUploadError(message: string) {
   <Teleport to="body">
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50"
       @click.self="handleClose"
     >
       <div class="modal-container max-w-[95vw] sm:max-w-xl max-h-[90dvh] sm:max-h-[90vh]">
@@ -148,7 +148,7 @@ function onUploadError(message: string) {
         <div class="modal-header">
           <h2>할 일 추가</h2>
           <button @click="handleClose" class="p-2 hover-bg-light rounded-full transition cursor-pointer">
-            <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
+            <X class="w-6 h-6 text-dp-text-primary" />
           </button>
         </div>
 
@@ -157,7 +157,7 @@ function onUploadError(message: string) {
           <div class="space-y-4">
             <!-- Status Selection -->
             <div>
-              <label class="block text-sm font-medium mb-2" :style="{ color: 'var(--dp-text-secondary)' }">상태</label>
+              <label class="block text-sm font-medium mb-2 text-dp-text-secondary">상태</label>
               <div class="grid grid-cols-3 gap-2">
                 <button
                   v-for="option in statusOptions"
@@ -174,31 +174,31 @@ function onUploadError(message: string) {
             </div>
 
             <div>
-              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
-                제목 <span class="text-red-500">*</span>
+              <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
+                제목 <span class="text-dp-danger">*</span>
                 <CharacterCounter :current="title.length" :max="50" />
               </label>
               <input
                 v-model="title"
                 type="text"
                 maxlength="50"
-                class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
+                class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
                 placeholder="할 일 제목을 입력하세요"
               />
             </div>
 
             <div>
-              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">내용</label>
+              <label class="block text-sm font-medium mb-1 text-dp-text-secondary">내용</label>
               <textarea
                 v-model="content"
                 rows="6"
-                class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
+                class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
                 placeholder="상세 내용을 입력하세요 (선택사항)"
               ></textarea>
             </div>
 
             <div>
-              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
+              <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
                 <Calendar class="w-4 h-4 inline-block mr-1 -mt-0.5" />
                 마감일
                 <span class="ml-1 text-xs font-normal due-date-optional">(선택)</span>
@@ -206,13 +206,13 @@ function onUploadError(message: string) {
               <input
                 v-model="dueDate"
                 type="date"
-                class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
+                class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
               />
             </div>
 
             <!-- Attachment Upload -->
             <div>
-              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">첨부파일</label>
+              <label class="block text-sm font-medium mb-1 text-dp-text-secondary">첨부파일</label>
               <FileUploader
                 v-if="isOpen"
                 ref="fileUploaderRef"
@@ -228,7 +228,7 @@ function onUploadError(message: string) {
         </div>
 
         <!-- Footer (sticky at bottom) -->
-        <div class="p-3 sm:p-4 flex-shrink-0 flex flex-row gap-2 justify-end" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
+        <div class="p-3 sm:p-4 flex-shrink-0 flex flex-row gap-2 justify-end border-t border-dp-border-primary">
           <button
             @click="handleClose"
             class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
@@ -238,7 +238,7 @@ function onUploadError(message: string) {
           <button
             @click="handleSave"
             :disabled="!title.trim() || isUploading"
-            class="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {{ isUploading ? '업로드 중...' : '저장' }}
           </button>
@@ -294,7 +294,7 @@ function onUploadError(message: string) {
 .status-card-in-progress.status-card-selected {
   border-color: var(--dp-warning);
   background-color: color-mix(in srgb, var(--dp-warning) 25%, var(--dp-bg-tertiary));
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+  box-shadow: 0 0 0 3px var(--dp-warning-ring);
 }
 
 /* DONE status - Green/Success */
@@ -310,7 +310,7 @@ function onUploadError(message: string) {
 .status-card-done.status-card-selected {
   border-color: var(--dp-success);
   background-color: color-mix(in srgb, var(--dp-success) 25%, var(--dp-bg-tertiary));
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+  box-shadow: 0 0 0 3px var(--dp-success-ring);
 }
 
 .due-date-optional {

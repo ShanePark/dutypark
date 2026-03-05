@@ -132,34 +132,30 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
   <Teleport to="body">
     <div
       v-if="isOpen && schedule"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 pb-16 sm:pb-0"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50 pb-16 sm:pb-0"
       @click.self="emit('close')"
     >
       <div class="modal-container max-w-[95vw] sm:max-w-lg max-h-[calc(100dvh-5rem)] sm:max-h-[85vh]">
         <!-- Header -->
         <div
-          class="p-3 sm:p-4 flex-shrink-0"
-          :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderBottom: '1px solid var(--dp-border-primary)' }"
+          class="p-3 sm:p-4 flex-shrink-0 bg-dp-bg-tertiary border-b border-dp-border-primary"
         >
           <div class="flex items-start justify-between gap-3">
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
                 <Lock
                   v-if="schedule.visibility === 'PRIVATE'"
-                  class="w-4 h-4 flex-shrink-0"
-                  :style="{ color: 'var(--dp-text-muted)' }"
+                  class="w-4 h-4 flex-shrink-0 text-dp-text-muted"
                 />
                 <h2
-                  class="text-base sm:text-lg font-bold break-words"
-                  :style="{ color: 'var(--dp-text-primary)' }"
+                  class="text-base sm:text-lg font-bold break-words text-dp-text-primary"
                 >
                   {{ schedule.content }}
                 </h2>
                 <component
                   v-if="schedule.visibility !== 'PRIVATE'"
                   :is="getVisibilityIcon(schedule.visibility)"
-                  class="w-4 h-4 flex-shrink-0"
-                  :style="{ color: 'var(--dp-text-muted)' }"
+                  class="w-4 h-4 flex-shrink-0 text-dp-text-muted"
                   :title="getVisibilityLabel(schedule.visibility)"
                 />
               </div>
@@ -176,7 +172,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
               @click="emit('close')"
               class="p-2 rounded-full flex-shrink-0 hover-close-btn cursor-pointer"
             >
-              <X class="w-5 h-5" :style="{ color: 'var(--dp-text-primary)' }" />
+              <X class="w-5 h-5 text-dp-text-primary" />
             </button>
           </div>
         </div>
@@ -186,13 +182,12 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
           <!-- Date/Time -->
           <div class="flex items-start gap-3">
             <div
-              class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-              :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
+              class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-dp-bg-tertiary"
             >
-              <Calendar class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
+              <Calendar class="w-4 h-4 text-dp-text-muted" />
             </div>
             <div class="flex-1 pt-1">
-              <div class="text-sm" :style="{ color: 'var(--dp-text-primary)' }">
+              <div class="text-sm text-dp-text-primary">
                 {{ formattedDateTime }}
               </div>
             </div>
@@ -201,14 +196,13 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
           <!-- Owner (for tagged schedules) -->
           <div v-if="schedule.isTagged" class="flex items-start gap-3">
             <div
-              class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-              :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
+              class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-dp-bg-tertiary"
             >
-              <User class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
+              <User class="w-4 h-4 text-dp-text-muted" />
             </div>
             <div class="flex-1 pt-1">
-              <div class="text-xs mb-1" :style="{ color: 'var(--dp-text-muted)' }">태그한 사람</div>
-              <div class="text-sm" :style="{ color: 'var(--dp-text-primary)' }">
+              <div class="text-xs mb-1 text-dp-text-muted">태그한 사람</div>
+              <div class="text-sm text-dp-text-primary">
                 {{ schedule.taggedBy || schedule.owner }}
               </div>
             </div>
@@ -217,18 +211,17 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
           <!-- Tags -->
           <div v-if="displayTags.length > 0" class="flex items-start gap-3">
             <div
-              class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-              :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
+              class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-dp-bg-tertiary"
             >
-              <Users class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
+              <Users class="w-4 h-4 text-dp-text-muted" />
             </div>
             <div class="flex-1 pt-1">
-              <div class="text-xs mb-1.5" :style="{ color: 'var(--dp-text-muted)' }">함께하는 사람</div>
+              <div class="text-xs mb-1.5 text-dp-text-muted">함께하는 사람</div>
               <div class="flex flex-wrap gap-1.5">
                 <span
                   v-for="tag in displayTags"
                   :key="tag.id"
-                  class="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full"
+                  class="inline-flex items-center px-2 py-0.5 bg-dp-accent-soft text-dp-accent-hover text-xs rounded-full"
                 >
                   {{ tag.name }}
                 </span>
@@ -239,16 +232,14 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
           <!-- Description -->
           <div v-if="schedule.description" class="flex items-start gap-3">
             <div
-              class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-              :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
+              class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-dp-bg-tertiary"
             >
-              <FileText class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
+              <FileText class="w-4 h-4 text-dp-text-muted" />
             </div>
             <div class="flex-1 pt-1">
-              <div class="text-xs mb-1" :style="{ color: 'var(--dp-text-muted)' }">설명</div>
+              <div class="text-xs mb-1 text-dp-text-muted">설명</div>
               <div
-                class="text-sm whitespace-pre-wrap"
-                :style="{ color: 'var(--dp-text-primary)' }"
+                class="text-sm whitespace-pre-wrap text-dp-text-primary"
               >
                 {{ schedule.description }}
               </div>
@@ -258,13 +249,12 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
           <!-- Attachments -->
           <div v-if="schedule.attachments?.length" class="flex items-start gap-3">
             <div
-              class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-              :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
+              class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-dp-bg-tertiary"
             >
-              <Paperclip class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
+              <Paperclip class="w-4 h-4 text-dp-text-muted" />
             </div>
             <div class="flex-1 pt-1">
-              <div class="text-xs mb-2" :style="{ color: 'var(--dp-text-muted)' }">
+              <div class="text-xs mb-2 text-dp-text-muted">
                 첨부파일 ({{ schedule.attachments.length }})
               </div>
               <AttachmentGrid
@@ -277,8 +267,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
           <!-- Empty state when no extra info -->
           <div
             v-if="!schedule.isTagged && displayTags.length === 0 && !schedule.description && !schedule.attachments?.length"
-            class="text-center py-4"
-            :style="{ color: 'var(--dp-text-muted)' }"
+            class="text-center py-4 text-dp-text-muted"
           >
             추가 정보가 없습니다.
           </div>
@@ -286,8 +275,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
 
         <!-- Footer -->
         <div
-          class="p-3 sm:p-4 flex-shrink-0"
-          :style="{ borderTop: '1px solid var(--dp-border-primary)' }"
+          class="p-3 sm:p-4 flex-shrink-0 border-t border-dp-border-primary"
         >
           <button
             @click="emit('close')"

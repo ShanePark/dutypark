@@ -174,7 +174,7 @@ defineExpose({ checkVisibility })
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: var(--dp-overlay-scrim);
   padding: 0.75rem;
   padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
 }
@@ -185,18 +185,12 @@ defineExpose({ checkVisibility })
   background-color: var(--dp-bg-card);
   border: 2px solid var(--dp-accent);
   border-radius: 1.25rem;
-  box-shadow:
-    0 -8px 32px rgba(59, 130, 246, 0.25),
-    0 -2px 16px rgba(0, 0, 0, 0.2),
-    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  box-shadow: var(--dp-shadow-guide);
   overflow: hidden;
 }
 
 .dark .push-guide-container {
-  box-shadow:
-    0 -8px 32px rgba(59, 130, 246, 0.3),
-    0 -2px 16px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  box-shadow: var(--dp-shadow-guide-dark);
 }
 
 .push-guide-header {
@@ -250,7 +244,7 @@ defineExpose({ checkVisibility })
   width: 100%;
   padding: 0.875rem 1rem;
   background-color: var(--dp-accent);
-  color: white;
+  color: var(--dp-text-on-dark);
   font-weight: 600;
   border-radius: 0.75rem;
   transition: all 0.15s ease;
@@ -270,8 +264,8 @@ defineExpose({ checkVisibility })
 .push-guide-spinner {
   width: 1.25rem;
   height: 1.25rem;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
+  border: 2px solid var(--dp-border-on-dark);
+  border-top-color: var(--dp-text-on-dark);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -315,7 +309,7 @@ defineExpose({ checkVisibility })
 
 .slide-up-enter-from,
 .slide-up-leave-to {
-  background-color: rgba(0, 0, 0, 0);
+  background-color: var(--dp-overlay-transparent);
 }
 
 .slide-up-enter-from .push-guide-container,

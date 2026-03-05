@@ -88,11 +88,11 @@ function handleDelete(tokenId: number) {
   <div>
     <!-- Loading State -->
     <div v-if="loading" class="flex items-center justify-center py-8">
-      <Loader2 class="w-6 h-6 animate-spin text-blue-500" />
+      <Loader2 class="w-6 h-6 animate-spin text-dp-accent" />
     </div>
 
     <template v-else-if="sortedTokens.length === 0">
-      <div class="py-8 text-center text-sm" :style="{ color: 'var(--dp-text-muted)' }">
+      <div class="py-8 text-center text-sm text-dp-text-muted">
         세션 정보가 없습니다
       </div>
     </template>
@@ -105,28 +105,27 @@ function handleDelete(tokenId: number) {
           <div
             v-for="(token, idx) in visibleTokens"
             :key="token.id"
-            class="text-sm rounded-lg p-3"
-            :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
+            class="text-sm rounded-lg p-3 bg-dp-bg-tertiary"
           >
             <div class="flex items-center justify-between gap-2 mb-2">
-              <div class="flex flex-col" :style="{ color: 'var(--dp-text-secondary)' }">
+              <div class="flex flex-col text-dp-text-secondary">
                 <div class="flex items-center gap-1">
-                  <Clock class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+                  <Clock class="w-4 h-4 flex-shrink-0 text-dp-text-muted" />
                   <span>{{ formatRelativeTime(token.lastUsed) }}</span>
                 </div>
-                <span class="text-xs ml-5" :style="{ color: 'var(--dp-text-muted)' }">
+                <span class="text-xs ml-5 text-dp-text-muted">
                   최초: {{ formatDate(token.createdDate) }}
                 </span>
               </div>
               <div class="flex items-center gap-2">
                 <!-- Delete button or current login badge -->
-                <span v-if="token.isCurrentLogin" class="px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded-full">
+                <span v-if="token.isCurrentLogin" class="px-2 py-0.5 text-xs font-medium text-dp-success bg-dp-success-soft rounded-full">
                   현재
                 </span>
                 <button
                   v-else-if="showDeleteButton"
                   @click="handleDelete(token.id)"
-                  class="w-6 h-6 flex items-center justify-center text-red-500 hover:bg-red-100 rounded-full transition cursor-pointer"
+                  class="w-6 h-6 flex items-center justify-center text-dp-danger hover:bg-dp-danger-soft rounded-full transition cursor-pointer"
                   title="접속 종료"
                 >
                   <LogOut class="w-3.5 h-3.5" />
@@ -137,7 +136,7 @@ function handleDelete(tokenId: number) {
                     v-if="idx === 0 && hiddenCount > 0"
                     @click="expanded = !expanded"
                     class="w-6 h-6 flex items-center justify-center text-xs font-medium rounded-full cursor-pointer transition"
-                    :class="expanded ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'"
+                    :class="expanded ? 'bg-dp-surface-strong text-dp-text-on-dark' : 'bg-dp-bg-tertiary text-dp-text-secondary hover:bg-dp-bg-tertiary'"
                   >
                     {{ expanded ? '-' : `+${hiddenCount}` }}
                   </button>
@@ -145,14 +144,14 @@ function handleDelete(tokenId: number) {
               </div>
             </div>
             <div class="space-y-1">
-              <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
-                <Globe class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+              <div class="flex items-center gap-2 text-dp-text-secondary">
+                <Globe class="w-4 h-4 flex-shrink-0 text-dp-text-muted" />
                 <span>{{ token.remoteAddr || '-' }}</span>
               </div>
-              <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
-                <component :is="isDesktopDevice(token.userAgent?.device) ? Monitor : Smartphone" class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+              <div class="flex items-center gap-2 text-dp-text-secondary">
+                <component :is="isDesktopDevice(token.userAgent?.device) ? Monitor : Smartphone" class="w-4 h-4 flex-shrink-0 text-dp-text-muted" />
                 <span>{{ token.userAgent?.device || '-' }}</span>
-                <span :style="{ color: 'var(--dp-text-muted)' }">{{ token.userAgent?.browser || '-' }}</span>
+                <span class="text-dp-text-muted">{{ token.userAgent?.browser || '-' }}</span>
               </div>
             </div>
           </div>
@@ -162,44 +161,43 @@ function handleDelete(tokenId: number) {
           <div
             v-for="(token, idx) in visibleTokens"
             :key="token.id"
-            class="grid text-sm rounded-lg p-3 gap-x-2"
+            class="grid text-sm rounded-lg p-3 gap-x-2 bg-dp-bg-tertiary"
             :class="[
               collapsible
                 ? (showDeleteButton ? 'grid-cols-[1fr_1fr_1fr_1fr_auto_28px]' : 'grid-cols-[1fr_1fr_1fr_1fr_28px]')
                 : (showDeleteButton ? 'grid-cols-[1fr_1fr_1fr_1fr_auto]' : 'grid-cols-[1fr_1fr_1fr_1fr]')
             ]"
-            :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
           >
-            <div class="flex flex-col justify-center" :style="{ color: 'var(--dp-text-secondary)' }">
+            <div class="flex flex-col justify-center text-dp-text-secondary">
               <div class="flex items-center gap-1">
-                <Clock class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+                <Clock class="w-4 h-4 flex-shrink-0 text-dp-text-muted" />
                 <span>{{ formatRelativeTime(token.lastUsed) }}</span>
               </div>
-              <span class="text-xs ml-5" :style="{ color: 'var(--dp-text-muted)' }">
+              <span class="text-xs ml-5 text-dp-text-muted">
                 최초: {{ formatDate(token.createdDate) }}
               </span>
             </div>
-            <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
-              <Globe class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+            <div class="flex items-center gap-2 text-dp-text-secondary">
+              <Globe class="w-4 h-4 flex-shrink-0 text-dp-text-muted" />
               <span class="truncate">{{ token.remoteAddr || '-' }}</span>
             </div>
-            <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
-              <component :is="isDesktopDevice(token.userAgent?.device) ? Monitor : Smartphone" class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+            <div class="flex items-center gap-2 text-dp-text-secondary">
+              <component :is="isDesktopDevice(token.userAgent?.device) ? Monitor : Smartphone" class="w-4 h-4 flex-shrink-0 text-dp-text-muted" />
               <span class="truncate">{{ token.userAgent?.device || '-' }}</span>
             </div>
-            <div class="truncate flex items-center" :style="{ color: 'var(--dp-text-muted)' }">
+            <div class="truncate flex items-center text-dp-text-muted">
               {{ token.userAgent?.browser || '-' }}
             </div>
             <div v-if="showDeleteButton" class="flex items-center justify-end">
               <button
                 v-if="!token.isCurrentLogin"
                 @click="handleDelete(token.id)"
-                class="w-6 h-6 flex items-center justify-center text-red-500 hover:bg-red-100 rounded-full transition cursor-pointer"
+                class="w-6 h-6 flex items-center justify-center text-dp-danger hover:bg-dp-danger-soft rounded-full transition cursor-pointer"
                 title="접속 종료"
               >
                 <LogOut class="w-3.5 h-3.5" />
               </button>
-              <span v-else class="px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded-full">
+              <span v-else class="px-2 py-0.5 text-xs font-medium text-dp-success bg-dp-success-soft rounded-full">
                 현재 접속
               </span>
             </div>
@@ -209,7 +207,7 @@ function handleDelete(tokenId: number) {
                 v-if="idx === 0 && hiddenCount > 0"
                 @click="expanded = !expanded"
                 class="w-6 h-6 flex items-center justify-center text-xs font-medium rounded-full cursor-pointer transition"
-                :class="expanded ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'"
+                :class="expanded ? 'bg-dp-surface-strong text-dp-text-on-dark' : 'bg-dp-bg-tertiary text-dp-text-secondary hover:bg-dp-bg-tertiary'"
               >
                 {{ expanded ? '-' : `+${hiddenCount}` }}
               </button>
@@ -225,46 +223,45 @@ function handleDelete(tokenId: number) {
           <div
             v-for="token in sortedTokens"
             :key="token.id"
-            class="p-4 rounded-lg"
-            :style="{ backgroundColor: 'var(--dp-bg-secondary)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }"
+            class="p-4 rounded-lg bg-dp-bg-secondary border border-dp-border-primary"
           >
             <div class="flex items-center justify-between mb-3">
               <div class="flex flex-col">
-                <span class="text-sm font-medium" :style="{ color: 'var(--dp-text-primary)' }">
+                <span class="text-sm font-medium text-dp-text-primary">
                   {{ formatRelativeTime(token.lastUsed) }}
                 </span>
-                <span class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">
+                <span class="text-xs text-dp-text-muted">
                   최초: {{ formatDate(token.createdDate) }}
                 </span>
               </div>
-              <span v-if="token.isCurrentLogin" class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
+              <span v-if="token.isCurrentLogin" class="px-3 py-1 text-xs font-medium text-dp-success bg-dp-success-soft rounded-full">
                 현재 접속
               </span>
               <button
                 v-else-if="showDeleteButton"
                 @click="handleDelete(token.id)"
-                class="w-10 h-10 flex items-center justify-center text-red-500 hover:bg-red-100 rounded-full transition cursor-pointer"
+                class="w-10 h-10 flex items-center justify-center text-dp-danger hover:bg-dp-danger-soft rounded-full transition cursor-pointer"
                 title="접속 종료"
               >
                 <LogOut class="w-5 h-5" />
               </button>
             </div>
             <div class="space-y-2 text-sm">
-              <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
-                <span class="w-16" :style="{ color: 'var(--dp-text-muted)' }">IP</span>
+              <div class="flex items-center gap-2 text-dp-text-secondary">
+                <span class="w-16 text-dp-text-muted">IP</span>
                 <span>{{ token.remoteAddr || '-' }}</span>
               </div>
-              <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
-                <span class="w-16" :style="{ color: 'var(--dp-text-muted)' }">기기</span>
+              <div class="flex items-center gap-2 text-dp-text-secondary">
+                <span class="w-16 text-dp-text-muted">기기</span>
                 <span class="flex items-center gap-1">
-                  <component :is="isDesktopDevice(token.userAgent?.device) ? Monitor : Smartphone" class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
+                  <component :is="isDesktopDevice(token.userAgent?.device) ? Monitor : Smartphone" class="w-4 h-4 text-dp-text-muted" />
                   {{ token.userAgent?.device || '-' }}
                 </span>
               </div>
-              <div class="flex items-center gap-2" :style="{ color: 'var(--dp-text-secondary)' }">
-                <span class="w-16" :style="{ color: 'var(--dp-text-muted)' }">브라우저</span>
+              <div class="flex items-center gap-2 text-dp-text-secondary">
+                <span class="w-16 text-dp-text-muted">브라우저</span>
                 <span class="flex items-center gap-1">
-                  <Globe class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
+                  <Globe class="w-4 h-4 text-dp-text-muted" />
                   {{ token.userAgent?.browser || '-' }}
                 </span>
               </div>
@@ -276,40 +273,39 @@ function handleDelete(tokenId: number) {
         <div class="hidden sm:block overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
-              <tr :style="{ borderBottomWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
-                <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">최근 접속</th>
-                <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">최초 로그인</th>
-                <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">IP</th>
-                <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">기기</th>
-                <th class="text-left py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">브라우저</th>
-                <th v-if="showDeleteButton" class="text-center py-3 px-2 font-medium" :style="{ color: 'var(--dp-text-secondary)' }">관리</th>
+              <tr class="border-b border-dp-border-primary">
+                <th class="text-left py-3 px-2 font-medium text-dp-text-secondary">최근 접속</th>
+                <th class="text-left py-3 px-2 font-medium text-dp-text-secondary">최초 로그인</th>
+                <th class="text-left py-3 px-2 font-medium text-dp-text-secondary">IP</th>
+                <th class="text-left py-3 px-2 font-medium text-dp-text-secondary">기기</th>
+                <th class="text-left py-3 px-2 font-medium text-dp-text-secondary">브라우저</th>
+                <th v-if="showDeleteButton" class="text-center py-3 px-2 font-medium text-dp-text-secondary">관리</th>
               </tr>
             </thead>
             <tbody>
               <tr
                 v-for="token in sortedTokens"
                 :key="token.id"
-                class="hover:opacity-90"
-                :style="{ borderBottomWidth: '1px', borderColor: 'var(--dp-border-secondary)' }"
+                class="hover:opacity-90 border-b border-dp-border-secondary"
               >
-                <td class="py-3 px-2" :style="{ color: 'var(--dp-text-primary)' }">
+                <td class="py-3 px-2 text-dp-text-primary">
                   {{ formatRelativeTime(token.lastUsed) }}
                 </td>
-                <td class="py-3 px-2" :style="{ color: 'var(--dp-text-muted)' }">
+                <td class="py-3 px-2 text-dp-text-muted">
                   {{ formatDate(token.createdDate) }}
                 </td>
-                <td class="py-3 px-2" :style="{ color: 'var(--dp-text-primary)' }">
+                <td class="py-3 px-2 text-dp-text-primary">
                   {{ token.remoteAddr || '-' }}
                 </td>
                 <td class="py-3 px-2">
-                  <span class="flex items-center gap-1" :style="{ color: 'var(--dp-text-primary)' }">
-                    <component :is="isDesktopDevice(token.userAgent?.device) ? Monitor : Smartphone" class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
+                  <span class="flex items-center gap-1 text-dp-text-primary">
+                    <component :is="isDesktopDevice(token.userAgent?.device) ? Monitor : Smartphone" class="w-4 h-4 text-dp-text-muted" />
                     {{ token.userAgent?.device || '-' }}
                   </span>
                 </td>
                 <td class="py-3 px-2">
-                  <span class="flex items-center gap-1" :style="{ color: 'var(--dp-text-primary)' }">
-                    <Globe class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
+                  <span class="flex items-center gap-1 text-dp-text-primary">
+                    <Globe class="w-4 h-4 text-dp-text-muted" />
                     {{ token.userAgent?.browser || '-' }}
                   </span>
                 </td>
@@ -317,12 +313,12 @@ function handleDelete(tokenId: number) {
                   <button
                     v-if="!token.isCurrentLogin"
                     @click="handleDelete(token.id)"
-                    class="w-8 h-8 inline-flex items-center justify-center text-red-500 hover:bg-red-100 rounded-full transition cursor-pointer"
+                    class="w-8 h-8 inline-flex items-center justify-center text-dp-danger hover:bg-dp-danger-soft rounded-full transition cursor-pointer"
                     title="접속 종료"
                   >
                     <LogOut class="w-4 h-4" />
                   </button>
-                  <span v-else class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
+                  <span v-else class="px-3 py-1 text-xs font-medium text-dp-success bg-dp-success-soft rounded-full">
                     현재 접속
                   </span>
                 </td>

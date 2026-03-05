@@ -200,8 +200,7 @@ const gridColsClass = {
   <div v-if="attachments.length > 0">
     <div
       v-if="showLabel"
-      class="flex items-center gap-1 text-sm mb-2"
-      :style="{ color: 'var(--dp-text-muted)' }"
+      class="flex items-center gap-1 text-sm mb-2 text-dp-text-muted"
     >
       <Paperclip class="w-3 h-3" />
       첨부파일 ({{ attachments.length }})
@@ -217,8 +216,7 @@ const gridColsClass = {
       >
         <!-- Thumbnail or Icon -->
         <div
-          class="aspect-square flex items-center justify-center relative"
-          :style="{ backgroundColor: 'var(--dp-bg-secondary)' }"
+          class="aspect-square flex items-center justify-center relative bg-dp-bg-secondary"
         >
           <img
             v-if="getThumbnailUrl(attachment.id)"
@@ -229,23 +227,22 @@ const gridColsClass = {
           <component
             v-else
             :is="getFileIconComponent(attachment)"
-            class="w-12 h-12"
-            :style="{ color: 'var(--dp-text-muted)' }"
+            class="w-12 h-12 text-dp-text-muted"
           />
 
           <!-- Zoom overlay for images - shown on hover -->
           <div
             v-if="attachment.contentType?.startsWith('image/')"
-            class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            class="absolute inset-0 bg-dp-overlay-dark/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
             @click.stop="openImageViewer(idx)"
           >
-            <ZoomIn class="w-10 h-10 text-white" />
+            <ZoomIn class="w-10 h-10 text-dp-text-on-dark" />
           </div>
         </div>
 
         <!-- Download button - always visible, larger touch area on mobile -->
         <button
-          class="absolute top-1 right-1 p-2.5 sm:p-1.5 bg-black/50 rounded text-white hover:bg-black/70 active:bg-black/80 transition-colors cursor-pointer"
+          class="absolute top-1 right-1 p-2.5 sm:p-1.5 bg-dp-overlay-dark/50 rounded text-dp-text-on-dark hover:bg-dp-overlay-dark/70 active:bg-dp-overlay-dark/80 transition-colors cursor-pointer"
           @click.stop="downloadAttachment(attachment.id, attachment.originalFilename)"
           title="다운로드"
         >
@@ -253,11 +250,11 @@ const gridColsClass = {
         </button>
 
         <!-- File info -->
-        <div class="p-2" :style="{ backgroundColor: 'var(--dp-bg-card)' }">
-          <p class="text-sm truncate" :title="attachment.originalFilename" :style="{ color: 'var(--dp-text-primary)' }">
+        <div class="p-2 bg-dp-bg-card">
+          <p class="text-sm truncate text-dp-text-primary" :title="attachment.originalFilename">
             {{ attachment.originalFilename }}
           </p>
-          <p class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">{{ formatBytes(attachment.size) }}</p>
+          <p class="text-xs text-dp-text-muted">{{ formatBytes(attachment.size) }}</p>
         </div>
       </div>
     </div>

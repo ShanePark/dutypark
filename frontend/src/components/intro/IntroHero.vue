@@ -113,7 +113,7 @@ function scrollToFeatures() {
   font-weight: 600;
   font-size: 1.125rem;
   background-color: var(--dp-accent) !important;
-  color: white !important;
+  color: var(--dp-text-on-dark) !important;
   box-shadow: 0 10px 40px -10px var(--dp-accent-ring);
   transform: translateY(20px);
   opacity: 0;

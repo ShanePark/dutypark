@@ -69,10 +69,9 @@ const guideLinkStyle = computed(() => {
     <div class="max-w-2xl mx-auto px-4">
       <div class="mb-6" :style="iconStyle">
         <div
-          class="inline-flex items-center justify-center w-16 h-16 rounded-2xl"
-          :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
+          class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-dp-bg-tertiary"
         >
-          <Sparkles class="w-8 h-8" :style="{ color: 'var(--dp-text-primary)' }" />
+          <Sparkles class="w-8 h-8 text-dp-text-primary" />
         </div>
       </div>
 

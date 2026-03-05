@@ -47,26 +47,26 @@ function getDutyColorAt(index: number): string | null {
 
 function getMutedTextColor(dutyColor: string | null): string {
   if (!dutyColor) return 'var(--dp-text-muted)'
-  return isLightColor(dutyColor) ? 'var(--dp-text-muted)' : 'rgba(255,255,255,0.7)'
+  return isLightColor(dutyColor) ? 'var(--dp-text-muted)' : 'var(--dp-text-on-dark-muted)'
 }
 
 function getPrimaryTextColor(dutyColor: string | null): string {
   if (!dutyColor) return 'var(--dp-text-primary)'
-  return isLightColor(dutyColor) ? '#1f2937' : '#ffffff'
+  return isLightColor(dutyColor) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
 }
 
 function getIconTextColor(dutyColor: string | null): string {
   if (!dutyColor) return 'var(--dp-text-primary)'
-  return isLightColor(dutyColor) ? '#000000' : '#ffffff'
+  return isLightColor(dutyColor) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
 }
 
 function getBorderColor(dutyColor: string | null): string {
   if (!dutyColor) return 'var(--dp-border-primary)'
-  return isLightColor(dutyColor) ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.3)'
+  return isLightColor(dutyColor) ? 'var(--dp-border-on-light)' : 'var(--dp-border-on-dark)'
 }
 
 function getOtherDutyTextColor(dutyColor: string | null): string {
-  return isLightColor(dutyColor) ? '#000' : '#fff'
+  return isLightColor(dutyColor) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
 }
 
 function calcDDayForDay(day: CalendarDay) {
@@ -162,15 +162,15 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
           @click.stop="emit('batch-duty-change', day, dutyType.id)"
           class="text-[10px] sm:text-xs px-1 py-1 rounded border transition-all min-h-[22px] sm:min-h-[26px] cursor-pointer"
           :class="{
-            'ring-2 ring-gray-800 font-bold shadow-sm':
+            'ring-2 ring-dp-text-primary font-bold shadow-sm':
               (duties[index]?.dutyType === dutyType.name) ||
               (!duties[index]?.dutyType && dutyType.id === null),
             'hover:opacity-80': true,
           }"
           :style="{
-            backgroundColor: dutyType.color || '#6c757d',
-            color: isLightColor(dutyType.color) ? '#000' : '#fff',
-            borderColor: dutyType.color || '#6c757d',
+            backgroundColor: dutyType.color || 'var(--dp-duty-fallback)',
+            color: isLightColor(dutyType.color) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)',
+            borderColor: dutyType.color || 'var(--dp-duty-fallback)',
           }"
         >
           <span class="sm:hidden">{{ dutyType.name.charAt(0) }}</span>
@@ -184,9 +184,9 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
           <div
             v-for="otherDuty in otherDuties"
             :key="otherDuty.memberId"
-            class="text-[10px] sm:text-sm px-1.5 py-0.5 rounded-full border border-white/50"
+            class="text-[10px] sm:text-sm px-1.5 py-0.5 rounded-full border border-dp-overlay-light/50"
             :style="{
-              backgroundColor: otherDuty.duties[index]?.dutyColor || '#6c757d',
+              backgroundColor: otherDuty.duties[index]?.dutyColor || 'var(--dp-duty-fallback)',
               color: getOtherDutyTextColor(otherDuty.duties[index]?.dutyColor || null),
             }"
           >

@@ -82,12 +82,12 @@ async function uploadBatch() {
 <template>
   <div
     v-if="isOpen"
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+    class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
     @click.self="close"
   >
-    <div class="rounded-lg shadow-xl w-full max-w-md" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
-      <div class="flex items-center justify-between p-4 border-b" :style="{ borderColor: 'var(--dp-border-primary)' }">
-        <h3 class="text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">근무표 업로드</h3>
+    <div class="rounded-lg shadow-xl w-full max-w-md bg-dp-bg-modal">
+      <div class="flex items-center justify-between p-4 border-b border-dp-border-primary">
+        <h3 class="text-lg font-bold text-dp-text-primary">근무표 업로드</h3>
         <button
           @click="close"
           class="p-1.5 rounded-full hover-close-btn cursor-pointer"
@@ -98,21 +98,20 @@ async function uploadBatch() {
 
       <div class="p-4 space-y-4">
         <div>
-          <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
+          <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
             근무표 파일 업로드 (.xlsx)
           </label>
           <input
             type="file"
             accept=".xlsx"
             @change="handleFileChange"
-            class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
+            class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent bg-dp-bg-input border-dp-border-input text-dp-text-primary"
           />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
+            <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
               연도
             </label>
             <input
@@ -120,12 +119,11 @@ async function uploadBatch() {
               type="number"
               :min="new Date().getFullYear()"
               :max="new Date().getFullYear() + 1"
-              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
+              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent bg-dp-bg-input border-dp-border-input text-dp-text-primary"
             />
           </div>
           <div>
-            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
+            <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
               월
             </label>
             <input
@@ -133,26 +131,24 @@ async function uploadBatch() {
               type="number"
               min="1"
               max="12"
-              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
+              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent bg-dp-bg-input border-dp-border-input text-dp-text-primary"
             />
           </div>
         </div>
       </div>
 
-      <div class="flex justify-end gap-2 p-4 border-t" :style="{ borderColor: 'var(--dp-border-primary)' }">
+      <div class="flex justify-end gap-2 p-4 border-t border-dp-border-primary">
         <button
           @click="uploadBatch"
           :disabled="saving || !batchForm.file"
-          class="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          class="px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           <Loader2 v-if="saving" class="w-4 h-4 animate-spin" />
           업로드
         </button>
         <button
           @click="close"
-          class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer"
-          :style="{ backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-secondary)' }"
+          class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"
         >
           취소
         </button>

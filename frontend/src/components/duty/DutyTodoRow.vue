@@ -24,17 +24,15 @@ const emit = defineEmits<{
       <!-- Todo Management Button - navigates to /todo -->
       <button
         @click="emit('open-todo-board')"
-        class="todo-manage-btn h-7 px-2 flex items-center gap-1 transition-all duration-150 cursor-pointer rounded-l-lg border"
-        :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)' }"
+        class="todo-manage-btn h-7 px-2 flex items-center gap-1 transition-all duration-150 cursor-pointer rounded-l-lg border bg-dp-bg-card border-dp-border-secondary"
       >
-        <span class="text-xs font-medium" :style="{ color: 'var(--dp-text-secondary)' }">할일</span>
-        <ChevronRight class="w-3 h-3" :style="{ color: 'var(--dp-text-muted)' }" />
+        <span class="text-xs font-medium text-dp-text-secondary">할일</span>
+        <ChevronRight class="w-3 h-3 text-dp-text-muted" />
       </button>
       <!-- Add Todo Button -->
       <button
         @click="emit('add-todo')"
-        class="todo-btn-add h-7 px-2 flex items-center justify-center transition-all duration-150 cursor-pointer rounded-r-lg border border-l-0"
-        :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)', color: 'var(--dp-text-secondary)' }"
+        class="todo-btn-add h-7 px-2 flex items-center justify-center transition-all duration-150 cursor-pointer rounded-r-lg border border-l-0 bg-dp-bg-card border-dp-border-secondary text-dp-text-secondary"
         title="새 할일 추가"
       >
         <Plus class="todo-btn-add-icon w-4 h-4 transition-transform duration-200" />
@@ -67,7 +65,7 @@ const emit = defineEmits<{
             }"
           >
             <span class="truncate">{{ todo.title }}</span>
-            <FileText v-if="todo.content || todo.hasAttachments" class="w-2.5 h-2.5 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+            <FileText v-if="todo.content || todo.hasAttachments" class="w-2.5 h-2.5 flex-shrink-0 text-dp-text-muted" />
           </button>
         </div>
       </div>

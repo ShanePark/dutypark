@@ -132,7 +132,7 @@ onMounted(() => {
       <div v-if="hasPhoto" class="photo-preview">
         <img :src="displayPhotoUrl!" alt="Profile" class="photo-image" />
         <div class="photo-overlay">
-          <Camera :class="props.size === 'sm' ? 'w-4 h-4' : 'w-6 h-6'" class="text-white" />
+          <Camera :class="props.size === 'sm' ? 'w-4 h-4' : 'w-6 h-6'" class="text-dp-text-on-dark" />
         </div>
       </div>
       <div v-else class="photo-placeholder">
@@ -140,7 +140,7 @@ onMounted(() => {
         <span v-if="props.size !== 'sm'" class="text-sm mt-1">Upload Photo</span>
       </div>
       <div v-if="isUploading || isDeleting" class="upload-loading">
-        <Loader2 class="w-8 h-8 animate-spin text-white" />
+        <Loader2 class="w-8 h-8 animate-spin text-dp-text-on-dark" />
       </div>
     </div>
 
@@ -170,7 +170,7 @@ onMounted(() => {
   overflow: hidden;
   transition: all 0.2s ease;
   border: 3px solid var(--dp-border-secondary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--dp-shadow-md);
 }
 
 .photo-size-sm {
@@ -210,7 +210,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: var(--dp-overlay-scrim-medium);
   opacity: 0;
   transition: opacity 0.2s ease;
 }
@@ -243,6 +243,6 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: var(--dp-overlay-scrim-strong);
 }
 </style>

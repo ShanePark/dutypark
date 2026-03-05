@@ -92,7 +92,9 @@ function getBorderColor(day: CalendarDay): string {
   if (!props.useAdaptiveBorder) return 'var(--dp-border-secondary)'
   const bgColor = props.getDutyColor(day)
   if (!bgColor) return 'var(--dp-border-secondary)'
-  return isLightColor(bgColor) ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.2)'
+  return isLightColor(bgColor)
+    ? 'color-mix(in srgb, var(--dp-border-on-light) 100%, transparent)'
+    : 'color-mix(in srgb, var(--dp-border-on-dark) 70%, transparent)'
 }
 
 // Get background color for a day
@@ -108,7 +110,7 @@ function getDayNumberColor(day: CalendarDay, dayOfWeek: number): string {
   if (dayOfWeek === 0) return 'var(--dp-sunday)'
   if (dayOfWeek === 6) return 'var(--dp-saturday)'
   if (bgColor) {
-    return isLightColor(bgColor) ? '#1f2937' : '#ffffff'
+    return isLightColor(bgColor) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
   }
   return 'var(--dp-text-primary)'
 }
@@ -118,7 +120,7 @@ function getHolidayColor(day: CalendarDay, holiday: HolidayDto): string {
   if (holiday.isHoliday) return 'var(--dp-sunday)'
   const bgColor = props.getDutyColor(day)
   if (bgColor) {
-    return isLightColor(bgColor) ? 'var(--dp-text-muted)' : 'rgba(255,255,255,0.7)'
+    return isLightColor(bgColor) ? 'var(--dp-text-muted)' : 'var(--dp-text-on-dark-muted)'
   }
   return 'var(--dp-text-muted)'
 }
@@ -129,7 +131,7 @@ function handleDayClick(day: CalendarDay, index: number) {
 </script>
 
 <template>
-  <div class="rounded-lg border overflow-hidden mb-2 shadow-sm" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)' }">
+  <div class="rounded-lg border overflow-hidden mb-2 shadow-sm bg-dp-bg-card border-dp-border-secondary">
     <!-- Week Days Header -->
     <div class="grid grid-cols-7" :style="{ backgroundColor: 'var(--dp-calendar-header-bg)' }">
       <div
@@ -154,8 +156,8 @@ function handleDayClick(day: CalendarDay, index: number) {
           clickable ? 'cursor-pointer hover:brightness-95 hover:shadow-inner' : '',
           {
             'highlight-pulse-glow': !focusedDay && isHighlighted(day),
-            'ring-2 ring-red-500 ring-inset': !focusedDay && isToday(day) && !isHighlighted(day),
-            'ring-2 ring-blue-500 ring-inset': !focusedDay && isSelected(day) && !isToday(day) && !isHighlighted(day),
+            'ring-2 ring-dp-danger ring-inset': !focusedDay && isToday(day) && !isHighlighted(day),
+            'ring-2 ring-dp-accent ring-inset': !focusedDay && isSelected(day) && !isToday(day) && !isHighlighted(day),
             'duty-day-focused': isFocused(day),
             'rounded-bl-lg': idx === days.length - 7,
             'rounded-br-lg': idx === days.length - 1,

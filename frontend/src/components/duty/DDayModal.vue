@@ -86,7 +86,7 @@ const isEditMode = props.dday !== null && props.dday !== undefined
   <Teleport to="body">
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50"
       @click.self="handleClose"
     >
       <div class="modal-container max-w-[95vw] sm:max-w-md max-h-[90dvh] sm:max-h-[90vh]">
@@ -94,34 +94,34 @@ const isEditMode = props.dday !== null && props.dday !== undefined
         <div class="modal-header">
           <h2>{{ dday ? '디데이 수정' : '디데이 추가' }}</h2>
           <button @click="handleClose" class="p-2 rounded-full transition hover-bg-light cursor-pointer">
-            <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
+            <X class="w-6 h-6 text-dp-text-primary" />
           </button>
         </div>
 
         <!-- Content -->
         <div class="p-3 sm:p-4 space-y-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
           <div>
-            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
-              제목 <span class="text-red-500">*</span>
+            <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
+              제목 <span class="text-dp-danger">*</span>
               <CharacterCounter :current="title.length" :max="30" />
             </label>
             <input
               v-model="title"
               type="text"
               maxlength="30"
-              class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
+              class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
               placeholder="디데이 제목을 입력하세요"
             />
           </div>
 
           <div>
-            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
-              날짜 <span class="text-red-500">*</span>
+            <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
+              날짜 <span class="text-dp-danger">*</span>
             </label>
             <input
               v-model="date"
               type="date"
-              class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
+              class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
             />
           </div>
 
@@ -165,18 +165,18 @@ const isEditMode = props.dday !== null && props.dday !== undefined
           </div>
 
           <!-- Privacy Toggle -->
-          <div class="flex items-center justify-between p-3 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
+          <div class="flex items-center justify-between p-3 rounded-lg bg-dp-bg-secondary">
             <div class="flex items-center gap-2">
-              <component :is="isPrivate ? Lock : Unlock" class="w-5 h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
-              <span class="text-sm" :style="{ color: 'var(--dp-text-primary)' }">비공개</span>
+              <component :is="isPrivate ? Lock : Unlock" class="w-5 h-5 text-dp-text-secondary" />
+              <span class="text-sm text-dp-text-primary">비공개</span>
             </div>
             <button
               @click="isPrivate = !isPrivate"
               class="relative inline-flex h-6 w-11 items-center rounded-full transition cursor-pointer"
-              :class="isPrivate ? 'bg-blue-600' : 'bg-gray-300'"
+              :class="isPrivate ? 'bg-dp-accent' : 'bg-dp-border-secondary'"
             >
               <span
-                class="inline-block h-4 w-4 transform rounded-full bg-white transition"
+                class="inline-block h-4 w-4 transform rounded-full bg-dp-bg-primary transition"
                 :class="isPrivate ? 'translate-x-6' : 'translate-x-1'"
               ></span>
             </button>
@@ -184,7 +184,7 @@ const isEditMode = props.dday !== null && props.dday !== undefined
         </div>
 
         <!-- Footer (sticky at bottom) -->
-        <div class="p-3 sm:p-4 flex-shrink-0 flex flex-row gap-2 justify-end" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
+        <div class="p-3 sm:p-4 flex-shrink-0 flex flex-row gap-2 justify-end border-t border-dp-border-primary">
           <button
             @click="handleClose"
             class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
@@ -194,7 +194,7 @@ const isEditMode = props.dday !== null && props.dday !== undefined
           <button
             @click="handleSave"
             :disabled="!title.trim() || !date"
-            class="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             저장
           </button>
@@ -217,12 +217,12 @@ const isEditMode = props.dday !== null && props.dday !== undefined
 
 .date-adjust-btn:hover {
   border-color: var(--dp-border-secondary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--dp-shadow-sm);
 }
 
 .date-adjust-btn:active {
   transform: scale(0.92);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15);
+  box-shadow: inset 0 1px 3px color-mix(in srgb, var(--dp-overlay-scrim) 30%, transparent);
 }
 
 .date-adjust-btn--today {

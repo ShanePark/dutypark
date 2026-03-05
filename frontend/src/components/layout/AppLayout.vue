@@ -17,7 +17,7 @@ const showLayout = computed(() => {
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
+  <div class="min-h-screen flex flex-col bg-dp-bg-secondary">
     <!-- Impersonation Banner -->
     <ImpersonationBanner v-if="authStore.isImpersonating" />
     <!-- Header -->

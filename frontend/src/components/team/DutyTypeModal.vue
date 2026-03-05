@@ -30,10 +30,12 @@ const isOpenRef = toRef(props, 'isOpen')
 useBodyScrollLock(isOpenRef)
 useEscapeKey(isOpenRef, () => emit('close'))
 
+const defaultDutyColor = '#ffb3ba'
+
 const dutyTypeForm = ref({
   id: null as number | null,
   name: '',
-  color: '#ffb3ba',
+  color: defaultDutyColor,
   isDefault: false,
 })
 
@@ -42,19 +44,19 @@ const colorPickerRef = ref<HTMLElement | null>(null)
 
 function setFormFromProps() {
   if (!props.dutyType) {
-    dutyTypeForm.value = {
-      id: null,
-      name: '',
-      color: '#ffb3ba',
-      isDefault: false,
-    }
+      dutyTypeForm.value = {
+        id: null,
+        name: '',
+        color: defaultDutyColor,
+        isDefault: false,
+      }
     return
   }
 
   dutyTypeForm.value = {
     id: props.dutyType.id,
     name: props.dutyType.name,
-    color: props.dutyType.color || '#ffb3ba',
+    color: props.dutyType.color || defaultDutyColor,
     isDefault: props.dutyType.position === -1,
   }
 }
@@ -170,12 +172,12 @@ async function saveDutyType() {
 <template>
   <div
     v-if="isOpen"
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+    class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
     @click.self="close"
   >
-    <div class="rounded-lg shadow-xl w-full max-w-md" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
-      <div class="flex items-center justify-between p-4 border-b" :style="{ borderColor: 'var(--dp-border-primary)' }">
-        <h3 class="text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">
+    <div class="rounded-lg shadow-xl w-full max-w-md bg-dp-bg-modal">
+      <div class="flex items-center justify-between p-4 border-b border-dp-border-primary">
+        <h3 class="text-lg font-bold text-dp-text-primary">
           {{ dutyTypeForm.id !== null || dutyTypeForm.isDefault ? '근무 유형 수정' : '근무 유형 추가' }}
         </h3>
         <button
@@ -187,19 +189,19 @@ async function saveDutyType() {
       </div>
 
       <div class="p-4 space-y-4">
-        <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
+        <p class="text-sm text-dp-text-secondary">
           해당 근무유형의 명칭 및 색상을 선택해주세요.
         </p>
 
         <div
           v-if="dutyTypeForm.isDefault"
-          class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700"
+          class="bg-dp-accent-soft border border-dp-accent-border rounded-lg p-3 text-sm text-dp-accent-hover"
         >
           현재 선택한 근무 유형은 <strong>휴무일</strong>에 해당합니다.
         </div>
 
         <div>
-          <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
+          <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
             근무명
             <CharacterCounter :current="dutyTypeForm.name.length" :max="10" />
           </label>
@@ -208,13 +210,12 @@ async function saveDutyType() {
             type="text"
             maxlength="10"
             placeholder="근무명"
-            class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
+            class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent bg-dp-bg-input border-dp-border-input text-dp-text-primary"
           />
         </div>
 
         <div class="color-picker-container">
-          <label class="block text-sm font-medium mb-2" :style="{ color: 'var(--dp-text-secondary)' }">
+          <label class="block text-sm font-medium mb-2 text-dp-text-secondary">
             색상 선택
           </label>
           <div class="color-picker-wrapper flex justify-center items-center">
@@ -223,7 +224,7 @@ async function saveDutyType() {
         </div>
 
         <div>
-          <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
+          <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
             미리보기
           </label>
           <div
@@ -235,18 +236,17 @@ async function saveDutyType() {
         </div>
       </div>
 
-      <div class="flex justify-end gap-2 p-4 border-t" :style="{ borderColor: 'var(--dp-border-primary)' }">
+      <div class="flex justify-end gap-2 p-4 border-t border-dp-border-primary">
         <button
           @click="saveDutyType"
           :disabled="!dutyTypeForm.name.trim()"
-          class="px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          class="px-4 py-2 bg-dp-success text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-success-hover transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {{ dutyTypeForm.id !== null || dutyTypeForm.isDefault ? '저장' : '추가' }}
         </button>
         <button
           @click="close"
-          class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer"
-          :style="{ backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-secondary)' }"
+          class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"
         >
           취소
         </button>

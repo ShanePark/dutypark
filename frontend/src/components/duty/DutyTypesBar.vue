@@ -46,21 +46,21 @@ function toggleBatchEdit() {
       <!-- Edit mode: Clickable duty type buttons for quick input -->
       <template v-if="batchEditMode && dutyTypes.length > 0">
         <!-- Current focus indicator with navigation -->
-        <div class="flex items-center rounded-md border" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderColor: 'var(--dp-border-secondary)' }">
+        <div class="flex items-center rounded-md border bg-dp-bg-tertiary border-dp-border-secondary">
           <button
             @click="moveFocusDay(-1)"
             :disabled="focusedDayValue === 1"
-            class="p-1 rounded-l-md transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-500/10"
+            class="p-1 rounded-l-md transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-dp-bg-hover"
           >
-            <ChevronLeft class="w-4 h-4" :style="{ color: 'var(--dp-text-secondary)' }" />
+            <ChevronLeft class="w-4 h-4 text-dp-text-secondary" />
           </button>
-          <span class="px-1 text-xs sm:text-sm font-bold text-orange-500">{{ focusedDayValue }}일</span>
+          <span class="px-1 text-xs sm:text-sm font-bold text-dp-warning">{{ focusedDayValue }}일</span>
           <button
             @click="moveFocusDay(1)"
             :disabled="focusedDayValue === lastDayInMonth"
-            class="p-1 rounded-r-md transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-500/10"
+            class="p-1 rounded-r-md transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-dp-bg-hover"
           >
-            <ChevronRight class="w-4 h-4" :style="{ color: 'var(--dp-text-secondary)' }" />
+            <ChevronRight class="w-4 h-4 text-dp-text-secondary" />
           </button>
         </div>
         <button
@@ -70,8 +70,8 @@ function toggleBatchEdit() {
           class="duty-quick-btn"
           :class="{ 'duty-quick-btn-active': focusedDayDutyType === dutyType.name || (!focusedDayDutyType && dutyType.id === null) }"
           :style="{
-            '--duty-color': dutyType.color || '#6c757d',
-            '--duty-text': isLightColor(dutyType.color) ? '#000' : '#fff'
+            '--duty-color': dutyType.color || 'var(--dp-duty-fallback)',
+            '--duty-text': isLightColor(dutyType.color) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
           } as any"
         >
           <span class="duty-quick-btn-inner">
@@ -85,27 +85,26 @@ function toggleBatchEdit() {
         <div v-for="dutyType in dutyTypesWithCount" :key="dutyType.name" class="flex items-center gap-1">
           <span
             class="w-4 h-4 rounded border-2"
-            :style="{ backgroundColor: dutyType.color || '#6c757d', borderColor: 'var(--dp-border-primary)' }"
+            :style="{ backgroundColor: dutyType.color || 'var(--dp-duty-fallback)', borderColor: 'var(--dp-border-primary)' }"
           ></span>
-          <span class="text-xs sm:text-sm" :style="{ color: 'var(--dp-text-secondary)' }">{{ dutyType.name }}</span>
-          <span class="text-xs sm:text-sm font-bold" :style="{ color: 'var(--dp-text-primary)' }">{{ dutyType.cnt }}</span>
+          <span class="text-xs sm:text-sm text-dp-text-secondary">{{ dutyType.name }}</span>
+          <span class="text-xs sm:text-sm font-bold text-dp-text-primary">{{ dutyType.cnt }}</span>
         </div>
       </template>
-      <span v-else-if="isLoadingDuties" class="text-sm" :style="{ color: 'var(--dp-text-muted)' }">
+      <span v-else-if="isLoadingDuties" class="text-sm text-dp-text-muted">
         <Loader2 class="w-4 h-4 animate-spin inline mr-1" />
         로딩 중...
       </span>
-      <span v-else class="text-sm" :style="{ color: 'var(--dp-text-muted)' }">
+      <span v-else class="text-sm text-dp-text-muted">
         근무 타입 정보 없음
       </span>
     </div>
-    <div class="inline-flex rounded-lg border overflow-hidden ml-auto" :style="{ borderColor: 'var(--dp-border-secondary)' }">
+    <div class="inline-flex rounded-lg border overflow-hidden ml-auto border-dp-border-secondary">
       <button
         v-if="!batchEditMode"
         @click="emit('toggle-other-duties')"
-        class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1 border-r cursor-pointer"
-        :style="{ borderColor: 'var(--dp-border-secondary)' }"
-        :class="isOtherDutyActive ? 'bg-blue-50/70 text-blue-700 hover:bg-blue-50' : 'hover:bg-gray-500/10 dark:hover:bg-gray-400/10'"
+        class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1 border-r cursor-pointer border-dp-border-secondary"
+        :class="isOtherDutyActive ? 'bg-dp-accent-soft/70 text-dp-accent-hover hover:bg-dp-accent-soft' : 'hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover'"
       >
         <Users class="w-4 h-4" />
         <span class="hidden xs:inline">함께보기</span>
@@ -114,24 +113,22 @@ function toggleBatchEdit() {
       <button
         v-if="canEditMyCalendar && batchEditMode"
         @click="emit('show-batch-update-modal')"
-        class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 border-r cursor-pointer hover:bg-gray-500/10 dark:hover:bg-gray-400/10"
-        :style="{ borderColor: 'var(--dp-border-secondary)' }"
+        class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 border-r cursor-pointer hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover border-dp-border-secondary"
       >
         일괄수정
       </button>
       <button
         v-if="canEdit"
         @click="toggleBatchEdit"
-        class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 border-r last:border-r-0 cursor-pointer"
-        :style="{ borderColor: 'var(--dp-border-secondary)' }"
-        :class="batchEditMode ? 'bg-orange-50/70 text-orange-700 hover:bg-orange-50' : 'hover:bg-gray-500/10 dark:hover:bg-gray-400/10'"
+        class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 border-r last:border-r-0 cursor-pointer border-dp-border-secondary"
+        :class="batchEditMode ? 'bg-dp-warning-soft/70 text-dp-warning hover:bg-dp-warning-soft' : 'hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover'"
       >
         편집모드
       </button>
       <button
         v-if="canEditMyCalendar && teamHasDutyBatchTemplate && !batchEditMode"
         @click="emit('show-excel-upload-modal')"
-        class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1 cursor-pointer hover:bg-gray-500/10 dark:hover:bg-gray-400/10"
+        class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1 cursor-pointer hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover"
       >
         <FileSpreadsheet class="w-4 h-4" />
         <span class="hidden sm:inline">엑셀</span>

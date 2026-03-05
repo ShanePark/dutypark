@@ -36,10 +36,8 @@ function handleNavClick(item: { path: string; icon: string; label: string }, eve
 
 <template>
   <footer
-      class="fixed bottom-0 left-0 right-0 border-t z-50"
+      class="fixed bottom-0 left-0 right-0 border-t border-dp-border-secondary bg-dp-bg-footer z-50"
       :style="{
-      backgroundColor: 'var(--dp-bg-footer)',
-      borderColor: 'var(--dp-border-secondary)',
       paddingBottom: 'env(safe-area-inset-bottom)',
       paddingLeft: 'env(safe-area-inset-left)',
       paddingRight: 'env(safe-area-inset-right)'
@@ -52,11 +50,7 @@ function handleNavClick(item: { path: string; icon: string; label: string }, eve
               :to="item.path"
               @click="handleNavClick(item, $event)"
               class="flex flex-col items-center px-2 sm:px-3 py-2 sm:py-3 text-xs sm:text-sm rounded-xl transition-colors min-h-[56px] sm:min-h-[64px]"
-              :style="{
-              backgroundColor: isActive(item.path) ? 'rgba(255, 255, 255, 0.25)' : 'transparent',
-              color: isActive(item.path) ? '#ffffff' : 'rgba(255, 255, 255, 0.55)',
-              fontWeight: isActive(item.path) ? '600' : '400'
-            }"
+              :class="isActive(item.path) ? 'footer-nav-active' : 'footer-nav-inactive'"
           >
             <svg
                 v-if="item.icon === 'home'"

@@ -54,7 +54,7 @@ function handleToggle(friendId: number) {
 .friend-item:hover {
   background-color: var(--dp-bg-tertiary);
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--dp-shadow-sm);
 }
 
 .friend-item-disabled {
@@ -70,29 +70,29 @@ function handleToggle(friendId: number) {
   <Teleport to="body">
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50"
       @click.self="emit('close')"
     >
       <div class="modal-container max-w-[95vw] sm:max-w-md max-h-[90dvh] sm:max-h-[90vh]">
         <!-- Header -->
-        <div class="flex items-center justify-between p-3 sm:p-4" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderBottom: '1px solid var(--dp-border-primary)' }">
+        <div class="flex items-center justify-between p-3 sm:p-4 bg-dp-bg-tertiary border-b border-dp-border-primary">
           <div class="flex items-center gap-2">
-            <Users class="w-5 h-5 text-blue-600" />
-            <h2 class="text-base sm:text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">함께보기</h2>
+            <Users class="w-5 h-5 text-dp-accent" />
+            <h2 class="text-base sm:text-lg font-bold text-dp-text-primary">함께보기</h2>
           </div>
           <button @click="emit('close')" class="p-2 rounded-full hover-close-btn cursor-pointer">
-            <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
+            <X class="w-6 h-6 text-dp-text-primary" />
           </button>
         </div>
 
         <!-- Description -->
-        <div class="px-3 sm:px-4 py-2 text-xs sm:text-sm bg-blue-600/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
+        <div class="px-3 sm:px-4 py-2 text-xs sm:text-sm bg-dp-accent/10 text-dp-accent dark:bg-dp-accent/20 dark:text-dp-accent-light">
           친구의 근무표를 함께 볼 수 있습니다. (최대 {{ maxSelections }}명)
         </div>
 
         <!-- Content -->
         <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(90dvh-180px)] sm:max-h-[calc(90vh-180px)]">
-          <div v-if="friends.length === 0" class="text-center py-8" :style="{ color: 'var(--dp-text-muted)' }">
+          <div v-if="friends.length === 0" class="text-center py-8 text-dp-text-muted">
             친구 목록이 없습니다.
           </div>
 
@@ -103,7 +103,7 @@ function handleToggle(friendId: number) {
               @click="handleToggle(friend.id)"
               class="flex items-center gap-2 p-2 rounded-lg cursor-pointer transition"
               :class="{
-                'bg-blue-600/15 dark:bg-blue-500/25 border-2 border-blue-500': isSelected(friend.id),
+                'bg-dp-accent/15 dark:bg-dp-accent/25 border-2 border-dp-accent-border': isSelected(friend.id),
                 'border-2 border-transparent friend-item':
                   !isSelected(friend.id) && canSelectMore,
                 'opacity-50 cursor-not-allowed border-2 border-transparent friend-item-disabled':
@@ -113,8 +113,7 @@ function handleToggle(friendId: number) {
             >
               <!-- Profile Image -->
               <div
-                class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
+                class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-dp-bg-tertiary"
               >
                 <img
                   v-if="friend.profileImage"
@@ -122,36 +121,36 @@ function handleToggle(friendId: number) {
                   :alt="friend.name"
                   class="w-8 h-8 rounded-full object-cover"
                 />
-                <span v-else class="font-medium text-sm" :style="{ color: 'var(--dp-text-muted)' }">
+                <span v-else class="font-medium text-sm text-dp-text-muted">
                   {{ friend.name.charAt(0) }}
                 </span>
               </div>
 
               <!-- Name -->
               <div class="flex-1 min-w-0">
-                <span class="font-medium text-sm truncate block" :style="{ color: 'var(--dp-text-primary)' }">{{ friend.name }}</span>
+                <span class="font-medium text-sm truncate block text-dp-text-primary">{{ friend.name }}</span>
               </div>
 
               <!-- Check icon -->
               <div
                 v-if="isSelected(friend.id)"
-                class="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0"
+                class="w-5 h-5 bg-dp-accent rounded-full flex items-center justify-center flex-shrink-0"
               >
-                <Check class="w-3 h-3 text-white" />
+                <Check class="w-3 h-3 text-dp-text-on-dark" />
               </div>
             </div>
           </div>
         </div>
 
         <!-- Footer -->
-        <div class="p-3 sm:p-4 border-t" :style="{ borderColor: 'var(--dp-border-primary)' }">
+        <div class="p-3 sm:p-4 border-t border-dp-border-primary">
           <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-between gap-2">
-            <span class="text-sm text-center sm:text-left" :style="{ color: 'var(--dp-text-muted)' }">
+            <span class="text-sm text-center sm:text-left text-dp-text-muted">
               {{ selectedFriendIds.length }} / {{ maxSelections }}명 선택됨
             </span>
             <button
               @click="emit('close')"
-              class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition cursor-pointer"
+              class="w-full sm:w-auto px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
             >
               확인
             </button>

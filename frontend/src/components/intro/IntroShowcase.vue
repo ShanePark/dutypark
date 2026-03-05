@@ -593,11 +593,11 @@ function scrollToFeature(index: number) {
   aspect-ratio: 9/19.5;
   border-radius: 1.75rem;
   overflow: hidden;
-  background: #000;
+  background: var(--dp-bg-footer);
   box-shadow:
-    0 25px 80px -20px rgba(0, 0, 0, 0.35),
-    0 0 0 6px #1a1a1a,
-    0 0 0 7px rgba(255, 255, 255, 0.08);
+    0 25px 80px -20px color-mix(in srgb, var(--dp-overlay-scrim) 70%, transparent),
+    0 0 0 6px color-mix(in srgb, var(--dp-bg-footer) 85%, var(--dp-bg-primary)),
+    0 0 0 7px color-mix(in srgb, var(--dp-text-on-dark) 8%, transparent);
 }
 
 /* Dynamic Island */
@@ -609,16 +609,16 @@ function scrollToFeature(index: number) {
   transform: translateX(-50%);
   width: 72px;
   height: 22px;
-  background: #000;
+  background: var(--dp-bg-footer);
   border-radius: 20px;
   z-index: 10;
 }
 
 .dark .intro-mockup-frame {
   box-shadow:
-    0 25px 80px -20px rgba(0, 0, 0, 0.6),
-    0 0 0 6px #2a2a2a,
-    0 0 0 7px rgba(255, 255, 255, 0.05);
+    0 25px 80px -20px color-mix(in srgb, var(--dp-overlay-scrim) 100%, transparent),
+    0 0 0 6px color-mix(in srgb, var(--dp-bg-footer) 70%, var(--dp-bg-secondary)),
+    0 0 0 7px color-mix(in srgb, var(--dp-text-on-dark) 5%, transparent);
 }
 
 @media (min-width: 768px) {
