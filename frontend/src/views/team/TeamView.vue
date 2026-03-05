@@ -226,6 +226,11 @@ function getDutyColor(day: { year: number; month: number; day: number }): string
   return duty?.dutyColor ?? null
 }
 
+function getDutyTypeHeaderTextColor(color: string | null | undefined): string {
+  if (!color) return 'var(--dp-text-primary)'
+  return isLightColor(color) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
+}
+
 // Load holidays from API
 async function loadHolidays() {
   try {
@@ -558,7 +563,7 @@ onMounted(() => {
               class="p-3 flex items-center justify-between"
               :style="{ backgroundColor: group.dutyType.color ?? 'var(--dp-duty-type-fallback)' }"
             >
-              <span class="font-bold" :style="{ color: isLightColor(group.dutyType.color) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)' }">{{ group.dutyType.name }}</span>
+              <span class="font-bold" :style="{ color: getDutyTypeHeaderTextColor(group.dutyType.color) }">{{ group.dutyType.name }}</span>
               <span class="px-2 py-0.5 rounded-full text-sm font-medium" :style="{ backgroundColor: 'var(--dp-chip-on-dark-bg)', color: 'var(--dp-text-on-light)' }">
                 {{ group.members.length }}명
               </span>
