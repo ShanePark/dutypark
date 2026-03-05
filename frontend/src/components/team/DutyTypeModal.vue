@@ -30,12 +30,7 @@ const isOpenRef = toRef(props, 'isOpen')
 useBodyScrollLock(isOpenRef)
 useEscapeKey(isOpenRef, () => emit('close'))
 
-function resolveDefaultDutyColor(): string {
-  if (typeof window === 'undefined') return 'pink'
-  return getComputedStyle(document.documentElement).getPropertyValue('--dp-danger-border').trim() || 'pink'
-}
-
-const defaultDutyColor = resolveDefaultDutyColor()
+const defaultDutyColor = '#ffb3ba'
 
 const dutyTypeForm = ref({
   id: null as number | null,
