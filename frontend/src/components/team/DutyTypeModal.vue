@@ -30,10 +30,17 @@ const isOpenRef = toRef(props, 'isOpen')
 useBodyScrollLock(isOpenRef)
 useEscapeKey(isOpenRef, () => emit('close'))
 
+function resolveDefaultDutyColor(): string {
+  if (typeof window === 'undefined') return 'pink'
+  return getComputedStyle(document.documentElement).getPropertyValue('--dp-danger-border').trim() || 'pink'
+}
+
+const defaultDutyColor = resolveDefaultDutyColor()
+
 const dutyTypeForm = ref({
   id: null as number | null,
   name: '',
-  color: '#ffb3ba',
+  color: defaultDutyColor,
   isDefault: false,
 })
 
@@ -42,19 +49,19 @@ const colorPickerRef = ref<HTMLElement | null>(null)
 
 function setFormFromProps() {
   if (!props.dutyType) {
-    dutyTypeForm.value = {
-      id: null,
-      name: '',
-      color: '#ffb3ba',
-      isDefault: false,
-    }
+      dutyTypeForm.value = {
+        id: null,
+        name: '',
+        color: defaultDutyColor,
+        isDefault: false,
+      }
     return
   }
 
   dutyTypeForm.value = {
     id: props.dutyType.id,
     name: props.dutyType.name,
-    color: props.dutyType.color || '#ffb3ba',
+    color: props.dutyType.color || defaultDutyColor,
     isDefault: props.dutyType.position === -1,
   }
 }

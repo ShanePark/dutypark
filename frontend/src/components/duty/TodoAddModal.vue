@@ -294,7 +294,7 @@ function onUploadError(message: string) {
 .status-card-in-progress.status-card-selected {
   border-color: var(--dp-warning);
   background-color: color-mix(in srgb, var(--dp-warning) 25%, var(--dp-bg-tertiary));
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+  box-shadow: 0 0 0 3px var(--dp-warning-ring);
 }
 
 /* DONE status - Green/Success */
@@ -310,7 +310,7 @@ function onUploadError(message: string) {
 .status-card-done.status-card-selected {
   border-color: var(--dp-success);
   background-color: color-mix(in srgb, var(--dp-success) 25%, var(--dp-bg-tertiary));
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+  box-shadow: 0 0 0 3px var(--dp-success-ring);
 }
 
 .due-date-optional {

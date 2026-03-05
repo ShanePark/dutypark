@@ -123,37 +123,23 @@ async function handleRestore() {
 
 <style scoped>
 .impersonation-banner {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  border-bottom: 1px solid #f59e0b;
-}
-
-.dark .impersonation-banner {
-  background: linear-gradient(135deg, #78350f 0%, #92400e 100%);
-  border-bottom: 1px solid #d97706;
-}
-
-.dark .impersonation-banner span {
-  color: #fef3c7;
-}
-
-.dark .impersonation-banner .text-dp-warning {
-  color: #fcd34d;
-}
-
-.dark .impersonation-banner .text-dp-warning,
-.dark .impersonation-banner .text-dp-warning {
-  color: #fef3c7;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--dp-warning-bg) 92%, var(--dp-bg-card)),
+    color-mix(in srgb, var(--dp-warning) 30%, var(--dp-bg-card))
+  );
+  border-bottom: 1px solid var(--dp-warning);
 }
 
 .impersonation-restore-btn {
-  background-color: rgba(180, 83, 9, 0.15);
-  color: #92400e;
-  border: 1px solid rgba(180, 83, 9, 0.3);
+  background-color: color-mix(in srgb, var(--dp-warning) 18%, transparent);
+  color: color-mix(in srgb, var(--dp-warning-hover) 86%, var(--dp-text-primary));
+  border: 1px solid color-mix(in srgb, var(--dp-warning) 40%, transparent);
 }
 
 .impersonation-restore-btn:hover:not(:disabled) {
-  background-color: rgba(180, 83, 9, 0.25);
-  border-color: rgba(180, 83, 9, 0.5);
+  background-color: color-mix(in srgb, var(--dp-warning) 26%, transparent);
+  border-color: color-mix(in srgb, var(--dp-warning) 55%, transparent);
 }
 
 .impersonation-restore-btn:disabled {
@@ -161,36 +147,15 @@ async function handleRestore() {
   cursor: not-allowed;
 }
 
-.dark .impersonation-restore-btn {
-  background-color: rgba(254, 243, 199, 0.15);
-  color: #fef3c7;
-  border: 1px solid rgba(254, 243, 199, 0.3);
-}
-
-.dark .impersonation-restore-btn:hover:not(:disabled) {
-  background-color: rgba(254, 243, 199, 0.25);
-  border-color: rgba(254, 243, 199, 0.5);
-}
-
 .impersonation-timer {
-  background-color: rgba(180, 83, 9, 0.1);
-  color: #92400e;
+  background-color: color-mix(in srgb, var(--dp-warning) 14%, transparent);
+  color: color-mix(in srgb, var(--dp-warning-hover) 86%, var(--dp-text-primary));
 }
 
 .impersonation-timer-urgent {
-  background-color: rgba(220, 38, 38, 0.15);
-  color: #dc2626;
+  background-color: color-mix(in srgb, var(--dp-danger) 16%, transparent);
+  color: var(--dp-danger-hover);
   animation: pulse-urgent 1s ease-in-out infinite;
-}
-
-.dark .impersonation-timer {
-  background-color: rgba(254, 243, 199, 0.1);
-  color: #fef3c7;
-}
-
-.dark .impersonation-timer-urgent {
-  background-color: rgba(248, 113, 113, 0.2);
-  color: #fca5a5;
 }
 
 @keyframes pulse-urgent {

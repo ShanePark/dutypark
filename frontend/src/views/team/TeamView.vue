@@ -452,15 +452,15 @@ onMounted(() => {
               :key="schedule.id"
               class="text-[10px] sm:text-sm leading-snug px-0.5 border-t-2 border-dashed break-words"
               :style="{
-                color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? '#1f2937' : '#ffffff') : 'var(--dp-text-primary)',
-                borderColor: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.3)') : 'var(--dp-border-primary)'
+                color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)') : 'var(--dp-text-primary)',
+                borderColor: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? 'var(--dp-border-on-light)' : 'var(--dp-border-on-dark)') : 'var(--dp-border-primary)'
               }"
             >
               {{ schedule.content }}
               <span
                 v-if="schedule.totalDays && schedule.totalDays > 1"
                 class="text-[9px] sm:text-xs"
-                :style="{ color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? 'var(--dp-text-muted)' : 'rgba(255,255,255,0.7)') : 'var(--dp-text-muted)' }"
+                :style="{ color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? 'var(--dp-text-muted)' : 'var(--dp-text-on-dark-muted)') : 'var(--dp-text-muted)' }"
               >
                 ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})
               </span>
@@ -468,7 +468,7 @@ onMounted(() => {
             <div
               v-if="teamSchedules[index].length > 2"
               class="text-[10px] font-medium"
-              :style="{ color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? 'var(--dp-text-muted)' : 'rgba(255,255,255,0.8)') : 'var(--dp-text-muted)' }"
+              :style="{ color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? 'var(--dp-text-muted)' : 'var(--dp-text-on-dark-soft)') : 'var(--dp-text-muted)' }"
             >
               +{{ teamSchedules[index].length - 2 }}
             </div>
@@ -558,10 +558,10 @@ onMounted(() => {
             <!-- Duty Type Header -->
             <div
               class="p-3 flex items-center justify-between"
-              :style="{ backgroundColor: group.dutyType.color ?? '#e8e8e8' }"
+              :style="{ backgroundColor: group.dutyType.color ?? 'var(--dp-duty-type-fallback)' }"
             >
-              <span class="font-bold" :style="{ color: isLightColor(group.dutyType.color) ? '#1f2937' : '#ffffff' }">{{ group.dutyType.name }}</span>
-              <span class="px-2 py-0.5 rounded-full text-sm font-medium" :style="{ backgroundColor: 'rgba(255,255,255,0.9)', color: '#1f2937' }">
+              <span class="font-bold" :style="{ color: isLightColor(group.dutyType.color) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)' }">{{ group.dutyType.name }}</span>
+              <span class="px-2 py-0.5 rounded-full text-sm font-medium" :style="{ backgroundColor: 'var(--dp-chip-on-dark-bg)', color: 'var(--dp-text-on-light)' }">
                 {{ group.members.length }}명
               </span>
             </div>

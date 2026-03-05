@@ -456,7 +456,7 @@ const duties = computed<Array<DutyDay | null>>(() => {
     const dutyType = dutyTypes.value.find((dt) => dt.name === duty.dutyType)
     return {
       dutyType: duty.dutyType || 'OFF',
-      dutyColor: duty.dutyColor || '#6c757d',
+      dutyColor: duty.dutyColor || 'var(--dp-duty-fallback)',
       dutyTypeId: dutyType?.id ?? null,
     }
   })
@@ -1209,7 +1209,7 @@ async function loadOtherDuties() {
       memberName: item.name,
       duties: item.duties.map((d) => ({
         dutyType: d.dutyType || 'OFF',
-        dutyColor: d.dutyColor || '#6c757d',
+        dutyColor: d.dutyColor || 'var(--dp-duty-fallback)',
       })),
     }))
   } catch (error) {
@@ -1370,8 +1370,8 @@ async function showBatchUpdateModal() {
 
   const buttonsHtml = dutyTypes.value
     .map((dt) => {
-      const textColor = isLightColor(dt.color) ? '#000' : '#fff'
-      return `<button class="swal2-styled duty-type-btn" style="background-color: ${dt.color || '#6c757d'}; color: ${textColor}; margin: 4px;" data-id="${dt.id}">${dt.name}</button>`
+      const textColor = isLightColor(dt.color) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
+      return `<button class="swal2-styled duty-type-btn" style="background-color: ${dt.color || 'var(--dp-duty-fallback)'}; color: ${textColor}; margin: 4px;" data-id="${dt.id}">${dt.name}</button>`
     })
     .join('')
 

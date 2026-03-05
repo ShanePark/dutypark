@@ -474,8 +474,8 @@ watch(
                   <span
                     class="px-2.5 py-0.5 rounded-md font-semibold text-sm"
                     :style="{
-                      backgroundColor: myInfo.duty.dutyColor || '#666',
-                      color: isLightColor(myInfo.duty.dutyColor) ? '#1f2937' : '#ffffff'
+                      backgroundColor: myInfo.duty.dutyColor || 'var(--dp-duty-fallback)',
+                      color: isLightColor(myInfo.duty.dutyColor) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
                     }"
                   >
                     {{ myInfo.duty.dutyType || '휴무' }}

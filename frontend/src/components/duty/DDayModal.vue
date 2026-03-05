@@ -217,12 +217,12 @@ const isEditMode = props.dday !== null && props.dday !== undefined
 
 .date-adjust-btn:hover {
   border-color: var(--dp-border-secondary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--dp-shadow-sm);
 }
 
 .date-adjust-btn:active {
   transform: scale(0.92);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15);
+  box-shadow: inset 0 1px 3px color-mix(in srgb, var(--dp-overlay-scrim) 30%, transparent);
 }
 
 .date-adjust-btn--today {

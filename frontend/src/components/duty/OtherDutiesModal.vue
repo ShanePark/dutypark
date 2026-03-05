@@ -54,7 +54,7 @@ function handleToggle(friendId: number) {
 .friend-item:hover {
   background-color: var(--dp-bg-tertiary);
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--dp-shadow-sm);
 }
 
 .friend-item-disabled {

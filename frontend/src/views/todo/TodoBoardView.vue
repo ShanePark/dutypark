@@ -721,17 +721,17 @@ onBeforeUnmount(() => {
 
 .todo-board-tab-todo.active .todo-board-tab-count {
   background-color: var(--dp-accent);
-  color: white;
+  color: var(--dp-text-on-dark);
 }
 
 .todo-board-tab-in-progress.active .todo-board-tab-count {
   background-color: var(--dp-warning);
-  color: white;
+  color: var(--dp-text-on-dark);
 }
 
 .todo-board-tab-done.active .todo-board-tab-count {
   background-color: var(--dp-success);
-  color: white;
+  color: var(--dp-text-on-dark);
 }
 
 .todo-board-title {
@@ -756,7 +756,7 @@ onBeforeUnmount(() => {
   padding: 0.25rem 0.75rem;
   border-radius: 9999px;
   background-color: var(--dp-accent);
-  color: white;
+  color: var(--dp-text-on-dark);
 }
 
 .todo-board-loading {
@@ -898,7 +898,7 @@ onBeforeUnmount(() => {
 .help-modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: var(--dp-overlay-scrim);
   display: flex;
   align-items: center;
   justify-content: center;

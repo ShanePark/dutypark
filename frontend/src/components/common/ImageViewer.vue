@@ -195,7 +195,7 @@ onUnmounted(() => {
         <!-- Image info -->
         <div class="mt-4 text-dp-text-on-dark text-center">
           <div class="text-sm">{{ images[currentIndex]?.originalFilename }}</div>
-          <div class="text-xs mt-1" style="color: rgba(255, 255, 255, 0.7)">
+          <div class="text-xs mt-1 text-dp-text-on-dark-muted">
             {{ currentIndex + 1 }} / {{ images.length }}
           </div>
         </div>

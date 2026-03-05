@@ -433,8 +433,8 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background-color: rgba(59, 130, 246, 0.85);
-  color: white;
+  background-color: color-mix(in srgb, var(--dp-accent) 85%, transparent);
+  color: var(--dp-text-on-dark);
   font-size: 1rem;
   font-weight: 500;
   z-index: 10;
@@ -617,7 +617,7 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
 
 .btn-confirm {
   background-color: var(--dp-accent);
-  color: white;
+  color: var(--dp-text-on-dark);
 }
 
 .btn-confirm:hover:not(:disabled) {
@@ -643,6 +643,6 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
 }
 
 .vue-advanced-cropper__foreground {
-  background-color: rgba(0, 0, 0, 0.5) !important;
+  background-color: var(--dp-overlay-scrim) !important;
 }
 </style>

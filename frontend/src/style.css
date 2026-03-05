@@ -43,10 +43,17 @@
     --color-dp-text-inverse: var(--dp-text-inverse);
     /* On-dark is fixed bright text for strong/overlay backgrounds. */
     --color-dp-text-on-dark: var(--dp-text-on-dark);
+    --color-dp-text-on-dark-strong: var(--dp-text-on-dark-strong);
+    --color-dp-text-on-dark-soft: var(--dp-text-on-dark-soft);
+    --color-dp-text-on-dark-muted: var(--dp-text-on-dark-muted);
+    --color-dp-text-on-dark-dim: var(--dp-text-on-dark-dim);
+    --color-dp-text-on-light: var(--dp-text-on-light);
 
     --color-dp-border-primary: var(--dp-border-primary);
     --color-dp-border-secondary: var(--dp-border-secondary);
     --color-dp-border-hover: var(--dp-border-hover);
+    --color-dp-border-on-light: var(--dp-border-on-light);
+    --color-dp-border-on-dark: var(--dp-border-on-dark);
 
     --color-dp-accent: var(--dp-accent);
     --color-dp-accent-hover: var(--dp-accent-hover);
@@ -75,6 +82,11 @@
     --color-dp-surface-strong-hover: var(--dp-bg-footer);
     --color-dp-overlay-dark: #000000;
     --color-dp-overlay-light: #ffffff;
+    --color-dp-overlay-scrim: var(--dp-overlay-scrim);
+    --color-dp-overlay-scrim-soft: var(--dp-overlay-scrim-soft);
+
+    --color-dp-duty-fallback: var(--dp-duty-fallback);
+    --color-dp-duty-type-fallback: var(--dp-duty-type-fallback);
 
     /* Kakao OAuth */
     --color-kakao: #fee500;
@@ -102,11 +114,18 @@
     /* Inverse is theme-aware; on-dark stays bright for overlay/brand surfaces. */
     --dp-text-inverse: #ffffff;
     --dp-text-on-dark: #ffffff;
+    --dp-text-on-dark-strong: rgba(255, 255, 255, 0.85);
+    --dp-text-on-dark-soft: rgba(255, 255, 255, 0.8);
+    --dp-text-on-dark-muted: rgba(255, 255, 255, 0.7);
+    --dp-text-on-dark-dim: rgba(255, 255, 255, 0.55);
+    --dp-text-on-light: #1f2937;
 
     --dp-border-primary: #e5e7eb;
     --dp-border-secondary: #d1d5db;
     --dp-border-input: #d1d5db;
     --dp-border-hover: #9ca3af;
+    --dp-border-on-light: rgba(0, 0, 0, 0.15);
+    --dp-border-on-dark: rgba(255, 255, 255, 0.3);
 
     --dp-accent: #3b82f6;
     --dp-accent-hover: #2563eb;
@@ -130,10 +149,16 @@
     --dp-warning-hover: #d97706;
     --dp-warning-bg: #fffbeb;
     --dp-warning-border: #fcd34d;
+    --dp-warning-ring: rgba(245, 158, 11, 0.2);
+    --dp-success-ring: rgba(34, 197, 94, 0.2);
 
     --dp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
     --dp-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
     --dp-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+    --dp-shadow-dropdown: 0 10px 40px -5px rgba(0, 0, 0, 0.25), 0 4px 12px -2px rgba(0, 0, 0, 0.15);
+    --dp-shadow-dropdown-dark: 0 10px 40px -5px rgba(0, 0, 0, 0.5), 0 4px 12px -2px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    --dp-shadow-guide: 0 -8px 32px rgba(59, 130, 246, 0.25), 0 -2px 16px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    --dp-shadow-guide-dark: 0 -8px 32px rgba(59, 130, 246, 0.3), 0 -2px 16px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
 
     --dp-calendar-cell-bg: #ffffff;
     --dp-calendar-cell-prev-next: #f9fafb;
@@ -147,6 +172,19 @@
 
     --dp-kakao: #fee500;
     --dp-kakao-text: #000000;
+
+    --dp-overlay-scrim: rgba(0, 0, 0, 0.5);
+    --dp-overlay-scrim-soft: rgba(0, 0, 0, 0.3);
+    --dp-overlay-scrim-medium: rgba(0, 0, 0, 0.4);
+    --dp-overlay-scrim-strong: rgba(0, 0, 0, 0.6);
+    --dp-overlay-transparent: rgba(0, 0, 0, 0);
+    --dp-chip-on-dark-bg: rgba(255, 255, 255, 0.9);
+
+    --dp-footer-active-bg: rgba(255, 255, 255, 0.25);
+    --dp-footer-hover-bg: rgba(255, 255, 255, 0.1);
+
+    --dp-duty-fallback: #6c757d;
+    --dp-duty-type-fallback: var(--dp-bg-tertiary);
 }
 
 .dark {
@@ -165,11 +203,18 @@
     --dp-text-muted: #9ca3af;
     --dp-text-inverse: #111827;
     --dp-text-on-dark: #ffffff;
+    --dp-text-on-dark-strong: rgba(255, 255, 255, 0.85);
+    --dp-text-on-dark-soft: rgba(255, 255, 255, 0.8);
+    --dp-text-on-dark-muted: rgba(255, 255, 255, 0.7);
+    --dp-text-on-dark-dim: rgba(255, 255, 255, 0.55);
+    --dp-text-on-light: #1f2937;
 
     --dp-border-primary: #374151;
     --dp-border-secondary: #4b5563;
     --dp-border-input: #4b5563;
     --dp-border-hover: #6b7280;
+    --dp-border-on-light: rgba(0, 0, 0, 0.15);
+    --dp-border-on-dark: rgba(255, 255, 255, 0.3);
 
     --dp-accent: #3b82f6;
     --dp-accent-hover: #2563eb;
@@ -193,10 +238,16 @@
     --dp-warning-hover: #d97706;
     --dp-warning-bg: #451a03;
     --dp-warning-border: #f59e0b;
+    --dp-warning-ring: rgba(245, 158, 11, 0.2);
+    --dp-success-ring: rgba(34, 197, 94, 0.2);
 
     --dp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
     --dp-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
     --dp-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+    --dp-shadow-dropdown: 0 10px 40px -5px rgba(0, 0, 0, 0.25), 0 4px 12px -2px rgba(0, 0, 0, 0.15);
+    --dp-shadow-dropdown-dark: 0 10px 40px -5px rgba(0, 0, 0, 0.5), 0 4px 12px -2px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    --dp-shadow-guide: 0 -8px 32px rgba(59, 130, 246, 0.25), 0 -2px 16px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    --dp-shadow-guide-dark: 0 -8px 32px rgba(59, 130, 246, 0.3), 0 -2px 16px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
 
     --dp-calendar-cell-bg: #1f2937;
     --dp-calendar-cell-prev-next: #111827;
@@ -210,6 +261,19 @@
 
     --dp-kakao: #fee500;
     --dp-kakao-text: #000000;
+
+    --dp-overlay-scrim: rgba(0, 0, 0, 0.5);
+    --dp-overlay-scrim-soft: rgba(0, 0, 0, 0.3);
+    --dp-overlay-scrim-medium: rgba(0, 0, 0, 0.4);
+    --dp-overlay-scrim-strong: rgba(0, 0, 0, 0.6);
+    --dp-overlay-transparent: rgba(0, 0, 0, 0);
+    --dp-chip-on-dark-bg: rgba(255, 255, 255, 0.9);
+
+    --dp-footer-active-bg: rgba(255, 255, 255, 0.25);
+    --dp-footer-hover-bg: rgba(255, 255, 255, 0.1);
+
+    --dp-duty-fallback: #6c757d;
+    --dp-duty-type-fallback: var(--dp-bg-tertiary);
 }
 
 /* ====================================
@@ -455,29 +519,33 @@ html.dark {
 
 /* D-Day Badge Colors */
 .dday-badge-today {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    color: white;
+    background: linear-gradient(135deg, var(--dp-danger), var(--dp-danger-hover));
+    color: var(--dp-text-on-dark);
     animation: pulse-glow 2s ease-in-out infinite;
 }
 
 .dday-badge-past {
     background-color: var(--dp-text-muted);
-    color: white;
+    color: var(--dp-text-on-dark);
 }
 
 .dday-badge-upcoming-1 {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    color: white;
+    background: linear-gradient(135deg, var(--dp-danger), var(--dp-danger-hover));
+    color: var(--dp-text-on-dark);
 }
 
 .dday-badge-upcoming-2 {
-    background: linear-gradient(135deg, #f97316, #ea580c);
-    color: white;
+    background: linear-gradient(135deg, var(--dp-warning), var(--dp-warning-hover));
+    color: var(--dp-text-on-dark);
 }
 
 .dday-badge-upcoming-3 {
-    background: linear-gradient(135deg, #fb923c, #f97316);
-    color: white;
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--dp-warning) 85%, var(--dp-bg-card)),
+      var(--dp-warning)
+    );
+    color: var(--dp-text-on-dark);
 }
 
 .dday-badge-future {
@@ -487,10 +555,10 @@ html.dark {
 
 @keyframes pulse-glow {
     0%, 100% {
-        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--dp-danger) 40%, transparent);
     }
     50% {
-        box-shadow: 0 0 20px 4px rgba(239, 68, 68, 0.3);
+        box-shadow: 0 0 20px 4px color-mix(in srgb, var(--dp-danger) 30%, transparent);
     }
 }
 
@@ -606,19 +674,19 @@ html.dark {
 
 /* Footer navigation selection states */
 .footer-nav-active {
-    background-color: rgba(255, 255, 255, 0.25);
-    color: #ffffff;
+    background-color: var(--dp-footer-active-bg);
+    color: var(--dp-text-on-dark);
     font-weight: 600;
 }
 
 .footer-nav-inactive {
     background-color: transparent;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--dp-text-on-dark-dim);
 }
 
 .footer-nav-inactive:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.85);
+    background-color: var(--dp-footer-hover-bg);
+    color: var(--dp-text-on-dark-strong);
 }
 
 /* Schedule Tags */
@@ -748,7 +816,35 @@ html.dark {
 
 .color-picker-swatch:hover {
     transform: scale(1.15);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--dp-shadow-md);
+}
+
+.text-dp-text-on-dark-strong {
+    color: var(--dp-text-on-dark-strong);
+}
+
+.text-dp-text-on-dark-soft {
+    color: var(--dp-text-on-dark-soft);
+}
+
+.text-dp-text-on-dark-muted {
+    color: var(--dp-text-on-dark-muted);
+}
+
+.text-dp-text-on-dark-dim {
+    color: var(--dp-text-on-dark-dim);
+}
+
+.text-dp-text-on-light {
+    color: var(--dp-text-on-light);
+}
+
+.bg-dp-overlay-scrim {
+    background-color: var(--dp-overlay-scrim);
+}
+
+.bg-dp-overlay-scrim-soft {
+    background-color: var(--dp-overlay-scrim-soft);
 }
 
 /* Calendar Navigation Buttons */

@@ -424,10 +424,10 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
 
 .schedule-dragging {
   opacity: 0.95;
-  background: white;
+  background: var(--dp-bg-card);
   border-radius: 0.5rem;
   padding: 0.5rem 0.75rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--dp-shadow-lg);
 }
 
 .schedule-drag-handle:active {

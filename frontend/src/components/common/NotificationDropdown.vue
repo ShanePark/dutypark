@@ -179,7 +179,7 @@ function handleOverlayClick() {
 <style scoped>
 /* Overlay for mobile - adds dim background to make dropdown stand out */
 .notification-overlay {
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: var(--dp-overlay-scrim-soft);
 }
 
 @media (min-width: 640px) {
@@ -191,17 +191,12 @@ function handleOverlayClick() {
 .notification-dropdown {
   background-color: var(--dp-bg-card);
   border: 1px solid var(--dp-border-secondary);
-  box-shadow:
-    0 10px 40px -5px rgba(0, 0, 0, 0.25),
-    0 4px 12px -2px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--dp-shadow-dropdown);
 }
 
 /* Stronger shadow for dark mode */
 :global(.dark) .notification-dropdown {
-  box-shadow:
-    0 10px 40px -5px rgba(0, 0, 0, 0.5),
-    0 4px 12px -2px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.05);
+  box-shadow: var(--dp-shadow-dropdown-dark);
 }
 
 .notification-dropdown-header {

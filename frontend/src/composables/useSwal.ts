@@ -1,8 +1,17 @@
 import Swal from 'sweetalert2'
 
-const defaultConfig = {
-  confirmButtonColor: '#2563eb',
-  cancelButtonColor: '#f3f4f6',
+function readCssVar(name: string, fallback: string): string {
+  if (typeof window === 'undefined') return fallback
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  return value || fallback
+}
+
+function getSwalColors() {
+  return {
+    confirmButtonColor: readCssVar('--dp-accent', 'var(--dp-accent)'),
+    cancelButtonColor: readCssVar('--dp-bg-tertiary', 'var(--dp-bg-tertiary)'),
+    dangerButtonColor: readCssVar('--dp-danger-hover', 'var(--dp-danger-hover)'),
+  }
 }
 
 const Toast = Swal.mixin({
@@ -24,46 +33,51 @@ const Toast = Swal.mixin({
 
 export function useSwal() {
   const showError = (message: string, title = '오류') => {
+    const colors = getSwalColors()
     return Swal.fire({
       icon: 'error',
       title,
       text: message,
       confirmButtonText: '확인',
-      confirmButtonColor: defaultConfig.confirmButtonColor,
+      confirmButtonColor: colors.confirmButtonColor,
     })
   }
 
   const showWarning = (message: string, title = '주의') => {
+    const colors = getSwalColors()
     return Swal.fire({
       icon: 'warning',
       title,
       text: message,
       confirmButtonText: '확인',
-      confirmButtonColor: defaultConfig.confirmButtonColor,
+      confirmButtonColor: colors.confirmButtonColor,
     })
   }
 
   const showSuccess = (message: string, title = '성공') => {
+    const colors = getSwalColors()
     return Swal.fire({
       icon: 'success',
       title,
       text: message,
       confirmButtonText: '확인',
-      confirmButtonColor: defaultConfig.confirmButtonColor,
+      confirmButtonColor: colors.confirmButtonColor,
     })
   }
 
   const showInfo = (message: string, title = '알림') => {
+    const colors = getSwalColors()
     return Swal.fire({
       icon: 'info',
       title,
       text: message,
       confirmButtonText: '확인',
-      confirmButtonColor: defaultConfig.confirmButtonColor,
+      confirmButtonColor: colors.confirmButtonColor,
     })
   }
 
   const confirm = (message: string, title = '확인') => {
+    const colors = getSwalColors()
     return Swal.fire({
       icon: 'question',
       title,
@@ -71,11 +85,13 @@ export function useSwal() {
       showCancelButton: true,
       confirmButtonText: '확인',
       cancelButtonText: '취소',
-      confirmButtonColor: defaultConfig.confirmButtonColor,
+      confirmButtonColor: colors.confirmButtonColor,
+      cancelButtonColor: colors.cancelButtonColor,
     }).then((result) => result.isConfirmed)
   }
 
   const confirmDelete = (message: string, title = '삭제 확인') => {
+    const colors = getSwalColors()
     return Swal.fire({
       icon: 'warning',
       title,
@@ -83,7 +99,8 @@ export function useSwal() {
       showCancelButton: true,
       confirmButtonText: '삭제',
       cancelButtonText: '취소',
-      confirmButtonColor: '#dc2626',
+      confirmButtonColor: colors.dangerButtonColor,
+      cancelButtonColor: colors.cancelButtonColor,
     }).then((result) => result.isConfirmed)
   }
 

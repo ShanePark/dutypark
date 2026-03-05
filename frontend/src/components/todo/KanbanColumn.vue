@@ -162,7 +162,7 @@ const statusConfig: Record<TodoStatus, { label: string; bgClass: string; textCla
   height: 1.5rem;
   border-radius: 0.375rem;
   background-color: var(--dp-accent);
-  color: white;
+  color: var(--dp-text-on-dark);
   cursor: pointer;
   transition: all 0.15s ease;
   border: none;

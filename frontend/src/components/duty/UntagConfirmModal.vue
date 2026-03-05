@@ -29,7 +29,7 @@ function confirm() {
         :style="{
           backgroundColor: 'var(--dp-bg-modal)',
           borderColor: 'var(--dp-border-primary)',
-          boxShadow: '0 20px 40px -8px rgba(0, 0, 0, 0.25), 0 8px 16px -4px rgba(0, 0, 0, 0.1)'
+          boxShadow: 'var(--dp-shadow-lg), var(--dp-shadow-md)'
         }"
       >
         <div
@@ -58,7 +58,7 @@ function confirm() {
           <button
             @click="confirm"
             class="px-5 py-2 bg-dp-warning hover:bg-dp-warning-hover text-dp-text-on-dark rounded-lg text-sm font-medium transition-all duration-200 hover:-translate-y-px cursor-pointer"
-            style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);"
+            style="box-shadow: var(--dp-shadow-md), var(--dp-shadow-sm);"
           >
             태그 제거
           </button>
@@ -69,7 +69,7 @@ function confirm() {
               backgroundColor: 'var(--dp-bg-card)',
               color: 'var(--dp-text-secondary)',
               borderColor: 'var(--dp-border-primary)',
-              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+              boxShadow: 'var(--dp-shadow-sm)'
             }"
           >
             취소

@@ -570,7 +570,7 @@ onMounted(() => {
                 <span
                   @click="openEditDutyTypeModal(dutyType)"
                   class="inline-block w-6 h-6 rounded-full border-2 cursor-pointer color-picker-swatch"
-                  :style="{ backgroundColor: dutyType.color || '#e8e8e8', borderColor: 'var(--dp-border-primary)' }"
+                  :style="{ backgroundColor: dutyType.color || 'var(--dp-duty-type-fallback)', borderColor: 'var(--dp-border-primary)' }"
                 ></span>
               </td>
               <td class="px-4 py-3">

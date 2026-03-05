@@ -70,8 +70,8 @@ function toggleBatchEdit() {
           class="duty-quick-btn"
           :class="{ 'duty-quick-btn-active': focusedDayDutyType === dutyType.name || (!focusedDayDutyType && dutyType.id === null) }"
           :style="{
-            '--duty-color': dutyType.color || '#6c757d',
-            '--duty-text': isLightColor(dutyType.color) ? '#000' : '#fff'
+            '--duty-color': dutyType.color || 'var(--dp-duty-fallback)',
+            '--duty-text': isLightColor(dutyType.color) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
           } as any"
         >
           <span class="duty-quick-btn-inner">
@@ -85,7 +85,7 @@ function toggleBatchEdit() {
         <div v-for="dutyType in dutyTypesWithCount" :key="dutyType.name" class="flex items-center gap-1">
           <span
             class="w-4 h-4 rounded border-2"
-            :style="{ backgroundColor: dutyType.color || '#6c757d', borderColor: 'var(--dp-border-primary)' }"
+            :style="{ backgroundColor: dutyType.color || 'var(--dp-duty-fallback)', borderColor: 'var(--dp-border-primary)' }"
           ></span>
           <span class="text-xs sm:text-sm" :style="{ color: 'var(--dp-text-secondary)' }">{{ dutyType.name }}</span>
           <span class="text-xs sm:text-sm font-bold" :style="{ color: 'var(--dp-text-primary)' }">{{ dutyType.cnt }}</span>

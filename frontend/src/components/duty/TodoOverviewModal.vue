@@ -412,13 +412,13 @@ function handleTodoClick(todo: Todo) {
 <style>
 /* SortableJS drag-and-drop styles - must be unscoped for dynamic classes */
 .sortable-ghost {
-  background-color: rgb(219 234 254) !important; /* bg-dp-accent-soft */
-  border-color: rgb(147 197 253) !important; /* border-dp-accent-border */
+  background-color: var(--dp-accent-bg) !important;
+  border-color: var(--dp-accent-border) !important;
   opacity: 0.6 !important;
 }
 
 .sortable-chosen {
-  box-shadow: 0 0 0 2px rgb(96 165 250), 0 10px 15px -3px rgb(0 0 0 / 0.1) !important; /* ring-2 ring-dp-accent shadow-lg */
+  box-shadow: 0 0 0 2px var(--dp-accent-light), var(--dp-shadow-lg) !important;
 }
 
 .sortable-drag {
@@ -427,7 +427,7 @@ function handleTodoClick(todo: Todo) {
 
 .sortable-fallback {
   opacity: 0.9 !important;
-  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25) !important; /* shadow-xl */
+  box-shadow: var(--dp-shadow-lg) !important;
   transform: rotate(1deg) !important;
 }
 </style>

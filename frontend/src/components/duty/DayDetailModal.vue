@@ -385,7 +385,7 @@ function handleUploadError(message: string) {
             >
               <span
                 class="inline-block w-3 h-3 rounded border"
-                :style="{ backgroundColor: dutyType.color || '#6c757d', borderColor: 'var(--dp-border-secondary)' }"
+                :style="{ backgroundColor: dutyType.color || 'var(--dp-duty-fallback)', borderColor: 'var(--dp-border-secondary)' }"
               ></span>
               {{ dutyType.name }}
             </button>
@@ -394,7 +394,7 @@ function handleUploadError(message: string) {
           <div v-else-if="duty && !canEdit" class="mt-2">
             <span
               class="px-2.5 py-1 rounded-md text-xs font-medium text-dp-text-on-dark"
-              :style="{ backgroundColor: duty.dutyColor || '#6c757d' }"
+              :style="{ backgroundColor: duty.dutyColor || 'var(--dp-duty-fallback)' }"
             >
               {{ duty.dutyType || 'OFF' }}
             </span>
