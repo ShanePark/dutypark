@@ -94,11 +94,11 @@ const pagesToShow = computed(() => {
     >
       <div class="modal-container max-w-[95vw] sm:max-w-2xl max-h-[85dvh] sm:max-h-[70vh]">
         <!-- Header -->
-        <div class="p-3 sm:p-4 flex-shrink-0" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderBottom: '1px solid var(--dp-border-primary)' }">
+        <div class="p-3 sm:p-4 flex-shrink-0 bg-dp-bg-tertiary border-b border-dp-border-primary">
           <div class="flex items-center justify-between mb-3">
-            <h2 class="text-base sm:text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">검색 결과</h2>
+            <h2 class="text-base sm:text-lg font-bold text-dp-text-primary">검색 결과</h2>
             <button @click="emit('close')" class="p-2 rounded-full flex-shrink-0 hover-close-btn cursor-pointer">
-              <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
+              <X class="w-6 h-6 text-dp-text-primary" />
             </button>
           </div>
           <!-- Search input -->
@@ -116,7 +116,7 @@ const pagesToShow = computed(() => {
                 }"
                 :disabled="isSearching"
               />
-              <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
+              <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dp-text-muted" />
             </div>
             <button
               type="submit"
@@ -127,7 +127,7 @@ const pagesToShow = computed(() => {
               <span>검색</span>
             </button>
           </form>
-          <p v-if="query" class="text-sm mt-2" :style="{ color: 'var(--dp-text-muted)' }">
+          <p v-if="query" class="text-sm mt-2 text-dp-text-muted">
             "{{ query }}" 검색 결과 {{ pageInfo.totalElements }}건
           </p>
         </div>
@@ -135,11 +135,11 @@ const pagesToShow = computed(() => {
         <!-- Content -->
         <div class="p-3 sm:p-4 overflow-y-auto flex-1 min-h-0">
           <!-- No query entered yet -->
-          <div v-if="!query" class="text-center py-8" :style="{ color: 'var(--dp-text-muted)' }">
+          <div v-if="!query" class="text-center py-8 text-dp-text-muted">
             검색어를 입력해주세요.
           </div>
           <!-- Query entered but no results -->
-          <div v-else-if="results.length === 0" class="text-center py-8" :style="{ color: 'var(--dp-text-muted)' }">
+          <div v-else-if="results.length === 0" class="text-center py-8 text-dp-text-muted">
             검색 결과가 없습니다.
           </div>
 
@@ -148,27 +148,24 @@ const pagesToShow = computed(() => {
               v-for="result in results"
               :key="result.id"
               @click="emit('goToDate', result)"
-              class="p-4 border rounded-lg cursor-pointer transition result-item"
-              :style="{ borderColor: 'var(--dp-border-primary)' }"
+              class="p-4 border rounded-lg cursor-pointer transition result-item border-dp-border-primary"
             >
               <div class="flex items-start justify-between">
                 <div class="flex-1">
                   <div class="flex items-center gap-2">
-                    <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ result.content }}</span>
+                    <span class="font-medium text-dp-text-primary">{{ result.content }}</span>
                     <Paperclip
                       v-if="result.hasAttachments"
-                      class="w-4 h-4"
-                      :style="{ color: 'var(--dp-text-muted)' }"
+                      class="w-4 h-4 text-dp-text-muted"
                     />
                   </div>
                   <p
                     v-if="result.description"
-                    class="text-sm mt-1 line-clamp-2"
-                    :style="{ color: 'var(--dp-text-secondary)' }"
+                    class="text-sm mt-1 line-clamp-2 text-dp-text-secondary"
                   >
                     {{ result.description }}
                   </p>
-                  <div class="flex items-center gap-1 mt-2 text-sm" :style="{ color: 'var(--dp-text-muted)' }">
+                  <div class="flex items-center gap-1 mt-2 text-sm text-dp-text-muted">
                     <Calendar class="w-4 h-4" />
                     {{ formatDateRange(result.startDateTime, result.endDateTime) }}
                   </div>
@@ -187,8 +184,7 @@ const pagesToShow = computed(() => {
           <button
             @click="emit('changePage', currentPage - 2)"
             :disabled="currentPage === 1"
-            class="p-2 rounded disabled:opacity-50 disabled:cursor-not-allowed transition hover-bg cursor-pointer"
-            :style="{ color: 'var(--dp-text-primary)' }"
+            class="p-2 rounded disabled:opacity-50 disabled:cursor-not-allowed transition hover-bg cursor-pointer text-dp-text-primary"
           >
             <ChevronLeft class="w-5 h-5 sm:w-4 sm:h-4" />
           </button>
@@ -211,8 +207,7 @@ const pagesToShow = computed(() => {
           <button
             @click="emit('changePage', currentPage)"
             :disabled="currentPage === pageInfo.totalPages"
-            class="p-2 rounded disabled:opacity-50 disabled:cursor-not-allowed transition hover-bg cursor-pointer"
-            :style="{ color: 'var(--dp-text-primary)' }"
+            class="p-2 rounded disabled:opacity-50 disabled:cursor-not-allowed transition hover-bg cursor-pointer text-dp-text-primary"
           >
             <ChevronRight class="w-5 h-5 sm:w-4 sm:h-4" />
           </button>

@@ -70,13 +70,13 @@ function getDDayBadgeClass(calc: number): string {
         </div>
 
         <!-- Title -->
-        <p class="text-sm sm:text-base font-medium mb-1 sm:mb-2 flex items-start gap-1 sm:gap-1.5" :style="{ color: 'var(--dp-text-primary)' }">
-          <Lock v-if="dday.isPrivate" class="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 mt-0.5" :style="{ color: 'var(--dp-text-muted)' }" />
+        <p class="text-sm sm:text-base font-medium mb-1 sm:mb-2 flex items-start gap-1 sm:gap-1.5 text-dp-text-primary">
+          <Lock v-if="dday.isPrivate" class="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 mt-0.5 text-dp-text-muted" />
           <span class="line-clamp-2">{{ dday.title }}</span>
         </p>
 
         <!-- Date -->
-        <p class="text-xs sm:text-sm flex items-center gap-1" :style="{ color: 'var(--dp-text-muted)' }">
+        <p class="text-xs sm:text-sm flex items-center gap-1 text-dp-text-muted">
           <CalendarCheck class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           {{ dday.date }}
         </p>
@@ -87,13 +87,12 @@ function getDDayBadgeClass(calc: number): string {
     <div
       v-if="isMyCalendar"
       @click="emit('add')"
-      class="rounded-xl sm:rounded-2xl border-2 border-dashed cursor-pointer hover:border-dp-accent-border hover:bg-dp-accent-soft/50 transition-all duration-300 flex flex-col items-center justify-center min-h-[100px] sm:min-h-[120px] group"
-      :style="{ borderColor: 'var(--dp-border-secondary)' }"
+      class="rounded-xl sm:rounded-2xl border-2 border-dashed cursor-pointer hover:border-dp-accent-border hover:bg-dp-accent-soft/50 transition-all duration-300 flex flex-col items-center justify-center min-h-[100px] sm:min-h-[120px] group border-dp-border-secondary"
     >
-      <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full group-hover:bg-dp-accent-soft flex items-center justify-center mb-1.5 sm:mb-2 transition-colors" :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }">
-        <Plus class="w-5 h-5 sm:w-6 sm:h-6 group-hover:text-dp-accent transition-colors" :style="{ color: 'var(--dp-text-muted)' }" />
+      <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full group-hover:bg-dp-accent-soft flex items-center justify-center mb-1.5 sm:mb-2 transition-colors bg-dp-bg-tertiary">
+        <Plus class="w-5 h-5 sm:w-6 sm:h-6 group-hover:text-dp-accent transition-colors text-dp-text-muted" />
       </div>
-      <span class="text-xs sm:text-sm group-hover:text-dp-accent transition-colors font-medium" :style="{ color: 'var(--dp-text-muted)' }">디데이 추가</span>
+      <span class="text-xs sm:text-sm group-hover:text-dp-accent transition-colors font-medium text-dp-text-muted">디데이 추가</span>
     </div>
   </div>
 </template>

@@ -76,20 +76,20 @@ function handleKakaoLogin() {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center px-4 pb-safe pt-safe" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
+  <div class="min-h-screen flex items-center justify-center px-4 pb-safe pt-safe bg-dp-bg-secondary">
     <div class="w-full max-w-md">
       <!-- Logo -->
       <div class="text-center mb-8">
-        <h1 class="text-3xl font-bold" :style="{ color: 'var(--dp-text-primary)' }">Dutypark</h1>
-        <p class="mt-2" :style="{ color: 'var(--dp-text-muted)' }">로그인하여 시작하세요</p>
+        <h1 class="text-3xl font-bold text-dp-text-primary">Dutypark</h1>
+        <p class="mt-2 text-dp-text-muted">로그인하여 시작하세요</p>
       </div>
 
       <!-- Login Card -->
-      <div class="rounded-2xl shadow-sm p-8" :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }">
+      <div class="rounded-2xl shadow-sm p-8 bg-dp-bg-card border border-dp-border-primary">
         <form @submit.prevent="handleLogin" class="space-y-5">
           <!-- Email Field -->
           <div>
-            <label for="email" class="block text-sm font-medium mb-2" :style="{ color: 'var(--dp-text-secondary)' }">
+            <label for="email" class="block text-sm font-medium mb-2 text-dp-text-secondary">
               이메일
             </label>
             <input
@@ -110,10 +110,9 @@ function handleKakaoLogin() {
                 id="rememberMe"
                 v-model="rememberMe"
                 type="checkbox"
-                class="h-4 w-4 text-dp-text-primary focus:ring-dp-text-secondary rounded cursor-pointer"
-                :style="{ borderColor: 'var(--dp-border-input)' }"
+                class="h-4 w-4 text-dp-text-primary focus:ring-dp-text-secondary rounded cursor-pointer border-dp-border-input"
               />
-              <label for="rememberMe" class="ml-2 text-sm cursor-pointer" :style="{ color: 'var(--dp-text-secondary)' }">
+              <label for="rememberMe" class="ml-2 text-sm cursor-pointer text-dp-text-secondary">
                 아이디 저장
               </label>
             </div>
@@ -121,7 +120,7 @@ function handleKakaoLogin() {
 
           <!-- Password Field -->
           <div>
-            <label for="password" class="block text-sm font-medium mb-2" :style="{ color: 'var(--dp-text-secondary)' }">
+            <label for="password" class="block text-sm font-medium mb-2 text-dp-text-secondary">
               비밀번호
             </label>
             <input
@@ -169,10 +168,10 @@ function handleKakaoLogin() {
           <!-- Divider -->
           <div class="relative my-6">
             <div class="absolute inset-0 flex items-center">
-              <div class="w-full border-t" :style="{ borderColor: 'var(--dp-border-primary)' }"></div>
+              <div class="w-full border-t border-dp-border-primary"></div>
             </div>
             <div class="relative flex justify-center text-sm">
-              <span class="px-4" :style="{ backgroundColor: 'var(--dp-bg-card)', color: 'var(--dp-text-muted)' }">또는</span>
+              <span class="px-4 bg-dp-bg-card text-dp-text-muted">또는</span>
             </div>
           </div>
 
@@ -192,7 +191,7 @@ function handleKakaoLogin() {
 
       <!-- Back to Home -->
       <div class="text-center mt-6">
-        <router-link to="/" class="text-sm transition" :style="{ color: 'var(--dp-text-muted)' }">
+        <router-link to="/" class="text-sm transition text-dp-text-muted">
           홈으로 돌아가기
         </router-link>
       </div>
@@ -201,17 +200,15 @@ function handleKakaoLogin() {
       <div class="text-center mt-4">
         <button
           type="button"
-          class="text-xs transition hover:underline"
-          :style="{ color: 'var(--dp-text-muted)' }"
+          class="text-xs transition hover:underline text-dp-text-muted"
           @click="policyModal = 'terms'"
         >
           이용약관
         </button>
-        <span class="mx-2 text-xs" :style="{ color: 'var(--dp-text-muted)' }">|</span>
+        <span class="mx-2 text-xs text-dp-text-muted">|</span>
         <button
           type="button"
-          class="text-xs transition hover:underline"
-          :style="{ color: 'var(--dp-text-muted)' }"
+          class="text-xs transition hover:underline text-dp-text-muted"
           @click="policyModal = 'privacy'"
         >
           개인정보 처리방침

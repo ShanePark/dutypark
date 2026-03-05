@@ -45,8 +45,7 @@ function handleSearchClick() {
       <ProfileAvatar :member-id="memberId" :has-profile-photo="memberHasProfilePhoto" :profile-photo-version="memberProfilePhotoVersion" size="xl" class="flex-shrink-0 hidden sm:block" :name="memberName" />
       <!-- Name -->
       <span
-        class="text-xs sm:text-sm font-semibold truncate"
-        :style="{ color: 'var(--dp-text-primary)' }"
+        class="text-xs sm:text-sm font-semibold truncate text-dp-text-primary"
       >{{ memberName }}</span>
     </div>
 
@@ -68,15 +67,14 @@ function handleSearchClick() {
 
     <!-- Right: Search -->
     <div class="flex justify-end">
-      <div v-if="canSearch" class="flex items-stretch rounded-lg border overflow-hidden" :style="{ borderColor: 'var(--dp-border-secondary)' }">
+      <div v-if="canSearch" class="flex items-stretch rounded-lg border overflow-hidden border-dp-border-secondary">
         <input
           :value="searchQuery"
           type="text"
           placeholder="검색"
           @input="handleSearchInput"
           @keyup.enter="emit('search')"
-          class="px-2 py-1.5 text-sm focus:ring-2 focus:ring-dp-accent focus:outline-none w-12 sm:w-20 border-none"
-          :style="{ backgroundColor: 'var(--dp-bg-input)', color: 'var(--dp-text-primary)' }"
+          class="px-2 py-1.5 text-sm focus:ring-2 focus:ring-dp-accent focus:outline-none w-12 sm:w-20 border-none bg-dp-bg-input text-dp-text-primary"
         />
         <button
           @click="handleSearchClick"

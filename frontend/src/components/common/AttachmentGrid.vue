@@ -200,8 +200,7 @@ const gridColsClass = {
   <div v-if="attachments.length > 0">
     <div
       v-if="showLabel"
-      class="flex items-center gap-1 text-sm mb-2"
-      :style="{ color: 'var(--dp-text-muted)' }"
+      class="flex items-center gap-1 text-sm mb-2 text-dp-text-muted"
     >
       <Paperclip class="w-3 h-3" />
       첨부파일 ({{ attachments.length }})
@@ -217,8 +216,7 @@ const gridColsClass = {
       >
         <!-- Thumbnail or Icon -->
         <div
-          class="aspect-square flex items-center justify-center relative"
-          :style="{ backgroundColor: 'var(--dp-bg-secondary)' }"
+          class="aspect-square flex items-center justify-center relative bg-dp-bg-secondary"
         >
           <img
             v-if="getThumbnailUrl(attachment.id)"
@@ -229,8 +227,7 @@ const gridColsClass = {
           <component
             v-else
             :is="getFileIconComponent(attachment)"
-            class="w-12 h-12"
-            :style="{ color: 'var(--dp-text-muted)' }"
+            class="w-12 h-12 text-dp-text-muted"
           />
 
           <!-- Zoom overlay for images - shown on hover -->
@@ -253,11 +250,11 @@ const gridColsClass = {
         </button>
 
         <!-- File info -->
-        <div class="p-2" :style="{ backgroundColor: 'var(--dp-bg-card)' }">
-          <p class="text-sm truncate" :title="attachment.originalFilename" :style="{ color: 'var(--dp-text-primary)' }">
+        <div class="p-2 bg-dp-bg-card">
+          <p class="text-sm truncate text-dp-text-primary" :title="attachment.originalFilename">
             {{ attachment.originalFilename }}
           </p>
-          <p class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">{{ formatBytes(attachment.size) }}</p>
+          <p class="text-xs text-dp-text-muted">{{ formatBytes(attachment.size) }}</p>
         </div>
       </div>
     </div>

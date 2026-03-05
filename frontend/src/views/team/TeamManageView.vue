@@ -305,8 +305,7 @@ onMounted(() => {
       <div class="font-bold text-xl py-3 rounded-t-lg flex items-center justify-between px-4" :style="{ backgroundColor: 'var(--dp-modal-header-bg)', color: 'var(--dp-text-on-dark)' }">
         <button
           @click="router.back()"
-          class="px-3 py-1 text-dp-text-on-dark text-sm rounded-lg hover:bg-dp-border-secondary transition flex items-center gap-1 cursor-pointer"
-          :style="{ backgroundColor: 'var(--dp-modal-header-bg-alt)' }"
+          class="px-3 py-1 text-dp-text-on-dark text-sm rounded-lg hover:bg-dp-border-secondary transition flex items-center gap-1 cursor-pointer bg-dp-surface-strong-alt"
         >
           <ChevronLeft class="w-4 h-4" />
           뒤로
@@ -323,23 +322,23 @@ onMounted(() => {
       </div>
 
     <!-- Team Info Card -->
-    <div class="border rounded-b-lg overflow-hidden mb-4" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }">
+    <div class="border rounded-b-lg overflow-hidden mb-4 bg-dp-bg-card border-dp-border-primary">
       <div class="overflow-x-auto">
       <table class="w-full min-w-[300px]">
-        <tbody :style="{ borderColor: 'var(--dp-border-primary)' }">
-          <tr :style="{ borderBottomWidth: '1px', borderBottomStyle: 'solid', borderBottomColor: 'var(--dp-border-primary)' }">
-            <th class="px-4 py-3 text-left w-1/4 font-medium" :style="{ backgroundColor: 'var(--dp-bg-secondary)', color: 'var(--dp-text-secondary)' }">
+        <tbody class="border-dp-border-primary">
+          <tr class="border-b border-dp-border-primary">
+            <th class="px-4 py-3 text-left w-1/4 font-medium bg-dp-bg-secondary text-dp-text-secondary">
               팀 설명
             </th>
-            <td class="px-4 py-3" :style="{ color: 'var(--dp-text-primary)' }">
+            <td class="px-4 py-3 text-dp-text-primary">
               {{ team.description }}
             </td>
           </tr>
-          <tr v-if="isAdmin" :style="{ borderBottomWidth: '1px', borderBottomStyle: 'solid', borderBottomColor: 'var(--dp-border-primary)' }">
-            <th class="px-4 py-3 text-left font-medium" :style="{ backgroundColor: 'var(--dp-bg-secondary)', color: 'var(--dp-text-secondary)' }">
+          <tr class="border-b border-dp-border-primary" v-if="isAdmin">
+            <th class="px-4 py-3 text-left font-medium bg-dp-bg-secondary text-dp-text-secondary">
               팀 대표
             </th>
-            <td class="px-4 py-3" :style="{ color: 'var(--dp-text-primary)' }">
+            <td class="px-4 py-3 text-dp-text-primary">
               <div class="flex items-center gap-2">
                 <span class="font-medium">{{ team.adminName || 'N/A' }}</span>
                 <button
@@ -353,16 +352,15 @@ onMounted(() => {
               </div>
             </td>
           </tr>
-          <tr :style="{ borderBottomWidth: '1px', borderBottomStyle: 'solid', borderBottomColor: 'var(--dp-border-primary)' }">
-            <th class="px-4 py-3 text-left font-medium" :style="{ backgroundColor: 'var(--dp-bg-secondary)', color: 'var(--dp-text-secondary)' }">
+          <tr class="border-b border-dp-border-primary">
+            <th class="px-4 py-3 text-left font-medium bg-dp-bg-secondary text-dp-text-secondary">
               근무 형태
             </th>
             <td class="px-4 py-3">
               <select
                 :value="team.workType"
                 @change="updateWorkType(($event.target as HTMLSelectElement).value)"
-                class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent"
-                :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
+                class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent bg-dp-bg-input border-dp-border-input text-dp-text-primary"
               >
                 <option v-for="wt in workTypes" :key="wt.value" :value="wt.value">
                   {{ wt.label }}
@@ -370,16 +368,15 @@ onMounted(() => {
               </select>
             </td>
           </tr>
-          <tr :style="{ borderBottomWidth: '1px', borderBottomStyle: 'solid', borderBottomColor: 'var(--dp-border-primary)' }">
-            <th class="px-4 py-3 text-left font-medium" :style="{ backgroundColor: 'var(--dp-bg-secondary)', color: 'var(--dp-text-secondary)' }">
+          <tr class="border-b border-dp-border-primary">
+            <th class="px-4 py-3 text-left font-medium bg-dp-bg-secondary text-dp-text-secondary">
               근무 반입 양식
             </th>
             <td class="px-4 py-3">
               <select
                 :value="team.dutyBatchTemplate?.name || ''"
                 @change="updateBatchTemplate(($event.target as HTMLSelectElement).value)"
-                class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent"
-                :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
+                class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent bg-dp-bg-input border-dp-border-input text-dp-text-primary"
               >
                 <option value="">없음</option>
                 <option v-for="template in dutyBatchTemplates" :key="template.name" :value="template.name">
@@ -389,7 +386,7 @@ onMounted(() => {
             </td>
           </tr>
           <tr v-if="team.dutyBatchTemplate">
-            <th class="px-4 py-3 text-left font-medium" :style="{ backgroundColor: 'var(--dp-bg-secondary)', color: 'var(--dp-text-secondary)' }">
+            <th class="px-4 py-3 text-left font-medium bg-dp-bg-secondary text-dp-text-secondary">
               근무표 업로드
             </th>
             <td class="px-4 py-3">
@@ -408,8 +405,8 @@ onMounted(() => {
     </div>
 
     <!-- Members Section -->
-    <div class="border rounded-lg overflow-hidden mb-4" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }">
-      <div class="text-dp-text-on-dark px-4 py-3 flex flex-wrap items-center justify-between gap-2" :style="{ backgroundColor: 'var(--dp-modal-header-bg)' }">
+    <div class="border rounded-lg overflow-hidden mb-4 bg-dp-bg-card border-dp-border-primary">
+      <div class="text-dp-text-on-dark px-4 py-3 flex flex-wrap items-center justify-between gap-2 bg-dp-surface-strong">
         <h3 class="font-bold">팀 멤버</h3>
         <button
           @click="openMemberSearchModal"
@@ -423,7 +420,7 @@ onMounted(() => {
       <!-- Desktop Table View -->
       <div v-if="hasMember" class="hidden sm:block overflow-x-auto">
         <table class="w-full">
-          <thead class="text-dp-text-on-dark" :style="{ backgroundColor: 'var(--dp-bg-footer)' }">
+          <thead class="text-dp-text-on-dark bg-dp-bg-footer">
             <tr>
               <th class="px-4 py-2 text-center w-12">#</th>
               <th class="px-4 py-2 text-left">이름</th>
@@ -431,10 +428,10 @@ onMounted(() => {
               <th class="px-4 py-2 text-center">도구</th>
             </tr>
           </thead>
-          <tbody :style="{ borderColor: 'var(--dp-border-primary)' }">
-            <tr v-for="(member, index) in team.members" :key="member.id" :style="{ borderBottomWidth: '1px', borderBottomStyle: 'solid', borderBottomColor: 'var(--dp-border-primary)' }" class="hover-bg-light">
-              <td class="px-4 py-3 text-center" :style="{ color: 'var(--dp-text-muted)' }">{{ index + 1 }}</td>
-              <td class="px-4 py-3 font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ member.name }}</td>
+          <tbody class="border-dp-border-primary">
+            <tr v-for="(member, index) in team.members" :key="member.id" class="hover-bg-light border-b border-dp-border-primary">
+              <td class="px-4 py-3 text-center text-dp-text-muted">{{ index + 1 }}</td>
+              <td class="px-4 py-3 font-medium text-dp-text-primary">{{ member.name }}</td>
               <td class="px-4 py-3 text-center">
                 <template v-if="!isAdmin">
                   <Check v-if="member.isManager" class="w-5 h-5 text-dp-success mx-auto" />
@@ -463,7 +460,7 @@ onMounted(() => {
                       대표 위임
                     </button>
                   </div>
-                  <span v-else-if="member.isAdmin" :style="{ color: 'var(--dp-text-muted)' }">-</span>
+                  <span class="text-dp-text-muted" v-else-if="member.isAdmin">-</span>
                 </template>
               </td>
               <td class="px-4 py-3 text-center">
@@ -481,17 +478,16 @@ onMounted(() => {
       </div>
 
       <!-- Mobile Card View -->
-      <div v-if="hasMember" class="sm:hidden" :style="{ borderColor: 'var(--dp-border-primary)' }">
+      <div v-if="hasMember" class="sm:hidden border-dp-border-primary">
         <div
           v-for="(member, index) in team.members"
           :key="member.id"
-          class="p-3 hover-bg-light"
-          :style="{ borderBottomWidth: '1px', borderBottomStyle: 'solid', borderBottomColor: 'var(--dp-border-primary)' }"
+          class="p-3 hover-bg-light border-b border-dp-border-primary"
         >
           <div class="flex items-center justify-between mb-2">
             <div class="flex items-center gap-2">
-              <span class="text-sm" :style="{ color: 'var(--dp-text-muted)' }">{{ index + 1 }}</span>
-              <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ member.name }}</span>
+              <span class="text-sm text-dp-text-muted">{{ index + 1 }}</span>
+              <span class="font-medium text-dp-text-primary">{{ member.name }}</span>
               <Check v-if="member.isManager" class="w-4 h-4 text-dp-success" />
             </div>
             <button
@@ -530,19 +526,18 @@ onMounted(() => {
           </div>
         </div>
       </div>
-      <div v-else class="p-6 text-center" :style="{ color: 'var(--dp-text-muted)' }">
+      <div v-else class="p-6 text-center text-dp-text-muted">
         이 팀에 멤버가 없습니다.
       </div>
     </div>
 
     <!-- Duty Types Section -->
-    <div class="border rounded-lg overflow-hidden" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }">
-      <div class="text-dp-text-on-dark px-4 py-3 flex items-center justify-between" :style="{ backgroundColor: 'var(--dp-modal-header-bg)' }">
+    <div class="border rounded-lg overflow-hidden bg-dp-bg-card border-dp-border-primary">
+      <div class="text-dp-text-on-dark px-4 py-3 flex items-center justify-between bg-dp-surface-strong">
         <h3 class="font-bold">근무 유형</h3>
         <button
           @click="openAddDutyTypeModal"
-          class="px-3 py-1.5 rounded-lg text-sm font-medium hover-interactive cursor-pointer flex items-center gap-1"
-          :style="{ backgroundColor: 'var(--dp-bg-card)', color: 'var(--dp-text-primary)' }"
+          class="px-3 py-1.5 rounded-lg text-sm font-medium hover-interactive cursor-pointer flex items-center gap-1 bg-dp-bg-card text-dp-text-primary"
         >
           <Plus class="w-4 h-4" />
           추가
@@ -551,7 +546,7 @@ onMounted(() => {
 
       <div v-if="hasDutyType" class="overflow-x-auto">
         <table class="w-full">
-          <thead class="text-dp-text-on-dark" :style="{ backgroundColor: 'var(--dp-bg-footer)' }">
+          <thead class="text-dp-text-on-dark bg-dp-bg-footer">
             <tr>
               <th class="px-4 py-2 text-center w-12">#</th>
               <th class="px-4 py-2 text-left">근무명</th>
@@ -559,12 +554,12 @@ onMounted(() => {
               <th class="px-4 py-2 text-center">도구</th>
             </tr>
           </thead>
-          <tbody :style="{ borderColor: 'var(--dp-border-primary)' }">
-            <tr v-for="(dutyType, index) in team.dutyTypes" :key="dutyType.id || 'default'" class="hover-bg-light" :style="{ borderBottomWidth: '1px', borderBottomStyle: 'solid', borderBottomColor: 'var(--dp-border-primary)' }">
-              <td class="px-4 py-3 text-center" :style="{ color: 'var(--dp-text-muted)' }">{{ index + 1 }}</td>
-              <td class="px-4 py-3 font-medium" :style="{ color: 'var(--dp-text-primary)' }">
+          <tbody class="border-dp-border-primary">
+            <tr v-for="(dutyType, index) in team.dutyTypes" :key="dutyType.id || 'default'" class="hover-bg-light border-b border-dp-border-primary">
+              <td class="px-4 py-3 text-center text-dp-text-muted">{{ index + 1 }}</td>
+              <td class="px-4 py-3 font-medium text-dp-text-primary">
                 {{ dutyType.name }}
-                <span v-if="dutyType.id === null" class="text-xs font-normal" :style="{ color: 'var(--dp-text-muted)' }">(휴무)</span>
+                <span v-if="dutyType.id === null" class="text-xs font-normal text-dp-text-muted">(휴무)</span>
               </td>
               <td class="px-4 py-3 text-center">
                 <span
@@ -579,8 +574,7 @@ onMounted(() => {
                     v-if="dutyType.id"
                     :disabled="index === 0 || index === team.dutyTypes.length - 1"
                     @click="swapPosition(index, index + 1)"
-                    class="p-1 sm:p-1.5 border rounded hover-bg-light transition disabled:opacity-50 disabled:cursor-not-allowed"
-                    :style="{ borderColor: 'var(--dp-border-secondary)' }"
+                    class="p-1 sm:p-1.5 border rounded hover-bg-light transition disabled:opacity-50 disabled:cursor-not-allowed border-dp-border-secondary"
                   >
                     <ArrowDown class="w-3 h-3 sm:w-4 sm:h-4" />
                   </button>
@@ -588,8 +582,7 @@ onMounted(() => {
                     v-if="dutyType.id"
                     :disabled="index <= 1"
                     @click="swapPosition(index, index - 1)"
-                    class="p-1 sm:p-1.5 border rounded hover-bg-light transition disabled:opacity-50 disabled:cursor-not-allowed"
-                    :style="{ borderColor: 'var(--dp-border-secondary)' }"
+                    class="p-1 sm:p-1.5 border rounded hover-bg-light transition disabled:opacity-50 disabled:cursor-not-allowed border-dp-border-secondary"
                   >
                     <ArrowUp class="w-3 h-3 sm:w-4 sm:h-4" />
                   </button>
@@ -612,7 +605,7 @@ onMounted(() => {
           </tbody>
         </table>
       </div>
-      <div v-else class="p-6 text-center" :style="{ color: 'var(--dp-text-muted)' }">
+      <div v-else class="p-6 text-center text-dp-text-muted">
         근무 유형이 없습니다.
       </div>
     </div>

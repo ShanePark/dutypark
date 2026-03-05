@@ -221,9 +221,9 @@ function handleTodoClick(todo: Todo) {
     >
       <div class="modal-container modal-container-rounded max-w-[95vw] sm:max-w-xl max-h-[90dvh] sm:max-h-[85vh]">
         <!-- Header -->
-        <div class="flex items-center justify-between px-4 py-3 sm:px-5 sm:py-4" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderBottom: '1px solid var(--dp-border-primary)' }">
+        <div class="flex items-center justify-between px-4 py-3 sm:px-5 sm:py-4 bg-dp-bg-tertiary border-b border-dp-border-primary">
           <div class="flex items-center gap-2">
-            <h2 class="text-base sm:text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">Todo</h2>
+            <h2 class="text-base sm:text-lg font-bold text-dp-text-primary">Todo</h2>
             <span class="bg-dp-accent text-dp-text-on-dark text-xs px-2 py-0.5 rounded-full">
               {{ todos.length }}
             </span>
@@ -236,15 +236,15 @@ function handleTodoClick(todo: Todo) {
               <Plus class="w-4 h-4" />
               <span class="hidden sm:inline">추가</span>
             </button>
-            <button @click="emit('close')" class="p-1.5 rounded-lg transition hover:bg-dp-overlay-dark/10 cursor-pointer" :style="{ color: 'var(--dp-text-muted)' }">
+            <button @click="emit('close')" class="p-1.5 rounded-lg transition hover:bg-dp-overlay-dark/10 cursor-pointer text-dp-text-muted">
               <X class="w-5 h-5" />
             </button>
           </div>
         </div>
 
         <!-- Filters -->
-        <div class="px-4 sm:px-5 py-2.5 flex items-center gap-2 overflow-x-auto" :style="{ backgroundColor: 'var(--dp-bg-card)', borderBottom: '1px solid var(--dp-border-primary)' }">
-          <Filter class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+        <div class="px-4 sm:px-5 py-2.5 flex items-center gap-2 overflow-x-auto bg-dp-bg-card border-b border-dp-border-primary">
+          <Filter class="w-4 h-4 flex-shrink-0 text-dp-text-muted" />
           <button
             @click="toggleFilter('all')"
             class="px-3 py-1 text-xs sm:text-sm rounded-full transition whitespace-nowrap cursor-pointer"
@@ -284,8 +284,8 @@ function handleTodoClick(todo: Todo) {
         </div>
 
         <!-- Content -->
-        <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(90dvh-180px)] sm:max-h-[calc(90vh-180px)]" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
-          <div v-if="filteredTodos.length === 0" class="text-center py-12" :style="{ color: 'var(--dp-text-muted)' }">
+        <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(90dvh-180px)] sm:max-h-[calc(90vh-180px)] bg-dp-bg-secondary">
+          <div v-if="filteredTodos.length === 0" class="text-center py-12 text-dp-text-muted">
             <Circle class="w-12 h-12 mx-auto mb-3 opacity-30" />
             <p>표시할 할 일이 없습니다.</p>
           </div>
@@ -325,15 +325,14 @@ function handleTodoClick(todo: Todo) {
                   <!-- Active + sortable: drag handle -->
                   <div
                     v-else-if="isSortingEnabled"
-                    class="drag-handle cursor-grab active:cursor-grabbing hover:text-dp-accent rounded p-1 transition-colors"
-                    :style="{ color: 'var(--dp-text-muted)' }"
+                    class="drag-handle cursor-grab active:cursor-grabbing hover:text-dp-accent rounded p-1 transition-colors text-dp-text-muted"
                     @click.stop
                     title="드래그하여 순서 변경"
                   >
                     <GripVertical class="w-4 h-4" />
                   </div>
                   <!-- Active + not sortable: empty circle -->
-                  <Circle v-else class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
+                  <Circle v-else class="w-4 h-4 text-dp-text-muted" />
                 </div>
 
                 <!-- Main content -->
@@ -351,7 +350,7 @@ function handleTodoClick(todo: Todo) {
                       >
                         {{ todo.title }}
                       </h3>
-                      <div class="flex items-center gap-2 mt-0.5 text-xs" :style="{ color: 'var(--dp-text-muted)' }">
+                      <div class="flex items-center gap-2 mt-0.5 text-xs text-dp-text-muted">
                         <span class="flex items-center gap-1">
                           <Calendar class="w-3 h-3" />
                           {{ extractDatePart(todo.createdDate) }}

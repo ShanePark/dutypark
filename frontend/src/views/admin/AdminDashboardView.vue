@@ -204,7 +204,7 @@ onMounted(async () => {
 <template>
   <div class="max-w-4xl mx-auto px-4 py-6">
       <div v-if="loading" class="flex items-center justify-center py-20">
-        <Loader2 class="w-8 h-8 animate-spin" :style="{ color: 'var(--dp-text-muted)' }" />
+        <Loader2 class="w-8 h-8 animate-spin text-dp-text-muted" />
       </div>
 
       <template v-else>
@@ -219,105 +219,100 @@ onMounted(async () => {
           </router-link>
           <router-link
             to="/admin/teams"
-            class="rounded-xl p-4 transition"
-            :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }"
+            class="rounded-xl p-4 transition bg-dp-bg-card border border-dp-border-primary"
             @mouseover="(e: Event) => setHoverBg(e)"
             @mouseleave="(e: Event) => clearHoverBg(e)"
           >
-            <Building2 class="w-6 h-6 mb-2" :style="{ color: 'var(--dp-text-secondary)' }" />
-            <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">팀 관리</span>
+            <Building2 class="w-6 h-6 mb-2 text-dp-text-secondary" />
+            <span class="font-medium text-dp-text-primary">팀 관리</span>
           </router-link>
           <router-link
             to="/admin/dev"
-            class="rounded-xl p-4 transition"
-            :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }"
+            class="rounded-xl p-4 transition bg-dp-bg-card border border-dp-border-primary"
             @mouseover="(e: Event) => setHoverBg(e)"
             @mouseleave="(e: Event) => clearHoverBg(e)"
           >
-            <Code2 class="w-6 h-6 mb-2" :style="{ color: 'var(--dp-text-secondary)' }" />
-            <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">개발</span>
+            <Code2 class="w-6 h-6 mb-2 text-dp-text-secondary" />
+            <span class="font-medium text-dp-text-primary">개발</span>
           </router-link>
           <a
             href="/docs/index.html"
             target="_blank"
-            class="rounded-xl p-4 transition"
-            :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }"
+            class="rounded-xl p-4 transition bg-dp-bg-card border border-dp-border-primary"
             @mouseover="(e: Event) => setHoverBg(e)"
             @mouseleave="(e: Event) => clearHoverBg(e)"
           >
             <div class="flex items-center gap-1 mb-2">
-              <FileText class="w-6 h-6" :style="{ color: 'var(--dp-text-secondary)' }" />
-              <ExternalLink class="w-3 h-3" :style="{ color: 'var(--dp-text-muted)' }" />
+              <FileText class="w-6 h-6 text-dp-text-secondary" />
+              <ExternalLink class="w-3 h-3 text-dp-text-muted" />
             </div>
-            <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">API 문서</span>
+            <span class="font-medium text-dp-text-primary">API 문서</span>
           </a>
         </div>
 
         <!-- Stats Cards -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div class="rounded-xl p-4" :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }">
+          <div class="rounded-xl p-4 bg-dp-bg-card border border-dp-border-primary">
             <div class="flex items-center justify-between mb-2">
-              <Users class="w-5 h-5" :style="{ color: 'var(--dp-text-muted)' }" />
-              <span class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">전체</span>
+              <Users class="w-5 h-5 text-dp-text-muted" />
+              <span class="text-xs text-dp-text-muted">전체</span>
             </div>
-            <p class="text-2xl font-bold" :style="{ color: 'var(--dp-text-primary)' }">{{ stats.totalMembers }}</p>
-            <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">등록 회원</p>
+            <p class="text-2xl font-bold text-dp-text-primary">{{ stats.totalMembers }}</p>
+            <p class="text-sm text-dp-text-secondary">등록 회원</p>
           </div>
-          <div class="rounded-xl p-4" :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }">
+          <div class="rounded-xl p-4 bg-dp-bg-card border border-dp-border-primary">
             <div class="flex items-center justify-between mb-2">
-              <Building2 class="w-5 h-5" :style="{ color: 'var(--dp-text-muted)' }" />
-              <span class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">활성</span>
+              <Building2 class="w-5 h-5 text-dp-text-muted" />
+              <span class="text-xs text-dp-text-muted">활성</span>
             </div>
-            <p class="text-2xl font-bold" :style="{ color: 'var(--dp-text-primary)' }">{{ stats.totalTeams }}</p>
-            <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">등록 팀</p>
+            <p class="text-2xl font-bold text-dp-text-primary">{{ stats.totalTeams }}</p>
+            <p class="text-sm text-dp-text-secondary">등록 팀</p>
           </div>
-          <div class="rounded-xl p-4" :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }">
+          <div class="rounded-xl p-4 bg-dp-bg-card border border-dp-border-primary">
             <div class="flex items-center justify-between mb-2">
-              <Key class="w-5 h-5" :style="{ color: 'var(--dp-text-muted)' }" />
-              <span class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">유효</span>
+              <Key class="w-5 h-5 text-dp-text-muted" />
+              <span class="text-xs text-dp-text-muted">유효</span>
             </div>
-            <p class="text-2xl font-bold" :style="{ color: 'var(--dp-text-primary)' }">{{ stats.activeTokens }}</p>
-            <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">활성 토큰</p>
+            <p class="text-2xl font-bold text-dp-text-primary">{{ stats.activeTokens }}</p>
+            <p class="text-sm text-dp-text-secondary">활성 토큰</p>
           </div>
-          <div class="rounded-xl p-4" :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }">
+          <div class="rounded-xl p-4 bg-dp-bg-card border border-dp-border-primary">
             <div class="flex items-center justify-between mb-2">
-              <Clock class="w-5 h-5" :style="{ color: 'var(--dp-text-muted)' }" />
-              <span class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">오늘</span>
+              <Clock class="w-5 h-5 text-dp-text-muted" />
+              <span class="text-xs text-dp-text-muted">오늘</span>
             </div>
-            <p class="text-2xl font-bold" :style="{ color: 'var(--dp-text-primary)' }">{{ stats.todayLogins }}</p>
-            <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">접속 횟수</p>
+            <p class="text-2xl font-bold text-dp-text-primary">{{ stats.todayLogins }}</p>
+            <p class="text-sm text-dp-text-secondary">접속 횟수</p>
           </div>
         </div>
 
         <!-- Member Management Section -->
-        <div class="rounded-xl" :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }">
-          <div class="p-4" :style="{ borderBottom: '1px solid var(--dp-border-primary)' }">
+        <div class="rounded-xl bg-dp-bg-card border border-dp-border-primary">
+          <div class="p-4 border-b border-dp-border-primary">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <h2 class="text-lg font-semibold" :style="{ color: 'var(--dp-text-primary)' }">회원 관리</h2>
+              <h2 class="text-lg font-semibold text-dp-text-primary">회원 관리</h2>
               <div class="relative w-full sm:w-auto">
-                <Search class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2" :style="{ color: 'var(--dp-text-muted)' }" />
+                <Search class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-dp-text-muted" />
                 <input
                   v-model="searchKeyword"
                   type="text"
                   placeholder="회원 검색..."
-                  class="w-full sm:w-auto pl-9 pr-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-dp-text-primary focus:border-transparent"
-                  :style="{ backgroundColor: 'var(--dp-bg-input)', border: '1px solid var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
+                  class="w-full sm:w-auto pl-9 pr-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-dp-text-primary focus:border-transparent bg-dp-bg-input border border-dp-border-input text-dp-text-primary"
                 />
               </div>
             </div>
           </div>
 
-          <div :style="{ borderTop: '1px solid var(--dp-border-secondary)' }">
+          <div class="border-t border-dp-border-secondary">
             <div v-if="isLoading" class="flex items-center justify-center py-12">
-              <Loader2 class="w-6 h-6 animate-spin" :style="{ color: 'var(--dp-text-muted)' }" />
+              <Loader2 class="w-6 h-6 animate-spin text-dp-text-muted" />
             </div>
 
             <template v-else>
               <div
                 v-for="member in members"
                 :key="member.id"
-                class="p-4 transition"
-                :style="{ borderBottom: '1px solid var(--dp-border-secondary)' }"
+                class="p-4 transition border-b border-dp-border-secondary"
                 @mouseover="(e: Event) => setHoverBg(e)"
                 @mouseleave="(e: Event) => clearHoverBg(e, 'transparent')"
               >
@@ -325,8 +320,8 @@ onMounted(async () => {
                   <div class="flex items-center gap-3">
                     <ProfileAvatar :member-id="member.id" :has-profile-photo="member.hasProfilePhoto" :profile-photo-version="member.profilePhotoVersion" size="md" :name="member.name" />
                     <div class="min-w-0">
-                      <p class="font-medium truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ member.name }}</p>
-                      <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
+                      <p class="font-medium truncate text-dp-text-primary">{{ member.name }}</p>
+                      <p class="text-sm text-dp-text-secondary">
                         {{ member.tokens.length > 0 ? `${member.tokens.length}개의 활성 세션` : '활성 세션 없음' }}
                       </p>
                     </div>
@@ -351,7 +346,7 @@ onMounted(async () => {
                 </div>
               </div>
 
-              <div v-if="members.length === 0" class="p-8 text-center" :style="{ color: 'var(--dp-text-muted)' }">
+              <div v-if="members.length === 0" class="p-8 text-center text-dp-text-muted">
                 검색 결과가 없습니다
               </div>
             </template>
@@ -359,19 +354,18 @@ onMounted(async () => {
 
           <!-- Pagination -->
           <div v-if="totalPages > 1" class="p-4 flex items-center justify-between" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
-            <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
+            <p class="text-sm text-dp-text-secondary">
               총 {{ totalElements }}명 중 {{ currentPage * pageSize + 1 }}-{{ Math.min((currentPage + 1) * pageSize, totalElements) }}
             </p>
             <div class="flex items-center gap-2">
               <button
                 @click="goToPage(currentPage - 1)"
                 :disabled="currentPage === 0"
-                class="p-2 rounded-lg transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
+                class="p-2 rounded-lg transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed bg-dp-bg-tertiary"
               >
-                <ChevronLeft class="w-4 h-4" :style="{ color: 'var(--dp-text-secondary)' }" />
+                <ChevronLeft class="w-4 h-4 text-dp-text-secondary" />
               </button>
-              <span class="text-sm px-2" :style="{ color: 'var(--dp-text-primary)' }">
+              <span class="text-sm px-2 text-dp-text-primary">
                 {{ currentPage + 1 }} / {{ totalPages }}
               </span>
               <button
@@ -380,7 +374,7 @@ onMounted(async () => {
                 class="p-2 rounded-lg transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }"
               >
-                <ChevronRight class="w-4 h-4" :style="{ color: 'var(--dp-text-secondary)' }" />
+                <ChevronRight class="w-4 h-4 text-dp-text-secondary" />
               </button>
             </div>
           </div>
@@ -393,40 +387,37 @@ onMounted(async () => {
       class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50"
       @click.self="closePasswordModal"
     >
-      <div class="rounded-xl shadow-xl w-full max-w-md mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
-        <div class="p-4" :style="{ borderBottom: '1px solid var(--dp-border-primary)' }">
-          <h3 class="text-lg font-semibold" :style="{ color: 'var(--dp-text-primary)' }">비밀번호 변경</h3>
-          <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">{{ selectedMember?.name }}님의 비밀번호를 변경합니다</p>
+      <div class="rounded-xl shadow-xl w-full max-w-md mx-4 bg-dp-bg-modal">
+        <div class="p-4 border-b border-dp-border-primary">
+          <h3 class="text-lg font-semibold text-dp-text-primary">비밀번호 변경</h3>
+          <p class="text-sm text-dp-text-secondary">{{ selectedMember?.name }}님의 비밀번호를 변경합니다</p>
         </div>
         <div class="p-4 space-y-4">
           <div>
-            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">새 비밀번호</label>
+            <label class="block text-sm font-medium mb-1 text-dp-text-secondary">새 비밀번호</label>
             <input
               v-model="newPassword"
               type="password"
-              class="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-text-primary focus:border-transparent"
-              :style="{ backgroundColor: 'var(--dp-bg-input)', border: '1px solid var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
+              class="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-text-primary focus:border-transparent bg-dp-bg-input border border-dp-border-input text-dp-text-primary"
               placeholder="새 비밀번호 입력"
             />
           </div>
           <div>
-            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">비밀번호 확인</label>
+            <label class="block text-sm font-medium mb-1 text-dp-text-secondary">비밀번호 확인</label>
             <input
               v-model="confirmPassword"
               type="password"
-              class="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-text-primary focus:border-transparent"
-              :style="{ backgroundColor: 'var(--dp-bg-input)', border: '1px solid var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
+              class="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-text-primary focus:border-transparent bg-dp-bg-input border border-dp-border-input text-dp-text-primary"
               placeholder="비밀번호 다시 입력"
             />
           </div>
           <p v-if="passwordError" class="text-sm text-dp-danger">{{ passwordError }}</p>
         </div>
-        <div class="p-4 flex justify-end gap-2" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
+        <div class="p-4 flex justify-end gap-2 border-t border-dp-border-primary">
           <button
             @click="closePasswordModal"
             :disabled="changingPassword"
-            class="px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50 cursor-pointer"
-            :style="{ color: 'var(--dp-text-primary)', backgroundColor: 'var(--dp-bg-tertiary)' }"
+            class="px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50 cursor-pointer bg-dp-bg-tertiary text-dp-text-primary"
             @mouseover="(e: Event) => !changingPassword && setHoverBg(e)"
             @mouseleave="(e: Event) => !changingPassword && clearHoverBg(e, 'var(--dp-bg-tertiary)')"
           >

@@ -28,7 +28,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen py-8 px-4" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
+  <div class="min-h-screen py-8 px-4 bg-dp-bg-secondary">
     <div class="max-w-3xl mx-auto">
       <div
         class="rounded-lg shadow-sm p-6 sm:p-8"
@@ -37,7 +37,7 @@ onMounted(async () => {
           border: '1px solid var(--dp-border-default)',
         }"
       >
-        <h1 class="text-2xl font-bold mb-6" :style="{ color: 'var(--dp-text-primary)' }">
+        <h1 class="text-2xl font-bold mb-6 text-dp-text-primary">
           이용약관
         </h1>
 
@@ -46,15 +46,15 @@ onMounted(async () => {
         </div>
 
         <div v-else-if="error" class="text-center py-12">
-          <p :style="{ color: 'var(--dp-text-muted)' }">{{ error }}</p>
+          <p class="text-dp-text-muted">{{ error }}</p>
         </div>
 
-        <div v-else-if="policy" class="prose prose-sm sm:prose-base max-w-none" :style="{ color: 'var(--dp-text-secondary)' }" v-html="renderedContent">
+        <div v-else-if="policy" class="prose prose-sm sm:prose-base max-w-none text-dp-text-secondary" v-html="renderedContent">
         </div>
       </div>
 
       <div class="text-center mt-6">
-        <router-link to="/" class="text-sm hover:underline" :style="{ color: 'var(--dp-text-muted)' }">
+        <router-link to="/" class="text-sm hover:underline text-dp-text-muted">
           ← 홈으로 돌아가기
         </router-link>
       </div>

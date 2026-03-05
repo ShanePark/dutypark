@@ -94,14 +94,14 @@ const isEditMode = props.dday !== null && props.dday !== undefined
         <div class="modal-header">
           <h2>{{ dday ? '디데이 수정' : '디데이 추가' }}</h2>
           <button @click="handleClose" class="p-2 rounded-full transition hover-bg-light cursor-pointer">
-            <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
+            <X class="w-6 h-6 text-dp-text-primary" />
           </button>
         </div>
 
         <!-- Content -->
         <div class="p-3 sm:p-4 space-y-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
           <div>
-            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
+            <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
               제목 <span class="text-dp-danger">*</span>
               <CharacterCounter :current="title.length" :max="30" />
             </label>
@@ -115,7 +115,7 @@ const isEditMode = props.dday !== null && props.dday !== undefined
           </div>
 
           <div>
-            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
+            <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
               날짜 <span class="text-dp-danger">*</span>
             </label>
             <input
@@ -165,10 +165,10 @@ const isEditMode = props.dday !== null && props.dday !== undefined
           </div>
 
           <!-- Privacy Toggle -->
-          <div class="flex items-center justify-between p-3 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
+          <div class="flex items-center justify-between p-3 rounded-lg bg-dp-bg-secondary">
             <div class="flex items-center gap-2">
-              <component :is="isPrivate ? Lock : Unlock" class="w-5 h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
-              <span class="text-sm" :style="{ color: 'var(--dp-text-primary)' }">비공개</span>
+              <component :is="isPrivate ? Lock : Unlock" class="w-5 h-5 text-dp-text-secondary" />
+              <span class="text-sm text-dp-text-primary">비공개</span>
             </div>
             <button
               @click="isPrivate = !isPrivate"
@@ -184,7 +184,7 @@ const isEditMode = props.dday !== null && props.dday !== undefined
         </div>
 
         <!-- Footer (sticky at bottom) -->
-        <div class="p-3 sm:p-4 flex-shrink-0 flex flex-row gap-2 justify-end" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
+        <div class="p-3 sm:p-4 flex-shrink-0 flex flex-row gap-2 justify-end border-t border-dp-border-primary">
           <button
             @click="handleClose"
             class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"

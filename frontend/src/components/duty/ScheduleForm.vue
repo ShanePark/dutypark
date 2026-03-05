@@ -77,7 +77,7 @@ defineExpose({
 <template>
   <div class="space-y-2 sm:space-y-3">
     <div class="flex items-center gap-2">
-      <label class="text-sm flex-shrink-0 w-16" :style="{ color: 'var(--dp-text-secondary)' }">
+      <label class="text-sm flex-shrink-0 w-16 text-dp-text-secondary">
         제목 <span class="text-dp-danger">*</span>
       </label>
       <div class="flex-1 min-w-0 relative">
@@ -97,7 +97,7 @@ defineExpose({
     <div class="space-y-2">
       <!-- Create mode: time only (date is already selected from calendar) -->
       <div v-if="!isEditMode" class="flex items-center gap-2">
-        <label class="text-sm flex-shrink-0 w-16" :style="{ color: 'var(--dp-text-secondary)' }">시작 시간</label>
+        <label class="text-sm flex-shrink-0 w-16 text-dp-text-secondary">시작 시간</label>
         <input
           v-model="startTime"
           type="time"
@@ -106,7 +106,7 @@ defineExpose({
       </div>
       <!-- Edit mode: full datetime (allow changing date) -->
       <div v-else class="flex items-center gap-2">
-        <label class="text-sm flex-shrink-0 w-16" :style="{ color: 'var(--dp-text-secondary)' }">시작 일시</label>
+        <label class="text-sm flex-shrink-0 w-16 text-dp-text-secondary">시작 일시</label>
         <input
           v-model="form.startDateTime"
           type="datetime-local"
@@ -114,7 +114,7 @@ defineExpose({
         />
       </div>
       <div class="flex items-center gap-2">
-        <label class="text-sm flex-shrink-0 w-16" :style="{ color: 'var(--dp-text-secondary)' }">종료 일시</label>
+        <label class="text-sm flex-shrink-0 w-16 text-dp-text-secondary">종료 일시</label>
         <input
           v-model="form.endDateTime"
           type="datetime-local"
@@ -124,7 +124,7 @@ defineExpose({
     </div>
 
     <div class="flex items-start gap-2">
-      <label class="text-sm flex-shrink-0 w-16 pt-2" :style="{ color: 'var(--dp-text-secondary)' }">설명</label>
+      <label class="text-sm flex-shrink-0 w-16 pt-2 text-dp-text-secondary">설명</label>
       <textarea
         v-model="form.description"
         rows="2"
@@ -134,7 +134,7 @@ defineExpose({
     </div>
 
     <div class="flex items-start gap-2">
-      <label class="text-sm flex-shrink-0 w-16 pt-2" :style="{ color: 'var(--dp-text-secondary)' }">공개 범위</label>
+      <label class="text-sm flex-shrink-0 w-16 pt-2 text-dp-text-secondary">공개 범위</label>
       <div class="flex-1 min-w-0 grid grid-cols-2 gap-1.5 sm:gap-2">
         <button
           v-for="option in visibilityOptions"
@@ -171,8 +171,7 @@ defineExpose({
               {{ option.label }}
             </div>
             <div
-              class="text-[10px] sm:text-xs truncate hidden sm:block"
-              :style="{ color: 'var(--dp-text-muted)' }"
+              class="text-[10px] sm:text-xs truncate hidden sm:block text-dp-text-muted"
             >
               {{ option.description }}
             </div>
@@ -183,7 +182,7 @@ defineExpose({
 
     <!-- Attachment Upload Area -->
     <div class="flex items-start gap-2">
-      <label class="text-sm flex-shrink-0 w-16 pt-2" :style="{ color: 'var(--dp-text-secondary)' }">첨부파일</label>
+      <label class="text-sm flex-shrink-0 w-16 pt-2 text-dp-text-secondary">첨부파일</label>
       <FileUploader
         class="flex-1 min-w-0"
         ref="fileUploaderRef"

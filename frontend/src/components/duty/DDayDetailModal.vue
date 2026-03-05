@@ -103,7 +103,7 @@ const ddayBadgeClass = computed(() => {
             @click="handleClose"
             class="p-2 rounded-full transition hover-bg-light cursor-pointer"
           >
-            <X class="w-5 h-5" :style="{ color: 'var(--dp-text-primary)' }" />
+            <X class="w-5 h-5 text-dp-text-primary" />
           </button>
         </div>
 
@@ -121,30 +121,29 @@ const ddayBadgeClass = computed(() => {
 
           <!-- Title -->
           <div class="mb-4">
-            <label class="block text-xs font-medium mb-1" :style="{ color: 'var(--dp-text-muted)' }">
+            <label class="block text-xs font-medium mb-1 text-dp-text-muted">
               제목
             </label>
-            <p class="text-lg flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-              <Lock v-if="dday.isPrivate" class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-muted)' }" />
+            <p class="text-lg flex items-center gap-2 text-dp-text-primary">
+              <Lock v-if="dday.isPrivate" class="w-4 h-4 flex-shrink-0 text-dp-text-muted" />
               {{ dday.title }}
             </p>
           </div>
 
           <!-- Date -->
           <div class="mb-4">
-            <label class="block text-xs font-medium mb-1" :style="{ color: 'var(--dp-text-muted)' }">
+            <label class="block text-xs font-medium mb-1 text-dp-text-muted">
               날짜
             </label>
-            <p class="text-base flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-              <CalendarCheck class="w-4 h-4" :style="{ color: 'var(--dp-text-muted)' }" />
+            <p class="text-base flex items-center gap-2 text-dp-text-primary">
+              <CalendarCheck class="w-4 h-4 text-dp-text-muted" />
               {{ formattedDate }}
             </p>
           </div>
 
           <!-- Pin Status -->
           <div
-            class="flex items-center justify-between p-3 rounded-lg mb-4"
-            :style="{ backgroundColor: 'var(--dp-bg-secondary)' }"
+            class="flex items-center justify-between p-3 rounded-lg mb-4 bg-dp-bg-secondary"
           >
             <div class="flex items-center gap-2">
               <Star
@@ -152,7 +151,7 @@ const ddayBadgeClass = computed(() => {
                 :class="isPinned ? 'text-dp-warning fill-dp-warning' : ''"
                 :style="!isPinned ? { color: 'var(--dp-text-muted)' } : {}"
               />
-              <span class="text-sm" :style="{ color: 'var(--dp-text-primary)' }">
+              <span class="text-sm text-dp-text-primary">
                 {{ isPinned ? '캘린더에 고정됨' : '캘린더에 고정하기' }}
               </span>
             </div>
@@ -171,8 +170,7 @@ const ddayBadgeClass = computed(() => {
 
         <!-- Footer (sticky at bottom) -->
         <div
-          class="p-4 flex-shrink-0 flex justify-between gap-2"
-          :style="{ borderTop: '1px solid var(--dp-border-primary)' }"
+          class="p-4 flex-shrink-0 flex justify-between gap-2 border-t border-dp-border-primary"
         >
           <div class="flex gap-2">
             <button

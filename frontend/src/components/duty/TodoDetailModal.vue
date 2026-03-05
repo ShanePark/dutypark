@@ -262,10 +262,10 @@ function onUploadError(message: string) {
     >
       <div class="modal-container max-w-[95vw] sm:max-w-xl max-h-[90dvh] sm:max-h-[90vh]">
         <!-- Header -->
-        <div class="flex items-center justify-between p-3 sm:p-4 flex-shrink-0" :style="{ backgroundColor: 'var(--dp-bg-card)', borderBottom: '1px solid var(--dp-border-primary)' }">
+        <div class="flex items-center justify-between p-3 sm:p-4 flex-shrink-0 bg-dp-bg-card border-b border-dp-border-primary">
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-2">
-              <h2 class="text-base sm:text-lg font-bold truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ todo.title }}</h2>
+              <h2 class="text-base sm:text-lg font-bold truncate text-dp-text-primary">{{ todo.title }}</h2>
               <span
                 :class="[
                   'px-2 py-0.5 text-xs rounded-full flex-shrink-0',
@@ -277,13 +277,13 @@ function onUploadError(message: string) {
                 {{ getStatusLabel(todo.status) }}
               </span>
             </div>
-            <p class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">
+            <p class="text-xs text-dp-text-muted">
               {{ formatDateKorean(todo.createdDate) }}
               <span v-if="todo.completedDate"> · 완료 {{ formatDateKorean(todo.completedDate) }}</span>
             </p>
           </div>
           <button @click="handleClose" class="p-2 hover-bg-light rounded-full transition flex-shrink-0 cursor-pointer">
-            <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
+            <X class="w-6 h-6 text-dp-text-primary" />
           </button>
         </div>
 
@@ -306,11 +306,11 @@ function onUploadError(message: string) {
               </div>
 
               <div v-if="todo.content">
-                <p class="whitespace-pre-wrap break-all" :style="{ color: 'var(--dp-text-primary)' }">{{ todo.content }}</p>
+                <p class="whitespace-pre-wrap break-all text-dp-text-primary">{{ todo.content }}</p>
               </div>
 
               <!-- Attachments (View Mode) -->
-              <div v-if="isLoadingAttachments" class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
+              <div v-if="isLoadingAttachments" class="text-sm text-dp-text-secondary">
                 첨부파일 로딩 중...
               </div>
               <AttachmentGrid
@@ -326,7 +326,7 @@ function onUploadError(message: string) {
             <div class="space-y-4">
               <!-- Status Selection -->
               <div>
-                <label class="block text-sm font-medium mb-2" :style="{ color: 'var(--dp-text-secondary)' }">상태</label>
+                <label class="block text-sm font-medium mb-2 text-dp-text-secondary">상태</label>
                 <div class="grid grid-cols-3 gap-2">
                   <button
                     v-for="option in statusOptions"
@@ -343,7 +343,7 @@ function onUploadError(message: string) {
               </div>
 
               <div>
-                <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
+                <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
                   제목 <span class="text-dp-danger">*</span>
                   <CharacterCounter :current="editTitle.length" :max="50" />
                 </label>
@@ -356,7 +356,7 @@ function onUploadError(message: string) {
               </div>
 
               <div>
-                <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">내용</label>
+                <label class="block text-sm font-medium mb-1 text-dp-text-secondary">내용</label>
                 <textarea
                   v-model="editContent"
                   rows="6"
@@ -365,7 +365,7 @@ function onUploadError(message: string) {
               </div>
 
               <div>
-                <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
+                <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
                   <Calendar class="w-4 h-4 inline-block mr-1 -mt-0.5" />
                   마감일
                 </label>
@@ -378,7 +378,7 @@ function onUploadError(message: string) {
 
               <!-- Attachments (Edit Mode) -->
               <div>
-                <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">첨부파일</label>
+                <label class="block text-sm font-medium mb-1 text-dp-text-secondary">첨부파일</label>
                 <FileUploader
                   v-if="isEditMode"
                   ref="fileUploaderRef"
@@ -397,7 +397,7 @@ function onUploadError(message: string) {
         </div>
 
         <!-- Footer (sticky at bottom) -->
-        <div class="p-3 sm:p-4 flex-shrink-0" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
+        <div class="p-3 sm:p-4 flex-shrink-0 border-t border-dp-border-primary">
           <template v-if="!isEditMode">
             <div class="flex items-center justify-between gap-2">
               <!-- Left: Back to list -->

@@ -116,18 +116,18 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center px-4 pb-safe pt-safe" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
+  <div class="min-h-screen flex items-center justify-center px-4 pb-safe pt-safe bg-dp-bg-secondary">
     <div class="max-w-md sm:max-w-xl lg:max-w-2xl w-full">
       <div class="text-center mb-6 sm:mb-8">
-        <h1 class="text-2xl sm:text-3xl font-bold" :style="{ color: 'var(--dp-text-primary)' }">회원가입</h1>
-        <p class="mt-2" :style="{ color: 'var(--dp-text-secondary)' }">Dutypark에 오신 것을 환영합니다</p>
+        <h1 class="text-2xl sm:text-3xl font-bold text-dp-text-primary">회원가입</h1>
+        <p class="mt-2 text-dp-text-secondary">Dutypark에 오신 것을 환영합니다</p>
       </div>
 
-      <div class="rounded-lg shadow-md p-5 sm:p-6" :style="{ backgroundColor: 'var(--dp-bg-card)' }">
+      <div class="rounded-lg shadow-md p-5 sm:p-6 bg-dp-bg-card">
         <form class="space-y-4 sm:space-y-5" @submit.prevent="handleSubmit">
           <!-- Username input -->
           <div>
-            <label for="username" class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
+            <label for="username" class="block text-sm font-medium mb-1 text-dp-text-secondary">
               사용자명
               <CharacterCounter :current="username.length" :max="10" />
             </label>
@@ -154,7 +154,7 @@ async function handleSubmit() {
           <!-- Terms of Service -->
           <div>
             <div class="flex items-center justify-between mb-2">
-              <label class="block text-sm font-medium" :style="{ color: 'var(--dp-text-secondary)' }">
+              <label class="block text-sm font-medium text-dp-text-secondary">
                 이용약관
               </label>
               <button
@@ -206,10 +206,9 @@ async function handleSubmit() {
               type="checkbox"
               required
               :disabled="isLoading"
-              class="h-5 w-5 text-dp-accent focus:ring-dp-accent rounded cursor-pointer disabled:cursor-not-allowed"
-              :style="{ borderColor: 'var(--dp-border-input)' }"
+              class="h-5 w-5 text-dp-accent focus:ring-dp-accent rounded cursor-pointer disabled:cursor-not-allowed border-dp-border-input"
             />
-            <label for="termAgree" class="ml-2 text-sm cursor-pointer" :style="{ color: 'var(--dp-text-secondary)' }">
+            <label for="termAgree" class="ml-2 text-sm cursor-pointer text-dp-text-secondary">
               이용약관에 동의합니다 <span class="text-dp-danger">*</span>
             </label>
           </div>
@@ -217,7 +216,7 @@ async function handleSubmit() {
           <!-- Privacy Policy -->
           <div>
             <div class="flex items-center justify-between mb-2">
-              <label class="block text-sm font-medium" :style="{ color: 'var(--dp-text-secondary)' }">
+              <label class="block text-sm font-medium text-dp-text-secondary">
                 개인정보 처리방침
               </label>
               <button
@@ -269,10 +268,9 @@ async function handleSubmit() {
               type="checkbox"
               required
               :disabled="isLoading"
-              class="h-5 w-5 text-dp-accent focus:ring-dp-accent rounded cursor-pointer disabled:cursor-not-allowed"
-              :style="{ borderColor: 'var(--dp-border-input)' }"
+              class="h-5 w-5 text-dp-accent focus:ring-dp-accent rounded cursor-pointer disabled:cursor-not-allowed border-dp-border-input"
             />
-            <label for="privacyAgree" class="ml-2 text-sm cursor-pointer" :style="{ color: 'var(--dp-text-secondary)' }">
+            <label for="privacyAgree" class="ml-2 text-sm cursor-pointer text-dp-text-secondary">
               개인정보 처리방침에 동의합니다 <span class="text-dp-danger">*</span>
             </label>
           </div>
@@ -317,17 +315,15 @@ async function handleSubmit() {
       <div class="text-center mt-4">
         <button
           type="button"
-          class="text-xs transition hover:underline"
-          :style="{ color: 'var(--dp-text-muted)' }"
+          class="text-xs transition hover:underline text-dp-text-muted"
           @click="openPolicyModal('terms')"
         >
           이용약관
         </button>
-        <span class="mx-2 text-xs" :style="{ color: 'var(--dp-text-muted)' }">|</span>
+        <span class="mx-2 text-xs text-dp-text-muted">|</span>
         <button
           type="button"
-          class="text-xs transition hover:underline"
-          :style="{ color: 'var(--dp-text-muted)' }"
+          class="text-xs transition hover:underline text-dp-text-muted"
           @click="openPolicyModal('privacy')"
         >
           개인정보 처리방침

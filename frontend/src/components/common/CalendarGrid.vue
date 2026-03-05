@@ -131,7 +131,7 @@ function handleDayClick(day: CalendarDay, index: number) {
 </script>
 
 <template>
-  <div class="rounded-lg border overflow-hidden mb-2 shadow-sm" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)' }">
+  <div class="rounded-lg border overflow-hidden mb-2 shadow-sm bg-dp-bg-card border-dp-border-secondary">
     <!-- Week Days Header -->
     <div class="grid grid-cols-7" :style="{ backgroundColor: 'var(--dp-calendar-header-bg)' }">
       <div

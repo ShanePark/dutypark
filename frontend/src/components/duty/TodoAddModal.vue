@@ -148,7 +148,7 @@ function onUploadError(message: string) {
         <div class="modal-header">
           <h2>할 일 추가</h2>
           <button @click="handleClose" class="p-2 hover-bg-light rounded-full transition cursor-pointer">
-            <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
+            <X class="w-6 h-6 text-dp-text-primary" />
           </button>
         </div>
 
@@ -157,7 +157,7 @@ function onUploadError(message: string) {
           <div class="space-y-4">
             <!-- Status Selection -->
             <div>
-              <label class="block text-sm font-medium mb-2" :style="{ color: 'var(--dp-text-secondary)' }">상태</label>
+              <label class="block text-sm font-medium mb-2 text-dp-text-secondary">상태</label>
               <div class="grid grid-cols-3 gap-2">
                 <button
                   v-for="option in statusOptions"
@@ -174,7 +174,7 @@ function onUploadError(message: string) {
             </div>
 
             <div>
-              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
+              <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
                 제목 <span class="text-dp-danger">*</span>
                 <CharacterCounter :current="title.length" :max="50" />
               </label>
@@ -188,7 +188,7 @@ function onUploadError(message: string) {
             </div>
 
             <div>
-              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">내용</label>
+              <label class="block text-sm font-medium mb-1 text-dp-text-secondary">내용</label>
               <textarea
                 v-model="content"
                 rows="6"
@@ -198,7 +198,7 @@ function onUploadError(message: string) {
             </div>
 
             <div>
-              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
+              <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
                 <Calendar class="w-4 h-4 inline-block mr-1 -mt-0.5" />
                 마감일
                 <span class="ml-1 text-xs font-normal due-date-optional">(선택)</span>
@@ -212,7 +212,7 @@ function onUploadError(message: string) {
 
             <!-- Attachment Upload -->
             <div>
-              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">첨부파일</label>
+              <label class="block text-sm font-medium mb-1 text-dp-text-secondary">첨부파일</label>
               <FileUploader
                 v-if="isOpen"
                 ref="fileUploaderRef"
@@ -228,7 +228,7 @@ function onUploadError(message: string) {
         </div>
 
         <!-- Footer (sticky at bottom) -->
-        <div class="p-3 sm:p-4 flex-shrink-0 flex flex-row gap-2 justify-end" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
+        <div class="p-3 sm:p-4 flex-shrink-0 flex flex-row gap-2 justify-end border-t border-dp-border-primary">
           <button
             @click="handleClose"
             class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"

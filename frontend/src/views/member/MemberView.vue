@@ -505,7 +505,7 @@ onMounted(async () => {
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-6">
-    <h1 class="text-2xl font-bold mb-6" :style="{ color: 'var(--dp-text-primary)' }">내 정보</h1>
+    <h1 class="text-2xl font-bold mb-6 text-dp-text-primary">내 정보</h1>
 
     <!-- Loading State -->
     <div v-if="loading" class="flex items-center justify-center py-20">
@@ -514,9 +514,9 @@ onMounted(async () => {
 
     <template v-else>
       <!-- Profile Section -->
-      <section class="rounded-xl shadow-sm p-6 mb-4" :style="{ backgroundColor: 'var(--dp-bg-card)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
-        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-          <User class="w-5 h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
+      <section class="rounded-xl shadow-sm p-6 mb-4 bg-dp-bg-card border border-dp-border-primary">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-dp-text-primary">
+          <User class="w-5 h-5 text-dp-text-secondary" />
           기본 정보
         </h2>
 
@@ -546,39 +546,38 @@ onMounted(async () => {
           <!-- Member Info (Right) -->
           <div class="flex flex-col justify-center space-y-2 sm:space-y-3 min-w-0">
             <div class="flex items-center gap-2 sm:gap-3">
-              <User class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }" />
-              <span class="text-sm w-12 sm:w-14 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }">이름</span>
-              <span class="font-medium truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ memberInfo?.name }}</span>
+              <User class="w-4 h-4 flex-shrink-0 text-dp-text-secondary" />
+              <span class="text-sm w-12 sm:w-14 flex-shrink-0 text-dp-text-secondary">이름</span>
+              <span class="font-medium truncate text-dp-text-primary">{{ memberInfo?.name }}</span>
             </div>
             <div class="flex items-center gap-2 sm:gap-3">
-              <Building2 class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }" />
-              <span class="text-sm w-12 sm:w-14 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }">소속</span>
-              <span class="font-medium truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ memberInfo?.team || '-' }}</span>
+              <Building2 class="w-4 h-4 flex-shrink-0 text-dp-text-secondary" />
+              <span class="text-sm w-12 sm:w-14 flex-shrink-0 text-dp-text-secondary">소속</span>
+              <span class="font-medium truncate text-dp-text-primary">{{ memberInfo?.team || '-' }}</span>
             </div>
             <div v-if="memberInfo?.email" class="flex items-center gap-2 sm:gap-3">
-              <Mail class="w-4 h-4 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }" />
-              <span class="text-sm w-12 sm:w-14 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }">이메일</span>
-              <span class="font-medium truncate text-sm sm:text-base" :style="{ color: 'var(--dp-text-primary)' }">{{ memberInfo?.email }}</span>
+              <Mail class="w-4 h-4 flex-shrink-0 text-dp-text-secondary" />
+              <span class="text-sm w-12 sm:w-14 flex-shrink-0 text-dp-text-secondary">이메일</span>
+              <span class="font-medium truncate text-sm sm:text-base text-dp-text-primary">{{ memberInfo?.email }}</span>
             </div>
           </div>
         </div>
       </section>
 
       <!-- Privacy Settings Section -->
-      <section class="rounded-xl shadow-sm p-6 mb-4" :style="{ backgroundColor: 'var(--dp-bg-card)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
-        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-          <Eye class="w-5 h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
+      <section class="rounded-xl shadow-sm p-6 mb-4 bg-dp-bg-card border border-dp-border-primary">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-dp-text-primary">
+          <Eye class="w-5 h-5 text-dp-text-secondary" />
           시간표 공개 설정
         </h2>
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <p :style="{ color: 'var(--dp-text-primary)' }">현재 공개 대상</p>
-            <p class="text-sm mt-1" :style="{ color: 'var(--dp-text-secondary)' }">내 시간표를 볼 수 있는 사람을 설정합니다</p>
+            <p class="text-dp-text-primary">현재 공개 대상</p>
+            <p class="text-sm mt-1 text-dp-text-secondary">내 시간표를 볼 수 있는 사람을 설정합니다</p>
           </div>
           <button
             @click="showVisibilityModal = true"
-            class="px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium transition flex items-center justify-center gap-2 hover:brightness-95 cursor-pointer"
-            :style="{ backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-primary)' }"
+            class="px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium transition flex items-center justify-center gap-2 hover:brightness-95 cursor-pointer bg-dp-bg-tertiary text-dp-text-primary"
           >
             <span
               class="w-2 h-2 rounded-full"
@@ -591,9 +590,9 @@ onMounted(async () => {
       </section>
 
       <!-- Theme Settings Section -->
-      <section class="rounded-xl shadow-sm p-6 mb-4" :style="{ backgroundColor: 'var(--dp-bg-card)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
-        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-          <Sun class="w-5 h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
+      <section class="rounded-xl shadow-sm p-6 mb-4 bg-dp-bg-card border border-dp-border-primary">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-dp-text-primary">
+          <Sun class="w-5 h-5 text-dp-text-secondary" />
           화면 테마 설정
         </h2>
         <div class="flex flex-col sm:flex-row gap-3">
@@ -614,21 +613,21 @@ onMounted(async () => {
             {{ option.label }}
           </button>
         </div>
-        <p class="text-sm mt-3" :style="{ color: 'var(--dp-text-muted)' }">
+        <p class="text-sm mt-3 text-dp-text-muted">
           {{ themeStore.mode === 'dark' ? '다크 모드가 적용됩니다' : '라이트 모드가 적용됩니다' }}
         </p>
       </section>
 
       <!-- Push Notification Settings Section -->
-      <section v-if="showPushSettings" class="rounded-xl shadow-sm p-6 mb-4" :style="{ backgroundColor: 'var(--dp-bg-card)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
-        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-          <Bell class="w-5 h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
+      <section v-if="showPushSettings" class="rounded-xl shadow-sm p-6 mb-4 bg-dp-bg-card border border-dp-border-primary">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-dp-text-primary">
+          <Bell class="w-5 h-5 text-dp-text-secondary" />
           푸시 알림 설정
         </h2>
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <p :style="{ color: 'var(--dp-text-primary)' }">알림 상태</p>
-            <p class="text-sm mt-1" :style="{ color: 'var(--dp-text-secondary)' }">{{ pushStatusText }}</p>
+            <p class="text-dp-text-primary">알림 상태</p>
+            <p class="text-sm mt-1 text-dp-text-secondary">{{ pushStatusText }}</p>
           </div>
           <button
             @click="togglePushNotification"
@@ -651,19 +650,19 @@ onMounted(async () => {
             {{ pushNotification.permission.value === 'granted' && pushNotification.isSubscribed.value ? '알림 끄기' : '알림 허용' }}
           </button>
         </div>
-        <p v-if="isIOSPWA && pushNotification.permission.value === 'denied'" class="text-sm mt-3" :style="{ color: 'var(--dp-text-muted)' }">
+        <p v-if="isIOSPWA && pushNotification.permission.value === 'denied'" class="text-sm mt-3 text-dp-text-muted">
           알림을 다시 허용하려면 홈 화면에서 앱을 삭제 후 다시 추가해주세요.
         </p>
       </section>
 
       <!-- Manager Delegation Section -->
-      <section class="rounded-xl shadow-sm p-6 mb-4" :style="{ backgroundColor: 'var(--dp-bg-card)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
-        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-          <Shield class="w-5 h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
+      <section class="rounded-xl shadow-sm p-6 mb-4 bg-dp-bg-card border border-dp-border-primary">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-dp-text-primary">
+          <Shield class="w-5 h-5 text-dp-text-secondary" />
           관리 권한 위임
         </h2>
         <div class="space-y-4">
-          <div class="flex items-center gap-2 text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
+          <div class="flex items-center gap-2 text-sm text-dp-text-secondary">
             <Info class="w-4 h-4" />
             <span>가족만 관리자로 추가할 수 있어요</span>
           </div>
@@ -690,39 +689,36 @@ onMounted(async () => {
             <div
               v-for="manager in managers"
               :key="manager.id ?? 'none'"
-              class="inline-flex items-center gap-2 px-3 py-2 rounded-lg"
-              :style="{ backgroundColor: 'var(--dp-bg-hover)' }"
+              class="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-dp-bg-hover"
             >
-              <span :style="{ color: 'var(--dp-text-primary)' }">{{ manager.name }}</span>
+              <span class="text-dp-text-primary">{{ manager.name }}</span>
               <button
                 @click="unAssignManager(manager)"
-                class="p-1 rounded-full hover-danger cursor-pointer"
-                :style="{ color: 'var(--dp-text-muted)' }"
+                class="p-1 rounded-full hover-danger cursor-pointer text-dp-text-muted"
               >
                 <Trash2 class="w-4 h-4" />
               </button>
             </div>
           </div>
-          <p v-else class="text-sm" :style="{ color: 'var(--dp-text-muted)' }">등록된 관리자가 없습니다</p>
+          <p v-else class="text-sm text-dp-text-muted">등록된 관리자가 없습니다</p>
 
           <!-- Managed Members (accounts I manage) -->
-          <div class="mt-6 pt-4" :style="{ borderTopWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
+          <div class="mt-6 pt-4 border-t border-dp-border-primary">
             <div class="flex items-center gap-2 mb-3">
-              <Users class="w-4 h-4" :style="{ color: 'var(--dp-text-secondary)' }" />
-              <h3 class="text-sm font-medium" :style="{ color: 'var(--dp-text-primary)' }">내가 관리 중인 계정</h3>
+              <Users class="w-4 h-4 text-dp-text-secondary" />
+              <h3 class="text-sm font-medium text-dp-text-primary">내가 관리 중인 계정</h3>
             </div>
             <div class="space-y-2">
               <div
                 v-for="member in managedMembers"
                 :key="member.id ?? 'unknown'"
-                class="flex items-center justify-between p-3 rounded-lg"
-                :style="{ backgroundColor: 'var(--dp-bg-secondary)' }"
+                class="flex items-center justify-between p-3 rounded-lg bg-dp-bg-secondary"
               >
                 <div class="flex items-center gap-3">
                   <ProfileAvatar :member-id="member.id" :has-profile-photo="member.hasProfilePhoto" :profile-photo-version="member.profilePhotoVersion" size="md" :name="member.name" />
                   <div>
-                    <p class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ member.name }}</p>
-                    <p v-if="member.team" class="text-xs" :style="{ color: 'var(--dp-text-muted)' }">{{ member.team }}</p>
+                    <p class="font-medium text-dp-text-primary">{{ member.name }}</p>
+                    <p v-if="member.team" class="text-xs text-dp-text-muted">{{ member.team }}</p>
                   </div>
                 </div>
                 <button
@@ -738,8 +734,7 @@ onMounted(async () => {
               <!-- Add auxiliary account card -->
               <button
                 @click="openAuxiliaryModal"
-                class="w-full flex items-center justify-center gap-2 p-3 rounded-lg border-2 border-dashed transition cursor-pointer hover:border-solid"
-                :style="{ borderColor: 'var(--dp-border-primary)', color: 'var(--dp-text-muted)' }"
+                class="w-full flex items-center justify-center gap-2 p-3 rounded-lg border-2 border-dashed transition cursor-pointer hover:border-solid border-dp-border-primary text-dp-text-muted"
               >
                 <Plus class="w-5 h-5" />
                 <span class="text-sm font-medium">보조 계정 추가</span>
@@ -750,10 +745,10 @@ onMounted(async () => {
       </section>
 
       <!-- Session Management Section -->
-      <section class="rounded-xl shadow-sm p-6 mb-4" :style="{ backgroundColor: 'var(--dp-bg-card)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
+      <section class="rounded-xl shadow-sm p-6 mb-4 bg-dp-bg-card border border-dp-border-primary">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-            <Smartphone class="w-5 h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
+          <h2 class="text-lg font-semibold flex items-center gap-2 text-dp-text-primary">
+            <Smartphone class="w-5 h-5 text-dp-text-secondary" />
             접속 세션 관리
           </h2>
           <button
@@ -776,23 +771,22 @@ onMounted(async () => {
       </section>
 
       <!-- SSO Connections Section -->
-      <section class="rounded-xl shadow-sm p-6 mb-4" :style="{ backgroundColor: 'var(--dp-bg-card)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
-        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-          <Link class="w-5 h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
+      <section class="rounded-xl shadow-sm p-6 mb-4 bg-dp-bg-card border border-dp-border-primary">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-dp-text-primary">
+          <Link class="w-5 h-5 text-dp-text-secondary" />
           소셜 계정 연동
         </h2>
         <div class="space-y-3">
           <div
             v-for="sso in ssoConnections"
             :key="sso.provider"
-            class="flex items-center justify-between p-3 rounded-lg"
-            :style="{ backgroundColor: 'var(--dp-bg-secondary)' }"
+            class="flex items-center justify-between p-3 rounded-lg bg-dp-bg-secondary"
           >
             <div class="flex items-center gap-3">
               <img :src="sso.icon" :alt="sso.provider" class="w-8 h-8 rounded" />
               <div>
-                <p class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ sso.provider }}</p>
-                <p v-if="sso.connected && sso.accountName" class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
+                <p class="font-medium text-dp-text-primary">{{ sso.provider }}</p>
+                <p v-if="sso.connected && sso.accountName" class="text-sm text-dp-text-secondary">
                   {{ sso.accountName }}
                 </p>
               </div>
@@ -816,9 +810,9 @@ onMounted(async () => {
       </section>
 
       <!-- Account Management Section -->
-      <section class="rounded-xl shadow-sm p-6 mb-4" :style="{ backgroundColor: 'var(--dp-bg-card)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
-        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-          <Lock class="w-5 h-5" :style="{ color: 'var(--dp-text-secondary)' }" />
+      <section class="rounded-xl shadow-sm p-6 mb-4 bg-dp-bg-card border border-dp-border-primary">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-dp-text-primary">
+          <Lock class="w-5 h-5 text-dp-text-secondary" />
           회원정보 관리
         </h2>
         <div class="flex flex-wrap gap-3">
@@ -841,7 +835,7 @@ onMounted(async () => {
       </section>
 
       <!-- Logout Section -->
-      <section class="rounded-xl shadow-sm p-4 sm:p-6" :style="{ backgroundColor: 'var(--dp-bg-card)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
+      <section class="rounded-xl shadow-sm p-4 sm:p-6 bg-dp-bg-card border border-dp-border-primary">
         <button
           @click="logout"
           class="w-full px-4 py-3 min-h-12 text-dp-warning bg-dp-warning-soft hover:bg-dp-warning-soft rounded-lg font-medium transition flex items-center justify-center gap-2 cursor-pointer"
@@ -859,16 +853,16 @@ onMounted(async () => {
         class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
         @click.self="showVisibilityModal = false"
       >
-        <div class="rounded-xl shadow-xl max-w-md w-full" :style="{ backgroundColor: 'var(--dp-bg-card)' }">
-          <div class="flex items-center justify-between p-4" :style="{ borderBottomWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
-            <h3 class="text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">시간표 공개 대상 설정</h3>
-            <button @click="showVisibilityModal = false" class="p-1.5 rounded-full hover-close-btn cursor-pointer" :style="{ color: 'var(--dp-text-muted)' }">
+        <div class="rounded-xl shadow-xl max-w-md w-full bg-dp-bg-card">
+          <div class="flex items-center justify-between p-4 border-b border-dp-border-primary">
+            <h3 class="text-lg font-bold text-dp-text-primary">시간표 공개 대상 설정</h3>
+            <button @click="showVisibilityModal = false" class="p-1.5 rounded-full hover-close-btn cursor-pointer text-dp-text-muted">
               <X class="w-5 h-5" />
             </button>
           </div>
           <div class="p-4 sm:p-6">
-            <p class="mb-4" :style="{ color: 'var(--dp-text-secondary)' }">내 달력을 공개할 범위를 설정하세요.</p>
-            <p class="text-sm mb-4" :style="{ color: 'var(--dp-text-muted)' }">선택시 변경사항이 즉시 저장됩니다.</p>
+            <p class="mb-4 text-dp-text-secondary">내 달력을 공개할 범위를 설정하세요.</p>
+            <p class="text-sm mb-4 text-dp-text-muted">선택시 변경사항이 즉시 저장됩니다.</p>
             <div class="space-y-2">
               <button
                 v-for="option in visibilityOptions"
@@ -885,26 +879,24 @@ onMounted(async () => {
               >
                 <div class="flex items-center gap-3">
                   <span class="w-3 h-3 rounded-full" :class="option.color"></span>
-                  <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ option.label }}</span>
+                  <span class="font-medium text-dp-text-primary">{{ option.label }}</span>
                   <Check
                     v-if="calendarVisibility === option.value"
                     class="w-5 h-5 text-dp-accent ml-auto"
                   />
                   <Loader2
                     v-if="savingVisibility && calendarVisibility !== option.value"
-                    class="w-5 h-5 animate-spin ml-auto"
-                    :style="{ color: 'var(--dp-text-muted)' }"
+                    class="w-5 h-5 animate-spin ml-auto text-dp-text-muted"
                   />
                 </div>
-                <p class="text-sm mt-1 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">{{ option.description }}</p>
+                <p class="text-sm mt-1 ml-6 text-dp-text-secondary">{{ option.description }}</p>
               </button>
             </div>
           </div>
-          <div class="p-4 sm:p-6" :style="{ borderTopWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
+          <div class="p-4 sm:p-6 border-t border-dp-border-primary">
             <button
               @click="showVisibilityModal = false"
-              class="w-full px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer"
-              :style="{ backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-primary)' }"
+              class="w-full px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-primary"
             >
               닫기
             </button>
@@ -920,16 +912,16 @@ onMounted(async () => {
         class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
         @click.self="showPasswordModal = false"
       >
-        <div class="rounded-xl shadow-xl max-w-md w-full" :style="{ backgroundColor: 'var(--dp-bg-card)' }">
-          <div class="flex items-center justify-between p-4" :style="{ borderBottomWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
-            <h3 class="text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">비밀번호 변경</h3>
-            <button @click="showPasswordModal = false" class="p-1.5 rounded-full hover-close-btn cursor-pointer" :style="{ color: 'var(--dp-text-muted)' }">
+        <div class="rounded-xl shadow-xl max-w-md w-full bg-dp-bg-card">
+          <div class="flex items-center justify-between p-4 border-b border-dp-border-primary">
+            <h3 class="text-lg font-bold text-dp-text-primary">비밀번호 변경</h3>
+            <button @click="showPasswordModal = false" class="p-1.5 rounded-full hover-close-btn cursor-pointer text-dp-text-muted">
               <X class="w-5 h-5" />
             </button>
           </div>
           <div class="p-4 sm:p-6 space-y-4">
             <div>
-              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-primary)' }">현재 비밀번호</label>
+              <label class="block text-sm font-medium mb-1 text-dp-text-primary">현재 비밀번호</label>
               <input
                 v-model="passwordForm.currentPassword"
                 type="password"
@@ -948,7 +940,7 @@ onMounted(async () => {
               </p>
             </div>
             <div>
-              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-primary)' }">새 비밀번호</label>
+              <label class="block text-sm font-medium mb-1 text-dp-text-primary">새 비밀번호</label>
               <input
                 v-model="passwordForm.newPassword"
                 type="password"
@@ -967,7 +959,7 @@ onMounted(async () => {
               </p>
             </div>
             <div>
-              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-primary)' }">새 비밀번호 확인</label>
+              <label class="block text-sm font-medium mb-1 text-dp-text-primary">새 비밀번호 확인</label>
               <input
                 v-model="passwordForm.confirmPassword"
                 type="password"
@@ -986,7 +978,7 @@ onMounted(async () => {
               </p>
             </div>
           </div>
-          <div class="p-4 sm:p-6 flex gap-2" :style="{ borderTopWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
+          <div class="p-4 sm:p-6 flex gap-2 border-t border-dp-border-primary">
             <button
               @click="changePassword"
               :disabled="changingPassword"
@@ -1015,20 +1007,20 @@ onMounted(async () => {
         class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
         @click.self="showAuxiliaryModal = false"
       >
-        <div class="rounded-xl shadow-xl max-w-md w-full" :style="{ backgroundColor: 'var(--dp-bg-card)' }">
-          <div class="flex items-center justify-between p-4" :style="{ borderBottomWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
-            <h3 class="text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">보조 계정 추가</h3>
-            <button @click="showAuxiliaryModal = false" class="p-1.5 rounded-full hover-close-btn cursor-pointer" :style="{ color: 'var(--dp-text-muted)' }">
+        <div class="rounded-xl shadow-xl max-w-md w-full bg-dp-bg-card">
+          <div class="flex items-center justify-between p-4 border-b border-dp-border-primary">
+            <h3 class="text-lg font-bold text-dp-text-primary">보조 계정 추가</h3>
+            <button @click="showAuxiliaryModal = false" class="p-1.5 rounded-full hover-close-btn cursor-pointer text-dp-text-muted">
               <X class="w-5 h-5" />
             </button>
           </div>
           <div class="p-4 sm:p-6 space-y-4">
-            <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
+            <p class="text-sm text-dp-text-secondary">
               자녀, 부업 등 별도 시간표 관리용 계정을 만들 수 있습니다.<br>
               이 화면에서 바로 전환하여 사용할 수 있습니다.
             </p>
             <div>
-              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-primary)' }">계정 이름</label>
+              <label class="block text-sm font-medium mb-1 text-dp-text-primary">계정 이름</label>
               <input
                 v-model="auxiliaryName"
                 type="text"
@@ -1043,10 +1035,10 @@ onMounted(async () => {
                 placeholder="예: 둘째 아이, 부업"
                 @keyup.enter="createAuxiliaryAccount"
               />
-              <p class="text-xs mt-1" :style="{ color: 'var(--dp-text-muted)' }">최대 10자</p>
+              <p class="text-xs mt-1 text-dp-text-muted">최대 10자</p>
             </div>
           </div>
-          <div class="p-4 sm:p-6 flex gap-2" :style="{ borderTopWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
+          <div class="p-4 sm:p-6 flex gap-2 border-t border-dp-border-primary">
             <button
               @click="createAuxiliaryAccount"
               :disabled="creatingAuxiliary || !auxiliaryName.trim()"

@@ -190,7 +190,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
 
 <template>
   <div class="space-y-3">
-    <div v-if="schedules.length === 0" class="text-center py-6" :style="{ color: 'var(--dp-text-muted)' }">
+    <div v-if="schedules.length === 0" class="text-center py-6 text-dp-text-muted">
       등록된 일정이 없습니다.
     </div>
 
@@ -211,8 +211,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
         <div class="flex items-start justify-between">
           <div
             v-if="hasDraggableSchedules && canEdit && !schedule.isTagged"
-            class="schedule-drag-handle flex items-center pr-2 cursor-grab"
-            :style="{ color: 'var(--dp-text-muted)' }"
+            class="schedule-drag-handle flex items-center pr-2 cursor-grab text-dp-text-muted"
             title="드래그하여 순서 변경"
           >
             <GripVertical class="w-5 h-5" />
@@ -221,25 +220,22 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
             <div class="flex items-center gap-2 flex-wrap">
               <Lock
                 v-if="schedule.visibility === 'PRIVATE'"
-                class="w-4 h-4"
-                :style="{ color: 'var(--dp-text-muted)' }"
+                class="w-4 h-4 text-dp-text-muted"
                 :title="getVisibilityLabel(schedule.visibility)"
               />
-              <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ schedule.content }}<template v-if="schedule.totalDays && schedule.totalDays > 1"> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template></span>
-              <span v-if="formatScheduleTime(schedule)" class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
+              <span class="font-medium text-dp-text-primary">{{ schedule.content }}<template v-if="schedule.totalDays && schedule.totalDays > 1"> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template></span>
+              <span v-if="formatScheduleTime(schedule)" class="text-sm text-dp-text-secondary">
                 {{ formatScheduleTime(schedule) }}
               </span>
               <component
                 v-if="schedule.visibility !== 'PRIVATE'"
                 :is="getVisibilityIcon(schedule.visibility)"
-                class="w-4 h-4"
-                :style="{ color: 'var(--dp-text-muted)' }"
+                class="w-4 h-4 text-dp-text-muted"
                 :title="getVisibilityLabel(schedule.visibility)"
               />
               <span
                 v-if="schedule.attachments?.length"
-                class="flex items-center gap-1 text-sm"
-                :style="{ color: 'var(--dp-text-muted)' }"
+                class="flex items-center gap-1 text-sm text-dp-text-muted"
               >
                 <Paperclip class="w-3 h-3" />
                 {{ schedule.attachments.length }}
@@ -351,12 +347,12 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
           </div>
 
           <!-- Description -->
-          <div v-if="schedule.description" class="mt-2 pt-2" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
-            <div class="text-sm whitespace-pre-wrap" :style="{ color: 'var(--dp-text-secondary)' }">{{ schedule.description }}</div>
+          <div v-if="schedule.description" class="mt-2 pt-2 border-t border-dp-border-primary">
+            <div class="text-sm whitespace-pre-wrap text-dp-text-secondary">{{ schedule.description }}</div>
           </div>
 
           <!-- Attachments -->
-          <div v-if="schedule.attachments?.length" class="mt-2 pt-2" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
+          <div v-if="schedule.attachments?.length" class="mt-2 pt-2 border-t border-dp-border-primary">
             <AttachmentGrid
               :attachments="toNormalizedAttachments(schedule.attachments)"
               :columns="4"

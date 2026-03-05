@@ -1464,7 +1464,7 @@ async function showExcelUploadModal() {
     <!-- Loading State -->
     <div v-if="isLoading" class="flex items-center justify-center py-20">
       <Loader2 class="w-8 h-8 text-dp-accent animate-spin" />
-      <span class="ml-2" :style="{ color: 'var(--dp-text-secondary)' }">데이터를 불러오는 중...</span>
+      <span class="ml-2 text-dp-text-secondary">데이터를 불러오는 중...</span>
     </div>
 
     <!-- Error State -->

@@ -54,8 +54,7 @@ function handleGoToThisMonth() {
       >
         <!-- Year Navigation -->
         <div
-          class="flex items-center justify-between p-3 sm:p-4 border-b"
-          :style="{ borderColor: 'var(--dp-border-primary)' }"
+          class="flex items-center justify-between p-3 sm:p-4 border-b border-dp-border-primary"
         >
           <button
             @click="pickerYear--"
@@ -63,7 +62,7 @@ function handleGoToThisMonth() {
           >
             <ChevronLeft class="w-6 h-6 sm:w-5 sm:h-5" />
           </button>
-          <span class="text-xl font-bold" :style="{ color: 'var(--dp-text-primary)' }">{{ pickerYear }}년</span>
+          <span class="text-xl font-bold text-dp-text-primary">{{ pickerYear }}년</span>
           <button
             @click="pickerYear++"
             class="calendar-nav-btn p-2 rounded-full cursor-pointer"
@@ -97,7 +96,7 @@ function handleGoToThisMonth() {
         </div>
 
         <!-- Buttons -->
-        <div class="p-3 sm:p-4 border-t flex flex-row gap-2" :style="{ borderColor: 'var(--dp-border-primary)' }">
+        <div class="p-3 sm:p-4 border-t flex flex-row gap-2 border-dp-border-primary">
           <button
             @click="handleGoToThisMonth"
             class="flex-[3] px-3 sm:px-4 py-2 bg-dp-accent hover:bg-dp-accent-hover rounded-lg text-dp-text-on-dark font-medium transition text-sm cursor-pointer"
@@ -106,8 +105,7 @@ function handleGoToThisMonth() {
           </button>
           <button
             @click="emit('close')"
-            class="close-btn flex-1 px-3 sm:px-4 py-2 rounded-lg font-medium transition text-sm cursor-pointer"
-            :style="{ backgroundColor: 'var(--dp-bg-tertiary)', color: 'var(--dp-text-secondary)' }"
+            class="close-btn flex-1 px-3 sm:px-4 py-2 rounded-lg font-medium transition text-sm cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"
           >
             닫기
           </button>

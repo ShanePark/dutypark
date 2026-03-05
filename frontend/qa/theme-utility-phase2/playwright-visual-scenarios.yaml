@@ -1,0 +1,212 @@
+meta:
+  name: theme-utility-phase2-visual-regression
+  owner: frontend
+  base_url: http://localhost:5173
+  artifact_root: /tmp/dutypark-theme-utility-phase2
+  capture_policy:
+    wait_for_network_idle_ms: 800
+    wait_for_fonts: true
+    freeze_animations: true
+    capture_points:
+      - top
+      - middle
+      - bottom
+  account:
+    email: test@duty.park
+    password: "12345678"
+
+viewports:
+  - id: pc-1080
+    width: 1920
+    height: 1080
+    device: desktop
+  - id: pc-768
+    width: 1366
+    height: 768
+    device: desktop
+  - id: ios-390x844
+    width: 390
+    height: 844
+    device: mobile
+    user_agent_profile: iPhone 14
+  - id: android-360x800
+    width: 360
+    height: 800
+    device: mobile
+    user_agent_profile: Galaxy S21
+
+themes:
+  - light
+  - dark
+
+thresholds:
+  default_diff_ratio_max: 0.003
+  animated_diff_ratio_max: 0.010
+  animated_routes:
+    - /
+    - /guide
+
+global_assertions:
+  - id: no-horizontal-scroll
+    check: document.documentElement.scrollWidth <= window.innerWidth
+  - id: safe-area-visible
+    check: fixed footer and modal action buttons are not clipped on mobile
+  - id: typography-stable
+    check: no clipping/overlap for title, subtitle, button labels
+  - id: dark-contrast
+    check: text remains readable on dark surfaces and overlays
+
+scenarios:
+  - id: guest-home
+    route: /
+    auth: guest
+    purpose: landing visual baseline
+    actions:
+      - wait: root-content-visible
+      - capture: top
+      - scroll: 45%
+      - capture: middle
+      - scroll: bottom
+      - capture: bottom
+
+  - id: guide-page
+    route: /guide
+    auth: guest
+    purpose: long content and section cards
+    actions:
+      - wait: guide-header-visible
+      - capture: top
+      - scroll: 50%
+      - capture: middle
+      - scroll: bottom
+      - capture: bottom
+
+  - id: login-page
+    route: /auth/login
+    auth: guest
+    purpose: form input states and CTA consistency
+    actions:
+      - wait: login-form-visible
+      - capture: top
+      - click: email-input
+      - type: invalid-email
+      - click: password-input
+      - type: short-password
+      - click: submit-button
+      - wait: validation-or-error-state
+      - capture: error-state
+
+  - id: dashboard-logged-in
+    route: /
+    auth: login
+    purpose: primary user dashboard baseline
+    actions:
+      - wait: dashboard-main-visible
+      - capture: top
+      - scroll: 50%
+      - capture: middle
+
+  - id: friends-page
+    route: /friends
+    auth: login
+    purpose: cards, actions, modal, hover/touch feedback
+    actions:
+      - wait: friends-header-visible
+      - capture: top
+      - click: add-friend-button
+      - wait: search-modal-visible
+      - capture: modal-open
+      - close: modal
+      - capture: modal-closed
+
+  - id: member-page
+    route: /member
+    auth: login
+    purpose: profile forms and modal surfaces
+    actions:
+      - wait: member-main-visible
+      - capture: top
+      - click: auxiliary-account-open-button
+      - wait: auxiliary-modal-visible
+      - capture: modal-open
+      - close: modal
+
+  - id: team-page
+    route: /team
+    auth: login
+    purpose: calendar, cards, badges with mixed surface colors
+    actions:
+      - wait: team-calendar-visible
+      - capture: top
+      - scroll: 60%
+      - capture: middle
+
+  - id: team-manage-page
+    route: /team/manage/{teamId}
+    auth: login
+    params:
+      teamId_source: first-accessible-team
+    purpose: table row borders, form controls, section headers
+    actions:
+      - wait: team-manage-main-visible
+      - capture: top
+      - scroll: 50%
+      - capture: middle
+      - scroll: bottom
+      - capture: bottom
+
+  - id: todo-page
+    route: /todo
+    auth: login
+    purpose: kanban columns and filter/button states
+    actions:
+      - wait: todo-board-visible
+      - capture: top
+      - click: filter-in-progress
+      - capture: filter-state
+
+  - id: terms-page
+    route: /terms
+    auth: guest
+    purpose: prose typography and table styling
+    actions:
+      - wait: policy-title-visible
+      - capture: top
+      - scroll: 60%
+      - capture: middle
+
+  - id: privacy-page
+    route: /privacy
+    auth: guest
+    purpose: prose typography and link readability
+    actions:
+      - wait: policy-title-visible
+      - capture: top
+      - scroll: 60%
+      - capture: middle
+
+edge_cases:
+  desktop:
+    - hover states for card/button/icon controls remain visually consistent
+    - focus ring and disabled states remain visible and not color-shifted
+    - long names/titles do not overflow container boundaries
+  mobile:
+    - touch targets remain >= 44px for primary actions
+    - safe-area bottom padding keeps footer and modal actions tappable
+    - virtual keyboard does not hide focused input and primary action
+    - no unintended horizontal scroll during modal open/close
+  both:
+    - loading, empty, error states preserve prior hierarchy and readability
+    - z-index layering for modal/dropdown/toast remains unchanged
+
+reporting:
+  required_outputs:
+    - before_screenshots
+    - after_screenshots
+    - diff_images
+    - diff_summary_tsv
+    - manual_checklist_md
+  gate_rules:
+    - fail_if_non_intentional_diff_exists
+    - fail_if_mobile_desktop_experience_diverges
+    - fail_if_dark_mode_contrast_regresses

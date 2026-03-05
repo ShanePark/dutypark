@@ -75,8 +75,7 @@ function close() {
         </div>
         <!-- Modal Body -->
         <div
-          class="flex-1 overflow-y-auto p-6 prose prose-sm sm:prose-base max-w-none"
-          :style="{ color: 'var(--dp-text-secondary)' }"
+          class="flex-1 overflow-y-auto p-6 prose prose-sm sm:prose-base max-w-none text-dp-text-secondary"
         >
           <div v-if="isLoading" class="flex items-center justify-center h-32">
             <div class="animate-spin rounded-full h-6 w-6 border-2 border-dp-accent-border border-t-transparent"></div>
@@ -87,7 +86,7 @@ function close() {
           <div v-else v-html="modalContent"></div>
         </div>
         <!-- Modal Footer -->
-        <div class="flex-shrink-0 p-4 border-t" :style="{ borderColor: 'var(--dp-border-primary)' }">
+        <div class="flex-shrink-0 p-4 border-t border-dp-border-primary">
           <button
             type="button"
             class="w-full py-2.5 px-4 rounded-lg font-medium transition"

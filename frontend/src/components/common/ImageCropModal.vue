@@ -215,7 +215,7 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
             class="p-2 rounded-full transition hover-bg-light cursor-pointer"
             :disabled="isProcessing"
           >
-            <X class="w-6 h-6" :style="{ color: 'var(--dp-text-primary)' }" />
+            <X class="w-6 h-6 text-dp-text-primary" />
           </button>
         </div>
 

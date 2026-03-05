@@ -43,12 +43,11 @@ function confirm() {
           태그 제거
         </div>
         <div class="py-4 px-4 space-y-3">
-          <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
+          <p class="text-sm text-dp-text-secondary">
             이 일정에서 태그를 제거하시겠습니까?
           </p>
           <div
-            class="p-3 rounded-lg text-xs space-y-1"
-            :style="{ backgroundColor: 'var(--dp-bg-secondary)', color: 'var(--dp-text-muted)' }"
+            class="p-3 rounded-lg text-xs space-y-1 bg-dp-bg-secondary text-dp-text-muted"
           >
             <p>• 태그를 제거하면 이 일정이 내 달력에서 사라집니다.</p>
             <p>• 태그 복원은 불가능하며, 다시 태그하려면 해당 사용자에게 요청해야 합니다.</p>

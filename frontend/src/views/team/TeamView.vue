@@ -378,12 +378,12 @@ onMounted(() => {
 
     <!-- No Team State -->
     <template v-else-if="!hasTeam">
-      <div class="rounded-lg shadow overflow-hidden" :style="{ backgroundColor: 'var(--dp-bg-card)' }">
+      <div class="rounded-lg shadow overflow-hidden bg-dp-bg-card">
         <div class="bg-dp-surface-strong text-dp-text-on-dark font-bold text-xl text-center py-3">
           내 팀
         </div>
-        <div class="flex flex-col items-center justify-center p-12" :style="{ color: 'var(--dp-text-secondary)' }">
-          <Building2 class="w-16 h-16 mb-4" :style="{ color: 'var(--dp-text-muted)' }" />
+        <div class="flex flex-col items-center justify-center p-12 text-dp-text-secondary">
+          <Building2 class="w-16 h-16 mb-4 text-dp-text-muted" />
           <p class="text-xl font-bold mb-2">어느 팀에도 속해있지 않습니다.</p>
           <p class="text-lg">팀 관리자에게 가입을 요청해주세요.</p>
         </div>
@@ -396,9 +396,9 @@ onMounted(() => {
       <div class="flex items-center justify-between gap-1 mb-1">
         <!-- Left: Team name -->
         <div class="w-20 sm:w-24 flex-shrink-0 flex items-center justify-start">
-          <div class="flex items-center gap-1.5 px-2 py-1 rounded-full border" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderColor: 'var(--dp-border-secondary)' }">
-            <Building2 class="w-3.5 h-3.5 flex-shrink-0" :style="{ color: 'var(--dp-text-secondary)' }" />
-            <span class="text-xs sm:text-sm font-semibold truncate max-w-[60px] sm:max-w-[72px]" :style="{ color: 'var(--dp-text-primary)' }">{{ team.name }}</span>
+          <div class="flex items-center gap-1.5 px-2 py-1 rounded-full border bg-dp-bg-tertiary border-dp-border-secondary">
+            <Building2 class="w-3.5 h-3.5 flex-shrink-0 text-dp-text-secondary" />
+            <span class="text-xs sm:text-sm font-semibold truncate max-w-[60px] sm:max-w-[72px] text-dp-text-primary">{{ team.name }}</span>
           </div>
         </div>
 
@@ -423,8 +423,7 @@ onMounted(() => {
           <button
             v-if="isTeamManager"
             @click="goToTeamManage"
-            class="px-3 py-2 border rounded-lg flex items-center gap-1 hover-interactive cursor-pointer"
-            :style="{ borderColor: 'var(--dp-border-secondary)' }"
+            class="px-3 py-2 border rounded-lg flex items-center gap-1 hover-interactive cursor-pointer border-dp-border-secondary"
           >
             <Settings class="w-4 h-4" />
             <span class="hidden sm:inline">팀 관리</span>
@@ -477,9 +476,9 @@ onMounted(() => {
       </CalendarGrid>
 
       <!-- Selected Day Schedule -->
-      <div class="rounded-lg border shadow-sm p-3" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-secondary)' }">
+      <div class="rounded-lg border shadow-sm p-3 bg-dp-bg-card border-dp-border-secondary">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-          <h3 class="text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">
+          <h3 class="text-lg font-bold text-dp-text-primary">
             {{ selectedDay.year }}년 {{ selectedDay.month }}월 {{ selectedDay.day }}일
           </h3>
           <button
@@ -500,18 +499,17 @@ onMounted(() => {
           <div
             v-for="schedule in teamSchedules[selectedDay.index]"
             :key="schedule.id"
-            class="rounded-lg p-3 border transition-all duration-150 hover:shadow-md"
-            :style="{ backgroundColor: 'var(--dp-bg-secondary)', borderColor: 'var(--dp-border-primary)' }"
+            class="rounded-lg p-3 border transition-all duration-150 hover:shadow-md bg-dp-bg-secondary border-dp-border-primary"
           >
             <div class="flex items-start justify-between">
               <div class="flex-1 min-w-0">
-                <div class="font-bold mb-1" :style="{ color: 'var(--dp-text-primary)' }">
+                <div class="font-bold mb-1 text-dp-text-primary">
                   {{ schedule.content }}
-                  <span class="text-sm font-normal" :style="{ color: 'var(--dp-text-secondary)' }">
+                  <span class="text-sm font-normal text-dp-text-secondary">
                     (by: <strong>{{ schedule.createMember }}</strong>)
                   </span>
                 </div>
-                <div v-if="schedule.description" class="text-sm whitespace-pre-wrap break-words" :style="{ color: 'var(--dp-text-secondary)' }">
+                <div v-if="schedule.description" class="text-sm whitespace-pre-wrap break-words text-dp-text-secondary">
                   {{ schedule.description }}
                 </div>
               </div>
@@ -534,7 +532,7 @@ onMounted(() => {
             </div>
           </div>
         </div>
-        <div v-else class="text-center py-6" :style="{ color: 'var(--dp-text-muted)' }">
+        <div v-else class="text-center py-6 text-dp-text-muted">
           이 날의 팀 일정이 없습니다.
         </div>
       </div>
@@ -581,7 +579,7 @@ onMounted(() => {
                 }"
               >
                 <ProfileAvatar :member-id="member.id" :has-profile-photo="member.hasProfilePhoto" :profile-photo-version="member.profilePhotoVersion" size="sm" class="mb-1" />
-                <span class="text-sm font-medium truncate w-full text-center" :style="{ color: 'var(--dp-text-primary)' }">
+                <span class="text-sm font-medium truncate w-full text-center text-dp-text-primary">
                   {{ member.name }}
                 </span>
               </div>
@@ -597,8 +595,8 @@ onMounted(() => {
       class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
       @click.self="closeScheduleModal"
     >
-      <div class="rounded-lg shadow-xl w-full max-w-lg" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
-        <div class="flex items-center justify-between p-4 border-b" :style="{ borderColor: 'var(--dp-border-primary)' }">
+      <div class="rounded-lg shadow-xl w-full max-w-lg bg-dp-bg-modal">
+        <div class="flex items-center justify-between p-4 border-b border-dp-border-primary">
           <h3 class="text-lg font-bold">팀 일정 저장</h3>
           <button
             @click="closeScheduleModal"
@@ -610,7 +608,7 @@ onMounted(() => {
 
         <div class="p-4 space-y-4">
           <div>
-            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-primary)' }">
+            <label class="block text-sm font-medium mb-1 text-dp-text-primary">
               제목(필수)
               <CharacterCounter :current="scheduleForm.content.length" :max="50" />
             </label>
@@ -629,7 +627,7 @@ onMounted(() => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-primary)' }">
+            <label class="block text-sm font-medium mb-1 text-dp-text-primary">
               상세(옵션)
             </label>
             <textarea
@@ -647,7 +645,7 @@ onMounted(() => {
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-primary)' }">
+              <label class="block text-sm font-medium mb-1 text-dp-text-primary">
                 시작일
               </label>
               <input
@@ -663,7 +661,7 @@ onMounted(() => {
               />
             </div>
             <div>
-              <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-primary)' }">
+              <label class="block text-sm font-medium mb-1 text-dp-text-primary">
                 종료일
               </label>
               <input
@@ -680,7 +678,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="flex justify-end gap-2 p-4 border-t" :style="{ borderColor: 'var(--dp-border-primary)' }">
+        <div class="flex justify-end gap-2 p-4 border-t border-dp-border-primary">
           <button
             @click="saveSchedule"
             :disabled="saving || !scheduleForm.content.trim()"

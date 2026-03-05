@@ -50,23 +50,21 @@ onMounted(() => {
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
       <router-link
         to="/admin"
-        class="rounded-xl p-4 transition"
-        :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }"
+        class="rounded-xl p-4 transition bg-dp-bg-card border border-dp-border-primary"
         @mouseover="(e: Event) => setHoverBg(e)"
         @mouseleave="(e: Event) => clearHoverBg(e)"
       >
-        <Users class="w-6 h-6 mb-2" :style="{ color: 'var(--dp-text-secondary)' }" />
-        <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">회원 관리</span>
+        <Users class="w-6 h-6 mb-2 text-dp-text-secondary" />
+        <span class="font-medium text-dp-text-primary">회원 관리</span>
       </router-link>
       <router-link
         to="/admin/teams"
-        class="rounded-xl p-4 transition"
-        :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }"
+        class="rounded-xl p-4 transition bg-dp-bg-card border border-dp-border-primary"
         @mouseover="(e: Event) => setHoverBg(e)"
         @mouseleave="(e: Event) => clearHoverBg(e)"
       >
-        <Building2 class="w-6 h-6 mb-2" :style="{ color: 'var(--dp-text-secondary)' }" />
-        <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">팀 관리</span>
+        <Building2 class="w-6 h-6 mb-2 text-dp-text-secondary" />
+        <span class="font-medium text-dp-text-primary">팀 관리</span>
       </router-link>
       <router-link
         to="/admin/dev"
@@ -78,57 +76,53 @@ onMounted(() => {
       <a
         href="/docs/index.html"
         target="_blank"
-        class="rounded-xl p-4 transition"
-        :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }"
+        class="rounded-xl p-4 transition bg-dp-bg-card border border-dp-border-primary"
         @mouseover="(e: Event) => setHoverBg(e)"
         @mouseleave="(e: Event) => clearHoverBg(e)"
       >
         <div class="flex items-center gap-1 mb-2">
-          <FileText class="w-6 h-6" :style="{ color: 'var(--dp-text-secondary)' }" />
-          <ExternalLink class="w-3 h-3" :style="{ color: 'var(--dp-text-muted)' }" />
+          <FileText class="w-6 h-6 text-dp-text-secondary" />
+          <ExternalLink class="w-3 h-3 text-dp-text-muted" />
         </div>
-        <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">API 문서</span>
+        <span class="font-medium text-dp-text-primary">API 문서</span>
       </a>
     </div>
 
     <!-- Page Header -->
     <div class="mb-6">
-      <h1 class="text-2xl font-bold" :style="{ color: 'var(--dp-text-primary)' }">
+      <h1 class="text-2xl font-bold text-dp-text-primary">
         개발 플레이그라운드
       </h1>
-      <p class="mt-1" :style="{ color: 'var(--dp-text-secondary)' }">
+      <p class="mt-1 text-dp-text-secondary">
         컴포넌트를 테스트하고 비교해볼 수 있는 공간입니다.
       </p>
     </div>
 
     <!-- Example Section -->
     <div
-      class="rounded-xl"
-      :style="{ backgroundColor: 'var(--dp-bg-card)', border: '1px solid var(--dp-border-primary)' }"
+      class="rounded-xl bg-dp-bg-card border border-dp-border-primary"
     >
       <button
         class="w-full p-4 flex items-center justify-between cursor-pointer"
         @click="toggleSection('example')"
       >
-        <h2 class="text-lg font-semibold" :style="{ color: 'var(--dp-text-primary)' }">
+        <h2 class="text-lg font-semibold text-dp-text-primary">
           예제 섹션
         </h2>
         <component
           :is="expandedSections.has('example') ? ChevronDown : ChevronRight"
-          class="w-5 h-5"
-          :style="{ color: 'var(--dp-text-muted)' }"
+          class="w-5 h-5 text-dp-text-muted"
         />
       </button>
       <div
         v-if="expandedSections.has('example')"
-        class="p-4"
-        :style="{ borderTop: '1px solid var(--dp-border-primary)' }"
+        class="p-4 border-t border-dp-border-primary"
       >
-        <p :style="{ color: 'var(--dp-text-secondary)' }">
+        <p class="text-dp-text-secondary">
           여기에 테스트할 컴포넌트를 추가하세요.
         </p>
-        <div class="mt-4 p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }">
-          <code :style="{ color: 'var(--dp-text-primary)' }">
+        <div class="mt-4 p-4 rounded-lg bg-dp-bg-tertiary">
+          <code class="text-dp-text-primary">
             &lt;YourComponent /&gt;
           </code>
         </div>
