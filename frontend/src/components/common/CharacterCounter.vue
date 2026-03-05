@@ -10,7 +10,7 @@ const percentage = computed(() => (props.current / props.max) * 100)
 
 const colorClass = computed(() => {
   if (percentage.value >= 100) return 'text-dp-danger'
-  if (percentage.value >= 95) return 'text-dp-warning'
+  if (percentage.value >= 95) return 'text-dp-warning-hover'
   if (percentage.value >= 90) return 'text-dp-warning'
   return 'char-counter-normal'
 })
