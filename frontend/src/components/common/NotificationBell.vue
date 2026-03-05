@@ -84,7 +84,7 @@ onUnmounted(() => {
 
 .notification-badge {
   background-color: var(--dp-danger);
-  color: var(--dp-text-inverse);
+  color: var(--dp-text-on-dark);
   font-size: 10px;
   line-height: 1;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);

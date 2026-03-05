@@ -82,7 +82,7 @@ async function uploadBatch() {
 <template>
   <div
     v-if="isOpen"
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+    class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
     @click.self="close"
   >
     <div class="rounded-lg shadow-xl w-full max-w-md" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
@@ -105,7 +105,7 @@ async function uploadBatch() {
             type="file"
             accept=".xlsx"
             @change="handleFileChange"
-            class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent"
             :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
           />
         </div>
@@ -120,7 +120,7 @@ async function uploadBatch() {
               type="number"
               :min="new Date().getFullYear()"
               :max="new Date().getFullYear() + 1"
-              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent"
               :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
             />
           </div>
@@ -133,7 +133,7 @@ async function uploadBatch() {
               type="number"
               min="1"
               max="12"
-              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent"
               :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
             />
           </div>
@@ -144,7 +144,7 @@ async function uploadBatch() {
         <button
           @click="uploadBatch"
           :disabled="saving || !batchForm.file"
-          class="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          class="px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           <Loader2 v-if="saving" class="w-4 h-4 animate-spin" />
           업로드

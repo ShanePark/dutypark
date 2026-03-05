@@ -89,7 +89,7 @@ const pagesToShow = computed(() => {
   <Teleport to="body">
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50"
       @click.self="emit('close')"
     >
       <div class="modal-container max-w-[95vw] sm:max-w-2xl max-h-[85dvh] sm:max-h-[70vh]">
@@ -108,7 +108,7 @@ const pagesToShow = computed(() => {
                 v-model="localQuery"
                 type="text"
                 placeholder="검색어 입력..."
-                class="w-full pl-10 pr-4 py-2 rounded-lg border text-sm transition focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full pl-10 pr-4 py-2 rounded-lg border text-sm transition focus:outline-none focus:ring-2 focus:ring-dp-accent"
                 :style="{
                   backgroundColor: 'var(--dp-bg-primary)',
                   borderColor: 'var(--dp-border-primary)',
@@ -121,7 +121,7 @@ const pagesToShow = computed(() => {
             <button
               type="submit"
               :disabled="!localQuery.trim() || isSearching"
-              class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium transition hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2"
+              class="px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg text-sm font-medium transition hover:bg-dp-accent-hover disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2"
             >
               <Loader2 v-if="isSearching" class="w-4 h-4 animate-spin" />
               <span>검색</span>
@@ -200,7 +200,7 @@ const pagesToShow = computed(() => {
             class="px-2 sm:px-3 py-1 text-sm rounded transition cursor-pointer"
             :class="[
               page === currentPage
-                ? 'bg-blue-600 text-white'
+                ? 'bg-dp-accent text-dp-text-on-dark'
                 : 'hover-bg'
             ]"
             :style="page !== currentPage ? { color: 'var(--dp-text-primary)' } : {}"

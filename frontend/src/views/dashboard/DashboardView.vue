@@ -434,7 +434,7 @@ watch(
       >
         <!-- Header -->
         <div
-          class="group px-5 py-3 bg-gradient-to-r from-gray-700 to-gray-800 flex items-center justify-between cursor-pointer hover:from-gray-600 hover:to-gray-700 transition-all"
+          class="group px-5 py-3 bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt flex items-center justify-between cursor-pointer hover:from-dp-surface-strong-alt hover:to-dp-surface-strong-hover transition-all"
           @click="moveTo()"
         >
           <div class="flex items-center gap-3">
@@ -445,15 +445,15 @@ watch(
               :profile-photo-version="myInfo?.member.profilePhotoVersion"
               size="md"
             />
-            <span class="text-lg font-bold text-white">{{ myInfo?.member.name || '로딩중...' }}</span>
+            <span class="text-lg font-bold text-dp-text-on-dark">{{ myInfo?.member.name || '로딩중...' }}</span>
           </div>
-          <ChevronRight class="w-5 h-5 text-gray-400 group-hover:text-white group-hover:translate-x-1 transition-all" />
+          <ChevronRight class="w-5 h-5 text-dp-text-muted group-hover:text-dp-text-on-dark group-hover:translate-x-1 transition-all" />
         </div>
 
         <!-- Content -->
         <div class="p-5">
           <!-- Error state -->
-          <div v-if="myInfoError" class="text-center py-4 text-red-500">
+          <div v-if="myInfoError" class="text-center py-4 text-dp-danger">
             {{ myInfoError }}
           </div>
           <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -518,23 +518,23 @@ watch(
       <!-- Friends List Section -->
       <div ref="friendSectionRef" class="friend-section rounded-2xl shadow-sm border overflow-hidden" :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }">
         <div
-          class="group bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-3 cursor-pointer hover:from-slate-600 hover:to-slate-700 transition-all"
+          class="group bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt px-6 py-3 cursor-pointer hover:from-dp-surface-strong-alt hover:to-dp-surface-strong-hover transition-all"
           @click="router.push('/friends')"
         >
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <Users class="w-5 h-5 text-white" />
-              <span class="text-white font-bold">친구관리</span>
-              <span v-if="friendInfo?.friends.length" class="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs text-white">
+              <Users class="w-5 h-5 text-dp-text-on-dark" />
+              <span class="text-dp-text-on-dark font-bold">친구관리</span>
+              <span v-if="friendInfo?.friends.length" class="ml-2 px-2 py-0.5 bg-dp-overlay-light/20 rounded-full text-xs text-dp-text-on-dark">
                 {{ friendInfo.friends.length }}
               </span>
             </div>
-            <ChevronRight class="w-5 h-5 text-gray-400 group-hover:text-white group-hover:translate-x-1 transition-all" />
+            <ChevronRight class="w-5 h-5 text-dp-text-muted group-hover:text-dp-text-on-dark group-hover:translate-x-1 transition-all" />
           </div>
         </div>
         <div class="p-5">
           <!-- Error state -->
-          <div v-if="friendInfoError" class="text-center py-4 text-red-500">
+          <div v-if="friendInfoError" class="text-center py-4 text-dp-danger">
             {{ friendInfoError }}
           </div>
           <template v-else-if="friendInfoLoading">
@@ -547,7 +547,7 @@ watch(
             <Users class="w-12 h-12 mx-auto mb-3" :style="{ color: 'var(--dp-text-muted)' }" />
             <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">아직 친구가 없습니다.</p>
             <button
-              class="mt-4 px-4 py-2 text-sm font-medium bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition cursor-pointer"
+              class="mt-4 px-4 py-2 text-sm font-medium bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
               @click="openSearchModal"
             >
               친구 추가하기
@@ -564,7 +564,7 @@ watch(
               :class="[
                 friend.pinOrder
                   ? 'pinned-friend pinned-friend-highlight border-2 shadow-md'
-                  : 'border hover:border-blue-300'
+                  : 'border hover:border-dp-accent-border'
               ]"
               :style="!friend.pinOrder ? { backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' } : {}"
               @click="moveTo(friend.member.id)"
@@ -587,13 +587,13 @@ watch(
                   <div class="flex items-center justify-between mb-1.5">
                     <div class="flex items-center gap-1.5 min-w-0">
                       <span class="font-medium text-sm truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ friend.member.name }}</span>
-                      <Home v-if="friend.isFamily" class="w-3.5 h-3.5 flex-shrink-0 text-amber-500" title="Family member" />
+                      <Home v-if="friend.isFamily" class="w-3.5 h-3.5 flex-shrink-0 text-dp-warning" title="Family member" />
                     </div>
                     <div class="flex items-center flex-shrink-0" @click.stop>
                     <!-- Pin/Unpin button -->
                     <button
                       v-if="friend.pinOrder"
-                      class="p-1 text-amber-500 hover:text-amber-600 transition cursor-pointer"
+                      class="p-1 text-dp-warning hover:text-dp-warning transition cursor-pointer"
                       @click.stop="unpinFriend(friend.member)"
                       title="고정 해제"
                     >
@@ -601,7 +601,7 @@ watch(
                     </button>
                     <button
                       v-else
-                      class="p-1 text-gray-300 hover:text-amber-500 transition cursor-pointer"
+                      class="p-1 text-dp-text-muted hover:text-dp-warning transition cursor-pointer"
                       @click.stop="pinFriend(friend.member)"
                       title="고정"
                     >
@@ -637,7 +637,7 @@ watch(
               <!-- Drag handle for pinned friends -->
               <div v-if="friend.pinOrder" class="absolute bottom-2 right-2" @click.stop>
                 <div
-                  class="handle friend-drag-handle rounded-lg p-1.5 transition hover:bg-black/10 !cursor-grab active:!cursor-grabbing"
+                  class="handle friend-drag-handle rounded-lg p-1.5 transition hover:bg-dp-overlay-dark/10 !cursor-grab active:!cursor-grabbing"
                   title="드래그하여 순서 변경"
                 >
                   <GripVertical class="w-4 h-4" />
@@ -657,15 +657,15 @@ watch(
         @click.self="closeSearchModal"
       >
         <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="closeSearchModal"></div>
+        <div class="absolute inset-0 bg-dp-overlay-dark/60 backdrop-blur-sm" @click="closeSearchModal"></div>
 
         <!-- Modal Content -->
         <div class="relative rounded-2xl shadow-2xl w-full max-w-2xl mx-2 sm:mx-4 max-h-[90vh] overflow-hidden" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
           <!-- Header -->
           <div class="flex items-center justify-between p-5 border-b" :style="{ borderColor: 'var(--dp-border-primary)', backgroundColor: 'var(--dp-bg-secondary)' }">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                <UserPlus class="w-5 h-5 text-white" />
+              <div class="w-10 h-10 bg-gradient-to-br from-dp-accent to-dp-accent-hover rounded-xl flex items-center justify-center">
+                <UserPlus class="w-5 h-5 text-dp-text-on-dark" />
               </div>
               <h3 class="text-xl font-bold" :style="{ color: 'var(--dp-text-primary)' }">친구 추가</h3>
             </div>
@@ -688,13 +688,13 @@ watch(
                   v-model="searchKeyword"
                   type="text"
                   placeholder="이름 또는 팀 검색"
-                  class="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                  class="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-dp-accent/20 focus:border-dp-accent outline-none transition-all"
                   :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
                   @keyup.enter="search"
                 />
               </div>
               <button
-                class="px-5 py-3 bg-gradient-to-r from-slate-700 to-slate-800 text-white rounded-xl hover:from-slate-800 hover:to-slate-900 transition-all shadow-lg flex items-center gap-2 font-medium cursor-pointer"
+                class="px-5 py-3 bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt text-dp-text-on-dark rounded-xl hover:from-dp-surface-strong-alt hover:to-dp-surface-strong-hover transition-all shadow-lg flex items-center gap-2 font-medium cursor-pointer"
                 @click="search"
               >
                 <Search class="w-4 h-4" />
@@ -730,7 +730,7 @@ watch(
                     </div>
                   </div>
                   <button
-                    class="px-4 py-2 text-sm font-medium bg-green-500 text-white rounded-xl hover:bg-green-600 transition shadow-sm cursor-pointer"
+                    class="px-4 py-2 text-sm font-medium bg-dp-success text-dp-text-on-dark rounded-xl hover:bg-dp-success-hover transition shadow-sm cursor-pointer"
                     @click="requestFriend(member)"
                   >
                     친구 요청
@@ -752,7 +752,7 @@ watch(
                 <template v-for="i in searchTotalPage" :key="i">
                   <button
                     class="w-10 h-10 rounded-xl border font-medium hover-bg-light cursor-pointer"
-                    :class="(i - 1) === searchPage ? 'bg-blue-600 text-white border-blue-600' : ''"
+                    :class="(i - 1) === searchPage ? 'bg-dp-accent text-dp-text-on-dark border-dp-accent' : ''"
                     :style="(i - 1) !== searchPage ? { borderColor: 'var(--dp-border-primary)' } : {}"
                     @click="goToPage(i - 1)"
                   >

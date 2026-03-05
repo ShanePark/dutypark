@@ -50,15 +50,15 @@ function toggleBatchEdit() {
           <button
             @click="moveFocusDay(-1)"
             :disabled="focusedDayValue === 1"
-            class="p-1 rounded-l-md transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-500/10"
+            class="p-1 rounded-l-md transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-dp-bg-hover"
           >
             <ChevronLeft class="w-4 h-4" :style="{ color: 'var(--dp-text-secondary)' }" />
           </button>
-          <span class="px-1 text-xs sm:text-sm font-bold text-orange-500">{{ focusedDayValue }}일</span>
+          <span class="px-1 text-xs sm:text-sm font-bold text-dp-warning">{{ focusedDayValue }}일</span>
           <button
             @click="moveFocusDay(1)"
             :disabled="focusedDayValue === lastDayInMonth"
-            class="p-1 rounded-r-md transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-500/10"
+            class="p-1 rounded-r-md transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-dp-bg-hover"
           >
             <ChevronRight class="w-4 h-4" :style="{ color: 'var(--dp-text-secondary)' }" />
           </button>
@@ -105,7 +105,7 @@ function toggleBatchEdit() {
         @click="emit('toggle-other-duties')"
         class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1 border-r cursor-pointer"
         :style="{ borderColor: 'var(--dp-border-secondary)' }"
-        :class="isOtherDutyActive ? 'bg-blue-50/70 text-blue-700 hover:bg-blue-50' : 'hover:bg-gray-500/10 dark:hover:bg-gray-400/10'"
+        :class="isOtherDutyActive ? 'bg-dp-accent-soft/70 text-dp-accent-hover hover:bg-dp-accent-soft' : 'hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover'"
       >
         <Users class="w-4 h-4" />
         <span class="hidden xs:inline">함께보기</span>
@@ -114,7 +114,7 @@ function toggleBatchEdit() {
       <button
         v-if="canEditMyCalendar && batchEditMode"
         @click="emit('show-batch-update-modal')"
-        class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 border-r cursor-pointer hover:bg-gray-500/10 dark:hover:bg-gray-400/10"
+        class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 border-r cursor-pointer hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover"
         :style="{ borderColor: 'var(--dp-border-secondary)' }"
       >
         일괄수정
@@ -124,14 +124,14 @@ function toggleBatchEdit() {
         @click="toggleBatchEdit"
         class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 border-r last:border-r-0 cursor-pointer"
         :style="{ borderColor: 'var(--dp-border-secondary)' }"
-        :class="batchEditMode ? 'bg-orange-50/70 text-orange-700 hover:bg-orange-50' : 'hover:bg-gray-500/10 dark:hover:bg-gray-400/10'"
+        :class="batchEditMode ? 'bg-dp-warning-soft/70 text-dp-warning hover:bg-dp-warning-soft' : 'hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover'"
       >
         편집모드
       </button>
       <button
         v-if="canEditMyCalendar && teamHasDutyBatchTemplate && !batchEditMode"
         @click="emit('show-excel-upload-modal')"
-        class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1 cursor-pointer hover:bg-gray-500/10 dark:hover:bg-gray-400/10"
+        class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1 cursor-pointer hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover"
       >
         <FileSpreadsheet class="w-4 h-4" />
         <span class="hidden sm:inline">엑셀</span>

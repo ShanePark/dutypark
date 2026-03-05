@@ -97,7 +97,7 @@ function handleKakaoLogin() {
               v-model="email"
               type="text"
               autocomplete="email"
-              class="w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent transition"
+              class="w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-dp-text-primary focus:border-transparent transition"
               :style="{
                 border: '1px solid var(--dp-border-input)',
                 backgroundColor: 'var(--dp-bg-input)',
@@ -110,7 +110,7 @@ function handleKakaoLogin() {
                 id="rememberMe"
                 v-model="rememberMe"
                 type="checkbox"
-                class="h-4 w-4 text-gray-900 focus:ring-gray-500 rounded cursor-pointer"
+                class="h-4 w-4 text-dp-text-primary focus:ring-dp-text-secondary rounded cursor-pointer"
                 :style="{ borderColor: 'var(--dp-border-input)' }"
               />
               <label for="rememberMe" class="ml-2 text-sm cursor-pointer" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -131,7 +131,7 @@ function handleKakaoLogin() {
               required
               maxlength="20"
               autocomplete="current-password"
-              class="w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent transition"
+              class="w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-dp-text-primary focus:border-transparent transition"
               :style="{
                 border: '1px solid var(--dp-border-input)',
                 backgroundColor: 'var(--dp-bg-input)',
@@ -142,7 +142,7 @@ function handleKakaoLogin() {
           </div>
 
           <!-- Error Message -->
-          <div v-if="error" class="text-sm p-3 rounded-xl border" :class="remainingAttempts !== null && remainingAttempts <= 1 ? 'text-orange-700 bg-orange-50 border-orange-200' : 'text-red-600 bg-red-50 border-red-100'">
+          <div v-if="error" class="text-sm p-3 rounded-xl border" :class="remainingAttempts !== null && remainingAttempts <= 1 ? 'text-dp-warning bg-dp-warning-soft border-dp-warning-border' : 'text-dp-danger bg-dp-danger-soft border-dp-danger-border'">
             <div>{{ error }}</div>
             <div v-if="remainingAttempts !== null && remainingAttempts <= 3" class="mt-1 font-medium">
               <template v-if="remainingAttempts === 0">
@@ -161,7 +161,7 @@ function handleKakaoLogin() {
           <button
             type="submit"
             :disabled="isLoading"
-            class="w-full bg-gray-900 text-white py-3.5 px-4 rounded-xl font-semibold hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+            class="w-full bg-dp-surface-strong text-dp-text-on-dark py-3.5 px-4 rounded-xl font-semibold hover:bg-dp-surface-strong-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
           >
             {{ isLoading ? '로그인 중...' : '로그인' }}
           </button>

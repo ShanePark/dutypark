@@ -132,7 +132,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
   <Teleport to="body">
     <div
       v-if="isOpen && schedule"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 pb-16 sm:pb-0"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50 pb-16 sm:pb-0"
       @click.self="emit('close')"
     >
       <div class="modal-container max-w-[95vw] sm:max-w-lg max-h-[calc(100dvh-5rem)] sm:max-h-[85vh]">
@@ -228,7 +228,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
                 <span
                   v-for="tag in displayTags"
                   :key="tag.id"
-                  class="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full"
+                  class="inline-flex items-center px-2 py-0.5 bg-dp-accent-soft text-dp-accent-hover text-xs rounded-full"
                 >
                   {{ tag.name }}
                 </span>

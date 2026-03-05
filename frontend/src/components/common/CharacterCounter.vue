@@ -9,9 +9,9 @@ const props = defineProps<{
 const percentage = computed(() => (props.current / props.max) * 100)
 
 const colorClass = computed(() => {
-  if (percentage.value >= 100) return 'text-red-500'
-  if (percentage.value >= 95) return 'text-orange-500'
-  if (percentage.value >= 90) return 'text-yellow-600'
+  if (percentage.value >= 100) return 'text-dp-danger'
+  if (percentage.value >= 95) return 'text-dp-warning'
+  if (percentage.value >= 90) return 'text-dp-warning'
   return 'char-counter-normal'
 })
 </script>

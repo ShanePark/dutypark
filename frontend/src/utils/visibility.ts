@@ -17,14 +17,14 @@ export const VISIBILITY_LABELS: Record<CalendarVisibility, string> = {
 }
 
 export const VISIBILITY_COLORS: Record<CalendarVisibility, string> = {
-  PUBLIC: 'bg-green-500',
-  FRIENDS: 'bg-blue-500',
-  FAMILY: 'bg-orange-500',
-  PRIVATE: 'bg-red-500',
+  PUBLIC: 'bg-dp-success',
+  FRIENDS: 'bg-dp-accent',
+  FAMILY: 'bg-dp-warning',
+  PRIVATE: 'bg-dp-danger',
 }
 
 export function getVisibilityColor(visibility: string): string {
-  return VISIBILITY_COLORS[visibility as CalendarVisibility] || 'bg-blue-500'
+  return VISIBILITY_COLORS[visibility as CalendarVisibility] || 'bg-dp-accent'
 }
 
 export function getVisibilityIcon(visibility: string): LucideIcon {

@@ -106,7 +106,7 @@ onUnmounted(() => {
             :aria-label="themeStore.isDark ? '라이트 모드로 전환' : '다크 모드로 전환'"
           >
             <Moon v-if="!themeStore.isDark" class="w-5 h-5 theme-icon" />
-            <Sun v-else class="w-5 h-5 text-amber-400 theme-icon" />
+            <Sun v-else class="w-5 h-5 text-dp-warning theme-icon" />
           </button>
 
           <template v-if="authStore.isLoggedIn">
@@ -164,7 +164,7 @@ onUnmounted(() => {
                   친구 관리
                   <span
                     v-if="notificationStore.hasFriendRequests"
-                    class="ml-auto px-1.5 py-0.5 text-xs font-bold bg-red-500 text-white rounded-full min-w-[18px] text-center"
+                    class="ml-auto px-1.5 py-0.5 text-xs font-bold bg-dp-danger text-dp-text-on-dark rounded-full min-w-[18px] text-center"
                   >
                     {{ notificationStore.friendRequestCountDisplay }}
                   </span>

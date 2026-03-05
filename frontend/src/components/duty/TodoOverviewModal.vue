@@ -216,7 +216,7 @@ function handleTodoClick(todo: Todo) {
   <Teleport to="body">
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50"
       @click.self="emit('close')"
     >
       <div class="modal-container modal-container-rounded max-w-[95vw] sm:max-w-xl max-h-[90dvh] sm:max-h-[85vh]">
@@ -224,19 +224,19 @@ function handleTodoClick(todo: Todo) {
         <div class="flex items-center justify-between px-4 py-3 sm:px-5 sm:py-4" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderBottom: '1px solid var(--dp-border-primary)' }">
           <div class="flex items-center gap-2">
             <h2 class="text-base sm:text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">Todo</h2>
-            <span class="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">
+            <span class="bg-dp-accent text-dp-text-on-dark text-xs px-2 py-0.5 rounded-full">
               {{ todos.length }}
             </span>
           </div>
           <div class="flex items-center gap-2">
             <button
               @click="emit('add')"
-              class="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition cursor-pointer"
+              class="flex items-center gap-1 px-3 py-1.5 bg-dp-success text-dp-text-on-dark text-sm rounded-lg hover:bg-dp-success-hover transition cursor-pointer"
             >
               <Plus class="w-4 h-4" />
               <span class="hidden sm:inline">추가</span>
             </button>
-            <button @click="emit('close')" class="p-1.5 rounded-lg transition hover:bg-black/10 cursor-pointer" :style="{ color: 'var(--dp-text-muted)' }">
+            <button @click="emit('close')" class="p-1.5 rounded-lg transition hover:bg-dp-overlay-dark/10 cursor-pointer" :style="{ color: 'var(--dp-text-muted)' }">
               <X class="w-5 h-5" />
             </button>
           </div>
@@ -250,8 +250,8 @@ function handleTodoClick(todo: Todo) {
             class="px-3 py-1 text-xs sm:text-sm rounded-full transition whitespace-nowrap cursor-pointer"
             :class="
               filters.active && filters.completed
-                ? 'bg-slate-700 text-white'
-                : 'hover:bg-black/5'
+                ? 'bg-dp-surface-strong text-dp-text-on-dark'
+                : 'hover:bg-dp-overlay-dark/5'
             "
             :style="!(filters.active && filters.completed) ? { color: 'var(--dp-text-secondary)' } : {}"
           >
@@ -262,8 +262,8 @@ function handleTodoClick(todo: Todo) {
             class="px-3 py-1 text-xs sm:text-sm rounded-full transition whitespace-nowrap cursor-pointer"
             :class="
               filters.active && !filters.completed
-                ? 'bg-blue-500 text-white'
-                : 'hover:bg-black/5'
+                ? 'bg-dp-accent text-dp-text-on-dark'
+                : 'hover:bg-dp-overlay-dark/5'
             "
             :style="!(filters.active && !filters.completed) ? { color: 'var(--dp-text-secondary)' } : {}"
           >
@@ -274,8 +274,8 @@ function handleTodoClick(todo: Todo) {
             class="px-3 py-1 text-xs sm:text-sm rounded-full transition whitespace-nowrap cursor-pointer"
             :class="
               !filters.active && filters.completed
-                ? 'bg-green-500 text-white'
-                : 'hover:bg-black/5'
+                ? 'bg-dp-success text-dp-text-on-dark'
+                : 'hover:bg-dp-overlay-dark/5'
             "
             :style="!(!filters.active && filters.completed) ? { color: 'var(--dp-text-secondary)' } : {}"
           >
@@ -297,8 +297,8 @@ function handleTodoClick(todo: Todo) {
               :data-id="todo.id"
               class="rounded-lg overflow-hidden transition-all cursor-pointer group border"
               :class="{
-                'todo-item-completed opacity-60 border-green-200': isDone(todo.status),
-                'hover:shadow-md hover:border-blue-300 todo-item-active': isActive(todo.status)
+                'todo-item-completed opacity-60 border-dp-success-border': isDone(todo.status),
+                'hover:shadow-md hover:border-dp-accent-border todo-item-active': isActive(todo.status)
               }"
               :style="{
                 backgroundColor: 'var(--dp-bg-card)',
@@ -311,7 +311,7 @@ function handleTodoClick(todo: Todo) {
                 <div
                   class="flex-shrink-0 w-9 sm:w-10 flex items-center justify-center"
                   :class="{
-                    'bg-green-500/10': isDone(todo.status)
+                    'bg-dp-success/10': isDone(todo.status)
                   }"
                   :style="{
                     backgroundColor: isActive(todo.status) ? 'var(--dp-bg-tertiary)' : undefined
@@ -320,12 +320,12 @@ function handleTodoClick(todo: Todo) {
                   <!-- Completed: check icon -->
                   <CheckCircle2
                     v-if="isDone(todo.status)"
-                    class="w-5 h-5 text-green-500"
+                    class="w-5 h-5 text-dp-success"
                   />
                   <!-- Active + sortable: drag handle -->
                   <div
                     v-else-if="isSortingEnabled"
-                    class="drag-handle cursor-grab active:cursor-grabbing hover:text-blue-600 rounded p-1 transition-colors"
+                    class="drag-handle cursor-grab active:cursor-grabbing hover:text-dp-accent rounded p-1 transition-colors"
                     :style="{ color: 'var(--dp-text-muted)' }"
                     @click.stop
                     title="드래그하여 순서 변경"
@@ -343,7 +343,7 @@ function handleTodoClick(todo: Todo) {
                       <h3
                         class="font-medium text-sm sm:text-base truncate"
                         :class="{
-                          'text-green-600 line-through': isDone(todo.status)
+                          'text-dp-success line-through': isDone(todo.status)
                         }"
                         :style="{
                           color: isActive(todo.status) ? 'var(--dp-text-primary)' : undefined
@@ -356,12 +356,12 @@ function handleTodoClick(todo: Todo) {
                           <Calendar class="w-3 h-3" />
                           {{ extractDatePart(todo.createdDate) }}
                         </span>
-                        <span v-if="todo.completedDate" class="flex items-center gap-1 text-green-500">
+                        <span v-if="todo.completedDate" class="flex items-center gap-1 text-dp-success">
                           <Check class="w-3 h-3" />
                           {{ extractDatePart(todo.completedDate) }}
                         </span>
-                        <FileText v-if="todo.content" class="w-3.5 h-3.5 text-blue-400" title="메모 있음" />
-                        <Paperclip v-if="todo.hasAttachments" class="w-3.5 h-3.5 text-purple-400" title="첨부파일 있음" />
+                        <FileText v-if="todo.content" class="w-3.5 h-3.5 text-dp-accent-light" title="메모 있음" />
+                        <Paperclip v-if="todo.hasAttachments" class="w-3.5 h-3.5 text-dp-accent-light" title="첨부파일 있음" />
                       </div>
                     </div>
 
@@ -370,7 +370,7 @@ function handleTodoClick(todo: Todo) {
                       <button
                         v-if="isActive(todo.status)"
                         @click="emit('complete', todo.id)"
-                        class="p-1.5 text-green-500 hover:bg-green-500/10 rounded-md transition cursor-pointer"
+                        class="p-1.5 text-dp-success hover:bg-dp-success/10 rounded-md transition cursor-pointer"
                         title="완료"
                       >
                         <Check class="w-4 h-4 sm:w-5 sm:h-5" />
@@ -378,21 +378,21 @@ function handleTodoClick(todo: Todo) {
                       <button
                         v-else
                         @click="emit('reopen', todo.id)"
-                        class="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-md transition cursor-pointer"
+                        class="p-1.5 text-dp-accent hover:bg-dp-accent/10 rounded-md transition cursor-pointer"
                         title="재오픈"
                       >
                         <RotateCcw class="w-4 h-4 sm:w-5 sm:h-5" />
                       </button>
                       <button
                         @click="emit('edit', todo)"
-                        class="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-md transition cursor-pointer"
+                        class="p-1.5 text-dp-accent hover:bg-dp-accent/10 rounded-md transition cursor-pointer"
                         title="수정"
                       >
                         <Pencil class="w-4 h-4 sm:w-5 sm:h-5" />
                       </button>
                       <button
                         @click="emit('delete', todo.id)"
-                        class="p-1.5 text-red-500 hover:bg-red-500/10 rounded-md transition cursor-pointer"
+                        class="p-1.5 text-dp-danger hover:bg-dp-danger/10 rounded-md transition cursor-pointer"
                         title="삭제"
                       >
                         <Trash2 class="w-4 h-4 sm:w-5 sm:h-5" />
@@ -412,13 +412,13 @@ function handleTodoClick(todo: Todo) {
 <style>
 /* SortableJS drag-and-drop styles - must be unscoped for dynamic classes */
 .sortable-ghost {
-  background-color: rgb(219 234 254) !important; /* bg-blue-100 */
-  border-color: rgb(147 197 253) !important; /* border-blue-300 */
+  background-color: rgb(219 234 254) !important; /* bg-dp-accent-soft */
+  border-color: rgb(147 197 253) !important; /* border-dp-accent-border */
   opacity: 0.6 !important;
 }
 
 .sortable-chosen {
-  box-shadow: 0 0 0 2px rgb(96 165 250), 0 10px 15px -3px rgb(0 0 0 / 0.1) !important; /* ring-2 ring-blue-400 shadow-lg */
+  box-shadow: 0 0 0 2px rgb(96 165 250), 0 10px 15px -3px rgb(0 0 0 / 0.1) !important; /* ring-2 ring-dp-accent shadow-lg */
 }
 
 .sortable-drag {

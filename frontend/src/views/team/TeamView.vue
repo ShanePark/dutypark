@@ -373,13 +373,13 @@ onMounted(() => {
   <div class="max-w-4xl mx-auto px-2 sm:px-4 py-4">
     <!-- Loading State -->
     <div v-if="loading" class="flex items-center justify-center py-20">
-      <Loader2 class="w-8 h-8 animate-spin text-blue-500" />
+      <Loader2 class="w-8 h-8 animate-spin text-dp-accent" />
     </div>
 
     <!-- No Team State -->
     <template v-else-if="!hasTeam">
       <div class="rounded-lg shadow overflow-hidden" :style="{ backgroundColor: 'var(--dp-bg-card)' }">
-        <div class="bg-gray-600 text-white font-bold text-xl text-center py-3">
+        <div class="bg-dp-surface-strong text-dp-text-on-dark font-bold text-xl text-center py-3">
           내 팀
         </div>
         <div class="flex flex-col items-center justify-center p-12" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -485,7 +485,7 @@ onMounted(() => {
           <button
             v-if="isTeamManager"
             @click="openNewScheduleModal"
-            class="px-3 py-1.5 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition flex items-center gap-1 w-full sm:w-auto justify-center cursor-pointer"
+            class="px-3 py-1.5 bg-dp-success text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-success-hover transition flex items-center gap-1 w-full sm:w-auto justify-center cursor-pointer"
           >
             <CalendarPlus class="w-4 h-4" />
             팀 일정 추가
@@ -518,14 +518,14 @@ onMounted(() => {
               <div v-if="isTeamManager" class="flex gap-1 ml-2 flex-shrink-0">
                 <button
                   @click="openEditScheduleModal(schedule)"
-                  class="p-1.5 text-blue-500 rounded-lg hover:bg-blue-100 transition cursor-pointer"
+                  class="p-1.5 text-dp-accent rounded-lg hover:bg-dp-accent-soft transition cursor-pointer"
                   title="수정"
                 >
                   <Pencil class="w-4 h-4" />
                 </button>
                 <button
                   @click="deleteSchedule(schedule.id)"
-                  class="p-1.5 text-red-500 rounded-lg hover:bg-red-100 transition cursor-pointer"
+                  class="p-1.5 text-dp-danger rounded-lg hover:bg-dp-danger-soft transition cursor-pointer"
                   title="삭제"
                 >
                   <Trash2 class="w-4 h-4" />
@@ -541,7 +541,7 @@ onMounted(() => {
 
       <!-- Shift Groups -->
       <div v-if="shiftLoading" class="mt-3 flex items-center justify-center py-8">
-        <Loader2 class="w-6 h-6 animate-spin text-blue-500" />
+        <Loader2 class="w-6 h-6 animate-spin text-dp-accent" />
       </div>
       <div v-else-if="shift.length > 0" class="mt-3 space-y-3">
         <template v-for="group in shift" :key="group.dutyType.id">
@@ -594,7 +594,7 @@ onMounted(() => {
     <!-- Schedule Modal -->
     <div
       v-if="showScheduleModal"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
       @click.self="closeScheduleModal"
     >
       <div class="rounded-lg shadow-xl w-full max-w-lg" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
@@ -618,7 +618,7 @@ onMounted(() => {
               v-model="scheduleForm.content"
               type="text"
               maxlength="50"
-              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent"
               :style="{
                 backgroundColor: 'var(--dp-bg-input)',
                 borderColor: 'var(--dp-border-input)',
@@ -635,7 +635,7 @@ onMounted(() => {
             <textarea
               v-model="scheduleForm.description"
               rows="4"
-              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent resize-none"
               :style="{
                 backgroundColor: 'var(--dp-bg-input)',
                 borderColor: 'var(--dp-border-input)',
@@ -669,7 +669,7 @@ onMounted(() => {
               <input
                 v-model="scheduleForm.endDate"
                 type="date"
-                class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent"
                 :style="{
                   backgroundColor: 'var(--dp-bg-input)',
                   borderColor: 'var(--dp-border-input)',
@@ -684,7 +684,7 @@ onMounted(() => {
           <button
             @click="saveSchedule"
             :disabled="saving || !scheduleForm.content.trim()"
-            class="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
+            class="px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
           >
             <Loader2 v-if="saving" class="w-4 h-4 animate-spin" />
             저장

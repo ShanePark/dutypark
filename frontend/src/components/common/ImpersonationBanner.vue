@@ -93,8 +93,8 @@ async function handleRestore() {
     class="impersonation-banner flex items-center justify-between px-4 py-2 sm:py-1.5 fixed top-0 left-0 right-0 z-50"
   >
     <div class="flex items-center gap-2 min-w-0">
-      <AlertTriangle class="w-4 h-4 flex-shrink-0 text-amber-800" />
-      <span class="text-xs sm:text-sm text-amber-900 truncate">
+      <AlertTriangle class="w-4 h-4 flex-shrink-0 text-dp-warning" />
+      <span class="text-xs sm:text-sm text-dp-warning truncate">
         <span class="font-semibold">{{ authStore.user?.name }}</span>
         <span class="hidden sm:inline"> 계정으로 활동 중</span>
         <span class="sm:hidden"> 계정</span>
@@ -136,12 +136,12 @@ async function handleRestore() {
   color: #fef3c7;
 }
 
-.dark .impersonation-banner .text-amber-700 {
+.dark .impersonation-banner .text-dp-warning {
   color: #fcd34d;
 }
 
-.dark .impersonation-banner .text-amber-800,
-.dark .impersonation-banner .text-amber-900 {
+.dark .impersonation-banner .text-dp-warning,
+.dark .impersonation-banner .text-dp-warning {
   color: #fef3c7;
 }
 

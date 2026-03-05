@@ -159,7 +159,7 @@ onUnmounted(() => {
   <Teleport to="body">
     <div
       v-if="isOpen && images.length > 0"
-      class="fixed inset-0 z-[60] flex items-center justify-center bg-black/90"
+      class="fixed inset-0 z-[60] flex items-center justify-center bg-dp-overlay-dark/90"
       @click.self="emit('close')"
       @touchstart="handleTouchStart"
       @touchmove="handleTouchMove"
@@ -168,7 +168,7 @@ onUnmounted(() => {
       <!-- Close button -->
       <button
         @click="emit('close')"
-        class="absolute top-4 right-4 p-2 text-white hover:bg-white/20 rounded-full transition z-10 cursor-pointer"
+        class="absolute top-4 right-4 p-2 text-dp-text-on-dark hover:bg-dp-overlay-light/20 rounded-full transition z-10 cursor-pointer"
       >
         <X class="w-6 h-6" />
       </button>
@@ -177,7 +177,7 @@ onUnmounted(() => {
       <button
         v-if="currentIndex > 0"
         @click="prevImage"
-        class="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-3 sm:p-2 text-white hover:bg-white/20 active:bg-white/30 rounded-full transition z-10 cursor-pointer"
+        class="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-3 sm:p-2 text-dp-text-on-dark hover:bg-dp-overlay-light/20 active:bg-dp-overlay-light/30 rounded-full transition z-10 cursor-pointer"
       >
         <ChevronLeft class="w-8 h-8" />
       </button>
@@ -190,10 +190,10 @@ onUnmounted(() => {
           :alt="images[currentIndex]?.originalFilename"
           class="max-w-full max-h-[70vh] sm:max-h-[80vh] object-contain"
         />
-        <div v-else class="text-white">{{ isLoading ? '로딩 중...' : '이미지를 불러올 수 없습니다' }}</div>
+        <div v-else class="text-dp-text-on-dark">{{ isLoading ? '로딩 중...' : '이미지를 불러올 수 없습니다' }}</div>
 
         <!-- Image info -->
-        <div class="mt-4 text-white text-center">
+        <div class="mt-4 text-dp-text-on-dark text-center">
           <div class="text-sm">{{ images[currentIndex]?.originalFilename }}</div>
           <div class="text-xs mt-1" style="color: rgba(255, 255, 255, 0.7)">
             {{ currentIndex + 1 }} / {{ images.length }}
@@ -203,7 +203,7 @@ onUnmounted(() => {
         <!-- Download button - larger touch area on mobile -->
         <button
           @click="downloadImage"
-          class="mt-4 flex items-center gap-2 px-5 py-3 sm:px-4 sm:py-2 bg-white/20 hover:bg-white/30 active:bg-white/40 rounded-lg text-white transition cursor-pointer"
+          class="mt-4 flex items-center gap-2 px-5 py-3 sm:px-4 sm:py-2 bg-dp-overlay-light/20 hover:bg-dp-overlay-light/30 active:bg-dp-overlay-light/40 rounded-lg text-dp-text-on-dark transition cursor-pointer"
         >
           <Download class="w-5 h-5 sm:w-4 sm:h-4" />
           다운로드
@@ -214,7 +214,7 @@ onUnmounted(() => {
       <button
         v-if="currentIndex < images.length - 1"
         @click="nextImage"
-        class="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-3 sm:p-2 text-white hover:bg-white/20 active:bg-white/30 rounded-full transition z-10 cursor-pointer"
+        class="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-3 sm:p-2 text-dp-text-on-dark hover:bg-dp-overlay-light/20 active:bg-dp-overlay-light/30 rounded-full transition z-10 cursor-pointer"
       >
         <ChevronRight class="w-8 h-8" />
       </button>

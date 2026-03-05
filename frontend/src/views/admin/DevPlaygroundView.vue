@@ -70,10 +70,10 @@ onMounted(() => {
       </router-link>
       <router-link
         to="/admin/dev"
-        class="bg-gray-700 text-white rounded-xl p-4 hover:bg-gray-800 transition"
+        class="bg-dp-surface-strong text-dp-text-on-dark rounded-xl p-4 hover:bg-dp-surface-strong-hover transition"
       >
-        <Code2 class="w-6 h-6 mb-2 text-white" />
-        <span class="font-medium text-white">개발</span>
+        <Code2 class="w-6 h-6 mb-2 text-dp-text-on-dark" />
+        <span class="font-medium text-dp-text-on-dark">개발</span>
       </router-link>
       <a
         href="/docs/index.html"

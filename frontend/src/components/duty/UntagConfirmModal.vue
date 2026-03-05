@@ -21,7 +21,7 @@ function confirm() {
   <Teleport to="body">
     <div
       v-if="props.isOpen"
-      class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+      class="fixed inset-0 z-[60] flex items-center justify-center bg-dp-overlay-dark/50 p-4"
       @click.self="close"
     >
       <div
@@ -57,7 +57,7 @@ function confirm() {
         <div class="pb-4 flex justify-center gap-2">
           <button
             @click="confirm"
-            class="px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-all duration-200 hover:-translate-y-px cursor-pointer"
+            class="px-5 py-2 bg-dp-warning hover:bg-dp-warning-hover text-dp-text-on-dark rounded-lg text-sm font-medium transition-all duration-200 hover:-translate-y-px cursor-pointer"
             style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);"
           >
             태그 제거

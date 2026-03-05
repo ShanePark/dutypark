@@ -70,14 +70,14 @@ function handleToggle(friendId: number) {
   <Teleport to="body">
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50"
       @click.self="emit('close')"
     >
       <div class="modal-container max-w-[95vw] sm:max-w-md max-h-[90dvh] sm:max-h-[90vh]">
         <!-- Header -->
         <div class="flex items-center justify-between p-3 sm:p-4" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderBottom: '1px solid var(--dp-border-primary)' }">
           <div class="flex items-center gap-2">
-            <Users class="w-5 h-5 text-blue-600" />
+            <Users class="w-5 h-5 text-dp-accent" />
             <h2 class="text-base sm:text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">함께보기</h2>
           </div>
           <button @click="emit('close')" class="p-2 rounded-full hover-close-btn cursor-pointer">
@@ -86,7 +86,7 @@ function handleToggle(friendId: number) {
         </div>
 
         <!-- Description -->
-        <div class="px-3 sm:px-4 py-2 text-xs sm:text-sm bg-blue-600/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
+        <div class="px-3 sm:px-4 py-2 text-xs sm:text-sm bg-dp-accent/10 text-dp-accent dark:bg-dp-accent/20 dark:text-dp-accent-light">
           친구의 근무표를 함께 볼 수 있습니다. (최대 {{ maxSelections }}명)
         </div>
 
@@ -103,7 +103,7 @@ function handleToggle(friendId: number) {
               @click="handleToggle(friend.id)"
               class="flex items-center gap-2 p-2 rounded-lg cursor-pointer transition"
               :class="{
-                'bg-blue-600/15 dark:bg-blue-500/25 border-2 border-blue-500': isSelected(friend.id),
+                'bg-dp-accent/15 dark:bg-dp-accent/25 border-2 border-dp-accent-border': isSelected(friend.id),
                 'border-2 border-transparent friend-item':
                   !isSelected(friend.id) && canSelectMore,
                 'opacity-50 cursor-not-allowed border-2 border-transparent friend-item-disabled':
@@ -135,9 +135,9 @@ function handleToggle(friendId: number) {
               <!-- Check icon -->
               <div
                 v-if="isSelected(friend.id)"
-                class="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0"
+                class="w-5 h-5 bg-dp-accent rounded-full flex items-center justify-center flex-shrink-0"
               >
-                <Check class="w-3 h-3 text-white" />
+                <Check class="w-3 h-3 text-dp-text-on-dark" />
               </div>
             </div>
           </div>
@@ -151,7 +151,7 @@ function handleToggle(friendId: number) {
             </span>
             <button
               @click="emit('close')"
-              class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition cursor-pointer"
+              class="w-full sm:w-auto px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
             >
               확인
             </button>

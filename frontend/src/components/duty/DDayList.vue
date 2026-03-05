@@ -38,7 +38,7 @@ function getDDayBadgeClass(calc: number): string {
       class="relative overflow-hidden rounded-xl sm:rounded-2xl cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-lg border"
       :class="[
         pinnedDDayId === dday.id
-          ? 'ring-2 ring-amber-400 shadow-md'
+          ? 'ring-2 ring-dp-warning shadow-md'
           : 'shadow-sm',
         dday.calc <= 0
           ? 'dday-card-past'
@@ -59,12 +59,12 @@ function getDDayBadgeClass(calc: number): string {
           <button
             @click.stop="emit('toggle-pin', dday)"
             class="p-1 sm:p-1.5 rounded-full transition hover:scale-110 cursor-pointer"
-            :class="pinnedDDayId === dday.id ? 'hover:bg-amber-100' : 'hover:bg-gray-100'"
+            :class="pinnedDDayId === dday.id ? 'hover:bg-dp-warning-soft' : 'hover:bg-dp-bg-hover'"
             :title="pinnedDDayId === dday.id ? '고정 해제' : '캘린더에 고정'"
           >
             <Star
               class="w-4 h-4 sm:w-5 sm:h-5 transition-colors"
-              :class="pinnedDDayId === dday.id ? 'text-amber-500 fill-amber-500' : 'text-gray-300 hover:text-amber-400'"
+              :class="pinnedDDayId === dday.id ? 'text-dp-warning fill-dp-warning' : 'text-dp-text-muted hover:text-dp-warning'"
             />
           </button>
         </div>
@@ -87,13 +87,13 @@ function getDDayBadgeClass(calc: number): string {
     <div
       v-if="isMyCalendar"
       @click="emit('add')"
-      class="rounded-xl sm:rounded-2xl border-2 border-dashed cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-all duration-300 flex flex-col items-center justify-center min-h-[100px] sm:min-h-[120px] group"
+      class="rounded-xl sm:rounded-2xl border-2 border-dashed cursor-pointer hover:border-dp-accent-border hover:bg-dp-accent-soft/50 transition-all duration-300 flex flex-col items-center justify-center min-h-[100px] sm:min-h-[120px] group"
       :style="{ borderColor: 'var(--dp-border-secondary)' }"
     >
-      <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full group-hover:bg-blue-100 flex items-center justify-center mb-1.5 sm:mb-2 transition-colors" :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }">
-        <Plus class="w-5 h-5 sm:w-6 sm:h-6 group-hover:text-blue-500 transition-colors" :style="{ color: 'var(--dp-text-muted)' }" />
+      <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full group-hover:bg-dp-accent-soft flex items-center justify-center mb-1.5 sm:mb-2 transition-colors" :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }">
+        <Plus class="w-5 h-5 sm:w-6 sm:h-6 group-hover:text-dp-accent transition-colors" :style="{ color: 'var(--dp-text-muted)' }" />
       </div>
-      <span class="text-xs sm:text-sm group-hover:text-blue-600 transition-colors font-medium" :style="{ color: 'var(--dp-text-muted)' }">디데이 추가</span>
+      <span class="text-xs sm:text-sm group-hover:text-dp-accent transition-colors font-medium" :style="{ color: 'var(--dp-text-muted)' }">디데이 추가</span>
     </div>
   </div>
 </template>

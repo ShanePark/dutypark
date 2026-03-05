@@ -75,12 +75,12 @@ function handleSearchClick() {
           placeholder="검색"
           @input="handleSearchInput"
           @keyup.enter="emit('search')"
-          class="px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none w-12 sm:w-20 border-none"
+          class="px-2 py-1.5 text-sm focus:ring-2 focus:ring-dp-accent focus:outline-none w-12 sm:w-20 border-none"
           :style="{ backgroundColor: 'var(--dp-bg-input)', color: 'var(--dp-text-primary)' }"
         />
         <button
           @click="handleSearchClick"
-          class="px-2 py-1.5 bg-gray-800 text-white hover:bg-gray-700 transition flex items-center justify-center cursor-pointer"
+          class="px-2 py-1.5 bg-dp-surface-strong text-dp-text-on-dark hover:bg-dp-surface-strong-hover transition flex items-center justify-center cursor-pointer"
         >
           <Search class="w-4 h-4" />
         </button>

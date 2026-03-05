@@ -11,6 +11,7 @@ import { useEscapeKey } from '@/composables/useEscapeKey'
 import { useKakao } from '@/composables/useKakao'
 import { usePushNotification } from '@/composables/usePushNotification'
 import type { FriendDto, MemberDto, RefreshTokenDto, CalendarVisibility } from '@/types'
+import { VISIBILITY_COLORS } from '@/utils/visibility'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
 import ProfilePhotoUploader from '@/components/common/ProfilePhotoUploader.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
@@ -212,11 +213,13 @@ const visibilityLabel = computed(() => {
 })
 
 const visibilityOptions: { value: CalendarVisibility; label: string; color: string; description: string }[] = [
-  { value: 'PUBLIC', label: '누구나', color: 'bg-green-500', description: '모든 사용자가 내 시간표를 볼 수 있습니다' },
-  { value: 'FRIENDS', label: '친구만', color: 'bg-yellow-500', description: '친구로 등록된 사용자만 볼 수 있습니다' },
-  { value: 'FAMILY', label: '가족만', color: 'bg-orange-500', description: '가족으로 등록된 사용자만 볼 수 있습니다' },
-  { value: 'PRIVATE', label: '비공개', color: 'bg-red-500', description: '나만 볼 수 있습니다' },
+  { value: 'PUBLIC', label: '누구나', color: VISIBILITY_COLORS.PUBLIC, description: '모든 사용자가 내 시간표를 볼 수 있습니다' },
+  { value: 'FRIENDS', label: '친구만', color: VISIBILITY_COLORS.FRIENDS, description: '친구로 등록된 사용자만 볼 수 있습니다' },
+  { value: 'FAMILY', label: '가족만', color: VISIBILITY_COLORS.FAMILY, description: '가족으로 등록된 사용자만 볼 수 있습니다' },
+  { value: 'PRIVATE', label: '비공개', color: VISIBILITY_COLORS.PRIVATE, description: '나만 볼 수 있습니다' },
 ]
+
+const visibilityColorClass = computed(() => VISIBILITY_COLORS[calendarVisibility.value] ?? 'bg-dp-accent')
 
 async function setVisibility(value: CalendarVisibility) {
   if (!authStore.user) return
@@ -506,7 +509,7 @@ onMounted(async () => {
 
     <!-- Loading State -->
     <div v-if="loading" class="flex items-center justify-center py-20">
-      <Loader2 class="w-8 h-8 animate-spin text-blue-500" />
+      <Loader2 class="w-8 h-8 animate-spin text-dp-accent" />
     </div>
 
     <template v-else>
@@ -579,12 +582,7 @@ onMounted(async () => {
           >
             <span
               class="w-2 h-2 rounded-full"
-              :class="{
-                'bg-green-500': calendarVisibility === 'PUBLIC',
-                'bg-yellow-500': calendarVisibility === 'FRIENDS',
-                'bg-orange-500': calendarVisibility === 'FAMILY',
-                'bg-red-500': calendarVisibility === 'PRIVATE',
-              }"
+              :class="visibilityColorClass"
             ></span>
             {{ visibilityLabel }}
             <ChevronRight class="w-4 h-4" />
@@ -642,7 +640,7 @@ onMounted(async () => {
                 : 'var(--dp-accent)',
               color: pushNotification.permission.value === 'granted' && pushNotification.isSubscribed.value
                 ? 'var(--dp-text-primary)'
-                : 'white'
+                : 'var(--dp-text-on-dark)'
             }"
           >
             <Loader2 v-if="togglingPush" class="w-4 h-4 animate-spin" />
@@ -676,7 +674,7 @@ onMounted(async () => {
               v-model="selectedManagerToAdd"
               @change="assignManager"
               :disabled="savingManager || availableFamilyMembers.length === 0"
-              class="flex-1 px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+              class="flex-1 px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-accent focus:border-transparent disabled:opacity-50"
               :style="{ borderWidth: '1px', borderColor: 'var(--dp-border-primary)', backgroundColor: 'var(--dp-bg-secondary)', color: 'var(--dp-text-primary)' }"
             >
               <option value="">관리자 추가</option>
@@ -684,7 +682,7 @@ onMounted(async () => {
                 {{ member.name }}
               </option>
             </select>
-            <Loader2 v-if="savingManager" class="w-5 h-5 animate-spin text-blue-500" />
+            <Loader2 v-if="savingManager" class="w-5 h-5 animate-spin text-dp-accent" />
           </div>
 
           <!-- Current Managers -->
@@ -730,7 +728,7 @@ onMounted(async () => {
                 <button
                   @click="handleImpersonate(member)"
                   :disabled="impersonating === member.id"
-                  class="flex items-center gap-1.5 px-3 py-2 min-h-10 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  class="flex items-center gap-1.5 px-3 py-2 min-h-10 text-sm font-medium text-dp-accent bg-dp-accent-soft hover:bg-dp-accent-soft rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <Loader2 v-if="impersonating === member.id" class="w-4 h-4 animate-spin" />
                   <LogIn v-else class="w-4 h-4" />
@@ -762,7 +760,7 @@ onMounted(async () => {
             v-if="tokens.filter(t => !t.isCurrentLogin).length > 0"
             @click="deleteOtherTokens"
             :disabled="deletingOtherTokens"
-            class="px-3 py-2 min-h-10 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+            class="px-3 py-2 min-h-10 text-xs font-medium text-dp-danger bg-dp-danger-soft hover:bg-dp-danger-soft rounded-lg transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
           >
             <Loader2 v-if="deletingOtherTokens" class="w-4 h-4 animate-spin" />
             <LogOut v-else class="w-4 h-4" />
@@ -800,7 +798,7 @@ onMounted(async () => {
               </div>
             </div>
             <div>
-              <span v-if="sso.connected" class="flex items-center gap-1 text-green-600 text-sm">
+              <span v-if="sso.connected" class="flex items-center gap-1 text-dp-success text-sm">
                 <Check class="w-4 h-4" />
                 연동중
               </span>
@@ -808,7 +806,7 @@ onMounted(async () => {
                 v-else
                 @click="connectSso(sso.provider)"
                 :disabled="connectingSso"
-                class="px-4 py-2.5 sm:py-1.5 min-h-11 sm:min-h-0 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                class="px-4 py-2.5 sm:py-1.5 min-h-11 sm:min-h-0 text-sm font-medium text-dp-accent bg-dp-accent-soft hover:bg-dp-accent-soft rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {{ connectingSso ? '연동 중...' : '연동하기' }}
               </button>
@@ -827,14 +825,14 @@ onMounted(async () => {
           <button
             v-if="memberInfo?.hasPassword"
             @click="openPasswordModal"
-            class="px-4 py-3 sm:py-2 min-h-11 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition flex items-center gap-2 cursor-pointer"
+            class="px-4 py-3 sm:py-2 min-h-11 text-sm font-medium text-dp-accent bg-dp-accent-soft hover:bg-dp-accent-soft rounded-lg transition flex items-center gap-2 cursor-pointer"
           >
             <Lock class="w-4 h-4" />
             비밀번호 변경
           </button>
           <button
             @click="deleteAccount"
-            class="px-4 py-3 sm:py-2 min-h-11 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition flex items-center gap-2 cursor-pointer"
+            class="px-4 py-3 sm:py-2 min-h-11 text-sm font-medium text-dp-danger bg-dp-danger-soft hover:bg-dp-danger-soft rounded-lg transition flex items-center gap-2 cursor-pointer"
           >
             <UserX class="w-4 h-4" />
             회원 탈퇴
@@ -846,7 +844,7 @@ onMounted(async () => {
       <section class="rounded-xl shadow-sm p-4 sm:p-6" :style="{ backgroundColor: 'var(--dp-bg-card)', borderWidth: '1px', borderColor: 'var(--dp-border-primary)' }">
         <button
           @click="logout"
-          class="w-full px-4 py-3 min-h-12 text-yellow-700 bg-yellow-100 hover:bg-yellow-200 rounded-lg font-medium transition flex items-center justify-center gap-2 cursor-pointer"
+          class="w-full px-4 py-3 min-h-12 text-dp-warning bg-dp-warning-soft hover:bg-dp-warning-soft rounded-lg font-medium transition flex items-center justify-center gap-2 cursor-pointer"
         >
           <LogOut class="w-5 h-5" />
           로그아웃
@@ -858,7 +856,7 @@ onMounted(async () => {
     <Teleport to="body">
       <div
         v-if="showVisibilityModal"
-        class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
         @click.self="showVisibilityModal = false"
       >
         <div class="rounded-xl shadow-xl max-w-md w-full" :style="{ backgroundColor: 'var(--dp-bg-card)' }">
@@ -890,7 +888,7 @@ onMounted(async () => {
                   <span class="font-medium" :style="{ color: 'var(--dp-text-primary)' }">{{ option.label }}</span>
                   <Check
                     v-if="calendarVisibility === option.value"
-                    class="w-5 h-5 text-blue-500 ml-auto"
+                    class="w-5 h-5 text-dp-accent ml-auto"
                   />
                   <Loader2
                     v-if="savingVisibility && calendarVisibility !== option.value"
@@ -919,7 +917,7 @@ onMounted(async () => {
     <Teleport to="body">
       <div
         v-if="showPasswordModal"
-        class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
         @click.self="showPasswordModal = false"
       >
         <div class="rounded-xl shadow-xl max-w-md w-full" :style="{ backgroundColor: 'var(--dp-bg-card)' }">
@@ -936,7 +934,7 @@ onMounted(async () => {
                 v-model="passwordForm.currentPassword"
                 type="password"
                 maxlength="20"
-                class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-accent"
                 :style="{
                   borderWidth: '1px',
                   borderColor: passwordErrors.currentPassword ? 'var(--dp-danger)' : 'var(--dp-border-primary)',
@@ -945,7 +943,7 @@ onMounted(async () => {
                 }"
                 placeholder="현재 비밀번호"
               />
-              <p v-if="passwordErrors.currentPassword" class="text-sm text-red-500 mt-1">
+              <p v-if="passwordErrors.currentPassword" class="text-sm text-dp-danger mt-1">
                 {{ passwordErrors.currentPassword }}
               </p>
             </div>
@@ -955,7 +953,7 @@ onMounted(async () => {
                 v-model="passwordForm.newPassword"
                 type="password"
                 maxlength="20"
-                class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-accent"
                 :style="{
                   borderWidth: '1px',
                   borderColor: passwordErrors.newPassword ? 'var(--dp-danger)' : 'var(--dp-border-primary)',
@@ -964,7 +962,7 @@ onMounted(async () => {
                 }"
                 placeholder="새 비밀번호 (8-20자)"
               />
-              <p v-if="passwordErrors.newPassword" class="text-sm text-red-500 mt-1">
+              <p v-if="passwordErrors.newPassword" class="text-sm text-dp-danger mt-1">
                 {{ passwordErrors.newPassword }}
               </p>
             </div>
@@ -974,7 +972,7 @@ onMounted(async () => {
                 v-model="passwordForm.confirmPassword"
                 type="password"
                 maxlength="20"
-                class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-accent"
                 :style="{
                   borderWidth: '1px',
                   borderColor: passwordErrors.confirmPassword ? 'var(--dp-danger)' : 'var(--dp-border-primary)',
@@ -983,7 +981,7 @@ onMounted(async () => {
                 }"
                 placeholder="새 비밀번호 확인"
               />
-              <p v-if="passwordErrors.confirmPassword" class="text-sm text-red-500 mt-1">
+              <p v-if="passwordErrors.confirmPassword" class="text-sm text-dp-danger mt-1">
                 {{ passwordErrors.confirmPassword }}
               </p>
             </div>
@@ -992,7 +990,7 @@ onMounted(async () => {
             <button
               @click="changePassword"
               :disabled="changingPassword"
-              class="flex-1 px-4 py-3 sm:py-2 min-h-11 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-medium transition disabled:opacity-50 flex items-center justify-center gap-2"
+              class="flex-1 px-4 py-3 sm:py-2 min-h-11 bg-dp-accent hover:bg-dp-accent-hover rounded-lg text-dp-text-on-dark font-medium transition disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Loader2 v-if="changingPassword" class="w-4 h-4 animate-spin" />
               {{ changingPassword ? '변경 중...' : '변경' }}
@@ -1014,7 +1012,7 @@ onMounted(async () => {
     <Teleport to="body">
       <div
         v-if="showAuxiliaryModal"
-        class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
         @click.self="showAuxiliaryModal = false"
       >
         <div class="rounded-xl shadow-xl max-w-md w-full" :style="{ backgroundColor: 'var(--dp-bg-card)' }">
@@ -1035,7 +1033,7 @@ onMounted(async () => {
                 v-model="auxiliaryName"
                 type="text"
                 maxlength="10"
-                class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-accent"
                 :style="{
                   borderWidth: '1px',
                   borderColor: 'var(--dp-border-primary)',
@@ -1052,7 +1050,7 @@ onMounted(async () => {
             <button
               @click="createAuxiliaryAccount"
               :disabled="creatingAuxiliary || !auxiliaryName.trim()"
-              class="flex-1 px-4 py-3 sm:py-2 min-h-11 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-medium transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+              class="flex-1 px-4 py-3 sm:py-2 min-h-11 bg-dp-accent hover:bg-dp-accent-hover rounded-lg text-dp-text-on-dark font-medium transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
             >
               <Loader2 v-if="creatingAuxiliary" class="w-4 h-4 animate-spin" />
               {{ creatingAuxiliary ? '생성 중...' : '생성' }}

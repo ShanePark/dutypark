@@ -140,7 +140,7 @@ function onUploadError(message: string) {
   <Teleport to="body">
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50"
       @click.self="handleClose"
     >
       <div class="modal-container max-w-[95vw] sm:max-w-xl max-h-[90dvh] sm:max-h-[90vh]">
@@ -175,14 +175,14 @@ function onUploadError(message: string) {
 
             <div>
               <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
-                제목 <span class="text-red-500">*</span>
+                제목 <span class="text-dp-danger">*</span>
                 <CharacterCounter :current="title.length" :max="50" />
               </label>
               <input
                 v-model="title"
                 type="text"
                 maxlength="50"
-                class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
+                class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
                 placeholder="할 일 제목을 입력하세요"
               />
             </div>
@@ -192,7 +192,7 @@ function onUploadError(message: string) {
               <textarea
                 v-model="content"
                 rows="6"
-                class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
+                class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
                 placeholder="상세 내용을 입력하세요 (선택사항)"
               ></textarea>
             </div>
@@ -206,7 +206,7 @@ function onUploadError(message: string) {
               <input
                 v-model="dueDate"
                 type="date"
-                class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
+                class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
               />
             </div>
 
@@ -238,7 +238,7 @@ function onUploadError(message: string) {
           <button
             @click="handleSave"
             :disabled="!title.trim() || isUploading"
-            class="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {{ isUploading ? '업로드 중...' : '저장' }}
           </button>

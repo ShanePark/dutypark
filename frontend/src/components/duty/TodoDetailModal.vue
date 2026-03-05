@@ -257,7 +257,7 @@ function onUploadError(message: string) {
   <Teleport to="body">
     <div
       v-if="isOpen && todo"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50"
       @click.self="handleClose"
     >
       <div class="modal-container max-w-[95vw] sm:max-w-xl max-h-[90dvh] sm:max-h-[90vh]">
@@ -269,9 +269,9 @@ function onUploadError(message: string) {
               <span
                 :class="[
                   'px-2 py-0.5 text-xs rounded-full flex-shrink-0',
-                  todo.status === 'TODO' ? 'bg-slate-100 text-slate-700' : '',
-                  todo.status === 'IN_PROGRESS' ? 'bg-amber-100 text-amber-700' : '',
-                  todo.status === 'DONE' ? 'bg-green-100 text-green-700 line-through' : '',
+                  todo.status === 'TODO' ? 'bg-dp-bg-tertiary text-dp-text-primary' : '',
+                  todo.status === 'IN_PROGRESS' ? 'bg-dp-warning-soft text-dp-warning' : '',
+                  todo.status === 'DONE' ? 'bg-dp-success-soft text-dp-success line-through' : '',
                 ]"
               >
                 {{ getStatusLabel(todo.status) }}
@@ -294,14 +294,14 @@ function onUploadError(message: string) {
             <div class="space-y-4">
               <!-- Due Date Display -->
               <div v-if="todo.dueDate" class="flex items-center gap-2">
-                <Calendar class="w-4 h-4" :class="todo.isOverdue ? 'text-red-500' : ''" :style="!todo.isOverdue ? { color: 'var(--dp-text-secondary)' } : undefined" />
+                <Calendar class="w-4 h-4" :class="todo.isOverdue ? 'text-dp-danger' : ''" :style="!todo.isOverdue ? { color: 'var(--dp-text-secondary)' } : undefined" />
                 <span
                   class="text-sm"
-                  :class="todo.isOverdue ? 'text-red-500 font-medium' : ''"
+                  :class="todo.isOverdue ? 'text-dp-danger font-medium' : ''"
                   :style="!todo.isOverdue ? { color: 'var(--dp-text-secondary)' } : undefined"
                 >
                   마감일: {{ formatDateKorean(todo.dueDate) }}
-                  <span v-if="todo.isOverdue" class="text-red-500">(기한 초과)</span>
+                  <span v-if="todo.isOverdue" class="text-dp-danger">(기한 초과)</span>
                 </span>
               </div>
 
@@ -344,14 +344,14 @@ function onUploadError(message: string) {
 
               <div>
                 <label class="block text-sm font-medium mb-1" :style="{ color: 'var(--dp-text-secondary)' }">
-                  제목 <span class="text-red-500">*</span>
+                  제목 <span class="text-dp-danger">*</span>
                   <CharacterCounter :current="editTitle.length" :max="50" />
                 </label>
                 <input
                   v-model="editTitle"
                   type="text"
                   maxlength="50"
-                  class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
+                  class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
                 />
               </div>
 
@@ -360,7 +360,7 @@ function onUploadError(message: string) {
                 <textarea
                   v-model="editContent"
                   rows="6"
-                  class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
+                  class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
                 ></textarea>
               </div>
 
@@ -372,7 +372,7 @@ function onUploadError(message: string) {
                 <input
                   v-model="editDueDate"
                   type="date"
-                  class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent form-control"
+                  class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
                 />
               </div>
 
@@ -414,14 +414,14 @@ function onUploadError(message: string) {
               <div class="flex gap-2">
                 <button
                   @click="enterEditMode"
-                  class="flex items-center justify-center gap-1 px-3 py-2 border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition cursor-pointer"
+                  class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-accent-border text-dp-accent rounded-lg hover:bg-dp-accent-soft transition cursor-pointer"
                 >
                   <Pencil class="w-4 h-4" />
                   <span class="hidden sm:inline">수정</span>
                 </button>
                 <button
                   @click="emit('delete', todo.id)"
-                  class="flex items-center justify-center gap-1 px-3 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition cursor-pointer"
+                  class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-danger-border text-dp-danger rounded-lg hover:bg-dp-danger-soft transition cursor-pointer"
                 >
                   <Trash2 class="w-4 h-4" />
                   <span class="hidden sm:inline">삭제</span>
@@ -429,7 +429,7 @@ function onUploadError(message: string) {
                 <button
                   v-if="isActive"
                   @click="emit('complete', todo.id)"
-                  class="flex items-center justify-center gap-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition cursor-pointer"
+                  class="flex items-center justify-center gap-1 px-3 py-2 bg-dp-success text-dp-text-on-dark rounded-lg hover:bg-dp-success-hover transition cursor-pointer"
                 >
                   <Check class="w-4 h-4" />
                   <span class="hidden sm:inline">완료</span>
@@ -437,7 +437,7 @@ function onUploadError(message: string) {
                 <button
                   v-else
                   @click="emit('reopen', todo.id)"
-                  class="flex items-center justify-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition cursor-pointer"
+                  class="flex items-center justify-center gap-1 px-3 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
                 >
                   <RotateCcw class="w-4 h-4" />
                   <span class="hidden sm:inline">재오픈</span>
@@ -456,7 +456,7 @@ function onUploadError(message: string) {
               <button
                 @click="saveEdit"
                 :disabled="!editTitle.trim() || isUploading"
-                class="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 cursor-pointer"
+                class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 cursor-pointer"
               >
                 {{ isUploading ? '업로드 중...' : '저장' }}
               </button>

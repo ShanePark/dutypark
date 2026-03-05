@@ -41,7 +41,7 @@ function goHome() {
         <button
           type="button"
           @click="goHome"
-          class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition cursor-pointer"
+          class="w-full bg-dp-accent text-dp-text-on-dark py-3 px-4 rounded-lg font-medium hover:bg-dp-accent-hover transition cursor-pointer"
         >
           홈으로
         </button>

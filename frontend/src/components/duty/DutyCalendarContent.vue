@@ -162,7 +162,7 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
           @click.stop="emit('batch-duty-change', day, dutyType.id)"
           class="text-[10px] sm:text-xs px-1 py-1 rounded border transition-all min-h-[22px] sm:min-h-[26px] cursor-pointer"
           :class="{
-            'ring-2 ring-gray-800 font-bold shadow-sm':
+            'ring-2 ring-dp-text-primary font-bold shadow-sm':
               (duties[index]?.dutyType === dutyType.name) ||
               (!duties[index]?.dutyType && dutyType.id === null),
             'hover:opacity-80': true,
@@ -184,7 +184,7 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
           <div
             v-for="otherDuty in otherDuties"
             :key="otherDuty.memberId"
-            class="text-[10px] sm:text-sm px-1.5 py-0.5 rounded-full border border-white/50"
+            class="text-[10px] sm:text-sm px-1.5 py-0.5 rounded-full border border-dp-overlay-light/50"
             :style="{
               backgroundColor: otherDuty.duties[index]?.dutyColor || '#6c757d',
               color: getOtherDutyTextColor(otherDuty.duties[index]?.dutyColor || null),

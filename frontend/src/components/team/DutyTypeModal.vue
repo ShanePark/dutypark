@@ -170,7 +170,7 @@ async function saveDutyType() {
 <template>
   <div
     v-if="isOpen"
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+    class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
     @click.self="close"
   >
     <div class="rounded-lg shadow-xl w-full max-w-md" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
@@ -193,7 +193,7 @@ async function saveDutyType() {
 
         <div
           v-if="dutyTypeForm.isDefault"
-          class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700"
+          class="bg-dp-accent-soft border border-dp-accent-border rounded-lg p-3 text-sm text-dp-accent-hover"
         >
           현재 선택한 근무 유형은 <strong>휴무일</strong>에 해당합니다.
         </div>
@@ -208,7 +208,7 @@ async function saveDutyType() {
             type="text"
             maxlength="10"
             placeholder="근무명"
-            class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent"
             :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
           />
         </div>
@@ -239,7 +239,7 @@ async function saveDutyType() {
         <button
           @click="saveDutyType"
           :disabled="!dutyTypeForm.name.trim()"
-          class="px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          class="px-4 py-2 bg-dp-success text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-success-hover transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {{ dutyTypeForm.id !== null || dutyTypeForm.isDefault ? '저장' : '추가' }}
         </button>

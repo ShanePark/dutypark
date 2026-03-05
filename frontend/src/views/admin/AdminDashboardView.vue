@@ -212,10 +212,10 @@ onMounted(async () => {
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <router-link
             to="/admin"
-            class="bg-gray-700 text-white rounded-xl p-4 hover:bg-gray-800 transition"
+            class="bg-dp-surface-strong text-dp-text-on-dark rounded-xl p-4 hover:bg-dp-surface-strong-hover transition"
           >
-            <Users class="w-6 h-6 mb-2 text-white" />
-            <span class="font-medium text-white">회원 관리</span>
+            <Users class="w-6 h-6 mb-2 text-dp-text-on-dark" />
+            <span class="font-medium text-dp-text-on-dark">회원 관리</span>
           </router-link>
           <router-link
             to="/admin/teams"
@@ -300,7 +300,7 @@ onMounted(async () => {
                   v-model="searchKeyword"
                   type="text"
                   placeholder="회원 검색..."
-                  class="w-full sm:w-auto pl-9 pr-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                  class="w-full sm:w-auto pl-9 pr-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-dp-text-primary focus:border-transparent"
                   :style="{ backgroundColor: 'var(--dp-bg-input)', border: '1px solid var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
                 />
               </div>
@@ -333,7 +333,7 @@ onMounted(async () => {
                   </div>
                   <button
                     @click="openPasswordModal(member)"
-                    class="px-3 py-1.5 text-sm font-medium text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition flex-shrink-0 self-start sm:self-auto cursor-pointer"
+                    class="px-3 py-1.5 text-sm font-medium text-dp-warning bg-dp-warning-soft hover:bg-dp-warning-soft rounded-lg transition flex-shrink-0 self-start sm:self-auto cursor-pointer"
                   >
                     비밀번호 변경
                   </button>
@@ -390,7 +390,7 @@ onMounted(async () => {
     <!-- Password Change Modal -->
     <div
       v-if="showPasswordModal"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50"
       @click.self="closePasswordModal"
     >
       <div class="rounded-xl shadow-xl w-full max-w-md mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
@@ -404,7 +404,7 @@ onMounted(async () => {
             <input
               v-model="newPassword"
               type="password"
-              class="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+              class="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-text-primary focus:border-transparent"
               :style="{ backgroundColor: 'var(--dp-bg-input)', border: '1px solid var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
               placeholder="새 비밀번호 입력"
             />
@@ -414,12 +414,12 @@ onMounted(async () => {
             <input
               v-model="confirmPassword"
               type="password"
-              class="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+              class="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-text-primary focus:border-transparent"
               :style="{ backgroundColor: 'var(--dp-bg-input)', border: '1px solid var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
               placeholder="비밀번호 다시 입력"
             />
           </div>
-          <p v-if="passwordError" class="text-sm text-red-500">{{ passwordError }}</p>
+          <p v-if="passwordError" class="text-sm text-dp-danger">{{ passwordError }}</p>
         </div>
         <div class="p-4 flex justify-end gap-2" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
           <button
@@ -435,7 +435,7 @@ onMounted(async () => {
           <button
             @click="handleChangePassword"
             :disabled="changingPassword"
-            class="px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-lg transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+            class="px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-surface-strong hover:bg-dp-surface-strong-hover rounded-lg transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
           >
             <Loader2 v-if="changingPassword" class="w-4 h-4 animate-spin" />
             {{ changingPassword ? '변경 중...' : '변경' }}

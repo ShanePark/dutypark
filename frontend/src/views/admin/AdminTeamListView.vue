@@ -209,10 +209,10 @@ onMounted(() => {
         </router-link>
         <router-link
           to="/admin/teams"
-          class="bg-gray-700 text-white rounded-xl p-4 hover:bg-gray-800 transition"
+          class="bg-dp-surface-strong text-dp-text-on-dark rounded-xl p-4 hover:bg-dp-surface-strong-hover transition"
         >
-          <Building2 class="w-6 h-6 mb-2 text-white" />
-          <span class="font-medium text-white">팀 관리</span>
+          <Building2 class="w-6 h-6 mb-2 text-dp-text-on-dark" />
+          <span class="font-medium text-dp-text-on-dark">팀 관리</span>
         </router-link>
         <router-link
           to="/admin/dev"
@@ -247,7 +247,7 @@ onMounted(() => {
             <div>
               <h2 class="text-lg font-semibold" :style="{ color: 'var(--dp-text-primary)' }">팀 목록</h2>
               <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">
-                <span v-if="searchKeyword" class="text-blue-600">[{{ searchKeyword }}]</span>
+                <span v-if="searchKeyword" class="text-dp-accent">[{{ searchKeyword }}]</span>
                 총 {{ totalElements }}개의 팀이 있습니다
               </p>
             </div>
@@ -258,7 +258,7 @@ onMounted(() => {
                   v-model="keyword"
                   type="text"
                   placeholder="팀 검색..."
-                  class="w-full pl-9 pr-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                  class="w-full pl-9 pr-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-dp-text-primary focus:border-transparent"
                   :style="{ backgroundColor: 'var(--dp-bg-input)', border: '1px solid var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
                   @keyup.enter="handleSearch"
                 />
@@ -274,7 +274,7 @@ onMounted(() => {
               </button>
               <button
                 @click="openNewTeamModal"
-                class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition"
+                class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-accent hover:bg-dp-accent-hover rounded-lg transition"
               >
                 <Plus class="w-4 h-4" />
                 <span class="hidden sm:inline">새 팀 추가</span>
@@ -388,7 +388,7 @@ onMounted(() => {
               <button
                 v-if="totalPages <= 5 || p === 1 || p === totalPages || (p >= page && p <= page + 2)"
                 class="px-3 py-1 text-sm rounded-lg transition"
-                :class="p - 1 === page ? 'bg-gray-900 text-white' : ''"
+                :class="p - 1 === page ? 'bg-dp-surface-strong text-dp-text-on-dark' : ''"
                 :style="p - 1 !== page ? { color: 'var(--dp-text-secondary)' } : {}"
                 @click="goToPage(p - 1)"
                 @mouseover="(e: Event) => p - 1 !== page && setHoverBg(e)"
@@ -424,7 +424,7 @@ onMounted(() => {
     <!-- New Team Modal -->
     <div
       v-if="showNewTeamModal"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50"
       @click.self="closeNewTeamModal"
     >
       <div class="rounded-xl shadow-xl w-full max-w-md mx-4" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
@@ -452,14 +452,14 @@ onMounted(() => {
                 type="text"
                 maxlength="20"
                 minlength="2"
-                class="flex-1 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                class="flex-1 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-text-primary focus:border-transparent"
                 :style="{ backgroundColor: 'var(--dp-bg-input)', border: '1px solid var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
                 placeholder="팀 이름 입력"
                 @input="nameCheckResult = null"
               />
               <button
                 @click="checkTeamName"
-                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition cursor-pointer"
+                class="px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-accent hover:bg-dp-accent-hover rounded-lg transition cursor-pointer"
               >
                 확인
               </button>
@@ -467,7 +467,7 @@ onMounted(() => {
             <p
               v-if="nameCheckResult"
               class="mt-1 text-sm flex items-center gap-1"
-              :class="nameCheckResult === 'OK' ? 'text-green-600' : 'text-red-500'"
+              :class="nameCheckResult === 'OK' ? 'text-dp-success' : 'text-dp-danger'"
             >
               <Check v-if="nameCheckResult === 'OK'" class="w-4 h-4" />
               <AlertCircle v-else class="w-4 h-4" />
@@ -483,7 +483,7 @@ onMounted(() => {
               v-model="newTeamDescription"
               type="text"
               maxlength="50"
-              class="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+              class="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-text-primary focus:border-transparent"
               :style="{ backgroundColor: 'var(--dp-bg-input)', border: '1px solid var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
               placeholder="팀 설명 입력"
             />
@@ -493,7 +493,7 @@ onMounted(() => {
           <button
             @click="handleCreateTeam"
             :disabled="nameCheckResult !== 'OK' || !newTeamDescription"
-            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            class="px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-accent hover:bg-dp-accent-hover rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             추가
           </button>

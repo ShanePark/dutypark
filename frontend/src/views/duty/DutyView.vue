@@ -1380,7 +1380,7 @@ async function showBatchUpdateModal() {
     html: `
       <p>${currentYear.value}년 ${currentMonth.value}월의 기본 근무를 선택해주세요.</p>
       <p>현재 월의 모든 날짜가 선택한 근무로 설정됩니다.</p>
-      <p class="text-sm text-orange-600 font-semibold mt-2">클릭시 바로 변경됩니다.</p>
+      <p class="text-sm text-dp-warning font-semibold mt-2">클릭시 바로 변경됩니다.</p>
       <div class="mt-4">${buttonsHtml}</div>
     `,
     showConfirmButton: false,
@@ -1419,7 +1419,7 @@ async function showExcelUploadModal() {
   const { value: file } = await Swal.fire({
     title: '시간표 파일 업로드',
     input: 'file',
-    html: `시간표 파일을 업로드해주세요.<br/>자동으로 파일에 맞춰 시간표를 업데이트 합니다.<br/><span class="text-orange-600 font-semibold">업로드하는 시간표가 ${currentYear.value}년 ${currentMonth.value}월에 맞는지 꼭 확인해주세요.</span>`,
+    html: `시간표 파일을 업로드해주세요.<br/>자동으로 파일에 맞춰 시간표를 업데이트 합니다.<br/><span class="text-dp-warning font-semibold">업로드하는 시간표가 ${currentYear.value}년 ${currentMonth.value}월에 맞는지 꼭 확인해주세요.</span>`,
     inputAttributes: {
       accept: fileExtensions.join(','),
       'aria-label': '시간표 파일을 업로드해주세요.',
@@ -1463,16 +1463,16 @@ async function showExcelUploadModal() {
   <div class="max-w-4xl mx-auto px-2 sm:px-4 py-2 sm:py-4">
     <!-- Loading State -->
     <div v-if="isLoading" class="flex items-center justify-center py-20">
-      <Loader2 class="w-8 h-8 text-blue-500 animate-spin" />
+      <Loader2 class="w-8 h-8 text-dp-accent animate-spin" />
       <span class="ml-2" :style="{ color: 'var(--dp-text-secondary)' }">데이터를 불러오는 중...</span>
     </div>
 
     <!-- Error State -->
     <div v-else-if="loadError" class="border rounded-lg p-4 mb-4" :style="{ backgroundColor: 'var(--dp-danger-bg)', borderColor: 'var(--dp-danger-border)' }">
-      <p class="text-red-700">{{ loadError }}</p>
+      <p class="text-dp-danger">{{ loadError }}</p>
       <button
         @click="loadDuties"
-        class="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition cursor-pointer"
+        class="mt-2 px-4 py-2 bg-dp-danger text-dp-text-on-dark rounded hover:bg-dp-danger-hover transition cursor-pointer"
       >
         다시 시도
       </button>

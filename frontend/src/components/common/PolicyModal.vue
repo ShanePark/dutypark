@@ -58,7 +58,7 @@ function close() {
       class="fixed inset-0 z-50 flex items-center justify-center p-4"
       @click.self="close"
     >
-      <div class="fixed inset-0 bg-black/50" @click="close"></div>
+      <div class="fixed inset-0 bg-dp-overlay-dark/50" @click="close"></div>
       <div class="modal-container relative max-w-[95vw] sm:max-w-3xl max-h-[90vh]">
         <!-- Modal Header -->
         <div class="modal-header">
@@ -79,7 +79,7 @@ function close() {
           :style="{ color: 'var(--dp-text-secondary)' }"
         >
           <div v-if="isLoading" class="flex items-center justify-center h-32">
-            <div class="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent"></div>
+            <div class="animate-spin rounded-full h-6 w-6 border-2 border-dp-accent-border border-t-transparent"></div>
           </div>
           <div v-else-if="!modalContent" class="flex items-center justify-center h-32 text-sm">
             내용을 불러올 수 없습니다.

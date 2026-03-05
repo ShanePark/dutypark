@@ -236,16 +236,16 @@ const gridColsClass = {
           <!-- Zoom overlay for images - shown on hover -->
           <div
             v-if="attachment.contentType?.startsWith('image/')"
-            class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            class="absolute inset-0 bg-dp-overlay-dark/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
             @click.stop="openImageViewer(idx)"
           >
-            <ZoomIn class="w-10 h-10 text-white" />
+            <ZoomIn class="w-10 h-10 text-dp-text-on-dark" />
           </div>
         </div>
 
         <!-- Download button - always visible, larger touch area on mobile -->
         <button
-          class="absolute top-1 right-1 p-2.5 sm:p-1.5 bg-black/50 rounded text-white hover:bg-black/70 active:bg-black/80 transition-colors cursor-pointer"
+          class="absolute top-1 right-1 p-2.5 sm:p-1.5 bg-dp-overlay-dark/50 rounded text-dp-text-on-dark hover:bg-dp-overlay-dark/70 active:bg-dp-overlay-dark/80 transition-colors cursor-pointer"
           @click.stop="downloadAttachment(attachment.id, attachment.originalFilename)"
           title="다운로드"
         >

@@ -88,7 +88,7 @@ function handleDelete(tokenId: number) {
   <div>
     <!-- Loading State -->
     <div v-if="loading" class="flex items-center justify-center py-8">
-      <Loader2 class="w-6 h-6 animate-spin text-blue-500" />
+      <Loader2 class="w-6 h-6 animate-spin text-dp-accent" />
     </div>
 
     <template v-else-if="sortedTokens.length === 0">
@@ -120,13 +120,13 @@ function handleDelete(tokenId: number) {
               </div>
               <div class="flex items-center gap-2">
                 <!-- Delete button or current login badge -->
-                <span v-if="token.isCurrentLogin" class="px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded-full">
+                <span v-if="token.isCurrentLogin" class="px-2 py-0.5 text-xs font-medium text-dp-success bg-dp-success-soft rounded-full">
                   현재
                 </span>
                 <button
                   v-else-if="showDeleteButton"
                   @click="handleDelete(token.id)"
-                  class="w-6 h-6 flex items-center justify-center text-red-500 hover:bg-red-100 rounded-full transition cursor-pointer"
+                  class="w-6 h-6 flex items-center justify-center text-dp-danger hover:bg-dp-danger-soft rounded-full transition cursor-pointer"
                   title="접속 종료"
                 >
                   <LogOut class="w-3.5 h-3.5" />
@@ -137,7 +137,7 @@ function handleDelete(tokenId: number) {
                     v-if="idx === 0 && hiddenCount > 0"
                     @click="expanded = !expanded"
                     class="w-6 h-6 flex items-center justify-center text-xs font-medium rounded-full cursor-pointer transition"
-                    :class="expanded ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'"
+                    :class="expanded ? 'bg-dp-surface-strong text-dp-text-on-dark' : 'bg-dp-bg-tertiary text-dp-text-secondary hover:bg-dp-bg-tertiary'"
                   >
                     {{ expanded ? '-' : `+${hiddenCount}` }}
                   </button>
@@ -194,12 +194,12 @@ function handleDelete(tokenId: number) {
               <button
                 v-if="!token.isCurrentLogin"
                 @click="handleDelete(token.id)"
-                class="w-6 h-6 flex items-center justify-center text-red-500 hover:bg-red-100 rounded-full transition cursor-pointer"
+                class="w-6 h-6 flex items-center justify-center text-dp-danger hover:bg-dp-danger-soft rounded-full transition cursor-pointer"
                 title="접속 종료"
               >
                 <LogOut class="w-3.5 h-3.5" />
               </button>
-              <span v-else class="px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded-full">
+              <span v-else class="px-2 py-0.5 text-xs font-medium text-dp-success bg-dp-success-soft rounded-full">
                 현재 접속
               </span>
             </div>
@@ -209,7 +209,7 @@ function handleDelete(tokenId: number) {
                 v-if="idx === 0 && hiddenCount > 0"
                 @click="expanded = !expanded"
                 class="w-6 h-6 flex items-center justify-center text-xs font-medium rounded-full cursor-pointer transition"
-                :class="expanded ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'"
+                :class="expanded ? 'bg-dp-surface-strong text-dp-text-on-dark' : 'bg-dp-bg-tertiary text-dp-text-secondary hover:bg-dp-bg-tertiary'"
               >
                 {{ expanded ? '-' : `+${hiddenCount}` }}
               </button>
@@ -237,13 +237,13 @@ function handleDelete(tokenId: number) {
                   최초: {{ formatDate(token.createdDate) }}
                 </span>
               </div>
-              <span v-if="token.isCurrentLogin" class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
+              <span v-if="token.isCurrentLogin" class="px-3 py-1 text-xs font-medium text-dp-success bg-dp-success-soft rounded-full">
                 현재 접속
               </span>
               <button
                 v-else-if="showDeleteButton"
                 @click="handleDelete(token.id)"
-                class="w-10 h-10 flex items-center justify-center text-red-500 hover:bg-red-100 rounded-full transition cursor-pointer"
+                class="w-10 h-10 flex items-center justify-center text-dp-danger hover:bg-dp-danger-soft rounded-full transition cursor-pointer"
                 title="접속 종료"
               >
                 <LogOut class="w-5 h-5" />
@@ -317,12 +317,12 @@ function handleDelete(tokenId: number) {
                   <button
                     v-if="!token.isCurrentLogin"
                     @click="handleDelete(token.id)"
-                    class="w-8 h-8 inline-flex items-center justify-center text-red-500 hover:bg-red-100 rounded-full transition cursor-pointer"
+                    class="w-8 h-8 inline-flex items-center justify-center text-dp-danger hover:bg-dp-danger-soft rounded-full transition cursor-pointer"
                     title="접속 종료"
                   >
                     <LogOut class="w-4 h-4" />
                   </button>
-                  <span v-else class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
+                  <span v-else class="px-3 py-1 text-xs font-medium text-dp-success bg-dp-success-soft rounded-full">
                     현재 접속
                   </span>
                 </td>

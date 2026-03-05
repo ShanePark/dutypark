@@ -352,7 +352,7 @@ function handleUploadError(message: string) {
   <Teleport to="body">
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 pb-16 sm:pb-0"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50 pb-16 sm:pb-0"
       @click.self="emit('close')"
     >
       <div class="modal-container max-w-[95vw] sm:max-w-2xl max-h-[calc(100dvh-5rem)] sm:max-h-[90vh]">
@@ -360,8 +360,8 @@ function handleUploadError(message: string) {
         <div class="p-3 sm:p-4 flex-shrink-0" :style="{ backgroundColor: 'var(--dp-bg-tertiary)', borderBottom: '1px solid var(--dp-border-primary)' }">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <span v-if="isCreateMode" class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">일정 추가</span>
-              <span v-else-if="isEditMode" class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">일정 수정</span>
+              <span v-if="isCreateMode" class="px-2 py-0.5 bg-dp-success-soft text-dp-success text-xs font-medium rounded">일정 추가</span>
+              <span v-else-if="isEditMode" class="px-2 py-0.5 bg-dp-accent-soft text-dp-accent-hover text-xs font-medium rounded">일정 수정</span>
               <h2 class="text-base sm:text-lg font-bold" :style="{ color: 'var(--dp-text-primary)' }">{{ formattedDate }}</h2>
             </div>
             <button @click="emit('close')" class="p-2 rounded-full flex-shrink-0 hover-close-btn cursor-pointer">
@@ -393,7 +393,7 @@ function handleUploadError(message: string) {
           <!-- Current Duty (other's calendar only) -->
           <div v-else-if="duty && !canEdit" class="mt-2">
             <span
-              class="px-2.5 py-1 rounded-md text-xs font-medium text-white"
+              class="px-2.5 py-1 rounded-md text-xs font-medium text-dp-text-on-dark"
               :style="{ backgroundColor: duty.dutyColor || '#6c757d' }"
             >
               {{ duty.dutyType || 'OFF' }}
@@ -439,7 +439,7 @@ function handleUploadError(message: string) {
           <div v-if="!isCreateMode && !isEditMode && canEdit" class="flex justify-end">
             <button
               @click="startCreateMode"
-              class="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition cursor-pointer"
+              class="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-dp-success text-dp-text-on-dark rounded-lg hover:bg-dp-success-hover transition cursor-pointer"
             >
               <Plus class="w-4 h-4" />
               일정 추가
@@ -456,7 +456,7 @@ function handleUploadError(message: string) {
             <button
               @click="saveSchedule"
               :disabled="isUploading"
-              class="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {{ isUploading ? '업로드 중...' : (isEditMode ? '수정' : '저장') }}
             </button>

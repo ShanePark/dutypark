@@ -449,13 +449,13 @@ onUnmounted(() => {
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl flex items-center justify-center">
-          <Users class="w-5 h-5 text-white" />
+        <div class="w-10 h-10 bg-gradient-to-br from-dp-surface-strong to-dp-surface-strong-alt rounded-xl flex items-center justify-center">
+          <Users class="w-5 h-5 text-dp-text-on-dark" />
         </div>
         <h1 class="text-xl font-bold" :style="{ color: 'var(--dp-text-primary)' }">친구 관리</h1>
       </div>
       <button
-        class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-slate-700 to-slate-800 text-white rounded-xl hover:from-slate-800 hover:to-slate-900 transition-all shadow-lg font-medium cursor-pointer"
+        class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt text-dp-text-on-dark rounded-xl hover:from-dp-surface-strong-alt hover:to-dp-surface-strong-hover transition-all shadow-lg font-medium cursor-pointer"
         @click="openSearchModal"
       >
         <UserPlus class="w-4 h-4" />
@@ -469,7 +469,7 @@ onUnmounted(() => {
     </div>
 
     <!-- Error -->
-    <div v-else-if="error" class="text-center py-16 text-red-500">
+    <div v-else-if="error" class="text-center py-16 text-dp-danger">
       {{ error }}
     </div>
 
@@ -480,11 +480,11 @@ onUnmounted(() => {
         class="rounded-2xl shadow-sm border mb-6 overflow-hidden"
         :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }"
       >
-        <div class="bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-3">
+        <div class="bg-gradient-to-r from-dp-warning to-dp-warning-hover px-5 py-3">
           <div class="flex items-center gap-2">
-            <UserCheck class="w-5 h-5 text-white" />
-            <span class="text-white font-bold">친구 요청</span>
-            <span class="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs text-white">
+            <UserCheck class="w-5 h-5 text-dp-text-on-dark" />
+            <span class="text-dp-text-on-dark font-bold">친구 요청</span>
+            <span class="ml-2 px-2 py-0.5 bg-dp-overlay-light/20 rounded-full text-xs text-dp-text-on-dark">
               {{ friendInfo.pendingRequestsTo.length + friendInfo.pendingRequestsFrom.length }}
             </span>
           </div>
@@ -505,9 +505,9 @@ onUnmounted(() => {
                     :profile-photo-version="req.fromMember.profilePhotoVersion"
                     size="md"
                   />
-                  <div class="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center ring-2 ring-white" :class="req.requestType === 'FAMILY_REQUEST' ? 'bg-amber-500' : 'bg-blue-500'">
-                    <Home v-if="req.requestType === 'FAMILY_REQUEST'" class="w-3 h-3 text-white" />
-                    <UserPlus v-else class="w-3 h-3 text-white" />
+                  <div class="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center ring-2 ring-dp-overlay-light" :class="req.requestType === 'FAMILY_REQUEST' ? 'bg-dp-warning' : 'bg-dp-accent'">
+                    <Home v-if="req.requestType === 'FAMILY_REQUEST'" class="w-3 h-3 text-dp-text-on-dark" />
+                    <UserPlus v-else class="w-3 h-3 text-dp-text-on-dark" />
                   </div>
                 </div>
                 <div>
@@ -519,13 +519,13 @@ onUnmounted(() => {
               </div>
               <div class="flex gap-2">
                 <button
-                  class="px-4 py-2 text-sm font-medium bg-green-500 text-white rounded-lg hover:bg-green-600 transition shadow-sm cursor-pointer"
+                  class="px-4 py-2 text-sm font-medium bg-dp-success text-dp-text-on-dark rounded-lg hover:bg-dp-success-hover transition shadow-sm cursor-pointer"
                   @click="acceptFriendRequest(req)"
                 >
                   승인
                 </button>
                 <button
-                  class="px-4 py-2 text-sm font-medium border border-red-200 rounded-lg hover:bg-red-50 transition cursor-pointer"
+                  class="px-4 py-2 text-sm font-medium border border-dp-danger-border rounded-lg hover:bg-dp-danger-soft transition cursor-pointer"
                   :style="{ backgroundColor: 'var(--dp-bg-card)', color: 'var(--dp-danger)' }"
                   @click="rejectFriendRequest(req)"
                 >
@@ -550,9 +550,9 @@ onUnmounted(() => {
                     :profile-photo-version="req.toMember.profilePhotoVersion"
                     size="md"
                   />
-                  <div class="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center bg-amber-500 ring-2 ring-white">
-                    <Home v-if="req.requestType === 'FAMILY_REQUEST'" class="w-3 h-3 text-white" />
-                    <UserPlus v-else class="w-3 h-3 text-white" />
+                  <div class="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center bg-dp-warning ring-2 ring-dp-overlay-light">
+                    <Home v-if="req.requestType === 'FAMILY_REQUEST'" class="w-3 h-3 text-dp-text-on-dark" />
+                    <UserPlus v-else class="w-3 h-3 text-dp-text-on-dark" />
                   </div>
                 </div>
                 <div>
@@ -563,7 +563,7 @@ onUnmounted(() => {
                 </div>
               </div>
               <button
-                class="px-4 py-2 text-sm font-medium border border-amber-300 rounded-lg hover:bg-amber-50 transition cursor-pointer"
+                class="px-4 py-2 text-sm font-medium border border-dp-warning-border rounded-lg hover:bg-dp-warning-soft transition cursor-pointer"
                 :style="{ backgroundColor: 'var(--dp-bg-card)', color: 'var(--dp-warning-hover)' }"
                 @click="cancelRequest(req)"
               >
@@ -580,11 +580,11 @@ onUnmounted(() => {
         class="friend-section rounded-2xl shadow-sm border"
         :style="{ backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' }"
       >
-        <div class="bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-3">
+        <div class="bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt px-6 py-3">
           <div class="flex items-center gap-2">
-            <Users class="w-5 h-5 text-white" />
-            <span class="text-white font-bold">친구 목록</span>
-            <span v-if="friendInfo.friends.length" class="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs text-white">
+            <Users class="w-5 h-5 text-dp-text-on-dark" />
+            <span class="text-dp-text-on-dark font-bold">친구 목록</span>
+            <span v-if="friendInfo.friends.length" class="ml-2 px-2 py-0.5 bg-dp-overlay-light/20 rounded-full text-xs text-dp-text-on-dark">
               {{ friendInfo.friends.length }}
             </span>
           </div>
@@ -594,7 +594,7 @@ onUnmounted(() => {
             <Users class="w-12 h-12 mx-auto mb-3" :style="{ color: 'var(--dp-text-muted)' }" />
             <p class="text-sm" :style="{ color: 'var(--dp-text-secondary)' }">아직 친구가 없습니다.</p>
             <button
-              class="mt-4 px-4 py-2 text-sm font-medium bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition cursor-pointer"
+              class="mt-4 px-4 py-2 text-sm font-medium bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
               @click="openSearchModal"
             >
               친구 추가하기
@@ -611,7 +611,7 @@ onUnmounted(() => {
               :class="[
                 friend.pinOrder
                   ? 'pinned-friend pinned-friend-highlight border-2 shadow-md'
-                  : 'border hover:border-blue-300'
+                  : 'border hover:border-dp-accent-border'
               ]"
               :style="!friend.pinOrder ? { backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' } : {}"
               @click="moveTo(friend.member.id)"
@@ -634,13 +634,13 @@ onUnmounted(() => {
                   <div class="flex items-center justify-between mb-1.5">
                     <div class="flex items-center gap-1.5 min-w-0">
                       <span class="font-medium text-sm truncate" :style="{ color: 'var(--dp-text-primary)' }">{{ friend.member.name }}</span>
-                      <Home v-if="friend.isFamily" class="w-3.5 h-3.5 flex-shrink-0 text-amber-500" title="Family member" />
+                      <Home v-if="friend.isFamily" class="w-3.5 h-3.5 flex-shrink-0 text-dp-warning" title="Family member" />
                     </div>
                     <div class="flex items-center flex-shrink-0" @click.stop>
                       <!-- Pin/Unpin button -->
                       <button
                         v-if="friend.pinOrder"
-                        class="p-1 text-amber-500 hover:text-amber-600 transition cursor-pointer"
+                        class="p-1 text-dp-warning hover:text-dp-warning transition cursor-pointer"
                         @click.stop="unpinFriend(friend.member)"
                         title="고정 해제"
                       >
@@ -648,7 +648,7 @@ onUnmounted(() => {
                       </button>
                       <button
                         v-else
-                        class="p-1 text-gray-300 hover:text-amber-500 transition cursor-pointer"
+                        class="p-1 text-dp-text-muted hover:text-dp-warning transition cursor-pointer"
                         @click.stop="pinFriend(friend.member)"
                         title="고정"
                       >
@@ -671,7 +671,7 @@ onUnmounted(() => {
               <!-- Drag handle for pinned friends -->
               <div v-if="friend.pinOrder" class="absolute bottom-2 right-2" @click.stop>
                 <div
-                  class="handle friend-drag-handle rounded-lg p-1.5 transition hover:bg-black/10 !cursor-grab active:!cursor-grabbing"
+                  class="handle friend-drag-handle rounded-lg p-1.5 transition hover:bg-dp-overlay-dark/10 !cursor-grab active:!cursor-grabbing"
                   title="드래그하여 순서 변경"
                 >
                   <GripVertical class="w-4 h-4" />
@@ -681,14 +681,14 @@ onUnmounted(() => {
 
             <!-- Add Friend Card -->
             <div
-              class="group rounded-xl sm:rounded-2xl border-2 border-dashed cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all duration-300 flex flex-col items-center justify-center min-h-[80px] sm:min-h-[120px]"
+              class="group rounded-xl sm:rounded-2xl border-2 border-dashed cursor-pointer hover:border-dp-accent-border hover:bg-dp-accent-soft transition-all duration-300 flex flex-col items-center justify-center min-h-[80px] sm:min-h-[120px]"
               :style="{ borderColor: 'var(--dp-border-secondary)' }"
               @click="openSearchModal"
             >
-              <div class="w-8 h-8 sm:w-12 sm:h-12 group-hover:bg-blue-100 rounded-full flex items-center justify-center mb-1 sm:mb-2 transition-colors" :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }">
-                <UserPlus class="w-4 h-4 sm:w-6 sm:h-6 group-hover:text-blue-500 transition-colors" :style="{ color: 'var(--dp-text-muted)' }" />
+              <div class="w-8 h-8 sm:w-12 sm:h-12 group-hover:bg-dp-accent-soft rounded-full flex items-center justify-center mb-1 sm:mb-2 transition-colors" :style="{ backgroundColor: 'var(--dp-bg-tertiary)' }">
+                <UserPlus class="w-4 h-4 sm:w-6 sm:h-6 group-hover:text-dp-accent transition-colors" :style="{ color: 'var(--dp-text-muted)' }" />
               </div>
-              <span class="font-semibold text-xs sm:text-sm group-hover:text-blue-600 transition-colors" :style="{ color: 'var(--dp-text-muted)' }">친구 추가</span>
+              <span class="font-semibold text-xs sm:text-sm group-hover:text-dp-accent transition-colors" :style="{ color: 'var(--dp-text-muted)' }">친구 추가</span>
             </div>
           </div>
         </div>
@@ -710,7 +710,7 @@ onUnmounted(() => {
       >
         <button
           v-if="!openDropdownFriend.isFamily"
-          class="w-full px-3 py-2.5 text-left text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 transition cursor-pointer"
+          class="w-full px-3 py-2.5 text-left text-sm text-dp-accent hover:bg-dp-accent-soft flex items-center gap-2 transition cursor-pointer"
           @click="addFamily(openDropdownFriend.member)"
         >
           <Home class="w-4 h-4" />
@@ -718,14 +718,14 @@ onUnmounted(() => {
         </button>
         <button
           v-if="openDropdownFriend.isFamily"
-          class="w-full px-3 py-2.5 text-left text-sm text-amber-600 hover:bg-amber-50 flex items-center gap-2 transition cursor-pointer"
+          class="w-full px-3 py-2.5 text-left text-sm text-dp-warning hover:bg-dp-warning-soft flex items-center gap-2 transition cursor-pointer"
           @click="demoteFromFamily(openDropdownFriend.member)"
         >
           <UserMinus class="w-4 h-4" />
           가족에서 제외
         </button>
         <button
-          class="w-full px-3 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition cursor-pointer"
+          class="w-full px-3 py-2.5 text-left text-sm text-dp-danger hover:bg-dp-danger-soft flex items-center gap-2 transition cursor-pointer"
           @click="unfriend(openDropdownFriend.member)"
         >
           <Trash2 class="w-4 h-4" />
@@ -742,15 +742,15 @@ onUnmounted(() => {
         @click.self="closeSearchModal"
       >
         <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="closeSearchModal"></div>
+        <div class="absolute inset-0 bg-dp-overlay-dark/60 backdrop-blur-sm" @click="closeSearchModal"></div>
 
         <!-- Modal Content -->
         <div class="relative rounded-2xl shadow-2xl w-full max-w-2xl mx-2 sm:mx-4 max-h-[90vh] overflow-hidden" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
           <!-- Header -->
           <div class="flex items-center justify-between p-5 border-b" :style="{ borderColor: 'var(--dp-border-primary)', backgroundColor: 'var(--dp-bg-secondary)' }">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                <UserPlus class="w-5 h-5 text-white" />
+              <div class="w-10 h-10 bg-gradient-to-br from-dp-accent to-dp-accent-hover rounded-xl flex items-center justify-center">
+                <UserPlus class="w-5 h-5 text-dp-text-on-dark" />
               </div>
               <h3 class="text-xl font-bold" :style="{ color: 'var(--dp-text-primary)' }">친구 추가</h3>
             </div>
@@ -773,13 +773,13 @@ onUnmounted(() => {
                   v-model="searchKeyword"
                   type="text"
                   placeholder="이름 또는 팀 검색"
-                  class="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                  class="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-dp-accent/20 focus:border-dp-accent outline-none transition-all"
                   :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
                   @keyup.enter="search"
                 />
               </div>
               <button
-                class="flex-shrink-0 px-4 sm:px-5 py-3 bg-gradient-to-r from-slate-700 to-slate-800 text-white rounded-xl hover:from-slate-800 hover:to-slate-900 transition-all shadow-lg flex items-center gap-2 font-medium cursor-pointer whitespace-nowrap"
+                class="flex-shrink-0 px-4 sm:px-5 py-3 bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt text-dp-text-on-dark rounded-xl hover:from-dp-surface-strong-alt hover:to-dp-surface-strong-hover transition-all shadow-lg flex items-center gap-2 font-medium cursor-pointer whitespace-nowrap"
                 @click="search"
               >
                 <Search class="w-4 h-4" />
@@ -815,7 +815,7 @@ onUnmounted(() => {
                     </div>
                   </div>
                   <button
-                    class="px-4 py-2 text-sm font-medium bg-green-500 text-white rounded-xl hover:bg-green-600 transition shadow-sm cursor-pointer"
+                    class="px-4 py-2 text-sm font-medium bg-dp-success text-dp-text-on-dark rounded-xl hover:bg-dp-success-hover transition shadow-sm cursor-pointer"
                     @click="requestFriend(member)"
                   >
                     친구 요청
@@ -837,7 +837,7 @@ onUnmounted(() => {
                 <template v-for="i in searchTotalPage" :key="i">
                   <button
                     class="w-10 h-10 rounded-xl border font-medium hover-bg-light cursor-pointer"
-                    :class="(i - 1) === searchPage ? 'bg-blue-600 text-white border-blue-600' : ''"
+                    :class="(i - 1) === searchPage ? 'bg-dp-accent text-dp-text-on-dark border-dp-accent' : ''"
                     :style="(i - 1) !== searchPage ? { borderColor: 'var(--dp-border-primary)' } : {}"
                     @click="goToPage(i - 1)"
                   >

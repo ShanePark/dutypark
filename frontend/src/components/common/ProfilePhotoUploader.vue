@@ -132,7 +132,7 @@ onMounted(() => {
       <div v-if="hasPhoto" class="photo-preview">
         <img :src="displayPhotoUrl!" alt="Profile" class="photo-image" />
         <div class="photo-overlay">
-          <Camera :class="props.size === 'sm' ? 'w-4 h-4' : 'w-6 h-6'" class="text-white" />
+          <Camera :class="props.size === 'sm' ? 'w-4 h-4' : 'w-6 h-6'" class="text-dp-text-on-dark" />
         </div>
       </div>
       <div v-else class="photo-placeholder">
@@ -140,7 +140,7 @@ onMounted(() => {
         <span v-if="props.size !== 'sm'" class="text-sm mt-1">Upload Photo</span>
       </div>
       <div v-if="isUploading || isDeleting" class="upload-loading">
-        <Loader2 class="w-8 h-8 animate-spin text-white" />
+        <Loader2 class="w-8 h-8 animate-spin text-dp-text-on-dark" />
       </div>
     </div>
 

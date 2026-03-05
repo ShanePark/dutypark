@@ -8,7 +8,7 @@
       <p class="text-xl mt-4" :style="{ color: 'var(--dp-text-secondary)' }">페이지를 찾을 수 없습니다</p>
       <router-link
         to="/"
-        class="inline-block mt-6 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
+        class="inline-block mt-6 bg-dp-accent text-dp-text-on-dark px-6 py-3 rounded-lg hover:bg-dp-accent-hover transition"
       >
         홈으로 돌아가기
       </router-link>

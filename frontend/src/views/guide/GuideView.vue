@@ -81,8 +81,8 @@ function closeAllSections() {
       </router-link>
 
       <div class="flex items-center gap-3 mb-4">
-        <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-          <BookOpen class="w-6 h-6 text-white" />
+        <div class="w-12 h-12 bg-gradient-to-br from-dp-accent to-dp-accent-hover rounded-xl flex items-center justify-center">
+          <BookOpen class="w-6 h-6 text-dp-text-on-dark" />
         </div>
         <div>
           <h1 class="text-2xl font-bold" :style="{ color: 'var(--dp-text-primary)' }">이용 안내</h1>
@@ -122,7 +122,7 @@ function closeAllSections() {
           :style="{ backgroundColor: 'var(--dp-bg-secondary)' }"
         >
           <div class="flex items-center gap-3">
-            <Home class="w-5 h-5 text-blue-500" />
+            <Home class="w-5 h-5 text-dp-accent" />
             <span class="font-semibold" :style="{ color: 'var(--dp-text-primary)' }">대시보드 (홈)</span>
           </div>
           <ChevronUp v-if="sections.find(s => s.id === 'dashboard')?.isOpen" class="w-5 h-5" :style="{ color: 'var(--dp-text-muted)' }" />
@@ -137,7 +137,7 @@ function closeAllSections() {
           <div class="space-y-4">
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Calendar class="w-4 h-4 text-blue-500" />
+                <Calendar class="w-4 h-4 text-dp-accent" />
                 오늘의 정보 확인
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -151,14 +151,14 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Users class="w-4 h-4 text-slate-600" />
+                <Users class="w-4 h-4 text-dp-text-secondary" />
                 친구 목록
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
                 <li>등록된 친구들의 오늘 근무와 일정을 확인할 수 있습니다.</li>
                 <li>친구 카드를 클릭하면 해당 친구의 달력으로 이동합니다.</li>
                 <li class="flex items-center gap-1">
-                  <Star class="w-3 h-3 text-amber-500" fill="currentColor" />
+                  <Star class="w-3 h-3 text-dp-warning" fill="currentColor" />
                   버튼으로 자주 보는 친구를 상단에 고정할 수 있습니다.
                 </li>
                 <li class="flex items-center gap-1">
@@ -183,7 +183,7 @@ function closeAllSections() {
           :style="{ backgroundColor: 'var(--dp-bg-secondary)' }"
         >
           <div class="flex items-center gap-3">
-            <Calendar class="w-5 h-5 text-green-500" />
+            <Calendar class="w-5 h-5 text-dp-success" />
             <span class="font-semibold" :style="{ color: 'var(--dp-text-primary)' }">내 달력</span>
           </div>
           <ChevronUp v-if="sections.find(s => s.id === 'calendar')?.isOpen" class="w-5 h-5" :style="{ color: 'var(--dp-text-muted)' }" />
@@ -198,7 +198,7 @@ function closeAllSections() {
           <div class="space-y-4">
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Pencil class="w-4 h-4 text-orange-500" />
+                <Pencil class="w-4 h-4 text-dp-warning" />
                 근무 관리
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -212,7 +212,7 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <FileSpreadsheet class="w-4 h-4 text-green-600" />
+                <FileSpreadsheet class="w-4 h-4 text-dp-success" />
                 엑셀 업로드 (일부 팀 지원)
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -224,7 +224,7 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Plus class="w-4 h-4 text-blue-500" />
+                <Plus class="w-4 h-4 text-dp-accent" />
                 일정 관리
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -233,7 +233,7 @@ function closeAllSections() {
                 <li>파일이나 이미지를 첨부할 수 있습니다.</li>
                 <li>공개 범위를 설정하여 누가 이 일정을 볼 수 있는지 지정할 수 있습니다.</li>
                 <li class="flex items-center gap-1">
-                  <Tag class="w-3 h-3 text-blue-500" />
+                  <Tag class="w-3 h-3 text-dp-accent" />
                   친구를 태그하면 해당 친구의 달력에도 일정이 표시됩니다.
                 </li>
                 <li>태그된 친구는 자신의 달력에서 태그를 제거할 수 있습니다.</li>
@@ -243,7 +243,7 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Sparkles class="w-4 h-4 text-violet-500" />
+                <Sparkles class="w-4 h-4 text-dp-accent-light" />
                 AI 시간 자동 인식
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -256,7 +256,7 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Eye class="w-4 h-4 text-emerald-500" />
+                <Eye class="w-4 h-4 text-dp-success" />
                 일정 공개 범위
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -269,7 +269,7 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <CalendarCheck class="w-4 h-4 text-purple-500" />
+                <CalendarCheck class="w-4 h-4 text-dp-accent-light" />
                 D-Day 관리
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -283,7 +283,7 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <ClipboardList class="w-4 h-4 text-indigo-500" />
+                <ClipboardList class="w-4 h-4 text-dp-accent" />
                 Todo (할 일) 관리
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -296,7 +296,7 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Search class="w-4 h-4 text-gray-600" />
+                <Search class="w-4 h-4 text-dp-text-secondary" />
                 일정 검색
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -307,7 +307,7 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Users class="w-4 h-4 text-teal-500" />
+                <Users class="w-4 h-4 text-dp-success" />
                 함께보기
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -319,7 +319,7 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <UserPlus class="w-4 h-4 text-cyan-500" />
+                <UserPlus class="w-4 h-4 text-dp-accent-light" />
                 다른 사람 달력 보기
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -344,7 +344,7 @@ function closeAllSections() {
           :style="{ backgroundColor: 'var(--dp-bg-secondary)' }"
         >
           <div class="flex items-center gap-3">
-            <Building2 class="w-5 h-5 text-purple-500" />
+            <Building2 class="w-5 h-5 text-dp-accent-light" />
             <span class="font-semibold" :style="{ color: 'var(--dp-text-primary)' }">내 팀</span>
           </div>
           <ChevronUp v-if="sections.find(s => s.id === 'team')?.isOpen" class="w-5 h-5" :style="{ color: 'var(--dp-text-muted)' }" />
@@ -359,7 +359,7 @@ function closeAllSections() {
           <div class="space-y-4">
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Calendar class="w-4 h-4 text-purple-500" />
+                <Calendar class="w-4 h-4 text-dp-accent-light" />
                 팀 캘린더
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -371,7 +371,7 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Users class="w-4 h-4 text-indigo-500" />
+                <Users class="w-4 h-4 text-dp-accent" />
                 근무자 확인
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -383,7 +383,7 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Plus class="w-4 h-4 text-green-500" />
+                <Plus class="w-4 h-4 text-dp-success" />
                 팀 일정 (팀 관리자)
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -394,7 +394,7 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <UserCog class="w-4 h-4 text-blue-500" />
+                <UserCog class="w-4 h-4 text-dp-accent" />
                 멤버 관리 (팀 관리자)
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -407,7 +407,7 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Palette class="w-4 h-4 text-pink-500" />
+                <Palette class="w-4 h-4 text-dp-accent-light" />
                 근무 타입 관리 (팀 관리자)
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -420,7 +420,7 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <FileSpreadsheet class="w-4 h-4 text-emerald-600" />
+                <FileSpreadsheet class="w-4 h-4 text-dp-success" />
                 팀 엑셀 업로드 (팀 관리자)
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -444,7 +444,7 @@ function closeAllSections() {
           :style="{ backgroundColor: 'var(--dp-bg-secondary)' }"
         >
           <div class="flex items-center gap-3">
-            <UserPlus class="w-5 h-5 text-amber-500" />
+            <UserPlus class="w-5 h-5 text-dp-warning" />
             <span class="font-semibold" :style="{ color: 'var(--dp-text-primary)' }">친구 관리</span>
           </div>
           <ChevronUp v-if="sections.find(s => s.id === 'friends')?.isOpen" class="w-5 h-5" :style="{ color: 'var(--dp-text-muted)' }" />
@@ -459,7 +459,7 @@ function closeAllSections() {
           <div class="space-y-4">
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <UserPlus class="w-4 h-4 text-blue-500" />
+                <UserPlus class="w-4 h-4 text-dp-accent" />
                 친구 추가
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -471,7 +471,7 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Bell class="w-4 h-4 text-rose-500" />
+                <Bell class="w-4 h-4 text-dp-danger" />
                 친구 요청 관리
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -483,7 +483,7 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Home class="w-4 h-4 text-amber-500" />
+                <Home class="w-4 h-4 text-dp-warning" />
                 가족 등록
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -497,7 +497,7 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Star class="w-4 h-4 text-amber-500" />
+                <Star class="w-4 h-4 text-dp-warning" />
                 친구 고정 및 순서 변경
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -509,7 +509,7 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Trash2 class="w-4 h-4 text-red-500" />
+                <Trash2 class="w-4 h-4 text-dp-danger" />
                 친구 삭제
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -532,7 +532,7 @@ function closeAllSections() {
           :style="{ backgroundColor: 'var(--dp-bg-secondary)' }"
         >
           <div class="flex items-center gap-3">
-            <Settings class="w-5 h-5 text-gray-500" />
+            <Settings class="w-5 h-5 text-dp-text-muted" />
             <span class="font-semibold" :style="{ color: 'var(--dp-text-primary)' }">설정</span>
           </div>
           <ChevronUp v-if="sections.find(s => s.id === 'settings')?.isOpen" class="w-5 h-5" :style="{ color: 'var(--dp-text-muted)' }" />
@@ -547,7 +547,7 @@ function closeAllSections() {
           <div class="space-y-4">
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Camera class="w-4 h-4 text-violet-500" />
+                <Camera class="w-4 h-4 text-dp-accent-light" />
                 프로필 사진 설정
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -559,7 +559,7 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Eye class="w-4 h-4 text-blue-500" />
+                <Eye class="w-4 h-4 text-dp-accent" />
                 시간표 공개 설정
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -572,8 +572,8 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Sun class="w-4 h-4 text-amber-500" />
-                <Moon class="w-4 h-4 text-indigo-500" />
+                <Sun class="w-4 h-4 text-dp-warning" />
+                <Moon class="w-4 h-4 text-dp-accent" />
                 화면 테마 설정
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -585,7 +585,7 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Shield class="w-4 h-4 text-green-500" />
+                <Shield class="w-4 h-4 text-dp-success" />
                 관리 권한 위임
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -598,7 +598,7 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Smartphone class="w-4 h-4 text-purple-500" />
+                <Smartphone class="w-4 h-4 text-dp-accent-light" />
                 접속 세션 관리
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -610,7 +610,7 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Link class="w-4 h-4 text-yellow-600" />
+                <Link class="w-4 h-4 text-dp-warning" />
                 소셜 계정 연동
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">
@@ -621,7 +621,7 @@ function closeAllSections() {
 
             <div class="p-4 rounded-lg" :style="{ backgroundColor: 'var(--dp-bg-secondary)' }">
               <h4 class="font-medium mb-2 flex items-center gap-2" :style="{ color: 'var(--dp-text-primary)' }">
-                <Lock class="w-4 h-4 text-gray-600" />
+                <Lock class="w-4 h-4 text-dp-text-secondary" />
                 비밀번호 변경
               </h4>
               <ul class="text-sm space-y-1.5 ml-6" :style="{ color: 'var(--dp-text-secondary)' }">

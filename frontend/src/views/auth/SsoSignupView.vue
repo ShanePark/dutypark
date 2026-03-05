@@ -138,7 +138,7 @@ async function handleSubmit() {
               required
               maxlength="10"
               :disabled="isLoading"
-              class="w-full px-3 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:cursor-not-allowed"
+              class="w-full px-3 py-3 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent disabled:cursor-not-allowed"
               :style="{
                 border: '1px solid var(--dp-border-input)',
                 backgroundColor: isLoading ? 'var(--dp-bg-tertiary)' : 'var(--dp-bg-input)',
@@ -146,7 +146,7 @@ async function handleSubmit() {
               }"
               placeholder="사용자명을 입력하세요 (1-10자)"
             />
-            <p v-if="usernameError" class="mt-1 text-sm text-red-600">
+            <p v-if="usernameError" class="mt-1 text-sm text-dp-danger">
               {{ usernameError }}
             </p>
           </div>
@@ -159,7 +159,7 @@ async function handleSubmit() {
               </label>
               <button
                 type="button"
-                class="text-xs text-blue-600 hover:text-blue-700 hover:underline"
+                class="text-xs text-dp-accent hover:text-dp-accent-hover hover:underline"
                 @click="openPolicyModal('terms')"
               >
                 전체보기 →
@@ -173,7 +173,7 @@ async function handleSubmit() {
                 backgroundColor: 'var(--dp-bg-tertiary)',
               }"
             >
-              <div class="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent"></div>
+              <div class="animate-spin rounded-full h-6 w-6 border-2 border-dp-accent-border border-t-transparent"></div>
             </div>
             <div
               v-else-if="!policies?.terms"
@@ -183,7 +183,7 @@ async function handleSubmit() {
                 backgroundColor: 'var(--dp-bg-tertiary)',
               }"
             >
-              <p class="text-sm text-red-600">이용약관을 불러올 수 없습니다.</p>
+              <p class="text-sm text-dp-danger">이용약관을 불러올 수 없습니다.</p>
             </div>
             <div
               v-else
@@ -206,11 +206,11 @@ async function handleSubmit() {
               type="checkbox"
               required
               :disabled="isLoading"
-              class="h-5 w-5 text-blue-600 focus:ring-blue-500 rounded cursor-pointer disabled:cursor-not-allowed"
+              class="h-5 w-5 text-dp-accent focus:ring-dp-accent rounded cursor-pointer disabled:cursor-not-allowed"
               :style="{ borderColor: 'var(--dp-border-input)' }"
             />
             <label for="termAgree" class="ml-2 text-sm cursor-pointer" :style="{ color: 'var(--dp-text-secondary)' }">
-              이용약관에 동의합니다 <span class="text-red-500">*</span>
+              이용약관에 동의합니다 <span class="text-dp-danger">*</span>
             </label>
           </div>
 
@@ -222,7 +222,7 @@ async function handleSubmit() {
               </label>
               <button
                 type="button"
-                class="text-xs text-blue-600 hover:text-blue-700 hover:underline"
+                class="text-xs text-dp-accent hover:text-dp-accent-hover hover:underline"
                 @click="openPolicyModal('privacy')"
               >
                 전체보기 →
@@ -236,7 +236,7 @@ async function handleSubmit() {
                 backgroundColor: 'var(--dp-bg-tertiary)',
               }"
             >
-              <div class="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent"></div>
+              <div class="animate-spin rounded-full h-6 w-6 border-2 border-dp-accent-border border-t-transparent"></div>
             </div>
             <div
               v-else-if="!policies?.privacy"
@@ -246,7 +246,7 @@ async function handleSubmit() {
                 backgroundColor: 'var(--dp-bg-tertiary)',
               }"
             >
-              <p class="text-sm text-red-600">개인정보 처리방침을 불러올 수 없습니다.</p>
+              <p class="text-sm text-dp-danger">개인정보 처리방침을 불러올 수 없습니다.</p>
             </div>
             <div
               v-else
@@ -269,11 +269,11 @@ async function handleSubmit() {
               type="checkbox"
               required
               :disabled="isLoading"
-              class="h-5 w-5 text-blue-600 focus:ring-blue-500 rounded cursor-pointer disabled:cursor-not-allowed"
+              class="h-5 w-5 text-dp-accent focus:ring-dp-accent rounded cursor-pointer disabled:cursor-not-allowed"
               :style="{ borderColor: 'var(--dp-border-input)' }"
             />
             <label for="privacyAgree" class="ml-2 text-sm cursor-pointer" :style="{ color: 'var(--dp-text-secondary)' }">
-              개인정보 처리방침에 동의합니다 <span class="text-red-500">*</span>
+              개인정보 처리방침에 동의합니다 <span class="text-dp-danger">*</span>
             </label>
           </div>
 
@@ -281,11 +281,11 @@ async function handleSubmit() {
           <button
             type="submit"
             :disabled="!isFormValid || isLoading"
-            class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition min-h-12 flex items-center justify-center"
+            class="w-full bg-dp-accent text-dp-text-on-dark py-3 px-4 rounded-lg hover:bg-dp-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition min-h-12 flex items-center justify-center"
           >
             <template v-if="isLoading">
               <svg
-                class="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
+                class="animate-spin -ml-1 mr-2 h-5 w-5 text-dp-text-on-dark"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"

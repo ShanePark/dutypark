@@ -110,7 +110,7 @@ async function addMember(member: MemberDto) {
 <template>
   <div
     v-if="isOpen"
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+    class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
     @click.self="close"
   >
     <div class="rounded-lg shadow-xl w-full max-w-lg" :style="{ backgroundColor: 'var(--dp-bg-modal)' }">
@@ -131,13 +131,13 @@ async function addMember(member: MemberDto) {
             v-model="searchKeyword"
             type="text"
             placeholder="이름 또는 이메일로 검색"
-            class="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            class="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent"
             :style="{ backgroundColor: 'var(--dp-bg-input)', borderColor: 'var(--dp-border-input)', color: 'var(--dp-text-primary)' }"
             @keyup.enter="searchMembers"
           />
           <button
             @click="searchMembers"
-            class="px-4 py-2 text-white rounded-lg hover:bg-gray-700 transition"
+            class="px-4 py-2 text-dp-text-on-dark rounded-lg hover:bg-dp-surface-strong-hover transition"
             :style="{ backgroundColor: 'var(--dp-modal-header-bg)' }"
           >
             <Search class="w-5 h-5" />
@@ -146,7 +146,7 @@ async function addMember(member: MemberDto) {
 
         <!-- Search Results -->
         <div v-if="searchLoading" class="flex items-center justify-center py-8">
-          <Loader2 class="w-6 h-6 animate-spin text-blue-500" />
+          <Loader2 class="w-6 h-6 animate-spin text-dp-accent" />
         </div>
         <div v-else-if="searchResult.length > 0" class="overflow-x-auto">
           <table class="w-full">
@@ -169,7 +169,7 @@ async function addMember(member: MemberDto) {
                   <button
                     @click="addMember(member)"
                     :disabled="!!member.teamId || saving"
-                    class="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="px-3 py-1 bg-dp-accent text-dp-text-on-dark text-sm rounded hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {{ member.teamId ? '소속 있음' : '추가' }}
                   </button>
@@ -201,7 +201,7 @@ async function addMember(member: MemberDto) {
               :key="i"
               @click="goToPage(i - 1)"
               class="px-2 sm:px-3 py-1 text-sm border rounded transition"
-              :class="i - 1 === currentPage ? 'bg-blue-500 text-white border-blue-500' : ''"
+              :class="i - 1 === currentPage ? 'bg-dp-accent text-dp-text-on-dark border-dp-accent-border' : ''"
               :style="i - 1 !== currentPage ? { borderColor: 'var(--dp-border-secondary)' } : {}"
             >
               {{ i }}
