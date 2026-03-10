@@ -171,6 +171,38 @@ class NaverLoginServiceTest {
         verify(authService, never()).getTokenResponseByMemberId(any(), any())
     }
 
+    @Test
+    fun `login throws readable exception when naver token exchange fails`() {
+        whenever(
+            naverTokenApi.getAccessToken(
+                grantType = any(),
+                clientId = any(),
+                clientSecret = any(),
+                code = any(),
+                state = any()
+            )
+        ).thenReturn(
+            NaverTokenResponse(
+                error = "invalid_request",
+                errorDescription = "no valid data in session"
+            )
+        )
+
+        val exception = assertThrows<IllegalStateException> {
+            service.login(
+                req = MockHttpServletRequest(),
+                resp = MockHttpServletResponse(),
+                code = "code-3",
+                state = "encoded-state",
+                callbackUrl = "https://client/callback",
+                redirectTarget = "/"
+            )
+        }
+
+        assertThat(exception.message).contains("no valid data in session")
+        verify(naverUserInfoApi, never()).getUserInfo(any())
+    }
+
     private fun stubNaverApis(naverId: String) {
         whenever(
             naverTokenApi.getAccessToken(

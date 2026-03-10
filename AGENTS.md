@@ -1,441 +1,83 @@
 # Dutypark – Agent Operations Manual
 
-Use this document whenever you change code in Dutypark. It distills everything an LLM coding agent needs—no marketing fluff, no redundant facts.
+Use this file for repo-wide defaults only. Keep it lean; read the code and nearby tests for details instead of expanding this document into a full reference manual.
 
----
+## 1. Current Snapshot
 
-## 1. Core Context
+- **Backend:** Kotlin 2.3, Java 25 toolchain, Spring Boot 4.0.1, Spring MVC + WebFlux + Security + Validation + Actuator + Cache + Flyway
+- **AI:** Spring AI OpenAI-compatible chat client against Google Generative Language, default model `gemma-3-27b-it`, queue-based schedule time parsing, disabled when `GEMINI_API_KEY` is blank or `EMPTY`
+- **Frontend:** Vue 3.5 SPA, Vite 7, TypeScript 5.9, Pinia, Vue Router 4, Tailwind CSS 4, Vitest
+- **Persistence / Ops:** MySQL 8.0, Flyway migrations in `src/main/resources/db/migration/v1` and `v2`, Docker Compose stack for app/mysql/nginx/prometheus/grafana
+- **Auth:** HttpOnly cookie access/refresh flow for the SPA, Bearer header fallback still supported, Kakao + Naver OAuth, auxiliary accounts, impersonation
+- **PWA / Push:** service worker at `frontend/public/sw.js`, VAPID web push, app badge support
 
-- **Backend:** Kotlin 2.3, Spring Boot 4.0.x (Data JPA, Web, WebFlux, Security, Validation, Actuator, DevTools, Scheduling, Async, Caching, AI)
-- **Frontend:** Vue 3 SPA (Vite + TypeScript + Pinia + Tailwind CSS), fully separated from backend
-- **Persistence:** MySQL 8.0 via Flyway migrations (`db/migration/v1`, `v2`); ULID entities for attachments/schedules/todos/notifications
-- **Auth:** JWT Bearer tokens + sliding refresh tokens (SPA), Kakao OAuth SSO, `@Login` argument resolver, account impersonation
-- **AI:** Spring AI + Gemini for schedule time parsing (async queue manager + worker in `schedule/timeparsing`, rate-limited)
-- **PWA:** Web Push notifications with VAPID keys, installable on iOS/Android home screens
-- **Observability:** Micrometer Prometheus registry, Slack lifecycle/error hooks, rolling Logback files
-- **Deployment:** Docker Compose stack: app, mysql, nginx (TLS), Prometheus, Grafana (+ standalone MySQL stack in `dutypark_dev_db`)
+## 2. Repo Map
 
-### Architecture Overview
+- **Backend modules:** `attachment`, `schedule`, `duty`, `todo`, `team`, `member`, `dashboard`, `notification`, `push`, `holiday`, `policy`, `security`, `common`, `admin`
+- **Frontend hotspots:** `frontend/src/api`, `frontend/src/views`, `frontend/src/components`, `frontend/src/stores`, `frontend/src/composables`, `frontend/src/types`, `frontend/src/router`
+- **High-signal files when orienting:** `build.gradle.kts`, `src/main/resources/application.yml`, `src/main/resources/application-dev.yml`, `frontend/package.json`, `frontend/src/router/index.ts`, `frontend/src/components/layout/AppHeader.vue`
 
-```
-┌─────────────────────────────────────────┐
-│      Vue 3 SPA (frontend/)              │
-│  Vite dev: http://localhost:5173        │
-└────────────┬────────────────────────────┘
-             │ /api/* proxy
-             ▼
-┌─────────────────────────────────────────┐
-│   Spring Boot Backend (:8080)           │
-│   REST API + JWT Auth                   │
-└────────────┬────────────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────────────┐
-│   MySQL 8.0 (:3306/3307)                │
-└─────────────────────────────────────────┘
-```
+## 3. Hard Rules
 
-### Key Modules & Responsibilities
+### General
 
-| Module          | Highlights                                                                                                                     |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `attachment/`   | Upload sessions, validation/blacklist, filesystem abstraction, thumbnail generation, nightly cleanup, permission evaluator.    |
-| `schedule/`     | Schedule CRUD, tagging, search, AI parsing queue/worker, attachment orchestration, visibility enforcement via `FriendService`. |
-| `duty/`         | Calendar duties, Excel batch import (`SungsimCakeParser`) for members/teams, duty type management.                             |
-| `todo/`         | Kanban board with 5 statuses (BACKLOG/TODO/DOING/DONE/CLOSED), draggable ordering with SortableJS, reopen/complete logic.      |
-| `team/`         | Teams, managers, duty types/colors, work-type presets, shared team schedules, batch templates.                                 |
-| `member/`       | Friends/family, D-Day events, refresh tokens, SSO onboarding, auxiliary accounts, `@Login` annotation.                         |
-| `dashboard/`    | Aggregated "my + friends" snapshot (duties, schedules, requests, pins) with batch loading.                                     |
-| `notification/` | In-app alerts with event-driven async handling, pagination, unread counts, mark-as-read.                                       |
-| `push/`         | Web Push notifications with VAPID keys, iOS PWA support, subscription management.                                              |
-| `holiday/`      | Korean public holidays from Data.go.kr with concurrency-safe caching and admin reset.                                          |
-| `security/`     | JWT provider/filter, Bearer token support, Kakao OAuth, rate limiting, impersonation, admin filter, CORS configuration.        |
-| `common/`       | Core configs (async, clock, storage, logging), Slack notifier, DataGoKr client, exception advisors.                            |
-
-### High-Impact Features
-
-- Duty calendar with visibility-aware data, manager checks, Excel batch import, default off-type fallback.
-- Schedule editor with attachments (session-based Uppy uploads, thumbnails via Thumbnailator/TwelveMonkeys, cleanup scheduler).
-- AI-assisted time parsing queue that respects Gemini rate limits (30 RPM / 14400 RPD) and populates `contentWithoutTime`.
-- Kanban todo board with 5 statuses, SortableJS drag-drop reordering between columns, position persistence.
-- D-Day creation with privacy flag, localStorage selection for quick display.
-- Dashboard showing my duty + today's schedules plus friends/family insights and request management.
-- Team schedule board and templates, plus DataGoKr-powered holiday sync with caching and concurrency locks.
-- Web Push notifications for friend requests, schedule tags, and other events (VAPID-based, iOS PWA compatible).
-- Account impersonation allowing managers to switch to managed accounts for viewing/editing.
-- Slack notifications for startup/shutdown and error detections (request payload + metadata).
-
----
-
-## 2. Build & Run Reference
+- Do not start backend or frontend dev servers yourself unless the user explicitly asks. Assume the developer handles `./gradlew bootRun` and `cd frontend && npm run dev`.
+- Add new configuration in `application.yml` with safe defaults and surface overrides through `.env.sample`.
+- Prefer existing patterns over inventing new structure. Read the nearest controller, service, view, and test first.
 
 ### Backend
 
-```bash
-./gradlew bootRun          # dev server (DevTools toggled in application-dev.yml)
-./gradlew test             # fail-fast H2 + Mockito suites
-./gradlew build            # compiles + tests + bootJar (plain jar disabled)
-./gradlew asciidoctor      # runs tests, exports REST Docs to static/docs
-```
-
-### Frontend (Vue 3 SPA)
-
-```bash
-cd frontend
-npm install                # install dependencies
-npm run dev                # dev server at http://localhost:5173
-npm run build              # production build to dist/
-npm run type-check         # TypeScript type checking (vue-tsc)
-```
-
-### Docker
-
-```bash
-docker compose up -d                                              # full stack (nginx TLS)
-docker compose -f docker-compose.yml -f docker-compose.local.yml up -d  # HTTP-only local stack
-cd dutypark_dev_db && docker compose up -d                              # standalone MySQL on :3307
-```
-
-### Build Guidelines
-
-- **Backend:** `./gradlew build` or `./gradlew test`
-- **Frontend:** `npm run type-check` and `npm run build`
-- **REST Docs:** `./gradlew asciidoctor` after controller changes
-
-### Configuration Essentials
-
-- Copy `.env.sample` → `.env`, then populate DB creds, JWT secret (base64), Slack token, DataGoKr key, Kakao key, Gemini key, VAPID keys, domain, `COOKIE_SSL_ENABLED`, `NGINX_CONF_NAME`, `UID/GID`, `TZ`.
-- `application.yml`: toggles storage root/size/blacklist, Slack/DataGoKr keys, AI base URL/model/temperature, VAPID keys for push, actuator exposure, Flyway, logging.
-- `application-dev.yml`: points to `localhost:3307`, enables DevTools & LiveReload, disables SSL, seeds fake secrets, logs to local path.
-- Storage is centralized under `dutypark.storage.root` (permanent) and `<root>/_tmp` (sessions). Update `StoragePathResolver` + cleanup scheduler if adding contexts.
-- AI parsing auto-disables when `GEMINI_API_KEY` is blank—preserve this behavior when touching `schedule/timeparsing`.
-- Generate VAPID keys with `npx web-push generate-vapid-keys` for push notifications.
-
-### Git Configuration for Development
-
-Ignore local deletion of `frontend/dist/.gitkeep` (required for deployment, but deleted during dev builds):
-
-```bash
-git update-index --assume-unchanged frontend/dist/.gitkeep
-```
-
----
-
-## 3. Frontend Architecture (Vue 3 SPA)
-
-### Directory Structure
-
-```
-frontend/
-├── src/
-│   ├── api/                    # API client modules (Axios)
-│   │   ├── client.ts           # Axios instance, interceptors, token management
-│   │   ├── auth.ts             # Authentication (Bearer tokens, OAuth)
-│   │   ├── admin.ts            # Admin API (separate /admin/api base)
-│   │   ├── dashboard.ts        # Dashboard aggregation
-│   │   ├── duty.ts             # Duty calendar
-│   │   ├── todo.ts             # Todo CRUD + ordering
-│   │   ├── schedule.ts         # Schedule CRUD + tags + search
-│   │   ├── member.ts           # Member/friends/D-Day
-│   │   ├── team.ts             # Team management
-│   │   ├── attachment.ts       # File upload sessions
-│   │   ├── notification.ts     # Notification CRUD + polling
-│   │   ├── push.ts             # Web Push subscription management
-│   │   └── policy.ts           # Terms & privacy policy versions
-│   ├── components/
-│   │   ├── common/             # FileUploader, YearMonthPicker, AttachmentGrid, ImageViewer, NotificationBell
-│   │   ├── duty/               # DayDetailModal, TodoModals, DDayModal, OtherDutiesModal, etc.
-│   │   ├── todo/               # KanbanColumn, KanbanCard
-│   │   └── layout/             # AppLayout, AppHeader, AppFooter
-│   ├── composables/            # useSwal, useKakao, usePushNotification, useNotificationNavigation, useEscapeKey
-│   ├── stores/
-│   │   ├── auth.ts             # Pinia authentication store (login, impersonation)
-│   │   ├── notification.ts     # Notification polling with exponential backoff
-│   │   └── theme.ts            # Dark/light mode persistence
-│   ├── views/                  # Page-level components
-│   │   ├── auth/               # LoginView, OAuthCallbackView, SsoSignupView, SsoCongratsView
-│   │   ├── dashboard/          # DashboardView
-│   │   ├── duty/               # DutyView
-│   │   ├── todo/               # TodoBoardView (Kanban)
-│   │   ├── member/             # MemberView, FriendsView
-│   │   ├── team/               # TeamView, TeamManageView
-│   │   ├── notification/       # NotificationListView
-│   │   ├── admin/              # AdminDashboardView, AdminTeamListView, DevPlaygroundView
-│   │   ├── policy/             # TermsView, PrivacyView
-│   │   ├── guide/              # GuideView
-│   │   └── NotFoundView.vue
-│   ├── utils/                  # Helpers (color, date, visibility)
-│   ├── types/index.ts          # TypeScript type definitions (50+ interfaces)
-│   ├── router/index.ts         # Vue Router configuration
-│   └── style.css               # Tailwind CSS + design tokens
-├── vite.config.ts              # Vite config (proxy: /api → localhost:8080)
-└── package.json
-```
-
-### Key Technologies
-
-- **Vue 3** with Composition API (`<script setup>`)
-- **TypeScript** for type safety
-- **Pinia** for state management (auth, notification, theme stores)
-- **Vue Router** with lazy-loaded routes and navigation guards
-- **Axios** with request/response interceptors for JWT handling
-- **Tailwind CSS** for styling (custom design tokens in `style.css`)
-- **SweetAlert2** via `useSwal` composable
-- **SortableJS** for drag-drop reordering (todos, schedules)
-- **Uppy** for file uploads with progress tracking
-- **Vue Advanced Cropper** for profile photo editing
-- **Lucide Vue** for icons (500+ SVG icons)
-- **dayjs** for date handling
-
-### Authentication Flow
-
-Login → JWT tokens in localStorage → Bearer header via interceptor → 401 auto-refresh → router guards
-
-### API Client Pattern
-
-```typescript
-// All API modules follow this pattern
-import apiClient from './client'
-
-export const exampleApi = {
-  getItems: () => apiClient.get<ItemDto[]>('/items'),
-  createItem: (data: CreateItemDto) => apiClient.post<ItemDto>('/items', data),
-  updateItem: (id: string, data: UpdateItemDto) => apiClient.put<ItemDto>(`/items/${id}`, data),
-  deleteItem: (id: string) => apiClient.delete(`/items/${id}`)
-}
-```
-
-### Router Structure
-
-| Path | View | Auth | Notes |
-|------|------|------|-------|
-| `/` | DashboardView | Optional | Guest sees intro |
-| `/auth/login` | LoginView | Guest only | |
-| `/auth/sso-signup` | SsoSignupView | Optional | |
-| `/auth/sso-congrats` | SsoCongratsView | Required | |
-| `/auth/oauth-callback` | OAuthCallbackView | Optional | |
-| `/duty/:id` | DutyView | Optional | Visibility check |
-| `/todo` | TodoBoardView | Required | Kanban board |
-| `/member` | MemberView | Required | |
-| `/friends` | FriendsView | Required | |
-| `/team` | TeamView | Required | |
-| `/team/manage/:teamId` | TeamManageView | Required | Permission check |
-| `/notifications` | NotificationListView | Required | Full notification history |
-| `/guide` | GuideView | Optional | User guide |
-| `/terms` | TermsView | Optional | Terms of service |
-| `/privacy` | PrivacyView | Optional | Privacy policy |
-| `/admin` | AdminDashboardView | Admin | |
-| `/admin/teams` | AdminTeamListView | Admin | |
-| `/admin/dev` | DevPlaygroundView | Admin | Development tools |
-
-### Hamburger Menu (AppHeader.vue)
-
-The hamburger menu in `AppHeader.vue` provides the main navigation for logged-in users.
-
-**IMPORTANT: When adding a new page/view, always check if it should be added to the hamburger menu.** Consider:
-1. Is this a user-facing feature that needs direct navigation?
-2. Should it be accessible from the main menu or only via in-page links?
-3. Update `AppHeader.vue` if the page should appear in the menu.
-
----
-
-## 4. Infra & Ops Notes
-
-- **Docker:** `docker-compose.yml` wires mysql → app → nginx, plus Prometheus/Grafana; app logs + storage are volume-mounted (`./data/logs`, `./data/storage`). `dutypark_dev_db` provides a lightweight DB-only stack.
-- **nginx:** Configs under `data/nginx*.conf` (HTTPS vs HTTP). Includes HTTP→HTTPS redirect, Let's Encrypt mounts, `/actuator` IP allowlist, static caching, strict security headers.
-- **Monitoring:** Prometheus config at `data/prometheus/prometheus.yml` scrapes `app:8080/actuator/prometheus`; Grafana served on `:3000` with persistent volume `./data/grafana`.
-- **Logging:** `LogbackConfig` writes daily rolling files to `dutypark.log.path` (default `/dutypark/logs`). Keep log path in sync with Docker volumes when changing.
-- **Slack:** `ApplicationStartupShutdownListener` announces lifecycle with `git.properties` info; `ErrorDetectAdvisor` pushes stack traces + request context; optional `@SlackNotification` aspect for domain events.
-- **Scheduled jobs:** Attachment session cleanup (02:00 every day), refresh token cleanup (00:00 daily), and AI parsing worker. Ensure new async code respects existing executors/logging.
-
----
-
-## 5. Coding Conventions & Gotchas
-
-### Backend
-
-- Constructor injection only; annotate services with `@Service` + `@Transactional`.
-- Use `logger()` extension from `common/config/LogbackConfig.kt`.
-- Respect visibility/ownership checks (`FriendService`, `SchedulePermissionService`, `AttachmentPermissionEvaluator`).
-- When adding upload contexts or storage tweaks, update every layer: DTO, validation, path resolver, cleanup scheduler, and Docker volume expectations.
-- Schedule updates should reset `ParsingTimeStatus` to `WAIT` and push tasks onto the queue when content/time changes.
-- For multi-threaded writes (e.g., worker), avoid relying on JPA dirty checking—explicit `save` already in place.
-- JWT supports both cookie-based auth (legacy) and Bearer token auth (SPA); both flows coexist.
+- Use constructor injection. Service-layer code usually stays `@Service` + `@Transactional`.
+- Use the `logger()` extension from `common/config/LogbackConfig.kt`.
+- Respect visibility and ownership gates: `FriendService`, `SchedulePermissionService`, `AttachmentPermissionEvaluator`, manager checks.
+- Cookie auth and Bearer auth both exist. Do not remove one path without checking `JwtAuthFilter`, `CookieService`, backend auth controllers, and `frontend/src/api/client.ts`.
+- Scheduled cleanup jobs currently run for refresh tokens at 00:00, attachment sessions at 02:00, notifications at 02:30, and login attempts at 03:00.
 
 ### Frontend
 
-- Use Composition API (`<script setup lang="ts">`) for all new components.
-- Follow existing patterns in `src/api/` for API client modules.
-- Use `useSwal()` composable for all user notifications and confirmations.
-- **Styling rules:** Tailwind utility classes over inline styles; custom design tokens defined in `style.css`.
-- Keep components focused; extract reusable logic to `composables/`.
-- Type all API responses using interfaces in `types/index.ts`.
+- Use `<script setup lang="ts">` for new Vue SFCs.
+- Keep authenticated HTTP work inside `frontend/src/api/*.ts`; use shared interfaces from `frontend/src/types/index.ts`.
+- Use `useSwal()` for confirmations and user-facing alerts.
+- Auth is cookie-based through the shared Axios client. Do not add access-token persistence in localStorage.
+- Style with Tailwind utilities and `--dp-*` tokens from `frontend/src/style.css`. Avoid hardcoded hex colors or theme-blind utility colors for surfaces, borders, and text.
+- Inline `:style` is acceptable only for runtime-dependent values or CSS-variable-backed colors already common in the codebase.
+- Keep interactive targets at least 44px and preserve visible hover/focus feedback.
+- When adding a user-facing route, always review both `frontend/src/router/index.ts` and `frontend/src/components/layout/AppHeader.vue`.
 
-### Dark Mode & Responsive Design (CRITICAL)
+### Domain Gotchas
 
-- Use `--dp-*` CSS variables from `style.css`, NOT hardcoded colors (`bg-gray-50`, `hover:bg-gray-100`)
-- Interactive elements: `cursor-pointer` + theme-aware hover (e.g., `hover-bg-light`) + min 44px touch targets
-- Mobile-first: use Tailwind responsive prefixes (`sm:`, `md:`, `lg:`)
+- Attachment contexts currently include `SCHEDULE`, `PROFILE`, `TEAM`, and `TODO`. If you add or change a context, update the enum, validation, storage path resolution, synchronization flow, cleanup expectations, and storage layout together.
+- Schedule create/update behavior depends on `ScheduleTimeParsingQueueManager`. Updates currently reset `ParsingTimeStatus` to `WAIT` and requeue parsing; preserve that contract unless the feature spec explicitly changes it.
+- The time parsing worker runs off-thread and explicitly saves entities. Do not rely on JPA dirty checking there.
+- Push subscription flow depends on a valid refresh token cookie plus service worker registration. Backend and frontend changes often need to move together.
+- Notification behavior includes unread polling, exponential backoff, friend-request counts, and app badge updates. Keep those semantics aligned when touching notification UI or APIs.
 
-### Hover & Interaction Design
+## 4. Verification Matrix
 
-- Add hover effects to all clickable elements for better UX feedback
-- Use `transition-all duration-150` for smooth animations
-- Hover styles: background color change, border color change, subtle transform (`translateY(-1px)`), box-shadow
-- For theme compatibility, define hover styles in `style.css` with `.dark` variants (not inline Tailwind classes like `hover:bg-blue-50`)
-- Example pattern: add a class (e.g., `.todo-item-bubble`) and define hover in CSS with light/dark variants
+- **Backend code:** `./gradlew test` or targeted `--tests`
+- **Controller / API docs changes:** `./gradlew asciidoctor`
+- **Full backend build:** `./gradlew build` (`build` already depends on `asciidoctor`)
+- **Frontend changes:** `cd frontend && npm run type-check` and `cd frontend && npm run build`
+- **Frontend unit-level logic:** `cd frontend && npm run test` when touching existing Vitest-covered stores or utils, or when adding new unit tests
 
-### Code Comments Policy
+## 5. Skills To Use
 
-- Comment "why", not "what"; only for non-obvious reasoning or workarounds
-- **English only** (no Korean in any comment syntax)
+- Dutypark-specific skills live in `./.codex/skills/` inside this repository, not in the global Codex home.
+- Use `./.codex/skills/dutypark-restdocs-endpoint/SKILL.md` when changing Spring controller contracts, request or response schemas, or `src/docs/asciidoc`.
+- Use `./.codex/skills/dutypark-frontend-page/SKILL.md` when adding or updating Vue pages, routes, hamburger-menu exposure, or theme-sensitive UI.
+- Use `./.codex/skills/dutypark-playwright-ui/SKILL.md` only for complex browser verification such as drag-drop, modal chains, notification flows, push flows, SSO, or visual regressions.
+- Use the existing `$git-commit`, `$pr`, and `$gh-address-comments` skills for Git and GitHub tasks instead of duplicating those workflows here.
 
----
+## 6. Collaboration Preferences
 
-## 6. Testing & Docs
+- Ask short numbered questions only when ambiguity is risky.
+- Favor backend-first changes for cross-cutting features.
+- Work one checklist item at a time; follow a RED -> GREEN -> REFACTOR rhythm where it fits.
+- Stop after each requested checklist item and present the code before moving on.
+- Never commit automatically.
+- All agent responses to the user must be written in Korean.
 
-- **Backend Structure:** service-layer unit tests (Mockito), controller/integration tests, REST Docs generation, all JUnit 5.
-- **Test Base Classes:** `DutyparkIntegrationTest` (full Spring context + H2), `RestDocsTest` (MockMvc + REST Docs).
-- **Best practices:** cover security (permissions, ownership), edge cases (empty lists, boundaries), performance (N+1, transactions), and error handling (missing resources, storage failures).
-- **Commands:** use `./gradlew test --tests "ClassName"` or `./gradlew clean test --tests "*ControllerTest"` for targeted runs; `./gradlew test jacocoTestReport` for coverage.
-- **REST Docs:** `./gradlew asciidoctor` depends on tests; output copied to `src/main/resources/static/docs`. Keep docs build passing when editing controllers.
+## 7. Quick Pointers
 
-### REST Docs Requirements
-
-**New endpoints require REST Docs tests** (`*ControllerTest.kt` extending `RestDocsTest`):
-- Document all parameters/fields; use `subsectionWithPath()` for optional arrays
-- Update `src/docs/asciidoc/index.adoc`
-- Run `./gradlew asciidoctor` to verify
-- Reference: `FriendControllerTest.kt`, `TeamControllerTest.kt`
-
-### Frontend Testing
-
-- TypeScript type checking: `npm run type-check`
-- Build verification: `npm run build`
-
-### Playwright MCP Usage
-
-**Use only when necessary:**
-- Complex UI (drag-drop, multi-step), visual regressions, OAuth/SSO flows, or user request
-- **NOT for:** CRUD, styling, routine features verifiable via tests or manual refresh
-
-**IMPORTANT: Do NOT start dev servers yourself.**
-- The developer will run `./gradlew bootRun` and `npm run dev` manually
-- Never execute commands to start backend or frontend servers
-- Assume servers are already running when using Playwright
-
-**Development credentials:**
-- Email: `test@duty.park`
-- Password: `12345678`
-
----
-
-## 7. Collaboration Preferences
-
-- Confirm unclear requirements with short, numbered questions (user answers by number).
-- Favor TDD-ish workflow: implement backend pieces first, then frontend, especially for cross-cutting features.
-- Introduce new configuration via `application.yml` with safe defaults, surface env overrides through `.env.sample`.
-- When feasible, capture decisions/specs in `issue-*.md`.
-
-### Task Execution Guidelines
-
-- Work on **one checklist item at a time**; do not parallelize.
-- Break each checklist item into 3–5 small todos; finish all todos for the current item before moving on.
-- Follow a strict **RED → GREEN → REFACTOR** cadence for every feature or fix; do not jump phases or mix steps.
-- After finishing a checklist item, **stop and present the code for review**—do not continue until the user approves.
-- **Never commit automatically**; wait for explicit instructions like "commit this."
-- Only start the next checklist item after user confirms the previous one and requests the commit (if any).
-- **User Communication:** All agent responses to user messages must be written in Korean.
-
-### Parallel Execution & Sub-agent Strategy
-
-**Evaluate parallelizability first:**
-- **Safe:** reading unrelated files, searching different modules, independent validation, exploration
-- **Unsafe:** sequential dependencies (create → edit), shared state/file modifications
-- Always prefer parallel sub-agents for research/exploration tasks
-
----
-
-## 8. Git & GitHub Workflow
-
-### GitHub CLI Usage
-
-Use `gh` CLI: `gh issue create/view`, `gh pr create/view`
-**English only** for all GitHub titles/descriptions.
-
-### Git Commit Policy & Convention
-
-**Never commit unless explicitly asked.**
-
-When committing:
-- Format: `type: summary` where `type ∈ {feat, fix, chore, refactor}`
-- Analyze diff only (not conversation); run `git log --oneline -10` for style check
-- **English only**, imperative, no trailing period
-
----
-
-## 9. Quick Command Reminders
-
-```bash
-# Environment bootstrap
-cp .env.sample .env && edit placeholders
-
-# Backend development
-./gradlew bootRun                          # Start backend on :8080
-
-# Frontend development
-cd frontend && npm run dev                 # Start Vite dev server on :5173
-
-# Docker helpers
-docker compose up -d                       # full stack
-docker compose down                        # stop stack
-cd dutypark_dev_db && docker compose up -d # DB-only on :3307
-
-# Attachments / storage
-ls ./data/storage                          # host-side storage mount
-
-# Type checking
-cd frontend && npm run type-check          # TypeScript verification
-```
-
----
-
-## 10. API Reference
-
-### Authentication Endpoints
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/auth/token` | POST | Bearer token login (SPA) |
-| `/api/auth/refresh` | POST | Refresh access token |
-| `/api/auth/logout` | POST | Logout and invalidate refresh token |
-| `/api/auth/status` | GET | Check login status |
-| `/api/auth/password` | PUT | Change password |
-| `/api/auth/sso/signup/token` | POST | SSO signup (SPA) |
-| `/api/auth/impersonate/{id}` | POST | Switch to managed account |
-| `/api/auth/restore` | POST | Return from impersonation |
-| `/api/auth/push/vapid-public-key` | GET | Get VAPID public key |
-| `/api/auth/push/subscribe` | POST | Subscribe to push notifications |
-| `/api/auth/push/unsubscribe` | POST | Unsubscribe from push |
-
-### Core Domain Endpoints
-
-| Base Path | Domain | Key Operations |
-|-----------|--------|----------------|
-| `/api/duty` | Duties | GET (monthly), PUT (change), PUT (batch) |
-| `/api/schedules` | Schedules | CRUD, search, tag friends, reorder |
-| `/api/todos` | Todos | CRUD, reorder by status, complete/reopen |
-| `/api/dashboard` | Dashboard | GET /my, GET /friends |
-| `/api/members` | Members | Profile, visibility, managers, profile-photo |
-| `/api/friends` | Friends | CRUD, requests, pin/unpin, family |
-| `/api/dday` | D-Day | CRUD |
-| `/api/teams` | Teams | Read, schedules, shift view |
-| `/api/teams/manage` | Team Admin | Members, duty types, batch upload |
-| `/api/attachments` | Files | Upload, download, reorder, sessions |
-| `/api/notifications` | Notifications | GET, mark-read, delete, unread count |
-| `/api/holidays` | Holidays | GET (cached), DELETE (admin reset) |
-| `/admin/api` | Admin | Members, teams, refresh tokens |
-
----
-
-Keep this file close. If a change needs knowledge beyond this guide, consult `README.md`, the package source, or ask clarifying questions before coding.
+- If `frontend/dist/.gitkeep` becomes noisy during local frontend builds, ignore the deletion locally with `git update-index --assume-unchanged frontend/dist/.gitkeep`.
+- If this file is not enough, inspect `README.md`, `application*.yml`, the nearest controller or view, and the closest existing test before coding.

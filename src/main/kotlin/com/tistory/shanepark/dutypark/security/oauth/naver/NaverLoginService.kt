@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.security.oauth.naver
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberSsoRegister
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -30,6 +31,7 @@ class NaverLoginService(
     @param:Value("\${oauth.naver.client-id}") private val clientId: String,
     @param:Value("\${oauth.naver.client-secret}") private val clientSecret: String,
 ) {
+    private val log = logger()
 
     private fun getNaverId(code: String, state: String): String {
         val tokenResponse = naverTokenApi.getAccessToken(
@@ -39,8 +41,19 @@ class NaverLoginService(
             code = code,
             state = state
         )
+        val accessToken = tokenResponse.accessToken
+            ?: run {
+                log.warn(
+                    "Failed to exchange Naver token. error={}, description={}",
+                    tokenResponse.error,
+                    tokenResponse.errorDescription
+                )
+                throw IllegalStateException(
+                    "Failed to exchange Naver token: ${tokenResponse.errorDescription ?: tokenResponse.error ?: "unknown error"}"
+                )
+            }
 
-        val userInfo = naverUserInfoApi.getUserInfo(accessToken = "Bearer ${tokenResponse.accessToken}")
+        val userInfo = naverUserInfoApi.getUserInfo(accessToken = "Bearer $accessToken")
         check(userInfo.resultCode == "00") { "Failed to fetch Naver user info: ${userInfo.message}" }
         return userInfo.response.id
     }

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dutypark REST Docs"
+  short_description: "Update Dutypark REST Docs for controller changes"
+  default_prompt: "Use $dutypark-restdocs-endpoint to add or update a documented Dutypark API endpoint and verify the REST Docs build."
