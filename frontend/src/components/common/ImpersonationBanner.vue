@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSwal } from '@/composables/useSwal'
 import { ArrowLeftCircle, AlertTriangle, Loader2, Clock } from 'lucide-vue-next'
+import { buildLoginPath } from '@/utils/redirect'
 
 const authStore = useAuthStore()
+const route = useRoute()
+const router = useRouter()
 const { confirm, showError, showInfo } = useSwal()
 
 const restoring = ref(false)
@@ -63,7 +67,7 @@ async function handleAutoRestore() {
     // Clear auth state and redirect to login on failure
     authStore.clearAuth()
     showError('세션이 만료되었습니다. 다시 로그인해주세요.')
-    window.location.href = '/auth/login'
+    window.location.href = buildLoginPath(route.fullPath)
   }
 }
 
@@ -78,7 +82,7 @@ async function handleRestore() {
   restoring.value = true
   try {
     await authStore.restore()
-    window.location.href = '/'
+    window.location.href = router.resolve('/').href
   } catch (error) {
     console.error('Failed to restore account:', error)
     showError('원래 계정으로 복귀하는데 실패했습니다.')

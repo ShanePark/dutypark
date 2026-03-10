@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { buildLoginRoute } from '@/utils/redirect'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -143,7 +144,7 @@ router.beforeEach(async (to, _from, next) => {
 
   // Check authentication requirements
   if (to.meta.requiresAuth && !authStore.isLoggedIn) {
-    next({ name: 'login', query: { redirect: to.fullPath } })
+    next(buildLoginRoute(to.fullPath))
     return
   }
 
