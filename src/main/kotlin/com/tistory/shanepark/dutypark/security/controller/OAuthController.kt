@@ -38,8 +38,6 @@ class OAuthController(
     private val jsonMapper = JsonMapper.builder().build()
 
     companion object {
-        private const val DEFAULT_TERMS_VERSION = "2025-01-15"
-        private const val DEFAULT_PRIVACY_VERSION = "2026-03-10"
         private const val SOCIAL_LINK_ERROR_ALREADY_LINKED = "already_linked"
     }
 
@@ -135,6 +133,8 @@ class OAuthController(
         if (!request.termAgree || !request.privacyAgree) {
             return ResponseEntity.badRequest().build()
         }
+        val termsVersion = request.termsVersion?.takeIf { it.isNotBlank() } ?: return ResponseEntity.badRequest().build()
+        val privacyVersion = request.privacyVersion?.takeIf { it.isNotBlank() } ?: return ResponseEntity.badRequest().build()
 
         val member = memberService.createSsoMember(
             username = request.username,
@@ -143,9 +143,6 @@ class OAuthController(
 
         val ipAddress = httpServletRequest.remoteAddr
         val userAgent = httpServletRequest.getHeader("User-Agent")
-
-        val termsVersion = request.termsVersion ?: DEFAULT_TERMS_VERSION
-        val privacyVersion = request.privacyVersion ?: DEFAULT_PRIVACY_VERSION
 
         consentService.recordConsent(
             member = member,

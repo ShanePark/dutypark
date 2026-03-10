@@ -280,13 +280,15 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `sso signup creates member and consent with default versions`() {
+    fun `sso signup creates member and consent with explicit versions`() {
         val ssoRegister = memberSsoRegisterRepository.save(MemberSsoRegister(SsoType.NAVER, "naver-id-1"))
         val request = SsoSignupRequest(
             uuid = ssoRegister.uuid,
             username = "new-user",
             termAgree = true,
-            privacyAgree = true
+            privacyAgree = true,
+            termsVersion = "2025-01-15",
+            privacyVersion = "2026-03-10"
         )
 
         val json = objectMapper.writeValueAsString(request)
@@ -320,13 +322,61 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
     }
 
     @Test
+    fun `sso signup returns bad request when policy terms version is missing`() {
+        val ssoRegister = memberSsoRegisterRepository.save(MemberSsoRegister(SsoType.KAKAO, "kakao-id-2"))
+        val request = SsoSignupRequest(
+            uuid = ssoRegister.uuid,
+            username = "badtermv",
+            termAgree = true,
+            privacyAgree = true,
+            privacyVersion = "2026-03-10"
+        )
+        val json = objectMapper.writeValueAsString(request)
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/sso/signup/token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+        )
+            .andExpect(status().isBadRequest)
+
+        assertThat(memberRepository.findAll().none { it.name == "badtermv" }).isTrue
+        assertThat(memberConsentRepository.findAll().none { it.member.name == "badtermv" }).isTrue
+    }
+
+    @Test
+    fun `sso signup returns bad request when policy privacy version is missing`() {
+        val ssoRegister = memberSsoRegisterRepository.save(MemberSsoRegister(SsoType.KAKAO, "kakao-id-3"))
+        val request = SsoSignupRequest(
+            uuid = ssoRegister.uuid,
+            username = "badprivv",
+            termAgree = true,
+            privacyAgree = true,
+            termsVersion = "2025-01-15"
+        )
+        val json = objectMapper.writeValueAsString(request)
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/sso/signup/token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+        )
+            .andExpect(status().isBadRequest)
+
+        assertThat(memberRepository.findAll().none { it.name == "badprivv" }).isTrue
+        assertThat(memberConsentRepository.findAll().none { it.member.name == "badprivv" }).isTrue
+    }
+
+    @Test
     fun `sso signup returns bad request when term not agreed`() {
         val ssoRegister = memberSsoRegisterRepository.save(MemberSsoRegister(SsoType.KAKAO, "kakao-id-2"))
         val request = SsoSignupRequest(
             uuid = ssoRegister.uuid,
             username = "bad-user-1",
             termAgree = false,
-            privacyAgree = true
+            privacyAgree = true,
+            termsVersion = "2025-01-15",
+            privacyVersion = "2026-03-10"
         )
         val json = objectMapper.writeValueAsString(request)
 
@@ -343,12 +393,14 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
 
     @Test
     fun `sso signup returns bad request when privacy not agreed`() {
-        val ssoRegister = memberSsoRegisterRepository.save(MemberSsoRegister(SsoType.KAKAO, "kakao-id-3"))
+        val ssoRegister = memberSsoRegisterRepository.save(MemberSsoRegister(SsoType.KAKAO, "kakao-id-4"))
         val request = SsoSignupRequest(
             uuid = ssoRegister.uuid,
             username = "bad-user-2",
             termAgree = true,
-            privacyAgree = false
+            privacyAgree = false,
+            termsVersion = "2025-01-15",
+            privacyVersion = "2026-03-10"
         )
         val json = objectMapper.writeValueAsString(request)
 
