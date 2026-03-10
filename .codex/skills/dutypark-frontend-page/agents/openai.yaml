@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dutypark Frontend Page"
+  short_description: "Add or update Dutypark Vue routes and themed pages"
+  default_prompt: "Use $dutypark-frontend-page to add or update a Dutypark frontend page, wire navigation, and run the required frontend checks."

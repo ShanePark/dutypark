@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dutypark UI Verification"
+  short_description: "Verify complex Dutypark UI flows with Playwright"
+  default_prompt: "Use $dutypark-playwright-ui to verify a complex Dutypark UI flow with Playwright without starting any dev servers."
