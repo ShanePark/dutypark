@@ -27,6 +27,7 @@ const isLoading = ref(false)
 const isPoliciesLoading = ref(true)
 const policies = ref<CurrentPoliciesDto | null>(null)
 const policyModal = ref<'terms' | 'privacy' | null>(null)
+const usernameInput = ref<HTMLInputElement | null>(null)
 
 const renderedTerms = computed(() => {
   if (!policies.value?.terms?.content) return ''
@@ -43,17 +44,69 @@ function openPolicyModal(type: 'terms' | 'privacy') {
 }
 
 // Validation
-const usernameError = computed(() => {
-  if (!username.value) return ''
-  if (username.value.length < 1) return '사용자명을 입력해주세요.'
-  if (username.value.length > 10) return '사용자명은 10자 이내로 입력해주세요.'
-  return ''
+const trimmedUsername = computed(() => username.value.trim())
+
+const hasStartedFormInput = computed(() => {
+  return username.value.length > 0 || termAgree.value || privacyAgree.value
+})
+
+const isUsernameMissing = computed(() => trimmedUsername.value.length === 0)
+const isUsernameTooLong = computed(() => trimmedUsername.value.length > 10)
+const missingRequiredItems = computed(() => {
+  const items: string[] = []
+
+  if (isUsernameMissing.value) {
+    items.push('사용자명 입력')
+  } else if (isUsernameTooLong.value) {
+    items.push('사용자명 10자 이하 입력')
+  }
+
+  if (!termAgree.value) items.push('이용약관 동의')
+  if (!privacyAgree.value) items.push('개인정보 처리방침 동의')
+
+  return items
+})
+
+const shouldHighlightUsername = computed(() => {
+  return (isUsernameMissing.value && hasStartedFormInput.value) || isUsernameTooLong.value
+})
+
+const usernameHelperText = computed(() => {
+  if (isUsernameMissing.value) {
+    return hasStartedFormInput.value
+      ? '사용자명을 입력해야 가입할 수 있어요.'
+      : '가입 시 사용할 사용자명을 1-10자로 입력해주세요.'
+  }
+  if (isUsernameTooLong.value) return '사용자명은 10자 이내로 입력해주세요.'
+  return '가입 후 프로필과 일정에 표시될 이름입니다.'
+})
+
+const submitHint = computed(() => {
+  if (isPoliciesLoading.value) return '약관 정보를 불러오는 중입니다.'
+  if (!policies.value?.terms || !policies.value?.privacy) {
+    return '약관 정보를 불러오지 못해 지금은 가입할 수 없어요.'
+  }
+  if (!uuid.value) return '소셜 로그인 정보를 확인할 수 없어 다시 로그인해야 합니다.'
+  if (missingRequiredItems.value.length === 0) return ''
+  return `필수 항목을 완료해주세요: ${missingRequiredItems.value.join(', ')}`
+})
+
+const submitHintClass = computed(() => {
+  if (isPoliciesLoading.value) return 'text-dp-text-muted'
+  if (!policies.value?.terms || !policies.value?.privacy || !uuid.value) return 'text-dp-danger'
+  if (!hasStartedFormInput.value) return 'text-dp-text-muted'
+  if (!submitHint.value) return 'text-dp-text-muted'
+  return 'text-dp-danger'
+})
+
+const isSubmitDisabled = computed(() => {
+  return !isFormValid.value || isLoading.value
 })
 
 const isFormValid = computed(() => {
   return (
-    username.value.length >= 1 &&
-    username.value.length <= 10 &&
+    trimmedUsername.value.length >= 1 &&
+    trimmedUsername.value.length <= 10 &&
     termAgree.value &&
     privacyAgree.value &&
     uuid.value &&
@@ -84,13 +137,17 @@ onMounted(async () => {
 })
 
 async function handleSubmit() {
+  if (isUsernameMissing.value || isUsernameTooLong.value) {
+    usernameInput.value?.focus()
+  }
+
   if (!isFormValid.value || isLoading.value) return
 
   isLoading.value = true
   try {
     await authApi.ssoSignup({
       uuid: uuid.value,
-      username: username.value,
+      username: trimmedUsername.value,
       termAgree: termAgree.value,
       privacyAgree: privacyAgree.value,
       termsVersion: policies.value?.terms?.version,
@@ -133,21 +190,26 @@ async function handleSubmit() {
             </label>
             <input
               id="username"
+              ref="usernameInput"
               v-model="username"
               type="text"
               required
               maxlength="10"
               :disabled="isLoading"
+              :aria-invalid="shouldHighlightUsername"
               class="w-full px-3 py-3 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent disabled:cursor-not-allowed"
               :style="{
-                border: '1px solid var(--dp-border-input)',
+                border: `1px solid ${shouldHighlightUsername ? 'var(--dp-danger-border)' : 'var(--dp-border-input)'}`,
                 backgroundColor: isLoading ? 'var(--dp-bg-tertiary)' : 'var(--dp-bg-input)',
                 color: 'var(--dp-text-primary)'
               }"
               placeholder="사용자명을 입력하세요 (1-10자)"
             />
-            <p v-if="usernameError" class="mt-1 text-sm text-dp-danger">
-              {{ usernameError }}
+            <p
+              class="mt-1 text-sm"
+              :class="shouldHighlightUsername ? 'text-dp-danger' : 'text-dp-text-muted'"
+            >
+              {{ usernameHelperText }}
             </p>
           </div>
 
@@ -278,7 +340,7 @@ async function handleSubmit() {
           <!-- Submit button -->
           <button
             type="submit"
-            :disabled="!isFormValid || isLoading"
+            :disabled="isSubmitDisabled"
             class="w-full bg-dp-accent text-dp-text-on-dark py-3 px-4 rounded-lg hover:bg-dp-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition min-h-12 flex items-center justify-center"
           >
             <template v-if="isLoading">
@@ -304,10 +366,11 @@ async function handleSubmit() {
               </svg>
               가입 처리 중...
             </template>
-            <template v-else>
-              가입하기
-            </template>
+            <template v-else>가입하기</template>
           </button>
+          <p v-if="submitHint" class="text-sm" :class="submitHintClass">
+            {{ submitHint }}
+          </p>
         </form>
       </div>
 
