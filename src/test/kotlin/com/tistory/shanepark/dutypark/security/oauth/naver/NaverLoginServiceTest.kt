@@ -7,6 +7,7 @@ import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.TokenResponse
+import com.tistory.shanepark.dutypark.security.oauth.SocialAccountAlreadyLinkedException
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import com.tistory.shanepark.dutypark.security.service.CookieService
 import org.assertj.core.api.Assertions.assertThat
@@ -86,6 +87,24 @@ class NaverLoginServiceTest {
                 loginMember = LoginMember(id = 1L, name = "tester")
             )
         }
+    }
+
+    @Test
+    fun `setNaverIdToMember throws when naver id is already linked to another member`() {
+        val member = memberWithId(1L)
+        val existingMember = memberWithId(2L)
+        whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
+        whenever(memberRepository.findMemberByNaverId("naver-123")).thenReturn(existingMember)
+        stubNaverApis(naverId = "naver-123")
+
+        val exception = assertThrows<SocialAccountAlreadyLinkedException> {
+            service.setNaverIdToMember(
+                code = "code-1",
+                state = "encoded-state",
+                loginMember = LoginMember(id = 1L, name = "tester")
+            )
+        }
+        assertThat(exception.provider).isEqualTo(SsoType.NAVER)
     }
 
     @Test

@@ -33,6 +33,8 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.net.URI
+import java.nio.charset.StandardCharsets
 import java.util.Base64
 
 @AutoConfigureMockMvc
@@ -72,6 +74,37 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
 
         val updated = memberRepository.findById(member.id!!).orElseThrow()
         assertThat(updated.kakaoId).isEqualTo(TEST_KAKAO_ID.toString())
+    }
+
+    @Test
+    fun `kakao callback redirects to member page with already linked error when another member owns account`() {
+        val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
+        member.kakaoId = null
+        memberRepository.save(member)
+
+        val existingMember = memberRepository.save(
+            com.tistory.shanepark.dutypark.member.domain.entity.Member("other-user", "other@duty.park", "pass").apply {
+                kakaoId = TEST_KAKAO_ID.toString()
+            }
+        )
+        assertThat(existingMember.id).isNotEqualTo(member.id)
+
+        val referer = "http://localhost:5173/member"
+        val stateJson = encodedState(login = true, referer = referer)
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/kakao")
+                .param("code", "test-code")
+                .param("state", stateJson)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
+        )
+            .andExpect(status().isFound)
+            .andExpect(
+                header().string(
+                    HttpHeaders.LOCATION,
+                    "$referer?socialLinkError=already_linked&socialProvider=kakao"
+                )
+            )
     }
 
     @Test
@@ -133,7 +166,7 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
         val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
         member.naverId = null
 
-        val stateJson = stateJson(login = true, referer = "/after")
+        val stateJson = encodedState(login = true, referer = "/after")
 
         mockMvc.perform(
             MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/naver")
@@ -152,12 +185,66 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
     }
 
     @Test
+    fun `naver callback decodes utf8 encoded state`() {
+        val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
+        member.naverId = null
+        val referer = "http://localhost:5173/member?tab=네이버"
+        val stateJson = encodedState(login = true, referer = referer)
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/naver")
+                .param("code", "test-code")
+                .param("state", stateJson)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
+        )
+            .andExpect(status().isFound)
+            .andExpect(header().string(HttpHeaders.LOCATION, URI.create(referer).toASCIIString()))
+
+        em.flush()
+        em.clear()
+
+        val updated = memberRepository.findById(member.id!!).orElseThrow()
+        assertThat(updated.naverId).isEqualTo(TEST_NAVER_ID)
+    }
+
+    @Test
+    fun `naver callback redirects to member page with already linked error when another member owns account`() {
+        val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
+        member.naverId = null
+        memberRepository.save(member)
+
+        val existingMember = memberRepository.save(
+            com.tistory.shanepark.dutypark.member.domain.entity.Member("other2", "other2@duty.park", "pass").apply {
+                naverId = TEST_NAVER_ID
+            }
+        )
+        assertThat(existingMember.id).isNotEqualTo(member.id)
+
+        val referer = "http://localhost:5173/member"
+        val stateJson = encodedState(login = true, referer = referer)
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/naver")
+                .param("code", "test-code")
+                .param("state", stateJson)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
+        )
+            .andExpect(status().isFound)
+            .andExpect(
+                header().string(
+                    HttpHeaders.LOCATION,
+                    "$referer?socialLinkError=already_linked&socialProvider=naver"
+                )
+            )
+    }
+
+    @Test
     fun `naver callback redirects with login success when member exists`() {
         val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
         member.naverId = TEST_NAVER_ID
         memberRepository.save(member)
 
-        val stateJson = stateJson(callbackUrl = CALLBACK_URL)
+        val stateJson = encodedState(callbackUrl = CALLBACK_URL)
 
         mockMvc.perform(
             MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/naver")
@@ -174,7 +261,7 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
 
     @Test
     fun `naver callback redirects with sso required when member not found`() {
-        val stateJson = stateJson(callbackUrl = CALLBACK_URL)
+        val stateJson = encodedState(callbackUrl = CALLBACK_URL)
 
         val result = mockMvc.perform(
             MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/naver")
@@ -224,8 +311,9 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
         assertThat(consents).hasSize(2)
         assertThat(consents.map { it.policyType }).containsExactlyInAnyOrder(PolicyType.TERMS, PolicyType.PRIVACY)
 
+        assertThat(consents.single { it.policyType == PolicyType.TERMS }.consentVersion).isEqualTo("2025-01-15")
+        assertThat(consents.single { it.policyType == PolicyType.PRIVACY }.consentVersion).isEqualTo("2026-03-10")
         consents.forEach { consent ->
-            assertThat(consent.consentVersion).isEqualTo("2025-01-15")
             assertThat(consent.ipAddress).isEqualTo("127.0.0.1")
             assertThat(consent.userAgent).isEqualTo("Test-UA")
         }
@@ -300,7 +388,10 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
     ): String {
         return Base64.getUrlEncoder()
             .withoutPadding()
-            .encodeToString(stateJson(login = login, referer = referer, callbackUrl = callbackUrl).toByteArray())
+            .encodeToString(
+                stateJson(login = login, referer = referer, callbackUrl = callbackUrl)
+                    .toByteArray(StandardCharsets.UTF_8)
+            )
     }
 
     @TestConfiguration

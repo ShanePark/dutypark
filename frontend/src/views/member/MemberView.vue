@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore, type ThemeMode } from '@/stores/theme'
 import { memberApi, refreshTokenApi } from '@/api/member'
@@ -42,6 +42,7 @@ import {
   BellOff,
 } from 'lucide-vue-next'
 
+const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const themeStore = useThemeStore()
@@ -409,6 +410,42 @@ async function connectSso(provider: SsoProvider) {
   }
 }
 
+type SocialLinkProvider = 'kakao' | 'naver'
+type SocialLinkErrorCode = 'already_linked'
+
+function getSingleQueryValue(value: unknown): string | null {
+  if (Array.isArray(value)) {
+    return typeof value[0] === 'string' ? value[0] : null
+  }
+  return typeof value === 'string' ? value : null
+}
+
+async function clearSocialLinkQuery() {
+  if (!route.query.socialLinkError && !route.query.socialProvider) return
+
+  const nextQuery = { ...route.query }
+  delete nextQuery.socialLinkError
+  delete nextQuery.socialProvider
+  await router.replace({ query: nextQuery })
+}
+
+async function handleSocialLinkQuery() {
+  const socialLinkError = getSingleQueryValue(route.query.socialLinkError) as SocialLinkErrorCode | null
+  const socialProvider = getSingleQueryValue(route.query.socialProvider) as SocialLinkProvider | null
+
+  if (!socialLinkError || !socialProvider) return
+
+  await clearSocialLinkQuery()
+
+  if (socialLinkError !== 'already_linked') return
+
+  const providerLabel = socialProvider === 'kakao' ? '카카오' : '네이버'
+  await showError(
+    `이미 다른 Dutypark 계정에 연동된 ${providerLabel} 계정입니다. 다른 ${providerLabel} 계정으로 다시 시도해주세요.`,
+    '소셜 계정 연동 실패'
+  )
+}
+
 // Password change
 const showPasswordModal = ref(false)
 useBodyScrollLock(showPasswordModal)
@@ -528,6 +565,7 @@ onMounted(async () => {
 
     // Set SSO connections based on user data
     ssoConnections.value = buildSsoConnections(memberInfo.value)
+    await handleSocialLinkQuery()
   } catch (error) {
     console.error('Failed to initialize:', error)
   } finally {

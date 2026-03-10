@@ -8,7 +8,10 @@ interface NaverStatePayload {
 }
 
 function encodeState(state: NaverStatePayload): string {
-  return btoa(JSON.stringify(state))
+  const utf8Bytes = new TextEncoder().encode(JSON.stringify(state))
+  const binary = Array.from(utf8Bytes, (byte) => String.fromCharCode(byte)).join('')
+
+  return btoa(binary)
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=+$/g, '')

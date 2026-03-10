@@ -7,6 +7,7 @@ import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.TokenResponse
+import com.tistory.shanepark.dutypark.security.oauth.SocialAccountAlreadyLinkedException
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import com.tistory.shanepark.dutypark.security.service.CookieService
 import org.assertj.core.api.Assertions.assertThat
@@ -82,6 +83,25 @@ class KakaoLoginServiceTest {
                 loginMember = LoginMember(id = 1L, name = "tester")
             )
         }
+    }
+
+    @Test
+    fun `setKakaoIdToMember throws when kakao id is already linked to another member`() {
+        val member = memberWithId(1L)
+        val existingMember = memberWithId(2L)
+        whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
+        whenever(memberRepository.findMemberByKakaoId("123")).thenReturn(existingMember)
+        stubKakaoApis(kakaoId = 123L)
+
+        val exception = assertThrows<SocialAccountAlreadyLinkedException> {
+            service.setKakaoIdToMember(
+                code = "code-1",
+                redirectUrl = "https://auth/callback",
+                loginMember = LoginMember(id = 1L, name = "tester")
+            )
+        }
+
+        assertThat(exception.provider).isEqualTo(SsoType.KAKAO)
     }
 
     @Test

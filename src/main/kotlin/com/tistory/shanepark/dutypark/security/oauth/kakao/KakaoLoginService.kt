@@ -5,6 +5,7 @@ import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.security.oauth.SocialAccountAlreadyLinkedException
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import com.tistory.shanepark.dutypark.security.service.CookieService
 import jakarta.servlet.http.HttpServletRequest
@@ -45,6 +46,12 @@ class KakaoLoginService(
     fun setKakaoIdToMember(code: String, redirectUrl: String, loginMember: LoginMember) {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
         val kakaoId = getKakaoId(redirectUrl, code)
+
+        val existingMember = memberRepository.findMemberByKakaoId(kakaoId)
+        if (existingMember != null && existingMember.id != member.id) {
+            throw SocialAccountAlreadyLinkedException(SsoType.KAKAO)
+        }
+
         member.kakaoId = kakaoId
     }
 

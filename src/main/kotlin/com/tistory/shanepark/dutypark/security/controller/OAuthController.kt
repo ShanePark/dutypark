@@ -4,6 +4,7 @@ import tools.jackson.core.type.TypeReference
 import tools.jackson.databind.json.JsonMapper
 import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
+import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.policy.domain.enums.PolicyType
 import com.tistory.shanepark.dutypark.member.service.ConsentService
 import com.tistory.shanepark.dutypark.member.service.MemberService
@@ -11,6 +12,7 @@ import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.SsoSignupRequest
 import com.tistory.shanepark.dutypark.security.oauth.kakao.KakaoLoginService
 import com.tistory.shanepark.dutypark.security.oauth.naver.NaverLoginService
+import com.tistory.shanepark.dutypark.security.oauth.SocialAccountAlreadyLinkedException
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import com.tistory.shanepark.dutypark.security.service.CookieService
 import jakarta.servlet.http.HttpServletRequest
@@ -18,7 +20,9 @@ import jakarta.servlet.http.HttpServletResponse
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.util.UriComponentsBuilder
 import java.net.URI
+import java.nio.charset.StandardCharsets
 import java.util.Base64
 
 @RestController
@@ -32,6 +36,12 @@ class OAuthController(
     private val consentService: ConsentService,
 ) {
     private val jsonMapper = JsonMapper.builder().build()
+
+    companion object {
+        private const val DEFAULT_TERMS_VERSION = "2025-01-15"
+        private const val DEFAULT_PRIVACY_VERSION = "2026-03-10"
+        private const val SOCIAL_LINK_ERROR_ALREADY_LINKED = "already_linked"
+    }
 
     @GetMapping("Oauth2ClientCallback/kakao")
     fun kakaoLoginCallback(
@@ -48,14 +58,20 @@ class OAuthController(
 
         val login = (state["login"] as Boolean?) ?: false
         if (login && loginMember != null) {
-            kakaoLoginService.setKakaoIdToMember(
-                code = code,
-                redirectUrl = redirectUrl,
-                loginMember = loginMember,
-            )
-            return ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create(referer))
-                .build()
+            return try {
+                kakaoLoginService.setKakaoIdToMember(
+                    code = code,
+                    redirectUrl = redirectUrl,
+                    loginMember = loginMember,
+                )
+                ResponseEntity.status(HttpStatus.FOUND)
+                    .location(URI.create(referer))
+                    .build()
+            } catch (e: SocialAccountAlreadyLinkedException) {
+                ResponseEntity.status(HttpStatus.FOUND)
+                    .location(buildSocialLinkErrorUri(referer, e.provider))
+                    .build()
+            }
         }
 
         val callbackUrl = state["callbackUrl"] as String?
@@ -82,14 +98,20 @@ class OAuthController(
 
         val login = (state["login"] as Boolean?) ?: false
         if (login && loginMember != null) {
-            naverLoginService.setNaverIdToMember(
-                code = code,
-                state = stateString,
-                loginMember = loginMember,
-            )
-            return ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create(referer))
-                .build()
+            return try {
+                naverLoginService.setNaverIdToMember(
+                    code = code,
+                    state = stateString,
+                    loginMember = loginMember,
+                )
+                ResponseEntity.status(HttpStatus.FOUND)
+                    .location(URI.create(referer))
+                    .build()
+            } catch (e: SocialAccountAlreadyLinkedException) {
+                ResponseEntity.status(HttpStatus.FOUND)
+                    .location(buildSocialLinkErrorUri(referer, e.provider))
+                    .build()
+            }
         }
 
         val callbackUrl = state["callbackUrl"] as String?
@@ -122,8 +144,8 @@ class OAuthController(
         val ipAddress = httpServletRequest.remoteAddr
         val userAgent = httpServletRequest.getHeader("User-Agent")
 
-        val termsVersion = request.termsVersion ?: "2025-01-15"
-        val privacyVersion = request.privacyVersion ?: "2025-01-15"
+        val termsVersion = request.termsVersion ?: DEFAULT_TERMS_VERSION
+        val privacyVersion = request.privacyVersion ?: DEFAULT_PRIVACY_VERSION
 
         consentService.recordConsent(
             member = member,
@@ -165,9 +187,17 @@ class OAuthController(
                     val padding = (4 - raw.length % 4) % 4
                     raw + "=".repeat(padding)
                 }
-            val decoded = String(Base64.getDecoder().decode(normalized))
+            val decoded = String(Base64.getDecoder().decode(normalized), StandardCharsets.UTF_8)
             jsonMapper.readValue(decoded, object : TypeReference<Map<String, Any>>() {})
         }
+    }
+
+    private fun buildSocialLinkErrorUri(referer: String, provider: SsoType): URI {
+        return UriComponentsBuilder.fromUriString(referer)
+            .replaceQueryParam("socialLinkError", SOCIAL_LINK_ERROR_ALREADY_LINKED)
+            .replaceQueryParam("socialProvider", provider.name.lowercase())
+            .build(true)
+            .toUri()
     }
 
 }
