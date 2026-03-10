@@ -6,6 +6,7 @@ import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
 import com.tistory.shanepark.dutypark.member.service.MemberSocialAccountService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.security.oauth.buildOAuthCallbackUri
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import com.tistory.shanepark.dutypark.security.service.CookieService
 import jakarta.servlet.http.HttpServletRequest
@@ -15,7 +16,6 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.net.URI
 
 @Service
 @Transactional
@@ -56,7 +56,8 @@ class NaverLoginService(
         resp: HttpServletResponse,
         code: String,
         state: String,
-        callbackUrl: String
+        callbackUrl: String,
+        redirectTarget: String? = null
     ): ResponseEntity<Void> {
         val naverId = getNaverId(code = code, state = state)
 
@@ -66,15 +67,27 @@ class NaverLoginService(
             cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)
 
             return ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create("$callbackUrl#login=success"))
+                .location(
+                    buildOAuthCallbackUri(
+                        callbackUrl = callbackUrl,
+                        redirectTarget = redirectTarget,
+                        "login" to "success"
+                    )
+                )
                 .build()
         }
 
         val ssoRegister = memberSsoRegisterRepository.save(MemberSsoRegister(ssoId = naverId, ssoType = SsoType.NAVER))
-        val errorFragment = "error=sso_required&uuid=${ssoRegister.uuid}"
 
         return ResponseEntity.status(HttpStatus.FOUND)
-            .location(URI.create("$callbackUrl#$errorFragment"))
+            .location(
+                buildOAuthCallbackUri(
+                    callbackUrl = callbackUrl,
+                    redirectTarget = redirectTarget,
+                    "error" to "sso_required",
+                    "uuid" to ssoRegister.uuid
+                )
+            )
             .build()
     }
 }

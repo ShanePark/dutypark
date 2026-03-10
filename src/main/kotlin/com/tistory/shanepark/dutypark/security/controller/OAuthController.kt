@@ -79,7 +79,8 @@ class OAuthController(
             resp = httpServletResponse,
             code = code,
             redirectUrl = redirectUrl,
-            callbackUrl = callbackUrl
+            callbackUrl = callbackUrl,
+            redirectTarget = state["referer"] as String?
         )
     }
 
@@ -119,7 +120,8 @@ class OAuthController(
             resp = httpServletResponse,
             code = code,
             state = stateString,
-            callbackUrl = callbackUrl
+            callbackUrl = callbackUrl,
+            redirectTarget = state["referer"] as String?
         )
     }
 

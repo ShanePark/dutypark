@@ -9,6 +9,7 @@ import { useSwal } from '@/composables/useSwal'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import PolicyModal from '@/components/common/PolicyModal.vue'
 import type { AxiosError } from 'axios'
+import { getSafeRedirect } from '@/utils/redirect'
 
 marked.setOptions({
   breaks: true,
@@ -28,6 +29,7 @@ const isPoliciesLoading = ref(true)
 const policies = ref<CurrentPoliciesDto | null>(null)
 const policyModal = ref<'terms' | 'privacy' | null>(null)
 const usernameInput = ref<HTMLInputElement | null>(null)
+const redirectTarget = computed(() => getSafeRedirect(route.query.redirect))
 
 const renderedTerms = computed(() => {
   if (!policies.value?.terms?.content) return ''
@@ -158,7 +160,10 @@ async function handleSubmit() {
     await authStore.checkAuth()
 
     // Navigate to congrats page
-    router.push('/auth/sso-congrats')
+    await router.push({
+      path: '/auth/sso-congrats',
+      query: redirectTarget.value ? { redirect: redirectTarget.value } : undefined,
+    })
   } catch (error) {
     const axiosError = error as AxiosError<{ message?: string }>
     const message =

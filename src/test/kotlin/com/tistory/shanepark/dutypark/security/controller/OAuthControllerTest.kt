@@ -117,7 +117,8 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
         clearSocialAccount(member, SsoType.KAKAO)
         linkSocialAccount(member, SsoType.KAKAO, TEST_KAKAO_ID.toString())
 
-        val stateJson = encodedState(callbackUrl = CALLBACK_URL)
+        val redirect = "/todo?view=mine"
+        val stateJson = encodedState(callbackUrl = CALLBACK_URL, referer = redirect)
 
         mockMvc.perform(
             MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/kakao")
@@ -125,7 +126,12 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
                 .param("state", stateJson)
         )
             .andExpect(status().isFound)
-            .andExpect(header().string(HttpHeaders.LOCATION, "$CALLBACK_URL#login=success"))
+            .andExpect(
+                header().string(
+                    HttpHeaders.LOCATION,
+                    "$CALLBACK_URL#login=success&redirect=%2Ftodo%3Fview%3Dmine"
+                )
+            )
             .andExpect(cookie().exists("access_token"))
             .andExpect(cookie().exists("refresh_token"))
 
@@ -134,7 +140,8 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
 
     @Test
     fun `kakao callback redirects with sso required when member not found`() {
-        val stateJson = encodedState(callbackUrl = CALLBACK_URL)
+        val redirect = "/todo?view=mine"
+        val stateJson = encodedState(callbackUrl = CALLBACK_URL, referer = redirect)
 
         val result = mockMvc.perform(
             MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/kakao")
@@ -149,7 +156,9 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
         assertThat(saved.ssoId).isEqualTo(TEST_KAKAO_ID.toString())
 
         val location = result.response.getHeader(HttpHeaders.LOCATION)
-        assertThat(location).isEqualTo("$CALLBACK_URL#error=sso_required&uuid=${saved.uuid}")
+        assertThat(location).isEqualTo(
+            "$CALLBACK_URL#error=sso_required&uuid=${saved.uuid}&redirect=%2Ftodo%3Fview%3Dmine"
+        )
     }
 
     @Test
@@ -246,7 +255,8 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
         clearSocialAccount(member, SsoType.NAVER)
         linkSocialAccount(member, SsoType.NAVER, TEST_NAVER_ID)
 
-        val stateJson = encodedState(callbackUrl = CALLBACK_URL)
+        val redirect = "/todo?view=mine"
+        val stateJson = encodedState(callbackUrl = CALLBACK_URL, referer = redirect)
 
         mockMvc.perform(
             MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/naver")
@@ -254,7 +264,12 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
                 .param("state", stateJson)
         )
             .andExpect(status().isFound)
-            .andExpect(header().string(HttpHeaders.LOCATION, "$CALLBACK_URL#login=success"))
+            .andExpect(
+                header().string(
+                    HttpHeaders.LOCATION,
+                    "$CALLBACK_URL#login=success&redirect=%2Ftodo%3Fview%3Dmine"
+                )
+            )
             .andExpect(cookie().exists("access_token"))
             .andExpect(cookie().exists("refresh_token"))
 
@@ -263,7 +278,8 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
 
     @Test
     fun `naver callback redirects with sso required when member not found`() {
-        val stateJson = encodedState(callbackUrl = CALLBACK_URL)
+        val redirect = "/todo?view=mine"
+        val stateJson = encodedState(callbackUrl = CALLBACK_URL, referer = redirect)
 
         val result = mockMvc.perform(
             MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/naver")
@@ -278,7 +294,9 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
         assertThat(saved.ssoId).isEqualTo(TEST_NAVER_ID)
 
         val location = result.response.getHeader(HttpHeaders.LOCATION)
-        assertThat(location).isEqualTo("$CALLBACK_URL#error=sso_required&uuid=${saved.uuid}")
+        assertThat(location).isEqualTo(
+            "$CALLBACK_URL#error=sso_required&uuid=${saved.uuid}&redirect=%2Ftodo%3Fview%3Dmine"
+        )
     }
 
     @Test

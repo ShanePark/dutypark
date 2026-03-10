@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { getSafeRedirect } from '@/utils/redirect'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const username = computed(() => authStore.user?.name || '')
+const redirectTarget = computed(() => getSafeRedirect(route.query.redirect) || '/')
 
 onMounted(() => {
   if (!authStore.isLoggedIn) {
@@ -15,7 +18,7 @@ onMounted(() => {
 })
 
 function goHome() {
-  router.push('/')
+  router.push(redirectTarget.value)
 }
 </script>
 

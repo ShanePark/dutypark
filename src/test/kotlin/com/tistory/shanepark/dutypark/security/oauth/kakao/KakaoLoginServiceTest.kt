@@ -110,6 +110,7 @@ class KakaoLoginServiceTest {
     @Test
     fun `login returns success redirect for existing member`() {
         val member = memberWithId(10L)
+        val redirectTarget = "/todo?view=mine"
         whenever(memberSocialAccountService.findMemberByProviderAndSocialId(SsoType.KAKAO, "123")).thenReturn(member)
         stubKakaoApis(kakaoId = 123L)
         whenever(authService.getTokenResponseByMemberId(org.mockito.kotlin.eq(10L), org.mockito.kotlin.any())).thenReturn(
@@ -123,17 +124,21 @@ class KakaoLoginServiceTest {
             resp = response,
             code = "code-1",
             redirectUrl = "https://auth/callback",
-            callbackUrl = "https://client/callback"
+            callbackUrl = "https://client/callback",
+            redirectTarget = redirectTarget
         )
 
         assertThat(result.statusCode).isEqualTo(HttpStatus.FOUND)
-        assertThat(result.headers.location?.toString()).isEqualTo("https://client/callback#login=success")
+        assertThat(result.headers.location?.toString()).isEqualTo(
+            "https://client/callback#login=success&redirect=%2Ftodo%3Fview%3Dmine"
+        )
         verify(cookieService).setTokenCookies(response, "access", "refresh")
         verify(memberSsoRegisterRepository, never()).save(org.mockito.kotlin.any())
     }
 
     @Test
     fun `login returns sso required for new member`() {
+        val redirectTarget = "/todo?view=mine"
         whenever(memberSocialAccountService.findMemberByProviderAndSocialId(SsoType.KAKAO, "999")).thenReturn(null)
         stubKakaoApis(kakaoId = 999L)
         whenever(memberSsoRegisterRepository.save(org.mockito.kotlin.any())).thenAnswer { it.arguments[0] as MemberSsoRegister }
@@ -145,7 +150,8 @@ class KakaoLoginServiceTest {
             resp = response,
             code = "code-2",
             redirectUrl = "https://auth/callback",
-            callbackUrl = "https://client/callback"
+            callbackUrl = "https://client/callback",
+            redirectTarget = redirectTarget
         )
 
         val captor = argumentCaptor<MemberSsoRegister>()
@@ -154,7 +160,7 @@ class KakaoLoginServiceTest {
 
         assertThat(result.statusCode).isEqualTo(HttpStatus.FOUND)
         assertThat(result.headers.location?.toString()).isEqualTo(
-            "https://client/callback#error=sso_required&uuid=${saved.uuid}"
+            "https://client/callback#error=sso_required&uuid=${saved.uuid}&redirect=%2Ftodo%3Fview%3Dmine"
         )
         assertThat(saved.ssoType).isEqualTo(SsoType.KAKAO)
         assertThat(saved.ssoId).isEqualTo("999")

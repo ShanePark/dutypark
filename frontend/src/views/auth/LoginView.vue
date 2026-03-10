@@ -6,6 +6,7 @@ import { useKakao } from '@/composables/useKakao'
 import { useNaver } from '@/composables/useNaver'
 import { AxiosError } from 'axios'
 import PolicyModal from '@/components/common/PolicyModal.vue'
+import { getSafeRedirect } from '@/utils/redirect'
 
 const REMEMBER_EMAIL_KEY = 'dp-remember-email'
 
@@ -24,6 +25,7 @@ const isNaverLoading = ref(false)
 const error = ref('')
 const remainingAttempts = ref<number | null>(null)
 const policyModal = ref<'terms' | 'privacy' | null>(null)
+const redirectTarget = () => getSafeRedirect(route.query.redirect) || '/'
 
 onMounted(() => {
   initKakao()
@@ -53,8 +55,7 @@ async function handleLogin() {
       localStorage.removeItem(REMEMBER_EMAIL_KEY)
     }
 
-    const redirect = (route.query.redirect as string) || '/'
-    router.push(redirect)
+    router.push(redirectTarget())
   } catch (e: unknown) {
     if (e instanceof AxiosError && e.response?.data) {
       error.value = e.response.data.error || '로그인에 실패했습니다.'
@@ -72,15 +73,13 @@ async function handleLogin() {
 function handleKakaoLogin() {
   if (isKakaoLoading.value) return
   isKakaoLoading.value = true
-  const referer = (route.query.redirect as string) || '/'
-  kakaoLogin(referer)
+  kakaoLogin(redirectTarget())
 }
 
 function handleNaverLogin() {
   if (isNaverLoading.value) return
   isNaverLoading.value = true
-  const referer = (route.query.redirect as string) || '/'
-  naverLogin(referer)
+  naverLogin(redirectTarget())
 }
 
 </script>

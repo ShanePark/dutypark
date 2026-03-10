@@ -113,6 +113,7 @@ class NaverLoginServiceTest {
     @Test
     fun `login returns success redirect for existing member`() {
         val member = memberWithId(10L)
+        val redirectTarget = "/todo?view=mine"
         whenever(memberSocialAccountService.findMemberByProviderAndSocialId(SsoType.NAVER, "naver-123")).thenReturn(member)
         stubNaverApis(naverId = "naver-123")
         whenever(authService.getTokenResponseByMemberId(eq(10L), any())).thenReturn(
@@ -126,17 +127,21 @@ class NaverLoginServiceTest {
             resp = response,
             code = "code-1",
             state = "encoded-state",
-            callbackUrl = "https://client/callback"
+            callbackUrl = "https://client/callback",
+            redirectTarget = redirectTarget
         )
 
         assertThat(result.statusCode).isEqualTo(HttpStatus.FOUND)
-        assertThat(result.headers.location?.toString()).isEqualTo("https://client/callback#login=success")
+        assertThat(result.headers.location?.toString()).isEqualTo(
+            "https://client/callback#login=success&redirect=%2Ftodo%3Fview%3Dmine"
+        )
         verify(cookieService).setTokenCookies(response, "access", "refresh")
         verify(memberSsoRegisterRepository, never()).save(any())
     }
 
     @Test
     fun `login returns sso required for new member`() {
+        val redirectTarget = "/todo?view=mine"
         whenever(memberSocialAccountService.findMemberByProviderAndSocialId(SsoType.NAVER, "naver-999")).thenReturn(null)
         stubNaverApis(naverId = "naver-999")
         whenever(memberSsoRegisterRepository.save(any())).thenAnswer { it.arguments[0] as MemberSsoRegister }
@@ -148,7 +153,8 @@ class NaverLoginServiceTest {
             resp = response,
             code = "code-2",
             state = "encoded-state",
-            callbackUrl = "https://client/callback"
+            callbackUrl = "https://client/callback",
+            redirectTarget = redirectTarget
         )
 
         val captor = argumentCaptor<MemberSsoRegister>()
@@ -157,7 +163,7 @@ class NaverLoginServiceTest {
 
         assertThat(result.statusCode).isEqualTo(HttpStatus.FOUND)
         assertThat(result.headers.location?.toString()).isEqualTo(
-            "https://client/callback#error=sso_required&uuid=${saved.uuid}"
+            "https://client/callback#error=sso_required&uuid=${saved.uuid}&redirect=%2Ftodo%3Fview%3Dmine"
         )
         assertThat(saved.ssoType).isEqualTo(SsoType.NAVER)
         assertThat(saved.ssoId).isEqualTo("naver-999")
