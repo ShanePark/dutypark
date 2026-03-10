@@ -1,4 +1,4 @@
-package com.tistory.shanepark.dutypark.security.oauth.kakao
+package com.tistory.shanepark.dutypark.security.oauth.naver
 
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberSsoRegister
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
@@ -19,55 +19,54 @@ import org.springframework.transaction.annotation.Transactional
 
 @Service
 @Transactional
-class KakaoLoginService(
-    private val kakaoTokenApi: KakaoTokenApi,
-    private val kakaoUserInfoApi: KakaoUserInfoApi,
+class NaverLoginService(
+    private val naverTokenApi: NaverTokenApi,
+    private val naverUserInfoApi: NaverUserInfoApi,
     private val memberRepository: MemberRepository,
     private val authService: AuthService,
     private val memberSsoRegisterRepository: MemberSsoRegisterRepository,
     private val memberSocialAccountService: MemberSocialAccountService,
     private val cookieService: CookieService,
-    @param:Value("\${oauth.kakao.rest-api-key}") private val restApiKey: String
+    @param:Value("\${oauth.naver.client-id}") private val clientId: String,
+    @param:Value("\${oauth.naver.client-secret}") private val clientSecret: String,
 ) {
 
-    private fun getKakaoId(redirectUrl: String, code: String): String {
-        val kakaoTokenResponse = kakaoTokenApi.getAccessToken(
+    private fun getNaverId(code: String, state: String): String {
+        val tokenResponse = naverTokenApi.getAccessToken(
             grantType = "authorization_code",
-            clientId = restApiKey,
-            redirectUri = redirectUrl,
-            code = code
+            clientId = clientId,
+            clientSecret = clientSecret,
+            code = code,
+            state = state
         )
 
-        val userinfo = kakaoUserInfoApi.getUserInfo(accessToken = "Bearer ${kakaoTokenResponse.accessToken}")
-
-        val kakaoId = userinfo.id.toString()
-        return kakaoId
+        val userInfo = naverUserInfoApi.getUserInfo(accessToken = "Bearer ${tokenResponse.accessToken}")
+        check(userInfo.resultCode == "00") { "Failed to fetch Naver user info: ${userInfo.message}" }
+        return userInfo.response.id
     }
 
-    fun setKakaoIdToMember(code: String, redirectUrl: String, loginMember: LoginMember) {
+    fun setNaverIdToMember(code: String, state: String, loginMember: LoginMember) {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
-        val kakaoId = getKakaoId(redirectUrl, code)
-        memberSocialAccountService.link(member, SsoType.KAKAO, kakaoId)
+        val naverId = getNaverId(code = code, state = state)
+        memberSocialAccountService.link(member, SsoType.NAVER, naverId)
     }
 
     fun login(
         req: HttpServletRequest,
         resp: HttpServletResponse,
         code: String,
-        redirectUrl: String,
+        state: String,
         callbackUrl: String,
         redirectTarget: String? = null
     ): ResponseEntity<Void> {
-        val kakaoId = getKakaoId(redirectUrl, code)
+        val naverId = getNaverId(code = code, state = state)
 
-        val member = memberSocialAccountService.findMemberByProviderAndSocialId(SsoType.KAKAO, kakaoId)
+        val member = memberSocialAccountService.findMemberByProviderAndSocialId(SsoType.NAVER, naverId)
         if (member != null) {
             val tokenResponse = authService.getTokenResponseByMemberId(member.id!!, req)
-
             cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)
 
-            return ResponseEntity
-                .status(HttpStatus.FOUND)
+            return ResponseEntity.status(HttpStatus.FOUND)
                 .location(
                     buildOAuthCallbackUri(
                         callbackUrl = callbackUrl,
@@ -78,10 +77,9 @@ class KakaoLoginService(
                 .build()
         }
 
-        val ssoRegister = memberSsoRegisterRepository.save(MemberSsoRegister(ssoId = kakaoId, ssoType = SsoType.KAKAO))
+        val ssoRegister = memberSsoRegisterRepository.save(MemberSsoRegister(ssoId = naverId, ssoType = SsoType.NAVER))
 
-        return ResponseEntity
-            .status(HttpStatus.FOUND)
+        return ResponseEntity.status(HttpStatus.FOUND)
             .location(
                 buildOAuthCallbackUri(
                     callbackUrl = callbackUrl,
@@ -92,5 +90,4 @@ class KakaoLoginService(
             )
             .build()
     }
-
 }

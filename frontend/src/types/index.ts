@@ -207,6 +207,7 @@ export interface DashboardMemberDto {
   team?: string | null
   calendarVisibility: CalendarVisibility
   kakaoId?: string | null
+  naverId?: string | null
   hasPassword?: boolean
   hasProfilePhoto?: boolean
   profilePhotoVersion?: number
@@ -449,6 +450,7 @@ export interface MemberDto {
   team: string | null
   calendarVisibility: CalendarVisibility
   kakaoId: string | null
+  naverId: string | null
   hasPassword: boolean
   hasProfilePhoto?: boolean
   profilePhotoVersion?: number
@@ -570,4 +572,3 @@ export interface NotificationCountDto {
   unreadCount: number
   totalCount: number
 }
-

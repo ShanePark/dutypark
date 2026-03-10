@@ -6,7 +6,6 @@ import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberManager
 import com.tistory.shanepark.dutypark.member.domain.enums.ManagerRole
-import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.repository.MemberManagerRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -14,6 +13,7 @@ import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterReposit
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
@@ -26,19 +26,21 @@ class MemberService(
     private val passwordEncoder: PasswordEncoder,
     private val memberSsoRegisterRepository: MemberSsoRegisterRepository,
     private val memberManagerRepository: MemberManagerRepository,
+    private val memberSocialAccountService: MemberSocialAccountService,
+    private val memberDtoAssembler: MemberDtoAssembler,
 ) {
 
     @Transactional(readOnly = true)
     fun findAll(): List<MemberDto> {
-        return memberRepository.findAll()
+        val members = memberRepository.findAll()
             .sortedWith(compareBy({ it.team?.name }, { it.name }))
-            .map { MemberDto.of(it) }
+        return memberDtoAssembler.toDtos(members)
     }
 
     @Transactional(readOnly = true)
     fun findById(memberId: Long): MemberDto {
         val member = memberRepository.findById(memberId).orElseThrow()
-        return MemberDto.of(member)
+        return memberDtoAssembler.toDto(member)
     }
 
     fun createMember(memberCreateDto: MemberCreateDto): Member {
@@ -61,16 +63,7 @@ class MemberService(
             password = ""
         )
         memberRepository.save(member)
-        when (ssoRegister.ssoType) {
-            SsoType.KAKAO -> {
-                member.kakaoId = ssoRegister.ssoId
-            }
-
-            SsoType.NAVER -> {
-                // not implemented yet
-//                member.naverId = ssoRegister.ssoId
-            }
-        }
+        memberSocialAccountService.link(member, ssoRegister.ssoType, ssoRegister.ssoId)
         return member
     }
 
@@ -78,9 +71,12 @@ class MemberService(
     fun searchMembersToInviteTeam(
         page: Pageable, keyword: String
     ): Page<MemberDto> {
-        memberRepository.findMembersByNameContainingIgnoreCaseAndTeamIsNull(keyword, page).let { it ->
-            return it.map { MemberDto.of(it) }
-        }
+        val membersPage = memberRepository.findMembersByNameContainingIgnoreCaseAndTeamIsNull(keyword, page)
+        return PageImpl(
+            memberDtoAssembler.toDtos(membersPage.content),
+            membersPage.pageable,
+            membersPage.totalElements
+        )
     }
 
     fun updateCalendarVisibility(loginMember: LoginMember, visibility: Visibility) {
@@ -145,7 +141,7 @@ class MemberService(
 
     fun findAllManagers(loginMember: LoginMember): List<MemberDto> {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
-        return findAllManagers(member).map { MemberDto.of(it) }
+        return memberDtoAssembler.toDtos(findAllManagers(member))
     }
 
     fun isManager(isManager: LoginMember, targetMemberId: Long): Boolean {
@@ -165,7 +161,7 @@ class MemberService(
     fun findManagedMembers(loginMember: LoginMember): List<MemberDto> {
         val manager = memberRepository.findById(loginMember.id).orElseThrow()
         val managedMembers = memberManagerRepository.findAllByManager(manager).map { it.managed }
-        return managedMembers.map { MemberDto.of(it) }
+        return memberDtoAssembler.toDtos(managedMembers)
     }
 
     fun createAuxiliaryAccount(loginMember: LoginMember, name: String): MemberDto {
@@ -184,7 +180,7 @@ class MemberService(
         )
         memberManagerRepository.save(managerEntity)
 
-        return MemberDto.of(member)
+        return memberDtoAssembler.toDto(member)
     }
 
 }

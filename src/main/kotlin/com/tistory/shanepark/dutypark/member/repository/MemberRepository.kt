@@ -22,8 +22,6 @@ interface MemberRepository : JpaRepository<Member, Long> {
 
     @Query("select m from Member m left join fetch m.team d  where m.id = :memberId")
     fun findMemberWithTeam(memberId: Long): Optional<Member>
-
-    fun findMemberByKakaoId(kakaoId: String): Member?
     fun findMembersByTeam(team: Team): List<Member>
 
     @Query(

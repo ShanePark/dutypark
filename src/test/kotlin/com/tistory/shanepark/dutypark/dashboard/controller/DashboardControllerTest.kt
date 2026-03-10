@@ -3,6 +3,9 @@ package com.tistory.shanepark.dutypark.dashboard.controller
 import com.tistory.shanepark.dutypark.RestDocsTest
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
+import com.tistory.shanepark.dutypark.member.domain.entity.MemberSocialAccount
+import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
+import com.tistory.shanepark.dutypark.member.repository.MemberSocialAccountRepository
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import org.junit.jupiter.api.Test
@@ -24,6 +27,9 @@ class DashboardControllerTest : RestDocsTest() {
 
     @Autowired
     lateinit var scheduleRepository: ScheduleRepository
+
+    @Autowired
+    lateinit var memberSocialAccountRepository: MemberSocialAccountRepository
 
     @Test
     fun `get my dashboard`() {
@@ -49,6 +55,8 @@ class DashboardControllerTest : RestDocsTest() {
                 position = 0
             )
         )
+        memberSocialAccountRepository.save(MemberSocialAccount(TestData.member, SsoType.KAKAO, "kakao-dashboard"))
+        memberSocialAccountRepository.save(MemberSocialAccount(TestData.member, SsoType.NAVER, "naver-dashboard"))
 
         mockMvc.perform(
             RestDocumentationRequestBuilders.get("/api/dashboard/my")
@@ -57,6 +65,8 @@ class DashboardControllerTest : RestDocsTest() {
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.member").exists())
+            .andExpect(jsonPath("$.member.kakaoId").value("kakao-dashboard"))
+            .andExpect(jsonPath("$.member.naverId").value("naver-dashboard"))
             .andDo(MockMvcResultHandlers.print())
             .andDo(
                 document(
@@ -69,6 +79,7 @@ class DashboardControllerTest : RestDocsTest() {
                         fieldWithPath("member.team").description("Team name"),
                         fieldWithPath("member.calendarVisibility").description("Calendar visibility setting"),
                         fieldWithPath("member.kakaoId").description("Kakao ID (nullable)"),
+                        fieldWithPath("member.naverId").description("Naver ID (nullable)"),
                         fieldWithPath("member.hasPassword").description("Whether member has password set"),
                         fieldWithPath("member.hasProfilePhoto").description("Whether member has profile photo"),
                         fieldWithPath("member.profilePhotoVersion").description("Profile photo version for cache busting"),

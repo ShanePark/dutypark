@@ -5,6 +5,7 @@ import type { LoginMember, LoginDto } from '@/types'
 import { authApi } from '@/api/auth'
 import { setAuthFailureHandler, setImpersonationHandlers, resetRefreshState } from '@/api/client'
 import router from '@/router'
+import { buildLoginRoute } from '@/utils/redirect'
 
 const USER_CACHE_KEY = 'dp-login-member'
 const IMPERSONATION_EXPIRES_KEY = 'dp-impersonation-expires'
@@ -141,7 +142,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   function handleAuthFailure() {
     clearAuth()
-    router.push('/auth/login')
+    router.push(buildLoginRoute(router.currentRoute.value.fullPath))
   }
 
   function handleImpersonationExpired() {
@@ -150,7 +151,7 @@ export const useAuthStore = defineStore('auth', () => {
     impersonationExpiresAt.value = null
     saveImpersonationExpiresAt(null)
     clearAuth()
-    router.push('/auth/login')
+    router.push(buildLoginRoute(router.currentRoute.value.fullPath))
   }
 
   // Register auth failure handler with API client

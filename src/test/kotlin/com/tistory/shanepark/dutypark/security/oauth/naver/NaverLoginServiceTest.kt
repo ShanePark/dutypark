@@ -1,4 +1,4 @@
-package com.tistory.shanepark.dutypark.security.oauth.kakao
+package com.tistory.shanepark.dutypark.security.oauth.naver
 
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberSsoRegister
@@ -16,7 +16,9 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
+import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
@@ -27,93 +29,94 @@ import org.springframework.mock.web.MockHttpServletResponse
 import java.util.Optional
 
 @ExtendWith(org.mockito.junit.jupiter.MockitoExtension::class)
-class KakaoLoginServiceTest {
+class NaverLoginServiceTest {
 
-    private val kakaoTokenApi: KakaoTokenApi = mock()
-    private val kakaoUserInfoApi: KakaoUserInfoApi = mock()
+    private val naverTokenApi: NaverTokenApi = mock()
+    private val naverUserInfoApi: NaverUserInfoApi = mock()
     private val memberRepository: MemberRepository = mock()
     private val authService: AuthService = mock()
     private val memberSsoRegisterRepository: MemberSsoRegisterRepository = mock()
     private val memberSocialAccountService: MemberSocialAccountService = mock()
     private val cookieService: CookieService = mock()
 
-    private lateinit var service: KakaoLoginService
+    private lateinit var service: NaverLoginService
 
     @BeforeEach
     fun setUp() {
-        service = KakaoLoginService(
-            kakaoTokenApi = kakaoTokenApi,
-            kakaoUserInfoApi = kakaoUserInfoApi,
+        service = NaverLoginService(
+            naverTokenApi = naverTokenApi,
+            naverUserInfoApi = naverUserInfoApi,
             memberRepository = memberRepository,
             authService = authService,
             memberSsoRegisterRepository = memberSsoRegisterRepository,
             memberSocialAccountService = memberSocialAccountService,
             cookieService = cookieService,
-            restApiKey = "rest-key"
+            clientId = "naver-client-id",
+            clientSecret = "naver-client-secret"
         )
     }
 
     @Test
-    fun `setKakaoIdToMember delegates social account link`() {
+    fun `setNaverIdToMember delegates social account link`() {
         val member = memberWithId(1L)
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
-        stubKakaoApis(kakaoId = 123L)
+        stubNaverApis(naverId = "naver-123")
 
-        service.setKakaoIdToMember(
+        service.setNaverIdToMember(
             code = "code-1",
-            redirectUrl = "https://auth/callback",
+            state = "encoded-state",
             loginMember = LoginMember(id = 1L, name = "tester")
         )
 
-        verify(kakaoTokenApi).getAccessToken(
+        verify(naverTokenApi).getAccessToken(
             grantType = "authorization_code",
-            clientId = "rest-key",
-            redirectUri = "https://auth/callback",
-            code = "code-1"
+            clientId = "naver-client-id",
+            clientSecret = "naver-client-secret",
+            code = "code-1",
+            state = "encoded-state"
         )
-        verify(memberSocialAccountService).link(member, SsoType.KAKAO, "123")
+        verify(memberSocialAccountService).link(member, SsoType.NAVER, "naver-123")
     }
 
     @Test
-    fun `setKakaoIdToMember throws when member not found`() {
+    fun `setNaverIdToMember throws when member not found`() {
         whenever(memberRepository.findById(1L)).thenReturn(Optional.empty())
-        stubKakaoApis(kakaoId = 123L)
+        stubNaverApis(naverId = "naver-123")
 
         assertThrows<NoSuchElementException> {
-            service.setKakaoIdToMember(
+            service.setNaverIdToMember(
                 code = "code-1",
-                redirectUrl = "https://auth/callback",
+                state = "encoded-state",
                 loginMember = LoginMember(id = 1L, name = "tester")
             )
         }
     }
 
     @Test
-    fun `setKakaoIdToMember propagates social account link exception`() {
+    fun `setNaverIdToMember propagates social account link exception`() {
         val member = memberWithId(1L)
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
-        whenever(memberSocialAccountService.link(member, SsoType.KAKAO, "123"))
-            .thenThrow(SocialAccountAlreadyLinkedException(SsoType.KAKAO))
-        stubKakaoApis(kakaoId = 123L)
+        whenever(memberSocialAccountService.link(member, SsoType.NAVER, "naver-123"))
+            .thenThrow(SocialAccountAlreadyLinkedException(SsoType.NAVER))
+        stubNaverApis(naverId = "naver-123")
 
         val exception = assertThrows<SocialAccountAlreadyLinkedException> {
-            service.setKakaoIdToMember(
+            service.setNaverIdToMember(
                 code = "code-1",
-                redirectUrl = "https://auth/callback",
+                state = "encoded-state",
                 loginMember = LoginMember(id = 1L, name = "tester")
             )
         }
-
-        assertThat(exception.provider).isEqualTo(SsoType.KAKAO)
+        assertThat(exception.provider).isEqualTo(SsoType.NAVER)
     }
 
     @Test
     fun `login returns success redirect for existing member`() {
         val member = memberWithId(10L)
         val redirectTarget = "/todo?view=mine"
-        whenever(memberSocialAccountService.findMemberByProviderAndSocialId(SsoType.KAKAO, "123")).thenReturn(member)
-        stubKakaoApis(kakaoId = 123L)
-        whenever(authService.getTokenResponseByMemberId(org.mockito.kotlin.eq(10L), org.mockito.kotlin.any())).thenReturn(
+        whenever(memberSocialAccountService.findMemberByProviderAndSocialId(SsoType.NAVER, "naver-123")).thenReturn(member)
+        stubNaverApis(naverId = "naver-123")
+        whenever(authService.getTokenResponseByMemberId(eq(10L), any())).thenReturn(
             TokenResponse(accessToken = "access", refreshToken = "refresh", expiresIn = 3600)
         )
 
@@ -123,7 +126,7 @@ class KakaoLoginServiceTest {
             req = request,
             resp = response,
             code = "code-1",
-            redirectUrl = "https://auth/callback",
+            state = "encoded-state",
             callbackUrl = "https://client/callback",
             redirectTarget = redirectTarget
         )
@@ -133,15 +136,15 @@ class KakaoLoginServiceTest {
             "https://client/callback#login=success&redirect=%2Ftodo%3Fview%3Dmine"
         )
         verify(cookieService).setTokenCookies(response, "access", "refresh")
-        verify(memberSsoRegisterRepository, never()).save(org.mockito.kotlin.any())
+        verify(memberSsoRegisterRepository, never()).save(any())
     }
 
     @Test
     fun `login returns sso required for new member`() {
         val redirectTarget = "/todo?view=mine"
-        whenever(memberSocialAccountService.findMemberByProviderAndSocialId(SsoType.KAKAO, "999")).thenReturn(null)
-        stubKakaoApis(kakaoId = 999L)
-        whenever(memberSsoRegisterRepository.save(org.mockito.kotlin.any())).thenAnswer { it.arguments[0] as MemberSsoRegister }
+        whenever(memberSocialAccountService.findMemberByProviderAndSocialId(SsoType.NAVER, "naver-999")).thenReturn(null)
+        stubNaverApis(naverId = "naver-999")
+        whenever(memberSsoRegisterRepository.save(any())).thenAnswer { it.arguments[0] as MemberSsoRegister }
 
         val request = MockHttpServletRequest()
         val response = MockHttpServletResponse()
@@ -149,7 +152,7 @@ class KakaoLoginServiceTest {
             req = request,
             resp = response,
             code = "code-2",
-            redirectUrl = "https://auth/callback",
+            state = "encoded-state",
             callbackUrl = "https://client/callback",
             redirectTarget = redirectTarget
         )
@@ -162,33 +165,34 @@ class KakaoLoginServiceTest {
         assertThat(result.headers.location?.toString()).isEqualTo(
             "https://client/callback#error=sso_required&uuid=${saved.uuid}&redirect=%2Ftodo%3Fview%3Dmine"
         )
-        assertThat(saved.ssoType).isEqualTo(SsoType.KAKAO)
-        assertThat(saved.ssoId).isEqualTo("999")
-        verify(cookieService, never()).setTokenCookies(org.mockito.kotlin.any(), org.mockito.kotlin.any(), org.mockito.kotlin.any())
-        verify(authService, never()).getTokenResponseByMemberId(org.mockito.kotlin.any(), org.mockito.kotlin.any())
+        assertThat(saved.ssoType).isEqualTo(SsoType.NAVER)
+        assertThat(saved.ssoId).isEqualTo("naver-999")
+        verify(cookieService, never()).setTokenCookies(any(), any(), any())
+        verify(authService, never()).getTokenResponseByMemberId(any(), any())
     }
 
-    private fun stubKakaoApis(kakaoId: Long) {
+    private fun stubNaverApis(naverId: String) {
         whenever(
-            kakaoTokenApi.getAccessToken(
-                grantType = org.mockito.kotlin.any(),
-                clientId = org.mockito.kotlin.any(),
-                redirectUri = org.mockito.kotlin.any(),
-                code = org.mockito.kotlin.any()
+            naverTokenApi.getAccessToken(
+                grantType = any(),
+                clientId = any(),
+                clientSecret = any(),
+                code = any(),
+                state = any()
             )
         ).thenReturn(
-            KakaoTokenResponse(
+            NaverTokenResponse(
                 accessToken = "access-token",
-                tokenType = "bearer",
                 refreshToken = "refresh-token",
-                expiresIn = 3600,
-                refreshTokenExpiresIn = 7200
+                tokenType = "bearer",
+                expiresIn = "3600"
             )
         )
-        whenever(kakaoUserInfoApi.getUserInfo("Bearer access-token")).thenReturn(
-            KakaoUserInfoResponse(
-                id = kakaoId,
-                connectedAt = "2025-01-01T00:00:00Z"
+        whenever(naverUserInfoApi.getUserInfo("Bearer access-token")).thenReturn(
+            NaverUserInfoResponse(
+                resultCode = "00",
+                message = "success",
+                response = NaverUserInfoPayload(id = naverId)
             )
         )
     }

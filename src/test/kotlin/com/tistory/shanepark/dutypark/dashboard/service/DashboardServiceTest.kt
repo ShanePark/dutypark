@@ -8,6 +8,7 @@ import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestType
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
+import com.tistory.shanepark.dutypark.member.service.MemberDtoAssembler
 import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
@@ -37,6 +38,7 @@ class DashboardServiceTest {
     private val scheduleRepository: ScheduleRepository = mock()
     private val friendRelationRepository: FriendRelationRepository = mock()
     private val friendService: FriendService = mock()
+    private val memberDtoAssembler: MemberDtoAssembler = mock()
 
     private lateinit var dashboardService: DashboardService
 
@@ -47,7 +49,8 @@ class DashboardServiceTest {
             dutyRepository = dutyRepository,
             scheduleRepository = scheduleRepository,
             friendRelationRepository = friendRelationRepository,
-            friendService = friendService
+            friendService = friendService,
+            memberDtoAssembler = memberDtoAssembler
         )
     }
 
@@ -83,6 +86,7 @@ class DashboardServiceTest {
             scheduleRepository.findTaggedSchedulesOfRange(eq(member), any(), any(), any())
         ).thenReturn(listOf(taggedSchedule))
         whenever(dutyRepository.findByMemberAndDutyDate(member, today)).thenReturn(null)
+        whenever(memberDtoAssembler.toDto(member)).thenReturn(memberDtoOf(member))
 
         val result = dashboardService.my(loginMember)
 
@@ -212,4 +216,18 @@ class DashboardServiceTest {
         field.set(request, id)
         return request
     }
+
+    private fun memberDtoOf(member: Member) = com.tistory.shanepark.dutypark.member.domain.dto.MemberDto(
+        id = member.id,
+        name = member.name,
+        email = member.email,
+        teamId = member.team?.id,
+        team = member.team?.name,
+        calendarVisibility = member.calendarVisibility,
+        kakaoId = null,
+        naverId = null,
+        hasPassword = member.password != null,
+        hasProfilePhoto = member.hasProfilePhoto(),
+        profilePhotoVersion = member.profilePhotoVersion,
+    )
 }

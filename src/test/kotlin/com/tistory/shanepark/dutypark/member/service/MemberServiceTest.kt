@@ -41,6 +41,12 @@ class MemberServiceTest {
     @Mock
     private lateinit var memberManagerRepository: MemberManagerRepository
 
+    @Mock
+    private lateinit var memberSocialAccountService: MemberSocialAccountService
+
+    @Mock
+    private lateinit var memberDtoAssembler: MemberDtoAssembler
+
     private lateinit var memberService: MemberService
 
     @BeforeEach
@@ -49,7 +55,9 @@ class MemberServiceTest {
             memberRepository,
             passwordEncoder,
             memberSsoRegisterRepository,
-            memberManagerRepository
+            memberManagerRepository,
+            memberSocialAccountService,
+            memberDtoAssembler
         )
     }
 
@@ -84,8 +92,8 @@ class MemberServiceTest {
         // Then
         assertThat(member.name).isEqualTo("shane")
         assertThat(member.password).isEqualTo("")
-        assertThat(member.kakaoId).isEqualTo("kakao_id")
         verify(memberRepository).save(any<Member>())
+        verify(memberSocialAccountService).link(member, SsoType.KAKAO, "kakao_id")
     }
 
     @Test
@@ -105,7 +113,7 @@ class MemberServiceTest {
     }
 
     @Test
-    fun `create Sso member for NAVER does not set kakaoId`() {
+    fun `create Sso member for NAVER links social account`() {
         // Given
         val uuid = UUID.randomUUID().toString()
         val ssoRegister = MemberSsoRegister(SsoType.NAVER, "naver_id")
@@ -118,7 +126,7 @@ class MemberServiceTest {
         val member = memberService.createSsoMember("shane", uuid)
 
         // Then
-        assertThat(member.kakaoId).isNull()
+        verify(memberSocialAccountService).link(member, SsoType.NAVER, "naver_id")
     }
 
     @Test
@@ -199,6 +207,7 @@ class MemberServiceTest {
 
         whenever(memberRepository.findById(2L)).thenReturn(Optional.of(managed))
         whenever(memberManagerRepository.findAllByManaged(managed)).thenReturn(listOf(relation))
+        whenever(memberDtoAssembler.toDtos(listOf(manager))).thenReturn(listOf(memberDtoOf(manager)))
 
         // When
         val loginMember = createLoginMember(managed)
@@ -271,6 +280,7 @@ class MemberServiceTest {
             savedMember
         }
         whenever(memberManagerRepository.save(any<MemberManager>())).thenAnswer { it.arguments[0] }
+        whenever(memberDtoAssembler.toDto(any())).thenAnswer { memberDtoOf(it.arguments[0] as Member) }
 
         // When
         val result = memberService.createAuxiliaryAccount(loginMember, "aux")
@@ -298,4 +308,18 @@ class MemberServiceTest {
             isAdmin = false
         )
     }
+
+    private fun memberDtoOf(member: Member) = com.tistory.shanepark.dutypark.member.domain.dto.MemberDto(
+        id = member.id,
+        name = member.name,
+        email = member.email,
+        teamId = member.team?.id,
+        team = member.team?.name,
+        calendarVisibility = member.calendarVisibility,
+        kakaoId = null,
+        naverId = null,
+        hasPassword = member.password != null,
+        hasProfilePhoto = member.hasProfilePhoto(),
+        profilePhotoVersion = member.profilePhotoVersion,
+    )
 }

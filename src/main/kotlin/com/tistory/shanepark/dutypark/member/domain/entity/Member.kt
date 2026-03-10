@@ -30,9 +30,6 @@ class Member(
     @Enumerated(EnumType.STRING)
     var calendarVisibility: Visibility = Visibility.FRIENDS
 
-    @Column(name = "oauth_kakao_id")
-    var kakaoId: String? = null
-
     @Column(name = "profile_photo_path")
     var profilePhotoPath: String? = null
 

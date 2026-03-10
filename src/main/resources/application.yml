@@ -87,6 +87,9 @@ dutypark:
 oauth:
   kakao:
     rest-api-key: "${KAKAO_REST_API_KEY:KAKAO_REST_API_KEY_HERE}"
+  naver:
+    client-id: "${NAVER_CLIENT_ID:}"
+    client-secret: "${NAVER_CLIENT_SECRET:}"
 
 decorator:
   datasource:

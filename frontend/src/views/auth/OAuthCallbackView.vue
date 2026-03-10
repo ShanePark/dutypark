@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { getSafeRedirect } from '@/utils/redirect'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -12,11 +13,20 @@ const isLoading = ref(true)
 onMounted(async () => {
   const hash = window.location.hash.substring(1)
   const params = new URLSearchParams(hash)
+  const redirect = getSafeRedirect(params.get('redirect'))
 
   const errorParam = params.get('error')
   if (errorParam === 'sso_required') {
     const uuid = params.get('uuid')
-    router.replace(`/auth/sso-signup?uuid=${uuid}`)
+    if (!uuid) {
+      error.value = '회원가입 정보를 받지 못했습니다.'
+      isLoading.value = false
+      return
+    }
+    await router.replace({
+      path: '/auth/sso-signup',
+      query: redirect ? { uuid, redirect } : { uuid },
+    })
     return
   }
 
@@ -29,7 +39,7 @@ onMounted(async () => {
 
   try {
     await authStore.checkAuth()
-    router.replace('/')
+    await router.replace(redirect || '/')
   } catch {
     error.value = '인증에 실패했습니다.'
     isLoading.value = false

@@ -92,6 +92,8 @@
     /* Kakao OAuth */
     --color-kakao: #fee500;
     --color-kakao-text: #000000;
+    --color-naver: #03c75a;
+    --color-naver-text: #ffffff;
 }
 
 /* ====================================
@@ -173,6 +175,8 @@
 
     --dp-kakao: #fee500;
     --dp-kakao-text: #000000;
+    --dp-naver: #03c75a;
+    --dp-naver-text: #ffffff;
 
     --dp-overlay-scrim: rgba(0, 0, 0, 0.5);
     --dp-overlay-scrim-soft: rgba(0, 0, 0, 0.3);
@@ -262,6 +266,8 @@
 
     --dp-kakao: #fee500;
     --dp-kakao-text: #000000;
+    --dp-naver: #03c75a;
+    --dp-naver-text: #ffffff;
 
     --dp-overlay-scrim: rgba(0, 0, 0, 0.5);
     --dp-overlay-scrim-soft: rgba(0, 0, 0, 0.3);
@@ -350,6 +356,12 @@ html.dark {
 .btn-kakao {
     background-color: var(--color-kakao);
     color: var(--color-kakao-text);
+    @apply hover:brightness-95;
+}
+
+.btn-naver {
+    background-color: var(--color-naver);
+    color: var(--color-naver-text);
     @apply hover:brightness-95;
 }
 

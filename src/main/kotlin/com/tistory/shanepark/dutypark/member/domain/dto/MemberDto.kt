@@ -11,20 +11,22 @@ data class MemberDto(
     val team: String? = null,
     val calendarVisibility: Visibility,
     val kakaoId: String?,
+    val naverId: String?,
     val hasPassword: Boolean = false,
     val hasProfilePhoto: Boolean = false,
     val profilePhotoVersion: Long = 0,
 ) {
     companion object {
-        fun of(member: Member): MemberDto {
+        fun of(member: Member, kakaoId: String? = null, naverId: String? = null): MemberDto {
             return MemberDto(
-                id = member.id!!,
+                id = member.id,
                 name = member.name,
                 email = member.email,
                 teamId = member.team?.id,
                 team = member.team?.name,
                 calendarVisibility = member.calendarVisibility,
-                kakaoId = member.kakaoId,
+                kakaoId = kakaoId,
+                naverId = naverId,
                 hasPassword = member.password != null,
                 hasProfilePhoto = member.hasProfilePhoto(),
                 profilePhotoVersion = member.profilePhotoVersion,

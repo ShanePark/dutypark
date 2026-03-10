@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore, type ThemeMode } from '@/stores/theme'
 import { memberApi, refreshTokenApi } from '@/api/member'
@@ -9,6 +9,7 @@ import { useSwal } from '@/composables/useSwal'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEscapeKey } from '@/composables/useEscapeKey'
 import { useKakao } from '@/composables/useKakao'
+import { useNaver } from '@/composables/useNaver'
 import { usePushNotification } from '@/composables/usePushNotification'
 import type { FriendDto, MemberDto, RefreshTokenDto, CalendarVisibility } from '@/types'
 import { VISIBILITY_COLORS } from '@/utils/visibility'
@@ -41,6 +42,7 @@ import {
   BellOff,
 } from 'lucide-vue-next'
 
+const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const themeStore = useThemeStore()
@@ -124,6 +126,7 @@ async function handleImpersonate(member: MemberDto) {
   }
 }
 const { kakaoLink } = useKakao()
+const { isNaverEnabled, naverLink } = useNaver()
 
 // Push notification settings
 const pushNotification = usePushNotification()
@@ -194,7 +197,9 @@ const loading = ref(false)
 const tokensLoading = ref(false)
 const savingVisibility = ref(false)
 const savingManager = ref(false)
-const connectingSso = ref(false)
+type SsoProvider = 'Kakao' | 'Naver'
+
+const connectingSso = ref<SsoProvider | null>(null)
 
 // Visibility settings
 const calendarVisibility = ref<CalendarVisibility>('FRIENDS')
@@ -346,7 +351,8 @@ async function deleteOtherTokens() {
 
 // SSO connections
 interface SsoConnection {
-  provider: string
+  provider: SsoProvider
+  label: string
   icon: string
   connected: boolean
   accountName?: string
@@ -354,20 +360,90 @@ interface SsoConnection {
 
 const ssoConnections = ref<SsoConnection[]>([])
 
-async function connectSso(provider: string) {
+function buildSsoConnections(member: MemberDto | null): SsoConnection[] {
+  const connections: SsoConnection[] = [
+    {
+      provider: 'Kakao',
+      label: '카카오',
+      icon: '/img/kakao.png',
+      connected: !!member?.kakaoId,
+    },
+    {
+      provider: 'Naver',
+      label: '네이버',
+      icon: '/img/naver.svg',
+      connected: !!member?.naverId,
+    },
+  ]
+
+  return connections.filter((connection) => connection.connected || connection.provider !== 'Naver' || isNaverEnabled)
+}
+
+async function connectSso(provider: SsoProvider) {
   if (connectingSso.value) return
 
-  if (provider === 'Kakao') {
-    const confirmed = await confirm(
-      '카카오 계정을 연동하면 카카오 로그인으로 간편하게 접속할 수 있습니다. 카카오 로그인 페이지로 이동합니다.',
-      '카카오 계정 연동',
-    )
-    if (confirmed) {
-      connectingSso.value = true
-      kakaoLink()
-    }
+  const prompts: Record<SsoProvider, { message: string; title: string; connect: () => void }> = {
+    Kakao: {
+      message: '카카오 계정을 연동하면 카카오 로그인으로 간편하게 접속할 수 있습니다. 카카오 로그인 페이지로 이동합니다.',
+      title: '카카오 계정 연동',
+      connect: () => kakaoLink(),
+    },
+    Naver: {
+      message: '네이버 계정을 연동하면 네이버 로그인으로 간편하게 접속할 수 있습니다. 네이버 로그인 페이지로 이동합니다.',
+      title: '네이버 계정 연동',
+      connect: () => naverLink(),
+    },
+  }
+
+  const prompt = prompts[provider]
+  const confirmed = await confirm(prompt.message, prompt.title)
+  if (!confirmed) return
+
+  connectingSso.value = provider
+  try {
+    prompt.connect()
+  } catch (error) {
+    console.error('Failed to connect sso:', error)
+    connectingSso.value = null
+    showError('소셜 계정 연동을 시작하지 못했습니다.')
     return
   }
+}
+
+type SocialLinkProvider = 'kakao' | 'naver'
+type SocialLinkErrorCode = 'already_linked'
+
+function getSingleQueryValue(value: unknown): string | null {
+  if (Array.isArray(value)) {
+    return typeof value[0] === 'string' ? value[0] : null
+  }
+  return typeof value === 'string' ? value : null
+}
+
+async function clearSocialLinkQuery() {
+  if (!route.query.socialLinkError && !route.query.socialProvider) return
+
+  const nextQuery = { ...route.query }
+  delete nextQuery.socialLinkError
+  delete nextQuery.socialProvider
+  await router.replace({ query: nextQuery })
+}
+
+async function handleSocialLinkQuery() {
+  const socialLinkError = getSingleQueryValue(route.query.socialLinkError) as SocialLinkErrorCode | null
+  const socialProvider = getSingleQueryValue(route.query.socialProvider) as SocialLinkProvider | null
+
+  if (!socialLinkError || !socialProvider) return
+
+  await clearSocialLinkQuery()
+
+  if (socialLinkError !== 'already_linked') return
+
+  const providerLabel = socialProvider === 'kakao' ? '카카오' : '네이버'
+  await showError(
+    `이미 다른 Dutypark 계정에 연동된 ${providerLabel} 계정입니다. 다른 ${providerLabel} 계정으로 다시 시도해주세요.`,
+    '소셜 계정 연동 실패'
+  )
 }
 
 // Password change
@@ -488,13 +564,8 @@ onMounted(async () => {
     }
 
     // Set SSO connections based on user data
-    ssoConnections.value = [
-      {
-        provider: 'Kakao',
-        icon: '/img/kakao.png',
-        connected: !!memberInfo.value?.kakaoId,
-      },
-    ]
+    ssoConnections.value = buildSsoConnections(memberInfo.value)
+    await handleSocialLinkQuery()
   } catch (error) {
     console.error('Failed to initialize:', error)
   } finally {
@@ -783,9 +854,9 @@ onMounted(async () => {
             class="flex items-center justify-between p-3 rounded-lg bg-dp-bg-secondary"
           >
             <div class="flex items-center gap-3">
-              <img :src="sso.icon" :alt="sso.provider" class="w-8 h-8 rounded" />
+              <img :src="sso.icon" :alt="sso.label" class="w-8 h-8 rounded" />
               <div>
-                <p class="font-medium text-dp-text-primary">{{ sso.provider }}</p>
+                <p class="font-medium text-dp-text-primary">{{ sso.label }}</p>
                 <p v-if="sso.connected && sso.accountName" class="text-sm text-dp-text-secondary">
                   {{ sso.accountName }}
                 </p>
@@ -799,10 +870,10 @@ onMounted(async () => {
               <button
                 v-else
                 @click="connectSso(sso.provider)"
-                :disabled="connectingSso"
+                :disabled="!!connectingSso"
                 class="px-4 py-2.5 sm:py-1.5 min-h-11 sm:min-h-0 text-sm font-medium text-dp-accent bg-dp-accent-soft hover:bg-dp-accent-soft rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
-                {{ connectingSso ? '연동 중...' : '연동하기' }}
+                {{ connectingSso === sso.provider ? '연동 중...' : '연동하기' }}
               </button>
             </div>
           </div>

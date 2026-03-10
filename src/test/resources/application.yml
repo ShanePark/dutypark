@@ -68,3 +68,6 @@ cookie:
 oauth:
   kakao:
     rest-api-key: "KAKAO_REST_API_KEY_HERE"
+  naver:
+    client-id: "NAVER_CLIENT_ID_HERE"
+    client-secret: "NAVER_CLIENT_SECRET_HERE"
