@@ -1,9 +1,12 @@
 package com.tistory.shanepark.dutypark.security.controller
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.member.domain.entity.MemberSocialAccount
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberSsoRegister
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.member.repository.MemberConsentRepository
+import com.tistory.shanepark.dutypark.member.repository.MemberSocialAccountRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
 import com.tistory.shanepark.dutypark.policy.domain.enums.PolicyType
 import com.tistory.shanepark.dutypark.security.config.JwtConfig
@@ -51,12 +54,15 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
     lateinit var memberConsentRepository: MemberConsentRepository
 
     @Autowired
+    lateinit var memberSocialAccountRepository: MemberSocialAccountRepository
+
+    @Autowired
     lateinit var jwtConfig: JwtConfig
 
     @Test
     fun `kakao callback links kakao id when login requested`() {
         val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
-        member.kakaoId = null
+        clearSocialAccount(member, SsoType.KAKAO)
 
         val stateJson = encodedState(login = true, referer = "/after")
 
@@ -72,22 +78,20 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
         em.flush()
         em.clear()
 
-        val updated = memberRepository.findById(member.id!!).orElseThrow()
-        assertThat(updated.kakaoId).isEqualTo(TEST_KAKAO_ID.toString())
+        val linked = memberSocialAccountRepository.findByProviderAndSocialId(SsoType.KAKAO, TEST_KAKAO_ID.toString())
+        assertThat(linked?.member?.id).isEqualTo(member.id)
     }
 
     @Test
     fun `kakao callback redirects to member page with already linked error when another member owns account`() {
         val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
-        member.kakaoId = null
-        memberRepository.save(member)
+        clearSocialAccount(member, SsoType.KAKAO)
 
         val existingMember = memberRepository.save(
-            com.tistory.shanepark.dutypark.member.domain.entity.Member("other-user", "other@duty.park", "pass").apply {
-                kakaoId = TEST_KAKAO_ID.toString()
-            }
+            Member("other-user", "other@duty.park", "pass")
         )
         assertThat(existingMember.id).isNotEqualTo(member.id)
+        linkSocialAccount(existingMember, SsoType.KAKAO, TEST_KAKAO_ID.toString())
 
         val referer = "http://localhost:5173/member"
         val stateJson = encodedState(login = true, referer = referer)
@@ -110,8 +114,8 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
     @Test
     fun `kakao callback redirects with login success when member exists`() {
         val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
-        member.kakaoId = TEST_KAKAO_ID.toString()
-        memberRepository.save(member)
+        clearSocialAccount(member, SsoType.KAKAO)
+        linkSocialAccount(member, SsoType.KAKAO, TEST_KAKAO_ID.toString())
 
         val stateJson = encodedState(callbackUrl = CALLBACK_URL)
 
@@ -164,7 +168,7 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
     @Test
     fun `naver callback links naver id when login requested`() {
         val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
-        member.naverId = null
+        clearSocialAccount(member, SsoType.NAVER)
 
         val stateJson = encodedState(login = true, referer = "/after")
 
@@ -180,14 +184,14 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
         em.flush()
         em.clear()
 
-        val updated = memberRepository.findById(member.id!!).orElseThrow()
-        assertThat(updated.naverId).isEqualTo(TEST_NAVER_ID)
+        val linked = memberSocialAccountRepository.findByProviderAndSocialId(SsoType.NAVER, TEST_NAVER_ID)
+        assertThat(linked?.member?.id).isEqualTo(member.id)
     }
 
     @Test
     fun `naver callback decodes utf8 encoded state`() {
         val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
-        member.naverId = null
+        clearSocialAccount(member, SsoType.NAVER)
         val referer = "http://localhost:5173/member?tab=네이버"
         val stateJson = encodedState(login = true, referer = referer)
 
@@ -203,22 +207,20 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
         em.flush()
         em.clear()
 
-        val updated = memberRepository.findById(member.id!!).orElseThrow()
-        assertThat(updated.naverId).isEqualTo(TEST_NAVER_ID)
+        val linked = memberSocialAccountRepository.findByProviderAndSocialId(SsoType.NAVER, TEST_NAVER_ID)
+        assertThat(linked?.member?.id).isEqualTo(member.id)
     }
 
     @Test
     fun `naver callback redirects to member page with already linked error when another member owns account`() {
         val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
-        member.naverId = null
-        memberRepository.save(member)
+        clearSocialAccount(member, SsoType.NAVER)
 
         val existingMember = memberRepository.save(
-            com.tistory.shanepark.dutypark.member.domain.entity.Member("other2", "other2@duty.park", "pass").apply {
-                naverId = TEST_NAVER_ID
-            }
+            Member("other2", "other2@duty.park", "pass")
         )
         assertThat(existingMember.id).isNotEqualTo(member.id)
+        linkSocialAccount(existingMember, SsoType.NAVER, TEST_NAVER_ID)
 
         val referer = "http://localhost:5173/member"
         val stateJson = encodedState(login = true, referer = referer)
@@ -241,8 +243,8 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
     @Test
     fun `naver callback redirects with login success when member exists`() {
         val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
-        member.naverId = TEST_NAVER_ID
-        memberRepository.save(member)
+        clearSocialAccount(member, SsoType.NAVER)
+        linkSocialAccount(member, SsoType.NAVER, TEST_NAVER_ID)
 
         val stateJson = encodedState(callbackUrl = CALLBACK_URL)
 
@@ -307,7 +309,8 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
 
         val created = memberRepository.findAll().first { it.name == "new-user" }
         assertThat(created.password).isEqualTo("")
-        assertThat(created.naverId).isEqualTo("naver-id-1")
+        val linked = memberSocialAccountRepository.findByProviderAndSocialId(SsoType.NAVER, "naver-id-1")
+        assertThat(linked?.member?.id).isEqualTo(created.id)
 
         val consents = memberConsentRepository.findAll().filter { it.member.id == created.id }
         assertThat(consents).hasSize(2)
@@ -444,6 +447,17 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
                 stateJson(login = login, referer = referer, callbackUrl = callbackUrl)
                     .toByteArray(StandardCharsets.UTF_8)
             )
+    }
+
+    private fun clearSocialAccount(member: Member, provider: SsoType) {
+        memberSocialAccountRepository.findByMemberAndProvider(member, provider)
+            ?.let { memberSocialAccountRepository.delete(it) }
+    }
+
+    private fun linkSocialAccount(member: Member, provider: SsoType, socialId: String) {
+        memberSocialAccountRepository.saveAndFlush(
+            MemberSocialAccount(member = member, provider = provider, socialId = socialId)
+        )
     }
 
     @TestConfiguration

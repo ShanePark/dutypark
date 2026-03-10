@@ -15,6 +15,7 @@ import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
+import com.tistory.shanepark.dutypark.member.service.MemberDtoAssembler
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
@@ -31,12 +32,13 @@ class DashboardService(
     private val scheduleRepository: ScheduleRepository,
     private val friendRelationRepository: FriendRelationRepository,
     private val friendService: FriendService,
+    private val memberDtoAssembler: MemberDtoAssembler,
 ) {
 
     fun my(loginMember: LoginMember): DashboardMyDetail {
         val member = memberRepository.findMemberWithTeam(loginMember.id).orElseThrow()
         return DashboardMyDetail(
-            member = MemberDto.of(member),
+            member = memberDtoAssembler.toDto(member),
             duty = todayDuty(member),
             schedules = todaySchedules(loginMember = loginMember, member = member),
         )

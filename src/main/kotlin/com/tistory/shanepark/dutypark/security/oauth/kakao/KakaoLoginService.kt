@@ -4,14 +4,13 @@ import com.tistory.shanepark.dutypark.member.domain.entity.MemberSsoRegister
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
+import com.tistory.shanepark.dutypark.member.service.MemberSocialAccountService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
-import com.tistory.shanepark.dutypark.security.oauth.SocialAccountAlreadyLinkedException
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import com.tistory.shanepark.dutypark.security.service.CookieService
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
@@ -26,6 +25,7 @@ class KakaoLoginService(
     private val memberRepository: MemberRepository,
     private val authService: AuthService,
     private val memberSsoRegisterRepository: MemberSsoRegisterRepository,
+    private val memberSocialAccountService: MemberSocialAccountService,
     private val cookieService: CookieService,
     @param:Value("\${oauth.kakao.rest-api-key}") private val restApiKey: String
 ) {
@@ -47,18 +47,7 @@ class KakaoLoginService(
     fun setKakaoIdToMember(code: String, redirectUrl: String, loginMember: LoginMember) {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
         val kakaoId = getKakaoId(redirectUrl, code)
-
-        val existingMember = memberRepository.findMemberByKakaoId(kakaoId)
-        if (existingMember != null && existingMember.id != member.id) {
-            throw SocialAccountAlreadyLinkedException(SsoType.KAKAO)
-        }
-
-        member.kakaoId = kakaoId
-        try {
-            memberRepository.saveAndFlush(member)
-        } catch (_: DataIntegrityViolationException) {
-            throw SocialAccountAlreadyLinkedException(SsoType.KAKAO)
-        }
+        memberSocialAccountService.link(member, SsoType.KAKAO, kakaoId)
     }
 
     fun login(
@@ -70,7 +59,7 @@ class KakaoLoginService(
     ): ResponseEntity<Void> {
         val kakaoId = getKakaoId(redirectUrl, code)
 
-        val member = memberRepository.findMemberByKakaoId(kakaoId)
+        val member = memberSocialAccountService.findMemberByProviderAndSocialId(SsoType.KAKAO, kakaoId)
         if (member != null) {
             val tokenResponse = authService.getTokenResponseByMemberId(member.id!!, req)
 

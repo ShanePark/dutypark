@@ -4,14 +4,13 @@ import com.tistory.shanepark.dutypark.member.domain.entity.MemberSsoRegister
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
+import com.tistory.shanepark.dutypark.member.service.MemberSocialAccountService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
-import com.tistory.shanepark.dutypark.security.oauth.SocialAccountAlreadyLinkedException
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import com.tistory.shanepark.dutypark.security.service.CookieService
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
@@ -26,6 +25,7 @@ class NaverLoginService(
     private val memberRepository: MemberRepository,
     private val authService: AuthService,
     private val memberSsoRegisterRepository: MemberSsoRegisterRepository,
+    private val memberSocialAccountService: MemberSocialAccountService,
     private val cookieService: CookieService,
     @param:Value("\${oauth.naver.client-id}") private val clientId: String,
     @param:Value("\${oauth.naver.client-secret}") private val clientSecret: String,
@@ -48,18 +48,7 @@ class NaverLoginService(
     fun setNaverIdToMember(code: String, state: String, loginMember: LoginMember) {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
         val naverId = getNaverId(code = code, state = state)
-
-        val existingMember = memberRepository.findMemberByNaverId(naverId)
-        if (existingMember != null && existingMember.id != member.id) {
-            throw SocialAccountAlreadyLinkedException(SsoType.NAVER)
-        }
-
-        member.naverId = naverId
-        try {
-            memberRepository.saveAndFlush(member)
-        } catch (_: DataIntegrityViolationException) {
-            throw SocialAccountAlreadyLinkedException(SsoType.NAVER)
-        }
+        memberSocialAccountService.link(member, SsoType.NAVER, naverId)
     }
 
     fun login(
@@ -71,7 +60,7 @@ class NaverLoginService(
     ): ResponseEntity<Void> {
         val naverId = getNaverId(code = code, state = state)
 
-        val member = memberRepository.findMemberByNaverId(naverId)
+        val member = memberSocialAccountService.findMemberByProviderAndSocialId(SsoType.NAVER, naverId)
         if (member != null) {
             val tokenResponse = authService.getTokenResponseByMemberId(member.id!!, req)
             cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)

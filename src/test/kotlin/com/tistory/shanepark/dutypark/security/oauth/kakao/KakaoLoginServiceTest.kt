@@ -5,6 +5,7 @@ import com.tistory.shanepark.dutypark.member.domain.entity.MemberSsoRegister
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
+import com.tistory.shanepark.dutypark.member.service.MemberSocialAccountService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.TokenResponse
 import com.tistory.shanepark.dutypark.security.oauth.SocialAccountAlreadyLinkedException
@@ -15,12 +16,11 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.Mockito.never
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
@@ -34,6 +34,7 @@ class KakaoLoginServiceTest {
     private val memberRepository: MemberRepository = mock()
     private val authService: AuthService = mock()
     private val memberSsoRegisterRepository: MemberSsoRegisterRepository = mock()
+    private val memberSocialAccountService: MemberSocialAccountService = mock()
     private val cookieService: CookieService = mock()
 
     private lateinit var service: KakaoLoginService
@@ -46,14 +47,15 @@ class KakaoLoginServiceTest {
             memberRepository = memberRepository,
             authService = authService,
             memberSsoRegisterRepository = memberSsoRegisterRepository,
+            memberSocialAccountService = memberSocialAccountService,
             cookieService = cookieService,
             restApiKey = "rest-key"
         )
     }
 
     @Test
-    fun `setKakaoIdToMember sets kakao id`() {
-        val member = Member("tester", "tester@duty.park", "pass")
+    fun `setKakaoIdToMember delegates social account link`() {
+        val member = memberWithId(1L)
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
         stubKakaoApis(kakaoId = 123L)
 
@@ -63,13 +65,13 @@ class KakaoLoginServiceTest {
             loginMember = LoginMember(id = 1L, name = "tester")
         )
 
-        assertThat(member.kakaoId).isEqualTo("123")
         verify(kakaoTokenApi).getAccessToken(
             grantType = "authorization_code",
             clientId = "rest-key",
             redirectUri = "https://auth/callback",
             code = "code-1"
         )
+        verify(memberSocialAccountService).link(member, SsoType.KAKAO, "123")
     }
 
     @Test
@@ -87,30 +89,11 @@ class KakaoLoginServiceTest {
     }
 
     @Test
-    fun `setKakaoIdToMember throws when kakao id is already linked to another member`() {
-        val member = memberWithId(1L)
-        val existingMember = memberWithId(2L)
-        whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
-        whenever(memberRepository.findMemberByKakaoId("123")).thenReturn(existingMember)
-        stubKakaoApis(kakaoId = 123L)
-
-        val exception = assertThrows<SocialAccountAlreadyLinkedException> {
-            service.setKakaoIdToMember(
-                code = "code-1",
-                redirectUrl = "https://auth/callback",
-                loginMember = LoginMember(id = 1L, name = "tester")
-            )
-        }
-
-        assertThat(exception.provider).isEqualTo(SsoType.KAKAO)
-    }
-
-    @Test
-    fun `setKakaoIdToMember throws social linked exception when save fails with duplicate key`() {
+    fun `setKakaoIdToMember propagates social account link exception`() {
         val member = memberWithId(1L)
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
-        whenever(memberRepository.findMemberByKakaoId("123")).thenReturn(null)
-        whenever(memberRepository.saveAndFlush(member)).thenThrow(DataIntegrityViolationException("duplicate"))
+        whenever(memberSocialAccountService.link(member, SsoType.KAKAO, "123"))
+            .thenThrow(SocialAccountAlreadyLinkedException(SsoType.KAKAO))
         stubKakaoApis(kakaoId = 123L)
 
         val exception = assertThrows<SocialAccountAlreadyLinkedException> {
@@ -127,7 +110,7 @@ class KakaoLoginServiceTest {
     @Test
     fun `login returns success redirect for existing member`() {
         val member = memberWithId(10L)
-        whenever(memberRepository.findMemberByKakaoId("123")).thenReturn(member)
+        whenever(memberSocialAccountService.findMemberByProviderAndSocialId(SsoType.KAKAO, "123")).thenReturn(member)
         stubKakaoApis(kakaoId = 123L)
         whenever(authService.getTokenResponseByMemberId(org.mockito.kotlin.eq(10L), org.mockito.kotlin.any())).thenReturn(
             TokenResponse(accessToken = "access", refreshToken = "refresh", expiresIn = 3600)
@@ -151,7 +134,7 @@ class KakaoLoginServiceTest {
 
     @Test
     fun `login returns sso required for new member`() {
-        whenever(memberRepository.findMemberByKakaoId("999")).thenReturn(null)
+        whenever(memberSocialAccountService.findMemberByProviderAndSocialId(SsoType.KAKAO, "999")).thenReturn(null)
         stubKakaoApis(kakaoId = 999L)
         whenever(memberSsoRegisterRepository.save(org.mockito.kotlin.any())).thenAnswer { it.arguments[0] as MemberSsoRegister }
 
