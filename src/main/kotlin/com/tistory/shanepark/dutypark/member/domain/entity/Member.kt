@@ -30,10 +30,10 @@ class Member(
     @Enumerated(EnumType.STRING)
     var calendarVisibility: Visibility = Visibility.FRIENDS
 
-    @Column(name = "oauth_kakao_id")
+    @Column(name = "oauth_kakao_id", unique = true)
     var kakaoId: String? = null
 
-    @Column(name = "oauth_naver_id")
+    @Column(name = "oauth_naver_id", unique = true)
     var naverId: String? = null
 
     @Column(name = "profile_photo_path")

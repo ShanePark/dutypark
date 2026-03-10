@@ -20,6 +20,7 @@ import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
@@ -91,6 +92,25 @@ class KakaoLoginServiceTest {
         val existingMember = memberWithId(2L)
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
         whenever(memberRepository.findMemberByKakaoId("123")).thenReturn(existingMember)
+        stubKakaoApis(kakaoId = 123L)
+
+        val exception = assertThrows<SocialAccountAlreadyLinkedException> {
+            service.setKakaoIdToMember(
+                code = "code-1",
+                redirectUrl = "https://auth/callback",
+                loginMember = LoginMember(id = 1L, name = "tester")
+            )
+        }
+
+        assertThat(exception.provider).isEqualTo(SsoType.KAKAO)
+    }
+
+    @Test
+    fun `setKakaoIdToMember throws social linked exception when save fails with duplicate key`() {
+        val member = memberWithId(1L)
+        whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
+        whenever(memberRepository.findMemberByKakaoId("123")).thenReturn(null)
+        whenever(memberRepository.saveAndFlush(member)).thenThrow(DataIntegrityViolationException("duplicate"))
         stubKakaoApis(kakaoId = 123L)
 
         val exception = assertThrows<SocialAccountAlreadyLinkedException> {
