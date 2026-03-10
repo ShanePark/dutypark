@@ -12,6 +12,11 @@ import com.tistory.shanepark.dutypark.security.oauth.kakao.KakaoTokenApi
 import com.tistory.shanepark.dutypark.security.oauth.kakao.KakaoTokenResponse
 import com.tistory.shanepark.dutypark.security.oauth.kakao.KakaoUserInfoApi
 import com.tistory.shanepark.dutypark.security.oauth.kakao.KakaoUserInfoResponse
+import com.tistory.shanepark.dutypark.security.oauth.naver.NaverTokenApi
+import com.tistory.shanepark.dutypark.security.oauth.naver.NaverTokenResponse
+import com.tistory.shanepark.dutypark.security.oauth.naver.NaverUserInfoApi
+import com.tistory.shanepark.dutypark.security.oauth.naver.NaverUserInfoPayload
+import com.tistory.shanepark.dutypark.security.oauth.naver.NaverUserInfoResponse
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -28,9 +33,10 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.util.Base64
 
 @AutoConfigureMockMvc
-@Import(OAuthControllerTest.KakaoApiTestConfig::class)
+@Import(OAuthControllerTest.KakaoApiTestConfig::class, OAuthControllerTest.NaverApiTestConfig::class)
 class OAuthControllerTest : DutyparkIntegrationTest() {
 
     @Autowired
@@ -50,7 +56,7 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
         val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
         member.kakaoId = null
 
-        val stateJson = stateJson(login = true, referer = "/after")
+        val stateJson = encodedState(login = true, referer = "/after")
 
         mockMvc.perform(
             MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/kakao")
@@ -74,7 +80,7 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
         member.kakaoId = TEST_KAKAO_ID.toString()
         memberRepository.save(member)
 
-        val stateJson = stateJson(callbackUrl = CALLBACK_URL)
+        val stateJson = encodedState(callbackUrl = CALLBACK_URL)
 
         mockMvc.perform(
             MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/kakao")
@@ -91,7 +97,7 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
 
     @Test
     fun `kakao callback redirects with sso required when member not found`() {
-        val stateJson = stateJson(callbackUrl = CALLBACK_URL)
+        val stateJson = encodedState(callbackUrl = CALLBACK_URL)
 
         val result = mockMvc.perform(
             MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/kakao")
@@ -123,8 +129,72 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
     }
 
     @Test
+    fun `naver callback links naver id when login requested`() {
+        val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
+        member.naverId = null
+
+        val stateJson = stateJson(login = true, referer = "/after")
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/naver")
+                .param("code", "test-code")
+                .param("state", stateJson)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
+        )
+            .andExpect(status().isFound)
+            .andExpect(header().string(HttpHeaders.LOCATION, "/after"))
+
+        em.flush()
+        em.clear()
+
+        val updated = memberRepository.findById(member.id!!).orElseThrow()
+        assertThat(updated.naverId).isEqualTo(TEST_NAVER_ID)
+    }
+
+    @Test
+    fun `naver callback redirects with login success when member exists`() {
+        val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
+        member.naverId = TEST_NAVER_ID
+        memberRepository.save(member)
+
+        val stateJson = stateJson(callbackUrl = CALLBACK_URL)
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/naver")
+                .param("code", "test-code")
+                .param("state", stateJson)
+        )
+            .andExpect(status().isFound)
+            .andExpect(header().string(HttpHeaders.LOCATION, "$CALLBACK_URL#login=success"))
+            .andExpect(cookie().exists("access_token"))
+            .andExpect(cookie().exists("refresh_token"))
+
+        assertThat(memberSsoRegisterRepository.findAll().none { it.ssoType == SsoType.NAVER }).isTrue()
+    }
+
+    @Test
+    fun `naver callback redirects with sso required when member not found`() {
+        val stateJson = stateJson(callbackUrl = CALLBACK_URL)
+
+        val result = mockMvc.perform(
+            MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/naver")
+                .param("code", "test-code")
+                .param("state", stateJson)
+        )
+            .andExpect(status().isFound)
+            .andReturn()
+
+        val saved = memberSsoRegisterRepository.findAll().single { it.ssoType == SsoType.NAVER }
+        assertThat(saved.ssoType).isEqualTo(SsoType.NAVER)
+        assertThat(saved.ssoId).isEqualTo(TEST_NAVER_ID)
+
+        val location = result.response.getHeader(HttpHeaders.LOCATION)
+        assertThat(location).isEqualTo("$CALLBACK_URL#error=sso_required&uuid=${saved.uuid}")
+    }
+
+    @Test
     fun `sso signup creates member and consent with default versions`() {
-        val ssoRegister = memberSsoRegisterRepository.save(MemberSsoRegister(SsoType.KAKAO, "kakao-id-1"))
+        val ssoRegister = memberSsoRegisterRepository.save(MemberSsoRegister(SsoType.NAVER, "naver-id-1"))
         val request = SsoSignupRequest(
             uuid = ssoRegister.uuid,
             username = "new-user",
@@ -148,7 +218,7 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
 
         val created = memberRepository.findAll().first { it.name == "new-user" }
         assertThat(created.password).isEqualTo("")
-        assertThat(created.kakaoId).isEqualTo("kakao-id-1")
+        assertThat(created.naverId).isEqualTo("naver-id-1")
 
         val consents = memberConsentRepository.findAll().filter { it.member.id == created.id }
         assertThat(consents).hasSize(2)
@@ -223,6 +293,16 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
         return objectMapper.writeValueAsString(state)
     }
 
+    private fun encodedState(
+        login: Boolean? = null,
+        referer: String? = null,
+        callbackUrl: String? = null
+    ): String {
+        return Base64.getUrlEncoder()
+            .withoutPadding()
+            .encodeToString(stateJson(login = login, referer = referer, callbackUrl = callbackUrl).toByteArray())
+    }
+
     @TestConfiguration
     class KakaoApiTestConfig {
         @Bean
@@ -260,8 +340,47 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
         }
     }
 
+    @TestConfiguration
+    class NaverApiTestConfig {
+        @Bean
+        @Primary
+        fun testNaverTokenApi(): NaverTokenApi {
+            return object : NaverTokenApi {
+                override fun getAccessToken(
+                    grantType: String,
+                    clientId: String,
+                    clientSecret: String,
+                    code: String,
+                    state: String
+                ): NaverTokenResponse {
+                    return NaverTokenResponse(
+                        accessToken = "naver-access-token",
+                        refreshToken = "naver-refresh-token",
+                        tokenType = "bearer",
+                        expiresIn = "3600"
+                    )
+                }
+            }
+        }
+
+        @Bean
+        @Primary
+        fun testNaverUserInfoApi(): NaverUserInfoApi {
+            return object : NaverUserInfoApi {
+                override fun getUserInfo(accessToken: String): NaverUserInfoResponse {
+                    return NaverUserInfoResponse(
+                        resultCode = "00",
+                        message = "success",
+                        response = NaverUserInfoPayload(id = TEST_NAVER_ID)
+                    )
+                }
+            }
+        }
+    }
+
     companion object {
         private const val CALLBACK_URL = "https://client.example.com/callback"
         private const val TEST_KAKAO_ID = 123456789L
+        private const val TEST_NAVER_ID = "naver-user-123"
     }
 }

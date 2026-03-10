@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useKakao } from '@/composables/useKakao'
+import { useNaver } from '@/composables/useNaver'
 import { AxiosError } from 'axios'
 import PolicyModal from '@/components/common/PolicyModal.vue'
 
@@ -12,12 +13,14 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const { initKakao, kakaoLogin } = useKakao()
+const { isNaverEnabled, naverLogin } = useNaver()
 
 const email = ref('')
 const password = ref('')
 const rememberMe = ref(false)
 const isLoading = ref(false)
 const isKakaoLoading = ref(false)
+const isNaverLoading = ref(false)
 const error = ref('')
 const remainingAttempts = ref<number | null>(null)
 const policyModal = ref<'terms' | 'privacy' | null>(null)
@@ -71,6 +74,13 @@ function handleKakaoLogin() {
   isKakaoLoading.value = true
   const referer = (route.query.redirect as string) || '/'
   kakaoLogin(referer)
+}
+
+function handleNaverLogin() {
+  if (isNaverLoading.value) return
+  isNaverLoading.value = true
+  const referer = (route.query.redirect as string) || '/'
+  naverLogin(referer)
 }
 
 </script>
@@ -175,17 +185,31 @@ function handleKakaoLogin() {
             </div>
           </div>
 
-          <!-- Kakao Login Button -->
-          <button
-            type="button"
-            @click="handleKakaoLogin"
-            :disabled="isKakaoLoading"
-            class="w-full py-3.5 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-3 hover:opacity-90 cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            :style="{ backgroundColor: 'var(--dp-kakao)', color: 'var(--dp-kakao-text)' }"
-          >
-            <img src="/img/kakao.png" alt="Kakao" class="w-5 h-5" />
-            <span>{{ isKakaoLoading ? '로그인 중...' : '카카오 로그인' }}</span>
-          </button>
+          <div class="space-y-3">
+            <!-- Kakao Login Button -->
+            <button
+              type="button"
+              @click="handleKakaoLogin"
+              :disabled="isKakaoLoading"
+              class="w-full py-3.5 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-3 hover:opacity-90 cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              :style="{ backgroundColor: 'var(--dp-kakao)', color: 'var(--dp-kakao-text)' }"
+            >
+              <img src="/img/kakao.png" alt="Kakao" class="w-5 h-5" />
+              <span>{{ isKakaoLoading ? '로그인 중...' : '카카오 로그인' }}</span>
+            </button>
+
+            <button
+              v-if="isNaverEnabled"
+              type="button"
+              @click="handleNaverLogin"
+              :disabled="isNaverLoading"
+              class="w-full py-3.5 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-3 hover:opacity-95 cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              :style="{ backgroundColor: 'var(--dp-naver)', color: 'var(--dp-naver-text)' }"
+            >
+              <img src="/img/naver.svg" alt="Naver" class="w-5 h-5" />
+              <span>{{ isNaverLoading ? '로그인 중...' : '네이버 로그인' }}</span>
+            </button>
+          </div>
         </form>
       </div>
 

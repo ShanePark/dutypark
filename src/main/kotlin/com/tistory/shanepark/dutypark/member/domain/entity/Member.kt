@@ -33,6 +33,9 @@ class Member(
     @Column(name = "oauth_kakao_id")
     var kakaoId: String? = null
 
+    @Column(name = "oauth_naver_id")
+    var naverId: String? = null
+
     @Column(name = "profile_photo_path")
     var profilePhotoPath: String? = null
 

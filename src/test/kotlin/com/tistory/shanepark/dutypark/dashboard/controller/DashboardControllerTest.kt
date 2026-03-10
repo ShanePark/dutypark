@@ -69,6 +69,7 @@ class DashboardControllerTest : RestDocsTest() {
                         fieldWithPath("member.team").description("Team name"),
                         fieldWithPath("member.calendarVisibility").description("Calendar visibility setting"),
                         fieldWithPath("member.kakaoId").description("Kakao ID (nullable)"),
+                        fieldWithPath("member.naverId").description("Naver ID (nullable)"),
                         fieldWithPath("member.hasPassword").description("Whether member has password set"),
                         fieldWithPath("member.hasProfilePhoto").description("Whether member has profile photo"),
                         fieldWithPath("member.profilePhotoVersion").description("Profile photo version for cache busting"),

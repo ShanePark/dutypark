@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.security.controller
 
+import tools.jackson.core.type.TypeReference
 import tools.jackson.databind.json.JsonMapper
 import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
@@ -9,6 +10,7 @@ import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.SsoSignupRequest
 import com.tistory.shanepark.dutypark.security.oauth.kakao.KakaoLoginService
+import com.tistory.shanepark.dutypark.security.oauth.naver.NaverLoginService
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import com.tistory.shanepark.dutypark.security.service.CookieService
 import jakarta.servlet.http.HttpServletRequest
@@ -17,11 +19,13 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import java.net.URI
+import java.util.Base64
 
 @RestController
 @RequestMapping("/api/auth")
 class OAuthController(
     private val kakaoLoginService: KakaoLoginService,
+    private val naverLoginService: NaverLoginService,
     private val memberService: MemberService,
     private val authService: AuthService,
     private val cookieService: CookieService,
@@ -37,7 +41,7 @@ class OAuthController(
         httpServletResponse: HttpServletResponse,
         @Login(required = false) loginMember: LoginMember?
     ): ResponseEntity<Void> {
-        val state = jsonMapper.readValue(stateString, Map::class.java)
+        val state = parseState(stateString)
         val referer = (state["referer"] as String?) ?: "/"
 
         val redirectUrl = httpServletRequest.requestURL.toString()
@@ -61,6 +65,40 @@ class OAuthController(
             resp = httpServletResponse,
             code = code,
             redirectUrl = redirectUrl,
+            callbackUrl = callbackUrl
+        )
+    }
+
+    @GetMapping("Oauth2ClientCallback/naver")
+    fun naverLoginCallback(
+        @RequestParam code: String,
+        @RequestParam(value = "state") stateString: String,
+        httpServletRequest: HttpServletRequest,
+        httpServletResponse: HttpServletResponse,
+        @Login(required = false) loginMember: LoginMember?
+    ): ResponseEntity<Void> {
+        val state = parseState(stateString)
+        val referer = (state["referer"] as String?) ?: "/"
+
+        val login = (state["login"] as Boolean?) ?: false
+        if (login && loginMember != null) {
+            naverLoginService.setNaverIdToMember(
+                code = code,
+                state = stateString,
+                loginMember = loginMember,
+            )
+            return ResponseEntity.status(HttpStatus.FOUND)
+                .location(URI.create(referer))
+                .build()
+        }
+
+        val callbackUrl = state["callbackUrl"] as String?
+            ?: throw IllegalArgumentException("callbackUrl is required in state")
+        return naverLoginService.login(
+            req = httpServletRequest,
+            resp = httpServletResponse,
+            code = code,
+            state = stateString,
             callbackUrl = callbackUrl
         )
     }
@@ -114,6 +152,22 @@ class OAuthController(
                 "expiresIn" to tokenResponse.expiresIn
             )
         )
+    }
+
+    private fun parseState(stateString: String): Map<String, Any> {
+        return try {
+            jsonMapper.readValue(stateString, object : TypeReference<Map<String, Any>>() {})
+        } catch (_: Exception) {
+            val normalized = stateString
+                .replace('-', '+')
+                .replace('_', '/')
+                .let { raw ->
+                    val padding = (4 - raw.length % 4) % 4
+                    raw + "=".repeat(padding)
+                }
+            val decoded = String(Base64.getDecoder().decode(normalized))
+            jsonMapper.readValue(decoded, object : TypeReference<Map<String, Any>>() {})
+        }
     }
 
 }

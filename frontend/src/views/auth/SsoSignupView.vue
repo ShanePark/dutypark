@@ -68,7 +68,7 @@ onMounted(async () => {
   if (typeof uuidParam === 'string' && uuidParam) {
     uuid.value = uuidParam
   } else {
-    showError('잘못된 접근입니다. 카카오 로그인을 다시 시도해주세요.')
+    showError('잘못된 접근입니다. 소셜 로그인을 다시 시도해주세요.')
     router.push('/auth/login')
     return
   }

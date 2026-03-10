@@ -67,8 +67,7 @@ class MemberService(
             }
 
             SsoType.NAVER -> {
-                // not implemented yet
-//                member.naverId = ssoRegister.ssoId
+                member.naverId = ssoRegister.ssoId
             }
         }
         return member

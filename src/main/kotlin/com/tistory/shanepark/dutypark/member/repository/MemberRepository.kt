@@ -24,6 +24,7 @@ interface MemberRepository : JpaRepository<Member, Long> {
     fun findMemberWithTeam(memberId: Long): Optional<Member>
 
     fun findMemberByKakaoId(kakaoId: String): Member?
+    fun findMemberByNaverId(naverId: String): Member?
     fun findMembersByTeam(team: Team): List<Member>
 
     @Query(

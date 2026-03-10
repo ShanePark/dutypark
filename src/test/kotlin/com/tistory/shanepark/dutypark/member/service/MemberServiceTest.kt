@@ -105,7 +105,7 @@ class MemberServiceTest {
     }
 
     @Test
-    fun `create Sso member for NAVER does not set kakaoId`() {
+    fun `create Sso member for NAVER sets naverId`() {
         // Given
         val uuid = UUID.randomUUID().toString()
         val ssoRegister = MemberSsoRegister(SsoType.NAVER, "naver_id")
@@ -119,6 +119,7 @@ class MemberServiceTest {
 
         // Then
         assertThat(member.kakaoId).isNull()
+        assertThat(member.naverId).isEqualTo("naver_id")
     }
 
     @Test
