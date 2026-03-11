@@ -12,5 +12,5 @@ services:
       MYSQL_PASSWORD: PASSWORD_HERE
       MYSQL_INITDB_SKIP_TZINFO: 1
     volumes:
-      - ./my.cnf:/etc/mysql/my.cnf:ro
+      - ./my.cnf/dev-low-memory.cnf:/etc/mysql/conf.d/dev-low-memory.cnf:ro
       - ./data:/var/lib/mysql     
