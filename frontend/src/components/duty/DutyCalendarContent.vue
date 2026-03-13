@@ -128,6 +128,34 @@ function getVisibleTags(schedule: Schedule) {
   return (schedule.tags ?? []).filter((tag) => tag.id !== props.memberId)
 }
 
+function getDisplayTagMembers(schedule: Schedule) {
+  const visibleTags = getVisibleTags(schedule).map((tag) => ({
+    key: `tag-${tag.id}`,
+    id: tag.id,
+    name: tag.name,
+    hasProfilePhoto: tag.hasProfilePhoto,
+    profilePhotoVersion: tag.profilePhotoVersion,
+  }))
+
+  const taggedByMember = schedule.taggedByMember
+  if (schedule.isTagged && taggedByMember && !visibleTags.some((tag) => tag.id === taggedByMember.id)) {
+    visibleTags.unshift({
+      key: `tagged-by-${taggedByMember.id}`,
+      id: taggedByMember.id,
+      name: taggedByMember.name,
+      hasProfilePhoto: taggedByMember.hasProfilePhoto,
+      profilePhotoVersion: taggedByMember.profilePhotoVersion,
+    })
+  } else if (schedule.isTagged && !taggedByMember && (schedule.taggedBy || schedule.owner)) {
+    visibleTags.unshift({
+      key: `tagged-by-${schedule.id}`,
+      name: schedule.taggedBy || schedule.owner || '',
+    })
+  }
+
+  return visibleTags.filter((tag) => tag.name)
+}
+
 function getCalendarTagLabel(name: string) {
   const chars = Array.from(name)
   return chars.length > 3 ? `${chars.slice(0, 2).join('')}..` : name
@@ -227,16 +255,16 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
         />
           <!-- Tags display -->
           <div
-            v-if="getVisibleTags(schedule).length || (schedule.isTagged && (schedule.taggedBy || schedule.owner))"
+            v-if="getDisplayTagMembers(schedule).length"
             class="mt-px flex flex-wrap gap-px justify-end sm:mt-0.5 sm:gap-0.5"
           >
             <span
-              v-for="tag in getVisibleTags(schedule)"
-              :key="tag.id"
+              v-for="tag in getDisplayTagMembers(schedule)"
+              :key="tag.key"
               class="schedule-tag schedule-tag-with-avatar"
             >
               <ProfileAvatar
-                :member-id="tag.id"
+                :member-id="tag.id ?? null"
                 :name="tag.name"
                 :has-profile-photo="tag.hasProfilePhoto"
                 :profile-photo-version="tag.profilePhotoVersion"
@@ -245,10 +273,6 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
               />
               <span class="schedule-tag-label">{{ getCalendarTagLabel(tag.name) }}</span>
             </span>
-            <span
-              v-if="schedule.isTagged && (schedule.taggedBy || schedule.owner)"
-              class="schedule-tag schedule-tag-by"
-            ><span class="text-[6px] sm:text-[10px]">by</span> {{ getCalendarTagLabel(schedule.taggedBy || schedule.owner || '') }}</span>
           </div>
         </div>
         <div
@@ -316,21 +340,6 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
   letter-spacing: -0.03em;
 }
 
-.schedule-tag-by {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.06rem;
-  width: 2.85rem;
-  box-sizing: border-box;
-  min-height: 1.05rem;
-  padding-right: 0.1rem;
-  padding-left: 0.1rem;
-  font-size: 10px;
-  line-height: 1.05;
-  text-align: center;
-}
-
 :deep(.schedule-tag-avatar.profile-avatar) {
   border-width: 1px;
   width: 0.62rem;
@@ -345,14 +354,6 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
     gap: 0.08rem;
     padding-right: 0.3rem;
     padding-left: 0.08rem;
-    font-size: 14px;
-  }
-
-  .schedule-tag-by {
-    width: 4.8rem;
-    min-height: 1.6rem;
-    padding-right: 0.3rem;
-    padding-left: 0.3rem;
     font-size: 14px;
   }
 

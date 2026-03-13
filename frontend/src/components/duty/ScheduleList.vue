@@ -24,7 +24,14 @@ interface Schedule {
   visibility: 'PUBLIC' | 'FRIENDS' | 'FAMILY' | 'PRIVATE'
   isMine: boolean
   isTagged: boolean
+  owner?: string
   taggedBy?: string
+  taggedByMember?: {
+    id: number
+    name: string
+    hasProfilePhoto?: boolean
+    profilePhotoVersion?: number
+  }
   attachments?: Array<{
     id: string
     originalFilename: string
@@ -171,6 +178,34 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
 function getVisibleTags(schedule: Schedule) {
   return (schedule.tags ?? []).filter((tag) => tag.id !== props.memberId)
 }
+
+function getDisplayTagMembers(schedule: Schedule) {
+  const visibleTags = getVisibleTags(schedule).map((tag) => ({
+    key: `tag-${tag.id}`,
+    id: tag.id,
+    name: tag.name,
+    hasProfilePhoto: tag.hasProfilePhoto,
+    profilePhotoVersion: tag.profilePhotoVersion,
+  }))
+
+  const taggedByMember = schedule.taggedByMember
+  if (schedule.isTagged && taggedByMember && !visibleTags.some((tag) => tag.id === taggedByMember.id)) {
+    visibleTags.unshift({
+      key: `tagged-by-${taggedByMember.id}`,
+      id: taggedByMember.id,
+      name: taggedByMember.name,
+      hasProfilePhoto: taggedByMember.hasProfilePhoto,
+      profilePhotoVersion: taggedByMember.profilePhotoVersion,
+    })
+  } else if (schedule.isTagged && !taggedByMember && (schedule.taggedBy || schedule.owner)) {
+    visibleTags.unshift({
+      key: `tagged-by-${schedule.id}`,
+      name: schedule.taggedBy || schedule.owner || '',
+    })
+  }
+
+  return visibleTags.filter((tag) => tag.name)
+}
 </script>
 
 <template>
@@ -228,28 +263,22 @@ function getVisibleTags(schedule: Schedule) {
             </div>
 
           <div
-            v-if="getVisibleTags(schedule).length || (schedule.isTagged && schedule.taggedBy)"
+            v-if="getDisplayTagMembers(schedule).length"
             class="mt-2 flex flex-wrap items-center gap-1.5"
           >
             <span
-              v-for="tag in getVisibleTags(schedule)"
-              :key="tag.id"
+              v-for="tag in getDisplayTagMembers(schedule)"
+              :key="tag.key"
               class="inline-flex min-h-[34px] items-center gap-1.5 rounded-full border border-dp-accent-border bg-dp-accent-soft px-1 py-1 pr-2 text-xs text-dp-text-primary"
             >
               <ProfileAvatar
-                :member-id="tag.id"
+                :member-id="tag.id ?? null"
                 :name="tag.name"
                 :has-profile-photo="tag.hasProfilePhoto"
                 :profile-photo-version="tag.profilePhotoVersion"
                 size="sm"
               />
               <span class="max-w-[120px] truncate font-medium">{{ tag.name }}</span>
-            </span>
-            <span
-              v-if="schedule.isTagged && schedule.taggedBy"
-              class="inline-flex min-h-[30px] items-center rounded-full bg-dp-bg-tertiary px-2.5 py-1 text-[11px] font-medium text-dp-text-secondary"
-            >
-              by {{ schedule.taggedBy }}
             </span>
           </div>
 

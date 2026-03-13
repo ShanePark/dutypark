@@ -73,6 +73,10 @@ operation::duty/batch-update[]
 
 == Schedules
 
+=== Get List
+
+operation::schedules/get-list[]
+
 === Create
 
 operation::schedules/create[]

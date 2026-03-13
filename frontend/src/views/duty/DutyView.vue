@@ -268,6 +268,15 @@ async function loadDDays() {
 
 // Convert ScheduleDto to Schedule for UI
 function mapToSchedule(dto: ScheduleDto): Schedule {
+  const taggedByMember = dto.isTagged && dto.taggedByMember?.id != null
+    ? {
+      id: dto.taggedByMember.id,
+      name: dto.taggedByMember.name,
+      hasProfilePhoto: dto.taggedByMember.hasProfilePhoto ?? false,
+      profilePhotoVersion: dto.taggedByMember.profilePhotoVersion ?? 0,
+    }
+    : undefined
+
   return {
     id: dto.id,
     content: dto.content,
@@ -279,7 +288,8 @@ function mapToSchedule(dto: ScheduleDto): Schedule {
     isMine: !dto.isTagged,
     isTagged: dto.isTagged,
     owner: dto.owner,
-    taggedBy: dto.isTagged ? dto.owner : undefined,
+    taggedBy: taggedByMember?.name ?? (dto.isTagged ? dto.owner : undefined),
+    taggedByMember,
     attachments: dto.attachments.map((a) => ({
       id: a.id,
       originalFilename: a.originalFilename,

@@ -28,6 +28,12 @@ interface Schedule {
   isTagged: boolean
   owner?: string
   taggedBy?: string
+  taggedByMember?: {
+    id: number
+    name: string
+    hasProfilePhoto?: boolean
+    profilePhotoVersion?: number
+  }
   attachments?: Array<{
     id: string
     originalFilename: string
@@ -112,6 +118,23 @@ const formattedDateTime = computed(() => {
 const displayTags = computed(() => {
   if (!props.schedule?.tags) return []
   return props.schedule.tags.filter(t => t.id !== props.memberId)
+})
+
+const taggedByDisplay = computed(() => {
+  if (!props.schedule?.isTagged) return null
+  if (props.schedule.taggedByMember) {
+    return props.schedule.taggedByMember
+  }
+
+  const fallbackName = props.schedule.taggedBy || props.schedule.owner
+  if (!fallbackName) return null
+
+  return {
+    id: undefined,
+    name: fallbackName,
+    hasProfilePhoto: false,
+    profilePhotoVersion: 0,
+  }
 })
 
 function toNormalizedAttachments(attachments: Schedule['attachments']): NormalizedAttachment[] {
@@ -200,16 +223,23 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
           </div>
 
           <!-- Owner (for tagged schedules) -->
-          <div v-if="schedule.isTagged" class="flex items-start gap-3">
+          <div v-if="taggedByDisplay" class="flex items-start gap-3">
             <div
               class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-dp-bg-tertiary"
             >
               <User class="w-4 h-4 text-dp-text-muted" />
             </div>
-            <div class="flex-1 pt-1">
-              <div class="text-xs mb-1 text-dp-text-muted">태그한 사람</div>
-              <div class="text-sm text-dp-text-primary">
-                {{ schedule.taggedBy || schedule.owner }}
+            <div class="flex-1 pt-0.5">
+              <div class="inline-flex min-h-[36px] items-center gap-1.5 rounded-full border border-dp-border-primary bg-dp-bg-secondary px-1 py-1 pr-3 text-dp-text-primary">
+                <span class="pl-1 text-xs font-medium text-dp-text-muted">by</span>
+                <ProfileAvatar
+                  :member-id="taggedByDisplay.id ?? null"
+                  :name="taggedByDisplay.name"
+                  :has-profile-photo="taggedByDisplay.hasProfilePhoto"
+                  :profile-photo-version="taggedByDisplay.profilePhotoVersion"
+                  size="sm"
+                />
+                <span class="max-w-[180px] truncate text-sm font-medium">{{ taggedByDisplay.name }}</span>
               </div>
             </div>
           </div>

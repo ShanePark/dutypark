@@ -216,15 +216,33 @@ class ScheduleControllerTest : RestDocsTest() {
     @Test
     fun `getSchedules returns schedules with attachments field`() {
         // Given
-        val member = TestData.member
+        val owner = TestData.member
+        val member = TestData.member2
+        makeThemFriend(owner, member)
         val dateTime = LocalDateTime.of(2024, 3, 10, 0, 0)
-        scheduleRepository.save(
+        val schedule = scheduleRepository.save(
             Schedule(
-                member = member,
+                member = owner,
                 content = "test schedule",
                 startDateTime = dateTime,
                 endDateTime = dateTime,
                 position = 0
+            )
+        )
+        schedule.addTag(member)
+        scheduleRepository.save(schedule)
+
+        attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = schedule.id.toString(),
+                originalFilename = "test.jpg",
+                storedFilename = "stored-test.jpg",
+                contentType = "image/jpeg",
+                size = 1000L,
+                storagePath = "/test/path",
+                createdBy = owner.id!!,
+                orderIndex = 0
             )
         )
 
@@ -241,7 +259,42 @@ class ScheduleControllerTest : RestDocsTest() {
         ).andExpect(status().isOk)
             .andExpect(jsonPath("$..content").value(hasItem("test schedule")))
             .andExpect(jsonPath("$..attachments").exists())
+            .andExpect(jsonPath("$..taggedByMember.name").value(hasItem(owner.name)))
             .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "schedules/get-list",
+                    queryParameters(
+                        parameterWithName("memberId").description("조회할 캘린더 주인의 member id"),
+                        parameterWithName("year").description("조회할 연도"),
+                        parameterWithName("month").description("조회할 월")
+                    ),
+                    relaxedResponseFields(
+                        fieldWithPath("[].[]").description("월간 캘린더의 각 날짜 칸에 해당하는 일정 목록").optional(),
+                        fieldWithPath("[].[].id").description("일정 ID").optional(),
+                        fieldWithPath("[].[].content").description("일정 내용").optional(),
+                        fieldWithPath("[].[].description").description("일정 설명").optional(),
+                        fieldWithPath("[].[].position").description("일정 정렬 순서").optional(),
+                        fieldWithPath("[].[].year").description("현재 셀의 연도").optional(),
+                        fieldWithPath("[].[].month").description("현재 셀의 월").optional(),
+                        fieldWithPath("[].[].dayOfMonth").description("현재 셀의 일").optional(),
+                        fieldWithPath("[].[].startDateTime").description("일정 시작 일시").optional(),
+                        fieldWithPath("[].[].endDateTime").description("일정 종료 일시").optional(),
+                        fieldWithPath("[].[].isTagged").description("태그된 일정인지 여부").optional(),
+                        fieldWithPath("[].[].owner").description("일정 작성자 이름").optional(),
+                        subsectionWithPath("[].[].taggedByMember").description("태그된 일정일 때 태그한 사람의 요약 정보").optional(),
+                        subsectionWithPath("[].[].tags").description("태그된 멤버 요약 정보 목록").optional(),
+                        fieldWithPath("[].[].visibility").description("일정 공개 범위").optional(),
+                        fieldWithPath("[].[].dateToCompare").description("현재 셀 기준 날짜").optional(),
+                        subsectionWithPath("[].[].attachments").description("첨부파일 목록").optional(),
+                        fieldWithPath("[].[].startDate").description("일정 시작 날짜").optional(),
+                        fieldWithPath("[].[].daysFromStart").description("현재 셀 기준 시작일로부터 경과 일수").optional(),
+                        fieldWithPath("[].[].endDate").description("일정 종료 날짜").optional(),
+                        fieldWithPath("[].[].curDate").description("현재 셀의 실제 날짜").optional(),
+                        fieldWithPath("[].[].totalDays").description("전체 일정 일수").optional()
+                    )
+                )
+            )
     }
 
     @Test

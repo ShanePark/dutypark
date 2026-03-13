@@ -18,6 +18,7 @@ export interface ScheduleDto {
   endDateTime: string
   isTagged: boolean
   owner: string
+  taggedByMember?: ScheduleTagMemberDto | null
   tags: ScheduleTagMemberDto[]
   visibility?: CalendarVisibility
   dateToCompare: string
