@@ -219,7 +219,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
             </div>
 
           <div
-            v-if="isMyCalendar && schedule.isMine && canEdit"
+            v-if="isMyCalendar && schedule.isMine && canEdit && schedule.tags?.length"
             class="mt-2 rounded-xl border border-dp-border-primary bg-dp-bg-primary p-2.5"
           >
             <div class="flex items-center justify-between gap-2">
@@ -243,12 +243,6 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
               >
                 {{ tag.name }}
               </span>
-            </div>
-            <div
-              v-else
-              class="mt-2 rounded-lg border border-dashed border-dp-border-secondary px-3 py-2 text-xs text-dp-text-muted"
-            >
-              아직 태그된 친구가 없습니다.
             </div>
           </div>
 

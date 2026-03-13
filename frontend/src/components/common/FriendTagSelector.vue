@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { Check, Home, RotateCcw, Search, Star, X } from 'lucide-vue-next'
+import { computed, ref, watch } from 'vue'
+import { Check, Home, RotateCcw, Search, Star, UserPlus, X } from 'lucide-vue-next'
 import type { TaggableFriend } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import { useSwal } from '@/composables/useSwal'
@@ -30,6 +30,7 @@ const emit = defineEmits<{
 
 const { confirm } = useSwal()
 const searchQuery = ref('')
+const isExpanded = ref(props.modelValue.length > 0)
 
 const normalizedQuery = computed(() => searchQuery.value.trim().toLowerCase())
 const selectedIdSet = computed(() => new Set(props.modelValue))
@@ -89,6 +90,12 @@ const visibleFriends = computed<SelectedFriendEntry[]>(() => {
   return [...prioritizedSelectedFriends.value, ...filteredUnselectedFriends]
 })
 
+watch(selectedCount, (count, previousCount) => {
+  if (count > 0 && previousCount === 0) {
+    isExpanded.value = true
+  }
+})
+
 function matchesQuery(friend: TaggableFriend) {
   if (!normalizedQuery.value) {
     return true
@@ -127,6 +134,14 @@ async function clearSelection() {
   emit('update:modelValue', [])
 }
 
+function openSelector() {
+  if (props.disabled) {
+    return
+  }
+
+  isExpanded.value = true
+}
+
 function getSubtitle(friend: TaggableFriend) {
   if ('isUnavailable' in friend && friend.isUnavailable) {
     return '현재 친구 목록에 없음'
@@ -139,101 +154,113 @@ function getSubtitle(friend: TaggableFriend) {
 </script>
 
 <template>
-  <section class="friend-tag-selector space-y-2.5 rounded-2xl border border-dp-border-primary p-3 sm:p-4">
-    <div class="flex items-center gap-2">
-      <label for="friend-tag-search" class="sr-only">친구 검색</label>
-      <div class="friend-tag-selector__search min-w-0 flex-1">
-        <Search class="friend-tag-selector__search-icon" />
-        <input
-          id="friend-tag-search"
-          v-model="searchQuery"
-          type="text"
-          inputmode="search"
-          class="form-control friend-tag-selector__search-input friend-tag-selector__search-input--compact w-full rounded-xl"
-          placeholder="친구 검색"
-          @keydown.esc="searchQuery = ''"
-        />
-        <button
-          v-if="searchQuery"
-          type="button"
-          class="friend-tag-selector__search-clear"
-          aria-label="검색어 지우기"
-          @click="searchQuery = ''"
-        >
-          <X class="h-4 w-4" />
-        </button>
+  <section :class="isExpanded ? 'friend-tag-selector space-y-2.5 rounded-2xl border border-dp-border-primary p-3 sm:p-4' : ''">
+    <button
+      v-if="!isExpanded"
+      type="button"
+      class="flex min-h-[56px] w-full items-center gap-3 rounded-2xl border border-dp-border-primary bg-dp-bg-card px-4 py-3 text-left transition hover:border-dp-accent-border hover:bg-dp-bg-hover disabled:cursor-not-allowed disabled:opacity-60"
+      :disabled="props.disabled"
+      @click="openSelector"
+    >
+      <div class="flex min-w-0 items-center gap-3">
+        <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-dp-bg-tertiary text-dp-accent">
+          <UserPlus class="h-4 w-4" />
+        </div>
+        <span class="truncate text-sm font-medium text-dp-text-primary">친구 태그 추가</span>
       </div>
-      <div class="flex flex-shrink-0 items-center gap-1.5">
-        <div class="inline-flex min-h-[32px] items-center rounded-full border border-dp-border-secondary bg-dp-bg-tertiary px-2.5 py-1 text-xs font-semibold text-dp-text-primary sm:px-3">
-          {{ selectedCount }}명
+    </button>
+
+    <div v-else class="space-y-2.5">
+      <div class="flex items-center gap-2">
+        <label for="friend-tag-search" class="sr-only">친구 검색</label>
+        <div class="friend-tag-selector__search min-w-0 flex-1">
+          <Search class="friend-tag-selector__search-icon" />
+          <input
+            id="friend-tag-search"
+            v-model="searchQuery"
+            type="text"
+            inputmode="search"
+            class="form-control friend-tag-selector__search-input friend-tag-selector__search-input--compact w-full rounded-xl"
+            placeholder="친구 검색"
+            @keydown.esc="searchQuery = ''"
+          />
+          <button
+            v-if="searchQuery"
+            type="button"
+            class="friend-tag-selector__search-clear"
+            aria-label="검색어 지우기"
+            @click="searchQuery = ''"
+          >
+            <X class="h-4 w-4" />
+          </button>
         </div>
         <button
           v-if="selectedCount"
           type="button"
-          class="inline-flex h-8 w-8 items-center justify-center rounded-full text-dp-text-secondary transition hover:bg-dp-bg-hover hover:text-dp-text-primary"
+          class="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-dp-text-secondary transition hover:bg-dp-bg-hover hover:text-dp-text-primary"
           aria-label="선택된 친구 전체 해제"
           title="전체 해제"
-          @click="clearSelection"
+          @click.stop="clearSelection"
         >
           <RotateCcw class="h-3.5 w-3.5" />
         </button>
       </div>
-    </div>
 
-    <div class="overflow-hidden rounded-2xl border border-dp-border-primary bg-dp-bg-primary">
-      <div
-        v-if="visibleFriends.length"
-        class="friend-tag-selector__list max-h-72 overflow-y-auto lg:grid lg:grid-cols-2 lg:gap-px lg:bg-dp-border-primary"
-      >
-        <button
-          v-for="friend in visibleFriends"
-          :key="friend.id"
-          type="button"
-          class="flex min-h-[56px] w-full items-center gap-3 border-b border-dp-border-primary bg-dp-bg-primary px-3 py-2.5 text-left transition last:border-b-0 hover:bg-dp-bg-hover lg:border-b-0"
-          :class="isSelected(friend.id) ? 'bg-dp-accent-soft' : ''"
-          @click="toggleFriend(friend.id)"
+      <div class="overflow-hidden rounded-2xl border border-dp-border-primary bg-dp-bg-primary">
+        <div
+          v-if="visibleFriends.length"
+          class="friend-tag-selector__list max-h-72 overflow-y-auto lg:grid lg:grid-cols-2 lg:gap-px lg:bg-dp-border-primary"
         >
-          <ProfileAvatar
-            :member-id="friend.id"
-            :name="friend.name"
-            :has-profile-photo="friend.hasProfilePhoto"
-            :profile-photo-version="friend.profilePhotoVersion"
-            size="sm"
-            class="friend-tag-selector__avatar"
-          />
-
-          <div class="min-w-0 flex-1">
-            <div class="flex items-center gap-2">
-              <span class="truncate text-sm font-medium text-dp-text-primary">{{ friend.name }}</span>
-              <Star
-                v-if="friend.pinOrder != null"
-                class="h-3.5 w-3.5 flex-shrink-0 text-dp-warning"
-                fill="currentColor"
-                title="즐겨찾기"
-              />
-              <Home
-                v-if="friend.isFamily"
-                class="h-3.5 w-3.5 flex-shrink-0 text-dp-warning"
-                title="가족"
-              />
-            </div>
-            <p v-if="getSubtitle(friend)" class="truncate text-xs text-dp-text-muted">{{ getSubtitle(friend) }}</p>
-          </div>
-
-          <div
-            class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border"
-            :class="isSelected(friend.id)
-              ? 'border-dp-accent bg-dp-accent text-dp-text-on-dark'
-              : 'border-dp-border-secondary text-dp-text-muted'"
+          <button
+            v-for="friend in visibleFriends"
+            :key="friend.id"
+            type="button"
+            class="flex min-h-[56px] w-full items-center gap-3 border-b border-dp-border-primary bg-dp-bg-primary px-3 py-2.5 text-left transition last:border-b-0 hover:bg-dp-bg-hover lg:border-b-0"
+            :class="isSelected(friend.id) ? 'bg-dp-accent-soft' : ''"
+            @click="toggleFriend(friend.id)"
           >
-            <Check v-if="isSelected(friend.id)" class="h-3.5 w-3.5" />
-          </div>
-        </button>
-      </div>
+            <ProfileAvatar
+              :member-id="friend.id"
+              :name="friend.name"
+              :has-profile-photo="friend.hasProfilePhoto"
+              :profile-photo-version="friend.profilePhotoVersion"
+              size="sm"
+              class="friend-tag-selector__avatar"
+            />
 
-      <div v-else class="px-4 py-10 text-center">
-        <p class="text-sm font-medium text-dp-text-primary">검색 결과가 없어요.</p>
-        <p class="mt-1 text-xs text-dp-text-muted">이름이나 팀명을 바꿔서 다시 찾아보세요.</p>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <span class="truncate text-sm font-medium text-dp-text-primary">{{ friend.name }}</span>
+                <Star
+                  v-if="friend.pinOrder != null"
+                  class="h-3.5 w-3.5 flex-shrink-0 text-dp-warning"
+                  fill="currentColor"
+                  title="즐겨찾기"
+                />
+                <Home
+                  v-if="friend.isFamily"
+                  class="h-3.5 w-3.5 flex-shrink-0 text-dp-warning"
+                  title="가족"
+                />
+              </div>
+              <p v-if="getSubtitle(friend)" class="truncate text-xs text-dp-text-muted">{{ getSubtitle(friend) }}</p>
+            </div>
+
+            <div
+              class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border"
+              :class="isSelected(friend.id)
+                ? 'border-dp-accent bg-dp-accent text-dp-text-on-dark'
+                : 'border-dp-border-secondary text-dp-text-muted'"
+            >
+              <Check v-if="isSelected(friend.id)" class="h-3.5 w-3.5" />
+            </div>
+          </button>
+        </div>
+
+        <div v-else class="px-4 py-10 text-center">
+          <p class="text-sm font-medium text-dp-text-primary">검색 결과가 없어요.</p>
+          <p class="mt-1 text-xs text-dp-text-muted">이름이나 팀명을 바꿔서 다시 찾아보세요.</p>
+        </div>
       </div>
     </div>
   </section>
