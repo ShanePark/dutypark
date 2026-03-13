@@ -85,7 +85,7 @@ defineExpose({
 </script>
 
 <template>
-  <div class="space-y-2 sm:space-y-3">
+  <div class="space-y-1.5 sm:space-y-3">
     <div class="flex items-center gap-2">
       <label class="text-sm flex-shrink-0 w-16 text-dp-text-secondary">
         제목 <span class="text-dp-danger">*</span>
@@ -104,7 +104,7 @@ defineExpose({
       </div>
     </div>
 
-    <div class="space-y-2">
+    <div class="space-y-1.5 sm:space-y-2">
       <!-- Create mode: time only (date is already selected from calendar) -->
       <div v-if="!isEditMode" class="flex items-center gap-2">
         <label class="text-sm flex-shrink-0 w-16 text-dp-text-secondary">시작 시간</label>

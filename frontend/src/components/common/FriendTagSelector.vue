@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Check, Home, RotateCcw, Search, Star, UserPlus, X } from 'lucide-vue-next'
+import { RotateCcw, Search, UserPlus, X } from 'lucide-vue-next'
 import type { TaggableFriend } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import { useSwal } from '@/composables/useSwal'
@@ -154,7 +154,7 @@ function getSubtitle(friend: TaggableFriend) {
 </script>
 
 <template>
-  <section :class="isExpanded ? 'friend-tag-selector space-y-2.5 rounded-2xl border border-dp-border-primary bg-dp-bg-card p-3 sm:p-4' : ''">
+  <section :class="isExpanded ? 'friend-tag-selector space-y-2 rounded-2xl border border-dp-border-primary bg-dp-bg-card p-2.5 sm:space-y-2.5 sm:p-4' : ''">
     <button
       v-if="!isExpanded"
       type="button"
@@ -170,8 +170,8 @@ function getSubtitle(friend: TaggableFriend) {
       </div>
     </button>
 
-    <div v-else class="space-y-2.5">
-      <div class="flex items-center gap-2">
+    <div v-else class="space-y-2 sm:space-y-2.5">
+      <div class="flex items-center gap-1.5 sm:gap-2">
         <label for="friend-tag-search" class="sr-only">친구 검색</label>
         <div class="friend-tag-selector__search min-w-0 flex-1">
           <Search class="friend-tag-selector__search-icon" />
@@ -181,7 +181,7 @@ function getSubtitle(friend: TaggableFriend) {
             type="text"
             inputmode="search"
             class="form-control friend-tag-selector__search-input friend-tag-selector__search-input--compact w-full rounded-xl"
-            placeholder="친구 검색"
+            placeholder="검색"
             @keydown.esc="searchQuery = ''"
           />
           <button
@@ -193,6 +193,13 @@ function getSubtitle(friend: TaggableFriend) {
           >
             <X class="h-4 w-4" />
           </button>
+        </div>
+        <div
+          v-if="selectedCount"
+          class="inline-flex h-8 flex-shrink-0 items-center rounded-full border border-dp-accent-border bg-dp-accent-soft px-2.5 text-xs font-semibold text-dp-text-primary"
+          :aria-label="`선택된 친구 ${selectedCount}명`"
+        >
+          {{ selectedCount }}명
         </div>
         <button
           v-if="selectedCount"
@@ -209,14 +216,14 @@ function getSubtitle(friend: TaggableFriend) {
       <div class="overflow-hidden rounded-2xl border border-dp-border-primary bg-dp-bg-secondary">
         <div
           v-if="visibleFriends.length"
-          class="friend-tag-selector__list max-h-72 overflow-y-auto lg:grid lg:grid-cols-2 lg:gap-px lg:bg-dp-border-primary"
+          class="friend-tag-selector__list grid grid-cols-2 gap-px overflow-y-auto bg-dp-border-primary"
         >
           <button
             v-for="friend in visibleFriends"
             :key="friend.id"
             type="button"
-            class="flex min-h-[52px] w-full items-center gap-2 border-b border-dp-border-primary bg-dp-bg-primary px-2.5 py-2 text-left transition last:border-b-0 hover:bg-dp-bg-hover lg:border-b-0"
-            :class="isSelected(friend.id) ? 'bg-dp-accent-soft' : ''"
+            class="friend-tag-selector__item flex w-full items-start gap-2 bg-dp-bg-primary px-2 py-2 text-left transition sm:items-center sm:gap-3 sm:px-3 sm:py-2.5"
+            :class="isSelected(friend.id) ? 'friend-tag-selector__item--selected' : ''"
             @click="toggleFriend(friend.id)"
           >
             <ProfileAvatar
@@ -229,30 +236,8 @@ function getSubtitle(friend: TaggableFriend) {
             />
 
             <div class="min-w-0 flex-1">
-              <div class="flex items-center gap-2">
-                <span class="truncate text-sm font-medium text-dp-text-primary">{{ friend.name }}</span>
-                <Star
-                  v-if="friend.pinOrder != null"
-                  class="h-3.5 w-3.5 flex-shrink-0 text-dp-warning"
-                  fill="currentColor"
-                  title="즐겨찾기"
-                />
-                <Home
-                  v-if="friend.isFamily"
-                  class="h-3.5 w-3.5 flex-shrink-0 text-dp-warning"
-                  title="가족"
-                />
-              </div>
-              <p v-if="getSubtitle(friend)" class="truncate text-xs text-dp-text-muted">{{ getSubtitle(friend) }}</p>
-            </div>
-
-            <div
-              class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border"
-              :class="isSelected(friend.id)
-                ? 'border-dp-accent bg-dp-accent text-dp-text-on-dark'
-                : 'border-dp-border-secondary text-dp-text-muted'"
-            >
-              <Check v-if="isSelected(friend.id)" class="h-3.5 w-3.5" />
+              <div class="truncate text-[13px] font-medium leading-tight text-dp-text-primary sm:text-sm">{{ friend.name }}</div>
+              <p v-if="getSubtitle(friend)" class="truncate text-[11px] text-dp-text-muted sm:text-xs">{{ getSubtitle(friend) }}</p>
             </div>
           </button>
         </div>
@@ -267,8 +252,31 @@ function getSubtitle(friend: TaggableFriend) {
 </template>
 
 <style scoped>
+.friend-tag-selector__list {
+  --friend-tag-row-height: 56px;
+  max-height: calc((var(--friend-tag-row-height) * 3) + 2px);
+  scrollbar-color: var(--dp-border-secondary) var(--dp-bg-primary);
+  scrollbar-gutter: stable;
+}
+
+.friend-tag-selector__item {
+  min-height: var(--friend-tag-row-height);
+}
+
 .friend-tag-selector__avatar {
   flex-shrink: 0;
+  width: 1.625rem;
+  height: 1.625rem;
+}
+
+.friend-tag-selector__item--selected {
+  background-color: var(--dp-accent-bg-hover) !important;
+  border-color: var(--dp-accent-border);
+  box-shadow: inset 0 0 0 1px var(--dp-accent-border);
+}
+
+.friend-tag-selector__item--selected:hover {
+  background-color: var(--dp-accent-bg-hover) !important;
 }
 
 .friend-tag-selector__search {
@@ -323,12 +331,75 @@ function getSubtitle(friend: TaggableFriend) {
   outline-offset: 2px;
 }
 
-@media (min-width: 1024px) {
+.friend-tag-selector__list::-webkit-scrollbar {
+  width: 0.625rem;
+}
+
+.friend-tag-selector__list::-webkit-scrollbar-track {
+  background: var(--dp-bg-primary);
+}
+
+.friend-tag-selector__list::-webkit-scrollbar-thumb {
+  background: var(--dp-border-secondary);
+  border: 2px solid var(--dp-bg-primary);
+  border-radius: 9999px;
+}
+
+.friend-tag-selector__list::-webkit-scrollbar-corner {
+  background: var(--dp-bg-primary);
+}
+
+@media (max-width: 639px) {
+  .friend-tag-selector__item {
+    align-items: flex-start;
+  }
+}
+
+.friend-tag-selector__list > :first-child {
+  border-top-left-radius: 1rem;
+}
+
+.friend-tag-selector__list > :nth-child(2) {
+  border-top-right-radius: 1rem;
+}
+
+.friend-tag-selector__list > :nth-last-child(2):nth-child(odd) {
+  border-bottom-left-radius: 1rem;
+}
+
+.friend-tag-selector__list > :last-child:nth-child(even) {
+  border-bottom-right-radius: 1rem;
+}
+
+.friend-tag-selector__list > :last-child:nth-child(odd) {
+  border-bottom-left-radius: 1rem;
+}
+
+.friend-tag-selector__list:has(> :last-child:nth-child(odd))::after {
+  content: '';
+  display: block;
+  min-height: var(--friend-tag-row-height);
+  background: var(--dp-bg-primary);
+  border-bottom-right-radius: 1rem;
+}
+
+@media (min-width: 640px) {
+  .friend-tag-selector__list {
+    --friend-tag-row-height: 60px;
+    max-height: 18rem;
+  }
+
+  .friend-tag-selector__avatar {
+    width: 1.875rem;
+    height: 1.875rem;
+  }
+
+  .friend-tag-selector__item {
+    padding-inline: 0.75rem;
+  }
+
   .friend-tag-selector__list:has(> :last-child:nth-child(odd))::after {
-    content: '';
-    display: block;
-    min-height: 52px;
-    background: var(--dp-bg-primary);
+    min-height: var(--friend-tag-row-height);
   }
 }
 </style>
