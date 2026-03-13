@@ -27,7 +27,7 @@ import type {
   TeamDto,
   TeamScheduleDto,
   DutyByShift,
-  SimpleMemberDto,
+  MemberPreviewDto,
   DutyCalendarDay,
   HolidayDto,
 } from '@/types'
@@ -191,7 +191,7 @@ async function fetchShift() {
     // Add isMyGroup flag based on loginMemberId
     shift.value = response.data.map(group => ({
       ...group,
-      isMyGroup: group.members.some((m: SimpleMemberDto) => m.id === loginMemberId.value),
+      isMyGroup: group.members.some((m: MemberPreviewDto) => m.id === loginMemberId.value),
     }))
   } catch (error) {
     console.error('Failed to fetch shift:', error)

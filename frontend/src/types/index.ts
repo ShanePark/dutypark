@@ -403,16 +403,9 @@ export interface MyTeamSummary {
   isTeamManager: boolean
 }
 
-export interface SimpleMemberDto {
-  id: number
-  name: string
-  hasProfilePhoto?: boolean
-  profilePhotoVersion?: number
-}
-
 export interface DutyByShift {
   dutyType: DutyTypeDto
-  members: SimpleMemberDto[]
+  members: MemberPreviewDto[]
 }
 
 export interface TeamScheduleDto {
@@ -456,7 +449,7 @@ export interface MemberDto {
   profilePhotoVersion?: number
 }
 
-export interface MemberSummaryDto {
+export interface MemberPreviewDto {
   id: number | null
   name: string
   teamId: number | null

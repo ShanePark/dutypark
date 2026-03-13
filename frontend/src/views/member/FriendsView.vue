@@ -8,7 +8,7 @@ import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEscapeKey } from '@/composables/useEscapeKey'
 import { useNotificationStore } from '@/stores/notification'
 import Sortable from 'sortablejs'
-import type { DashboardFriendInfo, MemberSummaryDto } from '@/types'
+import type { DashboardFriendInfo, MemberPreviewDto } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import {
   Users,
@@ -56,7 +56,7 @@ const showSearchModal = ref(false)
 useBodyScrollLock(showSearchModal)
 useEscapeKey(showSearchModal, () => { showSearchModal.value = false })
 const searchKeyword = ref('')
-const searchResult = ref<MemberSummaryDto[]>([])
+const searchResult = ref<MemberPreviewDto[]>([])
 const searchPage = ref(0)
 const searchTotalPage = ref(0)
 const searchTotalElements = ref(0)
@@ -318,7 +318,7 @@ async function search() {
   }
 }
 
-async function requestFriend(member: MemberSummaryDto) {
+async function requestFriend(member: MemberPreviewDto) {
   if (!member.id) return
   if (!await confirm(`${member.name}님에게 친구 요청을 보내시겠습니까?`, '친구 요청')) return
   try {

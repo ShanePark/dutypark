@@ -2,7 +2,7 @@ import apiClient from './client'
 import type {
   MemberDto,
   FriendDto,
-  MemberSummaryDto,
+  MemberPreviewDto,
   DDayDto,
   DDaySaveDto,
   RefreshTokenDto,
@@ -53,7 +53,7 @@ export const memberApi = {
    * Get family members
    */
   getFamilyMembers() {
-    return apiClient.get<MemberSummaryDto[]>('/members/family')
+    return apiClient.get<MemberPreviewDto[]>('/members/family')
   },
 
   /**
@@ -109,7 +109,7 @@ export const friendApi = {
    * Search possible friends to add
    */
   searchPossibleFriends(keyword: string, page = 0, size = 10) {
-    return apiClient.get<Page<MemberSummaryDto>>('/friends/search', {
+    return apiClient.get<Page<MemberPreviewDto>>('/friends/search', {
       params: { keyword, page, size },
     })
   },
