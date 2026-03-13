@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { RotateCcw, Search, UserPlus, X } from 'lucide-vue-next'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { ChevronDown, RotateCcw, Search, UserPlus, X } from 'lucide-vue-next'
 import type { TaggableFriend } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import { useSwal } from '@/composables/useSwal'
@@ -31,6 +31,9 @@ const emit = defineEmits<{
 const { confirm } = useSwal()
 const searchQuery = ref('')
 const isExpanded = ref(props.modelValue.length > 0)
+const showSelectedOnly = ref(false)
+const listRef = ref<HTMLElement | null>(null)
+const hasMoreBelow = ref(false)
 
 const normalizedQuery = computed(() => searchQuery.value.trim().toLowerCase())
 const selectedIdSet = computed(() => new Set(props.modelValue))
@@ -60,11 +63,11 @@ const sortedFriends = computed(() => {
   })
 })
 
-const prioritizedSelectedFriends = computed<SelectedFriendEntry[]>(() => {
+const unavailableSelectedFriends = computed<SelectedFriendEntry[]>(() => {
   return props.modelValue.map((friendId) => {
     const friend = friendMap.value.get(friendId)
     if (friend) {
-      return friend
+      return null
     }
 
     const fallback = selectedSummaryMap.value.get(friendId)
@@ -79,22 +82,37 @@ const prioritizedSelectedFriends = computed<SelectedFriendEntry[]>(() => {
       pinOrder: null,
       isUnavailable: true,
     }
-  })
+  }).filter((friend): friend is SelectedFriendEntry => friend !== null)
 })
 
 const visibleFriends = computed<SelectedFriendEntry[]>(() => {
-  const filteredUnselectedFriends = sortedFriends.value.filter(
-    (friend) => !selectedIdSet.value.has(friend.id) && matchesQuery(friend)
+  const selectedFriends = sortedFriends.value.filter((friend) => selectedIdSet.value.has(friend.id))
+
+  if (showSelectedOnly.value) {
+    return [...selectedFriends, ...unavailableSelectedFriends.value]
+  }
+
+  const orderedVisibleFriends = sortedFriends.value.filter(
+    (friend) => selectedIdSet.value.has(friend.id) || matchesQuery(friend)
   )
 
-  return [...prioritizedSelectedFriends.value, ...filteredUnselectedFriends]
+  return [...orderedVisibleFriends, ...unavailableSelectedFriends.value]
 })
 
 watch(selectedCount, (count, previousCount) => {
   if (count > 0 && previousCount === 0) {
     isExpanded.value = true
   }
+
+  if (count === 0) {
+    showSelectedOnly.value = false
+  }
 })
+
+watch([visibleFriends, isExpanded, showSelectedOnly], async () => {
+  await nextTick()
+  updateScrollHint()
+}, { deep: true })
 
 function matchesQuery(friend: TaggableFriend) {
   if (!normalizedQuery.value) {
@@ -132,6 +150,7 @@ async function clearSelection() {
   }
 
   emit('update:modelValue', [])
+  showSelectedOnly.value = false
 }
 
 function openSelector() {
@@ -141,6 +160,51 @@ function openSelector() {
 
   isExpanded.value = true
 }
+
+function toggleSelectedOnly() {
+  if (props.disabled || selectedCount.value === 0) {
+    return
+  }
+
+  showSelectedOnly.value = !showSelectedOnly.value
+}
+
+function updateScrollHint() {
+  const listElement = listRef.value
+  if (!listElement) {
+    hasMoreBelow.value = false
+    return
+  }
+
+  const canScroll = listElement.scrollHeight - listElement.clientHeight > 4
+  const remainingScroll = listElement.scrollHeight - listElement.clientHeight - listElement.scrollTop
+  hasMoreBelow.value = canScroll && remainingScroll > 4
+}
+
+function handleListScroll() {
+  updateScrollHint()
+}
+
+function scrollListDown() {
+  const listElement = listRef.value
+  if (!listElement) {
+    return
+  }
+
+  listElement.scrollBy({
+    top: Math.max(listElement.clientHeight * 0.5, 88),
+    behavior: 'smooth',
+  })
+}
+
+onMounted(() => {
+  updateScrollHint()
+  window.addEventListener('resize', updateScrollHint)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateScrollHint)
+})
 
 function getSubtitle(friend: TaggableFriend) {
   if ('isUnavailable' in friend && friend.isUnavailable) {
@@ -194,13 +258,19 @@ function getSubtitle(friend: TaggableFriend) {
             <X class="h-4 w-4" />
           </button>
         </div>
-        <div
+        <button
           v-if="selectedCount"
-          class="inline-flex h-8 flex-shrink-0 items-center rounded-full border border-dp-accent-border bg-dp-accent-soft px-2.5 text-xs font-semibold text-dp-text-primary"
-          :aria-label="`선택된 친구 ${selectedCount}명`"
+          type="button"
+          class="inline-flex h-8 flex-shrink-0 items-center rounded-full border px-2.5 text-xs font-semibold transition"
+          :class="showSelectedOnly
+            ? 'border-dp-accent bg-dp-accent text-dp-text-on-dark'
+            : 'border-dp-accent-border bg-dp-accent-soft text-dp-text-primary hover:border-dp-accent hover:bg-dp-accent-bg'"
+          :aria-label="showSelectedOnly ? `선택된 친구 ${selectedCount}명만 보는 중` : `선택된 친구 ${selectedCount}명만 보기`"
+          :aria-pressed="showSelectedOnly"
+          @click="toggleSelectedOnly"
         >
           {{ selectedCount }}명
-        </div>
+        </button>
         <button
           v-if="selectedCount"
           type="button"
@@ -213,34 +283,49 @@ function getSubtitle(friend: TaggableFriend) {
         </button>
       </div>
 
-      <div class="overflow-hidden rounded-2xl border border-dp-border-primary bg-dp-bg-secondary">
-        <div
-          v-if="visibleFriends.length"
-          class="friend-tag-selector__list grid grid-cols-2 gap-px overflow-y-auto bg-dp-border-primary"
-        >
-          <button
-            v-for="friend in visibleFriends"
-            :key="friend.id"
-            type="button"
-            class="friend-tag-selector__item flex w-full items-start gap-2 bg-dp-bg-primary px-2 py-2 text-left transition sm:items-center sm:gap-3 sm:px-3 sm:py-2.5"
-            :class="isSelected(friend.id) ? 'friend-tag-selector__item--selected' : ''"
-            @click="toggleFriend(friend.id)"
+      <div class="friend-tag-selector__list-frame overflow-hidden rounded-2xl border border-dp-border-primary bg-dp-bg-secondary">
+        <template v-if="visibleFriends.length">
+          <div
+            ref="listRef"
+            class="friend-tag-selector__list grid grid-cols-2 gap-px overflow-y-auto bg-dp-border-primary"
+            @scroll.passive="handleListScroll"
           >
-            <ProfileAvatar
-              :member-id="friend.id"
-              :name="friend.name"
-              :has-profile-photo="friend.hasProfilePhoto"
-              :profile-photo-version="friend.profilePhotoVersion"
-              size="xs"
-              class="friend-tag-selector__avatar"
-            />
+            <button
+              v-for="friend in visibleFriends"
+              :key="friend.id"
+              type="button"
+              class="friend-tag-selector__item flex w-full items-start gap-2 bg-dp-bg-primary px-2 py-2 text-left transition sm:items-center sm:gap-3 sm:px-3 sm:py-2.5"
+              :class="isSelected(friend.id) ? 'friend-tag-selector__item--selected' : ''"
+              @click="toggleFriend(friend.id)"
+            >
+              <ProfileAvatar
+                :member-id="friend.id"
+                :name="friend.name"
+                :has-profile-photo="friend.hasProfilePhoto"
+                :profile-photo-version="friend.profilePhotoVersion"
+                size="xs"
+                class="friend-tag-selector__avatar"
+              />
 
-            <div class="min-w-0 flex-1">
-              <div class="truncate text-[13px] font-medium leading-tight text-dp-text-primary sm:text-sm">{{ friend.name }}</div>
-              <p v-if="getSubtitle(friend)" class="truncate text-[11px] text-dp-text-muted sm:text-xs">{{ getSubtitle(friend) }}</p>
-            </div>
-          </button>
-        </div>
+              <div class="min-w-0 flex-1">
+                <div class="truncate text-[13px] font-medium leading-tight text-dp-text-primary sm:text-sm">{{ friend.name }}</div>
+                <p v-if="getSubtitle(friend)" class="truncate text-[11px] text-dp-text-muted sm:text-xs">{{ getSubtitle(friend) }}</p>
+              </div>
+            </button>
+          </div>
+
+          <div v-if="hasMoreBelow" class="friend-tag-selector__scroll-hint">
+            <button
+              type="button"
+              class="friend-tag-selector__scroll-hint-pill"
+              aria-label="친구 목록 조금 더 아래로 보기"
+              @click="scrollListDown"
+            >
+              <ChevronDown class="h-3 w-3" />
+              아래로 더 보기
+            </button>
+          </div>
+        </template>
 
         <div v-else class="px-4 py-10 text-center">
           <p class="text-sm font-medium text-dp-text-primary">검색 결과가 없어요.</p>
@@ -257,6 +342,55 @@ function getSubtitle(friend: TaggableFriend) {
   max-height: calc((var(--friend-tag-row-height) * 3) + 2px);
   scrollbar-color: var(--dp-border-secondary) var(--dp-bg-primary);
   scrollbar-gutter: stable;
+}
+
+.friend-tag-selector__list-frame {
+  position: relative;
+}
+
+.friend-tag-selector__scroll-hint {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  justify-content: center;
+  padding: 1.75rem 0 0.375rem;
+  background: linear-gradient(to bottom, transparent 0%, color-mix(in srgb, var(--dp-bg-secondary) 72%, transparent) 58%, var(--dp-bg-secondary) 100%);
+  pointer-events: none;
+}
+
+.friend-tag-selector__scroll-hint-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 1.25rem;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--dp-border-primary);
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--dp-bg-card) 92%, transparent);
+  color: var(--dp-text-muted);
+  font-size: 0.625rem;
+  font-weight: 600;
+  line-height: 1;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--dp-overlay-dark) 12%, transparent);
+  backdrop-filter: blur(4px);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.friend-tag-selector__scroll-hint-pill:hover {
+  border-color: var(--dp-accent-border);
+  color: var(--dp-text-primary);
+}
+
+.friend-tag-selector__scroll-hint-pill:focus-visible {
+  outline: none;
+}
+
+.friend-tag-selector__scroll-hint-pill:focus-visible {
+  outline: 2px solid var(--dp-accent);
+  outline-offset: 2px;
 }
 
 .friend-tag-selector__item {
@@ -387,6 +521,10 @@ function getSubtitle(friend: TaggableFriend) {
   .friend-tag-selector__list {
     --friend-tag-row-height: 60px;
     max-height: 18rem;
+  }
+
+  .friend-tag-selector__scroll-hint {
+    padding: 2rem 0 0.5rem;
   }
 
   .friend-tag-selector__avatar {
