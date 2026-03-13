@@ -288,7 +288,12 @@ function mapToSchedule(dto: ScheduleDto): Schedule {
       thumbnailUrl: a.thumbnailUrl ?? undefined,
       hasThumbnail: a.hasThumbnail,
     })),
-    tags: dto.tags.flatMap((tag) => tag.id == null ? [] : [{ id: tag.id, name: tag.name }]),
+    tags: dto.tags.flatMap((tag) => tag.id == null ? [] : [{
+      id: tag.id,
+      name: tag.name,
+      hasProfilePhoto: tag.hasProfilePhoto ?? false,
+      profilePhotoVersion: tag.profilePhotoVersion ?? 0,
+    }]),
     daysFromStart: dto.daysFromStart,
     totalDays: dto.totalDays,
   }

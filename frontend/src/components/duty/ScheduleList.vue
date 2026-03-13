@@ -5,12 +5,12 @@ import {
   GripVertical,
   Paperclip,
   Lock,
-  Users,
   Pencil,
   Trash2,
   X,
 } from 'lucide-vue-next'
 import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
+import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import type { NormalizedAttachment } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { getVisibilityIcon, getVisibilityLabel } from '@/utils/visibility'
@@ -33,7 +33,12 @@ interface Schedule {
     thumbnailUrl?: string
     hasThumbnail: boolean
   }>
-  tags?: Array<{ id: number; name: string }>
+  tags?: Array<{
+    id: number
+    name: string
+    hasProfilePhoto?: boolean
+    profilePhotoVersion?: number
+  }>
   daysFromStart?: number
   totalDays?: number
 }
@@ -162,6 +167,10 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
     })
   )
 }
+
+function getVisibleTags(schedule: Schedule) {
+  return (schedule.tags ?? []).filter((tag) => tag.id !== props.memberId)
+}
 </script>
 
 <template>
@@ -219,62 +228,27 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
             </div>
 
           <div
-            v-if="isMyCalendar && schedule.isMine && canEdit && schedule.tags?.length"
-            class="mt-2 rounded-xl border border-dp-border-primary bg-dp-bg-primary p-2.5"
-          >
-            <div class="flex items-center justify-between gap-2">
-              <div class="flex items-center gap-1.5 text-xs font-medium text-dp-text-secondary">
-                <Users class="w-3.5 h-3.5 text-dp-accent" />
-                함께하는 친구
-              </div>
-              <button
-                @click="emit('edit', schedule)"
-                class="inline-flex min-h-[32px] items-center gap-1 rounded-full border border-dp-accent-border px-2.5 py-1 text-xs font-medium text-dp-accent transition hover:bg-dp-accent-soft"
-              >
-                태그 편집
-              </button>
-            </div>
-
-            <div v-if="schedule.tags?.length" class="mt-2 flex flex-wrap gap-1.5">
-              <span
-                v-for="tag in schedule.tags"
-                :key="tag.id"
-                class="inline-flex items-center gap-1 rounded-full bg-dp-accent-soft px-2 py-1 text-xs text-dp-accent-hover"
-              >
-                {{ tag.name }}
-              </span>
-            </div>
-          </div>
-
-          <!-- Tags display for non-owners (show tags list) -->
-          <div
-            v-else-if="!schedule.isTagged && schedule.tags?.length"
-            class="flex items-center gap-1.5 mt-2 flex-wrap"
+            v-if="getVisibleTags(schedule).length || (schedule.isTagged && schedule.taggedBy)"
+            class="mt-2 flex flex-wrap items-center gap-1.5"
           >
             <span
-              v-for="tag in schedule.tags"
+              v-for="tag in getVisibleTags(schedule)"
               :key="tag.id"
-              class="inline-flex items-center gap-1 px-2 py-0.5 bg-dp-accent-soft text-dp-accent-hover text-xs rounded-full"
+              class="inline-flex min-h-[34px] items-center gap-1.5 rounded-full border border-dp-accent-border bg-dp-accent-soft px-1 py-1 pr-2 text-xs text-dp-text-primary"
             >
-              {{ tag.name }}
+              <ProfileAvatar
+                :member-id="tag.id"
+                :name="tag.name"
+                :has-profile-photo="tag.hasProfilePhoto"
+                :profile-photo-version="tag.profilePhotoVersion"
+                size="sm"
+              />
+              <span class="max-w-[120px] truncate font-medium">{{ tag.name }}</span>
             </span>
-          </div>
-
-          <!-- Tagged by indicator (when I was tagged by someone) -->
-          <div
-            v-else-if="schedule.isTagged"
-            class="flex items-center gap-1.5 mt-2 flex-wrap"
-          >
-            <!-- Show other tagged members (exclude calendar owner) -->
             <span
-              v-for="tag in schedule.tags?.filter(t => t.id !== memberId)"
-              :key="tag.id"
-              class="inline-flex items-center gap-1 px-2 py-0.5 bg-dp-accent-soft text-dp-accent-hover text-xs rounded-full"
+              v-if="schedule.isTagged && schedule.taggedBy"
+              class="inline-flex min-h-[30px] items-center rounded-full bg-dp-bg-tertiary px-2.5 py-1 text-[11px] font-medium text-dp-text-secondary"
             >
-              {{ tag.name }}
-            </span>
-            <!-- Show who tagged me -->
-            <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-dp-bg-tertiary text-dp-text-secondary text-xs rounded-full">
               by {{ schedule.taggedBy }}
             </span>
           </div>

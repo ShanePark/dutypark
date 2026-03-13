@@ -36,6 +36,8 @@ export interface ScheduleTagMemberDto {
   email?: string | null
   teamId?: number | null
   team?: string | null
+  hasProfilePhoto?: boolean
+  profilePhotoVersion?: number
 }
 
 export interface ScheduleAttachmentDto {

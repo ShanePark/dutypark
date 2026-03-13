@@ -55,7 +55,12 @@ export interface Schedule {
     thumbnailUrl?: string
     hasThumbnail: boolean
   }>
-  tags?: Array<{ id: number; name: string }>
+  tags?: Array<{
+    id: number
+    name: string
+    hasProfilePhoto?: boolean
+    profilePhotoVersion?: number
+  }>
   daysFromStart: number
   totalDays: number
 }

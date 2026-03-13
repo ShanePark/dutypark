@@ -10,6 +10,7 @@ import {
   Users,
 } from 'lucide-vue-next'
 import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
+import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import type { NormalizedAttachment } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
@@ -35,7 +36,12 @@ interface Schedule {
     thumbnailUrl?: string
     hasThumbnail: boolean
   }>
-  tags?: Array<{ id: number; name: string }>
+  tags?: Array<{
+    id: number
+    name: string
+    hasProfilePhoto?: boolean
+    profilePhotoVersion?: number
+  }>
   daysFromStart?: number
   totalDays?: number
 }
@@ -215,15 +221,21 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
             >
               <Users class="w-4 h-4 text-dp-text-muted" />
             </div>
-            <div class="flex-1 pt-1">
-              <div class="text-xs mb-1.5 text-dp-text-muted">함께하는 사람</div>
+            <div class="flex-1 pt-0.5">
               <div class="flex flex-wrap gap-1.5">
                 <span
                   v-for="tag in displayTags"
                   :key="tag.id"
-                  class="inline-flex items-center px-2 py-0.5 bg-dp-accent-soft text-dp-accent-hover text-xs rounded-full"
+                  class="inline-flex min-h-[34px] items-center gap-1.5 rounded-full border border-dp-accent-border bg-dp-accent-soft px-1 py-1 pr-2 text-xs text-dp-text-primary"
                 >
-                  {{ tag.name }}
+                  <ProfileAvatar
+                    :member-id="tag.id"
+                    :name="tag.name"
+                    :has-profile-photo="tag.hasProfilePhoto"
+                    :profile-photo-version="tag.profilePhotoVersion"
+                    size="sm"
+                  />
+                  <span class="max-w-[140px] truncate font-medium">{{ tag.name }}</span>
                 </span>
               </div>
             </div>
