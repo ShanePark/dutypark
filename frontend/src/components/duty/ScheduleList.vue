@@ -5,8 +5,7 @@ import {
   GripVertical,
   Paperclip,
   Lock,
-  User,
-  UserPlus,
+  Users,
   Pencil,
   Trash2,
   X,
@@ -39,15 +38,9 @@ interface Schedule {
   totalDays?: number
 }
 
-interface Friend {
-  id: number
-  name: string
-}
-
 const props = defineProps<{
   schedules: Schedule[]
   canEdit: boolean
-  friends: Friend[]
   isMyCalendar: boolean
   memberId: number
 }>()
@@ -56,8 +49,6 @@ const emit = defineEmits<{
   (e: 'edit', schedule: Schedule): void
   (e: 'delete', scheduleId: string): void
   (e: 'reorder', scheduleIds: string[]): void
-  (e: 'add-tag', scheduleId: string, friendId: number): void
-  (e: 'remove-tag', scheduleId: string, friendId: number): void
   (e: 'request-untag', scheduleId: string): void
 }>()
 
@@ -68,21 +59,6 @@ let sortableInstance: Sortable | null = null
 const hasDraggableSchedules = computed(() => {
   return props.canEdit && props.schedules.filter(s => !s.isTagged).length > 1
 })
-
-const taggingScheduleId = ref<string | null>(null)
-
-function openTagPanel(scheduleId: string) {
-  taggingScheduleId.value = scheduleId
-}
-
-function closeTagPanel() {
-  taggingScheduleId.value = null
-}
-
-function getUntaggedFriends(schedule: Schedule) {
-  const taggedIds = new Set(schedule.tags?.map((t) => t.id) || [])
-  return props.friends.filter((f) => !taggedIds.has(f.id))
-}
 
 function initSortable() {
   if (!scheduleListRef.value || !props.canEdit) {
@@ -242,74 +218,37 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
               </span>
             </div>
 
-          <!-- Tags Section (only shown on own calendar) -->
           <div
-            v-if="isMyCalendar && schedule.isMine && canEdit && (schedule.tags?.length || friends.length > 0)"
-            class="mt-2"
+            v-if="isMyCalendar && schedule.isMine && canEdit"
+            class="mt-2 rounded-xl border border-dp-border-primary bg-dp-bg-primary p-2.5"
           >
-            <div class="flex items-center gap-1.5 flex-wrap">
-              <!-- Existing tags -->
-              <span
-                v-for="tag in schedule.tags"
-                :key="tag.id"
-                class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 bg-dp-accent-soft text-dp-accent-hover text-xs rounded-full"
-              >
-                {{ tag.name }}
-                <button
-                  @click.stop="emit('remove-tag', schedule.id, tag.id)"
-                  class="p-0.5 hover:bg-dp-accent-soft-hover rounded-full transition cursor-pointer"
-                  title="태그 삭제"
-                >
-                  <X class="w-3 h-3" />
-                </button>
-              </span>
-
-              <!-- Add tag button -->
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-1.5 text-xs font-medium text-dp-text-secondary">
+                <Users class="w-3.5 h-3.5 text-dp-accent" />
+                함께하는 친구
+              </div>
               <button
-                v-if="friends.length > 0"
-                @click.stop="openTagPanel(schedule.id)"
-                class="inline-flex items-center gap-1 px-2 py-0.5 border border-dashed text-xs rounded-full hover:border-dp-accent-border hover:text-dp-accent hover:bg-dp-accent-soft transition cursor-pointer"
-                :class="{ 'border-dp-accent-border text-dp-accent bg-dp-accent-soft': taggingScheduleId === schedule.id }"
-                :style="{
-                  borderColor: taggingScheduleId === schedule.id ? undefined : 'var(--dp-border-secondary)',
-                  color: taggingScheduleId === schedule.id ? undefined : 'var(--dp-text-secondary)'
-                }"
-                title="친구 태그"
+                @click="emit('edit', schedule)"
+                class="inline-flex min-h-[32px] items-center gap-1 rounded-full border border-dp-accent-border px-2.5 py-1 text-xs font-medium text-dp-accent transition hover:bg-dp-accent-soft"
               >
-                <UserPlus class="w-3 h-3" />
-                <span>태그</span>
+                태그 편집
               </button>
             </div>
 
-            <!-- Inline tag selection (expanded below the button) -->
+            <div v-if="schedule.tags?.length" class="mt-2 flex flex-wrap gap-1.5">
+              <span
+                v-for="tag in schedule.tags"
+                :key="tag.id"
+                class="inline-flex items-center gap-1 rounded-full bg-dp-accent-soft px-2 py-1 text-xs text-dp-accent-hover"
+              >
+                {{ tag.name }}
+              </span>
+            </div>
             <div
-              v-if="taggingScheduleId === schedule.id && getUntaggedFriends(schedule).length > 0"
-              class="mt-2 p-2.5 bg-dp-accent-soft border border-dp-accent-border rounded-lg"
+              v-else
+              class="mt-2 rounded-lg border border-dashed border-dp-border-secondary px-3 py-2 text-xs text-dp-text-muted"
             >
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-medium text-dp-accent-hover">친구 선택</span>
-                <button
-                  @click.stop="closeTagPanel"
-                  class="p-0.5 hover:bg-dp-accent-soft rounded transition cursor-pointer"
-                >
-                  <X class="w-3.5 h-3.5 text-dp-accent" />
-                </button>
-              </div>
-              <div class="flex flex-wrap gap-1.5">
-                <button
-                  v-for="friend in getUntaggedFriends(schedule)"
-                  :key="friend.id"
-                  @click.stop="emit('add-tag', schedule.id, friend.id)"
-                  class="inline-flex items-center gap-1 px-2 py-1 border border-dp-accent-border text-xs rounded-full hover:border-dp-accent-border hover:bg-dp-accent-soft transition cursor-pointer"
-                  :style="{
-                    backgroundColor: 'var(--dp-bg-primary)',
-                    color: 'var(--dp-text-primary)'
-                  }"
-                >
-                  <User class="w-3 h-3" />
-                  {{ friend.name }}
-                </button>
-              </div>
+              아직 태그된 친구가 없습니다.
             </div>
           </div>
 

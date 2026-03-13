@@ -1,4 +1,4 @@
-import type { CalendarVisibility } from '@/types'
+import type { CalendarVisibility, TaggableFriend } from '@/types'
 
 export interface LocalTodo {
   id: string
@@ -69,10 +69,7 @@ export interface LocalDDay {
   dDayText: string
 }
 
-export interface Friend {
-  id: number
-  name: string
-}
+export type Friend = TaggableFriend
 
 export interface CalendarDay {
   year: number

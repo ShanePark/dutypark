@@ -36,6 +36,8 @@ class ScheduleControllerTest : RestDocsTest() {
     fun `createSchedule test`() {
         // Given
         val member = TestData.member
+        val friend = TestData.member2
+        makeThemFriend(member, friend)
 
         val jwt = getJwt(member)
         val updateScheduleDto = ScheduleSaveDto(
@@ -43,6 +45,7 @@ class ScheduleControllerTest : RestDocsTest() {
             content = "test",
             startDateTime = fixedDateTime,
             endDateTime = fixedDateTime.plusHours(1),
+            tagFriendIds = listOf(friend.id!!),
         )
         val json = objectMapper.writeValueAsString(updateScheduleDto)
         val sizeBefore = scheduleRepository.findAll().size
@@ -66,6 +69,8 @@ class ScheduleControllerTest : RestDocsTest() {
                         fieldWithPath("startDateTime").description("Schedule Start DateTime"),
                         fieldWithPath("endDateTime").description("Schedule End DateTime"),
                         fieldWithPath("visibility").description("Schedule Visibility"),
+                        fieldWithPath("tagFriendIds").description("Friend member IDs to tag with the schedule")
+                            .type("Array").optional(),
                         fieldWithPath("id").description("Schedule Id (optional, for update)").type("UUID").optional(),
                         fieldWithPath("attachmentSessionId").description("Attachment Session Id (optional)")
                             .type("UUID").optional(),
@@ -75,6 +80,9 @@ class ScheduleControllerTest : RestDocsTest() {
                 )
             )
         assertThat(scheduleRepository.findAll().size).isEqualTo(sizeBefore + 1)
+        val createdSchedule = scheduleRepository.findAll()
+            .first { it.member.id == member.id && it.content == updateScheduleDto.content }
+        assertThat(createdSchedule.tags).hasSize(1)
     }
 
     @Test
@@ -110,6 +118,8 @@ class ScheduleControllerTest : RestDocsTest() {
     fun `update schedule test`() {
         // Given
         val member = TestData.member
+        val friend = TestData.member2
+        makeThemFriend(member, friend)
         val oldSchedule = scheduleRepository.save(
             Schedule(
                 member = member,
@@ -126,7 +136,8 @@ class ScheduleControllerTest : RestDocsTest() {
             memberId = member.id!!,
             content = "test2",
             startDateTime = fixedDateTime.plusHours(2),
-            endDateTime = fixedDateTime.plusHours(3)
+            endDateTime = fixedDateTime.plusHours(3),
+            tagFriendIds = listOf(friend.id!!)
         )
         val json = objectMapper.writeValueAsString(updateScheduleDto)
 
@@ -150,6 +161,8 @@ class ScheduleControllerTest : RestDocsTest() {
                         fieldWithPath("startDateTime").description("Schedule Start DateTime"),
                         fieldWithPath("endDateTime").description("Schedule End DateTime"),
                         fieldWithPath("visibility").description("Schedule Visibility"),
+                        fieldWithPath("tagFriendIds").description("Friend member IDs to tag with the schedule")
+                            .type("Array").optional(),
                         fieldWithPath("attachmentSessionId").description("Attachment Session Id (optional)")
                             .type("UUID").optional(),
                         fieldWithPath("orderedAttachmentIds").description("Ordered Attachment Ids (optional)")
@@ -161,6 +174,7 @@ class ScheduleControllerTest : RestDocsTest() {
             assertThat(this.content).isEqualTo(updateScheduleDto.content)
             assertThat(this.startDateTime).isEqualTo(updateScheduleDto.startDateTime)
             assertThat(this.endDateTime).isEqualTo(updateScheduleDto.endDateTime)
+            assertThat(this.tags).hasSize(1)
         }
     }
 

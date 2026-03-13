@@ -1,18 +1,13 @@
 <script setup lang="ts">
 import { computed, toRef } from 'vue'
 import { X, Users, Check } from 'lucide-vue-next'
+import type { TaggableFriend } from '@/types'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEscapeKey } from '@/composables/useEscapeKey'
 
-interface Friend {
-  id: number
-  name: string
-  profileImage?: string
-}
-
 interface Props {
   isOpen: boolean
-  friends: Friend[]
+  friends: TaggableFriend[]
   selectedFriendIds: number[]
   maxSelections?: number
 }
@@ -115,13 +110,7 @@ function handleToggle(friendId: number) {
               <div
                 class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-dp-bg-tertiary"
               >
-                <img
-                  v-if="friend.profileImage"
-                  :src="friend.profileImage"
-                  :alt="friend.name"
-                  class="w-8 h-8 rounded-full object-cover"
-                />
-                <span v-else class="font-medium text-sm text-dp-text-muted">
+                <span class="font-medium text-sm text-dp-text-muted">
                   {{ friend.name.charAt(0) }}
                 </span>
               </div>

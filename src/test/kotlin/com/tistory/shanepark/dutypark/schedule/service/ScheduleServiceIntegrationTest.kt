@@ -180,6 +180,60 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
     }
 
     @Test
+    fun `create schedule can include tagged friends`() {
+        val member = TestData.member
+        val friend = TestData.member2
+        makeThemFriend(member, friend)
+
+        val scheduleSaveDto = ScheduleSaveDto(
+            memberId = member.id!!,
+            content = "schedule with tag",
+            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 10, 1, 0),
+            tagFriendIds = listOf(friend.id!!)
+        )
+
+        val created = scheduleService.createSchedule(loginMember(member), scheduleSaveDto)
+
+        val schedule = scheduleRepository.findById(created.id).orElseThrow()
+        assertThat(schedule.tags).hasSize(1)
+        assertThat(schedule.tags.map { it.member.id }).containsExactly(friend.id)
+    }
+
+    @Test
+    fun `update schedule syncs tagged friends`() {
+        val member = TestData.member
+        val friend = TestData.member2
+        makeThemFriend(member, friend)
+
+        val created = scheduleService.createSchedule(
+            loginMember(member),
+            ScheduleSaveDto(
+                memberId = member.id!!,
+                content = "schedule sync",
+                startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+                endDateTime = LocalDateTime.of(2023, 4, 10, 1, 0),
+                tagFriendIds = listOf(friend.id!!)
+            )
+        )
+
+        scheduleService.updateSchedule(
+            loginMember(member),
+            ScheduleSaveDto(
+                id = created.id,
+                memberId = member.id!!,
+                content = "schedule sync updated",
+                startDateTime = LocalDateTime.of(2023, 4, 10, 2, 0),
+                endDateTime = LocalDateTime.of(2023, 4, 10, 3, 0),
+                tagFriendIds = emptyList()
+            )
+        )
+
+        val schedule = scheduleRepository.findById(created.id).orElseThrow()
+        assertThat(schedule.tags).isEmpty()
+    }
+
+    @Test
     fun `can't tag a person to schedule if not friend`() {
         // Given
         val member = TestData.member

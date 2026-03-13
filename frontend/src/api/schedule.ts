@@ -57,6 +57,7 @@ export interface ScheduleSaveDto {
   visibility?: CalendarVisibility
   startDateTime: string
   endDateTime: string
+  tagFriendIds?: number[]
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }

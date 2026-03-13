@@ -28,8 +28,8 @@ import { todoApi } from '@/api/todo'
 import { dutyApi } from '@/api/duty'
 import { ddayApi, memberApi, friendApi } from '@/api/member'
 import { scheduleApi, type ScheduleDto } from '@/api/schedule'
-import type { DutyCalendarDay, TeamDto, DDayDto, DDaySaveDto, HolidayDto, TodoStatus } from '@/types'
-import type { LocalTodo, DutyType, Schedule, LocalDDay, Friend, CalendarDay, OtherDuty, DutyTypeWithCount, DutyDay, TodoDueItem } from './dutyViewTypes'
+import type { DutyCalendarDay, TeamDto, DDayDto, DDaySaveDto, HolidayDto, TaggableFriend, TodoStatus } from '@/types'
+import type { LocalTodo, DutyType, Schedule, LocalDDay, CalendarDay, OtherDuty, DutyTypeWithCount, DutyDay, TodoDueItem } from './dutyViewTypes'
 
 import { useAuthStore } from '@/stores/auth'
 
@@ -288,7 +288,7 @@ function mapToSchedule(dto: ScheduleDto): Schedule {
       thumbnailUrl: a.thumbnailUrl ?? undefined,
       hasThumbnail: a.hasThumbnail,
     })),
-    tags: dto.tags.map((t) => ({ id: t.id ?? 0, name: t.name })),
+    tags: dto.tags.flatMap((tag) => tag.id == null ? [] : [{ id: tag.id, name: tag.name }]),
     daysFromStart: dto.daysFromStart,
     totalDays: dto.totalDays,
   }
@@ -382,7 +382,7 @@ const dutyTypesWithCount = computed<DutyTypeWithCount[]>(() => {
 const dDays = ref<LocalDDay[]>([])
 const isLoadingDDays = ref(false)
 
-const friends = ref<Friend[]>([])
+const friends = ref<TaggableFriend[]>([])
 const isLoadingFriends = ref(false)
 
 const selectedFriendIds = ref<number[]>([])
@@ -1225,10 +1225,7 @@ async function loadFriends() {
   isLoadingFriends.value = true
   try {
     const response = await friendApi.getFriends()
-    friends.value = response.data.map((f) => ({
-      id: f.id ?? 0,
-      name: f.name,
-    }))
+    friends.value = response.data
   } catch (error) {
     console.error('Failed to load friends:', error)
   } finally {
@@ -1244,6 +1241,7 @@ interface ScheduleSaveData {
   startDateTime: string
   endDateTime: string
   visibility: 'PUBLIC' | 'FRIENDS' | 'FAMILY' | 'PRIVATE'
+  tagFriendIds: number[]
   attachmentSessionId?: string | null
   orderedAttachmentIds?: string[]
 }
@@ -1259,6 +1257,7 @@ async function handleCreateSchedule(data: ScheduleSaveData) {
       startDateTime: data.startDateTime,
       endDateTime: data.endDateTime,
       visibility: data.visibility,
+      tagFriendIds: data.tagFriendIds,
       attachmentSessionId: data.attachmentSessionId || undefined,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
@@ -1282,6 +1281,7 @@ async function handleEditSchedule(data: ScheduleSaveData) {
       startDateTime: data.startDateTime,
       endDateTime: data.endDateTime,
       visibility: data.visibility,
+      tagFriendIds: data.tagFriendIds,
       attachmentSessionId: data.attachmentSessionId || undefined,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
@@ -1314,26 +1314,6 @@ async function handleReorderSchedules(scheduleIds: string[]) {
   } catch (error) {
     console.error('Failed to reorder schedules:', error)
     showError('일정 순서 변경에 실패했습니다.')
-  }
-}
-
-async function handleAddTag(scheduleId: string, friendId: number) {
-  try {
-    await scheduleApi.tagFriend(scheduleId, friendId)
-    await loadSchedules()
-  } catch (error) {
-    console.error('Failed to add tag:', error)
-    showError('태그 추가에 실패했습니다.')
-  }
-}
-
-async function handleRemoveTag(scheduleId: string, friendId: number) {
-  try {
-    await scheduleApi.untagFriend(scheduleId, friendId)
-    await loadSchedules()
-  } catch (error) {
-    console.error('Failed to remove tag:', error)
-    showError('태그 삭제에 실패했습니다.')
   }
 }
 
@@ -1580,8 +1560,6 @@ async function showExcelUploadModal() {
       @edit-schedule="handleEditSchedule"
       @delete-schedule="handleDeleteSchedule"
       @reorder-schedules="handleReorderSchedules"
-      @add-tag="handleAddTag"
-      @remove-tag="handleRemoveTag"
       @untag-self="handleUntagSelf"
       @change-duty-type="handleChangeDutyType"
     />

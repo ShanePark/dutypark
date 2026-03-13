@@ -13,7 +13,7 @@ import type {
   DashboardMyDetail,
   DashboardFriendInfo,
   DashboardScheduleDto,
-  FriendDto,
+  MemberSummaryDto,
 } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import IntroSection from '@/components/intro/IntroSection.vue'
@@ -98,7 +98,7 @@ const showSearchModal = ref(false)
 useBodyScrollLock(showSearchModal)
 useEscapeKey(showSearchModal, () => { showSearchModal.value = false })
 const searchKeyword = ref('')
-const searchResult = ref<FriendDto[]>([])
+const searchResult = ref<MemberSummaryDto[]>([])
 const searchPage = ref(0)
 const searchTotalPage = ref(0)
 const searchTotalElements = ref(0)
@@ -262,7 +262,7 @@ async function search() {
   }
 }
 
-async function requestFriend(member: FriendDto) {
+async function requestFriend(member: MemberSummaryDto) {
   if (!member.id) return
   if (!await confirm(`${member.name}님에게 친구 요청을 보내시겠습니까?`, '친구 요청')) return
   try {

@@ -3,8 +3,14 @@ import { ref, computed } from 'vue'
 import { Check } from 'lucide-vue-next'
 import FileUploader from '@/components/common/FileUploader.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
-import type { NormalizedAttachment } from '@/types'
+import FriendTagSelector from '@/components/common/FriendTagSelector.vue'
+import type { NormalizedAttachment, TaggableFriend } from '@/types'
 import type { CalendarVisibility } from '@/utils/visibility'
+
+interface SelectedTagSummary {
+  id: number
+  name: string
+}
 
 interface ScheduleFormData {
   content: string
@@ -12,6 +18,7 @@ interface ScheduleFormData {
   startDateTime: string
   endDateTime: string
   visibility: CalendarVisibility
+  tagFriendIds: number[]
 }
 
 interface VisibilityOption {
@@ -27,6 +34,9 @@ const props = defineProps<{
   editAttachments: NormalizedAttachment[]
   visibilityOptions: VisibilityOption[]
   isEditMode: boolean
+  friends: TaggableFriend[]
+  canTagFriends: boolean
+  selectedTagSummaries: SelectedTagSummary[]
 }>()
 
 // For create mode: extract time portion from startDateTime
@@ -177,6 +187,17 @@ defineExpose({
             </div>
           </div>
         </button>
+      </div>
+    </div>
+
+    <div v-if="canTagFriends" class="flex items-start gap-2">
+      <label class="text-sm flex-shrink-0 w-16 pt-2 text-dp-text-secondary">친구 태그</label>
+      <div class="flex-1 min-w-0">
+        <FriendTagSelector
+          v-model="form.tagFriendIds"
+          :friends="friends"
+          :selected-summaries="selectedTagSummaries"
+        />
       </div>
     </div>
 

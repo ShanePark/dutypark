@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendDto
+import com.tistory.shanepark.dutypark.member.domain.dto.MemberSummaryDto
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -39,7 +40,7 @@ class FriendService(
         val relations = friendRelationRepository.findAllByMember(member)
         return relations
             .sortedWith(compareBy({ it.pinOrder ?: Long.MAX_VALUE }, { it.friend.name }))
-            .map { FriendDto.of(it.friend) }
+            .map(FriendDto::of)
     }
 
     @Transactional(readOnly = true)
@@ -233,9 +234,9 @@ class FriendService(
     }
 
     @Transactional(readOnly = true)
-    fun searchPossibleFriends(login: LoginMember, keyword: String, page: Pageable): Page<FriendDto> {
+    fun searchPossibleFriends(login: LoginMember, keyword: String, page: Pageable): Page<MemberSummaryDto> {
         val result = memberRepository.searchPossibleFriends(keyword, login.id, page)
-        return result.map { FriendDto.of(it) }
+        return result.map { MemberSummaryDto.of(it) }
     }
 
     private fun loginMemberToMember(login: LoginMember): Member {
@@ -351,11 +352,11 @@ class FriendService(
     }
 
     @Transactional(readOnly = true)
-    fun findAllFamilyMembers(id: Long): List<FriendDto> {
+    fun findAllFamilyMembers(id: Long): List<MemberSummaryDto> {
         val member = memberRepository.findById(id).orElseThrow()
         val familyRelations = friendRelationRepository.findAllByMember(member).filter { it.isFamily }
         return familyRelations
-            .map { FriendDto.of(it.friend) }
+            .map { MemberSummaryDto.of(it.friend) }
             .sortedBy { it.name }
     }
 

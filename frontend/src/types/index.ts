@@ -456,7 +456,7 @@ export interface MemberDto {
   profilePhotoVersion?: number
 }
 
-export interface FriendDto {
+export interface MemberSummaryDto {
   id: number | null
   name: string
   teamId: number | null
@@ -464,6 +464,19 @@ export interface FriendDto {
   hasProfilePhoto?: boolean
   profilePhotoVersion?: number
 }
+
+export interface FriendDto {
+  id: number
+  name: string
+  teamId: number | null
+  team: string | null
+  hasProfilePhoto?: boolean
+  profilePhotoVersion?: number
+  isFamily: boolean
+  pinOrder: number | null
+}
+
+export interface TaggableFriend extends FriendDto {}
 
 export interface DDayDto {
   id: number

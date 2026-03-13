@@ -5,9 +5,9 @@ import com.tistory.shanepark.dutypark.dashboard.domain.DashboardFriendInfo
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardMyDetail
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
-import com.tistory.shanepark.dutypark.member.domain.dto.FriendDto
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendRequestDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
+import com.tistory.shanepark.dutypark.member.domain.dto.MemberSummaryDto
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -92,7 +92,7 @@ class DashboardService(
             .map {
                 val friendId = it.friend.id ?: throw IllegalStateException("Friend id is null")
                 DashboardFriendDetail(
-                    member = FriendDto.of(it.friend),
+                    member = MemberSummaryDto.of(it.friend),
                     duty = dutiesByMemberId[friendId],
                     schedules = schedulesByMemberId[friendId] ?: emptyList(),
                     isFamily = it.isFamily,
@@ -110,8 +110,8 @@ class DashboardService(
     private fun toFriendRequestDto(request: FriendRequest): FriendRequestDto {
         return FriendRequestDto(
             id = request.id!!,
-            fromMember = FriendDto.of(request.fromMember),
-            toMember = FriendDto.of(request.toMember),
+            fromMember = MemberSummaryDto.of(request.fromMember),
+            toMember = MemberSummaryDto.of(request.toMember),
             status = request.status.name,
             createdAt = request.createdDate,
             requestType = request.requestType
