@@ -139,7 +139,7 @@ defineExpose({
         v-model="form.description"
         rows="2"
         class="flex-1 min-w-0 px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
-        placeholder="설명 (선택사항)"
+        placeholder="설명"
       ></textarea>
     </div>
 
@@ -185,17 +185,6 @@ defineExpose({
       </div>
     </div>
 
-    <div v-if="canTagFriends" class="flex items-start gap-2">
-      <label class="text-sm flex-shrink-0 w-16 pt-2 text-dp-text-secondary">친구 태그</label>
-      <div class="flex-1 min-w-0">
-        <FriendTagSelector
-          v-model="form.tagFriendIds"
-          :friends="friends"
-          :selected-summaries="selectedTagSummaries"
-        />
-      </div>
-    </div>
-
     <!-- Attachment Upload Area -->
     <div class="flex items-start gap-2">
       <label class="text-sm flex-shrink-0 w-16 pt-2 text-dp-text-secondary">첨부파일</label>
@@ -208,6 +197,17 @@ defineExpose({
         @upload-complete="emit('upload-complete')"
         @error="emit('error', $event)"
       />
+    </div>
+
+    <div v-if="canTagFriends" class="flex items-start gap-2">
+      <label class="text-sm flex-shrink-0 w-16 pt-2 text-dp-text-secondary">친구 태그</label>
+      <div class="flex-1 min-w-0">
+        <FriendTagSelector
+          v-model="form.tagFriendIds"
+          :friends="friends"
+          :selected-summaries="selectedTagSummaries"
+        />
+      </div>
     </div>
   </div>
 </template>
