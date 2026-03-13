@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Check, Home, Search, Star, X } from 'lucide-vue-next'
+import { Check, Home, RotateCcw, Search, Star, X } from 'lucide-vue-next'
 import type { TaggableFriend } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
+import { useSwal } from '@/composables/useSwal'
 
 type SelectedFriendSummary = {
   id: number
@@ -27,6 +28,7 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: number[]): void
 }>()
 
+const { confirm } = useSwal()
 const searchQuery = ref('')
 
 const normalizedQuery = computed(() => searchQuery.value.trim().toLowerCase())
@@ -113,10 +115,15 @@ function toggleFriend(friendId: number) {
   emit('update:modelValue', [...props.modelValue, friendId])
 }
 
-function clearSelection() {
-  if (props.disabled) {
+async function clearSelection() {
+  if (props.disabled || props.modelValue.length === 0) {
     return
   }
+
+  if (!await confirm('선택된 친구 태그를 모두 해제하시겠습니까?', '전체 해제')) {
+    return
+  }
+
   emit('update:modelValue', [])
 }
 
@@ -156,17 +163,19 @@ function getSubtitle(friend: TaggableFriend) {
           <X class="h-4 w-4" />
         </button>
       </div>
-      <div class="flex flex-shrink-0 items-center gap-2">
-        <div class="inline-flex min-h-[32px] items-center rounded-full border border-dp-border-secondary bg-dp-bg-tertiary px-3 py-1 text-xs font-semibold text-dp-text-primary">
-          {{ selectedCount }}명 선택됨
+      <div class="flex flex-shrink-0 items-center gap-1.5">
+        <div class="inline-flex min-h-[32px] items-center rounded-full border border-dp-border-secondary bg-dp-bg-tertiary px-2.5 py-1 text-xs font-semibold text-dp-text-primary sm:px-3">
+          {{ selectedCount }}명
         </div>
         <button
           v-if="selectedCount"
           type="button"
-          class="min-h-[32px] rounded-full px-2 text-xs font-medium text-dp-text-secondary transition hover:bg-dp-bg-hover hover:text-dp-text-primary"
+          class="inline-flex h-8 w-8 items-center justify-center rounded-full text-dp-text-secondary transition hover:bg-dp-bg-hover hover:text-dp-text-primary"
+          aria-label="선택된 친구 전체 해제"
+          title="전체 해제"
           @click="clearSelection"
         >
-          전체 해제
+          <RotateCcw class="h-3.5 w-3.5" />
         </button>
       </div>
     </div>
