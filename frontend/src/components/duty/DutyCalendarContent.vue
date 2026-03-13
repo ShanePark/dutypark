@@ -35,6 +35,14 @@ const emit = defineEmits<{
   (e: 'todo-click', todo: TodoDueItem): void
 }>()
 
+type DisplayTagMember = {
+  key: string
+  id?: number
+  name: string
+  hasProfilePhoto?: boolean
+  profilePhotoVersion?: number
+}
+
 const focusedCalendarDay = computed(() => {
   if (!props.batchEditMode || !props.focusedDay) return null
   return { year: props.currentYear, month: props.currentMonth, day: props.focusedDay }
@@ -129,7 +137,7 @@ function getVisibleTags(schedule: Schedule) {
 }
 
 function getDisplayTagMembers(schedule: Schedule) {
-  const visibleTags = getVisibleTags(schedule).map((tag) => ({
+  const visibleTags: DisplayTagMember[] = getVisibleTags(schedule).map((tag) => ({
     key: `tag-${tag.id}`,
     id: tag.id,
     name: tag.name,

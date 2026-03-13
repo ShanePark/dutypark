@@ -299,6 +299,17 @@ function goToMemberDuty(memberId: number) {
   router.push(`/duty/${memberId}`)
 }
 
+function goToMemberDutyIfAvailable(member: MemberPreviewDto) {
+  if (member.id == null) {
+    return
+  }
+  goToMemberDuty(member.id)
+}
+
+function getShiftMemberKey(group: DutyByShift, member: MemberPreviewDto) {
+  return member.id ?? `${group.dutyType.id ?? group.dutyType.name}-${member.name}`
+}
+
 // Schedule Modal functions
 function openNewScheduleModal() {
   const dateStr = `${selectedDay.value.year}-${String(selectedDay.value.month).padStart(2, '0')}-${String(selectedDay.value.day).padStart(2, '0')}`
@@ -573,10 +584,14 @@ onMounted(() => {
             <div class="p-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
               <div
                 v-for="member in group.members"
-                :key="member.id"
-                @click="goToMemberDuty(member.id)"
-                class="flex flex-col items-center p-2 border rounded-lg cursor-pointer hover-card-select"
-                :class="{ 'ring-2': member.id === loginMemberId }"
+                :key="getShiftMemberKey(group, member)"
+                @click="goToMemberDutyIfAvailable(member)"
+                class="flex flex-col items-center p-2 border rounded-lg hover-card-select"
+                :class="{
+                  'cursor-pointer': member.id != null,
+                  'cursor-default': member.id == null,
+                  'ring-2': member.id === loginMemberId,
+                }"
                 :style="{
                   borderColor: 'var(--dp-border-secondary)',
                   backgroundColor: 'var(--dp-bg-secondary)',

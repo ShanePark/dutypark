@@ -63,26 +63,32 @@ const sortedFriends = computed(() => {
   })
 })
 
-const unavailableSelectedFriends = computed<SelectedFriendEntry[]>(() => {
-  return props.modelValue.map((friendId) => {
-    const friend = friendMap.value.get(friendId)
-    if (friend) {
-      return null
-    }
+function createUnavailableSelectedFriend(friendId: number): SelectedFriendEntry | null {
+  const friend = friendMap.value.get(friendId)
+  if (friend) {
+    return null
+  }
 
-    const fallback = selectedSummaryMap.value.get(friendId)
-    return {
-      id: friendId,
-      name: fallback?.name ?? `친구 #${friendId}`,
-      teamId: null,
-      team: null,
-      hasProfilePhoto: false,
-      profilePhotoVersion: 0,
-      isFamily: false,
-      pinOrder: null,
-      isUnavailable: true,
-    }
-  }).filter((friend): friend is SelectedFriendEntry => friend !== null)
+  const fallback = selectedSummaryMap.value.get(friendId)
+  const unavailableFriend: SelectedFriendEntry = {
+    id: friendId,
+    name: fallback?.name ?? `친구 #${friendId}`,
+    teamId: null,
+    team: null,
+    hasProfilePhoto: false,
+    profilePhotoVersion: 0,
+    isFamily: false,
+    pinOrder: null,
+    isUnavailable: true,
+  }
+  return unavailableFriend
+}
+
+const unavailableSelectedFriends = computed<SelectedFriendEntry[]>(() => {
+  return props.modelValue.flatMap((friendId) => {
+    const friend = createUnavailableSelectedFriend(friendId)
+    return friend ? [friend] : []
+  })
 })
 
 const visibleFriends = computed<SelectedFriendEntry[]>(() => {

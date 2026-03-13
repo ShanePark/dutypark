@@ -64,6 +64,14 @@ const emit = defineEmits<{
   (e: 'request-untag', scheduleId: string): void
 }>()
 
+type DisplayTagMember = {
+  key: string
+  id?: number
+  name: string
+  hasProfilePhoto?: boolean
+  profilePhotoVersion?: number
+}
+
 const scheduleListRef = ref<HTMLElement | null>(null)
 const isDragging = ref(false)
 let sortableInstance: Sortable | null = null
@@ -180,7 +188,7 @@ function getVisibleTags(schedule: Schedule) {
 }
 
 function getDisplayTagMembers(schedule: Schedule) {
-  const visibleTags = getVisibleTags(schedule).map((tag) => ({
+  const visibleTags: DisplayTagMember[] = getVisibleTags(schedule).map((tag) => ({
     key: `tag-${tag.id}`,
     id: tag.id,
     name: tag.name,
