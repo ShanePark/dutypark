@@ -24,6 +24,7 @@ Use this file for repo-wide defaults only. Keep it lean; read the code and nearb
 - Do not start backend or frontend dev servers yourself unless the user explicitly asks. Assume the developer handles `./gradlew bootRun` and `cd frontend && npm run dev`.
 - Add new configuration in `application.yml` with safe defaults and surface overrides through `.env.sample`.
 - Prefer existing patterns over inventing new structure. Read the nearest controller, service, view, and test first.
+- When creating GitHub issues or PRs with `gh`, first review a few recently created issues or PRs to match the repository's current conventions, then write the final issue or PR title/body in English.
 
 ### Backend
 
