@@ -41,7 +41,8 @@ Use this file for repo-wide defaults only. Keep it lean; read the code and nearb
 - Use `useSwal()` for confirmations and user-facing alerts.
 - Auth is cookie-based through the shared Axios client. Do not add access-token persistence in localStorage.
 - Style with Tailwind utilities and `--dp-*` tokens from `frontend/src/style.css`. Avoid hardcoded hex colors or theme-blind utility colors for surfaces, borders, and text.
-- Design frontend UI to work well on both mobile and desktop by default. Check responsive layout, spacing, overflow, and interaction ergonomics across narrow and wide viewports instead of optimizing for only one screen size.
+- Design frontend UI to work well on both mobile and desktop by default. Check responsive layout, spacing, overflow, and interaction ergonomics across narrow and wide viewports instead of optimizing for only one screen size. For mobile verification, check both iPhone 16 Pro (402 x 874 CSS px) and iPhone 13 mini (375 x 812 CSS px) portrait viewport sizes.
+- Verify user-facing frontend UI in both light and dark modes when checking visual quality, layout, or interaction changes.
 - Inline `:style` is acceptable only for runtime-dependent values or CSS-variable-backed colors already common in the codebase.
 - Keep interactive targets at least 44px and preserve visible hover/focus feedback.
 - When a task depends on visual quality, layout balance, or interaction polish, verify the result in the browser and iterate. Use Playwright for direct visual checks and feedback loops when static code inspection is not enough.
