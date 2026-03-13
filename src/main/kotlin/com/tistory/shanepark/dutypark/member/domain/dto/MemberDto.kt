@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.member.domain.dto
 
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 
 data class MemberDto(
@@ -15,3 +16,20 @@ data class MemberDto(
     val hasProfilePhoto: Boolean = false,
     val profilePhotoVersion: Long = 0,
 )
+
+internal fun Member.toMemberDto(kakaoId: String? = null, naverId: String? = null): MemberDto {
+    val preview = toMemberPreviewDto()
+    return MemberDto(
+        id = preview.id,
+        name = preview.name,
+        email = email,
+        teamId = preview.teamId,
+        team = preview.team,
+        calendarVisibility = calendarVisibility,
+        kakaoId = kakaoId,
+        naverId = naverId,
+        hasPassword = password != null,
+        hasProfilePhoto = preview.hasProfilePhoto,
+        profilePhotoVersion = preview.profilePhotoVersion,
+    )
+}
