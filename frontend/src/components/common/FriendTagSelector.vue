@@ -154,7 +154,7 @@ function getSubtitle(friend: TaggableFriend) {
 </script>
 
 <template>
-  <section :class="isExpanded ? 'friend-tag-selector space-y-2.5 rounded-2xl border border-dp-border-primary p-3 sm:p-4' : ''">
+  <section :class="isExpanded ? 'friend-tag-selector space-y-2.5 rounded-2xl border border-dp-border-primary bg-dp-bg-card p-3 sm:p-4' : ''">
     <button
       v-if="!isExpanded"
       type="button"
@@ -206,7 +206,7 @@ function getSubtitle(friend: TaggableFriend) {
         </button>
       </div>
 
-      <div class="overflow-hidden rounded-2xl border border-dp-border-primary bg-dp-bg-primary">
+      <div class="overflow-hidden rounded-2xl border border-dp-border-primary bg-dp-bg-secondary">
         <div
           v-if="visibleFriends.length"
           class="friend-tag-selector__list max-h-72 overflow-y-auto lg:grid lg:grid-cols-2 lg:gap-px lg:bg-dp-border-primary"
@@ -215,7 +215,7 @@ function getSubtitle(friend: TaggableFriend) {
             v-for="friend in visibleFriends"
             :key="friend.id"
             type="button"
-            class="flex min-h-[56px] w-full items-center gap-3 border-b border-dp-border-primary bg-dp-bg-primary px-3 py-2.5 text-left transition last:border-b-0 hover:bg-dp-bg-hover lg:border-b-0"
+            class="flex min-h-[52px] w-full items-center gap-2 border-b border-dp-border-primary bg-dp-bg-primary px-2.5 py-2 text-left transition last:border-b-0 hover:bg-dp-bg-hover lg:border-b-0"
             :class="isSelected(friend.id) ? 'bg-dp-accent-soft' : ''"
             @click="toggleFriend(friend.id)"
           >
@@ -224,7 +224,7 @@ function getSubtitle(friend: TaggableFriend) {
               :name="friend.name"
               :has-profile-photo="friend.hasProfilePhoto"
               :profile-photo-version="friend.profilePhotoVersion"
-              size="sm"
+              size="xs"
               class="friend-tag-selector__avatar"
             />
 
@@ -267,12 +267,6 @@ function getSubtitle(friend: TaggableFriend) {
 </template>
 
 <style scoped>
-.friend-tag-selector {
-  background:
-    radial-gradient(circle at top right, var(--dp-accent-ring), transparent 42%),
-    linear-gradient(180deg, color-mix(in srgb, var(--dp-bg-card) 88%, var(--dp-accent-bg) 12%), var(--dp-bg-card));
-}
-
 .friend-tag-selector__avatar {
   flex-shrink: 0;
 }
@@ -327,5 +321,14 @@ function getSubtitle(friend: TaggableFriend) {
 .friend-tag-selector__search-clear:focus-visible {
   outline: 2px solid var(--dp-accent);
   outline-offset: 2px;
+}
+
+@media (min-width: 1024px) {
+  .friend-tag-selector__list:has(> :last-child:nth-child(odd))::after {
+    content: '';
+    display: block;
+    min-height: 52px;
+    background: var(--dp-bg-primary);
+  }
 }
 </style>
