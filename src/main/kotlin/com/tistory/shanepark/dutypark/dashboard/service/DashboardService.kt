@@ -5,11 +5,9 @@ import com.tistory.shanepark.dutypark.dashboard.domain.DashboardFriendInfo
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardMyDetail
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
-import com.tistory.shanepark.dutypark.member.domain.dto.FriendDto
-import com.tistory.shanepark.dutypark.member.domain.dto.FriendRequestDto
-import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
+import com.tistory.shanepark.dutypark.member.domain.dto.toFriendRequestDto
+import com.tistory.shanepark.dutypark.member.domain.dto.toMemberPreviewDto
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
-import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
@@ -92,7 +90,7 @@ class DashboardService(
             .map {
                 val friendId = it.friend.id ?: throw IllegalStateException("Friend id is null")
                 DashboardFriendDetail(
-                    member = FriendDto.of(it.friend),
+                    member = it.friend.toMemberPreviewDto(),
                     duty = dutiesByMemberId[friendId],
                     schedules = schedulesByMemberId[friendId] ?: emptyList(),
                     isFamily = it.isFamily,
@@ -102,19 +100,8 @@ class DashboardService(
 
         return DashboardFriendInfo(
             friends = friends,
-            pendingRequestsFrom = pendingRequestsFrom.map { toFriendRequestDto(it) },
-            pendingRequestsTo = pendingRequestsTo.map { toFriendRequestDto(it) },
-        )
-    }
-
-    private fun toFriendRequestDto(request: FriendRequest): FriendRequestDto {
-        return FriendRequestDto(
-            id = request.id!!,
-            fromMember = FriendDto.of(request.fromMember),
-            toMember = FriendDto.of(request.toMember),
-            status = request.status.name,
-            createdAt = request.createdDate,
-            requestType = request.requestType
+            pendingRequestsFrom = pendingRequestsFrom.map { it.toFriendRequestDto() },
+            pendingRequestsTo = pendingRequestsTo.map { it.toFriendRequestDto() },
         )
     }
 

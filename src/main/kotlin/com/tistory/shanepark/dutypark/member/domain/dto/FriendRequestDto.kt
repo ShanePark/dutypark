@@ -6,22 +6,20 @@ import java.time.LocalDateTime
 
 data class FriendRequestDto(
     val id: Long,
-    val fromMember: FriendDto,
-    val toMember: FriendDto,
+    val fromMember: MemberPreviewDto,
+    val toMember: MemberPreviewDto,
     val status: String,
     val createdAt: LocalDateTime?,
     val requestType: FriendRequestType,
-) {
-    companion object {
-        fun of(friendRequest: FriendRequest): FriendRequestDto {
-            return FriendRequestDto(
-                id = friendRequest.id!!,
-                fromMember = FriendDto.of(friendRequest.fromMember),
-                toMember = FriendDto.of(friendRequest.toMember),
-                status = friendRequest.status.name,
-                createdAt = friendRequest.createdDate,
-                requestType = friendRequest.requestType
-            )
-        }
-    }
+)
+
+internal fun FriendRequest.toFriendRequestDto(): FriendRequestDto {
+    return FriendRequestDto(
+        id = id ?: throw IllegalStateException("FriendRequest id is null"),
+        fromMember = fromMember.toMemberPreviewDto(),
+        toMember = toMember.toMemberPreviewDto(),
+        status = status.name,
+        createdAt = createdDate,
+        requestType = requestType,
+    )
 }

@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { CalendarCheck, Lock, MessageSquareText, CheckSquare } from 'lucide-vue-next'
 import { isLightColor } from '@/utils/color'
 import CalendarGrid from '@/components/common/CalendarGrid.vue'
+import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import type { HolidayDto } from '@/types'
 import type { CalendarDay, DutyType, Schedule, OtherDuty, LocalDDay, DutyDay, TodoDueItem } from '@/views/duty/dutyViewTypes'
 
@@ -33,6 +34,14 @@ const emit = defineEmits<{
   (e: 'schedule-click', schedule: Schedule): void
   (e: 'todo-click', todo: TodoDueItem): void
 }>()
+
+type DisplayTagMember = {
+  key: string
+  id?: number
+  name: string
+  hasProfilePhoto?: boolean
+  profilePhotoVersion?: number
+}
 
 const focusedCalendarDay = computed(() => {
   if (!props.batchEditMode || !props.focusedDay) return null
@@ -121,6 +130,43 @@ function formatScheduleTime(schedule: Schedule) {
 
 function hasScheduleDetails(schedule: Schedule) {
   return !!(schedule.description || schedule.attachments?.length)
+}
+
+function getVisibleTags(schedule: Schedule) {
+  return (schedule.tags ?? []).filter((tag) => tag.id !== props.memberId)
+}
+
+function getDisplayTagMembers(schedule: Schedule) {
+  const visibleTags: DisplayTagMember[] = getVisibleTags(schedule).map((tag) => ({
+    key: `tag-${tag.id}`,
+    id: tag.id,
+    name: tag.name,
+    hasProfilePhoto: tag.hasProfilePhoto,
+    profilePhotoVersion: tag.profilePhotoVersion,
+  }))
+
+  const taggedByMember = schedule.taggedByMember
+  if (schedule.isTagged && taggedByMember && !visibleTags.some((tag) => tag.id === taggedByMember.id)) {
+    visibleTags.unshift({
+      key: `tagged-by-${taggedByMember.id}`,
+      id: taggedByMember.id,
+      name: taggedByMember.name,
+      hasProfilePhoto: taggedByMember.hasProfilePhoto,
+      profilePhotoVersion: taggedByMember.profilePhotoVersion,
+    })
+  } else if (schedule.isTagged && !taggedByMember && (schedule.taggedBy || schedule.owner)) {
+    visibleTags.unshift({
+      key: `tagged-by-${schedule.id}`,
+      name: schedule.taggedBy || schedule.owner || '',
+    })
+  }
+
+  return visibleTags.filter((tag) => tag.name)
+}
+
+function getCalendarTagLabel(name: string) {
+  const chars = Array.from(name)
+  return chars.length > 3 ? `${chars.slice(0, 2).join('')}..` : name
 }
 
 function handleScheduleClick(schedule: Schedule, event: Event) {
@@ -216,16 +262,25 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
           :style="{ color: getIconTextColor(getDutyColorAt(index)) }"
         />
           <!-- Tags display -->
-          <div v-if="schedule.tags?.length || schedule.isTagged" class="flex flex-wrap gap-0.5 justify-end">
+          <div
+            v-if="getDisplayTagMembers(schedule).length"
+            class="mt-px flex flex-wrap gap-px justify-end sm:mt-0.5 sm:gap-0.5"
+          >
             <span
-              v-for="tag in schedule.tags?.filter(t => t.id !== memberId)"
-              :key="tag.id"
-              class="schedule-tag"
-            >{{ tag.name }}</span>
-            <span
-              v-if="schedule.isTagged"
-              class="schedule-tag"
-            ><span class="text-[6px] sm:text-[10px]">by</span> {{ schedule.owner }}</span>
+              v-for="tag in getDisplayTagMembers(schedule)"
+              :key="tag.key"
+              class="schedule-tag schedule-tag-with-avatar"
+            >
+              <ProfileAvatar
+                :member-id="tag.id ?? null"
+                :name="tag.name"
+                :has-profile-photo="tag.hasProfilePhoto"
+                :profile-photo-version="tag.profilePhotoVersion"
+                size="xs"
+                class="schedule-tag-avatar"
+              />
+              <span class="schedule-tag-label">{{ getCalendarTagLabel(tag.name) }}</span>
+            </span>
           </div>
         </div>
         <div
@@ -260,3 +315,59 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
     </template>
   </CalendarGrid>
 </template>
+
+<style scoped>
+.schedule-tag {
+  padding: 0;
+  border-radius: 9999px;
+  box-shadow: none;
+  background: var(--dp-bg-primary);
+  border-color: var(--dp-border-primary);
+  color: var(--dp-text-secondary);
+}
+
+.schedule-tag-with-avatar {
+  display: inline-grid;
+  grid-template-columns: 0.62rem minmax(0, 1fr);
+  width: 2.85rem;
+  box-sizing: border-box;
+  align-items: center;
+  min-height: 1.05rem;
+  gap: 0.01rem;
+  padding-right: 0.06rem;
+  padding-left: 0.03rem;
+  font-size: 10px;
+  line-height: 1.05;
+}
+
+.schedule-tag-label {
+  min-width: 0;
+  text-align: left;
+  white-space: nowrap;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+:deep(.schedule-tag-avatar.profile-avatar) {
+  border-width: 1px;
+  width: 0.62rem;
+  height: 0.62rem;
+}
+
+@media (min-width: 640px) {
+  .schedule-tag-with-avatar {
+    grid-template-columns: 1rem minmax(0, 1fr);
+    width: 4.8rem;
+    min-height: 1.6rem;
+    gap: 0.08rem;
+    padding-right: 0.3rem;
+    padding-left: 0.08rem;
+    font-size: 14px;
+  }
+
+  :deep(.schedule-tag-avatar.profile-avatar) {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+</style>

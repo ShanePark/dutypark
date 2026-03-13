@@ -4,7 +4,7 @@ import { X, Plus } from 'lucide-vue-next'
 import ScheduleList from '@/components/duty/ScheduleList.vue'
 import ScheduleForm from '@/components/duty/ScheduleForm.vue'
 import UntagConfirmModal from '@/components/duty/UntagConfirmModal.vue'
-import type { NormalizedAttachment } from '@/types'
+import type { NormalizedAttachment, TaggableFriend } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
@@ -50,7 +50,7 @@ interface Props {
   dutyTypes: DutyType[]
   canEdit: boolean
   batchEditMode: boolean
-  friends: Array<{ id: number; name: string }>
+  friends: TaggableFriend[]
   memberId: number
   isMyCalendar: boolean
 }
@@ -70,8 +70,14 @@ interface ScheduleSaveData {
   startDateTime: string
   endDateTime: string
   visibility: 'PUBLIC' | 'FRIENDS' | 'FAMILY' | 'PRIVATE'
+  tagFriendIds: number[]
   attachmentSessionId?: string | null
   orderedAttachmentIds?: string[]
+}
+
+interface SelectedTagSummary {
+  id: number
+  name: string
 }
 
 const emit = defineEmits<{
@@ -81,8 +87,6 @@ const emit = defineEmits<{
   (e: 'editSchedule', data: ScheduleSaveData): void
   (e: 'deleteSchedule', scheduleId: string): void
   (e: 'reorderSchedules', scheduleIds: string[]): void
-  (e: 'addTag', scheduleId: string, friendId: number): void
-  (e: 'removeTag', scheduleId: string, friendId: number): void
   (e: 'untagSelf', scheduleId: string): void
 }>()
 
@@ -119,8 +123,10 @@ const newSchedule = ref({
   startDateTime: '',
   endDateTime: '',
   visibility: 'FAMILY' as 'PUBLIC' | 'FRIENDS' | 'FAMILY' | 'PRIVATE',
+  tagFriendIds: [] as number[],
 })
 const editAttachments = ref<NormalizedAttachment[]>([])
+const selectedTagSummaries = ref<SelectedTagSummary[]>([])
 
 const untagConfirmScheduleId = ref<string | null>(null)
 
@@ -190,6 +196,8 @@ watch(
       const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
       newSchedule.value.startDateTime = `${dateStr}T00:00`
       newSchedule.value.endDateTime = `${dateStr}T00:00`
+      newSchedule.value.tagFriendIds = []
+      selectedTagSummaries.value = []
     } else {
       // Cleanup when modal closes
       scheduleFormRef.value?.cleanup()
@@ -222,7 +230,9 @@ function startCreateMode() {
     startDateTime: `${dateStr}T00:00`,
     endDateTime: `${dateStr}T00:00`,
     visibility: 'FAMILY',
+    tagFriendIds: [],
   }
+  selectedTagSummaries.value = []
   // Scroll to top when entering create mode
   nextTick(() => {
     if (contentRef.value) {
@@ -248,7 +258,12 @@ function startEditMode(schedule: Schedule) {
     startDateTime: formatDateTime(start),
     endDateTime: formatDateTime(end),
     visibility: schedule.visibility,
+    tagFriendIds: schedule.tags?.map((tag) => tag.id) || [],
   }
+  selectedTagSummaries.value = (schedule.tags || []).map((tag) => ({
+    id: tag.id,
+    name: tag.name,
+  }))
 
   // Load existing attachments
   editAttachments.value = (schedule.attachments || []).map((a) =>
@@ -280,6 +295,7 @@ function cancelEdit() {
   isEditMode.value = false
   editingScheduleId.value = null
   editAttachments.value = []
+  selectedTagSummaries.value = []
   scheduleFormRef.value?.cleanup()
 }
 
@@ -305,6 +321,7 @@ function buildScheduleData(): ScheduleSaveData {
     startDateTime,
     endDateTime,
     visibility: newSchedule.value.visibility,
+    tagFriendIds: [...newSchedule.value.tagFriendIds],
     attachmentSessionId: sessionId,
     orderedAttachmentIds: orderedIds.length > 0 ? orderedIds : undefined,
   }
@@ -357,7 +374,7 @@ function handleUploadError(message: string) {
     >
       <div class="modal-container max-w-[95vw] sm:max-w-2xl max-h-[calc(100dvh-5rem)] sm:max-h-[90vh]">
         <!-- Header -->
-        <div class="p-3 sm:p-4 flex-shrink-0 bg-dp-bg-tertiary border-b border-dp-border-primary">
+        <div class="px-3 py-2.5 sm:p-4 flex-shrink-0 bg-dp-bg-tertiary border-b border-dp-border-primary">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <span v-if="isCreateMode" class="px-2 py-0.5 bg-dp-success-soft text-dp-success text-xs font-medium rounded">일정 추가</span>
@@ -402,20 +419,17 @@ function handleUploadError(message: string) {
         </div>
 
         <!-- Content -->
-        <div ref="contentRef" class="p-3 sm:p-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
+        <div ref="contentRef" class="px-3 py-2.5 sm:p-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
 
           <ScheduleList
             v-if="!isCreateMode && !isEditMode"
             :schedules="schedules"
             :can-edit="canEdit"
-            :friends="friends"
             :is-my-calendar="isMyCalendar"
             :member-id="memberId"
             @edit="startEditMode"
             @delete="(scheduleId) => emit('deleteSchedule', scheduleId)"
             @reorder="(scheduleIds) => emit('reorderSchedules', scheduleIds)"
-            @add-tag="(scheduleId, friendId) => emit('addTag', scheduleId, friendId)"
-            @remove-tag="(scheduleId, friendId) => emit('removeTag', scheduleId, friendId)"
             @request-untag="openUntagConfirmModal"
           />
 
@@ -427,6 +441,9 @@ function handleUploadError(message: string) {
             :edit-attachments="editAttachments"
             :visibility-options="visibilityOptions"
             :is-edit-mode="isEditMode"
+            :friends="friends"
+            :can-tag-friends="isMyCalendar"
+            :selected-tag-summaries="selectedTagSummaries"
             @upload-start="handleUploadStart"
             @upload-complete="handleUploadComplete"
             @error="handleUploadError"
@@ -434,7 +451,7 @@ function handleUploadError(message: string) {
         </div>
 
         <!-- Footer (sticky at bottom) -->
-        <div class="p-3 sm:p-4 flex-shrink-0 border-t border-dp-border-primary">
+        <div class="px-3 py-2.5 sm:p-4 flex-shrink-0 border-t border-dp-border-primary">
           <!-- List mode: Add schedule button -->
           <div v-if="!isCreateMode && !isEditMode && canEdit" class="flex justify-end">
             <button

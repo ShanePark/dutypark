@@ -193,7 +193,7 @@ function onUploadError(message: string) {
                 v-model="content"
                 rows="6"
                 class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
-                placeholder="상세 내용을 입력하세요 (선택사항)"
+                placeholder="상세 내용을 입력하세요"
               ></textarea>
             </div>
 
@@ -201,7 +201,6 @@ function onUploadError(message: string) {
               <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
                 <Calendar class="w-4 h-4 inline-block mr-1 -mt-0.5" />
                 마감일
-                <span class="ml-1 text-xs font-normal due-date-optional">(선택)</span>
               </label>
               <input
                 v-model="dueDate"
@@ -313,7 +312,4 @@ function onUploadError(message: string) {
   box-shadow: 0 0 0 3px var(--dp-success-ring);
 }
 
-.due-date-optional {
-  color: var(--dp-text-muted);
-}
 </style>

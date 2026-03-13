@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.member.controller
 import com.tistory.shanepark.dutypark.common.domain.dto.PageResponse
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendDto
+import com.tistory.shanepark.dutypark.member.domain.dto.MemberPreviewDto
 import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.data.domain.Pageable
@@ -30,7 +31,7 @@ class FriendController(
         @SortDefault(sort = ["name"], direction = Sort.Direction.ASC)
         page: Pageable,
         @RequestParam(required = false, defaultValue = "") keyword: String,
-    ): PageResponse<FriendDto> {
+    ): PageResponse<MemberPreviewDto> {
         return PageResponse(friendService.searchPossibleFriends(loginMember, keyword, page))
     }
 

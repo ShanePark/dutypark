@@ -27,7 +27,7 @@ import type {
   TeamDto,
   TeamScheduleDto,
   DutyByShift,
-  SimpleMemberDto,
+  MemberPreviewDto,
   DutyCalendarDay,
   HolidayDto,
 } from '@/types'
@@ -191,7 +191,7 @@ async function fetchShift() {
     // Add isMyGroup flag based on loginMemberId
     shift.value = response.data.map(group => ({
       ...group,
-      isMyGroup: group.members.some((m: SimpleMemberDto) => m.id === loginMemberId.value),
+      isMyGroup: group.members.some((m: MemberPreviewDto) => m.id === loginMemberId.value),
     }))
   } catch (error) {
     console.error('Failed to fetch shift:', error)
@@ -297,6 +297,17 @@ function goToTeamManage() {
 
 function goToMemberDuty(memberId: number) {
   router.push(`/duty/${memberId}`)
+}
+
+function goToMemberDutyIfAvailable(member: MemberPreviewDto) {
+  if (member.id == null) {
+    return
+  }
+  goToMemberDuty(member.id)
+}
+
+function getShiftMemberKey(group: DutyByShift, member: MemberPreviewDto) {
+  return member.id ?? `${group.dutyType.id ?? group.dutyType.name}-${member.name}`
 }
 
 // Schedule Modal functions
@@ -573,10 +584,14 @@ onMounted(() => {
             <div class="p-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
               <div
                 v-for="member in group.members"
-                :key="member.id"
-                @click="goToMemberDuty(member.id)"
-                class="flex flex-col items-center p-2 border rounded-lg cursor-pointer hover-card-select"
-                :class="{ 'ring-2': member.id === loginMemberId }"
+                :key="getShiftMemberKey(group, member)"
+                @click="goToMemberDutyIfAvailable(member)"
+                class="flex flex-col items-center p-2 border rounded-lg hover-card-select"
+                :class="{
+                  'cursor-pointer': member.id != null,
+                  'cursor-default': member.id == null,
+                  'ring-2': member.id === loginMemberId,
+                }"
                 :style="{
                   borderColor: 'var(--dp-border-secondary)',
                   backgroundColor: 'var(--dp-bg-secondary)',

@@ -10,6 +10,7 @@ import {
   Users,
 } from 'lucide-vue-next'
 import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
+import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import type { NormalizedAttachment } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
@@ -27,6 +28,12 @@ interface Schedule {
   isTagged: boolean
   owner?: string
   taggedBy?: string
+  taggedByMember?: {
+    id: number
+    name: string
+    hasProfilePhoto?: boolean
+    profilePhotoVersion?: number
+  }
   attachments?: Array<{
     id: string
     originalFilename: string
@@ -35,7 +42,12 @@ interface Schedule {
     thumbnailUrl?: string
     hasThumbnail: boolean
   }>
-  tags?: Array<{ id: number; name: string }>
+  tags?: Array<{
+    id: number
+    name: string
+    hasProfilePhoto?: boolean
+    profilePhotoVersion?: number
+  }>
   daysFromStart?: number
   totalDays?: number
 }
@@ -106,6 +118,23 @@ const formattedDateTime = computed(() => {
 const displayTags = computed(() => {
   if (!props.schedule?.tags) return []
   return props.schedule.tags.filter(t => t.id !== props.memberId)
+})
+
+const taggedByDisplay = computed(() => {
+  if (!props.schedule?.isTagged) return null
+  if (props.schedule.taggedByMember) {
+    return props.schedule.taggedByMember
+  }
+
+  const fallbackName = props.schedule.taggedBy || props.schedule.owner
+  if (!fallbackName) return null
+
+  return {
+    id: undefined,
+    name: fallbackName,
+    hasProfilePhoto: false,
+    profilePhotoVersion: 0,
+  }
 })
 
 function toNormalizedAttachments(attachments: Schedule['attachments']): NormalizedAttachment[] {
@@ -194,16 +223,23 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
           </div>
 
           <!-- Owner (for tagged schedules) -->
-          <div v-if="schedule.isTagged" class="flex items-start gap-3">
+          <div v-if="taggedByDisplay" class="flex items-start gap-3">
             <div
               class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-dp-bg-tertiary"
             >
               <User class="w-4 h-4 text-dp-text-muted" />
             </div>
-            <div class="flex-1 pt-1">
-              <div class="text-xs mb-1 text-dp-text-muted">태그한 사람</div>
-              <div class="text-sm text-dp-text-primary">
-                {{ schedule.taggedBy || schedule.owner }}
+            <div class="flex-1 pt-0.5">
+              <div class="inline-flex min-h-[36px] items-center gap-1.5 rounded-full border border-dp-border-primary bg-dp-bg-secondary px-1 py-1 pr-3 text-dp-text-primary">
+                <span class="pl-1 text-xs font-medium text-dp-text-muted">by</span>
+                <ProfileAvatar
+                  :member-id="taggedByDisplay.id ?? null"
+                  :name="taggedByDisplay.name"
+                  :has-profile-photo="taggedByDisplay.hasProfilePhoto"
+                  :profile-photo-version="taggedByDisplay.profilePhotoVersion"
+                  size="sm"
+                />
+                <span class="max-w-[180px] truncate text-sm font-medium">{{ taggedByDisplay.name }}</span>
               </div>
             </div>
           </div>
@@ -215,15 +251,21 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
             >
               <Users class="w-4 h-4 text-dp-text-muted" />
             </div>
-            <div class="flex-1 pt-1">
-              <div class="text-xs mb-1.5 text-dp-text-muted">함께하는 사람</div>
+            <div class="flex-1 pt-0.5">
               <div class="flex flex-wrap gap-1.5">
                 <span
                   v-for="tag in displayTags"
                   :key="tag.id"
-                  class="inline-flex items-center px-2 py-0.5 bg-dp-accent-soft text-dp-accent-hover text-xs rounded-full"
+                  class="inline-flex min-h-[34px] items-center gap-1.5 rounded-full border border-dp-accent-border bg-dp-accent-soft px-1 py-1 pr-2 text-xs text-dp-text-primary"
                 >
-                  {{ tag.name }}
+                  <ProfileAvatar
+                    :member-id="tag.id"
+                    :name="tag.name"
+                    :has-profile-photo="tag.hasProfilePhoto"
+                    :profile-photo-version="tag.profilePhotoVersion"
+                    size="sm"
+                  />
+                  <span class="max-w-[140px] truncate font-medium">{{ tag.name }}</span>
                 </span>
               </div>
             </div>

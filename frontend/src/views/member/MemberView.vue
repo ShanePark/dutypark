@@ -11,7 +11,7 @@ import { useEscapeKey } from '@/composables/useEscapeKey'
 import { useKakao } from '@/composables/useKakao'
 import { useNaver } from '@/composables/useNaver'
 import { usePushNotification } from '@/composables/usePushNotification'
-import type { FriendDto, MemberDto, RefreshTokenDto, CalendarVisibility } from '@/types'
+import type { MemberPreviewDto, MemberDto, RefreshTokenDto, CalendarVisibility } from '@/types'
 import { VISIBILITY_COLORS } from '@/utils/visibility'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
 import ProfilePhotoUploader from '@/components/common/ProfilePhotoUploader.vue'
@@ -243,7 +243,7 @@ async function setVisibility(value: CalendarVisibility) {
 }
 
 // Manager delegation
-const familyMembers = ref<FriendDto[]>([])
+const familyMembers = ref<MemberPreviewDto[]>([])
 const managers = ref<MemberDto[]>([])
 const selectedManagerToAdd = ref<string>('')
 

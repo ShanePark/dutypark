@@ -1,4 +1,4 @@
-import type { CalendarVisibility } from '@/types'
+import type { CalendarVisibility, TaggableFriend } from '@/types'
 
 export interface LocalTodo {
   id: string
@@ -47,6 +47,12 @@ export interface Schedule {
   isTagged: boolean
   owner?: string
   taggedBy?: string
+  taggedByMember?: {
+    id: number
+    name: string
+    hasProfilePhoto?: boolean
+    profilePhotoVersion?: number
+  }
   attachments?: Array<{
     id: string
     originalFilename: string
@@ -55,7 +61,12 @@ export interface Schedule {
     thumbnailUrl?: string
     hasThumbnail: boolean
   }>
-  tags?: Array<{ id: number; name: string }>
+  tags?: Array<{
+    id: number
+    name: string
+    hasProfilePhoto?: boolean
+    profilePhotoVersion?: number
+  }>
   daysFromStart: number
   totalDays: number
 }
@@ -69,10 +80,7 @@ export interface LocalDDay {
   dDayText: string
 }
 
-export interface Friend {
-  id: number
-  name: string
-}
+export type Friend = TaggableFriend
 
 export interface CalendarDay {
   year: number

@@ -18,6 +18,7 @@ export interface ScheduleDto {
   endDateTime: string
   isTagged: boolean
   owner: string
+  taggedByMember?: ScheduleTagMemberDto | null
   tags: ScheduleTagMemberDto[]
   visibility?: CalendarVisibility
   dateToCompare: string
@@ -36,6 +37,8 @@ export interface ScheduleTagMemberDto {
   email?: string | null
   teamId?: number | null
   team?: string | null
+  hasProfilePhoto?: boolean
+  profilePhotoVersion?: number
 }
 
 export interface ScheduleAttachmentDto {
@@ -57,6 +60,7 @@ export interface ScheduleSaveDto {
   visibility?: CalendarVisibility
   startDateTime: string
   endDateTime: string
+  tagFriendIds?: number[]
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }

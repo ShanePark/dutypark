@@ -129,6 +129,7 @@ class ScheduleService(
         )
 
         scheduleRepository.save(schedule)
+        syncScheduleTags(schedule, scheduleSaveDto.tagFriendIds.orEmpty())
         scheduleTimeParsingQueueManager.addTask(schedule)
 
         attachmentService.synchronizeContextAttachments(
@@ -160,6 +161,7 @@ class ScheduleService(
         schedule.description = scheduleSaveDto.description
         schedule.visibility = scheduleSaveDto.visibility
         schedule.parsingTimeStatus = ParsingTimeStatus.WAIT
+        scheduleSaveDto.tagFriendIds?.let { syncScheduleTags(schedule, it) }
 
         scheduleRepository.save(schedule)
         scheduleTimeParsingQueueManager.addTask(schedule)
@@ -219,23 +221,9 @@ class ScheduleService(
     fun tagFriend(loginMember: LoginMember, scheduleId: UUID, friendId: Long) {
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow()
         val friend = memberRepository.findById(friendId).orElseThrow()
-        val login = memberRepository.findById(loginMember.id).orElseThrow()
 
         schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
-
-        if (!friendService.isFriend(login, friend)) {
-            throw AuthException("$friend is not friend of $loginMember")
-        }
-
-        schedule.addTag(friend)
-        eventPublisher.publishEvent(
-            ScheduleTaggedEvent(
-                scheduleId = schedule.id,
-                ownerId = schedule.member.id!!,
-                taggedMemberId = friend.id!!,
-                scheduleTitle = schedule.content
-            )
-        )
+        addTagToSchedule(schedule, friend)
     }
 
     fun untagFriend(loginMember: LoginMember, scheduleId: UUID, memberId: Long) {
@@ -250,6 +238,47 @@ class ScheduleService(
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow()
         val member = memberRepository.findById(loginMember.id).orElseThrow()
         schedule.removeTag(member)
+    }
+
+    private fun syncScheduleTags(schedule: Schedule, tagFriendIds: List<Long>) {
+        val desiredTagIds = tagFriendIds.distinct()
+        val desiredTagSet = desiredTagIds.toSet()
+
+        schedule.tags
+            .mapNotNull { it.member.id }
+            .filterNot(desiredTagSet::contains)
+            .forEach { memberId ->
+                val member = memberRepository.findById(memberId).orElseThrow()
+                schedule.removeTag(member)
+            }
+
+        val existingTagIds = schedule.tags.mapNotNull { it.member.id }.toSet()
+        desiredTagIds
+            .filterNot(existingTagIds::contains)
+            .forEach { friendId ->
+                val friend = memberRepository.findById(friendId).orElseThrow()
+                addTagToSchedule(schedule, friend)
+            }
+    }
+
+    private fun addTagToSchedule(schedule: Schedule, friend: Member) {
+        if (!friendService.isFriend(schedule.member, friend)) {
+            throw AuthException("$friend is not friend of ${schedule.member}")
+        }
+
+        schedule.addTag(friend)
+        publishScheduleTaggedEvent(schedule, friend)
+    }
+
+    private fun publishScheduleTaggedEvent(schedule: Schedule, friend: Member) {
+        eventPublisher.publishEvent(
+            ScheduleTaggedEvent(
+                scheduleId = schedule.id,
+                ownerId = schedule.member.id!!,
+                taggedMemberId = friend.id!!,
+                scheduleTitle = schedule.content
+            )
+        )
     }
 
 }

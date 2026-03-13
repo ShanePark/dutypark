@@ -1,18 +1,14 @@
 <script setup lang="ts">
 import { computed, toRef } from 'vue'
 import { X, Users, Check } from 'lucide-vue-next'
+import type { TaggableFriend } from '@/types'
+import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEscapeKey } from '@/composables/useEscapeKey'
 
-interface Friend {
-  id: number
-  name: string
-  profileImage?: string
-}
-
 interface Props {
   isOpen: boolean
-  friends: Friend[]
+  friends: TaggableFriend[]
   selectedFriendIds: number[]
   maxSelections?: number
 }
@@ -112,19 +108,13 @@ function handleToggle(friendId: number) {
               :style="!isSelected(friend.id) && canSelectMore ? { backgroundColor: 'var(--dp-bg-secondary)' } : {}"
             >
               <!-- Profile Image -->
-              <div
-                class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-dp-bg-tertiary"
-              >
-                <img
-                  v-if="friend.profileImage"
-                  :src="friend.profileImage"
-                  :alt="friend.name"
-                  class="w-8 h-8 rounded-full object-cover"
-                />
-                <span v-else class="font-medium text-sm text-dp-text-muted">
-                  {{ friend.name.charAt(0) }}
-                </span>
-              </div>
+              <ProfileAvatar
+                :member-id="friend.id"
+                :name="friend.name"
+                :has-profile-photo="friend.hasProfilePhoto"
+                :profile-photo-version="friend.profilePhotoVersion"
+                size="sm"
+              />
 
               <!-- Name -->
               <div class="flex-1 min-w-0">

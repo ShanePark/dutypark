@@ -5,13 +5,12 @@ import {
   GripVertical,
   Paperclip,
   Lock,
-  User,
-  UserPlus,
   Pencil,
   Trash2,
   X,
 } from 'lucide-vue-next'
 import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
+import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import type { NormalizedAttachment } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { getVisibilityIcon, getVisibilityLabel } from '@/utils/visibility'
@@ -25,7 +24,14 @@ interface Schedule {
   visibility: 'PUBLIC' | 'FRIENDS' | 'FAMILY' | 'PRIVATE'
   isMine: boolean
   isTagged: boolean
+  owner?: string
   taggedBy?: string
+  taggedByMember?: {
+    id: number
+    name: string
+    hasProfilePhoto?: boolean
+    profilePhotoVersion?: number
+  }
   attachments?: Array<{
     id: string
     originalFilename: string
@@ -34,20 +40,19 @@ interface Schedule {
     thumbnailUrl?: string
     hasThumbnail: boolean
   }>
-  tags?: Array<{ id: number; name: string }>
+  tags?: Array<{
+    id: number
+    name: string
+    hasProfilePhoto?: boolean
+    profilePhotoVersion?: number
+  }>
   daysFromStart?: number
   totalDays?: number
-}
-
-interface Friend {
-  id: number
-  name: string
 }
 
 const props = defineProps<{
   schedules: Schedule[]
   canEdit: boolean
-  friends: Friend[]
   isMyCalendar: boolean
   memberId: number
 }>()
@@ -56,10 +61,16 @@ const emit = defineEmits<{
   (e: 'edit', schedule: Schedule): void
   (e: 'delete', scheduleId: string): void
   (e: 'reorder', scheduleIds: string[]): void
-  (e: 'add-tag', scheduleId: string, friendId: number): void
-  (e: 'remove-tag', scheduleId: string, friendId: number): void
   (e: 'request-untag', scheduleId: string): void
 }>()
+
+type DisplayTagMember = {
+  key: string
+  id?: number
+  name: string
+  hasProfilePhoto?: boolean
+  profilePhotoVersion?: number
+}
 
 const scheduleListRef = ref<HTMLElement | null>(null)
 const isDragging = ref(false)
@@ -68,21 +79,6 @@ let sortableInstance: Sortable | null = null
 const hasDraggableSchedules = computed(() => {
   return props.canEdit && props.schedules.filter(s => !s.isTagged).length > 1
 })
-
-const taggingScheduleId = ref<string | null>(null)
-
-function openTagPanel(scheduleId: string) {
-  taggingScheduleId.value = scheduleId
-}
-
-function closeTagPanel() {
-  taggingScheduleId.value = null
-}
-
-function getUntaggedFriends(schedule: Schedule) {
-  const taggedIds = new Set(schedule.tags?.map((t) => t.id) || [])
-  return props.friends.filter((f) => !taggedIds.has(f.id))
-}
 
 function initSortable() {
   if (!scheduleListRef.value || !props.canEdit) {
@@ -186,6 +182,38 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
     })
   )
 }
+
+function getVisibleTags(schedule: Schedule) {
+  return (schedule.tags ?? []).filter((tag) => tag.id !== props.memberId)
+}
+
+function getDisplayTagMembers(schedule: Schedule) {
+  const visibleTags: DisplayTagMember[] = getVisibleTags(schedule).map((tag) => ({
+    key: `tag-${tag.id}`,
+    id: tag.id,
+    name: tag.name,
+    hasProfilePhoto: tag.hasProfilePhoto,
+    profilePhotoVersion: tag.profilePhotoVersion,
+  }))
+
+  const taggedByMember = schedule.taggedByMember
+  if (schedule.isTagged && taggedByMember && !visibleTags.some((tag) => tag.id === taggedByMember.id)) {
+    visibleTags.unshift({
+      key: `tagged-by-${taggedByMember.id}`,
+      id: taggedByMember.id,
+      name: taggedByMember.name,
+      hasProfilePhoto: taggedByMember.hasProfilePhoto,
+      profilePhotoVersion: taggedByMember.profilePhotoVersion,
+    })
+  } else if (schedule.isTagged && !taggedByMember && (schedule.taggedBy || schedule.owner)) {
+    visibleTags.unshift({
+      key: `tagged-by-${schedule.id}`,
+      name: schedule.taggedBy || schedule.owner || '',
+    })
+  }
+
+  return visibleTags.filter((tag) => tag.name)
+}
 </script>
 
 <template>
@@ -242,107 +270,23 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
               </span>
             </div>
 
-          <!-- Tags Section (only shown on own calendar) -->
           <div
-            v-if="isMyCalendar && schedule.isMine && canEdit && (schedule.tags?.length || friends.length > 0)"
-            class="mt-2"
-          >
-            <div class="flex items-center gap-1.5 flex-wrap">
-              <!-- Existing tags -->
-              <span
-                v-for="tag in schedule.tags"
-                :key="tag.id"
-                class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 bg-dp-accent-soft text-dp-accent-hover text-xs rounded-full"
-              >
-                {{ tag.name }}
-                <button
-                  @click.stop="emit('remove-tag', schedule.id, tag.id)"
-                  class="p-0.5 hover:bg-dp-accent-soft-hover rounded-full transition cursor-pointer"
-                  title="태그 삭제"
-                >
-                  <X class="w-3 h-3" />
-                </button>
-              </span>
-
-              <!-- Add tag button -->
-              <button
-                v-if="friends.length > 0"
-                @click.stop="openTagPanel(schedule.id)"
-                class="inline-flex items-center gap-1 px-2 py-0.5 border border-dashed text-xs rounded-full hover:border-dp-accent-border hover:text-dp-accent hover:bg-dp-accent-soft transition cursor-pointer"
-                :class="{ 'border-dp-accent-border text-dp-accent bg-dp-accent-soft': taggingScheduleId === schedule.id }"
-                :style="{
-                  borderColor: taggingScheduleId === schedule.id ? undefined : 'var(--dp-border-secondary)',
-                  color: taggingScheduleId === schedule.id ? undefined : 'var(--dp-text-secondary)'
-                }"
-                title="친구 태그"
-              >
-                <UserPlus class="w-3 h-3" />
-                <span>태그</span>
-              </button>
-            </div>
-
-            <!-- Inline tag selection (expanded below the button) -->
-            <div
-              v-if="taggingScheduleId === schedule.id && getUntaggedFriends(schedule).length > 0"
-              class="mt-2 p-2.5 bg-dp-accent-soft border border-dp-accent-border rounded-lg"
-            >
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-medium text-dp-accent-hover">친구 선택</span>
-                <button
-                  @click.stop="closeTagPanel"
-                  class="p-0.5 hover:bg-dp-accent-soft rounded transition cursor-pointer"
-                >
-                  <X class="w-3.5 h-3.5 text-dp-accent" />
-                </button>
-              </div>
-              <div class="flex flex-wrap gap-1.5">
-                <button
-                  v-for="friend in getUntaggedFriends(schedule)"
-                  :key="friend.id"
-                  @click.stop="emit('add-tag', schedule.id, friend.id)"
-                  class="inline-flex items-center gap-1 px-2 py-1 border border-dp-accent-border text-xs rounded-full hover:border-dp-accent-border hover:bg-dp-accent-soft transition cursor-pointer"
-                  :style="{
-                    backgroundColor: 'var(--dp-bg-primary)',
-                    color: 'var(--dp-text-primary)'
-                  }"
-                >
-                  <User class="w-3 h-3" />
-                  {{ friend.name }}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Tags display for non-owners (show tags list) -->
-          <div
-            v-else-if="!schedule.isTagged && schedule.tags?.length"
-            class="flex items-center gap-1.5 mt-2 flex-wrap"
+            v-if="getDisplayTagMembers(schedule).length"
+            class="mt-2 flex flex-wrap items-center gap-1.5"
           >
             <span
-              v-for="tag in schedule.tags"
-              :key="tag.id"
-              class="inline-flex items-center gap-1 px-2 py-0.5 bg-dp-accent-soft text-dp-accent-hover text-xs rounded-full"
+              v-for="tag in getDisplayTagMembers(schedule)"
+              :key="tag.key"
+              class="inline-flex min-h-[34px] items-center gap-1.5 rounded-full border border-dp-accent-border bg-dp-accent-soft px-1 py-1 pr-2 text-xs text-dp-text-primary"
             >
-              {{ tag.name }}
-            </span>
-          </div>
-
-          <!-- Tagged by indicator (when I was tagged by someone) -->
-          <div
-            v-else-if="schedule.isTagged"
-            class="flex items-center gap-1.5 mt-2 flex-wrap"
-          >
-            <!-- Show other tagged members (exclude calendar owner) -->
-            <span
-              v-for="tag in schedule.tags?.filter(t => t.id !== memberId)"
-              :key="tag.id"
-              class="inline-flex items-center gap-1 px-2 py-0.5 bg-dp-accent-soft text-dp-accent-hover text-xs rounded-full"
-            >
-              {{ tag.name }}
-            </span>
-            <!-- Show who tagged me -->
-            <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-dp-bg-tertiary text-dp-text-secondary text-xs rounded-full">
-              by {{ schedule.taggedBy }}
+              <ProfileAvatar
+                :member-id="tag.id ?? null"
+                :name="tag.name"
+                :has-profile-photo="tag.hasProfilePhoto"
+                :profile-photo-version="tag.profilePhotoVersion"
+                size="sm"
+              />
+              <span class="max-w-[120px] truncate font-medium">{{ tag.name }}</span>
             </span>
           </div>
 

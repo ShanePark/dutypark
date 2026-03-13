@@ -24,6 +24,7 @@ Use this file for repo-wide defaults only. Keep it lean; read the code and nearb
 - Do not start backend or frontend dev servers yourself unless the user explicitly asks. Assume the developer handles `./gradlew bootRun` and `cd frontend && npm run dev`.
 - Add new configuration in `application.yml` with safe defaults and surface overrides through `.env.sample`.
 - Prefer existing patterns over inventing new structure. Read the nearest controller, service, view, and test first.
+- When creating GitHub issues or PRs with `gh`, first review a few recently created issues or PRs to match the repository's current conventions, then write the final issue or PR title/body in English.
 
 ### Backend
 
@@ -40,8 +41,11 @@ Use this file for repo-wide defaults only. Keep it lean; read the code and nearb
 - Use `useSwal()` for confirmations and user-facing alerts.
 - Auth is cookie-based through the shared Axios client. Do not add access-token persistence in localStorage.
 - Style with Tailwind utilities and `--dp-*` tokens from `frontend/src/style.css`. Avoid hardcoded hex colors or theme-blind utility colors for surfaces, borders, and text.
+- Design frontend UI to work well on both mobile and desktop by default. Check responsive layout, spacing, overflow, and interaction ergonomics across narrow and wide viewports instead of optimizing for only one screen size. For mobile verification, check both iPhone 16 Pro (402 x 874 CSS px) and iPhone 13 mini (375 x 812 CSS px) portrait viewport sizes.
+- Verify user-facing frontend UI in both light and dark modes when checking visual quality, layout, or interaction changes.
 - Inline `:style` is acceptable only for runtime-dependent values or CSS-variable-backed colors already common in the codebase.
 - Keep interactive targets at least 44px and preserve visible hover/focus feedback.
+- When a task depends on visual quality, layout balance, or interaction polish, verify the result in the browser and iterate. Use Playwright for direct visual checks and feedback loops when static code inspection is not enough.
 - When adding a user-facing route, always review both `frontend/src/router/index.ts` and `frontend/src/components/layout/AppHeader.vue`.
 
 ### Domain Gotchas
@@ -65,7 +69,7 @@ Use this file for repo-wide defaults only. Keep it lean; read the code and nearb
 - Dutypark-specific skills live in `./.codex/skills/` inside this repository, not in the global Codex home.
 - Use `./.codex/skills/dutypark-restdocs-endpoint/SKILL.md` when changing Spring controller contracts, request or response schemas, or `src/docs/asciidoc`.
 - Use `./.codex/skills/dutypark-frontend-page/SKILL.md` when adding or updating Vue pages, routes, hamburger-menu exposure, or theme-sensitive UI.
-- Use `./.codex/skills/dutypark-playwright-ui/SKILL.md` only for complex browser verification such as drag-drop, modal chains, notification flows, push flows, SSO, or visual regressions.
+- Use `./.codex/skills/dutypark-playwright-ui/SKILL.md` for complex browser verification such as drag-drop, modal chains, notification flows, push flows, SSO, visual regressions, or responsive/design validation that needs direct in-browser confirmation.
 - Use the existing `$git-commit`, `$pr`, and `$gh-address-comments` skills for Git and GitHub tasks instead of duplicating those workflows here.
 
 ## 6. Collaboration Preferences
@@ -74,6 +78,7 @@ Use this file for repo-wide defaults only. Keep it lean; read the code and nearb
 - Favor backend-first changes for cross-cutting features.
 - Work one checklist item at a time; follow a RED -> GREEN -> REFACTOR rhythm where it fits.
 - Stop after each requested checklist item and present the code before moving on.
+- If design direction or visual preference needs user input, prefer showing concrete options inside the admin `관리 > 개발` tab (`/admin/dev`) so the user can compare and choose in the product instead of deciding only from chat descriptions.
 - Never commit automatically.
 - All agent responses to the user must be written in Korean.
 

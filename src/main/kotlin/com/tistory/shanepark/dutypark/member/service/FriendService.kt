@@ -2,6 +2,9 @@ package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendDto
+import com.tistory.shanepark.dutypark.member.domain.dto.MemberPreviewDto
+import com.tistory.shanepark.dutypark.member.domain.dto.toFriendDto
+import com.tistory.shanepark.dutypark.member.domain.dto.toMemberPreviewDto
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -39,7 +42,7 @@ class FriendService(
         val relations = friendRelationRepository.findAllByMember(member)
         return relations
             .sortedWith(compareBy({ it.pinOrder ?: Long.MAX_VALUE }, { it.friend.name }))
-            .map { FriendDto.of(it.friend) }
+            .map { it.toFriendDto() }
     }
 
     @Transactional(readOnly = true)
@@ -233,9 +236,9 @@ class FriendService(
     }
 
     @Transactional(readOnly = true)
-    fun searchPossibleFriends(login: LoginMember, keyword: String, page: Pageable): Page<FriendDto> {
+    fun searchPossibleFriends(login: LoginMember, keyword: String, page: Pageable): Page<MemberPreviewDto> {
         val result = memberRepository.searchPossibleFriends(keyword, login.id, page)
-        return result.map { FriendDto.of(it) }
+        return result.map { it.toMemberPreviewDto() }
     }
 
     private fun loginMemberToMember(login: LoginMember): Member {
@@ -351,11 +354,11 @@ class FriendService(
     }
 
     @Transactional(readOnly = true)
-    fun findAllFamilyMembers(id: Long): List<FriendDto> {
+    fun findAllFamilyMembers(id: Long): List<MemberPreviewDto> {
         val member = memberRepository.findById(id).orElseThrow()
         val familyRelations = friendRelationRepository.findAllByMember(member).filter { it.isFamily }
         return familyRelations
-            .map { FriendDto.of(it.friend) }
+            .map { it.friend.toMemberPreviewDto() }
             .sortedBy { it.name }
     }
 
