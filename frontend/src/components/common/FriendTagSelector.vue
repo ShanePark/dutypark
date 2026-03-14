@@ -324,11 +324,11 @@ function getSubtitle(friend: TaggableFriend) {
             <button
               type="button"
               class="friend-tag-selector__scroll-hint-pill"
-              aria-label="친구 목록 조금 더 아래로 보기"
+              aria-label="친구 목록 더보기"
               @click="scrollListDown"
             >
-              <ChevronDown class="h-3 w-3" />
-              아래로 더 보기
+              <ChevronDown class="h-4 w-4" />
+              더보기
             </button>
           </div>
         </template>
@@ -370,13 +370,13 @@ function getSubtitle(friend: TaggableFriend) {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  min-height: 1.25rem;
-  padding: 0.125rem 0.5rem;
+  min-height: 2.75rem;
+  padding: 0 0.875rem;
   border: 1px solid var(--dp-border-primary);
   border-radius: 9999px;
   background: color-mix(in srgb, var(--dp-bg-card) 92%, transparent);
   color: var(--dp-text-muted);
-  font-size: 0.625rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   line-height: 1;
   box-shadow: 0 4px 12px color-mix(in srgb, var(--dp-overlay-dark) 12%, transparent);
@@ -444,7 +444,14 @@ function getSubtitle(friend: TaggableFriend) {
   }
 
   .friend-tag-selector__scroll-hint {
-    padding: 1rem 0 0.25rem;
+    padding: 0.75rem 0 0.125rem;
+  }
+
+  .friend-tag-selector__scroll-hint-pill {
+    gap: 0.1875rem;
+    min-height: 2.5rem;
+    padding: 0 0.625rem;
+    font-size: 0.75rem;
   }
 }
 
