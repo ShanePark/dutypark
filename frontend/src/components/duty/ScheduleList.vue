@@ -214,6 +214,15 @@ function getDisplayTagMembers(schedule: Schedule) {
 
   return visibleTags.filter((tag) => tag.name)
 }
+
+function canEditSchedule(schedule: Schedule) {
+  return !schedule.isTagged && (schedule.isMine || props.canEdit)
+}
+
+function handleTagClick(schedule: Schedule) {
+  if (!canEditSchedule(schedule)) return
+  emit('edit', schedule)
+}
 </script>
 
 <template>
@@ -274,10 +283,17 @@ function getDisplayTagMembers(schedule: Schedule) {
             v-if="getDisplayTagMembers(schedule).length"
             class="mt-2 flex flex-wrap items-center gap-1.5"
           >
-            <span
+            <component
               v-for="tag in getDisplayTagMembers(schedule)"
               :key="tag.key"
-              class="inline-flex min-h-[34px] items-center gap-1.5 rounded-full border border-dp-accent-border bg-dp-accent-soft px-1 py-1 pr-2 text-xs text-dp-text-primary"
+              :is="canEditSchedule(schedule) ? 'button' : 'span'"
+              :type="canEditSchedule(schedule) ? 'button' : undefined"
+              class="schedule-tag-chip inline-flex items-center gap-1.5 rounded-full border border-dp-accent-border bg-dp-accent-soft text-xs text-dp-text-primary"
+              :class="canEditSchedule(schedule)
+                ? 'schedule-tag-chip--interactive px-1.5 py-1.5 pr-2.5'
+                : 'min-h-[34px] px-1 py-1 pr-2'"
+              :title="canEditSchedule(schedule) ? '태그 수정' : undefined"
+              @click.stop="handleTagClick(schedule)"
             >
               <ProfileAvatar
                 :member-id="tag.id ?? null"
@@ -287,7 +303,7 @@ function getDisplayTagMembers(schedule: Schedule) {
                 size="sm"
               />
               <span class="max-w-[120px] truncate font-medium">{{ tag.name }}</span>
-            </span>
+            </component>
           </div>
 
           <!-- Description -->
@@ -307,7 +323,7 @@ function getDisplayTagMembers(schedule: Schedule) {
         <!-- Actions -->
         <div class="flex items-center gap-1 ml-2">
           <!-- Edit/Delete for own schedules or manager -->
-          <template v-if="!schedule.isTagged && (schedule.isMine || canEdit)">
+          <template v-if="canEditSchedule(schedule)">
             <button
               @click="emit('edit', schedule)"
               class="p-1.5 rounded-lg hover-icon-btn cursor-pointer text-dp-accent"
@@ -372,5 +388,32 @@ function getDisplayTagMembers(schedule: Schedule) {
 
 .schedule-drag-handle:active {
   cursor: grabbing;
+}
+
+.schedule-tag-chip {
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.schedule-tag-chip--interactive {
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.schedule-tag-chip--interactive:hover {
+  background-color: var(--dp-accent-bg-hover);
+  border-color: var(--dp-accent-border);
+}
+
+.schedule-tag-chip--interactive:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--dp-accent-ring);
+}
+
+.schedule-tag-chip--interactive:active {
+  transform: translateY(1px);
 }
 </style>
