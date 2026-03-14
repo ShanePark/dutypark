@@ -369,10 +369,10 @@ function handleUploadError(message: string) {
   <Teleport to="body">
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50 pb-16 sm:pb-0"
+      class="day-detail-modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-dp-overlay-dark/50"
       @click.self="emit('close')"
     >
-      <div class="modal-container max-w-[95vw] sm:max-w-2xl max-h-[calc(100dvh-5rem)] sm:max-h-[90vh]">
+      <div class="day-detail-modal-shell modal-container max-w-[95vw] sm:max-w-2xl">
         <!-- Header -->
         <div class="px-3 py-2.5 sm:p-4 flex-shrink-0 bg-dp-bg-tertiary border-b border-dp-border-primary">
           <div class="flex items-center justify-between">
@@ -451,7 +451,7 @@ function handleUploadError(message: string) {
         </div>
 
         <!-- Footer (sticky at bottom) -->
-        <div class="px-3 py-2.5 sm:p-4 flex-shrink-0 border-t border-dp-border-primary">
+        <div class="day-detail-modal-footer px-3 py-2.5 sm:p-4 flex-shrink-0 border-t border-dp-border-primary">
           <!-- List mode: Add schedule button -->
           <div v-if="!isCreateMode && !isEditMode && canEdit" class="flex justify-end">
             <button
@@ -490,3 +490,47 @@ function handleUploadError(message: string) {
     @confirm="confirmUntag"
   />
 </template>
+
+<style scoped>
+.day-detail-modal-overlay {
+  padding:
+    max(0.5rem, env(safe-area-inset-top))
+    0.5rem
+    max(0.5rem, env(safe-area-inset-bottom))
+    0.5rem;
+}
+
+.day-detail-modal-shell {
+  max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 1rem);
+}
+
+.day-detail-modal-footer {
+  padding-bottom: calc(0.625rem + env(safe-area-inset-bottom));
+}
+
+@media (max-width: 639px) {
+  .day-detail-modal-overlay {
+    align-items: flex-start;
+  }
+
+  .day-detail-modal-shell {
+    width: 100%;
+    max-width: 100%;
+    height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 1rem);
+  }
+}
+
+@media (min-width: 640px) {
+  .day-detail-modal-overlay {
+    padding: 0;
+  }
+
+  .day-detail-modal-shell {
+    max-height: 90vh;
+  }
+
+  .day-detail-modal-footer {
+    padding-bottom: 1rem;
+  }
+}
+</style>
