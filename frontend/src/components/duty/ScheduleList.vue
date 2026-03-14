@@ -219,6 +219,10 @@ function canEditSchedule(schedule: Schedule) {
   return !schedule.isTagged && (schedule.isMine || props.canEdit)
 }
 
+function canUntagSchedule(schedule: Schedule) {
+  return schedule.isTagged && props.isMyCalendar
+}
+
 function handleTagClick(schedule: Schedule) {
   if (!canEditSchedule(schedule)) return
   emit('edit', schedule)
@@ -245,7 +249,7 @@ function handleTagClick(schedule: Schedule) {
           backgroundColor: 'var(--dp-bg-card)'
         }"
       >
-        <div class="flex items-start justify-between">
+        <div class="flex items-start">
           <div
             v-if="hasDraggableSchedules && canEdit && !schedule.isTagged"
             class="schedule-drag-handle flex items-center pr-2 cursor-grab text-dp-text-muted"
@@ -253,107 +257,111 @@ function handleTagClick(schedule: Schedule) {
           >
             <GripVertical class="w-5 h-5" />
           </div>
-          <div class="flex-1">
-            <div class="flex items-center gap-2 flex-wrap">
-              <Lock
-                v-if="schedule.visibility === 'PRIVATE'"
-                class="w-4 h-4 text-dp-text-muted"
-                :title="getVisibilityLabel(schedule.visibility)"
-              />
-              <span class="font-medium text-dp-text-primary">{{ schedule.content }}<template v-if="schedule.totalDays && schedule.totalDays > 1"> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template></span>
-              <span v-if="formatScheduleTime(schedule)" class="text-sm text-dp-text-secondary">
-                {{ formatScheduleTime(schedule) }}
-              </span>
-              <component
-                v-if="schedule.visibility !== 'PRIVATE'"
-                :is="getVisibilityIcon(schedule.visibility)"
-                class="w-4 h-4 text-dp-text-muted"
-                :title="getVisibilityLabel(schedule.visibility)"
-              />
-              <span
-                v-if="schedule.attachments?.length"
-                class="flex items-center gap-1 text-sm text-dp-text-muted"
+          <div class="min-w-0 flex-1">
+            <div class="schedule-primary-row flex items-start gap-2">
+              <div class="schedule-primary-info min-w-0 flex-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <Lock
+                    v-if="schedule.visibility === 'PRIVATE'"
+                    class="w-4 h-4 text-dp-text-muted"
+                    :title="getVisibilityLabel(schedule.visibility)"
+                  />
+                  <span class="font-medium text-dp-text-primary">{{ schedule.content }}<template v-if="schedule.totalDays && schedule.totalDays > 1"> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template></span>
+                  <span v-if="formatScheduleTime(schedule)" class="text-sm text-dp-text-secondary">
+                    {{ formatScheduleTime(schedule) }}
+                  </span>
+                  <component
+                    v-if="schedule.visibility !== 'PRIVATE'"
+                    :is="getVisibilityIcon(schedule.visibility)"
+                    class="w-4 h-4 text-dp-text-muted"
+                    :title="getVisibilityLabel(schedule.visibility)"
+                  />
+                  <span
+                    v-if="schedule.attachments?.length"
+                    class="flex items-center gap-1 text-sm text-dp-text-muted"
+                  >
+                    <Paperclip class="w-3 h-3" />
+                    {{ schedule.attachments.length }}
+                  </span>
+                </div>
+              </div>
+
+              <div
+                v-if="canUntagSchedule(schedule) || canEditSchedule(schedule)"
+                class="schedule-action-row flex shrink-0 items-center gap-1"
               >
-                <Paperclip class="w-3 h-3" />
-                {{ schedule.attachments.length }}
-              </span>
+                <button
+                  v-if="canUntagSchedule(schedule)"
+                  @click="emit('request-untag', schedule.id)"
+                  class="inline-flex min-h-[44px] shrink-0 items-center gap-1 whitespace-nowrap rounded border border-dp-warning-border px-2 py-1 text-xs font-medium text-dp-warning transition hover:bg-dp-warning-soft cursor-pointer"
+                  title="태그 제거"
+                >
+                  <X class="w-3.5 h-3.5" />
+                  태그 제거
+                </button>
+
+                <template v-if="canEditSchedule(schedule)">
+                  <button
+                    @click="emit('edit', schedule)"
+                    class="p-1.5 rounded-lg hover-icon-btn cursor-pointer text-dp-accent"
+                    title="수정"
+                  >
+                    <Pencil class="w-4 h-4" />
+                  </button>
+                  <button
+                    @click="emit('delete', schedule.id)"
+                    class="p-1.5 rounded-lg hover-danger cursor-pointer text-dp-danger"
+                    title="삭제"
+                  >
+                    <Trash2 class="w-4 h-4" />
+                  </button>
+                </template>
+              </div>
             </div>
 
-          <div
-            v-if="getDisplayTagMembers(schedule).length"
-            class="mt-2 flex flex-wrap items-center gap-1.5"
-          >
-            <component
-              v-for="tag in getDisplayTagMembers(schedule)"
-              :key="tag.key"
-              :is="canEditSchedule(schedule) ? 'button' : 'span'"
-              :type="canEditSchedule(schedule) ? 'button' : undefined"
-              class="schedule-tag-chip inline-flex items-center gap-1.5 rounded-full border border-dp-accent-border bg-dp-accent-soft text-xs text-dp-text-primary"
-              :class="canEditSchedule(schedule)
-                ? 'schedule-tag-chip--interactive px-1.5 py-1.5 pr-2.5'
-                : 'min-h-[34px] px-1 py-1 pr-2'"
-              :title="canEditSchedule(schedule) ? '태그 수정' : undefined"
-              @click.stop="handleTagClick(schedule)"
+            <div
+              v-if="getDisplayTagMembers(schedule).length"
+              class="mt-2 flex w-full flex-wrap items-center gap-1.5"
             >
-              <ProfileAvatar
-                :member-id="tag.id ?? null"
-                :name="tag.name"
-                :has-profile-photo="tag.hasProfilePhoto"
-                :profile-photo-version="tag.profilePhotoVersion"
-                size="sm"
+              <component
+                v-for="tag in getDisplayTagMembers(schedule)"
+                :key="tag.key"
+                :is="canEditSchedule(schedule) ? 'button' : 'span'"
+                :type="canEditSchedule(schedule) ? 'button' : undefined"
+                class="schedule-tag-chip inline-flex items-center gap-1.5 rounded-full border border-dp-accent-border bg-dp-accent-soft text-xs text-dp-text-primary"
+                :class="canEditSchedule(schedule)
+                  ? 'schedule-tag-chip--interactive px-1.5 py-1.5 pr-2.5'
+                  : 'min-h-[34px] px-1 py-1 pr-2'"
+                :title="canEditSchedule(schedule) ? '태그 수정' : undefined"
+                @click.stop="handleTagClick(schedule)"
+              >
+                <ProfileAvatar
+                  :member-id="tag.id ?? null"
+                  :name="tag.name"
+                  :has-profile-photo="tag.hasProfilePhoto"
+                  :profile-photo-version="tag.profilePhotoVersion"
+                  size="sm"
+                />
+                <span class="max-w-[120px] truncate font-medium">{{ tag.name }}</span>
+              </component>
+            </div>
+
+            <!-- Description -->
+            <div v-if="schedule.description" class="mt-2 pt-2 border-t border-dp-border-primary">
+              <div class="text-sm whitespace-pre-wrap text-dp-text-secondary">{{ schedule.description }}</div>
+            </div>
+
+            <!-- Attachments -->
+            <div v-if="schedule.attachments?.length" class="mt-2 pt-2 border-t border-dp-border-primary">
+              <AttachmentGrid
+                :attachments="toNormalizedAttachments(schedule.attachments)"
+                :columns="4"
               />
-              <span class="max-w-[120px] truncate font-medium">{{ tag.name }}</span>
-            </component>
+            </div>
           </div>
-
-          <!-- Description -->
-          <div v-if="schedule.description" class="mt-2 pt-2 border-t border-dp-border-primary">
-            <div class="text-sm whitespace-pre-wrap text-dp-text-secondary">{{ schedule.description }}</div>
-          </div>
-
-          <!-- Attachments -->
-          <div v-if="schedule.attachments?.length" class="mt-2 pt-2 border-t border-dp-border-primary">
-            <AttachmentGrid
-              :attachments="toNormalizedAttachments(schedule.attachments)"
-              :columns="4"
-            />
-          </div>
-        </div>
-
-        <!-- Actions -->
-        <div class="flex items-center gap-1 ml-2">
-          <!-- Edit/Delete for own schedules or manager -->
-          <template v-if="canEditSchedule(schedule)">
-            <button
-              @click="emit('edit', schedule)"
-              class="p-1.5 rounded-lg hover-icon-btn cursor-pointer text-dp-accent"
-              title="수정"
-            >
-              <Pencil class="w-4 h-4" />
-            </button>
-            <button
-              @click="emit('delete', schedule.id)"
-              class="p-1.5 rounded-lg hover-danger cursor-pointer text-dp-danger"
-              title="삭제"
-            >
-              <Trash2 class="w-4 h-4" />
-            </button>
-          </template>
-
-          <!-- Untag for tagged schedules (only on own calendar) -->
-          <button
-            v-if="schedule.isTagged && isMyCalendar"
-            @click="emit('request-untag', schedule.id)"
-            class="px-2 py-1 border border-dp-warning-border hover:bg-dp-warning-soft rounded transition text-dp-warning text-xs font-medium flex items-center gap-1 cursor-pointer"
-            title="태그 제거"
-          >
-            <X class="w-3.5 h-3.5" />
-            태그 제거
-          </button>
         </div>
       </div>
     </div>
-  </div>
   </div>
 </template>
 
@@ -369,7 +377,7 @@ function handleTagClick(schedule: Schedule) {
 
 /* Show only title when dragging - applies to all items in drag mode */
 .is-dragging .schedule-item .flex-1 > *:not(:first-child),
-.is-dragging .schedule-item .flex.items-center.gap-1.ml-2 {
+.is-dragging .schedule-item .schedule-action-row {
   display: none !important;
 }
 

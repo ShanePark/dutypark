@@ -332,49 +332,49 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
   max-width: 100%;
   box-sizing: border-box;
   align-items: center;
+  min-width: 0;
   min-height: 1.05rem;
-  gap: 0.08rem;
-  padding-right: 0.18rem;
-  padding-left: 0.08rem;
+  gap: 0.04rem;
+  padding-right: 0.12rem;
+  padding-left: 0.04rem;
   font-size: 10px;
   line-height: 1.05;
 }
 
 .schedule-tag-label {
   display: block;
-  width: 3em;
-  min-width: 3em;
+  min-width: 0;
+  max-width: 3em;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-align: right;
   white-space: nowrap;
   line-height: 1;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.05em;
 }
 
 :deep(.schedule-tag-avatar.profile-avatar) {
+  box-sizing: border-box;
   border-width: 1px;
-  width: 0.62rem;
-  height: 0.62rem;
+  width: 0.58rem;
+  height: 0.58rem;
 }
 
 @media (min-width: 640px) {
   .schedule-tag-with-avatar {
     min-height: 1.5rem;
-    gap: 0.16rem;
-    padding-right: 0.34rem;
-    padding-left: 0.12rem;
+    gap: 0.1rem;
+    padding-right: 0.28rem;
+    padding-left: 0.1rem;
     font-size: 14px;
   }
 
   .schedule-tag-label {
-    width: 3em;
-    min-width: 3em;
+    max-width: 3em;
   }
 
   :deep(.schedule-tag-avatar.profile-avatar) {
-    width: 1rem;
-    height: 1rem;
+    width: 0.94rem;
+    height: 0.94rem;
   }
 }
 </style>

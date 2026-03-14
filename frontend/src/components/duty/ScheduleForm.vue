@@ -95,10 +95,10 @@ defineExpose({
           v-model="form.content"
           type="text"
           maxlength="50"
-          class="schedule-form__input w-full px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
+          class="schedule-form__input schedule-form__input--with-counter w-full px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
           placeholder="일정 제목을 입력하세요"
         />
-        <div class="absolute right-2 top-1/2 -translate-y-1/2">
+        <div class="schedule-form__counter pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
           <CharacterCounter :current="form.content.length" :max="50" />
         </div>
       </div>
@@ -254,6 +254,10 @@ defineExpose({
     font-size: 0.9375rem;
   }
 
+  .schedule-form__input--with-counter {
+    padding-right: 4.75rem;
+  }
+
   .schedule-form__textarea {
     min-height: 4.5rem;
   }
@@ -285,5 +289,15 @@ defineExpose({
   .schedule-form__file-uploader :deep(.attachment-item) {
     padding: 0.375rem 0.5rem;
   }
+}
+
+.schedule-form__input--with-counter {
+  padding-right: 5.25rem;
+}
+
+.schedule-form__counter {
+  padding-left: 0.375rem;
+  background-color: var(--dp-bg-input);
+  line-height: 1;
 }
 </style>
