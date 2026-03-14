@@ -22,15 +22,13 @@ const showLayout = computed(() => {
     <ImpersonationBanner v-if="authStore.isImpersonating" />
     <!-- Header -->
     <AppHeader v-if="showLayout && authStore.isLoggedIn" />
-    <!-- pt-12/14: header height (+10 for impersonation banner), pb-20: footer (64px) + safe area (~34px on iPhone), only when logged in -->
     <main
       class="flex-1"
       :class="[
-        authStore.isLoggedIn ? 'pb-20 sm:pb-16' : '',
+        authStore.isLoggedIn ? 'app-layout__main--authed' : '',
         authStore.isLoggedIn && authStore.isImpersonating ? 'pt-[5.5rem] sm:pt-24' : '',
         authStore.isLoggedIn && !authStore.isImpersonating ? 'pt-12 sm:pt-14' : ''
       ]"
-      :style="authStore.isLoggedIn ? { paddingBottom: 'max(5rem, calc(4rem + env(safe-area-inset-bottom)))' } : {}"
     >
       <slot />
     </main>
@@ -41,3 +39,15 @@ const showLayout = computed(() => {
     <PushPermissionGuide v-if="authStore.isLoggedIn" />
   </div>
 </template>
+
+<style scoped>
+.app-layout__main--authed {
+  padding-bottom: calc(3.5rem + max(0.375rem, calc(env(safe-area-inset-bottom) - 0.5rem)));
+}
+
+@media (min-width: 640px) {
+  .app-layout__main--authed {
+    padding-bottom: 5rem;
+  }
+}
+</style>

@@ -369,12 +369,22 @@ function handleUploadError(message: string) {
   <Teleport to="body">
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50 pb-16 sm:pb-0"
+      class="day-detail-modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-dp-overlay-dark/50"
+      :class="{
+        'day-detail-modal-overlay--list': !isCreateMode && !isEditMode,
+        'day-detail-modal-overlay--form': isCreateMode || isEditMode,
+      }"
       @click.self="emit('close')"
     >
-      <div class="modal-container max-w-[95vw] sm:max-w-2xl max-h-[calc(100dvh-5rem)] sm:max-h-[90vh]">
+      <div
+        class="day-detail-modal-shell modal-container max-w-[95vw] sm:max-w-2xl"
+        :class="{
+          'day-detail-modal-shell--list': !isCreateMode && !isEditMode,
+          'day-detail-modal-shell--form': isCreateMode || isEditMode,
+        }"
+      >
         <!-- Header -->
-        <div class="px-3 py-2.5 sm:p-4 flex-shrink-0 bg-dp-bg-tertiary border-b border-dp-border-primary">
+        <div class="day-detail-modal-header px-3 py-2.5 sm:p-4 flex-shrink-0 bg-dp-bg-tertiary border-b border-dp-border-primary">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <span v-if="isCreateMode" class="px-2 py-0.5 bg-dp-success-soft text-dp-success text-xs font-medium rounded">일정 추가</span>
@@ -419,7 +429,7 @@ function handleUploadError(message: string) {
         </div>
 
         <!-- Content -->
-        <div ref="contentRef" class="px-3 py-2.5 sm:p-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
+        <div ref="contentRef" class="day-detail-modal-content px-3 py-2.5 sm:p-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
 
           <ScheduleList
             v-if="!isCreateMode && !isEditMode"
@@ -451,7 +461,10 @@ function handleUploadError(message: string) {
         </div>
 
         <!-- Footer (sticky at bottom) -->
-        <div class="px-3 py-2.5 sm:p-4 flex-shrink-0 border-t border-dp-border-primary">
+        <div
+          class="day-detail-modal-footer px-3 py-2.5 sm:p-4 flex-shrink-0 border-t border-dp-border-primary"
+          :class="{ 'day-detail-modal-footer--list': !isCreateMode && !isEditMode }"
+        >
           <!-- List mode: Add schedule button -->
           <div v-if="!isCreateMode && !isEditMode && canEdit" class="flex justify-end">
             <button
@@ -490,3 +503,85 @@ function handleUploadError(message: string) {
     @confirm="confirmUntag"
   />
 </template>
+
+<style scoped>
+.day-detail-modal-overlay {
+  padding:
+    max(0.5rem, env(safe-area-inset-top))
+    0.5rem
+    0
+    0.5rem;
+}
+
+.day-detail-modal-shell {
+  max-height: calc(100dvh - max(0.5rem, env(safe-area-inset-top)));
+}
+
+.day-detail-modal-footer {
+  padding-bottom: max(0.25rem, calc(env(safe-area-inset-bottom) - 1rem));
+}
+
+.day-detail-modal-footer--list {
+  padding-bottom: max(0.5rem, calc(env(safe-area-inset-bottom) - 1rem));
+}
+
+@media (max-width: 639px) {
+  .day-detail-modal-overlay {
+    align-items: flex-end;
+    padding: 1rem;
+  }
+
+  .day-detail-modal-overlay--list {
+    padding-bottom: 1rem;
+  }
+
+  .day-detail-modal-overlay--form {
+    padding-bottom: 1rem;
+  }
+
+  .day-detail-modal-shell {
+    margin-left: 0;
+    margin-right: 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 2rem);
+    height: calc(100dvh - 2rem);
+  }
+
+  .day-detail-modal-shell--list {
+    height: calc(100dvh - 2rem);
+  }
+
+  .day-detail-modal-shell--form {
+    height: calc(100dvh - 2rem);
+  }
+
+  .day-detail-modal-header {
+    padding: 0.75rem 0.875rem;
+  }
+
+  .day-detail-modal-content {
+    padding: 0.625rem 0.875rem;
+  }
+
+  .day-detail-modal-footer {
+    padding-top: 0.625rem;
+    padding-left: 0.875rem;
+    padding-right: 0.875rem;
+  }
+}
+
+@media (min-width: 640px) {
+  .day-detail-modal-overlay {
+    padding: 0;
+  }
+
+  .day-detail-modal-shell {
+    max-height: 90vh;
+  }
+
+  .day-detail-modal-footer {
+    padding-bottom: 1rem;
+  }
+}
+</style>
