@@ -36,20 +36,19 @@ function handleNavClick(item: { path: string; icon: string; label: string }, eve
 
 <template>
   <footer
-      class="fixed bottom-0 left-0 right-0 border-t border-dp-border-secondary bg-dp-bg-footer z-50"
+      class="footer-shell fixed bottom-0 left-0 right-0 border-t border-dp-border-secondary bg-dp-bg-footer z-50"
       :style="{
-      paddingBottom: 'env(safe-area-inset-bottom)',
       paddingLeft: 'env(safe-area-inset-left)',
       paddingRight: 'env(safe-area-inset-right)'
     }"
   >
-    <nav class="max-w-lg mx-auto px-2 sm:px-4">
-      <ul class="flex justify-around py-1 sm:py-2">
+    <nav class="max-w-lg mx-auto px-2 pt-1 pb-0.5 sm:px-4 sm:pt-2 sm:pb-2">
+      <ul class="footer-nav-list flex justify-around gap-1">
         <li v-for="item in navItems" :key="item.path" class="flex-1">
           <router-link
               :to="item.path"
               @click="handleNavClick(item, $event)"
-              class="flex flex-col items-center px-2 sm:px-3 py-2 sm:py-3 text-xs sm:text-sm rounded-xl transition-colors min-h-[56px] sm:min-h-[64px]"
+              class="footer-nav-link flex flex-col items-center justify-center px-2 sm:px-3 py-1.5 sm:py-3 text-xs sm:text-sm rounded-xl transition-colors min-h-[48px] sm:min-h-[64px]"
               :class="isActive(item.path) ? 'footer-nav-active' : 'footer-nav-inactive'"
           >
             <svg
@@ -149,3 +148,23 @@ function handleNavClick(item: { path: string; icon: string; label: string }, eve
     </nav>
   </footer>
 </template>
+
+<style scoped>
+.footer-shell {
+  padding-bottom: max(0.375rem, calc(env(safe-area-inset-bottom) - 0.5rem));
+}
+
+.footer-nav-list {
+  padding-bottom: 0;
+}
+
+.footer-nav-link {
+  line-height: 1.1;
+}
+
+@media (min-width: 640px) {
+  .footer-shell {
+    padding-bottom: 0;
+  }
+}
+</style>
