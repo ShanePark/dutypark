@@ -166,7 +166,7 @@ function getDisplayTagMembers(schedule: Schedule) {
 
 function getCalendarTagLabel(name: string) {
   const chars = Array.from(name)
-  return chars.length > 3 ? `${chars.slice(0, 2).join('')}..` : name
+  return chars.length > 3 ? `${chars.slice(0, 2).join('')}…` : name
 }
 
 function handleScheduleClick(schedule: Schedule, event: Event) {
@@ -327,22 +327,26 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
 }
 
 .schedule-tag-with-avatar {
-  display: inline-grid;
-  grid-template-columns: 0.62rem minmax(0, 1fr);
-  width: 2.85rem;
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
   box-sizing: border-box;
   align-items: center;
   min-height: 1.05rem;
-  gap: 0.01rem;
-  padding-right: 0.06rem;
-  padding-left: 0.03rem;
+  gap: 0.08rem;
+  padding-right: 0.18rem;
+  padding-left: 0.08rem;
   font-size: 10px;
   line-height: 1.05;
 }
 
 .schedule-tag-label {
-  min-width: 0;
-  text-align: left;
+  display: block;
+  width: 3em;
+  min-width: 3em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
   white-space: nowrap;
   line-height: 1;
   letter-spacing: -0.03em;
@@ -356,13 +360,16 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
 
 @media (min-width: 640px) {
   .schedule-tag-with-avatar {
-    grid-template-columns: 1rem minmax(0, 1fr);
-    width: 4.8rem;
-    min-height: 1.6rem;
-    gap: 0.08rem;
-    padding-right: 0.3rem;
-    padding-left: 0.08rem;
+    min-height: 1.5rem;
+    gap: 0.16rem;
+    padding-right: 0.34rem;
+    padding-left: 0.12rem;
     font-size: 14px;
+  }
+
+  .schedule-tag-label {
+    width: 3em;
+    min-width: 3em;
   }
 
   :deep(.schedule-tag-avatar.profile-avatar) {
