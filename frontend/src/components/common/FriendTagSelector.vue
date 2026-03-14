@@ -419,6 +419,35 @@ function getSubtitle(friend: TaggableFriend) {
   background-color: var(--dp-accent-bg-hover) !important;
 }
 
+@media (max-width: 639px) {
+  .friend-tag-selector {
+    padding: 0.625rem;
+    gap: 0.5rem;
+  }
+
+  .friend-tag-selector__list {
+    --friend-tag-row-height: 48px;
+    max-height: calc((var(--friend-tag-row-height) * 3) + 2px);
+  }
+
+  .friend-tag-selector__search-input--compact {
+    min-height: 2.75rem;
+  }
+
+  .friend-tag-selector__item {
+    padding: 0.375rem 0.5rem;
+  }
+
+  .friend-tag-selector__avatar {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .friend-tag-selector__scroll-hint {
+    padding: 1rem 0 0.25rem;
+  }
+}
+
 .friend-tag-selector__search {
   position: relative;
 }

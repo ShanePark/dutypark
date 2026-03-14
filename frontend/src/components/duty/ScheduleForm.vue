@@ -85,9 +85,9 @@ defineExpose({
 </script>
 
 <template>
-  <div class="space-y-1.5 sm:space-y-3">
+  <div class="schedule-form space-y-1.5 sm:space-y-3">
     <div class="flex items-center gap-2">
-      <label class="text-sm flex-shrink-0 w-16 text-dp-text-secondary">
+      <label class="schedule-form__label text-sm flex-shrink-0 w-16 text-dp-text-secondary">
         제목 <span class="text-dp-danger">*</span>
       </label>
       <div class="flex-1 min-w-0 relative">
@@ -95,7 +95,7 @@ defineExpose({
           v-model="form.content"
           type="text"
           maxlength="50"
-          class="w-full px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
+          class="schedule-form__input w-full px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
           placeholder="일정 제목을 입력하세요"
         />
         <div class="absolute right-2 top-1/2 -translate-y-1/2">
@@ -107,44 +107,44 @@ defineExpose({
     <div class="space-y-1.5 sm:space-y-2">
       <!-- Create mode: time only (date is already selected from calendar) -->
       <div v-if="!isEditMode" class="flex items-center gap-2">
-        <label class="text-sm flex-shrink-0 w-16 text-dp-text-secondary">시작 시간</label>
+        <label class="schedule-form__label text-sm flex-shrink-0 w-16 text-dp-text-secondary">시작 시간</label>
         <input
           v-model="startTime"
           type="time"
-          class="flex-1 min-w-0 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
+          class="schedule-form__input flex-1 min-w-0 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
         />
       </div>
       <!-- Edit mode: full datetime (allow changing date) -->
       <div v-else class="flex items-center gap-2">
-        <label class="text-sm flex-shrink-0 w-16 text-dp-text-secondary">시작 일시</label>
+        <label class="schedule-form__label text-sm flex-shrink-0 w-16 text-dp-text-secondary">시작 일시</label>
         <input
           v-model="form.startDateTime"
           type="datetime-local"
-          class="flex-1 min-w-0 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
+          class="schedule-form__input flex-1 min-w-0 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
         />
       </div>
       <div class="flex items-center gap-2">
-        <label class="text-sm flex-shrink-0 w-16 text-dp-text-secondary">종료 일시</label>
+        <label class="schedule-form__label text-sm flex-shrink-0 w-16 text-dp-text-secondary">종료 일시</label>
         <input
           v-model="form.endDateTime"
           type="datetime-local"
-          class="flex-1 min-w-0 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
+          class="schedule-form__input flex-1 min-w-0 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
         />
       </div>
     </div>
 
     <div class="flex items-start gap-2">
-      <label class="text-sm flex-shrink-0 w-16 pt-2 text-dp-text-secondary">설명</label>
+      <label class="schedule-form__label schedule-form__label--top text-sm flex-shrink-0 w-16 pt-2 text-dp-text-secondary">설명</label>
       <textarea
         v-model="form.description"
         rows="2"
-        class="flex-1 min-w-0 px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
+        class="schedule-form__input schedule-form__textarea flex-1 min-w-0 px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
         placeholder="설명"
       ></textarea>
     </div>
 
     <div class="flex items-start gap-2">
-      <label class="text-sm flex-shrink-0 w-16 pt-2 text-dp-text-secondary">공개 범위</label>
+      <label class="schedule-form__label schedule-form__label--top text-sm flex-shrink-0 w-16 pt-2 text-dp-text-secondary">공개 범위</label>
       <div class="flex-1 min-w-0 grid grid-cols-4 gap-1 sm:gap-2">
         <button
           v-for="option in visibilityOptions"
@@ -187,9 +187,9 @@ defineExpose({
 
     <!-- Attachment Upload Area -->
     <div class="flex items-start gap-2">
-      <label class="text-sm flex-shrink-0 w-16 pt-2 text-dp-text-secondary">첨부파일</label>
+      <label class="schedule-form__label schedule-form__label--top text-sm flex-shrink-0 w-16 pt-2 text-dp-text-secondary">첨부파일</label>
       <FileUploader
-        class="flex-1 min-w-0"
+        class="schedule-form__file-uploader flex-1 min-w-0"
         ref="fileUploaderRef"
         context-type="SCHEDULE"
         :existing-attachments="editAttachments"
@@ -200,7 +200,7 @@ defineExpose({
     </div>
 
     <div v-if="canTagFriends" class="flex items-start gap-2">
-      <label class="text-sm flex-shrink-0 w-16 pt-2 text-dp-text-secondary">친구 태그</label>
+      <label class="schedule-form__label schedule-form__label--top text-sm flex-shrink-0 w-16 pt-2 text-dp-text-secondary">친구 태그</label>
       <div class="flex-1 min-w-0">
         <FriendTagSelector
           v-model="form.tagFriendIds"
@@ -230,5 +230,60 @@ defineExpose({
   border-color: var(--dp-accent-border);
   background-color: var(--dp-bg-secondary);
   opacity: 0.92;
+}
+
+@media (max-width: 639px) {
+  .schedule-form {
+    gap: 0.5rem;
+  }
+
+  .schedule-form__label {
+    width: 3.5rem;
+    font-size: 0.8125rem;
+    line-height: 1.15rem;
+  }
+
+  .schedule-form__label--top {
+    padding-top: 0.625rem;
+  }
+
+  .schedule-form__input {
+    min-height: 2.75rem;
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
+    font-size: 0.9375rem;
+  }
+
+  .schedule-form__textarea {
+    min-height: 4.5rem;
+  }
+
+  .visibility-card {
+    min-height: 3.75rem;
+    gap: 0.375rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .visibility-card :deep(svg) {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+
+  .schedule-form__file-uploader :deep(.file-uploader) {
+    gap: 0.5rem;
+  }
+
+  .schedule-form__file-uploader :deep(.drop-zone) {
+    padding: 0.5rem 0.875rem;
+  }
+
+  .schedule-form__file-uploader :deep(.attachment-list) {
+    gap: 0.375rem;
+  }
+
+  .schedule-form__file-uploader :deep(.attachment-item) {
+    padding: 0.375rem 0.5rem;
+  }
 }
 </style>
