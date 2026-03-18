@@ -3,14 +3,15 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import Sortable from 'sortablejs'
 import { HelpCircle, X, ListTodo, Clock, CheckCircle2, Lightbulb, LayoutGrid, Plus } from 'lucide-vue-next'
 import { todoApi } from '@/api/todo'
+import { friendApi } from '@/api/member'
 import { useSwal } from '@/composables/useSwal'
 import KanbanColumn from '@/components/todo/KanbanColumn.vue'
 import KanbanCard from '@/components/todo/KanbanCard.vue'
 import TodoAddModal from '@/components/duty/TodoAddModal.vue'
 import TodoDetailModal from '@/components/duty/TodoDetailModal.vue'
-import type { Todo, TodoBoard, TodoStatus } from '@/types'
+import type { TaggableFriend, Todo, TodoBoard, TodoStatus } from '@/types'
 
-const { showSuccess, showError, confirmDelete } = useSwal()
+const { showSuccess, showError, confirm, confirmDelete } = useSwal()
 
 const isHelpModalOpen = ref(false)
 
@@ -23,6 +24,7 @@ const isDetailModalOpen = ref(false)
 const selectedTodo = ref<Todo | null>(null)
 const startInEditMode = ref(false)
 const activeStatus = ref<TodoStatus>('IN_PROGRESS')
+const friends = ref<TaggableFriend[]>([])
 let scrollRafId: number | null = null
 
 // Sortable instances for each column
@@ -89,7 +91,7 @@ function initSortables() {
     sortableInstances[refName] = Sortable.create(el, {
       group: 'kanban',
       animation: 200,
-      draggable: '.kanban-card-wrapper',
+      draggable: '.kanban-card-wrapper[data-is-tagged="false"]',
       ghostClass: 'kanban-ghost',
       chosenClass: 'kanban-chosen',
       dragClass: 'kanban-drag',
@@ -126,7 +128,7 @@ async function handleDragEnd(evt: Sortable.SortableEvent) {
 
   if (fromColumn === toColumn) {
     // Within-column reordering
-    const columnItems = evt.to.querySelectorAll('[data-id]')
+    const columnItems = evt.to.querySelectorAll('[data-id][data-is-tagged="false"]')
     const orderedIds: string[] = []
     columnItems.forEach((item) => {
       const id = item.getAttribute('data-id')
@@ -147,7 +149,7 @@ async function handleDragEnd(evt: Sortable.SortableEvent) {
   } else {
     // Cross-column move (status change)
     // Extract full order from DOM after SortableJS has moved the item
-    const columnItems = evt.to.querySelectorAll('[data-id]')
+    const columnItems = evt.to.querySelectorAll('[data-id][data-is-tagged="false"]')
     const orderedIds: string[] = []
     columnItems.forEach((item) => {
       const id = item.getAttribute('data-id')
@@ -245,6 +247,7 @@ async function handleAddTodo(data: {
   content: string
   status: TodoStatus
   dueDate?: string
+  tagFriendIds?: number[]
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }) {
@@ -254,6 +257,7 @@ async function handleAddTodo(data: {
       content: data.content,
       status: data.status,
       dueDate: data.dueDate,
+      tagFriendIds: data.tagFriendIds,
       attachmentSessionId: data.attachmentSessionId,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
@@ -272,6 +276,7 @@ async function handleUpdateTodo(data: {
   content: string
   status: TodoStatus
   dueDate?: string | null
+  tagFriendIds?: number[]
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }) {
@@ -281,6 +286,7 @@ async function handleUpdateTodo(data: {
       content: data.content,
       status: data.status,
       dueDate: data.dueDate,
+      tagFriendIds: data.tagFriendIds,
       attachmentSessionId: data.attachmentSessionId,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
@@ -339,12 +345,37 @@ async function handleDeleteTodo(id: string) {
   }
 }
 
+async function handleUntagSelf(id: string) {
+  const confirmed = await confirm('이 TODO 태그를 제거하시겠습니까?', '태그 제거')
+  if (!confirmed) return
+
+  try {
+    await todoApi.untagSelf(id)
+    showSuccess('TODO 태그가 제거되었습니다.')
+    closeDetailModal()
+    await loadBoard()
+  } catch (error) {
+    console.error('Failed to untag self:', error)
+    showError('태그 제거에 실패했습니다.')
+  }
+}
+
+async function loadFriends() {
+  try {
+    const response = await friendApi.getFriends()
+    friends.value = response.data
+  } catch (error) {
+    console.error('Failed to load friends:', error)
+  }
+}
+
 function handleBackToList() {
   closeDetailModal()
 }
 
 onMounted(() => {
   loadBoard()
+  loadFriends()
 })
 
 onBeforeUnmount(() => {
@@ -413,6 +444,7 @@ onBeforeUnmount(() => {
               v-for="todo in todoList"
               :key="todo.id"
               :data-id="todo.id"
+              :data-is-tagged="todo.isTagged"
               class="kanban-card-wrapper"
             >
               <KanbanCard :todo="todo" @click="openDetailModal(todo)" />
@@ -435,6 +467,7 @@ onBeforeUnmount(() => {
               v-for="todo in inProgressList"
               :key="todo.id"
               :data-id="todo.id"
+              :data-is-tagged="todo.isTagged"
               class="kanban-card-wrapper"
             >
               <KanbanCard :todo="todo" @click="openDetailModal(todo)" />
@@ -457,6 +490,7 @@ onBeforeUnmount(() => {
               v-for="todo in doneList"
               :key="todo.id"
               :data-id="todo.id"
+              :data-is-tagged="todo.isTagged"
               class="kanban-card-wrapper"
             >
               <KanbanCard :todo="todo" @click="openDetailModal(todo)" />
@@ -478,6 +512,7 @@ onBeforeUnmount(() => {
     <TodoAddModal
       :is-open="isAddModalOpen"
       :initial-status="addModalInitialStatus"
+      :friends="friends"
       @close="isAddModalOpen = false"
       @save="handleAddTodo"
     />
@@ -485,12 +520,14 @@ onBeforeUnmount(() => {
     <TodoDetailModal
       :is-open="isDetailModalOpen"
       :todo="selectedTodo"
+      :friends="friends"
       :start-in-edit-mode="startInEditMode"
       @close="closeDetailModal"
       @update="handleUpdateTodo"
       @complete="handleCompleteTodo"
       @reopen="handleReopenTodo"
       @delete="handleDeleteTodo"
+      @untag-self="handleUntagSelf"
       @back-to-list="handleBackToList"
     />
 

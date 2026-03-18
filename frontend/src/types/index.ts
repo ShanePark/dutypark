@@ -130,9 +130,22 @@ export interface Todo {
   completedDate: string | null
   dueDate: string | null
   isOverdue: boolean
+  isTagged: boolean
+  owner: string
+  taggedByMember?: TodoTagMember | null
+  tags: TodoTagMember[]
   // Frontend-only computed fields (for backward compatibility with existing components)
   hasAttachments?: boolean
   attachments?: Attachment[]
+}
+
+export interface TodoTagMember {
+  id: number | null
+  name: string
+  teamId?: number | null
+  team?: string | null
+  hasProfilePhoto?: boolean
+  profilePhotoVersion?: number
 }
 
 export type TodoStatus = 'TODO' | 'IN_PROGRESS' | 'DONE'
@@ -158,6 +171,7 @@ export interface TodoCreateRequest {
   content?: string
   status?: TodoStatus
   dueDate?: string
+  tagFriendIds?: number[]
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }
@@ -167,6 +181,7 @@ export interface TodoUpdateRequest {
   content: string
   status?: TodoStatus
   dueDate?: string | null
+  tagFriendIds?: number[]
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }
@@ -598,8 +613,9 @@ export type NotificationType =
   | 'FAMILY_REQUEST_RECEIVED'
   | 'FAMILY_REQUEST_ACCEPTED'
   | 'SCHEDULE_TAGGED'
+  | 'TODO_TAGGED'
 
-export type NotificationReferenceType = 'FRIEND_REQUEST' | 'SCHEDULE' | 'MEMBER'
+export type NotificationReferenceType = 'FRIEND_REQUEST' | 'SCHEDULE' | 'TODO' | 'MEMBER'
 
 export interface NotificationDto {
   id: string

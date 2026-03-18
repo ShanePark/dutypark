@@ -18,6 +18,7 @@ export function useNotificationNavigation() {
     const typeRoutes: Record<NotificationReferenceType, string | null> = {
       FRIEND_REQUEST: '/friends',
       SCHEDULE: null,
+      TODO: '/todo',
       MEMBER: referenceId ? `/duty/${referenceId}` : null,
     }
 

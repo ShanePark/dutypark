@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Paperclip, CalendarCheck } from 'lucide-vue-next'
+import MemberTagChips from '@/components/common/MemberTagChips.vue'
+import { toDisplayTagMember } from '@/utils/tagMembers'
 import type { Todo } from '@/types'
 
 interface Props {
@@ -20,6 +22,38 @@ const formattedDueDate = computed(() => {
   const month = date.getMonth() + 1
   const day = date.getDate()
   return `${year}/${month}/${day}`
+})
+
+const ownerTagMembers = computed(() => {
+  if (!props.todo.isTagged) return []
+
+  if (props.todo.taggedByMember?.name) {
+    return [
+      toDisplayTagMember(
+        props.todo.taggedByMember,
+        `kanban-owner-${props.todo.taggedByMember.id ?? props.todo.id}`
+      ),
+    ]
+  }
+
+  if (!props.todo.owner) {
+    return []
+  }
+
+  return [{
+    key: `kanban-owner-${props.todo.id}`,
+    id: null,
+    name: props.todo.owner,
+    hasProfilePhoto: false,
+    profilePhotoVersion: 0,
+  }]
+})
+
+const visibleTags = computed(() => {
+  if (props.todo.isTagged) return []
+  return props.todo.tags
+    .filter((tag) => tag.name)
+    .map((tag, index) => toDisplayTagMember(tag, `kanban-tag-${tag.id ?? `${props.todo.id}-${index}`}`))
 })
 </script>
 
@@ -41,6 +75,19 @@ const formattedDueDate = computed(() => {
     >
       {{ todo.content }}
     </p>
+    <div v-if="ownerTagMembers.length > 0 || visibleTags.length > 0" class="kanban-card-tags">
+      <MemberTagChips
+        v-if="ownerTagMembers.length > 0"
+        :members="ownerTagMembers"
+        density="compact"
+      />
+      <MemberTagChips
+        v-else
+        :members="visibleTags"
+        density="compact"
+        :max-visible="2"
+      />
+    </div>
     <div
       v-if="formattedDueDate"
       class="kanban-card-due-date"
@@ -104,6 +151,10 @@ const formattedDueDate = computed(() => {
   -webkit-box-orient: vertical;
   overflow: hidden;
   word-break: break-word;
+}
+
+.kanban-card-tags {
+  margin-top: 0.5rem;
 }
 
 .kanban-card-due-date {

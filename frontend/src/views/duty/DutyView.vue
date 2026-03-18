@@ -36,7 +36,7 @@ import { useAuthStore } from '@/stores/auth'
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const { showError, confirmDelete, toastSuccess } = useSwal()
+const { showError, confirm, confirmDelete, toastSuccess } = useSwal()
 
 // State
 const today = new Date()
@@ -194,7 +194,22 @@ function handleTodoBubbleClick(todo: LocalTodo | { id: string }) {
 }
 
 // Convert API Todo to LocalTodo
-function mapToLocalTodo(apiTodo: { id: string; title: string; content: string; position: number | null; status: 'TODO' | 'IN_PROGRESS' | 'DONE'; createdDate: string; completedDate: string | null; dueDate?: string | null; isOverdue?: boolean }): LocalTodo {
+function mapToLocalTodo(apiTodo: {
+  id: string
+  title: string
+  content: string
+  position: number | null
+  status: 'TODO' | 'IN_PROGRESS' | 'DONE'
+  createdDate: string
+  completedDate: string | null
+  dueDate?: string | null
+  isOverdue?: boolean
+  hasAttachments?: boolean
+  isTagged: boolean
+  owner: string
+  taggedByMember?: { id: number | null; name: string; teamId?: number | null; team?: string | null; hasProfilePhoto?: boolean; profilePhotoVersion?: number } | null
+  tags: Array<{ id: number | null; name: string; teamId?: number | null; team?: string | null; hasProfilePhoto?: boolean; profilePhotoVersion?: number }>
+}): LocalTodo {
   return {
     id: apiTodo.id,
     title: apiTodo.title,
@@ -204,7 +219,11 @@ function mapToLocalTodo(apiTodo: { id: string; title: string; content: string; p
     completedDate: apiTodo.completedDate ?? undefined,
     dueDate: apiTodo.dueDate ?? undefined,
     isOverdue: apiTodo.isOverdue ?? false,
-    hasAttachments: false,
+    isTagged: apiTodo.isTagged,
+    owner: apiTodo.owner,
+    taggedByMember: apiTodo.taggedByMember ?? null,
+    tags: apiTodo.tags,
+    hasAttachments: apiTodo.hasAttachments ?? false,
     attachments: [],
   }
 }
@@ -971,6 +990,7 @@ async function handleTodoUpdate(data: {
   content: string
   status: TodoStatus
   dueDate?: string | null
+  tagFriendIds?: number[]
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }) {
@@ -980,6 +1000,7 @@ async function handleTodoUpdate(data: {
       content: data.content,
       status: data.status,
       dueDate: data.dueDate,
+      tagFriendIds: data.tagFriendIds,
       attachmentSessionId: data.attachmentSessionId,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
@@ -1064,6 +1085,8 @@ async function handleTodoAdd(data: {
   title: string
   content: string
   status: TodoStatus
+  dueDate?: string
+  tagFriendIds?: number[]
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }) {
@@ -1072,6 +1095,8 @@ async function handleTodoAdd(data: {
       title: data.title,
       content: data.content,
       status: data.status,
+      dueDate: data.dueDate,
+      tagFriendIds: data.tagFriendIds,
       attachmentSessionId: data.attachmentSessionId,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
@@ -1091,6 +1116,21 @@ async function handleTodoAdd(data: {
   if (isTodoAddFromOverview.value) {
     isTodoOverviewModalOpen.value = true
     isTodoAddFromOverview.value = false
+  }
+}
+
+async function handleTodoUntagSelf(id: string) {
+  if (!await confirm('이 TODO 태그를 제거하시겠습니까?', '태그 제거')) return
+
+  try {
+    await todoApi.untagSelf(id)
+    todos.value = todos.value.filter((todo) => todo.id !== id)
+    completedTodos.value = completedTodos.value.filter((todo) => todo.id !== id)
+    isTodoDetailModalOpen.value = false
+    toastSuccess('TODO 태그를 제거했습니다.')
+  } catch (error) {
+    console.error('Failed to untag todo:', error)
+    showError('태그 제거에 실패했습니다.')
   }
 }
 
@@ -1582,6 +1622,7 @@ async function showExcelUploadModal() {
     <TodoAddModal
       :is-open="isTodoAddModalOpen"
       initial-status="IN_PROGRESS"
+      :friends="friends"
       @close="isTodoAddModalOpen = false; if (isTodoAddFromOverview) { isTodoOverviewModalOpen = true; isTodoAddFromOverview = false; }"
       @save="handleTodoAdd"
     />
@@ -1589,12 +1630,14 @@ async function showExcelUploadModal() {
     <TodoDetailModal
       :is-open="isTodoDetailModalOpen"
       :todo="selectedTodo"
+      :friends="friends"
       :start-in-edit-mode="startTodoEditMode"
       @close="isTodoDetailModalOpen = false; startTodoEditMode = false"
       @update="handleTodoUpdate"
       @complete="handleTodoComplete"
       @reopen="handleTodoReopen"
       @delete="handleTodoDelete"
+      @untag-self="handleTodoUntagSelf"
       @back-to-list="isTodoDetailModalOpen = false; startTodoEditMode = false; isTodoOverviewModalOpen = true"
     />
 

@@ -88,10 +88,10 @@ class NotificationControllerTest : RestDocsTest() {
                     "notifications/get-unread",
                     responseFields(
                         fieldWithPath("[].id").description("Notification ID (UUID)"),
-                        fieldWithPath("[].type").description("Notification type (FRIEND_REQUEST_RECEIVED, FRIEND_REQUEST_ACCEPTED, FAMILY_REQUEST_RECEIVED, FAMILY_REQUEST_ACCEPTED, SCHEDULE_TAGGED)"),
+                        fieldWithPath("[].type").description("Notification type (FRIEND_REQUEST_RECEIVED, FRIEND_REQUEST_ACCEPTED, FAMILY_REQUEST_RECEIVED, FAMILY_REQUEST_ACCEPTED, SCHEDULE_TAGGED, TODO_TAGGED)"),
                         fieldWithPath("[].title").description("Notification title"),
                         fieldWithPath("[].content").description("Notification content (nullable)"),
-                        fieldWithPath("[].referenceType").description("Reference entity type (FRIEND_REQUEST, SCHEDULE, MEMBER) (nullable)"),
+                        fieldWithPath("[].referenceType").description("Reference entity type (FRIEND_REQUEST, SCHEDULE, TODO, MEMBER) (nullable)"),
                         fieldWithPath("[].referenceId").description("Reference entity ID (nullable)"),
                         fieldWithPath("[].actorId").description("Actor member ID who triggered the notification (nullable)"),
                         fieldWithPath("[].actorName").description("Actor member name (nullable)"),

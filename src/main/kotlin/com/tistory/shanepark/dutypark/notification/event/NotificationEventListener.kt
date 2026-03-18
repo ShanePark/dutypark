@@ -120,6 +120,25 @@ class NotificationEventListener(
         }
     }
 
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Async("notificationExecutor")
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    fun handleTodoTagged(event: TodoTaggedEvent) {
+        try {
+            val notification = notificationService.createNotification(
+                memberId = event.taggedMemberId,
+                type = NotificationType.TODO_TAGGED,
+                actorId = event.ownerId,
+                referenceType = NotificationReferenceType.TODO,
+                referenceId = event.todoId.toString(),
+                content = event.todoTitle
+            )
+            sendPushNotification(notification)
+        } catch (e: Exception) {
+            log.error("Failed to create todo tagged notification: {}", e.message, e)
+        }
+    }
+
     private fun sendPushNotification(notification: Notification) {
         val memberId = notification.member.id!!
         val unreadCount = notificationRepository.countByMemberIdAndIsReadFalse(memberId).toInt()
@@ -145,6 +164,7 @@ class NotificationEventListener(
         return when (notification.referenceType) {
             NotificationReferenceType.FRIEND_REQUEST -> "/friends"
             NotificationReferenceType.SCHEDULE -> "/duty/${notification.member.id}"
+            NotificationReferenceType.TODO -> "/todo"
             NotificationReferenceType.MEMBER -> "/duty/${notification.referenceId}"
             else -> "/"
         }

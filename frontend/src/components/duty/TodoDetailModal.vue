@@ -15,25 +15,17 @@ import {
 import FileUploader from '@/components/common/FileUploader.vue'
 import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
+import FriendTagSelector from '@/components/common/FriendTagSelector.vue'
+import MemberTagChips from '@/components/common/MemberTagChips.vue'
 import { attachmentApi } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEscapeKey } from '@/composables/useEscapeKey'
 import { formatDateKorean } from '@/utils/date'
-import type { NormalizedAttachment, TodoStatus } from '@/types'
+import { toDisplayTagMember } from '@/utils/tagMembers'
+import type { NormalizedAttachment, TaggableFriend, Todo as TodoDto, TodoStatus } from '@/types'
 
 const { showWarning, showError } = useSwal()
-
-interface Todo {
-  id: string
-  title: string
-  content: string
-  status: 'TODO' | 'IN_PROGRESS' | 'DONE'
-  createdDate: string
-  completedDate?: string | null
-  dueDate?: string | null
-  isOverdue?: boolean
-}
 
 // Helper functions for status compatibility
 function isActiveTodo(status: string): boolean {
@@ -59,12 +51,14 @@ function getStatusLabel(status: string): string {
 
 interface Props {
   isOpen: boolean
-  todo: Todo | null
+  todo: TodoDto | null
+  friends?: TaggableFriend[]
   startInEditMode?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   startInEditMode: false,
+  friends: () => [],
 })
 
 useBodyScrollLock(toRef(props, 'isOpen'))
@@ -77,12 +71,14 @@ const emit = defineEmits<{
     content: string
     status: TodoStatus
     dueDate?: string | null
+    tagFriendIds?: number[]
     attachmentSessionId?: string
     orderedAttachmentIds?: string[]
   }): void
   (e: 'complete', id: string): void
   (e: 'reopen', id: string): void
   (e: 'delete', id: string): void
+  (e: 'untagSelf', id: string): void
   (e: 'backToList'): void
 }>()
 
@@ -93,6 +89,7 @@ const editTitle = ref('')
 const editContent = ref('')
 const editStatus = ref<TodoStatus>('TODO')
 const editDueDate = ref('')
+const editTagFriendIds = ref<number[]>([])
 const editAttachments = ref<NormalizedAttachment[]>([])
 const sessionId = ref<string | null>(null)
 const isUploading = ref(false)
@@ -106,6 +103,13 @@ const statusOptions: Array<{ value: TodoStatus; label: string; icon: typeof List
   { value: 'DONE', label: '완료', icon: CheckCircle2, colorClass: 'status-card-done' },
 ]
 
+const selectedTagSummaries = computed(() => {
+  return editTagFriendIds.value.flatMap((id) => {
+    const friend = props.friends.find((candidate) => candidate.id === id)
+    return friend ? [{ id: friend.id, name: friend.name }] : []
+  })
+})
+
 watch(
   () => props.isOpen,
   async (open) => {
@@ -114,6 +118,7 @@ watch(
       editContent.value = props.todo.content
       editStatus.value = props.todo.status
       editDueDate.value = props.todo.dueDate || ''
+      editTagFriendIds.value = props.todo.tags.flatMap((tag) => tag.id == null ? [] : [tag.id])
       sessionId.value = null
       isUploading.value = false
 
@@ -121,7 +126,7 @@ watch(
       await loadAttachments()
 
       // Start in edit mode if requested
-      if (props.startInEditMode) {
+      if (props.startInEditMode && !props.todo.isTagged) {
         isEditMode.value = true
       } else {
         isEditMode.value = false
@@ -140,6 +145,7 @@ watch(
       editContent.value = newTodo.content
       editStatus.value = newTodo.status
       editDueDate.value = newTodo.dueDate || ''
+      editTagFriendIds.value = newTodo.tags.flatMap((tag) => tag.id == null ? [] : [tag.id])
       await loadAttachments()
     }
   },
@@ -163,15 +169,50 @@ async function loadAttachments() {
 }
 
 const isActive = computed(() => props.todo ? isActiveTodo(props.todo.status) : false)
+const isTaggedTodo = computed(() => props.todo?.isTagged ?? false)
+
+const taggedOwnerMembers = computed(() => {
+  if (!props.todo?.isTagged) return []
+
+  if (props.todo.taggedByMember?.name) {
+    return [
+      toDisplayTagMember(
+        props.todo.taggedByMember,
+        `todo-owner-${props.todo.taggedByMember.id ?? props.todo.id}`
+      ),
+    ]
+  }
+
+  if (!props.todo.owner) {
+    return []
+  }
+
+  return [{
+    key: `todo-owner-${props.todo.id}`,
+    id: null,
+    name: props.todo.owner,
+    hasProfilePhoto: false,
+    profilePhotoVersion: 0,
+  }]
+})
+
+const todoTagMembers = computed(() => {
+  if (!props.todo) return []
+
+  return props.todo.tags
+    .filter((tag) => tag.name)
+    .map((tag, index) => toDisplayTagMember(tag, `todo-tag-${tag.id ?? `${props.todo.id}-${index}`}`))
+})
 
 
 function enterEditMode() {
-  if (!props.todo) return
+  if (!props.todo || props.todo.isTagged) return
   isEditMode.value = true
   editTitle.value = props.todo.title
   editContent.value = props.todo.content
   editStatus.value = props.todo.status
   editDueDate.value = props.todo.dueDate || ''
+  editTagFriendIds.value = props.todo.tags.flatMap((tag) => tag.id == null ? [] : [tag.id])
   editAttachments.value = [...viewAttachments.value]
   sessionId.value = null
   isUploading.value = false
@@ -188,6 +229,7 @@ function cancelEdit() {
     editContent.value = props.todo.content
     editStatus.value = props.todo.status
     editDueDate.value = props.todo.dueDate || ''
+    editTagFriendIds.value = props.todo.tags.flatMap((tag) => tag.id == null ? [] : [tag.id])
     editAttachments.value = [...viewAttachments.value]
   }
   sessionId.value = null
@@ -209,6 +251,7 @@ function saveEdit() {
     content: editContent.value.trim(),
     status: editStatus.value,
     dueDate: editDueDate.value || null,
+    tagFriendIds: [...editTagFriendIds.value],
     attachmentSessionId: sessionId.value || undefined,
     orderedAttachmentIds: orderedAttachmentIds,
   })
@@ -305,6 +348,19 @@ function onUploadError(message: string) {
                 </span>
               </div>
 
+              <div v-if="taggedOwnerMembers.length > 0" class="space-y-2">
+                <div class="text-xs font-semibold text-dp-text-muted">소유자</div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <MemberTagChips :members="taggedOwnerMembers" density="compact" />
+                  <span class="text-xs text-dp-text-muted">태그된 TODO</span>
+                </div>
+              </div>
+
+              <div v-else-if="todoTagMembers.length > 0" class="space-y-2">
+                <div class="text-xs font-semibold text-dp-text-muted">태그된 친구</div>
+                <MemberTagChips :members="todoTagMembers" density="compact" />
+              </div>
+
               <div v-if="todo.content">
                 <p class="whitespace-pre-wrap break-all text-dp-text-primary">{{ todo.content }}</p>
               </div>
@@ -376,6 +432,15 @@ function onUploadError(message: string) {
                 />
               </div>
 
+              <div v-if="props.friends.length > 0">
+                <label class="block text-sm font-medium mb-2 text-dp-text-secondary">친구 태그</label>
+                <FriendTagSelector
+                  v-model="editTagFriendIds"
+                  :friends="props.friends"
+                  :selected-summaries="selectedTagSummaries"
+                />
+              </div>
+
               <!-- Attachments (Edit Mode) -->
               <div>
                 <label class="block text-sm font-medium mb-1 text-dp-text-secondary">첨부파일</label>
@@ -413,35 +478,45 @@ function onUploadError(message: string) {
               <!-- Right: Action buttons -->
               <div class="flex gap-2">
                 <button
-                  @click="enterEditMode"
-                  class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-accent-border text-dp-accent rounded-lg hover:bg-dp-accent-soft transition cursor-pointer"
+                  v-if="isTaggedTodo"
+                  @click="emit('untagSelf', todo.id)"
+                  class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-warning-border text-dp-warning rounded-lg hover:bg-dp-warning-soft transition cursor-pointer"
                 >
-                  <Pencil class="w-4 h-4" />
-                  <span class="hidden sm:inline">수정</span>
+                  <X class="w-4 h-4" />
+                  <span class="hidden sm:inline">태그 제거</span>
                 </button>
-                <button
-                  @click="emit('delete', todo.id)"
-                  class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-danger-border text-dp-danger rounded-lg hover:bg-dp-danger-soft transition cursor-pointer"
-                >
-                  <Trash2 class="w-4 h-4" />
-                  <span class="hidden sm:inline">삭제</span>
-                </button>
-                <button
-                  v-if="isActive"
-                  @click="emit('complete', todo.id)"
-                  class="flex items-center justify-center gap-1 px-3 py-2 bg-dp-success text-dp-text-on-dark rounded-lg hover:bg-dp-success-hover transition cursor-pointer"
-                >
-                  <Check class="w-4 h-4" />
-                  <span class="hidden sm:inline">완료</span>
-                </button>
-                <button
-                  v-else
-                  @click="emit('reopen', todo.id)"
-                  class="flex items-center justify-center gap-1 px-3 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
-                >
-                  <RotateCcw class="w-4 h-4" />
-                  <span class="hidden sm:inline">재오픈</span>
-                </button>
+                <template v-else>
+                  <button
+                    @click="enterEditMode"
+                    class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-accent-border text-dp-accent rounded-lg hover:bg-dp-accent-soft transition cursor-pointer"
+                  >
+                    <Pencil class="w-4 h-4" />
+                    <span class="hidden sm:inline">수정</span>
+                  </button>
+                  <button
+                    @click="emit('delete', todo.id)"
+                    class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-danger-border text-dp-danger rounded-lg hover:bg-dp-danger-soft transition cursor-pointer"
+                  >
+                    <Trash2 class="w-4 h-4" />
+                    <span class="hidden sm:inline">삭제</span>
+                  </button>
+                  <button
+                    v-if="isActive"
+                    @click="emit('complete', todo.id)"
+                    class="flex items-center justify-center gap-1 px-3 py-2 bg-dp-success text-dp-text-on-dark rounded-lg hover:bg-dp-success-hover transition cursor-pointer"
+                  >
+                    <Check class="w-4 h-4" />
+                    <span class="hidden sm:inline">완료</span>
+                  </button>
+                  <button
+                    v-else
+                    @click="emit('reopen', todo.id)"
+                    class="flex items-center justify-center gap-1 px-3 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
+                  >
+                    <RotateCcw class="w-4 h-4" />
+                    <span class="hidden sm:inline">재오픈</span>
+                  </button>
+                </template>
               </div>
             </div>
           </template>

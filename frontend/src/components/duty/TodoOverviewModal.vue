@@ -28,6 +28,8 @@ interface Todo {
   status: 'TODO' | 'IN_PROGRESS' | 'DONE'
   createdDate: string
   completedDate?: string
+  isTagged: boolean
+  owner: string
   hasAttachments: boolean
   attachments: Array<{
     id: string
@@ -98,6 +100,10 @@ let isDragging = false
 // Check if sorting should be enabled (when active todos are shown)
 const isSortingEnabled = computed(() => filters.value.active)
 
+function isOwnedActive(todo: Todo): boolean {
+  return isActive(todo.status) && !todo.isTagged
+}
+
 function initSortable() {
   if (!todoListRef.value) return
 
@@ -110,7 +116,7 @@ function initSortable() {
   sortableInstance = Sortable.create(todoListRef.value, {
     animation: 200,
     handle: '.drag-handle',
-    draggable: '.todo-item-active',
+    draggable: '.todo-item-active:not(.todo-item-tagged)',
     ghostClass: 'sortable-ghost',
     chosenClass: 'sortable-chosen',
     dragClass: 'sortable-drag',
@@ -133,7 +139,7 @@ function initSortable() {
         const id = el.getAttribute('data-id')
         // Only include active todos (not completed)
         const todo = props.todos.find(t => t.id === id)
-        if (id && todo) {
+        if (id && todo && !todo.isTagged) {
           newOrderIds.push(id)
         }
       })
@@ -298,7 +304,8 @@ function handleTodoClick(todo: Todo) {
               class="rounded-lg overflow-hidden transition-all cursor-pointer group border"
               :class="{
                 'todo-item-completed opacity-60 border-dp-success-border': isDone(todo.status),
-                'hover:shadow-md hover:border-dp-accent-border todo-item-active': isActive(todo.status)
+                'hover:shadow-md hover:border-dp-accent-border todo-item-active': isActive(todo.status),
+                'todo-item-tagged': todo.isTagged
               }"
               :style="{
                 backgroundColor: 'var(--dp-bg-card)',
@@ -324,7 +331,7 @@ function handleTodoClick(todo: Todo) {
                   />
                   <!-- Active + sortable: drag handle -->
                   <div
-                    v-else-if="isSortingEnabled"
+                    v-else-if="isSortingEnabled && isOwnedActive(todo)"
                     class="drag-handle cursor-grab active:cursor-grabbing hover:text-dp-accent rounded p-1 transition-colors text-dp-text-muted"
                     @click.stop
                     title="드래그하여 순서 변경"
@@ -351,6 +358,9 @@ function handleTodoClick(todo: Todo) {
                         {{ todo.title }}
                       </h3>
                       <div class="flex items-center gap-2 mt-0.5 text-xs text-dp-text-muted">
+                        <span v-if="todo.isTagged" class="inline-flex items-center rounded-full border border-dp-accent-border bg-dp-accent-soft px-2 py-0.5 text-[11px] text-dp-text-primary">
+                          {{ todo.owner }}
+                        </span>
                         <span class="flex items-center gap-1">
                           <Calendar class="w-3 h-3" />
                           {{ extractDatePart(todo.createdDate) }}
@@ -367,7 +377,7 @@ function handleTodoClick(todo: Todo) {
                     <!-- Action buttons -->
                     <div class="flex items-center gap-0.5 flex-shrink-0" @click.stop>
                       <button
-                        v-if="isActive(todo.status)"
+                        v-if="isActive(todo.status) && !todo.isTagged"
                         @click="emit('complete', todo.id)"
                         class="p-1.5 text-dp-success hover:bg-dp-success/10 rounded-md transition cursor-pointer"
                         title="완료"
@@ -375,7 +385,7 @@ function handleTodoClick(todo: Todo) {
                         <Check class="w-4 h-4 sm:w-5 sm:h-5" />
                       </button>
                       <button
-                        v-else
+                        v-else-if="!todo.isTagged"
                         @click="emit('reopen', todo.id)"
                         class="p-1.5 text-dp-accent hover:bg-dp-accent/10 rounded-md transition cursor-pointer"
                         title="재오픈"
@@ -383,6 +393,7 @@ function handleTodoClick(todo: Todo) {
                         <RotateCcw class="w-4 h-4 sm:w-5 sm:h-5" />
                       </button>
                       <button
+                        v-if="!todo.isTagged"
                         @click="emit('edit', todo)"
                         class="p-1.5 text-dp-accent hover:bg-dp-accent/10 rounded-md transition cursor-pointer"
                         title="수정"
@@ -390,6 +401,7 @@ function handleTodoClick(todo: Todo) {
                         <Pencil class="w-4 h-4 sm:w-5 sm:h-5" />
                       </button>
                       <button
+                        v-if="!todo.isTagged"
                         @click="emit('delete', todo.id)"
                         class="p-1.5 text-dp-danger hover:bg-dp-danger/10 rounded-md transition cursor-pointer"
                         title="삭제"

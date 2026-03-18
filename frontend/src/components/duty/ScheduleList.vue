@@ -10,9 +10,10 @@ import {
   X,
 } from 'lucide-vue-next'
 import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
-import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
+import MemberTagChips from '@/components/common/MemberTagChips.vue'
 import type { NormalizedAttachment } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
+import { buildDisplayTagMembers } from '@/utils/tagMembers'
 import { getVisibilityIcon, getVisibilityLabel } from '@/utils/visibility'
 
 interface Schedule {
@@ -63,14 +64,6 @@ const emit = defineEmits<{
   (e: 'reorder', scheduleIds: string[]): void
   (e: 'request-untag', scheduleId: string): void
 }>()
-
-type DisplayTagMember = {
-  key: string
-  id?: number
-  name: string
-  hasProfilePhoto?: boolean
-  profilePhotoVersion?: number
-}
 
 const scheduleListRef = ref<HTMLElement | null>(null)
 const isDragging = ref(false)
@@ -183,36 +176,16 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
   )
 }
 
-function getVisibleTags(schedule: Schedule) {
-  return (schedule.tags ?? []).filter((tag) => tag.id !== props.memberId)
-}
-
 function getDisplayTagMembers(schedule: Schedule) {
-  const visibleTags: DisplayTagMember[] = getVisibleTags(schedule).map((tag) => ({
-    key: `tag-${tag.id}`,
-    id: tag.id,
-    name: tag.name,
-    hasProfilePhoto: tag.hasProfilePhoto,
-    profilePhotoVersion: tag.profilePhotoVersion,
-  }))
-
-  const taggedByMember = schedule.taggedByMember
-  if (schedule.isTagged && taggedByMember && !visibleTags.some((tag) => tag.id === taggedByMember.id)) {
-    visibleTags.unshift({
-      key: `tagged-by-${taggedByMember.id}`,
-      id: taggedByMember.id,
-      name: taggedByMember.name,
-      hasProfilePhoto: taggedByMember.hasProfilePhoto,
-      profilePhotoVersion: taggedByMember.profilePhotoVersion,
-    })
-  } else if (schedule.isTagged && !taggedByMember && (schedule.taggedBy || schedule.owner)) {
-    visibleTags.unshift({
-      key: `tagged-by-${schedule.id}`,
-      name: schedule.taggedBy || schedule.owner || '',
-    })
-  }
-
-  return visibleTags.filter((tag) => tag.name)
+  return buildDisplayTagMembers({
+    itemKey: schedule.id,
+    isTagged: schedule.isTagged,
+    owner: schedule.owner,
+    taggedBy: schedule.taggedBy,
+    taggedByMember: schedule.taggedByMember,
+    tags: schedule.tags,
+    excludeMemberId: props.memberId,
+  })
 }
 
 function canEditSchedule(schedule: Schedule) {
@@ -321,29 +294,15 @@ function handleTagClick(schedule: Schedule) {
 
             <div
               v-if="getDisplayTagMembers(schedule).length"
-              class="mt-2 flex w-full flex-wrap items-center gap-1.5"
+              class="mt-2 w-full"
             >
-              <component
-                v-for="tag in getDisplayTagMembers(schedule)"
-                :key="tag.key"
-                :is="canEditSchedule(schedule) ? 'button' : 'span'"
-                :type="canEditSchedule(schedule) ? 'button' : undefined"
-                class="schedule-tag-chip inline-flex items-center gap-1.5 rounded-full border border-dp-accent-border bg-dp-accent-soft text-xs text-dp-text-primary"
-                :class="canEditSchedule(schedule)
-                  ? 'schedule-tag-chip--interactive px-1.5 py-1.5 pr-2.5'
-                  : 'min-h-[34px] px-1 py-1 pr-2'"
-                :title="canEditSchedule(schedule) ? '태그 수정' : undefined"
-                @click.stop="handleTagClick(schedule)"
-              >
-                <ProfileAvatar
-                  :member-id="tag.id ?? null"
-                  :name="tag.name"
-                  :has-profile-photo="tag.hasProfilePhoto"
-                  :profile-photo-version="tag.profilePhotoVersion"
-                  size="sm"
-                />
-                <span class="max-w-[120px] truncate font-medium">{{ tag.name }}</span>
-              </component>
+              <MemberTagChips
+                :members="getDisplayTagMembers(schedule)"
+                :interactive="canEditSchedule(schedule)"
+                :button-title="'태그 수정'"
+                :density="canEditSchedule(schedule) ? 'regular' : 'compact'"
+                @chip-click="handleTagClick(schedule)"
+              />
             </div>
 
             <!-- Description -->
@@ -398,30 +357,4 @@ function handleTagClick(schedule: Schedule) {
   cursor: grabbing;
 }
 
-.schedule-tag-chip {
-  transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease,
-    box-shadow 0.15s ease,
-    transform 0.15s ease;
-}
-
-.schedule-tag-chip--interactive {
-  min-height: 44px;
-  cursor: pointer;
-}
-
-.schedule-tag-chip--interactive:hover {
-  background-color: var(--dp-accent-bg-hover);
-  border-color: var(--dp-accent-border);
-}
-
-.schedule-tag-chip--interactive:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--dp-accent-ring);
-}
-
-.schedule-tag-chip--interactive:active {
-  transform: translateY(1px);
-}
 </style>

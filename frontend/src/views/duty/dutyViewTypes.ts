@@ -1,4 +1,4 @@
-import type { CalendarVisibility, TaggableFriend } from '@/types'
+import type { CalendarVisibility, TaggableFriend, TodoTagMember } from '@/types'
 
 export interface LocalTodo {
   id: string
@@ -9,6 +9,10 @@ export interface LocalTodo {
   completedDate?: string
   dueDate?: string
   isOverdue?: boolean
+  isTagged: boolean
+  owner: string
+  taggedByMember?: TodoTagMember | null
+  tags: TodoTagMember[]
   hasAttachments: boolean
   attachments: Array<{
     id: string

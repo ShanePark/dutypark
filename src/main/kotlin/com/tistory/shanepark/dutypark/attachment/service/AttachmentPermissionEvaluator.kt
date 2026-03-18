@@ -18,7 +18,7 @@ class AttachmentPermissionEvaluator(
     fun checkReadPermission(loginMember: LoginMember?, attachment: Attachment) {
         when (attachment.contextType) {
             AttachmentContextType.SCHEDULE -> checkScheduleReadPermission(loginMember, attachment)
-            AttachmentContextType.TODO -> checkTodoPermission(loginMember, attachment)
+            AttachmentContextType.TODO -> checkTodoReadPermission(loginMember, attachment)
             AttachmentContextType.PROFILE -> { /* Public read - no auth required */ }
             AttachmentContextType.TEAM -> throw UnsupportedOperationException("Context type ${attachment.contextType} not yet implemented")
         }
@@ -27,7 +27,7 @@ class AttachmentPermissionEvaluator(
     fun checkWritePermission(loginMember: LoginMember, attachment: Attachment) {
         when (attachment.contextType) {
             AttachmentContextType.SCHEDULE -> checkScheduleWritePermission(loginMember, attachment)
-            AttachmentContextType.TODO -> checkTodoPermission(loginMember, attachment)
+            AttachmentContextType.TODO -> checkTodoWritePermission(loginMember, attachment)
             AttachmentContextType.PROFILE -> checkProfileWritePermission(loginMember, attachment)
             AttachmentContextType.TEAM -> throw UnsupportedOperationException("Context type ${attachment.contextType} not yet implemented")
         }
@@ -77,7 +77,15 @@ class AttachmentPermissionEvaluator(
         schedulePermissionService.checkScheduleWriteAuthority(loginMember, scheduleId)
     }
 
-    private fun checkTodoPermission(loginMember: LoginMember?, attachment: Attachment) {
+    private fun checkTodoReadPermission(loginMember: LoginMember?, attachment: Attachment) {
+        val contextId = attachment.contextId
+            ?: throw IllegalStateException("Attachment ${attachment.id} has no contextId")
+
+        val todoId = UUID.fromString(contextId)
+        ensureTodoReadPermission(loginMember, todoId)
+    }
+
+    private fun checkTodoWritePermission(loginMember: LoginMember, attachment: Attachment) {
         val contextId = attachment.contextId
             ?: throw IllegalStateException("Attachment ${attachment.id} has no contextId")
 
@@ -95,11 +103,23 @@ class AttachmentPermissionEvaluator(
 
     private fun ensureTodoOwnership(loginMember: LoginMember?, todoId: UUID) {
         val requester = loginMember ?: throw AuthException("Login required to access todo")
-        val todo = todoRepository.findById(todoId)
-            .orElseThrow { IllegalArgumentException("Todo not found") }
+        if (!todoRepository.existsById(todoId)) {
+            throw IllegalArgumentException("Todo not found")
+        }
 
-        if (todo.member.id != requester.id) {
+        if (!todoRepository.existsByIdAndMemberId(todoId, requester.id)) {
             throw AuthException("Todo $todoId does not belong to user ${requester.id}")
+        }
+    }
+
+    private fun ensureTodoReadPermission(loginMember: LoginMember?, todoId: UUID) {
+        val requester = loginMember ?: throw AuthException("Login required to access todo")
+        if (!todoRepository.existsById(todoId)) {
+            throw IllegalArgumentException("Todo not found")
+        }
+
+        if (!todoRepository.existsAccessibleTodo(todoId, requester.id)) {
+            throw AuthException("Todo $todoId is not accessible to user ${requester.id}")
         }
     }
 

@@ -32,3 +32,10 @@ data class ScheduleTaggedEvent(
     val taggedMemberId: Long,
     val scheduleTitle: String
 )
+
+data class TodoTaggedEvent(
+    val todoId: UUID,
+    val ownerId: Long,
+    val taggedMemberId: Long,
+    val todoTitle: String
+)
