@@ -262,6 +262,10 @@ class FriendService(
         val targetMember = memberRepository.findById(targetId!!).orElseThrow()
         login ?: return targetMember.calendarVisibility == Visibility.PUBLIC
 
+        if (login.isAdmin) {
+            return true
+        }
+
         val loginMember = memberRepository.findById(login.id).orElseThrow()
         if (login.id == targetMember.id)
             return true
@@ -288,6 +292,9 @@ class FriendService(
     fun availableScheduleVisibilities(loginMember: LoginMember?, member: Member): Set<Visibility> {
         if (loginMember == null)
             return Visibility.publicOnly()
+        if (loginMember.isAdmin) {
+            return Visibility.all()
+        }
         if (loginMember.id == member.id || memberService.isManager(loginMember, member)) {
             return Visibility.all()
         }

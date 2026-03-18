@@ -7,6 +7,10 @@ import org.springframework.data.jpa.repository.JpaRepository
 
 interface FriendRelationRepository : JpaRepository<FriendRelation, Long> {
 
+    fun countByMemberId(memberId: Long): Long
+
+    fun countByMemberIdAndIsFamilyTrue(memberId: Long): Long
+
     @EntityGraph(attributePaths = ["friend", "friend.team"])
     fun findAllByMember(member: Member): List<FriendRelation>
 

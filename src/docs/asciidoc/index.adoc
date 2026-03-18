@@ -49,6 +49,12 @@ operation::dashboard/friends[]
 
 operation::members/update-visibility[]
 
+== Admin
+
+=== Member Detail
+
+operation::admin/members-detail[]
+
 == Duty
 
 === Get Duties

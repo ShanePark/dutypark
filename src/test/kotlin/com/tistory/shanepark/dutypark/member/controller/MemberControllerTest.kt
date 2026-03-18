@@ -151,6 +151,20 @@ class MemberControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `admin can get private member details`() {
+        val member = TestData.member
+        member.calendarVisibility = Visibility.PRIVATE
+        memberRepository.save(member)
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/members/${member.id}")
+                .withAuth(TestData.admin)
+        )
+            .andExpect(status().isOk)
+            .andExpect(content().string(org.hamcrest.Matchers.containsString(member.name)))
+    }
+
+    @Test
     fun `getProfilePhoto returns 404 when file is missing`() {
         val member = TestData.member
         val missingPath = storagePathResolver.getStorageRoot().resolve("PROFILE/${member.id}/missing.png")

@@ -8,14 +8,14 @@ import { refreshTokenApi } from '@/api/member'
 import { useSwal } from '@/composables/useSwal'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEscapeKey } from '@/composables/useEscapeKey'
-import type { AdminMemberDto, RefreshTokenDto } from '@/types'
+import type { AdminMemberDetailDto, AdminMemberDto, RefreshTokenDto } from '@/types'
 import { extractDatePart } from '@/utils/date'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
+import AdminMemberDetailModal from '@/components/admin/AdminMemberDetailModal.vue'
 import {
   Users,
   Building2,
-  Key,
   ChevronLeft,
   ChevronRight,
   Search,
@@ -23,7 +23,6 @@ import {
   Loader2,
   FileText,
   ExternalLink,
-  Clock,
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -69,13 +68,24 @@ watch(searchKeyword, () => {
 const showPasswordModal = ref(false)
 useBodyScrollLock(showPasswordModal)
 useEscapeKey(showPasswordModal, () => { showPasswordModal.value = false })
-const selectedMember = ref<{ id: number; name: string } | null>(null)
+const passwordTargetMember = ref<{ id: number; name: string } | null>(null)
 const newPassword = ref('')
 const confirmPassword = ref('')
 const passwordError = ref('')
+const showMemberDetailModal = ref(false)
+const selectedMemberId = ref<number | null>(null)
+const selectedMemberDetail = ref<AdminMemberDetailDto | null>(null)
+const isMemberDetailLoading = ref(false)
+const memberDetailError = ref<string | null>(null)
+let memberDetailRequestId = 0
+
+const selectedMemberForDetail = computed(() => {
+  if (selectedMemberId.value == null) return null
+  return members.value.find(member => member.id === selectedMemberId.value) ?? null
+})
 
 function openPasswordModal(member: { id: number; name: string }) {
-  selectedMember.value = member
+  passwordTargetMember.value = member
   newPassword.value = ''
   confirmPassword.value = ''
   passwordError.value = ''
@@ -84,7 +94,7 @@ function openPasswordModal(member: { id: number; name: string }) {
 
 function closePasswordModal() {
   showPasswordModal.value = false
-  selectedMember.value = null
+  passwordTargetMember.value = null
 }
 
 const changingPassword = ref(false)
@@ -106,10 +116,10 @@ async function handleChangePassword() {
   changingPassword.value = true
   try {
     await authApi.changePassword({
-      memberId: selectedMember.value!.id,
+      memberId: passwordTargetMember.value!.id,
       newPassword: newPassword.value,
     })
-    showSuccess(`${selectedMember.value?.name}님의 비밀번호가 변경되었습니다.`)
+    showSuccess(`${passwordTargetMember.value?.name}님의 비밀번호가 변경되었습니다.`)
     closePasswordModal()
   } catch (error: any) {
     const message = error.response?.data?.message || '비밀번호 변경에 실패했습니다.'
@@ -127,10 +137,63 @@ async function handleRevokeToken(tokenId: number, member: AdminMemberDto) {
     toastSuccess(`${member.name}님의 세션이 종료되었습니다.`)
     member.tokens = member.tokens.filter(t => t.id !== tokenId)
     allTokens.value = allTokens.value.filter(t => t.id !== tokenId)
+    if (showMemberDetailModal.value && selectedMemberId.value === member.id) {
+      fetchSelectedMemberDetail(member.id)
+    }
   } catch (error) {
     console.error('Failed to revoke token:', error)
     showError('세션 종료에 실패했습니다.')
   }
+}
+
+async function fetchSelectedMemberDetail(memberId: number = selectedMemberId.value ?? -1) {
+  if (!memberId || memberId < 0) return
+
+  const requestId = ++memberDetailRequestId
+  isMemberDetailLoading.value = true
+  memberDetailError.value = null
+
+  try {
+    const res = await adminApi.getMemberDetail(memberId)
+    if (requestId !== memberDetailRequestId) return
+    selectedMemberDetail.value = res.data
+  } catch (error) {
+    console.error('Failed to fetch member detail:', error)
+    if (requestId !== memberDetailRequestId) return
+    selectedMemberDetail.value = null
+    memberDetailError.value = '회원 상세 정보를 불러오지 못했습니다.'
+  } finally {
+    if (requestId === memberDetailRequestId) {
+      isMemberDetailLoading.value = false
+    }
+  }
+}
+
+function openMemberDetail(member: AdminMemberDto) {
+  selectedMemberId.value = member.id
+  selectedMemberDetail.value = null
+  memberDetailError.value = null
+  showMemberDetailModal.value = true
+  fetchSelectedMemberDetail(member.id)
+}
+
+function closeMemberDetailModal() {
+  showMemberDetailModal.value = false
+  selectedMemberId.value = null
+  selectedMemberDetail.value = null
+  memberDetailError.value = null
+  memberDetailRequestId += 1
+  isMemberDetailLoading.value = false
+}
+
+function openPasswordModalFromDetail(member: AdminMemberDto) {
+  closeMemberDetailModal()
+  openPasswordModal(member)
+}
+
+async function goToMemberSchedule(memberId: number) {
+  closeMemberDetailModal()
+  await router.push({ name: 'duty', params: { id: String(memberId) } })
 }
 
 async function fetchMembers() {
@@ -209,80 +272,70 @@ onMounted(async () => {
 
       <template v-else>
         <!-- Admin Navigation -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="grid grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
           <router-link
             to="/admin"
-            class="bg-dp-surface-strong text-dp-text-on-dark rounded-xl p-4 hover:bg-dp-surface-strong-hover transition"
+            class="admin-top-tile admin-top-tile-active hover:bg-dp-surface-strong-hover"
           >
-            <Users class="w-6 h-6 mb-2 text-dp-text-on-dark" />
-            <span class="font-medium text-dp-text-on-dark">회원 관리</span>
+            <Users class="admin-top-tile-icon text-dp-text-on-dark" />
+            <span class="admin-top-tile-label text-dp-text-on-dark">회원 관리</span>
           </router-link>
           <router-link
             to="/admin/teams"
-            class="rounded-xl p-4 transition bg-dp-bg-card border border-dp-border-primary"
+            class="admin-top-tile bg-dp-bg-card border border-dp-border-primary"
             @mouseover="(e: Event) => setHoverBg(e)"
             @mouseleave="(e: Event) => clearHoverBg(e)"
           >
-            <Building2 class="w-6 h-6 mb-2 text-dp-text-secondary" />
-            <span class="font-medium text-dp-text-primary">팀 관리</span>
+            <Building2 class="admin-top-tile-icon text-dp-text-secondary" />
+            <span class="admin-top-tile-label text-dp-text-primary">팀 관리</span>
           </router-link>
           <router-link
             to="/admin/dev"
-            class="rounded-xl p-4 transition bg-dp-bg-card border border-dp-border-primary"
+            class="admin-top-tile bg-dp-bg-card border border-dp-border-primary"
             @mouseover="(e: Event) => setHoverBg(e)"
             @mouseleave="(e: Event) => clearHoverBg(e)"
           >
-            <Code2 class="w-6 h-6 mb-2 text-dp-text-secondary" />
-            <span class="font-medium text-dp-text-primary">개발</span>
+            <Code2 class="admin-top-tile-icon text-dp-text-secondary" />
+            <span class="admin-top-tile-label text-dp-text-primary">개발</span>
           </router-link>
           <a
             href="/docs/index.html"
             target="_blank"
-            class="rounded-xl p-4 transition bg-dp-bg-card border border-dp-border-primary"
+            class="admin-top-tile bg-dp-bg-card border border-dp-border-primary"
             @mouseover="(e: Event) => setHoverBg(e)"
             @mouseleave="(e: Event) => clearHoverBg(e)"
           >
-            <div class="flex items-center gap-1 mb-2">
-              <FileText class="w-6 h-6 text-dp-text-secondary" />
-              <ExternalLink class="w-3 h-3 text-dp-text-muted" />
+            <div class="mb-2 flex items-center gap-1">
+              <FileText class="admin-top-tile-icon mb-0 text-dp-text-secondary" />
+              <ExternalLink class="hidden sm:block w-3 h-3 text-dp-text-muted" />
             </div>
-            <span class="font-medium text-dp-text-primary">API 문서</span>
+            <span class="admin-top-tile-label text-dp-text-primary">API 문서</span>
           </a>
         </div>
 
         <!-- Stats Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div class="rounded-xl p-4 bg-dp-bg-card border border-dp-border-primary">
-            <div class="flex items-center justify-between mb-2">
-              <Users class="w-5 h-5 text-dp-text-muted" />
-              <span class="text-xs text-dp-text-muted">전체</span>
+        <div class="admin-stats-band mb-4 sm:mb-6" aria-label="관리자 요약 통계">
+          <div class="admin-stats-grid">
+            <div class="admin-stat-tile">
+              <p class="admin-stat-kicker text-dp-text-muted">등록 회원</p>
+              <p class="admin-stat-tile-value text-dp-text-primary">{{ stats.totalMembers }}</p>
+              <p class="admin-stat-tile-note text-dp-text-secondary">전체</p>
             </div>
-            <p class="text-2xl font-bold text-dp-text-primary">{{ stats.totalMembers }}</p>
-            <p class="text-sm text-dp-text-secondary">등록 회원</p>
-          </div>
-          <div class="rounded-xl p-4 bg-dp-bg-card border border-dp-border-primary">
-            <div class="flex items-center justify-between mb-2">
-              <Building2 class="w-5 h-5 text-dp-text-muted" />
-              <span class="text-xs text-dp-text-muted">활성</span>
+            <div class="admin-stat-tile">
+              <p class="admin-stat-kicker text-dp-text-muted">등록 팀</p>
+              <p class="admin-stat-tile-value text-dp-text-primary">{{ stats.totalTeams }}</p>
+              <p class="admin-stat-tile-note text-dp-text-secondary">활성</p>
             </div>
-            <p class="text-2xl font-bold text-dp-text-primary">{{ stats.totalTeams }}</p>
-            <p class="text-sm text-dp-text-secondary">등록 팀</p>
-          </div>
-          <div class="rounded-xl p-4 bg-dp-bg-card border border-dp-border-primary">
-            <div class="flex items-center justify-between mb-2">
-              <Key class="w-5 h-5 text-dp-text-muted" />
-              <span class="text-xs text-dp-text-muted">유효</span>
+            <div class="admin-stat-tile">
+              <p class="admin-stat-kicker text-dp-text-muted">활성 토큰</p>
+              <p class="admin-stat-tile-value text-dp-text-primary">{{ stats.activeTokens }}</p>
+              <p class="admin-stat-tile-note text-dp-text-secondary">유효</p>
             </div>
-            <p class="text-2xl font-bold text-dp-text-primary">{{ stats.activeTokens }}</p>
-            <p class="text-sm text-dp-text-secondary">활성 토큰</p>
-          </div>
-          <div class="rounded-xl p-4 bg-dp-bg-card border border-dp-border-primary">
-            <div class="flex items-center justify-between mb-2">
-              <Clock class="w-5 h-5 text-dp-text-muted" />
-              <span class="text-xs text-dp-text-muted">오늘</span>
+            <div class="admin-stat-tile">
+              <p class="admin-stat-kicker text-dp-text-muted">접속 횟수</p>
+              <p class="admin-stat-tile-value text-dp-text-primary">{{ stats.todayLogins }}</p>
+              <p class="admin-stat-tile-note text-dp-text-secondary">오늘</p>
             </div>
-            <p class="text-2xl font-bold text-dp-text-primary">{{ stats.todayLogins }}</p>
-            <p class="text-sm text-dp-text-secondary">접속 횟수</p>
           </div>
         </div>
 
@@ -312,29 +365,32 @@ onMounted(async () => {
               <div
                 v-for="member in members"
                 :key="member.id"
-                class="p-4 transition border-b border-dp-border-secondary"
-                @mouseover="(e: Event) => setHoverBg(e)"
-                @mouseleave="(e: Event) => clearHoverBg(e, 'transparent')"
+                class="admin-member-row group/admin-member p-4 border-b border-dp-border-secondary cursor-pointer focus-visible:outline-none"
+                role="button"
+                tabindex="0"
+                @click="openMemberDetail(member)"
+                @keydown.enter.prevent="openMemberDetail(member)"
+                @keydown.space.prevent="openMemberDetail(member)"
               >
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-                  <div class="flex items-center gap-3">
-                    <ProfileAvatar :member-id="member.id" :has-profile-photo="member.hasProfilePhoto" :profile-photo-version="member.profilePhotoVersion" size="md" :name="member.name" />
+                <div class="flex items-start justify-between gap-3 mb-3">
+                  <div class="flex min-w-0 items-center gap-3">
+                    <div class="admin-member-avatar-ring">
+                      <ProfileAvatar :member-id="member.id" :has-profile-photo="member.hasProfilePhoto" :profile-photo-version="member.profilePhotoVersion" size="md" :name="member.name" />
+                    </div>
                     <div class="min-w-0">
-                      <p class="font-medium truncate text-dp-text-primary">{{ member.name }}</p>
-                      <p class="text-sm text-dp-text-secondary">
+                      <p class="admin-member-name font-medium truncate text-dp-text-primary">{{ member.name }}</p>
+                      <p class="admin-member-meta text-sm text-dp-text-secondary">
                         {{ member.tokens.length > 0 ? `${member.tokens.length}개의 활성 세션` : '활성 세션 없음' }}
                       </p>
                     </div>
                   </div>
-                  <button
-                    @click="openPasswordModal(member)"
-                    class="px-3 py-1.5 text-sm font-medium text-dp-warning bg-dp-warning-soft hover:bg-dp-warning-soft rounded-lg transition flex-shrink-0 self-start sm:self-auto cursor-pointer"
-                  >
-                    비밀번호 변경
-                  </button>
+                  <div class="admin-member-aside flex flex-col items-end gap-1 text-dp-text-muted">
+                    <span class="text-xs whitespace-nowrap">{{ member.teamName || '팀 없음' }}</span>
+                    <ChevronRight class="admin-member-chevron w-4 h-4" />
+                  </div>
                 </div>
 
-                <div v-if="member.tokens.length > 0" class="ml-0 sm:ml-13 mt-2">
+                <div v-if="member.tokens.length > 0" class="ml-0 sm:ml-13 mt-2" @click.stop>
                   <SessionTokenList
                     :tokens="member.tokens"
                     :loading="false"
@@ -381,16 +437,28 @@ onMounted(async () => {
         </div>
       </template>
 
+    <AdminMemberDetailModal
+      :open="showMemberDetailModal"
+      :member="selectedMemberForDetail"
+      :member-detail="selectedMemberDetail"
+      :loading="isMemberDetailLoading"
+      :load-error="memberDetailError"
+      @close="closeMemberDetailModal"
+      @retry="fetchSelectedMemberDetail()"
+      @go-to-schedule="goToMemberSchedule"
+      @change-password="openPasswordModalFromDetail"
+    />
+
     <!-- Password Change Modal -->
     <div
       v-if="showPasswordModal"
-      class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50"
+      class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-[80]"
       @click.self="closePasswordModal"
     >
       <div class="rounded-xl shadow-xl w-full max-w-md mx-4 bg-dp-bg-modal">
         <div class="p-4 border-b border-dp-border-primary">
           <h3 class="text-lg font-semibold text-dp-text-primary">비밀번호 변경</h3>
-          <p class="text-sm text-dp-text-secondary">{{ selectedMember?.name }}님의 비밀번호를 변경합니다</p>
+          <p class="text-sm text-dp-text-secondary">{{ passwordTargetMember?.name }}님의 비밀번호를 변경합니다</p>
         </div>
         <div class="p-4 space-y-4">
           <div>
@@ -436,3 +504,210 @@ onMounted(async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.admin-top-tile {
+  min-width: 0;
+  transition:
+    background-color 160ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.admin-top-tile {
+  display: flex;
+  min-height: 5.3rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+  padding: 0.75rem 0.4rem;
+  text-align: center;
+}
+
+.admin-top-tile-active {
+  background-color: var(--dp-modal-header-bg);
+}
+
+.admin-top-tile-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-bottom: 0.5rem;
+  flex-shrink: 0;
+}
+
+.admin-top-tile-label {
+  font-size: 0.72rem;
+  line-height: 1.1rem;
+  font-weight: 700;
+  word-break: keep-all;
+}
+
+.admin-stats-band {
+  overflow: hidden;
+  border: 1px solid var(--dp-border-primary);
+  border-radius: 1.15rem;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--dp-bg-card) 92%, var(--dp-bg-secondary)) 0%,
+      color-mix(in srgb, var(--dp-bg-card) 80%, var(--dp-bg-tertiary)) 100%
+    );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--dp-bg-card) 72%, white 28%),
+    inset 0 -1px 0 color-mix(in srgb, var(--dp-border-secondary) 35%, transparent);
+}
+
+.admin-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.admin-stat-tile {
+  min-width: 0;
+  min-height: 5.15rem;
+  padding: 0.68rem 0.3rem 0.62rem;
+  text-align: center;
+  user-select: none;
+}
+
+.admin-stat-tile + .admin-stat-tile {
+  border-left: 1px solid color-mix(in srgb, var(--dp-border-primary) 78%, transparent);
+}
+
+.admin-stat-kicker {
+  font-size: 0.68rem;
+  line-height: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  word-break: keep-all;
+}
+
+.admin-stat-tile-value {
+  margin-top: 0.2rem;
+  font-size: 1.55rem;
+  line-height: 1.15;
+  font-weight: 700;
+}
+
+.admin-stat-tile-note {
+  margin-top: 0.16rem;
+  font-size: 0.68rem;
+  line-height: 0.95rem;
+  word-break: keep-all;
+}
+
+.admin-member-row {
+  position: relative;
+  transition:
+    background-color 160ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.admin-member-avatar-ring,
+.admin-member-name,
+.admin-member-meta,
+.admin-member-aside,
+.admin-member-chevron {
+  transition:
+    transform 180ms ease,
+    color 180ms ease,
+    opacity 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+
+.admin-member-avatar-ring {
+  border-radius: 9999px;
+}
+
+.admin-member-row:focus-visible {
+  background-color: color-mix(in srgb, var(--dp-bg-hover) 74%, var(--dp-accent-bg));
+  box-shadow:
+    inset 3px 0 0 color-mix(in srgb, var(--dp-accent) 72%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--dp-accent) 18%, transparent);
+}
+
+@media (hover: hover) {
+  .admin-top-tile:hover {
+    transform: translateY(-1px);
+  }
+
+  .admin-member-row:hover {
+    background-color: color-mix(in srgb, var(--dp-bg-hover) 74%, var(--dp-accent-bg));
+    box-shadow: inset 3px 0 0 color-mix(in srgb, var(--dp-accent) 72%, transparent);
+    transform: translateY(-1px);
+  }
+
+  .admin-member-row:hover .admin-member-avatar-ring,
+  .admin-member-row:focus-visible .admin-member-avatar-ring {
+    box-shadow:
+      0 0 0 5px color-mix(in srgb, var(--dp-accent) 12%, transparent),
+      0 10px 24px color-mix(in srgb, var(--dp-overlay-scrim) 14%, transparent);
+  }
+
+  .admin-member-row:hover .admin-member-name,
+  .admin-member-row:focus-visible .admin-member-name {
+    color: color-mix(in srgb, var(--dp-text-primary) 58%, var(--dp-accent));
+  }
+
+  .admin-member-row:hover .admin-member-meta,
+  .admin-member-row:focus-visible .admin-member-meta,
+  .admin-member-row:hover .admin-member-aside,
+  .admin-member-row:focus-visible .admin-member-aside {
+    color: var(--dp-text-primary);
+  }
+
+  .admin-member-row:hover .admin-member-chevron,
+  .admin-member-row:focus-visible .admin-member-chevron {
+    color: var(--dp-accent);
+    transform: translateX(4px);
+  }
+}
+
+@media (min-width: 640px) {
+  .admin-top-tile {
+    min-height: auto;
+    align-items: flex-start;
+    padding: 1rem;
+    text-align: left;
+  }
+
+  .admin-top-tile-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .admin-top-tile-label {
+    font-size: 1rem;
+    line-height: 1.4rem;
+  }
+
+  .admin-stats-band {
+    border-radius: 1.35rem;
+  }
+
+  .admin-stat-tile {
+    min-height: 6rem;
+    padding: 1rem 1.1rem 0.95rem;
+    text-align: left;
+  }
+
+  .admin-stat-kicker {
+    font-size: 0.82rem;
+    line-height: 1.1rem;
+  }
+
+  .admin-stat-tile-value {
+    margin-top: 0.3rem;
+    font-size: 1.85rem;
+  }
+
+  .admin-stat-tile-note {
+    margin-top: 0.2rem;
+    font-size: 0.8rem;
+    line-height: 1.1rem;
+  }
+}
+</style>
