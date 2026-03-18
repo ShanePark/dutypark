@@ -76,6 +76,7 @@ Use this file for repo-wide defaults only. Keep it lean; read the code and nearb
 
 - Consider sub-agent use on every non-trivial task.
 - Use sub-agents proactively when independent research, search, verification, or disjoint implementation work can run in parallel within the current checklist item and clearly help.
+- When spawning sub-agents, use the same model as the main agent. Do not override the sub-agent model unless the user explicitly asks for a different one.
 - Do not use sub-agents for sequential steps, overlapping file edits, or tightly coupled refactors.
 - The main agent remains responsible for planning, integration, final verification, and user communication.
 
