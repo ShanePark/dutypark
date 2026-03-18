@@ -221,10 +221,10 @@ class TodoService(
         val todo = todoRepository.findById(id)
             .orElseThrow { IllegalArgumentException("Todo not found") }
 
-        verifyOwnership(todo, member)
+        verifyStatusChangePermission(todo, member)
 
         if (todo.status == TodoStatus.TODO || todo.status == TodoStatus.IN_PROGRESS) {
-            val newPosition = todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.DONE) - 1
+            val newPosition = todoRepository.findMinPositionByMemberAndStatus(todo.member, TodoStatus.DONE) - 1
             todo.markCompleted(newPosition)
         }
 
@@ -237,10 +237,10 @@ class TodoService(
         val todo = todoRepository.findById(id)
             .orElseThrow { IllegalArgumentException("Todo not found") }
 
-        verifyOwnership(todo, member)
+        verifyStatusChangePermission(todo, member)
 
         if (todo.status == TodoStatus.DONE) {
-            val todoLastPosition = todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.TODO)
+            val todoLastPosition = todoRepository.findMinPositionByMemberAndStatus(todo.member, TodoStatus.TODO)
             todo.markActive(todoLastPosition - 1)
         }
 
@@ -257,11 +257,18 @@ class TodoService(
         val todo = todoRepository.findById(id)
             .orElseThrow { IllegalArgumentException("Todo not found") }
 
-        verifyOwnership(todo, member)
+        verifyStatusChangePermission(todo, member)
+        val owner = todo.member
+        val isOwner = isOwner(todo, member)
 
         // Change status first
         if (todo.status != newStatus) {
-            todo.changeStatus(newStatus, 0)
+            val targetPosition = if (isOwner) 0 else todoRepository.findMinPositionByMemberAndStatus(owner, newStatus) - 1
+            todo.changeStatus(newStatus, targetPosition)
+        }
+
+        if (!isOwner) {
+            return toResponse(todo, member)
         }
 
         // Reorder all todos in target column based on orderedIds
@@ -339,6 +346,27 @@ class TodoService(
             log.warn("Unauthorized access attempt: memberId={} tried to access todo {} (owner={})", member.id, todoEntity.id, todoEntity.member.id)
             throw IllegalArgumentException("Todo is not yours")
         }
+    }
+
+    private fun verifyStatusChangePermission(todoEntity: Todo, member: Member) {
+        if (isOwner(todoEntity, member) || isTaggedMember(todoEntity, member)) {
+            return
+        }
+        log.warn(
+            "Unauthorized status change attempt: memberId={} tried to change status of todo {} (owner={})",
+            member.id,
+            todoEntity.id,
+            todoEntity.member.id
+        )
+        throw IllegalArgumentException("Todo status change is not allowed")
+    }
+
+    private fun isOwner(todoEntity: Todo, member: Member): Boolean {
+        return todoEntity.member.id == member.id
+    }
+
+    private fun isTaggedMember(todoEntity: Todo, member: Member): Boolean {
+        return todoEntity.tags.any { it.member.id == member.id }
     }
 
     private fun findMember(loginMember: LoginMember): Member =

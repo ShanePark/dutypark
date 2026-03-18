@@ -77,6 +77,7 @@ const emit = defineEmits<{
   }): void
   (e: 'complete', id: string): void
   (e: 'reopen', id: string): void
+  (e: 'change-status', data: { id: string; status: TodoStatus }): void
   (e: 'delete', id: string): void
   (e: 'untagSelf', id: string): void
   (e: 'backToList'): void
@@ -202,6 +203,11 @@ const todoTagMembers = computed(() => {
   return props.todo.tags
     .filter((tag) => tag.name)
     .map((tag, index) => toDisplayTagMember(tag, `todo-tag-${tag.id ?? `${props.todo.id}-${index}`}`))
+})
+
+const statusActionOptions = computed(() => {
+  if (!props.todo) return []
+  return statusOptions.filter((option) => option.value !== props.todo?.status)
 })
 
 
@@ -477,14 +483,24 @@ function onUploadError(message: string) {
 
               <!-- Right: Action buttons -->
               <div class="flex gap-2">
-                <button
-                  v-if="isTaggedTodo"
-                  @click="emit('untagSelf', todo.id)"
-                  class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-warning-border text-dp-warning rounded-lg hover:bg-dp-warning-soft transition cursor-pointer"
-                >
-                  <X class="w-4 h-4" />
-                  <span class="hidden sm:inline">태그 제거</span>
-                </button>
+                <template v-if="isTaggedTodo">
+                  <button
+                    v-for="option in statusActionOptions"
+                    :key="option.value"
+                    @click="emit('change-status', { id: todo.id, status: option.value })"
+                    class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-accent-border text-dp-accent rounded-lg hover:bg-dp-accent-soft transition cursor-pointer"
+                  >
+                    <component :is="option.icon" class="w-4 h-4" />
+                    <span class="hidden sm:inline">{{ option.label }}</span>
+                  </button>
+                  <button
+                    @click="emit('untagSelf', todo.id)"
+                    class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-warning-border text-dp-warning rounded-lg hover:bg-dp-warning-soft transition cursor-pointer"
+                  >
+                    <X class="w-4 h-4" />
+                    <span class="hidden sm:inline">태그 제거</span>
+                  </button>
+                </template>
                 <template v-else>
                   <button
                     @click="enterEditMode"

@@ -619,7 +619,27 @@ class TodoServiceTest {
         val exception = assertThrows<IllegalArgumentException> {
             todoService.changeStatus(loginMember, todoId, TodoStatus.IN_PROGRESS, listOf(todoId))
         }
-        assertEquals("Todo is not yours", exception.message)
+        assertEquals("Todo status change is not allowed", exception.message)
+    }
+
+    @Test
+    fun `changeStatus should allow tagged member to update status`() {
+        val todoId = UUID.randomUUID()
+        val owner = otherMember()
+        val todo = createTodo("task", TodoStatus.TODO, 7)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+        ReflectionTestUtils.setField(todo, "member", owner)
+        todo.addTag(member)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(owner, TodoStatus.IN_PROGRESS)).thenReturn(3)
+
+        val result = todoService.changeStatus(loginMember, todoId, TodoStatus.IN_PROGRESS, listOf(todoId))
+
+        assertEquals(TodoStatus.IN_PROGRESS, result.status)
+        assertEquals(2, result.position)
+        verify(todoRepository, never()).findAllById(anyList())
     }
 
     @Test
@@ -820,7 +840,26 @@ class TodoServiceTest {
         val exception = assertThrows<IllegalArgumentException> {
             todoService.completeTodo(loginMember, todoId)
         }
-        assertEquals("Todo is not yours", exception.message)
+        assertEquals("Todo status change is not allowed", exception.message)
+    }
+
+    @Test
+    fun `completeTodo should allow tagged member to mark todo done`() {
+        val todoId = UUID.randomUUID()
+        val owner = otherMember()
+        val todo = createTodo("task", TodoStatus.IN_PROGRESS, 5)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+        ReflectionTestUtils.setField(todo, "member", owner)
+        todo.addTag(member)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(owner, TodoStatus.DONE)).thenReturn(4)
+
+        val result = todoService.completeTodo(loginMember, todoId)
+
+        assertEquals(TodoStatus.DONE, result.status)
+        assertEquals(3, result.position)
     }
 
     // ========== reopenTodo Edge Cases ==========
@@ -840,7 +879,28 @@ class TodoServiceTest {
         val exception = assertThrows<IllegalArgumentException> {
             todoService.reopenTodo(loginMember, todoId)
         }
-        assertEquals("Todo is not yours", exception.message)
+        assertEquals("Todo status change is not allowed", exception.message)
+    }
+
+    @Test
+    fun `reopenTodo should allow tagged member to reopen todo`() {
+        val todoId = UUID.randomUUID()
+        val owner = otherMember()
+        val todo = createTodo("task", TodoStatus.DONE, 0)
+        todo.markCompleted(0)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+        ReflectionTestUtils.setField(todo, "member", owner)
+        todo.addTag(member)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(owner, TodoStatus.TODO)).thenReturn(2)
+
+        val result = todoService.reopenTodo(loginMember, todoId)
+
+        assertEquals(TodoStatus.TODO, result.status)
+        assertEquals(1, result.position)
+        assertNull(result.completedDate)
     }
 
     @Test

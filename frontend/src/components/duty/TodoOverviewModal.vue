@@ -377,7 +377,7 @@ function handleTodoClick(todo: Todo) {
                     <!-- Action buttons -->
                     <div class="flex items-center gap-0.5 flex-shrink-0" @click.stop>
                       <button
-                        v-if="isActive(todo.status) && !todo.isTagged"
+                        v-if="isActive(todo.status)"
                         @click="emit('complete', todo.id)"
                         class="p-1.5 text-dp-success hover:bg-dp-success/10 rounded-md transition cursor-pointer"
                         title="완료"
@@ -385,7 +385,7 @@ function handleTodoClick(todo: Todo) {
                         <Check class="w-4 h-4 sm:w-5 sm:h-5" />
                       </button>
                       <button
-                        v-else-if="!todo.isTagged"
+                        v-else
                         @click="emit('reopen', todo.id)"
                         class="p-1.5 text-dp-accent hover:bg-dp-accent/10 rounded-md transition cursor-pointer"
                         title="재오픈"

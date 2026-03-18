@@ -91,7 +91,7 @@ function initSortables() {
     sortableInstances[refName] = Sortable.create(el, {
       group: 'kanban',
       animation: 200,
-      draggable: '.kanban-card-wrapper[data-is-tagged="false"]',
+      draggable: '.kanban-card-wrapper',
       ghostClass: 'kanban-ghost',
       chosenClass: 'kanban-chosen',
       dragClass: 'kanban-drag',
@@ -105,9 +105,25 @@ function initSortables() {
       scrollSensitivity: 80,
       scrollSpeed: 10,
       swapThreshold: 0.65,
+      onMove: handleDragMove,
       onEnd: handleDragEnd,
     })
   })
+}
+
+function isTaggedCard(element: Element | null): boolean {
+  return element?.getAttribute('data-is-tagged') === 'true'
+}
+
+function handleDragMove(evt: Sortable.MoveEvent) {
+  const draggedIsTagged = isTaggedCard(evt.dragged)
+  if (!draggedIsTagged) {
+    return true
+  }
+
+  const fromColumn = evt.from.getAttribute('data-column')
+  const toColumn = evt.to.getAttribute('data-column')
+  return fromColumn !== toColumn
 }
 
 function destroySortables() {
@@ -125,6 +141,12 @@ async function handleDragEnd(evt: Sortable.SortableEvent) {
 
   const fromColumn = evt.from.getAttribute('data-column') as TodoStatus
   const toColumn = evt.to.getAttribute('data-column') as TodoStatus
+  const draggedIsTagged = isTaggedCard(evt.item)
+
+  if (draggedIsTagged && fromColumn === toColumn) {
+    await loadBoard()
+    return
+  }
 
   if (fromColumn === toColumn) {
     // Within-column reordering
@@ -330,6 +352,21 @@ async function handleReopenTodo(id: string) {
   }
 }
 
+async function handleChangeTodoStatus(data: { id: string; status: TodoStatus }) {
+  try {
+    await todoApi.changeStatus(data.id, {
+      status: data.status,
+      orderedIds: [data.id],
+    })
+    showSuccess('할 일 상태가 변경되었습니다.')
+    closeDetailModal()
+    await loadBoard()
+  } catch (error) {
+    console.error('Failed to change todo status:', error)
+    showError('상태 변경에 실패했습니다.')
+  }
+}
+
 async function handleDeleteTodo(id: string) {
   const confirmed = await confirmDelete('정말 삭제하시겠습니까?')
   if (!confirmed) return
@@ -526,6 +563,7 @@ onBeforeUnmount(() => {
       @update="handleUpdateTodo"
       @complete="handleCompleteTodo"
       @reopen="handleReopenTodo"
+      @change-status="handleChangeTodoStatus"
       @delete="handleDeleteTodo"
       @untag-self="handleUntagSelf"
       @back-to-list="handleBackToList"

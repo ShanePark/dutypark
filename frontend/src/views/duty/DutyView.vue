@@ -228,6 +228,36 @@ function mapToLocalTodo(apiTodo: {
   }
 }
 
+function applyTodoUpdate(apiTodo: {
+  id: string
+  title: string
+  content: string
+  position: number | null
+  status: 'TODO' | 'IN_PROGRESS' | 'DONE'
+  createdDate: string
+  completedDate: string | null
+  dueDate?: string | null
+  isOverdue?: boolean
+  hasAttachments?: boolean
+  isTagged: boolean
+  owner: string
+  taggedByMember?: { id: number | null; name: string; teamId?: number | null; team?: string | null; hasProfilePhoto?: boolean; profilePhotoVersion?: number } | null
+  tags: Array<{ id: number | null; name: string; teamId?: number | null; team?: string | null; hasProfilePhoto?: boolean; profilePhotoVersion?: number }>
+}) {
+  const localTodo = mapToLocalTodo(apiTodo)
+
+  todos.value = todos.value.filter((t) => t.id !== apiTodo.id)
+  completedTodos.value = completedTodos.value.filter((t) => t.id !== apiTodo.id)
+
+  if (apiTodo.status === 'DONE') {
+    completedTodos.value.unshift(localTodo)
+  } else {
+    todos.value.unshift(localTodo)
+  }
+
+  selectedTodo.value = localTodo
+}
+
 // Convert API DDayDto to LocalDDay
 function mapToLocalDDay(apiDDay: DDayDto): LocalDDay {
   const dDayText = apiDDay.calc === 0 ? 'D-Day' : apiDDay.calc < 0 ? `D+${Math.abs(apiDDay.calc)}` : `D-${apiDDay.calc}`
@@ -1004,27 +1034,7 @@ async function handleTodoUpdate(data: {
       attachmentSessionId: data.attachmentSessionId,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
-    const localTodo = mapToLocalTodo(updatedTodo)
-
-    // Remove from both lists first
-    const activeIdx = todos.value.findIndex((t) => t.id === data.id)
-    if (activeIdx >= 0) {
-      todos.value.splice(activeIdx, 1)
-    }
-    const completedIdx = completedTodos.value.findIndex((t) => t.id === data.id)
-    if (completedIdx >= 0) {
-      completedTodos.value.splice(completedIdx, 1)
-    }
-
-    // Add to appropriate list based on status
-    if (updatedTodo.status === 'DONE') {
-      completedTodos.value.unshift(localTodo)
-    } else {
-      todos.value.unshift(localTodo)
-    }
-
-    // Update selectedTodo for the detail modal
-    selectedTodo.value = localTodo
+    applyTodoUpdate(updatedTodo)
     toastSuccess('할 일이 수정되었습니다.')
   } catch (error) {
     console.error('Failed to update todo:', error)
@@ -1036,8 +1046,7 @@ async function handleTodoComplete(id: string) {
   const fromDetailModal = isTodoDetailModalOpen.value
   try {
     const completedTodo = await todoApi.completeTodo(id)
-    todos.value = todos.value.filter((t) => t.id !== id)
-    completedTodos.value.unshift(mapToLocalTodo(completedTodo))
+    applyTodoUpdate(completedTodo)
   } catch (error) {
     console.error('Failed to complete todo:', error)
     showError('할 일 완료 처리에 실패했습니다.')
@@ -1052,13 +1061,30 @@ async function handleTodoReopen(id: string) {
   const fromDetailModal = isTodoDetailModalOpen.value
   try {
     const reopenedTodo = await todoApi.reopenTodo(id)
-    completedTodos.value = completedTodos.value.filter((t) => t.id !== id)
-    todos.value.push(mapToLocalTodo(reopenedTodo))
+    applyTodoUpdate(reopenedTodo)
   } catch (error) {
     console.error('Failed to reopen todo:', error)
     showError('할 일 재오픈에 실패했습니다.')
   }
   // Only close detail modal if called from detail modal
+  if (fromDetailModal) {
+    isTodoDetailModalOpen.value = false
+  }
+}
+
+async function handleTodoStatusChange(data: { id: string; status: TodoStatus }) {
+  const fromDetailModal = isTodoDetailModalOpen.value
+  try {
+    const updatedTodo = await todoApi.changeStatus(data.id, {
+      status: data.status,
+      orderedIds: [data.id],
+    })
+    applyTodoUpdate(updatedTodo)
+    toastSuccess('할 일 상태를 변경했습니다.')
+  } catch (error) {
+    console.error('Failed to change todo status:', error)
+    showError('할 일 상태 변경에 실패했습니다.')
+  }
   if (fromDetailModal) {
     isTodoDetailModalOpen.value = false
   }
@@ -1636,6 +1662,7 @@ async function showExcelUploadModal() {
       @update="handleTodoUpdate"
       @complete="handleTodoComplete"
       @reopen="handleTodoReopen"
+      @change-status="handleTodoStatusChange"
       @delete="handleTodoDelete"
       @untag-self="handleTodoUntagSelf"
       @back-to-list="isTodoDetailModalOpen = false; startTodoEditMode = false; isTodoOverviewModalOpen = true"
