@@ -28,7 +28,7 @@ import { todoApi } from '@/api/todo'
 import { dutyApi } from '@/api/duty'
 import { ddayApi, memberApi, friendApi } from '@/api/member'
 import { scheduleApi, type ScheduleDto } from '@/api/schedule'
-import type { DutyCalendarDay, TeamDto, DDayDto, DDaySaveDto, HolidayDto, TaggableFriend, TodoStatus } from '@/types'
+import type { DutyCalendarDay, TeamDto, DDayDto, DDaySaveDto, HolidayDto, TaggableFriend, Todo as TodoDto, TodoStatus } from '@/types'
 import type { LocalTodo, DutyType, Schedule, LocalDDay, CalendarDay, OtherDuty, DutyTypeWithCount, DutyDay, TodoDueItem } from './dutyViewTypes'
 
 import { useAuthStore } from '@/stores/auth'
@@ -194,31 +194,17 @@ function handleTodoBubbleClick(todo: LocalTodo | { id: string }) {
 }
 
 // Convert API Todo to LocalTodo
-function mapToLocalTodo(apiTodo: {
-  id: string
-  title: string
-  content: string
-  position: number | null
-  status: 'TODO' | 'IN_PROGRESS' | 'DONE'
-  createdDate: string
-  completedDate: string | null
-  dueDate?: string | null
-  isOverdue?: boolean
-  hasAttachments?: boolean
-  isTagged: boolean
-  owner: string
-  taggedByMember?: { id: number | null; name: string; teamId?: number | null; team?: string | null; hasProfilePhoto?: boolean; profilePhotoVersion?: number } | null
-  tags: Array<{ id: number | null; name: string; teamId?: number | null; team?: string | null; hasProfilePhoto?: boolean; profilePhotoVersion?: number }>
-}): LocalTodo {
+function mapToLocalTodo(apiTodo: TodoDto): LocalTodo {
   return {
     id: apiTodo.id,
     title: apiTodo.title,
     content: apiTodo.content,
+    position: apiTodo.position,
     status: apiTodo.status,
     createdDate: apiTodo.createdDate,
-    completedDate: apiTodo.completedDate ?? undefined,
-    dueDate: apiTodo.dueDate ?? undefined,
-    isOverdue: apiTodo.isOverdue ?? false,
+    completedDate: apiTodo.completedDate,
+    dueDate: apiTodo.dueDate,
+    isOverdue: apiTodo.isOverdue,
     isTagged: apiTodo.isTagged,
     owner: apiTodo.owner,
     taggedByMember: apiTodo.taggedByMember ?? null,
@@ -228,22 +214,7 @@ function mapToLocalTodo(apiTodo: {
   }
 }
 
-function applyTodoUpdate(apiTodo: {
-  id: string
-  title: string
-  content: string
-  position: number | null
-  status: 'TODO' | 'IN_PROGRESS' | 'DONE'
-  createdDate: string
-  completedDate: string | null
-  dueDate?: string | null
-  isOverdue?: boolean
-  hasAttachments?: boolean
-  isTagged: boolean
-  owner: string
-  taggedByMember?: { id: number | null; name: string; teamId?: number | null; team?: string | null; hasProfilePhoto?: boolean; profilePhotoVersion?: number } | null
-  tags: Array<{ id: number | null; name: string; teamId?: number | null; team?: string | null; hasProfilePhoto?: boolean; profilePhotoVersion?: number }>
-}) {
+function applyTodoUpdate(apiTodo: TodoDto) {
   const localTodo = mapToLocalTodo(apiTodo)
 
   todos.value = todos.value.filter((t) => t.id !== apiTodo.id)

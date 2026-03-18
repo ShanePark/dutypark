@@ -20,29 +20,7 @@ import {
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEscapeKey } from '@/composables/useEscapeKey'
 import { extractDatePart } from '@/utils/date'
-
-interface Todo {
-  id: string
-  title: string
-  content: string
-  status: 'TODO' | 'IN_PROGRESS' | 'DONE'
-  createdDate: string
-  completedDate?: string
-  isTagged: boolean
-  owner: string
-  hasAttachments: boolean
-  attachments: Array<{
-    id: string
-    name: string
-    originalFilename: string
-    size: number
-    contentType: string
-    isImage: boolean
-    hasThumbnail: boolean
-    thumbnailUrl?: string
-    downloadUrl: string
-  }>
-}
+import type { LocalTodo } from '@/views/duty/dutyViewTypes'
 
 // Helper functions for status compatibility
 function isActive(status: string): boolean {
@@ -55,8 +33,8 @@ function isDone(status: string): boolean {
 
 interface Props {
   isOpen: boolean
-  todos: Todo[]
-  completedTodos: Todo[]
+  todos: LocalTodo[]
+  completedTodos: LocalTodo[]
 }
 
 const props = defineProps<Props>()
@@ -65,8 +43,8 @@ useBodyScrollLock(toRef(props, 'isOpen'))
 
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'showDetail', todo: Todo): void
-  (e: 'edit', todo: Todo): void
+  (e: 'showDetail', todo: LocalTodo): void
+  (e: 'edit', todo: LocalTodo): void
   (e: 'complete', id: string): void
   (e: 'reopen', id: string): void
   (e: 'delete', id: string): void
@@ -82,7 +60,7 @@ const filters = ref({
 })
 
 const filteredTodos = computed(() => {
-  const items: Todo[] = []
+  const items: LocalTodo[] = []
   if (filters.value.active) {
     items.push(...props.todos)
   }
@@ -100,7 +78,7 @@ let isDragging = false
 // Check if sorting should be enabled (when active todos are shown)
 const isSortingEnabled = computed(() => filters.value.active)
 
-function isOwnedActive(todo: Todo): boolean {
+function isOwnedActive(todo: LocalTodo): boolean {
   return isActive(todo.status) && !todo.isTagged
 }
 
@@ -211,7 +189,7 @@ function toggleFilter(type: 'active' | 'completed' | 'all') {
 }
 
 
-function handleTodoClick(todo: Todo) {
+function handleTodoClick(todo: LocalTodo) {
   // Ignore click if we just finished dragging
   if (isDragging) return
   emit('showDetail', todo)

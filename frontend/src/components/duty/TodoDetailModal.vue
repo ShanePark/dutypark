@@ -25,6 +25,8 @@ import { formatDateKorean } from '@/utils/date'
 import { toDisplayTagMember } from '@/utils/tagMembers'
 import type { NormalizedAttachment, TaggableFriend, Todo as TodoDto, TodoStatus } from '@/types'
 
+type TodoDetailItem = Omit<TodoDto, 'attachments'>
+
 const { showWarning, showError } = useSwal()
 
 // Helper functions for status compatibility
@@ -51,7 +53,7 @@ function getStatusLabel(status: string): string {
 
 interface Props {
   isOpen: boolean
-  todo: TodoDto | null
+  todo: TodoDetailItem | null
   friends?: TaggableFriend[]
   startInEditMode?: boolean
 }
@@ -199,10 +201,11 @@ const taggedOwnerMembers = computed(() => {
 
 const todoTagMembers = computed(() => {
   if (!props.todo) return []
+  const todoId = props.todo.id
 
   return props.todo.tags
     .filter((tag) => tag.name)
-    .map((tag, index) => toDisplayTagMember(tag, `todo-tag-${tag.id ?? `${props.todo.id}-${index}`}`))
+    .map((tag, index) => toDisplayTagMember(tag, `todo-tag-${tag.id ?? `${todoId}-${index}`}`))
 })
 
 const statusActionOptions = computed(() => {

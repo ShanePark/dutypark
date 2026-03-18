@@ -1,18 +1,6 @@
-import type { CalendarVisibility, TaggableFriend, TodoTagMember } from '@/types'
+import type { CalendarVisibility, TaggableFriend, Todo as SharedTodo } from '@/types'
 
-export interface LocalTodo {
-  id: string
-  title: string
-  content: string
-  status: 'TODO' | 'IN_PROGRESS' | 'DONE'
-  createdDate: string
-  completedDate?: string
-  dueDate?: string
-  isOverdue?: boolean
-  isTagged: boolean
-  owner: string
-  taggedByMember?: TodoTagMember | null
-  tags: TodoTagMember[]
+export type LocalTodo = Omit<SharedTodo, 'attachments'> & {
   hasAttachments: boolean
   attachments: Array<{
     id: string
