@@ -545,7 +545,7 @@ class TodoControllerTest : RestDocsTest() {
                     ),
                     requestFields(
                         fieldWithPath("status").description("New status (TODO, IN_PROGRESS, DONE)"),
-                        fieldWithPath("orderedIds").description("Ordered list of todo IDs in the target column after the move")
+                        fieldWithPath("orderedIds").description("Ordered list of todo IDs in the target column after the move").optional()
                     ),
                     responseFields(*todoResponseFields())
                 )
@@ -1137,6 +1137,38 @@ class TodoControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `tagged member sees tagged todos before own todos in list`() {
+        val taggedTodo = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Tagged Todo",
+                content = "Content",
+                position = 999
+            ).apply { addTag(TestData.member2) }
+        )
+        val ownTodo = todoRepository.save(
+            Todo(
+                member = TestData.member2,
+                title = "Own Todo",
+                content = "Content",
+                position = -10
+            )
+        )
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/todos")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member2)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].id").value(taggedTodo.id.toString()))
+            .andExpect(jsonPath("$[0].isTagged").value(true))
+            .andExpect(jsonPath("$[1].id").value(ownTodo.id.toString()))
+            .andExpect(jsonPath("$[1].isTagged").value(false))
+    }
+
+    @Test
     fun `member can only see own todos in board`() {
         // Given: member1 creates todos in all statuses
         todoRepository.saveAll(
@@ -1184,6 +1216,40 @@ class TodoControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `tagged todos are placed before own todos in board`() {
+        todoRepository.save(
+            Todo(
+                member = TestData.member2,
+                title = "Own Todo",
+                content = "Content",
+                position = -10,
+                status = TodoStatus.TODO
+            )
+        )
+        val taggedTodo = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Tagged Todo",
+                content = "Content",
+                position = 99,
+                status = TodoStatus.TODO
+            ).apply { addTag(TestData.member2) }
+        )
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/todos/board")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member2)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.todo[0].id").value(taggedTodo.id.toString()))
+            .andExpect(jsonPath("$.todo[0].isTagged").value(true))
+            .andExpect(jsonPath("$.todo[1].title").value("Own Todo"))
+            .andExpect(jsonPath("$.todo[1].isTagged").value(false))
+    }
+
+    @Test
     fun `changeStatus from TODO to DONE sets completedDate`() {
         val saved = todoRepository.save(
             Todo(
@@ -1207,6 +1273,42 @@ class TodoControllerTest : RestDocsTest() {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value("DONE"))
             .andExpect(jsonPath("$.completedDate").isNotEmpty)
+    }
+
+    @Test
+    fun `tagged member can change status without orderedIds`() {
+        todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Existing In Progress",
+                content = "Content",
+                position = 1,
+                status = TodoStatus.IN_PROGRESS
+            )
+        )
+        val taggedTodo = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Tagged Todo",
+                content = "Content",
+                position = 0,
+                status = TodoStatus.TODO
+            ).apply { addTag(TestData.member2) }
+        )
+
+        val json = """{"status": "IN_PROGRESS"}"""
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.patch("/api/todos/{id}/status", taggedTodo.id)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member2)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+            .andExpect(jsonPath("$.position").value(0))
+            .andExpect(jsonPath("$.isTagged").value(true))
     }
 
     @Test

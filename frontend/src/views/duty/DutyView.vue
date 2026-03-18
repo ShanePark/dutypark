@@ -1045,8 +1045,8 @@ async function handleTodoUpdate(data: {
 async function handleTodoComplete(id: string) {
   const fromDetailModal = isTodoDetailModalOpen.value
   try {
-    const completedTodo = await todoApi.completeTodo(id)
-    applyTodoUpdate(completedTodo)
+    await todoApi.completeTodo(id)
+    await loadTodos()
   } catch (error) {
     console.error('Failed to complete todo:', error)
     showError('할 일 완료 처리에 실패했습니다.')
@@ -1060,8 +1060,8 @@ async function handleTodoComplete(id: string) {
 async function handleTodoReopen(id: string) {
   const fromDetailModal = isTodoDetailModalOpen.value
   try {
-    const reopenedTodo = await todoApi.reopenTodo(id)
-    applyTodoUpdate(reopenedTodo)
+    await todoApi.reopenTodo(id)
+    await loadTodos()
   } catch (error) {
     console.error('Failed to reopen todo:', error)
     showError('할 일 재오픈에 실패했습니다.')
@@ -1075,11 +1075,8 @@ async function handleTodoReopen(id: string) {
 async function handleTodoStatusChange(data: { id: string; status: TodoStatus }) {
   const fromDetailModal = isTodoDetailModalOpen.value
   try {
-    const updatedTodo = await todoApi.changeStatus(data.id, {
-      status: data.status,
-      orderedIds: [data.id],
-    })
-    applyTodoUpdate(updatedTodo)
+    await todoApi.changeStatus(data.id, { status: data.status })
+    await loadTodos()
     toastSuccess('할 일 상태를 변경했습니다.')
   } catch (error) {
     console.error('Failed to change todo status:', error)

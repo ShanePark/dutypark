@@ -188,7 +188,7 @@ export interface TodoUpdateRequest {
 
 export interface TodoStatusChangeRequest {
   status: TodoStatus
-  orderedIds: string[]
+  orderedIds?: string[]
 }
 
 export interface TodoPositionUpdateRequest {

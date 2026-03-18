@@ -115,9 +115,8 @@ function isTaggedCard(element: Element | null): boolean {
   return element?.getAttribute('data-is-tagged') === 'true'
 }
 
-function handleDragMove(evt: Sortable.MoveEvent) {
-  const draggedIsTagged = isTaggedCard(evt.dragged)
-  if (!draggedIsTagged) {
+function handleDragMove(evt: { dragged: Element; from: Element; to: Element }) {
+  if (!isTaggedCard(evt.dragged)) {
     return true
   }
 
@@ -169,20 +168,24 @@ async function handleDragEnd(evt: Sortable.SortableEvent) {
       await loadBoard()
     }
   } else {
-    // Cross-column move (status change)
-    // Extract full order from DOM after SortableJS has moved the item
-    const columnItems = evt.to.querySelectorAll('[data-id][data-is-tagged="false"]')
-    const orderedIds: string[] = []
-    columnItems.forEach((item) => {
-      const id = item.getAttribute('data-id')
-      if (id) orderedIds.push(id)
-    })
-
     try {
-      await todoApi.changeStatus(todoId, {
-        status: toColumn,
-        orderedIds,
-      })
+      if (draggedIsTagged) {
+        await todoApi.changeStatus(todoId, { status: toColumn })
+      } else {
+        // Cross-column move (status change)
+        // Extract full order from DOM after SortableJS has moved the item
+        const columnItems = evt.to.querySelectorAll('[data-id][data-is-tagged="false"]')
+        const orderedIds: string[] = []
+        columnItems.forEach((item) => {
+          const id = item.getAttribute('data-id')
+          if (id) orderedIds.push(id)
+        })
+
+        await todoApi.changeStatus(todoId, {
+          status: toColumn,
+          orderedIds,
+        })
+      }
       focusStatus(toColumn, 'smooth')
       await loadBoard()
     } catch (error) {
@@ -354,10 +357,7 @@ async function handleReopenTodo(id: string) {
 
 async function handleChangeTodoStatus(data: { id: string; status: TodoStatus }) {
   try {
-    await todoApi.changeStatus(data.id, {
-      status: data.status,
-      orderedIds: [data.id],
-    })
+    await todoApi.changeStatus(data.id, { status: data.status })
     showSuccess('할 일 상태가 변경되었습니다.')
     closeDetailModal()
     await loadBoard()

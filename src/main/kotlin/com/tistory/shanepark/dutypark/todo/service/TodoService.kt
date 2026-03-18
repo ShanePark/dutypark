@@ -224,7 +224,7 @@ class TodoService(
         verifyStatusChangePermission(todo, member)
 
         if (todo.status == TodoStatus.TODO || todo.status == TodoStatus.IN_PROGRESS) {
-            val newPosition = todoRepository.findMinPositionByMemberAndStatus(todo.member, TodoStatus.DONE) - 1
+            val newPosition = findStatusChangePosition(todo, member, TodoStatus.DONE)
             todo.markCompleted(newPosition)
         }
 
@@ -240,8 +240,8 @@ class TodoService(
         verifyStatusChangePermission(todo, member)
 
         if (todo.status == TodoStatus.DONE) {
-            val todoLastPosition = todoRepository.findMinPositionByMemberAndStatus(todo.member, TodoStatus.TODO)
-            todo.markActive(todoLastPosition - 1)
+            val newPosition = findStatusChangePosition(todo, member, TodoStatus.TODO)
+            todo.markActive(newPosition)
         }
 
         return toResponse(todo, member)
@@ -258,12 +258,11 @@ class TodoService(
             .orElseThrow { IllegalArgumentException("Todo not found") }
 
         verifyStatusChangePermission(todo, member)
-        val owner = todo.member
         val isOwner = isOwner(todo, member)
 
         // Change status first
         if (todo.status != newStatus) {
-            val targetPosition = if (isOwner) 0 else todoRepository.findMinPositionByMemberAndStatus(owner, newStatus) - 1
+            val targetPosition = if (isOwner) 0 else findStatusChangePosition(todo, member, newStatus)
             todo.changeStatus(newStatus, targetPosition)
         }
 
@@ -369,6 +368,19 @@ class TodoService(
         return todoEntity.tags.any { it.member.id == member.id }
     }
 
+    private fun findStatusChangePosition(todoEntity: Todo, actor: Member, targetStatus: TodoStatus): Int {
+        val owner = todoEntity.member
+        return todoRepository.findMinPositionByMemberAndStatus(owner, targetStatus) - 1
+    }
+
+    private fun ownerScopedSortKey(todo: Todo, viewer: Member): Long {
+        return if (todo.member.id == viewer.id) Long.MIN_VALUE else todo.member.id ?: Long.MAX_VALUE
+    }
+
+    private fun viewerSortBucket(todo: Todo, viewer: Member): Int {
+        return if (todo.member.id == viewer.id) 1 else 0
+    }
+
     private fun findMember(loginMember: LoginMember): Member =
         memberRepository.findById(loginMember.id)
             .orElseThrow { IllegalArgumentException("Member not found") }
@@ -422,7 +434,12 @@ class TodoService(
     }
 
     private fun boardOrderComparator(viewer: Member): Comparator<Todo> {
-        return compareBy<Todo>({ it.member.id != viewer.id }, { it.position ?: Int.MAX_VALUE }, { it.createdDate })
+        return compareBy<Todo>(
+            { viewerSortBucket(it, viewer) },
+            { ownerScopedSortKey(it, viewer) },
+            { it.position ?: Int.MAX_VALUE },
+            { it.createdDate }
+        )
     }
 
     private fun completedOrderComparator(viewer: Member): Comparator<Todo> {
@@ -434,6 +451,7 @@ class TodoService(
     private fun dueDateOrderComparator(viewer: Member): Comparator<Todo> {
         return compareBy<Todo>({ it.dueDate ?: LocalDate.MAX })
             .thenBy { it.member.id != viewer.id }
+            .thenBy { ownerScopedSortKey(it, viewer) }
             .thenBy { it.position ?: Int.MAX_VALUE }
             .thenBy { it.createdDate }
     }

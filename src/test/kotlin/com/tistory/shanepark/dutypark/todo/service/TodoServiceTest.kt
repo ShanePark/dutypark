@@ -420,6 +420,47 @@ class TodoServiceTest {
     }
 
     @Test
+    fun `getBoard should group tagged todos by owner before applying position`() {
+        val ownerA = otherMember()
+        val ownerB = otherMember()
+        ReflectionTestUtils.setField(ownerA, "id", 3L)
+        ReflectionTestUtils.setField(ownerB, "id", 2L)
+
+        val taggedFromOwnerA = Todo(ownerA, "owner-a", "content", 0, TodoStatus.TODO)
+        val taggedFromOwnerB = Todo(ownerB, "owner-b", "content", 10, TodoStatus.TODO)
+        taggedFromOwnerA.addTag(member)
+        taggedFromOwnerB.addTag(member)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findAccessibleTodos(member))
+            .thenReturn(listOf(taggedFromOwnerA, taggedFromOwnerB))
+
+        val board = todoService.getBoard(loginMember)
+
+        assertEquals(listOf("owner-b", "owner-a"), board.todo.map { it.title })
+    }
+
+    @Test
+    fun `getBoard should place tagged todos before own todos`() {
+        val owner = otherMember()
+        ReflectionTestUtils.setField(owner, "id", 3L)
+
+        val ownTodo = createTodo("own", TodoStatus.TODO, -10)
+        val taggedTodo = Todo(owner, "tagged", "content", 99, TodoStatus.TODO)
+        taggedTodo.addTag(member)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findAccessibleTodos(member))
+            .thenReturn(listOf(ownTodo, taggedTodo))
+
+        val board = todoService.getBoard(loginMember)
+
+        assertEquals(listOf("tagged", "own"), board.todo.map { it.title })
+        assertEquals(true, board.todo[0].isTagged)
+        assertEquals(false, board.todo[1].isTagged)
+    }
+
+    @Test
     fun `getBoard should include hasAttachments flag`() {
         val todoItem = createTodo("task with attachment", TodoStatus.TODO, 0)
         ReflectionTestUtils.setField(todoItem, "id", UUID.randomUUID())
@@ -1595,7 +1636,7 @@ class TodoServiceTest {
     }
 
     @Test
-    fun `todoList should keep tagged todos after own todos`() {
+    fun `todoList should place tagged todos before own todos`() {
         val friend = otherMember()
         ReflectionTestUtils.setField(friend, "name", "owner")
         val ownTodo = createTodo("own", TodoStatus.TODO, 0)
@@ -1608,10 +1649,10 @@ class TodoServiceTest {
 
         val response = todoService.todoList(loginMember)
 
-        assertEquals(listOf("own", "tagged"), response.map { it.title })
-        assertEquals(false, response[0].isTagged)
-        assertEquals(true, response[1].isTagged)
-        assertEquals(friend.name, response[1].owner)
+        assertEquals(listOf("tagged", "own"), response.map { it.title })
+        assertEquals(true, response[0].isTagged)
+        assertEquals(friend.name, response[0].owner)
+        assertEquals(false, response[1].isTagged)
     }
 
     @Test
