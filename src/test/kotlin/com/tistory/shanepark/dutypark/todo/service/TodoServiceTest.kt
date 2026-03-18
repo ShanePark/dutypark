@@ -676,7 +676,7 @@ class TodoServiceTest {
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
         `when`(todoRepository.findMinPositionByMemberAndStatus(owner, TodoStatus.IN_PROGRESS)).thenReturn(3)
 
-        val result = todoService.changeStatus(loginMember, todoId, TodoStatus.IN_PROGRESS, listOf(todoId))
+        val result = todoService.changeStatus(loginMember, todoId, TodoStatus.IN_PROGRESS, emptyList())
 
         assertEquals(TodoStatus.IN_PROGRESS, result.status)
         assertEquals(2, result.position)
@@ -736,19 +736,39 @@ class TodoServiceTest {
     }
 
     @Test
-    fun `changeStatus with empty orderedIds should still change status`() {
+    fun `changeStatus should allow owner to update status without orderedIds`() {
         val todoId = UUID.randomUUID()
         val todo = createTodo("task", TodoStatus.TODO, 5)
         ReflectionTestUtils.setField(todo, "id", todoId)
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
-        `when`(todoRepository.findAllById(emptyList<UUID>())).thenReturn(emptyList())
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.IN_PROGRESS)).thenReturn(3)
 
         val result = todoService.changeStatus(loginMember, todoId, TodoStatus.IN_PROGRESS, emptyList())
 
         assertEquals(TodoStatus.IN_PROGRESS, result.status)
-        assertEquals(0, result.position)
+        assertEquals(2, result.position)
+        verify(todoRepository, never()).findAllById(anyList())
+    }
+
+    @Test
+    fun `changeStatus should require orderedIds when owner reorders within same status`() {
+        val todoId = UUID.randomUUID()
+        val todo = createTodo("task", TodoStatus.TODO, 5)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+
+        val exception = assertThrows<IllegalArgumentException> {
+            todoService.changeStatus(loginMember, todoId, TodoStatus.TODO, emptyList())
+        }
+
+        assertEquals("orderedIds is required when reordering within the same status", exception.message)
+        assertEquals(TodoStatus.TODO, todo.status)
+        assertEquals(5, todo.position)
+        verify(todoRepository, never()).findAllById(anyList())
     }
 
     @Test

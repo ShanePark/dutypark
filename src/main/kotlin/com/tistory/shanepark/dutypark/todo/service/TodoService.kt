@@ -259,15 +259,23 @@ class TodoService(
 
         verifyStatusChangePermission(todo, member)
         val isOwner = isOwner(todo, member)
+        val statusChanged = todo.status != newStatus
 
         // Change status first
-        if (todo.status != newStatus) {
-            val targetPosition = if (isOwner) 0 else findStatusChangePosition(todo, member, newStatus)
+        if (statusChanged) {
+            val targetPosition = if (isOwner && orderedIds.isNotEmpty()) 0 else findStatusChangePosition(todo, member, newStatus)
             todo.changeStatus(newStatus, targetPosition)
         }
 
         if (!isOwner) {
             return toResponse(todo, member)
+        }
+
+        if (orderedIds.isEmpty()) {
+            if (statusChanged) {
+                return toResponse(todo, member)
+            }
+            throw IllegalArgumentException("orderedIds is required when reordering within the same status")
         }
 
         // Reorder all todos in target column based on orderedIds

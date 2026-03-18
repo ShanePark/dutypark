@@ -1312,6 +1312,67 @@ class TodoControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `owner can change status without orderedIds`() {
+        todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Existing In Progress",
+                content = "Content",
+                position = 1,
+                status = TodoStatus.IN_PROGRESS
+            )
+        )
+        val saved = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Todo",
+                content = "Content",
+                position = 0,
+                status = TodoStatus.TODO
+            )
+        )
+
+        val json = """{"status": "IN_PROGRESS"}"""
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.patch("/api/todos/{id}/status", saved.id)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+            .andExpect(jsonPath("$.position").value(0))
+            .andExpect(jsonPath("$.isTagged").value(false))
+    }
+
+    @Test
+    fun `owner cannot reorder within same status without orderedIds`() {
+        val saved = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Todo",
+                content = "Content",
+                position = 0,
+                status = TodoStatus.TODO
+            )
+        )
+
+        val json = """{"status": "TODO"}"""
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.patch("/api/todos/{id}/status", saved.id)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error").value("orderedIds is required when reordering within the same status"))
+    }
+
+    @Test
     fun `changeStatus from DONE to TODO clears completedDate`() {
         val saved = todoRepository.save(
             Todo(
