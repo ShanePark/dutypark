@@ -401,6 +401,32 @@ class ScheduleControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `admin can get private member schedules`() {
+        val member = TestData.member
+        member.calendarVisibility = com.tistory.shanepark.dutypark.member.domain.enums.Visibility.PRIVATE
+        memberRepository.save(member)
+        scheduleRepository.save(
+            Schedule(
+                member = member,
+                content = "admin visible schedule",
+                startDateTime = LocalDateTime.of(2024, 3, 1, 0, 0),
+                endDateTime = LocalDateTime.of(2024, 3, 1, 1, 0),
+                position = 0
+            )
+        )
+
+        mockMvc.perform(
+            get("/api/schedules")
+                .param("memberId", member.id.toString())
+                .param("year", "2024")
+                .param("month", "3")
+                .accept("application/json")
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.admin)}")
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$..content").value(hasItem("admin visible schedule")))
+    }
+
+    @Test
     fun `getSchedule returns basic info`() {
         val member = TestData.member
         val schedule = scheduleRepository.save(

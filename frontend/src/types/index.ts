@@ -313,6 +313,47 @@ export interface AdminMemberDto {
   profilePhotoVersion?: number
 }
 
+export interface AdminMemberDetailDto {
+  id: number
+  name: string
+  email: string | null
+  teamId: number | null
+  teamName: string | null
+  calendarVisibility: CalendarVisibility
+  hasProfilePhoto: boolean
+  profilePhotoVersion: number
+  serviceAdmin: boolean
+  teamAdmin: boolean
+  teamManager: boolean
+  auxiliaryAccount: boolean
+  hasPassword: boolean
+  authProviders: string[]
+  createdDate: string
+  lastModifiedDate: string
+  activeSessionCount: number
+  pushEnabledSessionCount: number
+  lastActiveAt: string | null
+  totalScheduleCount: number
+  upcomingScheduleCount: number
+  taggedScheduleCount: number
+  totalTodoCount: number
+  todoCount: number
+  inProgressTodoCount: number
+  doneTodoCount: number
+  overdueTodoCount: number
+  dueTodayTodoCount: number
+  friendCount: number
+  familyCount: number
+  pendingReceivedFriendRequestCount: number
+  pendingSentFriendRequestCount: number
+  managerCount: number
+  managedMemberCount: number
+  managerNames: string[]
+  managedMemberNames: string[]
+  totalNotificationCount: number
+  unreadNotificationCount: number
+}
+
 export interface SimpleTeam {
   id: number
   name: string

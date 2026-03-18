@@ -11,6 +11,14 @@ import java.util.*
 
 interface TodoRepository : JpaRepository<Todo, UUID> {
 
+    fun countByMemberId(memberId: Long): Long
+
+    fun countByMemberIdAndStatus(memberId: Long, status: TodoStatus): Long
+
+    fun countByMemberIdAndStatusNotAndDueDateBefore(memberId: Long, status: TodoStatus, dueDate: LocalDate): Long
+
+    fun countByMemberIdAndStatusNotAndDueDate(memberId: Long, status: TodoStatus, dueDate: LocalDate): Long
+
     @Query(
         "SELECT COALESCE(MIN(t.position), 0) " +
                 "FROM Todo t " +

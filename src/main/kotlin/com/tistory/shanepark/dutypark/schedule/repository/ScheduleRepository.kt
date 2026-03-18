@@ -13,6 +13,20 @@ import java.util.*
 
 interface ScheduleRepository : JpaRepository<Schedule, UUID> {
 
+    fun countByMemberId(memberId: Long): Long
+
+    fun countByMemberIdAndEndDateTimeGreaterThanEqual(memberId: Long, dateTime: LocalDateTime): Long
+
+    @Query(
+        """
+        SELECT COUNT(DISTINCT s)
+        FROM Schedule s
+        JOIN s.tags t
+        WHERE t.member.id = :memberId
+        """
+    )
+    fun countTaggedSchedulesByMemberId(memberId: Long): Long
+
     @Query(
         value = """
         SELECT DISTINCT s
