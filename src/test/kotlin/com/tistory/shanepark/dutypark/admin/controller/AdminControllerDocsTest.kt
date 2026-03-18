@@ -1,7 +1,10 @@
 package com.tistory.shanepark.dutypark.admin.controller
 
 import com.tistory.shanepark.dutypark.RestDocsTest
+import com.tistory.shanepark.dutypark.member.domain.entity.DDayEvent
+import com.tistory.shanepark.dutypark.member.repository.DDayRepository
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders
@@ -12,11 +15,26 @@ import org.springframework.restdocs.request.RequestDocumentation.parameterWithNa
 import org.springframework.restdocs.request.RequestDocumentation.pathParameters
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.time.LocalDate
 
 class AdminControllerDocsTest : RestDocsTest() {
 
+    @Autowired
+    lateinit var dDayRepository: DDayRepository
+
     @Test
     fun `admin member detail`() {
+        dDayRepository.save(
+            DDayEvent(
+                member = TestData.member,
+                title = "결혼 기념일",
+                date = LocalDate.now().plusDays(10),
+                isPrivate = false,
+            )
+        )
+        em.flush()
+        em.clear()
+
         mockMvc.perform(
             RestDocumentationRequestBuilders.get("/admin/api/members/{memberId}", TestData.member.id!!)
                 .accept(MediaType.APPLICATION_JSON)
@@ -59,6 +77,13 @@ class AdminControllerDocsTest : RestDocsTest() {
                         fieldWithPath("doneTodoCount").description("완료 TODO 수"),
                         fieldWithPath("overdueTodoCount").description("기한 지난 미완료 TODO 수"),
                         fieldWithPath("dueTodayTodoCount").description("오늘 마감인 미완료 TODO 수"),
+                        fieldWithPath("dDays").description("회원 D-Day 목록"),
+                        fieldWithPath("dDays[].id").description("D-Day ID"),
+                        fieldWithPath("dDays[].title").description("D-Day 제목"),
+                        fieldWithPath("dDays[].date").description("D-Day 날짜"),
+                        fieldWithPath("dDays[].isPrivate").description("비공개 여부"),
+                        fieldWithPath("dDays[].calc").description("한국식 D-Day 계산값(당일 0, 지난 날짜는 음수 이전 값)"),
+                        fieldWithPath("dDays[].daysLeft").description("오늘 기준 남은 일 수"),
                         fieldWithPath("friendCount").description("친구 수"),
                         fieldWithPath("familyCount").description("가족 표시된 친구 수"),
                         fieldWithPath("pendingReceivedFriendRequestCount").description("받은 대기 중 친구 요청 수"),

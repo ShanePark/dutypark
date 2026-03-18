@@ -2,8 +2,10 @@ package com.tistory.shanepark.dutypark.admin.service
 
 import com.tistory.shanepark.dutypark.admin.domain.dto.AdminMemberDto
 import com.tistory.shanepark.dutypark.admin.domain.dto.AdminMemberDetailDto
+import com.tistory.shanepark.dutypark.member.domain.dto.DDayDto
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
+import com.tistory.shanepark.dutypark.member.repository.DDayRepository
 import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberManagerRepository
@@ -33,6 +35,7 @@ class AdminService(
     private val friendRelationRepository: FriendRelationRepository,
     private val friendRequestRepository: FriendRequestRepository,
     private val memberManagerRepository: MemberManagerRepository,
+    private val dDayRepository: DDayRepository,
     private val notificationRepository: NotificationRepository,
     private val memberSocialAccountService: MemberSocialAccountService,
     private val dutyparkProperties: DutyparkProperties,
@@ -104,6 +107,7 @@ class AdminService(
             doneTodoCount = todoRepository.countByMemberIdAndStatus(memberId, TodoStatus.DONE),
             overdueTodoCount = todoRepository.countByMemberIdAndStatusNotAndDueDateBefore(memberId, TodoStatus.DONE, today),
             dueTodayTodoCount = todoRepository.countByMemberIdAndStatusNotAndDueDate(memberId, TodoStatus.DONE, today),
+            dDays = dDayRepository.findAllByMemberOrderByDate(member).map(DDayDto::of),
             friendCount = friendRelationRepository.countByMemberId(memberId),
             familyCount = friendRelationRepository.countByMemberIdAndIsFamilyTrue(memberId),
             pendingReceivedFriendRequestCount = friendRequestRepository.countByToMemberIdAndStatus(memberId, FriendRequestStatus.PENDING),

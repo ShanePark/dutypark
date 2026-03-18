@@ -1,9 +1,11 @@
 package com.tistory.shanepark.dutypark.admin.controller
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
+import com.tistory.shanepark.dutypark.member.domain.entity.DDayEvent
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberSocialAccount
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
+import com.tistory.shanepark.dutypark.member.repository.DDayRepository
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSocialAccountRepository
 import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
@@ -50,6 +52,9 @@ class AdminControllerTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var friendRequestRepository: FriendRequestRepository
+
+    @Autowired
+    lateinit var dDayRepository: DDayRepository
 
     @Autowired
     lateinit var notificationRepository: NotificationRepository
@@ -178,6 +183,23 @@ class AdminControllerTest : DutyparkIntegrationTest() {
         taggedSchedule.addTag(TestData.member)
         scheduleRepository.save(taggedSchedule)
 
+        dDayRepository.save(
+            DDayEvent(
+                member = TestData.member,
+                title = "비공개 기념일",
+                date = LocalDate.now().minusDays(2),
+                isPrivate = true,
+            )
+        )
+        dDayRepository.save(
+            DDayEvent(
+                member = TestData.member,
+                title = "공개 기념일",
+                date = LocalDate.now().plusDays(5),
+                isPrivate = false,
+            )
+        )
+
         todoRepository.save(
             Todo(
                 member = TestData.member,
@@ -270,6 +292,11 @@ class AdminControllerTest : DutyparkIntegrationTest() {
             .andExpect(jsonPath("$.doneTodoCount").value(1))
             .andExpect(jsonPath("$.overdueTodoCount").value(1))
             .andExpect(jsonPath("$.dueTodayTodoCount").value(1))
+            .andExpect(jsonPath("$.dDays.length()").value(2))
+            .andExpect(jsonPath("$.dDays[0].title").value("비공개 기념일"))
+            .andExpect(jsonPath("$.dDays[0].isPrivate").value(true))
+            .andExpect(jsonPath("$.dDays[1].title").value("공개 기념일"))
+            .andExpect(jsonPath("$.dDays[1].isPrivate").value(false))
             .andExpect(jsonPath("$.friendCount").value(1))
             .andExpect(jsonPath("$.familyCount").value(1))
             .andExpect(jsonPath("$.pendingReceivedFriendRequestCount").value(1))

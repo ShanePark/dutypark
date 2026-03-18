@@ -342,6 +342,7 @@ export interface AdminMemberDetailDto {
   doneTodoCount: number
   overdueTodoCount: number
   dueTodayTodoCount: number
+  dDays: DDayDto[]
   friendCount: number
   familyCount: number
   pendingReceivedFriendRequestCount: number

@@ -7,15 +7,12 @@ import type { AdminMemberDetailDto, AdminMemberDto } from '@/types'
 import { getVisibilityIcon, getVisibilityLabel } from '@/utils/visibility'
 import {
   Bell,
-  Building2,
   CalendarDays,
   ChevronRight,
-  Clock,
   Eye,
   Key,
   ListTodo,
   Loader2,
-  Mail,
   Shield,
   Smartphone,
   UserCog,
@@ -128,47 +125,38 @@ const primaryInfoRows = computed(() => {
     {
       label: '가입일',
       value: formatDateLabel(props.memberDetail.createdDate),
-      secondaryValue: formatTimeLabel(props.memberDetail.createdDate),
-      helper: formatSince(props.memberDetail.createdDate),
-      icon: Clock,
-      valueClass: 'member-info-value-date',
+      inlineMeta: formatTimeLabel(props.memberDetail.createdDate),
+      inlineNote: formatSince(props.memberDetail.createdDate),
+      valueClass: 'member-detail-main-strong',
     },
     {
       label: '최근 수정',
       value: formatDateLabel(props.memberDetail.lastModifiedDate),
-      secondaryValue: formatTimeLabel(props.memberDetail.lastModifiedDate),
-      helper: formatSince(props.memberDetail.lastModifiedDate),
-      icon: Clock,
-      valueClass: 'member-info-value-date',
+      inlineMeta: formatTimeLabel(props.memberDetail.lastModifiedDate),
+      inlineNote: formatSince(props.memberDetail.lastModifiedDate),
+      valueClass: 'member-detail-main-strong',
     },
     {
       label: '최근 활동',
       value: props.memberDetail.lastActiveAt ? formatDateLabel(props.memberDetail.lastActiveAt) : '활동 기록 없음',
-      secondaryValue: props.memberDetail.lastActiveAt ? formatTimeLabel(props.memberDetail.lastActiveAt) : null,
-      helper: props.memberDetail.lastActiveAt ? formatSince(props.memberDetail.lastActiveAt) : '유효 세션 기준',
-      icon: Smartphone,
-      valueClass: props.memberDetail.lastActiveAt ? 'member-info-value-date' : 'member-info-value-muted',
+      inlineMeta: props.memberDetail.lastActiveAt ? formatTimeLabel(props.memberDetail.lastActiveAt) : null,
+      inlineNote: props.memberDetail.lastActiveAt ? formatSince(props.memberDetail.lastActiveAt) : null,
+      valueClass: props.memberDetail.lastActiveAt ? 'member-detail-main-strong' : 'member-detail-main-muted',
     },
     {
       label: '이메일',
       value: props.memberDetail.email || '등록된 이메일 없음',
-      helper: props.memberDetail.auxiliaryAccount ? '보조 계정은 이메일이 없을 수 있어요' : '로그인/연락처 기준',
-      icon: Mail,
-      valueClass: props.memberDetail.email ? 'member-info-value-email' : 'member-info-value-muted',
+      valueClass: props.memberDetail.email ? 'member-detail-main-break' : 'member-detail-main-muted',
     },
     {
       label: '소속 팀',
       value: props.memberDetail.teamName || '팀 없음',
-      helper: props.memberDetail.teamId ? `팀 ID ${props.memberDetail.teamId}` : '미배정 회원',
-      icon: Building2,
-      valueClass: 'member-info-value-default',
+      valueClass: 'member-detail-main-strong',
     },
     {
       label: '공개 범위',
       value: visibilityLabel.value,
-      helper: '관리자는 항상 조회 가능',
-      icon: visibilityIcon.value,
-      valueClass: 'member-info-value-default',
+      valueClass: 'member-detail-main-strong',
     },
   ]
 })
@@ -190,6 +178,17 @@ const relationshipGroups = computed(() => {
       countText: `${formatNumber(props.memberDetail.managedMemberCount)}명`,
     },
   ]
+})
+
+const dDaySummary = computed(() => {
+  const dDays = props.memberDetail?.dDays ?? []
+  const privateCount = dDays.filter((dday) => dday.isPrivate).length
+
+  return {
+    total: dDays.length,
+    privateCount,
+    publicCount: dDays.length - privateCount,
+  }
 })
 
 function formatNumber(value: number) {
@@ -350,7 +349,7 @@ function openPasswordModal() {
               </div>
             </section>
 
-            <div class="grid gap-3 xl:grid-cols-[1.08fr_0.92fr]">
+            <div class="grid gap-3 xl:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)]">
             <section class="member-section-card">
               <div class="flex items-center gap-2">
                 <Shield class="w-4 h-4 text-dp-text-secondary" />
@@ -360,16 +359,13 @@ function openPasswordModal() {
                 <article
                   v-for="row in primaryInfoRows"
                   :key="row.label"
-                  class="member-info-row"
+                  class="member-detail-item"
                 >
-                  <div class="member-info-icon">
-                    <component :is="row.icon" class="w-4 h-4 text-dp-text-secondary" />
-                  </div>
-                  <div class="member-info-copy min-w-0">
-                    <p class="text-xs font-medium text-dp-text-muted">{{ row.label }}</p>
-                    <p class="member-info-value" :class="row.valueClass">{{ row.value }}</p>
-                    <p v-if="row.secondaryValue" class="member-info-secondary">{{ row.secondaryValue }}</p>
-                    <p class="member-info-helper">{{ row.helper }}</p>
+                  <p class="member-detail-label">{{ row.label }}</p>
+                  <div class="mt-1 flex flex-wrap items-center gap-2">
+                    <p class="member-detail-main" :class="row.valueClass">{{ row.value }}</p>
+                    <span v-if="row.inlineMeta" class="member-detail-inline-meta">{{ row.inlineMeta }}</span>
+                    <span v-if="row.inlineNote" class="member-detail-inline-note">{{ row.inlineNote }}</span>
                   </div>
                 </article>
               </div>
@@ -381,8 +377,8 @@ function openPasswordModal() {
                 <h3 class="text-base font-semibold text-dp-text-primary">계정 상태</h3>
               </div>
               <div class="mt-3 space-y-3">
-                <div>
-                  <p class="text-xs font-medium text-dp-text-muted">로그인 방식</p>
+                <div class="member-detail-item">
+                  <p class="member-detail-label">로그인 방식</p>
                   <div class="mt-2 flex flex-wrap gap-2">
                     <span
                       v-for="badge in loginBadges"
@@ -394,16 +390,16 @@ function openPasswordModal() {
                   </div>
                 </div>
                 <div class="grid grid-cols-2 gap-2">
-                  <article class="member-mini-card">
-                    <p class="text-xs font-medium text-dp-text-muted">공개 범위</p>
-                    <div class="mt-2 flex items-center gap-2">
+                  <article class="member-detail-item">
+                    <p class="member-detail-label">공개 범위</p>
+                    <div class="mt-1 flex items-center gap-2">
                       <component :is="visibilityIcon" class="w-4 h-4 text-dp-text-secondary" />
-                      <span class="text-sm font-semibold text-dp-text-primary">{{ visibilityLabel }}</span>
+                      <span class="member-detail-main member-detail-main-strong">{{ visibilityLabel }}</span>
                     </div>
                   </article>
-                  <article class="member-mini-card">
-                    <p class="text-xs font-medium text-dp-text-muted">푸시 연결</p>
-                    <p class="mt-2 text-sm font-semibold text-dp-text-primary">
+                  <article class="member-detail-item">
+                    <p class="member-detail-label">푸시 연결</p>
+                    <p class="mt-1 member-detail-main member-detail-main-strong">
                       {{ formatNumber(memberDetail.pushEnabledSessionCount) }}개 세션
                     </p>
                   </article>
@@ -411,24 +407,24 @@ function openPasswordModal() {
               </div>
             </section>
 
-            <section class="member-section-card">
+            <section class="member-section-card xl:col-span-2">
               <div class="flex items-center gap-2">
                 <CalendarDays class="w-4 h-4 text-dp-text-secondary" />
-                <h3 class="text-base font-semibold text-dp-text-primary">일정 / TODO 요약</h3>
+                <h3 class="text-base font-semibold text-dp-text-primary">일정 / TODO / D-Day 요약</h3>
               </div>
-              <div class="mt-3 grid gap-2 sm:grid-cols-2">
+              <div class="mt-3 grid gap-2 lg:grid-cols-3">
                 <article class="member-mini-card">
                   <p class="text-xs font-medium text-dp-text-muted">일정</p>
-                  <div class="mt-3 space-y-2 text-sm text-dp-text-primary">
-                    <div class="flex items-center justify-between gap-3">
+                  <div class="mt-2 space-y-1.5 text-sm text-dp-text-primary">
+                    <div class="member-summary-row">
                       <span>직접 등록</span>
                       <strong>{{ formatNumber(memberDetail.totalScheduleCount) }}</strong>
                     </div>
-                    <div class="flex items-center justify-between gap-3">
+                    <div class="member-summary-row">
                       <span>예정 일정</span>
                       <strong>{{ formatNumber(memberDetail.upcomingScheduleCount) }}</strong>
                     </div>
-                    <div class="flex items-center justify-between gap-3">
+                    <div class="member-summary-row">
                       <span>태그된 일정</span>
                       <strong>{{ formatNumber(memberDetail.taggedScheduleCount) }}</strong>
                     </div>
@@ -437,33 +433,57 @@ function openPasswordModal() {
 
                 <article class="member-mini-card">
                   <p class="text-xs font-medium text-dp-text-muted">TODO</p>
-                  <div class="mt-3 space-y-2 text-sm text-dp-text-primary">
-                    <div class="flex items-center justify-between gap-3">
+                  <div class="mt-2 space-y-1.5 text-sm text-dp-text-primary">
+                    <div class="member-summary-row">
                       <span>대기</span>
                       <strong>{{ formatNumber(memberDetail.todoCount) }}</strong>
                     </div>
-                    <div class="flex items-center justify-between gap-3">
+                    <div class="member-summary-row">
                       <span>진행 중</span>
                       <strong>{{ formatNumber(memberDetail.inProgressTodoCount) }}</strong>
                     </div>
-                    <div class="flex items-center justify-between gap-3">
+                    <div class="member-summary-row">
                       <span>완료</span>
                       <strong>{{ formatNumber(memberDetail.doneTodoCount) }}</strong>
                     </div>
-                    <div class="flex items-center justify-between gap-3">
+                    <div class="member-summary-row">
                       <span>기한 초과</span>
                       <strong class="text-dp-warning">{{ formatNumber(memberDetail.overdueTodoCount) }}</strong>
                     </div>
-                    <div class="flex items-center justify-between gap-3">
+                    <div class="member-summary-row">
                       <span>오늘 마감</span>
                       <strong>{{ formatNumber(memberDetail.dueTodayTodoCount) }}</strong>
+                    </div>
+                  </div>
+                </article>
+
+                <article class="member-mini-card">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <p class="text-xs font-medium text-dp-text-muted">D-Day</p>
+                      <p class="mt-1 text-lg font-bold text-dp-text-primary">{{ formatNumber(dDaySummary.total) }}개</p>
+                    </div>
+                    <span class="member-inline-badge">관리자 조회 기준</span>
+                  </div>
+                  <div class="mt-2 space-y-1.5 text-sm text-dp-text-primary">
+                    <div class="member-summary-row">
+                      <span>전체</span>
+                      <strong>{{ formatNumber(dDaySummary.total) }}</strong>
+                    </div>
+                    <div class="member-summary-row">
+                      <span>공개</span>
+                      <strong>{{ formatNumber(dDaySummary.publicCount) }}</strong>
+                    </div>
+                    <div class="member-summary-row">
+                      <span>비공개</span>
+                      <strong>{{ formatNumber(dDaySummary.privateCount) }}</strong>
                     </div>
                   </div>
                 </article>
               </div>
             </section>
 
-            <section class="member-section-card">
+            <section class="member-section-card xl:col-span-2">
               <div class="flex items-center gap-2">
                 <Users class="w-4 h-4 text-dp-text-secondary" />
                 <h3 class="text-base font-semibold text-dp-text-primary">관계 / 알림</h3>
@@ -577,7 +597,7 @@ function openPasswordModal() {
 .member-stat-card,
 .member-section-card,
 .member-mini-card,
-.member-info-row {
+.member-detail-item {
   transition:
     transform 180ms ease,
     box-shadow 180ms ease,
@@ -607,75 +627,54 @@ function openPasswordModal() {
   padding: 0.85rem;
 }
 
-.member-info-row {
+.member-detail-item {
   border-radius: 1rem;
-  display: flex;
-  gap: 0.875rem;
-  padding: 0.8rem;
-  align-items: flex-start;
+  padding: 0.78rem 0.85rem;
 }
 
-.member-info-icon {
-  width: 2.25rem;
-  height: 2.25rem;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  display: flex;
-  border-radius: 0.9rem;
-  background-color: color-mix(in srgb, var(--dp-bg-tertiary) 90%, transparent);
+.member-detail-label {
+  font-size: 0.74rem;
+  line-height: 1rem;
+  font-weight: 600;
+  color: var(--dp-text-muted);
 }
 
-.member-info-copy {
-  display: flex;
-  flex-direction: column;
-}
-
-.member-info-value {
-  margin-top: 0.28rem;
-  font-size: 0.98rem;
+.member-detail-main {
+  font-size: 0.96rem;
   line-height: 1.35;
-  font-weight: 700;
   color: var(--dp-text-primary);
 }
 
-.member-info-value-default {
-  word-break: keep-all;
+.member-detail-main-strong {
+  font-weight: 700;
 }
 
-.member-info-value-date {
-  white-space: nowrap;
-  letter-spacing: -0.01em;
-}
-
-.member-info-value-email {
-  word-break: break-all;
-}
-
-.member-info-value-muted {
+.member-detail-main-muted {
   font-weight: 600;
   color: var(--dp-text-secondary);
 }
 
-.member-info-secondary {
-  margin-top: 0.35rem;
+.member-detail-main-break {
+  word-break: break-all;
+  font-weight: 700;
+}
+
+.member-detail-inline-meta {
   display: inline-flex;
-  width: fit-content;
-  max-width: 100%;
   align-items: center;
   border-radius: 9999px;
   background-color: color-mix(in srgb, var(--dp-bg-tertiary) 92%, transparent);
   color: var(--dp-text-secondary);
-  font-size: 0.75rem;
-  line-height: 1rem;
+  font-size: 0.72rem;
+  line-height: 0.95rem;
   font-weight: 700;
-  padding: 0.24rem 0.58rem;
+  padding: 0.18rem 0.5rem;
 }
 
-.member-info-helper {
-  margin-top: 0.42rem;
-  font-size: 0.74rem;
+.member-detail-inline-note {
+  font-size: 0.77rem;
   line-height: 1rem;
+  font-weight: 600;
   color: var(--dp-text-secondary);
 }
 
@@ -684,6 +683,13 @@ function openPasswordModal() {
   padding: 0.38rem 0.8rem;
   font-size: 0.75rem;
   font-weight: 700;
+}
+
+.member-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
 @media (hover: hover) {
@@ -713,7 +719,7 @@ function openPasswordModal() {
   .member-stat-card:hover,
   .member-section-card:hover,
   .member-mini-card:hover,
-  .member-info-row:hover {
+  .member-detail-item:hover {
     border-color: color-mix(in srgb, var(--dp-accent) 22%, var(--dp-border-primary));
     background-color: color-mix(in srgb, var(--dp-bg-card) 92%, var(--dp-accent-bg));
   }
@@ -731,18 +737,22 @@ function openPasswordModal() {
     padding: 0.85rem;
   }
 
-  .member-info-row,
+  .member-detail-item,
   .member-mini-card,
   .member-stat-card {
     padding: 0.8rem;
   }
 
-  .member-info-value {
+  .member-detail-main {
     font-size: 0.93rem;
   }
 
-  .member-info-secondary {
+  .member-detail-inline-meta {
     font-size: 0.72rem;
+  }
+
+  .member-detail-inline-note {
+    font-size: 0.74rem;
   }
 }
 </style>

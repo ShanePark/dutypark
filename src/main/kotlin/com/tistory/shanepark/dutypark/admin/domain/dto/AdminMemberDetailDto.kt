@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.admin.domain.dto
 
+import com.tistory.shanepark.dutypark.member.domain.dto.DDayDto
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import java.time.LocalDateTime
 
@@ -32,6 +33,7 @@ data class AdminMemberDetailDto(
     val doneTodoCount: Long,
     val overdueTodoCount: Long,
     val dueTodayTodoCount: Long,
+    val dDays: List<DDayDto>,
     val friendCount: Long,
     val familyCount: Long,
     val pendingReceivedFriendRequestCount: Long,
