@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import Sortable from 'sortablejs'
+import type { MoveEvent, SortableEvent } from 'sortablejs'
 import { HelpCircle, X, ListTodo, Clock, CheckCircle2, Lightbulb, LayoutGrid, Plus } from 'lucide-vue-next'
 import { todoApi } from '@/api/todo'
 import { friendApi } from '@/api/member'
@@ -106,6 +107,7 @@ function initSortables() {
       scrollSpeed: 10,
       swapThreshold: 0.65,
       onMove: handleDragMove,
+      onChange: handleDragChange,
       onEnd: handleDragEnd,
     })
   })
@@ -115,14 +117,101 @@ function isTaggedCard(element: Element | null): boolean {
   return element?.getAttribute('data-is-tagged') === 'true'
 }
 
-function handleDragMove(evt: { dragged: Element; from: Element; to: Element }) {
-  if (!isTaggedCard(evt.dragged)) {
-    return true
+function getColumnCards(container: Element | null, exclude: Element | null = null): HTMLElement[] {
+  if (!(container instanceof HTMLElement)) {
+    return []
   }
 
-  const fromColumn = evt.from.getAttribute('data-column')
-  const toColumn = evt.to.getAttribute('data-column')
-  return fromColumn !== toColumn
+  return Array.from(container.children).filter((child): child is HTMLElement => {
+    return child instanceof HTMLElement && child !== exclude
+  })
+}
+
+function getLeadingTaggedCount(cards: Element[]): number {
+  let index = 0
+  while (index < cards.length && isTaggedCard(cards[index])) {
+    index += 1
+  }
+  return index
+}
+
+function pinTaggedCardToColumnTop(container: Element | null, card: Element | null) {
+  if (!(container instanceof HTMLElement) || !(card instanceof HTMLElement)) {
+    return
+  }
+
+  const anchor = Array.from(container.children).find((child) => child !== card)
+  if (anchor) {
+    container.insertBefore(card, anchor)
+    return
+  }
+
+  if (card.parentElement !== container) {
+    container.appendChild(card)
+  }
+}
+
+function keepOwnedCardBelowTaggedBlock(container: Element | null, card: Element | null) {
+  if (!(container instanceof HTMLElement) || !(card instanceof HTMLElement)) {
+    return
+  }
+
+  const cardsWithoutDragged = getColumnCards(container, card)
+  const leadingTaggedCount = getLeadingTaggedCount(cardsWithoutDragged)
+  if (leadingTaggedCount === 0) {
+    return
+  }
+
+  const currentCards = getColumnCards(container)
+  const currentIndex = currentCards.indexOf(card)
+  if (currentIndex < 0 || currentIndex >= leadingTaggedCount) {
+    return
+  }
+
+  const anchor = cardsWithoutDragged[leadingTaggedCount]
+  if (anchor) {
+    container.insertBefore(card, anchor)
+    return
+  }
+
+  container.appendChild(card)
+}
+
+function normalizeDraggedCardPosition(container: Element | null, card: Element | null, from: Element | null, to: Element | null) {
+  if (isCrossColumnTaggedMove(card, from, to)) {
+    pinTaggedCardToColumnTop(container, card)
+    return
+  }
+
+  if (!isTaggedCard(card)) {
+    keepOwnedCardBelowTaggedBlock(container, card)
+  }
+}
+
+function isCrossColumnTaggedMove(dragged: Element | null, from: Element | null, to: Element | null): boolean {
+  if (!isTaggedCard(dragged)) {
+    return false
+  }
+
+  return from?.getAttribute('data-column') !== to?.getAttribute('data-column')
+}
+
+function handleDragMove(evt: MoveEvent) {
+  if (isTaggedCard(evt.dragged)) {
+    const fromColumn = evt.from.getAttribute('data-column')
+    const toColumn = evt.to.getAttribute('data-column')
+    return fromColumn !== toColumn
+  }
+
+  if (isTaggedCard(evt.related)) {
+    return 1
+  }
+
+  return true
+}
+
+function handleDragChange(evt: SortableEvent) {
+  normalizeDraggedCardPosition(evt.to, evt.item, evt.from, evt.to)
 }
 
 function destroySortables() {
@@ -134,13 +223,15 @@ function destroySortables() {
   sortableInstances = {}
 }
 
-async function handleDragEnd(evt: Sortable.SortableEvent) {
+async function handleDragEnd(evt: SortableEvent) {
   const todoId = evt.item.getAttribute('data-id')
   if (!todoId) return
 
   const fromColumn = evt.from.getAttribute('data-column') as TodoStatus
   const toColumn = evt.to.getAttribute('data-column') as TodoStatus
   const draggedIsTagged = isTaggedCard(evt.item)
+
+  normalizeDraggedCardPosition(evt.to, evt.item, evt.from, evt.to)
 
   if (draggedIsTagged && fromColumn === toColumn) {
     await loadBoard()

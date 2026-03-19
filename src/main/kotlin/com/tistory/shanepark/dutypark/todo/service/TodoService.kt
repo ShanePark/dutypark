@@ -385,8 +385,8 @@ class TodoService(
         return if (todo.member.id == viewer.id) Long.MIN_VALUE else todo.member.id ?: Long.MAX_VALUE
     }
 
-    private fun viewerSortBucket(todo: Todo, viewer: Member): Int {
-        return if (todo.member.id == viewer.id) 1 else 0
+    private fun isTaggedForViewer(todo: Todo, viewer: Member): Boolean {
+        return todo.member.id != viewer.id
     }
 
     private fun findMember(loginMember: LoginMember): Member =
@@ -442,12 +442,30 @@ class TodoService(
     }
 
     private fun boardOrderComparator(viewer: Member): Comparator<Todo> {
-        return compareBy<Todo>(
-            { viewerSortBucket(it, viewer) },
-            { ownerScopedSortKey(it, viewer) },
-            { it.position ?: Int.MAX_VALUE },
-            { it.createdDate }
-        )
+        return Comparator { left, right ->
+            val leftTagged = isTaggedForViewer(left, viewer)
+            val rightTagged = isTaggedForViewer(right, viewer)
+
+            when {
+                leftTagged && rightTagged -> compareValuesBy(
+                    right,
+                    left,
+                    { it.lastModifiedDate },
+                    { it.createdDate },
+                    { it.id.toString() }
+                )
+
+                leftTagged != rightTagged -> if (leftTagged) -1 else 1
+
+                else -> compareValuesBy(
+                    left,
+                    right,
+                    { it.position ?: Int.MAX_VALUE },
+                    { it.createdDate },
+                    { it.id.toString() }
+                )
+            }
+        }
     }
 
     private fun completedOrderComparator(viewer: Member): Comparator<Todo> {

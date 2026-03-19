@@ -1250,6 +1250,50 @@ class TodoControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `tagged todos are sorted by modified date desc in board`() {
+        todoRepository.save(
+            Todo(
+                member = TestData.member2,
+                title = "Own Todo",
+                content = "Content",
+                position = -10,
+                status = TodoStatus.TODO
+            )
+        )
+        todoRepository.saveAndFlush(
+            Todo(
+                member = TestData.member,
+                title = "Older Tagged Todo",
+                content = "Content",
+                position = 0,
+                status = TodoStatus.TODO
+            ).apply { addTag(TestData.member2) }
+        )
+        Thread.sleep(20)
+        val newerTaggedTodo = todoRepository.saveAndFlush(
+            Todo(
+                member = TestData.member,
+                title = "Newer Tagged Todo",
+                content = "Content",
+                position = 99,
+                status = TodoStatus.TODO
+            ).apply { addTag(TestData.member2) }
+        )
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/todos/board")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member2)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.todo[0].id").value(newerTaggedTodo.id.toString()))
+            .andExpect(jsonPath("$.todo[0].title").value("Newer Tagged Todo"))
+            .andExpect(jsonPath("$.todo[1].title").value("Older Tagged Todo"))
+            .andExpect(jsonPath("$.todo[2].title").value("Own Todo"))
+    }
+
+    @Test
     fun `changeStatus from TODO to DONE sets completedDate`() {
         val saved = todoRepository.save(
             Todo(

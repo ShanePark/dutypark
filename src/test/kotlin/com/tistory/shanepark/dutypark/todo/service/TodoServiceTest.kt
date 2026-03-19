@@ -24,6 +24,7 @@ import org.mockito.Mockito.*
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.*
@@ -420,24 +421,29 @@ class TodoServiceTest {
     }
 
     @Test
-    fun `getBoard should group tagged todos by owner before applying position`() {
-        val ownerA = otherMember()
-        val ownerB = otherMember()
-        ReflectionTestUtils.setField(ownerA, "id", 3L)
-        ReflectionTestUtils.setField(ownerB, "id", 2L)
+    fun `getBoard should sort tagged todos by modified date before own todos`() {
+        val owner = otherMember()
+        ReflectionTestUtils.setField(owner, "id", 3L)
 
-        val taggedFromOwnerA = Todo(ownerA, "owner-a", "content", 0, TodoStatus.TODO)
-        val taggedFromOwnerB = Todo(ownerB, "owner-b", "content", 10, TodoStatus.TODO)
-        taggedFromOwnerA.addTag(member)
-        taggedFromOwnerB.addTag(member)
+        val olderTagged = Todo(owner, "older-tagged", "content", 0, TodoStatus.TODO).apply {
+            addTag(member)
+            lastModifiedDate = LocalDateTime.of(2025, 1, 10, 9, 0)
+            createdDate = LocalDateTime.of(2025, 1, 10, 9, 0)
+        }
+        val newerTagged = Todo(owner, "newer-tagged", "content", 10, TodoStatus.TODO).apply {
+            addTag(member)
+            lastModifiedDate = LocalDateTime.of(2025, 1, 10, 10, 0)
+            createdDate = LocalDateTime.of(2025, 1, 10, 10, 0)
+        }
+        val ownTodo = createTodo("own", TodoStatus.TODO, -10)
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findAccessibleTodos(member))
-            .thenReturn(listOf(taggedFromOwnerA, taggedFromOwnerB))
+            .thenReturn(listOf(olderTagged, newerTagged, ownTodo))
 
         val board = todoService.getBoard(loginMember)
 
-        assertEquals(listOf("owner-b", "owner-a"), board.todo.map { it.title })
+        assertEquals(listOf("newer-tagged", "older-tagged", "own"), board.todo.map { it.title })
     }
 
     @Test
