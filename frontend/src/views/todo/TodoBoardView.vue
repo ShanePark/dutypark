@@ -177,30 +177,18 @@ function keepOwnedCardBelowTaggedBlock(container: Element | null, card: Element 
   container.appendChild(card)
 }
 
-function normalizeDraggedCardPosition(container: Element | null, card: Element | null, from: Element | null, to: Element | null) {
-  if (isCrossColumnTaggedMove(card, from, to)) {
+function normalizeDraggedCardPosition(container: Element | null, card: Element | null) {
+  if (isTaggedCard(card)) {
     pinTaggedCardToColumnTop(container, card)
     return
   }
 
-  if (!isTaggedCard(card)) {
-    keepOwnedCardBelowTaggedBlock(container, card)
-  }
-}
-
-function isCrossColumnTaggedMove(dragged: Element | null, from: Element | null, to: Element | null): boolean {
-  if (!isTaggedCard(dragged)) {
-    return false
-  }
-
-  return from?.getAttribute('data-column') !== to?.getAttribute('data-column')
+  keepOwnedCardBelowTaggedBlock(container, card)
 }
 
 function handleDragMove(evt: MoveEvent) {
   if (isTaggedCard(evt.dragged)) {
-    const fromColumn = evt.from.getAttribute('data-column')
-    const toColumn = evt.to.getAttribute('data-column')
-    return fromColumn !== toColumn
+    return true
   }
 
   if (isTaggedCard(evt.related)) {
@@ -211,7 +199,7 @@ function handleDragMove(evt: MoveEvent) {
 }
 
 function handleDragChange(evt: SortableEvent) {
-  normalizeDraggedCardPosition(evt.to, evt.item, evt.from, evt.to)
+  normalizeDraggedCardPosition(evt.to, evt.item)
 }
 
 function destroySortables() {
@@ -231,7 +219,7 @@ async function handleDragEnd(evt: SortableEvent) {
   const toColumn = evt.to.getAttribute('data-column') as TodoStatus
   const draggedIsTagged = isTaggedCard(evt.item)
 
-  normalizeDraggedCardPosition(evt.to, evt.item, evt.from, evt.to)
+  normalizeDraggedCardPosition(evt.to, evt.item)
 
   if (draggedIsTagged && fromColumn === toColumn) {
     await loadBoard()
@@ -1267,10 +1255,7 @@ onBeforeUnmount(() => {
 }
 
 .kanban-fallback {
-  opacity: 0.95 !important;
-  box-shadow: var(--dp-shadow-lg) !important;
-  transform: rotate(2deg) !important;
-  background-color: var(--dp-bg-card) !important;
-  border-radius: 0.5rem;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 </style>
