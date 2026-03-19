@@ -12,7 +12,7 @@ import TodoAddModal from '@/components/duty/TodoAddModal.vue'
 import TodoDetailModal from '@/components/duty/TodoDetailModal.vue'
 import type { TaggableFriend, Todo, TodoBoard, TodoStatus } from '@/types'
 
-const { showSuccess, showError, confirm, confirmDelete } = useSwal()
+const { showSuccess, showError, confirm, confirmDelete, toastSuccess } = useSwal()
 
 const isHelpModalOpen = ref(false)
 
@@ -365,7 +365,7 @@ async function handleAddTodo(data: {
       attachmentSessionId: data.attachmentSessionId,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
-    showSuccess('할 일이 추가되었습니다.')
+    toastSuccess('할 일이 추가되었습니다.')
     isAddModalOpen.value = false
     await loadBoard()
   } catch (error) {
@@ -394,7 +394,6 @@ async function handleUpdateTodo(data: {
       attachmentSessionId: data.attachmentSessionId,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
-    showSuccess('할 일이 수정되었습니다.')
     await loadBoard()
     // Update selectedTodo with fresh data from the board so modal shows updated content
     if (selectedTodo.value && board.value) {
@@ -452,7 +451,7 @@ async function handleDeleteTodo(id: string) {
 
   try {
     await todoApi.deleteTodo(id)
-    showSuccess('할 일이 삭제되었습니다.')
+    toastSuccess('할 일이 삭제되었습니다.')
     closeDetailModal()
     await loadBoard()
   } catch (error) {

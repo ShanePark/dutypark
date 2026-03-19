@@ -354,7 +354,9 @@ async function saveSchedule() {
     })
     showScheduleModal.value = false
     await fetchTeamSchedules()
-    toastSuccess(isNew ? '일정이 등록되었습니다.' : '일정이 수정되었습니다.')
+    if (isNew) {
+      toastSuccess('일정이 등록되었습니다.')
+    }
   } catch (error) {
     console.error('Failed to save schedule:', error)
     showError('일정 저장에 실패했습니다.')

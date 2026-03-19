@@ -1006,7 +1006,6 @@ async function handleTodoUpdate(data: {
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
     applyTodoUpdate(updatedTodo)
-    toastSuccess('할 일이 수정되었습니다.')
   } catch (error) {
     console.error('Failed to update todo:', error)
     showError('할 일 수정에 실패했습니다.')
@@ -1335,7 +1334,6 @@ async function handleEditSchedule(data: ScheduleSaveData) {
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
     await loadSchedules()
-    toastSuccess('일정이 수정되었습니다.')
   } catch (error) {
     console.error('Failed to update schedule:', error)
     showError('일정 수정에 실패했습니다.')
