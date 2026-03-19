@@ -10,7 +10,6 @@ import { Loader2 } from 'lucide-vue-next'
 import DayDetailModal from '@/components/duty/DayDetailModal.vue'
 import TodoAddModal from '@/components/duty/TodoAddModal.vue'
 import TodoDetailModal from '@/components/duty/TodoDetailModal.vue'
-import TodoOverviewModal from '@/components/duty/TodoOverviewModal.vue'
 import DDayModal from '@/components/duty/DDayModal.vue'
 import DDayDetailModal from '@/components/duty/DDayDetailModal.vue'
 import SearchResultModal from '@/components/duty/SearchResultModal.vue'
@@ -79,10 +78,7 @@ const lastDayInMonth = computed(() => new Date(currentYear.value, currentMonth.v
 // Modal states
 const isDayDetailModalOpen = ref(false)
 const isTodoAddModalOpen = ref(false)
-const isTodoAddFromOverview = ref(false)
 const isTodoDetailModalOpen = ref(false)
-const startTodoEditMode = ref(false)
-const isTodoOverviewModalOpen = ref(false)
 const isDDayModalOpen = ref(false)
 const isDDayDetailModalOpen = ref(false)
 const isDDayEditFromDetail = ref(false)
@@ -1105,11 +1101,6 @@ async function handleTodoAdd(data: {
     showError('할 일 추가에 실패했습니다.')
   }
   isTodoAddModalOpen.value = false
-  // Only return to overview modal if added from overview
-  if (isTodoAddFromOverview.value) {
-    isTodoOverviewModalOpen.value = true
-    isTodoAddFromOverview.value = false
-  }
 }
 
 async function handleTodoUntagSelf(id: string) {
@@ -1127,19 +1118,9 @@ async function handleTodoUntagSelf(id: string) {
   }
 }
 
-// Todo position update for drag-and-drop
-async function handleTodoPositionUpdate(orderedIds: string[]) {
-  try {
-    await todoApi.updatePositions({ status: 'TODO', orderedIds })
-    // Reorder local todos array to match the new order
-    const todoMap = new Map(todos.value.map((t) => [t.id, t]))
-    todos.value = orderedIds.map((id) => todoMap.get(id)).filter((t): t is LocalTodo => t !== undefined)
-  } catch (error) {
-    console.error('Failed to update todo positions:', error)
-    showError('할 일 순서 변경에 실패했습니다.')
-    // Reload todos to restore correct order
-    await loadTodos()
-  }
+function handleTodoBackToList() {
+  isTodoDetailModalOpen.value = false
+  router.push('/todo')
 }
 
 // Search handler
@@ -1615,7 +1596,7 @@ async function showExcelUploadModal() {
       :is-open="isTodoAddModalOpen"
       initial-status="IN_PROGRESS"
       :friends="friends"
-      @close="isTodoAddModalOpen = false; if (isTodoAddFromOverview) { isTodoOverviewModalOpen = true; isTodoAddFromOverview = false; }"
+      @close="isTodoAddModalOpen = false"
       @save="handleTodoAdd"
     />
 
@@ -1623,29 +1604,14 @@ async function showExcelUploadModal() {
       :is-open="isTodoDetailModalOpen"
       :todo="selectedTodo"
       :friends="friends"
-      :start-in-edit-mode="startTodoEditMode"
-      @close="isTodoDetailModalOpen = false; startTodoEditMode = false"
+      @close="isTodoDetailModalOpen = false"
       @update="handleTodoUpdate"
       @complete="handleTodoComplete"
       @reopen="handleTodoReopen"
       @change-status="handleTodoStatusChange"
       @delete="handleTodoDelete"
       @untag-self="handleTodoUntagSelf"
-      @back-to-list="isTodoDetailModalOpen = false; startTodoEditMode = false; isTodoOverviewModalOpen = true"
-    />
-
-    <TodoOverviewModal
-      :is-open="isTodoOverviewModalOpen"
-      :todos="todos"
-      :completed-todos="completedTodos"
-      @close="isTodoOverviewModalOpen = false"
-      @show-detail="(todo: LocalTodo) => { selectedTodo = todo; isTodoDetailModalOpen = true; isTodoOverviewModalOpen = false; }"
-      @edit="(todo: LocalTodo) => { selectedTodo = todo; startTodoEditMode = true; isTodoDetailModalOpen = true; isTodoOverviewModalOpen = false; }"
-      @complete="handleTodoComplete"
-      @reopen="handleTodoReopen"
-      @delete="handleTodoDelete"
-      @reorder="handleTodoPositionUpdate"
-      @add="isTodoOverviewModalOpen = false; isTodoAddModalOpen = true; isTodoAddFromOverview = true"
+      @back-to-list="handleTodoBackToList"
     />
 
     <DDayModal
