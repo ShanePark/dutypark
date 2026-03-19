@@ -10,11 +10,12 @@ import {
   Users,
 } from 'lucide-vue-next'
 import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
-import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
+import MemberTagChips from '@/components/common/MemberTagChips.vue'
 import type { NormalizedAttachment } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEscapeKey } from '@/composables/useEscapeKey'
+import { toDisplayTagMember } from '@/utils/tagMembers'
 import { getVisibilityIcon, getVisibilityLabel } from '@/utils/visibility'
 
 interface Schedule {
@@ -117,20 +118,26 @@ const formattedDateTime = computed(() => {
 // Filter tags to exclude self
 const displayTags = computed(() => {
   if (!props.schedule?.tags) return []
-  return props.schedule.tags.filter(t => t.id !== props.memberId)
+  return props.schedule.tags
+    .filter(t => t.id !== props.memberId)
+    .map((tag, index) => toDisplayTagMember(tag, `schedule-modal-tag-${tag.id ?? index}`))
 })
 
 const taggedByDisplay = computed(() => {
   if (!props.schedule?.isTagged) return null
   if (props.schedule.taggedByMember) {
-    return props.schedule.taggedByMember
+    return toDisplayTagMember(
+      props.schedule.taggedByMember,
+      `schedule-modal-owner-${props.schedule.taggedByMember.id ?? props.schedule.id}`
+    )
   }
 
   const fallbackName = props.schedule.taggedBy || props.schedule.owner
   if (!fallbackName) return null
 
   return {
-    id: undefined,
+    key: `schedule-modal-owner-${props.schedule.id}`,
+    id: null,
     name: fallbackName,
     hasProfilePhoto: false,
     profilePhotoVersion: 0,
@@ -230,17 +237,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
               <User class="w-4 h-4 text-dp-text-muted" />
             </div>
             <div class="flex-1 pt-0.5">
-              <div class="inline-flex min-h-[36px] items-center gap-1.5 rounded-full border border-dp-border-primary bg-dp-bg-secondary px-1 py-1 pr-3 text-dp-text-primary">
-                <span class="pl-1 text-xs font-medium text-dp-text-muted">by</span>
-                <ProfileAvatar
-                  :member-id="taggedByDisplay.id ?? null"
-                  :name="taggedByDisplay.name"
-                  :has-profile-photo="taggedByDisplay.hasProfilePhoto"
-                  :profile-photo-version="taggedByDisplay.profilePhotoVersion"
-                  size="sm"
-                />
-                <span class="max-w-[180px] truncate text-sm font-medium">{{ taggedByDisplay.name }}</span>
-              </div>
+              <MemberTagChips :members="[taggedByDisplay]" density="compact" />
             </div>
           </div>
 
@@ -252,22 +249,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
               <Users class="w-4 h-4 text-dp-text-muted" />
             </div>
             <div class="flex-1 pt-0.5">
-              <div class="flex flex-wrap gap-1.5">
-                <span
-                  v-for="tag in displayTags"
-                  :key="tag.id"
-                  class="inline-flex min-h-[34px] items-center gap-1.5 rounded-full border border-dp-accent-border bg-dp-accent-soft px-1 py-1 pr-2 text-xs text-dp-text-primary"
-                >
-                  <ProfileAvatar
-                    :member-id="tag.id"
-                    :name="tag.name"
-                    :has-profile-photo="tag.hasProfilePhoto"
-                    :profile-photo-version="tag.profilePhotoVersion"
-                    size="sm"
-                  />
-                  <span class="max-w-[140px] truncate font-medium">{{ tag.name }}</span>
-                </span>
-              </div>
+              <MemberTagChips :members="displayTags" density="compact" />
             </div>
           </div>
 

@@ -5,8 +5,12 @@ import com.tistory.shanepark.dutypark.attachment.dto.AttachmentDto
 import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.member.service.FriendService
+import com.tistory.shanepark.dutypark.notification.event.TodoStatusChangedEvent
+import com.tistory.shanepark.dutypark.notification.event.TodoTaggedEvent
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.todo.domain.entity.Todo
+import com.tistory.shanepark.dutypark.todo.domain.entity.TodoTag
 import com.tistory.shanepark.dutypark.todo.domain.entity.TodoStatus
 import com.tistory.shanepark.dutypark.todo.repository.TodoRepository
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -16,11 +20,14 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.*
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.*
@@ -31,6 +38,8 @@ class TodoServiceTest {
     private lateinit var memberRepository: MemberRepository
     private lateinit var todoRepository: TodoRepository
     private lateinit var attachmentService: AttachmentService
+    private lateinit var friendService: FriendService
+    private lateinit var eventPublisher: ApplicationEventPublisher
 
     private val loginMember = LoginMember(id = 1, email = "", name = "", team = "", isAdmin = false)
     private val member = Member(name = "", password = "")
@@ -41,7 +50,10 @@ class TodoServiceTest {
         memberRepository = mock(MemberRepository::class.java)
         todoRepository = mock(TodoRepository::class.java)
         attachmentService = mock(AttachmentService::class.java)
-        todoService = TodoService(memberRepository, todoRepository, attachmentService)
+        friendService = mock(FriendService::class.java)
+        eventPublisher = mock(ApplicationEventPublisher::class.java)
+        ReflectionTestUtils.setField(member, "id", loginMember.id)
+        todoService = TodoService(memberRepository, todoRepository, attachmentService, friendService, eventPublisher)
     }
 
     @Test
@@ -139,7 +151,7 @@ class TodoServiceTest {
                     .id
             )
         ).thenReturn(Optional.of(member))
-        `when`(todoRepository.findAllByMemberAndStatusOrderByPosition(member, TodoStatus.TODO)).thenReturn(
+        `when`(todoRepository.findAccessibleTodosByStatus(member, TodoStatus.TODO)).thenReturn(
             listOf(
                 Todo(member, "title1", "content1", 1),
                 Todo(member, "title2", "content2", 2)
@@ -184,7 +196,7 @@ class TodoServiceTest {
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         val completedTodo = Todo(member, "title", "content", 0, TodoStatus.DONE)
         `when`(
-            todoRepository.findAllByMemberAndStatusOrderByCompletedDateDesc(member, TodoStatus.DONE)
+            todoRepository.findAccessibleTodosByStatus(member, TodoStatus.DONE)
         ).thenReturn(listOf(completedTodo))
 
         val response = todoService.completedTodoList(loginMember)
@@ -206,6 +218,30 @@ class TodoServiceTest {
 
         assertEquals(TodoStatus.DONE, response.status)
         assertEquals(-1, response.position)
+    }
+
+    @Test
+    fun `completeTodo should notify tagged members except actor`() {
+        val todoId = UUID.randomUUID()
+        val taggedMember = otherMember()
+        val secondTaggedMember = memberWithId(3L)
+        val todo = Todo(member, "title", "content", 1)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+        todo.addTag(taggedMember)
+        todo.addTag(secondTaggedMember)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.DONE)).thenReturn(0)
+
+        todoService.completeTodo(loginMember, todoId)
+
+        val eventCaptor = ArgumentCaptor.forClass(TodoStatusChangedEvent::class.java)
+        verify(eventPublisher, times(2)).publishEvent(eventCaptor.capture())
+        assertEquals(setOf(taggedMember.id, secondTaggedMember.id), eventCaptor.allValues.map { it.recipientMemberId }.toSet())
+        assertTrue(eventCaptor.allValues.all { it.actorId == member.id })
+        assertTrue(eventCaptor.allValues.all { it.todoId == todoId })
+        assertTrue(eventCaptor.allValues.all { it.newStatus == TodoStatus.DONE })
     }
 
     @Test
@@ -335,11 +371,13 @@ class TodoServiceTest {
         verifyNoInteractions(attachmentService)
     }
 
-    private fun otherMember(): Member {
+    private fun memberWithId(id: Long): Member {
         val member = Member(name = "", password = "")
-        ReflectionTestUtils.setField(member, "id", 2L)
+        ReflectionTestUtils.setField(member, "id", id)
         return member
     }
+
+    private fun otherMember(): Member = memberWithId(2L)
 
     private fun createAttachmentDto(id: UUID): AttachmentDto {
         return AttachmentDto(
@@ -362,7 +400,7 @@ class TodoServiceTest {
     @Test
     fun `getBoard should return empty board when no todos exist`() {
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
-        `when`(todoRepository.findAllByMemberOrderByStatusAscPositionAsc(member)).thenReturn(emptyList())
+        `when`(todoRepository.findAccessibleTodos(member)).thenReturn(emptyList())
 
         val board = todoService.getBoard(loginMember)
 
@@ -379,7 +417,7 @@ class TodoServiceTest {
         val doneItem = createTodo("done task", TodoStatus.DONE, 0)
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
-        `when`(todoRepository.findAllByMemberOrderByStatusAscPositionAsc(member))
+        `when`(todoRepository.findAccessibleTodos(member))
             .thenReturn(listOf(todoItem, inProgressItem, doneItem))
 
         val board = todoService.getBoard(loginMember)
@@ -400,7 +438,7 @@ class TodoServiceTest {
         val todo3 = createTodo("third", TodoStatus.TODO, 2)
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
-        `when`(todoRepository.findAllByMemberOrderByStatusAscPositionAsc(member))
+        `when`(todoRepository.findAccessibleTodos(member))
             .thenReturn(listOf(todo1, todo2, todo3))
 
         val board = todoService.getBoard(loginMember)
@@ -412,12 +450,58 @@ class TodoServiceTest {
     }
 
     @Test
+    fun `getBoard should sort tagged todos by modified date before own todos`() {
+        val owner = otherMember()
+        ReflectionTestUtils.setField(owner, "id", 3L)
+
+        val olderTagged = Todo(owner, "older-tagged", "content", 0, TodoStatus.TODO).apply {
+            addTag(member)
+            lastModifiedDate = LocalDateTime.of(2025, 1, 10, 9, 0)
+            createdDate = LocalDateTime.of(2025, 1, 10, 9, 0)
+        }
+        val newerTagged = Todo(owner, "newer-tagged", "content", 10, TodoStatus.TODO).apply {
+            addTag(member)
+            lastModifiedDate = LocalDateTime.of(2025, 1, 10, 10, 0)
+            createdDate = LocalDateTime.of(2025, 1, 10, 10, 0)
+        }
+        val ownTodo = createTodo("own", TodoStatus.TODO, -10)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findAccessibleTodos(member))
+            .thenReturn(listOf(olderTagged, newerTagged, ownTodo))
+
+        val board = todoService.getBoard(loginMember)
+
+        assertEquals(listOf("newer-tagged", "older-tagged", "own"), board.todo.map { it.title })
+    }
+
+    @Test
+    fun `getBoard should place tagged todos before own todos`() {
+        val owner = otherMember()
+        ReflectionTestUtils.setField(owner, "id", 3L)
+
+        val ownTodo = createTodo("own", TodoStatus.TODO, -10)
+        val taggedTodo = Todo(owner, "tagged", "content", 99, TodoStatus.TODO)
+        taggedTodo.addTag(member)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findAccessibleTodos(member))
+            .thenReturn(listOf(ownTodo, taggedTodo))
+
+        val board = todoService.getBoard(loginMember)
+
+        assertEquals(listOf("tagged", "own"), board.todo.map { it.title })
+        assertEquals(true, board.todo[0].isTagged)
+        assertEquals(false, board.todo[1].isTagged)
+    }
+
+    @Test
     fun `getBoard should include hasAttachments flag`() {
         val todoItem = createTodo("task with attachment", TodoStatus.TODO, 0)
         ReflectionTestUtils.setField(todoItem, "id", UUID.randomUUID())
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
-        `when`(todoRepository.findAllByMemberOrderByStatusAscPositionAsc(member)).thenReturn(listOf(todoItem))
+        `when`(todoRepository.findAccessibleTodos(member)).thenReturn(listOf(todoItem))
         `when`(attachmentService.hasAttachments(AttachmentContextType.TODO, todoItem.id.toString())).thenReturn(true)
 
         val board = todoService.getBoard(loginMember)
@@ -433,7 +517,7 @@ class TodoServiceTest {
         val todo2 = createTodo("todo2", TodoStatus.TODO, 1)
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
-        `when`(todoRepository.findAllByMemberAndStatusOrderByPositionAsc(member, TodoStatus.TODO))
+        `when`(todoRepository.findAccessibleTodosByStatus(member, TodoStatus.TODO))
             .thenReturn(listOf(todo1, todo2))
 
         val result = todoService.getByStatus(loginMember, TodoStatus.TODO)
@@ -446,7 +530,7 @@ class TodoServiceTest {
     @Test
     fun `getByStatus should return empty list when no todos with status exist`() {
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
-        `when`(todoRepository.findAllByMemberAndStatusOrderByPositionAsc(member, TodoStatus.IN_PROGRESS))
+        `when`(todoRepository.findAccessibleTodosByStatus(member, TodoStatus.IN_PROGRESS))
             .thenReturn(emptyList())
 
         val result = todoService.getByStatus(loginMember, TodoStatus.IN_PROGRESS)
@@ -571,6 +655,7 @@ class TodoServiceTest {
 
         assertEquals(TodoStatus.TODO, result.status)
         assertEquals(0, result.position)
+        verify(eventPublisher, never()).publishEvent(any(TodoStatusChangedEvent::class.java))
     }
 
     @Test
@@ -611,7 +696,51 @@ class TodoServiceTest {
         val exception = assertThrows<IllegalArgumentException> {
             todoService.changeStatus(loginMember, todoId, TodoStatus.IN_PROGRESS, listOf(todoId))
         }
-        assertEquals("Todo is not yours", exception.message)
+        assertEquals("Todo status change is not allowed", exception.message)
+    }
+
+    @Test
+    fun `changeStatus should allow tagged member to update status`() {
+        val todoId = UUID.randomUUID()
+        val owner = otherMember()
+        val todo = createTodo("task", TodoStatus.TODO, 7)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+        ReflectionTestUtils.setField(todo, "member", owner)
+        todo.addTag(member)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(owner, TodoStatus.IN_PROGRESS)).thenReturn(3)
+
+        val result = todoService.changeStatus(loginMember, todoId, TodoStatus.IN_PROGRESS, emptyList())
+
+        assertEquals(TodoStatus.IN_PROGRESS, result.status)
+        assertEquals(2, result.position)
+        verify(todoRepository, never()).findAllById(anyList())
+    }
+
+    @Test
+    fun `changeStatus should notify owner and other tagged members when tagged member updates status`() {
+        val todoId = UUID.randomUUID()
+        val owner = otherMember()
+        val otherTaggedMember = memberWithId(3L)
+        val todo = createTodo("task", TodoStatus.TODO, 7)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+        ReflectionTestUtils.setField(todo, "member", owner)
+        todo.addTag(member)
+        todo.addTag(otherTaggedMember)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(owner, TodoStatus.IN_PROGRESS)).thenReturn(3)
+
+        todoService.changeStatus(loginMember, todoId, TodoStatus.IN_PROGRESS, emptyList())
+
+        val eventCaptor = ArgumentCaptor.forClass(TodoStatusChangedEvent::class.java)
+        verify(eventPublisher, times(2)).publishEvent(eventCaptor.capture())
+        assertEquals(setOf(owner.id, otherTaggedMember.id), eventCaptor.allValues.map { it.recipientMemberId }.toSet())
+        assertTrue(eventCaptor.allValues.all { it.actorId == member.id })
+        assertTrue(eventCaptor.allValues.all { it.newStatus == TodoStatus.IN_PROGRESS })
     }
 
     @Test
@@ -667,19 +796,39 @@ class TodoServiceTest {
     }
 
     @Test
-    fun `changeStatus with empty orderedIds should still change status`() {
+    fun `changeStatus should allow owner to update status without orderedIds`() {
         val todoId = UUID.randomUUID()
         val todo = createTodo("task", TodoStatus.TODO, 5)
         ReflectionTestUtils.setField(todo, "id", todoId)
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
-        `when`(todoRepository.findAllById(emptyList<UUID>())).thenReturn(emptyList())
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.IN_PROGRESS)).thenReturn(3)
 
         val result = todoService.changeStatus(loginMember, todoId, TodoStatus.IN_PROGRESS, emptyList())
 
         assertEquals(TodoStatus.IN_PROGRESS, result.status)
-        assertEquals(0, result.position)
+        assertEquals(2, result.position)
+        verify(todoRepository, never()).findAllById(anyList())
+    }
+
+    @Test
+    fun `changeStatus should require orderedIds when owner reorders within same status`() {
+        val todoId = UUID.randomUUID()
+        val todo = createTodo("task", TodoStatus.TODO, 5)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+
+        val exception = assertThrows<IllegalArgumentException> {
+            todoService.changeStatus(loginMember, todoId, TodoStatus.TODO, emptyList())
+        }
+
+        assertEquals("orderedIds is required when reordering within the same status", exception.message)
+        assertEquals(TodoStatus.TODO, todo.status)
+        assertEquals(5, todo.position)
+        verify(todoRepository, never()).findAllById(anyList())
     }
 
     @Test
@@ -796,6 +945,7 @@ class TodoServiceTest {
 
         assertEquals(TodoStatus.DONE, result.status)
         assertEquals(0, result.position)
+        verify(eventPublisher, never()).publishEvent(any(TodoStatusChangedEvent::class.java))
     }
 
     @Test
@@ -812,7 +962,26 @@ class TodoServiceTest {
         val exception = assertThrows<IllegalArgumentException> {
             todoService.completeTodo(loginMember, todoId)
         }
-        assertEquals("Todo is not yours", exception.message)
+        assertEquals("Todo status change is not allowed", exception.message)
+    }
+
+    @Test
+    fun `completeTodo should allow tagged member to mark todo done`() {
+        val todoId = UUID.randomUUID()
+        val owner = otherMember()
+        val todo = createTodo("task", TodoStatus.IN_PROGRESS, 5)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+        ReflectionTestUtils.setField(todo, "member", owner)
+        todo.addTag(member)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(owner, TodoStatus.DONE)).thenReturn(4)
+
+        val result = todoService.completeTodo(loginMember, todoId)
+
+        assertEquals(TodoStatus.DONE, result.status)
+        assertEquals(3, result.position)
     }
 
     // ========== reopenTodo Edge Cases ==========
@@ -832,7 +1001,34 @@ class TodoServiceTest {
         val exception = assertThrows<IllegalArgumentException> {
             todoService.reopenTodo(loginMember, todoId)
         }
-        assertEquals("Todo is not yours", exception.message)
+        assertEquals("Todo status change is not allowed", exception.message)
+    }
+
+    @Test
+    fun `reopenTodo should allow tagged member to reopen todo`() {
+        val todoId = UUID.randomUUID()
+        val owner = otherMember()
+        val todo = createTodo("task", TodoStatus.DONE, 0)
+        todo.markCompleted(0)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+        ReflectionTestUtils.setField(todo, "member", owner)
+        todo.addTag(member)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(owner, TodoStatus.TODO)).thenReturn(2)
+
+        val result = todoService.reopenTodo(loginMember, todoId)
+
+        assertEquals(TodoStatus.TODO, result.status)
+        assertEquals(1, result.position)
+        assertNull(result.completedDate)
+
+        val eventCaptor = ArgumentCaptor.forClass(TodoStatusChangedEvent::class.java)
+        verify(eventPublisher).publishEvent(eventCaptor.capture())
+        assertEquals(owner.id, eventCaptor.value.recipientMemberId)
+        assertEquals(member.id, eventCaptor.value.actorId)
+        assertEquals(TodoStatus.TODO, eventCaptor.value.newStatus)
     }
 
     @Test
@@ -877,7 +1073,7 @@ class TodoServiceTest {
         todo2.dueDate = LocalDate.of(2024, 6, 20)
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
-        `when`(todoRepository.findAllByMemberAndDueDateBetweenOrderByDueDateAsc(
+        `when`(todoRepository.findAccessibleTodosByDueDateBetween(
             member,
             LocalDate.of(2024, 6, 1),
             LocalDate.of(2024, 6, 30)
@@ -895,7 +1091,7 @@ class TodoServiceTest {
         todo.dueDate = dueDate
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
-        `when`(todoRepository.findAllByMemberAndDueDateOrderByPositionAsc(member, dueDate))
+        `when`(todoRepository.findAccessibleTodosByDueDate(member, dueDate))
             .thenReturn(listOf(todo))
 
         val result = todoService.getTodosByDate(loginMember, dueDate)
@@ -909,7 +1105,7 @@ class TodoServiceTest {
         overdueTodo.dueDate = fixedDate.minusDays(1)
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
-        doReturn(listOf(overdueTodo)).`when`(todoRepository).findAllByMemberAndDueDateLessThanAndStatusNot(
+        doReturn(listOf(overdueTodo)).`when`(todoRepository).findAccessibleOverdueTodos(
             any(Member::class.java) ?: member,
             any(LocalDate::class.java) ?: fixedDate,
             any(TodoStatus::class.java) ?: TodoStatus.DONE
@@ -926,7 +1122,7 @@ class TodoServiceTest {
     @Test
     fun `todoList should return empty list when no todos exist`() {
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
-        `when`(todoRepository.findAllByMemberAndStatusOrderByPosition(member, TodoStatus.TODO))
+        `when`(todoRepository.findAccessibleTodosByStatus(member, TodoStatus.TODO))
             .thenReturn(emptyList())
 
         val result = todoService.todoList(loginMember)
@@ -937,7 +1133,7 @@ class TodoServiceTest {
     @Test
     fun `completedTodoList should return empty list when no completed todos exist`() {
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
-        `when`(todoRepository.findAllByMemberAndStatusOrderByCompletedDateDesc(member, TodoStatus.DONE))
+        `when`(todoRepository.findAccessibleTodosByStatus(member, TodoStatus.DONE))
             .thenReturn(emptyList())
 
         val result = todoService.completedTodoList(loginMember)
@@ -948,7 +1144,7 @@ class TodoServiceTest {
     @Test
     fun `getTodosByMonth should return empty list when no todos in month`() {
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
-        `when`(todoRepository.findAllByMemberAndDueDateBetweenOrderByDueDateAsc(
+        `when`(todoRepository.findAccessibleTodosByDueDateBetween(
             member,
             LocalDate.of(2024, 6, 1),
             LocalDate.of(2024, 6, 30)
@@ -963,7 +1159,7 @@ class TodoServiceTest {
     fun `getTodosByDate should return empty list when no todos on date`() {
         val date = LocalDate.of(2024, 6, 15)
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
-        `when`(todoRepository.findAllByMemberAndDueDateOrderByPositionAsc(member, date))
+        `when`(todoRepository.findAccessibleTodosByDueDate(member, date))
             .thenReturn(emptyList())
 
         val result = todoService.getTodosByDate(loginMember, date)
@@ -974,7 +1170,7 @@ class TodoServiceTest {
     @Test
     fun `getOverdueTodos should return empty list when no overdue todos`() {
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
-        doReturn(emptyList<Todo>()).`when`(todoRepository).findAllByMemberAndDueDateLessThanAndStatusNot(
+        doReturn(emptyList<Todo>()).`when`(todoRepository).findAccessibleOverdueTodos(
             any(Member::class.java) ?: member,
             any(LocalDate::class.java) ?: fixedDate,
             any(TodoStatus::class.java) ?: TodoStatus.DONE
@@ -1251,7 +1447,7 @@ class TodoServiceTest {
         )
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
-        `when`(todoRepository.findAllByMemberOrderByStatusAscPositionAsc(member)).thenReturn(todos)
+        `when`(todoRepository.findAccessibleTodos(member)).thenReturn(todos)
 
         val board = todoService.getBoard(loginMember)
 
@@ -1351,6 +1547,32 @@ class TodoServiceTest {
     }
 
     @Test
+    fun `addTodo should include tagged friends in response`() {
+        val friend = otherMember()
+        ReflectionTestUtils.setField(friend, "name", "친구")
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(memberRepository.findById(friend.id!!)).thenReturn(Optional.of(friend))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.TODO)).thenReturn(0)
+        `when`(todoRepository.save(any(Todo::class.java))).thenAnswer { invocation ->
+            invocation.getArgument<Todo>(0)
+        }
+        `when`(friendService.isFriend(member, friend)).thenReturn(true)
+
+        val response = todoService.addTodo(
+            loginMember = loginMember,
+            title = "task",
+            content = "content",
+            tagFriendIds = listOf(friend.id!!)
+        )
+
+        assertEquals(1, response.tags.size)
+        assertEquals(friend.id, response.tags.first().id)
+        assertEquals("친구", response.tags.first().name)
+        verify(eventPublisher).publishEvent(any(TodoTaggedEvent::class.java))
+    }
+
+    @Test
     fun `addTodo with status should use correct position query`() {
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.IN_PROGRESS)).thenReturn(5)
@@ -1382,6 +1604,28 @@ class TodoServiceTest {
         assertEquals(TodoStatus.IN_PROGRESS, response.status)
         assertEquals(9, response.position)
         assertNull(response.completedDate)
+    }
+
+    @Test
+    fun `editTodo with status change should notify tagged members`() {
+        val todoId = UUID.randomUUID()
+        val taggedMember = otherMember()
+        val todo = createTodo("old title", TodoStatus.TODO, 5)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+        todo.addTag(taggedMember)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.IN_PROGRESS)).thenReturn(10)
+
+        todoService.editTodo(loginMember, todoId, "new title", "new content", TodoStatus.IN_PROGRESS)
+
+        val eventCaptor = ArgumentCaptor.forClass(TodoStatusChangedEvent::class.java)
+        verify(eventPublisher).publishEvent(eventCaptor.capture())
+        assertEquals(taggedMember.id, eventCaptor.value.recipientMemberId)
+        assertEquals(member.id, eventCaptor.value.actorId)
+        assertEquals("new title", eventCaptor.value.todoTitle)
+        assertEquals(TodoStatus.IN_PROGRESS, eventCaptor.value.newStatus)
     }
 
     @Test
@@ -1498,6 +1742,78 @@ class TodoServiceTest {
 
         assertEquals(TodoStatus.TODO, response.status)
         assertNull(response.completedDate)
+    }
+
+    @Test
+    fun `todoList should place tagged todos before own todos`() {
+        val friend = otherMember()
+        ReflectionTestUtils.setField(friend, "name", "owner")
+        val ownTodo = createTodo("own", TodoStatus.TODO, 0)
+        val taggedTodo = Todo(friend, "tagged", "content", 0, TodoStatus.TODO)
+        taggedTodo.addTag(member)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findAccessibleTodosByStatus(member, TodoStatus.TODO))
+            .thenReturn(listOf(taggedTodo, ownTodo))
+
+        val response = todoService.todoList(loginMember)
+
+        assertEquals(listOf("tagged", "own"), response.map { it.title })
+        assertEquals(true, response[0].isTagged)
+        assertEquals(friend.name, response[0].owner)
+        assertEquals(false, response[1].isTagged)
+    }
+
+    @Test
+    fun `untagSelf should remove current member tag`() {
+        val todoId = UUID.randomUUID()
+        val friend = otherMember()
+        val todo = Todo(friend, "tagged", "content", 0, TodoStatus.TODO)
+        todo.addTag(member)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findByIdForUpdate(todoId)).thenReturn(Optional.of(todo))
+
+        todoService.untagSelf(loginMember, todoId)
+
+        assertEquals(emptyList<Long>(), todo.tags.mapNotNull { it.member.id })
+    }
+
+    @Test
+    fun `tagFriend should be idempotent for already tagged friend`() {
+        val todoId = UUID.randomUUID()
+        val friend = otherMember()
+        val todo = Todo(member, "task", "content", 0, TodoStatus.TODO)
+        todo.addTag(friend)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(memberRepository.findById(friend.id!!)).thenReturn(Optional.of(friend))
+        `when`(todoRepository.findByIdForUpdate(todoId)).thenReturn(Optional.of(todo))
+
+        todoService.tagFriend(loginMember, todoId, friend.id!!)
+
+        assertEquals(listOf(friend.id), todo.tags.mapNotNull { it.member.id })
+        verifyNoInteractions(friendService)
+        verify(eventPublisher, never()).publishEvent(any(TodoTaggedEvent::class.java))
+    }
+
+    @Test
+    fun `untagSelf should remove duplicated tags at once`() {
+        val todoId = UUID.randomUUID()
+        val friend = otherMember()
+        val todo = Todo(friend, "tagged", "content", 0, TodoStatus.TODO)
+        todo.tags.add(TodoTag(todo, member))
+        todo.tags.add(TodoTag(todo, member))
+        ReflectionTestUtils.setField(todo, "id", todoId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findByIdForUpdate(todoId)).thenReturn(Optional.of(todo))
+
+        todoService.untagSelf(loginMember, todoId)
+
+        assertTrue(todo.tags.none { it.member.id == member.id })
     }
 
     // ========== Helper Methods ==========

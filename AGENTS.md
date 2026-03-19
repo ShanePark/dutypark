@@ -72,7 +72,15 @@ Use this file for repo-wide defaults only. Keep it lean; read the code and nearb
 - Use `./.codex/skills/dutypark-playwright-ui/SKILL.md` for complex browser verification such as drag-drop, modal chains, notification flows, push flows, SSO, visual regressions, or responsive/design validation that needs direct in-browser confirmation.
 - Use the existing `$git-commit`, `$pr`, and `$gh-address-comments` skills for Git and GitHub tasks instead of duplicating those workflows here.
 
-## 6. Collaboration Preferences
+## 6. Sub-Agent Use
+
+- Consider sub-agent use on every non-trivial task.
+- Use sub-agents proactively when independent research, search, verification, or disjoint implementation work can run in parallel within the current checklist item and clearly help.
+- When spawning sub-agents, use the same model as the main agent. Do not override the sub-agent model unless the user explicitly asks for a different one.
+- Do not use sub-agents for sequential steps, overlapping file edits, or tightly coupled refactors.
+- The main agent remains responsible for planning, integration, final verification, and user communication.
+
+## 7. Collaboration Preferences
 
 - Ask short numbered questions only when ambiguity is risky.
 - Favor backend-first changes for cross-cutting features.
@@ -82,7 +90,7 @@ Use this file for repo-wide defaults only. Keep it lean; read the code and nearb
 - Never commit automatically.
 - All agent responses to the user must be written in Korean.
 
-## 7. Quick Pointers
+## 8. Quick Pointers
 
 - If `frontend/dist/.gitkeep` becomes noisy during local frontend builds, ignore the deletion locally with `git update-index --assume-unchanged frontend/dist/.gitkeep`.
 - If this file is not enough, inspect `README.md`, `application*.yml`, the nearest controller or view, and the closest existing test before coding.

@@ -9,6 +9,7 @@ import com.tistory.shanepark.dutypark.notification.domain.repository.Notificatio
 import com.tistory.shanepark.dutypark.notification.service.NotificationService
 import com.tistory.shanepark.dutypark.push.dto.PushNotificationPayload
 import com.tistory.shanepark.dutypark.push.service.WebPushService
+import com.tistory.shanepark.dutypark.todo.domain.entity.TodoStatus
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Propagation
@@ -120,6 +121,44 @@ class NotificationEventListener(
         }
     }
 
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Async("notificationExecutor")
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    fun handleTodoTagged(event: TodoTaggedEvent) {
+        try {
+            val notification = notificationService.createNotification(
+                memberId = event.taggedMemberId,
+                type = NotificationType.TODO_TAGGED,
+                actorId = event.ownerId,
+                referenceType = NotificationReferenceType.TODO,
+                referenceId = event.todoId.toString(),
+                content = event.todoTitle
+            )
+            sendPushNotification(notification)
+        } catch (e: Exception) {
+            log.error("Failed to create todo tagged notification: {}", e.message, e)
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Async("notificationExecutor")
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    fun handleTodoStatusChanged(event: TodoStatusChangedEvent) {
+        try {
+            val notification = notificationService.createNotification(
+                memberId = event.recipientMemberId,
+                type = getTodoStatusChangedNotificationType(event.newStatus),
+                actorId = event.actorId,
+                referenceType = NotificationReferenceType.TODO,
+                referenceId = event.todoId.toString(),
+                content = event.todoTitle
+            )
+            sendPushNotification(notification)
+        } catch (e: Exception) {
+            log.error("Failed to create todo status changed notification: {}", e.message, e)
+        }
+    }
+
     private fun sendPushNotification(notification: Notification) {
         val memberId = notification.member.id!!
         val unreadCount = notificationRepository.countByMemberIdAndIsReadFalse(memberId).toInt()
@@ -145,8 +184,17 @@ class NotificationEventListener(
         return when (notification.referenceType) {
             NotificationReferenceType.FRIEND_REQUEST -> "/friends"
             NotificationReferenceType.SCHEDULE -> "/duty/${notification.member.id}"
+            NotificationReferenceType.TODO -> "/todo"
             NotificationReferenceType.MEMBER -> "/duty/${notification.referenceId}"
             else -> "/"
+        }
+    }
+
+    private fun getTodoStatusChangedNotificationType(status: TodoStatus): NotificationType {
+        return when (status) {
+            TodoStatus.TODO -> NotificationType.TODO_STATUS_TODO
+            TodoStatus.IN_PROGRESS -> NotificationType.TODO_STATUS_IN_PROGRESS
+            TodoStatus.DONE -> NotificationType.TODO_STATUS_DONE
         }
     }
 }

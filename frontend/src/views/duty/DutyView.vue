@@ -10,7 +10,6 @@ import { Loader2 } from 'lucide-vue-next'
 import DayDetailModal from '@/components/duty/DayDetailModal.vue'
 import TodoAddModal from '@/components/duty/TodoAddModal.vue'
 import TodoDetailModal from '@/components/duty/TodoDetailModal.vue'
-import TodoOverviewModal from '@/components/duty/TodoOverviewModal.vue'
 import DDayModal from '@/components/duty/DDayModal.vue'
 import DDayDetailModal from '@/components/duty/DDayDetailModal.vue'
 import SearchResultModal from '@/components/duty/SearchResultModal.vue'
@@ -28,7 +27,7 @@ import { todoApi } from '@/api/todo'
 import { dutyApi } from '@/api/duty'
 import { ddayApi, memberApi, friendApi } from '@/api/member'
 import { scheduleApi, type ScheduleDto } from '@/api/schedule'
-import type { DutyCalendarDay, TeamDto, DDayDto, DDaySaveDto, HolidayDto, TaggableFriend, TodoStatus } from '@/types'
+import type { DutyCalendarDay, TeamDto, DDayDto, DDaySaveDto, HolidayDto, TaggableFriend, Todo as TodoDto, TodoStatus } from '@/types'
 import type { LocalTodo, DutyType, Schedule, LocalDDay, CalendarDay, OtherDuty, DutyTypeWithCount, DutyDay, TodoDueItem } from './dutyViewTypes'
 
 import { useAuthStore } from '@/stores/auth'
@@ -36,7 +35,7 @@ import { useAuthStore } from '@/stores/auth'
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const { showError, confirmDelete, toastSuccess } = useSwal()
+const { showError, confirm, confirmDelete, toastSuccess } = useSwal()
 
 // State
 const today = new Date()
@@ -79,10 +78,7 @@ const lastDayInMonth = computed(() => new Date(currentYear.value, currentMonth.v
 // Modal states
 const isDayDetailModalOpen = ref(false)
 const isTodoAddModalOpen = ref(false)
-const isTodoAddFromOverview = ref(false)
 const isTodoDetailModalOpen = ref(false)
-const startTodoEditMode = ref(false)
-const isTodoOverviewModalOpen = ref(false)
 const isDDayModalOpen = ref(false)
 const isDDayDetailModalOpen = ref(false)
 const isDDayEditFromDetail = ref(false)
@@ -194,19 +190,39 @@ function handleTodoBubbleClick(todo: LocalTodo | { id: string }) {
 }
 
 // Convert API Todo to LocalTodo
-function mapToLocalTodo(apiTodo: { id: string; title: string; content: string; position: number | null; status: 'TODO' | 'IN_PROGRESS' | 'DONE'; createdDate: string; completedDate: string | null; dueDate?: string | null; isOverdue?: boolean }): LocalTodo {
+function mapToLocalTodo(apiTodo: TodoDto): LocalTodo {
   return {
     id: apiTodo.id,
     title: apiTodo.title,
     content: apiTodo.content,
+    position: apiTodo.position,
     status: apiTodo.status,
     createdDate: apiTodo.createdDate,
-    completedDate: apiTodo.completedDate ?? undefined,
-    dueDate: apiTodo.dueDate ?? undefined,
-    isOverdue: apiTodo.isOverdue ?? false,
-    hasAttachments: false,
+    completedDate: apiTodo.completedDate,
+    dueDate: apiTodo.dueDate,
+    isOverdue: apiTodo.isOverdue,
+    isTagged: apiTodo.isTagged,
+    owner: apiTodo.owner,
+    taggedByMember: apiTodo.taggedByMember ?? null,
+    tags: apiTodo.tags,
+    hasAttachments: apiTodo.hasAttachments ?? false,
     attachments: [],
   }
+}
+
+function applyTodoUpdate(apiTodo: TodoDto) {
+  const localTodo = mapToLocalTodo(apiTodo)
+
+  todos.value = todos.value.filter((t) => t.id !== apiTodo.id)
+  completedTodos.value = completedTodos.value.filter((t) => t.id !== apiTodo.id)
+
+  if (apiTodo.status === 'DONE') {
+    completedTodos.value.unshift(localTodo)
+  } else {
+    todos.value.unshift(localTodo)
+  }
+
+  selectedTodo.value = localTodo
 }
 
 // Convert API DDayDto to LocalDDay
@@ -971,6 +987,7 @@ async function handleTodoUpdate(data: {
   content: string
   status: TodoStatus
   dueDate?: string | null
+  tagFriendIds?: number[]
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }) {
@@ -980,31 +997,11 @@ async function handleTodoUpdate(data: {
       content: data.content,
       status: data.status,
       dueDate: data.dueDate,
+      tagFriendIds: data.tagFriendIds,
       attachmentSessionId: data.attachmentSessionId,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
-    const localTodo = mapToLocalTodo(updatedTodo)
-
-    // Remove from both lists first
-    const activeIdx = todos.value.findIndex((t) => t.id === data.id)
-    if (activeIdx >= 0) {
-      todos.value.splice(activeIdx, 1)
-    }
-    const completedIdx = completedTodos.value.findIndex((t) => t.id === data.id)
-    if (completedIdx >= 0) {
-      completedTodos.value.splice(completedIdx, 1)
-    }
-
-    // Add to appropriate list based on status
-    if (updatedTodo.status === 'DONE') {
-      completedTodos.value.unshift(localTodo)
-    } else {
-      todos.value.unshift(localTodo)
-    }
-
-    // Update selectedTodo for the detail modal
-    selectedTodo.value = localTodo
-    toastSuccess('할 일이 수정되었습니다.')
+    applyTodoUpdate(updatedTodo)
   } catch (error) {
     console.error('Failed to update todo:', error)
     showError('할 일 수정에 실패했습니다.')
@@ -1014,9 +1011,8 @@ async function handleTodoUpdate(data: {
 async function handleTodoComplete(id: string) {
   const fromDetailModal = isTodoDetailModalOpen.value
   try {
-    const completedTodo = await todoApi.completeTodo(id)
-    todos.value = todos.value.filter((t) => t.id !== id)
-    completedTodos.value.unshift(mapToLocalTodo(completedTodo))
+    await todoApi.completeTodo(id)
+    await loadTodos()
   } catch (error) {
     console.error('Failed to complete todo:', error)
     showError('할 일 완료 처리에 실패했습니다.')
@@ -1030,14 +1026,28 @@ async function handleTodoComplete(id: string) {
 async function handleTodoReopen(id: string) {
   const fromDetailModal = isTodoDetailModalOpen.value
   try {
-    const reopenedTodo = await todoApi.reopenTodo(id)
-    completedTodos.value = completedTodos.value.filter((t) => t.id !== id)
-    todos.value.push(mapToLocalTodo(reopenedTodo))
+    await todoApi.reopenTodo(id)
+    await loadTodos()
   } catch (error) {
     console.error('Failed to reopen todo:', error)
     showError('할 일 재오픈에 실패했습니다.')
   }
   // Only close detail modal if called from detail modal
+  if (fromDetailModal) {
+    isTodoDetailModalOpen.value = false
+  }
+}
+
+async function handleTodoStatusChange(data: { id: string; status: TodoStatus }) {
+  const fromDetailModal = isTodoDetailModalOpen.value
+  try {
+    await todoApi.changeStatus(data.id, { status: data.status })
+    await loadTodos()
+    toastSuccess('할 일 상태를 변경했습니다.')
+  } catch (error) {
+    console.error('Failed to change todo status:', error)
+    showError('할 일 상태 변경에 실패했습니다.')
+  }
   if (fromDetailModal) {
     isTodoDetailModalOpen.value = false
   }
@@ -1064,6 +1074,8 @@ async function handleTodoAdd(data: {
   title: string
   content: string
   status: TodoStatus
+  dueDate?: string
+  tagFriendIds?: number[]
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }) {
@@ -1072,6 +1084,8 @@ async function handleTodoAdd(data: {
       title: data.title,
       content: data.content,
       status: data.status,
+      dueDate: data.dueDate,
+      tagFriendIds: data.tagFriendIds,
       attachmentSessionId: data.attachmentSessionId,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
@@ -1087,26 +1101,26 @@ async function handleTodoAdd(data: {
     showError('할 일 추가에 실패했습니다.')
   }
   isTodoAddModalOpen.value = false
-  // Only return to overview modal if added from overview
-  if (isTodoAddFromOverview.value) {
-    isTodoOverviewModalOpen.value = true
-    isTodoAddFromOverview.value = false
+}
+
+async function handleTodoUntagSelf(id: string) {
+  if (!await confirm('이 TODO 태그를 제거하시겠습니까?', '태그 제거')) return
+
+  try {
+    await todoApi.untagSelf(id)
+    todos.value = todos.value.filter((todo) => todo.id !== id)
+    completedTodos.value = completedTodos.value.filter((todo) => todo.id !== id)
+    isTodoDetailModalOpen.value = false
+    toastSuccess('TODO 태그를 제거했습니다.')
+  } catch (error) {
+    console.error('Failed to untag todo:', error)
+    showError('태그 제거에 실패했습니다.')
   }
 }
 
-// Todo position update for drag-and-drop
-async function handleTodoPositionUpdate(orderedIds: string[]) {
-  try {
-    await todoApi.updatePositions({ status: 'TODO', orderedIds })
-    // Reorder local todos array to match the new order
-    const todoMap = new Map(todos.value.map((t) => [t.id, t]))
-    todos.value = orderedIds.map((id) => todoMap.get(id)).filter((t): t is LocalTodo => t !== undefined)
-  } catch (error) {
-    console.error('Failed to update todo positions:', error)
-    showError('할 일 순서 변경에 실패했습니다.')
-    // Reload todos to restore correct order
-    await loadTodos()
-  }
+function handleTodoBackToList() {
+  isTodoDetailModalOpen.value = false
+  router.push('/todo')
 }
 
 // Search handler
@@ -1301,7 +1315,6 @@ async function handleEditSchedule(data: ScheduleSaveData) {
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
     await loadSchedules()
-    toastSuccess('일정이 수정되었습니다.')
   } catch (error) {
     console.error('Failed to update schedule:', error)
     showError('일정 수정에 실패했습니다.')
@@ -1582,34 +1595,23 @@ async function showExcelUploadModal() {
     <TodoAddModal
       :is-open="isTodoAddModalOpen"
       initial-status="IN_PROGRESS"
-      @close="isTodoAddModalOpen = false; if (isTodoAddFromOverview) { isTodoOverviewModalOpen = true; isTodoAddFromOverview = false; }"
+      :friends="friends"
+      @close="isTodoAddModalOpen = false"
       @save="handleTodoAdd"
     />
 
     <TodoDetailModal
       :is-open="isTodoDetailModalOpen"
       :todo="selectedTodo"
-      :start-in-edit-mode="startTodoEditMode"
-      @close="isTodoDetailModalOpen = false; startTodoEditMode = false"
+      :friends="friends"
+      @close="isTodoDetailModalOpen = false"
       @update="handleTodoUpdate"
       @complete="handleTodoComplete"
       @reopen="handleTodoReopen"
+      @change-status="handleTodoStatusChange"
       @delete="handleTodoDelete"
-      @back-to-list="isTodoDetailModalOpen = false; startTodoEditMode = false; isTodoOverviewModalOpen = true"
-    />
-
-    <TodoOverviewModal
-      :is-open="isTodoOverviewModalOpen"
-      :todos="todos"
-      :completed-todos="completedTodos"
-      @close="isTodoOverviewModalOpen = false"
-      @show-detail="(todo: LocalTodo) => { selectedTodo = todo; isTodoDetailModalOpen = true; isTodoOverviewModalOpen = false; }"
-      @edit="(todo: LocalTodo) => { selectedTodo = todo; startTodoEditMode = true; isTodoDetailModalOpen = true; isTodoOverviewModalOpen = false; }"
-      @complete="handleTodoComplete"
-      @reopen="handleTodoReopen"
-      @delete="handleTodoDelete"
-      @reorder="handleTodoPositionUpdate"
-      @add="isTodoOverviewModalOpen = false; isTodoAddModalOpen = true; isTodoAddFromOverview = true"
+      @untag-self="handleTodoUntagSelf"
+      @back-to-list="handleTodoBackToList"
     />
 
     <DDayModal

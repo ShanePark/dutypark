@@ -2,7 +2,7 @@
 import { Plus, ChevronRight, ListTodo, FileText } from 'lucide-vue-next'
 import type { LocalTodo } from '@/views/duty/dutyViewTypes'
 
-type DutyTodoRowItem = Pick<LocalTodo, 'id' | 'title' | 'status' | 'content' | 'hasAttachments'>
+type DutyTodoRowItem = Pick<LocalTodo, 'id' | 'title' | 'status' | 'content' | 'hasAttachments' | 'isTagged' | 'owner'>
 
 defineProps<{
   showTodoTodo: boolean
@@ -59,12 +59,12 @@ const emit = defineEmits<{
             @click="emit('todo-click', todo)"
             class="todo-item-bubble flex-shrink-0 max-w-[120px] sm:max-w-[160px] flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] sm:text-xs cursor-pointer transition-all duration-150 border"
             :style="{
-              backgroundColor: todo.status === 'IN_PROGRESS' ? 'var(--dp-warning-bg)' : 'var(--dp-accent-bg)',
-              borderColor: todo.status === 'IN_PROGRESS' ? 'var(--dp-warning)' : 'var(--dp-accent)',
+              backgroundColor: todo.isTagged ? 'var(--dp-accent-soft)' : (todo.status === 'IN_PROGRESS' ? 'var(--dp-warning-bg)' : 'var(--dp-accent-bg)'),
+              borderColor: todo.isTagged ? 'var(--dp-accent-border)' : (todo.status === 'IN_PROGRESS' ? 'var(--dp-warning)' : 'var(--dp-accent)'),
               color: 'var(--dp-text-primary)'
             }"
           >
-            <span class="truncate">{{ todo.title }}</span>
+            <span class="truncate">{{ todo.isTagged ? `${todo.owner} · ${todo.title}` : todo.title }}</span>
             <FileText v-if="todo.content || todo.hasAttachments" class="w-2.5 h-2.5 flex-shrink-0 text-dp-text-muted" />
           </button>
         </div>

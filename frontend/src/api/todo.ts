@@ -11,6 +11,9 @@ import type {
 export interface LegacyTodoRequest {
   title: string
   content: string
+  status?: string
+  dueDate?: string | null
+  tagFriendIds?: number[]
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }
@@ -46,6 +49,27 @@ export const todoApi = {
   changeStatus: async (id: string, request: TodoStatusChangeRequest): Promise<Todo> => {
     const response = await apiClient.patch<Todo>(`/todos/${id}/status`, request)
     return response.data
+  },
+
+  /**
+   * Remove the current member from a tagged todo
+   */
+  untagSelf: async (id: string): Promise<void> => {
+    await apiClient.delete(`/todos/${id}/tags`)
+  },
+
+  /**
+   * Tag a friend to a todo
+   */
+  tagFriend: async (id: string, friendId: number): Promise<void> => {
+    await apiClient.post(`/todos/${id}/tags/${friendId}`)
+  },
+
+  /**
+   * Untag a friend from a todo
+   */
+  untagFriend: async (id: string, friendId: number): Promise<void> => {
+    await apiClient.delete(`/todos/${id}/tags/${friendId}`)
   },
 
   /**

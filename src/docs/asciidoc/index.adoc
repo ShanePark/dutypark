@@ -121,6 +121,18 @@ operation::todos/create[]
 
 operation::todos/update[]
 
+=== TAG FRIEND
+
+operation::todos/tag-friend[]
+
+=== UNTAG FRIEND
+
+operation::todos/untag-friend[]
+
+=== UNTAG SELF
+
+operation::todos/untag-self[]
+
 === UPDATE-POSITION
 
 operation::todos/update-position[]

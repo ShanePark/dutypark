@@ -5,5 +5,5 @@ import java.util.*
 
 data class TodoStatusChangeRequest(
     val status: TodoStatus,
-    val orderedIds: List<UUID>
+    val orderedIds: List<UUID> = emptyList()
 )

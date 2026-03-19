@@ -51,7 +51,7 @@ onUnmounted(() => {
     <Bell class="w-5 h-5 bell-icon" />
     <span
       v-if="notificationStore.hasUnread"
-      class="notification-badge absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-xs font-bold rounded-full"
+      class="notification-badge absolute top-1 right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-xs font-bold rounded-full"
     >
       {{ notificationStore.unreadCountDisplay }}
     </span>
@@ -87,6 +87,8 @@ onUnmounted(() => {
   color: var(--dp-text-on-dark);
   font-size: 10px;
   line-height: 1;
-  box-shadow: var(--dp-shadow-sm);
+  box-shadow:
+    0 0 0 2px var(--dp-bg-card),
+    var(--dp-shadow-sm);
 }
 </style>

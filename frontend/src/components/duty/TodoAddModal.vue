@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, watch, toRef } from 'vue'
+import { computed, ref, watch, toRef } from 'vue'
 import { X, Calendar, ListTodo, Clock, CheckCircle2 } from 'lucide-vue-next'
 import FileUploader from '@/components/common/FileUploader.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
-import type { NormalizedAttachment, TodoStatus } from '@/types'
+import FriendTagSelector from '@/components/common/FriendTagSelector.vue'
+import type { NormalizedAttachment, TaggableFriend, TodoStatus } from '@/types'
 import { useSwal } from '@/composables/useSwal'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEscapeKey } from '@/composables/useEscapeKey'
@@ -11,10 +12,12 @@ import { useEscapeKey } from '@/composables/useEscapeKey'
 interface Props {
   isOpen: boolean
   initialStatus?: TodoStatus
+  friends?: TaggableFriend[]
 }
 
 const props = withDefaults(defineProps<Props>(), {
   initialStatus: 'TODO',
+  friends: () => [],
 })
 
 useBodyScrollLock(toRef(props, 'isOpen'))
@@ -26,6 +29,7 @@ const emit = defineEmits<{
     content: string
     status: TodoStatus
     dueDate?: string
+    tagFriendIds?: number[]
     attachmentSessionId?: string
     orderedAttachmentIds?: string[]
   }): void
@@ -37,6 +41,7 @@ const title = ref('')
 const content = ref('')
 const status = ref<TodoStatus>('TODO')
 const dueDate = ref('')
+const tagFriendIds = ref<number[]>([])
 const attachments = ref<NormalizedAttachment[]>([])
 const sessionId = ref<string | null>(null)
 const isUploading = ref(false)
@@ -50,6 +55,13 @@ const statusOptions: Array<{ value: TodoStatus; label: string; icon: typeof List
   { value: 'DONE', label: '완료', icon: CheckCircle2, colorClass: 'status-card-done' },
 ]
 
+const selectedTagSummaries = computed(() => {
+  return tagFriendIds.value.flatMap((id) => {
+    const friend = props.friends.find((candidate) => candidate.id === id)
+    return friend ? [{ id: friend.id, name: friend.name }] : []
+  })
+})
+
 watch(
   () => props.isOpen,
   (open) => {
@@ -59,6 +71,7 @@ watch(
       content.value = ''
       status.value = props.initialStatus
       dueDate.value = ''
+      tagFriendIds.value = []
       attachments.value = []
       sessionId.value = null
       isUploading.value = false
@@ -75,6 +88,7 @@ function handleClose() {
   content.value = ''
   status.value = 'TODO'
   dueDate.value = ''
+  tagFriendIds.value = []
   attachments.value = []
   sessionId.value = null
   isUploading.value = false
@@ -97,6 +111,7 @@ function handleSave() {
     content: content.value.trim(),
     status: status.value,
     dueDate: dueDate.value || undefined,
+    tagFriendIds: tagFriendIds.value.length ? [...tagFriendIds.value] : undefined,
     attachmentSessionId: sessionId.value || undefined,
     orderedAttachmentIds: orderedAttachmentIds.length > 0 ? orderedAttachmentIds : undefined,
   })
@@ -109,6 +124,7 @@ function handleSave() {
   content.value = ''
   status.value = 'TODO'
   dueDate.value = ''
+  tagFriendIds.value = []
   attachments.value = []
   sessionId.value = null
   isUploading.value = false
@@ -206,6 +222,15 @@ function onUploadError(message: string) {
                 v-model="dueDate"
                 type="date"
                 class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
+              />
+            </div>
+
+            <div v-if="props.friends.length > 0">
+              <label class="block text-sm font-medium mb-2 text-dp-text-secondary">친구 태그</label>
+              <FriendTagSelector
+                v-model="tagFriendIds"
+                :friends="props.friends"
+                :selected-summaries="selectedTagSummaries"
               />
             </div>
 

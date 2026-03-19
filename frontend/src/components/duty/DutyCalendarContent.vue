@@ -6,6 +6,7 @@ import CalendarGrid from '@/components/common/CalendarGrid.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import type { HolidayDto } from '@/types'
 import type { CalendarDay, DutyType, Schedule, OtherDuty, LocalDDay, DutyDay, TodoDueItem } from '@/views/duty/dutyViewTypes'
+import { buildDisplayTagMembers } from '@/utils/tagMembers'
 
 const props = defineProps<{
   days: CalendarDay[]
@@ -34,14 +35,6 @@ const emit = defineEmits<{
   (e: 'schedule-click', schedule: Schedule): void
   (e: 'todo-click', todo: TodoDueItem): void
 }>()
-
-type DisplayTagMember = {
-  key: string
-  id?: number
-  name: string
-  hasProfilePhoto?: boolean
-  profilePhotoVersion?: number
-}
 
 const focusedCalendarDay = computed(() => {
   if (!props.batchEditMode || !props.focusedDay) return null
@@ -132,36 +125,16 @@ function hasScheduleDetails(schedule: Schedule) {
   return !!(schedule.description || schedule.attachments?.length)
 }
 
-function getVisibleTags(schedule: Schedule) {
-  return (schedule.tags ?? []).filter((tag) => tag.id !== props.memberId)
-}
-
 function getDisplayTagMembers(schedule: Schedule) {
-  const visibleTags: DisplayTagMember[] = getVisibleTags(schedule).map((tag) => ({
-    key: `tag-${tag.id}`,
-    id: tag.id,
-    name: tag.name,
-    hasProfilePhoto: tag.hasProfilePhoto,
-    profilePhotoVersion: tag.profilePhotoVersion,
-  }))
-
-  const taggedByMember = schedule.taggedByMember
-  if (schedule.isTagged && taggedByMember && !visibleTags.some((tag) => tag.id === taggedByMember.id)) {
-    visibleTags.unshift({
-      key: `tagged-by-${taggedByMember.id}`,
-      id: taggedByMember.id,
-      name: taggedByMember.name,
-      hasProfilePhoto: taggedByMember.hasProfilePhoto,
-      profilePhotoVersion: taggedByMember.profilePhotoVersion,
-    })
-  } else if (schedule.isTagged && !taggedByMember && (schedule.taggedBy || schedule.owner)) {
-    visibleTags.unshift({
-      key: `tagged-by-${schedule.id}`,
-      name: schedule.taggedBy || schedule.owner || '',
-    })
-  }
-
-  return visibleTags.filter((tag) => tag.name)
+  return buildDisplayTagMembers({
+    itemKey: schedule.id,
+    isTagged: schedule.isTagged,
+    owner: schedule.owner,
+    taggedBy: schedule.taggedBy,
+    taggedByMember: schedule.taggedByMember,
+    tags: schedule.tags,
+    excludeMemberId: props.memberId,
+  })
 }
 
 function getCalendarTagLabel(name: string) {

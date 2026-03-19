@@ -61,6 +61,7 @@ class TodoController(
             content = todoRequest.content,
             status = todoRequest.status,
             dueDate = todoRequest.dueDate,
+            tagFriendIds = todoRequest.tagFriendIds.orEmpty(),
             attachmentSessionId = todoRequest.attachmentSessionId,
             orderedAttachmentIds = todoRequest.orderedAttachmentIds
         )
@@ -79,9 +80,36 @@ class TodoController(
             content = todoRequest.content,
             status = todoRequest.status,
             dueDate = todoRequest.dueDate,
+            tagFriendIds = todoRequest.tagFriendIds,
             attachmentSessionId = todoRequest.attachmentSessionId,
             orderedAttachmentIds = todoRequest.orderedAttachmentIds
         )
+    }
+
+    @PostMapping("/{id}/tags/{friendId}")
+    fun tagFriend(
+        @Login loginMember: LoginMember,
+        @PathVariable id: UUID,
+        @PathVariable friendId: Long
+    ) {
+        todoService.tagFriend(loginMember, id, friendId)
+    }
+
+    @DeleteMapping("/{id}/tags/{friendId}")
+    fun untagFriend(
+        @Login loginMember: LoginMember,
+        @PathVariable id: UUID,
+        @PathVariable friendId: Long
+    ) {
+        todoService.untagFriend(loginMember, id, friendId)
+    }
+
+    @DeleteMapping("/{id}/tags")
+    fun untagSelf(
+        @Login loginMember: LoginMember,
+        @PathVariable id: UUID
+    ) {
+        todoService.untagSelf(loginMember, id)
     }
 
     @PatchMapping("/position")

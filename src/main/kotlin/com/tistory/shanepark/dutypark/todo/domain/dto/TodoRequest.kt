@@ -17,6 +17,7 @@ data class TodoRequest(
     val content: String,
     val status: TodoStatus? = null,
     val dueDate: LocalDate? = null,
+    val tagFriendIds: List<Long>? = null,
     val attachmentSessionId: UUID? = null,
     val orderedAttachmentIds: List<UUID> = emptyList()
 )

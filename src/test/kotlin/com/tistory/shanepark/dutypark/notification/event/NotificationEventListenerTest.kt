@@ -9,6 +9,7 @@ import com.tistory.shanepark.dutypark.notification.domain.repository.Notificatio
 import com.tistory.shanepark.dutypark.notification.service.NotificationService
 import com.tistory.shanepark.dutypark.push.dto.PushNotificationPayload
 import com.tistory.shanepark.dutypark.push.service.WebPushService
+import com.tistory.shanepark.dutypark.todo.domain.entity.TodoStatus
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
@@ -126,6 +127,102 @@ class NotificationEventListenerTest {
         val payload = payloadCaptor.firstValue
         assertThat(payload.title).isNull()
         assertThat(payload.url).isEqualTo("/duty/${member.id}")
+    }
+
+    @Test
+    fun `handleTodoTagged uses todo url`() {
+        val member = memberWithId(1L, "receiver")
+        val todoId = UUID.randomUUID()
+        val notification = notificationWith(
+            member = member,
+            type = NotificationType.TODO_TAGGED,
+            referenceType = NotificationReferenceType.TODO,
+            referenceId = todoId.toString(),
+            actorId = 2L,
+            content = "보고서 정리"
+        )
+
+        whenever(
+            notificationService.createNotification(
+                member.id!!,
+                NotificationType.TODO_TAGGED,
+                2L,
+                NotificationReferenceType.TODO,
+                todoId.toString(),
+                "보고서 정리"
+            )
+        ).thenReturn(notification)
+        whenever(notificationRepository.countByMemberIdAndIsReadFalse(member.id!!)).thenReturn(2)
+        whenever(memberRepository.findById(2L)).thenReturn(Optional.of(memberWithId(2L, "owner")))
+
+        listener.handleTodoTagged(TodoTaggedEvent(todoId, 2L, member.id!!, "보고서 정리"))
+
+        verify(notificationService).createNotification(
+            member.id!!,
+            NotificationType.TODO_TAGGED,
+            2L,
+            NotificationReferenceType.TODO,
+            todoId.toString(),
+            "보고서 정리"
+        )
+        val payloadCaptor = argumentCaptor<PushNotificationPayload>()
+        verify(webPushService).sendToMember(eq(member.id!!), payloadCaptor.capture())
+        val payload = payloadCaptor.firstValue
+        assertThat(payload.title).isEqualTo("owner")
+        assertThat(payload.url).isEqualTo("/todo")
+        assertThat(payload.unreadCount).isEqualTo(2)
+    }
+
+    @Test
+    fun `handleTodoStatusChanged maps status to notification type and uses todo url`() {
+        val member = memberWithId(1L, "receiver")
+        val todoId = UUID.randomUUID()
+        val notification = notificationWith(
+            member = member,
+            type = NotificationType.TODO_STATUS_IN_PROGRESS,
+            referenceType = NotificationReferenceType.TODO,
+            referenceId = todoId.toString(),
+            actorId = 2L,
+            content = "보고서 정리"
+        )
+
+        whenever(
+            notificationService.createNotification(
+                member.id!!,
+                NotificationType.TODO_STATUS_IN_PROGRESS,
+                2L,
+                NotificationReferenceType.TODO,
+                todoId.toString(),
+                "보고서 정리"
+            )
+        ).thenReturn(notification)
+        whenever(notificationRepository.countByMemberIdAndIsReadFalse(member.id!!)).thenReturn(4)
+        whenever(memberRepository.findById(2L)).thenReturn(Optional.of(memberWithId(2L, "actor")))
+
+        listener.handleTodoStatusChanged(
+            TodoStatusChangedEvent(
+                todoId = todoId,
+                actorId = 2L,
+                recipientMemberId = member.id!!,
+                todoTitle = "보고서 정리",
+                newStatus = TodoStatus.IN_PROGRESS
+            )
+        )
+
+        verify(notificationService).createNotification(
+            member.id!!,
+            NotificationType.TODO_STATUS_IN_PROGRESS,
+            2L,
+            NotificationReferenceType.TODO,
+            todoId.toString(),
+            "보고서 정리"
+        )
+        val payloadCaptor = argumentCaptor<PushNotificationPayload>()
+        verify(webPushService).sendToMember(eq(member.id!!), payloadCaptor.capture())
+        val payload = payloadCaptor.firstValue
+        assertThat(payload.title).isEqualTo("actor")
+        assertThat(payload.url).isEqualTo("/todo")
+        assertThat(payload.unreadCount).isEqualTo(4)
     }
 
     @Test
