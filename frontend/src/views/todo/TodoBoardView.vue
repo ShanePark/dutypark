@@ -129,7 +129,7 @@ function getColumnCards(container: Element | null, exclude: Element | null = nul
 
 function getLeadingTaggedCount(cards: Element[]): number {
   let index = 0
-  while (index < cards.length && isTaggedCard(cards[index])) {
+  while (index < cards.length && isTaggedCard(cards[index] ?? null)) {
     index += 1
   }
   return index
@@ -566,7 +566,13 @@ onBeforeUnmount(() => {
     >
       <div class="todo-board-columns">
         <!-- TODO Column -->
-        <KanbanColumn status="TODO" :count="counts.todo" @add="openAddModal('TODO')">
+        <KanbanColumn
+          status="TODO"
+          :count="counts.todo"
+          clickable-header
+          @select="focusStatus"
+          @add="openAddModal('TODO')"
+        >
           <div data-column="TODO" class="kanban-column-drop-zone">
             <div
               v-for="todo in todoList"
@@ -589,7 +595,13 @@ onBeforeUnmount(() => {
         </KanbanColumn>
 
         <!-- IN_PROGRESS Column -->
-        <KanbanColumn status="IN_PROGRESS" :count="counts.inProgress" @add="openAddModal('IN_PROGRESS')">
+        <KanbanColumn
+          status="IN_PROGRESS"
+          :count="counts.inProgress"
+          clickable-header
+          @select="focusStatus"
+          @add="openAddModal('IN_PROGRESS')"
+        >
           <div data-column="IN_PROGRESS" class="kanban-column-drop-zone">
             <div
               v-for="todo in inProgressList"
@@ -612,7 +624,13 @@ onBeforeUnmount(() => {
         </KanbanColumn>
 
         <!-- DONE Column -->
-        <KanbanColumn status="DONE" :count="counts.done" @add="openAddModal('DONE')">
+        <KanbanColumn
+          status="DONE"
+          :count="counts.done"
+          clickable-header
+          @select="focusStatus"
+          @add="openAddModal('DONE')"
+        >
           <div data-column="DONE" class="kanban-column-drop-zone">
             <div
               v-for="todo in doneList"
