@@ -3,7 +3,9 @@ package com.tistory.shanepark.dutypark.todo.repository
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.todo.domain.entity.Todo
 import com.tistory.shanepark.dutypark.todo.domain.entity.TodoStatus
+import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import java.time.LocalDate
@@ -18,6 +20,12 @@ interface TodoRepository : JpaRepository<Todo, UUID> {
     fun countByMemberIdAndStatusNotAndDueDateBefore(memberId: Long, status: TodoStatus, dueDate: LocalDate): Long
 
     fun countByMemberIdAndStatusNotAndDueDate(memberId: Long, status: TodoStatus, dueDate: LocalDate): Long
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT t FROM Todo t WHERE t.id = :id")
+    fun findByIdForUpdate(
+        @Param("id") id: UUID
+    ): Optional<Todo>
 
     @Query(
         "SELECT COALESCE(MIN(t.position), 0) " +

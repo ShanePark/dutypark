@@ -42,6 +42,10 @@ class Todo(
         this.content = content
     }
 
+    fun hasTag(member: Member): Boolean {
+        return tags.any { it.member.id == member.id }
+    }
+
     fun addTag(member: Member) {
         tags.find { it.member.id == member.id }
             ?.let { throw IllegalArgumentException("$member is already tagged in todo $this") }
@@ -51,11 +55,10 @@ class Todo(
     }
 
     fun removeTag(member: Member) {
-        val todoTag = tags.find { it.member.id == member.id }
-        if (todoTag == null) {
+        val removed = tags.removeAll { it.member.id == member.id }
+        if (!removed) {
             throw IllegalArgumentException("$member is not tagged in todo $this")
         }
-        tags.remove(todoTag)
     }
 
     fun changeStatus(newStatus: TodoStatus, newPosition: Int) {

@@ -141,8 +141,12 @@ class TodoService(
     ): TodoResponse {
         val member = findMember(loginMember)
 
-        val todo = todoRepository.findById(id)
-            .orElseThrow { IllegalArgumentException("Todo not found") }
+        val todo = if (tagFriendIds != null) {
+            findTodoForTagUpdate(id)
+        } else {
+            todoRepository.findById(id)
+                .orElseThrow { IllegalArgumentException("Todo not found") }
+        }
 
         verifyOwnership(todo, member)
 
@@ -325,7 +329,7 @@ class TodoService(
     }
 
     fun tagFriend(loginMember: LoginMember, todoId: UUID, friendId: Long) {
-        val todo = todoRepository.findById(todoId).orElseThrow { IllegalArgumentException("Todo not found") }
+        val todo = findTodoForTagUpdate(todoId)
         val member = findMember(loginMember)
         val friend = memberRepository.findById(friendId).orElseThrow { IllegalArgumentException("Member not found") }
 
@@ -334,7 +338,7 @@ class TodoService(
     }
 
     fun untagFriend(loginMember: LoginMember, todoId: UUID, friendId: Long) {
-        val todo = todoRepository.findById(todoId).orElseThrow { IllegalArgumentException("Todo not found") }
+        val todo = findTodoForTagUpdate(todoId)
         val member = findMember(loginMember)
         val friend = memberRepository.findById(friendId).orElseThrow { IllegalArgumentException("Member not found") }
 
@@ -343,7 +347,7 @@ class TodoService(
     }
 
     fun untagSelf(loginMember: LoginMember, todoId: UUID) {
-        val todo = todoRepository.findById(todoId).orElseThrow { IllegalArgumentException("Todo not found") }
+        val todo = findTodoForTagUpdate(todoId)
         val member = findMember(loginMember)
         todo.removeTag(member)
     }
@@ -393,6 +397,10 @@ class TodoService(
         memberRepository.findById(loginMember.id)
             .orElseThrow { IllegalArgumentException("Member not found") }
 
+    private fun findTodoForTagUpdate(id: UUID): Todo =
+        todoRepository.findByIdForUpdate(id)
+            .orElseThrow { IllegalArgumentException("Todo not found") }
+
     private fun toResponse(todo: Todo, viewer: Member): TodoResponse {
         val hasAttachments = attachmentService.hasAttachments(
             AttachmentContextType.TODO,
@@ -423,6 +431,9 @@ class TodoService(
     }
 
     private fun addTagToTodo(todo: Todo, friend: Member) {
+        if (todo.hasTag(friend)) {
+            return
+        }
         if (!friendService.isFriend(todo.member, friend)) {
             throw AuthException("$friend is not friend of ${todo.member}")
         }

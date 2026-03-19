@@ -9,6 +9,7 @@ import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.notification.event.TodoTaggedEvent
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.todo.domain.entity.Todo
+import com.tistory.shanepark.dutypark.todo.domain.entity.TodoTag
 import com.tistory.shanepark.dutypark.todo.domain.entity.TodoStatus
 import com.tistory.shanepark.dutypark.todo.repository.TodoRepository
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -1690,11 +1691,47 @@ class TodoServiceTest {
         ReflectionTestUtils.setField(todo, "id", todoId)
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
-        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findByIdForUpdate(todoId)).thenReturn(Optional.of(todo))
 
         todoService.untagSelf(loginMember, todoId)
 
         assertEquals(emptyList<Long>(), todo.tags.mapNotNull { it.member.id })
+    }
+
+    @Test
+    fun `tagFriend should be idempotent for already tagged friend`() {
+        val todoId = UUID.randomUUID()
+        val friend = otherMember()
+        val todo = Todo(member, "task", "content", 0, TodoStatus.TODO)
+        todo.addTag(friend)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(memberRepository.findById(friend.id!!)).thenReturn(Optional.of(friend))
+        `when`(todoRepository.findByIdForUpdate(todoId)).thenReturn(Optional.of(todo))
+
+        todoService.tagFriend(loginMember, todoId, friend.id!!)
+
+        assertEquals(listOf(friend.id), todo.tags.mapNotNull { it.member.id })
+        verifyNoInteractions(friendService)
+        verify(eventPublisher, never()).publishEvent(any(TodoTaggedEvent::class.java))
+    }
+
+    @Test
+    fun `untagSelf should remove duplicated tags at once`() {
+        val todoId = UUID.randomUUID()
+        val friend = otherMember()
+        val todo = Todo(friend, "tagged", "content", 0, TodoStatus.TODO)
+        todo.tags.add(TodoTag(todo, member))
+        todo.tags.add(TodoTag(todo, member))
+        ReflectionTestUtils.setField(todo, "id", todoId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findByIdForUpdate(todoId)).thenReturn(Optional.of(todo))
+
+        todoService.untagSelf(loginMember, todoId)
+
+        assertTrue(todo.tags.none { it.member.id == member.id })
     }
 
     // ========== Helper Methods ==========
