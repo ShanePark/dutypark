@@ -7,6 +7,7 @@ import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
+import com.tistory.shanepark.dutypark.notification.event.TodoStatusChangedEvent
 import com.tistory.shanepark.dutypark.notification.event.TodoTaggedEvent
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.todo.domain.dto.TodoBoardResponse
@@ -154,11 +155,15 @@ class TodoService(
         todo.dueDate = dueDate
 
         // Handle status change if provided and different from current
-        if (status != null && status != todo.status) {
-            val newPosition = todoRepository.findMinPositionByMemberAndStatus(member, status) - 1
-            todo.changeStatus(status, newPosition)
+        val changedStatus = status?.takeIf { it != todo.status }
+        if (changedStatus != null) {
+            val newPosition = todoRepository.findMinPositionByMemberAndStatus(member, changedStatus) - 1
+            todo.changeStatus(changedStatus, newPosition)
         }
         tagFriendIds?.let { syncTodoTags(todo, it) }
+        if (changedStatus != null) {
+            publishTodoStatusChangedEvents(todo, member, changedStatus)
+        }
 
         attachmentService.synchronizeContextAttachments(
             loginMember = loginMember,
@@ -230,6 +235,7 @@ class TodoService(
         if (todo.status == TodoStatus.TODO || todo.status == TodoStatus.IN_PROGRESS) {
             val newPosition = findStatusChangePosition(todo, member, TodoStatus.DONE)
             todo.markCompleted(newPosition)
+            publishTodoStatusChangedEvents(todo, member, TodoStatus.DONE)
         }
 
         return toResponse(todo, member)
@@ -246,6 +252,7 @@ class TodoService(
         if (todo.status == TodoStatus.DONE) {
             val newPosition = findStatusChangePosition(todo, member, TodoStatus.TODO)
             todo.markActive(newPosition)
+            publishTodoStatusChangedEvents(todo, member, TodoStatus.TODO)
         }
 
         return toResponse(todo, member)
@@ -269,6 +276,7 @@ class TodoService(
         if (statusChanged) {
             val targetPosition = if (isOwner && orderedIds.isNotEmpty()) 0 else findStatusChangePosition(todo, member, newStatus)
             todo.changeStatus(newStatus, targetPosition)
+            publishTodoStatusChangedEvents(todo, member, newStatus)
         }
 
         if (!isOwner) {
@@ -450,6 +458,27 @@ class TodoService(
                 todoTitle = todo.title
             )
         )
+    }
+
+    private fun publishTodoStatusChangedEvents(todo: Todo, actor: Member, newStatus: TodoStatus) {
+        val actorId = actor.id ?: return
+        val recipientIds = buildSet {
+            todo.member.id?.let(::add)
+            todo.tags.mapNotNullTo(this) { it.member.id }
+        }
+            .filterNot { it == actorId }
+
+        recipientIds.forEach { recipientId ->
+            eventPublisher.publishEvent(
+                TodoStatusChangedEvent(
+                    todoId = todo.id,
+                    actorId = actorId,
+                    recipientMemberId = recipientId,
+                    todoTitle = todo.title,
+                    newStatus = newStatus
+                )
+            )
+        }
     }
 
     private fun boardOrderComparator(viewer: Member): Comparator<Todo> {

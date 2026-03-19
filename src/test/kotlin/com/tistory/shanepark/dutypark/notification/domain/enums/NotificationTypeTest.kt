@@ -64,6 +64,15 @@ class NotificationTypeTest {
 
         assertThat(NotificationType.TODO_TAGGED.generateTitle(actorName, todoTitle))
             .isEqualTo("테스트유저님의 [할 일 제목] TODO에 태그되었습니다")
+
+        assertThat(NotificationType.TODO_STATUS_TODO.generateTitle(actorName, todoTitle))
+            .isEqualTo("테스트유저님이 [할 일 제목] TODO를 할 일로 변경했습니다")
+
+        assertThat(NotificationType.TODO_STATUS_IN_PROGRESS.generateTitle(actorName, todoTitle))
+            .isEqualTo("테스트유저님이 [할 일 제목] TODO를 진행중으로 변경했습니다")
+
+        assertThat(NotificationType.TODO_STATUS_DONE.generateTitle(actorName, todoTitle))
+            .isEqualTo("테스트유저님이 [할 일 제목] TODO를 완료 처리했습니다")
     }
 
     @Test
@@ -92,5 +101,12 @@ class NotificationTypeTest {
         val body = NotificationType.TODO_TAGGED.generatePushBody("보고서 정리")
 
         assertThat(body).isEqualTo("[보고서 정리] TODO에 태그되었습니다")
+    }
+
+    @Test
+    fun `generatePushBody for TODO_STATUS_DONE replaces todo title when provided`() {
+        val body = NotificationType.TODO_STATUS_DONE.generatePushBody("보고서 정리")
+
+        assertThat(body).isEqualTo("[보고서 정리] TODO를 완료 처리했습니다")
     }
 }

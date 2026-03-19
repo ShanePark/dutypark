@@ -6,6 +6,7 @@ import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
+import com.tistory.shanepark.dutypark.notification.event.TodoStatusChangedEvent
 import com.tistory.shanepark.dutypark.notification.event.TodoTaggedEvent
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.todo.domain.entity.Todo
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.*
@@ -219,6 +221,30 @@ class TodoServiceTest {
     }
 
     @Test
+    fun `completeTodo should notify tagged members except actor`() {
+        val todoId = UUID.randomUUID()
+        val taggedMember = otherMember()
+        val secondTaggedMember = memberWithId(3L)
+        val todo = Todo(member, "title", "content", 1)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+        todo.addTag(taggedMember)
+        todo.addTag(secondTaggedMember)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.DONE)).thenReturn(0)
+
+        todoService.completeTodo(loginMember, todoId)
+
+        val eventCaptor = ArgumentCaptor.forClass(TodoStatusChangedEvent::class.java)
+        verify(eventPublisher, times(2)).publishEvent(eventCaptor.capture())
+        assertEquals(setOf(taggedMember.id, secondTaggedMember.id), eventCaptor.allValues.map { it.recipientMemberId }.toSet())
+        assertTrue(eventCaptor.allValues.all { it.actorId == member.id })
+        assertTrue(eventCaptor.allValues.all { it.todoId == todoId })
+        assertTrue(eventCaptor.allValues.all { it.newStatus == TodoStatus.DONE })
+    }
+
+    @Test
     fun `reopenTodo should mark todo as active`() {
         val todoId = UUID.randomUUID()
         val todo = Todo(member, "title", "content", 0)
@@ -345,11 +371,13 @@ class TodoServiceTest {
         verifyNoInteractions(attachmentService)
     }
 
-    private fun otherMember(): Member {
+    private fun memberWithId(id: Long): Member {
         val member = Member(name = "", password = "")
-        ReflectionTestUtils.setField(member, "id", 2L)
+        ReflectionTestUtils.setField(member, "id", id)
         return member
     }
+
+    private fun otherMember(): Member = memberWithId(2L)
 
     private fun createAttachmentDto(id: UUID): AttachmentDto {
         return AttachmentDto(
@@ -627,6 +655,7 @@ class TodoServiceTest {
 
         assertEquals(TodoStatus.TODO, result.status)
         assertEquals(0, result.position)
+        verify(eventPublisher, never()).publishEvent(any(TodoStatusChangedEvent::class.java))
     }
 
     @Test
@@ -688,6 +717,30 @@ class TodoServiceTest {
         assertEquals(TodoStatus.IN_PROGRESS, result.status)
         assertEquals(2, result.position)
         verify(todoRepository, never()).findAllById(anyList())
+    }
+
+    @Test
+    fun `changeStatus should notify owner and other tagged members when tagged member updates status`() {
+        val todoId = UUID.randomUUID()
+        val owner = otherMember()
+        val otherTaggedMember = memberWithId(3L)
+        val todo = createTodo("task", TodoStatus.TODO, 7)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+        ReflectionTestUtils.setField(todo, "member", owner)
+        todo.addTag(member)
+        todo.addTag(otherTaggedMember)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(owner, TodoStatus.IN_PROGRESS)).thenReturn(3)
+
+        todoService.changeStatus(loginMember, todoId, TodoStatus.IN_PROGRESS, emptyList())
+
+        val eventCaptor = ArgumentCaptor.forClass(TodoStatusChangedEvent::class.java)
+        verify(eventPublisher, times(2)).publishEvent(eventCaptor.capture())
+        assertEquals(setOf(owner.id, otherTaggedMember.id), eventCaptor.allValues.map { it.recipientMemberId }.toSet())
+        assertTrue(eventCaptor.allValues.all { it.actorId == member.id })
+        assertTrue(eventCaptor.allValues.all { it.newStatus == TodoStatus.IN_PROGRESS })
     }
 
     @Test
@@ -892,6 +945,7 @@ class TodoServiceTest {
 
         assertEquals(TodoStatus.DONE, result.status)
         assertEquals(0, result.position)
+        verify(eventPublisher, never()).publishEvent(any(TodoStatusChangedEvent::class.java))
     }
 
     @Test
@@ -969,6 +1023,12 @@ class TodoServiceTest {
         assertEquals(TodoStatus.TODO, result.status)
         assertEquals(1, result.position)
         assertNull(result.completedDate)
+
+        val eventCaptor = ArgumentCaptor.forClass(TodoStatusChangedEvent::class.java)
+        verify(eventPublisher).publishEvent(eventCaptor.capture())
+        assertEquals(owner.id, eventCaptor.value.recipientMemberId)
+        assertEquals(member.id, eventCaptor.value.actorId)
+        assertEquals(TodoStatus.TODO, eventCaptor.value.newStatus)
     }
 
     @Test
@@ -1544,6 +1604,28 @@ class TodoServiceTest {
         assertEquals(TodoStatus.IN_PROGRESS, response.status)
         assertEquals(9, response.position)
         assertNull(response.completedDate)
+    }
+
+    @Test
+    fun `editTodo with status change should notify tagged members`() {
+        val todoId = UUID.randomUUID()
+        val taggedMember = otherMember()
+        val todo = createTodo("old title", TodoStatus.TODO, 5)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+        todo.addTag(taggedMember)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.IN_PROGRESS)).thenReturn(10)
+
+        todoService.editTodo(loginMember, todoId, "new title", "new content", TodoStatus.IN_PROGRESS)
+
+        val eventCaptor = ArgumentCaptor.forClass(TodoStatusChangedEvent::class.java)
+        verify(eventPublisher).publishEvent(eventCaptor.capture())
+        assertEquals(taggedMember.id, eventCaptor.value.recipientMemberId)
+        assertEquals(member.id, eventCaptor.value.actorId)
+        assertEquals("new title", eventCaptor.value.todoTitle)
+        assertEquals(TodoStatus.IN_PROGRESS, eventCaptor.value.newStatus)
     }
 
     @Test

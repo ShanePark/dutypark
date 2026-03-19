@@ -349,6 +349,30 @@ class NotificationServiceTest {
     }
 
     @Test
+    fun `createNotification for TODO_STATUS_DONE includes todo title in notification title`() {
+        val todoTitle = "보고서 정리"
+        whenever(memberRepository.findById(testMember.id!!))
+            .thenReturn(Optional.of(testMember))
+        whenever(memberRepository.findById(actorMember.id!!))
+            .thenReturn(Optional.of(actorMember))
+        whenever(notificationRepository.save(any<Notification>()))
+            .thenAnswer { it.arguments[0] }
+
+        val result = notificationService.createNotification(
+            memberId = testMember.id!!,
+            type = NotificationType.TODO_STATUS_DONE,
+            actorId = actorMember.id,
+            referenceType = NotificationReferenceType.TODO,
+            referenceId = UUID.randomUUID().toString(),
+            content = todoTitle
+        )
+
+        assertThat(result.title).isEqualTo("actorUser님이 [보고서 정리] TODO를 완료 처리했습니다")
+        assertThat(result.type).isEqualTo(NotificationType.TODO_STATUS_DONE)
+        assertThat(result.content).isEqualTo(todoTitle)
+    }
+
+    @Test
     fun `enrichWithActorInfo handles empty actor list`() {
         // Given
         val notification = createNotification(testMember, actorId = null)
