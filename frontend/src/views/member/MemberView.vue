@@ -964,7 +964,7 @@ onMounted(async () => {
               </button>
             </div>
           </div>
-          <div class="p-4 sm:p-6 border-t border-dp-border-primary">
+          <div class="modal-footer-safe p-4 sm:p-6 border-t border-dp-border-primary">
             <button
               @click="showVisibilityModal = false"
               class="w-full px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-primary"
@@ -1049,7 +1049,7 @@ onMounted(async () => {
               </p>
             </div>
           </div>
-          <div class="p-4 sm:p-6 flex gap-2 border-t border-dp-border-primary">
+          <div class="modal-footer-safe p-4 sm:p-6 flex gap-2 border-t border-dp-border-primary">
             <button
               @click="changePassword"
               :disabled="changingPassword"
@@ -1109,7 +1109,7 @@ onMounted(async () => {
               <p class="text-xs mt-1 text-dp-text-muted">최대 10자</p>
             </div>
           </div>
-          <div class="p-4 sm:p-6 flex gap-2 border-t border-dp-border-primary">
+          <div class="modal-footer-safe p-4 sm:p-6 flex gap-2 border-t border-dp-border-primary">
             <button
               @click="createAuxiliaryAccount"
               :disabled="creatingAuxiliary || !auxiliaryName.trim()"

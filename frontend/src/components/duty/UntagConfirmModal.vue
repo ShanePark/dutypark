@@ -51,7 +51,7 @@ function confirm() {
             <p>• 태그 복원은 불가능하며, 다시 태그하려면 해당 사용자에게 요청해야 합니다.</p>
           </div>
         </div>
-        <div class="pb-4 flex justify-center gap-2">
+        <div class="pb-4 modal-footer-safe flex justify-center gap-2">
           <button
             @click="confirm"
             class="px-5 py-2 bg-dp-warning hover:bg-dp-warning-hover text-dp-text-on-dark rounded-lg text-sm font-medium transition-all duration-200 hover:-translate-y-px cursor-pointer"

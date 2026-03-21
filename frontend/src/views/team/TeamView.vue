@@ -700,7 +700,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="flex justify-end gap-2 p-4 border-t border-dp-border-primary">
+        <div class="modal-footer-safe flex justify-end gap-2 p-4 border-t border-dp-border-primary">
           <button
             @click="saveSchedule"
             :disabled="saving || !scheduleForm.content.trim()"

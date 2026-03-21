@@ -127,7 +127,7 @@ function handleToggle(friendId: number) {
         </div>
 
         <!-- Footer -->
-        <div class="p-3 sm:p-4 border-t border-dp-border-primary">
+        <div class="modal-footer-safe p-3 sm:p-4 border-t border-dp-border-primary">
           <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-between gap-2">
             <span class="text-sm text-center sm:text-left text-dp-text-muted">
               {{ selectedFriendIds.length }} / {{ maxSelections }}명 선택됨

@@ -178,7 +178,7 @@ const isEditMode = props.dday !== null && props.dday !== undefined
         </div>
 
         <!-- Footer (sticky at bottom) -->
-        <div class="p-3 sm:p-4 flex-shrink-0 flex flex-row gap-2 justify-end border-t border-dp-border-primary">
+        <div class="modal-footer-safe p-3 sm:p-4 flex-shrink-0 flex flex-row gap-2 justify-end border-t border-dp-border-primary">
           <button
             @click="handleClose"
             class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"

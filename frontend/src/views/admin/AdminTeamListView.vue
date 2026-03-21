@@ -476,7 +476,7 @@ onMounted(() => {
             />
           </div>
         </div>
-        <div class="p-4 flex justify-end gap-2 border-t border-dp-border-primary">
+        <div class="modal-footer-safe p-4 flex justify-end gap-2 border-t border-dp-border-primary">
           <button
             @click="handleCreateTeam"
             :disabled="nameCheckResult !== 'OK' || !newTeamDescription"

@@ -700,6 +700,13 @@ html.dark {
     @apply max-h-[580px] overflow-y-auto;
 }
 
+@media (max-width: 639px) {
+    .modal-footer-safe {
+        padding-bottom: 1rem;
+        padding-bottom: max(1rem, calc(env(safe-area-inset-bottom) - 0.25rem));
+    }
+}
+
 @media (min-width: 640px) {
     .modal-overlay-padding-nav-safe {
         padding:

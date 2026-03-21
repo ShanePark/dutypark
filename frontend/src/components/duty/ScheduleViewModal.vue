@@ -295,7 +295,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
 
         <!-- Footer -->
         <div
-          class="p-3 sm:p-4 flex-shrink-0 border-t border-dp-border-primary"
+          class="modal-footer-safe p-3 sm:p-4 flex-shrink-0 border-t border-dp-border-primary"
         >
           <button
             @click="emit('close')"

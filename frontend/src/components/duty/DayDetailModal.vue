@@ -447,8 +447,7 @@ function handleUploadError(message: string) {
 
         <!-- Footer (sticky at bottom) -->
         <div
-          class="day-detail-modal-footer px-3 py-2.5 sm:p-4 flex-shrink-0 border-t border-dp-border-primary"
-          :class="{ 'day-detail-modal-footer--list': !isCreateMode && !isEditMode }"
+          class="day-detail-modal-footer modal-footer-safe px-3 py-2.5 sm:p-4 flex-shrink-0 border-t border-dp-border-primary"
         >
           <!-- List mode: Add schedule button -->
           <div v-if="!isCreateMode && !isEditMode && canEdit" class="flex justify-end">
@@ -488,14 +487,6 @@ function handleUploadError(message: string) {
 </template>
 
 <style scoped>
-.day-detail-modal-footer {
-  padding-bottom: max(0.25rem, calc(env(safe-area-inset-bottom) - 1rem));
-}
-
-.day-detail-modal-footer--list {
-  padding-bottom: max(0.5rem, calc(env(safe-area-inset-bottom) - 1rem));
-}
-
 @media (max-width: 639px) {
   .day-detail-modal-header {
     padding: 0.75rem 0.875rem;
@@ -512,9 +503,4 @@ function handleUploadError(message: string) {
   }
 }
 
-@media (min-width: 640px) {
-  .day-detail-modal-footer {
-    padding-bottom: 1rem;
-  }
-}
 </style>

@@ -466,7 +466,7 @@ function onUploadError(message: string) {
         </div>
 
         <!-- Footer (sticky at bottom) -->
-        <div class="p-3 sm:p-4 flex-shrink-0 border-t border-dp-border-primary">
+        <div class="modal-footer-safe p-3 sm:p-4 flex-shrink-0 border-t border-dp-border-primary">
           <template v-if="!isEditMode">
             <div class="flex items-center justify-between gap-2">
               <!-- Left: Back to list -->

@@ -210,7 +210,7 @@ async function addMember(member: MemberDto) {
         </div>
       </div>
 
-      <div class="flex justify-end p-4 border-t border-dp-border-primary">
+      <div class="modal-footer-safe flex justify-end p-4 border-t border-dp-border-primary">
         <button
           @click="close"
           class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"

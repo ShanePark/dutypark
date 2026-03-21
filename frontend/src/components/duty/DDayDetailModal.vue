@@ -166,7 +166,7 @@ const ddayBadgeClass = computed(() => {
 
         <!-- Footer (sticky at bottom) -->
         <div
-          class="p-4 flex-shrink-0 flex justify-between gap-2 border-t border-dp-border-primary"
+          class="modal-footer-safe p-4 flex-shrink-0 flex justify-between gap-2 border-t border-dp-border-primary"
         >
           <div class="flex gap-2">
             <button

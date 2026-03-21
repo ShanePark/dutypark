@@ -571,6 +571,8 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
   justify-content: flex-end;
   gap: 0.75rem;
   padding: 1rem 1.5rem;
+  padding-bottom: 1rem;
+  padding-bottom: max(1rem, calc(env(safe-area-inset-bottom) - 0.25rem));
   border-top: 1px solid var(--dp-border-primary);
 }
 

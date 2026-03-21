@@ -481,7 +481,7 @@ onMounted(async () => {
           </div>
           <p v-if="passwordError" class="text-sm text-dp-danger">{{ passwordError }}</p>
         </div>
-        <div class="p-4 flex justify-end gap-2 border-t border-dp-border-primary">
+        <div class="modal-footer-safe p-4 flex justify-end gap-2 border-t border-dp-border-primary">
           <button
             @click="closePasswordModal"
             :disabled="changingPassword"
