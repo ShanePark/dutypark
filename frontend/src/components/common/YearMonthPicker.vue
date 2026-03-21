@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, watch, toRef } from 'vue'
+import { ref, watch } from 'vue'
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
+import BaseModal from '@/components/common/BaseModal.vue'
 
 const props = defineProps<{
   isOpen: boolean
@@ -18,9 +17,6 @@ const emit = defineEmits<{
 
 const pickerYear = ref(props.currentYear)
 const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월']
-
-useBodyScrollLock(toRef(props, 'isOpen'))
-useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 
 // Sync pickerYear when modal opens
 watch(() => props.isOpen, (open) => {
@@ -39,19 +35,14 @@ function handleGoToThisMonth() {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      v-if="isOpen"
-      class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-2 sm:p-4"
-      @click.self="emit('close')"
-    >
-      <div
-        class="modal-panel-width rounded-xl shadow-xl sm:max-w-sm"
-        :style="{
-          backgroundColor: 'var(--dp-bg-modal)',
-          border: '1px solid var(--dp-border-primary)',
-        }"
-      >
+  <BaseModal
+    :is-open="isOpen"
+    size="sm"
+    height="fit"
+    rounded
+    panel-class="border border-dp-border-primary"
+    @close="emit('close')"
+  >
         <!-- Year Navigation -->
         <div
           class="flex items-center justify-between p-3 sm:p-4 border-b border-dp-border-primary"
@@ -110,7 +101,5 @@ function handleGoToThisMonth() {
             닫기
           </button>
         </div>
-      </div>
-    </div>
-  </Teleport>
+  </BaseModal>
 </template>

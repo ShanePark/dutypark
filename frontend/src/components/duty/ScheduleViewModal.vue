@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, toRef } from 'vue'
+import { computed } from 'vue'
 import {
   X,
   Lock,
@@ -10,11 +10,10 @@ import {
   Users,
 } from 'lucide-vue-next'
 import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
+import BaseModal from '@/components/common/BaseModal.vue'
 import MemberTagChips from '@/components/common/MemberTagChips.vue'
 import type { NormalizedAttachment } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
 import { toDisplayTagMember } from '@/utils/tagMembers'
 import { getVisibilityIcon, getVisibilityLabel } from '@/utils/visibility'
 
@@ -61,13 +60,9 @@ interface Props {
 
 const props = defineProps<Props>()
 
-useBodyScrollLock(toRef(props, 'isOpen'))
-
 const emit = defineEmits<{
   (e: 'close'): void
 }>()
-
-useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 
 const formattedDateTime = computed(() => {
   if (!props.schedule) return ''
@@ -165,13 +160,14 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      v-if="isOpen && schedule"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50 pb-16 sm:pb-0"
-      @click.self="emit('close')"
-    >
-      <div class="modal-container sm:max-w-lg max-h-[calc(100dvh-5rem)] sm:max-h-[85vh]">
+  <BaseModal
+    :is-open="isOpen && !!schedule"
+    size="lg"
+    height="schedule"
+    overlay-padding="nav-safe"
+    @close="emit('close')"
+  >
+    <template v-if="schedule">
         <!-- Header -->
         <div
           class="p-3 sm:p-4 flex-shrink-0 bg-dp-bg-tertiary border-b border-dp-border-primary"
@@ -308,7 +304,6 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
             닫기
           </button>
         </div>
-      </div>
-    </div>
-  </Teleport>
+    </template>
+  </BaseModal>
 </template>

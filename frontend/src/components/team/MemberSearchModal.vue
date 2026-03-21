@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, watch, toRef } from 'vue'
+import { ref, watch } from 'vue'
+import BaseModal from '@/components/common/BaseModal.vue'
 import { useSwal } from '@/composables/useSwal'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
 import { teamApi } from '@/api/team'
 import type { MemberDto } from '@/types'
 import { Search, X, ChevronLeft, ChevronRight, Loader2 } from 'lucide-vue-next'
@@ -20,10 +19,6 @@ const emit = defineEmits<{
 }>()
 
 const { showError, toastSuccess, confirm } = useSwal()
-const isOpenRef = toRef(props, 'isOpen')
-
-useBodyScrollLock(isOpenRef)
-useEscapeKey(isOpenRef, () => emit('close'))
 
 const searchKeyword = ref('')
 const searchLoading = ref(false)
@@ -108,12 +103,12 @@ async function addMember(member: MemberDto) {
 </script>
 
 <template>
-  <div
-    v-if="isOpen"
-    class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
-    @click.self="close"
+  <BaseModal
+    :is-open="isOpen"
+    size="lg"
+    height="fit"
+    @close="close"
   >
-    <div class="rounded-lg shadow-xl w-full max-w-lg bg-dp-bg-modal">
       <div class="flex items-center justify-between p-4 border-b border-dp-border-primary">
         <h3 class="text-lg font-bold text-dp-text-primary">멤버 추가</h3>
         <button
@@ -124,7 +119,7 @@ async function addMember(member: MemberDto) {
         </button>
       </div>
 
-      <div class="p-4">
+      <div class="p-4 overflow-y-auto flex-1 min-h-0">
         <!-- Search Input -->
         <div class="flex gap-2 mb-4">
           <input
@@ -138,7 +133,7 @@ async function addMember(member: MemberDto) {
             @click="searchMembers"
             class="px-4 py-2 text-dp-text-on-dark rounded-lg hover:bg-dp-surface-strong-hover transition bg-dp-surface-strong"
           >
-            <Search class="w-5 h-5" />
+          <Search class="w-5 h-5" />
           </button>
         </div>
 
@@ -223,6 +218,5 @@ async function addMember(member: MemberDto) {
           닫기
         </button>
       </div>
-    </div>
-  </div>
+  </BaseModal>
 </template>

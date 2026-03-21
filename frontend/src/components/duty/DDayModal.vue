@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, watch, toRef } from 'vue'
+import { ref, watch } from 'vue'
 import { X, Plus, Minus, RotateCcw, Lock, Unlock } from 'lucide-vue-next'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
+import BaseModal from '@/components/common/BaseModal.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 
 interface DDay {
@@ -21,14 +20,10 @@ interface Props {
 
 const props = defineProps<Props>()
 
-useBodyScrollLock(toRef(props, 'isOpen'))
-
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'save', dday: DDay): void
 }>()
-
-useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 
 const title = ref('')
 const date = ref('')
@@ -83,13 +78,12 @@ const isEditMode = props.dday !== null && props.dday !== undefined
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50"
-      @click.self="handleClose"
-    >
-      <div class="modal-container sm:max-w-md max-h-[90dvh] sm:max-h-[90vh]">
+  <BaseModal
+    :is-open="isOpen"
+    size="md"
+    height="default"
+    @close="handleClose"
+  >
         <!-- Header -->
         <div class="modal-header">
           <h2>{{ dday ? '디데이 수정' : '디데이 추가' }}</h2>
@@ -199,9 +193,7 @@ const isEditMode = props.dday !== null && props.dday !== undefined
             저장
           </button>
         </div>
-      </div>
-    </div>
-  </Teleport>
+  </BaseModal>
 </template>
 
 <style scoped>

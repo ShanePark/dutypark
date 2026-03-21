@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, toRef } from 'vue'
+import { ref, computed, watch } from 'vue'
 import {
   X,
   Pencil,
@@ -12,6 +12,7 @@ import {
   Clock,
   CheckCircle2,
 } from 'lucide-vue-next'
+import BaseModal from '@/components/common/BaseModal.vue'
 import FileUploader from '@/components/common/FileUploader.vue'
 import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
@@ -19,8 +20,6 @@ import FriendTagSelector from '@/components/common/FriendTagSelector.vue'
 import MemberTagChips from '@/components/common/MemberTagChips.vue'
 import { attachmentApi } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
 import { formatDateKorean } from '@/utils/date'
 import { toDisplayTagMember } from '@/utils/tagMembers'
 import type { NormalizedAttachment, TaggableFriend, Todo as TodoDto, TodoStatus } from '@/types'
@@ -63,8 +62,6 @@ const props = withDefaults(defineProps<Props>(), {
   friends: () => [],
 })
 
-useBodyScrollLock(toRef(props, 'isOpen'))
-
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'update', data: {
@@ -84,8 +81,6 @@ const emit = defineEmits<{
   (e: 'untagSelf', id: string): void
   (e: 'backToList'): void
 }>()
-
-useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 
 const isEditMode = ref(false)
 const editTitle = ref('')
@@ -306,13 +301,13 @@ function onUploadError(message: string) {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      v-if="isOpen && todo"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50"
-      @click.self="handleClose"
-    >
-      <div class="modal-container sm:max-w-xl max-h-[90dvh] sm:max-h-[90vh]">
+  <BaseModal
+    :is-open="isOpen && !!todo"
+    size="xl"
+    height="default"
+    @close="handleClose"
+  >
+    <template v-if="todo">
         <!-- Header -->
         <div class="flex items-center justify-between p-3 sm:p-4 flex-shrink-0 bg-dp-bg-card border-b border-dp-border-primary">
           <div class="min-w-0 flex-1">
@@ -557,9 +552,8 @@ function onUploadError(message: string) {
             </div>
           </template>
         </div>
-      </div>
-    </div>
-  </Teleport>
+    </template>
+  </BaseModal>
 </template>
 
 <style scoped>

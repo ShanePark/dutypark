@@ -1,14 +1,13 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, toRef } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { X, Plus } from 'lucide-vue-next'
+import BaseModal from '@/components/common/BaseModal.vue'
 import ScheduleList from '@/components/duty/ScheduleList.vue'
 import ScheduleForm from '@/components/duty/ScheduleForm.vue'
 import UntagConfirmModal from '@/components/duty/UntagConfirmModal.vue'
 import type { NormalizedAttachment, TaggableFriend } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
 import { VISIBILITY_ICONS, VISIBILITY_COLORS, type CalendarVisibility } from '@/utils/visibility'
 
 const { showWarning, showError } = useSwal()
@@ -61,8 +60,6 @@ const props = withDefaults(defineProps<Props>(), {
   friends: () => [],
 })
 
-useBodyScrollLock(toRef(props, 'isOpen'))
-
 interface ScheduleSaveData {
   id?: string
   content: string
@@ -89,8 +86,6 @@ const emit = defineEmits<{
   (e: 'reorderSchedules', scheduleIds: string[]): void
   (e: 'untagSelf', scheduleId: string): void
 }>()
-
-useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 
 const isCreateMode = ref(false)
 const isEditMode = ref(false)
@@ -366,23 +361,13 @@ function handleUploadError(message: string) {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      v-if="isOpen"
-      class="day-detail-modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-dp-overlay-dark/50"
-      :class="{
-        'day-detail-modal-overlay--list': !isCreateMode && !isEditMode,
-        'day-detail-modal-overlay--form': isCreateMode || isEditMode,
-      }"
-      @click.self="emit('close')"
-    >
-      <div
-        class="day-detail-modal-shell modal-container sm:max-w-2xl"
-        :class="{
-          'day-detail-modal-shell--list': !isCreateMode && !isEditMode,
-          'day-detail-modal-shell--form': isCreateMode || isEditMode,
-        }"
-      >
+  <BaseModal
+    :is-open="isOpen"
+    size="2xl"
+    height="viewport"
+    z-index="detail"
+    @close="emit('close')"
+  >
         <!-- Header -->
         <div class="day-detail-modal-header px-3 py-2.5 sm:p-4 flex-shrink-0 bg-dp-bg-tertiary border-b border-dp-border-primary">
           <div class="flex items-center justify-between">
@@ -492,9 +477,7 @@ function handleUploadError(message: string) {
             </button>
           </div>
         </div>
-      </div>
-    </div>
-  </Teleport>
+  </BaseModal>
 
   <!-- Untag Confirm Modal -->
   <UntagConfirmModal
@@ -505,18 +488,6 @@ function handleUploadError(message: string) {
 </template>
 
 <style scoped>
-.day-detail-modal-overlay {
-  padding:
-    max(0.5rem, env(safe-area-inset-top))
-    0.5rem
-    0
-    0.5rem;
-}
-
-.day-detail-modal-shell {
-  max-height: calc(100dvh - max(0.5rem, env(safe-area-inset-top)));
-}
-
 .day-detail-modal-footer {
   padding-bottom: max(0.25rem, calc(env(safe-area-inset-bottom) - 1rem));
 }
@@ -526,19 +497,6 @@ function handleUploadError(message: string) {
 }
 
 @media (max-width: 639px) {
-  .day-detail-modal-overlay {
-    align-items: center;
-    padding: 1rem var(--dp-modal-inline-gutter);
-  }
-
-  .day-detail-modal-shell {
-    margin-left: 0;
-    margin-right: 0;
-    width: 100%;
-    max-width: 100%;
-    max-height: calc(100dvh - 2rem);
-  }
-
   .day-detail-modal-header {
     padding: 0.75rem 0.875rem;
   }
@@ -555,14 +513,6 @@ function handleUploadError(message: string) {
 }
 
 @media (min-width: 640px) {
-  .day-detail-modal-overlay {
-    padding: 0;
-  }
-
-  .day-detail-modal-shell {
-    max-height: 90vh;
-  }
-
   .day-detail-modal-footer {
     padding-bottom: 1rem;
   }

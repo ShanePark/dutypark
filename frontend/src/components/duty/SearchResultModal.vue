@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, toRef, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { X, ChevronLeft, ChevronRight, Calendar, Paperclip, Search, Loader2 } from 'lucide-vue-next'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
-import { formatDateTime, formatDateRange } from '@/utils/date'
+import BaseModal from '@/components/common/BaseModal.vue'
+import { formatDateRange } from '@/utils/date'
 
 interface SearchResult {
   id: string
@@ -31,16 +30,12 @@ interface Props {
 
 const props = defineProps<Props>()
 
-useBodyScrollLock(toRef(props, 'isOpen'))
-
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'goToDate', result: SearchResult): void
   (e: 'changePage', page: number): void
   (e: 'search', query: string): void
 }>()
-
-useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 
 const localQuery = ref(props.query)
 
@@ -86,13 +81,12 @@ const pagesToShow = computed(() => {
 </style>
 
 <template>
-  <Teleport to="body">
-    <div
-      v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50"
-      @click.self="emit('close')"
-    >
-      <div class="modal-container sm:max-w-2xl max-h-[85dvh] sm:max-h-[70vh]">
+  <BaseModal
+    :is-open="isOpen"
+    size="2xl"
+    height="search"
+    @close="emit('close')"
+  >
         <!-- Header -->
         <div class="p-3 sm:p-4 flex-shrink-0 bg-dp-bg-tertiary border-b border-dp-border-primary">
           <div class="flex items-center justify-between mb-3">
@@ -212,7 +206,5 @@ const pagesToShow = computed(() => {
             <ChevronRight class="w-5 h-5 sm:w-4 sm:h-4" />
           </button>
         </div>
-      </div>
-    </div>
-  </Teleport>
+  </BaseModal>
 </template>

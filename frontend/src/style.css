@@ -619,9 +619,34 @@ html.dark {
 }
 
 /* Modal */
-.modal-panel-width {
-    width: min(100%, calc(100vw - (var(--dp-modal-inline-gutter) * 2)));
-    margin-inline: auto;
+.modal-overlay {
+    @apply fixed inset-0 flex justify-center bg-dp-overlay-dark/50;
+    align-items: center;
+}
+
+.modal-overlay-padding-default {
+    padding:
+        max(1rem, env(safe-area-inset-top))
+        var(--dp-modal-inline-gutter)
+        max(1rem, env(safe-area-inset-bottom));
+}
+
+.modal-overlay-padding-compact {
+    padding:
+        max(0.5rem, env(safe-area-inset-top))
+        var(--dp-modal-inline-gutter)
+        max(0.5rem, env(safe-area-inset-bottom));
+}
+
+.modal-overlay-padding-nav-safe {
+    padding:
+        max(1rem, env(safe-area-inset-top))
+        var(--dp-modal-inline-gutter)
+        max(4rem, calc(4rem + env(safe-area-inset-bottom)));
+}
+
+.modal-overlay-padding-none {
+    padding: 0;
 }
 
 .modal-container {
@@ -633,6 +658,26 @@ html.dark {
 
 .modal-container-rounded {
     @apply rounded-2xl;
+}
+
+.modal-height-fit {
+    max-height: calc(100dvh - 2rem);
+}
+
+.modal-height-default {
+    max-height: 90dvh;
+}
+
+.modal-height-search {
+    max-height: 85dvh;
+}
+
+.modal-height-viewport {
+    max-height: calc(100dvh - 2rem);
+}
+
+.modal-height-schedule {
+    max-height: calc(100dvh - 5rem);
 }
 
 .modal-header {
@@ -653,6 +698,63 @@ html.dark {
 
 .modal-body {
     @apply max-h-[580px] overflow-y-auto;
+}
+
+@media (min-width: 640px) {
+    .modal-overlay-padding-nav-safe {
+        padding:
+            max(1rem, env(safe-area-inset-top))
+            var(--dp-modal-inline-gutter)
+            max(1rem, env(safe-area-inset-bottom));
+    }
+
+    .modal-size-sm {
+        max-width: 24rem;
+    }
+
+    .modal-size-md {
+        max-width: 28rem;
+    }
+
+    .modal-size-lg {
+        max-width: 32rem;
+    }
+
+    .modal-size-xl {
+        max-width: 36rem;
+    }
+
+    .modal-size-2xl {
+        max-width: 42rem;
+    }
+
+    .modal-size-3xl {
+        max-width: 48rem;
+    }
+
+    .modal-size-5xl {
+        max-width: 64rem;
+    }
+
+    .modal-height-fit {
+        max-height: calc(100vh - 2rem);
+    }
+
+    .modal-height-default {
+        max-height: 90vh;
+    }
+
+    .modal-height-search {
+        max-height: 70vh;
+    }
+
+    .modal-height-viewport {
+        max-height: 90vh;
+    }
+
+    .modal-height-schedule {
+        max-height: 85vh;
+    }
 }
 
 /* Todo Button Group */
