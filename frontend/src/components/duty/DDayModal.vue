@@ -89,7 +89,7 @@ const isEditMode = props.dday !== null && props.dday !== undefined
       class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50"
       @click.self="handleClose"
     >
-      <div class="modal-container max-w-[95vw] sm:max-w-md max-h-[90dvh] sm:max-h-[90vh]">
+      <div class="modal-container sm:max-w-md max-h-[90dvh] sm:max-h-[90vh]">
         <!-- Header -->
         <div class="modal-header">
           <h2>{{ dday ? '디데이 수정' : '디데이 추가' }}</h2>

@@ -171,7 +171,7 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
       class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50 pb-16 sm:pb-0"
       @click.self="emit('close')"
     >
-      <div class="modal-container max-w-[95vw] sm:max-w-lg max-h-[calc(100dvh-5rem)] sm:max-h-[85vh]">
+      <div class="modal-container sm:max-w-lg max-h-[calc(100dvh-5rem)] sm:max-h-[85vh]">
         <!-- Header -->
         <div
           class="p-3 sm:p-4 flex-shrink-0 bg-dp-bg-tertiary border-b border-dp-border-primary"

@@ -206,7 +206,7 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
       class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50"
       @mousedown.self="handleClose"
     >
-      <div class="modal-container crop-modal max-w-[95vw] sm:max-w-xl max-h-[90dvh] sm:max-h-[90vh]">
+      <div class="modal-container crop-modal sm:max-w-xl max-h-[90dvh] sm:max-h-[90vh]">
         <!-- Header -->
         <div class="modal-header">
           <h2>프로필 사진 편집</h2>

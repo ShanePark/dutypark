@@ -95,7 +95,7 @@ const ddayBadgeClass = computed(() => {
       class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50"
       @click.self="handleClose"
     >
-      <div class="modal-container modal-container-rounded max-w-[95vw] sm:max-w-md max-h-[90dvh] sm:max-h-[90vh]">
+      <div class="modal-container modal-container-rounded sm:max-w-md max-h-[90dvh] sm:max-h-[90vh]">
         <!-- Header -->
         <div class="modal-header">
           <h2>디데이 상세</h2>

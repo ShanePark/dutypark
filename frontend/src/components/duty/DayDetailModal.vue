@@ -377,7 +377,7 @@ function handleUploadError(message: string) {
       @click.self="emit('close')"
     >
       <div
-        class="day-detail-modal-shell modal-container max-w-[95vw] sm:max-w-2xl"
+        class="day-detail-modal-shell modal-container sm:max-w-2xl"
         :class="{
           'day-detail-modal-shell--list': !isCreateMode && !isEditMode,
           'day-detail-modal-shell--form': isCreateMode || isEditMode,
@@ -528,7 +528,7 @@ function handleUploadError(message: string) {
 @media (max-width: 639px) {
   .day-detail-modal-overlay {
     align-items: center;
-    padding: 1rem;
+    padding: 1rem var(--dp-modal-inline-gutter);
   }
 
   .day-detail-modal-shell {

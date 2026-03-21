@@ -69,7 +69,7 @@ function handleToggle(friendId: number) {
       class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50"
       @click.self="emit('close')"
     >
-      <div class="modal-container max-w-[95vw] sm:max-w-md max-h-[90dvh] sm:max-h-[90vh]">
+      <div class="modal-container sm:max-w-md max-h-[90dvh] sm:max-h-[90vh]">
         <!-- Header -->
         <div class="flex items-center justify-between p-3 sm:p-4 bg-dp-bg-tertiary border-b border-dp-border-primary">
           <div class="flex items-center gap-2">

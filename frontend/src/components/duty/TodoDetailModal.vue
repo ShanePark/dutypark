@@ -312,7 +312,7 @@ function onUploadError(message: string) {
       class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50"
       @click.self="handleClose"
     >
-      <div class="modal-container max-w-[95vw] sm:max-w-xl max-h-[90dvh] sm:max-h-[90vh]">
+      <div class="modal-container sm:max-w-xl max-h-[90dvh] sm:max-h-[90vh]">
         <!-- Header -->
         <div class="flex items-center justify-between p-3 sm:p-4 flex-shrink-0 bg-dp-bg-card border-b border-dp-border-primary">
           <div class="min-w-0 flex-1">

@@ -59,7 +59,7 @@ function close() {
       @click.self="close"
     >
       <div class="fixed inset-0 bg-dp-overlay-dark/50" @click="close"></div>
-      <div class="modal-container relative max-w-[95vw] sm:max-w-3xl max-h-[90vh]">
+      <div class="modal-container relative sm:max-w-3xl max-h-[90vh]">
         <!-- Modal Header -->
         <div class="modal-header">
           <h2>{{ modalTitle }}</h2>

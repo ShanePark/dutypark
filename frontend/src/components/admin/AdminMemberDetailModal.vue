@@ -240,7 +240,7 @@ function openPasswordModal() {
       class="fixed inset-0 z-[70] flex items-center justify-center bg-dp-overlay-dark/50 p-4"
       @click.self="emit('close')"
     >
-      <div class="member-detail-shell modal-container modal-container-rounded max-w-[95vw] sm:max-w-5xl max-h-[90dvh] sm:max-h-[90vh]">
+      <div class="member-detail-shell modal-container modal-container-rounded sm:max-w-5xl max-h-[90dvh] sm:max-h-[90vh]">
         <div class="modal-header">
           <div class="min-w-0">
             <h2>{{ effectiveMember?.name ?? '회원 상세' }}</h2>

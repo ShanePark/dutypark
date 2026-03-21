@@ -92,7 +92,7 @@ const pagesToShow = computed(() => {
       class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50"
       @click.self="emit('close')"
     >
-      <div class="modal-container max-w-[95vw] sm:max-w-2xl max-h-[85dvh] sm:max-h-[70vh]">
+      <div class="modal-container sm:max-w-2xl max-h-[85dvh] sm:max-h-[70vh]">
         <!-- Header -->
         <div class="p-3 sm:p-4 flex-shrink-0 bg-dp-bg-tertiary border-b border-dp-border-primary">
           <div class="flex items-center justify-between mb-3">

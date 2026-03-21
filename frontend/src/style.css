@@ -110,6 +110,7 @@
     --dp-bg-input: #ffffff;
     --dp-bg-modal: #ffffff;
     --dp-bg-footer: #1f2937;
+    --dp-modal-inline-gutter: 1rem;
 
     --dp-text-primary: #111827;
     --dp-text-secondary: #4b5563;
@@ -618,8 +619,15 @@ html.dark {
 }
 
 /* Modal */
+.modal-panel-width {
+    width: min(100%, calc(100vw - (var(--dp-modal-inline-gutter) * 2)));
+    margin-inline: auto;
+}
+
 .modal-container {
-    @apply rounded-lg shadow-xl overflow-hidden w-full mx-2 sm:mx-4 flex flex-col;
+    @apply rounded-lg shadow-xl overflow-hidden flex flex-col;
+    width: min(100%, calc(100vw - (var(--dp-modal-inline-gutter) * 2)));
+    margin-inline: auto;
     background-color: var(--dp-bg-modal);
 }
 

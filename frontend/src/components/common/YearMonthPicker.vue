@@ -46,7 +46,7 @@ function handleGoToThisMonth() {
       @click.self="emit('close')"
     >
       <div
-        class="rounded-xl shadow-xl w-full max-w-[95vw] sm:max-w-sm mx-2 sm:mx-4"
+        class="modal-panel-width rounded-xl shadow-xl sm:max-w-sm"
         :style="{
           backgroundColor: 'var(--dp-bg-modal)',
           border: '1px solid var(--dp-border-primary)',
