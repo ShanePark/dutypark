@@ -527,16 +527,8 @@ function handleUploadError(message: string) {
 
 @media (max-width: 639px) {
   .day-detail-modal-overlay {
-    align-items: flex-end;
+    align-items: center;
     padding: 1rem;
-  }
-
-  .day-detail-modal-overlay--list {
-    padding-bottom: 1rem;
-  }
-
-  .day-detail-modal-overlay--form {
-    padding-bottom: 1rem;
   }
 
   .day-detail-modal-shell {
@@ -545,15 +537,6 @@ function handleUploadError(message: string) {
     width: 100%;
     max-width: 100%;
     max-height: calc(100dvh - 2rem);
-    height: calc(100dvh - 2rem);
-  }
-
-  .day-detail-modal-shell--list {
-    height: calc(100dvh - 2rem);
-  }
-
-  .day-detail-modal-shell--form {
-    height: calc(100dvh - 2rem);
   }
 
   .day-detail-modal-header {
