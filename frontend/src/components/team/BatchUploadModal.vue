@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, watch, toRef } from 'vue'
+import { ref, watch } from 'vue'
+import BaseModal from '@/components/common/BaseModal.vue'
 import { useSwal } from '@/composables/useSwal'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
 import { teamApi } from '@/api/team'
 import { X, Loader2 } from 'lucide-vue-next'
 
@@ -18,10 +17,6 @@ const emit = defineEmits<{
 }>()
 
 const { showWarning, showError, toastSuccess } = useSwal()
-const isOpenRef = toRef(props, 'isOpen')
-
-useBodyScrollLock(isOpenRef)
-useEscapeKey(isOpenRef, () => emit('close'))
 
 const batchForm = ref({
   file: null as File | null,
@@ -80,12 +75,12 @@ async function uploadBatch() {
 </script>
 
 <template>
-  <div
-    v-if="isOpen"
-    class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
-    @click.self="close"
+  <BaseModal
+    :is-open="isOpen"
+    size="md"
+    height="fit"
+    @close="close"
   >
-    <div class="rounded-lg shadow-xl w-full max-w-md bg-dp-bg-modal">
       <div class="flex items-center justify-between p-4 border-b border-dp-border-primary">
         <h3 class="text-lg font-bold text-dp-text-primary">근무표 업로드</h3>
         <button
@@ -96,7 +91,7 @@ async function uploadBatch() {
         </button>
       </div>
 
-      <div class="p-4 space-y-4">
+      <div class="p-4 space-y-4 overflow-y-auto flex-1 min-h-0">
         <div>
           <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
             근무표 파일 업로드 (.xlsx)
@@ -153,6 +148,5 @@ async function uploadBatch() {
           취소
         </button>
       </div>
-    </div>
-  </div>
+  </BaseModal>
 </template>

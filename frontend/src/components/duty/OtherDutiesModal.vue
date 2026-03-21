@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { computed, toRef } from 'vue'
+import { computed } from 'vue'
 import { X, Users, Check } from 'lucide-vue-next'
 import type { TaggableFriend } from '@/types'
+import BaseModal from '@/components/common/BaseModal.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
 
 interface Props {
   isOpen: boolean
@@ -17,14 +16,10 @@ const props = withDefaults(defineProps<Props>(), {
   maxSelections: 3,
 })
 
-useBodyScrollLock(toRef(props, 'isOpen'))
-
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'toggle', friendId: number): void
 }>()
-
-useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 
 const canSelectMore = computed(() => {
   return props.selectedFriendIds.length < props.maxSelections
@@ -63,13 +58,12 @@ function handleToggle(friendId: number) {
 </style>
 
 <template>
-  <Teleport to="body">
-    <div
-      v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50"
-      @click.self="emit('close')"
-    >
-      <div class="modal-container max-w-[95vw] sm:max-w-md max-h-[90dvh] sm:max-h-[90vh]">
+  <BaseModal
+    :is-open="isOpen"
+    size="md"
+    height="default"
+    @close="emit('close')"
+  >
         <!-- Header -->
         <div class="flex items-center justify-between p-3 sm:p-4 bg-dp-bg-tertiary border-b border-dp-border-primary">
           <div class="flex items-center gap-2">
@@ -146,7 +140,5 @@ function handleToggle(friendId: number) {
             </button>
           </div>
         </div>
-      </div>
-    </div>
-  </Teleport>
+  </BaseModal>
 </template>

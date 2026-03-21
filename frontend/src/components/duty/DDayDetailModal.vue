@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { computed, toRef } from 'vue'
+import { computed } from 'vue'
 import { X, Star, Pencil, Trash2, Lock, CalendarCheck } from 'lucide-vue-next'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
+import BaseModal from '@/components/common/BaseModal.vue'
 
 interface DDay {
   id: number
@@ -22,16 +21,12 @@ interface Props {
 
 const props = defineProps<Props>()
 
-useBodyScrollLock(toRef(props, 'isOpen'))
-
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'edit', dday: DDay): void
   (e: 'delete', dday: DDay): void
   (e: 'toggle-pin', dday: DDay): void
 }>()
-
-useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 
 function handleClose() {
   emit('close')
@@ -89,13 +84,14 @@ const ddayBadgeClass = computed(() => {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      v-if="isOpen && dday"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50"
-      @click.self="handleClose"
-    >
-      <div class="modal-container modal-container-rounded max-w-[95vw] sm:max-w-md max-h-[90dvh] sm:max-h-[90vh]">
+  <BaseModal
+    :is-open="isOpen && !!dday"
+    size="md"
+    height="default"
+    rounded
+    @close="handleClose"
+  >
+    <template v-if="dday">
         <!-- Header -->
         <div class="modal-header">
           <h2>디데이 상세</h2>
@@ -197,7 +193,6 @@ const ddayBadgeClass = computed(() => {
             닫기
           </button>
         </div>
-      </div>
-    </div>
-  </Teleport>
+    </template>
+  </BaseModal>
 </template>

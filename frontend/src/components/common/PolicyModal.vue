@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { marked } from 'marked'
+import BaseModal from '@/components/common/BaseModal.vue'
 import { policyApi, type CurrentPoliciesDto } from '@/api/policy'
 
 marked.setOptions({
@@ -52,14 +53,12 @@ function close() {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      v-if="type"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4"
-      @click.self="close"
-    >
-      <div class="fixed inset-0 bg-dp-overlay-dark/50" @click="close"></div>
-      <div class="modal-container relative max-w-[95vw] sm:max-w-3xl max-h-[90vh]">
+  <BaseModal
+    :is-open="!!type"
+    size="3xl"
+    height="viewport"
+    @close="close"
+  >
         <!-- Modal Header -->
         <div class="modal-header">
           <h2>{{ modalTitle }}</h2>
@@ -99,7 +98,5 @@ function close() {
             닫기
           </button>
         </div>
-      </div>
-    </div>
-  </Teleport>
+  </BaseModal>
 </template>

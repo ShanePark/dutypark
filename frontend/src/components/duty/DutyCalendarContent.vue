@@ -217,7 +217,7 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
         <div
           v-for="dday in getDDaysForDay(day)"
           :key="dday.id"
-          class="text-[10px] sm:text-sm leading-snug px-0.5 break-words"
+          class="truncate px-0.5 text-[10px] leading-snug sm:text-sm sm:whitespace-normal sm:break-words"
           :style="{ color: getPrimaryTextColor(getDutyColorAt(index)) }"
         ><CalendarCheck class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" />{{ dday.title }}</div>
 
@@ -225,19 +225,28 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
         <div
           v-for="schedule in schedulesByDays[index]?.slice(0, 3)"
           :key="schedule.id"
-          class="text-[10px] sm:text-sm leading-snug px-0.5 border-t-2 border-dashed break-words"
+          class="px-0.5 text-[10px] leading-snug border-t-2 border-dashed sm:text-sm"
           :class="{ 'cursor-pointer hover:underline': !canEdit && hasScheduleDetails(schedule) }"
           :style="{ color: getPrimaryTextColor(getDutyColorAt(index)), borderColor: getBorderColor(getDutyColorAt(index)) }"
           @click="!canEdit && hasScheduleDetails(schedule) ? handleScheduleClick(schedule, $event) : null"
-        ><Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" :style="{ color: getMutedTextColor(getDutyColorAt(index)) }" />{{ schedule.contentWithoutTime || schedule.content }}{{ formatScheduleTime(schedule) }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
-          v-if="hasScheduleDetails(schedule)"
-          class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px] ml-0.5"
-          :style="{ color: getIconTextColor(getDutyColorAt(index)) }"
-        />
+        >
+          <div class="truncate sm:whitespace-normal sm:break-words">
+            <Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" :style="{ color: getMutedTextColor(getDutyColorAt(index)) }" />{{ schedule.contentWithoutTime || schedule.content }}{{ formatScheduleTime(schedule) }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
+              v-if="hasScheduleDetails(schedule)"
+              class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px] ml-0.5"
+              :style="{ color: getIconTextColor(getDutyColorAt(index)) }"
+            />
+            <span
+              v-if="getDisplayTagMembers(schedule).length"
+              class="ml-0.5 text-[9px] text-dp-text-muted sm:hidden"
+            >
+              +{{ getDisplayTagMembers(schedule).length }}
+            </span>
+          </div>
           <!-- Tags display -->
           <div
             v-if="getDisplayTagMembers(schedule).length"
-            class="mt-px flex flex-wrap gap-px justify-end sm:mt-0.5 sm:gap-0.5"
+            class="mt-px hidden flex-wrap justify-end gap-px sm:mt-0.5 sm:flex sm:gap-0.5"
           >
             <span
               v-for="tag in getDisplayTagMembers(schedule)"

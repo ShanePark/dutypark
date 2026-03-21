@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { ref, toRef, watch, computed } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { X, ZoomIn, ZoomOut, Upload, ImagePlus, Trash2 } from 'lucide-vue-next'
 import { Cropper, CircleStencil } from 'vue-advanced-cropper'
 import 'vue-advanced-cropper/dist/style.css'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
 import { attachmentValidation, validateFile } from '@/api/attachment'
+import BaseModal from '@/components/common/BaseModal.vue'
 import { useSwal } from '@/composables/useSwal'
 
 interface Props {
@@ -24,9 +23,6 @@ const emit = defineEmits<{
   (e: 'confirm', croppedFile: File): void
   (e: 'delete'): void
 }>()
-
-useBodyScrollLock(toRef(props, 'isOpen'))
-useEscapeKey(toRef(props, 'isOpen'), () => handleClose())
 
 const { showError } = useSwal()
 
@@ -200,13 +196,14 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50"
-      @mousedown.self="handleClose"
-    >
-      <div class="modal-container crop-modal max-w-[95vw] sm:max-w-xl max-h-[90dvh] sm:max-h-[90vh]">
+  <BaseModal
+    :is-open="isOpen"
+    size="xl"
+    height="default"
+    panel-class="crop-modal"
+    backdrop-event="mousedown"
+    @close="handleClose"
+  >
         <!-- Header -->
         <div class="modal-header">
           <h2>프로필 사진 편집</h2>
@@ -354,9 +351,7 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
           class="hidden"
           @change="onFileSelect"
         />
-      </div>
-    </div>
-  </Teleport>
+  </BaseModal>
 </template>
 
 <style scoped>

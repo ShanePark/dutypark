@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import BaseModal from '@/components/common/BaseModal.vue'
+
 const props = defineProps<{
   isOpen: boolean
 }>()
@@ -18,20 +20,16 @@ function confirm() {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      v-if="props.isOpen"
-      class="fixed inset-0 z-[60] flex items-center justify-center bg-dp-overlay-dark/50 p-4"
-      @click.self="close"
-    >
-      <div
-        class="rounded-2xl w-full max-w-[340px] min-w-[280px] overflow-hidden border"
-        :style="{
-          backgroundColor: 'var(--dp-bg-modal)',
-          borderColor: 'var(--dp-border-primary)',
-          boxShadow: 'var(--dp-shadow-lg), var(--dp-shadow-md)'
-        }"
-      >
+  <BaseModal
+    :is-open="props.isOpen"
+    size="sm"
+    height="fit"
+    rounded
+    z-index="detail"
+    panel-class="max-w-[340px] min-w-[280px] border border-dp-border-primary"
+    @close="close"
+  >
+      <div class="overflow-hidden">
         <div
           class="py-2.5 px-4 text-sm font-semibold"
           :style="{
@@ -75,6 +73,5 @@ function confirm() {
           </button>
         </div>
       </div>
-    </div>
-  </Teleport>
+  </BaseModal>
 </template>

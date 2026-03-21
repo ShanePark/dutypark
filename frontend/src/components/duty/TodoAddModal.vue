@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import { computed, ref, watch, toRef } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { X, Calendar, ListTodo, Clock, CheckCircle2 } from 'lucide-vue-next'
+import BaseModal from '@/components/common/BaseModal.vue'
 import FileUploader from '@/components/common/FileUploader.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import FriendTagSelector from '@/components/common/FriendTagSelector.vue'
 import type { NormalizedAttachment, TaggableFriend, TodoStatus } from '@/types'
 import { useSwal } from '@/composables/useSwal'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
 
 interface Props {
   isOpen: boolean
@@ -19,8 +18,6 @@ const props = withDefaults(defineProps<Props>(), {
   initialStatus: 'TODO',
   friends: () => [],
 })
-
-useBodyScrollLock(toRef(props, 'isOpen'))
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -34,8 +31,6 @@ const emit = defineEmits<{
     orderedAttachmentIds?: string[]
   }): void
 }>()
-
-useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 
 const title = ref('')
 const content = ref('')
@@ -153,13 +148,12 @@ function onUploadError(message: string) {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50"
-      @click.self="handleClose"
-    >
-      <div class="modal-container max-w-[95vw] sm:max-w-xl max-h-[90dvh] sm:max-h-[90vh]">
+  <BaseModal
+    :is-open="isOpen"
+    size="xl"
+    height="default"
+    @close="handleClose"
+  >
         <!-- Header -->
         <div class="modal-header">
           <h2>할 일 추가</h2>
@@ -267,9 +261,7 @@ function onUploadError(message: string) {
             {{ isUploading ? '업로드 중...' : '저장' }}
           </button>
         </div>
-      </div>
-    </div>
-  </Teleport>
+  </BaseModal>
 </template>
 
 <style scoped>

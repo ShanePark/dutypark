@@ -151,7 +151,7 @@ function handleDayClick(day: CalendarDay, index: number) {
         v-for="(day, idx) in days"
         :key="idx"
         @click="handleDayClick(day, idx)"
-        class="min-h-[70px] sm:min-h-[80px] md:min-h-[100px] border-b border-r p-0.5 sm:p-1 transition-all duration-150 relative"
+        class="min-h-[60px] sm:min-h-[80px] md:min-h-[100px] border-b border-r p-0.5 sm:p-1 transition-all duration-150 relative"
         :class="[
           clickable ? 'cursor-pointer hover:brightness-95 hover:shadow-inner' : '',
           {

@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { computed, toRef } from 'vue'
+import { computed } from 'vue'
+import BaseModal from '@/components/common/BaseModal.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
 import type { AdminMemberDetailDto, AdminMemberDto } from '@/types'
 import { getVisibilityIcon, getVisibilityLabel } from '@/utils/visibility'
 import {
@@ -34,10 +33,6 @@ const emit = defineEmits<{
   goToSchedule: [memberId: number]
   changePassword: [member: AdminMemberDto]
 }>()
-
-const openRef = toRef(props, 'open')
-useBodyScrollLock(openRef)
-useEscapeKey(openRef, () => emit('close'))
 
 const effectiveMember = computed(() => props.memberDetail ?? props.member)
 const visibilityLabel = computed(() => {
@@ -234,13 +229,15 @@ function openPasswordModal() {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      v-if="open"
-      class="fixed inset-0 z-[70] flex items-center justify-center bg-dp-overlay-dark/50 p-4"
-      @click.self="emit('close')"
-    >
-      <div class="member-detail-shell modal-container modal-container-rounded max-w-[95vw] sm:max-w-5xl max-h-[90dvh] sm:max-h-[90vh]">
+  <BaseModal
+    :is-open="open"
+    size="5xl"
+    height="default"
+    rounded
+    z-index="admin"
+    panel-class="member-detail-shell"
+    @close="emit('close')"
+  >
         <div class="modal-header">
           <div class="min-w-0">
             <h2>{{ effectiveMember?.name ?? '회원 상세' }}</h2>
@@ -542,9 +539,7 @@ function openPasswordModal() {
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  </Teleport>
+  </BaseModal>
 </template>
 
 <style scoped>
