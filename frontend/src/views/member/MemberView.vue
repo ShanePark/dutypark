@@ -6,13 +6,12 @@ import { useThemeStore, type ThemeMode } from '@/stores/theme'
 import { memberApi, refreshTokenApi } from '@/api/member'
 import { authApi } from '@/api/auth'
 import { useSwal } from '@/composables/useSwal'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
 import { useKakao } from '@/composables/useKakao'
 import { useNaver } from '@/composables/useNaver'
 import { usePushNotification } from '@/composables/usePushNotification'
 import type { MemberPreviewDto, MemberDto, RefreshTokenDto, CalendarVisibility } from '@/types'
 import { VISIBILITY_COLORS } from '@/utils/visibility'
+import BaseModal from '@/components/common/BaseModal.vue'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
 import ProfilePhotoUploader from '@/components/common/ProfilePhotoUploader.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
@@ -57,8 +56,6 @@ const impersonating = ref<number | null>(null)
 const showAuxiliaryModal = ref(false)
 const auxiliaryName = ref('')
 const creatingAuxiliary = ref(false)
-useBodyScrollLock(showAuxiliaryModal)
-useEscapeKey(showAuxiliaryModal, () => { showAuxiliaryModal.value = false })
 
 async function fetchManagedMembers() {
   managedMembersLoading.value = true
@@ -204,8 +201,6 @@ const connectingSso = ref<SsoProvider | null>(null)
 // Visibility settings
 const calendarVisibility = ref<CalendarVisibility>('FRIENDS')
 const showVisibilityModal = ref(false)
-useBodyScrollLock(showVisibilityModal)
-useEscapeKey(showVisibilityModal, () => { showVisibilityModal.value = false })
 
 const visibilityLabel = computed(() => {
   const labels: Record<CalendarVisibility, string> = {
@@ -448,13 +443,12 @@ async function handleSocialLinkQuery() {
 
 // Password change
 const showPasswordModal = ref(false)
-useBodyScrollLock(showPasswordModal)
-useEscapeKey(showPasswordModal, () => { showPasswordModal.value = false })
 const passwordForm = ref({
   currentPassword: '',
   newPassword: '',
   confirmPassword: '',
 })
+const memberModalPanelStyle = { backgroundColor: 'var(--dp-bg-card)' }
 const passwordErrors = ref({
   currentPassword: '',
   newPassword: '',
@@ -918,217 +912,199 @@ onMounted(async () => {
     </template>
 
     <!-- Visibility Modal -->
-    <Teleport to="body">
-      <div
-        v-if="showVisibilityModal"
-        class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
-        @click.self="showVisibilityModal = false"
-      >
-        <div class="rounded-xl shadow-xl max-w-md w-full bg-dp-bg-card">
-          <div class="flex items-center justify-between p-4 border-b border-dp-border-primary">
-            <h3 class="text-lg font-bold text-dp-text-primary">시간표 공개 대상 설정</h3>
-            <button @click="showVisibilityModal = false" class="p-1.5 rounded-full hover-close-btn cursor-pointer text-dp-text-muted">
-              <X class="w-5 h-5" />
-            </button>
-          </div>
-          <div class="p-4 sm:p-6">
-            <p class="mb-4 text-dp-text-secondary">내 달력을 공개할 범위를 설정하세요.</p>
-            <p class="text-sm mb-4 text-dp-text-muted">선택시 변경사항이 즉시 저장됩니다.</p>
-            <div class="space-y-2">
-              <button
-                v-for="option in visibilityOptions"
-                :key="option.value"
-                @click="setVisibility(option.value)"
-                :disabled="savingVisibility"
-                class="w-full p-4 min-h-16 rounded-lg transition text-left disabled:opacity-50 hover:scale-[1.01] cursor-pointer"
-                :class="{ 'hover:bg-opacity-80': calendarVisibility !== option.value }"
-                :style="{
-                  borderWidth: '2px',
-                  borderColor: calendarVisibility === option.value ? 'var(--dp-accent)' : 'var(--dp-border-primary)',
-                  backgroundColor: calendarVisibility === option.value ? 'var(--dp-accent-bg)' : 'var(--dp-bg-secondary)'
-                }"
-              >
-                <div class="flex items-center gap-3">
-                  <span class="w-3 h-3 rounded-full" :class="option.color"></span>
-                  <span class="font-medium text-dp-text-primary">{{ option.label }}</span>
-                  <Check
-                    v-if="calendarVisibility === option.value"
-                    class="w-5 h-5 text-dp-accent ml-auto"
-                  />
-                  <Loader2
-                    v-if="savingVisibility && calendarVisibility !== option.value"
-                    class="w-5 h-5 animate-spin ml-auto text-dp-text-muted"
-                  />
-                </div>
-                <p class="text-sm mt-1 ml-6 text-dp-text-secondary">{{ option.description }}</p>
-              </button>
+    <BaseModal
+      :is-open="showVisibilityModal"
+      size="md"
+      height="fit"
+      rounded
+      :panel-style="memberModalPanelStyle"
+      @close="showVisibilityModal = false"
+    >
+      <div class="modal-header">
+        <h2>시간표 공개 대상 설정</h2>
+        <button @click="showVisibilityModal = false" class="p-1.5 rounded-full hover-close-btn cursor-pointer text-dp-text-muted">
+          <X class="w-5 h-5" />
+        </button>
+      </div>
+      <div class="modal-body-form-lg">
+        <p class="text-dp-text-secondary">내 달력을 공개할 범위를 설정하세요.</p>
+        <p class="text-sm text-dp-text-muted">선택시 변경사항이 즉시 저장됩니다.</p>
+        <div class="space-y-2">
+          <button
+            v-for="option in visibilityOptions"
+            :key="option.value"
+            @click="setVisibility(option.value)"
+            :disabled="savingVisibility"
+            class="w-full p-4 min-h-16 rounded-lg transition text-left disabled:opacity-50 hover:scale-[1.01] cursor-pointer"
+            :class="{ 'hover:bg-opacity-80': calendarVisibility !== option.value }"
+            :style="{
+              borderWidth: '2px',
+              borderColor: calendarVisibility === option.value ? 'var(--dp-accent)' : 'var(--dp-border-primary)',
+              backgroundColor: calendarVisibility === option.value ? 'var(--dp-accent-bg)' : 'var(--dp-bg-secondary)'
+            }"
+          >
+            <div class="flex items-center gap-3">
+              <span class="w-3 h-3 rounded-full" :class="option.color"></span>
+              <span class="font-medium text-dp-text-primary">{{ option.label }}</span>
+              <Check
+                v-if="calendarVisibility === option.value"
+                class="w-5 h-5 text-dp-accent ml-auto"
+              />
+              <Loader2
+                v-if="savingVisibility && calendarVisibility !== option.value"
+                class="w-5 h-5 animate-spin ml-auto text-dp-text-muted"
+              />
             </div>
-          </div>
-          <div class="p-4 sm:p-6 border-t border-dp-border-primary">
-            <button
-              @click="showVisibilityModal = false"
-              class="w-full px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-primary"
-            >
-              닫기
-            </button>
-          </div>
+            <p class="text-sm mt-1 ml-6 text-dp-text-secondary">{{ option.description }}</p>
+          </button>
         </div>
       </div>
-    </Teleport>
+      <div class="modal-actions modal-footer-safe sm:px-6 sm:py-6">
+        <button
+          @click="showVisibilityModal = false"
+          class="w-full px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-primary"
+        >
+          닫기
+        </button>
+      </div>
+    </BaseModal>
 
     <!-- Password Change Modal -->
-    <Teleport to="body">
-      <div
-        v-if="showPasswordModal"
-        class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
-        @click.self="showPasswordModal = false"
-      >
-        <div class="rounded-xl shadow-xl max-w-md w-full bg-dp-bg-card">
-          <div class="flex items-center justify-between p-4 border-b border-dp-border-primary">
-            <h3 class="text-lg font-bold text-dp-text-primary">비밀번호 변경</h3>
-            <button @click="showPasswordModal = false" class="p-1.5 rounded-full hover-close-btn cursor-pointer text-dp-text-muted">
-              <X class="w-5 h-5" />
-            </button>
-          </div>
-          <div class="p-4 sm:p-6 space-y-4">
-            <div>
-              <label class="block text-sm font-medium mb-1 text-dp-text-primary">현재 비밀번호</label>
-              <input
-                v-model="passwordForm.currentPassword"
-                type="password"
-                maxlength="20"
-                class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-accent"
-                :style="{
-                  borderWidth: '1px',
-                  borderColor: passwordErrors.currentPassword ? 'var(--dp-danger)' : 'var(--dp-border-primary)',
-                  backgroundColor: 'var(--dp-bg-primary)',
-                  color: 'var(--dp-text-primary)'
-                }"
-                placeholder="현재 비밀번호"
-              />
-              <p v-if="passwordErrors.currentPassword" class="text-sm text-dp-danger mt-1">
-                {{ passwordErrors.currentPassword }}
-              </p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-1 text-dp-text-primary">새 비밀번호</label>
-              <input
-                v-model="passwordForm.newPassword"
-                type="password"
-                maxlength="20"
-                class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-accent"
-                :style="{
-                  borderWidth: '1px',
-                  borderColor: passwordErrors.newPassword ? 'var(--dp-danger)' : 'var(--dp-border-primary)',
-                  backgroundColor: 'var(--dp-bg-primary)',
-                  color: 'var(--dp-text-primary)'
-                }"
-                placeholder="새 비밀번호 (8-20자)"
-              />
-              <p v-if="passwordErrors.newPassword" class="text-sm text-dp-danger mt-1">
-                {{ passwordErrors.newPassword }}
-              </p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-1 text-dp-text-primary">새 비밀번호 확인</label>
-              <input
-                v-model="passwordForm.confirmPassword"
-                type="password"
-                maxlength="20"
-                class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-accent"
-                :style="{
-                  borderWidth: '1px',
-                  borderColor: passwordErrors.confirmPassword ? 'var(--dp-danger)' : 'var(--dp-border-primary)',
-                  backgroundColor: 'var(--dp-bg-primary)',
-                  color: 'var(--dp-text-primary)'
-                }"
-                placeholder="새 비밀번호 확인"
-              />
-              <p v-if="passwordErrors.confirmPassword" class="text-sm text-dp-danger mt-1">
-                {{ passwordErrors.confirmPassword }}
-              </p>
-            </div>
-          </div>
-          <div class="p-4 sm:p-6 flex gap-2 border-t border-dp-border-primary">
-            <button
-              @click="changePassword"
-              :disabled="changingPassword"
-              class="flex-1 px-4 py-3 sm:py-2 min-h-11 bg-dp-accent hover:bg-dp-accent-hover rounded-lg text-dp-text-on-dark font-medium transition disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              <Loader2 v-if="changingPassword" class="w-4 h-4 animate-spin" />
-              {{ changingPassword ? '변경 중...' : '변경' }}
-            </button>
-            <button
-              @click="showPasswordModal = false"
-              :disabled="changingPassword"
-              class="flex-1 px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer disabled:opacity-50"
-              :style="{ backgroundColor: 'var(--dp-bg-hover)', color: 'var(--dp-text-primary)' }"
-            >
-              취소
-            </button>
-          </div>
+    <BaseModal
+      :is-open="showPasswordModal"
+      size="md"
+      height="fit"
+      rounded
+      :panel-style="memberModalPanelStyle"
+      @close="showPasswordModal = false"
+    >
+      <div class="modal-header">
+        <h2>비밀번호 변경</h2>
+        <button @click="showPasswordModal = false" class="p-1.5 rounded-full hover-close-btn cursor-pointer text-dp-text-muted">
+          <X class="w-5 h-5" />
+        </button>
+      </div>
+      <div class="modal-body-form-lg">
+        <div>
+          <label class="form-label text-dp-text-primary">현재 비밀번호</label>
+          <input
+            v-model="passwordForm.currentPassword"
+            type="password"
+            maxlength="20"
+            class="form-control-card"
+            :style="{
+              borderColor: passwordErrors.currentPassword ? 'var(--dp-danger)' : 'var(--dp-border-primary)'
+            }"
+            placeholder="현재 비밀번호"
+          />
+          <p v-if="passwordErrors.currentPassword" class="text-sm text-dp-danger mt-1">
+            {{ passwordErrors.currentPassword }}
+          </p>
+        </div>
+        <div>
+          <label class="form-label text-dp-text-primary">새 비밀번호</label>
+          <input
+            v-model="passwordForm.newPassword"
+            type="password"
+            maxlength="20"
+            class="form-control-card"
+            :style="{
+              borderColor: passwordErrors.newPassword ? 'var(--dp-danger)' : 'var(--dp-border-primary)'
+            }"
+            placeholder="새 비밀번호 (8-20자)"
+          />
+          <p v-if="passwordErrors.newPassword" class="text-sm text-dp-danger mt-1">
+            {{ passwordErrors.newPassword }}
+          </p>
+        </div>
+        <div>
+          <label class="form-label text-dp-text-primary">새 비밀번호 확인</label>
+          <input
+            v-model="passwordForm.confirmPassword"
+            type="password"
+            maxlength="20"
+            class="form-control-card"
+            :style="{
+              borderColor: passwordErrors.confirmPassword ? 'var(--dp-danger)' : 'var(--dp-border-primary)'
+            }"
+            placeholder="새 비밀번호 확인"
+          />
+          <p v-if="passwordErrors.confirmPassword" class="text-sm text-dp-danger mt-1">
+            {{ passwordErrors.confirmPassword }}
+          </p>
         </div>
       </div>
-    </Teleport>
+      <div class="modal-actions modal-footer-safe sm:px-6 sm:py-6">
+        <button
+          @click="changePassword"
+          :disabled="changingPassword"
+          class="flex-1 px-4 py-3 sm:py-2 min-h-11 bg-dp-accent hover:bg-dp-accent-hover rounded-lg text-dp-text-on-dark font-medium transition disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          <Loader2 v-if="changingPassword" class="w-4 h-4 animate-spin" />
+          {{ changingPassword ? '변경 중...' : '변경' }}
+        </button>
+        <button
+          @click="showPasswordModal = false"
+          :disabled="changingPassword"
+          class="flex-1 px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer disabled:opacity-50"
+          :style="{ backgroundColor: 'var(--dp-bg-hover)', color: 'var(--dp-text-primary)' }"
+        >
+          취소
+        </button>
+      </div>
+    </BaseModal>
 
     <!-- Auxiliary Account Modal -->
-    <Teleport to="body">
-      <div
-        v-if="showAuxiliaryModal"
-        class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
-        @click.self="showAuxiliaryModal = false"
-      >
-        <div class="rounded-xl shadow-xl max-w-md w-full bg-dp-bg-card">
-          <div class="flex items-center justify-between p-4 border-b border-dp-border-primary">
-            <h3 class="text-lg font-bold text-dp-text-primary">보조 계정 추가</h3>
-            <button @click="showAuxiliaryModal = false" class="p-1.5 rounded-full hover-close-btn cursor-pointer text-dp-text-muted">
-              <X class="w-5 h-5" />
-            </button>
-          </div>
-          <div class="p-4 sm:p-6 space-y-4">
-            <p class="text-sm text-dp-text-secondary">
-              자녀, 부업 등 별도 시간표 관리용 계정을 만들 수 있습니다.<br>
-              이 화면에서 바로 전환하여 사용할 수 있습니다.
-            </p>
-            <div>
-              <label class="block text-sm font-medium mb-1 text-dp-text-primary">계정 이름</label>
-              <input
-                v-model="auxiliaryName"
-                type="text"
-                maxlength="10"
-                class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-accent"
-                :style="{
-                  borderWidth: '1px',
-                  borderColor: 'var(--dp-border-primary)',
-                  backgroundColor: 'var(--dp-bg-primary)',
-                  color: 'var(--dp-text-primary)'
-                }"
-                placeholder="예: 둘째 아이, 부업"
-                @keyup.enter="createAuxiliaryAccount"
-              />
-              <p class="text-xs mt-1 text-dp-text-muted">최대 10자</p>
-            </div>
-          </div>
-          <div class="p-4 sm:p-6 flex gap-2 border-t border-dp-border-primary">
-            <button
-              @click="createAuxiliaryAccount"
-              :disabled="creatingAuxiliary || !auxiliaryName.trim()"
-              class="flex-1 px-4 py-3 sm:py-2 min-h-11 bg-dp-accent hover:bg-dp-accent-hover rounded-lg text-dp-text-on-dark font-medium transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Loader2 v-if="creatingAuxiliary" class="w-4 h-4 animate-spin" />
-              {{ creatingAuxiliary ? '생성 중...' : '생성' }}
-            </button>
-            <button
-              @click="showAuxiliaryModal = false"
-              :disabled="creatingAuxiliary"
-              class="flex-1 px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer disabled:opacity-50"
-              :style="{ backgroundColor: 'var(--dp-bg-hover)', color: 'var(--dp-text-primary)' }"
-            >
-              취소
-            </button>
-          </div>
+    <BaseModal
+      :is-open="showAuxiliaryModal"
+      size="md"
+      height="fit"
+      rounded
+      :panel-style="memberModalPanelStyle"
+      @close="showAuxiliaryModal = false"
+    >
+      <div class="modal-header">
+        <h2>보조 계정 추가</h2>
+        <button @click="showAuxiliaryModal = false" class="p-1.5 rounded-full hover-close-btn cursor-pointer text-dp-text-muted">
+          <X class="w-5 h-5" />
+        </button>
+      </div>
+      <div class="modal-body-form-lg">
+        <p class="text-sm text-dp-text-secondary">
+          자녀, 부업 등 별도 시간표 관리용 계정을 만들 수 있습니다.<br>
+          이 화면에서 바로 전환하여 사용할 수 있습니다.
+        </p>
+        <div>
+          <label class="form-label text-dp-text-primary">계정 이름</label>
+          <input
+            v-model="auxiliaryName"
+            type="text"
+            maxlength="10"
+            class="form-control-card"
+            placeholder="예: 둘째 아이, 부업"
+            @keyup.enter="createAuxiliaryAccount"
+          />
+          <p class="text-xs mt-1 text-dp-text-muted">최대 10자</p>
         </div>
       </div>
-    </Teleport>
+      <div class="modal-actions modal-footer-safe sm:px-6 sm:py-6">
+        <button
+          @click="createAuxiliaryAccount"
+          :disabled="creatingAuxiliary || !auxiliaryName.trim()"
+          class="flex-1 px-4 py-3 sm:py-2 min-h-11 bg-dp-accent hover:bg-dp-accent-hover rounded-lg text-dp-text-on-dark font-medium transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+        >
+          <Loader2 v-if="creatingAuxiliary" class="w-4 h-4 animate-spin" />
+          {{ creatingAuxiliary ? '생성 중...' : '생성' }}
+        </button>
+        <button
+          @click="showAuxiliaryModal = false"
+          :disabled="creatingAuxiliary"
+          class="flex-1 px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer disabled:opacity-50"
+          :style="{ backgroundColor: 'var(--dp-bg-hover)', color: 'var(--dp-text-primary)' }"
+        >
+          취소
+        </button>
+      </div>
+    </BaseModal>
   </div>
 </template>

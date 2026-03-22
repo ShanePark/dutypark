@@ -308,250 +308,235 @@ function onUploadError(message: string) {
     @close="handleClose"
   >
     <template v-if="todo">
-        <!-- Header -->
-        <div class="flex items-center justify-between p-3 sm:p-4 flex-shrink-0 bg-dp-bg-card border-b border-dp-border-primary">
-          <div class="min-w-0 flex-1">
-            <div class="flex items-center gap-2">
-              <h2 class="text-base sm:text-lg font-bold truncate text-dp-text-primary">{{ todo.title }}</h2>
-              <span
-                :class="[
-                  'px-2 py-0.5 text-xs rounded-full flex-shrink-0',
-                  todo.status === 'TODO' ? 'bg-dp-bg-tertiary text-dp-text-primary' : '',
-                  todo.status === 'IN_PROGRESS' ? 'bg-dp-warning-soft text-dp-warning' : '',
-                  todo.status === 'DONE' ? 'bg-dp-success-soft text-dp-success line-through' : '',
-                ]"
-              >
-                {{ getStatusLabel(todo.status) }}
-              </span>
-            </div>
-            <p class="text-xs text-dp-text-muted">
-              {{ formatDateKorean(todo.createdDate) }}
-              <span v-if="todo.completedDate"> · 완료 {{ formatDateKorean(todo.completedDate) }}</span>
-            </p>
+      <div class="modal-header">
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2">
+            <h2 class="truncate">{{ todo.title }}</h2>
+            <span
+              :class="[
+                'px-2 py-0.5 text-xs rounded-full flex-shrink-0',
+                todo.status === 'TODO' ? 'bg-dp-bg-tertiary text-dp-text-primary' : '',
+                todo.status === 'IN_PROGRESS' ? 'bg-dp-warning-soft text-dp-warning' : '',
+                todo.status === 'DONE' ? 'bg-dp-success-soft text-dp-success line-through' : '',
+              ]"
+            >
+              {{ getStatusLabel(todo.status) }}
+            </span>
           </div>
-          <button @click="handleClose" class="p-2 hover-bg-light rounded-full transition flex-shrink-0 cursor-pointer">
-            <X class="w-6 h-6 text-dp-text-primary" />
-          </button>
+          <p class="text-xs text-dp-text-muted">
+            {{ formatDateKorean(todo.createdDate) }}
+            <span v-if="todo.completedDate"> · 완료 {{ formatDateKorean(todo.completedDate) }}</span>
+          </p>
         </div>
+        <button @click="handleClose" class="p-2 hover-close-btn rounded-full transition flex-shrink-0 cursor-pointer">
+          <X class="w-6 h-6 text-dp-text-primary" />
+        </button>
+      </div>
 
-        <!-- Content -->
-        <div class="p-3 sm:p-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
-          <!-- View Mode -->
-          <template v-if="!isEditMode">
-            <div class="space-y-4">
-              <!-- Due Date Display -->
-              <div v-if="todo.dueDate" class="flex items-center gap-2">
-                <Calendar class="w-4 h-4" :class="todo.isOverdue ? 'text-dp-danger' : ''" :style="!todo.isOverdue ? { color: 'var(--dp-text-secondary)' } : undefined" />
-                <span
-                  class="text-sm"
-                  :class="todo.isOverdue ? 'text-dp-danger font-medium' : ''"
-                  :style="!todo.isOverdue ? { color: 'var(--dp-text-secondary)' } : undefined"
+      <div class="modal-body-form-compact">
+        <template v-if="!isEditMode">
+          <div v-if="todo.dueDate" class="flex items-center gap-2">
+            <Calendar class="w-4 h-4" :class="todo.isOverdue ? 'text-dp-danger' : ''" :style="!todo.isOverdue ? { color: 'var(--dp-text-secondary)' } : undefined" />
+            <span
+              class="text-sm"
+              :class="todo.isOverdue ? 'text-dp-danger font-medium' : ''"
+              :style="!todo.isOverdue ? { color: 'var(--dp-text-secondary)' } : undefined"
+            >
+              마감일: {{ formatDateKorean(todo.dueDate) }}
+              <span v-if="todo.isOverdue" class="text-dp-danger">(기한 초과)</span>
+            </span>
+          </div>
+
+          <div v-if="taggedOwnerMembers.length > 0" class="space-y-2">
+            <div class="text-xs font-semibold text-dp-text-muted">소유자</div>
+            <div class="flex flex-wrap items-center gap-2">
+              <MemberTagChips :members="taggedOwnerMembers" density="compact" />
+              <span class="text-xs text-dp-text-muted">태그된 TODO</span>
+            </div>
+          </div>
+
+          <div v-else-if="todoTagMembers.length > 0" class="space-y-2">
+            <div class="text-xs font-semibold text-dp-text-muted">태그된 친구</div>
+            <MemberTagChips :members="todoTagMembers" density="compact" />
+          </div>
+
+          <div v-if="todo.content">
+            <p class="whitespace-pre-wrap break-all text-dp-text-primary">{{ todo.content }}</p>
+          </div>
+
+          <div v-if="isLoadingAttachments" class="text-sm text-dp-text-secondary">
+            첨부파일 로딩 중...
+          </div>
+          <AttachmentGrid
+            v-else
+            :attachments="viewAttachments"
+            :columns="2"
+          />
+        </template>
+
+        <template v-else>
+          <div>
+            <label class="block text-sm font-medium mb-2 text-dp-text-secondary">상태</label>
+            <div class="grid grid-cols-3 gap-2">
+              <button
+                v-for="option in statusOptions"
+                :key="option.value"
+                type="button"
+                @click="editStatus = option.value"
+                class="status-card cursor-pointer"
+                :class="[option.colorClass, { 'status-card-selected': editStatus === option.value }]"
+              >
+                <component :is="option.icon" class="w-4 h-4" />
+                <span class="text-xs font-medium">{{ option.label }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label class="form-label">
+              제목 <span class="text-dp-danger">*</span>
+              <CharacterCounter :current="editTitle.length" :max="50" />
+            </label>
+            <input
+              v-model="editTitle"
+              type="text"
+              maxlength="50"
+              class="form-control"
+            />
+          </div>
+
+          <div>
+            <label class="form-label">내용</label>
+            <textarea
+              v-model="editContent"
+              rows="6"
+              class="form-control"
+            ></textarea>
+          </div>
+
+          <div>
+            <label class="form-label">
+              <Calendar class="w-4 h-4 inline-block mr-1 -mt-0.5" />
+              마감일
+            </label>
+            <input
+              v-model="editDueDate"
+              type="date"
+              class="form-control"
+            />
+          </div>
+
+          <div v-if="props.friends.length > 0">
+            <label class="block text-sm font-medium mb-2 text-dp-text-secondary">친구 태그</label>
+            <FriendTagSelector
+              v-model="editTagFriendIds"
+              :friends="props.friends"
+              :selected-summaries="selectedTagSummaries"
+            />
+          </div>
+
+          <div>
+            <label class="form-label">첨부파일</label>
+            <FileUploader
+              v-if="isEditMode"
+              ref="fileUploaderRef"
+              context-type="TODO"
+              :target-context-id="todo?.id"
+              :existing-attachments="editAttachments"
+              @session-created="onSessionCreated"
+              @update:attachments="onAttachmentsUpdate"
+              @upload-start="onUploadStart"
+              @upload-complete="onUploadComplete"
+              @error="onUploadError"
+            />
+          </div>
+        </template>
+      </div>
+
+      <div class="modal-footer-safe p-3 sm:p-4 flex-shrink-0 border-t border-dp-border-primary">
+        <template v-if="!isEditMode">
+          <div class="flex items-center justify-between gap-2">
+            <button
+              @click="emit('backToList')"
+              class="flex items-center gap-1 px-3 py-2 rounded-lg transition btn-outline cursor-pointer"
+              title="목록으로 돌아가기"
+            >
+              <List class="w-4 h-4" />
+              <span class="hidden sm:inline">목록</span>
+            </button>
+
+            <div class="flex gap-2">
+              <template v-if="isTaggedTodo">
+                <button
+                  v-for="option in statusActionOptions"
+                  :key="option.value"
+                  @click="emit('change-status', { id: todo.id, status: option.value })"
+                  class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-accent-border text-dp-accent rounded-lg hover:bg-dp-accent-soft transition cursor-pointer"
                 >
-                  마감일: {{ formatDateKorean(todo.dueDate) }}
-                  <span v-if="todo.isOverdue" class="text-dp-danger">(기한 초과)</span>
-                </span>
-              </div>
-
-              <div v-if="taggedOwnerMembers.length > 0" class="space-y-2">
-                <div class="text-xs font-semibold text-dp-text-muted">소유자</div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <MemberTagChips :members="taggedOwnerMembers" density="compact" />
-                  <span class="text-xs text-dp-text-muted">태그된 TODO</span>
-                </div>
-              </div>
-
-              <div v-else-if="todoTagMembers.length > 0" class="space-y-2">
-                <div class="text-xs font-semibold text-dp-text-muted">태그된 친구</div>
-                <MemberTagChips :members="todoTagMembers" density="compact" />
-              </div>
-
-              <div v-if="todo.content">
-                <p class="whitespace-pre-wrap break-all text-dp-text-primary">{{ todo.content }}</p>
-              </div>
-
-              <!-- Attachments (View Mode) -->
-              <div v-if="isLoadingAttachments" class="text-sm text-dp-text-secondary">
-                첨부파일 로딩 중...
-              </div>
-              <AttachmentGrid
-                v-else
-                :attachments="viewAttachments"
-                :columns="2"
-              />
+                  <component :is="option.icon" class="w-4 h-4" />
+                  <span class="hidden sm:inline">{{ option.label }}</span>
+                </button>
+                <button
+                  @click="emit('untagSelf', todo.id)"
+                  class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-warning-border text-dp-warning rounded-lg hover:bg-dp-warning-soft transition cursor-pointer"
+                >
+                  <X class="w-4 h-4" />
+                  <span class="hidden sm:inline">태그 제거</span>
+                </button>
+              </template>
+              <template v-else>
+                <button
+                  @click="enterEditMode"
+                  class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-accent-border text-dp-accent rounded-lg hover:bg-dp-accent-soft transition cursor-pointer"
+                >
+                  <Pencil class="w-4 h-4" />
+                  <span class="hidden sm:inline">수정</span>
+                </button>
+                <button
+                  @click="emit('delete', todo.id)"
+                  class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-danger-border text-dp-danger rounded-lg hover:bg-dp-danger-soft transition cursor-pointer"
+                >
+                  <Trash2 class="w-4 h-4" />
+                  <span class="hidden sm:inline">삭제</span>
+                </button>
+                <button
+                  v-if="isActive"
+                  @click="emit('complete', todo.id)"
+                  class="flex items-center justify-center gap-1 px-3 py-2 bg-dp-success text-dp-text-on-dark rounded-lg hover:bg-dp-success-hover transition cursor-pointer"
+                >
+                  <Check class="w-4 h-4" />
+                  <span class="hidden sm:inline">완료</span>
+                </button>
+                <button
+                  v-else
+                  @click="emit('reopen', todo.id)"
+                  class="flex items-center justify-center gap-1 px-3 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
+                >
+                  <RotateCcw class="w-4 h-4" />
+                  <span class="hidden sm:inline">재오픈</span>
+                </button>
+              </template>
             </div>
-          </template>
-
-          <!-- Edit Mode -->
-          <template v-else>
-            <div class="space-y-4">
-              <!-- Status Selection -->
-              <div>
-                <label class="block text-sm font-medium mb-2 text-dp-text-secondary">상태</label>
-                <div class="grid grid-cols-3 gap-2">
-                  <button
-                    v-for="option in statusOptions"
-                    :key="option.value"
-                    type="button"
-                    @click="editStatus = option.value"
-                    class="status-card cursor-pointer"
-                    :class="[option.colorClass, { 'status-card-selected': editStatus === option.value }]"
-                  >
-                    <component :is="option.icon" class="w-4 h-4" />
-                    <span class="text-xs font-medium">{{ option.label }}</span>
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
-                  제목 <span class="text-dp-danger">*</span>
-                  <CharacterCounter :current="editTitle.length" :max="50" />
-                </label>
-                <input
-                  v-model="editTitle"
-                  type="text"
-                  maxlength="50"
-                  class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
-                />
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium mb-1 text-dp-text-secondary">내용</label>
-                <textarea
-                  v-model="editContent"
-                  rows="6"
-                  class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
-                ></textarea>
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
-                  <Calendar class="w-4 h-4 inline-block mr-1 -mt-0.5" />
-                  마감일
-                </label>
-                <input
-                  v-model="editDueDate"
-                  type="date"
-                  class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
-                />
-              </div>
-
-              <div v-if="props.friends.length > 0">
-                <label class="block text-sm font-medium mb-2 text-dp-text-secondary">친구 태그</label>
-                <FriendTagSelector
-                  v-model="editTagFriendIds"
-                  :friends="props.friends"
-                  :selected-summaries="selectedTagSummaries"
-                />
-              </div>
-
-              <!-- Attachments (Edit Mode) -->
-              <div>
-                <label class="block text-sm font-medium mb-1 text-dp-text-secondary">첨부파일</label>
-                <FileUploader
-                  v-if="isEditMode"
-                  ref="fileUploaderRef"
-                  context-type="TODO"
-                  :target-context-id="todo?.id"
-                  :existing-attachments="editAttachments"
-                  @session-created="onSessionCreated"
-                  @update:attachments="onAttachmentsUpdate"
-                  @upload-start="onUploadStart"
-                  @upload-complete="onUploadComplete"
-                  @error="onUploadError"
-                />
-              </div>
-            </div>
-          </template>
-        </div>
-
-        <!-- Footer (sticky at bottom) -->
-        <div class="p-3 sm:p-4 flex-shrink-0 border-t border-dp-border-primary">
-          <template v-if="!isEditMode">
-            <div class="flex items-center justify-between gap-2">
-              <!-- Left: Back to list -->
-              <button
-                @click="emit('backToList')"
-                class="flex items-center gap-1 px-3 py-2 rounded-lg transition btn-outline cursor-pointer"
-                title="목록으로 돌아가기"
-              >
-                <List class="w-4 h-4" />
-                <span class="hidden sm:inline">목록</span>
-              </button>
-
-              <!-- Right: Action buttons -->
-              <div class="flex gap-2">
-                <template v-if="isTaggedTodo">
-                  <button
-                    v-for="option in statusActionOptions"
-                    :key="option.value"
-                    @click="emit('change-status', { id: todo.id, status: option.value })"
-                    class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-accent-border text-dp-accent rounded-lg hover:bg-dp-accent-soft transition cursor-pointer"
-                  >
-                    <component :is="option.icon" class="w-4 h-4" />
-                    <span class="hidden sm:inline">{{ option.label }}</span>
-                  </button>
-                  <button
-                    @click="emit('untagSelf', todo.id)"
-                    class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-warning-border text-dp-warning rounded-lg hover:bg-dp-warning-soft transition cursor-pointer"
-                  >
-                    <X class="w-4 h-4" />
-                    <span class="hidden sm:inline">태그 제거</span>
-                  </button>
-                </template>
-                <template v-else>
-                  <button
-                    @click="enterEditMode"
-                    class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-accent-border text-dp-accent rounded-lg hover:bg-dp-accent-soft transition cursor-pointer"
-                  >
-                    <Pencil class="w-4 h-4" />
-                    <span class="hidden sm:inline">수정</span>
-                  </button>
-                  <button
-                    @click="emit('delete', todo.id)"
-                    class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-danger-border text-dp-danger rounded-lg hover:bg-dp-danger-soft transition cursor-pointer"
-                  >
-                    <Trash2 class="w-4 h-4" />
-                    <span class="hidden sm:inline">삭제</span>
-                  </button>
-                  <button
-                    v-if="isActive"
-                    @click="emit('complete', todo.id)"
-                    class="flex items-center justify-center gap-1 px-3 py-2 bg-dp-success text-dp-text-on-dark rounded-lg hover:bg-dp-success-hover transition cursor-pointer"
-                  >
-                    <Check class="w-4 h-4" />
-                    <span class="hidden sm:inline">완료</span>
-                  </button>
-                  <button
-                    v-else
-                    @click="emit('reopen', todo.id)"
-                    class="flex items-center justify-center gap-1 px-3 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
-                  >
-                    <RotateCcw class="w-4 h-4" />
-                    <span class="hidden sm:inline">재오픈</span>
-                  </button>
-                </template>
-              </div>
-            </div>
-          </template>
-          <template v-else>
-            <div class="flex flex-row gap-2 justify-end">
-              <button
-                @click="cancelEdit"
-                class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
-              >
-                취소
-              </button>
-              <button
-                @click="saveEdit"
-                :disabled="!editTitle.trim() || isUploading"
-                class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 cursor-pointer"
-              >
-                {{ isUploading ? '업로드 중...' : '저장' }}
-              </button>
-            </div>
-          </template>
-        </div>
+          </div>
+        </template>
+        <template v-else>
+          <div class="flex flex-row gap-2 justify-end">
+            <button
+              @click="cancelEdit"
+              class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
+            >
+              취소
+            </button>
+            <button
+              @click="saveEdit"
+              :disabled="!editTitle.trim() || isUploading"
+              class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 cursor-pointer"
+            >
+              {{ isUploading ? '업로드 중...' : '저장' }}
+            </button>
+          </div>
+        </template>
+      </div>
     </template>
   </BaseModal>
 </template>

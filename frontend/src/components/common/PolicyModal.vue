@@ -85,7 +85,7 @@ function close() {
           <div v-else v-html="modalContent"></div>
         </div>
         <!-- Modal Footer -->
-        <div class="flex-shrink-0 p-4 border-t border-dp-border-primary">
+        <div class="modal-footer-safe flex-shrink-0 p-4 border-t border-dp-border-primary">
           <button
             type="button"
             class="w-full py-2.5 px-4 rounded-lg font-medium transition"

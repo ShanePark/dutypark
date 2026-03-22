@@ -6,12 +6,11 @@ import { adminApi } from '@/api/admin'
 import { authApi } from '@/api/auth'
 import { refreshTokenApi } from '@/api/member'
 import { useSwal } from '@/composables/useSwal'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
 import type { AdminMemberDetailDto, AdminMemberDto, RefreshTokenDto } from '@/types'
 import { extractDatePart } from '@/utils/date'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
+import BaseModal from '@/components/common/BaseModal.vue'
 import AdminMemberDetailModal from '@/components/admin/AdminMemberDetailModal.vue'
 import {
   Users,
@@ -23,6 +22,7 @@ import {
   Loader2,
   FileText,
   ExternalLink,
+  X,
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -66,8 +66,6 @@ watch(searchKeyword, () => {
 
 
 const showPasswordModal = ref(false)
-useBodyScrollLock(showPasswordModal)
-useEscapeKey(showPasswordModal, () => { showPasswordModal.value = false })
 const passwordTargetMember = ref<{ id: number; name: string } | null>(null)
 const newPassword = ref('')
 const confirmPassword = ref('')
@@ -450,58 +448,65 @@ onMounted(async () => {
     />
 
     <!-- Password Change Modal -->
-    <div
-      v-if="showPasswordModal"
-      class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-[80]"
-      @click.self="closePasswordModal"
+    <BaseModal
+      :is-open="showPasswordModal"
+      size="md"
+      height="fit"
+      rounded
+      z-index="admin"
+      @close="closePasswordModal"
     >
-      <div class="rounded-xl shadow-xl w-full max-w-md mx-4 bg-dp-bg-modal">
-        <div class="p-4 border-b border-dp-border-primary">
-          <h3 class="text-lg font-semibold text-dp-text-primary">비밀번호 변경</h3>
-          <p class="text-sm text-dp-text-secondary">{{ passwordTargetMember?.name }}님의 비밀번호를 변경합니다</p>
+      <div class="modal-header">
+        <div>
+          <h2>비밀번호 변경</h2>
+          <p class="mt-1 text-sm text-dp-text-secondary">{{ passwordTargetMember?.name }}님의 비밀번호를 변경합니다</p>
         </div>
-        <div class="p-4 space-y-4">
-          <div>
-            <label class="block text-sm font-medium mb-1 text-dp-text-secondary">새 비밀번호</label>
-            <input
-              v-model="newPassword"
-              type="password"
-              class="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-text-primary focus:border-transparent bg-dp-bg-input border border-dp-border-input text-dp-text-primary"
-              placeholder="새 비밀번호 입력"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1 text-dp-text-secondary">비밀번호 확인</label>
-            <input
-              v-model="confirmPassword"
-              type="password"
-              class="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-text-primary focus:border-transparent bg-dp-bg-input border border-dp-border-input text-dp-text-primary"
-              placeholder="비밀번호 다시 입력"
-            />
-          </div>
-          <p v-if="passwordError" class="text-sm text-dp-danger">{{ passwordError }}</p>
-        </div>
-        <div class="p-4 flex justify-end gap-2 border-t border-dp-border-primary">
-          <button
-            @click="closePasswordModal"
-            :disabled="changingPassword"
-            class="px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50 cursor-pointer bg-dp-bg-tertiary text-dp-text-primary"
-            @mouseover="(e: Event) => !changingPassword && setHoverBg(e)"
-            @mouseleave="(e: Event) => !changingPassword && clearHoverBg(e, 'var(--dp-bg-tertiary)')"
-          >
-            취소
-          </button>
-          <button
-            @click="handleChangePassword"
-            :disabled="changingPassword"
-            class="px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-surface-strong hover:bg-dp-surface-strong-hover rounded-lg transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
-          >
-            <Loader2 v-if="changingPassword" class="w-4 h-4 animate-spin" />
-            {{ changingPassword ? '변경 중...' : '변경' }}
-          </button>
-        </div>
+        <button
+          @click="closePasswordModal"
+          class="p-1.5 rounded-full hover-close-btn cursor-pointer"
+        >
+          <X class="w-5 h-5 text-dp-text-primary" />
+        </button>
       </div>
-    </div>
+      <div class="modal-body-form">
+        <div>
+          <label class="form-label">새 비밀번호</label>
+          <input
+            v-model="newPassword"
+            type="password"
+            class="form-control-neutral"
+            placeholder="새 비밀번호 입력"
+          />
+        </div>
+        <div>
+          <label class="form-label">비밀번호 확인</label>
+          <input
+            v-model="confirmPassword"
+            type="password"
+            class="form-control-neutral"
+            placeholder="비밀번호 다시 입력"
+          />
+        </div>
+        <p v-if="passwordError" class="text-sm text-dp-danger">{{ passwordError }}</p>
+      </div>
+      <div class="modal-actions modal-actions-end modal-footer-safe">
+        <button
+          @click="closePasswordModal"
+          :disabled="changingPassword"
+          class="px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50 cursor-pointer bg-dp-bg-tertiary text-dp-text-primary hover-interactive"
+        >
+          취소
+        </button>
+        <button
+          @click="handleChangePassword"
+          :disabled="changingPassword"
+          class="px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-surface-strong hover:bg-dp-surface-strong-hover rounded-lg transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+        >
+          <Loader2 v-if="changingPassword" class="w-4 h-4 animate-spin" />
+          {{ changingPassword ? '변경 중...' : '변경' }}
+        </button>
+      </div>
+    </BaseModal>
   </div>
 </template>
 

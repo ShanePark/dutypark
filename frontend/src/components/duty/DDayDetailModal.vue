@@ -92,107 +92,96 @@ const ddayBadgeClass = computed(() => {
     @close="handleClose"
   >
     <template v-if="dday">
-        <!-- Header -->
-        <div class="modal-header">
-          <h2>디데이 상세</h2>
-          <button
-            @click="handleClose"
-            class="p-2 rounded-full transition hover-bg-light cursor-pointer"
-          >
-            <X class="w-5 h-5 text-dp-text-primary" />
-          </button>
-        </div>
-
-        <!-- Content -->
-        <div class="p-5 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
-          <!-- D-Day Badge -->
-          <div class="flex items-center justify-center mb-5">
-            <div
-              class="inline-flex items-center px-6 py-3 rounded-full text-2xl font-bold shadow-lg"
-              :class="ddayBadgeClass"
-            >
-              {{ dday.dDayText }}
-            </div>
-          </div>
-
-          <!-- Title -->
-          <div class="mb-4">
-            <label class="block text-xs font-medium mb-1 text-dp-text-muted">
-              제목
-            </label>
-            <p class="text-lg flex items-center gap-2 text-dp-text-primary">
-              <Lock v-if="dday.isPrivate" class="w-4 h-4 flex-shrink-0 text-dp-text-muted" />
-              {{ dday.title }}
-            </p>
-          </div>
-
-          <!-- Date -->
-          <div class="mb-4">
-            <label class="block text-xs font-medium mb-1 text-dp-text-muted">
-              날짜
-            </label>
-            <p class="text-base flex items-center gap-2 text-dp-text-primary">
-              <CalendarCheck class="w-4 h-4 text-dp-text-muted" />
-              {{ formattedDate }}
-            </p>
-          </div>
-
-          <!-- Pin Status -->
-          <div
-            class="flex items-center justify-between p-3 rounded-lg mb-4 bg-dp-bg-secondary"
-          >
-            <div class="flex items-center gap-2">
-              <Star
-                class="w-5 h-5"
-                :class="isPinned ? 'text-dp-warning fill-dp-warning' : ''"
-                :style="!isPinned ? { color: 'var(--dp-text-muted)' } : {}"
-              />
-              <span class="text-sm text-dp-text-primary">
-                {{ isPinned ? '캘린더에 고정됨' : '캘린더에 고정하기' }}
-              </span>
-            </div>
-            <button
-              @click="handleTogglePin"
-              class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer"
-              :class="isPinned ? 'bg-dp-warning' : 'bg-dp-border-secondary'"
-            >
-              <span
-                class="inline-block h-4 w-4 transform rounded-full bg-dp-bg-primary transition"
-                :class="isPinned ? 'translate-x-6' : 'translate-x-1'"
-              ></span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Footer (sticky at bottom) -->
-        <div
-          class="p-4 flex-shrink-0 flex justify-between gap-2 border-t border-dp-border-primary"
+      <div class="modal-header">
+        <h2>디데이 상세</h2>
+        <button
+          @click="handleClose"
+          class="p-2 rounded-full hover-close-btn cursor-pointer"
         >
-          <div class="flex gap-2">
-            <button
-              v-if="canEdit"
-              @click="handleEdit"
-              class="flex items-center gap-1.5 px-3 py-2 rounded-lg transition btn-outline cursor-pointer"
-            >
-              <Pencil class="w-4 h-4" />
-              수정
-            </button>
-            <button
-              v-if="canEdit"
-              @click="handleDelete"
-              class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-dp-danger border border-dp-danger-border hover:bg-dp-danger-soft transition cursor-pointer"
-            >
-              <Trash2 class="w-4 h-4" />
-              삭제
-            </button>
+          <X class="w-5 h-5 text-dp-text-primary" />
+        </button>
+      </div>
+
+      <div class="modal-body-form-lg">
+        <div class="flex items-center justify-center">
+          <div
+            class="inline-flex items-center px-6 py-3 rounded-full text-2xl font-bold shadow-lg"
+            :class="ddayBadgeClass"
+          >
+            {{ dday.dDayText }}
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium mb-1 text-dp-text-muted">
+            제목
+          </label>
+          <p class="text-lg flex items-center gap-2 text-dp-text-primary">
+            <Lock v-if="dday.isPrivate" class="w-4 h-4 flex-shrink-0 text-dp-text-muted" />
+            {{ dday.title }}
+          </p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium mb-1 text-dp-text-muted">
+            날짜
+          </label>
+          <p class="text-base flex items-center gap-2 text-dp-text-primary">
+            <CalendarCheck class="w-4 h-4 text-dp-text-muted" />
+            {{ formattedDate }}
+          </p>
+        </div>
+
+        <div class="flex items-center justify-between p-3 rounded-lg bg-dp-bg-secondary">
+          <div class="flex items-center gap-2">
+            <Star
+              class="w-5 h-5"
+              :class="isPinned ? 'text-dp-warning fill-dp-warning' : ''"
+              :style="!isPinned ? { color: 'var(--dp-text-muted)' } : {}"
+            />
+            <span class="text-sm text-dp-text-primary">
+              {{ isPinned ? '캘린더에 고정됨' : '캘린더에 고정하기' }}
+            </span>
           </div>
           <button
-            @click="handleClose"
-            class="px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
+            @click="handleTogglePin"
+            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer"
+            :class="isPinned ? 'bg-dp-warning' : 'bg-dp-border-secondary'"
           >
-            닫기
+            <span
+              class="inline-block h-4 w-4 transform rounded-full bg-dp-bg-primary transition"
+              :class="isPinned ? 'translate-x-6' : 'translate-x-1'"
+            ></span>
           </button>
         </div>
+      </div>
+
+      <div class="modal-actions modal-actions-between modal-footer-safe">
+        <div class="flex gap-2">
+          <button
+            v-if="canEdit"
+            @click="handleEdit"
+            class="flex items-center gap-1.5 px-3 py-2 rounded-lg transition btn-outline cursor-pointer"
+          >
+            <Pencil class="w-4 h-4" />
+            수정
+          </button>
+          <button
+            v-if="canEdit"
+            @click="handleDelete"
+            class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-dp-danger border border-dp-danger-border hover:bg-dp-danger-soft transition cursor-pointer"
+          >
+            <Trash2 class="w-4 h-4" />
+            삭제
+          </button>
+        </div>
+        <button
+          @click="handleClose"
+          class="px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
+        >
+          닫기
+        </button>
+      </div>
     </template>
   </BaseModal>
 </template>

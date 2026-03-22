@@ -4,8 +4,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { adminApi } from '@/api/admin'
 import { useSwal } from '@/composables/useSwal'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
+import BaseModal from '@/components/common/BaseModal.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import type { SimpleTeam, TeamNameCheckResult } from '@/types'
 import {
@@ -40,8 +39,6 @@ const isLoading = ref(false)
 
 // New team modal state
 const showNewTeamModal = ref(false)
-useBodyScrollLock(showNewTeamModal)
-useEscapeKey(showNewTeamModal, () => { showNewTeamModal.value = false })
 const newTeamName = ref('')
 const newTeamDescription = ref('')
 const nameCheckResult = ref<TeamNameCheckResult | null>(null)
@@ -412,89 +409,89 @@ onMounted(() => {
       </div>
 
     <!-- New Team Modal -->
-    <div
-      v-if="showNewTeamModal"
-      class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50"
-      @click.self="closeNewTeamModal"
+    <BaseModal
+      :is-open="showNewTeamModal"
+      size="md"
+      height="fit"
+      rounded
+      z-index="admin"
+      @close="closeNewTeamModal"
     >
-      <div class="rounded-xl shadow-xl w-full max-w-md mx-4 bg-dp-bg-modal">
-        <div class="p-4 flex items-center justify-between border-b border-dp-border-primary">
-          <h3 class="text-lg font-semibold text-dp-text-primary">새 팀 추가</h3>
-          <button
-            @click="closeNewTeamModal"
-            class="p-1 rounded transition cursor-pointer text-dp-text-muted"
-            @mouseover="(e: Event) => { if (e.currentTarget) (e.currentTarget as HTMLElement).style.color = 'var(--dp-text-secondary)' }"
-            @mouseleave="(e: Event) => { if (e.currentTarget) (e.currentTarget as HTMLElement).style.color = 'var(--dp-text-muted)' }"
-          >
-            <X class="w-5 h-5" />
-          </button>
-        </div>
-        <div class="p-4 space-y-4">
-          <div>
-            <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
-              팀 이름
-              <CharacterCounter :current="newTeamName.length" :max="20" />
-            </label>
-            <div class="flex gap-2">
-              <input
-                v-model="newTeamName"
-                type="text"
-                maxlength="20"
-                minlength="2"
-                class="flex-1 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-text-primary focus:border-transparent bg-dp-bg-input border border-dp-border-input text-dp-text-primary"
-                placeholder="팀 이름 입력"
-                @input="nameCheckResult = null"
-              />
-              <button
-                @click="checkTeamName"
-                class="px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-accent hover:bg-dp-accent-hover rounded-lg transition cursor-pointer"
-              >
-                확인
-              </button>
-            </div>
-            <p
-              v-if="nameCheckResult"
-              class="mt-1 text-sm flex items-center gap-1"
-              :class="nameCheckResult === 'OK' ? 'text-dp-success' : 'text-dp-danger'"
-            >
-              <Check v-if="nameCheckResult === 'OK'" class="w-4 h-4" />
-              <AlertCircle v-else class="w-4 h-4" />
-              {{ getNameCheckMessage() }}
-            </p>
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
-              설명
-              <CharacterCounter :current="newTeamDescription.length" :max="50" />
-            </label>
+      <div class="modal-header">
+        <h2>새 팀 추가</h2>
+        <button
+          @click="closeNewTeamModal"
+          class="p-1.5 rounded-full hover-close-btn cursor-pointer text-dp-text-muted"
+        >
+          <X class="w-5 h-5" />
+        </button>
+      </div>
+      <div class="modal-body-form">
+        <div>
+          <label class="form-label">
+            팀 이름
+            <CharacterCounter :current="newTeamName.length" :max="20" />
+          </label>
+          <div class="flex gap-2">
             <input
-              v-model="newTeamDescription"
+              v-model="newTeamName"
               type="text"
-              maxlength="50"
-              class="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-text-primary focus:border-transparent bg-dp-bg-input border border-dp-border-input text-dp-text-primary"
-              placeholder="팀 설명 입력"
+              maxlength="20"
+              minlength="2"
+              class="form-control-neutral flex-1"
+              placeholder="팀 이름 입력"
+              @input="nameCheckResult = null"
             />
+            <button
+              @click="checkTeamName"
+              :disabled="isCheckingName"
+              class="px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-accent hover:bg-dp-accent-hover rounded-lg transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <Loader2 v-if="isCheckingName" class="w-4 h-4 animate-spin" />
+              확인
+            </button>
           </div>
+          <p
+            v-if="nameCheckResult"
+            class="mt-1 text-sm flex items-center gap-1"
+            :class="nameCheckResult === 'OK' ? 'text-dp-success' : 'text-dp-danger'"
+          >
+            <Check v-if="nameCheckResult === 'OK'" class="w-4 h-4" />
+            <AlertCircle v-else class="w-4 h-4" />
+            {{ getNameCheckMessage() }}
+          </p>
         </div>
-        <div class="p-4 flex justify-end gap-2 border-t border-dp-border-primary">
-          <button
-            @click="handleCreateTeam"
-            :disabled="nameCheckResult !== 'OK' || !newTeamDescription"
-            class="px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-accent hover:bg-dp-accent-hover rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-          >
-            추가
-          </button>
-          <button
-            @click="closeNewTeamModal"
-            class="px-4 py-2 text-sm font-medium rounded-lg transition cursor-pointer bg-dp-bg-tertiary text-dp-text-primary"
-            @mouseover="(e: Event) => setHoverBg(e)"
-            @mouseleave="(e: Event) => clearHoverBg(e, 'var(--dp-bg-tertiary)')"
-          >
-            취소
-          </button>
+        <div>
+          <label class="form-label">
+            설명
+            <CharacterCounter :current="newTeamDescription.length" :max="50" />
+          </label>
+          <input
+            v-model="newTeamDescription"
+            type="text"
+            maxlength="50"
+            class="form-control-neutral"
+            placeholder="팀 설명 입력"
+          />
         </div>
       </div>
-    </div>
+      <div class="modal-actions modal-actions-end modal-footer-safe">
+        <button
+          @click="handleCreateTeam"
+          :disabled="nameCheckResult !== 'OK' || !newTeamDescription || isCreating"
+          class="px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-accent hover:bg-dp-accent-hover rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2"
+        >
+          <Loader2 v-if="isCreating" class="w-4 h-4 animate-spin" />
+          추가
+        </button>
+        <button
+          @click="closeNewTeamModal"
+          class="px-4 py-2 text-sm font-medium rounded-lg transition cursor-pointer bg-dp-bg-tertiary text-dp-text-primary hover-interactive"
+        >
+          취소
+        </button>
+      </div>
+    </BaseModal>
 
   </div>
 </template>

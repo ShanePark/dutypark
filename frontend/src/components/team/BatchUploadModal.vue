@@ -81,72 +81,72 @@ async function uploadBatch() {
     height="fit"
     @close="close"
   >
-      <div class="flex items-center justify-between p-4 border-b border-dp-border-primary">
-        <h3 class="text-lg font-bold text-dp-text-primary">근무표 업로드</h3>
-        <button
-          @click="close"
-          class="p-1.5 rounded-full hover-close-btn cursor-pointer"
-        >
-          <X class="w-5 h-5" />
-        </button>
+    <div class="modal-header">
+      <h2>근무표 업로드</h2>
+      <button
+        @click="close"
+        class="p-1.5 rounded-full hover-close-btn cursor-pointer"
+      >
+        <X class="w-5 h-5" />
+      </button>
+    </div>
+
+    <div class="modal-body-form">
+      <div>
+        <label class="form-label">
+          근무표 파일 업로드 (.xlsx)
+        </label>
+        <input
+          type="file"
+          accept=".xlsx"
+          @change="handleFileChange"
+          class="form-control"
+        />
       </div>
 
-      <div class="p-4 space-y-4 overflow-y-auto flex-1 min-h-0">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
-            근무표 파일 업로드 (.xlsx)
+          <label class="form-label">
+            연도
           </label>
           <input
-            type="file"
-            accept=".xlsx"
-            @change="handleFileChange"
-            class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent bg-dp-bg-input border-dp-border-input text-dp-text-primary"
+            v-model.number="batchForm.year"
+            type="number"
+            :min="new Date().getFullYear()"
+            :max="new Date().getFullYear() + 1"
+            class="form-control"
           />
         </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
-              연도
-            </label>
-            <input
-              v-model.number="batchForm.year"
-              type="number"
-              :min="new Date().getFullYear()"
-              :max="new Date().getFullYear() + 1"
-              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent bg-dp-bg-input border-dp-border-input text-dp-text-primary"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
-              월
-            </label>
-            <input
-              v-model.number="batchForm.month"
-              type="number"
-              min="1"
-              max="12"
-              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent bg-dp-bg-input border-dp-border-input text-dp-text-primary"
-            />
-          </div>
+        <div>
+          <label class="form-label">
+            월
+          </label>
+          <input
+            v-model.number="batchForm.month"
+            type="number"
+            min="1"
+            max="12"
+            class="form-control"
+          />
         </div>
       </div>
+    </div>
 
-      <div class="flex justify-end gap-2 p-4 border-t border-dp-border-primary">
-        <button
-          @click="uploadBatch"
-          :disabled="saving || !batchForm.file"
-          class="px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-        >
-          <Loader2 v-if="saving" class="w-4 h-4 animate-spin" />
-          업로드
-        </button>
-        <button
-          @click="close"
-          class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"
-        >
-          취소
-        </button>
-      </div>
+    <div class="modal-actions modal-actions-end modal-footer-safe">
+      <button
+        @click="uploadBatch"
+        :disabled="saving || !batchForm.file"
+        class="px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
+      >
+        <Loader2 v-if="saving" class="w-4 h-4 animate-spin" />
+        업로드
+      </button>
+      <button
+        @click="close"
+        class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"
+      >
+        취소
+      </button>
+    </div>
   </BaseModal>
 </template>
