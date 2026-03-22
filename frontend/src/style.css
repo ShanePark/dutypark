@@ -392,6 +392,32 @@ html.dark {
     background-color: var(--dp-bg-tertiary);
 }
 
+.form-control-neutral {
+    @apply w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-text-primary focus:border-transparent;
+    background-color: var(--dp-bg-input);
+    border: 1px solid var(--dp-border-input);
+    color: var(--dp-text-primary);
+}
+
+.form-control-neutral:disabled,
+.form-control-neutral[readonly] {
+    @apply cursor-not-allowed;
+    background-color: var(--dp-bg-tertiary);
+}
+
+.form-control-card {
+    @apply w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-accent;
+    background-color: var(--dp-bg-primary);
+    border: 1px solid var(--dp-border-primary);
+    color: var(--dp-text-primary);
+}
+
+.form-control-card:disabled,
+.form-control-card[readonly] {
+    @apply cursor-not-allowed;
+    background-color: var(--dp-bg-tertiary);
+}
+
 .form-label {
     @apply block text-sm font-medium mb-1;
     color: var(--dp-text-secondary);
@@ -686,6 +712,18 @@ html.dark {
     border-bottom: 1px solid var(--dp-border-primary);
 }
 
+.modal-header-compact {
+    @apply flex items-center justify-between px-4 py-2.5 flex-shrink-0;
+    background-color: var(--dp-bg-tertiary);
+    border-bottom: 1px solid var(--dp-border-primary);
+}
+
+.modal-header-stack {
+    @apply p-3 sm:p-4 flex-shrink-0 space-y-3;
+    background-color: var(--dp-bg-tertiary);
+    border-bottom: 1px solid var(--dp-border-primary);
+}
+
 .modal-header h2 {
     @apply text-base sm:text-lg font-bold;
     color: var(--dp-text-primary);
@@ -698,6 +736,45 @@ html.dark {
 
 .modal-body {
     @apply max-h-[580px] overflow-y-auto;
+}
+
+.modal-body-form {
+    @apply p-4 space-y-4 flex-1 min-h-0;
+    max-height: 580px;
+    overflow-y: auto;
+}
+
+.modal-body-form-lg {
+    @apply p-4 sm:p-6 space-y-4 flex-1 min-h-0;
+    max-height: 580px;
+    overflow-y: auto;
+}
+
+.modal-body-form-compact {
+    @apply p-3 sm:p-4 space-y-4 flex-1 min-h-0;
+    max-height: 580px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.modal-actions {
+    @apply p-4 flex flex-row gap-2 flex-shrink-0 border-t border-dp-border-primary;
+}
+
+.modal-actions-compact {
+    @apply p-3 sm:p-4 flex flex-row gap-2 flex-shrink-0 border-t border-dp-border-primary;
+}
+
+.modal-actions-end {
+    @apply justify-end;
+}
+
+.modal-actions-between {
+    @apply items-center justify-between;
+}
+
+.modal-actions-center {
+    @apply justify-center;
 }
 
 @media (max-width: 639px) {

@@ -4,12 +4,11 @@ import { useRouter } from 'vue-router'
 import { dashboardApi } from '@/api/dashboard'
 import { friendApi } from '@/api/member'
 import { useSwal } from '@/composables/useSwal'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
 import { useNotificationStore } from '@/stores/notification'
 import Sortable from 'sortablejs'
 import type { DashboardFriendInfo, MemberPreviewDto } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
+import FriendSearchModal from '@/components/common/FriendSearchModal.vue'
 import {
   Users,
   UserCheck,
@@ -20,10 +19,6 @@ import {
   GripVertical,
   MoreVertical,
   Trash2,
-  X,
-  Search,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -53,8 +48,6 @@ let isDragging = false
 
 // Search modal state
 const showSearchModal = ref(false)
-useBodyScrollLock(showSearchModal)
-useEscapeKey(showSearchModal, () => { showSearchModal.value = false })
 const searchKeyword = ref('')
 const searchResult = ref<MemberPreviewDto[]>([])
 const searchPage = ref(0)
@@ -329,20 +322,6 @@ async function requestFriend(member: MemberPreviewDto) {
   } catch (e) {
     console.error('Failed to send friend request:', e)
     showWarning('친구 요청을 보내는데 실패했습니다.')
-  }
-}
-
-function prevPage() {
-  if (searchPage.value > 0) {
-    searchPage.value--
-    search()
-  }
-}
-
-function nextPage() {
-  if (searchPage.value < searchTotalPage.value - 1) {
-    searchPage.value++
-    search()
   }
 }
 
@@ -728,143 +707,19 @@ onUnmounted(() => {
       </div>
     </Teleport>
 
-    <!-- Search Modal -->
-    <Teleport to="body">
-      <div
-        v-if="showSearchModal"
-        class="fixed inset-0 z-50 flex items-center justify-center"
-        @click.self="closeSearchModal"
-      >
-        <!-- Backdrop -->
-        <div class="absolute inset-0 bg-dp-overlay-dark/60 backdrop-blur-sm" @click="closeSearchModal"></div>
-
-        <!-- Modal Content -->
-        <div class="relative rounded-2xl shadow-2xl w-full max-w-2xl mx-2 sm:mx-4 max-h-[90vh] overflow-hidden bg-dp-bg-modal">
-          <!-- Header -->
-          <div class="flex items-center justify-between p-5 border-b bg-dp-bg-secondary border-dp-border-primary">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-gradient-to-br from-dp-accent to-dp-accent-hover rounded-xl flex items-center justify-center">
-                <UserPlus class="w-5 h-5 text-dp-text-on-dark" />
-              </div>
-              <h3 class="text-xl font-bold text-dp-text-primary">친구 추가</h3>
-            </div>
-            <button
-              class="p-2 rounded-full hover-close-btn cursor-pointer text-dp-text-muted"
-              @click="closeSearchModal"
-            >
-              <X class="w-5 h-5" />
-            </button>
-          </div>
-
-          <!-- Body -->
-          <div class="p-5 overflow-y-auto max-h-[calc(90vh-180px)]">
-            <!-- Search Input -->
-            <div class="flex gap-2 mb-5">
-              <div class="flex-grow relative min-w-0">
-                <Search class="w-5 h-5 absolute left-3.5 top-1/2 transform -translate-y-1/2 text-dp-text-muted" />
-                <input
-                  v-model="searchKeyword"
-                  type="text"
-                  placeholder="이름 또는 팀 검색"
-                  class="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-dp-accent/20 focus:border-dp-accent outline-none transition-all bg-dp-bg-input border-dp-border-input text-dp-text-primary"
-                  @keyup.enter="search"
-                />
-              </div>
-              <button
-                class="flex-shrink-0 px-4 sm:px-5 py-3 bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt text-dp-text-on-dark rounded-xl hover:from-dp-surface-strong-alt hover:to-dp-surface-strong-hover transition-all shadow-lg flex items-center gap-2 font-medium cursor-pointer whitespace-nowrap"
-                @click="search"
-              >
-                <Search class="w-4 h-4" />
-                <span class="hidden sm:inline">검색</span>
-              </button>
-            </div>
-
-            <!-- Search Loading -->
-            <div v-if="searchLoading" class="flex justify-center py-10">
-              <div class="w-8 h-8 border-3 rounded-full animate-spin" :style="{ borderColor: 'var(--dp-border-secondary)', borderTopColor: 'var(--dp-accent)' }"></div>
-            </div>
-
-            <!-- Search Results -->
-            <div v-else-if="searchResult.length > 0">
-              <div class="space-y-2">
-                <div
-                  v-for="(member, index) in searchResult"
-                  :key="member.id ?? index"
-                  class="flex items-center justify-between p-4 rounded-xl hover-bg-light bg-dp-bg-secondary"
-                >
-                  <div class="flex items-center gap-3">
-                    <ProfileAvatar
-                      :member-id="member.id"
-                      :name="member.name"
-                      :has-profile-photo="member.hasProfilePhoto"
-                      :profile-photo-version="member.profilePhotoVersion"
-                      size="md"
-                    />
-                    <div>
-                      <p class="font-semibold text-dp-text-primary">{{ member.name }}</p>
-                      <p class="text-sm text-dp-text-secondary">{{ member.team ?? '팀 없음' }}</p>
-                    </div>
-                  </div>
-                  <button
-                    class="px-4 py-2 text-sm font-medium bg-dp-success text-dp-text-on-dark rounded-xl hover:bg-dp-success-hover transition shadow-sm cursor-pointer"
-                    @click="requestFriend(member)"
-                  >
-                    친구 요청
-                  </button>
-                </div>
-              </div>
-
-              <!-- Pagination -->
-              <div v-if="searchTotalPage > 1" class="flex justify-center items-center gap-2 mt-6">
-                <button
-                  class="p-2.5 rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed hover-bg-light cursor-pointer border-dp-border-primary"
-                  :disabled="searchPage === 0"
-                  @click="prevPage"
-                >
-                  <ChevronLeft class="w-4 h-4" />
-                </button>
-
-                <template v-for="i in searchTotalPage" :key="i">
-                  <button
-                    class="w-10 h-10 rounded-xl border font-medium hover-bg-light cursor-pointer"
-                    :class="(i - 1) === searchPage ? 'bg-dp-accent text-dp-text-on-dark border-dp-accent' : ''"
-                    :style="(i - 1) !== searchPage ? { borderColor: 'var(--dp-border-primary)' } : {}"
-                    @click="goToPage(i - 1)"
-                  >
-                    {{ i }}
-                  </button>
-                </template>
-
-                <button
-                  class="p-2.5 rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed hover-bg-light cursor-pointer border-dp-border-primary"
-                  :disabled="searchPage >= searchTotalPage - 1"
-                  @click="nextPage"
-                >
-                  <ChevronRight class="w-4 h-4" />
-                </button>
-              </div>
-
-              <p class="text-center text-sm mt-4 text-dp-text-secondary">
-                페이지 {{ searchPage + 1 }} / {{ searchTotalPage }} | 전체 결과: {{ searchTotalElements }}
-              </p>
-            </div>
-            <div v-else class="text-center py-12">
-              <Search class="w-12 h-12 mx-auto mb-3 text-dp-border-secondary" />
-              <p class="text-dp-text-secondary">검색어를 입력하고 검색해주세요.</p>
-            </div>
-          </div>
-
-          <!-- Footer -->
-          <div class="flex justify-end p-5 border-t bg-dp-bg-secondary border-dp-border-primary">
-            <button
-              class="px-5 py-2.5 rounded-xl font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-primary"
-              @click="closeSearchModal"
-            >
-              닫기
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <FriendSearchModal
+      :is-open="showSearchModal"
+      :keyword="searchKeyword"
+      :results="searchResult"
+      :current-page="searchPage"
+      :total-pages="searchTotalPage"
+      :total-elements="searchTotalElements"
+      :loading="searchLoading"
+      @close="closeSearchModal"
+      @update:keyword="searchKeyword = $event"
+      @search="search"
+      @request-friend="requestFriend"
+      @change-page="goToPage"
+    />
   </div>
 </template>

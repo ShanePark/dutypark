@@ -21,6 +21,7 @@ const props = withDefaults(defineProps<{
   backdropEvent?: ModalBackdropEvent
   overlayClass?: HTMLAttributes['class']
   panelClass?: HTMLAttributes['class']
+  panelStyle?: HTMLAttributes['style']
 }>(), {
   size: 'lg',
   height: 'default',
@@ -32,6 +33,7 @@ const props = withDefaults(defineProps<{
   backdropEvent: 'click',
   overlayClass: undefined,
   panelClass: undefined,
+  panelStyle: undefined,
 })
 
 const emit = defineEmits<{
@@ -85,6 +87,7 @@ function handleBackdrop(eventType: ModalBackdropEvent) {
     >
       <div
         :class="panelClasses"
+        :style="props.panelStyle"
         role="dialog"
         aria-modal="true"
       >

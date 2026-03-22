@@ -6,6 +6,7 @@ import { HelpCircle, X, ListTodo, Clock, CheckCircle2, Lightbulb, LayoutGrid, Pl
 import { todoApi } from '@/api/todo'
 import { friendApi } from '@/api/member'
 import { useSwal } from '@/composables/useSwal'
+import BaseModal from '@/components/common/BaseModal.vue'
 import KanbanColumn from '@/components/todo/KanbanColumn.vue'
 import KanbanCard from '@/components/todo/KanbanCard.vue'
 import TodoAddModal from '@/components/duty/TodoAddModal.vue'
@@ -665,89 +666,87 @@ onBeforeUnmount(() => {
       @back-to-list="handleBackToList"
     />
 
-    <!-- Help Modal -->
-    <Teleport to="body">
-      <Transition name="modal">
-        <div
-          v-if="isHelpModalOpen"
-          class="help-modal-overlay"
-          @click.self="isHelpModalOpen = false"
+    <BaseModal
+      :is-open="isHelpModalOpen"
+      size="lg"
+      height="default"
+      rounded
+      overlay-class="backdrop-blur-sm"
+      panel-class="border border-dp-border-primary"
+      :panel-style="{ backgroundColor: 'var(--dp-bg-card)' }"
+      @close="isHelpModalOpen = false"
+    >
+      <div class="modal-header">
+        <h2>할일 보드 사용법</h2>
+        <button
+          class="p-2 rounded-full hover-close-btn cursor-pointer text-dp-text-muted"
+          @click="isHelpModalOpen = false"
+          aria-label="닫기"
         >
-          <div class="help-modal">
-            <div class="help-modal-header">
-              <h2 class="help-modal-title">할일 보드 사용법</h2>
-              <button
-                class="help-modal-close"
-                @click="isHelpModalOpen = false"
-                aria-label="닫기"
-              >
-                <X />
-              </button>
-            </div>
-            <div class="help-modal-content">
-              <section class="help-section">
-                <h3 class="help-section-title">
-                  <LayoutGrid class="help-section-icon" />
-                  칸반 보드란?
-                </h3>
-                <p class="help-section-text">
-                  할일을 <strong>할일</strong>, <strong>진행중</strong>, <strong>완료</strong> 세 단계로 나누어 관리하는 방식입니다.
-                  카드를 드래그하여 상태를 쉽게 변경할 수 있습니다.
-                </p>
-              </section>
+          <X class="w-5 h-5" />
+        </button>
+      </div>
+      <div class="modal-body-form-lg">
+        <section class="help-section">
+          <h3 class="help-section-title">
+            <LayoutGrid class="help-section-icon" />
+            칸반 보드란?
+          </h3>
+          <p class="help-section-text">
+            할일을 <strong>할일</strong>, <strong>진행중</strong>, <strong>완료</strong> 세 단계로 나누어 관리하는 방식입니다.
+            카드를 드래그하여 상태를 쉽게 변경할 수 있습니다.
+          </p>
+        </section>
 
-              <section class="help-section">
-                <h3 class="help-section-title">
-                  <ListTodo class="help-section-icon" />
-                  할일 (TODO)
-                </h3>
-                <p class="help-section-text">
-                  아직 시작하지 않은 할일들이 여기에 표시됩니다.
-                  <strong>+</strong> 버튼을 눌러 새로운 할일을 추가하세요.
-                </p>
-              </section>
+        <section class="help-section">
+          <h3 class="help-section-title">
+            <ListTodo class="help-section-icon" />
+            할일 (TODO)
+          </h3>
+          <p class="help-section-text">
+            아직 시작하지 않은 할일들이 여기에 표시됩니다.
+            <strong>+</strong> 버튼을 눌러 새로운 할일을 추가하세요.
+          </p>
+        </section>
 
-              <section class="help-section">
-                <h3 class="help-section-title">
-                  <Clock class="help-section-icon" />
-                  진행중 (IN PROGRESS)
-                </h3>
-                <p class="help-section-text">
-                  현재 작업 중인 할일들입니다.
-                  <strong class="help-highlight">진행중 상태의 할일은 내 달력에 표시</strong>되어
-                  오늘 집중해야 할 일을 한눈에 확인할 수 있습니다.
-                </p>
-              </section>
+        <section class="help-section">
+          <h3 class="help-section-title">
+            <Clock class="help-section-icon" />
+            진행중 (IN PROGRESS)
+          </h3>
+          <p class="help-section-text">
+            현재 작업 중인 할일들입니다.
+            <strong class="help-highlight">진행중 상태의 할일은 내 달력에 표시</strong>되어
+            오늘 집중해야 할 일을 한눈에 확인할 수 있습니다.
+          </p>
+        </section>
 
-              <section class="help-section">
-                <h3 class="help-section-title">
-                  <CheckCircle2 class="help-section-icon" />
-                  완료 (DONE)
-                </h3>
-                <p class="help-section-text">
-                  완료된 할일들이 여기에 보관됩니다.
-                  필요하면 다시 진행중이나 할일로 되돌릴 수 있습니다.
-                </p>
-              </section>
+        <section class="help-section">
+          <h3 class="help-section-title">
+            <CheckCircle2 class="help-section-icon" />
+            완료 (DONE)
+          </h3>
+          <p class="help-section-text">
+            완료된 할일들이 여기에 보관됩니다.
+            필요하면 다시 진행중이나 할일로 되돌릴 수 있습니다.
+          </p>
+        </section>
 
-              <section class="help-section">
-                <h3 class="help-section-title">
-                  <Lightbulb class="help-section-icon" />
-                  사용 팁
-                </h3>
-                <ul class="help-tips-list">
-                  <li>카드를 <strong>드래그&드롭</strong>하여 상태를 변경하세요</li>
-                  <li>같은 컬럼 내에서도 드래그로 <strong>순서를 조정</strong>할 수 있습니다</li>
-                  <li>카드를 클릭하면 <strong>상세 내용</strong>을 확인하고 수정할 수 있습니다</li>
-                  <li><strong>마감일</strong>을 설정하면 기한 관리가 편리합니다</li>
-                  <li>필요한 경우 <strong>파일을 첨부</strong>할 수도 있습니다</li>
-                </ul>
-              </section>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
+        <section class="help-section">
+          <h3 class="help-section-title">
+            <Lightbulb class="help-section-icon" />
+            사용 팁
+          </h3>
+          <ul class="help-tips-list">
+            <li>카드를 <strong>드래그&드롭</strong>하여 상태를 변경하세요</li>
+            <li>같은 컬럼 내에서도 드래그로 <strong>순서를 조정</strong>할 수 있습니다</li>
+            <li>카드를 클릭하면 <strong>상세 내용</strong>을 확인하고 수정할 수 있습니다</li>
+            <li><strong>마감일</strong>을 설정하면 기한 관리가 편리합니다</li>
+            <li>필요한 경우 <strong>파일을 첨부</strong>할 수도 있습니다</li>
+          </ul>
+        </section>
+      </div>
+    </BaseModal>
   </div>
 </template>
 
@@ -1065,75 +1064,6 @@ onBeforeUnmount(() => {
   opacity: 1;
 }
 
-/* Help Modal Styles */
-.help-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: var(--dp-overlay-scrim);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-  z-index: 1000;
-}
-
-.help-modal {
-  background-color: var(--dp-bg-card);
-  border-radius: 1rem;
-  max-width: 500px;
-  width: 100%;
-  max-height: 85vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  box-shadow: var(--dp-shadow-lg);
-}
-
-.help-modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--dp-border-primary);
-  flex-shrink: 0;
-}
-
-.help-modal-title {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: var(--dp-text-primary);
-}
-
-.help-modal-close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  border: none;
-  background-color: transparent;
-  color: var(--dp-text-muted);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.help-modal-close:hover {
-  background-color: var(--dp-bg-tertiary);
-  color: var(--dp-text-secondary);
-}
-
-.help-modal-close svg {
-  width: 1.25rem;
-  height: 1.25rem;
-}
-
-.help-modal-content {
-  padding: 1.25rem;
-  overflow-y: auto;
-  flex: 1;
-}
-
 .help-section {
   margin-bottom: 1.25rem;
 }
@@ -1205,27 +1135,6 @@ onBeforeUnmount(() => {
 .help-tips-list li strong {
   color: var(--dp-text-primary);
   font-weight: 600;
-}
-
-/* Modal Transition */
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.2s ease;
-}
-
-.modal-enter-active .help-modal,
-.modal-leave-active .help-modal {
-  transition: transform 0.2s ease;
-}
-
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
-
-.modal-enter-from .help-modal,
-.modal-leave-to .help-modal {
-  transform: scale(0.95);
 }
 </style>
 

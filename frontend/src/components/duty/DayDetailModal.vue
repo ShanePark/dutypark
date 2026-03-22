@@ -368,50 +368,49 @@ function handleUploadError(message: string) {
     z-index="detail"
     @close="emit('close')"
   >
-        <!-- Header -->
-        <div class="day-detail-modal-header px-3 py-2.5 sm:p-4 flex-shrink-0 bg-dp-bg-tertiary border-b border-dp-border-primary">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span v-if="isCreateMode" class="px-2 py-0.5 bg-dp-success-soft text-dp-success text-xs font-medium rounded">일정 추가</span>
-              <span v-else-if="isEditMode" class="px-2 py-0.5 bg-dp-accent-soft text-dp-accent-hover text-xs font-medium rounded">일정 수정</span>
-              <h2 class="text-base sm:text-lg font-bold text-dp-text-primary">{{ formattedDate }}</h2>
-            </div>
-            <button @click="emit('close')" class="p-2 rounded-full flex-shrink-0 hover-close-btn cursor-pointer">
-              <X class="w-6 h-6 text-dp-text-primary" />
-            </button>
+    <div class="day-detail-modal-header modal-header">
+      <div class="w-full">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2 min-w-0">
+            <span v-if="isCreateMode" class="px-2 py-0.5 bg-dp-success-soft text-dp-success text-xs font-medium rounded">일정 추가</span>
+            <span v-else-if="isEditMode" class="px-2 py-0.5 bg-dp-accent-soft text-dp-accent-hover text-xs font-medium rounded">일정 수정</span>
+            <h2>{{ formattedDate }}</h2>
           </div>
-          <!-- Duty Type Selection (my calendar only, hidden in add/edit mode) -->
-          <div v-if="!isCreateMode && !isEditMode && canEdit && dutyTypes.length > 0" class="flex flex-wrap gap-1.5 mt-2">
-            <button
-              v-for="dutyType in dutyTypes"
-              :key="dutyType.id ?? 'off'"
-              @click="handleDutyTypeChange(dutyType.id, dutyType.name)"
-              class="duty-type-btn px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 cursor-pointer"
-              :class="{
-                'duty-type-btn-selected': selectedDutyType === dutyType.name,
-              }"
-              :style="{
-                color: 'var(--dp-text-primary)',
-                backgroundColor: selectedDutyType === dutyType.name && dutyType.color ? dutyType.color + '30' : undefined
-              }"
-            >
-              <span
-                class="inline-block w-3 h-3 rounded border"
-                :style="{ backgroundColor: dutyType.color || 'var(--dp-duty-fallback)', borderColor: 'var(--dp-border-secondary)' }"
-              ></span>
-              {{ dutyType.name }}
-            </button>
-          </div>
-          <!-- Current Duty (other's calendar only) -->
-          <div v-else-if="duty && !canEdit" class="mt-2">
-            <span
-              class="px-2.5 py-1 rounded-md text-xs font-medium text-dp-text-on-dark"
-              :style="{ backgroundColor: duty.dutyColor || 'var(--dp-duty-fallback)' }"
-            >
-              {{ duty.dutyType || 'OFF' }}
-            </span>
-          </div>
+          <button @click="emit('close')" class="p-2 rounded-full flex-shrink-0 hover-close-btn cursor-pointer">
+            <X class="w-6 h-6 text-dp-text-primary" />
+          </button>
         </div>
+        <div v-if="!isCreateMode && !isEditMode && canEdit && dutyTypes.length > 0" class="flex flex-wrap gap-1.5 mt-2">
+          <button
+            v-for="dutyType in dutyTypes"
+            :key="dutyType.id ?? 'off'"
+            @click="handleDutyTypeChange(dutyType.id, dutyType.name)"
+            class="duty-type-btn px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 cursor-pointer"
+            :class="{
+              'duty-type-btn-selected': selectedDutyType === dutyType.name,
+            }"
+            :style="{
+              color: 'var(--dp-text-primary)',
+              backgroundColor: selectedDutyType === dutyType.name && dutyType.color ? dutyType.color + '30' : undefined
+            }"
+          >
+            <span
+              class="inline-block w-3 h-3 rounded border"
+              :style="{ backgroundColor: dutyType.color || 'var(--dp-duty-fallback)', borderColor: 'var(--dp-border-secondary)' }"
+            ></span>
+            {{ dutyType.name }}
+          </button>
+        </div>
+        <div v-else-if="duty && !canEdit" class="mt-2">
+          <span
+            class="px-2.5 py-1 rounded-md text-xs font-medium text-dp-text-on-dark"
+            :style="{ backgroundColor: duty.dutyColor || 'var(--dp-duty-fallback)' }"
+          >
+            {{ duty.dutyType || 'OFF' }}
+          </span>
+        </div>
+      </div>
+    </div>
 
         <!-- Content -->
         <div ref="contentRef" class="day-detail-modal-content px-3 py-2.5 sm:p-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
@@ -446,9 +445,7 @@ function handleUploadError(message: string) {
         </div>
 
         <!-- Footer (sticky at bottom) -->
-        <div
-          class="day-detail-modal-footer modal-footer-safe px-3 py-2.5 sm:p-4 flex-shrink-0 border-t border-dp-border-primary"
-        >
+        <div class="day-detail-modal-footer modal-footer-safe px-3 py-2.5 sm:p-4 flex-shrink-0 border-t border-dp-border-primary">
           <!-- List mode: Add schedule button -->
           <div v-if="!isCreateMode && !isEditMode && canEdit" class="flex justify-end">
             <button

@@ -154,113 +154,111 @@ function onUploadError(message: string) {
     height="default"
     @close="handleClose"
   >
-        <!-- Header -->
-        <div class="modal-header">
-          <h2>할 일 추가</h2>
-          <button @click="handleClose" class="p-2 hover-bg-light rounded-full transition cursor-pointer">
-            <X class="w-6 h-6 text-dp-text-primary" />
-          </button>
-        </div>
+    <!-- Header -->
+    <div class="modal-header">
+      <h2>할 일 추가</h2>
+      <button @click="handleClose" class="p-2 rounded-full hover-close-btn cursor-pointer">
+        <X class="w-6 h-6 text-dp-text-primary" />
+      </button>
+    </div>
 
-        <!-- Content -->
-        <div class="p-3 sm:p-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
-          <div class="space-y-4">
-            <!-- Status Selection -->
-            <div>
-              <label class="block text-sm font-medium mb-2 text-dp-text-secondary">상태</label>
-              <div class="grid grid-cols-3 gap-2">
-                <button
-                  v-for="option in statusOptions"
-                  :key="option.value"
-                  type="button"
-                  @click="status = option.value"
-                  class="status-card cursor-pointer"
-                  :class="[option.colorClass, { 'status-card-selected': status === option.value }]"
-                >
-                  <component :is="option.icon" class="w-4 h-4" />
-                  <span class="text-xs font-medium">{{ option.label }}</span>
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
-                제목 <span class="text-dp-danger">*</span>
-                <CharacterCounter :current="title.length" :max="50" />
-              </label>
-              <input
-                v-model="title"
-                type="text"
-                maxlength="50"
-                class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
-                placeholder="할 일 제목을 입력하세요"
-              />
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium mb-1 text-dp-text-secondary">내용</label>
-              <textarea
-                v-model="content"
-                rows="6"
-                class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
-                placeholder="상세 내용을 입력하세요"
-              ></textarea>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
-                <Calendar class="w-4 h-4 inline-block mr-1 -mt-0.5" />
-                마감일
-              </label>
-              <input
-                v-model="dueDate"
-                type="date"
-                class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
-              />
-            </div>
-
-            <div v-if="props.friends.length > 0">
-              <label class="block text-sm font-medium mb-2 text-dp-text-secondary">친구 태그</label>
-              <FriendTagSelector
-                v-model="tagFriendIds"
-                :friends="props.friends"
-                :selected-summaries="selectedTagSummaries"
-              />
-            </div>
-
-            <!-- Attachment Upload -->
-            <div>
-              <label class="block text-sm font-medium mb-1 text-dp-text-secondary">첨부파일</label>
-              <FileUploader
-                v-if="isOpen"
-                ref="fileUploaderRef"
-                context-type="TODO"
-                @session-created="onSessionCreated"
-                @update:attachments="onAttachmentsUpdate"
-                @upload-start="onUploadStart"
-                @upload-complete="onUploadComplete"
-                @error="onUploadError"
-              />
-            </div>
-          </div>
-        </div>
-
-        <!-- Footer (sticky at bottom) -->
-        <div class="modal-footer-safe p-3 sm:p-4 flex-shrink-0 flex flex-row gap-2 justify-end border-t border-dp-border-primary">
+    <!-- Content -->
+    <div class="modal-body-form-compact">
+      <!-- Status Selection -->
+      <div>
+        <label class="block text-sm font-medium mb-2 text-dp-text-secondary">상태</label>
+        <div class="grid grid-cols-3 gap-2">
           <button
-            @click="handleClose"
-            class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
+            v-for="option in statusOptions"
+            :key="option.value"
+            type="button"
+            @click="status = option.value"
+            class="status-card cursor-pointer"
+            :class="[option.colorClass, { 'status-card-selected': status === option.value }]"
           >
-            취소
-          </button>
-          <button
-            @click="handleSave"
-            :disabled="!title.trim() || isUploading"
-            class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-          >
-            {{ isUploading ? '업로드 중...' : '저장' }}
+            <component :is="option.icon" class="w-4 h-4" />
+            <span class="text-xs font-medium">{{ option.label }}</span>
           </button>
         </div>
+      </div>
+
+      <div>
+        <label class="form-label">
+          제목 <span class="text-dp-danger">*</span>
+          <CharacterCounter :current="title.length" :max="50" />
+        </label>
+        <input
+          v-model="title"
+          type="text"
+          maxlength="50"
+          class="form-control"
+          placeholder="할 일 제목을 입력하세요"
+        />
+      </div>
+
+      <div>
+        <label class="form-label">내용</label>
+        <textarea
+          v-model="content"
+          rows="6"
+          class="form-control"
+          placeholder="상세 내용을 입력하세요"
+        ></textarea>
+      </div>
+
+      <div>
+        <label class="form-label">
+          <Calendar class="w-4 h-4 inline-block mr-1 -mt-0.5" />
+          마감일
+        </label>
+        <input
+          v-model="dueDate"
+          type="date"
+          class="form-control"
+        />
+      </div>
+
+      <div v-if="props.friends.length > 0">
+        <label class="block text-sm font-medium mb-2 text-dp-text-secondary">친구 태그</label>
+        <FriendTagSelector
+          v-model="tagFriendIds"
+          :friends="props.friends"
+          :selected-summaries="selectedTagSummaries"
+        />
+      </div>
+
+      <!-- Attachment Upload -->
+      <div>
+        <label class="form-label">첨부파일</label>
+        <FileUploader
+          v-if="isOpen"
+          ref="fileUploaderRef"
+          context-type="TODO"
+          @session-created="onSessionCreated"
+          @update:attachments="onAttachmentsUpdate"
+          @upload-start="onUploadStart"
+          @upload-complete="onUploadComplete"
+          @error="onUploadError"
+        />
+      </div>
+    </div>
+
+    <!-- Footer (sticky at bottom) -->
+    <div class="modal-actions-compact modal-actions-end modal-footer-safe">
+      <button
+        @click="handleClose"
+        class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
+      >
+        취소
+      </button>
+      <button
+        @click="handleSave"
+        :disabled="!title.trim() || isUploading"
+        class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+      >
+        {{ isUploading ? '업로드 중...' : '저장' }}
+      </button>
+    </div>
   </BaseModal>
 </template>
 

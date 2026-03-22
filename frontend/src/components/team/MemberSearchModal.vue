@@ -109,114 +109,111 @@ async function addMember(member: MemberDto) {
     height="fit"
     @close="close"
   >
-      <div class="flex items-center justify-between p-4 border-b border-dp-border-primary">
-        <h3 class="text-lg font-bold text-dp-text-primary">멤버 추가</h3>
+    <div class="modal-header">
+      <h2>멤버 추가</h2>
+      <button
+        @click="close"
+        class="p-1.5 rounded-full hover-close-btn cursor-pointer"
+      >
+        <X class="w-5 h-5" />
+      </button>
+    </div>
+
+    <div class="modal-body-form">
+      <div class="flex gap-2">
+        <input
+          v-model="searchKeyword"
+          type="text"
+          placeholder="이름 또는 이메일로 검색"
+          class="form-control-neutral flex-1"
+          @keyup.enter="searchMembers"
+        />
         <button
-          @click="close"
-          class="p-1.5 rounded-full hover-close-btn cursor-pointer"
+          @click="searchMembers"
+          class="px-4 py-2 text-dp-text-on-dark rounded-lg hover:bg-dp-surface-strong-hover transition bg-dp-surface-strong cursor-pointer flex items-center justify-center"
         >
-          <X class="w-5 h-5" />
+          <Search class="w-5 h-5" />
         </button>
       </div>
 
-      <div class="p-4 overflow-y-auto flex-1 min-h-0">
-        <!-- Search Input -->
-        <div class="flex gap-2 mb-4">
-          <input
-            v-model="searchKeyword"
-            type="text"
-            placeholder="이름 또는 이메일로 검색"
-            class="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent bg-dp-bg-input border-dp-border-input text-dp-text-primary"
-            @keyup.enter="searchMembers"
-          />
+      <div v-if="searchLoading" class="flex items-center justify-center py-8">
+        <Loader2 class="w-6 h-6 animate-spin text-dp-accent" />
+      </div>
+      <div v-else-if="searchResult.length > 0" class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-dp-bg-secondary">
+            <tr>
+              <th class="px-3 py-2 text-left text-sm text-dp-text-secondary">#</th>
+              <th class="px-3 py-2 text-left text-sm text-dp-text-secondary">이름</th>
+              <th class="px-3 py-2 text-left text-sm text-dp-text-secondary">이메일</th>
+              <th class="px-3 py-2 text-center text-sm text-dp-text-secondary">추가</th>
+            </tr>
+          </thead>
+          <tbody class="border-dp-border-primary">
+            <tr v-for="(member, index) in searchResult" :key="member.id ?? index" class="hover-bg-light border-b border-dp-border-primary">
+              <td class="px-3 py-2 text-sm text-dp-text-muted">
+                {{ currentPage * pageSize + index + 1 }}
+              </td>
+              <td class="px-3 py-2 text-sm font-medium text-dp-text-primary">{{ member.name }}</td>
+              <td class="px-3 py-2 text-sm text-dp-text-muted">{{ member.email }}</td>
+              <td class="px-3 py-2 text-center">
+                <button
+                  @click="addMember(member)"
+                  :disabled="!!member.teamId || saving"
+                  class="px-3 py-1 bg-dp-accent text-dp-text-on-dark text-sm rounded hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {{ member.teamId ? '소속 있음' : '추가' }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div v-else class="text-center py-4 text-dp-text-muted">
+        검색 결과가 없습니다.
+      </div>
+
+      <div v-if="searchResult.length > 0" class="space-y-2">
+        <div class="text-sm text-dp-text-muted">
+          Page {{ currentPage + 1 }} of {{ totalPages }} | Total: {{ totalElements }}
+        </div>
+        <div class="flex flex-wrap items-center gap-1">
           <button
-            @click="searchMembers"
-            class="px-4 py-2 text-dp-text-on-dark rounded-lg hover:bg-dp-surface-strong-hover transition bg-dp-surface-strong"
+            @click="prevPage"
+            :disabled="currentPage === 0"
+            class="px-2 sm:px-3 py-1 border rounded hover-bg-light transition disabled:opacity-50 border-dp-border-secondary cursor-pointer"
           >
-          <Search class="w-5 h-5" />
+            <ChevronLeft class="w-4 h-4" />
+          </button>
+          <button
+            v-for="i in totalPages"
+            :key="i"
+            @click="goToPage(i - 1)"
+            class="px-2 sm:px-3 py-1 text-sm border rounded transition cursor-pointer"
+            :class="i - 1 === currentPage ? 'bg-dp-accent text-dp-text-on-dark border-dp-accent-border' : ''"
+            :style="i - 1 !== currentPage ? { borderColor: 'var(--dp-border-secondary)' } : {}"
+          >
+            {{ i }}
+          </button>
+          <button
+            @click="nextPage"
+            :disabled="currentPage >= totalPages - 1"
+            class="px-2 sm:px-3 py-1 border rounded hover-bg-light transition disabled:opacity-50 cursor-pointer"
+            :style="{ borderColor: 'var(--dp-border-secondary)' }"
+          >
+            <ChevronRight class="w-4 h-4" />
           </button>
         </div>
-
-        <!-- Search Results -->
-        <div v-if="searchLoading" class="flex items-center justify-center py-8">
-          <Loader2 class="w-6 h-6 animate-spin text-dp-accent" />
-        </div>
-        <div v-else-if="searchResult.length > 0" class="overflow-x-auto">
-          <table class="w-full">
-            <thead class="bg-dp-bg-secondary">
-              <tr>
-                <th class="px-3 py-2 text-left text-sm text-dp-text-secondary">#</th>
-                <th class="px-3 py-2 text-left text-sm text-dp-text-secondary">이름</th>
-                <th class="px-3 py-2 text-left text-sm text-dp-text-secondary">이메일</th>
-                <th class="px-3 py-2 text-center text-sm text-dp-text-secondary">추가</th>
-              </tr>
-            </thead>
-            <tbody class="border-dp-border-primary">
-              <tr v-for="(member, index) in searchResult" :key="member.id ?? index" class="hover-bg-light border-b border-dp-border-primary">
-                <td class="px-3 py-2 text-sm text-dp-text-muted">
-                  {{ currentPage * pageSize + index + 1 }}
-                </td>
-                <td class="px-3 py-2 text-sm font-medium text-dp-text-primary">{{ member.name }}</td>
-                <td class="px-3 py-2 text-sm text-dp-text-muted">{{ member.email }}</td>
-                <td class="px-3 py-2 text-center">
-                  <button
-                    @click="addMember(member)"
-                    :disabled="!!member.teamId || saving"
-                    class="px-3 py-1 bg-dp-accent text-dp-text-on-dark text-sm rounded hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {{ member.teamId ? '소속 있음' : '추가' }}
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div v-else class="text-center py-4 text-dp-text-muted">
-          검색 결과가 없습니다.
-        </div>
-
-        <!-- Pagination -->
-        <div v-if="searchResult.length > 0" class="mt-4">
-          <div class="text-sm mb-2 text-dp-text-muted">
-            Page {{ currentPage + 1 }} of {{ totalPages }} | Total: {{ totalElements }}
-          </div>
-          <div class="flex flex-wrap items-center gap-1">
-            <button
-              @click="prevPage"
-              :disabled="currentPage === 0"
-              class="px-2 sm:px-3 py-1 border rounded hover-bg-light transition disabled:opacity-50 border-dp-border-secondary"
-            >
-              <ChevronLeft class="w-4 h-4" />
-            </button>
-            <button
-              v-for="i in totalPages"
-              :key="i"
-              @click="goToPage(i - 1)"
-              class="px-2 sm:px-3 py-1 text-sm border rounded transition"
-              :class="i - 1 === currentPage ? 'bg-dp-accent text-dp-text-on-dark border-dp-accent-border' : ''"
-              :style="i - 1 !== currentPage ? { borderColor: 'var(--dp-border-secondary)' } : {}"
-            >
-              {{ i }}
-            </button>
-            <button
-              @click="nextPage"
-              :disabled="currentPage >= totalPages - 1"
-              class="px-2 sm:px-3 py-1 border rounded hover-bg-light transition disabled:opacity-50"
-              :style="{ borderColor: 'var(--dp-border-secondary)' }"
-            >
-              <ChevronRight class="w-4 h-4" />
-            </button>
-          </div>
-        </div>
       </div>
+    </div>
 
-      <div class="modal-footer-safe flex justify-end p-4 border-t border-dp-border-primary">
-        <button
-          @click="close"
-          class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"
-        >
-          닫기
-        </button>
-      </div>
+    <div class="modal-actions modal-actions-end modal-footer-safe">
+      <button
+        @click="close"
+        class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"
+      >
+        닫기
+      </button>
+    </div>
   </BaseModal>
 </template>

@@ -168,142 +168,122 @@ function toNormalizedAttachments(attachments: Schedule['attachments']): Normaliz
     @close="emit('close')"
   >
     <template v-if="schedule">
-        <!-- Header -->
-        <div
-          class="p-3 sm:p-4 flex-shrink-0 bg-dp-bg-tertiary border-b border-dp-border-primary"
-        >
-          <div class="flex items-start justify-between gap-3">
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 flex-wrap">
-                <Lock
-                  v-if="schedule.visibility === 'PRIVATE'"
-                  class="w-4 h-4 flex-shrink-0 text-dp-text-muted"
-                />
-                <h2
-                  class="text-base sm:text-lg font-bold break-words text-dp-text-primary"
-                >
-                  {{ schedule.content }}
-                </h2>
-                <component
-                  v-if="schedule.visibility !== 'PRIVATE'"
-                  :is="getVisibilityIcon(schedule.visibility)"
-                  class="w-4 h-4 flex-shrink-0 text-dp-text-muted"
-                  :title="getVisibilityLabel(schedule.visibility)"
-                />
-              </div>
-              <!-- Multi-day indicator -->
-              <div
-                v-if="schedule.totalDays && schedule.totalDays > 1"
-                class="text-xs mt-1"
-                :style="{ color: 'var(--dp-text-muted)' }"
-              >
-                {{ schedule.daysFromStart }}/{{ schedule.totalDays }}일차
-              </div>
-            </div>
-            <button
-              @click="emit('close')"
-              class="p-2 rounded-full flex-shrink-0 hover-close-btn cursor-pointer"
-            >
-              <X class="w-5 h-5 text-dp-text-primary" />
-            </button>
+      <div class="modal-header items-start gap-3">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <Lock
+              v-if="schedule.visibility === 'PRIVATE'"
+              class="w-4 h-4 flex-shrink-0 text-dp-text-muted"
+            />
+            <h2 class="break-words">
+              {{ schedule.content }}
+            </h2>
+            <component
+              v-if="schedule.visibility !== 'PRIVATE'"
+              :is="getVisibilityIcon(schedule.visibility)"
+              class="w-4 h-4 flex-shrink-0 text-dp-text-muted"
+              :title="getVisibilityLabel(schedule.visibility)"
+            />
           </div>
-        </div>
-
-        <!-- Content -->
-        <div class="p-3 sm:p-4 overflow-y-auto flex-1 min-h-0 space-y-4">
-          <!-- Date/Time -->
-          <div class="flex items-start gap-3">
-            <div
-              class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-dp-bg-tertiary"
-            >
-              <Calendar class="w-4 h-4 text-dp-text-muted" />
-            </div>
-            <div class="flex-1 pt-1">
-              <div class="text-sm text-dp-text-primary">
-                {{ formattedDateTime }}
-              </div>
-            </div>
-          </div>
-
-          <!-- Owner (for tagged schedules) -->
-          <div v-if="taggedByDisplay" class="flex items-start gap-3">
-            <div
-              class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-dp-bg-tertiary"
-            >
-              <User class="w-4 h-4 text-dp-text-muted" />
-            </div>
-            <div class="flex-1 pt-0.5">
-              <MemberTagChips :members="[taggedByDisplay]" density="compact" />
-            </div>
-          </div>
-
-          <!-- Tags -->
-          <div v-if="displayTags.length > 0" class="flex items-start gap-3">
-            <div
-              class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-dp-bg-tertiary"
-            >
-              <Users class="w-4 h-4 text-dp-text-muted" />
-            </div>
-            <div class="flex-1 pt-0.5">
-              <MemberTagChips :members="displayTags" density="compact" />
-            </div>
-          </div>
-
-          <!-- Description -->
-          <div v-if="schedule.description" class="flex items-start gap-3">
-            <div
-              class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-dp-bg-tertiary"
-            >
-              <FileText class="w-4 h-4 text-dp-text-muted" />
-            </div>
-            <div class="flex-1 pt-1">
-              <div class="text-xs mb-1 text-dp-text-muted">설명</div>
-              <div
-                class="text-sm whitespace-pre-wrap text-dp-text-primary"
-              >
-                {{ schedule.description }}
-              </div>
-            </div>
-          </div>
-
-          <!-- Attachments -->
-          <div v-if="schedule.attachments?.length" class="flex items-start gap-3">
-            <div
-              class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-dp-bg-tertiary"
-            >
-              <Paperclip class="w-4 h-4 text-dp-text-muted" />
-            </div>
-            <div class="flex-1 pt-1">
-              <div class="text-xs mb-2 text-dp-text-muted">
-                첨부파일 ({{ schedule.attachments.length }})
-              </div>
-              <AttachmentGrid
-                :attachments="toNormalizedAttachments(schedule.attachments)"
-                :columns="4"
-              />
-            </div>
-          </div>
-
-          <!-- Empty state when no extra info -->
           <div
-            v-if="!schedule.isTagged && displayTags.length === 0 && !schedule.description && !schedule.attachments?.length"
-            class="text-center py-4 text-dp-text-muted"
+            v-if="schedule.totalDays && schedule.totalDays > 1"
+            class="text-xs mt-1"
+            :style="{ color: 'var(--dp-text-muted)' }"
           >
-            추가 정보가 없습니다.
+            {{ schedule.daysFromStart }}/{{ schedule.totalDays }}일차
+          </div>
+        </div>
+        <button
+          @click="emit('close')"
+          class="p-2 rounded-full flex-shrink-0 hover-close-btn cursor-pointer"
+        >
+          <X class="w-5 h-5 text-dp-text-primary" />
+        </button>
+      </div>
+
+      <div class="modal-body-form-compact">
+        <div class="flex items-start gap-3">
+          <div
+            class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-dp-bg-tertiary"
+          >
+            <Calendar class="w-4 h-4 text-dp-text-muted" />
+          </div>
+          <div class="flex-1 pt-1">
+            <div class="text-sm text-dp-text-primary">
+              {{ formattedDateTime }}
+            </div>
           </div>
         </div>
 
-        <!-- Footer -->
-        <div
-          class="modal-footer-safe p-3 sm:p-4 flex-shrink-0 border-t border-dp-border-primary"
-        >
-          <button
-            @click="emit('close')"
-            class="w-full px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
+        <div v-if="taggedByDisplay" class="flex items-start gap-3">
+          <div
+            class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-dp-bg-tertiary"
           >
-            닫기
-          </button>
+            <User class="w-4 h-4 text-dp-text-muted" />
+          </div>
+          <div class="flex-1 pt-0.5">
+            <MemberTagChips :members="[taggedByDisplay]" density="compact" />
+          </div>
         </div>
+
+        <div v-if="displayTags.length > 0" class="flex items-start gap-3">
+          <div
+            class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-dp-bg-tertiary"
+          >
+            <Users class="w-4 h-4 text-dp-text-muted" />
+          </div>
+          <div class="flex-1 pt-0.5">
+            <MemberTagChips :members="displayTags" density="compact" />
+          </div>
+        </div>
+
+        <div v-if="schedule.description" class="flex items-start gap-3">
+          <div
+            class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-dp-bg-tertiary"
+          >
+            <FileText class="w-4 h-4 text-dp-text-muted" />
+          </div>
+          <div class="flex-1 pt-1">
+            <div class="text-xs mb-1 text-dp-text-muted">설명</div>
+            <div class="text-sm whitespace-pre-wrap text-dp-text-primary">
+              {{ schedule.description }}
+            </div>
+          </div>
+        </div>
+
+        <div v-if="schedule.attachments?.length" class="flex items-start gap-3">
+          <div
+            class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-dp-bg-tertiary"
+          >
+            <Paperclip class="w-4 h-4 text-dp-text-muted" />
+          </div>
+          <div class="flex-1 pt-1">
+            <div class="text-xs mb-2 text-dp-text-muted">
+              첨부파일 ({{ schedule.attachments.length }})
+            </div>
+            <AttachmentGrid
+              :attachments="toNormalizedAttachments(schedule.attachments)"
+              :columns="4"
+            />
+          </div>
+        </div>
+
+        <div
+          v-if="!schedule.isTagged && displayTags.length === 0 && !schedule.description && !schedule.attachments?.length"
+          class="text-center py-4 text-dp-text-muted"
+        >
+          추가 정보가 없습니다.
+        </div>
+      </div>
+
+      <div class="modal-actions modal-actions-center modal-footer-safe">
+        <button
+          @click="emit('close')"
+          class="w-full px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
+        >
+          닫기
+        </button>
+      </div>
     </template>
   </BaseModal>
 </template>

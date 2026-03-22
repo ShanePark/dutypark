@@ -84,115 +84,115 @@ const isEditMode = props.dday !== null && props.dday !== undefined
     height="default"
     @close="handleClose"
   >
-        <!-- Header -->
-        <div class="modal-header">
-          <h2>{{ dday ? '디데이 수정' : '디데이 추가' }}</h2>
-          <button @click="handleClose" class="p-2 rounded-full transition hover-bg-light cursor-pointer">
-            <X class="w-6 h-6 text-dp-text-primary" />
-          </button>
+    <!-- Header -->
+    <div class="modal-header">
+      <h2>{{ dday ? '디데이 수정' : '디데이 추가' }}</h2>
+      <button @click="handleClose" class="p-2 rounded-full hover-close-btn cursor-pointer">
+        <X class="w-6 h-6 text-dp-text-primary" />
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div class="modal-body-form-compact">
+      <div>
+        <label class="form-label">
+          제목 <span class="text-dp-danger">*</span>
+          <CharacterCounter :current="title.length" :max="30" />
+        </label>
+        <input
+          v-model="title"
+          type="text"
+          maxlength="30"
+          class="form-control"
+          placeholder="디데이 제목을 입력하세요"
+        />
+      </div>
+
+      <div>
+        <label class="form-label">
+          날짜 <span class="text-dp-danger">*</span>
+        </label>
+        <input
+          v-model="date"
+          type="date"
+          class="form-control"
+        />
+      </div>
+
+      <!-- Quick Date Buttons -->
+      <div class="flex justify-center gap-2">
+        <button
+          @click="addDays(-7)"
+          class="date-adjust-btn flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
+        >
+          <Minus class="w-3 h-3" />
+          7일
+        </button>
+        <button
+          @click="addDays(-1)"
+          class="date-adjust-btn flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
+        >
+          <Minus class="w-3 h-3" />
+          1일
+        </button>
+        <button
+          @click="resetToToday"
+          class="date-adjust-btn date-adjust-btn--today flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
+        >
+          <RotateCcw class="w-3 h-3" />
+          오늘
+        </button>
+        <button
+          @click="addDays(1)"
+          class="date-adjust-btn flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
+        >
+          <Plus class="w-3 h-3" />
+          1일
+        </button>
+        <button
+          @click="addDays(7)"
+          class="date-adjust-btn flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
+        >
+          <Plus class="w-3 h-3" />
+          7일
+        </button>
+      </div>
+
+      <!-- Privacy Toggle -->
+      <div class="flex items-center justify-between p-3 rounded-lg bg-dp-bg-secondary">
+        <div class="flex items-center gap-2">
+          <component :is="isPrivate ? Lock : Unlock" class="w-5 h-5 text-dp-text-secondary" />
+          <span class="text-sm text-dp-text-primary">비공개</span>
         </div>
+        <button
+          @click="isPrivate = !isPrivate"
+          class="relative inline-flex h-6 w-11 items-center rounded-full transition cursor-pointer"
+          :class="isPrivate ? 'bg-dp-accent' : 'bg-dp-border-secondary'"
+        >
+          <span
+            class="inline-block h-4 w-4 transform rounded-full bg-dp-bg-primary transition"
+            :class="isPrivate ? 'translate-x-6' : 'translate-x-1'"
+          ></span>
+        </button>
+      </div>
+    </div>
 
-        <!-- Content -->
-        <div class="p-3 sm:p-4 space-y-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
-          <div>
-            <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
-              제목 <span class="text-dp-danger">*</span>
-              <CharacterCounter :current="title.length" :max="30" />
-            </label>
-            <input
-              v-model="title"
-              type="text"
-              maxlength="30"
-              class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
-              placeholder="디데이 제목을 입력하세요"
-            />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
-              날짜 <span class="text-dp-danger">*</span>
-            </label>
-            <input
-              v-model="date"
-              type="date"
-              class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
-            />
-          </div>
-
-          <!-- Quick Date Buttons -->
-          <div class="flex justify-center gap-2">
-            <button
-              @click="addDays(-7)"
-              class="date-adjust-btn flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
-            >
-              <Minus class="w-3 h-3" />
-              7일
-            </button>
-            <button
-              @click="addDays(-1)"
-              class="date-adjust-btn flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
-            >
-              <Minus class="w-3 h-3" />
-              1일
-            </button>
-            <button
-              @click="resetToToday"
-              class="date-adjust-btn date-adjust-btn--today flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
-            >
-              <RotateCcw class="w-3 h-3" />
-              오늘
-            </button>
-            <button
-              @click="addDays(1)"
-              class="date-adjust-btn flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
-            >
-              <Plus class="w-3 h-3" />
-              1일
-            </button>
-            <button
-              @click="addDays(7)"
-              class="date-adjust-btn flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
-            >
-              <Plus class="w-3 h-3" />
-              7일
-            </button>
-          </div>
-
-          <!-- Privacy Toggle -->
-          <div class="flex items-center justify-between p-3 rounded-lg bg-dp-bg-secondary">
-            <div class="flex items-center gap-2">
-              <component :is="isPrivate ? Lock : Unlock" class="w-5 h-5 text-dp-text-secondary" />
-              <span class="text-sm text-dp-text-primary">비공개</span>
-            </div>
-            <button
-              @click="isPrivate = !isPrivate"
-              class="relative inline-flex h-6 w-11 items-center rounded-full transition cursor-pointer"
-              :class="isPrivate ? 'bg-dp-accent' : 'bg-dp-border-secondary'"
-            >
-              <span
-                class="inline-block h-4 w-4 transform rounded-full bg-dp-bg-primary transition"
-                :class="isPrivate ? 'translate-x-6' : 'translate-x-1'"
-              ></span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Footer (sticky at bottom) -->
-        <div class="modal-footer-safe p-3 sm:p-4 flex-shrink-0 flex flex-row gap-2 justify-end border-t border-dp-border-primary">
-          <button
-            @click="handleClose"
-            class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
-          >
-            취소
-          </button>
-          <button
-            @click="handleSave"
-            :disabled="!title.trim() || !date"
-            class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-          >
-            저장
-          </button>
-        </div>
+    <!-- Footer (sticky at bottom) -->
+    <div class="modal-actions-compact modal-actions-end modal-footer-safe">
+      <button
+        @click="handleClose"
+        class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
+      >
+        취소
+      </button>
+      <button
+        @click="handleSave"
+        :disabled="!title.trim() || !date"
+        class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+      >
+        저장
+      </button>
+    </div>
   </BaseModal>
 </template>
 

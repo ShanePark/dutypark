@@ -171,80 +171,78 @@ async function saveDutyType() {
     height="fit"
     @close="close"
   >
-      <div class="flex items-center justify-between p-4 border-b border-dp-border-primary">
-        <h3 class="text-lg font-bold text-dp-text-primary">
-          {{ dutyTypeForm.id !== null || dutyTypeForm.isDefault ? '근무 유형 수정' : '근무 유형 추가' }}
-        </h3>
-        <button
-          @click="close"
-          class="p-1.5 rounded-full hover-close-btn cursor-pointer"
-        >
-          <X class="w-5 h-5" />
-        </button>
+    <div class="modal-header">
+      <h2>{{ dutyTypeForm.id !== null || dutyTypeForm.isDefault ? '근무 유형 수정' : '근무 유형 추가' }}</h2>
+      <button
+        @click="close"
+        class="p-1.5 rounded-full hover-close-btn cursor-pointer"
+      >
+        <X class="w-5 h-5" />
+      </button>
+    </div>
+
+    <div class="modal-body-form">
+      <p class="text-sm text-dp-text-secondary">
+        해당 근무유형의 명칭 및 색상을 선택해주세요.
+      </p>
+
+      <div
+        v-if="dutyTypeForm.isDefault"
+        class="bg-dp-accent-soft border border-dp-accent-border rounded-lg p-3 text-sm text-dp-accent-hover"
+      >
+        현재 선택한 근무 유형은 <strong>휴무일</strong>에 해당합니다.
       </div>
 
-      <div class="p-4 space-y-4 overflow-y-auto flex-1 min-h-0">
-        <p class="text-sm text-dp-text-secondary">
-          해당 근무유형의 명칭 및 색상을 선택해주세요.
-        </p>
+      <div>
+        <label class="form-label">
+          근무명
+          <CharacterCounter :current="dutyTypeForm.name.length" :max="10" />
+        </label>
+        <input
+          v-model="dutyTypeForm.name"
+          type="text"
+          maxlength="10"
+          placeholder="근무명"
+          class="form-control"
+        />
+      </div>
 
+      <div class="color-picker-container">
+        <label class="form-label mb-2">
+          색상 선택
+        </label>
+        <div class="color-picker-wrapper flex justify-center items-center">
+          <div ref="colorPickerRef" class="color-picker"></div>
+        </div>
+      </div>
+
+      <div>
+        <label class="form-label">
+          미리보기
+        </label>
         <div
-          v-if="dutyTypeForm.isDefault"
-          class="bg-dp-accent-soft border border-dp-accent-border rounded-lg p-3 text-sm text-dp-accent-hover"
+          class="inline-block px-4 py-2 rounded-lg border font-medium"
+          :style="{ backgroundColor: dutyTypeForm.color, borderColor: 'var(--dp-border-primary)' }"
         >
-          현재 선택한 근무 유형은 <strong>휴무일</strong>에 해당합니다.
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
-            근무명
-            <CharacterCounter :current="dutyTypeForm.name.length" :max="10" />
-          </label>
-          <input
-            v-model="dutyTypeForm.name"
-            type="text"
-            maxlength="10"
-            placeholder="근무명"
-            class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent bg-dp-bg-input border-dp-border-input text-dp-text-primary"
-          />
-        </div>
-
-        <div class="color-picker-container">
-          <label class="block text-sm font-medium mb-2 text-dp-text-secondary">
-            색상 선택
-          </label>
-          <div class="color-picker-wrapper flex justify-center items-center">
-            <div ref="colorPickerRef" class="color-picker"></div>
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
-            미리보기
-          </label>
-          <div
-            class="inline-block px-4 py-2 rounded-lg border font-medium"
-            :style="{ backgroundColor: dutyTypeForm.color, borderColor: 'var(--dp-border-primary)' }"
-          >
-            {{ dutyTypeForm.name || '근무명 입력' }}
-          </div>
+          {{ dutyTypeForm.name || '근무명 입력' }}
         </div>
       </div>
+    </div>
 
-      <div class="modal-footer-safe flex justify-end gap-2 p-4 border-t border-dp-border-primary">
-        <button
-          @click="saveDutyType"
-          :disabled="!dutyTypeForm.name.trim()"
-          class="px-4 py-2 bg-dp-success text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-success-hover transition disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {{ dutyTypeForm.id !== null || dutyTypeForm.isDefault ? '저장' : '추가' }}
-        </button>
-        <button
-          @click="close"
-          class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"
-        >
-          취소
-        </button>
-      </div>
+    <div class="modal-actions modal-actions-end modal-footer-safe">
+      <button
+        @click="saveDutyType"
+        :disabled="!dutyTypeForm.name.trim()"
+        class="px-4 py-2 bg-dp-success text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-success-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+      >
+        {{ dutyTypeForm.id !== null || dutyTypeForm.isDefault ? '저장' : '추가' }}
+      </button>
+      <button
+        @click="close"
+        class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"
+      >
+        취소
+      </button>
+    </div>
   </BaseModal>
 </template>

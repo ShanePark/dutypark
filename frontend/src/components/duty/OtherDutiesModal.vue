@@ -64,81 +64,74 @@ function handleToggle(friendId: number) {
     height="default"
     @close="emit('close')"
   >
-        <!-- Header -->
-        <div class="flex items-center justify-between p-3 sm:p-4 bg-dp-bg-tertiary border-b border-dp-border-primary">
-          <div class="flex items-center gap-2">
-            <Users class="w-5 h-5 text-dp-accent" />
-            <h2 class="text-base sm:text-lg font-bold text-dp-text-primary">함께보기</h2>
+    <div class="modal-header">
+      <div class="flex items-center gap-2">
+        <Users class="w-5 h-5 text-dp-accent" />
+        <h2>함께보기</h2>
+      </div>
+      <button @click="emit('close')" class="p-2 rounded-full hover-close-btn cursor-pointer">
+        <X class="w-6 h-6 text-dp-text-primary" />
+      </button>
+    </div>
+
+    <div class="px-3 sm:px-4 py-2 text-xs sm:text-sm bg-dp-accent/10 text-dp-accent dark:bg-dp-accent/20 dark:text-dp-accent-light">
+      친구의 근무표를 함께 볼 수 있습니다. (최대 {{ maxSelections }}명)
+    </div>
+
+    <div class="modal-body-form-compact !space-y-0 max-h-[calc(90dvh-180px)] sm:max-h-[calc(90vh-180px)]">
+      <div v-if="friends.length === 0" class="text-center py-8 text-dp-text-muted">
+        친구 목록이 없습니다.
+      </div>
+
+      <div v-else class="grid grid-cols-2 gap-2">
+        <div
+          v-for="friend in friends"
+          :key="friend.id"
+          @click="handleToggle(friend.id)"
+          class="flex items-center gap-2 p-2 rounded-lg cursor-pointer transition"
+          :class="{
+            'bg-dp-accent/15 dark:bg-dp-accent/25 border-2 border-dp-accent-border': isSelected(friend.id),
+            'border-2 border-transparent friend-item':
+              !isSelected(friend.id) && canSelectMore,
+            'opacity-50 cursor-not-allowed border-2 border-transparent friend-item-disabled':
+              !isSelected(friend.id) && !canSelectMore,
+          }"
+          :style="!isSelected(friend.id) && canSelectMore ? { backgroundColor: 'var(--dp-bg-secondary)' } : {}"
+        >
+          <ProfileAvatar
+            :member-id="friend.id"
+            :name="friend.name"
+            :has-profile-photo="friend.hasProfilePhoto"
+            :profile-photo-version="friend.profilePhotoVersion"
+            size="sm"
+          />
+
+          <div class="flex-1 min-w-0">
+            <span class="font-medium text-sm truncate block text-dp-text-primary">{{ friend.name }}</span>
           </div>
-          <button @click="emit('close')" class="p-2 rounded-full hover-close-btn cursor-pointer">
-            <X class="w-6 h-6 text-dp-text-primary" />
-          </button>
-        </div>
 
-        <!-- Description -->
-        <div class="px-3 sm:px-4 py-2 text-xs sm:text-sm bg-dp-accent/10 text-dp-accent dark:bg-dp-accent/20 dark:text-dp-accent-light">
-          친구의 근무표를 함께 볼 수 있습니다. (최대 {{ maxSelections }}명)
-        </div>
-
-        <!-- Content -->
-        <div class="p-3 sm:p-4 overflow-y-auto max-h-[calc(90dvh-180px)] sm:max-h-[calc(90vh-180px)]">
-          <div v-if="friends.length === 0" class="text-center py-8 text-dp-text-muted">
-            친구 목록이 없습니다.
-          </div>
-
-          <div v-else class="grid grid-cols-2 gap-2">
-            <div
-              v-for="friend in friends"
-              :key="friend.id"
-              @click="handleToggle(friend.id)"
-              class="flex items-center gap-2 p-2 rounded-lg cursor-pointer transition"
-              :class="{
-                'bg-dp-accent/15 dark:bg-dp-accent/25 border-2 border-dp-accent-border': isSelected(friend.id),
-                'border-2 border-transparent friend-item':
-                  !isSelected(friend.id) && canSelectMore,
-                'opacity-50 cursor-not-allowed border-2 border-transparent friend-item-disabled':
-                  !isSelected(friend.id) && !canSelectMore,
-              }"
-              :style="!isSelected(friend.id) && canSelectMore ? { backgroundColor: 'var(--dp-bg-secondary)' } : {}"
-            >
-              <!-- Profile Image -->
-              <ProfileAvatar
-                :member-id="friend.id"
-                :name="friend.name"
-                :has-profile-photo="friend.hasProfilePhoto"
-                :profile-photo-version="friend.profilePhotoVersion"
-                size="sm"
-              />
-
-              <!-- Name -->
-              <div class="flex-1 min-w-0">
-                <span class="font-medium text-sm truncate block text-dp-text-primary">{{ friend.name }}</span>
-              </div>
-
-              <!-- Check icon -->
-              <div
-                v-if="isSelected(friend.id)"
-                class="w-5 h-5 bg-dp-accent rounded-full flex items-center justify-center flex-shrink-0"
-              >
-                <Check class="w-3 h-3 text-dp-text-on-dark" />
-              </div>
-            </div>
+          <div
+            v-if="isSelected(friend.id)"
+            class="w-5 h-5 bg-dp-accent rounded-full flex items-center justify-center flex-shrink-0"
+          >
+            <Check class="w-3 h-3 text-dp-text-on-dark" />
           </div>
         </div>
+      </div>
+    </div>
 
-        <!-- Footer -->
-        <div class="modal-footer-safe p-3 sm:p-4 border-t border-dp-border-primary">
-          <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-between gap-2">
-            <span class="text-sm text-center sm:text-left text-dp-text-muted">
-              {{ selectedFriendIds.length }} / {{ maxSelections }}명 선택됨
-            </span>
-            <button
-              @click="emit('close')"
-              class="w-full sm:w-auto px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
-            >
-              확인
-            </button>
-          </div>
-        </div>
+    <div class="modal-footer modal-footer-safe">
+      <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-between gap-2">
+        <span class="text-sm text-center sm:text-left text-dp-text-muted">
+          {{ selectedFriendIds.length }} / {{ maxSelections }}명 선택됨
+        </span>
+        <button
+          @click="emit('close')"
+          class="w-full sm:w-auto px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
+        >
+          확인
+        </button>
+      </div>
+    </div>
   </BaseModal>
 </template>

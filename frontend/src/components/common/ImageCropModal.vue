@@ -209,7 +209,7 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
           <h2>프로필 사진 편집</h2>
           <button
             @click="handleClose"
-            class="p-2 rounded-full transition hover-bg-light cursor-pointer"
+            class="p-2 rounded-full hover-close-btn cursor-pointer"
             :disabled="isProcessing"
           >
             <X class="w-6 h-6 text-dp-text-primary" />
@@ -314,7 +314,7 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
         </div>
 
         <!-- Footer -->
-        <div class="modal-footer flex-shrink-0">
+        <div class="modal-actions modal-actions-end modal-footer-safe flex-shrink-0">
           <button
             type="button"
             @click="handleClose"
@@ -564,16 +564,6 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
 .change-image-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  padding: 1rem 1.5rem;
-  padding-bottom: 1rem;
-  padding-bottom: max(1rem, calc(env(safe-area-inset-bottom) - 0.25rem));
-  border-top: 1px solid var(--dp-border-primary);
 }
 
 .btn-cancel,
