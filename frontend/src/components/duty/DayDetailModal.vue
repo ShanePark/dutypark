@@ -97,11 +97,12 @@ const contentRef = ref<HTMLElement | null>(null)
 // Local duty state for immediate UI feedback
 const selectedDutyType = ref<string | null>(null)
 
-// Sync selectedDutyType with props.duty
+// Sync selectedDutyType with both the selected date and duty prop.
+// The modal instance is reused across days, so date changes must also reset this state.
 watch(
-  () => props.duty?.dutyType,
-  (newVal) => {
-    selectedDutyType.value = newVal ?? null
+  () => [props.date.year, props.date.month, props.date.day, props.duty?.dutyType] as const,
+  ([, , , dutyType]) => {
+    selectedDutyType.value = dutyType ?? null
   },
   { immediate: true }
 )

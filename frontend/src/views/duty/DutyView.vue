@@ -99,7 +99,6 @@ function handleYearMonthSelect(year: number, month: number) {
 
 // Selected items
 const selectedDay = ref<CalendarDay | null>(null)
-const selectedDayDuty = ref<DutyDay | undefined>(undefined)
 const selectedTodo = ref<LocalTodo | null>(null)
 const selectedDDay = ref<LocalDDay | null>(null)
 const selectedSchedule = ref<Schedule | null>(null)
@@ -493,6 +492,21 @@ const duties = computed<Array<DutyDay | null>>(() => {
   })
 })
 
+const selectedDayDuty = computed<DutyDay | undefined>(() => {
+  const day = selectedDay.value
+  if (!day) return undefined
+
+  const dayIndex = calendarDays.value.findIndex(
+    (calendarDay) =>
+      calendarDay.year === day.year &&
+      calendarDay.month === day.month &&
+      calendarDay.day === day.day
+  )
+
+  if (dayIndex === -1) return undefined
+  return duties.value[dayIndex] ?? undefined
+})
+
 // Get duty for the currently focused day (for highlighting quick input buttons)
 const focusedDayDuty = computed(() => {
   if (!focusedDay.value) return null
@@ -778,7 +792,7 @@ async function handleGoToDate(event: Event) {
 }
 
 // Day click handler
-function handleDayClick(day: CalendarDay, index: number) {
+function handleDayClick(day: CalendarDay, _index: number) {
   if (!canEdit.value) return // Disable click if no edit permission
 
   // In batch edit mode, clicking a day moves the focus to that day
@@ -790,7 +804,6 @@ function handleDayClick(day: CalendarDay, index: number) {
   }
 
   selectedDay.value = day
-  selectedDayDuty.value = duties.value[index] || undefined
   isDayDetailModalOpen.value = true
 }
 
