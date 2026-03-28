@@ -257,23 +257,22 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 9999px;
-  border: 1px solid color-mix(in srgb, var(--visibility-hint-accent) 24%, var(--dp-border-primary));
-  background-color: color-mix(in srgb, var(--visibility-hint-accent) 10%, var(--dp-bg-card));
+  border: 1px solid transparent;
+  background-color: transparent;
   color: var(--visibility-hint-accent);
   box-shadow: none;
   transition:
     background-color 0.15s ease,
     border-color 0.15s ease,
     color 0.15s ease,
-    transform 0.15s ease;
+    transform 0.15s ease,
+    opacity 0.15s ease;
   cursor: pointer;
   appearance: none;
 }
 
 .visibility-hint-button:hover {
-  background-color: color-mix(in srgb, var(--visibility-hint-accent) 14%, var(--dp-bg-card));
-  border-color: color-mix(in srgb, var(--visibility-hint-accent) 34%, var(--dp-border-hover));
+  background-color: var(--dp-bg-hover);
 }
 
 .visibility-hint-button:focus-visible {
@@ -286,18 +285,28 @@ onBeforeUnmount(() => {
 }
 
 .visibility-hint-button--xs {
+  border-radius: 9999px;
+  border-color: color-mix(in srgb, var(--visibility-hint-accent) 24%, var(--dp-border-primary));
+  background-color: color-mix(in srgb, var(--visibility-hint-accent) 10%, var(--dp-bg-card));
   width: 1rem;
   height: 1rem;
 }
 
 .visibility-hint-button--sm {
-  width: 1.5rem;
-  height: 1.5rem;
+  border-radius: 0.5rem;
+  color: color-mix(in srgb, var(--visibility-hint-accent) 76%, var(--dp-text-muted));
+  width: 1.875rem;
+  height: 1.875rem;
 }
 
 .visibility-hint-icon {
   width: 0.7rem;
   height: 0.7rem;
+}
+
+.visibility-hint-button--sm .visibility-hint-icon {
+  width: 1rem;
+  height: 1rem;
 }
 
 .visibility-hint-popover {
@@ -351,13 +360,13 @@ onBeforeUnmount(() => {
 
 @media (max-width: 639px) {
   .visibility-hint-button--sm {
-    width: 1.4rem;
-    height: 1.4rem;
+    width: 1.75rem;
+    height: 1.75rem;
   }
 
-  .visibility-hint-icon {
-    width: 0.68rem;
-    height: 0.68rem;
+  .visibility-hint-button--sm .visibility-hint-icon {
+    width: 0.95rem;
+    height: 0.95rem;
   }
 }
 
