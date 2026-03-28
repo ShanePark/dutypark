@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { CalendarCheck, Lock, MessageSquareText, CheckSquare } from 'lucide-vue-next'
+import { CalendarCheck, MessageSquareText, CheckSquare } from 'lucide-vue-next'
 import { isLightColor } from '@/utils/color'
 import CalendarGrid from '@/components/common/CalendarGrid.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
+import VisibilityHintIcon from '@/components/common/VisibilityHintIcon.vue'
 import type { HolidayDto } from '@/types'
 import type { CalendarDay, DutyType, Schedule, OtherDuty, LocalDDay, DutyDay, TodoDueItem } from '@/views/duty/dutyViewTypes'
 import { buildDisplayTagMembers } from '@/utils/tagMembers'
@@ -150,6 +151,10 @@ function getHiddenMobileCalendarTagCount(schedule: Schedule) {
   return Math.max(getDisplayTagMembers(schedule).length - MOBILE_VISIBLE_CALENDAR_TAGS, 0)
 }
 
+function shouldShowPrivateVisibility(schedule: Schedule) {
+  return props.isMyCalendar && schedule.isMine && schedule.visibility === 'PRIVATE'
+}
+
 </script>
 
 <template>
@@ -233,7 +238,13 @@ function getHiddenMobileCalendarTagCount(schedule: Schedule) {
           :style="{ color: getPrimaryTextColor(getDutyColorAt(index)), borderColor: getBorderColor(getDutyColorAt(index)) }"
         >
           <div class="truncate sm:whitespace-normal sm:break-words">
-            <Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" :style="{ color: getMutedTextColor(getDutyColorAt(index)) }" />{{ schedule.contentWithoutTime || schedule.content }}{{ formatScheduleTime(schedule) }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
+            <VisibilityHintIcon
+              v-if="shouldShowPrivateVisibility(schedule)"
+              :visibility="schedule.visibility"
+              size="xs"
+              align="end"
+              class="mr-0.5 inline-flex align-[-2px] sm:align-[-3px]"
+            />{{ schedule.contentWithoutTime || schedule.content }}{{ formatScheduleTime(schedule) }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
               v-if="hasScheduleDetails(schedule)"
               class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px] ml-0.5"
               :style="{ color: getIconTextColor(getDutyColorAt(index)) }"
