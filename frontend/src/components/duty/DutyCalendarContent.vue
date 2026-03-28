@@ -42,6 +42,7 @@ const focusedCalendarDay = computed(() => {
 })
 
 const displayHolidays = computed(() => (props.batchEditMode ? [] : props.holidays))
+const MOBILE_VISIBLE_CALENDAR_TAGS = 1
 
 function getDutyColorAt(index: number): string | null {
   return props.duties[index]?.dutyColor ?? null
@@ -142,6 +143,14 @@ function getCalendarTagLabel(name: string) {
   return chars.length > 3 ? `${chars.slice(0, 2).join('')}…` : name
 }
 
+function getMobileCalendarTagMembers(schedule: Schedule) {
+  return getDisplayTagMembers(schedule).slice(0, MOBILE_VISIBLE_CALENDAR_TAGS)
+}
+
+function getHiddenMobileCalendarTagCount(schedule: Schedule) {
+  return Math.max(getDisplayTagMembers(schedule).length - MOBILE_VISIBLE_CALENDAR_TAGS, 0)
+}
+
 function handleScheduleClick(schedule: Schedule, event: Event) {
   event.stopPropagation()
   emit('schedule-click', schedule)
@@ -236,14 +245,34 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
               class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px] ml-0.5"
               :style="{ color: getIconTextColor(getDutyColorAt(index)) }"
             />
-            <span
-              v-if="getDisplayTagMembers(schedule).length"
-              class="ml-0.5 text-[9px] text-dp-text-muted sm:hidden"
-            >
-              +{{ getDisplayTagMembers(schedule).length }}
-            </span>
           </div>
           <!-- Tags display -->
+          <div
+            v-if="getDisplayTagMembers(schedule).length"
+            class="mt-px flex flex-wrap justify-end gap-px sm:hidden"
+          >
+            <span
+              v-for="tag in getMobileCalendarTagMembers(schedule)"
+              :key="tag.key"
+              class="schedule-tag schedule-tag-with-avatar"
+            >
+              <ProfileAvatar
+                :member-id="tag.id ?? null"
+                :name="tag.name"
+                :has-profile-photo="tag.hasProfilePhoto"
+                :profile-photo-version="tag.profilePhotoVersion"
+                size="xs"
+                class="schedule-tag-avatar"
+              />
+              <span class="schedule-tag-label">{{ getCalendarTagLabel(tag.name) }}</span>
+            </span>
+            <span
+              v-if="getHiddenMobileCalendarTagCount(schedule) > 0"
+              class="schedule-tag schedule-tag-count"
+            >
+              +{{ getHiddenMobileCalendarTagCount(schedule) }}
+            </span>
+          </div>
           <div
             v-if="getDisplayTagMembers(schedule).length"
             class="mt-px hidden flex-wrap justify-end gap-px sm:mt-0.5 sm:flex sm:gap-0.5"
@@ -334,6 +363,16 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
   letter-spacing: -0.05em;
 }
 
+.schedule-tag-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.05rem;
+  padding: 0 0.28rem;
+  font-size: 9px;
+  font-weight: 600;
+}
+
 :deep(.schedule-tag-avatar.profile-avatar) {
   box-sizing: border-box;
   border-width: 1px;
@@ -352,6 +391,12 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
 
   .schedule-tag-label {
     max-width: 3em;
+  }
+
+  .schedule-tag-count {
+    min-height: 1.5rem;
+    padding: 0 0.4rem;
+    font-size: 12px;
   }
 
   :deep(.schedule-tag-avatar.profile-avatar) {
