@@ -144,13 +144,22 @@ function getCalendarTagLabel(name: string) {
 }
 
 const MOBILE_CALENDAR_SCHEDULE_TITLE_LIMIT = 10
+const MOBILE_CALENDAR_DDAY_TITLE_LIMIT = 10
+
+function truncateMobileCalendarText(text: string, limit: number) {
+  const chars = Array.from(text)
+  return chars.length > limit
+    ? `${chars.slice(0, limit).join('')}…`
+    : text
+}
 
 function getMobileCalendarScheduleTitle(schedule: Schedule) {
   const title = schedule.contentWithoutTime || schedule.content
-  const chars = Array.from(title)
-  return chars.length > MOBILE_CALENDAR_SCHEDULE_TITLE_LIMIT
-    ? `${chars.slice(0, MOBILE_CALENDAR_SCHEDULE_TITLE_LIMIT).join('')}…`
-    : title
+  return truncateMobileCalendarText(title, MOBILE_CALENDAR_SCHEDULE_TITLE_LIMIT)
+}
+
+function getMobileCalendarDDayTitle(dday: LocalDDay) {
+  return truncateMobileCalendarText(dday.title, MOBILE_CALENDAR_DDAY_TITLE_LIMIT)
 }
 
 function getMobileCalendarTagMembers(schedule: Schedule) {
@@ -236,9 +245,9 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
         <div
           v-for="dday in getDDaysForDay(day)"
           :key="dday.id"
-          class="truncate px-0.5 text-[10px] leading-snug sm:text-sm sm:whitespace-normal sm:break-words"
+          class="calendar-inline-text px-0.5 text-[10px] leading-snug sm:text-sm sm:whitespace-normal sm:break-words"
           :style="{ color: getPrimaryTextColor(getDutyColorAt(index)) }"
-        ><CalendarCheck class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" />{{ dday.title }}</div>
+        ><CalendarCheck class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" /><span class="sm:hidden">{{ getMobileCalendarDDayTitle(dday) }}</span><span class="hidden sm:inline">{{ dday.title }}</span></div>
 
         <!-- Schedules -->
         <div
@@ -247,7 +256,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
           class="px-0.5 text-[10px] leading-snug border-t-2 border-dashed sm:text-sm"
           :style="{ color: getPrimaryTextColor(getDutyColorAt(index)), borderColor: getBorderColor(getDutyColorAt(index)) }"
         >
-          <div class="calendar-schedule-text sm:whitespace-normal sm:break-words">
+          <div class="calendar-inline-text sm:whitespace-normal sm:break-words">
             <VisibilityHintIcon
               v-if="shouldShowPrivateVisibility(schedule)"
               :visibility="schedule.visibility"
@@ -342,7 +351,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
 </template>
 
 <style scoped>
-.calendar-schedule-text {
+.calendar-inline-text {
   white-space: normal;
   overflow-wrap: anywhere;
 }
