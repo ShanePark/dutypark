@@ -4,17 +4,16 @@ import Sortable from 'sortablejs'
 import {
   GripVertical,
   Paperclip,
-  Lock,
   Pencil,
   Trash2,
   X,
 } from 'lucide-vue-next'
 import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
 import MemberTagChips from '@/components/common/MemberTagChips.vue'
+import VisibilityHintIcon from '@/components/common/VisibilityHintIcon.vue'
 import type { NormalizedAttachment } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { buildDisplayTagMembers } from '@/utils/tagMembers'
-import { getVisibilityIcon, getVisibilityLabel } from '@/utils/visibility'
 
 interface Schedule {
   id: string
@@ -196,6 +195,10 @@ function canUntagSchedule(schedule: Schedule) {
   return schedule.isTagged && props.isMyCalendar
 }
 
+function shouldShowVisibility(schedule: Schedule) {
+  return props.isMyCalendar && schedule.isMine
+}
+
 function handleTagClick(schedule: Schedule) {
   if (!canEditSchedule(schedule)) return
   emit('edit', schedule)
@@ -231,38 +234,39 @@ function handleTagClick(schedule: Schedule) {
             <GripVertical class="w-5 h-5" />
           </div>
           <div class="min-w-0 flex-1">
-            <div class="schedule-primary-row flex items-start gap-2">
+            <div class="schedule-primary-row flex items-start gap-1.5 sm:gap-2">
               <div class="schedule-primary-info min-w-0 flex-1">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <Lock
-                    v-if="schedule.visibility === 'PRIVATE'"
-                    class="w-4 h-4 text-dp-text-muted"
-                    :title="getVisibilityLabel(schedule.visibility)"
-                  />
-                  <span class="font-medium text-dp-text-primary">{{ schedule.content }}<template v-if="schedule.totalDays && schedule.totalDays > 1"> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template></span>
-                  <span v-if="formatScheduleTime(schedule)" class="text-sm text-dp-text-secondary">
-                    {{ formatScheduleTime(schedule) }}
-                  </span>
-                  <component
-                    v-if="schedule.visibility !== 'PRIVATE'"
-                    :is="getVisibilityIcon(schedule.visibility)"
-                    class="w-4 h-4 text-dp-text-muted"
-                    :title="getVisibilityLabel(schedule.visibility)"
-                  />
-                  <span
-                    v-if="schedule.attachments?.length"
-                    class="flex items-center gap-1 text-sm text-dp-text-muted"
+                <div class="schedule-primary-content min-w-0">
+                  <span class="schedule-primary-title font-medium text-dp-text-primary">{{ schedule.content }}<template v-if="schedule.totalDays && schedule.totalDays > 1"> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template></span>
+                  <div
+                    v-if="formatScheduleTime(schedule) || schedule.attachments?.length"
+                    class="schedule-primary-extra text-sm text-dp-text-secondary"
                   >
-                    <Paperclip class="w-3 h-3" />
-                    {{ schedule.attachments.length }}
-                  </span>
+                    <span v-if="formatScheduleTime(schedule)" class="schedule-primary-time">
+                      {{ formatScheduleTime(schedule) }}
+                    </span>
+                    <span
+                      v-if="schedule.attachments?.length"
+                      class="schedule-primary-attachments flex items-center gap-1 text-dp-text-muted"
+                    >
+                      <Paperclip class="w-3 h-3" />
+                      {{ schedule.attachments.length }}
+                    </span>
+                  </div>
                 </div>
               </div>
 
               <div
-                v-if="canUntagSchedule(schedule) || canEditSchedule(schedule)"
+                v-if="shouldShowVisibility(schedule) || canUntagSchedule(schedule) || canEditSchedule(schedule)"
                 class="schedule-action-row flex shrink-0 items-center gap-1"
               >
+                <VisibilityHintIcon
+                  v-if="shouldShowVisibility(schedule)"
+                  :visibility="schedule.visibility"
+                  size="sm"
+                  align="end"
+                  class="schedule-primary-visibility"
+                />
                 <button
                   v-if="canUntagSchedule(schedule)"
                   @click="emit('request-untag', schedule.id)"
@@ -294,7 +298,7 @@ function handleTagClick(schedule: Schedule) {
 
             <div
               v-if="getDisplayTagMembers(schedule).length"
-              class="mt-2 w-full"
+              class="mt-1.5 w-full sm:mt-2"
             >
               <MemberTagChips
                 :members="getDisplayTagMembers(schedule)"
@@ -355,6 +359,47 @@ function handleTagClick(schedule: Schedule) {
 
 .schedule-drag-handle:active {
   cursor: grabbing;
+}
+
+.schedule-primary-visibility {
+  margin-top: 0.05rem;
+  align-self: flex-start;
+}
+
+.schedule-primary-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.schedule-primary-title {
+  display: block;
+  min-width: 0;
+  line-height: 1.4;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.schedule-primary-extra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem 0.625rem;
+  margin-top: 0.25rem;
+}
+
+.schedule-primary-time {
+  white-space: nowrap;
+}
+
+.schedule-primary-attachments {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+@media (min-width: 640px) {
+  .schedule-primary-title {
+    line-height: 1.45;
+  }
 }
 
 </style>

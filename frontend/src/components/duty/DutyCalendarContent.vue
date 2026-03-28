@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { CalendarCheck, Lock, MessageSquareText, CheckSquare } from 'lucide-vue-next'
+import { CalendarCheck, MessageSquareText, CheckSquare } from 'lucide-vue-next'
 import { isLightColor } from '@/utils/color'
 import CalendarGrid from '@/components/common/CalendarGrid.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
+import VisibilityHintIcon from '@/components/common/VisibilityHintIcon.vue'
 import type { HolidayDto } from '@/types'
 import type { CalendarDay, DutyType, Schedule, OtherDuty, LocalDDay, DutyDay, TodoDueItem } from '@/views/duty/dutyViewTypes'
 import { buildDisplayTagMembers } from '@/utils/tagMembers'
@@ -32,7 +33,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'day-click', day: CalendarDay, index: number): void
   (e: 'batch-duty-change', day: CalendarDay, dutyTypeId: number | null): void
-  (e: 'schedule-click', schedule: Schedule): void
   (e: 'todo-click', todo: TodoDueItem): void
 }>()
 
@@ -42,6 +42,7 @@ const focusedCalendarDay = computed(() => {
 })
 
 const displayHolidays = computed(() => (props.batchEditMode ? [] : props.holidays))
+const MOBILE_VISIBLE_CALENDAR_TAGS = 3
 
 function getDutyColorAt(index: number): string | null {
   return props.duties[index]?.dutyColor ?? null
@@ -142,10 +143,28 @@ function getCalendarTagLabel(name: string) {
   return chars.length > 3 ? `${chars.slice(0, 2).join('')}…` : name
 }
 
-function handleScheduleClick(schedule: Schedule, event: Event) {
-  event.stopPropagation()
-  emit('schedule-click', schedule)
+const MOBILE_CALENDAR_SCHEDULE_TITLE_LIMIT = 10
+
+function getMobileCalendarScheduleTitle(schedule: Schedule) {
+  const title = schedule.contentWithoutTime || schedule.content
+  const chars = Array.from(title)
+  return chars.length > MOBILE_CALENDAR_SCHEDULE_TITLE_LIMIT
+    ? `${chars.slice(0, MOBILE_CALENDAR_SCHEDULE_TITLE_LIMIT).join('')}…`
+    : title
 }
+
+function getMobileCalendarTagMembers(schedule: Schedule) {
+  return getDisplayTagMembers(schedule).slice(0, MOBILE_VISIBLE_CALENDAR_TAGS)
+}
+
+function getHiddenMobileCalendarTagCount(schedule: Schedule) {
+  return Math.max(getDisplayTagMembers(schedule).length - MOBILE_VISIBLE_CALENDAR_TAGS, 0)
+}
+
+function shouldShowPrivateVisibility(schedule: Schedule) {
+  return props.isMyCalendar && schedule.isMine && schedule.visibility === 'PRIVATE'
+}
+
 </script>
 
 <template>
@@ -157,7 +176,7 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
     :get-duty-color="getDutyColorForDay"
     :highlight-day="highlightDay"
     :focused-day="focusedCalendarDay"
-    :clickable="canEdit"
+    :clickable="!batchEditMode || canEdit"
     @day-click="(day, index) => emit('day-click', day, index)"
   >
     <!-- D-Day indicator in header -->
@@ -226,24 +245,48 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
           v-for="schedule in schedulesByDays[index]?.slice(0, 3)"
           :key="schedule.id"
           class="px-0.5 text-[10px] leading-snug border-t-2 border-dashed sm:text-sm"
-          :class="{ 'cursor-pointer hover:underline': !canEdit && hasScheduleDetails(schedule) }"
           :style="{ color: getPrimaryTextColor(getDutyColorAt(index)), borderColor: getBorderColor(getDutyColorAt(index)) }"
-          @click="!canEdit && hasScheduleDetails(schedule) ? handleScheduleClick(schedule, $event) : null"
         >
-          <div class="truncate sm:whitespace-normal sm:break-words">
-            <Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" :style="{ color: getMutedTextColor(getDutyColorAt(index)) }" />{{ schedule.contentWithoutTime || schedule.content }}{{ formatScheduleTime(schedule) }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
+          <div class="calendar-schedule-text sm:whitespace-normal sm:break-words">
+            <VisibilityHintIcon
+              v-if="shouldShowPrivateVisibility(schedule)"
+              :visibility="schedule.visibility"
+              size="xs"
+              align="end"
+              class="mr-0.5 inline-flex align-[-2px] sm:align-[-3px]"
+            /><span class="sm:hidden">{{ getMobileCalendarScheduleTitle(schedule) }}</span><span class="hidden sm:inline">{{ schedule.contentWithoutTime || schedule.content }}</span>{{ formatScheduleTime(schedule) }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
               v-if="hasScheduleDetails(schedule)"
               class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px] ml-0.5"
               :style="{ color: getIconTextColor(getDutyColorAt(index)) }"
             />
-            <span
-              v-if="getDisplayTagMembers(schedule).length"
-              class="ml-0.5 text-[9px] text-dp-text-muted sm:hidden"
-            >
-              +{{ getDisplayTagMembers(schedule).length }}
-            </span>
           </div>
           <!-- Tags display -->
+          <div
+            v-if="getDisplayTagMembers(schedule).length"
+            class="mt-px flex flex-wrap justify-end gap-px sm:hidden"
+          >
+            <span
+              v-for="tag in getMobileCalendarTagMembers(schedule)"
+              :key="tag.key"
+              class="schedule-tag schedule-tag-with-avatar"
+            >
+              <ProfileAvatar
+                :member-id="tag.id ?? null"
+                :name="tag.name"
+                :has-profile-photo="tag.hasProfilePhoto"
+                :profile-photo-version="tag.profilePhotoVersion"
+                size="xs"
+                class="schedule-tag-avatar"
+              />
+              <span class="schedule-tag-label">{{ getCalendarTagLabel(tag.name) }}</span>
+            </span>
+            <span
+              v-if="getHiddenMobileCalendarTagCount(schedule) > 0"
+              class="schedule-tag schedule-tag-count"
+            >
+              +{{ getHiddenMobileCalendarTagCount(schedule) }}
+            </span>
+          </div>
           <div
             v-if="getDisplayTagMembers(schedule).length"
             class="mt-px hidden flex-wrap justify-end gap-px sm:mt-0.5 sm:flex sm:gap-0.5"
@@ -299,6 +342,11 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
 </template>
 
 <style scoped>
+.calendar-schedule-text {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .schedule-tag {
   padding: 0;
   border-radius: 9999px;
@@ -334,6 +382,16 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
   letter-spacing: -0.05em;
 }
 
+.schedule-tag-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.05rem;
+  padding: 0 0.28rem;
+  font-size: 9px;
+  font-weight: 600;
+}
+
 :deep(.schedule-tag-avatar.profile-avatar) {
   box-sizing: border-box;
   border-width: 1px;
@@ -352,6 +410,12 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
 
   .schedule-tag-label {
     max-width: 3em;
+  }
+
+  .schedule-tag-count {
+    min-height: 1.5rem;
+    padding: 0 0.4rem;
+    font-size: 12px;
   }
 
   :deep(.schedule-tag-avatar.profile-avatar) {

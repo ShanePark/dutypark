@@ -16,6 +16,13 @@ export const VISIBILITY_LABELS: Record<CalendarVisibility, string> = {
   PRIVATE: '비공개',
 }
 
+export const VISIBILITY_DESCRIPTIONS: Record<CalendarVisibility, string> = {
+  PUBLIC: '누구나 볼 수 있는 일정이에요.',
+  FRIENDS: '친구로 연결된 사람만 볼 수 있는 일정이에요.',
+  FAMILY: '가족으로 연결된 사람만 볼 수 있는 일정이에요.',
+  PRIVATE: '나만 볼 수 있는 일정이에요.',
+}
+
 export const VISIBILITY_COLORS: Record<CalendarVisibility, string> = {
   PUBLIC: 'bg-dp-success',
   FRIENDS: 'bg-dp-accent',
@@ -33,4 +40,8 @@ export function getVisibilityIcon(visibility: string): LucideIcon {
 
 export function getVisibilityLabel(visibility: string): string {
   return VISIBILITY_LABELS[visibility as CalendarVisibility] || visibility
+}
+
+export function getVisibilityDescription(visibility: string): string {
+  return VISIBILITY_DESCRIPTIONS[visibility as CalendarVisibility] || '설정된 공개 범위예요.'
 }

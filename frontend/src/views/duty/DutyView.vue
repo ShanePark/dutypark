@@ -14,7 +14,6 @@ import DDayModal from '@/components/duty/DDayModal.vue'
 import DDayDetailModal from '@/components/duty/DDayDetailModal.vue'
 import SearchResultModal from '@/components/duty/SearchResultModal.vue'
 import OtherDutiesModal from '@/components/duty/OtherDutiesModal.vue'
-import ScheduleViewModal from '@/components/duty/ScheduleViewModal.vue'
 import DutyHeaderControls from '@/components/duty/DutyHeaderControls.vue'
 import DutyTodoRow from '@/components/duty/DutyTodoRow.vue'
 import DutyTypesBar from '@/components/duty/DutyTypesBar.vue'
@@ -84,7 +83,6 @@ const isDDayDetailModalOpen = ref(false)
 const isDDayEditFromDetail = ref(false)
 const isSearchResultModalOpen = ref(false)
 const isOtherDutiesModalOpen = ref(false)
-const isScheduleDetailModalOpen = ref(false)
 
 // Search highlight - tracks the date to highlight after search navigation
 const searchDay = ref<{ year: number; month: number; day: number } | null>(null)
@@ -101,7 +99,6 @@ function handleYearMonthSelect(year: number, month: number) {
 const selectedDay = ref<CalendarDay | null>(null)
 const selectedTodo = ref<LocalTodo | null>(null)
 const selectedDDay = ref<LocalDDay | null>(null)
-const selectedSchedule = ref<Schedule | null>(null)
 const pinnedDDay = ref<LocalDDay | null>(null)
 
 // Data
@@ -507,6 +504,21 @@ const selectedDayDuty = computed<DutyDay | undefined>(() => {
   return duties.value[dayIndex] ?? undefined
 })
 
+const selectedDaySchedules = computed(() => {
+  const day = selectedDay.value
+  if (!day) return []
+
+  const dayIndex = calendarDays.value.findIndex(
+    (calendarDay) =>
+      calendarDay.year === day.year &&
+      calendarDay.month === day.month &&
+      calendarDay.day === day.day
+  )
+
+  if (dayIndex === -1) return []
+  return schedulesByDays.value[dayIndex] ?? []
+})
+
 // Get duty for the currently focused day (for highlighting quick input buttons)
 const focusedDayDuty = computed(() => {
   if (!focusedDay.value) return null
@@ -793,8 +805,6 @@ async function handleGoToDate(event: Event) {
 
 // Day click handler
 function handleDayClick(day: CalendarDay, _index: number) {
-  if (!canEdit.value) return // Disable click if no edit permission
-
   // In batch edit mode, clicking a day moves the focus to that day
   if (batchEditMode.value) {
     if (day.isCurrentMonth) {
@@ -805,12 +815,6 @@ function handleDayClick(day: CalendarDay, _index: number) {
 
   selectedDay.value = day
   isDayDetailModalOpen.value = true
-}
-
-// Schedule click handler (for read-only view on other's calendar)
-function handleScheduleClick(schedule: Schedule) {
-  selectedSchedule.value = schedule
-  isScheduleDetailModalOpen.value = true
 }
 
 // Batch edit mode: change duty type directly on cell
@@ -1569,7 +1573,6 @@ async function showExcelUploadModal() {
       :member-id="memberId"
       @day-click="handleDayClick"
       @batch-duty-change="handleBatchDutyChange"
-      @schedule-click="handleScheduleClick"
       @todo-click="handleTodoBubbleClick"
     />
 
@@ -1589,7 +1592,7 @@ async function showExcelUploadModal() {
       :is-open="isDayDetailModalOpen"
       :date="selectedDay || { year: currentYear, month: currentMonth, day: 1 }"
       :duty="selectedDayDuty"
-      :schedules="selectedDay ? (schedulesByDays[calendarDays.findIndex(d => d.year === selectedDay!.year && d.month === selectedDay!.month && d.day === selectedDay!.day)] ?? []) : []"
+      :schedules="selectedDaySchedules"
       :duty-types="dutyTypes"
       :can-edit="canEdit"
       :batch-edit-mode="batchEditMode"
@@ -1663,13 +1666,6 @@ async function showExcelUploadModal() {
       :selected-friend-ids="selectedFriendIds"
       @close="isOtherDutiesModalOpen = false"
       @toggle="handleFriendToggle"
-    />
-
-    <ScheduleViewModal
-      :is-open="isScheduleDetailModalOpen"
-      :schedule="selectedSchedule"
-      :member-id="memberId"
-      @close="isScheduleDetailModalOpen = false"
     />
 
     </template>
