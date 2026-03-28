@@ -446,7 +446,10 @@ function handleUploadError(message: string) {
         </div>
 
         <!-- Footer (sticky at bottom) -->
-        <div class="day-detail-modal-footer modal-footer-safe px-3 py-2.5 sm:p-4 flex-shrink-0 border-t border-dp-border-primary">
+        <div
+          v-if="canEdit || isCreateMode || isEditMode"
+          class="day-detail-modal-footer modal-footer-safe px-3 py-2.5 sm:p-4 flex-shrink-0 border-t border-dp-border-primary"
+        >
           <!-- List mode: Add schedule button -->
           <div v-if="!isCreateMode && !isEditMode && canEdit" class="flex justify-end">
             <button
@@ -455,6 +458,14 @@ function handleUploadError(message: string) {
             >
               <Plus class="w-4 h-4" />
               일정 추가
+            </button>
+          </div>
+          <div v-else-if="!isCreateMode && !isEditMode" class="flex justify-end">
+            <button
+              @click="emit('close')"
+              class="w-full sm:w-auto px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
+            >
+              닫기
             </button>
           </div>
           <!-- Create/Edit mode: Save/Cancel buttons -->

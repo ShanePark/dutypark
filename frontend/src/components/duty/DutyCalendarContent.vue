@@ -32,7 +32,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'day-click', day: CalendarDay, index: number): void
   (e: 'batch-duty-change', day: CalendarDay, dutyTypeId: number | null): void
-  (e: 'schedule-click', schedule: Schedule): void
   (e: 'todo-click', todo: TodoDueItem): void
 }>()
 
@@ -151,10 +150,6 @@ function getHiddenMobileCalendarTagCount(schedule: Schedule) {
   return Math.max(getDisplayTagMembers(schedule).length - MOBILE_VISIBLE_CALENDAR_TAGS, 0)
 }
 
-function handleScheduleClick(schedule: Schedule, event: Event) {
-  event.stopPropagation()
-  emit('schedule-click', schedule)
-}
 </script>
 
 <template>
@@ -166,7 +161,7 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
     :get-duty-color="getDutyColorForDay"
     :highlight-day="highlightDay"
     :focused-day="focusedCalendarDay"
-    :clickable="canEdit"
+    :clickable="!batchEditMode || canEdit"
     @day-click="(day, index) => emit('day-click', day, index)"
   >
     <!-- D-Day indicator in header -->
@@ -235,9 +230,7 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
           v-for="schedule in schedulesByDays[index]?.slice(0, 3)"
           :key="schedule.id"
           class="px-0.5 text-[10px] leading-snug border-t-2 border-dashed sm:text-sm"
-          :class="{ 'cursor-pointer hover:underline': !canEdit && hasScheduleDetails(schedule) }"
           :style="{ color: getPrimaryTextColor(getDutyColorAt(index)), borderColor: getBorderColor(getDutyColorAt(index)) }"
-          @click="!canEdit && hasScheduleDetails(schedule) ? handleScheduleClick(schedule, $event) : null"
         >
           <div class="truncate sm:whitespace-normal sm:break-words">
             <Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" :style="{ color: getMutedTextColor(getDutyColorAt(index)) }" />{{ schedule.contentWithoutTime || schedule.content }}{{ formatScheduleTime(schedule) }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
