@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type CSSProperties } from 'vue'
 import { getVisibilityDescription, getVisibilityIcon, getVisibilityLabel, type CalendarVisibility } from '@/utils/visibility'
 
 type VisibilityHintSize = 'xs' | 'sm'
 type VisibilityHintAlign = 'start' | 'end'
 type TooltipPlacement = 'top' | 'bottom'
+type LegacyMediaQueryList = MediaQueryList & {
+  addListener?: (listener: (event: MediaQueryListEvent) => void) => void
+  removeListener?: (listener: (event: MediaQueryListEvent) => void) => void
+}
 
 const props = withDefaults(defineProps<{
   visibility: CalendarVisibility
@@ -66,13 +70,13 @@ const tooltipPosition = ref<{
   ready: false,
 })
 
-const tooltipStyle = computed(() => ({
+const tooltipStyle = computed<CSSProperties>(() => ({
   top: `${tooltipPosition.value.top}px`,
   left: `${tooltipPosition.value.left}px`,
   visibility: tooltipPosition.value.ready ? 'visible' : 'hidden',
 }))
 
-let mediaQuery: MediaQueryList | null = null
+let mediaQuery: LegacyMediaQueryList | null = null
 let mediaQueryHandler: ((event: MediaQueryListEvent) => void) | null = null
 
 function updatePointerMode() {
@@ -175,10 +179,10 @@ onMounted(() => {
       }
     }
 
-    if ('addEventListener' in mediaQuery) {
+    if (typeof mediaQuery.addEventListener === 'function') {
       mediaQuery.addEventListener('change', mediaQueryHandler)
     } else {
-      mediaQuery.addListener(mediaQueryHandler)
+      mediaQuery.addListener?.(mediaQueryHandler)
     }
 
     window.addEventListener('resize', updateTooltipPosition)
@@ -197,10 +201,10 @@ onBeforeUnmount(() => {
   }
 
   if (mediaQuery && mediaQueryHandler) {
-    if ('removeEventListener' in mediaQuery) {
+    if (typeof mediaQuery.removeEventListener === 'function') {
       mediaQuery.removeEventListener('change', mediaQueryHandler)
     } else {
-      mediaQuery.removeListener(mediaQueryHandler)
+      mediaQuery.removeListener?.(mediaQueryHandler)
     }
   }
 })
