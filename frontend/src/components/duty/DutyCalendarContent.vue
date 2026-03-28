@@ -42,7 +42,7 @@ const focusedCalendarDay = computed(() => {
 })
 
 const displayHolidays = computed(() => (props.batchEditMode ? [] : props.holidays))
-const MOBILE_VISIBLE_CALENDAR_TAGS = 1
+const MOBILE_VISIBLE_CALENDAR_TAGS = 3
 
 function getDutyColorAt(index: number): string | null {
   return props.duties[index]?.dutyColor ?? null
@@ -143,6 +143,16 @@ function getCalendarTagLabel(name: string) {
   return chars.length > 3 ? `${chars.slice(0, 2).join('')}…` : name
 }
 
+const MOBILE_CALENDAR_SCHEDULE_TITLE_LIMIT = 10
+
+function getMobileCalendarScheduleTitle(schedule: Schedule) {
+  const title = schedule.contentWithoutTime || schedule.content
+  const chars = Array.from(title)
+  return chars.length > MOBILE_CALENDAR_SCHEDULE_TITLE_LIMIT
+    ? `${chars.slice(0, MOBILE_CALENDAR_SCHEDULE_TITLE_LIMIT).join('')}…`
+    : title
+}
+
 function getMobileCalendarTagMembers(schedule: Schedule) {
   return getDisplayTagMembers(schedule).slice(0, MOBILE_VISIBLE_CALENDAR_TAGS)
 }
@@ -237,14 +247,14 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
           class="px-0.5 text-[10px] leading-snug border-t-2 border-dashed sm:text-sm"
           :style="{ color: getPrimaryTextColor(getDutyColorAt(index)), borderColor: getBorderColor(getDutyColorAt(index)) }"
         >
-          <div class="truncate sm:whitespace-normal sm:break-words">
+          <div class="calendar-schedule-text sm:whitespace-normal sm:break-words">
             <VisibilityHintIcon
               v-if="shouldShowPrivateVisibility(schedule)"
               :visibility="schedule.visibility"
               size="xs"
               align="end"
               class="mr-0.5 inline-flex align-[-2px] sm:align-[-3px]"
-            />{{ schedule.contentWithoutTime || schedule.content }}{{ formatScheduleTime(schedule) }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
+            /><span class="sm:hidden">{{ getMobileCalendarScheduleTitle(schedule) }}</span><span class="hidden sm:inline">{{ schedule.contentWithoutTime || schedule.content }}</span>{{ formatScheduleTime(schedule) }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
               v-if="hasScheduleDetails(schedule)"
               class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px] ml-0.5"
               :style="{ color: getIconTextColor(getDutyColorAt(index)) }"
@@ -332,6 +342,11 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
 </template>
 
 <style scoped>
+.calendar-schedule-text {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .schedule-tag {
   padding: 0;
   border-radius: 9999px;
