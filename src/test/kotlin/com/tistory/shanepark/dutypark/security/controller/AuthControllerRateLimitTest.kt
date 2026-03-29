@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
@@ -56,6 +57,23 @@ class AuthControllerRateLimitTest : DutyparkIntegrationTest() {
         )
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.error").value("이메일 또는 비밀번호가 올바르지 않습니다."))
+            .andExpect(jsonPath("$.remainingAttempts").value(4))
+            .andDo(print())
+    }
+
+    @Test
+    fun `login error message follows accept language`() {
+        val loginDto = LoginDto(TestData.member.email, "wrongpassword", false)
+        val json = objectMapper.writeValueAsString(loginDto)
+
+        mockMvc.perform(
+            post("/api/auth/token")
+                .header(HttpHeaders.ACCEPT_LANGUAGE, "en")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.error").value("Email or password is incorrect."))
             .andExpect(jsonPath("$.remainingAttempts").value(4))
             .andDo(print())
     }
@@ -126,6 +144,31 @@ class AuthControllerRateLimitTest : DutyparkIntegrationTest() {
         )
             .andExpect(status().isTooManyRequests)
             .andExpect(jsonPath("$.error").value("로그인 시도 횟수를 초과했습니다. 잠시 후 다시 시도해 주세요."))
+            .andDo(print())
+    }
+
+    @Test
+    fun `rate limit message follows accept language`() {
+        val loginDto = LoginDto(TestData.member.email, "wrongpassword", false)
+        val json = objectMapper.writeValueAsString(loginDto)
+
+        repeat(5) {
+            mockMvc.perform(
+                post("/api/auth/token")
+                    .header(HttpHeaders.ACCEPT_LANGUAGE, "en")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json)
+            ).andExpect(status().isUnauthorized)
+        }
+
+        mockMvc.perform(
+            post("/api/auth/token")
+                .header(HttpHeaders.ACCEPT_LANGUAGE, "en")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+        )
+            .andExpect(status().isTooManyRequests)
+            .andExpect(jsonPath("$.error").value("Too many login attempts. Please try again later."))
             .andDo(print())
     }
 

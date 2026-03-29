@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { CheckCheck, ChevronRight } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
+import 'dayjs/locale/ja'
 import 'dayjs/locale/ko'
 import { useNotificationStore } from '@/stores/notification'
 import { useAuthStore } from '@/stores/auth'
@@ -12,7 +14,6 @@ import type { NotificationDto } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 
 dayjs.extend(relativeTime)
-dayjs.locale('ko')
 
 interface Props {
   visible: boolean
@@ -29,13 +30,20 @@ const router = useRouter()
 const notificationStore = useNotificationStore()
 const authStore = useAuthStore()
 const { navigateToNotification } = useNotificationNavigation()
+const { locale, t } = useI18n()
+
+const dayjsLocale = computed(() => {
+  if (locale.value.startsWith('ja')) return 'ja'
+  if (locale.value.startsWith('en')) return 'en'
+  return 'ko'
+})
 
 const displayNotifications = computed(() => {
   return notificationStore.recentNotifications.slice(0, 10)
 })
 
 function formatTimeAgo(dateString: string): string {
-  return dayjs(dateString).fromNow()
+  return dayjs(dateString).locale(dayjsLocale.value).fromNow()
 }
 
 async function handleNotificationClick(notification: NotificationDto) {
@@ -101,7 +109,7 @@ function handleOverlayClick() {
       >
       <!-- Header -->
       <div class="notification-dropdown-header flex items-center justify-between px-4 py-3">
-        <h3 class="text-sm font-semibold">알림</h3>
+        <h3 class="text-sm font-semibold">{{ t('notifications.dropdown.title') }}</h3>
         <button
           v-if="notificationStore.hasUnread"
           type="button"
@@ -109,18 +117,18 @@ function handleOverlayClick() {
           @click="handleMarkAllAsRead"
         >
           <CheckCheck class="w-3.5 h-3.5" />
-          전체 읽음
+          {{ t('notifications.dropdown.markAllAsRead') }}
         </button>
       </div>
 
       <!-- Notification List -->
       <div class="notification-dropdown-body max-h-80 overflow-y-auto">
         <div v-if="notificationStore.isLoading" class="p-4 text-center">
-          <span class="notification-loading-text text-sm">불러오는 중...</span>
+          <span class="notification-loading-text text-sm">{{ t('notifications.common.loading') }}</span>
         </div>
 
         <div v-else-if="displayNotifications.length === 0" class="p-8 text-center">
-          <span class="notification-empty-text text-sm">알림이 없습니다</span>
+          <span class="notification-empty-text text-sm">{{ t('notifications.common.empty') }}</span>
         </div>
 
         <template v-else>
@@ -167,7 +175,7 @@ function handleOverlayClick() {
           class="notification-view-all-btn cursor-pointer w-full flex items-center justify-center gap-1 text-sm py-2 rounded transition-all duration-150"
           @click="handleViewAll"
         >
-          더보기
+          {{ t('notifications.dropdown.viewAll') }}
           <ChevronRight class="w-4 h-4" />
         </button>
       </div>

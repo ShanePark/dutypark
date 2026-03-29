@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { dashboardApi } from '@/api/dashboard'
 import { friendApi } from '@/api/member'
@@ -30,6 +31,7 @@ import {
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { t, locale } = useI18n()
 const { showWarning, confirm, toastSuccess } = useSwal()
 
 // Loading states
@@ -43,7 +45,7 @@ const friendInfoError = ref<string | null>(null)
 
 // Today's date formatted
 const today = computed(() => {
-  return new Date().toLocaleDateString('ko-KR', {
+  return new Date().toLocaleDateString(locale.value, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -65,7 +67,7 @@ async function loadMyDashboard() {
     myInfo.value = await dashboardApi.getMyDashboard()
   } catch (error) {
     console.error('Failed to load my dashboard:', error)
-    myInfoError.value = '대시보드 정보를 불러오는데 실패했습니다.'
+    myInfoError.value = t('dashboard.messages.loadMyFailed')
   } finally {
     myInfoLoading.value = false
   }
@@ -82,7 +84,7 @@ async function loadFriendsDashboard() {
     friendInfoInitialized.value = true
   } catch (error) {
     console.error('Failed to load friends dashboard:', error)
-    friendInfoError.value = '친구 정보를 불러오는데 실패했습니다.'
+    friendInfoError.value = t('dashboard.messages.loadFriendsFailed')
   } finally {
     friendInfoLoading.value = false
   }
@@ -150,7 +152,7 @@ function printScheduleTime(startDateTime: string) {
   if (date.getHours() === 0 && date.getMinutes() === 0) {
     return ''
   }
-  return date.toLocaleTimeString('ko-KR', {
+  return date.toLocaleTimeString(locale.value, {
     hour: '2-digit',
     minute: '2-digit',
   })
@@ -173,7 +175,7 @@ async function pinFriend(member: { id: number | null; name: string }) {
       console.error('Failed to pin friend:', error)
       friend.pinOrder = null
       sortFriendsByPinOrder()
-      showWarning('친구 고정에 실패했습니다.')
+      showWarning(t('dashboard.messages.pinFailed'))
     }
   }
 }
@@ -194,7 +196,7 @@ async function unpinFriend(member: { id: number | null; name: string }) {
       console.error('Failed to unpin friend:', error)
       friend.pinOrder = oldPinOrder
       sortFriendsByPinOrder()
-      showWarning('친구 고정 해제에 실패했습니다.')
+      showWarning(t('dashboard.messages.unpinFailed'))
     }
   }
 }
@@ -257,17 +259,20 @@ async function search() {
 
 async function requestFriend(member: MemberPreviewDto) {
   if (!member.id) return
-  if (!await confirm(`${member.name}님에게 친구 요청을 보내시겠습니까?`, '친구 요청')) return
+  if (!await confirm(
+    t('dashboard.friendRequest.confirm', { name: member.name }),
+    t('dashboard.friendRequest.title'),
+  )) return
   try {
     await friendApi.sendFriendRequest(member.id)
     // Remove from search results to show it's been requested
     searchResult.value = searchResult.value.filter((m) => m.id !== member.id)
     // Refresh friend requests section
     await loadFriendsDashboard()
-    toastSuccess(`${member.name}님에게 친구 요청을 보냈습니다.`)
+    toastSuccess(t('dashboard.friendRequest.success', { name: member.name }))
   } catch (error) {
     console.error('Failed to send friend request:', error)
-    showWarning('친구 요청을 보내는데 실패했습니다.')
+    showWarning(t('dashboard.messages.friendRequestFailed'))
   }
 }
 
@@ -335,7 +340,7 @@ async function updateFriendsPin() {
     await friendApi.updateFriendsPinOrder(friendIds)
   } catch (error) {
     console.error('Failed to update friend pin order:', error)
-    showWarning('친구 순서 변경에 실패했습니다.')
+    showWarning(t('dashboard.messages.reorderFailed'))
   }
 }
 
@@ -424,7 +429,7 @@ watch(
               :profile-photo-version="myInfo?.member.profilePhotoVersion"
               size="md"
             />
-            <span class="text-lg font-bold text-dp-text-on-dark">{{ myInfo?.member.name || '로딩중...' }}</span>
+            <span class="text-lg font-bold text-dp-text-on-dark">{{ myInfo?.member.name || t('dashboard.labels.loadingName') }}</span>
           </div>
           <ChevronRight class="w-5 h-5 text-dp-text-muted group-hover:text-dp-text-on-dark group-hover:translate-x-1 transition-all" />
         </div>
@@ -445,7 +450,7 @@ watch(
 
               <div class="flex items-center gap-2">
                 <Briefcase class="w-5 h-5 text-dp-text-muted" />
-                <span class="text-dp-text-secondary">근무:</span>
+                <span class="text-dp-text-secondary">{{ t('dashboard.labels.duty') }}</span>
                 <template v-if="myInfoLoading">
                   <div class="w-4 h-4 border-2 rounded-full animate-spin" :style="{ borderColor: 'var(--dp-border-secondary)', borderTopColor: 'var(--dp-text-primary)' }"></div>
                 </template>
@@ -457,10 +462,10 @@ watch(
                       color: isLightColor(myInfo.duty.dutyColor) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
                     }"
                   >
-                    {{ myInfo.duty.dutyType || '휴무' }}
+                    {{ myInfo.duty.dutyType || t('dashboard.labels.offDuty') }}
                   </span>
                 </template>
-                <span class="text-dp-text-muted" v-else>없음</span>
+                <span class="text-dp-text-muted" v-else>{{ t('dashboard.labels.none') }}</span>
               </div>
             </div>
 
@@ -468,7 +473,7 @@ watch(
             <div class="border-t pt-4 md:border-t-0 md:pt-0 md:border-l md:pl-5 border-dp-border-primary">
               <div class="flex items-center gap-2 mb-2">
                 <ClipboardList class="w-5 h-5 text-dp-text-muted" />
-                <span class="font-medium text-dp-text-primary">오늘 일정</span>
+                <span class="font-medium text-dp-text-primary">{{ t('dashboard.labels.todaySchedules') }}</span>
               </div>
               <template v-if="myInfoLoading">
                 <div class="flex justify-center py-3">
@@ -485,7 +490,7 @@ watch(
                   <span class="ml-2 text-sm flex-shrink-0 text-dp-text-muted">{{ printScheduleTime(schedule.startDateTime) }}</span>
                 </li>
                 <li v-if="!myInfo?.schedules?.length" class="text-sm text-dp-text-muted">
-                  오늘의 일정이 없습니다.
+                  {{ t('dashboard.labels.noSchedules') }}
                 </li>
               </ul>
             </div>
@@ -502,7 +507,7 @@ watch(
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <Users class="w-5 h-5 text-dp-text-on-dark" />
-              <span class="text-dp-text-on-dark font-bold">친구관리</span>
+              <span class="text-dp-text-on-dark font-bold">{{ t('dashboard.labels.friends') }}</span>
               <span v-if="friendInfo?.friends.length" class="ml-2 px-2 py-0.5 bg-dp-overlay-light/20 rounded-full text-xs text-dp-text-on-dark">
                 {{ friendInfo.friends.length }}
               </span>
@@ -523,12 +528,12 @@ watch(
           <!-- Empty state -->
           <div v-else-if="sortedFriends.length === 0" class="text-center py-8">
             <Users class="w-12 h-12 mx-auto mb-3 text-dp-text-muted" />
-            <p class="text-sm text-dp-text-secondary">아직 친구가 없습니다.</p>
+            <p class="text-sm text-dp-text-secondary">{{ t('dashboard.labels.noFriends') }}</p>
             <button
               class="mt-4 px-4 py-2 text-sm font-medium bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
               @click="openSearchModal"
             >
-              친구 추가하기
+              {{ t('dashboard.actions.addFriend') }}
             </button>
           </div>
 
@@ -565,7 +570,7 @@ watch(
                   <div class="flex items-center justify-between mb-1.5">
                     <div class="flex items-center gap-1.5 min-w-0">
                       <span class="font-medium text-sm truncate text-dp-text-primary">{{ friend.member.name }}</span>
-                      <Home v-if="friend.isFamily" class="w-3.5 h-3.5 flex-shrink-0 text-dp-warning" title="Family member" />
+                      <Home v-if="friend.isFamily" class="w-3.5 h-3.5 flex-shrink-0 text-dp-warning" :title="t('dashboard.labels.familyMember')" />
                     </div>
                     <div class="flex items-center flex-shrink-0" @click.stop>
                     <!-- Pin/Unpin button -->
@@ -573,7 +578,7 @@ watch(
                       v-if="friend.pinOrder"
                       class="p-1 text-dp-warning hover:text-dp-warning transition cursor-pointer"
                       @click.stop="unpinFriend(friend.member)"
-                      title="고정 해제"
+                      :title="t('dashboard.actions.unpin')"
                     >
                       <Star class="w-4 h-4" fill="currentColor" />
                     </button>
@@ -581,7 +586,7 @@ watch(
                       v-else
                       class="p-1 text-dp-text-muted hover:text-dp-warning transition cursor-pointer"
                       @click.stop="pinFriend(friend.member)"
-                      title="고정"
+                      :title="t('dashboard.actions.pin')"
                     >
                       <Star class="w-4 h-4" />
                     </button>
@@ -591,8 +596,8 @@ watch(
                   <!-- Duty info -->
                   <div class="flex items-center gap-1.5 mb-1.5">
                     <Briefcase class="w-3.5 h-3.5 flex-shrink-0 text-dp-text-muted" />
-                    <span class="text-xs text-dp-text-secondary">근무:</span>
-                    <span v-if="friend.duty" class="text-xs font-medium truncate text-dp-text-primary">{{ friend.duty.dutyType || '휴무' }}</span>
+                    <span class="text-xs text-dp-text-secondary">{{ t('dashboard.labels.duty') }}</span>
+                    <span v-if="friend.duty" class="text-xs font-medium truncate text-dp-text-primary">{{ friend.duty.dutyType || t('dashboard.labels.offDuty') }}</span>
                     <span v-else class="text-xs text-dp-text-muted">-</span>
                   </div>
 
@@ -606,7 +611,7 @@ watch(
                       {{ printSchedule(schedule) }}
                     </div>
                     <div v-if="friend.schedules.length > 2" class="text-xs pl-1" :style="{ color: 'var(--dp-text-muted)' }">
-                      +{{ friend.schedules.length - 2 }}개 더보기
+                      {{ t('dashboard.labels.moreSchedules', { count: friend.schedules.length - 2 }) }}
                     </div>
                   </div>
                 </div>
@@ -616,7 +621,7 @@ watch(
               <div v-if="friend.pinOrder" class="absolute bottom-2 right-2" @click.stop>
                 <div
                   class="handle friend-drag-handle rounded-lg p-1.5 transition hover:bg-dp-overlay-dark/10 !cursor-grab active:!cursor-grabbing"
-                  title="드래그하여 순서 변경"
+                  :title="t('dashboard.actions.dragToReorder')"
                 >
                   <GripVertical class="w-4 h-4" />
                 </div>

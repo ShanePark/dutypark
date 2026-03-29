@@ -1,4 +1,5 @@
 import Swal from 'sweetalert2'
+import { translateGlobal } from '@/i18n'
 
 function readCssVar(name: string, fallback: string): string {
   if (typeof window === 'undefined') return fallback
@@ -32,73 +33,73 @@ const Toast = Swal.mixin({
 })
 
 export function useSwal() {
-  const showError = (message: string, title = '오류') => {
+  const showError = (message: string, title = translateGlobal('common.swal.error')) => {
     const colors = getSwalColors()
     return Swal.fire({
       icon: 'error',
       title,
       text: message,
-      confirmButtonText: '확인',
+      confirmButtonText: translateGlobal('common.actions.confirm'),
       confirmButtonColor: colors.confirmButtonColor,
     })
   }
 
-  const showWarning = (message: string, title = '주의') => {
+  const showWarning = (message: string, title = translateGlobal('common.swal.warning')) => {
     const colors = getSwalColors()
     return Swal.fire({
       icon: 'warning',
       title,
       text: message,
-      confirmButtonText: '확인',
+      confirmButtonText: translateGlobal('common.actions.confirm'),
       confirmButtonColor: colors.confirmButtonColor,
     })
   }
 
-  const showSuccess = (message: string, title = '성공') => {
+  const showSuccess = (message: string, title = translateGlobal('common.swal.success')) => {
     const colors = getSwalColors()
     return Swal.fire({
       icon: 'success',
       title,
       text: message,
-      confirmButtonText: '확인',
+      confirmButtonText: translateGlobal('common.actions.confirm'),
       confirmButtonColor: colors.confirmButtonColor,
     })
   }
 
-  const showInfo = (message: string, title = '알림') => {
+  const showInfo = (message: string, title = translateGlobal('common.swal.info')) => {
     const colors = getSwalColors()
     return Swal.fire({
       icon: 'info',
       title,
       text: message,
-      confirmButtonText: '확인',
+      confirmButtonText: translateGlobal('common.actions.confirm'),
       confirmButtonColor: colors.confirmButtonColor,
     })
   }
 
-  const confirm = (message: string, title = '확인') => {
+  const confirm = (message: string, title = translateGlobal('common.swal.confirm')) => {
     const colors = getSwalColors()
     return Swal.fire({
       icon: 'question',
       title,
       text: message,
       showCancelButton: true,
-      confirmButtonText: '확인',
-      cancelButtonText: '취소',
+      confirmButtonText: translateGlobal('common.actions.confirm'),
+      cancelButtonText: translateGlobal('common.actions.cancel'),
       confirmButtonColor: colors.confirmButtonColor,
       cancelButtonColor: colors.cancelButtonColor,
     }).then((result) => result.isConfirmed)
   }
 
-  const confirmDelete = (message: string, title = '삭제 확인') => {
+  const confirmDelete = (message: string, title = translateGlobal('common.swal.confirmDelete')) => {
     const colors = getSwalColors()
     return Swal.fire({
       icon: 'warning',
       title,
       text: message,
       showCancelButton: true,
-      confirmButtonText: '삭제',
-      cancelButtonText: '취소',
+      confirmButtonText: translateGlobal('common.actions.delete'),
+      cancelButtonText: translateGlobal('common.actions.cancel'),
       confirmButtonColor: colors.dangerButtonColor,
       cancelButtonColor: colors.cancelButtonColor,
     }).then((result) => result.isConfirmed)

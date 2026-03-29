@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, inject, computed, type Ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useScrollProgress } from '@/composables/useScrollProgress'
 import { ChevronRight, Sparkles, BookOpen } from 'lucide-vue-next'
 
 const sectionRef = ref<HTMLElement | null>(null)
 const containerRef = inject<Ref<HTMLElement | null>>('introContainer', ref(null))
+const { t } = useI18n()
 
 const { progress } = useScrollProgress(sectionRef, containerRef, {
   start: 0,
@@ -76,15 +78,15 @@ const guideLinkStyle = computed(() => {
       </div>
 
       <h2 class="intro-cta-title" :style="titleStyle">
-        소중한 사람들과 연결되세요
+        {{ t('intro.cta.title') }}
       </h2>
 
       <p
         class="mb-8"
         :style="{ ...descStyle, color: 'var(--dp-text-secondary)' }"
       >
-        당신의 일정은 단순한 근무 그 이상이니까요.<br>
-        카카오톡으로 지금 바로 시작하세요.
+        {{ t('intro.cta.descriptionLine1') }}<br>
+        {{ t('intro.cta.descriptionLine2') }}
       </p>
 
       <router-link
@@ -92,7 +94,7 @@ const guideLinkStyle = computed(() => {
         class="intro-cta-button"
         :style="buttonStyle"
       >
-        로그인 / 회원가입
+        {{ t('intro.cta.login') }}
         <ChevronRight class="w-5 h-5" />
       </router-link>
 
@@ -102,7 +104,7 @@ const guideLinkStyle = computed(() => {
         :style="guideLinkStyle"
       >
         <BookOpen class="w-4 h-4" />
-        먼저 기능 둘러보기
+        {{ t('intro.cta.guide') }}
       </router-link>
     </div>
   </section>

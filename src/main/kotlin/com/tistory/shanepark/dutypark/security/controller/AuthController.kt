@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.security.controller
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.config.LocalizedMessageResolver
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.common.exceptions.RateLimitException
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
@@ -13,6 +14,7 @@ import com.tistory.shanepark.dutypark.security.domain.dto.TokenResponse
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import com.tistory.shanepark.dutypark.security.service.CookieService
 import com.tistory.shanepark.dutypark.security.service.LoginAttemptService
+import jakarta.validation.Valid
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.http.ResponseEntity
@@ -26,20 +28,21 @@ class AuthController(
     private val refreshTokenService: RefreshTokenService,
     private val jwtConfig: JwtConfig,
     private val loginAttemptService: LoginAttemptService,
+    private val localizedMessageResolver: LocalizedMessageResolver,
 ) {
     private val log = logger()
 
     @PutMapping("password")
     fun changePassword(
         @Login loginMember: LoginMember,
-        @RequestBody(required = true) param: PasswordChangeDto
+        @Valid @RequestBody(required = true) param: PasswordChangeDto
     ): ResponseEntity<String> {
         if (loginMember.id != param.memberId && !loginMember.isAdmin) {
-            throw AuthException("You are not authorized to change this password")
+            throw AuthException("auth.password.changeUnauthorized")
         }
         val byAdmin = loginMember.isAdmin && loginMember.id != param.memberId
         authService.changePassword(param, byAdmin)
-        return ResponseEntity.ok().body("Password Changed")
+        return ResponseEntity.ok().body(localizedMessageResolver.resolve("auth.password.changed"))
     }
 
     @GetMapping("/status")
@@ -55,7 +58,7 @@ class AuthController(
      */
     @PostMapping("/token")
     fun loginForToken(
-        @RequestBody loginDto: LoginDto,
+        @Valid @RequestBody loginDto: LoginDto,
         req: HttpServletRequest,
         resp: HttpServletResponse
     ): ResponseEntity<*> {
@@ -64,14 +67,16 @@ class AuthController(
             cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)
             ResponseEntity.ok(tokenResponse.toPublicResponse())
         } catch (e: RateLimitException) {
-            ResponseEntity.status(429).body(mapOf("error" to e.message))
+            ResponseEntity.status(429).body(
+                mapOf("error" to localizedMessageResolver.resolve(e.message, defaultCode = "auth.login.rateLimited"))
+            )
         } catch (e: AuthException) {
             val email = loginDto.email ?: ""
             val ipAddress = req.remoteAddr ?: "unknown"
             val remainingAttempts = loginAttemptService.getRemainingAttempts(ipAddress, email)
             ResponseEntity.status(401).body(
                 mapOf(
-                    "error" to (e.message ?: "로그인에 실패했습니다."),
+                    "error" to localizedMessageResolver.resolve(e.message, defaultCode = "auth.login.failed"),
                     "remainingAttempts" to remainingAttempts
                 )
             )
@@ -133,7 +138,9 @@ class AuthController(
             cookieService.setAccessTokenCookie(resp, accessToken)
             ResponseEntity.ok(mapOf("expiresIn" to jwtConfig.tokenValidityInSeconds))
         } catch (e: AuthException) {
-            ResponseEntity.status(403).body(mapOf("error" to (e.message ?: "계정 전환에 실패했습니다.")))
+            ResponseEntity.status(403).body(
+                mapOf("error" to localizedMessageResolver.resolve(e.message, defaultCode = "auth.impersonation.failed"))
+            )
         }
     }
 
@@ -153,7 +160,9 @@ class AuthController(
             cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)
             ResponseEntity.ok(tokenResponse.toPublicResponse())
         } catch (e: AuthException) {
-            ResponseEntity.status(400).body(mapOf("error" to (e.message ?: "계정 복원에 실패했습니다.")))
+            ResponseEntity.status(400).body(
+                mapOf("error" to localizedMessageResolver.resolve(e.message, defaultCode = "auth.restore.failed"))
+            )
         }
     }
 

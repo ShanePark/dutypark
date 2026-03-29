@@ -1,11 +1,13 @@
 package com.tistory.shanepark.dutypark.notification.event
 
+import com.tistory.shanepark.dutypark.common.config.DutyparkLocale
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.notification.domain.entity.Notification
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationReferenceType
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationType
 import com.tistory.shanepark.dutypark.notification.domain.repository.NotificationRepository
+import com.tistory.shanepark.dutypark.notification.service.NotificationMessageResolver
 import com.tistory.shanepark.dutypark.notification.service.NotificationService
 import com.tistory.shanepark.dutypark.push.dto.PushNotificationPayload
 import com.tistory.shanepark.dutypark.push.service.WebPushService
@@ -16,13 +18,15 @@ import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
+import java.util.Locale
 
 @Component
 class NotificationEventListener(
     private val notificationService: NotificationService,
     private val notificationRepository: NotificationRepository,
     private val memberRepository: MemberRepository,
-    private val webPushService: WebPushService
+    private val webPushService: WebPushService,
+    private val notificationMessageResolver: NotificationMessageResolver,
 ) {
     private val log = logger()
 
@@ -166,7 +170,8 @@ class NotificationEventListener(
         val actorName = notification.actorId?.let { actorId ->
             memberRepository.findById(actorId).orElse(null)?.name
         }
-        val pushBody = notification.type.generatePushBody(notification.content)
+        val locale = Locale.forLanguageTag(DutyparkLocale.normalize(notification.member.preferredLocale))
+        val pushBody = notificationMessageResolver.resolvePushBody(notification.type, locale, notification.content)
 
         webPushService.sendToMember(
             memberId = memberId,

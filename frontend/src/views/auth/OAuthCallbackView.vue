@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { getSafeRedirect } from '@/utils/redirect'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { t } = useI18n()
 
 const error = ref('')
 const isLoading = ref(true)
@@ -19,7 +21,7 @@ onMounted(async () => {
   if (errorParam === 'sso_required') {
     const uuid = params.get('uuid')
     if (!uuid) {
-      error.value = '회원가입 정보를 받지 못했습니다.'
+      error.value = t('auth.oauthCallback.missingSignupInfo')
       isLoading.value = false
       return
     }
@@ -32,7 +34,7 @@ onMounted(async () => {
 
   const loginSuccess = params.get('login')
   if (loginSuccess !== 'success') {
-    error.value = '인증 정보를 받지 못했습니다.'
+    error.value = t('auth.oauthCallback.missingAuthInfo')
     isLoading.value = false
     return
   }
@@ -41,7 +43,7 @@ onMounted(async () => {
     await authStore.checkAuth()
     await router.replace(redirect || '/')
   } catch {
-    error.value = '인증에 실패했습니다.'
+    error.value = t('auth.oauthCallback.authFailed')
     isLoading.value = false
   }
 })
@@ -52,18 +54,18 @@ onMounted(async () => {
     <div class="rounded-xl shadow-sm p-8 max-w-md w-full mx-4 bg-dp-bg-card border border-dp-border-primary">
       <div v-if="isLoading" class="text-center">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-dp-accent mx-auto mb-4"></div>
-        <p class="text-dp-text-secondary">로그인 처리 중...</p>
+        <p class="text-dp-text-secondary">{{ t('auth.oauthCallback.loading') }}</p>
       </div>
 
       <div v-else-if="error" class="text-center">
         <div class="text-dp-danger text-5xl mb-4">!</div>
-        <h2 class="text-xl font-bold mb-2 text-dp-text-primary">로그인 실패</h2>
+        <h2 class="text-xl font-bold mb-2 text-dp-text-primary">{{ t('auth.oauthCallback.title') }}</h2>
         <p class="mb-4 text-dp-text-secondary">{{ error }}</p>
         <router-link
           to="/auth/login"
           class="inline-block bg-dp-accent text-dp-text-on-dark py-2 px-4 rounded-lg hover:bg-dp-accent-hover transition"
         >
-          로그인 페이지로 이동
+          {{ t('auth.oauthCallback.backToLogin') }}
         </router-link>
       </div>
     </div>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import type { AdminMemberDetailDto, AdminMemberDto } from '@/types'
@@ -34,9 +35,11 @@ const emit = defineEmits<{
   changePassword: [member: AdminMemberDto]
 }>()
 
+const { t, locale } = useI18n()
 const effectiveMember = computed(() => props.memberDetail ?? props.member)
 const visibilityLabel = computed(() => {
-  if (!props.memberDetail) return '불러오는 중'
+  locale.value
+  if (!props.memberDetail) return t('admin.memberDetail.loading')
   return getVisibilityLabel(props.memberDetail.calendarVisibility)
 })
 const visibilityIcon = computed(() => {
@@ -48,11 +51,11 @@ const roleBadges = computed(() => {
   if (!props.memberDetail) return []
 
   const badges: Array<{ label: string; tone: string }> = []
-  if (props.memberDetail.serviceAdmin) badges.push({ label: '서비스 관리자', tone: 'accent' })
-  if (props.memberDetail.teamAdmin) badges.push({ label: '팀장', tone: 'success' })
-  if (!props.memberDetail.teamAdmin && props.memberDetail.teamManager) badges.push({ label: '팀 매니저', tone: 'warning' })
-  if (props.memberDetail.auxiliaryAccount) badges.push({ label: '보조 계정', tone: 'muted' })
-  if (!badges.length) badges.push({ label: '일반 회원', tone: 'muted' })
+  if (props.memberDetail.serviceAdmin) badges.push({ label: t('admin.memberDetail.badges.serviceAdmin'), tone: 'accent' })
+  if (props.memberDetail.teamAdmin) badges.push({ label: t('admin.memberDetail.badges.teamLead'), tone: 'success' })
+  if (!props.memberDetail.teamAdmin && props.memberDetail.teamManager) badges.push({ label: t('admin.memberDetail.badges.teamManager'), tone: 'warning' })
+  if (props.memberDetail.auxiliaryAccount) badges.push({ label: t('admin.memberDetail.badges.auxiliaryAccount'), tone: 'muted' })
+  if (!badges.length) badges.push({ label: t('admin.memberDetail.badges.member'), tone: 'muted' })
   return badges
 })
 
@@ -60,13 +63,13 @@ const loginBadges = computed(() => {
   if (!props.memberDetail) return []
 
   const badges: string[] = []
-  if (props.memberDetail.hasPassword) badges.push('비밀번호')
+  if (props.memberDetail.hasPassword) badges.push(t('admin.memberDetail.badges.password'))
   props.memberDetail.authProviders.forEach((provider) => {
-    if (provider === 'KAKAO') badges.push('카카오')
-    else if (provider === 'NAVER') badges.push('네이버')
+    if (provider === 'KAKAO') badges.push(t('admin.memberDetail.badges.kakao'))
+    else if (provider === 'NAVER') badges.push(t('admin.memberDetail.badges.naver'))
     else badges.push(provider)
   })
-  if (!badges.length) badges.push('로그인 수단 없음')
+  if (!badges.length) badges.push(t('admin.memberDetail.badges.noLoginMethods'))
   return badges
 })
 
@@ -75,39 +78,51 @@ const heroStats = computed(() => {
 
   return [
     {
-      label: '등록 일정',
+      label: t('admin.memberDetail.hero.totalSchedules'),
       value: formatNumber(props.memberDetail.totalScheduleCount),
-      caption: `예정 ${formatNumber(props.memberDetail.upcomingScheduleCount)}개`,
+      caption: t('admin.memberDetail.hero.totalSchedulesCaption', {
+        count: formatNumber(props.memberDetail.upcomingScheduleCount),
+      }),
       icon: CalendarDays,
     },
     {
-      label: '전체 TODO',
+      label: t('admin.memberDetail.hero.totalTodos'),
       value: formatNumber(props.memberDetail.totalTodoCount),
-      caption: `진행 중 ${formatNumber(props.memberDetail.inProgressTodoCount)}개`,
+      caption: t('admin.memberDetail.hero.totalTodosCaption', {
+        count: formatNumber(props.memberDetail.inProgressTodoCount),
+      }),
       icon: ListTodo,
     },
     {
-      label: '활성 세션',
+      label: t('admin.memberDetail.hero.activeSessions'),
       value: formatNumber(props.memberDetail.activeSessionCount),
-      caption: `푸시 연결 ${formatNumber(props.memberDetail.pushEnabledSessionCount)}개`,
+      caption: t('admin.memberDetail.hero.activeSessionsCaption', {
+        count: formatNumber(props.memberDetail.pushEnabledSessionCount),
+      }),
       icon: Smartphone,
     },
     {
-      label: '읽지 않은 알림',
+      label: t('admin.memberDetail.hero.unreadNotifications'),
       value: formatNumber(props.memberDetail.unreadNotificationCount),
-      caption: `전체 ${formatNumber(props.memberDetail.totalNotificationCount)}개`,
+      caption: t('admin.memberDetail.hero.unreadNotificationsCaption', {
+        count: formatNumber(props.memberDetail.totalNotificationCount),
+      }),
       icon: Bell,
     },
     {
-      label: '친구',
+      label: t('admin.memberDetail.hero.friends'),
       value: formatNumber(props.memberDetail.friendCount),
-      caption: `가족 ${formatNumber(props.memberDetail.familyCount)}명`,
+      caption: t('admin.memberDetail.hero.friendsCaption', {
+        count: formatNumber(props.memberDetail.familyCount),
+      }),
       icon: Users,
     },
     {
-      label: '관리 계정',
+      label: t('admin.memberDetail.hero.managedAccounts'),
       value: formatNumber(props.memberDetail.managedMemberCount),
-      caption: `이 회원을 관리 중 ${formatNumber(props.memberDetail.managerCount)}명`,
+      caption: t('admin.memberDetail.hero.managedAccountsCaption', {
+        count: formatNumber(props.memberDetail.managerCount),
+      }),
       icon: UserCog,
     },
   ]
@@ -118,38 +133,38 @@ const primaryInfoRows = computed(() => {
 
   return [
     {
-      label: '가입일',
+      label: t('admin.memberDetail.fields.joinedAt'),
       value: formatDateLabel(props.memberDetail.createdDate),
       inlineMeta: formatTimeLabel(props.memberDetail.createdDate),
       inlineNote: formatSince(props.memberDetail.createdDate),
       valueClass: 'member-detail-main-strong',
     },
     {
-      label: '최근 수정',
+      label: t('admin.memberDetail.fields.lastUpdated'),
       value: formatDateLabel(props.memberDetail.lastModifiedDate),
       inlineMeta: formatTimeLabel(props.memberDetail.lastModifiedDate),
       inlineNote: formatSince(props.memberDetail.lastModifiedDate),
       valueClass: 'member-detail-main-strong',
     },
     {
-      label: '최근 활동',
-      value: props.memberDetail.lastActiveAt ? formatDateLabel(props.memberDetail.lastActiveAt) : '활동 기록 없음',
+      label: t('admin.memberDetail.fields.lastActive'),
+      value: props.memberDetail.lastActiveAt ? formatDateLabel(props.memberDetail.lastActiveAt) : t('admin.memberDetail.values.noActivity'),
       inlineMeta: props.memberDetail.lastActiveAt ? formatTimeLabel(props.memberDetail.lastActiveAt) : null,
       inlineNote: props.memberDetail.lastActiveAt ? formatSince(props.memberDetail.lastActiveAt) : null,
       valueClass: props.memberDetail.lastActiveAt ? 'member-detail-main-strong' : 'member-detail-main-muted',
     },
     {
-      label: '이메일',
-      value: props.memberDetail.email || '등록된 이메일 없음',
+      label: t('admin.memberDetail.fields.email'),
+      value: props.memberDetail.email || t('admin.memberDetail.values.noEmail'),
       valueClass: props.memberDetail.email ? 'member-detail-main-break' : 'member-detail-main-muted',
     },
     {
-      label: '소속 팀',
-      value: props.memberDetail.teamName || '팀 없음',
+      label: t('admin.memberDetail.fields.team'),
+      value: props.memberDetail.teamName || t('admin.memberDetail.values.noTeam'),
       valueClass: 'member-detail-main-strong',
     },
     {
-      label: '공개 범위',
+      label: t('admin.memberDetail.fields.visibility'),
       value: visibilityLabel.value,
       valueClass: 'member-detail-main-strong',
     },
@@ -161,16 +176,20 @@ const relationshipGroups = computed(() => {
 
   return [
     {
-      title: '이 회원을 관리하는 계정',
-      emptyText: '등록된 관리자 계정이 없어요',
+      title: t('admin.memberDetail.relationships.managersOfMemberTitle'),
+      emptyText: t('admin.memberDetail.relationships.managersOfMemberEmpty'),
       items: props.memberDetail.managerNames,
-      countText: `${formatNumber(props.memberDetail.managerCount)}명`,
+      countText: t('admin.memberDetail.relationships.countText', {
+        count: formatNumber(props.memberDetail.managerCount),
+      }),
     },
     {
-      title: '이 회원이 관리하는 계정',
-      emptyText: '관리 중인 계정이 없어요',
+      title: t('admin.memberDetail.relationships.managedByMemberTitle'),
+      emptyText: t('admin.memberDetail.relationships.managedByMemberEmpty'),
       items: props.memberDetail.managedMemberNames,
-      countText: `${formatNumber(props.memberDetail.managedMemberCount)}명`,
+      countText: t('admin.memberDetail.relationships.countText', {
+        count: formatNumber(props.memberDetail.managedMemberCount),
+      }),
     },
   ]
 })
@@ -187,27 +206,35 @@ const dDaySummary = computed(() => {
 })
 
 function formatNumber(value: number) {
-  return new Intl.NumberFormat('ko-KR').format(value)
+  return new Intl.NumberFormat(locale.value).format(value)
 }
 
 function formatDateLabel(value: string) {
   const date = new Date(value)
-  return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`
+  return new Intl.DateTimeFormat(locale.value, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(date)
 }
 
 function formatTimeLabel(value: string) {
   const date = new Date(value)
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+  return new Intl.DateTimeFormat(locale.value, {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date)
 }
 
 function formatSince(value: string) {
   const diffMs = Date.now() - new Date(value).getTime()
   const diffDays = Math.max(0, Math.floor(diffMs / 86400000))
 
-  if (diffDays === 0) return '오늘'
-  if (diffDays < 30) return `${diffDays}일 전`
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)}개월 전`
-  return `${Math.floor(diffDays / 365)}년 전`
+  if (diffDays === 0) return t('admin.memberDetail.relativeTime.today')
+  if (diffDays < 30) return t('admin.memberDetail.relativeTime.daysAgo', { count: diffDays })
+  if (diffDays < 365) return t('admin.memberDetail.relativeTime.monthsAgo', { count: Math.floor(diffDays / 30) })
+  return t('admin.memberDetail.relativeTime.yearsAgo', { count: Math.floor(diffDays / 365) })
 }
 
 function roleBadgeClass(tone: string) {
@@ -240,13 +267,13 @@ function openPasswordModal() {
   >
         <div class="modal-header">
           <div class="min-w-0">
-            <h2>{{ effectiveMember?.name ?? '회원 상세' }}</h2>
-            <p class="mt-1 text-xs sm:text-sm text-dp-text-secondary">회원 상세 정보</p>
+            <h2>{{ effectiveMember?.name ?? t('admin.memberDetail.titleFallback') }}</h2>
+            <p class="mt-1 text-xs sm:text-sm text-dp-text-secondary">{{ t('admin.memberDetail.subtitle') }}</p>
           </div>
           <button
             class="p-2 rounded-full hover-close-btn cursor-pointer text-dp-text-muted"
             @click="emit('close')"
-            aria-label="상세 모달 닫기"
+            :aria-label="t('admin.memberDetail.closeAria')"
           >
             <X class="w-5 h-5" />
           </button>
@@ -256,7 +283,7 @@ function openPasswordModal() {
           <div v-if="loading" class="flex min-h-64 items-center justify-center">
             <div class="flex items-center gap-3 text-dp-text-secondary">
               <Loader2 class="w-5 h-5 animate-spin" />
-              <span>회원 상세 정보를 불러오는 중입니다...</span>
+              <span>{{ t('admin.memberDetail.loadingMessage') }}</span>
             </div>
           </div>
 
@@ -268,7 +295,7 @@ function openPasswordModal() {
               class="min-h-11 rounded-xl bg-dp-surface-strong px-4 py-2 text-sm font-semibold text-dp-text-on-dark transition hover:bg-dp-surface-strong-hover cursor-pointer"
               @click="emit('retry')"
             >
-              다시 불러오기
+              {{ t('admin.memberDetail.retry') }}
             </button>
           </div>
 
@@ -286,15 +313,15 @@ function openPasswordModal() {
                   <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-2">
                       <h3 class="text-xl sm:text-2xl font-bold text-dp-text-primary truncate">
-                        {{ effectiveMember?.name ?? '회원 상세' }}
+                        {{ effectiveMember?.name ?? t('admin.memberDetail.titleFallback') }}
                       </h3>
                       <span class="member-inline-badge">ID {{ effectiveMember?.id ?? '-' }}</span>
                     </div>
                     <p class="mt-1 text-sm sm:text-base text-dp-text-secondary break-all">
-                      {{ effectiveMember?.email || '등록된 이메일 없음' }}
+                      {{ effectiveMember?.email || t('admin.memberDetail.values.noEmail') }}
                     </p>
                     <p class="mt-1 text-sm text-dp-text-muted">
-                      {{ effectiveMember?.teamName || '팀 없음' }}
+                      {{ effectiveMember?.teamName || t('admin.memberDetail.values.noTeam') }}
                     </p>
                     <div class="mt-3 flex flex-wrap gap-2">
                       <span
@@ -315,7 +342,7 @@ function openPasswordModal() {
                     @click="goToSchedule"
                   >
                     <span class="inline-flex items-center gap-1.5">
-                      시간표 보기
+                      {{ t('admin.memberDetail.actions.viewSchedule') }}
                       <ChevronRight class="member-action-button-icon w-4 h-4" />
                     </span>
                   </button>
@@ -323,7 +350,7 @@ function openPasswordModal() {
                     class="member-action-button member-action-button-warning"
                     @click="openPasswordModal"
                   >
-                    비밀번호 변경
+                    {{ t('admin.memberDetail.actions.changePassword') }}
                   </button>
                 </div>
               </div>
@@ -350,7 +377,7 @@ function openPasswordModal() {
             <section class="member-section-card">
               <div class="flex items-center gap-2">
                 <Shield class="w-4 h-4 text-dp-text-secondary" />
-                <h3 class="text-base font-semibold text-dp-text-primary">기본 정보</h3>
+                <h3 class="text-base font-semibold text-dp-text-primary">{{ t('admin.memberDetail.sections.basicInfo') }}</h3>
               </div>
               <div class="mt-3 grid gap-2 sm:grid-cols-2">
                 <article
@@ -371,11 +398,11 @@ function openPasswordModal() {
             <section class="member-section-card">
               <div class="flex items-center gap-2">
                 <Key class="w-4 h-4 text-dp-text-secondary" />
-                <h3 class="text-base font-semibold text-dp-text-primary">계정 상태</h3>
+                <h3 class="text-base font-semibold text-dp-text-primary">{{ t('admin.memberDetail.sections.accountStatus') }}</h3>
               </div>
               <div class="mt-3 space-y-3">
                 <div class="member-detail-item">
-                  <p class="member-detail-label">로그인 방식</p>
+                  <p class="member-detail-label">{{ t('admin.memberDetail.fields.loginMethods') }}</p>
                   <div class="mt-2 flex flex-wrap gap-2">
                     <span
                       v-for="badge in loginBadges"
@@ -388,16 +415,16 @@ function openPasswordModal() {
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                   <article class="member-detail-item">
-                    <p class="member-detail-label">공개 범위</p>
+                    <p class="member-detail-label">{{ t('admin.memberDetail.fields.visibility') }}</p>
                     <div class="mt-1 flex items-center gap-2">
                       <component :is="visibilityIcon" class="w-4 h-4 text-dp-text-secondary" />
                       <span class="member-detail-main member-detail-main-strong">{{ visibilityLabel }}</span>
                     </div>
                   </article>
                   <article class="member-detail-item">
-                    <p class="member-detail-label">푸시 연결</p>
+                    <p class="member-detail-label">{{ t('admin.memberDetail.fields.pushSessions') }}</p>
                     <p class="mt-1 member-detail-main member-detail-main-strong">
-                      {{ formatNumber(memberDetail.pushEnabledSessionCount) }}개 세션
+                      {{ t('admin.memberDetail.metrics.sessions', { count: formatNumber(memberDetail.pushEnabledSessionCount) }) }}
                     </p>
                   </article>
                 </div>
@@ -407,48 +434,48 @@ function openPasswordModal() {
             <section class="member-section-card xl:col-span-2">
               <div class="flex items-center gap-2">
                 <CalendarDays class="w-4 h-4 text-dp-text-secondary" />
-                <h3 class="text-base font-semibold text-dp-text-primary">일정 / TODO / D-Day 요약</h3>
+                <h3 class="text-base font-semibold text-dp-text-primary">{{ t('admin.memberDetail.sections.summary') }}</h3>
               </div>
               <div class="mt-3 grid gap-2 lg:grid-cols-3">
                 <article class="member-mini-card">
-                  <p class="text-xs font-medium text-dp-text-muted">일정</p>
+                  <p class="text-xs font-medium text-dp-text-muted">{{ t('admin.memberDetail.summaryCards.schedules') }}</p>
                   <div class="mt-2 space-y-1.5 text-sm text-dp-text-primary">
                     <div class="member-summary-row">
-                      <span>직접 등록</span>
+                      <span>{{ t('admin.memberDetail.summaryCards.directCreated') }}</span>
                       <strong>{{ formatNumber(memberDetail.totalScheduleCount) }}</strong>
                     </div>
                     <div class="member-summary-row">
-                      <span>예정 일정</span>
+                      <span>{{ t('admin.memberDetail.summaryCards.upcoming') }}</span>
                       <strong>{{ formatNumber(memberDetail.upcomingScheduleCount) }}</strong>
                     </div>
                     <div class="member-summary-row">
-                      <span>태그된 일정</span>
+                      <span>{{ t('admin.memberDetail.summaryCards.tagged') }}</span>
                       <strong>{{ formatNumber(memberDetail.taggedScheduleCount) }}</strong>
                     </div>
                   </div>
                 </article>
 
                 <article class="member-mini-card">
-                  <p class="text-xs font-medium text-dp-text-muted">TODO</p>
+                  <p class="text-xs font-medium text-dp-text-muted">{{ t('admin.memberDetail.summaryCards.todo') }}</p>
                   <div class="mt-2 space-y-1.5 text-sm text-dp-text-primary">
                     <div class="member-summary-row">
-                      <span>대기</span>
+                      <span>{{ t('admin.memberDetail.summaryCards.pending') }}</span>
                       <strong>{{ formatNumber(memberDetail.todoCount) }}</strong>
                     </div>
                     <div class="member-summary-row">
-                      <span>진행 중</span>
+                      <span>{{ t('admin.memberDetail.summaryCards.inProgress') }}</span>
                       <strong>{{ formatNumber(memberDetail.inProgressTodoCount) }}</strong>
                     </div>
                     <div class="member-summary-row">
-                      <span>완료</span>
+                      <span>{{ t('admin.memberDetail.summaryCards.done') }}</span>
                       <strong>{{ formatNumber(memberDetail.doneTodoCount) }}</strong>
                     </div>
                     <div class="member-summary-row">
-                      <span>기한 초과</span>
+                      <span>{{ t('admin.memberDetail.summaryCards.overdue') }}</span>
                       <strong class="text-dp-warning">{{ formatNumber(memberDetail.overdueTodoCount) }}</strong>
                     </div>
                     <div class="member-summary-row">
-                      <span>오늘 마감</span>
+                      <span>{{ t('admin.memberDetail.summaryCards.dueToday') }}</span>
                       <strong>{{ formatNumber(memberDetail.dueTodayTodoCount) }}</strong>
                     </div>
                   </div>
@@ -457,22 +484,22 @@ function openPasswordModal() {
                 <article class="member-mini-card">
                   <div class="flex items-start justify-between gap-3">
                     <div>
-                      <p class="text-xs font-medium text-dp-text-muted">D-Day</p>
-                      <p class="mt-1 text-lg font-bold text-dp-text-primary">{{ formatNumber(dDaySummary.total) }}개</p>
+                      <p class="text-xs font-medium text-dp-text-muted">{{ t('admin.memberDetail.summaryCards.dday') }}</p>
+                      <p class="mt-1 text-lg font-bold text-dp-text-primary">{{ t('admin.memberDetail.metrics.items', { count: formatNumber(dDaySummary.total) }) }}</p>
                     </div>
-                    <span class="member-inline-badge">관리자 조회 기준</span>
+                    <span class="member-inline-badge">{{ t('admin.memberDetail.badges.adminViewOnly') }}</span>
                   </div>
                   <div class="mt-2 space-y-1.5 text-sm text-dp-text-primary">
                     <div class="member-summary-row">
-                      <span>전체</span>
+                      <span>{{ t('admin.memberDetail.summaryCards.total') }}</span>
                       <strong>{{ formatNumber(dDaySummary.total) }}</strong>
                     </div>
                     <div class="member-summary-row">
-                      <span>공개</span>
+                      <span>{{ t('admin.memberDetail.summaryCards.public') }}</span>
                       <strong>{{ formatNumber(dDaySummary.publicCount) }}</strong>
                     </div>
                     <div class="member-summary-row">
-                      <span>비공개</span>
+                      <span>{{ t('admin.memberDetail.summaryCards.private') }}</span>
                       <strong>{{ formatNumber(dDaySummary.privateCount) }}</strong>
                     </div>
                   </div>
@@ -483,32 +510,32 @@ function openPasswordModal() {
             <section class="member-section-card xl:col-span-2">
               <div class="flex items-center gap-2">
                 <Users class="w-4 h-4 text-dp-text-secondary" />
-                <h3 class="text-base font-semibold text-dp-text-primary">관계 / 알림</h3>
+                <h3 class="text-base font-semibold text-dp-text-primary">{{ t('admin.memberDetail.sections.relationships') }}</h3>
               </div>
               <div class="mt-3 grid gap-2 sm:grid-cols-2">
                 <article class="member-mini-card">
-                  <p class="text-xs font-medium text-dp-text-muted">친구 요청</p>
+                  <p class="text-xs font-medium text-dp-text-muted">{{ t('admin.memberDetail.relationships.friendRequests') }}</p>
                   <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
                     <div>
-                      <p class="text-dp-text-secondary">받은 요청</p>
+                      <p class="text-dp-text-secondary">{{ t('admin.memberDetail.relationships.received') }}</p>
                       <p class="mt-1 text-lg font-bold text-dp-text-primary">{{ formatNumber(memberDetail.pendingReceivedFriendRequestCount) }}</p>
                     </div>
                     <div>
-                      <p class="text-dp-text-secondary">보낸 요청</p>
+                      <p class="text-dp-text-secondary">{{ t('admin.memberDetail.relationships.sent') }}</p>
                       <p class="mt-1 text-lg font-bold text-dp-text-primary">{{ formatNumber(memberDetail.pendingSentFriendRequestCount) }}</p>
                     </div>
                   </div>
                 </article>
 
                 <article class="member-mini-card">
-                  <p class="text-xs font-medium text-dp-text-muted">친구 / 가족</p>
+                  <p class="text-xs font-medium text-dp-text-muted">{{ t('admin.memberDetail.relationships.friendsFamily') }}</p>
                   <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
                     <div>
-                      <p class="text-dp-text-secondary">친구</p>
+                      <p class="text-dp-text-secondary">{{ t('admin.memberDetail.relationships.friends') }}</p>
                       <p class="mt-1 text-lg font-bold text-dp-text-primary">{{ formatNumber(memberDetail.friendCount) }}</p>
                     </div>
                     <div>
-                      <p class="text-dp-text-secondary">가족</p>
+                      <p class="text-dp-text-secondary">{{ t('admin.memberDetail.relationships.family') }}</p>
                       <p class="mt-1 text-lg font-bold text-dp-text-primary">{{ formatNumber(memberDetail.familyCount) }}</p>
                     </div>
                   </div>

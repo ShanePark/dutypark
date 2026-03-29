@@ -325,7 +325,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
           +{{ (schedulesByDays[index]?.length ?? 0) - 3 }}
         </div>
 
-        <!-- Due Todos (마감일 할일) - 내 달력에서만 표시 -->
+        <!-- Due to-dos shown only on my calendar -->
         <template v-if="isMyCalendar && todosDueByDays[index]?.length">
           <div
             v-for="todo in todosDueByDays[index].slice(0, 2)"

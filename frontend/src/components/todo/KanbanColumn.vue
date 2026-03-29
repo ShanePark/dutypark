@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { Plus, ListTodo, Clock, CheckCircle2 } from 'lucide-vue-next'
 import type { TodoStatus } from '@/types'
 import type { Component } from 'vue'
@@ -17,22 +18,26 @@ const emit = defineEmits<{
   (e: 'add'): void
   (e: 'select', status: TodoStatus): void
 }>()
+const { t } = useI18n()
 
-const statusConfig: Record<TodoStatus, { label: string; bgClass: string; textClass: string; icon: Component }> = {
+const statusConfig: Record<TodoStatus, { labelKey: string; shortLabelKey: string; bgClass: string; textClass: string; icon: Component }> = {
   TODO: {
-    label: '할일',
+    labelKey: 'todoBoard.status.todo',
+    shortLabelKey: 'todoBoard.statusShort.todo',
     bgClass: 'kanban-column-todo',
     textClass: 'kanban-title-todo',
     icon: ListTodo,
   },
   IN_PROGRESS: {
-    label: '진행중',
+    labelKey: 'todoBoard.status.inProgress',
+    shortLabelKey: 'todoBoard.statusShort.inProgress',
     bgClass: 'kanban-column-in-progress',
     textClass: 'kanban-title-in-progress',
     icon: Clock,
   },
   DONE: {
-    label: '완료',
+    labelKey: 'todoBoard.status.done',
+    shortLabelKey: 'todoBoard.statusShort.done',
     bgClass: 'kanban-column-done',
     textClass: 'kanban-title-done',
     icon: CheckCircle2,
@@ -54,7 +59,8 @@ const statusConfig: Record<TodoStatus, { label: string; bgClass: string; textCla
       >
         <h3 class="kanban-column-title" :class="statusConfig[status].textClass">
           <component :is="statusConfig[status].icon" class="kanban-column-icon" />
-          {{ statusConfig[status].label }}
+          <span class="sm:hidden">{{ t(statusConfig[status].shortLabelKey) }}</span>
+          <span class="hidden sm:inline">{{ t(statusConfig[status].labelKey) }}</span>
         </h3>
         <span class="kanban-column-count" :class="statusConfig[status].textClass">{{ count }}</span>
       </div>
@@ -62,7 +68,7 @@ const statusConfig: Record<TodoStatus, { label: string; bgClass: string; textCla
         type="button"
         class="kanban-column-add-btn"
         @click="emit('add')"
-        title="새 할일 추가"
+        :title="t('todoBoard.actions.addNew')"
       >
         <Plus class="w-4 h-4" />
       </button>

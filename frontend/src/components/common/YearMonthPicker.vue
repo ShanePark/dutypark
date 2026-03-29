@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import BaseModal from '@/components/common/BaseModal.vue'
 
@@ -15,8 +16,13 @@ const emit = defineEmits<{
   goToThisMonth: []
 }>()
 
+const { t, locale } = useI18n()
 const pickerYear = ref(props.currentYear)
-const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월']
+const monthFormatter = computed(() => new Intl.DateTimeFormat(locale.value, { month: 'long' }))
+const dateFormatter = computed(() => new Intl.DateTimeFormat(locale.value, { year: 'numeric', month: 'long' }))
+const monthNames = computed(() =>
+  Array.from({ length: 12 }, (_, index) => monthFormatter.value.format(new Date(2024, index, 1))),
+)
 
 // Sync pickerYear when modal opens
 watch(() => props.isOpen, (open) => {
@@ -47,13 +53,15 @@ function handleGoToThisMonth() {
       <button
         @click="pickerYear--"
         class="calendar-nav-btn p-2 rounded-full cursor-pointer"
+        :aria-label="t('common.calendar.previousYear')"
       >
         <ChevronLeft class="w-6 h-6 sm:w-5 sm:h-5" />
       </button>
-      <span class="text-xl font-bold text-dp-text-primary">{{ pickerYear }}년</span>
+      <span class="text-xl font-bold text-dp-text-primary">{{ t('common.calendar.yearLabel', { year: pickerYear }) }}</span>
       <button
         @click="pickerYear++"
         class="calendar-nav-btn p-2 rounded-full cursor-pointer"
+        :aria-label="t('common.calendar.nextYear')"
       >
         <ChevronRight class="w-6 h-6 sm:w-5 sm:h-5" />
       </button>
@@ -87,13 +95,13 @@ function handleGoToThisMonth() {
         @click="handleGoToThisMonth"
         class="flex-[3] px-3 sm:px-4 py-2 bg-dp-accent hover:bg-dp-accent-hover rounded-lg text-dp-text-on-dark font-medium transition text-sm cursor-pointer"
       >
-        이번달 ({{ new Date().getFullYear() }}년{{ new Date().getMonth() + 1 }}월)
+        {{ t('common.calendar.thisMonth', { date: dateFormatter.format(new Date()) }) }}
       </button>
       <button
         @click="emit('close')"
         class="close-btn flex-1 px-3 sm:px-4 py-2 rounded-lg font-medium transition text-sm cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"
       >
-        닫기
+        {{ t('common.actions.close') }}
       </button>
     </div>
   </BaseModal>

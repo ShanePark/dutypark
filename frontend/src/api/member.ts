@@ -7,6 +7,7 @@ import type {
   DDaySaveDto,
   RefreshTokenDto,
   CalendarVisibility,
+  PreferredLocaleResponse,
   Page,
 } from '@/types'
 
@@ -33,6 +34,20 @@ export const memberApi = {
    */
   updateVisibility(memberId: number, visibility: CalendarVisibility) {
     return apiClient.put(`/members/${memberId}/visibility`, { visibility })
+  },
+
+  /**
+   * Get my preferred locale
+   */
+  getPreferredLocale() {
+    return apiClient.get<PreferredLocaleResponse>('/members/me/preferred-locale')
+  },
+
+  /**
+   * Update my preferred locale
+   */
+  updatePreferredLocale(preferredLocale: string) {
+    return apiClient.put<PreferredLocaleResponse>('/members/me/preferred-locale', { preferredLocale })
   },
 
   /**

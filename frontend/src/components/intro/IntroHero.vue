@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ChevronDown, ChevronRight } from 'lucide-vue-next'
 
 const isLoaded = ref(false)
+const { t } = useI18n()
 
 onMounted(() => {
   setTimeout(() => {
@@ -30,15 +32,15 @@ function scrollToFeatures() {
         class="intro-hero-tagline hero-stagger-1"
         :class="{ 'hero-loaded': isLoaded }"
       >
-        나와 소중한 사람들을 위한 소셜 캘린더
+        {{ t('intro.hero.tagline') }}
       </p>
 
       <p
         class="intro-hero-subtitle hero-stagger-2"
         :class="{ 'hero-loaded': isLoaded }"
       >
-        근무 일정, 아이 등원, 응원하는 팀의 경기까지.<br>
-        서로의 일상을 공유하고 함께 계획하세요.
+        {{ t('intro.hero.subtitleLine1') }}<br>
+        {{ t('intro.hero.subtitleLine2') }}
       </p>
 
       <router-link
@@ -46,7 +48,7 @@ function scrollToFeatures() {
         class="intro-hero-cta hero-stagger-3"
         :class="{ 'hero-loaded': isLoaded }"
       >
-        시작하기
+        {{ t('intro.hero.cta') }}
         <ChevronRight class="w-5 h-5" />
       </router-link>
     </div>
@@ -56,7 +58,7 @@ function scrollToFeatures() {
       :class="{ 'hero-loaded': isLoaded }"
       @click="scrollToFeatures"
     >
-      <span class="text-sm">스크롤하여 더 알아보기</span>
+      <span class="text-sm">{{ t('intro.hero.scroll') }}</span>
       <ChevronDown class="w-6 h-6" />
     </button>
   </section>

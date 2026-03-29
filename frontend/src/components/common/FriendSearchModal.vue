@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { UserPlus, X, Search, ChevronLeft, ChevronRight, Loader2 } from 'lucide-vue-next'
 import type { MemberPreviewDto } from '@/types'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -23,6 +24,7 @@ const emit = defineEmits<{
   'update:keyword': [value: string]
 }>()
 
+const { t } = useI18n()
 const currentPageDisplay = computed(() => props.currentPage + 1)
 
 function handleKeywordInput(event: Event) {
@@ -43,11 +45,12 @@ function handleKeywordInput(event: Event) {
         <div class="w-10 h-10 bg-gradient-to-br from-dp-accent to-dp-accent-hover rounded-xl flex items-center justify-center flex-shrink-0">
           <UserPlus class="w-5 h-5 text-dp-text-on-dark" />
         </div>
-        <h2>친구 추가</h2>
+        <h2>{{ t('friendSearchModal.title') }}</h2>
       </div>
       <button
         class="p-2 rounded-full hover-close-btn cursor-pointer text-dp-text-muted"
         @click="emit('close')"
+        :aria-label="t('common.actions.close')"
       >
         <X class="w-5 h-5" />
       </button>
@@ -60,7 +63,7 @@ function handleKeywordInput(event: Event) {
           <input
             :value="keyword"
             type="text"
-            placeholder="이름 또는 팀 검색"
+            :placeholder="t('friendSearchModal.searchPlaceholder')"
             class="form-control-neutral w-full pl-11 pr-4 py-3 rounded-xl"
             @input="handleKeywordInput"
             @keyup.enter="emit('search')"
@@ -71,7 +74,7 @@ function handleKeywordInput(event: Event) {
           @click="emit('search')"
         >
           <Search class="w-4 h-4" />
-          <span class="hidden sm:inline">검색</span>
+          <span class="hidden sm:inline">{{ t('common.actions.search') }}</span>
         </button>
       </div>
 
@@ -96,14 +99,14 @@ function handleKeywordInput(event: Event) {
               />
               <div class="min-w-0">
                 <p class="font-semibold truncate text-dp-text-primary">{{ member.name }}</p>
-                <p class="text-sm truncate text-dp-text-secondary">{{ member.team ?? '팀 없음' }}</p>
+                <p class="text-sm truncate text-dp-text-secondary">{{ member.team ?? t('friendSearchModal.noTeam') }}</p>
               </div>
             </div>
             <button
               class="px-4 py-2 text-sm font-medium bg-dp-success text-dp-text-on-dark rounded-xl hover:bg-dp-success-hover transition shadow-sm cursor-pointer flex-shrink-0"
               @click="emit('requestFriend', member)"
             >
-              친구 요청
+              {{ t('friendSearchModal.requestFriend') }}
             </button>
           </div>
         </div>
@@ -138,14 +141,14 @@ function handleKeywordInput(event: Event) {
         </div>
 
         <p class="text-center text-sm text-dp-text-secondary">
-          페이지 {{ currentPageDisplay }} / {{ totalPages }} | 전체 결과: {{ totalElements }}
+          {{ t('friendSearchModal.resultsSummary', { current: currentPageDisplay, total: totalPages, count: totalElements }) }}
         </p>
       </div>
 
       <div v-else class="text-center py-12">
         <Search class="w-12 h-12 mx-auto mb-3 text-dp-border-secondary" />
         <p class="text-dp-text-secondary">
-          {{ keyword.trim() ? '검색 결과가 없습니다.' : '검색어를 입력하고 검색해주세요.' }}
+          {{ keyword.trim() ? t('friendSearchModal.emptyWithKeyword') : t('friendSearchModal.emptyWithoutKeyword') }}
         </p>
       </div>
     </div>
@@ -155,7 +158,7 @@ function handleKeywordInput(event: Event) {
         class="px-5 py-2.5 rounded-xl font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-primary"
         @click="emit('close')"
       >
-        닫기
+        {{ t('common.actions.close') }}
       </button>
     </div>
   </BaseModal>

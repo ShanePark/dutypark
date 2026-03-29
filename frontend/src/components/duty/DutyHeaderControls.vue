@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ChevronLeft, ChevronRight, Search } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 
 const props = defineProps<{
@@ -22,6 +23,8 @@ const emit = defineEmits<{
   (e: 'update:searchQuery', value: string): void
 }>()
 
+const { t } = useI18n()
+
 function handleSearchInput(event: Event) {
   emit('update:searchQuery', (event.target as HTMLInputElement).value)
 }
@@ -37,7 +40,7 @@ function handleSearchClick() {
 
 <template>
   <!-- Header: Profile + Year-Month (centered) + Search -->
-  <div class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center mb-2 px-1 gap-1">
+  <div class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center mb-2 px-1 gap-0.5 sm:gap-1">
     <!-- Left: Profile Photo + Name -->
     <div class="flex items-center gap-1.5 min-w-0">
       <!-- Profile Photo (smaller on mobile) -->
@@ -71,10 +74,10 @@ function handleSearchClick() {
         <input
           :value="searchQuery"
           type="text"
-          placeholder="검색"
+          :placeholder="t('duty.header.searchPlaceholder')"
           @input="handleSearchInput"
           @keyup.enter="emit('search')"
-          class="px-2 py-1.5 text-sm focus:ring-2 focus:ring-dp-accent focus:outline-none w-12 sm:w-20 border-none bg-dp-bg-input text-dp-text-primary"
+          class="px-2 py-1.5 text-sm focus:ring-2 focus:ring-dp-accent focus:outline-none w-24 sm:w-28 border-none bg-dp-bg-input text-dp-text-primary"
         />
         <button
           @click="handleSearchClick"

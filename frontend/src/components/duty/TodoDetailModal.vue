@@ -12,6 +12,7 @@ import {
   Clock,
   CheckCircle2,
 } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import FileUploader from '@/components/common/FileUploader.vue'
 import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
@@ -27,6 +28,7 @@ import type { NormalizedAttachment, TaggableFriend, Todo as TodoDto, TodoStatus 
 type TodoDetailItem = Omit<TodoDto, 'attachments'>
 
 const { showWarning, showError } = useSwal()
+const { t } = useI18n()
 
 // Helper functions for status compatibility
 function isActiveTodo(status: string): boolean {
@@ -40,11 +42,11 @@ function isDoneTodo(status: string): boolean {
 function getStatusLabel(status: string): string {
   switch (status) {
     case 'TODO':
-      return '할일'
+      return t('duty.todo.status.todo')
     case 'IN_PROGRESS':
-      return '진행중'
+      return t('duty.todo.status.inProgress')
     case 'DONE':
-      return '완료'
+      return t('duty.todo.status.done')
     default:
       return status
   }
@@ -95,11 +97,11 @@ const fileUploaderRef = ref<InstanceType<typeof FileUploader> | null>(null)
 const viewAttachments = ref<NormalizedAttachment[]>([])
 const isLoadingAttachments = ref(false)
 
-const statusOptions: Array<{ value: TodoStatus; label: string; icon: typeof ListTodo; colorClass: string }> = [
-  { value: 'TODO', label: '할일', icon: ListTodo, colorClass: 'status-card-todo' },
-  { value: 'IN_PROGRESS', label: '진행중', icon: Clock, colorClass: 'status-card-in-progress' },
-  { value: 'DONE', label: '완료', icon: CheckCircle2, colorClass: 'status-card-done' },
-]
+const statusOptions = computed<Array<{ value: TodoStatus; label: string; icon: typeof ListTodo; colorClass: string }>>(() => [
+  { value: 'TODO', label: t('duty.todo.status.todo'), icon: ListTodo, colorClass: 'status-card-todo' },
+  { value: 'IN_PROGRESS', label: t('duty.todo.status.inProgress'), icon: Clock, colorClass: 'status-card-in-progress' },
+  { value: 'DONE', label: t('duty.todo.status.done'), icon: CheckCircle2, colorClass: 'status-card-done' },
+])
 
 const selectedTagSummaries = computed(() => {
   return editTagFriendIds.value.flatMap((id) => {
@@ -205,7 +207,8 @@ const todoTagMembers = computed(() => {
 
 const statusActionOptions = computed(() => {
   if (!props.todo) return []
-  return statusOptions.filter((option) => option.value !== props.todo?.status)
+  const { status } = props.todo
+  return statusOptions.value.filter((option) => option.value !== status)
 })
 
 
@@ -243,7 +246,7 @@ function cancelEdit() {
 function saveEdit() {
   if (!props.todo || !editTitle.value.trim()) return
   if (isUploading.value) {
-    showWarning('파일 업로드가 진행 중입니다. 완료 후 다시 시도해주세요.')
+    showWarning(t('duty.todo.warnings.uploadInProgress'))
     return
   }
 
@@ -325,7 +328,7 @@ function onUploadError(message: string) {
           </div>
           <p class="text-xs text-dp-text-muted">
             {{ formatDateKorean(todo.createdDate) }}
-            <span v-if="todo.completedDate"> · 완료 {{ formatDateKorean(todo.completedDate) }}</span>
+            <span v-if="todo.completedDate"> · {{ t('duty.todo.labels.completed') }} {{ formatDateKorean(todo.completedDate) }}</span>
           </p>
         </div>
         <button @click="handleClose" class="p-2 hover-close-btn rounded-full transition flex-shrink-0 cursor-pointer">
@@ -342,21 +345,21 @@ function onUploadError(message: string) {
               :class="todo.isOverdue ? 'text-dp-danger font-medium' : ''"
               :style="!todo.isOverdue ? { color: 'var(--dp-text-secondary)' } : undefined"
             >
-              마감일: {{ formatDateKorean(todo.dueDate) }}
-              <span v-if="todo.isOverdue" class="text-dp-danger">(기한 초과)</span>
+              {{ t('duty.todo.fields.dueDate') }}: {{ formatDateKorean(todo.dueDate) }}
+              <span v-if="todo.isOverdue" class="text-dp-danger">({{ t('duty.todo.labels.overdue') }})</span>
             </span>
           </div>
 
           <div v-if="taggedOwnerMembers.length > 0" class="space-y-2">
-            <div class="text-xs font-semibold text-dp-text-muted">소유자</div>
+            <div class="text-xs font-semibold text-dp-text-muted">{{ t('duty.todo.labels.owner') }}</div>
             <div class="flex flex-wrap items-center gap-2">
               <MemberTagChips :members="taggedOwnerMembers" density="compact" />
-              <span class="text-xs text-dp-text-muted">태그된 TODO</span>
+              <span class="text-xs text-dp-text-muted">{{ t('duty.todo.labels.taggedTodo') }}</span>
             </div>
           </div>
 
           <div v-else-if="todoTagMembers.length > 0" class="space-y-2">
-            <div class="text-xs font-semibold text-dp-text-muted">태그된 친구</div>
+            <div class="text-xs font-semibold text-dp-text-muted">{{ t('duty.todo.labels.taggedFriends') }}</div>
             <MemberTagChips :members="todoTagMembers" density="compact" />
           </div>
 
@@ -365,7 +368,7 @@ function onUploadError(message: string) {
           </div>
 
           <div v-if="isLoadingAttachments" class="text-sm text-dp-text-secondary">
-            첨부파일 로딩 중...
+            {{ t('duty.todo.labels.loadingAttachments') }}
           </div>
           <AttachmentGrid
             v-else
@@ -376,7 +379,7 @@ function onUploadError(message: string) {
 
         <template v-else>
           <div>
-            <label class="block text-sm font-medium mb-2 text-dp-text-secondary">상태</label>
+            <label class="block text-sm font-medium mb-2 text-dp-text-secondary">{{ t('duty.todo.fields.status') }}</label>
             <div class="grid grid-cols-3 gap-2">
               <button
                 v-for="option in statusOptions"
@@ -394,7 +397,7 @@ function onUploadError(message: string) {
 
           <div>
             <label class="form-label">
-              제목 <span class="text-dp-danger">*</span>
+              {{ t('duty.todo.fields.title') }} <span class="text-dp-danger">*</span>
               <CharacterCounter :current="editTitle.length" :max="50" />
             </label>
             <input
@@ -406,7 +409,7 @@ function onUploadError(message: string) {
           </div>
 
           <div>
-            <label class="form-label">내용</label>
+            <label class="form-label">{{ t('duty.todo.fields.content') }}</label>
             <textarea
               v-model="editContent"
               rows="6"
@@ -417,7 +420,7 @@ function onUploadError(message: string) {
           <div>
             <label class="form-label">
               <Calendar class="w-4 h-4 inline-block mr-1 -mt-0.5" />
-              마감일
+              {{ t('duty.todo.fields.dueDate') }}
             </label>
             <input
               v-model="editDueDate"
@@ -427,7 +430,7 @@ function onUploadError(message: string) {
           </div>
 
           <div v-if="props.friends.length > 0">
-            <label class="block text-sm font-medium mb-2 text-dp-text-secondary">친구 태그</label>
+            <label class="block text-sm font-medium mb-2 text-dp-text-secondary">{{ t('duty.todo.fields.friendTag') }}</label>
             <FriendTagSelector
               v-model="editTagFriendIds"
               :friends="props.friends"
@@ -436,7 +439,7 @@ function onUploadError(message: string) {
           </div>
 
           <div>
-            <label class="form-label">첨부파일</label>
+            <label class="form-label">{{ t('duty.todo.fields.attachments') }}</label>
             <FileUploader
               v-if="isEditMode"
               ref="fileUploaderRef"
@@ -459,10 +462,10 @@ function onUploadError(message: string) {
             <button
               @click="emit('backToList')"
               class="flex items-center gap-1 px-3 py-2 rounded-lg transition btn-outline cursor-pointer"
-              title="목록으로 돌아가기"
+              :title="t('duty.todo.actions.backToList')"
             >
               <List class="w-4 h-4" />
-              <span class="hidden sm:inline">목록</span>
+              <span class="hidden sm:inline">{{ t('duty.todo.actions.list') }}</span>
             </button>
 
             <div class="flex gap-2">
@@ -481,7 +484,7 @@ function onUploadError(message: string) {
                   class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-warning-border text-dp-warning rounded-lg hover:bg-dp-warning-soft transition cursor-pointer"
                 >
                   <X class="w-4 h-4" />
-                  <span class="hidden sm:inline">태그 제거</span>
+                  <span class="hidden sm:inline">{{ t('duty.todo.actions.removeTag') }}</span>
                 </button>
               </template>
               <template v-else>
@@ -490,14 +493,14 @@ function onUploadError(message: string) {
                   class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-accent-border text-dp-accent rounded-lg hover:bg-dp-accent-soft transition cursor-pointer"
                 >
                   <Pencil class="w-4 h-4" />
-                  <span class="hidden sm:inline">수정</span>
+                  <span class="hidden sm:inline">{{ t('duty.todo.actions.edit') }}</span>
                 </button>
                 <button
                   @click="emit('delete', todo.id)"
                   class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-danger-border text-dp-danger rounded-lg hover:bg-dp-danger-soft transition cursor-pointer"
                 >
                   <Trash2 class="w-4 h-4" />
-                  <span class="hidden sm:inline">삭제</span>
+                  <span class="hidden sm:inline">{{ t('common.actions.delete') }}</span>
                 </button>
                 <button
                   v-if="isActive"
@@ -505,7 +508,7 @@ function onUploadError(message: string) {
                   class="flex items-center justify-center gap-1 px-3 py-2 bg-dp-success text-dp-text-on-dark rounded-lg hover:bg-dp-success-hover transition cursor-pointer"
                 >
                   <Check class="w-4 h-4" />
-                  <span class="hidden sm:inline">완료</span>
+                  <span class="hidden sm:inline">{{ t('duty.todo.actions.complete') }}</span>
                 </button>
                 <button
                   v-else
@@ -513,7 +516,7 @@ function onUploadError(message: string) {
                   class="flex items-center justify-center gap-1 px-3 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
                 >
                   <RotateCcw class="w-4 h-4" />
-                  <span class="hidden sm:inline">재오픈</span>
+                  <span class="hidden sm:inline">{{ t('duty.todo.actions.reopen') }}</span>
                 </button>
               </template>
             </div>
@@ -525,14 +528,14 @@ function onUploadError(message: string) {
               @click="cancelEdit"
               class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
             >
-              취소
+              {{ t('common.actions.cancel') }}
             </button>
             <button
               @click="saveEdit"
               :disabled="!editTitle.trim() || isUploading"
               class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 cursor-pointer"
             >
-              {{ isUploading ? '업로드 중...' : '저장' }}
+              {{ isUploading ? t('duty.common.uploading') : t('duty.todo.actions.save') }}
             </button>
           </div>
         </template>

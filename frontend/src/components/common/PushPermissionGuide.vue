@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Bell, X, Check } from 'lucide-vue-next'
 import { usePushNotification } from '@/composables/usePushNotification'
 
@@ -10,6 +11,7 @@ const isVisible = ref(false)
 const isSubscribing = ref(false)
 const forceShow = ref(false)
 const pushNotification = usePushNotification()
+const { t } = useI18n()
 
 // Check URL param for dev testing: ?push-guide=true
 function checkDevMode() {
@@ -114,13 +116,13 @@ defineExpose({ checkVisibility })
         <div class="push-guide-header">
           <div class="flex items-center gap-2">
             <Bell class="w-5 h-5 push-guide-icon" />
-            <span class="font-semibold">알림 허용</span>
+            <span class="font-semibold">{{ t('pushGuide.title') }}</span>
           </div>
           <button
             type="button"
             class="push-guide-close-btn"
             @click="dismiss"
-            aria-label="닫기"
+            :aria-label="t('pushGuide.close')"
           >
             <X class="w-5 h-5" />
           </button>
@@ -129,8 +131,8 @@ defineExpose({ checkVisibility })
         <!-- Content -->
         <div class="push-guide-content">
           <p class="push-guide-benefit">
-            알림을 허용하면<br />
-            <strong>근무 일정</strong>과 <strong>새 소식</strong>을 바로 받을 수 있어요!
+            {{ t('pushGuide.descriptionLine1') }}<br />
+            {{ t('pushGuide.descriptionLine2') }}
           </p>
 
           <!-- Allow Button -->
@@ -142,11 +144,11 @@ defineExpose({ checkVisibility })
           >
             <template v-if="isSubscribing">
               <span class="push-guide-spinner"></span>
-              <span>처리 중...</span>
+              <span>{{ t('pushGuide.subscribing') }}</span>
             </template>
             <template v-else>
               <Check class="w-5 h-5" />
-              <span>알림 허용하기</span>
+              <span>{{ t('pushGuide.allow') }}</span>
             </template>
           </button>
         </div>
@@ -158,7 +160,7 @@ defineExpose({ checkVisibility })
             class="push-guide-dismiss-btn"
             @click="dismissForDays"
           >
-            7일간 보지 않기
+            {{ t('pushGuide.dismissForDays') }}
           </button>
         </div>
       </div>

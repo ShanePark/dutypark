@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { adminApi } from '@/api/admin'
 import { authApi } from '@/api/auth'
@@ -27,6 +28,7 @@ import {
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { t } = useI18n()
 const { showSuccess, showError, confirm, toastSuccess } = useSwal()
 
 const loading = ref(true)
@@ -99,15 +101,15 @@ const changingPassword = ref(false)
 
 async function handleChangePassword() {
   if (!newPassword.value || !confirmPassword.value) {
-    passwordError.value = '비밀번호를 입력해주세요'
+    passwordError.value = t('admin.dashboard.password.validation.required')
     return
   }
   if (newPassword.value.length < 8) {
-    passwordError.value = '비밀번호는 8자 이상이어야 합니다'
+    passwordError.value = t('admin.dashboard.password.validation.min')
     return
   }
   if (newPassword.value !== confirmPassword.value) {
-    passwordError.value = '비밀번호가 일치하지 않습니다'
+    passwordError.value = t('admin.dashboard.password.validation.mismatch')
     return
   }
 
@@ -117,10 +119,10 @@ async function handleChangePassword() {
       memberId: passwordTargetMember.value!.id,
       newPassword: newPassword.value,
     })
-    showSuccess(`${passwordTargetMember.value?.name}님의 비밀번호가 변경되었습니다.`)
+    showSuccess(t('admin.dashboard.messages.changePasswordSuccess', { name: passwordTargetMember.value?.name ?? '' }))
     closePasswordModal()
   } catch (error: any) {
-    const message = error.response?.data?.message || '비밀번호 변경에 실패했습니다.'
+    const message = error.response?.data?.message || t('admin.dashboard.messages.changePasswordFailed')
     passwordError.value = message
   } finally {
     changingPassword.value = false
@@ -128,11 +130,14 @@ async function handleChangePassword() {
 }
 
 async function handleRevokeToken(tokenId: number, member: AdminMemberDto) {
-  if (!await confirm(`${member.name}님의 세션을 종료하시겠습니까?`, '세션 종료')) return
+  if (!await confirm(
+    t('admin.dashboard.messages.revokeSessionConfirm', { name: member.name }),
+    t('admin.dashboard.messages.revokeSessionTitle'),
+  )) return
 
   try {
     await refreshTokenApi.deleteRefreshToken(tokenId)
-    toastSuccess(`${member.name}님의 세션이 종료되었습니다.`)
+    toastSuccess(t('admin.dashboard.messages.revokeSessionSuccess', { name: member.name }))
     member.tokens = member.tokens.filter(t => t.id !== tokenId)
     allTokens.value = allTokens.value.filter(t => t.id !== tokenId)
     if (showMemberDetailModal.value && selectedMemberId.value === member.id) {
@@ -140,7 +145,7 @@ async function handleRevokeToken(tokenId: number, member: AdminMemberDto) {
     }
   } catch (error) {
     console.error('Failed to revoke token:', error)
-    showError('세션 종료에 실패했습니다.')
+    showError(t('admin.dashboard.messages.revokeSessionFailed'))
   }
 }
 
@@ -159,7 +164,7 @@ async function fetchSelectedMemberDetail(memberId: number = selectedMemberId.val
     console.error('Failed to fetch member detail:', error)
     if (requestId !== memberDetailRequestId) return
     selectedMemberDetail.value = null
-    memberDetailError.value = '회원 상세 정보를 불러오지 못했습니다.'
+    memberDetailError.value = t('admin.dashboard.messages.loadMemberDetailFailed')
   } finally {
     if (requestId === memberDetailRequestId) {
       isMemberDetailLoading.value = false
@@ -203,7 +208,7 @@ async function fetchMembers() {
     totalElements.value = res.data.totalElements
   } catch (error) {
     console.error('Failed to fetch members:', error)
-    showError('회원 목록을 불러오는데 실패했습니다.')
+    showError(t('admin.dashboard.messages.loadMembersFailed'))
   } finally {
     isLoading.value = false
   }
@@ -224,7 +229,7 @@ async function fetchData() {
     await Promise.all([fetchMembers(), fetchTokens()])
   } catch (error) {
     console.error('Failed to fetch admin data:', error)
-    showError('데이터를 불러오는데 실패했습니다.')
+    showError(t('admin.dashboard.messages.loadDataFailed'))
   } finally {
     loading.value = false
   }
@@ -276,7 +281,7 @@ onMounted(async () => {
             class="admin-top-tile admin-top-tile-active hover:bg-dp-surface-strong-hover"
           >
             <Users class="admin-top-tile-icon text-dp-text-on-dark" />
-            <span class="admin-top-tile-label text-dp-text-on-dark">회원 관리</span>
+            <span class="admin-top-tile-label text-dp-text-on-dark">{{ t('admin.nav.members') }}</span>
           </router-link>
           <router-link
             to="/admin/teams"
@@ -285,7 +290,7 @@ onMounted(async () => {
             @mouseleave="(e: Event) => clearHoverBg(e)"
           >
             <Building2 class="admin-top-tile-icon text-dp-text-secondary" />
-            <span class="admin-top-tile-label text-dp-text-primary">팀 관리</span>
+            <span class="admin-top-tile-label text-dp-text-primary">{{ t('admin.nav.teams') }}</span>
           </router-link>
           <router-link
             to="/admin/dev"
@@ -294,7 +299,7 @@ onMounted(async () => {
             @mouseleave="(e: Event) => clearHoverBg(e)"
           >
             <Code2 class="admin-top-tile-icon text-dp-text-secondary" />
-            <span class="admin-top-tile-label text-dp-text-primary">개발</span>
+            <span class="admin-top-tile-label text-dp-text-primary">{{ t('admin.nav.dev') }}</span>
           </router-link>
           <a
             href="/docs/index.html"
@@ -307,32 +312,32 @@ onMounted(async () => {
               <FileText class="admin-top-tile-icon mb-0 text-dp-text-secondary" />
               <ExternalLink class="hidden sm:block w-3 h-3 text-dp-text-muted" />
             </div>
-            <span class="admin-top-tile-label text-dp-text-primary">API 문서</span>
+            <span class="admin-top-tile-label text-dp-text-primary">{{ t('admin.nav.apiDocs') }}</span>
           </a>
         </div>
 
         <!-- Stats Cards -->
-        <div class="admin-stats-band mb-4 sm:mb-6" aria-label="관리자 요약 통계">
+        <div class="admin-stats-band mb-4 sm:mb-6" :aria-label="t('admin.dashboard.statsAriaLabel')">
           <div class="admin-stats-grid">
             <div class="admin-stat-tile">
-              <p class="admin-stat-kicker text-dp-text-muted">등록 회원</p>
+              <p class="admin-stat-kicker text-dp-text-muted">{{ t('admin.dashboard.stats.totalMembersLabel') }}</p>
               <p class="admin-stat-tile-value text-dp-text-primary">{{ stats.totalMembers }}</p>
-              <p class="admin-stat-tile-note text-dp-text-secondary">전체</p>
+              <p class="admin-stat-tile-note text-dp-text-secondary">{{ t('admin.dashboard.stats.totalMembersNote') }}</p>
             </div>
             <div class="admin-stat-tile">
-              <p class="admin-stat-kicker text-dp-text-muted">등록 팀</p>
+              <p class="admin-stat-kicker text-dp-text-muted">{{ t('admin.dashboard.stats.totalTeamsLabel') }}</p>
               <p class="admin-stat-tile-value text-dp-text-primary">{{ stats.totalTeams }}</p>
-              <p class="admin-stat-tile-note text-dp-text-secondary">활성</p>
+              <p class="admin-stat-tile-note text-dp-text-secondary">{{ t('admin.dashboard.stats.totalTeamsNote') }}</p>
             </div>
             <div class="admin-stat-tile">
-              <p class="admin-stat-kicker text-dp-text-muted">활성 토큰</p>
+              <p class="admin-stat-kicker text-dp-text-muted">{{ t('admin.dashboard.stats.activeTokensLabel') }}</p>
               <p class="admin-stat-tile-value text-dp-text-primary">{{ stats.activeTokens }}</p>
-              <p class="admin-stat-tile-note text-dp-text-secondary">유효</p>
+              <p class="admin-stat-tile-note text-dp-text-secondary">{{ t('admin.dashboard.stats.activeTokensNote') }}</p>
             </div>
             <div class="admin-stat-tile">
-              <p class="admin-stat-kicker text-dp-text-muted">접속 횟수</p>
+              <p class="admin-stat-kicker text-dp-text-muted">{{ t('admin.dashboard.stats.todayLoginsLabel') }}</p>
               <p class="admin-stat-tile-value text-dp-text-primary">{{ stats.todayLogins }}</p>
-              <p class="admin-stat-tile-note text-dp-text-secondary">오늘</p>
+              <p class="admin-stat-tile-note text-dp-text-secondary">{{ t('admin.dashboard.stats.todayLoginsNote') }}</p>
             </div>
           </div>
         </div>
@@ -341,13 +346,13 @@ onMounted(async () => {
         <div class="rounded-xl bg-dp-bg-card border border-dp-border-primary">
           <div class="p-4 border-b border-dp-border-primary">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <h2 class="text-lg font-semibold text-dp-text-primary">회원 관리</h2>
+              <h2 class="text-lg font-semibold text-dp-text-primary">{{ t('admin.dashboard.title') }}</h2>
               <div class="relative w-full sm:w-auto">
                 <Search class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-dp-text-muted" />
                 <input
                   v-model="searchKeyword"
                   type="text"
-                  placeholder="회원 검색..."
+                  :placeholder="t('admin.dashboard.searchPlaceholder')"
                   class="w-full sm:w-auto pl-9 pr-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-dp-text-primary focus:border-transparent bg-dp-bg-input border border-dp-border-input text-dp-text-primary"
                 />
               </div>
@@ -378,12 +383,14 @@ onMounted(async () => {
                     <div class="min-w-0">
                       <p class="admin-member-name font-medium truncate text-dp-text-primary">{{ member.name }}</p>
                       <p class="admin-member-meta text-sm text-dp-text-secondary">
-                        {{ member.tokens.length > 0 ? `${member.tokens.length}개의 활성 세션` : '활성 세션 없음' }}
+                        {{ member.tokens.length > 0
+                          ? t('admin.dashboard.memberRow.activeSessions', { count: member.tokens.length })
+                          : t('admin.dashboard.memberRow.noActiveSessions') }}
                       </p>
                     </div>
                   </div>
                   <div class="admin-member-aside flex flex-col items-end gap-1 text-dp-text-muted">
-                    <span class="text-xs whitespace-nowrap">{{ member.teamName || '팀 없음' }}</span>
+                    <span class="text-xs whitespace-nowrap">{{ member.teamName || t('admin.dashboard.memberRow.noTeam') }}</span>
                     <ChevronRight class="admin-member-chevron w-4 h-4" />
                   </div>
                 </div>
@@ -401,7 +408,7 @@ onMounted(async () => {
               </div>
 
               <div v-if="members.length === 0" class="p-8 text-center text-dp-text-muted">
-                검색 결과가 없습니다
+                {{ t('admin.dashboard.empty') }}
               </div>
             </template>
           </div>
@@ -409,7 +416,11 @@ onMounted(async () => {
           <!-- Pagination -->
           <div v-if="totalPages > 1" class="p-4 flex items-center justify-between" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
             <p class="text-sm text-dp-text-secondary">
-              총 {{ totalElements }}명 중 {{ currentPage * pageSize + 1 }}-{{ Math.min((currentPage + 1) * pageSize, totalElements) }}
+              {{ t('admin.dashboard.pagination', {
+                total: totalElements,
+                start: currentPage * pageSize + 1,
+                end: Math.min((currentPage + 1) * pageSize, totalElements),
+              }) }}
             </p>
             <div class="flex items-center gap-2">
               <button
@@ -458,8 +469,10 @@ onMounted(async () => {
     >
       <div class="modal-header">
         <div>
-          <h2>비밀번호 변경</h2>
-          <p class="mt-1 text-sm text-dp-text-secondary">{{ passwordTargetMember?.name }}님의 비밀번호를 변경합니다</p>
+          <h2>{{ t('admin.dashboard.password.modalTitle') }}</h2>
+          <p class="mt-1 text-sm text-dp-text-secondary">
+            {{ t('admin.dashboard.password.modalDescription', { name: passwordTargetMember?.name ?? '' }) }}
+          </p>
         </div>
         <button
           @click="closePasswordModal"
@@ -470,21 +483,21 @@ onMounted(async () => {
       </div>
       <div class="modal-body-form">
         <div>
-          <label class="form-label">새 비밀번호</label>
+          <label class="form-label">{{ t('admin.dashboard.password.newLabel') }}</label>
           <input
             v-model="newPassword"
             type="password"
             class="form-control-neutral"
-            placeholder="새 비밀번호 입력"
+            :placeholder="t('admin.dashboard.password.newPlaceholder')"
           />
         </div>
         <div>
-          <label class="form-label">비밀번호 확인</label>
+          <label class="form-label">{{ t('admin.dashboard.password.confirmLabel') }}</label>
           <input
             v-model="confirmPassword"
             type="password"
             class="form-control-neutral"
-            placeholder="비밀번호 다시 입력"
+            :placeholder="t('admin.dashboard.password.confirmPlaceholder')"
           />
         </div>
         <p v-if="passwordError" class="text-sm text-dp-danger">{{ passwordError }}</p>
@@ -495,7 +508,7 @@ onMounted(async () => {
           :disabled="changingPassword"
           class="px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50 cursor-pointer bg-dp-bg-tertiary text-dp-text-primary hover-interactive"
         >
-          취소
+          {{ t('common.actions.cancel') }}
         </button>
         <button
           @click="handleChangePassword"
@@ -503,7 +516,7 @@ onMounted(async () => {
           class="px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-surface-strong hover:bg-dp-surface-strong-hover rounded-lg transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
         >
           <Loader2 v-if="changingPassword" class="w-4 h-4 animate-spin" />
-          {{ changingPassword ? '변경 중...' : '변경' }}
+          {{ changingPassword ? t('admin.dashboard.password.changing') : t('admin.dashboard.password.change') }}
         </button>
       </div>
     </BaseModal>

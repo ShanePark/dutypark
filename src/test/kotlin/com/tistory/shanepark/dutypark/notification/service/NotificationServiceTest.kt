@@ -16,9 +16,13 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.*
+import org.springframework.context.i18n.LocaleContextHolder
+import org.springframework.context.support.ReloadableResourceBundleMessageSource
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
 import org.springframework.test.util.ReflectionTestUtils
+import java.nio.charset.StandardCharsets
+import java.util.Locale
 import java.util.*
 
 @ExtendWith(MockitoExtension::class)
@@ -33,6 +37,7 @@ class NotificationServiceTest {
     @Mock
     private lateinit var friendRequestRepository: FriendRequestRepository
 
+    private lateinit var notificationMessageResolver: NotificationMessageResolver
     private lateinit var notificationService: NotificationService
 
     private lateinit var testMember: Member
@@ -40,7 +45,21 @@ class NotificationServiceTest {
 
     @BeforeEach
     fun setUp() {
-        notificationService = NotificationService(notificationRepository, memberRepository, friendRequestRepository)
+        LocaleContextHolder.setLocale(Locale.KOREAN)
+        notificationMessageResolver = NotificationMessageResolver(
+            ReloadableResourceBundleMessageSource().apply {
+                setBasenames("classpath:messages")
+                setDefaultEncoding(StandardCharsets.UTF_8.name())
+                setFallbackToSystemLocale(false)
+                setUseCodeAsDefaultMessage(true)
+            }
+        )
+        notificationService = NotificationService(
+            notificationRepository,
+            memberRepository,
+            friendRequestRepository,
+            notificationMessageResolver,
+        )
 
         testMember = Member(name = "testUser", email = "test@test.com", password = "password")
         ReflectionTestUtils.setField(testMember, "id", 1L)
@@ -246,7 +265,7 @@ class NotificationServiceTest {
         )
 
         // Then
-        assertThat(result.title).isEqualTo("actorUser님이 친구 요청을 보냈습니다")
+        assertThat(result.title).isEqualTo("actorUser님이 친구 요청을 보냈습니다.")
         assertThat(result.type).isEqualTo(NotificationType.FRIEND_REQUEST_RECEIVED)
         assertThat(result.member).isEqualTo(testMember)
         assertThat(result.actorId).isEqualTo(actorMember.id)
@@ -294,7 +313,7 @@ class NotificationServiceTest {
         )
 
         // Then
-        assertThat(result.title).isEqualTo("Unknown님이 친구 요청을 보냈습니다")
+        assertThat(result.title).isEqualTo("Unknown님이 친구 요청을 보냈습니다.")
     }
 
     @Test
@@ -319,7 +338,7 @@ class NotificationServiceTest {
         )
 
         // Then
-        assertThat(result.title).isEqualTo("actorUser님의 [팀 회의] 일정에 태그되었습니다")
+        assertThat(result.title).isEqualTo("actorUser님의 [팀 회의] 일정에 태그되었습니다.")
         assertThat(result.type).isEqualTo(NotificationType.SCHEDULE_TAGGED)
         assertThat(result.content).isEqualTo(scheduleTitle)
     }
@@ -343,7 +362,7 @@ class NotificationServiceTest {
             content = todoTitle
         )
 
-        assertThat(result.title).isEqualTo("actorUser님의 [보고서 정리] TODO에 태그되었습니다")
+        assertThat(result.title).isEqualTo("actorUser님의 [보고서 정리] TODO에 태그되었습니다.")
         assertThat(result.type).isEqualTo(NotificationType.TODO_TAGGED)
         assertThat(result.content).isEqualTo(todoTitle)
     }
@@ -367,7 +386,7 @@ class NotificationServiceTest {
             content = todoTitle
         )
 
-        assertThat(result.title).isEqualTo("actorUser님이 [보고서 정리] TODO를 완료 처리했습니다")
+        assertThat(result.title).isEqualTo("actorUser님이 TODO [보고서 정리]를 완료 처리했습니다.")
         assertThat(result.type).isEqualTo(NotificationType.TODO_STATUS_DONE)
         assertThat(result.content).isEqualTo(todoTitle)
     }
