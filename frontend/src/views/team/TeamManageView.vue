@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useSwal } from '@/composables/useSwal'
 import { useAuthStore } from '@/stores/auth'
 import { teamApi } from '@/api/team'
@@ -33,6 +34,7 @@ import {
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const { t } = useI18n()
 const { showError, toastSuccess, confirmDelete, confirm } = useSwal()
 const teamId = Number(route.params.teamId)
 
@@ -51,12 +53,12 @@ const team = ref<TeamDto | null>(null)
 
 const dutyBatchTemplates = ref<DutyBatchTemplateDto[]>([])
 
-const workTypes = [
-  { value: 'WEEKDAY', label: '평일 근무' },
-  { value: 'WEEKEND', label: '주말 근무' },
-  { value: 'FIXED', label: '고정 근무' },
-  { value: 'FLEXIBLE', label: '유연 근무' },
-]
+const workTypes = computed(() => [
+  { value: 'WEEKDAY', label: t('team.manage.workTypes.weekday') },
+  { value: 'WEEKEND', label: t('team.manage.workTypes.weekend') },
+  { value: 'FIXED', label: t('team.manage.workTypes.fixed') },
+  { value: 'FLEXIBLE', label: t('team.manage.workTypes.flexible') },
+])
 
 // Computed
 const hasMember = computed(() => team.value?.members && team.value.members.length > 0)
@@ -84,7 +86,7 @@ async function fetchTeam() {
       team.value.members.some(m => m.id === loginId.value && m.isManager)
   } catch (error) {
     console.error('Failed to fetch team:', error)
-    showError('팀 정보를 불러오는데 실패했습니다.')
+    showError(t('team.manage.messages.fetchFailed'))
     router.push('/team')
   } finally {
     loading.value = false
@@ -112,48 +114,48 @@ function closeMemberSearchModal() {
 
 async function removeMember(memberId: number) {
   const member = team.value?.members.find(m => m.id === memberId)
-  if (!await confirmDelete(`정말로 ${member?.name} 님을 팀에서 제외하시겠습니까?`)) return
+  if (!await confirmDelete(t('team.manage.messages.removeMemberConfirm', { name: member?.name }))) return
 
   saving.value = true
   try {
     await teamApi.removeMember(teamId, memberId)
-    toastSuccess(`${member?.name} 님이 팀에서 제외되었습니다.`)
+    toastSuccess(t('team.manage.messages.removeMemberSuccess', { name: member?.name }))
     await fetchTeam()
   } catch (error) {
     console.error('Failed to remove member:', error)
-    showError('멤버 제외에 실패했습니다.')
+    showError(t('team.manage.messages.removeMemberFailed'))
   } finally {
     saving.value = false
   }
 }
 
 async function assignManager(member: TeamMemberDto) {
-  if (!await confirm(`${member.name} 님에게 매니저 권한을 부여하시겠습니까?`)) return
+  if (!await confirm(t('team.manage.messages.assignManagerConfirm', { name: member.name }))) return
 
   saving.value = true
   try {
     await teamApi.addManager(teamId, member.id)
-    toastSuccess(`${member.name} 님에게 매니저 권한이 부여되었습니다.`)
+    toastSuccess(t('team.manage.messages.assignManagerSuccess', { name: member.name }))
     await fetchTeam()
   } catch (error) {
     console.error('Failed to assign manager:', error)
-    showError('매니저 권한 부여에 실패했습니다.')
+    showError(t('team.manage.messages.assignManagerFailed'))
   } finally {
     saving.value = false
   }
 }
 
 async function unAssignManager(member: TeamMemberDto) {
-  if (!await confirm(`${member.name} 님의 매니저 권한을 취소하시겠습니까?`)) return
+  if (!await confirm(t('team.manage.messages.unassignManagerConfirm', { name: member.name }))) return
 
   saving.value = true
   try {
     await teamApi.removeManager(teamId, member.id)
-    toastSuccess(`${member.name} 님의 매니저 권한이 취소되었습니다.`)
+    toastSuccess(t('team.manage.messages.unassignManagerSuccess', { name: member.name }))
     await fetchTeam()
   } catch (error) {
     console.error('Failed to unassign manager:', error)
-    showError('매니저 권한 취소에 실패했습니다.')
+    showError(t('team.manage.messages.unassignManagerFailed'))
   } finally {
     saving.value = false
   }
@@ -161,19 +163,23 @@ async function unAssignManager(member: TeamMemberDto) {
 
 async function changeAdmin(member?: TeamMemberDto) {
   const message = member
-    ? `정말 ${member.name} 님을 대표로 변경하시겠습니까?\n다시 대표 권한을 획득하려면 ${member.name} 님에게 요청해야합니다.`
-    : '팀의 대표를 초기화 하시겠습니까?'
+    ? t('team.manage.messages.changeAdminConfirm', { name: member.name })
+    : t('team.manage.messages.resetAdminConfirm')
 
   if (!await confirm(message)) return
 
   saving.value = true
   try {
     await teamApi.changeAdmin(teamId, member?.id ?? null)
-    toastSuccess(member ? `${member.name} 님이 대표로 변경되었습니다.` : '대표가 초기화되었습니다.')
+    toastSuccess(
+      member
+        ? t('team.manage.messages.changeAdminSuccess', { name: member.name })
+        : t('team.manage.messages.resetAdminSuccess')
+    )
     await fetchTeam()
   } catch (error) {
     console.error('Failed to change admin:', error)
-    showError('대표 변경에 실패했습니다.')
+    showError(t('team.manage.messages.changeAdminFailed'))
   } finally {
     saving.value = false
   }
@@ -184,10 +190,10 @@ async function updateWorkType(workType: string) {
   try {
     await teamApi.updateWorkType(teamId, workType)
     if (team.value) team.value.workType = workType
-    toastSuccess('근무 형태가 변경되었습니다.')
+    toastSuccess(t('team.manage.messages.updateWorkTypeSuccess'))
   } catch (error) {
     console.error('Failed to update work type:', error)
-    showError('근무 형태 변경에 실패했습니다.')
+    showError(t('team.manage.messages.updateWorkTypeFailed'))
   } finally {
     saving.value = false
   }
@@ -202,10 +208,10 @@ async function updateBatchTemplate(templateName: string) {
         ? dutyBatchTemplates.value.find(t => t.name === templateName) || null
         : null
     }
-    toastSuccess('근무 반입 양식이 변경되었습니다.')
+    toastSuccess(t('team.manage.messages.updateBatchTemplateSuccess'))
   } catch (error) {
     console.error('Failed to update batch template:', error)
-    showError('근무 반입 양식 변경에 실패했습니다.')
+    showError(t('team.manage.messages.updateBatchTemplateFailed'))
   } finally {
     saving.value = false
   }
@@ -227,16 +233,16 @@ function closeDutyTypeModal() {
 
 async function removeDutyType(dutyType: DutyTypeDto) {
   if (!dutyType.id) return
-  if (!await confirmDelete(`[ ${dutyType.name} ] 근무 유형을 삭제하시겠습니까?\n삭제는 되돌릴 수 없으며 해당 유형으로 표시된 근무는 모두 제거됩니다.`)) return
+  if (!await confirmDelete(t('team.manage.messages.deleteDutyTypeConfirm', { name: dutyType.name }))) return
 
   saving.value = true
   try {
     await teamApi.deleteDutyType(teamId, dutyType.id)
-    toastSuccess('근무 유형이 삭제되었습니다.')
+    toastSuccess(t('team.manage.messages.deleteDutyTypeSuccess'))
     await fetchTeam()
   } catch (error) {
     console.error('Failed to delete duty type:', error)
-    showError('근무 유형 삭제에 실패했습니다.')
+    showError(t('team.manage.messages.deleteDutyTypeFailed'))
   } finally {
     saving.value = false
   }
@@ -254,10 +260,10 @@ async function swapPosition(index1: number, index2: number) {
     // Swap locally for immediate feedback
     team.value.dutyTypes[index1] = dt2
     team.value.dutyTypes[index2] = dt1
-    toastSuccess('순서가 변경되었습니다.')
+    toastSuccess(t('team.manage.messages.reorderDutyTypesSuccess'))
   } catch (error) {
     console.error('Failed to swap duty type positions:', error)
-    showError('순서 변경에 실패했습니다.')
+    showError(t('team.manage.messages.reorderDutyTypesFailed'))
     await fetchTeam()
   } finally {
     saving.value = false
@@ -274,15 +280,18 @@ function closeBatchUploadModal() {
 }
 
 async function removeTeam() {
-  const confirmed = await confirmDelete('팀 삭제', '정말로 이 팀을 삭제하겠습니까?')
+  const confirmed = await confirmDelete(
+    t('team.manage.messages.deleteTeamConfirm'),
+    t('team.manage.actions.deleteTeam')
+  )
   if (!confirmed) return
 
   try {
     await adminApi.deleteTeam(teamId)
-    toastSuccess('팀이 삭제되었습니다.')
+    toastSuccess(t('team.manage.messages.deleteTeamSuccess'))
     router.push('/admin/teams')
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : '팀 삭제에 실패했습니다.'
+    const message = e instanceof Error ? e.message : t('team.manage.messages.deleteTeamFailed')
     showError(message)
   }
 }
@@ -308,15 +317,15 @@ onMounted(() => {
           class="px-3 py-1 text-dp-text-on-dark text-sm rounded-lg hover:bg-dp-border-secondary transition flex items-center gap-1 cursor-pointer bg-dp-surface-strong-alt"
         >
           <ChevronLeft class="w-4 h-4" />
-          뒤로
+          {{ t('team.manage.actions.back') }}
         </button>
-        <span>{{ team.name }} 관리</span>
+        <span>{{ t('team.manage.title', { name: team.name }) }}</span>
         <button
           v-if="isAppAdmin && teamLoaded && !hasMember"
           @click="removeTeam"
           class="px-3 py-1 bg-dp-danger text-dp-text-on-dark text-sm rounded-lg hover:bg-dp-danger-hover transition cursor-pointer"
         >
-          팀 삭제
+          {{ t('team.manage.actions.deleteTeam') }}
         </button>
         <span v-else class="w-16"></span>
       </div>
@@ -328,7 +337,7 @@ onMounted(() => {
         <tbody class="border-dp-border-primary">
           <tr class="border-b border-dp-border-primary">
             <th class="px-4 py-3 text-left w-1/4 font-medium bg-dp-bg-secondary text-dp-text-secondary">
-              팀 설명
+              {{ t('team.manage.fields.description') }}
             </th>
             <td class="px-4 py-3 text-dp-text-primary">
               {{ team.description }}
@@ -336,25 +345,25 @@ onMounted(() => {
           </tr>
           <tr class="border-b border-dp-border-primary" v-if="isAdmin">
             <th class="px-4 py-3 text-left font-medium bg-dp-bg-secondary text-dp-text-secondary">
-              팀 대표
+              {{ t('team.manage.fields.admin') }}
             </th>
             <td class="px-4 py-3 text-dp-text-primary">
               <div class="flex items-center gap-2">
-                <span class="font-medium">{{ team.adminName || 'N/A' }}</span>
+                <span class="font-medium">{{ team.adminName || t('team.manage.labels.notAvailable') }}</span>
                 <button
                   v-if="team.adminId && loginId !== team.adminId"
                   @click="changeAdmin()"
                   class="px-2 py-1 text-sm border border-dp-danger-border text-dp-danger rounded hover:bg-dp-danger-soft transition flex items-center gap-1 cursor-pointer"
                 >
                   <Trash2 class="w-3 h-3" />
-                  대표 취소
+                  {{ t('team.manage.actions.cancelAdmin') }}
                 </button>
               </div>
             </td>
           </tr>
           <tr class="border-b border-dp-border-primary">
             <th class="px-4 py-3 text-left font-medium bg-dp-bg-secondary text-dp-text-secondary">
-              근무 형태
+              {{ t('team.manage.fields.workType') }}
             </th>
             <td class="px-4 py-3">
               <select
@@ -370,7 +379,7 @@ onMounted(() => {
           </tr>
           <tr class="border-b border-dp-border-primary">
             <th class="px-4 py-3 text-left font-medium bg-dp-bg-secondary text-dp-text-secondary">
-              근무 반입 양식
+              {{ t('team.manage.fields.batchTemplate') }}
             </th>
             <td class="px-4 py-3">
               <select
@@ -378,7 +387,7 @@ onMounted(() => {
                 @change="updateBatchTemplate(($event.target as HTMLSelectElement).value)"
                 class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent bg-dp-bg-input border-dp-border-input text-dp-text-primary"
               >
-                <option value="">없음</option>
+                <option value="">{{ t('team.manage.labels.none') }}</option>
                 <option v-for="template in dutyBatchTemplates" :key="template.name" :value="template.name">
                   {{ template.label }}
                 </option>
@@ -387,7 +396,7 @@ onMounted(() => {
           </tr>
           <tr v-if="team.dutyBatchTemplate">
             <th class="px-4 py-3 text-left font-medium bg-dp-bg-secondary text-dp-text-secondary">
-              근무표 업로드
+              {{ t('team.manage.fields.dutyUpload') }}
             </th>
             <td class="px-4 py-3">
               <button
@@ -395,7 +404,7 @@ onMounted(() => {
                 class="px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-accent-hover transition flex items-center gap-1 cursor-pointer"
               >
                 <Upload class="w-4 h-4" />
-                등록
+                {{ t('team.manage.actions.upload') }}
               </button>
             </td>
           </tr>
@@ -407,13 +416,13 @@ onMounted(() => {
     <!-- Members Section -->
     <div class="border rounded-lg overflow-hidden mb-4 bg-dp-bg-card border-dp-border-primary">
       <div class="text-dp-text-on-dark px-4 py-3 flex flex-wrap items-center justify-between gap-2 bg-dp-surface-strong">
-        <h3 class="font-bold">팀 멤버</h3>
+        <h3 class="font-bold">{{ t('team.manage.fields.members') }}</h3>
         <button
           @click="openMemberSearchModal"
           class="px-3 py-1.5 bg-dp-accent text-dp-text-on-dark rounded-lg text-sm font-medium hover:bg-dp-accent-hover transition flex items-center gap-1"
         >
           <UserPlus class="w-4 h-4" />
-          멤버 추가
+          {{ t('team.manage.actions.addMember') }}
         </button>
       </div>
 
@@ -423,9 +432,9 @@ onMounted(() => {
           <thead class="text-dp-text-on-dark bg-dp-bg-footer">
             <tr>
               <th class="px-4 py-2 text-center w-12">#</th>
-              <th class="px-4 py-2 text-left">이름</th>
-              <th class="px-4 py-2 text-center">매니저</th>
-              <th class="px-4 py-2 text-center">도구</th>
+              <th class="px-4 py-2 text-left">{{ t('team.manage.fields.name') }}</th>
+              <th class="px-4 py-2 text-center">{{ t('team.manage.fields.manager') }}</th>
+              <th class="px-4 py-2 text-center">{{ t('team.manage.fields.tools') }}</th>
             </tr>
           </thead>
           <tbody class="border-dp-border-primary">
@@ -450,14 +459,14 @@ onMounted(() => {
                       class="px-2 py-1 text-xs border border-dp-warning-border text-dp-warning rounded hover:bg-dp-warning-soft transition flex items-center gap-1"
                     >
                       <ShieldOff class="w-3 h-3" />
-                      권한 취소
+                      {{ t('team.manage.actions.revokeManager') }}
                     </button>
                     <button
                       @click="changeAdmin(member)"
                       class="px-2 py-1 text-xs border border-dp-accent-border text-dp-accent rounded hover:bg-dp-accent-soft transition flex items-center gap-1"
                     >
                       <Crown class="w-3 h-3" />
-                      대표 위임
+                      {{ t('team.manage.actions.transferAdmin') }}
                     </button>
                   </div>
                   <span class="text-dp-text-muted" v-else-if="member.isAdmin">-</span>
@@ -469,7 +478,7 @@ onMounted(() => {
                   class="px-2 py-1 text-sm bg-dp-danger text-dp-text-on-dark rounded hover:bg-dp-danger-hover transition flex items-center gap-1 mx-auto"
                 >
                   <Trash2 class="w-3 h-3" />
-                  탈퇴
+                  {{ t('team.manage.actions.removeMember') }}
                 </button>
               </td>
             </tr>
@@ -495,7 +504,7 @@ onMounted(() => {
               class="px-2 py-1 text-xs bg-dp-danger text-dp-text-on-dark rounded hover:bg-dp-danger-hover transition flex items-center gap-1"
             >
               <Trash2 class="w-3 h-3" />
-              탈퇴
+              {{ t('team.manage.actions.removeMember') }}
             </button>
           </div>
           <div v-if="isAdmin && !member.isAdmin" class="flex flex-wrap gap-1">
@@ -505,7 +514,7 @@ onMounted(() => {
               class="px-2 py-1 text-xs border border-dp-success-border text-dp-success rounded hover:bg-dp-success-soft transition flex items-center gap-1"
             >
               <Plus class="w-3 h-3" />
-              매니저 지정
+              {{ t('team.manage.actions.assignManager') }}
             </button>
             <template v-else-if="member.isManager">
               <button
@@ -513,34 +522,34 @@ onMounted(() => {
                 class="px-2 py-1 text-xs border border-dp-warning-border text-dp-warning rounded hover:bg-dp-warning-soft transition flex items-center gap-1"
               >
                 <ShieldOff class="w-3 h-3" />
-                권한 취소
+                {{ t('team.manage.actions.revokeManager') }}
               </button>
               <button
                 @click="changeAdmin(member)"
                 class="px-2 py-1 text-xs border border-dp-accent-border text-dp-accent rounded hover:bg-dp-accent-soft transition flex items-center gap-1"
               >
                 <Crown class="w-3 h-3" />
-                대표 위임
+                {{ t('team.manage.actions.transferAdmin') }}
               </button>
             </template>
           </div>
         </div>
       </div>
       <div v-else class="p-6 text-center text-dp-text-muted">
-        이 팀에 멤버가 없습니다.
+        {{ t('team.manage.labels.noMembers') }}
       </div>
     </div>
 
     <!-- Duty Types Section -->
     <div class="border rounded-lg overflow-hidden bg-dp-bg-card border-dp-border-primary">
       <div class="text-dp-text-on-dark px-4 py-3 flex items-center justify-between bg-dp-surface-strong">
-        <h3 class="font-bold">근무 유형</h3>
+        <h3 class="font-bold">{{ t('team.manage.fields.dutyTypes') }}</h3>
         <button
           @click="openAddDutyTypeModal"
           class="px-3 py-1.5 rounded-lg text-sm font-medium hover-interactive cursor-pointer flex items-center gap-1 bg-dp-bg-card text-dp-text-primary"
         >
           <Plus class="w-4 h-4" />
-          추가
+          {{ t('team.manage.actions.addDutyType') }}
         </button>
       </div>
 
@@ -549,9 +558,9 @@ onMounted(() => {
           <thead class="text-dp-text-on-dark bg-dp-bg-footer">
             <tr>
               <th class="px-4 py-2 text-center w-12">#</th>
-              <th class="px-4 py-2 text-left">근무명</th>
-              <th class="px-4 py-2 text-center">색상</th>
-              <th class="px-4 py-2 text-center">도구</th>
+              <th class="px-4 py-2 text-left">{{ t('team.manage.fields.dutyName') }}</th>
+              <th class="px-4 py-2 text-center">{{ t('team.manage.fields.color') }}</th>
+              <th class="px-4 py-2 text-center">{{ t('team.manage.fields.tools') }}</th>
             </tr>
           </thead>
           <tbody class="border-dp-border-primary">
@@ -559,7 +568,7 @@ onMounted(() => {
               <td class="px-4 py-3 text-center text-dp-text-muted">{{ index + 1 }}</td>
               <td class="px-4 py-3 font-medium text-dp-text-primary">
                 {{ dutyType.name }}
-                <span v-if="dutyType.id === null" class="text-xs font-normal text-dp-text-muted">(휴무)</span>
+                <span v-if="dutyType.id === null" class="text-xs font-normal text-dp-text-muted">({{ t('team.manage.labels.offDuty') }})</span>
               </td>
               <td class="px-4 py-3 text-center">
                 <span
@@ -606,7 +615,7 @@ onMounted(() => {
         </table>
       </div>
       <div v-else class="p-6 text-center text-dp-text-muted">
-        근무 유형이 없습니다.
+        {{ t('team.manage.labels.noDutyTypes') }}
       </div>
     </div>
 

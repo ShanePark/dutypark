@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import BaseModal from '@/components/common/BaseModal.vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
   isOpen: boolean
@@ -9,6 +10,8 @@ const emit = defineEmits<{
   close: []
   confirm: []
 }>()
+
+const { t } = useI18n()
 
 function close() {
   emit('close')
@@ -31,26 +34,26 @@ function confirm() {
   >
     <div class="overflow-hidden">
       <div class="modal-header-compact">
-        <h2 class="text-sm font-semibold text-dp-text-primary">태그 제거</h2>
+        <h2 class="text-sm font-semibold text-dp-text-primary">{{ t('duty.untagConfirm.title') }}</h2>
       </div>
       <div class="modal-body-form-compact">
         <p class="text-sm text-dp-text-secondary">
-          이 일정에서 태그를 제거하시겠습니까?
+          {{ t('duty.untagConfirm.message') }}
         </p>
         <div
           class="p-3 rounded-lg text-xs space-y-1 bg-dp-bg-secondary text-dp-text-muted"
         >
-          <p>• 태그를 제거하면 이 일정이 내 달력에서 사라집니다.</p>
-          <p>• 태그 복원은 불가능하며, 다시 태그하려면 해당 사용자에게 요청해야 합니다.</p>
+          <p>{{ t('duty.untagConfirm.warning1') }}</p>
+          <p>{{ t('duty.untagConfirm.warning2') }}</p>
         </div>
       </div>
       <div class="modal-actions modal-actions-center modal-footer-safe pt-0">
         <button
           @click="confirm"
-          class="px-5 py-2 bg-dp-warning hover:bg-dp-warning-hover text-dp-text-on-dark rounded-lg text-sm font-medium transition-all duration-200 hover:-translate-y-px cursor-pointer"
-          style="box-shadow: var(--dp-shadow-md), var(--dp-shadow-sm);"
-        >
-          태그 제거
+        class="px-5 py-2 bg-dp-warning hover:bg-dp-warning-hover text-dp-text-on-dark rounded-lg text-sm font-medium transition-all duration-200 hover:-translate-y-px cursor-pointer"
+        style="box-shadow: var(--dp-shadow-md), var(--dp-shadow-sm);"
+      >
+          {{ t('duty.untagConfirm.action') }}
         </button>
         <button
           @click="close"
@@ -62,7 +65,7 @@ function confirm() {
             boxShadow: 'var(--dp-shadow-sm)'
           }"
         >
-          취소
+          {{ t('common.actions.cancel') }}
         </button>
       </div>
     </div>

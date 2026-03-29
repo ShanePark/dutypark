@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useKakao } from '@/composables/useKakao'
 import { useNaver } from '@/composables/useNaver'
@@ -12,6 +13,7 @@ const REMEMBER_EMAIL_KEY = 'dp-remember-email'
 
 const router = useRouter()
 const route = useRoute()
+const { t } = useI18n()
 const authStore = useAuthStore()
 const { initKakao, kakaoLogin } = useKakao()
 const { isNaverEnabled, naverLogin } = useNaver()
@@ -26,6 +28,22 @@ const error = ref('')
 const remainingAttempts = ref<number | null>(null)
 const policyModal = ref<'terms' | 'privacy' | null>(null)
 const redirectTarget = () => getSafeRedirect(route.query.redirect) || '/'
+
+const remainingAttemptsMessage = computed(() => {
+  if (remainingAttempts.value === null || remainingAttempts.value > 3) {
+    return ''
+  }
+
+  if (remainingAttempts.value === 0) {
+    return t('auth.login.error.locked')
+  }
+
+  if (remainingAttempts.value === 1) {
+    return t('auth.login.error.lastAttempt')
+  }
+
+  return t('auth.login.error.remainingAttempts', { count: remainingAttempts.value })
+})
 
 onMounted(() => {
   initKakao()
@@ -58,12 +76,12 @@ async function handleLogin() {
     router.push(redirectTarget())
   } catch (e: unknown) {
     if (e instanceof AxiosError && e.response?.data) {
-      error.value = e.response.data.error || '로그인에 실패했습니다.'
+      error.value = e.response.data.error || t('auth.login.error.generic')
       if (typeof e.response.data.remainingAttempts === 'number') {
         remainingAttempts.value = e.response.data.remainingAttempts
       }
     } else {
-      error.value = '로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.'
+      error.value = t('auth.login.error.invalidCredentials')
     }
   } finally {
     isLoading.value = false
@@ -90,7 +108,7 @@ function handleNaverLogin() {
       <!-- Logo -->
       <div class="text-center mb-8">
         <h1 class="text-3xl font-bold text-dp-text-primary">Dutypark</h1>
-        <p class="mt-2 text-dp-text-muted">로그인하여 시작하세요</p>
+        <p class="mt-2 text-dp-text-muted">{{ t('auth.login.subtitle') }}</p>
       </div>
 
       <!-- Login Card -->
@@ -99,7 +117,7 @@ function handleNaverLogin() {
           <!-- Email Field -->
           <div>
             <label for="email" class="block text-sm font-medium mb-2 text-dp-text-secondary">
-              이메일
+              {{ t('auth.login.emailLabel') }}
             </label>
             <input
               id="email"
@@ -112,7 +130,7 @@ function handleNaverLogin() {
                 backgroundColor: 'var(--dp-bg-input)',
                 color: 'var(--dp-text-primary)'
               }"
-              placeholder="이메일 주소"
+              :placeholder="t('auth.login.emailPlaceholder')"
             />
             <div class="flex items-center mt-3">
               <input
@@ -122,7 +140,7 @@ function handleNaverLogin() {
                 class="h-4 w-4 text-dp-text-primary focus:ring-dp-text-secondary rounded cursor-pointer border-dp-border-input"
               />
               <label for="rememberMe" class="ml-2 text-sm cursor-pointer text-dp-text-secondary">
-                아이디 저장
+                {{ t('auth.login.rememberMe') }}
               </label>
             </div>
           </div>
@@ -130,7 +148,7 @@ function handleNaverLogin() {
           <!-- Password Field -->
           <div>
             <label for="password" class="block text-sm font-medium mb-2 text-dp-text-secondary">
-              비밀번호
+              {{ t('auth.login.passwordLabel') }}
             </label>
             <input
               id="password"
@@ -145,23 +163,15 @@ function handleNaverLogin() {
                 backgroundColor: 'var(--dp-bg-input)',
                 color: 'var(--dp-text-primary)'
               }"
-              placeholder="비밀번호"
+              :placeholder="t('auth.login.passwordPlaceholder')"
             />
           </div>
 
           <!-- Error Message -->
           <div v-if="error" class="text-sm p-3 rounded-xl border" :class="remainingAttempts !== null && remainingAttempts <= 1 ? 'text-dp-warning bg-dp-warning-soft border-dp-warning-border' : 'text-dp-danger bg-dp-danger-soft border-dp-danger-border'">
             <div>{{ error }}</div>
-            <div v-if="remainingAttempts !== null && remainingAttempts <= 3" class="mt-1 font-medium">
-              <template v-if="remainingAttempts === 0">
-                로그인이 차단되었습니다. 잠시 후 다시 시도해주세요.
-              </template>
-              <template v-else-if="remainingAttempts === 1">
-                주의: 마지막 시도입니다!
-              </template>
-              <template v-else>
-                남은 시도 횟수: {{ remainingAttempts }}회
-              </template>
+            <div v-if="remainingAttemptsMessage" class="mt-1 font-medium">
+              {{ remainingAttemptsMessage }}
             </div>
           </div>
 
@@ -171,7 +181,7 @@ function handleNaverLogin() {
             :disabled="isLoading"
             class="w-full bg-dp-surface-strong text-dp-text-on-dark py-3.5 px-4 rounded-xl font-semibold hover:bg-dp-surface-strong-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
           >
-            {{ isLoading ? '로그인 중...' : '로그인' }}
+            {{ isLoading ? t('auth.login.submitting') : t('auth.login.submit') }}
           </button>
 
           <!-- Divider -->
@@ -180,7 +190,7 @@ function handleNaverLogin() {
               <div class="w-full border-t border-dp-border-primary"></div>
             </div>
             <div class="relative flex justify-center text-sm">
-              <span class="px-4 bg-dp-bg-card text-dp-text-muted">또는</span>
+              <span class="px-4 bg-dp-bg-card text-dp-text-muted">{{ t('common.labels.or') }}</span>
             </div>
           </div>
 
@@ -194,7 +204,7 @@ function handleNaverLogin() {
               :style="{ backgroundColor: 'var(--dp-kakao)', color: 'var(--dp-kakao-text)' }"
             >
               <img src="/img/kakao.png" alt="Kakao" class="w-5 h-5" />
-              <span>{{ isKakaoLoading ? '로그인 중...' : '카카오 로그인' }}</span>
+              <span>{{ isKakaoLoading ? t('auth.login.submitting') : t('auth.login.social.kakao') }}</span>
             </button>
 
             <button
@@ -206,7 +216,7 @@ function handleNaverLogin() {
               :style="{ backgroundColor: 'var(--dp-naver)', color: 'var(--dp-naver-text)' }"
             >
               <img src="/img/naver.svg" alt="Naver" class="w-5 h-5" />
-              <span>{{ isNaverLoading ? '로그인 중...' : '네이버 로그인' }}</span>
+              <span>{{ isNaverLoading ? t('auth.login.submitting') : t('auth.login.social.naver') }}</span>
             </button>
           </div>
         </form>
@@ -215,7 +225,7 @@ function handleNaverLogin() {
       <!-- Back to Home -->
       <div class="text-center mt-6">
         <router-link to="/" class="text-sm transition text-dp-text-muted">
-          홈으로 돌아가기
+          {{ t('common.navigation.backHome') }}
         </router-link>
       </div>
 
@@ -226,7 +236,7 @@ function handleNaverLogin() {
           class="text-xs transition hover:underline text-dp-text-muted"
           @click="policyModal = 'terms'"
         >
-          이용약관
+          {{ t('policy.terms.title') }}
         </button>
         <span class="mx-2 text-xs text-dp-text-muted">|</span>
         <button
@@ -234,7 +244,7 @@ function handleNaverLogin() {
           class="text-xs transition hover:underline text-dp-text-muted"
           @click="policyModal = 'privacy'"
         >
-          개인정보 처리방침
+          {{ t('policy.privacy.title') }}
         </button>
       </div>
     </div>

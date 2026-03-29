@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { X, Plus } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ScheduleList from '@/components/duty/ScheduleList.vue'
 import ScheduleForm from '@/components/duty/ScheduleForm.vue'
@@ -59,6 +60,8 @@ const props = withDefaults(defineProps<Props>(), {
   dutyTypes: () => [],
   friends: () => [],
 })
+
+const { t, locale } = useI18n()
 
 interface ScheduleSaveData {
   id?: string
@@ -144,37 +147,43 @@ function confirmUntag() {
 const formattedDate = computed(() => {
   const { year, month, day } = props.date
   const date = new Date(year, month - 1, day)
-  const weekDays = ['일', '월', '화', '수', '목', '금', '토']
-  const dayOfWeek = weekDays[date.getDay()]
-  return `${year}년 ${month}월 ${day}일 (${dayOfWeek})`
+  const formatted = new Intl.DateTimeFormat(locale.value, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(date)
+  const dayOfWeek = new Intl.DateTimeFormat(locale.value, {
+    weekday: 'short',
+  }).format(date)
+  return `${formatted} (${dayOfWeek})`
 })
 
 const visibilityOptions = computed(() => [
   {
     value: 'PUBLIC' as CalendarVisibility,
-    label: '전체공개',
-    description: '모든 사람에게 공개',
+    label: t('visibility.labels.public'),
+    description: t('visibility.descriptions.public'),
     icon: VISIBILITY_ICONS.PUBLIC,
     color: VISIBILITY_COLORS.PUBLIC,
   },
   {
     value: 'FRIENDS' as CalendarVisibility,
-    label: '친구공개',
-    description: '친구에게만 공개',
+    label: t('visibility.labels.friends'),
+    description: t('visibility.descriptions.friends'),
     icon: VISIBILITY_ICONS.FRIENDS,
     color: VISIBILITY_COLORS.FRIENDS,
   },
   {
     value: 'FAMILY' as CalendarVisibility,
-    label: '가족공개',
-    description: '가족에게만 공개',
+    label: t('visibility.labels.family'),
+    description: t('visibility.descriptions.family'),
     icon: VISIBILITY_ICONS.FAMILY,
     color: VISIBILITY_COLORS.FAMILY,
   },
   {
     value: 'PRIVATE' as CalendarVisibility,
-    label: '비공개',
-    description: '나만 볼 수 있음',
+    label: t('visibility.labels.private'),
+    description: t('visibility.descriptions.private'),
     icon: VISIBILITY_ICONS.PRIVATE,
     color: VISIBILITY_COLORS.PRIVATE,
   },
@@ -330,7 +339,7 @@ function saveSchedule() {
 
   // Check if upload is in progress
   if (scheduleFormRef.value?.isUploading()) {
-    showWarning('파일 업로드가 진행 중입니다. 잠시 후 다시 시도해주세요.')
+    showWarning(t('duty.schedule.warnings.uploadInProgress'))
     return
   }
 
@@ -373,8 +382,8 @@ function handleUploadError(message: string) {
       <div class="w-full">
         <div class="flex items-center justify-between gap-3">
           <div class="flex items-center gap-2 min-w-0">
-            <span v-if="isCreateMode" class="px-2 py-0.5 bg-dp-success-soft text-dp-success text-xs font-medium rounded">일정 추가</span>
-            <span v-else-if="isEditMode" class="px-2 py-0.5 bg-dp-accent-soft text-dp-accent-hover text-xs font-medium rounded">일정 수정</span>
+            <span v-if="isCreateMode" class="px-2 py-0.5 bg-dp-success-soft text-dp-success text-xs font-medium rounded">{{ t('duty.schedule.dayDetail.createBadge') }}</span>
+            <span v-else-if="isEditMode" class="px-2 py-0.5 bg-dp-accent-soft text-dp-accent-hover text-xs font-medium rounded">{{ t('duty.schedule.dayDetail.editBadge') }}</span>
             <h2>{{ formattedDate }}</h2>
           </div>
           <button @click="emit('close')" class="p-2 rounded-full flex-shrink-0 hover-close-btn cursor-pointer">
@@ -407,7 +416,7 @@ function handleUploadError(message: string) {
             class="px-2.5 py-1 rounded-md text-xs font-medium text-dp-text-on-dark"
             :style="{ backgroundColor: duty.dutyColor || 'var(--dp-duty-fallback)' }"
           >
-            {{ duty.dutyType || 'OFF' }}
+            {{ duty.dutyType || t('duty.common.off') }}
           </span>
         </div>
       </div>
@@ -457,7 +466,7 @@ function handleUploadError(message: string) {
               class="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-dp-success text-dp-text-on-dark rounded-lg hover:bg-dp-success-hover transition cursor-pointer"
             >
               <Plus class="w-4 h-4" />
-              일정 추가
+              {{ t('duty.schedule.dayDetail.add') }}
             </button>
           </div>
           <div v-else-if="!isCreateMode && !isEditMode" class="flex justify-end">
@@ -465,7 +474,7 @@ function handleUploadError(message: string) {
               @click="emit('close')"
               class="w-full sm:w-auto px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
             >
-              닫기
+              {{ t('common.actions.close') }}
             </button>
           </div>
           <!-- Create/Edit mode: Save/Cancel buttons -->
@@ -474,14 +483,14 @@ function handleUploadError(message: string) {
               @click="cancelEdit"
               class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
             >
-              취소
+              {{ t('common.actions.cancel') }}
             </button>
             <button
               @click="saveSchedule"
               :disabled="isUploading"
               class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
-              {{ isUploading ? '업로드 중...' : (isEditMode ? '수정' : '저장') }}
+              {{ isUploading ? t('duty.common.uploading') : (isEditMode ? t('duty.schedule.actions.edit') : t('duty.schedule.actions.save')) }}
             </button>
           </div>
         </div>

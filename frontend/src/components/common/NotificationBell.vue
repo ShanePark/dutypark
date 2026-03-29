@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Bell } from 'lucide-vue-next'
 import { useNotificationStore } from '@/stores/notification'
 import { useAuthStore } from '@/stores/auth'
@@ -10,6 +11,7 @@ const emit = defineEmits<{
 
 const notificationStore = useNotificationStore()
 const authStore = useAuthStore()
+const { t } = useI18n()
 const isDropdownVisible = ref(false)
 
 function toggleDropdown() {
@@ -46,7 +48,7 @@ onUnmounted(() => {
     type="button"
     class="notification-bell cursor-pointer relative p-2 rounded-full transition-all duration-150 min-h-[44px] min-w-[44px] flex items-center justify-center"
     @click="toggleDropdown"
-    aria-label="알림"
+    :aria-label="t('notifications.common.ariaLabel')"
   >
     <Bell class="w-5 h-5 bell-icon" />
     <span

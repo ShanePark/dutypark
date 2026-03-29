@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import Swal from 'sweetalert2'
 import { useSwal } from '@/composables/useSwal'
 import { isLightColor } from '@/utils/color'
@@ -35,6 +36,7 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const { showError, confirm, confirmDelete, toastSuccess } = useSwal()
+const { t } = useI18n()
 
 // State
 const today = new Date()
@@ -566,7 +568,7 @@ async function loadDuties() {
     )
   } catch (error) {
     console.error('Failed to load duties:', error)
-    loadError.value = '근무 정보를 불러오는데 실패했습니다.'
+    loadError.value = t('duty.view.loadDutiesFailed')
   } finally {
     isLoadingDuties.value = false
   }
@@ -670,7 +672,7 @@ onMounted(async () => {
     }
   } catch (error) {
     console.error('Failed to initialize duty view:', error)
-    loadError.value = '데이터를 불러오는데 실패했습니다.'
+    loadError.value = t('duty.view.loadDataFailed')
   } finally {
     isLoading.value = false
   }
@@ -754,7 +756,7 @@ watch(
       }
     } catch (error) {
       console.error('Failed to reload duty view:', error)
-      loadError.value = '데이터를 불러오는데 실패했습니다.'
+      loadError.value = t('duty.view.loadDataFailed')
     } finally {
       isLoading.value = false
     }
@@ -829,7 +831,7 @@ async function handleBatchDutyChange(day: CalendarDay, dutyTypeId: number | null
     await loadDuties()
   } catch (error) {
     console.error('Failed to change duty type:', error)
-    showError('근무 변경에 실패했습니다.')
+    showError(t('duty.view.changeDutyFailed'))
   }
 }
 
@@ -966,7 +968,7 @@ async function handleDDaySave(dday: { id?: number; title: string; date: string; 
     sortDDays()
   } catch (error) {
     console.error('Failed to save D-Day:', error)
-    showError('D-Day 저장에 실패했습니다.')
+    showError(t('duty.dday.messages.saveFailed'))
   }
   isDDayModalOpen.value = false
   // Return to detail modal if editing from there
@@ -977,7 +979,7 @@ async function handleDDaySave(dday: { id?: number; title: string; date: string; 
 }
 
 async function deleteDDay(dday: LocalDDay) {
-  if (!await confirmDelete(`[${dday.title}]을(를) 정말로 삭제하시겠습니까?`)) return
+  if (!await confirmDelete(t('duty.dday.messages.deleteConfirm', { title: dday.title }))) return
 
   try {
     await ddayApi.deleteDDay(dday.id)
@@ -988,7 +990,7 @@ async function deleteDDay(dday: LocalDDay) {
     }
   } catch (error) {
     console.error('Failed to delete D-Day:', error)
-    showError('D-Day 삭제에 실패했습니다.')
+    showError(t('duty.dday.messages.deleteFailed'))
   }
 }
 
@@ -1021,7 +1023,7 @@ async function handleTodoUpdate(data: {
     applyTodoUpdate(updatedTodo)
   } catch (error) {
     console.error('Failed to update todo:', error)
-    showError('할 일 수정에 실패했습니다.')
+    showError(t('duty.todo.messages.updateFailed'))
   }
 }
 
@@ -1032,7 +1034,7 @@ async function handleTodoComplete(id: string) {
     await loadTodos()
   } catch (error) {
     console.error('Failed to complete todo:', error)
-    showError('할 일 완료 처리에 실패했습니다.')
+    showError(t('duty.todo.messages.completeFailed'))
   }
   // Only close detail modal and return to overview if called from detail modal
   if (fromDetailModal) {
@@ -1047,7 +1049,7 @@ async function handleTodoReopen(id: string) {
     await loadTodos()
   } catch (error) {
     console.error('Failed to reopen todo:', error)
-    showError('할 일 재오픈에 실패했습니다.')
+    showError(t('duty.todo.messages.reopenFailed'))
   }
   // Only close detail modal if called from detail modal
   if (fromDetailModal) {
@@ -1060,10 +1062,10 @@ async function handleTodoStatusChange(data: { id: string; status: TodoStatus }) 
   try {
     await todoApi.changeStatus(data.id, { status: data.status })
     await loadTodos()
-    toastSuccess('할 일 상태를 변경했습니다.')
+    toastSuccess(t('duty.todo.messages.statusChanged'))
   } catch (error) {
     console.error('Failed to change todo status:', error)
-    showError('할 일 상태 변경에 실패했습니다.')
+    showError(t('duty.todo.messages.statusChangeFailed'))
   }
   if (fromDetailModal) {
     isTodoDetailModalOpen.value = false
@@ -1071,7 +1073,7 @@ async function handleTodoStatusChange(data: { id: string; status: TodoStatus }) 
 }
 
 async function handleTodoDelete(id: string) {
-  if (!await confirmDelete('할 일을 삭제하시겠습니까?')) return
+  if (!await confirmDelete(t('duty.todo.messages.deleteConfirm'))) return
   const fromDetailModal = isTodoDetailModalOpen.value
   try {
     await todoApi.deleteTodo(id)
@@ -1079,7 +1081,7 @@ async function handleTodoDelete(id: string) {
     completedTodos.value = completedTodos.value.filter((t) => t.id !== id)
   } catch (error) {
     console.error('Failed to delete todo:', error)
-    showError('할 일 삭제에 실패했습니다.')
+    showError(t('duty.todo.messages.deleteFailed'))
   }
   // Only close detail modal if called from detail modal
   if (fromDetailModal) {
@@ -1112,26 +1114,26 @@ async function handleTodoAdd(data: {
     } else {
       todos.value.unshift(mapToLocalTodo(newTodo))
     }
-    toastSuccess('할 일이 추가되었습니다.')
+    toastSuccess(t('duty.todo.messages.added'))
   } catch (error) {
     console.error('Failed to add todo:', error)
-    showError('할 일 추가에 실패했습니다.')
+    showError(t('duty.todo.messages.addFailed'))
   }
   isTodoAddModalOpen.value = false
 }
 
 async function handleTodoUntagSelf(id: string) {
-  if (!await confirm('이 TODO 태그를 제거하시겠습니까?', '태그 제거')) return
+  if (!await confirm(t('duty.todo.messages.untagConfirm'), t('duty.todo.messages.untagTitle'))) return
 
   try {
     await todoApi.untagSelf(id)
     todos.value = todos.value.filter((todo) => todo.id !== id)
     completedTodos.value = completedTodos.value.filter((todo) => todo.id !== id)
     isTodoDetailModalOpen.value = false
-    toastSuccess('TODO 태그를 제거했습니다.')
+    toastSuccess(t('duty.todo.messages.untagged'))
   } catch (error) {
     console.error('Failed to untag todo:', error)
-    showError('태그 제거에 실패했습니다.')
+    showError(t('duty.todo.messages.untagFailed'))
   }
 }
 
@@ -1176,7 +1178,7 @@ async function handleSearch(page: number = 0) {
     isSearchResultModalOpen.value = true
   } catch (error) {
     console.error('Failed to search schedules:', error)
-    showError('검색에 실패했습니다.')
+    showError(t('duty.search.failed'))
   } finally {
     isSearching.value = false
   }
@@ -1254,13 +1256,13 @@ async function loadOtherDuties() {
       memberId: memberIdsToFetch[index] || 0,
       memberName: item.name,
       duties: item.duties.map((d) => ({
-        dutyType: d.dutyType || 'OFF',
+        dutyType: d.dutyType || t('duty.common.off'),
         dutyColor: d.dutyColor || 'var(--dp-duty-fallback)',
       })),
     }))
   } catch (error) {
     console.error('Failed to load other duties:', error)
-    showError('친구 근무 정보를 불러오는데 실패했습니다.')
+    showError(t('duty.view.loadOtherDutiesFailed'))
   }
 }
 
@@ -1308,10 +1310,10 @@ async function handleCreateSchedule(data: ScheduleSaveData) {
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
     await loadSchedules()
-    toastSuccess('일정이 추가되었습니다.')
+    toastSuccess(t('duty.schedule.messages.created'))
   } catch (error) {
     console.error('Failed to create schedule:', error)
-    showError('일정 생성에 실패했습니다.')
+    showError(t('duty.schedule.messages.createFailed'))
   }
 }
 
@@ -1334,20 +1336,20 @@ async function handleEditSchedule(data: ScheduleSaveData) {
     await loadSchedules()
   } catch (error) {
     console.error('Failed to update schedule:', error)
-    showError('일정 수정에 실패했습니다.')
+    showError(t('duty.schedule.messages.updateFailed'))
   }
 }
 
 async function handleDeleteSchedule(scheduleId: string) {
-  if (!await confirmDelete('이 일정을 삭제하시겠습니까?')) return
+  if (!await confirmDelete(t('duty.schedule.messages.deleteConfirm'))) return
 
   try {
     await scheduleApi.deleteSchedule(scheduleId)
     await loadSchedules()
-    toastSuccess('일정이 삭제되었습니다.')
+    toastSuccess(t('duty.schedule.messages.deleted'))
   } catch (error) {
     console.error('Failed to delete schedule:', error)
-    showError('일정 삭제에 실패했습니다.')
+    showError(t('duty.schedule.messages.deleteFailed'))
   }
 }
 
@@ -1355,10 +1357,10 @@ async function handleReorderSchedules(scheduleIds: string[]) {
   try {
     await scheduleApi.reorderSchedulePositions(scheduleIds)
     await loadSchedules()
-    toastSuccess('일정 순서가 변경되었습니다.')
+    toastSuccess(t('duty.schedule.messages.reordered'))
   } catch (error) {
     console.error('Failed to reorder schedules:', error)
-    showError('일정 순서 변경에 실패했습니다.')
+    showError(t('duty.schedule.messages.reorderFailed'))
   }
 }
 
@@ -1366,10 +1368,10 @@ async function handleUntagSelf(scheduleId: string) {
   try {
     await scheduleApi.untagSelf(scheduleId)
     await loadSchedules()
-    toastSuccess('태그가 해제되었습니다.')
+    toastSuccess(t('duty.schedule.messages.untagged'))
   } catch (error) {
     console.error('Failed to untag self:', error)
-    showError('태그 해제에 실패했습니다.')
+    showError(t('duty.schedule.messages.untagFailed'))
   }
 }
 
@@ -1385,7 +1387,7 @@ async function handleChangeDutyType(dutyTypeId: number | null) {
     await loadDuties()
   } catch (error) {
     console.error('Failed to change duty type:', error)
-    showError('근무 변경에 실패했습니다.')
+    showError(t('duty.view.changeDutyFailed'))
   }
 }
 
@@ -1401,16 +1403,16 @@ async function showBatchUpdateModal() {
     .join('')
 
   const result = await Swal.fire({
-    title: '한번에 수정',
+    title: t('duty.batchUpdate.title'),
     html: `
-      <p>${currentYear.value}년 ${currentMonth.value}월의 기본 근무를 선택해주세요.</p>
-      <p>현재 월의 모든 날짜가 선택한 근무로 설정됩니다.</p>
-      <p class="text-sm text-dp-warning font-semibold mt-2">클릭시 바로 변경됩니다.</p>
+      <p>${t('duty.batchUpdate.description1', { year: currentYear.value, month: currentMonth.value })}</p>
+      <p>${t('duty.batchUpdate.description2')}</p>
+      <p class="text-sm text-dp-warning font-semibold mt-2">${t('duty.batchUpdate.warning')}</p>
       <div class="mt-4">${buttonsHtml}</div>
     `,
     showConfirmButton: false,
     showCancelButton: true,
-    cancelButtonText: '취소',
+    cancelButtonText: t('common.actions.cancel'),
     didOpen: () => {
       const buttons = document.querySelectorAll('.duty-type-btn')
       buttons.forEach((button) => {
@@ -1427,7 +1429,7 @@ async function showBatchUpdateModal() {
             await loadDuties()
           } catch (error) {
             console.error('Failed to batch update duties:', error)
-            showError('일괄 수정에 실패했습니다.')
+            showError(t('duty.batchUpdate.failed'))
           }
         })
       })
@@ -1442,16 +1444,16 @@ async function showExcelUploadModal() {
   const fileExtensions = team.value.dutyBatchTemplate.fileExtensions || ['.xlsx', '.xls']
 
   const { value: file } = await Swal.fire({
-    title: '시간표 파일 업로드',
+    title: t('duty.excelUpload.title'),
     input: 'file',
-    html: `시간표 파일을 업로드해주세요.<br/>자동으로 파일에 맞춰 시간표를 업데이트 합니다.<br/><span class="text-dp-warning font-semibold">업로드하는 시간표가 ${currentYear.value}년 ${currentMonth.value}월에 맞는지 꼭 확인해주세요.</span>`,
+    html: `${t('duty.excelUpload.description1')}<br/>${t('duty.excelUpload.description2', { year: currentYear.value, month: currentMonth.value })}`,
     inputAttributes: {
       accept: fileExtensions.join(','),
-      'aria-label': '시간표 파일을 업로드해주세요.',
+      'aria-label': t('duty.excelUpload.ariaLabel'),
     },
-    confirmButtonText: '등록',
+    confirmButtonText: t('duty.excelUpload.confirm'),
     showCancelButton: true,
-    cancelButtonText: '취소',
+    cancelButtonText: t('common.actions.cancel'),
   })
 
   if (!file) return
@@ -1465,21 +1467,27 @@ async function showExcelUploadModal() {
     )
 
     if (!result.result) {
-      showError(result.errorMessage || '파일 업로드에 실패했습니다.', '시간표 파일 업로드 실패')
+      showError(result.errorMessage || t('duty.excelUpload.failed'), t('duty.excelUpload.failureTitle'))
       return
     }
 
     await Swal.fire({
       icon: 'success',
-      title: '시간표 적용 완료',
-      html: `시간표가 업로드 되었습니다.<br/>[${result.startDate}] ~ [${result.endDate}]<br/>총 ${result.workingDays + result.offDays}일 중 근무일은 ${result.workingDays}, 휴무일은 ${result.offDays}일 입니다.`,
-      confirmButtonText: '확인',
+      title: t('duty.excelUpload.successTitle'),
+      html: t('duty.excelUpload.successSummary', {
+        startDate: result.startDate,
+        endDate: result.endDate,
+        totalDays: result.workingDays + result.offDays,
+        workingDays: result.workingDays,
+        offDays: result.offDays,
+      }),
+      confirmButtonText: t('common.actions.confirm'),
     })
 
     await loadDuties()
   } catch (error) {
     console.error('Failed to upload duty batch:', error)
-    showError('파일 업로드에 실패했습니다.')
+    showError(t('duty.excelUpload.failed'))
   }
 }
 </script>
@@ -1489,7 +1497,7 @@ async function showExcelUploadModal() {
     <!-- Loading State -->
     <div v-if="isLoading" class="flex items-center justify-center py-20">
       <Loader2 class="w-8 h-8 text-dp-accent animate-spin" />
-      <span class="ml-2 text-dp-text-secondary">데이터를 불러오는 중...</span>
+      <span class="ml-2 text-dp-text-secondary">{{ t('duty.view.loading') }}</span>
     </div>
 
     <!-- Error State -->
@@ -1499,7 +1507,7 @@ async function showExcelUploadModal() {
         @click="loadDuties"
         class="mt-2 px-4 py-2 bg-dp-danger text-dp-text-on-dark rounded hover:bg-dp-danger-hover transition cursor-pointer"
       >
-        다시 시도
+        {{ t('duty.view.retry') }}
       </button>
     </div>
 

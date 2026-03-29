@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, inject, type Ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   CalendarDays,
   ListTodo,
@@ -25,6 +26,7 @@ const props = defineProps<{
 
 const showcaseRef = ref<HTMLElement | null>(null)
 const containerRef = inject<Ref<HTMLElement | null>>('introContainer', ref(null))
+const { t } = useI18n()
 
 // Scroll progress within the showcase section (0 to 1)
 const scrollProgress = ref(0)
@@ -345,7 +347,7 @@ function scrollToFeature(index: number) {
           :key="index"
           class="progress-dot"
           :class="{ active: dot.isActive, passed: dot.isPassed }"
-          :aria-label="`${features[index]?.title ?? '기능'}으로 이동`"
+          :aria-label="t('intro.hero.featureAriaLabel', { title: features[index]?.title ?? t('intro.hero.featureFallback') })"
           @click="scrollToFeature(index)"
         />
       </div>
@@ -405,7 +407,7 @@ function scrollToFeature(index: number) {
                 <img
                   v-if="feature.mockupType === 'image' && feature.mockupSrc"
                   :src="feature.mockupSrc"
-                  :alt="`${feature.title} 미리보기`"
+                  :alt="t('intro.hero.featureAlt', { title: feature.title })"
                 />
 
                 <div v-else class="intro-mockup-placeholder">

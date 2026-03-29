@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { X, ChevronLeft, ChevronRight, Calendar, Paperclip, Search, Loader2 } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { formatDateRange } from '@/utils/date'
 
@@ -36,6 +37,8 @@ const emit = defineEmits<{
   (e: 'changePage', page: number): void
   (e: 'search', query: string): void
 }>()
+
+const { t } = useI18n()
 
 const localQuery = ref(props.query)
 
@@ -89,7 +92,7 @@ const pagesToShow = computed(() => {
   >
     <div class="modal-header-stack">
       <div class="flex items-center justify-between gap-3">
-        <h2 class="text-base sm:text-lg font-bold text-dp-text-primary">검색 결과</h2>
+        <h2 class="text-base sm:text-lg font-bold text-dp-text-primary">{{ t('duty.search.title') }}</h2>
         <button @click="emit('close')" class="p-2 rounded-full flex-shrink-0 hover-close-btn cursor-pointer">
           <X class="w-6 h-6 text-dp-text-primary" />
         </button>
@@ -99,7 +102,7 @@ const pagesToShow = computed(() => {
           <input
             v-model="localQuery"
             type="text"
-            placeholder="검색어 입력..."
+            :placeholder="t('duty.search.placeholder')"
             class="form-control-card pl-10 pr-4 text-sm"
             :disabled="isSearching"
           />
@@ -111,20 +114,20 @@ const pagesToShow = computed(() => {
           class="px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg text-sm font-medium transition hover:bg-dp-accent-hover disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2"
         >
           <Loader2 v-if="isSearching" class="w-4 h-4 animate-spin" />
-          <span>검색</span>
+          <span>{{ t('duty.search.action') }}</span>
         </button>
       </form>
       <p v-if="query" class="text-sm text-dp-text-muted">
-        "{{ query }}" 검색 결과 {{ pageInfo.totalElements }}건
+        {{ t('duty.search.summary', { query, count: pageInfo.totalElements }) }}
       </p>
     </div>
 
     <div class="modal-body-form-compact">
       <div v-if="!query" class="text-center py-8 text-dp-text-muted">
-        검색어를 입력해주세요.
+        {{ t('duty.search.emptyQuery') }}
       </div>
       <div v-else-if="results.length === 0" class="text-center py-8 text-dp-text-muted">
-        검색 결과가 없습니다.
+        {{ t('duty.search.emptyResults') }}
       </div>
 
       <div v-else class="space-y-3">

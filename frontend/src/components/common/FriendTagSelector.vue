@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ChevronDown, RotateCcw, Search, UserPlus, X } from 'lucide-vue-next'
 import type { TaggableFriend } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
@@ -28,6 +29,7 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: number[]): void
 }>()
 
+const { t, locale } = useI18n()
 const { confirm } = useSwal()
 const searchQuery = ref('')
 const isExpanded = ref(props.modelValue.length > 0)
@@ -59,7 +61,7 @@ const sortedFriends = computed(() => {
       return aFamily - bFamily
     }
 
-    return a.name.localeCompare(b.name, 'ko')
+    return a.name.localeCompare(b.name, locale.value)
   })
 })
 
@@ -72,7 +74,7 @@ function createUnavailableSelectedFriend(friendId: number): SelectedFriendEntry 
   const fallback = selectedSummaryMap.value.get(friendId)
   const unavailableFriend: SelectedFriendEntry = {
     id: friendId,
-    name: fallback?.name ?? `친구 #${friendId}`,
+    name: fallback?.name ?? t('friendTagSelector.fallbackName', { id: friendId }),
     teamId: null,
     team: null,
     hasProfilePhoto: false,
@@ -151,7 +153,10 @@ async function clearSelection() {
     return
   }
 
-  if (!await confirm('선택된 친구 태그를 모두 해제하시겠습니까?', '전체 해제')) {
+  if (!await confirm(
+    t('friendTagSelector.clearConfirm'),
+    t('friendTagSelector.clearTitle'),
+  )) {
     return
   }
 
@@ -214,7 +219,7 @@ onUnmounted(() => {
 
 function getSubtitle(friend: TaggableFriend) {
   if ('isUnavailable' in friend && friend.isUnavailable) {
-    return '현재 친구 목록에 없음'
+    return t('friendTagSelector.unavailable')
   }
   if (friend.team) {
     return friend.team
@@ -236,13 +241,13 @@ function getSubtitle(friend: TaggableFriend) {
         <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-dp-bg-tertiary text-dp-accent">
           <UserPlus class="h-4 w-4" />
         </div>
-        <span class="truncate text-sm font-medium text-dp-text-primary">친구 태그 추가</span>
+        <span class="truncate text-sm font-medium text-dp-text-primary">{{ t('friendTagSelector.openButton') }}</span>
       </div>
     </button>
 
     <div v-else class="space-y-2 sm:space-y-2.5">
       <div class="flex items-center gap-1.5 sm:gap-2">
-        <label for="friend-tag-search" class="sr-only">친구 검색</label>
+        <label for="friend-tag-search" class="sr-only">{{ t('friendTagSelector.searchLabel') }}</label>
         <div class="friend-tag-selector__search min-w-0 flex-1">
           <Search class="friend-tag-selector__search-icon" />
           <input
@@ -251,14 +256,14 @@ function getSubtitle(friend: TaggableFriend) {
             type="text"
             inputmode="search"
             class="form-control friend-tag-selector__search-input friend-tag-selector__search-input--compact w-full rounded-xl"
-            placeholder="검색"
+            :placeholder="t('friendTagSelector.searchPlaceholder')"
             @keydown.esc="searchQuery = ''"
           />
           <button
             v-if="searchQuery"
             type="button"
             class="friend-tag-selector__search-clear"
-            aria-label="검색어 지우기"
+            :aria-label="t('friendTagSelector.clearSearchAria')"
             @click="searchQuery = ''"
           >
             <X class="h-4 w-4" />
@@ -271,18 +276,20 @@ function getSubtitle(friend: TaggableFriend) {
           :class="showSelectedOnly
             ? 'border-dp-accent bg-dp-accent text-dp-text-on-dark'
             : 'border-dp-accent-border bg-dp-accent-soft text-dp-text-primary hover:border-dp-accent hover:bg-dp-accent-bg'"
-          :aria-label="showSelectedOnly ? `선택된 친구 ${selectedCount}명만 보는 중` : `선택된 친구 ${selectedCount}명만 보기`"
+          :aria-label="showSelectedOnly
+            ? t('friendTagSelector.selectedOnlyActive', { count: selectedCount })
+            : t('friendTagSelector.selectedOnly', { count: selectedCount })"
           :aria-pressed="showSelectedOnly"
           @click="toggleSelectedOnly"
         >
-          {{ selectedCount }}명
+          {{ t('friendTagSelector.selectedCount', { count: selectedCount }) }}
         </button>
         <button
           v-if="selectedCount"
           type="button"
           class="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-dp-text-secondary transition hover:bg-dp-bg-hover hover:text-dp-text-primary"
-          aria-label="선택된 친구 전체 해제"
-          title="전체 해제"
+          :aria-label="t('friendTagSelector.clearSelectionAria')"
+          :title="t('friendTagSelector.clearTitle')"
           @click.stop="clearSelection"
         >
           <RotateCcw class="h-3.5 w-3.5" />
@@ -324,18 +331,18 @@ function getSubtitle(friend: TaggableFriend) {
             <button
               type="button"
               class="friend-tag-selector__scroll-hint-pill"
-              aria-label="친구 목록 더보기"
+              :aria-label="t('friendTagSelector.loadMoreAria')"
               @click="scrollListDown"
             >
               <ChevronDown class="h-4 w-4" />
-              더보기
+              {{ t('friendTagSelector.loadMore') }}
             </button>
           </div>
         </template>
 
         <div v-else class="px-4 py-10 text-center">
-          <p class="text-sm font-medium text-dp-text-primary">검색 결과가 없어요.</p>
-          <p class="mt-1 text-xs text-dp-text-muted">이름이나 팀명을 바꿔서 다시 찾아보세요.</p>
+          <p class="text-sm font-medium text-dp-text-primary">{{ t('friendTagSelector.emptyTitle') }}</p>
+          <p class="mt-1 text-xs text-dp-text-muted">{{ t('friendTagSelector.emptyDescription') }}</p>
         </div>
       </div>
     </div>

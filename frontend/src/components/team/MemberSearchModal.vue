@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { useSwal } from '@/composables/useSwal'
 import { teamApi } from '@/api/team'
@@ -19,6 +20,7 @@ const emit = defineEmits<{
 }>()
 
 const { showError, toastSuccess, confirm } = useSwal()
+const { t } = useI18n()
 
 const searchKeyword = ref('')
 const searchLoading = ref(false)
@@ -85,17 +87,17 @@ function goToPage(page: number) {
 
 async function addMember(member: MemberDto) {
   if (!member.id) return
-  if (!await confirm(`${member.name} 님을 팀에 추가하시겠습니까?`)) return
+  if (!await confirm(t('team.memberSearch.confirmAdd', { name: member.name }))) return
 
   emit('update:saving', true)
   try {
     await teamApi.addMember(props.teamId, member.id)
-    toastSuccess(`${member.name} 님이 팀에 추가되었습니다.`)
+    toastSuccess(t('team.memberSearch.addedSuccess', { name: member.name }))
     emit('member-added')
     close()
   } catch (error) {
     console.error('Failed to add member:', error)
-    showError('멤버 추가에 실패했습니다.')
+    showError(t('team.memberSearch.addFailed'))
   } finally {
     emit('update:saving', false)
   }
@@ -110,10 +112,11 @@ async function addMember(member: MemberDto) {
     @close="close"
   >
     <div class="modal-header">
-      <h2>멤버 추가</h2>
+      <h2>{{ t('team.memberSearch.title') }}</h2>
       <button
         @click="close"
         class="p-1.5 rounded-full hover-close-btn cursor-pointer"
+        :aria-label="t('common.actions.close')"
       >
         <X class="w-5 h-5" />
       </button>
@@ -124,7 +127,7 @@ async function addMember(member: MemberDto) {
         <input
           v-model="searchKeyword"
           type="text"
-          placeholder="이름 또는 이메일로 검색"
+          :placeholder="t('team.memberSearch.searchPlaceholder')"
           class="form-control-neutral flex-1"
           @keyup.enter="searchMembers"
         />
@@ -144,9 +147,9 @@ async function addMember(member: MemberDto) {
           <thead class="bg-dp-bg-secondary">
             <tr>
               <th class="px-3 py-2 text-left text-sm text-dp-text-secondary">#</th>
-              <th class="px-3 py-2 text-left text-sm text-dp-text-secondary">이름</th>
-              <th class="px-3 py-2 text-left text-sm text-dp-text-secondary">이메일</th>
-              <th class="px-3 py-2 text-center text-sm text-dp-text-secondary">추가</th>
+              <th class="px-3 py-2 text-left text-sm text-dp-text-secondary">{{ t('team.memberSearch.columns.name') }}</th>
+              <th class="px-3 py-2 text-left text-sm text-dp-text-secondary">{{ t('team.memberSearch.columns.email') }}</th>
+              <th class="px-3 py-2 text-center text-sm text-dp-text-secondary">{{ t('team.memberSearch.columns.add') }}</th>
             </tr>
           </thead>
           <tbody class="border-dp-border-primary">
@@ -162,7 +165,7 @@ async function addMember(member: MemberDto) {
                   :disabled="!!member.teamId || saving"
                   class="px-3 py-1 bg-dp-accent text-dp-text-on-dark text-sm rounded hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
-                  {{ member.teamId ? '소속 있음' : '추가' }}
+                  {{ member.teamId ? t('team.memberSearch.alreadyAssigned') : t('common.actions.add') }}
                 </button>
               </td>
             </tr>
@@ -170,12 +173,12 @@ async function addMember(member: MemberDto) {
         </table>
       </div>
       <div v-else class="text-center py-4 text-dp-text-muted">
-        검색 결과가 없습니다.
+        {{ t('team.memberSearch.empty') }}
       </div>
 
       <div v-if="searchResult.length > 0" class="space-y-2">
         <div class="text-sm text-dp-text-muted">
-          Page {{ currentPage + 1 }} of {{ totalPages }} | Total: {{ totalElements }}
+          {{ t('team.memberSearch.pagination', { current: currentPage + 1, total: totalPages, count: totalElements }) }}
         </div>
         <div class="flex flex-wrap items-center gap-1">
           <button
@@ -212,7 +215,7 @@ async function addMember(member: MemberDto) {
         @click="close"
         class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"
       >
-        닫기
+        {{ t('common.actions.close') }}
       </button>
     </div>
   </BaseModal>

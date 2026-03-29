@@ -1,22 +1,24 @@
 <script setup lang="ts">
-import {computed} from 'vue'
-import {useRoute} from 'vue-router'
-import {useAuthStore} from '@/stores/auth'
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const authStore = useAuthStore()
+const { t } = useI18n()
 
 const navItems = computed(() => {
   const items: Array<{ path: string; icon: string; label: string }> = [
-    {path: '/', icon: 'home', label: '홈'},
+    { path: '/', icon: 'home', label: t('footer.home') },
     {
       path: authStore.user ? `/duty/${authStore.user.id}` : '/',
       icon: 'calendar',
-      label: '내 달력',
+      label: t('footer.myCalendar'),
     },
-    {path: '/todo', icon: 'clipboard-list', label: '할일'},
-    {path: '/team', icon: 'users', label: '내 팀'},
-    {path: '/member', icon: 'settings', label: '설정'},
+    { path: '/todo', icon: 'clipboard-list', label: t('footer.todo') },
+    { path: '/team', icon: 'users', label: t('footer.myTeam') },
+    { path: '/member', icon: 'settings', label: t('footer.settings') },
   ]
   return items
 })

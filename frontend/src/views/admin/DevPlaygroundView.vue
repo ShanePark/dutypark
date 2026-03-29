@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import {
   Users,
@@ -14,6 +15,7 @@ import {
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { t } = useI18n()
 
 const expandedSections = ref<Set<string>>(new Set())
 
@@ -55,7 +57,7 @@ onMounted(() => {
         @mouseleave="(e: Event) => clearHoverBg(e)"
       >
         <Users class="admin-top-tile-icon text-dp-text-secondary" />
-        <span class="admin-top-tile-label text-dp-text-primary">회원 관리</span>
+        <span class="admin-top-tile-label text-dp-text-primary">{{ t('admin.nav.members') }}</span>
       </router-link>
       <router-link
         to="/admin/teams"
@@ -64,14 +66,14 @@ onMounted(() => {
         @mouseleave="(e: Event) => clearHoverBg(e)"
       >
         <Building2 class="admin-top-tile-icon text-dp-text-secondary" />
-        <span class="admin-top-tile-label text-dp-text-primary">팀 관리</span>
+        <span class="admin-top-tile-label text-dp-text-primary">{{ t('admin.nav.teams') }}</span>
       </router-link>
       <router-link
         to="/admin/dev"
         class="admin-top-tile admin-top-tile-active"
       >
         <Code2 class="admin-top-tile-icon text-dp-text-on-dark" />
-        <span class="admin-top-tile-label text-dp-text-on-dark">개발</span>
+        <span class="admin-top-tile-label text-dp-text-on-dark">{{ t('admin.nav.dev') }}</span>
       </router-link>
       <a
         href="/docs/index.html"
@@ -84,17 +86,17 @@ onMounted(() => {
           <FileText class="admin-top-tile-icon mb-0 text-dp-text-secondary" />
           <ExternalLink class="hidden sm:block w-3 h-3 text-dp-text-muted" />
         </div>
-        <span class="admin-top-tile-label text-dp-text-primary">API 문서</span>
+        <span class="admin-top-tile-label text-dp-text-primary">{{ t('admin.nav.apiDocs') }}</span>
       </a>
     </div>
 
     <!-- Page Header -->
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-dp-text-primary">
-        개발 플레이그라운드
+        {{ t('admin.devPlayground.title') }}
       </h1>
       <p class="mt-1 text-dp-text-secondary">
-        컴포넌트를 테스트하고 비교해볼 수 있는 공간입니다.
+        {{ t('admin.devPlayground.description') }}
       </p>
     </div>
 
@@ -107,7 +109,7 @@ onMounted(() => {
         @click="toggleSection('example')"
       >
         <h2 class="text-lg font-semibold text-dp-text-primary">
-          예제 섹션
+          {{ t('admin.devPlayground.exampleSectionTitle') }}
         </h2>
         <component
           :is="expandedSections.has('example') ? ChevronDown : ChevronRight"
@@ -119,7 +121,7 @@ onMounted(() => {
         class="p-4 border-t border-dp-border-primary"
       >
         <p class="text-dp-text-secondary">
-          여기에 테스트할 컴포넌트를 추가하세요.
+          {{ t('admin.devPlayground.exampleSectionDescription') }}
         </p>
         <div class="mt-4 p-4 rounded-lg bg-dp-bg-tertiary">
           <code class="text-dp-text-primary">

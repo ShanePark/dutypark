@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ChevronLeft, ChevronRight, Search } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 
 const props = defineProps<{
@@ -21,6 +22,8 @@ const emit = defineEmits<{
   (e: 'open-search-modal'): void
   (e: 'update:searchQuery', value: string): void
 }>()
+
+const { t } = useI18n()
 
 function handleSearchInput(event: Event) {
   emit('update:searchQuery', (event.target as HTMLInputElement).value)
@@ -71,10 +74,10 @@ function handleSearchClick() {
         <input
           :value="searchQuery"
           type="text"
-          placeholder="검색"
+          :placeholder="t('duty.header.searchPlaceholder')"
           @input="handleSearchInput"
           @keyup.enter="emit('search')"
-          class="px-2 py-1.5 text-sm focus:ring-2 focus:ring-dp-accent focus:outline-none w-12 sm:w-20 border-none bg-dp-bg-input text-dp-text-primary"
+          class="px-2 py-1.5 text-sm focus:ring-2 focus:ring-dp-accent focus:outline-none w-16 sm:w-24 border-none bg-dp-bg-input text-dp-text-primary"
         />
         <button
           @click="handleSearchClick"

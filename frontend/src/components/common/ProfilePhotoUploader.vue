@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Camera, Loader2, Upload } from 'lucide-vue-next'
 import { memberApi } from '@/api/member'
 import { fetchAuthenticatedImage } from '@/api/attachment'
@@ -29,6 +30,7 @@ const emit = defineEmits<{
   (e: 'upload-complete'): void
 }>()
 
+const { t } = useI18n()
 const { showError, toastSuccess, confirm } = useSwal()
 
 const displayPhotoUrl = ref<string | null>(null)
@@ -80,10 +82,10 @@ async function uploadFile(file: File) {
     displayPhotoUrl.value = URL.createObjectURL(file)
 
     emit('upload-complete')
-    toastSuccess('프로필 사진이 업데이트되었습니다')
+    toastSuccess(t('profilePhoto.updated'))
   } catch (error) {
     console.error('Failed to upload profile photo:', error)
-    showError('프로필 사진 업로드에 실패했습니다')
+    showError(t('profilePhoto.updateFailed'))
   } finally {
     isUploading.value = false
   }
@@ -104,10 +106,10 @@ async function deletePhoto() {
     }
     displayPhotoUrl.value = null
     emit('upload-complete')
-    toastSuccess('프로필 사진이 삭제되었습니다')
+    toastSuccess(t('profilePhoto.deleted'))
   } catch (error) {
     console.error('Failed to delete profile photo:', error)
-    showError('프로필 사진 삭제에 실패했습니다')
+    showError(t('profilePhoto.deleteFailed'))
   } finally {
     isDeleting.value = false
     showCropModal.value = false
@@ -115,7 +117,10 @@ async function deletePhoto() {
 }
 
 async function onCropDelete() {
-  const confirmed = await confirm('프로필 사진을 삭제하시겠습니까?', '사진 삭제')
+  const confirmed = await confirm(
+    t('profilePhoto.deleteConfirm'),
+    t('profilePhoto.deleteTitle'),
+  )
   if (confirmed) {
     await deletePhoto()
   }
@@ -130,14 +135,14 @@ onMounted(() => {
   <div class="profile-photo-uploader">
     <div class="photo-container" :class="sizeClasses[props.size]" @click="openCropModal">
       <div v-if="hasPhoto" class="photo-preview">
-        <img :src="displayPhotoUrl!" alt="Profile" class="photo-image" />
+        <img :src="displayPhotoUrl!" :alt="t('profilePhoto.alt')" class="photo-image" />
         <div class="photo-overlay">
           <Camera :class="props.size === 'sm' ? 'w-4 h-4' : 'w-6 h-6'" class="text-dp-text-on-dark" />
         </div>
       </div>
       <div v-else class="photo-placeholder">
         <Upload :class="props.size === 'sm' ? 'w-5 h-5' : 'w-8 h-8'" />
-        <span v-if="props.size !== 'sm'" class="text-sm mt-1">Upload Photo</span>
+        <span v-if="props.size !== 'sm'" class="text-sm mt-1">{{ t('profilePhoto.uploadPrompt') }}</span>
       </div>
       <div v-if="isUploading || isDeleting" class="upload-loading">
         <Loader2 class="w-8 h-8 animate-spin text-dp-text-on-dark" />

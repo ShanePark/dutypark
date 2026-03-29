@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import Sortable from 'sortablejs'
+import { useI18n } from 'vue-i18n'
 import {
   GripVertical,
   Paperclip,
@@ -63,6 +64,8 @@ const emit = defineEmits<{
   (e: 'reorder', scheduleIds: string[]): void
   (e: 'request-untag', scheduleId: string): void
 }>()
+
+const { t } = useI18n()
 
 const scheduleListRef = ref<HTMLElement | null>(null)
 const isDragging = ref(false)
@@ -208,7 +211,7 @@ function handleTagClick(schedule: Schedule) {
 <template>
   <div class="space-y-3">
     <div v-if="schedules.length === 0" class="text-center py-6 text-dp-text-muted">
-      등록된 일정이 없습니다.
+      {{ t('duty.schedule.list.empty') }}
     </div>
 
     <div ref="scheduleListRef" :class="['space-y-2', { 'is-dragging': isDragging }]">
@@ -229,7 +232,7 @@ function handleTagClick(schedule: Schedule) {
           <div
             v-if="hasDraggableSchedules && canEdit && !schedule.isTagged"
             class="schedule-drag-handle flex items-center pr-2 cursor-grab text-dp-text-muted"
-            title="드래그하여 순서 변경"
+            :title="t('duty.schedule.list.dragToReorder')"
           >
             <GripVertical class="w-5 h-5" />
           </div>
@@ -271,24 +274,24 @@ function handleTagClick(schedule: Schedule) {
                   v-if="canUntagSchedule(schedule)"
                   @click="emit('request-untag', schedule.id)"
                   class="inline-flex min-h-[44px] shrink-0 items-center gap-1 whitespace-nowrap rounded border border-dp-warning-border px-2 py-1 text-xs font-medium text-dp-warning transition hover:bg-dp-warning-soft cursor-pointer"
-                  title="태그 제거"
+                  :title="t('duty.schedule.list.untag')"
                 >
                   <X class="w-3.5 h-3.5" />
-                  태그 제거
+                  {{ t('duty.schedule.list.untag') }}
                 </button>
 
                 <template v-if="canEditSchedule(schedule)">
                   <button
                     @click="emit('edit', schedule)"
                     class="p-1.5 rounded-lg hover-icon-btn cursor-pointer text-dp-accent"
-                    title="수정"
+                    :title="t('duty.schedule.list.edit')"
                   >
                     <Pencil class="w-4 h-4" />
                   </button>
                   <button
                     @click="emit('delete', schedule.id)"
                     class="p-1.5 rounded-lg hover-danger cursor-pointer text-dp-danger"
-                    title="삭제"
+                    :title="t('duty.schedule.list.delete')"
                   >
                     <Trash2 class="w-4 h-4" />
                   </button>
@@ -303,7 +306,7 @@ function handleTagClick(schedule: Schedule) {
               <MemberTagChips
                 :members="getDisplayTagMembers(schedule)"
                 :interactive="canEditSchedule(schedule)"
-                :button-title="'태그 수정'"
+                :button-title="t('duty.schedule.list.editTag')"
                 :density="canEditSchedule(schedule) ? 'regular' : 'compact'"
                 @chip-click="handleTagClick(schedule)"
               />

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
@@ -326,6 +327,20 @@ class AuthControllerTest : DutyparkIntegrationTest() {
                 .header("Authorization", "Bearer $accessToken")
         ).andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.error").exists())
+            .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
+    fun `restore failure message follows accept language`() {
+        val member = memberRepository.findByEmail(TestData.member.email).orElseThrow()
+        val accessToken = getJwt(member)
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/restore")
+                .header("Authorization", "Bearer $accessToken")
+                .header(HttpHeaders.ACCEPT_LANGUAGE, "en")
+        ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error").value("You are not currently impersonating another account."))
             .andDo(MockMvcResultHandlers.print())
     }
 

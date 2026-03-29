@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { adminApi } from '@/api/admin'
 import { useSwal } from '@/composables/useSwal'
@@ -25,6 +26,7 @@ import {
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { t } = useI18n()
 const { showError, toastSuccess } = useSwal()
 
 // Team list state
@@ -55,7 +57,7 @@ async function fetchTeams() {
     totalPages.value = response.data.totalPages
   } catch (error) {
     console.error('Failed to fetch teams:', error)
-    showError('팀 목록을 불러오는데 실패했습니다.')
+    showError(t('admin.teamList.messages.loadFailed'))
   } finally {
     isLoading.value = false
   }
@@ -88,7 +90,7 @@ async function checkTeamName() {
     nameCheckResult.value = response.data
   } catch (error) {
     console.error('Failed to check team name:', error)
-    showError('팀 이름 확인에 실패했습니다.')
+    showError(t('admin.teamList.messages.nameCheckFailed'))
   } finally {
     isCheckingName.value = false
   }
@@ -97,13 +99,13 @@ async function checkTeamName() {
 function getNameCheckMessage(): string {
   switch (nameCheckResult.value) {
     case 'TOO_SHORT':
-      return '팀 이름은 2자 이상이어야 합니다'
+      return t('admin.teamList.nameCheck.tooShort')
     case 'TOO_LONG':
-      return '팀 이름은 20자 이하여야 합니다'
+      return t('admin.teamList.nameCheck.tooLong')
     case 'DUPLICATED':
-      return '이미 존재하는 팀 이름입니다'
+      return t('admin.teamList.nameCheck.duplicated')
     case 'OK':
-      return '사용 가능한 팀 이름입니다'
+      return t('admin.teamList.nameCheck.ok')
     default:
       return ''
   }
@@ -119,13 +121,13 @@ async function handleCreateTeam() {
       name: newTeamName.value,
       description: newTeamDescription.value,
     })
-    toastSuccess('팀이 생성되었습니다.')
+    toastSuccess(t('admin.teamList.messages.createSuccess'))
     closeNewTeamModal()
     // Navigate to team manage page
     router.push(`/team/manage/${response.data.id}`)
   } catch (error) {
     console.error('Failed to create team:', error)
-    showError('팀 생성에 실패했습니다.')
+    showError(t('admin.teamList.messages.createFailed'))
   } finally {
     isCreating.value = false
   }
@@ -201,14 +203,14 @@ onMounted(() => {
           @mouseleave="(e: Event) => clearHoverBg(e)"
         >
           <Users class="admin-top-tile-icon text-dp-text-secondary" />
-          <span class="admin-top-tile-label text-dp-text-primary">회원 관리</span>
+          <span class="admin-top-tile-label text-dp-text-primary">{{ t('admin.nav.members') }}</span>
         </router-link>
         <router-link
           to="/admin/teams"
           class="admin-top-tile admin-top-tile-active hover:bg-dp-surface-strong-hover"
         >
           <Building2 class="admin-top-tile-icon text-dp-text-on-dark" />
-          <span class="admin-top-tile-label text-dp-text-on-dark">팀 관리</span>
+          <span class="admin-top-tile-label text-dp-text-on-dark">{{ t('admin.nav.teams') }}</span>
         </router-link>
         <router-link
           to="/admin/dev"
@@ -217,7 +219,7 @@ onMounted(() => {
           @mouseleave="(e: Event) => clearHoverBg(e)"
         >
           <Code2 class="admin-top-tile-icon text-dp-text-secondary" />
-          <span class="admin-top-tile-label text-dp-text-primary">개발</span>
+          <span class="admin-top-tile-label text-dp-text-primary">{{ t('admin.nav.dev') }}</span>
         </router-link>
         <a
           href="/docs/index.html"
@@ -230,7 +232,7 @@ onMounted(() => {
             <FileText class="admin-top-tile-icon mb-0 text-dp-text-secondary" />
             <ExternalLink class="hidden sm:block w-3 h-3 text-dp-text-muted" />
           </div>
-          <span class="admin-top-tile-label text-dp-text-primary">API 문서</span>
+          <span class="admin-top-tile-label text-dp-text-primary">{{ t('admin.nav.apiDocs') }}</span>
         </a>
       </div>
 
@@ -239,10 +241,10 @@ onMounted(() => {
         <div class="p-4 border-b border-dp-border-primary">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 class="text-lg font-semibold text-dp-text-primary">팀 목록</h2>
+              <h2 class="text-lg font-semibold text-dp-text-primary">{{ t('admin.teamList.title') }}</h2>
               <p class="text-sm text-dp-text-secondary">
                 <span v-if="searchKeyword" class="text-dp-accent">[{{ searchKeyword }}]</span>
-                총 {{ totalElements }}개의 팀이 있습니다
+                {{ t('admin.teamList.totalTeams', { count: totalElements }) }}
               </p>
             </div>
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
@@ -251,7 +253,7 @@ onMounted(() => {
                 <input
                   v-model="keyword"
                   type="text"
-                  placeholder="팀 검색..."
+                  :placeholder="t('admin.teamList.searchPlaceholder')"
                   class="w-full pl-9 pr-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-dp-text-primary focus:border-transparent bg-dp-bg-input border border-dp-border-input text-dp-text-primary"
                   @keyup.enter="handleSearch"
                 />
@@ -262,15 +264,15 @@ onMounted(() => {
                 @mouseover="(e: Event) => setHoverBg(e)"
                 @mouseleave="(e: Event) => clearHoverBg(e, 'var(--dp-bg-tertiary)')"
               >
-                검색
+                {{ t('admin.teamList.searchButton') }}
               </button>
               <button
                 @click="openNewTeamModal"
                 class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-accent hover:bg-dp-accent-hover rounded-lg transition"
               >
                 <Plus class="w-4 h-4" />
-                <span class="hidden sm:inline">새 팀 추가</span>
-                <span class="sm:hidden">추가</span>
+                <span class="hidden sm:inline">{{ t('admin.teamList.newTeamDesktop') }}</span>
+                <span class="sm:hidden">{{ t('admin.teamList.newTeamMobile') }}</span>
               </button>
             </div>
           </div>
@@ -285,13 +287,13 @@ onMounted(() => {
                   #
                 </th>
                 <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-40 text-dp-text-muted">
-                  이름
+                  {{ t('admin.teamList.table.name') }}
                 </th>
                 <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-24 text-dp-text-muted">
-                  멤버
+                  {{ t('admin.teamList.table.members') }}
                 </th>
                 <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-dp-text-muted">
-                  설명
+                  {{ t('admin.teamList.table.description') }}
                 </th>
               </tr>
             </thead>
@@ -316,7 +318,7 @@ onMounted(() => {
                 <td class="px-4 py-4">
                   <div class="flex items-center gap-1 text-sm text-dp-text-secondary">
                     <Users class="w-4 h-4 text-dp-text-muted" />
-                    {{ team.memberCount }}명
+                    {{ t('admin.teamList.memberCount', { count: team.memberCount }) }}
                   </div>
                 </td>
                 <td class="px-4 py-4 text-sm text-dp-text-secondary">
@@ -349,14 +351,14 @@ onMounted(() => {
               </div>
               <div class="flex items-center gap-1 text-sm flex-shrink-0 text-dp-text-secondary">
                 <Users class="w-4 h-4 text-dp-text-muted" />
-                {{ team.memberCount }}명
+                {{ t('admin.teamList.memberCount', { count: team.memberCount }) }}
               </div>
             </div>
           </div>
         </div>
 
         <div v-if="teams.length === 0 && !isLoading" class="p-8 text-center text-dp-text-muted">
-          검색 결과가 없습니다
+          {{ t('admin.teamList.empty') }}
         </div>
 
         <!-- Footer with Pagination -->
@@ -418,7 +420,7 @@ onMounted(() => {
       @close="closeNewTeamModal"
     >
       <div class="modal-header">
-        <h2>새 팀 추가</h2>
+        <h2>{{ t('admin.teamList.modal.title') }}</h2>
         <button
           @click="closeNewTeamModal"
           class="p-1.5 rounded-full hover-close-btn cursor-pointer text-dp-text-muted"
@@ -429,7 +431,7 @@ onMounted(() => {
       <div class="modal-body-form">
         <div>
           <label class="form-label">
-            팀 이름
+            {{ t('admin.teamList.modal.nameLabel') }}
             <CharacterCounter :current="newTeamName.length" :max="20" />
           </label>
           <div class="flex gap-2">
@@ -439,7 +441,7 @@ onMounted(() => {
               maxlength="20"
               minlength="2"
               class="form-control-neutral flex-1"
-              placeholder="팀 이름 입력"
+              :placeholder="t('admin.teamList.modal.namePlaceholder')"
               @input="nameCheckResult = null"
             />
             <button
@@ -448,7 +450,7 @@ onMounted(() => {
               class="px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-accent hover:bg-dp-accent-hover rounded-lg transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <Loader2 v-if="isCheckingName" class="w-4 h-4 animate-spin" />
-              확인
+              {{ t('admin.teamList.modal.checkButton') }}
             </button>
           </div>
           <p
@@ -463,7 +465,7 @@ onMounted(() => {
         </div>
         <div>
           <label class="form-label">
-            설명
+            {{ t('admin.teamList.modal.descriptionLabel') }}
             <CharacterCounter :current="newTeamDescription.length" :max="50" />
           </label>
           <input
@@ -471,7 +473,7 @@ onMounted(() => {
             type="text"
             maxlength="50"
             class="form-control-neutral"
-            placeholder="팀 설명 입력"
+            :placeholder="t('admin.teamList.modal.descriptionPlaceholder')"
           />
         </div>
       </div>
@@ -482,13 +484,13 @@ onMounted(() => {
           class="px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-accent hover:bg-dp-accent-hover rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2"
         >
           <Loader2 v-if="isCreating" class="w-4 h-4 animate-spin" />
-          추가
+          {{ t('admin.teamList.modal.createButton') }}
         </button>
         <button
           @click="closeNewTeamModal"
           class="px-4 py-2 text-sm font-medium rounded-lg transition cursor-pointer bg-dp-bg-tertiary text-dp-text-primary hover-interactive"
         >
-          취소
+          {{ t('common.actions.cancel') }}
         </button>
       </div>
     </BaseModal>

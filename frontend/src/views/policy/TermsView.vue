@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { marked } from 'marked'
 
 marked.setOptions({
@@ -7,6 +8,7 @@ marked.setOptions({
 })
 import { policyApi, type PolicyDto } from '@/api/policy'
 
+const { t } = useI18n()
 const policy = ref<PolicyDto | null>(null)
 const isLoading = ref(true)
 const error = ref('')
@@ -20,7 +22,7 @@ onMounted(async () => {
   try {
     policy.value = await policyApi.getPolicy('TERMS')
   } catch {
-    error.value = '이용약관을 불러오는데 실패했습니다.'
+    error.value = t('policy.terms.loadError')
   } finally {
     isLoading.value = false
   }
@@ -38,11 +40,12 @@ onMounted(async () => {
         }"
       >
         <h1 class="text-2xl font-bold mb-6 text-dp-text-primary">
-          이용약관
+          {{ t('policy.terms.title') }}
         </h1>
 
-        <div v-if="isLoading" class="flex justify-center py-12">
+        <div v-if="isLoading" class="flex flex-col items-center justify-center py-12">
           <div class="animate-spin rounded-full h-8 w-8 border-2 border-dp-accent-border border-t-transparent"></div>
+          <p class="mt-3 text-sm text-dp-text-muted">{{ t('policy.loading') }}</p>
         </div>
 
         <div v-else-if="error" class="text-center py-12">
@@ -51,11 +54,16 @@ onMounted(async () => {
 
         <div v-else-if="policy" class="prose prose-sm sm:prose-base max-w-none text-dp-text-secondary" v-html="renderedContent">
         </div>
+
+        <div v-else class="text-center py-12">
+          <p class="text-dp-text-muted">{{ t('policy.unavailable') }}</p>
+        </div>
       </div>
 
       <div class="text-center mt-6">
         <router-link to="/" class="text-sm hover:underline text-dp-text-muted">
-          ← 홈으로 돌아가기
+          <span aria-hidden="true">←</span>
+          {{ t('common.navigation.backHome') }}
         </router-link>
       </div>
     </div>

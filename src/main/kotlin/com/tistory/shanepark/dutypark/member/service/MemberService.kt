@@ -1,8 +1,10 @@
 package com.tistory.shanepark.dutypark.member.service
 
+import com.tistory.shanepark.dutypark.common.config.DutyparkLocale
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberCreateDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
+import com.tistory.shanepark.dutypark.member.domain.dto.PreferredLocaleResponse
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberManager
 import com.tistory.shanepark.dutypark.member.domain.enums.ManagerRole
@@ -82,6 +84,26 @@ class MemberService(
     fun updateCalendarVisibility(loginMember: LoginMember, visibility: Visibility) {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
         member.calendarVisibility = visibility
+    }
+
+    @Transactional(readOnly = true)
+    fun getPreferredLocale(loginMember: LoginMember): PreferredLocaleResponse {
+        val member = memberRepository.findById(loginMember.id).orElseThrow {
+            NoSuchElementException("member.notFound")
+        }
+        return PreferredLocaleResponse(member.preferredLocale)
+    }
+
+    fun updatePreferredLocale(loginMember: LoginMember, preferredLocale: String): PreferredLocaleResponse {
+        val member = memberRepository.findById(loginMember.id).orElseThrow {
+            NoSuchElementException("member.notFound")
+        }
+        val normalizedPreferredLocale = DutyparkLocale.normalize(preferredLocale)
+        if (!DutyparkLocale.isSupported(normalizedPreferredLocale)) {
+            throw IllegalArgumentException("member.preferredLocale.unsupported")
+        }
+        member.preferredLocale = normalizedPreferredLocale
+        return PreferredLocaleResponse(member.preferredLocale)
     }
 
     fun getDutyBatchTemplate(memberId: Long): DutyBatchTemplate? {

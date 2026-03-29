@@ -49,6 +49,12 @@ operation::dashboard/friends[]
 
 operation::members/update-visibility[]
 
+=== Preferred Locale
+
+operation::members/get-preferred-locale[]
+
+operation::members/update-preferred-locale[]
+
 == Admin
 
 === Member Detail

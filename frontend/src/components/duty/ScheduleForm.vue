@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { Check } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 import FileUploader from '@/components/common/FileUploader.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import FriendTagSelector from '@/components/common/FriendTagSelector.vue'
@@ -58,6 +59,8 @@ const emit = defineEmits<{
   (e: 'error', message: string): void
 }>()
 
+const { t } = useI18n()
+
 const fileUploaderRef = ref<InstanceType<typeof FileUploader> | null>(null)
 
 function getSessionId() {
@@ -88,7 +91,7 @@ defineExpose({
   <div class="schedule-form space-y-1.5 sm:space-y-3">
     <div class="flex items-center gap-2">
       <label class="schedule-form__label text-sm flex-shrink-0 w-16 text-dp-text-secondary">
-        제목 <span class="text-dp-danger">*</span>
+        {{ t('duty.schedule.fields.title') }} <span class="text-dp-danger">*</span>
       </label>
       <div class="flex-1 min-w-0 relative">
         <input
@@ -96,7 +99,7 @@ defineExpose({
           type="text"
           maxlength="50"
           class="schedule-form__input schedule-form__input--with-counter w-full px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
-          placeholder="일정 제목을 입력하세요"
+          :placeholder="t('duty.schedule.placeholders.title')"
         />
         <div class="schedule-form__counter pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
           <CharacterCounter :current="form.content.length" :max="50" />
@@ -107,7 +110,7 @@ defineExpose({
     <div class="space-y-1.5 sm:space-y-2">
       <!-- Create mode: time only (date is already selected from calendar) -->
       <div v-if="!isEditMode" class="flex items-center gap-2">
-        <label class="schedule-form__label text-sm flex-shrink-0 w-16 text-dp-text-secondary">시작 시간</label>
+        <label class="schedule-form__label text-sm flex-shrink-0 w-16 text-dp-text-secondary">{{ t('duty.schedule.fields.startTime') }}</label>
         <input
           v-model="startTime"
           type="time"
@@ -116,7 +119,7 @@ defineExpose({
       </div>
       <!-- Edit mode: full datetime (allow changing date) -->
       <div v-else class="flex items-center gap-2">
-        <label class="schedule-form__label text-sm flex-shrink-0 w-16 text-dp-text-secondary">시작 일시</label>
+        <label class="schedule-form__label text-sm flex-shrink-0 w-16 text-dp-text-secondary">{{ t('duty.schedule.fields.startDateTime') }}</label>
         <input
           v-model="form.startDateTime"
           type="datetime-local"
@@ -124,7 +127,7 @@ defineExpose({
         />
       </div>
       <div class="flex items-center gap-2">
-        <label class="schedule-form__label text-sm flex-shrink-0 w-16 text-dp-text-secondary">종료 일시</label>
+        <label class="schedule-form__label text-sm flex-shrink-0 w-16 text-dp-text-secondary">{{ t('duty.schedule.fields.endDateTime') }}</label>
         <input
           v-model="form.endDateTime"
           type="datetime-local"
@@ -134,17 +137,17 @@ defineExpose({
     </div>
 
     <div class="flex items-start gap-2">
-      <label class="schedule-form__label schedule-form__label--top text-sm flex-shrink-0 w-16 pt-2 text-dp-text-secondary">설명</label>
+      <label class="schedule-form__label schedule-form__label--top text-sm flex-shrink-0 w-16 pt-2 text-dp-text-secondary">{{ t('duty.schedule.fields.description') }}</label>
       <textarea
         v-model="form.description"
         rows="2"
         class="schedule-form__input schedule-form__textarea flex-1 min-w-0 px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
-        placeholder="설명"
+        :placeholder="t('duty.schedule.placeholders.description')"
       ></textarea>
     </div>
 
     <div class="flex items-start gap-2">
-      <label class="schedule-form__label schedule-form__label--top text-sm flex-shrink-0 w-16 pt-2 text-dp-text-secondary">공개 범위</label>
+      <label class="schedule-form__label schedule-form__label--top text-sm flex-shrink-0 w-16 pt-2 text-dp-text-secondary">{{ t('duty.schedule.fields.visibility') }}</label>
       <div class="flex-1 min-w-0 grid grid-cols-4 gap-1 sm:gap-2">
         <button
           v-for="option in visibilityOptions"
@@ -187,7 +190,7 @@ defineExpose({
 
     <!-- Attachment Upload Area -->
     <div class="flex items-start gap-2">
-      <label class="schedule-form__label schedule-form__label--top text-sm flex-shrink-0 w-16 pt-2 text-dp-text-secondary">첨부파일</label>
+      <label class="schedule-form__label schedule-form__label--top text-sm flex-shrink-0 w-16 pt-2 text-dp-text-secondary">{{ t('duty.schedule.fields.attachments') }}</label>
       <FileUploader
         class="schedule-form__file-uploader flex-1 min-w-0"
         ref="fileUploaderRef"
@@ -200,7 +203,7 @@ defineExpose({
     </div>
 
     <div v-if="canTagFriends" class="flex items-start gap-2">
-      <label class="schedule-form__label schedule-form__label--top text-sm flex-shrink-0 w-16 pt-2 text-dp-text-secondary">친구 태그</label>
+      <label class="schedule-form__label schedule-form__label--top text-sm flex-shrink-0 w-16 pt-2 text-dp-text-secondary">{{ t('duty.schedule.fields.friendTag') }}</label>
       <div class="flex-1 min-w-0">
         <FriendTagSelector
           v-model="form.tagFriendIds"

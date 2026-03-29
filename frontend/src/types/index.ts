@@ -499,11 +499,16 @@ export interface MemberDto {
   teamId: number | null
   team: string | null
   calendarVisibility: CalendarVisibility
+  preferredLocale?: string
   kakaoId: string | null
   naverId: string | null
   hasPassword: boolean
   hasProfilePhoto?: boolean
   profilePhotoVersion?: number
+}
+
+export interface PreferredLocaleResponse {
+  preferredLocale: string
 }
 
 export interface MemberPreviewDto {

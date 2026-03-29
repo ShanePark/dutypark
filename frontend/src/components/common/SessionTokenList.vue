@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { RefreshTokenDto } from '@/types'
 import {
   Clock,
@@ -27,7 +28,24 @@ const emit = defineEmits<{
   delete: [tokenId: number]
 }>()
 
+const { locale, t } = useI18n()
 const expanded = ref(false)
+
+const compactDateFormatter = computed(() => {
+  return new Intl.DateTimeFormat(locale.value, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+})
+
+const fullDateFormatter = computed(() => {
+  return new Intl.DateTimeFormat(locale.value)
+})
+
+const relativeTimeFormatter = computed(() => {
+  return new Intl.RelativeTimeFormat(locale.value, { numeric: 'auto' })
+})
 
 const sortedTokens = computed(() => {
   return [...props.tokens].sort((a, b) => {
@@ -61,18 +79,18 @@ function formatRelativeTime(dateStr: string | null): string {
   const diffHours = Math.floor(diffMs / 3600000)
   const diffDays = Math.floor(diffMs / 86400000)
 
-  if (diffMins < 1) return '방금 전'
-  if (diffMins < 60) return `${diffMins}분 전`
-  if (diffHours < 24) return `${diffHours}시간 전`
-  if (diffDays < 7) return `${diffDays}일 전`
-  return date.toLocaleDateString('ko-KR')
+  if (diffMins < 1) return t('common.relativeTime.justNow')
+  if (diffMins < 60) return relativeTimeFormatter.value.format(-diffMins, 'minute')
+  if (diffHours < 24) return relativeTimeFormatter.value.format(-diffHours, 'hour')
+  if (diffDays < 7) return relativeTimeFormatter.value.format(-diffDays, 'day')
+  return fullDateFormatter.value.format(date)
 }
 
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return '-'
   const date = new Date(dateStr)
   if (isNaN(date.getTime())) return '-'
-  return date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' })
+  return compactDateFormatter.value.format(date)
 }
 
 function isDesktopDevice(device: string | undefined): boolean {
@@ -93,7 +111,7 @@ function handleDelete(tokenId: number) {
 
     <template v-else-if="sortedTokens.length === 0">
       <div class="py-8 text-center text-sm text-dp-text-muted">
-        세션 정보가 없습니다
+        {{ t('member.sessions.empty') }}
       </div>
     </template>
 
@@ -114,19 +132,19 @@ function handleDelete(tokenId: number) {
                   <span>{{ formatRelativeTime(token.lastUsed) }}</span>
                 </div>
                 <span class="text-xs ml-5 text-dp-text-muted">
-                  최초: {{ formatDate(token.createdDate) }}
+                  {{ t('member.sessions.createdAt') }}: {{ formatDate(token.createdDate) }}
                 </span>
               </div>
               <div class="flex items-center gap-2">
                 <!-- Delete button or current login badge -->
                 <span v-if="token.isCurrentLogin" class="px-2 py-0.5 text-xs font-medium text-dp-success bg-dp-success-soft rounded-full">
-                  현재
+                  {{ t('member.sessions.current') }}
                 </span>
                 <button
                   v-else-if="showDeleteButton"
                   @click="handleDelete(token.id)"
                   class="w-6 h-6 flex items-center justify-center text-dp-danger hover:bg-dp-danger-soft rounded-full transition cursor-pointer"
-                  title="접속 종료"
+                  :title="t('member.sessions.terminate')"
                 >
                   <LogOut class="w-3.5 h-3.5" />
                 </button>
@@ -173,10 +191,10 @@ function handleDelete(tokenId: number) {
                 <Clock class="w-4 h-4 flex-shrink-0 text-dp-text-muted" />
                 <span>{{ formatRelativeTime(token.lastUsed) }}</span>
               </div>
-              <span class="text-xs ml-5 text-dp-text-muted">
-                최초: {{ formatDate(token.createdDate) }}
-              </span>
-            </div>
+                <span class="text-xs ml-5 text-dp-text-muted">
+                  {{ t('member.sessions.createdAt') }}: {{ formatDate(token.createdDate) }}
+                </span>
+              </div>
             <div class="flex items-center gap-2 text-dp-text-secondary">
               <Globe class="w-4 h-4 flex-shrink-0 text-dp-text-muted" />
               <span class="truncate">{{ token.remoteAddr || '-' }}</span>
@@ -193,12 +211,12 @@ function handleDelete(tokenId: number) {
                 v-if="!token.isCurrentLogin"
                 @click="handleDelete(token.id)"
                 class="w-6 h-6 flex items-center justify-center text-dp-danger hover:bg-dp-danger-soft rounded-full transition cursor-pointer"
-                title="접속 종료"
+                :title="t('member.sessions.terminate')"
               >
                 <LogOut class="w-3.5 h-3.5" />
               </button>
               <span v-else class="px-2 py-0.5 text-xs font-medium text-dp-success bg-dp-success-soft rounded-full">
-                현재 접속
+                {{ t('member.sessions.currentLogin') }}
               </span>
             </div>
             <!-- Expand/Collapse column (always reserved when collapsible) -->
@@ -231,35 +249,35 @@ function handleDelete(tokenId: number) {
                   {{ formatRelativeTime(token.lastUsed) }}
                 </span>
                 <span class="text-xs text-dp-text-muted">
-                  최초: {{ formatDate(token.createdDate) }}
+                  {{ t('member.sessions.createdAt') }}: {{ formatDate(token.createdDate) }}
                 </span>
               </div>
               <span v-if="token.isCurrentLogin" class="px-3 py-1 text-xs font-medium text-dp-success bg-dp-success-soft rounded-full">
-                현재 접속
+                {{ t('member.sessions.currentLogin') }}
               </span>
               <button
                 v-else-if="showDeleteButton"
                 @click="handleDelete(token.id)"
                 class="w-10 h-10 flex items-center justify-center text-dp-danger hover:bg-dp-danger-soft rounded-full transition cursor-pointer"
-                title="접속 종료"
+                :title="t('member.sessions.terminate')"
               >
                 <LogOut class="w-5 h-5" />
               </button>
             </div>
             <div class="space-y-2 text-sm">
               <div class="flex items-center gap-2 text-dp-text-secondary">
-                <span class="w-16 text-dp-text-muted">IP</span>
+                <span class="w-16 text-dp-text-muted">{{ t('member.sessions.ipLabel') }}</span>
                 <span>{{ token.remoteAddr || '-' }}</span>
               </div>
               <div class="flex items-center gap-2 text-dp-text-secondary">
-                <span class="w-16 text-dp-text-muted">기기</span>
+                <span class="w-16 text-dp-text-muted">{{ t('member.sessions.deviceLabel') }}</span>
                 <span class="flex items-center gap-1">
                   <component :is="isDesktopDevice(token.userAgent?.device) ? Monitor : Smartphone" class="w-4 h-4 text-dp-text-muted" />
                   {{ token.userAgent?.device || '-' }}
                 </span>
               </div>
               <div class="flex items-center gap-2 text-dp-text-secondary">
-                <span class="w-16 text-dp-text-muted">브라우저</span>
+                <span class="w-16 text-dp-text-muted">{{ t('member.sessions.browserLabel') }}</span>
                 <span class="flex items-center gap-1">
                   <Globe class="w-4 h-4 text-dp-text-muted" />
                   {{ token.userAgent?.browser || '-' }}
@@ -274,12 +292,12 @@ function handleDelete(tokenId: number) {
           <table class="w-full text-sm">
             <thead>
               <tr class="border-b border-dp-border-primary">
-                <th class="text-left py-3 px-2 font-medium text-dp-text-secondary">최근 접속</th>
-                <th class="text-left py-3 px-2 font-medium text-dp-text-secondary">최초 로그인</th>
-                <th class="text-left py-3 px-2 font-medium text-dp-text-secondary">IP</th>
-                <th class="text-left py-3 px-2 font-medium text-dp-text-secondary">기기</th>
-                <th class="text-left py-3 px-2 font-medium text-dp-text-secondary">브라우저</th>
-                <th v-if="showDeleteButton" class="text-center py-3 px-2 font-medium text-dp-text-secondary">관리</th>
+                <th class="text-left py-3 px-2 font-medium text-dp-text-secondary">{{ t('member.sessions.recentAccess') }}</th>
+                <th class="text-left py-3 px-2 font-medium text-dp-text-secondary">{{ t('member.sessions.firstLogin') }}</th>
+                <th class="text-left py-3 px-2 font-medium text-dp-text-secondary">{{ t('member.sessions.ipLabel') }}</th>
+                <th class="text-left py-3 px-2 font-medium text-dp-text-secondary">{{ t('member.sessions.deviceLabel') }}</th>
+                <th class="text-left py-3 px-2 font-medium text-dp-text-secondary">{{ t('member.sessions.browserLabel') }}</th>
+                <th v-if="showDeleteButton" class="text-center py-3 px-2 font-medium text-dp-text-secondary">{{ t('member.sessions.manageLabel') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -314,12 +332,12 @@ function handleDelete(tokenId: number) {
                     v-if="!token.isCurrentLogin"
                     @click="handleDelete(token.id)"
                     class="w-8 h-8 inline-flex items-center justify-center text-dp-danger hover:bg-dp-danger-soft rounded-full transition cursor-pointer"
-                    title="접속 종료"
+                    :title="t('member.sessions.terminate')"
                   >
                     <LogOut class="w-4 h-4" />
                   </button>
                   <span v-else class="px-3 py-1 text-xs font-medium text-dp-success bg-dp-success-soft rounded-full">
-                    현재 접속
+                    {{ t('member.sessions.currentLogin') }}
                   </span>
                 </td>
               </tr>

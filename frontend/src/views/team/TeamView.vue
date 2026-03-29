@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import {
   ChevronLeft,
   ChevronRight,
@@ -33,6 +34,7 @@ import type {
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { t } = useI18n()
 const { showError, confirmDelete, toastSuccess } = useSwal()
 
 // Loading state
@@ -352,26 +354,26 @@ async function saveSchedule() {
     showScheduleModal.value = false
     await fetchTeamSchedules()
     if (isNew) {
-      toastSuccess('일정이 등록되었습니다.')
+      toastSuccess(t('team.view.schedule.saveSuccess'))
     }
   } catch (error) {
     console.error('Failed to save schedule:', error)
-    showError('일정 저장에 실패했습니다.')
+    showError(t('team.view.schedule.saveFailed'))
   } finally {
     saving.value = false
   }
 }
 
 async function deleteSchedule(scheduleId: string) {
-  if (!await confirmDelete('정말 삭제하시겠습니까?\n삭제된 일정은 복구할 수 없습니다.')) return
+  if (!await confirmDelete(t('team.view.schedule.deleteConfirm'))) return
 
   try {
     await teamApi.deleteTeamSchedule(scheduleId)
     await fetchTeamSchedules()
-    toastSuccess('일정이 삭제되었습니다.')
+    toastSuccess(t('team.view.schedule.deleteSuccess'))
   } catch (error) {
     console.error('Failed to delete schedule:', error)
-    showError('일정 삭제에 실패했습니다.')
+    showError(t('team.view.schedule.deleteFailed'))
   }
 }
 
@@ -395,12 +397,12 @@ onMounted(() => {
     <template v-else-if="!hasTeam">
       <div class="rounded-lg shadow overflow-hidden bg-dp-bg-card">
         <div class="bg-dp-surface-strong text-dp-text-on-dark font-bold text-xl text-center py-3">
-          내 팀
+          {{ t('header.menu.myTeam') }}
         </div>
         <div class="flex flex-col items-center justify-center p-12 text-dp-text-secondary">
           <Building2 class="w-16 h-16 mb-4 text-dp-text-muted" />
-          <p class="text-xl font-bold mb-2">어느 팀에도 속해있지 않습니다.</p>
-          <p class="text-lg">팀 관리자에게 가입을 요청해주세요.</p>
+          <p class="text-xl font-bold mb-2">{{ t('team.view.emptyTitle') }}</p>
+          <p class="text-lg">{{ t('team.view.emptyDescription') }}</p>
         </div>
       </div>
     </template>
@@ -441,7 +443,7 @@ onMounted(() => {
             class="px-3 py-2 border rounded-lg flex items-center gap-1 hover-interactive cursor-pointer border-dp-border-secondary"
           >
             <Settings class="w-4 h-4" />
-            <span class="hidden sm:inline">팀 관리</span>
+            <span class="hidden sm:inline">{{ t('team.view.actions.manage') }}</span>
           </button>
           <div v-else class="w-16 sm:w-20"></div>
         </div>
@@ -494,7 +496,7 @@ onMounted(() => {
       <div class="rounded-lg border shadow-sm p-3 bg-dp-bg-card border-dp-border-secondary">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
           <h3 class="text-lg font-bold text-dp-text-primary">
-            {{ selectedDay.year }}년 {{ selectedDay.month }}월 {{ selectedDay.day }}일
+            {{ t('team.view.selectedDate', selectedDay) }}
           </h3>
           <button
             v-if="isTeamManager"
@@ -502,7 +504,7 @@ onMounted(() => {
             class="px-3 py-1.5 bg-dp-success text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-success-hover transition flex items-center gap-1 w-full sm:w-auto justify-center cursor-pointer"
           >
             <CalendarPlus class="w-4 h-4" />
-            팀 일정 추가
+            {{ t('team.view.actions.addSchedule') }}
           </button>
         </div>
 
@@ -521,7 +523,7 @@ onMounted(() => {
                 <div class="font-bold mb-1 text-dp-text-primary">
                   {{ schedule.content }}
                   <span class="text-sm font-normal text-dp-text-secondary">
-                    (by: <strong>{{ schedule.createMember }}</strong>)
+                    ({{ t('team.view.schedule.createdBy') }} <strong>{{ schedule.createMember }}</strong>)
                   </span>
                 </div>
                 <div v-if="schedule.description" class="text-sm whitespace-pre-wrap break-words text-dp-text-secondary">
@@ -532,14 +534,14 @@ onMounted(() => {
                 <button
                   @click="openEditScheduleModal(schedule)"
                   class="p-1.5 text-dp-accent rounded-lg hover:bg-dp-accent-soft transition cursor-pointer"
-                  title="수정"
+                  :title="t('team.view.actions.editSchedule')"
                 >
                   <Pencil class="w-4 h-4" />
                 </button>
                 <button
                   @click="deleteSchedule(schedule.id)"
                   class="p-1.5 text-dp-danger rounded-lg hover:bg-dp-danger-soft transition cursor-pointer"
-                  title="삭제"
+                  :title="t('team.view.actions.deleteSchedule')"
                 >
                   <Trash2 class="w-4 h-4" />
                 </button>
@@ -548,7 +550,7 @@ onMounted(() => {
           </div>
         </div>
         <div v-else class="text-center py-6 text-dp-text-muted">
-          이 날의 팀 일정이 없습니다.
+          {{ t('team.view.schedule.empty') }}
         </div>
       </div>
 
@@ -575,7 +577,7 @@ onMounted(() => {
             >
               <span class="font-bold" :style="{ color: getDutyTypeHeaderTextColor(group.dutyType.color) }">{{ group.dutyType.name }}</span>
               <span class="px-2 py-0.5 rounded-full text-sm font-medium" :style="{ backgroundColor: 'var(--dp-chip-on-dark-bg)', color: 'var(--dp-text-on-light)' }">
-                {{ group.members.length }}명
+                {{ t('team.view.shift.memberCount', { count: group.members.length }) }}
               </span>
             </div>
 
@@ -616,7 +618,7 @@ onMounted(() => {
       @close="closeScheduleModal"
     >
       <div class="modal-header">
-        <h2>팀 일정 저장</h2>
+        <h2>{{ t('team.view.schedule.modal.title') }}</h2>
         <button
           @click="closeScheduleModal"
           class="p-1.5 rounded-full hover-close-btn cursor-pointer"
@@ -628,7 +630,7 @@ onMounted(() => {
       <div class="modal-body-form">
         <div>
           <label class="form-label text-dp-text-primary">
-            제목(필수)
+            {{ t('team.view.schedule.modal.contentLabel') }}
             <CharacterCounter :current="scheduleForm.content.length" :max="50" />
           </label>
           <input
@@ -636,26 +638,26 @@ onMounted(() => {
             type="text"
             maxlength="50"
             class="form-control"
-            placeholder="일정 제목을 입력하세요"
+            :placeholder="t('team.view.schedule.modal.contentPlaceholder')"
           />
         </div>
 
         <div>
           <label class="form-label text-dp-text-primary">
-            상세(옵션)
+            {{ t('team.view.schedule.modal.descriptionLabel') }}
           </label>
           <textarea
             v-model="scheduleForm.description"
             rows="4"
             class="form-control resize-none"
-            placeholder="상세 내용을 입력하세요"
+            :placeholder="t('team.view.schedule.modal.descriptionPlaceholder')"
           ></textarea>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="form-label text-dp-text-primary">
-              시작일
+              {{ t('team.view.schedule.modal.startDate') }}
             </label>
             <input
               v-model="scheduleForm.startDate"
@@ -666,7 +668,7 @@ onMounted(() => {
           </div>
           <div>
             <label class="form-label text-dp-text-primary">
-              종료일
+              {{ t('team.view.schedule.modal.endDate') }}
             </label>
             <input
               v-model="scheduleForm.endDate"
@@ -684,13 +686,13 @@ onMounted(() => {
           class="px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
         >
           <Loader2 v-if="saving" class="w-4 h-4 animate-spin" />
-          저장
+          {{ t('team.view.schedule.modal.save') }}
         </button>
         <button
           @click="closeScheduleModal"
           class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-primary"
         >
-          취소
+          {{ t('common.actions.cancel') }}
         </button>
       </div>
     </BaseModal>

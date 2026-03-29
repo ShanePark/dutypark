@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import { useSwal } from '@/composables/useSwal'
@@ -14,7 +15,14 @@ const route = useRoute()
 const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
 const themeStore = useThemeStore()
+const { t } = useI18n()
 const { confirm } = useSwal()
+
+const themeToggleAriaLabel = computed(() => {
+  return themeStore.isDark
+    ? t('header.actions.switchToLightMode')
+    : t('header.actions.switchToDarkMode')
+})
 
 function isActiveRoute(path: string): boolean {
   if (path === '/') {
@@ -73,7 +81,10 @@ function navigateTo(path: string) {
 
 const handleLogout = async () => {
   isMenuDropdownVisible.value = false
-  const confirmed = await confirm('정말 로그아웃 하시겠습니까?', '로그아웃')
+  const confirmed = await confirm(
+    t('header.logout.confirmMessage'),
+    t('header.logout.confirmTitle')
+  )
   if (confirmed) {
     authStore.logout()
   }
@@ -103,7 +114,7 @@ onUnmounted(() => {
             type="button"
             class="theme-toggle-btn cursor-pointer p-2 rounded-full transition-all duration-150 min-h-[44px] min-w-[44px] flex items-center justify-center"
             @click="themeStore.toggleTheme()"
-            :aria-label="themeStore.isDark ? '라이트 모드로 전환' : '다크 모드로 전환'"
+            :aria-label="themeToggleAriaLabel"
           >
             <Moon v-if="!themeStore.isDark" class="w-5 h-5 theme-icon" />
             <Sun v-else class="w-5 h-5 text-dp-warning theme-icon" />
@@ -126,7 +137,7 @@ onUnmounted(() => {
                 type="button"
                 class="menu-btn cursor-pointer p-2 rounded-full transition-all duration-150 min-h-[44px] min-w-[44px] flex items-center justify-center"
                 @click.stop="toggleMenuDropdown"
-                aria-label="메뉴"
+                :aria-label="t('header.actions.menu')"
               >
                 <Menu class="w-5 h-5 menu-icon transition-transform duration-200" />
               </button>
@@ -140,28 +151,28 @@ onUnmounted(() => {
                   @click="navigateTo('/')"
                 >
                   <Home class="w-4 h-4" />
-                  홈
+                  {{ t('header.menu.home') }}
                 </button>
                 <button
                   :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute(myDutyPath) }]"
                   @click="navigateTo(myDutyPath)"
                 >
                   <Calendar class="w-4 h-4" />
-                  내 달력
+                  {{ t('header.menu.myCalendar') }}
                 </button>
                 <button
                   :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute('/team') }]"
                   @click="navigateTo('/team')"
                 >
                   <Users class="w-4 h-4" />
-                  내 팀
+                  {{ t('header.menu.myTeam') }}
                 </button>
                 <button
                   :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute('/friends') }]"
                   @click="navigateTo('/friends')"
                 >
                   <UserPlus class="w-4 h-4" />
-                  친구 관리
+                  {{ t('header.menu.friends') }}
                   <span
                     v-if="notificationStore.hasFriendRequests"
                     class="ml-auto px-1.5 py-0.5 text-xs font-bold bg-dp-danger text-dp-text-on-dark rounded-full min-w-[18px] text-center"
@@ -174,14 +185,14 @@ onUnmounted(() => {
                   @click="navigateTo('/todo')"
                 >
                   <ListTodo class="w-4 h-4" />
-                  할일
+                  {{ t('header.menu.todo') }}
                 </button>
                 <button
                   :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute('/notifications') }]"
                   @click="navigateTo('/notifications')"
                 >
                   <Bell class="w-4 h-4" />
-                  알림
+                  {{ t('header.menu.notifications') }}
                 </button>
 
                 <!-- Divider -->
@@ -194,7 +205,7 @@ onUnmounted(() => {
                   @click="navigateTo('/admin')"
                 >
                   <Shield class="w-4 h-4" />
-                  관리
+                  {{ t('header.menu.admin') }}
                 </button>
 
                 <button
@@ -202,14 +213,14 @@ onUnmounted(() => {
                   @click="navigateTo('/guide')"
                 >
                   <BookOpen class="w-4 h-4" />
-                  이용 안내
+                  {{ t('header.menu.guide') }}
                 </button>
                 <button
                   :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute('/member') }]"
                   @click="navigateTo('/member')"
                 >
                   <Settings class="w-4 h-4" />
-                  설정
+                  {{ t('header.menu.settings') }}
                 </button>
 
                 <!-- Divider -->
@@ -220,7 +231,7 @@ onUnmounted(() => {
                   @click="handleLogout"
                 >
                   <LogOut class="w-4 h-4" />
-                  로그아웃
+                  {{ t('member.logout') }}
                 </button>
               </div>
             </div>
@@ -230,13 +241,13 @@ onUnmounted(() => {
               to="/guide"
               class="guide-link text-xs sm:text-sm px-2 py-2 rounded-md transition-colors min-h-[44px] flex items-center"
             >
-              이용 안내
+              {{ t('header.menu.guide') }}
             </router-link>
             <router-link
               to="/auth/login"
               class="login-link text-xs sm:text-sm px-3 py-2 rounded-md transition-colors min-h-[44px] flex items-center"
             >
-              로그인
+              {{ t('header.actions.login') }}
             </router-link>
           </template>
         </nav>

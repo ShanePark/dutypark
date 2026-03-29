@@ -8,14 +8,17 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpHeaders
+import org.springframework.http.MediaType
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders
 import org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath
 import org.springframework.restdocs.payload.PayloadDocumentation.requestFields
+import org.springframework.restdocs.payload.PayloadDocumentation.responseFields
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.imageio.ImageIO
@@ -68,6 +71,76 @@ class MemberControllerTest : RestDocsTest() {
         // Then
         val findMember = memberRepository.findById(member.id!!).orElseThrow()
         assertThat(findMember.calendarVisibility).isEqualTo(Visibility.PRIVATE)
+    }
+
+    @Test
+    fun `get preferred locale`() {
+        val member = TestData.member
+        member.preferredLocale = "en"
+        memberRepository.save(member)
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/members/me/preferred-locale")
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.preferredLocale").value("en"))
+            .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "members/get-preferred-locale",
+                    responseFields(
+                        fieldWithPath("preferredLocale").description("Preferred locale code for the current member")
+                    )
+                )
+            )
+    }
+
+    @Test
+    fun `update preferred locale`() {
+        val member = TestData.member
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/members/me/preferred-locale")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"preferredLocale\": \"en\"}")
+                .withAuth(member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.preferredLocale").value("en"))
+            .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "members/update-preferred-locale",
+                    requestFields(
+                        fieldWithPath("preferredLocale").description("Preferred locale code to store (ko or en)")
+                    ),
+                    responseFields(
+                        fieldWithPath("preferredLocale").description("Updated preferred locale code")
+                    )
+                )
+            )
+
+        val updatedMember = memberRepository.findById(member.id!!).orElseThrow()
+        assertThat(updatedMember.preferredLocale).isEqualTo("en")
+    }
+
+    @Test
+    fun `update preferred locale validates supported language in english`() {
+        val member = TestData.member
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/members/me/preferred-locale")
+                .header(HttpHeaders.ACCEPT_LANGUAGE, "en")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"preferredLocale\": \"fr\"}")
+                .withAuth(member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error").value("Preferred locale must be one of: ko, en."))
     }
 
     @Test
@@ -131,12 +204,14 @@ class MemberControllerTest : RestDocsTest() {
 
         mockMvc.perform(
             RestDocumentationRequestBuilders.post("/api/members/auxiliary")
+                .header(HttpHeaders.ACCEPT_LANGUAGE, "en")
                 .accept("application/json")
                 .contentType("application/json")
                 .content("{}")
                 .withAuth(member)
         )
             .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error").value("Name is required."))
     }
 
     @Test

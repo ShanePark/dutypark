@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { dashboardApi } from '@/api/dashboard'
 import { friendApi } from '@/api/member'
 import { useSwal } from '@/composables/useSwal'
@@ -23,6 +24,7 @@ import {
 
 const router = useRouter()
 const notificationStore = useNotificationStore()
+const { t } = useI18n()
 const { showWarning, confirm, confirmDelete, toastSuccess } = useSwal()
 
 // Watch for notification-triggered refresh
@@ -81,6 +83,12 @@ const openDropdownFriend = computed(() => {
   return friendInfo.value.friends.find(f => f.member.id === openDropdownId.value) || null
 })
 
+function getRequestTypeLabel(requestType: string) {
+  return requestType === 'FAMILY_REQUEST'
+    ? t('friends.labels.familyRequest')
+    : t('friends.labels.friendRequest')
+}
+
 async function loadFriendInfo() {
   loading.value = true
   error.value = null
@@ -91,7 +99,7 @@ async function loadFriendInfo() {
     })
   } catch (e) {
     console.error('Failed to load friend info:', e)
-    error.value = '친구 정보를 불러오는데 실패했습니다.'
+    error.value = t('friends.messages.loadFailed')
   } finally {
     loading.value = false
   }
@@ -104,39 +112,45 @@ async function acceptFriendRequest(req: { fromMember: { id: number | null; name:
     await friendApi.acceptFriendRequest(req.fromMember.id)
     await loadFriendInfo()
     notificationStore.fetchFriendRequestCount()
-    toastSuccess(`${req.fromMember.name}님의 친구 요청을 수락했습니다.`)
+    toastSuccess(t('friends.messages.acceptSuccess', { name: req.fromMember.name }))
   } catch (e) {
     console.error('Failed to accept friend request:', e)
-    showWarning('친구 요청 수락에 실패했습니다.')
+    showWarning(t('friends.messages.acceptFailed'))
   }
 }
 
 async function rejectFriendRequest(req: { fromMember: { id: number | null; name: string } }) {
   if (!friendInfo.value || !req.fromMember.id) return
-  if (!await confirm(`${req.fromMember.name}님의 친구 요청을 거절하시겠습니까?`, '요청 거절')) return
+  if (!await confirm(
+    t('friends.messages.rejectConfirm', { name: req.fromMember.name }),
+    t('friends.messages.rejectTitle'),
+  )) return
   try {
     await friendApi.rejectFriendRequest(req.fromMember.id)
     friendInfo.value.pendingRequestsTo = friendInfo.value.pendingRequestsTo.filter(
       (r) => r.fromMember.id !== req.fromMember.id
     )
     notificationStore.fetchFriendRequestCount()
-    toastSuccess(`${req.fromMember.name}님의 친구 요청을 거절했습니다.`)
+    toastSuccess(t('friends.messages.rejectSuccess', { name: req.fromMember.name }))
   } catch (e) {
     console.error('Failed to reject friend request:', e)
-    showWarning('친구 요청 거절에 실패했습니다.')
+    showWarning(t('friends.messages.rejectFailed'))
   }
 }
 
 async function cancelRequest(req: { toMember: { id: number | null; name: string } }) {
   if (!friendInfo.value || !req.toMember.id) return
-  if (!await confirm(`${req.toMember.name}님에게 보낸 요청을 취소하시겠습니까?`, '요청 취소')) return
+  if (!await confirm(
+    t('friends.messages.cancelConfirm', { name: req.toMember.name }),
+    t('friends.messages.cancelTitle'),
+  )) return
   try {
     await friendApi.cancelFriendRequest(req.toMember.id)
     await loadFriendInfo()
-    toastSuccess('친구 요청이 취소되었습니다.')
+    toastSuccess(t('friends.messages.cancelSuccess'))
   } catch (e) {
     console.error('Failed to cancel friend request:', e)
-    showWarning('친구 요청 취소에 실패했습니다.')
+    showWarning(t('friends.messages.cancelFailed'))
   }
 }
 
@@ -157,7 +171,7 @@ async function pinFriend(member: { id: number | null; name: string }) {
       console.error('Failed to pin friend:', e)
       friend.pinOrder = null
       sortFriendsByPinOrder()
-      showWarning('친구 고정에 실패했습니다.')
+      showWarning(t('friends.messages.pinFailed'))
     }
   }
 }
@@ -178,7 +192,7 @@ async function unpinFriend(member: { id: number | null; name: string }) {
       console.error('Failed to unpin friend:', e)
       friend.pinOrder = oldPinOrder
       sortFriendsByPinOrder()
-      showWarning('친구 고정 해제에 실패했습니다.')
+      showWarning(t('friends.messages.unpinFailed'))
     }
   }
 }
@@ -203,23 +217,26 @@ async function addFamily(member: { id: number | null; name: string }) {
   if (!friendInfo.value || !member.id) return
   const alreadySent = friendInfo.value.pendingRequestsFrom.some((r) => r.toMember.id === member.id)
   if (alreadySent) {
-    showWarning('이미 가족 요청을 보낸 상태입니다.')
+    showWarning(t('friends.messages.familyAlreadyRequested'))
     return
   }
   closeDropdown()
   try {
     await friendApi.sendFamilyRequest(member.id)
     await loadFriendInfo()
-    toastSuccess(`${member.name}님에게 가족 요청을 보냈습니다.`)
+    toastSuccess(t('friends.messages.familyRequestSuccess', { name: member.name }))
   } catch (e) {
     console.error('Failed to send family request:', e)
-    showWarning('가족 요청 전송에 실패했습니다.')
+    showWarning(t('friends.messages.familyRequestFailed'))
   }
 }
 
 async function demoteFromFamily(member: { id: number | null; name: string }) {
   if (!friendInfo.value || !member.id) return
-  if (!await confirm(`${member.name}님을 가족에서 제외하시겠습니까?\n친구 관계는 유지됩니다.`, '가족에서 제외')) return
+  if (!await confirm(
+    t('friends.messages.removeFamilyConfirm', { name: member.name }),
+    t('friends.messages.removeFamilyTitle'),
+  )) return
   closeDropdown()
   try {
     await friendApi.demoteFromFamily(member.id)
@@ -227,24 +244,24 @@ async function demoteFromFamily(member: { id: number | null; name: string }) {
     if (friend) {
       friend.isFamily = false
     }
-    toastSuccess(`${member.name}님을 가족에서 제외했습니다.`)
+    toastSuccess(t('friends.messages.removeFamilySuccess', { name: member.name }))
   } catch (e) {
     console.error('Failed to demote from family:', e)
-    showWarning('가족에서 제외하는데 실패했습니다.')
+    showWarning(t('friends.messages.removeFamilyFailed'))
   }
 }
 
 async function unfriend(member: { id: number | null; name: string }) {
   if (!friendInfo.value || !member.id) return
-  if (await confirmDelete(`정말로 [${member.name}]님을 친구목록에서 삭제하시겠습니까?`)) {
+  if (await confirmDelete(t('friends.messages.unfriendConfirm', { name: member.name }))) {
     closeDropdown()
     try {
       await friendApi.unfriend(member.id)
       friendInfo.value.friends = friendInfo.value.friends.filter((f) => f.member.id !== member.id)
-      toastSuccess(`${member.name}님을 친구 목록에서 삭제했습니다.`)
+      toastSuccess(t('friends.messages.unfriendSuccess', { name: member.name }))
     } catch (e) {
       console.error('Failed to unfriend:', e)
-      showWarning('친구 삭제에 실패했습니다.')
+      showWarning(t('friends.messages.unfriendFailed'))
     }
   } else {
     closeDropdown()
@@ -313,15 +330,18 @@ async function search() {
 
 async function requestFriend(member: MemberPreviewDto) {
   if (!member.id) return
-  if (!await confirm(`${member.name}님에게 친구 요청을 보내시겠습니까?`, '친구 요청')) return
+  if (!await confirm(
+    t('friends.messages.friendRequestConfirm', { name: member.name }),
+    t('friends.messages.friendRequestTitle'),
+  )) return
   try {
     await friendApi.sendFriendRequest(member.id)
     closeSearchModal()
     await loadFriendInfo()
-    toastSuccess(`${member.name}님에게 친구 요청을 보냈습니다.`)
+    toastSuccess(t('friends.messages.friendRequestSuccess', { name: member.name }))
   } catch (e) {
     console.error('Failed to send friend request:', e)
-    showWarning('친구 요청을 보내는데 실패했습니다.')
+    showWarning(t('friends.messages.friendRequestFailed'))
   }
 }
 
@@ -387,7 +407,7 @@ async function updateFriendsPin() {
     await friendApi.updateFriendsPinOrder(friendIds)
   } catch (e) {
     console.error('Failed to update friend pin order:', e)
-    showWarning('친구 순서 변경에 실패했습니다.')
+    showWarning(t('friends.messages.reorderFailed'))
   }
 }
 
@@ -431,14 +451,14 @@ onUnmounted(() => {
         <div class="w-10 h-10 bg-gradient-to-br from-dp-surface-strong to-dp-surface-strong-alt rounded-xl flex items-center justify-center">
           <Users class="w-5 h-5 text-dp-text-on-dark" />
         </div>
-        <h1 class="text-xl font-bold text-dp-text-primary">친구 관리</h1>
+        <h1 class="text-xl font-bold text-dp-text-primary">{{ t('friends.title') }}</h1>
       </div>
       <button
         class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt text-dp-text-on-dark rounded-xl hover:from-dp-surface-strong-alt hover:to-dp-surface-strong-hover transition-all shadow-lg font-medium cursor-pointer"
         @click="openSearchModal"
       >
         <UserPlus class="w-4 h-4" />
-        친구 추가
+        {{ t('friends.actions.addFriend') }}
       </button>
     </div>
 
@@ -461,7 +481,7 @@ onUnmounted(() => {
         <div class="bg-gradient-to-r from-dp-warning to-dp-warning-hover px-5 py-3">
           <div class="flex items-center gap-2">
             <UserCheck class="w-5 h-5 text-dp-text-on-dark" />
-            <span class="text-dp-text-on-dark font-bold">친구 요청</span>
+            <span class="text-dp-text-on-dark font-bold">{{ t('friends.sections.requests') }}</span>
             <span class="ml-2 px-2 py-0.5 bg-dp-overlay-light/20 rounded-full text-xs text-dp-text-on-dark">
               {{ friendInfo.pendingRequestsTo.length + friendInfo.pendingRequestsFrom.length }}
             </span>
@@ -491,7 +511,7 @@ onUnmounted(() => {
                 <div>
                   <p class="text-dp-text-primary">{{ req.fromMember.name }}</p>
                   <p class="text-xs text-dp-text-secondary">
-                    {{ req.requestType === 'FAMILY_REQUEST' ? '가족 요청' : '친구 요청' }}
+                    {{ getRequestTypeLabel(req.requestType) }}
                   </p>
                 </div>
               </div>
@@ -500,13 +520,13 @@ onUnmounted(() => {
                   class="px-4 py-2 text-sm font-medium bg-dp-success text-dp-text-on-dark rounded-lg hover:bg-dp-success-hover transition shadow-sm cursor-pointer"
                   @click="acceptFriendRequest(req)"
                 >
-                  승인
+                  {{ t('friends.actions.approve') }}
                 </button>
                 <button
                   class="px-4 py-2 text-sm font-medium border border-dp-danger-border rounded-lg hover:bg-dp-danger-soft transition cursor-pointer bg-dp-bg-card text-dp-danger"
                   @click="rejectFriendRequest(req)"
                 >
-                  거절
+                  {{ t('friends.actions.reject') }}
                 </button>
               </div>
             </div>
@@ -535,7 +555,7 @@ onUnmounted(() => {
                 <div>
                   <p class="text-dp-text-primary">{{ req.toMember.name }}</p>
                   <p class="text-xs text-dp-text-secondary">
-                    {{ req.requestType === 'FAMILY_REQUEST' ? '가족 요청' : '친구 요청' }} · 대기 중
+                    {{ t('friends.labels.sentRequestStatus', { type: getRequestTypeLabel(req.requestType) }) }}
                   </p>
                 </div>
               </div>
@@ -543,7 +563,7 @@ onUnmounted(() => {
                 class="px-4 py-2 text-sm font-medium border border-dp-warning-border rounded-lg hover:bg-dp-warning-soft transition cursor-pointer bg-dp-bg-card text-dp-warning-hover"
                 @click="cancelRequest(req)"
               >
-                요청 취소
+                {{ t('friends.actions.cancelRequest') }}
               </button>
             </div>
           </div>
@@ -558,7 +578,7 @@ onUnmounted(() => {
         <div class="bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt px-6 py-3">
           <div class="flex items-center gap-2">
             <Users class="w-5 h-5 text-dp-text-on-dark" />
-            <span class="text-dp-text-on-dark font-bold">친구 목록</span>
+            <span class="text-dp-text-on-dark font-bold">{{ t('friends.sections.list') }}</span>
             <span v-if="friendInfo.friends.length" class="ml-2 px-2 py-0.5 bg-dp-overlay-light/20 rounded-full text-xs text-dp-text-on-dark">
               {{ friendInfo.friends.length }}
             </span>
@@ -567,12 +587,12 @@ onUnmounted(() => {
         <div class="p-5">
           <div v-if="sortedFriends.length === 0" class="text-center py-8">
             <Users class="w-12 h-12 mx-auto mb-3 text-dp-text-muted" />
-            <p class="text-sm text-dp-text-secondary">아직 친구가 없습니다.</p>
+            <p class="text-sm text-dp-text-secondary">{{ t('friends.labels.noFriends') }}</p>
             <button
               class="mt-4 px-4 py-2 text-sm font-medium bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
               @click="openSearchModal"
             >
-              친구 추가하기
+              {{ t('friends.actions.addFriend') }}
             </button>
           </div>
 
@@ -609,7 +629,7 @@ onUnmounted(() => {
                   <div class="flex items-center justify-between mb-1.5">
                     <div class="flex items-center gap-1.5 min-w-0">
                       <span class="font-medium text-sm truncate text-dp-text-primary">{{ friend.member.name }}</span>
-                      <Home v-if="friend.isFamily" class="w-3.5 h-3.5 flex-shrink-0 text-dp-warning" title="Family member" />
+                      <Home v-if="friend.isFamily" class="w-3.5 h-3.5 flex-shrink-0 text-dp-warning" :title="t('friends.labels.familyMember')" />
                     </div>
                     <div class="flex items-center flex-shrink-0" @click.stop>
                       <!-- Pin/Unpin button -->
@@ -617,7 +637,7 @@ onUnmounted(() => {
                         v-if="friend.pinOrder"
                         class="p-1 text-dp-warning hover:text-dp-warning transition cursor-pointer"
                         @click.stop="unpinFriend(friend.member)"
-                        title="고정 해제"
+                        :title="t('friends.actions.unpin')"
                       >
                         <Star class="w-4 h-4" fill="currentColor" />
                       </button>
@@ -625,7 +645,7 @@ onUnmounted(() => {
                         v-else
                         class="p-1 text-dp-text-muted hover:text-dp-warning transition cursor-pointer"
                         @click.stop="pinFriend(friend.member)"
-                        title="고정"
+                        :title="t('friends.actions.pin')"
                       >
                         <Star class="w-4 h-4" />
                       </button>
@@ -646,7 +666,7 @@ onUnmounted(() => {
               <div v-if="friend.pinOrder" class="absolute bottom-2 right-2" @click.stop>
                 <div
                   class="handle friend-drag-handle rounded-lg p-1.5 transition hover:bg-dp-overlay-dark/10 !cursor-grab active:!cursor-grabbing"
-                  title="드래그하여 순서 변경"
+                  :title="t('friends.actions.dragToReorder')"
                 >
                   <GripVertical class="w-4 h-4" />
                 </div>
@@ -661,7 +681,7 @@ onUnmounted(() => {
               <div class="w-8 h-8 sm:w-12 sm:h-12 group-hover:bg-dp-accent-soft rounded-full flex items-center justify-center mb-1 sm:mb-2 transition-colors bg-dp-bg-tertiary">
                 <UserPlus class="w-4 h-4 sm:w-6 sm:h-6 group-hover:text-dp-accent transition-colors text-dp-text-muted" />
               </div>
-              <span class="font-semibold text-xs sm:text-sm group-hover:text-dp-accent transition-colors text-dp-text-muted">친구 추가</span>
+              <span class="font-semibold text-xs sm:text-sm group-hover:text-dp-accent transition-colors text-dp-text-muted">{{ t('friends.actions.addFriend') }}</span>
             </div>
           </div>
         </div>
@@ -687,7 +707,7 @@ onUnmounted(() => {
           @click="addFamily(openDropdownFriend.member)"
         >
           <Home class="w-4 h-4" />
-          가족 등록
+          {{ t('friends.actions.addFamily') }}
         </button>
         <button
           v-if="openDropdownFriend.isFamily"
@@ -695,14 +715,14 @@ onUnmounted(() => {
           @click="demoteFromFamily(openDropdownFriend.member)"
         >
           <UserMinus class="w-4 h-4" />
-          가족에서 제외
+          {{ t('friends.actions.removeFamily') }}
         </button>
         <button
           class="w-full px-3 py-2.5 text-left text-sm text-dp-danger hover:bg-dp-danger-soft flex items-center gap-2 transition cursor-pointer"
           @click="unfriend(openDropdownFriend.member)"
         >
           <Trash2 class="w-4 h-4" />
-          친구 삭제
+          {{ t('friends.actions.removeFriend') }}
         </button>
       </div>
     </Teleport>

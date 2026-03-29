@@ -34,8 +34,8 @@ class AuthService(
     private val log = logger()
 
     companion object {
-        private const val LOGIN_FAILED_MESSAGE = "이메일 또는 비밀번호가 올바르지 않습니다."
-        private const val RATE_LIMIT_MESSAGE = "로그인 시도 횟수를 초과했습니다. 잠시 후 다시 시도해 주세요."
+        private const val LOGIN_FAILED_MESSAGE = "auth.login.failed"
+        private const val RATE_LIMIT_MESSAGE = "auth.login.rateLimited"
     }
 
     @Transactional(readOnly = true)
@@ -54,14 +54,14 @@ class AuthService(
     fun changePassword(param: PasswordChangeDto, byAdmin: Boolean = false) {
         val member = memberRepository.findById(param.memberId).orElseThrow {
             log.warn("Change password failed: member not exist, memberId={}", param.memberId)
-            throw AuthException("존재하지 않는 회원입니다.")
+            throw AuthException("auth.password.memberNotFound")
         }
 
         if (!byAdmin) {
             val passwordMatch = passwordEncoder.matches(param.currentPassword, member.password)
             if (!passwordMatch) {
                 log.warn("Change password failed: password not match, memberId={}", param.memberId)
-                throw AuthException("비밀번호가 일치하지 않습니다.")
+                throw AuthException("auth.password.currentMismatch")
             }
         }
 
@@ -106,10 +106,10 @@ class AuthService(
 
     fun refreshAccessToken(refreshTokenValue: String, req: HttpServletRequest): TokenResponse {
         val refreshToken = refreshTokenService.findByToken(refreshTokenValue)
-            ?: throw AuthException("Invalid refresh token")
+            ?: throw AuthException("auth.refresh.invalid")
 
         if (!refreshToken.isValid()) {
-            throw AuthException("Refresh token expired")
+            throw AuthException("auth.refresh.expired")
         }
 
         val member = refreshToken.member
@@ -131,7 +131,7 @@ class AuthService(
     fun getTokenResponseByMemberId(memberId: Long, req: HttpServletRequest): TokenResponse {
         val member = memberRepository.findById(memberId).orElseThrow {
             log.warn("Token generation failed: member not exist, memberId={}", memberId)
-            AuthException("존재하지 않는 계정입니다.")
+            AuthException("auth.token.memberNotFound")
         }
 
         val jwt = jwtProvider.createToken(member)
@@ -151,21 +151,21 @@ class AuthService(
     fun impersonate(manager: LoginMember, targetMemberId: Long): String {
         if (manager.isImpersonating) {
             log.warn("Impersonation denied: manager {} already impersonating another account", manager.id)
-            throw AuthException("이미 다른 계정으로 전환된 상태입니다.")
+            throw AuthException("auth.impersonation.alreadyImpersonating")
         }
 
         val managerEntity = memberRepository.findById(manager.id).orElseThrow {
-            AuthException("관리자 계정을 찾을 수 없습니다.")
+            AuthException("auth.impersonation.managerNotFound")
         }
 
         val targetEntity = memberRepository.findById(targetMemberId).orElseThrow {
-            AuthException("대상 계정을 찾을 수 없습니다.")
+            AuthException("auth.impersonation.targetNotFound")
         }
 
         val isManager = memberManagerRepository.findAllByManagerAndManaged(managerEntity, targetEntity).isNotEmpty()
         if (!isManager) {
             log.warn("Impersonation denied: manager={} is not managing target={}", manager.id, targetMemberId)
-            throw AuthException("관리 권한이 없습니다.")
+            throw AuthException("auth.impersonation.forbidden")
         }
 
         log.info("Impersonation started: manager={} -> target={}", manager.id, targetMemberId)
@@ -175,14 +175,14 @@ class AuthService(
 
     fun restore(currentLogin: LoginMember, existingRefreshToken: String?, req: HttpServletRequest): TokenResponse {
         if (!currentLogin.isImpersonating) {
-            throw AuthException("전환된 계정 상태가 아닙니다.")
+            throw AuthException("auth.restore.notImpersonating")
         }
 
         val originalMemberId = currentLogin.originalMemberId
-            ?: throw AuthException("원래 계정 정보가 없습니다.")
+            ?: throw AuthException("auth.restore.originalMissing")
 
         val originalMember = memberRepository.findById(originalMemberId).orElseThrow {
-            AuthException("원래 계정을 찾을 수 없습니다.")
+            AuthException("auth.restore.originalNotFound")
         }
 
         val jwt = jwtProvider.createToken(originalMember)

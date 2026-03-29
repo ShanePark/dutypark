@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { useSwal } from '@/composables/useSwal'
 import { teamApi } from '@/api/team'
@@ -17,6 +18,7 @@ const emit = defineEmits<{
 }>()
 
 const { showWarning, showError, toastSuccess } = useSwal()
+const { t } = useI18n()
 
 const batchForm = ref({
   file: null as File | null,
@@ -46,7 +48,7 @@ function handleFileChange(event: Event) {
 
 async function uploadBatch() {
   if (!batchForm.value.file) {
-    showWarning('파일을 선택해주세요.')
+    showWarning(t('team.batchUpload.selectFile'))
     return
   }
 
@@ -59,14 +61,14 @@ async function uploadBatch() {
       batchForm.value.month
     )
     if (result.data.success) {
-      toastSuccess('근무표가 업로드되었습니다.')
+      toastSuccess(t('team.batchUpload.success'))
       close()
     } else {
-      showError(result.data.message || '근무표 업로드에 실패했습니다.')
+      showError(result.data.message || t('team.batchUpload.failed'))
     }
   } catch (error: any) {
     console.error('Failed to upload batch:', error)
-    const message = error.response?.data?.message || '근무표 업로드에 실패했습니다.'
+    const message = error.response?.data?.message || t('team.batchUpload.failed')
     showError(message)
   } finally {
     emit('update:saving', false)
@@ -82,10 +84,11 @@ async function uploadBatch() {
     @close="close"
   >
     <div class="modal-header">
-      <h2>근무표 업로드</h2>
+      <h2>{{ t('team.batchUpload.title') }}</h2>
       <button
         @click="close"
         class="p-1.5 rounded-full hover-close-btn cursor-pointer"
+        :aria-label="t('common.actions.close')"
       >
         <X class="w-5 h-5" />
       </button>
@@ -94,7 +97,7 @@ async function uploadBatch() {
     <div class="modal-body-form">
       <div>
         <label class="form-label">
-          근무표 파일 업로드 (.xlsx)
+          {{ t('team.batchUpload.fileLabel') }}
         </label>
         <input
           type="file"
@@ -107,7 +110,7 @@ async function uploadBatch() {
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label class="form-label">
-            연도
+            {{ t('team.batchUpload.year') }}
           </label>
           <input
             v-model.number="batchForm.year"
@@ -119,7 +122,7 @@ async function uploadBatch() {
         </div>
         <div>
           <label class="form-label">
-            월
+            {{ t('team.batchUpload.month') }}
           </label>
           <input
             v-model.number="batchForm.month"
@@ -139,13 +142,13 @@ async function uploadBatch() {
         class="px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
       >
         <Loader2 v-if="saving" class="w-4 h-4 animate-spin" />
-        업로드
+        {{ t('common.actions.upload') }}
       </button>
       <button
         @click="close"
         class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"
       >
-        취소
+        {{ t('common.actions.cancel') }}
       </button>
     </div>
   </BaseModal>

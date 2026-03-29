@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { X, Plus, Minus, RotateCcw, Lock, Unlock } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 
@@ -24,6 +25,8 @@ const emit = defineEmits<{
   (e: 'close'): void
   (e: 'save', dday: DDay): void
 }>()
+
+const { t } = useI18n()
 
 const title = ref('')
 const date = ref('')
@@ -86,7 +89,7 @@ const isEditMode = props.dday !== null && props.dday !== undefined
   >
     <!-- Header -->
     <div class="modal-header">
-      <h2>{{ dday ? '디데이 수정' : '디데이 추가' }}</h2>
+      <h2>{{ dday ? t('duty.ddayModal.editTitle') : t('duty.ddayModal.addTitle') }}</h2>
       <button @click="handleClose" class="p-2 rounded-full hover-close-btn cursor-pointer">
         <X class="w-6 h-6 text-dp-text-primary" />
       </button>
@@ -96,7 +99,7 @@ const isEditMode = props.dday !== null && props.dday !== undefined
     <div class="modal-body-form-compact">
       <div>
         <label class="form-label">
-          제목 <span class="text-dp-danger">*</span>
+          {{ t('duty.ddayModal.fields.title') }} <span class="text-dp-danger">*</span>
           <CharacterCounter :current="title.length" :max="30" />
         </label>
         <input
@@ -104,13 +107,13 @@ const isEditMode = props.dday !== null && props.dday !== undefined
           type="text"
           maxlength="30"
           class="form-control"
-          placeholder="디데이 제목을 입력하세요"
+          :placeholder="t('duty.ddayModal.placeholders.title')"
         />
       </div>
 
       <div>
         <label class="form-label">
-          날짜 <span class="text-dp-danger">*</span>
+          {{ t('duty.ddayModal.fields.date') }} <span class="text-dp-danger">*</span>
         </label>
         <input
           v-model="date"
@@ -126,35 +129,35 @@ const isEditMode = props.dday !== null && props.dday !== undefined
           class="date-adjust-btn flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
         >
           <Minus class="w-3 h-3" />
-          7일
+          {{ t('duty.ddayModal.quick.minusWeek') }}
         </button>
         <button
           @click="addDays(-1)"
           class="date-adjust-btn flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
         >
           <Minus class="w-3 h-3" />
-          1일
+          {{ t('duty.ddayModal.quick.minusDay') }}
         </button>
         <button
           @click="resetToToday"
           class="date-adjust-btn date-adjust-btn--today flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
         >
           <RotateCcw class="w-3 h-3" />
-          오늘
+          {{ t('duty.ddayModal.quick.today') }}
         </button>
         <button
           @click="addDays(1)"
           class="date-adjust-btn flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
         >
           <Plus class="w-3 h-3" />
-          1일
+          {{ t('duty.ddayModal.quick.plusDay') }}
         </button>
         <button
           @click="addDays(7)"
           class="date-adjust-btn flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
         >
           <Plus class="w-3 h-3" />
-          7일
+          {{ t('duty.ddayModal.quick.plusWeek') }}
         </button>
       </div>
 
@@ -162,7 +165,7 @@ const isEditMode = props.dday !== null && props.dday !== undefined
       <div class="flex items-center justify-between p-3 rounded-lg bg-dp-bg-secondary">
         <div class="flex items-center gap-2">
           <component :is="isPrivate ? Lock : Unlock" class="w-5 h-5 text-dp-text-secondary" />
-          <span class="text-sm text-dp-text-primary">비공개</span>
+          <span class="text-sm text-dp-text-primary">{{ t('visibility.labels.private') }}</span>
         </div>
         <button
           @click="isPrivate = !isPrivate"
@@ -183,14 +186,14 @@ const isEditMode = props.dday !== null && props.dday !== undefined
         @click="handleClose"
         class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
       >
-        취소
+        {{ t('common.actions.cancel') }}
       </button>
       <button
         @click="handleSave"
         :disabled="!title.trim() || !date"
         class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
       >
-        저장
+        {{ t('duty.ddayModal.save') }}
       </button>
     </div>
   </BaseModal>

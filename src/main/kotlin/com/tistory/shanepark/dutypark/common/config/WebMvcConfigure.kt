@@ -2,13 +2,23 @@ package com.tistory.shanepark.dutypark.common.config
 
 import com.tistory.shanepark.dutypark.security.config.LoginMemberArgumentResolver
 import org.springframework.context.annotation.Configuration
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.validation.Validator
 import org.springframework.web.method.support.HandlerMethodArgumentResolver
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 
 @Configuration
-class WebMvcConfigure : WebMvcConfigurer {
+class WebMvcConfigure(
+    private val loginMemberArgumentResolver: LoginMemberArgumentResolver,
+    @param:Qualifier("validator")
+    private val validator: Validator,
+) : WebMvcConfigurer {
 
     override fun addArgumentResolvers(resolvers: MutableList<HandlerMethodArgumentResolver>) {
-        resolvers.add(LoginMemberArgumentResolver())
+        resolvers.add(loginMemberArgumentResolver)
+    }
+
+    override fun getValidator(): Validator {
+        return validator
     }
 }

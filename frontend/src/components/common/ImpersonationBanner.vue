@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSwal } from '@/composables/useSwal'
 import { ArrowLeftCircle, AlertTriangle, Loader2, Clock } from 'lucide-vue-next'
@@ -9,6 +10,7 @@ import { buildLoginPath } from '@/utils/redirect'
 const authStore = useAuthStore()
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const { confirm, showError, showInfo } = useSwal()
 
 const restoring = ref(false)
@@ -60,21 +62,21 @@ async function handleAutoRestore() {
 
   try {
     await authStore.restore()
-    showInfo('세션이 만료되어 원래 계정으로 돌아갑니다.')
+    showInfo(t('impersonation.messages.sessionExpiredRestore'))
     window.location.href = '/'
   } catch (error) {
     console.error('Failed to auto-restore account:', error)
     // Clear auth state and redirect to login on failure
     authStore.clearAuth()
-    showError('세션이 만료되었습니다. 다시 로그인해주세요.')
+    showError(t('impersonation.messages.sessionExpiredLogin'))
     window.location.href = buildLoginPath(route.fullPath)
   }
 }
 
 async function handleRestore() {
   const confirmed = await confirm(
-    '원래 계정으로 돌아가시겠습니까?',
-    '계정 복귀'
+    t('impersonation.messages.restoreConfirmMessage'),
+    t('impersonation.messages.restoreConfirmTitle')
   )
 
   if (!confirmed) return
@@ -85,7 +87,7 @@ async function handleRestore() {
     window.location.href = router.resolve('/').href
   } catch (error) {
     console.error('Failed to restore account:', error)
-    showError('원래 계정으로 복귀하는데 실패했습니다.')
+    showError(t('impersonation.messages.restoreFailed'))
   } finally {
     restoring.value = false
   }
@@ -100,8 +102,8 @@ async function handleRestore() {
       <AlertTriangle class="w-4 h-4 flex-shrink-0 text-dp-warning" />
       <span class="text-xs sm:text-sm text-dp-warning truncate">
         <span class="font-semibold">{{ authStore.user?.name }}</span>
-        <span class="hidden sm:inline"> 계정으로 활동 중</span>
-        <span class="sm:hidden"> 계정</span>
+        <span class="hidden sm:inline"> {{ t('impersonation.banner.activeAsFull') }}</span>
+        <span class="sm:hidden"> {{ t('impersonation.banner.activeAsShort') }}</span>
       </span>
       <span
         v-if="remainingTimeText"
@@ -119,8 +121,8 @@ async function handleRestore() {
     >
       <Loader2 v-if="restoring" class="w-3.5 h-3.5 animate-spin" />
       <ArrowLeftCircle v-else class="w-3.5 h-3.5" />
-      <span class="hidden sm:inline">원래 계정으로 돌아가기</span>
-      <span class="sm:hidden">복귀</span>
+      <span class="hidden sm:inline">{{ t('impersonation.banner.restore') }}</span>
+      <span class="sm:hidden">{{ t('impersonation.banner.restoreShort') }}</span>
     </button>
   </div>
 </template>

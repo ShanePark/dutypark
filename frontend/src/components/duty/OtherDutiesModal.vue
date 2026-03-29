@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { X, Users, Check } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 import type { TaggableFriend } from '@/types'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
@@ -20,6 +21,8 @@ const emit = defineEmits<{
   (e: 'close'): void
   (e: 'toggle', friendId: number): void
 }>()
+
+const { t } = useI18n()
 
 const canSelectMore = computed(() => {
   return props.selectedFriendIds.length < props.maxSelections
@@ -67,7 +70,7 @@ function handleToggle(friendId: number) {
     <div class="modal-header">
       <div class="flex items-center gap-2">
         <Users class="w-5 h-5 text-dp-accent" />
-        <h2>함께보기</h2>
+        <h2>{{ t('duty.otherDuties.title') }}</h2>
       </div>
       <button @click="emit('close')" class="p-2 rounded-full hover-close-btn cursor-pointer">
         <X class="w-6 h-6 text-dp-text-primary" />
@@ -75,12 +78,12 @@ function handleToggle(friendId: number) {
     </div>
 
     <div class="px-3 sm:px-4 py-2 text-xs sm:text-sm bg-dp-accent/10 text-dp-accent dark:bg-dp-accent/20 dark:text-dp-accent-light">
-      친구의 근무표를 함께 볼 수 있습니다. (최대 {{ maxSelections }}명)
+      {{ t('duty.otherDuties.description', { count: maxSelections }) }}
     </div>
 
     <div class="modal-body-form-compact !space-y-0 max-h-[calc(90dvh-180px)] sm:max-h-[calc(90vh-180px)]">
       <div v-if="friends.length === 0" class="text-center py-8 text-dp-text-muted">
-        친구 목록이 없습니다.
+        {{ t('duty.otherDuties.empty') }}
       </div>
 
       <div v-else class="grid grid-cols-2 gap-2">
@@ -123,13 +126,13 @@ function handleToggle(friendId: number) {
     <div class="modal-footer modal-footer-safe">
       <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-between gap-2">
         <span class="text-sm text-center sm:text-left text-dp-text-muted">
-          {{ selectedFriendIds.length }} / {{ maxSelections }}명 선택됨
+          {{ t('duty.otherDuties.selectionCount', { selected: selectedFriendIds.length, count: maxSelections }) }}
         </span>
         <button
           @click="emit('close')"
           class="w-full sm:w-auto px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
         >
-          확인
+          {{ t('common.actions.confirm') }}
         </button>
       </div>
     </div>

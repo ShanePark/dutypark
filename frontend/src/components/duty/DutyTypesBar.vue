@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { ChevronLeft, ChevronRight, FileSpreadsheet, Loader2, Users } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 import { isLightColor } from '@/utils/color'
 import type { DutyType, DutyTypeWithCount } from '@/views/duty/dutyViewTypes'
 
@@ -28,6 +29,8 @@ const emit = defineEmits<{
   (e: 'update:focusedDay', value: number): void
 }>()
 
+const { t } = useI18n()
+
 const focusedDayValue = computed(() => props.focusedDay ?? 1)
 
 function moveFocusDay(delta: number) {
@@ -54,7 +57,7 @@ function toggleBatchEdit() {
           >
             <ChevronLeft class="w-4 h-4 text-dp-text-secondary" />
           </button>
-          <span class="px-1 text-xs sm:text-sm font-bold text-dp-warning">{{ focusedDayValue }}일</span>
+          <span class="px-1 text-xs sm:text-sm font-bold text-dp-warning">{{ t('duty.typesBar.focusedDay', { day: focusedDayValue }) }}</span>
           <button
             @click="moveFocusDay(1)"
             :disabled="focusedDayValue === lastDayInMonth"
@@ -93,10 +96,10 @@ function toggleBatchEdit() {
       </template>
       <span v-else-if="isLoadingDuties" class="text-sm text-dp-text-muted">
         <Loader2 class="w-4 h-4 animate-spin inline mr-1" />
-        로딩 중...
+        {{ t('duty.typesBar.loading') }}
       </span>
       <span v-else class="text-sm text-dp-text-muted">
-        근무 타입 정보 없음
+        {{ t('duty.typesBar.empty') }}
       </span>
     </div>
     <div class="inline-flex rounded-lg border overflow-hidden ml-auto border-dp-border-secondary">
@@ -107,7 +110,7 @@ function toggleBatchEdit() {
         :class="isOtherDutyActive ? 'bg-dp-accent-soft/70 text-dp-accent-hover hover:bg-dp-accent-soft' : 'hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover'"
       >
         <Users class="w-4 h-4" />
-        <span class="hidden xs:inline">함께보기</span>
+        <span class="hidden xs:inline">{{ t('duty.typesBar.compare') }}</span>
         <span v-if="isOtherDutyActive" class="text-xs">({{ otherDutyCount }})</span>
       </button>
       <button
@@ -115,7 +118,7 @@ function toggleBatchEdit() {
         @click="emit('show-batch-update-modal')"
         class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 border-r cursor-pointer hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover border-dp-border-secondary"
       >
-        일괄수정
+        {{ t('duty.typesBar.batchUpdate') }}
       </button>
       <button
         v-if="canEdit"
@@ -123,7 +126,7 @@ function toggleBatchEdit() {
         class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 border-r last:border-r-0 cursor-pointer border-dp-border-secondary"
         :class="batchEditMode ? 'bg-dp-warning-soft/70 text-dp-warning hover:bg-dp-warning-soft' : 'hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover'"
       >
-        편집모드
+        {{ t('duty.typesBar.editMode') }}
       </button>
       <button
         v-if="canEditMyCalendar && teamHasDutyBatchTemplate && !batchEditMode"
@@ -131,7 +134,7 @@ function toggleBatchEdit() {
         class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1 cursor-pointer hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover"
       >
         <FileSpreadsheet class="w-4 h-4" />
-        <span class="hidden sm:inline">엑셀</span>
+        <span class="hidden sm:inline">{{ t('duty.typesBar.excel') }}</span>
       </button>
     </div>
   </div>

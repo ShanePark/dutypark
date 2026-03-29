@@ -4,6 +4,7 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from 'axios'
 import type { ApiError } from '@/types'
+import { getCurrentLocale } from '@/i18n'
 
 let isRefreshing = false
 let refreshFailed = false
@@ -64,6 +65,14 @@ apiClient.interceptors.request.use((config) => {
   if (config.data instanceof FormData) {
     delete config.headers['Content-Type']
   }
+
+  const locale = getCurrentLocale()
+  if (typeof config.headers.set === 'function') {
+    config.headers.set('Accept-Language', locale)
+  } else {
+    config.headers['Accept-Language'] = locale
+  }
+
   return config
 })
 
@@ -116,7 +125,16 @@ apiClient.interceptors.response.use(
 
       try {
         // Cookie is sent automatically via withCredentials
-        await axios.post('/api/auth/refresh', {}, { withCredentials: true })
+        await axios.post(
+          '/api/auth/refresh',
+          {},
+          {
+            withCredentials: true,
+            headers: {
+              'Accept-Language': getCurrentLocale(),
+            },
+          }
+        )
 
         // Reset refresh failure flag on successful refresh
         refreshFailed = false

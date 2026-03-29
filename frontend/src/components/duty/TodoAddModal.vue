@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { X, Calendar, ListTodo, Clock, CheckCircle2 } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import FileUploader from '@/components/common/FileUploader.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
@@ -44,11 +45,13 @@ const fileUploaderRef = ref<InstanceType<typeof FileUploader> | null>(null)
 
 const { showWarning, showError } = useSwal()
 
-const statusOptions: Array<{ value: TodoStatus; label: string; icon: typeof ListTodo; colorClass: string }> = [
-  { value: 'TODO', label: '할일', icon: ListTodo, colorClass: 'status-card-todo' },
-  { value: 'IN_PROGRESS', label: '진행중', icon: Clock, colorClass: 'status-card-in-progress' },
-  { value: 'DONE', label: '완료', icon: CheckCircle2, colorClass: 'status-card-done' },
-]
+const { t } = useI18n()
+
+const statusOptions = computed<Array<{ value: TodoStatus; label: string; icon: typeof ListTodo; colorClass: string }>>(() => [
+  { value: 'TODO', label: t('duty.todo.status.todo'), icon: ListTodo, colorClass: 'status-card-todo' },
+  { value: 'IN_PROGRESS', label: t('duty.todo.status.inProgress'), icon: Clock, colorClass: 'status-card-in-progress' },
+  { value: 'DONE', label: t('duty.todo.status.done'), icon: CheckCircle2, colorClass: 'status-card-done' },
+])
 
 const selectedTagSummaries = computed(() => {
   return tagFriendIds.value.flatMap((id) => {
@@ -95,7 +98,7 @@ function handleSave() {
     return
   }
   if (isUploading.value) {
-    showWarning('파일 업로드가 진행 중입니다. 완료 후 다시 시도해주세요.')
+    showWarning(t('duty.todo.warnings.uploadInProgress'))
     return
   }
 
@@ -156,7 +159,7 @@ function onUploadError(message: string) {
   >
     <!-- Header -->
     <div class="modal-header">
-      <h2>할 일 추가</h2>
+      <h2>{{ t('duty.todo.actions.add') }}</h2>
       <button @click="handleClose" class="p-2 rounded-full hover-close-btn cursor-pointer">
         <X class="w-6 h-6 text-dp-text-primary" />
       </button>
@@ -166,7 +169,7 @@ function onUploadError(message: string) {
     <div class="modal-body-form-compact">
       <!-- Status Selection -->
       <div>
-        <label class="block text-sm font-medium mb-2 text-dp-text-secondary">상태</label>
+        <label class="block text-sm font-medium mb-2 text-dp-text-secondary">{{ t('duty.todo.fields.status') }}</label>
         <div class="grid grid-cols-3 gap-2">
           <button
             v-for="option in statusOptions"
@@ -184,7 +187,7 @@ function onUploadError(message: string) {
 
       <div>
         <label class="form-label">
-          제목 <span class="text-dp-danger">*</span>
+          {{ t('duty.todo.fields.title') }} <span class="text-dp-danger">*</span>
           <CharacterCounter :current="title.length" :max="50" />
         </label>
         <input
@@ -192,24 +195,24 @@ function onUploadError(message: string) {
           type="text"
           maxlength="50"
           class="form-control"
-          placeholder="할 일 제목을 입력하세요"
+          :placeholder="t('duty.todo.placeholders.title')"
         />
       </div>
 
       <div>
-        <label class="form-label">내용</label>
+        <label class="form-label">{{ t('duty.todo.fields.content') }}</label>
         <textarea
           v-model="content"
           rows="6"
           class="form-control"
-          placeholder="상세 내용을 입력하세요"
+          :placeholder="t('duty.todo.placeholders.content')"
         ></textarea>
       </div>
 
       <div>
         <label class="form-label">
           <Calendar class="w-4 h-4 inline-block mr-1 -mt-0.5" />
-          마감일
+          {{ t('duty.todo.fields.dueDate') }}
         </label>
         <input
           v-model="dueDate"
@@ -219,7 +222,7 @@ function onUploadError(message: string) {
       </div>
 
       <div v-if="props.friends.length > 0">
-        <label class="block text-sm font-medium mb-2 text-dp-text-secondary">친구 태그</label>
+        <label class="block text-sm font-medium mb-2 text-dp-text-secondary">{{ t('duty.todo.fields.friendTag') }}</label>
         <FriendTagSelector
           v-model="tagFriendIds"
           :friends="props.friends"
@@ -229,7 +232,7 @@ function onUploadError(message: string) {
 
       <!-- Attachment Upload -->
       <div>
-        <label class="form-label">첨부파일</label>
+        <label class="form-label">{{ t('duty.todo.fields.attachments') }}</label>
         <FileUploader
           v-if="isOpen"
           ref="fileUploaderRef"
@@ -249,14 +252,14 @@ function onUploadError(message: string) {
         @click="handleClose"
         class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
       >
-        취소
+        {{ t('common.actions.cancel') }}
       </button>
       <button
         @click="handleSave"
         :disabled="!title.trim() || isUploading"
         class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
       >
-        {{ isUploading ? '업로드 중...' : '저장' }}
+        {{ isUploading ? t('duty.common.uploading') : t('duty.todo.actions.save') }}
       </button>
     </div>
   </BaseModal>

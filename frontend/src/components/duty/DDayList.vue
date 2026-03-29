@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { CalendarCheck, Lock, Plus, Star } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 import type { LocalDDay } from '@/views/duty/dutyViewTypes'
 
 defineProps<{
@@ -13,6 +14,8 @@ const emit = defineEmits<{
   (e: 'toggle-pin', dday: LocalDDay): void
   (e: 'add'): void
 }>()
+
+const { t } = useI18n()
 
 function getDDayBadgeClass(calc: number): string {
   if (calc === 0) {
@@ -60,7 +63,7 @@ function getDDayBadgeClass(calc: number): string {
             @click.stop="emit('toggle-pin', dday)"
             class="p-1 sm:p-1.5 rounded-full transition hover:scale-110 cursor-pointer"
             :class="pinnedDDayId === dday.id ? 'hover:bg-dp-warning-soft' : 'hover:bg-dp-bg-hover'"
-            :title="pinnedDDayId === dday.id ? '고정 해제' : '캘린더에 고정'"
+            :title="pinnedDDayId === dday.id ? t('duty.ddayList.unpin') : t('duty.ddayList.pinToCalendar')"
           >
             <Star
               class="w-4 h-4 sm:w-5 sm:h-5 transition-colors"
@@ -92,7 +95,7 @@ function getDDayBadgeClass(calc: number): string {
       <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full group-hover:bg-dp-accent-soft flex items-center justify-center mb-1.5 sm:mb-2 transition-colors bg-dp-bg-tertiary">
         <Plus class="w-5 h-5 sm:w-6 sm:h-6 group-hover:text-dp-accent transition-colors text-dp-text-muted" />
       </div>
-      <span class="text-xs sm:text-sm group-hover:text-dp-accent transition-colors font-medium text-dp-text-muted">디데이 추가</span>
+      <span class="text-xs sm:text-sm group-hover:text-dp-accent transition-colors font-medium text-dp-text-muted">{{ t('duty.ddayList.add') }}</span>
     </div>
   </div>
 </template>

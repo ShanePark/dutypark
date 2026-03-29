@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { isLightColor } from '@/utils/color'
 import type { HolidayDto } from '@/types'
 
@@ -38,7 +39,11 @@ const emit = defineEmits<{
   (e: 'day-click', day: CalendarDay, index: number): void
 }>()
 
-const weekDays = ['일', '월', '화', '수', '목', '금', '토']
+const { locale } = useI18n()
+const weekDays = computed(() => {
+  const formatter = new Intl.DateTimeFormat(locale.value, { weekday: 'short' })
+  return Array.from({ length: 7 }, (_, index) => formatter.format(new Date(2024, 0, 7 + index)))
+})
 
 // Determine if a day is the current month
 function isCurrentMonth(day: CalendarDay): boolean {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { X, Star, Pencil, Trash2, Lock, CalendarCheck } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 
 interface DDay {
@@ -20,6 +21,8 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+const { t, locale } = useI18n()
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -54,7 +57,7 @@ function handleTogglePin() {
 const formattedDate = computed(() => {
   if (!props.dday) return ''
   const date = new Date(props.dday.date)
-  return date.toLocaleDateString('ko-KR', {
+  return date.toLocaleDateString(locale.value, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -93,7 +96,7 @@ const ddayBadgeClass = computed(() => {
   >
     <template v-if="dday">
       <div class="modal-header">
-        <h2>디데이 상세</h2>
+        <h2>{{ t('duty.ddayDetail.title') }}</h2>
         <button
           @click="handleClose"
           class="p-2 rounded-full hover-close-btn cursor-pointer"
@@ -114,7 +117,7 @@ const ddayBadgeClass = computed(() => {
 
         <div>
           <label class="block text-xs font-medium mb-1 text-dp-text-muted">
-            제목
+            {{ t('duty.ddayDetail.labels.title') }}
           </label>
           <p class="text-lg flex items-center gap-2 text-dp-text-primary">
             <Lock v-if="dday.isPrivate" class="w-4 h-4 flex-shrink-0 text-dp-text-muted" />
@@ -124,7 +127,7 @@ const ddayBadgeClass = computed(() => {
 
         <div>
           <label class="block text-xs font-medium mb-1 text-dp-text-muted">
-            날짜
+            {{ t('duty.ddayDetail.labels.date') }}
           </label>
           <p class="text-base flex items-center gap-2 text-dp-text-primary">
             <CalendarCheck class="w-4 h-4 text-dp-text-muted" />
@@ -140,7 +143,7 @@ const ddayBadgeClass = computed(() => {
               :style="!isPinned ? { color: 'var(--dp-text-muted)' } : {}"
             />
             <span class="text-sm text-dp-text-primary">
-              {{ isPinned ? '캘린더에 고정됨' : '캘린더에 고정하기' }}
+              {{ isPinned ? t('duty.ddayDetail.pinEnabled') : t('duty.ddayDetail.pinDisabled') }}
             </span>
           </div>
           <button
@@ -164,7 +167,7 @@ const ddayBadgeClass = computed(() => {
             class="flex items-center gap-1.5 px-3 py-2 rounded-lg transition btn-outline cursor-pointer"
           >
             <Pencil class="w-4 h-4" />
-            수정
+            {{ t('duty.ddayDetail.edit') }}
           </button>
           <button
             v-if="canEdit"
@@ -172,14 +175,14 @@ const ddayBadgeClass = computed(() => {
             class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-dp-danger border border-dp-danger-border hover:bg-dp-danger-soft transition cursor-pointer"
           >
             <Trash2 class="w-4 h-4" />
-            삭제
+            {{ t('common.actions.delete') }}
           </button>
         </div>
         <button
           @click="handleClose"
           class="px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
         >
-          닫기
+          {{ t('common.actions.close') }}
         </button>
       </div>
     </template>

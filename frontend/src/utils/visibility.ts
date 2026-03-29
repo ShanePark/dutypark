@@ -1,4 +1,5 @@
 import { Eye, Users, House, Lock, type LucideIcon } from 'lucide-vue-next'
+import { translateGlobal } from '@/i18n'
 
 export type CalendarVisibility = 'PUBLIC' | 'FRIENDS' | 'FAMILY' | 'PRIVATE'
 
@@ -7,20 +8,6 @@ export const VISIBILITY_ICONS: Record<CalendarVisibility, LucideIcon> = {
   FRIENDS: Users,
   FAMILY: House,
   PRIVATE: Lock,
-}
-
-export const VISIBILITY_LABELS: Record<CalendarVisibility, string> = {
-  PUBLIC: '전체공개',
-  FRIENDS: '친구공개',
-  FAMILY: '가족공개',
-  PRIVATE: '비공개',
-}
-
-export const VISIBILITY_DESCRIPTIONS: Record<CalendarVisibility, string> = {
-  PUBLIC: '누구나 볼 수 있는 일정이에요.',
-  FRIENDS: '친구로 연결된 사람만 볼 수 있는 일정이에요.',
-  FAMILY: '가족으로 연결된 사람만 볼 수 있는 일정이에요.',
-  PRIVATE: '나만 볼 수 있는 일정이에요.',
 }
 
 export const VISIBILITY_COLORS: Record<CalendarVisibility, string> = {
@@ -39,9 +26,31 @@ export function getVisibilityIcon(visibility: string): LucideIcon {
 }
 
 export function getVisibilityLabel(visibility: string): string {
-  return VISIBILITY_LABELS[visibility as CalendarVisibility] || visibility
+  switch (visibility as CalendarVisibility) {
+    case 'PUBLIC':
+      return translateGlobal('visibility.labels.public')
+    case 'FRIENDS':
+      return translateGlobal('visibility.labels.friends')
+    case 'FAMILY':
+      return translateGlobal('visibility.labels.family')
+    case 'PRIVATE':
+      return translateGlobal('visibility.labels.private')
+    default:
+      return visibility
+  }
 }
 
 export function getVisibilityDescription(visibility: string): string {
-  return VISIBILITY_DESCRIPTIONS[visibility as CalendarVisibility] || '설정된 공개 범위예요.'
+  switch (visibility as CalendarVisibility) {
+    case 'PUBLIC':
+      return translateGlobal('visibility.descriptions.public')
+    case 'FRIENDS':
+      return translateGlobal('visibility.descriptions.friends')
+    case 'FAMILY':
+      return translateGlobal('visibility.descriptions.family')
+    case 'PRIVATE':
+      return translateGlobal('visibility.descriptions.private')
+    default:
+      return translateGlobal('visibility.descriptions.fallback')
+  }
 }

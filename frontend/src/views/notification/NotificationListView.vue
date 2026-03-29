@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Bell, Trash2, CheckCheck } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
@@ -13,13 +14,13 @@ import type { NotificationDto, Page } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 
 dayjs.extend(relativeTime)
-dayjs.locale('ko')
 
 const notificationStore = useNotificationStore()
 const { navigateToNotification } = useNotificationNavigation()
 const { toastSuccess, toastError, showInfo, confirm } = useSwal()
 const route = useRoute()
 const router = useRouter()
+const { locale, t } = useI18n()
 
 const notifications = ref<NotificationDto[]>([])
 const isLoading = ref(false)
@@ -28,6 +29,7 @@ const totalPages = ref(0)
 const pageSize = 20
 
 const hasMorePages = computed(() => currentPage.value < totalPages.value - 1)
+const dayjsLocale = computed(() => (locale.value.startsWith('en') ? 'en' : 'ko'))
 
 const getPushId = () => {
   const pushId = route.query.pushId
@@ -59,13 +61,13 @@ const handlePushRedirect = async (): Promise<boolean> => {
 
     const navigated = await navigateToNotification(notification, {
       onScheduleError: () => {
-        toastError('스케줄 정보를 불러오는데 실패했습니다')
+        toastError(t('notifications.messages.scheduleLoadFailed'))
       }
     })
     return navigated
   } catch (error) {
     console.error('Failed to handle push notification:', error)
-    toastError('푸시 알림을 열지 못했습니다')
+    toastError(t('notifications.messages.pushOpenFailed'))
     await clearPushQuery()
     return false
   }
@@ -84,7 +86,7 @@ async function loadNotifications(page: number = 0) {
     totalPages.value = response.totalPages
   } catch (error) {
     console.error('Failed to load notifications:', error)
-    toastError('알림을 불러오는데 실패했습니다')
+    toastError(t('notifications.messages.loadFailed'))
   } finally {
     isLoading.value = false
   }
@@ -97,11 +99,12 @@ async function loadMore() {
 }
 
 function formatTimeAgo(dateString: string): string {
-  return dayjs(dateString).fromNow()
+  return dayjs(dateString).locale(dayjsLocale.value).fromNow()
 }
 
 function formatDate(dateString: string): string {
-  return dayjs(dateString).format('YYYY.MM.DD HH:mm')
+  const format = dayjsLocale.value === 'en' ? 'MMM D, YYYY HH:mm' : 'YYYY.MM.DD HH:mm'
+  return dayjs(dateString).locale(dayjsLocale.value).format(format)
 }
 
 async function handleNotificationClick(notification: NotificationDto) {
@@ -118,7 +121,7 @@ async function handleNotificationClick(notification: NotificationDto) {
 
   await navigateToNotification(notification, {
     onScheduleError: () => {
-      toastError('스케줄 정보를 불러오는데 실패했습니다')
+      toastError(t('notifications.messages.scheduleLoadFailed'))
     }
   })
 }
@@ -126,45 +129,48 @@ async function handleNotificationClick(notification: NotificationDto) {
 async function handleDeleteNotification(notification: NotificationDto, event: Event) {
   event.stopPropagation()
 
-  const confirmed = await confirm('이 알림을 삭제하시겠습니까?', '알림 삭제')
+  const confirmed = await confirm(
+    t('notifications.list.deleteConfirmMessage'),
+    t('notifications.list.deleteConfirmTitle')
+  )
   if (!confirmed) return
 
   try {
     await notificationApi.deleteNotification(notification.id)
     notifications.value = notifications.value.filter(n => n.id !== notification.id)
-    toastSuccess('알림이 삭제되었습니다')
+    toastSuccess(t('notifications.messages.deleteSuccess'))
     notificationStore.fetchUnreadCount()
   } catch {
-    toastError('알림 삭제에 실패했습니다')
+    toastError(t('notifications.messages.deleteFailed'))
   }
 }
 
 async function handleDeleteAllRead() {
   const readNotifications = notifications.value.filter(n => n.isRead)
   if (readNotifications.length === 0) {
-    showInfo('삭제할 읽은 알림이 없습니다')
+    showInfo(t('notifications.list.noReadNotifications'))
     return
   }
 
   const confirmed = await confirm(
-    `읽은 알림 ${readNotifications.length}개를 모두 삭제하시겠습니까?`,
-    '읽은 알림 삭제'
+    t('notifications.list.deleteAllReadConfirm', { count: readNotifications.length }),
+    t('notifications.list.deleteAllReadTitle')
   )
   if (!confirmed) return
 
   try {
     const result = await notificationApi.deleteAllRead()
     notifications.value = notifications.value.filter(n => !n.isRead)
-    toastSuccess(`${result.count}개의 알림이 삭제되었습니다`)
+    toastSuccess(t('notifications.messages.deleteAllReadSuccess', { count: result.count }))
   } catch {
-    toastError('알림 삭제에 실패했습니다')
+    toastError(t('notifications.messages.deleteFailed'))
   }
 }
 
 async function handleMarkAllAsRead() {
   const unreadNotifications = notifications.value.filter(n => !n.isRead)
   if (unreadNotifications.length === 0) {
-    showInfo('읽지 않은 알림이 없습니다')
+    showInfo(t('notifications.list.noUnreadNotifications'))
     return
   }
 
@@ -172,9 +178,9 @@ async function handleMarkAllAsRead() {
     await notificationApi.markAllAsRead()
     notifications.value.forEach(n => (n.isRead = true))
     notificationStore.fetchUnreadCount()
-    toastSuccess('모든 알림을 읽음으로 표시했습니다')
+    toastSuccess(t('notifications.messages.markAllAsReadSuccess'))
   } catch {
-    toastError('알림 처리에 실패했습니다')
+    toastError(t('notifications.messages.markAllAsReadFailed'))
   }
 }
 
@@ -203,7 +209,7 @@ watch(
     <div class="notification-list-header flex items-center justify-between mb-4">
       <div class="flex items-center gap-3">
         <Bell class="w-6 h-6" />
-        <h1 class="text-xl font-bold">알림</h1>
+        <h1 class="text-xl font-bold">{{ t('notifications.list.title') }}</h1>
       </div>
       <div class="flex items-center gap-2">
         <button
@@ -212,7 +218,7 @@ watch(
           @click="handleMarkAllAsRead"
         >
           <CheckCheck class="w-4 h-4" />
-          <span class="hidden sm:inline">전체 읽음</span>
+          <span class="hidden sm:inline">{{ t('notifications.list.markAllAsRead') }}</span>
         </button>
         <button
           type="button"
@@ -220,25 +226,25 @@ watch(
           @click="handleDeleteAllRead"
         >
           <Trash2 class="w-4 h-4" />
-          <span class="hidden sm:inline">읽은 알림 삭제</span>
+          <span class="hidden sm:inline">{{ t('notifications.list.deleteRead') }}</span>
         </button>
       </div>
     </div>
 
     <!-- Retention Notice -->
     <p class="notification-retention-notice text-xs mb-4">
-      알림은 30일간 보관됩니다.
+      {{ t('notifications.list.retentionNotice') }}
     </p>
 
     <!-- Notification List -->
     <div class="notification-list-container card">
       <div v-if="isLoading && notifications.length === 0" class="p-8 text-center">
-        <span class="notification-loading-text text-sm">불러오는 중...</span>
+        <span class="notification-loading-text text-sm">{{ t('notifications.common.loading') }}</span>
       </div>
 
       <div v-else-if="notifications.length === 0" class="p-12 text-center">
         <Bell class="w-12 h-12 mx-auto mb-4 notification-empty-icon" />
-        <p class="notification-empty-text text-sm">알림이 없습니다</p>
+        <p class="notification-empty-text text-sm">{{ t('notifications.common.empty') }}</p>
       </div>
 
       <template v-else>
@@ -266,7 +272,7 @@ watch(
                 type="button"
                 class="notification-delete-icon-btn cursor-pointer p-1.5 rounded-full transition-all duration-150 flex-shrink-0"
                 @click="handleDeleteNotification(notification, $event)"
-                aria-label="삭제"
+                :aria-label="t('common.actions.delete')"
               >
                 <Trash2 class="w-4 h-4" />
               </button>
@@ -293,7 +299,7 @@ watch(
             :disabled="isLoading"
             @click="loadMore"
           >
-            {{ isLoading ? '불러오는 중...' : '더보기' }}
+            {{ isLoading ? t('notifications.common.loading') : t('notifications.list.loadMore') }}
           </button>
         </div>
       </template>
