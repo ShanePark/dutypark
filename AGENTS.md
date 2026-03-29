@@ -33,6 +33,7 @@ Use this file for repo-wide defaults only. Keep it lean; read the code and nearb
 - Respect visibility and ownership gates: `FriendService`, `SchedulePermissionService`, `AttachmentPermissionEvaluator`, manager checks.
 - Cookie auth and Bearer auth both exist. Do not remove one path without checking `JwtAuthFilter`, `CookieService`, backend auth controllers, and `frontend/src/api/client.ts`.
 - Scheduled cleanup jobs currently run for refresh tokens at 00:00, attachment sessions at 02:00, notifications at 02:30, and login attempts at 03:00.
+- For user-facing backend text, prefer message codes plus `MessageSource` over hardcoded strings. Keep the default English bundle in `src/main/resources/messages.properties`, and add locale-specific overrides in `messages_ko.properties` / `messages_ja.properties` only when they differ.
 
 ### Frontend
 
@@ -40,9 +41,13 @@ Use this file for repo-wide defaults only. Keep it lean; read the code and nearb
 - Keep authenticated HTTP work inside `frontend/src/api/*.ts`; use shared interfaces from `frontend/src/types/index.ts`.
 - Use `useSwal()` for confirmations and user-facing alerts.
 - Auth is cookie-based through the shared Axios client. Do not add access-token persistence in localStorage.
+- Put user-facing UI copy in `frontend/src/i18n/messages/*.ts`; do not leave hardcoded Korean or English strings in components, composables, or view files unless the string is truly non-user-facing.
+- Keep auto-detected locale separate from explicit user choice. Browser locale may drive first render or language suggestions, but it should not be treated as a confirmed preference until the user accepts or picks a language.
+- In locale pickers and language settings, show language names in their native forms (`한국어`, `English`, `日本語`) rather than translating the language names to the current UI language.
 - Style with Tailwind utilities and `--dp-*` tokens from `frontend/src/style.css`. Avoid hardcoded hex colors or theme-blind utility colors for surfaces, borders, and text.
 - Design frontend UI to work well on both mobile and desktop by default. Check responsive layout, spacing, overflow, and interaction ergonomics across narrow and wide viewports instead of optimizing for only one screen size. For mobile verification, check both iPhone 16 Pro (402 x 874 CSS px) and iPhone 13 mini (375 x 812 CSS px) portrait viewport sizes.
 - Verify user-facing frontend UI in both light and dark modes when checking visual quality, layout, or interaction changes.
+- For tight mobile UI slots such as footer tabs, calendar cells, pills, and compact buttons, add dedicated short translation keys instead of reusing longer desktop copy.
 - Inline `:style` is acceptable only for runtime-dependent values or CSS-variable-backed colors already common in the codebase.
 - Keep interactive targets at least 44px and preserve visible hover/focus feedback.
 - When a task depends on visual quality, layout balance, or interaction polish, verify the result in the browser and iterate. Use Playwright for direct visual checks and feedback loops when static code inspection is not enough.
