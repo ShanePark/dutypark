@@ -4,7 +4,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore, type ThemeMode } from '@/stores/theme'
-import { useLocaleStore, type SupportedLocale } from '@/stores/locale'
 import { memberApi, refreshTokenApi } from '@/api/member'
 import { authApi } from '@/api/auth'
 import { useSwal } from '@/composables/useSwal'
@@ -36,7 +35,6 @@ import {
   Loader2,
   Sun,
   Moon,
-  Languages,
   Users,
   LogIn,
   Plus,
@@ -48,7 +46,6 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const themeStore = useThemeStore()
-const localeStore = useLocaleStore()
 const { t } = useI18n()
 const { showSuccess, showError, showInfo, confirm, toastSuccess } = useSwal()
 
@@ -200,38 +197,6 @@ const currentThemeLabel = computed(() => {
 
 function setTheme(mode: ThemeMode) {
   themeStore.setTheme(mode)
-}
-
-const languageOptions = computed<
-  { value: SupportedLocale; title: string; description: string }[]
->(() => [
-  {
-    value: 'ko',
-    title: t('member.language.options.ko.title'),
-    description: t('member.language.options.ko.description'),
-  },
-  {
-    value: 'en',
-    title: t('member.language.options.en.title'),
-    description: t('member.language.options.en.description'),
-  },
-])
-
-const currentLanguageLabel = computed(() => {
-  return localeStore.locale === 'en'
-    ? t('member.language.options.en.title')
-    : t('member.language.options.ko.title')
-})
-
-async function handleLocaleChange(nextLocale: SupportedLocale) {
-  if (localeStore.locale === nextLocale) return
-
-  try {
-    await localeStore.setLocale(nextLocale, { persist: authStore.isLoggedIn })
-  } catch (error: any) {
-    const errorMessage = error.response?.data?.message || t('member.language.updateFailed')
-    showError(errorMessage)
-  }
 }
 
 // Loading states
@@ -737,43 +702,6 @@ onMounted(async () => {
             <ChevronRight class="w-4 h-4" />
           </button>
         </div>
-      </section>
-
-      <!-- Language Settings Section -->
-      <section class="rounded-xl shadow-sm p-6 mb-4 bg-dp-bg-card border border-dp-border-primary">
-        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-dp-text-primary">
-          <Languages class="w-5 h-5 text-dp-text-secondary" />
-          {{ t('member.language.sectionTitle') }}
-        </h2>
-        <p class="text-sm mb-4 text-dp-text-secondary">
-          {{ t('member.language.description') }}
-        </p>
-        <div class="flex flex-col sm:flex-row gap-3">
-          <button
-            v-for="option in languageOptions"
-            :key="option.value"
-            @click="handleLocaleChange(option.value)"
-            class="flex-1 px-4 py-3 rounded-lg font-medium transition text-left cursor-pointer"
-            :class="{ 'hover:scale-[1.02]': localeStore.locale !== option.value }"
-            :style="{
-              borderWidth: '2px',
-              borderColor: localeStore.locale === option.value ? 'var(--dp-accent)' : 'var(--dp-border-primary)',
-              backgroundColor: localeStore.locale === option.value ? 'var(--dp-accent-bg)' : 'var(--dp-bg-secondary)',
-              color: localeStore.locale === option.value ? 'var(--dp-accent)' : 'var(--dp-text-primary)'
-            }"
-          >
-            <span class="block">{{ option.title }}</span>
-            <span
-              class="block mt-1 text-xs"
-              :style="{ color: localeStore.locale === option.value ? 'var(--dp-accent)' : 'var(--dp-text-muted)' }"
-            >
-              {{ option.description }}
-            </span>
-          </button>
-        </div>
-        <p class="text-sm mt-3 text-dp-text-muted">
-          {{ t('member.language.current', { language: currentLanguageLabel }) }}
-        </p>
       </section>
 
       <!-- Theme Settings Section -->

@@ -39,11 +39,43 @@ const emit = defineEmits<{
   (e: 'day-click', day: CalendarDay, index: number): void
 }>()
 
-const { locale } = useI18n()
+type HolidayLabelVariant = 'full' | 'short'
+
+const { locale, t } = useI18n()
 const weekDays = computed(() => {
   const formatter = new Intl.DateTimeFormat(locale.value, { weekday: 'short' })
   return Array.from({ length: 7 }, (_, index) => formatter.format(new Date(2024, 0, 7 + index)))
 })
+
+function translateHolidayName(dateName: string, variant: HolidayLabelVariant = 'full'): string {
+  const normalized = dateName.trim()
+  const substituteHoliday = normalized.match(/^대체공휴일\((.+)\)$/)
+  const messageNamespace = variant === 'short' ? 'holidayNamesShort' : 'holidayNames'
+  if (substituteHoliday) {
+    return t(`${messageNamespace}.substituteHolidayWithName`, {
+      name: translateHolidayName(substituteHoliday[1] ?? '', variant),
+    })
+  }
+
+  const holidayMap: Record<string, string> = {
+    신정: `${messageNamespace}.newYear`,
+    설날: `${messageNamespace}.lunarNewYear`,
+    삼일절: `${messageNamespace}.independenceMovementDay`,
+    어린이날: `${messageNamespace}.childrenDay`,
+    부처님오신날: `${messageNamespace}.buddhaBirthday`,
+    현충일: `${messageNamespace}.memorialDay`,
+    광복절: `${messageNamespace}.liberationDay`,
+    개천절: `${messageNamespace}.nationalFoundationDay`,
+    한글날: `${messageNamespace}.hangulDay`,
+    크리스마스: `${messageNamespace}.christmas`,
+    성탄절: `${messageNamespace}.christmas`,
+    추석: `${messageNamespace}.chuseok`,
+    대체공휴일: `${messageNamespace}.substituteHoliday`,
+  }
+
+  const messageKey = holidayMap[normalized]
+  return messageKey ? t(messageKey) : normalized
+}
 
 // Determine if a day is the current month
 function isCurrentMonth(day: CalendarDay): boolean {
@@ -191,10 +223,11 @@ function handleDayClick(day: CalendarDay, index: number) {
         <div
           v-for="holiday in (holidays[idx] ?? [])"
           :key="holiday.localDate + holiday.dateName"
-          class="text-[10px] sm:text-sm leading-snug px-0.5"
+          class="block truncate text-[10px] sm:text-sm leading-snug px-0.5"
+          :title="translateHolidayName(holiday.dateName)"
           :style="{ color: getHolidayColor(day, holiday) }"
         >
-          {{ holiday.dateName }}
+          {{ translateHolidayName(holiday.dateName, 'short') }}
         </div>
 
         <!-- Slot for day content (schedules, D-Days, etc.) -->

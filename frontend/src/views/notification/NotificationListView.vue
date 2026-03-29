@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { Bell, Trash2, CheckCheck } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
+import 'dayjs/locale/ja'
 import 'dayjs/locale/ko'
 import { notificationApi } from '@/api/notification'
 import { useNotificationStore } from '@/stores/notification'
@@ -29,7 +30,11 @@ const totalPages = ref(0)
 const pageSize = 20
 
 const hasMorePages = computed(() => currentPage.value < totalPages.value - 1)
-const dayjsLocale = computed(() => (locale.value.startsWith('en') ? 'en' : 'ko'))
+const dayjsLocale = computed(() => {
+  if (locale.value.startsWith('ja')) return 'ja'
+  if (locale.value.startsWith('en')) return 'en'
+  return 'ko'
+})
 
 const getPushId = () => {
   const pushId = route.query.pushId
@@ -103,7 +108,11 @@ function formatTimeAgo(dateString: string): string {
 }
 
 function formatDate(dateString: string): string {
-  const format = dayjsLocale.value === 'en' ? 'MMM D, YYYY HH:mm' : 'YYYY.MM.DD HH:mm'
+  const format = dayjsLocale.value === 'en'
+    ? 'MMM D, YYYY HH:mm'
+    : dayjsLocale.value === 'ja'
+      ? 'YYYY/MM/DD HH:mm'
+      : 'YYYY.MM.DD HH:mm'
   return dayjs(dateString).locale(dayjsLocale.value).format(format)
 }
 

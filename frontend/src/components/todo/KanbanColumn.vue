@@ -20,21 +20,24 @@ const emit = defineEmits<{
 }>()
 const { t } = useI18n()
 
-const statusConfig: Record<TodoStatus, { labelKey: string; bgClass: string; textClass: string; icon: Component }> = {
+const statusConfig: Record<TodoStatus, { labelKey: string; shortLabelKey: string; bgClass: string; textClass: string; icon: Component }> = {
   TODO: {
     labelKey: 'todoBoard.status.todo',
+    shortLabelKey: 'todoBoard.statusShort.todo',
     bgClass: 'kanban-column-todo',
     textClass: 'kanban-title-todo',
     icon: ListTodo,
   },
   IN_PROGRESS: {
     labelKey: 'todoBoard.status.inProgress',
+    shortLabelKey: 'todoBoard.statusShort.inProgress',
     bgClass: 'kanban-column-in-progress',
     textClass: 'kanban-title-in-progress',
     icon: Clock,
   },
   DONE: {
     labelKey: 'todoBoard.status.done',
+    shortLabelKey: 'todoBoard.statusShort.done',
     bgClass: 'kanban-column-done',
     textClass: 'kanban-title-done',
     icon: CheckCircle2,
@@ -56,7 +59,8 @@ const statusConfig: Record<TodoStatus, { labelKey: string; bgClass: string; text
       >
         <h3 class="kanban-column-title" :class="statusConfig[status].textClass">
           <component :is="statusConfig[status].icon" class="kanban-column-icon" />
-          {{ t(statusConfig[status].labelKey) }}
+          <span class="sm:hidden">{{ t(statusConfig[status].shortLabelKey) }}</span>
+          <span class="hidden sm:inline">{{ t(statusConfig[status].labelKey) }}</span>
         </h3>
         <span class="kanban-column-count" :class="statusConfig[status].textClass">{{ count }}</span>
       </div>

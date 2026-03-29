@@ -6,6 +6,7 @@ import com.tistory.shanepark.dutypark.notification.domain.entity.Notification
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationReferenceType
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationType
 import com.tistory.shanepark.dutypark.notification.domain.repository.NotificationRepository
+import com.tistory.shanepark.dutypark.notification.service.NotificationMessageResolver
 import com.tistory.shanepark.dutypark.notification.service.NotificationService
 import com.tistory.shanepark.dutypark.push.dto.PushNotificationPayload
 import com.tistory.shanepark.dutypark.push.service.WebPushService
@@ -22,6 +23,8 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
+import org.springframework.context.support.ReloadableResourceBundleMessageSource
+import java.nio.charset.StandardCharsets
 import java.util.Optional
 import java.util.UUID
 
@@ -31,12 +34,21 @@ class NotificationEventListenerTest {
     private val notificationRepository: NotificationRepository = mock()
     private val memberRepository: MemberRepository = mock()
     private val webPushService: WebPushService = mock()
+    private val notificationMessageResolver = NotificationMessageResolver(
+        ReloadableResourceBundleMessageSource().apply {
+            setBasenames("classpath:messages")
+            setDefaultEncoding(StandardCharsets.UTF_8.name())
+            setFallbackToSystemLocale(false)
+            setUseCodeAsDefaultMessage(true)
+        }
+    )
 
     private val listener = NotificationEventListener(
         notificationService = notificationService,
         notificationRepository = notificationRepository,
         memberRepository = memberRepository,
-        webPushService = webPushService
+        webPushService = webPushService,
+        notificationMessageResolver = notificationMessageResolver,
     )
 
     @Test

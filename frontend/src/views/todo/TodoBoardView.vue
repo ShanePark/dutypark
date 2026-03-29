@@ -40,9 +40,9 @@ const doneList = computed(() => board.value?.done ?? [])
 
 const counts = computed(() => board.value?.counts ?? { todo: 0, inProgress: 0, done: 0, total: 0 })
 const statusTabs: Array<{ status: TodoStatus; label: string; icon: typeof ListTodo }> = [
-  { status: 'TODO', label: t('todoBoard.status.todo'), icon: ListTodo },
-  { status: 'IN_PROGRESS', label: t('todoBoard.status.inProgress'), icon: Clock },
-  { status: 'DONE', label: t('todoBoard.status.done'), icon: CheckCircle2 },
+  { status: 'TODO', label: t('todoBoard.statusShort.todo'), icon: ListTodo },
+  { status: 'IN_PROGRESS', label: t('todoBoard.statusShort.inProgress'), icon: Clock },
+  { status: 'DONE', label: t('todoBoard.statusShort.done'), icon: CheckCircle2 },
 ]
 
 function getStatusCount(status: TodoStatus): number {
@@ -871,6 +871,7 @@ onBeforeUnmount(() => {
 
 .todo-board-tab-label {
   text-align: left;
+  white-space: nowrap;
 }
 
 .todo-board-tab-count {

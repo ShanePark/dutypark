@@ -1,6 +1,8 @@
 package com.tistory.shanepark.dutypark.notification.service
 
+import com.tistory.shanepark.dutypark.common.config.DutyparkLocale
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.notification.domain.entity.Notification
@@ -12,6 +14,7 @@ import com.tistory.shanepark.dutypark.notification.dto.NotificationDto
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
+import org.springframework.context.i18n.LocaleContextHolder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
@@ -21,7 +24,8 @@ import java.util.*
 class NotificationService(
     private val notificationRepository: NotificationRepository,
     private val memberRepository: MemberRepository,
-    private val friendRequestRepository: FriendRequestRepository
+    private val friendRequestRepository: FriendRequestRepository,
+    private val notificationMessageResolver: NotificationMessageResolver,
 ) {
 
     @Transactional(readOnly = true)
@@ -64,7 +68,7 @@ class NotificationService(
         notificationRepository.save(notification)
 
         val actor = notification.actorId?.let { memberRepository.findById(it).orElse(null) }
-        return NotificationDto.of(notification, actor)
+        return toDto(notification, actor)
     }
 
     fun markAllAsRead(memberId: Long): Int {
@@ -101,7 +105,8 @@ class NotificationService(
             memberRepository.findById(id).orElse(null)?.name ?: "Unknown"
         } ?: "Unknown"
 
-        val title = type.generateTitle(actorName, content)
+        val locale = Locale.forLanguageTag(DutyparkLocale.normalize(member.preferredLocale))
+        val title = notificationMessageResolver.resolveTitle(type, locale, actorName, content)
 
         val notification = Notification(
             member = member,
@@ -126,7 +131,14 @@ class NotificationService(
 
         return notifications.map { notification ->
             val actor = notification.actorId?.let { actorMap[it] }
-            NotificationDto.of(notification, actor)
+            toDto(notification, actor)
         }
+    }
+
+    private fun toDto(notification: Notification, actor: Member?): NotificationDto {
+        val locale = LocaleContextHolder.getLocale()
+        val actorName = actor?.name ?: "Unknown"
+        val title = notificationMessageResolver.resolveTitle(notification.type, locale, actorName, notification.content)
+        return NotificationDto.of(notification, actor, title)
     }
 }

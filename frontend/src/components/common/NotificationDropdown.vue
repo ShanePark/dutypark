@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { CheckCheck, ChevronRight } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
+import 'dayjs/locale/ja'
 import 'dayjs/locale/ko'
 import { useNotificationStore } from '@/stores/notification'
 import { useAuthStore } from '@/stores/auth'
@@ -31,7 +32,11 @@ const authStore = useAuthStore()
 const { navigateToNotification } = useNotificationNavigation()
 const { locale, t } = useI18n()
 
-const dayjsLocale = computed(() => (locale.value.startsWith('en') ? 'en' : 'ko'))
+const dayjsLocale = computed(() => {
+  if (locale.value.startsWith('ja')) return 'ja'
+  if (locale.value.startsWith('en')) return 'en'
+  return 'ko'
+})
 
 const displayNotifications = computed(() => {
   return notificationStore.recentNotifications.slice(0, 10)

@@ -23,10 +23,14 @@ data class NotificationDto(
 ) {
     companion object {
         fun of(notification: Notification, actor: Member?): NotificationDto {
+            return of(notification, actor, notification.title)
+        }
+
+        fun of(notification: Notification, actor: Member?, title: String = notification.title): NotificationDto {
             return NotificationDto(
                 id = notification.id,
                 type = notification.type,
-                title = notification.title,
+                title = title,
                 content = notification.content,
                 referenceType = notification.referenceType,
                 referenceId = notification.referenceId,

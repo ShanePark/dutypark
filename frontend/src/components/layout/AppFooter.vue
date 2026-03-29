@@ -143,7 +143,7 @@ function handleNavClick(item: { path: string; icon: string; label: string }, eve
                   d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
               />
             </svg>
-            <span>{{ item.label }}</span>
+            <span class="footer-nav-label">{{ item.label }}</span>
           </router-link>
         </li>
       </ul>
@@ -164,9 +164,20 @@ function handleNavClick(item: { path: string; icon: string; label: string }, eve
   line-height: 1.1;
 }
 
+.footer-nav-label {
+  display: block;
+  white-space: nowrap;
+  text-align: center;
+  font-size: 0.68rem;
+}
+
 @media (min-width: 640px) {
   .footer-shell {
     padding-bottom: 0;
+  }
+
+  .footer-nav-label {
+    font-size: 0.875rem;
   }
 }
 </style>

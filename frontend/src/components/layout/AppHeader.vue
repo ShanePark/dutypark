@@ -8,6 +8,7 @@ import { useSwal } from '@/composables/useSwal'
 import { Menu, Home, Calendar, Users, UserPlus, Bell, Shield, Settings, LogOut, Sun, Moon, BookOpen, ListTodo } from 'lucide-vue-next'
 import NotificationBell from '@/components/common/NotificationBell.vue'
 import NotificationDropdown from '@/components/common/NotificationDropdown.vue'
+import LocaleSwitcher from '@/components/layout/LocaleSwitcher.vue'
 import { useThemeStore } from '@/stores/theme'
 
 const router = useRouter()
@@ -103,12 +104,14 @@ onUnmounted(() => {
   <header
     :class="['fixed left-0 right-0 z-40 shadow-sm border-b header-bg', authStore.isImpersonating ? 'top-10' : 'top-0']"
   >
-    <div class="max-w-4xl mx-auto px-4">
+    <div class="max-w-4xl mx-auto px-3 sm:px-4">
       <div class="flex justify-between items-center h-12 sm:h-14">
-        <router-link to="/" class="text-xl font-bold header-title">
+        <router-link to="/" class="text-lg sm:text-xl font-bold header-title">
           Dutypark
         </router-link>
-        <nav class="flex items-center gap-1">
+        <nav class="flex items-center gap-0.5 sm:gap-1">
+          <LocaleSwitcher />
+
           <!-- Theme Toggle (always visible) -->
           <button
             type="button"
@@ -239,7 +242,7 @@ onUnmounted(() => {
           <template v-else>
             <router-link
               to="/guide"
-              class="guide-link text-xs sm:text-sm px-2 py-2 rounded-md transition-colors min-h-[44px] flex items-center"
+              class="guide-link hidden sm:flex text-sm px-2 py-2 rounded-md transition-colors min-h-[44px] items-center"
             >
               {{ t('header.menu.guide') }}
             </router-link>

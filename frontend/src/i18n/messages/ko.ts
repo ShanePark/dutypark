@@ -61,6 +61,8 @@ export default {
     actions: {
       switchToLightMode: '라이트 모드로 전환',
       switchToDarkMode: '다크 모드로 전환',
+      changeLanguage: '언어 변경',
+      languageUpdateFailed: '앱 언어 설정을 저장하지 못했습니다.',
       menu: '메뉴',
       login: '로그인',
     },
@@ -129,9 +131,9 @@ export default {
   },
   footer: {
     home: '홈',
-    myCalendar: '내 달력',
+    myCalendar: '달력',
     todo: '할일',
-    myTeam: '내 팀',
+    myTeam: '팀',
     settings: '설정',
   },
   impersonation: {
@@ -162,7 +164,45 @@ export default {
     names: {
       ko: '한국어',
       en: 'English',
+      ja: '日本語',
     },
+    suggestion: {
+      title: '{language}로 볼까요?',
+      description: '브라우저 언어를 기준으로 {language}가 감지되었습니다. 지금 이 언어로 계속 쓰거나, 다른 언어를 바로 선택할 수 있습니다.',
+      accept: '{language} 사용',
+      chooseOther: '다른 언어 고르기',
+      dismiss: '언어 제안 닫기',
+    },
+  },
+  holidayNames: {
+    newYear: '신정',
+    lunarNewYear: '설날',
+    independenceMovementDay: '삼일절',
+    childrenDay: '어린이날',
+    buddhaBirthday: '부처님오신날',
+    memorialDay: '현충일',
+    liberationDay: '광복절',
+    nationalFoundationDay: '개천절',
+    hangulDay: '한글날',
+    christmas: '크리스마스',
+    chuseok: '추석',
+    substituteHoliday: '대체공휴일',
+    substituteHolidayWithName: '{name} 대체공휴일',
+  },
+  holidayNamesShort: {
+    newYear: '신정',
+    lunarNewYear: '설날',
+    independenceMovementDay: '삼일절',
+    childrenDay: '어린이날',
+    buddhaBirthday: '부처님오신날',
+    memorialDay: '현충일',
+    liberationDay: '광복절',
+    nationalFoundationDay: '개천절',
+    hangulDay: '한글날',
+    christmas: '크리스마스',
+    chuseok: '추석',
+    substituteHoliday: '대휴',
+    substituteHolidayWithName: '{name} 대휴',
   },
   intro: {
     hero: {
@@ -311,6 +351,11 @@ export default {
     status: {
       todo: '할일',
       inProgress: '진행중',
+      done: '완료',
+    },
+    statusShort: {
+      todo: '할일',
+      inProgress: '진행',
       done: '완료',
     },
     actions: {

@@ -61,6 +61,8 @@ export default {
     actions: {
       switchToLightMode: 'Switch to light mode',
       switchToDarkMode: 'Switch to dark mode',
+      changeLanguage: 'Change language',
+      languageUpdateFailed: 'Failed to update the app language.',
       menu: 'Menu',
       login: 'Log in',
     },
@@ -129,9 +131,9 @@ export default {
   },
   footer: {
     home: 'Home',
-    myCalendar: 'My calendar',
+    myCalendar: 'Calendar',
     todo: 'To-do',
-    myTeam: 'My team',
+    myTeam: 'Team',
     settings: 'Settings',
   },
   impersonation: {
@@ -162,7 +164,45 @@ export default {
     names: {
       ko: 'Korean',
       en: 'English',
+      ja: 'Japanese',
     },
+    suggestion: {
+      title: 'Use {language}?',
+      description: 'Your browser is set to {language}. You can keep it or pick another language here anytime.',
+      accept: 'Use {language}',
+      chooseOther: 'Choose another',
+      dismiss: 'Dismiss language suggestion',
+    },
+  },
+  holidayNames: {
+    newYear: "New Year's Day",
+    lunarNewYear: 'Seollal',
+    independenceMovementDay: 'Independence Movement Day',
+    childrenDay: "Children's Day",
+    buddhaBirthday: "Buddha's Birthday",
+    memorialDay: 'Memorial Day',
+    liberationDay: 'Liberation Day',
+    nationalFoundationDay: 'National Foundation Day',
+    hangulDay: 'Hangul Day',
+    christmas: 'Christmas',
+    chuseok: 'Chuseok',
+    substituteHoliday: 'Substitute Holiday',
+    substituteHolidayWithName: '{name} Substitute Holiday',
+  },
+  holidayNamesShort: {
+    newYear: "New Year's",
+    lunarNewYear: 'Seollal',
+    independenceMovementDay: 'Mar 1',
+    childrenDay: "Kids' Day",
+    buddhaBirthday: 'Buddha Day',
+    memorialDay: 'Memorial',
+    liberationDay: 'Liberation',
+    nationalFoundationDay: 'Foundation',
+    hangulDay: 'Hangul',
+    christmas: 'Christmas',
+    chuseok: 'Chuseok',
+    substituteHoliday: 'Observed',
+    substituteHolidayWithName: '{name} Obs.',
   },
   intro: {
     hero: {
@@ -311,6 +351,11 @@ export default {
     status: {
       todo: 'To-do',
       inProgress: 'In progress',
+      done: 'Done',
+    },
+    statusShort: {
+      todo: 'To-do',
+      inProgress: 'Doing',
       done: 'Done',
     },
     actions: {

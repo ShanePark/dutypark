@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Pattern
 data class PreferredLocaleUpdateRequest(
     @field:NotBlank(message = "{member.preferredLocale.required}")
     @field:Pattern(
-        regexp = "^(ko|en)$",
+        regexp = "^(ko|en|ja)$",
         flags = [Pattern.Flag.CASE_INSENSITIVE],
         message = "{member.preferredLocale.unsupported}"
     )

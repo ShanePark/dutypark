@@ -115,7 +115,7 @@ class MemberControllerTest : RestDocsTest() {
                 document(
                     "members/update-preferred-locale",
                     requestFields(
-                        fieldWithPath("preferredLocale").description("Preferred locale code to store (ko or en)")
+                        fieldWithPath("preferredLocale").description("Preferred locale code to store (ko, en, or ja)")
                     ),
                     responseFields(
                         fieldWithPath("preferredLocale").description("Updated preferred locale code")
@@ -140,7 +140,7 @@ class MemberControllerTest : RestDocsTest() {
                 .withAuth(member)
         )
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.error").value("Preferred locale must be one of: ko, en."))
+            .andExpect(jsonPath("$.error").value("Preferred locale must be one of: ko, en, ja."))
     }
 
     @Test

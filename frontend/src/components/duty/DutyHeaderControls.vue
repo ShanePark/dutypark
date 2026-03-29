@@ -40,7 +40,7 @@ function handleSearchClick() {
 
 <template>
   <!-- Header: Profile + Year-Month (centered) + Search -->
-  <div class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center mb-2 px-1 gap-1">
+  <div class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center mb-2 px-1 gap-0.5 sm:gap-1">
     <!-- Left: Profile Photo + Name -->
     <div class="flex items-center gap-1.5 min-w-0">
       <!-- Profile Photo (smaller on mobile) -->
@@ -77,7 +77,7 @@ function handleSearchClick() {
           :placeholder="t('duty.header.searchPlaceholder')"
           @input="handleSearchInput"
           @keyup.enter="emit('search')"
-          class="px-2 py-1.5 text-sm focus:ring-2 focus:ring-dp-accent focus:outline-none w-16 sm:w-24 border-none bg-dp-bg-input text-dp-text-primary"
+          class="px-2 py-1.5 text-sm focus:ring-2 focus:ring-dp-accent focus:outline-none w-24 sm:w-28 border-none bg-dp-bg-input text-dp-text-primary"
         />
         <button
           @click="handleSearchClick"

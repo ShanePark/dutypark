@@ -71,6 +71,8 @@ describe('locale store', () => {
     store.initializeLocale()
 
     expect(store.locale).toBe('en')
+    expect(store.explicitLocale).toBe('en')
+    expect(store.shouldSuggestLocale).toBe(false)
     expect(document.documentElement.lang).toBe('en')
   })
 
@@ -83,7 +85,26 @@ describe('locale store', () => {
     store.initializeLocale()
 
     expect(store.locale).toBe('en')
-    expect(localStorageMock.setItem).toHaveBeenCalledWith('dp-locale', 'en')
+    expect(localStorageMock.setItem).not.toHaveBeenCalledWith('dp-locale', 'en')
+    expect(store.explicitLocale).toBeNull()
+    expect(store.detectedLocale).toBe('en')
+    expect(store.shouldSuggestLocale).toBe(true)
+  })
+
+  it('supports japanese browser locales', async () => {
+    setNavigatorLanguage('ja-JP')
+
+    const { useLocaleStore } = await import('./locale')
+    const store = useLocaleStore()
+
+    store.initializeLocale()
+
+    expect(store.locale).toBe('ja')
+    expect(localStorageMock.setItem).not.toHaveBeenCalledWith('dp-locale', 'ja')
+    expect(store.explicitLocale).toBeNull()
+    expect(store.detectedLocale).toBe('ja')
+    expect(store.shouldSuggestLocale).toBe(true)
+    expect(document.documentElement.lang).toBe('ja')
   })
 
   it('falls back to korean when the browser locale is unsupported', async () => {
@@ -95,6 +116,9 @@ describe('locale store', () => {
     store.initializeLocale()
 
     expect(store.locale).toBe('ko')
+    expect(store.explicitLocale).toBeNull()
+    expect(store.detectedLocale).toBe('ko')
+    expect(store.shouldSuggestLocale).toBe(false)
     expect(document.documentElement.lang).toBe('ko')
   })
 
@@ -102,11 +126,40 @@ describe('locale store', () => {
     const { useLocaleStore } = await import('./locale')
     const store = useLocaleStore()
 
-    await store.setLocale('en')
+    await store.setLocale('ja')
+
+    expect(store.locale).toBe('ja')
+    expect(localStorageMock.setItem).toHaveBeenCalledWith('dp-locale', 'ja')
+    expect(store.explicitLocale).toBe('ja')
+    expect(document.documentElement.lang).toBe('ja')
+  })
+
+  it('marks the detected locale as handled when the suggestion is dismissed', async () => {
+    setNavigatorLanguage('en-US')
+
+    const { useLocaleStore } = await import('./locale')
+    const store = useLocaleStore()
+
+    store.initializeLocale()
+    store.dismissLocaleSuggestion()
+
+    expect(localStorageMock.setItem).toHaveBeenCalledWith('dp-locale-suggestion', 'en')
+    expect(store.shouldSuggestLocale).toBe(false)
+  })
+
+  it('allows confirming the detected locale as an explicit choice', async () => {
+    setNavigatorLanguage('en-US')
+
+    const { useLocaleStore } = await import('./locale')
+    const store = useLocaleStore()
+
+    store.initializeLocale()
+    await store.confirmDetectedLocale()
 
     expect(store.locale).toBe('en')
+    expect(store.explicitLocale).toBe('en')
+    expect(store.shouldSuggestLocale).toBe(false)
     expect(localStorageMock.setItem).toHaveBeenCalledWith('dp-locale', 'en')
-    expect(document.documentElement.lang).toBe('en')
   })
 
   it('keeps the local locale when the server preference response is empty', async () => {
