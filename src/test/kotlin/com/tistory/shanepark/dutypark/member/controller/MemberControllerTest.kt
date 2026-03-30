@@ -74,76 +74,6 @@ class MemberControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `get preferred locale`() {
-        val member = TestData.member
-        member.preferredLocale = "en"
-        memberRepository.save(member)
-
-        mockMvc.perform(
-            RestDocumentationRequestBuilders.get("/api/members/me/preferred-locale")
-                .accept(MediaType.APPLICATION_JSON)
-                .withAuth(member)
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.preferredLocale").value("en"))
-            .andDo(MockMvcResultHandlers.print())
-            .andDo(
-                document(
-                    "members/get-preferred-locale",
-                    responseFields(
-                        fieldWithPath("preferredLocale").description("Preferred locale code for the current member")
-                    )
-                )
-            )
-    }
-
-    @Test
-    fun `update preferred locale`() {
-        val member = TestData.member
-
-        mockMvc.perform(
-            RestDocumentationRequestBuilders.put("/api/members/me/preferred-locale")
-                .accept(MediaType.APPLICATION_JSON)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"preferredLocale\": \"en\"}")
-                .withAuth(member)
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.preferredLocale").value("en"))
-            .andDo(MockMvcResultHandlers.print())
-            .andDo(
-                document(
-                    "members/update-preferred-locale",
-                    requestFields(
-                        fieldWithPath("preferredLocale").description("Preferred locale code to store (ko, en, or ja)")
-                    ),
-                    responseFields(
-                        fieldWithPath("preferredLocale").description("Updated preferred locale code")
-                    )
-                )
-            )
-
-        val updatedMember = memberRepository.findById(member.id!!).orElseThrow()
-        assertThat(updatedMember.preferredLocale).isEqualTo("en")
-    }
-
-    @Test
-    fun `update preferred locale validates supported language in english`() {
-        val member = TestData.member
-
-        mockMvc.perform(
-            RestDocumentationRequestBuilders.put("/api/members/me/preferred-locale")
-                .header(HttpHeaders.ACCEPT_LANGUAGE, "en")
-                .accept(MediaType.APPLICATION_JSON)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"preferredLocale\": \"fr\"}")
-                .withAuth(member)
-        )
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.error").value("Preferred locale must be one of: ko, en, ja."))
-    }
-
-    @Test
     fun `getProfilePhoto returns cache-control header for long-term caching`() {
         // Given
         val member = TestData.member
@@ -211,7 +141,8 @@ class MemberControllerTest : RestDocsTest() {
                 .withAuth(member)
         )
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.error").value("Name is required."))
+            .andExpect(jsonPath("$.code").value("member.auxiliary.name.required"))
+            .andExpect(jsonPath("$.fieldErrors[0].field").value("name"))
     }
 
     @Test

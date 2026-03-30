@@ -9,6 +9,7 @@ import { refreshTokenApi } from '@/api/member'
 import { useSwal } from '@/composables/useSwal'
 import type { AdminMemberDetailDto, AdminMemberDto, RefreshTokenDto } from '@/types'
 import { extractDatePart } from '@/utils/date'
+import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -122,7 +123,7 @@ async function handleChangePassword() {
     showSuccess(t('admin.dashboard.messages.changePasswordSuccess', { name: passwordTargetMember.value?.name ?? '' }))
     closePasswordModal()
   } catch (error: any) {
-    const message = error.response?.data?.message || t('admin.dashboard.messages.changePasswordFailed')
+    const message = resolveApiErrorMessage(error, { fallbackKey: 'admin.dashboard.messages.changePasswordFailed' }, t)
     passwordError.value = message
   } finally {
     changingPassword.value = false

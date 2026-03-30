@@ -2,15 +2,11 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Check, ChevronDown, Languages, Sparkles, X } from 'lucide-vue-next'
-import { useAuthStore } from '@/stores/auth'
 import { getLocaleNativeLabel } from '@/i18n'
 import { useLocaleStore, type SupportedLocale } from '@/stores/locale'
-import { useSwal } from '@/composables/useSwal'
 
-const authStore = useAuthStore()
 const localeStore = useLocaleStore()
 const { t } = useI18n()
-const { showError } = useSwal()
 
 const isOpen = ref(false)
 const switcherRef = ref<HTMLDivElement | null>(null)
@@ -50,10 +46,7 @@ async function acceptSuggestedLanguage() {
 
   isSaving.value = true
   try {
-    await localeStore.confirmDetectedLocale({ persist: authStore.isLoggedIn })
-  } catch (error: any) {
-    const errorMessage = error.response?.data?.message || t('header.actions.languageUpdateFailed')
-    showError(errorMessage)
+    await localeStore.confirmDetectedLocale()
   } finally {
     isSaving.value = false
   }
@@ -67,11 +60,8 @@ async function changeLocale(nextLocale: SupportedLocale) {
 
   isSaving.value = true
   try {
-    await localeStore.setLocale(nextLocale, { persist: authStore.isLoggedIn })
+    await localeStore.setLocale(nextLocale)
     closeDropdown()
-  } catch (error: any) {
-    const errorMessage = error.response?.data?.message || t('header.actions.languageUpdateFailed')
-    showError(errorMessage)
   } finally {
     isSaving.value = false
   }

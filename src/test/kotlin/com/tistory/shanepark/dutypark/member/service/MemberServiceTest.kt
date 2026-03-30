@@ -316,7 +316,6 @@ class MemberServiceTest {
         teamId = member.team?.id,
         team = member.team?.name,
         calendarVisibility = member.calendarVisibility,
-        preferredLocale = member.preferredLocale,
         kakaoId = null,
         naverId = null,
         hasPassword = member.password != null,

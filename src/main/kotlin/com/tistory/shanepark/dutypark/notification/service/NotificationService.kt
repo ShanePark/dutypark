@@ -1,23 +1,21 @@
 package com.tistory.shanepark.dutypark.notification.service
 
-import com.tistory.shanepark.dutypark.common.config.DutyparkLocale
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus
-import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.notification.domain.entity.Notification
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationReferenceType
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationType
+import com.tistory.shanepark.dutypark.notification.domain.payload.NotificationPayload
 import com.tistory.shanepark.dutypark.notification.domain.repository.NotificationRepository
 import com.tistory.shanepark.dutypark.notification.dto.NotificationCountDto
 import com.tistory.shanepark.dutypark.notification.dto.NotificationDto
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
-import org.springframework.context.i18n.LocaleContextHolder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.util.*
+import java.util.UUID
 
 @Service
 @Transactional
@@ -25,7 +23,7 @@ class NotificationService(
     private val notificationRepository: NotificationRepository,
     private val memberRepository: MemberRepository,
     private val friendRequestRepository: FriendRequestRepository,
-    private val notificationMessageResolver: NotificationMessageResolver,
+    private val notificationPayloadCodec: NotificationPayloadCodec,
 ) {
 
     @Transactional(readOnly = true)
@@ -33,13 +31,13 @@ class NotificationService(
         val notifications = notificationRepository.findByMemberIdAndIsReadFalseOrderByCreatedDateDesc(memberId)
             .take(50)
 
-        return enrichWithActorInfo(notifications)
+        return notifications.map(::toDto)
     }
 
     @Transactional(readOnly = true)
     fun getNotifications(memberId: Long, pageable: Pageable): Page<NotificationDto> {
         val notificationPage = notificationRepository.findByMemberIdOrderByCreatedDateDesc(memberId, pageable)
-        val dtos = enrichWithActorInfo(notificationPage.content)
+        val dtos = notificationPage.content.map(::toDto)
 
         return PageImpl(dtos, pageable, notificationPage.totalElements)
     }
@@ -67,8 +65,7 @@ class NotificationService(
         notification.isRead = true
         notificationRepository.save(notification)
 
-        val actor = notification.actorId?.let { memberRepository.findById(it).orElse(null) }
-        return toDto(notification, actor)
+        return toDto(notification)
     }
 
     fun markAllAsRead(memberId: Long): Int {
@@ -95,50 +92,31 @@ class NotificationService(
         actorId: Long?,
         referenceType: NotificationReferenceType?,
         referenceId: String?,
-        content: String?
+        payload: NotificationPayload
     ): Notification {
         val member = memberRepository.findById(memberId).orElseThrow {
             NoSuchElementException("Member not found: $memberId")
         }
 
-        val actorName = actorId?.let { id ->
-            memberRepository.findById(id).orElse(null)?.name ?: "Unknown"
-        } ?: "Unknown"
-
-        val locale = Locale.forLanguageTag(DutyparkLocale.normalize(member.preferredLocale))
-        val title = notificationMessageResolver.resolveTitle(type, locale, actorName, content)
-
         val notification = Notification(
             member = member,
             type = type,
-            title = title,
-            content = content,
             referenceType = referenceType,
             referenceId = referenceId,
-            actorId = actorId
+            actorId = actorId,
+            payloadJson = notificationPayloadCodec.serialize(payload),
+            payloadVersion = payload.version
         )
 
         return notificationRepository.save(notification)
     }
 
-    private fun enrichWithActorInfo(notifications: List<Notification>): List<NotificationDto> {
-        val actorIds = notifications.mapNotNull { it.actorId }.distinct()
-        val actorMap = if (actorIds.isNotEmpty()) {
-            memberRepository.findAllById(actorIds).associateBy { it.id }
-        } else {
-            emptyMap()
-        }
-
-        return notifications.map { notification ->
-            val actor = notification.actorId?.let { actorMap[it] }
-            toDto(notification, actor)
-        }
-    }
-
-    private fun toDto(notification: Notification, actor: Member?): NotificationDto {
-        val locale = LocaleContextHolder.getLocale()
-        val actorName = actor?.name ?: "Unknown"
-        val title = notificationMessageResolver.resolveTitle(notification.type, locale, actorName, notification.content)
-        return NotificationDto.of(notification, actor, title)
+    private fun toDto(notification: Notification): NotificationDto {
+        val payload = notificationPayloadCodec.deserialize(notification.type, notification.payloadVersion, notification.payloadJson)
+            ?: throw IllegalStateException("Notification payload is missing: ${notification.id}")
+        return NotificationDto.of(
+            notification = notification,
+            payload = payload,
+        )
     }
 }

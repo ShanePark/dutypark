@@ -2,6 +2,9 @@ package com.tistory.shanepark.dutypark.team.controller
 
 import com.tistory.shanepark.dutypark.RestDocsTest
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
+import com.tistory.shanepark.dutypark.duty.batch.exceptions.NotSupportedFileException
+import com.tistory.shanepark.dutypark.duty.batch.exceptions.YearMonthNotMatchException
+import com.tistory.shanepark.dutypark.duty.batch.service.DutyBatchSungsimService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.team.domain.enums.WorkType
 import org.assertj.core.api.Assertions.assertThat
@@ -9,11 +12,19 @@ import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
 import org.springframework.http.HttpHeaders
 import org.springframework.mock.web.MockMultipartFile
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.whenever
+import java.time.YearMonth
 
 class TeamManageControllerTest : RestDocsTest() {
+
+    @MockitoBean
+    lateinit var dutyBatchSungsimService: DutyBatchSungsimService
 
     @Test
     fun `manager can load team details`() {
@@ -104,7 +115,56 @@ class TeamManageControllerTest : RestDocsTest() {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
         )
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.error").value("templateName is required"))
+            .andExpect(jsonPath("$.code").value("dutyBatch.template.required"))
+    }
+
+    @Test
+    fun `team batch upload returns errorCode and errorDetails when file format is unsupported`() {
+        setTeamAdmin(TestData.member.id!!)
+        teamRepository.findById(TestData.team.id!!).orElseThrow().apply {
+            dutyBatchTemplate = DutyBatchTemplate.SUNGSIM_CAKE
+            teamRepository.save(this)
+        }
+        whenever(
+            dutyBatchSungsimService.batchUploadTeam(any(), eq(TestData.team.id!!), eq(YearMonth.of(2024, 1)))
+        ).thenThrow(NotSupportedFileException(".xls,.xlsx"))
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.multipart("/api/teams/manage/{teamId}/duty", TestData.team.id!!)
+                .file(validFile())
+                .param("year", "2024")
+                .param("month", "1")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.result").value(false))
+            .andExpect(jsonPath("$.errorCode").value("dutyBatch.notSupportedFile"))
+            .andExpect(jsonPath("$.errorDetails.supportedFile").value(".xls,.xlsx"))
+    }
+
+    @Test
+    fun `team batch upload returns year and month details for mismatched files`() {
+        setTeamAdmin(TestData.member.id!!)
+        teamRepository.findById(TestData.team.id!!).orElseThrow().apply {
+            dutyBatchTemplate = DutyBatchTemplate.SUNGSIM_CAKE
+            teamRepository.save(this)
+        }
+        whenever(
+            dutyBatchSungsimService.batchUploadTeam(any(), eq(TestData.team.id!!), eq(YearMonth.of(2024, 1)))
+        ).thenThrow(YearMonthNotMatchException(YearMonth.of(2023, 12)))
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.multipart("/api/teams/manage/{teamId}/duty", TestData.team.id!!)
+                .file(validFile())
+                .param("year", "2024")
+                .param("month", "1")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.result").value(false))
+            .andExpect(jsonPath("$.errorCode").value("dutyBatch.yearMonthNotMatch"))
+            .andExpect(jsonPath("$.errorDetails.year").value(2023))
+            .andExpect(jsonPath("$.errorDetails.month").value(12))
     }
 
     @Test
@@ -216,5 +276,14 @@ class TeamManageControllerTest : RestDocsTest() {
         teamRepository.save(team)
         em.flush()
         em.clear()
+    }
+
+    private fun validFile(): MockMultipartFile {
+        return MockMultipartFile(
+            "file",
+            "duty.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "dummy".toByteArray()
+        )
     }
 }

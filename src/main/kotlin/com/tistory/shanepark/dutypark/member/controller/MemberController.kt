@@ -4,8 +4,6 @@ import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.domain.dto.AuxiliaryAccountCreateRequest
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberPreviewDto
-import com.tistory.shanepark.dutypark.member.domain.dto.PreferredLocaleResponse
-import com.tistory.shanepark.dutypark.member.domain.dto.PreferredLocaleUpdateRequest
 import com.tistory.shanepark.dutypark.member.domain.dto.VisibilityUpdateRequest
 import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.member.service.MemberService
@@ -49,21 +47,6 @@ class MemberController(
         }
         val visibility = visibilityUpdateRequest.visibility
         memberService.updateCalendarVisibility(loginMember, visibility)
-    }
-
-    @GetMapping("/me/preferred-locale")
-    fun getMyPreferredLocale(
-        @Login loginMember: LoginMember,
-    ): PreferredLocaleResponse {
-        return memberService.getPreferredLocale(loginMember)
-    }
-
-    @PutMapping("/me/preferred-locale")
-    fun updateMyPreferredLocale(
-        @Login loginMember: LoginMember,
-        @Valid @RequestBody request: PreferredLocaleUpdateRequest,
-    ): PreferredLocaleResponse {
-        return memberService.updatePreferredLocale(loginMember, request.normalizedPreferredLocale())
     }
 
     @PostMapping("/manager/{managerId}")

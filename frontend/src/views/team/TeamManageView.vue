@@ -9,6 +9,7 @@ import MemberSearchModal from '@/components/team/MemberSearchModal.vue'
 import BatchUploadModal from '@/components/team/BatchUploadModal.vue'
 import DutyTypeModal from '@/components/team/DutyTypeModal.vue'
 import adminApi from '@/api/admin'
+import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import type {
   TeamDto,
   TeamMemberDto,
@@ -291,7 +292,7 @@ async function removeTeam() {
     toastSuccess(t('team.manage.messages.deleteTeamSuccess'))
     router.push('/admin/teams')
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : t('team.manage.messages.deleteTeamFailed')
+    const message = resolveApiErrorMessage(e, { fallbackKey: 'team.manage.messages.deleteTeamFailed' }, t)
     showError(message)
   }
 }

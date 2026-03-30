@@ -1,5 +1,8 @@
 import { ref, computed } from 'vue'
 import { pushApi } from '@/api/push'
+import { useLocaleStore } from '@/stores/locale'
+import { buildPushSubscriptionRequest } from '@/utils/pushSubscription'
+import { syncServiceWorkerLocale } from '@/utils/serviceWorkerLocale'
 
 const isSupported = ref(false)
 const isEnabled = ref(false)
@@ -8,6 +11,8 @@ const isSubscribed = ref(false)
 const isLoading = ref(false)
 
 export function usePushNotification() {
+  const localeStore = useLocaleStore()
+
   // Check browser support
   const checkSupport = () => {
     const notificationSupported = 'Notification' in window
@@ -45,6 +50,7 @@ export function usePushNotification() {
 
     try {
       const registration = await navigator.serviceWorker.register('/sw.js')
+      await syncServiceWorkerLocale(localeStore.locale, registration)
       return registration
     } catch (error) {
       console.error('Service Worker registration failed:', error)
@@ -113,6 +119,7 @@ export function usePushNotification() {
       // Register Service Worker
       const registration = await getReadyRegistration()
       if (!registration) return false
+      await syncServiceWorkerLocale(localeStore.locale, registration)
 
       const existingSubscription = await registration.pushManager.getSubscription()
       const subscription = existingSubscription ?? await registration.pushManager.subscribe({
@@ -120,7 +127,7 @@ export function usePushNotification() {
         applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as BufferSource
       })
 
-      const success = await pushApi.subscribe(buildSubscriptionRequest(subscription))
+      const success = await pushApi.subscribe(buildPushSubscriptionRequest(subscription))
 
       isSubscribed.value = success
       return success
@@ -190,29 +197,10 @@ export function usePushNotification() {
   }
 }
 
-function buildSubscriptionRequest(subscription: PushSubscription) {
-  const p256dh = arrayBufferToBase64(subscription.getKey('p256dh')!)
-  const auth = arrayBufferToBase64(subscription.getKey('auth')!)
-  return {
-    endpoint: subscription.endpoint,
-    keys: { p256dh, auth }
-  }
-}
-
 // Utility functions
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - base64String.length % 4) % 4)
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
   const rawData = window.atob(base64)
   return Uint8Array.from(rawData, char => char.charCodeAt(0))
-}
-
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer)
-  let binary = ''
-  bytes.forEach(b => binary += String.fromCharCode(b))
-  return window.btoa(binary)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '')
 }

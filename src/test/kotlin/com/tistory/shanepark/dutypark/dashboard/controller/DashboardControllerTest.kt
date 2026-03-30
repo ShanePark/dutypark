@@ -78,7 +78,6 @@ class DashboardControllerTest : RestDocsTest() {
                         fieldWithPath("member.teamId").description("Team ID"),
                         fieldWithPath("member.team").description("Team name"),
                         fieldWithPath("member.calendarVisibility").description("Calendar visibility setting"),
-                        fieldWithPath("member.preferredLocale").description("Preferred locale code"),
                         fieldWithPath("member.kakaoId").description("Kakao ID (nullable)"),
                         fieldWithPath("member.naverId").description("Naver ID (nullable)"),
                         fieldWithPath("member.hasPassword").description("Whether member has password set"),

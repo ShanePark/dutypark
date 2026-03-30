@@ -83,7 +83,7 @@ class TeamManageController(
     ): DutyBatchTeamResult {
         checkCanManage(login = loginMember, teamId = teamId)
         val team = teamRepository.findById(teamId).orElseThrow()
-        val batchTemplate = team.dutyBatchTemplate ?: throw IllegalArgumentException("templateName is required")
+        val batchTemplate = team.dutyBatchTemplate ?: throw IllegalArgumentException("dutyBatch.template.required")
         val dutyBatchService = applicationContext.getBean(batchTemplate.batchServiceClass) as DutyBatchService
         return try {
             log.info("Batch duty upload: teamId={}, year={}, month={}, by={}", team.id, year, month, loginMember.id)
@@ -93,7 +93,7 @@ class TeamManageController(
                 yearMonth = YearMonth.of(year, month)
             )
         } catch (e: DutyBatchException) {
-            DutyBatchTeamResult.fail(e.message ?: "알 수 없는 원인으로 시간표 업로드 실패.")
+            DutyBatchTeamResult.fail(e.errorCode, e.errorDetails)
         }
     }
 

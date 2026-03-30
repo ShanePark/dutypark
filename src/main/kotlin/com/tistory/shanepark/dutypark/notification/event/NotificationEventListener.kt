@@ -1,13 +1,22 @@
 package com.tistory.shanepark.dutypark.notification.event
 
-import com.tistory.shanepark.dutypark.common.config.DutyparkLocale
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.notification.domain.entity.Notification
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationReferenceType
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationType
+import com.tistory.shanepark.dutypark.notification.domain.payload.FamilyRequestAcceptedPayload
+import com.tistory.shanepark.dutypark.notification.domain.payload.FamilyRequestReceivedPayload
+import com.tistory.shanepark.dutypark.notification.domain.payload.FriendRequestAcceptedPayload
+import com.tistory.shanepark.dutypark.notification.domain.payload.FriendRequestReceivedPayload
+import com.tistory.shanepark.dutypark.notification.domain.payload.NotificationActorSnapshot
+import com.tistory.shanepark.dutypark.notification.domain.payload.NotificationPayload
+import com.tistory.shanepark.dutypark.notification.domain.payload.ScheduleTaggedPayload
+import com.tistory.shanepark.dutypark.notification.domain.payload.TodoStatusDonePayload
+import com.tistory.shanepark.dutypark.notification.domain.payload.TodoStatusInProgressPayload
+import com.tistory.shanepark.dutypark.notification.domain.payload.TodoStatusTodoPayload
+import com.tistory.shanepark.dutypark.notification.domain.payload.TodoTaggedPayload
 import com.tistory.shanepark.dutypark.notification.domain.repository.NotificationRepository
-import com.tistory.shanepark.dutypark.notification.service.NotificationMessageResolver
 import com.tistory.shanepark.dutypark.notification.service.NotificationService
 import com.tistory.shanepark.dutypark.push.dto.PushNotificationPayload
 import com.tistory.shanepark.dutypark.push.service.WebPushService
@@ -18,7 +27,6 @@ import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
-import java.util.Locale
 
 @Component
 class NotificationEventListener(
@@ -26,7 +34,6 @@ class NotificationEventListener(
     private val notificationRepository: NotificationRepository,
     private val memberRepository: MemberRepository,
     private val webPushService: WebPushService,
-    private val notificationMessageResolver: NotificationMessageResolver,
 ) {
     private val log = logger()
 
@@ -41,7 +48,9 @@ class NotificationEventListener(
                 actorId = event.fromMemberId,
                 referenceType = NotificationReferenceType.FRIEND_REQUEST,
                 referenceId = event.requestId.toString(),
-                content = null
+                payload = FriendRequestReceivedPayload(
+                    actor = actorSnapshot(event.fromMemberId)
+                )
             )
             sendPushNotification(notification)
         } catch (e: Exception) {
@@ -60,7 +69,9 @@ class NotificationEventListener(
                 actorId = event.toMemberId,
                 referenceType = NotificationReferenceType.FRIEND_REQUEST,
                 referenceId = null,
-                content = null
+                payload = FriendRequestAcceptedPayload(
+                    actor = actorSnapshot(event.toMemberId)
+                )
             )
             sendPushNotification(notification)
         } catch (e: Exception) {
@@ -79,7 +90,9 @@ class NotificationEventListener(
                 actorId = event.fromMemberId,
                 referenceType = NotificationReferenceType.FRIEND_REQUEST,
                 referenceId = event.requestId.toString(),
-                content = null
+                payload = FamilyRequestReceivedPayload(
+                    actor = actorSnapshot(event.fromMemberId)
+                )
             )
             sendPushNotification(notification)
         } catch (e: Exception) {
@@ -98,7 +111,9 @@ class NotificationEventListener(
                 actorId = event.toMemberId,
                 referenceType = NotificationReferenceType.FRIEND_REQUEST,
                 referenceId = null,
-                content = null
+                payload = FamilyRequestAcceptedPayload(
+                    actor = actorSnapshot(event.toMemberId)
+                )
             )
             sendPushNotification(notification)
         } catch (e: Exception) {
@@ -117,7 +132,10 @@ class NotificationEventListener(
                 actorId = event.ownerId,
                 referenceType = NotificationReferenceType.SCHEDULE,
                 referenceId = event.scheduleId.toString(),
-                content = event.scheduleTitle
+                payload = ScheduleTaggedPayload(
+                    actor = actorSnapshot(event.ownerId),
+                    scheduleTitle = event.scheduleTitle
+                )
             )
             sendPushNotification(notification)
         } catch (e: Exception) {
@@ -136,7 +154,10 @@ class NotificationEventListener(
                 actorId = event.ownerId,
                 referenceType = NotificationReferenceType.TODO,
                 referenceId = event.todoId.toString(),
-                content = event.todoTitle
+                payload = TodoTaggedPayload(
+                    actor = actorSnapshot(event.ownerId),
+                    todoTitle = event.todoTitle
+                )
             )
             sendPushNotification(notification)
         } catch (e: Exception) {
@@ -155,7 +176,7 @@ class NotificationEventListener(
                 actorId = event.actorId,
                 referenceType = NotificationReferenceType.TODO,
                 referenceId = event.todoId.toString(),
-                content = event.todoTitle
+                payload = getTodoStatusPayload(event.actorId, event.todoTitle, event.newStatus)
             )
             sendPushNotification(notification)
         } catch (e: Exception) {
@@ -167,22 +188,33 @@ class NotificationEventListener(
         val memberId = notification.member.id!!
         val unreadCount = notificationRepository.countByMemberIdAndIsReadFalse(memberId).toInt()
 
-        val actorName = notification.actorId?.let { actorId ->
-            memberRepository.findById(actorId).orElse(null)?.name
-        }
-        val locale = Locale.forLanguageTag(DutyparkLocale.normalize(notification.member.preferredLocale))
-        val pushBody = notificationMessageResolver.resolvePushBody(notification.type, locale, notification.content)
-
         webPushService.sendToMember(
             memberId = memberId,
             payload = PushNotificationPayload(
-                title = actorName,
-                body = pushBody,
+                type = notification.type,
                 url = getNotificationUrl(notification),
                 notificationId = notification.id.toString(),
                 unreadCount = unreadCount
             )
         )
+    }
+
+    private fun actorSnapshot(actorId: Long?): NotificationActorSnapshot {
+        val actor = actorId?.let { memberRepository.findById(it).orElse(null) }
+        return NotificationActorSnapshot(
+            name = actor?.name,
+            hasProfilePhoto = actor?.hasProfilePhoto() ?: false,
+            profilePhotoVersion = actor?.profilePhotoVersion ?: 0
+        )
+    }
+
+    private fun getTodoStatusPayload(actorId: Long, todoTitle: String, status: TodoStatus): NotificationPayload {
+        val actor = actorSnapshot(actorId)
+        return when (status) {
+            TodoStatus.TODO -> TodoStatusTodoPayload(actor = actor, todoTitle = todoTitle)
+            TodoStatus.IN_PROGRESS -> TodoStatusInProgressPayload(actor = actor, todoTitle = todoTitle)
+            TodoStatus.DONE -> TodoStatusDonePayload(actor = actor, todoTitle = todoTitle)
+        }
     }
 
     private fun getNotificationUrl(notification: Notification): String {

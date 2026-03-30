@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.member.domain.entity
 
-import com.tistory.shanepark.dutypark.common.config.DutyparkLocale
 import com.tistory.shanepark.dutypark.common.domain.entity.BaseTimeEntity
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -37,9 +36,6 @@ class Member(
 
     @Column(name = "profile_photo_version")
     var profilePhotoVersion: Long = 0
-
-    @Column(name = "preferred_locale", nullable = false, length = 5)
-    var preferredLocale: String = DutyparkLocale.DEFAULT
 
     fun hasProfilePhoto(): Boolean = profilePhotoPath != null
 

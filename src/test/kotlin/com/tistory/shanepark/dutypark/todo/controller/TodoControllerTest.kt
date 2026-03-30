@@ -1413,7 +1413,7 @@ class TodoControllerTest : RestDocsTest() {
                 .withAuth(TestData.member)
         )
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.error").value("orderedIds is required when reordering within the same status"))
+            .andExpect(jsonPath("$.code").value("todo.reorder.orderedIds.required"))
     }
 
     @Test

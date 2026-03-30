@@ -113,8 +113,10 @@ class AttachmentSessionControllerTest : RestDocsTest() {
                 document(
                     "attachments/sessions/create-unauthorized",
                     responseFields(
-                        fieldWithPath("errorCode").type(JsonFieldType.NUMBER).description("401"),
-                        fieldWithPath("message").type(JsonFieldType.STRING).description("Error message")
+                        fieldWithPath("status").type(JsonFieldType.NUMBER).description("HTTP status"),
+                        fieldWithPath("code").type(JsonFieldType.STRING).description("Machine-readable error code"),
+                        fieldWithPath("details").type(JsonFieldType.OBJECT).optional().description("Additional error details"),
+                        fieldWithPath("fieldErrors").type(JsonFieldType.ARRAY).optional().description("Field validation errors")
                     )
                 )
             )

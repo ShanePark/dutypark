@@ -4,7 +4,6 @@ import type { AxiosError } from 'axios'
 import type { LoginMember, LoginDto } from '@/types'
 import { authApi } from '@/api/auth'
 import { setAuthFailureHandler, setImpersonationHandlers, resetRefreshState } from '@/api/client'
-import { useLocaleStore } from '@/stores/locale'
 import router from '@/router'
 import { buildLoginRoute } from '@/utils/redirect'
 
@@ -99,10 +98,6 @@ export const useAuthStore = defineStore('auth', () => {
       if (!isServerUnavailable) {
         user.value = status
         saveCachedUser(status)
-        if (status) {
-          const localeStore = useLocaleStore()
-          await localeStore.syncWithServerPreference()
-        }
       }
       // On server unavailable, keep cached user (already loaded from localStorage)
     } finally {
@@ -119,10 +114,6 @@ export const useAuthStore = defineStore('auth', () => {
       resetRefreshState()
       user.value = await authApi.getStatus()
       saveCachedUser(user.value)
-      if (user.value) {
-        const localeStore = useLocaleStore()
-        await localeStore.syncWithServerPreference()
-      }
     } finally {
       isLoading.value = false
     }
@@ -178,10 +169,6 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = await authApi.getStatus()
       isInitialized.value = true
       saveCachedUser(user.value)
-      if (user.value) {
-        const localeStore = useLocaleStore()
-        await localeStore.syncWithServerPreference()
-      }
     } catch (error) {
       const status = (error as AxiosError)?.response?.status
       if (status === 401 || status === 403) {
@@ -207,10 +194,6 @@ export const useAuthStore = defineStore('auth', () => {
       // Refresh user info after impersonation (includes isImpersonating from JWT)
       user.value = await authApi.getStatus()
       saveCachedUser(user.value)
-      if (user.value) {
-        const localeStore = useLocaleStore()
-        await localeStore.syncWithServerPreference()
-      }
     } finally {
       isLoading.value = false
     }
@@ -228,10 +211,6 @@ export const useAuthStore = defineStore('auth', () => {
       // Refresh user info after restore (isImpersonating will be false)
       user.value = await authApi.getStatus()
       saveCachedUser(user.value)
-      if (user.value) {
-        const localeStore = useLocaleStore()
-        await localeStore.syncWithServerPreference()
-      }
     } finally {
       isLoading.value = false
     }

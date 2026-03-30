@@ -171,7 +171,7 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
                 .param("state", stateJson)
         )
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.error").value("callbackUrl is required in state"))
+            .andExpect(jsonPath("$.code").value("auth.oauth.callbackUrl.required"))
     }
 
     @Test
