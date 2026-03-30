@@ -1,4 +1,136 @@
-import { apiErrorMessagesEn } from './apiErrors'
+const apiErrors = {
+  auth: {
+    required: 'Login is required.',
+    unauthorized: 'Unauthorized.',
+    login: {
+      failed: 'Email or password is incorrect.',
+      rateLimited: 'Too many login attempts. Please try again later.',
+    },
+    password: {
+      memberNotFound: 'Account does not exist.',
+      currentMismatch: 'Current password does not match.',
+      changeUnauthorized: 'You are not authorized to change this password.',
+      changed: 'Password changed.',
+    },
+    refresh: {
+      invalid: 'Invalid refresh token.',
+      expired: 'Refresh token has expired.',
+    },
+    token: {
+      memberNotFound: 'Account does not exist.',
+    },
+    impersonation: {
+      alreadyImpersonating: 'You are already impersonating another account.',
+      managerNotFound: 'Manager account could not be found.',
+      targetNotFound: 'Target account could not be found.',
+      forbidden: 'You do not have permission to manage this account.',
+      failed: 'Failed to switch accounts.',
+    },
+    restore: {
+      notImpersonating: 'You are not currently impersonating another account.',
+      originalMissing: 'Original account information is missing.',
+      originalNotFound: 'Original account could not be found.',
+      failed: 'Failed to restore the original account.',
+    },
+    oauth: {
+      callbackUrl: {
+        required: 'Callback URL is required.',
+      },
+    },
+  },
+  common: {
+    notFound: 'Resource not found.',
+    badRequest: 'Bad request.',
+    validation: {
+      failed: 'Please check the request fields.',
+    },
+    rateLimit: {
+      exceeded: 'Too many requests. Please try again later.',
+    },
+  },
+  member: {
+    notFound: 'Member not found.',
+    visibility: {
+      update: {
+        forbidden: 'You cannot update another member\'s visibility.',
+      },
+    },
+    auxiliary: {
+      name: {
+        required: 'Name is required.',
+      },
+    },
+  },
+  dutyType: {
+    name: {
+      required: 'Duty name is required.',
+      length: 'Duty names must be between 1 and 10 characters.',
+      duplicate: 'A duty type with the same name already exists.',
+    },
+    color: {
+      invalid: 'Invalid color format.',
+    },
+  },
+  team: {
+    name: {
+      required: 'Team name is required.',
+      length: 'Team names must be between 2 and 20 characters.',
+    },
+    description: {
+      length: 'Descriptions must be 50 characters or fewer.',
+    },
+    dutyType: {
+      sameTeam: {
+        required: 'Duty types must belong to the same team.',
+      },
+    },
+  },
+  sso: {
+    uuid: {
+      required: 'Sign-up session information is required.',
+      invalid: 'The sign-up session is invalid or has expired.',
+    },
+    username: {
+      required: 'Username is required.',
+      length: 'Usernames must be between 1 and 10 characters.',
+    },
+  },
+  dday: {
+    title: {
+      required: 'D-Day title is required.',
+      length: 'D-Day titles must be between 1 and 30 characters.',
+    },
+  },
+  dutyBatch: {
+    unknown: 'Failed to upload the duty schedule.',
+    nameNotFound: 'Could not find the member name in the uploaded file.',
+    multipleNameFound: 'Multiple matching names were found in the uploaded file.',
+    notSupportedFile: 'This file format is not supported. Supported formats: {supportedFile}',
+    dutyTypeNotSingle: 'The team must have exactly one duty type to use batch upload.',
+    yearMonthNotMatch: 'The uploaded file month does not match the selected schedule month ({year}-{month}).',
+    template: {
+      required: 'Select a batch upload template first.',
+    },
+    member: {
+      teamRequired: 'The account must belong to a team to use batch upload.',
+    },
+  },
+  attachment: {
+    extension: {
+      blocked: 'This file extension is not allowed.',
+    },
+    size: {
+      exceeded: 'The file is too large.',
+    },
+  },
+  todo: {
+    reorder: {
+      orderedIds: {
+        required: 'The reordered to-do ID list is required.',
+      },
+    },
+  },
+} as const
 
 export default {
   common: {
@@ -44,7 +176,7 @@ export default {
       message: 'Page not found',
     },
   },
-  apiErrors: apiErrorMessagesEn,
+  apiErrors,
   visibility: {
     labels: {
       public: 'Public',
