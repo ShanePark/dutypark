@@ -244,22 +244,22 @@ class AdminControllerTest : DutyparkIntegrationTest() {
             Notification(
                 member = TestData.member,
                 type = NotificationType.FRIEND_REQUEST_RECEIVED,
-                title = "새 친구 요청",
-                content = "관리자 테스트",
                 referenceType = NotificationReferenceType.MEMBER,
                 referenceId = TestData.member2.id.toString(),
                 actorId = TestData.admin.id,
+                payloadJson = """{"version":1,"actor":{"name":"관리자","hasProfilePhoto":false,"profilePhotoVersion":0}}""",
+                payloadVersion = 1,
             )
         )
         notificationRepository.save(
             Notification(
                 member = TestData.member,
                 type = NotificationType.FRIEND_REQUEST_ACCEPTED,
-                title = "읽은 알림",
-                content = "관리자 테스트",
                 referenceType = NotificationReferenceType.MEMBER,
                 referenceId = TestData.member2.id.toString(),
                 actorId = TestData.admin.id,
+                payloadJson = """{"version":1,"actor":{"name":"친구","hasProfilePhoto":false,"profilePhotoVersion":0}}""",
+                payloadVersion = 1,
             ).apply {
                 isRead = true
             }

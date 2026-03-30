@@ -9,8 +9,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useSwal } from '@/composables/useSwal'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import PolicyModal from '@/components/common/PolicyModal.vue'
-import type { AxiosError } from 'axios'
 import { getSafeRedirect } from '@/utils/redirect'
+import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 
 marked.setOptions({
   breaks: true,
@@ -169,10 +169,7 @@ async function handleSubmit() {
       query: redirectTarget.value ? { redirect: redirectTarget.value } : undefined,
     })
   } catch (error) {
-    const axiosError = error as AxiosError<{ message?: string }>
-    const message =
-      axiosError.response?.data?.message ||
-      t('auth.ssoSignup.errors.submitFailed')
+    const message = resolveApiErrorMessage(error, { fallbackKey: 'auth.ssoSignup.errors.submitFailed' }, t)
     showError(message)
   } finally {
     isLoading.value = false

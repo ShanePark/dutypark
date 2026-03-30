@@ -19,6 +19,7 @@ import {
   validateFile,
   fetchAuthenticatedImage,
 } from '@/api/attachment'
+import { resolveFileUploaderErrorMessage } from './fileUploaderError'
 
 // Props
 interface Props {
@@ -274,14 +275,14 @@ function setupUppy() {
 
     removeFileFromState(file.id)
 
-    let message = t('fileUploader.uploadFailed')
-    if (response?.status === 413) {
-      message = attachmentValidation.tooLargeMessage(file.name)
-    } else if (response?.status === 400 && response?.body?.code === 'ATTACHMENT_EXTENSION_BLOCKED') {
-      message = attachmentValidation.blockedExtensionMessage(file.name)
-    } else if (response?.body?.message) {
-      message = response.body.message
-    }
+    const message = resolveFileUploaderErrorMessage(
+      file.name,
+      response as {
+        status?: number
+        body?: { code?: unknown; errorCode?: unknown; details?: unknown; errorDetails?: unknown }
+      } | undefined,
+      t,
+    )
 
     emit('error', message)
   })

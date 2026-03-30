@@ -6,10 +6,10 @@ import org.springframework.validation.annotation.Validated
 
 @Validated
 data class SsoSignupRequest(
-    @field:NotBlank(message = "{sso.uuid.required}")
+    @field:NotBlank(message = "sso.uuid.required")
     val uuid: String,
-    @field:NotBlank(message = "{sso.username.required}")
-    @field:Size(min = 1, max = 10, message = "{sso.username.length}")
+    @field:NotBlank(message = "sso.username.required")
+    @field:Size(min = 1, max = 10, message = "sso.username.length")
     val username: String,
     val termAgree: Boolean,
     val privacyAgree: Boolean,

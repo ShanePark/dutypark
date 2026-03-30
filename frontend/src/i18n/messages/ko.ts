@@ -1,3 +1,5 @@
+import { apiErrorMessagesKo } from './apiErrors'
+
 export default {
   common: {
     actions: {
@@ -42,6 +44,7 @@ export default {
       message: '페이지를 찾을 수 없습니다',
     },
   },
+  apiErrors: apiErrorMessagesKo,
   visibility: {
     labels: {
       public: '전체공개',
@@ -92,6 +95,64 @@ export default {
       title: '알림',
       markAllAsRead: '전체 읽음',
       viewAll: '더보기',
+    },
+    items: {
+      generic: '새 알림이 도착했습니다.',
+      someone: '누군가',
+      friendRequestReceived: {
+        v1: '{actorName}님이 친구 요청을 보냈습니다.',
+      },
+      friendRequestReceivedFallback: {
+        v1: '친구 요청이 도착했습니다.',
+      },
+      friendRequestAccepted: {
+        v1: '{actorName}님이 친구 요청을 수락했습니다.',
+      },
+      friendRequestAcceptedFallback: {
+        v1: '친구 요청이 수락되었습니다.',
+      },
+      familyRequestReceived: {
+        v1: '{actorName}님이 가족 요청을 보냈습니다.',
+      },
+      familyRequestReceivedFallback: {
+        v1: '가족 요청이 도착했습니다.',
+      },
+      familyRequestAccepted: {
+        v1: '{actorName}님이 가족 요청을 수락했습니다.',
+      },
+      familyRequestAcceptedFallback: {
+        v1: '가족 요청이 수락되었습니다.',
+      },
+      scheduleTagged: {
+        v1: '{actorName}님의 [{scheduleTitle}] 일정에 태그되었습니다.',
+      },
+      scheduleTaggedFallback: {
+        v1: '[{scheduleTitle}] 일정에 태그되었습니다.',
+      },
+      todoTagged: {
+        v1: '{actorName}님의 [{todoTitle}] TODO에 태그되었습니다.',
+      },
+      todoTaggedFallback: {
+        v1: '[{todoTitle}] TODO에 태그되었습니다.',
+      },
+      todoStatusTodo: {
+        v1: '{actorName}님이 [{todoTitle}] TODO를 할 일로 변경했습니다.',
+      },
+      todoStatusTodoFallback: {
+        v1: '[{todoTitle}] TODO가 할 일로 변경되었습니다.',
+      },
+      todoStatusInProgress: {
+        v1: '{actorName}님이 [{todoTitle}] TODO를 진행중으로 변경했습니다.',
+      },
+      todoStatusInProgressFallback: {
+        v1: '[{todoTitle}] TODO가 진행중으로 변경되었습니다.',
+      },
+      todoStatusDone: {
+        v1: '{actorName}님이 [{todoTitle}] TODO를 완료 처리했습니다.',
+      },
+      todoStatusDoneFallback: {
+        v1: '[{todoTitle}] TODO가 완료 처리되었습니다.',
+      },
     },
     list: {
       title: '알림',
@@ -173,36 +234,6 @@ export default {
       chooseOther: '다른 언어 고르기',
       dismiss: '언어 제안 닫기',
     },
-  },
-  holidayNames: {
-    newYear: '신정',
-    lunarNewYear: '설날',
-    independenceMovementDay: '삼일절',
-    childrenDay: '어린이날',
-    buddhaBirthday: '부처님오신날',
-    memorialDay: '현충일',
-    liberationDay: '광복절',
-    nationalFoundationDay: '개천절',
-    hangulDay: '한글날',
-    christmas: '크리스마스',
-    chuseok: '추석',
-    substituteHoliday: '대체공휴일',
-    substituteHolidayWithName: '{name} 대체공휴일',
-  },
-  holidayNamesShort: {
-    newYear: '신정',
-    lunarNewYear: '설날',
-    independenceMovementDay: '삼일절',
-    childrenDay: '어린이날',
-    buddhaBirthday: '부처님오신날',
-    memorialDay: '현충일',
-    liberationDay: '광복절',
-    nationalFoundationDay: '개천절',
-    hangulDay: '한글날',
-    christmas: '크리스마스',
-    chuseok: '추석',
-    substituteHoliday: '대휴',
-    substituteHolidayWithName: '{name} 대휴',
   },
   intro: {
     hero: {
@@ -355,7 +386,7 @@ export default {
     },
     statusShort: {
       todo: '할일',
-      inProgress: '진행',
+      inProgress: '진행중',
       done: '완료',
     },
     actions: {

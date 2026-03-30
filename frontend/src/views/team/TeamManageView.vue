@@ -9,6 +9,7 @@ import MemberSearchModal from '@/components/team/MemberSearchModal.vue'
 import BatchUploadModal from '@/components/team/BatchUploadModal.vue'
 import DutyTypeModal from '@/components/team/DutyTypeModal.vue'
 import adminApi from '@/api/admin'
+import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import type {
   TeamDto,
   TeamMemberDto,
@@ -291,7 +292,7 @@ async function removeTeam() {
     toastSuccess(t('team.manage.messages.deleteTeamSuccess'))
     router.push('/admin/teams')
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : t('team.manage.messages.deleteTeamFailed')
+    const message = resolveApiErrorMessage(e, { fallbackKey: 'team.manage.messages.deleteTeamFailed' }, t)
     showError(message)
   }
 }
@@ -332,84 +333,156 @@ onMounted(() => {
 
     <!-- Team Info Card -->
     <div class="border rounded-b-lg overflow-hidden mb-4 bg-dp-bg-card border-dp-border-primary">
-      <div class="overflow-x-auto">
-      <table class="w-full min-w-[300px]">
-        <tbody class="border-dp-border-primary">
-          <tr class="border-b border-dp-border-primary">
-            <th class="px-4 py-3 text-left w-1/4 font-medium bg-dp-bg-secondary text-dp-text-secondary">
-              {{ t('team.manage.fields.description') }}
-            </th>
-            <td class="px-4 py-3 text-dp-text-primary">
-              {{ team.description }}
-            </td>
-          </tr>
-          <tr class="border-b border-dp-border-primary" v-if="isAdmin">
-            <th class="px-4 py-3 text-left font-medium bg-dp-bg-secondary text-dp-text-secondary">
-              {{ t('team.manage.fields.admin') }}
-            </th>
-            <td class="px-4 py-3 text-dp-text-primary">
-              <div class="flex items-center gap-2">
-                <span class="font-medium">{{ team.adminName || t('team.manage.labels.notAvailable') }}</span>
-                <button
-                  v-if="team.adminId && loginId !== team.adminId"
-                  @click="changeAdmin()"
-                  class="px-2 py-1 text-sm border border-dp-danger-border text-dp-danger rounded hover:bg-dp-danger-soft transition flex items-center gap-1 cursor-pointer"
+      <div class="sm:hidden divide-y divide-dp-border-primary">
+        <div class="px-4 py-3">
+          <p class="text-xs font-medium text-dp-text-muted">
+            {{ t('team.manage.fields.description') }}
+          </p>
+          <p class="mt-1.5 text-sm text-dp-text-primary break-words">
+            {{ team.description || t('team.manage.labels.notAvailable') }}
+          </p>
+        </div>
+
+        <div v-if="isAdmin" class="px-4 py-3">
+          <p class="text-xs font-medium text-dp-text-muted">
+            {{ t('team.manage.fields.admin') }}
+          </p>
+          <div class="mt-1.5 flex flex-wrap items-center gap-2 text-dp-text-primary">
+            <span class="font-medium">{{ team.adminName || t('team.manage.labels.notAvailable') }}</span>
+            <button
+              v-if="team.adminId && loginId !== team.adminId"
+              @click="changeAdmin()"
+              class="px-2 py-1 text-sm border border-dp-danger-border text-dp-danger rounded hover:bg-dp-danger-soft transition flex items-center gap-1 cursor-pointer"
+            >
+              <Trash2 class="w-3 h-3" />
+              {{ t('team.manage.actions.cancelAdmin') }}
+            </button>
+          </div>
+        </div>
+
+        <div class="px-4 py-3">
+          <label class="text-xs font-medium text-dp-text-muted">
+            {{ t('team.manage.fields.workType') }}
+          </label>
+          <select
+            :value="team.workType"
+            @change="updateWorkType(($event.target as HTMLSelectElement).value)"
+            class="mt-1.5 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent bg-dp-bg-input border-dp-border-input text-dp-text-primary"
+          >
+            <option v-for="wt in workTypes" :key="wt.value" :value="wt.value">
+              {{ wt.label }}
+            </option>
+          </select>
+        </div>
+
+        <div class="px-4 py-3">
+          <label class="text-xs font-medium text-dp-text-muted">
+            {{ t('team.manage.fields.batchTemplate') }}
+          </label>
+          <select
+            :value="team.dutyBatchTemplate?.name || ''"
+            @change="updateBatchTemplate(($event.target as HTMLSelectElement).value)"
+            class="mt-1.5 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent bg-dp-bg-input border-dp-border-input text-dp-text-primary"
+          >
+            <option value="">{{ t('team.manage.labels.none') }}</option>
+            <option v-for="template in dutyBatchTemplates" :key="template.name" :value="template.name">
+              {{ template.label }}
+            </option>
+          </select>
+        </div>
+
+        <div v-if="team.dutyBatchTemplate" class="px-4 py-3">
+          <p class="text-xs font-medium text-dp-text-muted">
+            {{ t('team.manage.fields.dutyUpload') }}
+          </p>
+          <button
+            @click="openBatchUploadModal"
+            class="mt-1.5 w-full px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-accent-hover transition flex items-center justify-center gap-1 cursor-pointer"
+          >
+            <Upload class="w-4 h-4" />
+            {{ t('team.manage.actions.upload') }}
+          </button>
+        </div>
+      </div>
+
+      <div class="hidden sm:block overflow-x-auto">
+        <table class="w-full min-w-[300px]">
+          <tbody class="border-dp-border-primary">
+            <tr class="border-b border-dp-border-primary">
+              <th class="px-4 py-3 text-left w-1/4 font-medium bg-dp-bg-secondary text-dp-text-secondary">
+                {{ t('team.manage.fields.description') }}
+              </th>
+              <td class="px-4 py-3 text-dp-text-primary">
+                {{ team.description }}
+              </td>
+            </tr>
+            <tr class="border-b border-dp-border-primary" v-if="isAdmin">
+              <th class="px-4 py-3 text-left font-medium bg-dp-bg-secondary text-dp-text-secondary">
+                {{ t('team.manage.fields.admin') }}
+              </th>
+              <td class="px-4 py-3 text-dp-text-primary">
+                <div class="flex items-center gap-2">
+                  <span class="font-medium">{{ team.adminName || t('team.manage.labels.notAvailable') }}</span>
+                  <button
+                    v-if="team.adminId && loginId !== team.adminId"
+                    @click="changeAdmin()"
+                    class="px-2 py-1 text-sm border border-dp-danger-border text-dp-danger rounded hover:bg-dp-danger-soft transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <Trash2 class="w-3 h-3" />
+                    {{ t('team.manage.actions.cancelAdmin') }}
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr class="border-b border-dp-border-primary">
+              <th class="px-4 py-3 text-left font-medium bg-dp-bg-secondary text-dp-text-secondary">
+                {{ t('team.manage.fields.workType') }}
+              </th>
+              <td class="px-4 py-3">
+                <select
+                  :value="team.workType"
+                  @change="updateWorkType(($event.target as HTMLSelectElement).value)"
+                  class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent bg-dp-bg-input border-dp-border-input text-dp-text-primary"
                 >
-                  <Trash2 class="w-3 h-3" />
-                  {{ t('team.manage.actions.cancelAdmin') }}
+                  <option v-for="wt in workTypes" :key="wt.value" :value="wt.value">
+                    {{ wt.label }}
+                  </option>
+                </select>
+              </td>
+            </tr>
+            <tr class="border-b border-dp-border-primary">
+              <th class="px-4 py-3 text-left font-medium bg-dp-bg-secondary text-dp-text-secondary">
+                {{ t('team.manage.fields.batchTemplate') }}
+              </th>
+              <td class="px-4 py-3">
+                <select
+                  :value="team.dutyBatchTemplate?.name || ''"
+                  @change="updateBatchTemplate(($event.target as HTMLSelectElement).value)"
+                  class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent bg-dp-bg-input border-dp-border-input text-dp-text-primary"
+                >
+                  <option value="">{{ t('team.manage.labels.none') }}</option>
+                  <option v-for="template in dutyBatchTemplates" :key="template.name" :value="template.name">
+                    {{ template.label }}
+                  </option>
+                </select>
+              </td>
+            </tr>
+            <tr v-if="team.dutyBatchTemplate">
+              <th class="px-4 py-3 text-left font-medium bg-dp-bg-secondary text-dp-text-secondary">
+                {{ t('team.manage.fields.dutyUpload') }}
+              </th>
+              <td class="px-4 py-3">
+                <button
+                  @click="openBatchUploadModal"
+                  class="px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-accent-hover transition flex items-center gap-1 cursor-pointer"
+                >
+                  <Upload class="w-4 h-4" />
+                  {{ t('team.manage.actions.upload') }}
                 </button>
-              </div>
-            </td>
-          </tr>
-          <tr class="border-b border-dp-border-primary">
-            <th class="px-4 py-3 text-left font-medium bg-dp-bg-secondary text-dp-text-secondary">
-              {{ t('team.manage.fields.workType') }}
-            </th>
-            <td class="px-4 py-3">
-              <select
-                :value="team.workType"
-                @change="updateWorkType(($event.target as HTMLSelectElement).value)"
-                class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent bg-dp-bg-input border-dp-border-input text-dp-text-primary"
-              >
-                <option v-for="wt in workTypes" :key="wt.value" :value="wt.value">
-                  {{ wt.label }}
-                </option>
-              </select>
-            </td>
-          </tr>
-          <tr class="border-b border-dp-border-primary">
-            <th class="px-4 py-3 text-left font-medium bg-dp-bg-secondary text-dp-text-secondary">
-              {{ t('team.manage.fields.batchTemplate') }}
-            </th>
-            <td class="px-4 py-3">
-              <select
-                :value="team.dutyBatchTemplate?.name || ''"
-                @change="updateBatchTemplate(($event.target as HTMLSelectElement).value)"
-                class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent bg-dp-bg-input border-dp-border-input text-dp-text-primary"
-              >
-                <option value="">{{ t('team.manage.labels.none') }}</option>
-                <option v-for="template in dutyBatchTemplates" :key="template.name" :value="template.name">
-                  {{ template.label }}
-                </option>
-              </select>
-            </td>
-          </tr>
-          <tr v-if="team.dutyBatchTemplate">
-            <th class="px-4 py-3 text-left font-medium bg-dp-bg-secondary text-dp-text-secondary">
-              {{ t('team.manage.fields.dutyUpload') }}
-            </th>
-            <td class="px-4 py-3">
-              <button
-                @click="openBatchUploadModal"
-                class="px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-accent-hover transition flex items-center gap-1 cursor-pointer"
-              >
-                <Upload class="w-4 h-4" />
-                {{ t('team.manage.actions.upload') }}
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 

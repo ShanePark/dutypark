@@ -12,6 +12,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
+import org.springframework.restdocs.payload.JsonFieldType
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.*
 import org.springframework.restdocs.payload.PayloadDocumentation.*
 import org.springframework.restdocs.request.RequestDocumentation.*
@@ -107,8 +108,10 @@ class ScheduleControllerTest : RestDocsTest() {
             .andDo(
                 document(
                     "schedules/create-unauthorized", responseFields(
-                        fieldWithPath("errorCode").description("401"),
-                        fieldWithPath("message").description("Error Message")
+                        fieldWithPath("status").description("HTTP status"),
+                        fieldWithPath("code").description("Machine-readable error code"),
+                        fieldWithPath("details").type(JsonFieldType.OBJECT).optional().description("Additional error details"),
+                        fieldWithPath("fieldErrors").type(JsonFieldType.ARRAY).optional().description("Field validation errors")
                     )
                 )
             )

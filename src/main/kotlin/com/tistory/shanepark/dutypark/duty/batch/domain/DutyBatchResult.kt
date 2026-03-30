@@ -1,10 +1,14 @@
 package com.tistory.shanepark.dutypark.duty.batch.domain
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import java.time.LocalDate
 
 data class DutyBatchResult(
     val result: Boolean,
-    val errorMessage: String? = null,
+    @field:JsonInclude(JsonInclude.Include.NON_NULL)
+    val errorCode: String? = null,
+    @field:JsonInclude(JsonInclude.Include.NON_NULL)
+    val errorDetails: Map<String, Any?>? = null,
     val startDate: LocalDate? = null,
     val endDate: LocalDate? = null,
     val workingDays: Int = 0,
@@ -21,8 +25,15 @@ data class DutyBatchResult(
             )
         }
 
-        fun fail(errorMessage: String?): DutyBatchResult {
-            return DutyBatchResult(result = false, errorMessage = errorMessage)
+        fun fail(
+            errorCode: String?,
+            errorDetails: Map<String, Any?> = emptyMap(),
+        ): DutyBatchResult {
+            return DutyBatchResult(
+                result = false,
+                errorCode = errorCode,
+                errorDetails = errorDetails.takeIf { it.isNotEmpty() },
+            )
         }
     }
 }

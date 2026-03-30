@@ -13,6 +13,10 @@ import { useNotificationNavigation } from '@/composables/useNotificationNavigati
 import { useSwal } from '@/composables/useSwal'
 import type { NotificationDto, Page } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
+import {
+  formatNotificationMessage,
+  getNotificationActor,
+} from '@/utils/notificationFormatter'
 
 dayjs.extend(relativeTime)
 
@@ -114,6 +118,20 @@ function formatDate(dateString: string): string {
       ? 'YYYY/MM/DD HH:mm'
       : 'YYYY.MM.DD HH:mm'
   return dayjs(dateString).locale(dayjsLocale.value).format(format)
+}
+
+function getNotificationMessage(notification: NotificationDto): string {
+  return formatNotificationMessage(notification, t)
+}
+
+function getAvatarProps(notification: NotificationDto) {
+  const actor = getNotificationActor(notification)
+  return {
+    memberId: notification.actorId,
+    name: actor?.name ?? '',
+    hasProfilePhoto: actor?.hasProfilePhoto ?? false,
+    profilePhotoVersion: actor?.profilePhotoVersion ?? 0,
+  }
 }
 
 async function handleNotificationClick(notification: NotificationDto) {
@@ -266,16 +284,13 @@ watch(
           @click="handleNotificationClick(notification)"
         >
           <ProfileAvatar
-            :member-id="notification.actorId"
-            :name="notification.actorName || ''"
-            :has-profile-photo="notification.actorHasProfilePhoto ?? false"
-            :profile-photo-version="notification.actorProfilePhotoVersion ?? 0"
+            v-bind="getAvatarProps(notification)"
             size="md"
           />
           <div class="flex-1 min-w-0">
             <div class="flex items-start justify-between gap-2">
-              <p class="notification-list-item-title text-sm font-medium">
-                {{ notification.title }}
+              <p class="notification-list-item-title text-sm font-medium line-clamp-2">
+                {{ getNotificationMessage(notification) }}
               </p>
               <button
                 type="button"
@@ -286,9 +301,6 @@ watch(
                 <Trash2 class="w-4 h-4" />
               </button>
             </div>
-            <p v-if="notification.content" class="notification-list-item-content text-sm mt-1 line-clamp-2">
-              {{ notification.content }}
-            </p>
             <div class="flex items-center gap-2 mt-1.5">
               <span class="notification-list-item-time text-xs">
                 {{ formatTimeAgo(notification.createdAt) }}

@@ -236,7 +236,7 @@ class AuthControllerTest : DutyparkIntegrationTest() {
             MockMvcRequestBuilders.post("/api/auth/impersonate/${notManaged.id}")
                 .header("Authorization", "Bearer $accessToken")
         ).andExpect(status().isForbidden)
-            .andExpect(jsonPath("$.error").exists())
+            .andExpect(jsonPath("$.code").exists())
             .andDo(MockMvcResultHandlers.print())
     }
 
@@ -326,7 +326,7 @@ class AuthControllerTest : DutyparkIntegrationTest() {
             MockMvcRequestBuilders.post("/api/auth/restore")
                 .header("Authorization", "Bearer $accessToken")
         ).andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.error").exists())
+            .andExpect(jsonPath("$.code").exists())
             .andDo(MockMvcResultHandlers.print())
     }
 
@@ -340,7 +340,7 @@ class AuthControllerTest : DutyparkIntegrationTest() {
                 .header("Authorization", "Bearer $accessToken")
                 .header(HttpHeaders.ACCEPT_LANGUAGE, "en")
         ).andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.error").value("You are not currently impersonating another account."))
+            .andExpect(jsonPath("$.code").value("auth.restore.notImpersonating"))
             .andDo(MockMvcResultHandlers.print())
     }
 
@@ -369,7 +369,7 @@ class AuthControllerTest : DutyparkIntegrationTest() {
             MockMvcRequestBuilders.post("/api/auth/impersonate/${managed.id}")
                 .header("Authorization", "Bearer $impersonatedToken")
         ).andExpect(status().isForbidden)
-            .andExpect(jsonPath("$.error").exists())
+            .andExpect(jsonPath("$.code").exists())
             .andDo(MockMvcResultHandlers.print())
     }
 

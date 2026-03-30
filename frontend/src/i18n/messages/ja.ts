@@ -1,4 +1,5 @@
 import en from './en'
+import { apiErrorMessagesJa } from './apiErrors'
 
 export default {
   ...en,
@@ -54,6 +55,7 @@ export default {
       message: 'ページが見つかりません',
     },
   },
+  apiErrors: apiErrorMessagesJa,
   visibility: {
     ...en.visibility,
     labels: {
@@ -112,6 +114,83 @@ export default {
       title: '通知',
       markAllAsRead: 'すべて既読',
       viewAll: 'すべて見る',
+    },
+    items: {
+      ...en.notifications.items,
+      generic: '新しい通知があります。',
+      someone: 'だれか',
+      friendRequestReceived: {
+        ...en.notifications.items.friendRequestReceived,
+        v1: '{actorName}さんが友だちリクエストを送りました。',
+      },
+      friendRequestReceivedFallback: {
+        ...en.notifications.items.friendRequestReceivedFallback,
+        v1: '友だちリクエストが届きました。',
+      },
+      friendRequestAccepted: {
+        ...en.notifications.items.friendRequestAccepted,
+        v1: '{actorName}さんが友だちリクエストを承認しました。',
+      },
+      friendRequestAcceptedFallback: {
+        ...en.notifications.items.friendRequestAcceptedFallback,
+        v1: '友だちリクエストが承認されました。',
+      },
+      familyRequestReceived: {
+        ...en.notifications.items.familyRequestReceived,
+        v1: '{actorName}さんが家族リクエストを送りました。',
+      },
+      familyRequestReceivedFallback: {
+        ...en.notifications.items.familyRequestReceivedFallback,
+        v1: '家族リクエストが届きました。',
+      },
+      familyRequestAccepted: {
+        ...en.notifications.items.familyRequestAccepted,
+        v1: '{actorName}さんが家族リクエストを承認しました。',
+      },
+      familyRequestAcceptedFallback: {
+        ...en.notifications.items.familyRequestAcceptedFallback,
+        v1: '家族リクエストが承認されました。',
+      },
+      scheduleTagged: {
+        ...en.notifications.items.scheduleTagged,
+        v1: '{actorName}さんが[{scheduleTitle}]の予定にあなたをタグ付けしました。',
+      },
+      scheduleTaggedFallback: {
+        ...en.notifications.items.scheduleTaggedFallback,
+        v1: '[{scheduleTitle}]の予定にあなたがタグ付けされました。',
+      },
+      todoTagged: {
+        ...en.notifications.items.todoTagged,
+        v1: '{actorName}さんがTODO [{todoTitle}]にあなたをタグ付けしました。',
+      },
+      todoTaggedFallback: {
+        ...en.notifications.items.todoTaggedFallback,
+        v1: 'TODO [{todoTitle}]にあなたがタグ付けされました。',
+      },
+      todoStatusTodo: {
+        ...en.notifications.items.todoStatusTodo,
+        v1: '{actorName}さんがTODO [{todoTitle}]を未着手に変更しました。',
+      },
+      todoStatusTodoFallback: {
+        ...en.notifications.items.todoStatusTodoFallback,
+        v1: 'TODO [{todoTitle}]が未着手に変更されました。',
+      },
+      todoStatusInProgress: {
+        ...en.notifications.items.todoStatusInProgress,
+        v1: '{actorName}さんがTODO [{todoTitle}]を進行中に変更しました。',
+      },
+      todoStatusInProgressFallback: {
+        ...en.notifications.items.todoStatusInProgressFallback,
+        v1: 'TODO [{todoTitle}]が進行中に変更されました。',
+      },
+      todoStatusDone: {
+        ...en.notifications.items.todoStatusDone,
+        v1: '{actorName}さんがTODO [{todoTitle}]を完了に変更しました。',
+      },
+      todoStatusDoneFallback: {
+        ...en.notifications.items.todoStatusDoneFallback,
+        v1: 'TODO [{todoTitle}]が完了に変更されました。',
+      },
     },
     list: {
       ...en.notifications.list,
@@ -203,36 +282,6 @@ export default {
       chooseOther: '別の言語を選ぶ',
       dismiss: '言語の提案を閉じる',
     },
-  },
-  holidayNames: {
-    newYear: '元日',
-    lunarNewYear: 'ソルラル',
-    independenceMovementDay: '三一節',
-    childrenDay: 'こどもの日',
-    buddhaBirthday: '釈迦誕生日',
-    memorialDay: '顕忠日',
-    liberationDay: '光復節',
-    nationalFoundationDay: '開天節',
-    hangulDay: 'ハングルの日',
-    christmas: 'クリスマス',
-    chuseok: '秋夕',
-    substituteHoliday: '振替休日',
-    substituteHolidayWithName: '{name}の振替休日',
-  },
-  holidayNamesShort: {
-    newYear: '元日',
-    lunarNewYear: '旧正月',
-    independenceMovementDay: '三一節',
-    childrenDay: 'こども',
-    buddhaBirthday: '釈迦誕',
-    memorialDay: '顕忠日',
-    liberationDay: '光復節',
-    nationalFoundationDay: '開天節',
-    hangulDay: 'ハングル',
-    christmas: 'Xmas',
-    chuseok: '秋夕',
-    substituteHoliday: '振休',
-    substituteHolidayWithName: '{name} 振休',
   },
   intro: {
     ...en.intro,
@@ -542,7 +591,7 @@ export default {
       sectionTitle: 'プロフィール',
       name: '名前',
       team: 'チーム',
-      email: 'メールアドレス',
+      email: 'メール',
     },
     visibility: {
       ...en.member.visibility,
@@ -1673,7 +1722,7 @@ export default {
         joinedAt: '登録日',
         lastUpdated: '最終更新',
         lastActive: '最終活動',
-        email: 'メールアドレス',
+        email: 'メール',
         team: 'チーム',
         visibility: '公開範囲',
         loginMethods: 'ログイン方法',

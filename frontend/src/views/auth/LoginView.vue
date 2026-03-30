@@ -8,6 +8,7 @@ import { useNaver } from '@/composables/useNaver'
 import { AxiosError } from 'axios'
 import PolicyModal from '@/components/common/PolicyModal.vue'
 import { getSafeRedirect } from '@/utils/redirect'
+import { getApiErrorDetail, resolveApiErrorMessage } from '@/utils/resolveApiError'
 
 const REMEMBER_EMAIL_KEY = 'dp-remember-email'
 
@@ -76,9 +77,10 @@ async function handleLogin() {
     router.push(redirectTarget())
   } catch (e: unknown) {
     if (e instanceof AxiosError && e.response?.data) {
-      error.value = e.response.data.error || t('auth.login.error.generic')
-      if (typeof e.response.data.remainingAttempts === 'number') {
-        remainingAttempts.value = e.response.data.remainingAttempts
+      error.value = resolveApiErrorMessage(e, { fallbackKey: 'auth.login.error.generic' }, t)
+      const attempts = getApiErrorDetail<number>(e, 'remainingAttempts')
+      if (typeof attempts === 'number') {
+        remainingAttempts.value = attempts
       }
     } else {
       error.value = t('auth.login.error.invalidCredentials')

@@ -61,8 +61,11 @@ onMounted(async () => {
       </div>
 
       <div class="text-center mt-6">
-        <router-link to="/" class="text-sm hover:underline text-dp-text-muted">
-          <span aria-hidden="true">←</span>
+        <router-link
+          to="/"
+          class="inline-flex min-h-[44px] items-center justify-center gap-1 whitespace-nowrap rounded-full px-3 py-2 text-sm text-dp-text-muted transition-colors hover:bg-dp-bg-hover hover:text-dp-text-primary"
+        >
+          <span aria-hidden="true" class="leading-none">←</span>
           {{ t('common.navigation.backHome') }}
         </router-link>
       </div>

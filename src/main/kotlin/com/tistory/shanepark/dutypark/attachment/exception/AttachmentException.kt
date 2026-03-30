@@ -10,7 +10,7 @@ abstract class AttachmentException(
 class AttachmentExtensionBlockedException(
     val filename: String,
     val extension: String
-) : AttachmentException("File extension '$extension' is blocked (filename: $filename)") {
+) : AttachmentException("attachment.extension.blocked") {
     override val errorCode: Int = 400
 }
 
@@ -18,6 +18,6 @@ class AttachmentTooLargeException(
     val filename: String,
     val size: Long,
     val maxSize: Long
-) : AttachmentException("File size $size bytes exceeds maximum allowed size $maxSize bytes (filename: $filename)") {
+) : AttachmentException("attachment.size.exceeded") {
     override val errorCode: Int = 413
 }

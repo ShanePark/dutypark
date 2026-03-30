@@ -4,7 +4,6 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from 'axios'
 import type { ApiError } from '@/types'
-import { getCurrentLocale } from '@/i18n'
 
 let isRefreshing = false
 let refreshFailed = false
@@ -66,13 +65,6 @@ apiClient.interceptors.request.use((config) => {
     delete config.headers['Content-Type']
   }
 
-  const locale = getCurrentLocale()
-  if (typeof config.headers.set === 'function') {
-    config.headers.set('Accept-Language', locale)
-  } else {
-    config.headers['Accept-Language'] = locale
-  }
-
   return config
 })
 
@@ -130,9 +122,6 @@ apiClient.interceptors.response.use(
           {},
           {
             withCredentials: true,
-            headers: {
-              'Accept-Language': getCurrentLocale(),
-            },
           }
         )
 

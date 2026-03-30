@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.push.service
 
-import tools.jackson.databind.ObjectMapper
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
 import com.tistory.shanepark.dutypark.push.dto.PushNotificationPayload
@@ -12,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
+import tools.jackson.databind.ObjectMapper
 import java.time.LocalDateTime
 
 @Service
@@ -39,7 +39,7 @@ class WebPushService(
         refreshToken.subscribePush(
             endpoint = request.endpoint,
             p256dh = request.keys.p256dh,
-            auth = request.keys.auth
+            auth = request.keys.auth,
         )
         refreshTokenRepository.save(refreshToken)
         return true
@@ -64,13 +64,6 @@ class WebPushService(
             return
         }
 
-        val payloadJson = try {
-            objectMapper.writeValueAsString(payload)
-        } catch (e: Exception) {
-            log.error("Failed to serialize push payload for member {}: {}", memberId, e.message, e)
-            return
-        }
-
         tokens.forEach { token ->
             try {
                 if (token.pushEndpoint.isNullOrBlank() || token.pushP256dh.isNullOrBlank() || token.pushAuth.isNullOrBlank()) {
@@ -79,11 +72,21 @@ class WebPushService(
                     refreshTokenRepository.save(token)
                     return@forEach
                 }
+                val payloadJson = serializePayload(memberId, token, payload) ?: return@forEach
                 sendNotification(token, payloadJson)
             } catch (e: Exception) {
                 log.error("Failed to send push to token {}: {}", token.id, e.message)
                 handleSendError(token, e)
             }
+        }
+    }
+
+    private fun serializePayload(memberId: Long, token: RefreshToken, payload: PushNotificationPayload): String? {
+        return try {
+            objectMapper.writeValueAsString(payload)
+        } catch (e: Exception) {
+            log.error("Failed to serialize push payload for member {} token {}: {}", memberId, token.id, e.message, e)
+            null
         }
     }
 

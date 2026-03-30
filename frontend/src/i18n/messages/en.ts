@@ -1,3 +1,5 @@
+import { apiErrorMessagesEn } from './apiErrors'
+
 export default {
   common: {
     actions: {
@@ -42,6 +44,7 @@ export default {
       message: 'Page not found',
     },
   },
+  apiErrors: apiErrorMessagesEn,
   visibility: {
     labels: {
       public: 'Public',
@@ -92,6 +95,64 @@ export default {
       title: 'Notifications',
       markAllAsRead: 'Mark all as read',
       viewAll: 'View all',
+    },
+    items: {
+      generic: 'You have a new notification.',
+      someone: 'Someone',
+      friendRequestReceived: {
+        v1: '{actorName} sent you a friend request.',
+      },
+      friendRequestReceivedFallback: {
+        v1: 'You received a friend request.',
+      },
+      friendRequestAccepted: {
+        v1: '{actorName} accepted your friend request.',
+      },
+      friendRequestAcceptedFallback: {
+        v1: 'Your friend request was accepted.',
+      },
+      familyRequestReceived: {
+        v1: '{actorName} sent you a family request.',
+      },
+      familyRequestReceivedFallback: {
+        v1: 'You received a family request.',
+      },
+      familyRequestAccepted: {
+        v1: '{actorName} accepted your family request.',
+      },
+      familyRequestAcceptedFallback: {
+        v1: 'Your family request was accepted.',
+      },
+      scheduleTagged: {
+        v1: '{actorName} tagged you in [{scheduleTitle}].',
+      },
+      scheduleTaggedFallback: {
+        v1: 'You were tagged in [{scheduleTitle}].',
+      },
+      todoTagged: {
+        v1: '{actorName} tagged you in TODO [{todoTitle}].',
+      },
+      todoTaggedFallback: {
+        v1: 'You were tagged in TODO [{todoTitle}].',
+      },
+      todoStatusTodo: {
+        v1: '{actorName} moved TODO [{todoTitle}] to To-do.',
+      },
+      todoStatusTodoFallback: {
+        v1: 'TODO [{todoTitle}] was moved to To-do.',
+      },
+      todoStatusInProgress: {
+        v1: '{actorName} moved TODO [{todoTitle}] to In progress.',
+      },
+      todoStatusInProgressFallback: {
+        v1: 'TODO [{todoTitle}] was moved to In progress.',
+      },
+      todoStatusDone: {
+        v1: '{actorName} marked TODO [{todoTitle}] as done.',
+      },
+      todoStatusDoneFallback: {
+        v1: 'TODO [{todoTitle}] was marked as done.',
+      },
     },
     list: {
       title: 'Notifications',
@@ -173,36 +234,6 @@ export default {
       chooseOther: 'Choose another',
       dismiss: 'Dismiss language suggestion',
     },
-  },
-  holidayNames: {
-    newYear: "New Year's Day",
-    lunarNewYear: 'Seollal',
-    independenceMovementDay: 'Independence Movement Day',
-    childrenDay: "Children's Day",
-    buddhaBirthday: "Buddha's Birthday",
-    memorialDay: 'Memorial Day',
-    liberationDay: 'Liberation Day',
-    nationalFoundationDay: 'National Foundation Day',
-    hangulDay: 'Hangul Day',
-    christmas: 'Christmas',
-    chuseok: 'Chuseok',
-    substituteHoliday: 'Substitute Holiday',
-    substituteHolidayWithName: '{name} Substitute Holiday',
-  },
-  holidayNamesShort: {
-    newYear: "New Year's",
-    lunarNewYear: 'Seollal',
-    independenceMovementDay: 'Mar 1',
-    childrenDay: "Kids' Day",
-    buddhaBirthday: 'Buddha Day',
-    memorialDay: 'Memorial',
-    liberationDay: 'Liberation',
-    nationalFoundationDay: 'Foundation',
-    hangulDay: 'Hangul',
-    christmas: 'Christmas',
-    chuseok: 'Chuseok',
-    substituteHoliday: 'Observed',
-    substituteHolidayWithName: '{name} Obs.',
   },
   intro: {
     hero: {

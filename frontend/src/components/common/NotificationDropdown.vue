@@ -12,6 +12,10 @@ import { useAuthStore } from '@/stores/auth'
 import { useNotificationNavigation } from '@/composables/useNotificationNavigation'
 import type { NotificationDto } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
+import {
+  formatNotificationMessage,
+  getNotificationActor,
+} from '@/utils/notificationFormatter'
 
 dayjs.extend(relativeTime)
 
@@ -44,6 +48,20 @@ const displayNotifications = computed(() => {
 
 function formatTimeAgo(dateString: string): string {
   return dayjs(dateString).locale(dayjsLocale.value).fromNow()
+}
+
+function getNotificationMessage(notification: NotificationDto): string {
+  return formatNotificationMessage(notification, t)
+}
+
+function getAvatarProps(notification: NotificationDto) {
+  const actor = getNotificationActor(notification)
+  return {
+    memberId: notification.actorId,
+    name: actor?.name ?? '',
+    hasProfilePhoto: actor?.hasProfilePhoto ?? false,
+    profilePhotoVersion: actor?.profilePhotoVersion ?? 0,
+  }
 }
 
 async function handleNotificationClick(notification: NotificationDto) {
@@ -142,10 +160,7 @@ function handleOverlayClick() {
           >
             <div class="relative">
               <ProfileAvatar
-                :member-id="notification.actorId"
-                :name="notification.actorName || ''"
-                :has-profile-photo="notification.actorHasProfilePhoto ?? false"
-                :profile-photo-version="notification.actorProfilePhotoVersion ?? 0"
+                v-bind="getAvatarProps(notification)"
                 size="sm"
               />
               <span
@@ -158,7 +173,7 @@ function handleOverlayClick() {
                 class="text-sm truncate"
                 :class="notification.isRead ? 'notification-item-title-read' : 'notification-item-title'"
               >
-                {{ notification.title }}
+                {{ getNotificationMessage(notification) }}
               </p>
               <p class="notification-item-time text-xs mt-0.5">
                 {{ formatTimeAgo(notification.createdAt) }}

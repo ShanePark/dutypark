@@ -52,7 +52,7 @@ class TeamManageDutyTypeController(
     ) {
         val dutyType1 = dutyTypeService.findById(id1)
         val dutyType2 = dutyTypeService.findById(id2)
-        require(dutyType1.teamId == dutyType2.teamId) { "DutyTypes must belong to the same team" }
+        require(dutyType1.teamId == dutyType2.teamId) { "team.dutyType.sameTeam.required" }
         checkCanManage(login = loginMember, teamId = dutyType1.teamId)
         dutyTypeService.swapDutyTypePosition(id1, id2)
     }

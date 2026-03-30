@@ -16,6 +16,7 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
 import ProfilePhotoUploader from '@/components/common/ProfilePhotoUploader.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
+import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import {
   User,
   Building2,
@@ -95,7 +96,7 @@ async function createAuxiliaryAccount() {
     toastSuccess(t('member.auxiliary.success'))
   } catch (error: any) {
     console.error('Failed to create auxiliary account:', error)
-    const errorMessage = error.response?.data?.message || t('member.auxiliary.createFailed')
+    const errorMessage = resolveApiErrorMessage(error, { fallbackKey: 'member.auxiliary.createFailed' }, t)
     showError(errorMessage)
   } finally {
     creatingAuxiliary.value = false
@@ -118,7 +119,7 @@ async function handleImpersonate(member: MemberDto) {
     router.push('/')
   } catch (error: any) {
     console.error('Failed to impersonate:', error)
-    const errorMessage = error.response?.data?.error || t('member.manager.impersonateFailed')
+    const errorMessage = resolveApiErrorMessage(error, { fallbackKey: 'member.manager.impersonateFailed' }, t)
     showError(errorMessage)
   } finally {
     impersonating.value = null
@@ -552,7 +553,7 @@ async function changePassword() {
     authStore.logout()
     router.push('/auth/login')
   } catch (error: any) {
-    const message = error.response?.data?.message || t('member.password.changeFailed')
+    const message = resolveApiErrorMessage(error, { fallbackKey: 'member.password.changeFailed' }, t)
     showError(message)
   } finally {
     changingPassword.value = false

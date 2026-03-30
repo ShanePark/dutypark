@@ -1,11 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { syncServiceWorkerLocale } from '@/utils/serviceWorkerLocale'
 
-vi.mock('@/api/member', () => ({
-  memberApi: {
-    getPreferredLocale: vi.fn(),
-    updatePreferredLocale: vi.fn(),
-  },
+vi.mock('@/utils/serviceWorkerLocale', () => ({
+  syncServiceWorkerLocale: vi.fn(),
 }))
 
 const storage = new Map<string, string>()
@@ -56,6 +54,7 @@ describe('locale store', () => {
     localStorageMock.getItem.mockClear()
     localStorageMock.setItem.mockClear()
     localStorageMock.removeItem.mockClear()
+    vi.mocked(syncServiceWorkerLocale).mockClear()
     document.documentElement.lang = ''
     setNavigatorLanguage('ko-KR')
     vi.resetModules()
@@ -74,6 +73,7 @@ describe('locale store', () => {
     expect(store.explicitLocale).toBe('en')
     expect(store.shouldSuggestLocale).toBe(false)
     expect(document.documentElement.lang).toBe('en')
+    expect(syncServiceWorkerLocale).toHaveBeenCalledWith('en')
   })
 
   it('falls back to the browser locale when supported', async () => {
@@ -105,6 +105,7 @@ describe('locale store', () => {
     expect(store.detectedLocale).toBe('ja')
     expect(store.shouldSuggestLocale).toBe(true)
     expect(document.documentElement.lang).toBe('ja')
+    expect(syncServiceWorkerLocale).toHaveBeenCalledWith('ja')
   })
 
   it('falls back to korean when the browser locale is unsupported', async () => {
@@ -132,6 +133,7 @@ describe('locale store', () => {
     expect(localStorageMock.setItem).toHaveBeenCalledWith('dp-locale', 'ja')
     expect(store.explicitLocale).toBe('ja')
     expect(document.documentElement.lang).toBe('ja')
+    expect(syncServiceWorkerLocale).toHaveBeenCalledWith('ja')
   })
 
   it('marks the detected locale as handled when the suggestion is dismissed', async () => {
@@ -160,21 +162,16 @@ describe('locale store', () => {
     expect(store.explicitLocale).toBe('en')
     expect(store.shouldSuggestLocale).toBe(false)
     expect(localStorageMock.setItem).toHaveBeenCalledWith('dp-locale', 'en')
+    expect(syncServiceWorkerLocale).toHaveBeenCalledWith('en')
   })
 
-  it('keeps the local locale when the server preference response is empty', async () => {
+  it('keeps the explicit locale after initialization without server sync', async () => {
     storage.set('dp-locale', 'en')
-
-    const { memberApi } = await import('@/api/member')
-    vi.mocked(memberApi.getPreferredLocale).mockResolvedValue({
-      data: '',
-    } as never)
 
     const { useLocaleStore } = await import('./locale')
     const store = useLocaleStore()
 
     store.initializeLocale()
-    await store.syncWithServerPreference()
 
     expect(store.locale).toBe('en')
     expect(document.documentElement.lang).toBe('en')

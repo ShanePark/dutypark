@@ -18,10 +18,10 @@ enum class DutyBatchTemplate(
             ?.substringAfterLast(".", "")
             ?.lowercase()
             ?.let { ".$it" }
-            ?: throw IllegalArgumentException("파일에 확장자가 없습니다.")
+            ?: throw NotSupportedFileException(supportedFileExtensions.joinToString(","))
 
         require(extension in supportedFileExtensions) {
-            throw NotSupportedFileException("지원하지 않는 파일 형식입니다: ${extension},  지원하는 파일 형식: $supportedFileExtensions")
+            throw NotSupportedFileException(supportedFileExtensions.joinToString(","))
         }
     }
 

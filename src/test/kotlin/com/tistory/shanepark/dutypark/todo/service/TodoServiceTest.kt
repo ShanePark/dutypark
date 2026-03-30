@@ -825,7 +825,7 @@ class TodoServiceTest {
             todoService.changeStatus(loginMember, todoId, TodoStatus.TODO, emptyList())
         }
 
-        assertEquals("orderedIds is required when reordering within the same status", exception.message)
+        assertEquals("todo.reorder.orderedIds.required", exception.message)
         assertEquals(TodoStatus.TODO, todo.status)
         assertEquals(5, todo.position)
         verify(todoRepository, never()).findAllById(anyList())

@@ -73,7 +73,7 @@ class OAuthController(
         }
 
         val callbackUrl = state["callbackUrl"] as String?
-            ?: throw IllegalArgumentException("callbackUrl is required in state")
+            ?: throw IllegalArgumentException("auth.oauth.callbackUrl.required")
         return kakaoLoginService.login(
             req = httpServletRequest,
             resp = httpServletResponse,
@@ -114,7 +114,7 @@ class OAuthController(
         }
 
         val callbackUrl = state["callbackUrl"] as String?
-            ?: throw IllegalArgumentException("callbackUrl is required in state")
+            ?: throw IllegalArgumentException("auth.oauth.callbackUrl.required")
         return naverLoginService.login(
             req = httpServletRequest,
             resp = httpServletResponse,

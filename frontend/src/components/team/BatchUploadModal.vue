@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { useSwal } from '@/composables/useSwal'
 import { teamApi } from '@/api/team'
+import { resolveApiCodeMessage, resolveApiErrorMessage } from '@/utils/resolveApiError'
 import { X, Loader2 } from 'lucide-vue-next'
 
 const props = defineProps<{
@@ -60,15 +61,15 @@ async function uploadBatch() {
       batchForm.value.year,
       batchForm.value.month
     )
-    if (result.data.success) {
+    if (result.data.result) {
       toastSuccess(t('team.batchUpload.success'))
       close()
     } else {
-      showError(result.data.message || t('team.batchUpload.failed'))
+      showError(resolveApiCodeMessage(result.data, { fallbackKey: 'team.batchUpload.failed' }, t))
     }
   } catch (error: any) {
     console.error('Failed to upload batch:', error)
-    const message = error.response?.data?.message || t('team.batchUpload.failed')
+    const message = resolveApiErrorMessage(error, { fallbackKey: 'team.batchUpload.failed' }, t)
     showError(message)
   } finally {
     emit('update:saving', false)

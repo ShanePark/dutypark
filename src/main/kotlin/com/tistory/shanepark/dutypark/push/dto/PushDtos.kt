@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.push.dto
 
 import com.fasterxml.jackson.annotation.JsonInclude
+import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationType
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 
@@ -20,8 +21,7 @@ data class PushSubscriptionKeys(
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class PushNotificationPayload(
-    val title: String? = null,
-    val body: String,
+    val type: NotificationType,
     val icon: String = "/android-chrome-192x192.png",
     val badge: String = "/android-chrome-192x192.png",
     val url: String? = null,

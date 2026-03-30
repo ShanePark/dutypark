@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.push.service
 import tools.jackson.databind.ObjectMapper
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
+import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationType
 import com.tistory.shanepark.dutypark.push.dto.PushNotificationPayload
 import com.tistory.shanepark.dutypark.push.dto.PushSubscriptionKeys
 import com.tistory.shanepark.dutypark.push.dto.PushSubscriptionRequest
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mockito.never
+import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
@@ -122,7 +124,7 @@ class WebPushServiceTest {
         ).thenReturn(listOf(token))
         whenever(objectMapper.writeValueAsString(any())).thenThrow(RuntimeException("serialize"))
 
-        service.sendToMember(1L, PushNotificationPayload(body = "body"))
+        service.sendToMember(1L, pushPayload())
 
         verify(pushService, never()).send(any())
     }
@@ -135,9 +137,9 @@ class WebPushServiceTest {
         whenever(
             refreshTokenRepository.findAllByMemberIdAndPushEndpointIsNotNullAndValidUntilAfter(any(), any())
         ).thenReturn(listOf(token))
-        whenever(objectMapper.writeValueAsString(any())).thenReturn("{\"body\":\"body\"}")
+        whenever(objectMapper.writeValueAsString(any())).thenReturn("""{"type":"FRIEND_REQUEST_RECEIVED"}""")
 
-        service.sendToMember(1L, PushNotificationPayload(body = "body"))
+        service.sendToMember(1L, pushPayload())
 
         assertThat(token.hasPushSubscription()).isFalse
         verify(refreshTokenRepository).save(token)
@@ -147,7 +149,7 @@ class WebPushServiceTest {
     fun `sendToMember returns early when push is disabled`() {
         val disabledService = WebPushService(refreshTokenRepository, objectMapper, null)
 
-        disabledService.sendToMember(1L, PushNotificationPayload(body = "body"))
+        disabledService.sendToMember(1L, pushPayload())
 
         verify(refreshTokenRepository, never()).findAllByMemberIdAndPushEndpointIsNotNullAndValidUntilAfter(any(), any())
     }
@@ -158,7 +160,7 @@ class WebPushServiceTest {
             refreshTokenRepository.findAllByMemberIdAndPushEndpointIsNotNullAndValidUntilAfter(any(), any())
         ).thenReturn(emptyList())
 
-        service.sendToMember(1L, PushNotificationPayload(body = "body"))
+        service.sendToMember(1L, pushPayload())
 
         verify(objectMapper, never()).writeValueAsString(any())
         verify(pushService, never()).send(any())
@@ -171,12 +173,12 @@ class WebPushServiceTest {
         whenever(
             refreshTokenRepository.findAllByMemberIdAndPushEndpointIsNotNullAndValidUntilAfter(any(), any())
         ).thenReturn(listOf(token))
-        whenever(objectMapper.writeValueAsString(any())).thenReturn("{\"body\":\"body\"}")
+        whenever(objectMapper.writeValueAsString(any())).thenReturn("""{"type":"FRIEND_REQUEST_RECEIVED"}""")
 
         val response = BasicHttpResponse(ProtocolVersion("HTTP", 1, 1), 410, "Gone")
         whenever(pushService.send(any<nl.martijndwars.webpush.Notification>())).thenReturn(response)
 
-        service.sendToMember(1L, PushNotificationPayload(body = "body"))
+        service.sendToMember(1L, pushPayload())
 
         assertThat(token.hasPushSubscription()).isFalse
         verify(refreshTokenRepository).save(token)
@@ -189,12 +191,12 @@ class WebPushServiceTest {
         whenever(
             refreshTokenRepository.findAllByMemberIdAndPushEndpointIsNotNullAndValidUntilAfter(any(), any())
         ).thenReturn(listOf(token))
-        whenever(objectMapper.writeValueAsString(any())).thenReturn("{\"body\":\"body\"}")
+        whenever(objectMapper.writeValueAsString(any())).thenReturn("""{"type":"FRIEND_REQUEST_RECEIVED"}""")
 
         val response = BasicHttpResponse(ProtocolVersion("HTTP", 1, 1), 500, "Error")
         whenever(pushService.send(any<nl.martijndwars.webpush.Notification>())).thenReturn(response)
 
-        service.sendToMember(1L, PushNotificationPayload(body = "body"))
+        service.sendToMember(1L, pushPayload())
 
         assertThat(token.hasPushSubscription()).isTrue
         verify(refreshTokenRepository, never()).save(token)
@@ -223,13 +225,32 @@ class WebPushServiceTest {
         whenever(
             refreshTokenRepository.findAllByMemberIdAndPushEndpointIsNotNullAndValidUntilAfter(any(), any())
         ).thenReturn(listOf(token))
-        whenever(objectMapper.writeValueAsString(any())).thenReturn("{\"body\":\"body\"}")
+        whenever(objectMapper.writeValueAsString(any())).thenReturn("""{"type":"FRIEND_REQUEST_RECEIVED"}""")
         whenever(pushService.send(any<nl.martijndwars.webpush.Notification>())).thenThrow(RuntimeException("network error"))
 
-        service.sendToMember(1L, PushNotificationPayload(body = "body"))
+        service.sendToMember(1L, pushPayload())
 
         assertThat(token.hasPushSubscription()).isTrue
         verify(refreshTokenRepository, never()).save(token)
+    }
+
+    @Test
+    fun `sendToMember serializes the original payload without locale enrichment`() {
+        val token = refreshTokenWithId(1L, memberWithId(1L))
+        subscribeValidPush(token)
+        whenever(
+            refreshTokenRepository.findAllByMemberIdAndPushEndpointIsNotNullAndValidUntilAfter(any(), any())
+        ).thenReturn(listOf(token))
+        whenever(objectMapper.writeValueAsString(any())).thenReturn("""{"type":"FRIEND_REQUEST_RECEIVED"}""")
+        whenever(pushService.send(any<nl.martijndwars.webpush.Notification>()))
+            .thenReturn(BasicHttpResponse(ProtocolVersion("HTTP", 1, 1), 201, "Created"))
+
+        val payload = pushPayload()
+        service.sendToMember(1L, payload)
+
+        val payloadCaptor = argumentCaptor<PushNotificationPayload>()
+        verify(objectMapper).writeValueAsString(payloadCaptor.capture())
+        assertThat(payloadCaptor.firstValue).isEqualTo(payload)
     }
 
     private fun memberWithId(id: Long): Member {
@@ -256,6 +277,10 @@ class WebPushServiceTest {
     private fun subscribeValidPush(token: RefreshToken) {
         val keys = generateKeys()
         token.subscribePush("https://example.com/endpoint", keys.p256dh, keys.auth)
+    }
+
+    private fun pushPayload(): PushNotificationPayload {
+        return PushNotificationPayload(type = NotificationType.FRIEND_REQUEST_RECEIVED)
     }
 
     private data class WebPushKeys(val p256dh: String, val auth: String)

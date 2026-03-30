@@ -4,7 +4,10 @@ import com.tistory.shanepark.dutypark.RestDocsTest
 import com.tistory.shanepark.dutypark.notification.domain.entity.Notification
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationReferenceType
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationType
+import com.tistory.shanepark.dutypark.notification.domain.payload.FriendRequestReceivedPayload
+import com.tistory.shanepark.dutypark.notification.domain.payload.NotificationActorSnapshot
 import com.tistory.shanepark.dutypark.notification.domain.repository.NotificationRepository
+import com.tistory.shanepark.dutypark.notification.service.NotificationPayloadCodec
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
@@ -21,6 +24,9 @@ class NotificationControllerTest : RestDocsTest() {
     @Autowired
     lateinit var notificationRepository: NotificationRepository
 
+    @Autowired
+    lateinit var notificationPayloadCodec: NotificationPayloadCodec
+
     @Test
     fun `get notifications with pagination`() {
         createTestNotification()
@@ -35,6 +41,7 @@ class NotificationControllerTest : RestDocsTest() {
                 .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
+            .andExpect(jsonPath("$.content[0].payload.version").value(1))
             .andDo(MockMvcResultHandlers.print())
             .andDo(
                 document(
@@ -45,7 +52,14 @@ class NotificationControllerTest : RestDocsTest() {
                     ),
                     responseFields(
                         fieldWithPath("content").description("List of notifications"),
-                        subsectionWithPath("content[]").description("Notification items").optional(),
+                        fieldWithPath("content[].id").description("Notification ID (UUID)").optional(),
+                        fieldWithPath("content[].type").description("Notification type (FRIEND_REQUEST_RECEIVED, FRIEND_REQUEST_ACCEPTED, FAMILY_REQUEST_RECEIVED, FAMILY_REQUEST_ACCEPTED, SCHEDULE_TAGGED, TODO_TAGGED, TODO_STATUS_TODO, TODO_STATUS_IN_PROGRESS, TODO_STATUS_DONE)").optional(),
+                        fieldWithPath("content[].referenceType").description("Reference entity type (FRIEND_REQUEST, SCHEDULE, TODO, MEMBER) (nullable)").optional(),
+                        fieldWithPath("content[].referenceId").description("Reference entity ID (nullable)").optional(),
+                        fieldWithPath("content[].actorId").description("Actor member ID who triggered the notification (nullable)").optional(),
+                        subsectionWithPath("content[].payload").description("Notification payload snapshot used for client-side rendering").optional(),
+                        fieldWithPath("content[].isRead").description("Whether notification has been read").optional(),
+                        fieldWithPath("content[].createdAt").description("Notification created timestamp").optional(),
                         fieldWithPath("totalPages").description("Total pages"),
                         fieldWithPath("totalElements").description("Total elements"),
                         fieldWithPath("first").description("Is first page"),
@@ -82,6 +96,8 @@ class NotificationControllerTest : RestDocsTest() {
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$").isArray)
+            .andExpect(jsonPath("$[0].payload.version").value(1))
+            .andExpect(jsonPath("$[0].payload.actor.name").value(TestData.member2.name))
             .andDo(MockMvcResultHandlers.print())
             .andDo(
                 document(
@@ -89,14 +105,10 @@ class NotificationControllerTest : RestDocsTest() {
                     responseFields(
                         fieldWithPath("[].id").description("Notification ID (UUID)"),
                         fieldWithPath("[].type").description("Notification type (FRIEND_REQUEST_RECEIVED, FRIEND_REQUEST_ACCEPTED, FAMILY_REQUEST_RECEIVED, FAMILY_REQUEST_ACCEPTED, SCHEDULE_TAGGED, TODO_TAGGED, TODO_STATUS_TODO, TODO_STATUS_IN_PROGRESS, TODO_STATUS_DONE)"),
-                        fieldWithPath("[].title").description("Notification title"),
-                        fieldWithPath("[].content").description("Notification content (nullable)"),
                         fieldWithPath("[].referenceType").description("Reference entity type (FRIEND_REQUEST, SCHEDULE, TODO, MEMBER) (nullable)"),
                         fieldWithPath("[].referenceId").description("Reference entity ID (nullable)"),
                         fieldWithPath("[].actorId").description("Actor member ID who triggered the notification (nullable)"),
-                        fieldWithPath("[].actorName").description("Actor member name (nullable)"),
-                        fieldWithPath("[].actorHasProfilePhoto").description("Whether actor has profile photo"),
-                        fieldWithPath("[].actorProfilePhotoVersion").description("Actor profile photo version"),
+                        subsectionWithPath("[].payload").description("Notification payload snapshot used for client-side rendering"),
                         fieldWithPath("[].isRead").description("Whether notification has been read"),
                         fieldWithPath("[].createdAt").description("Notification created timestamp")
                     )
@@ -144,6 +156,8 @@ class NotificationControllerTest : RestDocsTest() {
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.isRead").value(true))
+            .andExpect(jsonPath("$.payload.version").value(1))
+            .andExpect(jsonPath("$.payload.actor.name").value(TestData.member2.name))
             .andDo(MockMvcResultHandlers.print())
             .andDo(
                 document(
@@ -154,14 +168,10 @@ class NotificationControllerTest : RestDocsTest() {
                     responseFields(
                         fieldWithPath("id").description("Notification ID"),
                         fieldWithPath("type").description("Notification type (FRIEND_REQUEST_RECEIVED, FRIEND_REQUEST_ACCEPTED, FAMILY_REQUEST_RECEIVED, FAMILY_REQUEST_ACCEPTED, SCHEDULE_TAGGED, TODO_TAGGED, TODO_STATUS_TODO, TODO_STATUS_IN_PROGRESS, TODO_STATUS_DONE)"),
-                        fieldWithPath("title").description("Notification title"),
-                        fieldWithPath("content").description("Notification content (nullable)"),
                         fieldWithPath("referenceType").description("Reference entity type (nullable)"),
                         fieldWithPath("referenceId").description("Reference entity ID (nullable)"),
                         fieldWithPath("actorId").description("Actor member ID (nullable)"),
-                        fieldWithPath("actorName").description("Actor member name (nullable)"),
-                        fieldWithPath("actorHasProfilePhoto").description("Whether actor has profile photo"),
-                        fieldWithPath("actorProfilePhotoVersion").description("Actor profile photo version"),
+                        subsectionWithPath("payload").description("Notification payload snapshot used for client-side rendering"),
                         fieldWithPath("isRead").description("Whether notification has been read"),
                         fieldWithPath("createdAt").description("Notification created timestamp")
                     )
@@ -244,14 +254,21 @@ class NotificationControllerTest : RestDocsTest() {
     }
 
     private fun createTestNotification(isRead: Boolean = false): Notification {
+        val payload = FriendRequestReceivedPayload(
+            actor = NotificationActorSnapshot(
+                name = TestData.member2.name,
+                hasProfilePhoto = false,
+                profilePhotoVersion = 0,
+            )
+        )
         val notification = Notification(
             member = TestData.member,
             type = NotificationType.FRIEND_REQUEST_RECEIVED,
-            title = "${TestData.member2.name}님이 친구 요청을 보냈습니다",
-            content = null,
             referenceType = NotificationReferenceType.FRIEND_REQUEST,
             referenceId = "123",
-            actorId = TestData.member2.id
+            actorId = TestData.member2.id,
+            payloadJson = notificationPayloadCodec.serialize(payload),
+            payloadVersion = payload.version
         ).apply {
             this.isRead = isRead
         }

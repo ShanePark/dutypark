@@ -1,9 +1,8 @@
 package com.tistory.shanepark.dutypark.common.advice
 
-import com.tistory.shanepark.dutypark.common.config.LocalizedMessageResolver
 import com.tistory.shanepark.dutypark.common.domain.dto.DutyParkErrorResponse
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
-import com.tistory.shanepark.dutypark.common.exceptions.RateLimitException
+import com.tistory.shanepark.dutypark.common.domain.dto.DutyParkFieldError
+import com.tistory.shanepark.dutypark.common.exceptions.DutyparkException
 import org.springframework.core.Ordered
 import org.springframework.core.annotation.Order
 import org.springframework.http.ResponseEntity
@@ -17,67 +16,98 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 @RestControllerAdvice(annotations = [RestController::class])
 @Order(Ordered.HIGHEST_PRECEDENCE)
-class RestExceptionControllerAdvice(
-    private val localizedMessageResolver: LocalizedMessageResolver,
-) {
+class RestExceptionControllerAdvice {
+
+    private val codePattern = Regex("^[a-z][a-zA-Z0-9]*(\\.[a-zA-Z0-9]+)+$")
+    private val legacyCodeMappings = mapOf(
+        "callbackUrl is required in state" to "auth.oauth.callbackUrl.required",
+        "orderedIds is required when reordering within the same status" to "todo.reorder.orderedIds.required",
+        "templateName is required" to "dutyBatch.template.required",
+        "DutyTypes must belong to the same team" to "team.dutyType.sameTeam.required",
+    )
 
     @ResponseBody
     @ExceptionHandler
-    fun notAuthorizedHandler(e: AuthException): ResponseEntity<DutyParkErrorResponse> {
-        return ResponseEntity.status(e.errorCode)
-            .body(
-                DutyParkErrorResponse.of(
-                    e = e,
-                    message = localizedMessageResolver.resolve(e.message, defaultCode = "auth.unauthorized")
-                )
+    fun dutyparkExceptionHandler(e: DutyparkException): ResponseEntity<DutyParkErrorResponse> {
+        val defaultCode = when (e.errorCode) {
+            401 -> "auth.unauthorized"
+            404 -> "common.notFound"
+            429 -> "common.rateLimit.exceeded"
+            else -> "common.badRequest"
+        }
+        return errorResponse(
+            status = e.errorCode,
+            code = normalizeCode(e.message, defaultCode),
+        )
+    }
+
+    @ResponseBody
+    @ExceptionHandler
+    fun noSuchElementHandler(e: NoSuchElementException): ResponseEntity<DutyParkErrorResponse> {
+        return errorResponse(
+            status = 404,
+            code = normalizeCode(e.message, "common.notFound"),
+        )
+    }
+
+    @ResponseBody
+    @ExceptionHandler
+    fun illegalArgumentHandler(e: IllegalArgumentException): ResponseEntity<DutyParkErrorResponse> {
+        return errorResponse(
+            status = 400,
+            code = normalizeCode(e.message, "common.badRequest"),
+        )
+    }
+
+    @ResponseBody
+    @ExceptionHandler
+    fun methodArgumentTypeMismatchHandler(e: MethodArgumentTypeMismatchException): ResponseEntity<DutyParkErrorResponse> {
+        return errorResponse(status = 400, code = "common.badRequest")
+    }
+
+    @ResponseBody
+    @ExceptionHandler
+    fun methodArgumentNotValidHandler(e: MethodArgumentNotValidException): ResponseEntity<DutyParkErrorResponse> {
+        val fieldErrors = e.bindingResult.fieldErrors.map {
+            DutyParkFieldError(
+                field = it.field,
+                code = normalizeCode(it.defaultMessage, "common.validation.failed"),
             )
+        }
+        val globalCode = normalizeCode(
+            e.bindingResult.globalErrors.firstOrNull()?.defaultMessage,
+            "common.validation.failed",
+        )
+        val code = fieldErrors.firstOrNull()?.code ?: globalCode
+        return errorResponse(
+            status = 400,
+            code = code,
+            fieldErrors = fieldErrors,
+        )
     }
 
     @ResponseBody
     @ExceptionHandler
-    fun rateLimitHandler(e: RateLimitException): ResponseEntity<Map<String, String>> {
-        return ResponseEntity.status(e.errorCode)
-            .body(mapOf("error" to localizedMessageResolver.resolve(e.message, defaultCode = "common.rateLimit.exceeded")))
+    fun httpMessageNotReadableHandler(e: HttpMessageNotReadableException): ResponseEntity<DutyParkErrorResponse> {
+        return errorResponse(status = 400, code = "common.badRequest")
     }
 
-    @ExceptionHandler
-    fun noSuchElementHandler(e: NoSuchElementException): ResponseEntity<Map<String, String>> {
-        return ResponseEntity.status(404)
-            .body(
-                mapOf(
-                    "error" to localizedMessageResolver.resolve("common.notFound.title"),
-                    "message" to localizedMessageResolver.resolve(e.message, defaultCode = "common.notFound.message")
-                )
-            )
+    private fun errorResponse(
+        status: Int,
+        code: String,
+        details: Map<String, Any?> = emptyMap(),
+        fieldErrors: List<DutyParkFieldError> = emptyList(),
+    ): ResponseEntity<DutyParkErrorResponse> {
+        return ResponseEntity.status(status)
+            .body(DutyParkErrorResponse.of(status, code, details, fieldErrors))
     }
 
-    @ResponseBody
-    @ExceptionHandler
-    fun illegalArgumentHandler(e: IllegalArgumentException): ResponseEntity<Map<String, String>> {
-        return ResponseEntity.badRequest()
-            .body(mapOf("error" to localizedMessageResolver.resolve(e.message, defaultCode = "common.badRequest")))
-    }
-
-    @ResponseBody
-    @ExceptionHandler
-    fun methodArgumentTypeMismatchHandler(e: MethodArgumentTypeMismatchException): ResponseEntity<Map<String, String>> {
-        return ResponseEntity.badRequest()
-            .body(mapOf("error" to localizedMessageResolver.resolve("common.badRequest")))
-    }
-
-    @ResponseBody
-    @ExceptionHandler
-    fun methodArgumentNotValidHandler(e: MethodArgumentNotValidException): ResponseEntity<Map<String, String>> {
-        val message = e.bindingResult.fieldErrors.firstOrNull()?.defaultMessage
-            ?: e.bindingResult.globalErrors.firstOrNull()?.defaultMessage
-        return ResponseEntity.badRequest()
-            .body(mapOf("error" to localizedMessageResolver.resolve(message, defaultCode = "common.validation.failed")))
-    }
-
-    @ResponseBody
-    @ExceptionHandler
-    fun httpMessageNotReadableHandler(e: HttpMessageNotReadableException): ResponseEntity<Map<String, String>> {
-        return ResponseEntity.badRequest()
-            .body(mapOf("error" to localizedMessageResolver.resolve("common.badRequest")))
+    private fun normalizeCode(candidate: String?, defaultCode: String): String {
+        val value = candidate?.trim().orEmpty()
+        if (value.isBlank()) {
+            return defaultCode
+        }
+        legacyCodeMappings[value]?.let { return it }
+        return if (codePattern.matches(value)) value else defaultCode
     }
 }

@@ -1,60 +1,106 @@
 package com.tistory.shanepark.dutypark.common.advice
 
-import com.tistory.shanepark.dutypark.common.config.LocalizedMessageResolver
+import com.tistory.shanepark.dutypark.attachment.exception.AttachmentExtensionBlockedException
+import com.tistory.shanepark.dutypark.attachment.exception.AttachmentTooLargeException
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
-import org.junit.jupiter.api.AfterEach
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.springframework.context.support.StaticMessageSource
-import org.springframework.context.i18n.LocaleContextHolder
-import java.util.Locale
+import org.springframework.core.MethodParameter
+import org.springframework.validation.BeanPropertyBindingResult
+import org.springframework.validation.FieldError
+import org.springframework.web.bind.MethodArgumentNotValidException
 
 class RestExceptionControllerAdviceTest {
 
-    private val messageSource = StaticMessageSource().apply {
-        addMessage("auth.login.failed", Locale.KOREAN, "이메일 또는 비밀번호가 올바르지 않습니다.")
-        addMessage("auth.login.failed", Locale.ENGLISH, "Email or password is incorrect.")
-        addMessage("common.notFound.title", Locale.KOREAN, "찾을 수 없음")
-        addMessage("common.notFound.title", Locale.ENGLISH, "Not Found")
-        addMessage("common.notFound.message", Locale.KOREAN, "리소스를 찾을 수 없습니다.")
-        addMessage("common.notFound.message", Locale.ENGLISH, "Resource not found.")
-        addMessage("member.notFound", Locale.KOREAN, "회원을 찾을 수 없습니다.")
-        addMessage("member.notFound", Locale.ENGLISH, "Member not found.")
-    }
-
-    private val advice = RestExceptionControllerAdvice(LocalizedMessageResolver(messageSource))
-
-    @AfterEach
-    fun clearLocaleContext() {
-        LocaleContextHolder.resetLocaleContext()
-    }
+    private val advice = RestExceptionControllerAdvice()
 
     @Test
-    fun `notAuthorizedHandler builds localized error response`() {
-        LocaleContextHolder.setLocale(Locale.ENGLISH)
-        val response = advice.notAuthorizedHandler(AuthException("auth.login.failed"))
+    fun `dutyparkExceptionHandler returns code-based response`() {
+        val response = advice.dutyparkExceptionHandler(AuthException("auth.login.failed"))
 
         assertThat(response.statusCode.value()).isEqualTo(401)
-        assertThat(response.body?.errorCode).isEqualTo(401)
-        assertThat(response.body?.message).isEqualTo("Email or password is incorrect.")
+        assertThat(response.body?.status).isEqualTo(401)
+        assertThat(response.body?.code).isEqualTo("auth.login.failed")
+        assertThat(response.body?.details).isNull()
+        assertThat(response.body?.fieldErrors).isEmpty()
     }
 
     @Test
-    fun `noSuchElementHandler uses localized exception code when present`() {
-        LocaleContextHolder.setLocale(Locale.KOREAN)
+    fun `noSuchElementHandler keeps explicit code`() {
         val response = advice.noSuchElementHandler(NoSuchElementException("member.notFound"))
 
         assertThat(response.statusCode.value()).isEqualTo(404)
-        assertThat(response.body?.get("error")).isEqualTo("찾을 수 없음")
-        assertThat(response.body?.get("message")).isEqualTo("회원을 찾을 수 없습니다.")
+        assertThat(response.body?.code).isEqualTo("member.notFound")
     }
 
     @Test
-    fun `noSuchElementHandler falls back to default message when missing`() {
-        LocaleContextHolder.setLocale(Locale.ENGLISH)
+    fun `noSuchElementHandler falls back to common notFound`() {
         val response = advice.noSuchElementHandler(NoSuchElementException())
 
         assertThat(response.statusCode.value()).isEqualTo(404)
-        assertThat(response.body?.get("message")).isEqualTo("Resource not found.")
+        assertThat(response.body?.code).isEqualTo("common.notFound")
+    }
+
+    @Test
+    fun `legacy raw messages are normalized to mapped codes`() {
+        val response = advice.illegalArgumentHandler(IllegalArgumentException("callbackUrl is required in state"))
+
+        assertThat(response.statusCode.value()).isEqualTo(400)
+        assertThat(response.body?.code).isEqualTo("auth.oauth.callbackUrl.required")
+    }
+
+    @Test
+    fun `illegalArgumentHandler keeps camelCase error codes`() {
+        val response = advice.illegalArgumentHandler(IllegalArgumentException("dutyBatch.template.required"))
+
+        assertThat(response.statusCode.value()).isEqualTo(400)
+        assertThat(response.body?.code).isEqualTo("dutyBatch.template.required")
+    }
+
+    @Test
+    fun `attachment exceptions return code-only responses with matching status`() {
+        val blocked = advice.dutyparkExceptionHandler(
+            AttachmentExtensionBlockedException(filename = "virus.exe", extension = ".exe"),
+        )
+        val tooLarge = advice.dutyparkExceptionHandler(
+            AttachmentTooLargeException(filename = "large.png", size = 10_000_000, maxSize = 5_000_000),
+        )
+
+        assertThat(blocked.statusCode.value()).isEqualTo(400)
+        assertThat(blocked.body?.code).isEqualTo("attachment.extension.blocked")
+        assertThat(tooLarge.statusCode.value()).isEqualTo(413)
+        assertThat(tooLarge.body?.code).isEqualTo("attachment.size.exceeded")
+    }
+
+    @Test
+    fun `methodArgumentNotValidHandler returns normalized field errors`() {
+        val bindingResult = BeanPropertyBindingResult(Any(), "request")
+        bindingResult.addError(FieldError("request", "name", "team.name.required"))
+        bindingResult.addError(FieldError("request", "description", "must not be blank"))
+        val exception = MethodArgumentNotValidException(dummyMethodParameter(), bindingResult)
+
+        val response = advice.methodArgumentNotValidHandler(exception)
+
+        assertThat(response.statusCode.value()).isEqualTo(400)
+        assertThat(response.body?.code).isEqualTo("team.name.required")
+        assertThat(response.body?.fieldErrors).containsExactly(
+            com.tistory.shanepark.dutypark.common.domain.dto.DutyParkFieldError(
+                field = "name",
+                code = "team.name.required",
+            ),
+            com.tistory.shanepark.dutypark.common.domain.dto.DutyParkFieldError(
+                field = "description",
+                code = "common.validation.failed",
+            ),
+        )
+    }
+
+    @Suppress("unused")
+    private fun dummyRequest(name: String) {
+    }
+
+    private fun dummyMethodParameter(): MethodParameter {
+        val method = this::class.java.getDeclaredMethod("dummyRequest", String::class.java)
+        return MethodParameter(method, 0)
     }
 }

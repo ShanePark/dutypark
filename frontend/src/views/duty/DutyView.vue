@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import Swal from 'sweetalert2'
 import { useSwal } from '@/composables/useSwal'
 import { isLightColor } from '@/utils/color'
+import { resolveApiCodeMessage, resolveApiErrorMessage } from '@/utils/resolveApiError'
 import { Loader2 } from 'lucide-vue-next'
 
 // Modal Components
@@ -1467,7 +1468,10 @@ async function showExcelUploadModal() {
     )
 
     if (!result.result) {
-      showError(result.errorMessage || t('duty.excelUpload.failed'), t('duty.excelUpload.failureTitle'))
+      showError(
+        resolveApiCodeMessage(result, { fallbackKey: 'duty.excelUpload.failed' }, t),
+        t('duty.excelUpload.failureTitle'),
+      )
       return
     }
 
@@ -1487,7 +1491,10 @@ async function showExcelUploadModal() {
     await loadDuties()
   } catch (error) {
     console.error('Failed to upload duty batch:', error)
-    showError(t('duty.excelUpload.failed'))
+    showError(
+      resolveApiErrorMessage(error, { fallbackKey: 'duty.excelUpload.failed' }, t),
+      t('duty.excelUpload.failureTitle'),
+    )
   }
 }
 </script>

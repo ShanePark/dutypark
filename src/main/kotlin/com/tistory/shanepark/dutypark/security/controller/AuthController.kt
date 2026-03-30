@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.security.controller
 
 import com.tistory.shanepark.dutypark.common.config.logger
-import com.tistory.shanepark.dutypark.common.config.LocalizedMessageResolver
+import com.tistory.shanepark.dutypark.common.domain.dto.DutyParkErrorResponse
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.common.exceptions.RateLimitException
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
@@ -28,21 +28,21 @@ class AuthController(
     private val refreshTokenService: RefreshTokenService,
     private val jwtConfig: JwtConfig,
     private val loginAttemptService: LoginAttemptService,
-    private val localizedMessageResolver: LocalizedMessageResolver,
 ) {
     private val log = logger()
+    private val codePattern = Regex("^[a-z][a-z0-9]*(\\.[a-zA-Z0-9]+)+$")
 
     @PutMapping("password")
     fun changePassword(
         @Login loginMember: LoginMember,
         @Valid @RequestBody(required = true) param: PasswordChangeDto
-    ): ResponseEntity<String> {
+    ): ResponseEntity<Void> {
         if (loginMember.id != param.memberId && !loginMember.isAdmin) {
             throw AuthException("auth.password.changeUnauthorized")
         }
         val byAdmin = loginMember.isAdmin && loginMember.id != param.memberId
         authService.changePassword(param, byAdmin)
-        return ResponseEntity.ok().body(localizedMessageResolver.resolve("auth.password.changed"))
+        return ResponseEntity.noContent().build()
     }
 
     @GetMapping("/status")
@@ -68,16 +68,22 @@ class AuthController(
             ResponseEntity.ok(tokenResponse.toPublicResponse())
         } catch (e: RateLimitException) {
             ResponseEntity.status(429).body(
-                mapOf("error" to localizedMessageResolver.resolve(e.message, defaultCode = "auth.login.rateLimited"))
+                DutyParkErrorResponse.of(
+                    status = 429,
+                    code = "auth.login.rateLimited",
+                )
             )
         } catch (e: AuthException) {
             val email = loginDto.email ?: ""
             val ipAddress = req.remoteAddr ?: "unknown"
             val remainingAttempts = loginAttemptService.getRemainingAttempts(ipAddress, email)
             ResponseEntity.status(401).body(
-                mapOf(
-                    "error" to localizedMessageResolver.resolve(e.message, defaultCode = "auth.login.failed"),
-                    "remainingAttempts" to remainingAttempts
+                DutyParkErrorResponse.of(
+                    status = 401,
+                    code = "auth.login.failed",
+                    details = mapOf(
+                        "remainingAttempts" to remainingAttempts,
+                    ),
                 )
             )
         }
@@ -139,7 +145,10 @@ class AuthController(
             ResponseEntity.ok(mapOf("expiresIn" to jwtConfig.tokenValidityInSeconds))
         } catch (e: AuthException) {
             ResponseEntity.status(403).body(
-                mapOf("error" to localizedMessageResolver.resolve(e.message, defaultCode = "auth.impersonation.failed"))
+                DutyParkErrorResponse.of(
+                    status = 403,
+                    code = normalizeErrorCode(e.message, "auth.impersonation.failed"),
+                )
             )
         }
     }
@@ -161,7 +170,10 @@ class AuthController(
             ResponseEntity.ok(tokenResponse.toPublicResponse())
         } catch (e: AuthException) {
             ResponseEntity.status(400).body(
-                mapOf("error" to localizedMessageResolver.resolve(e.message, defaultCode = "auth.restore.failed"))
+                DutyParkErrorResponse.of(
+                    status = 400,
+                    code = normalizeErrorCode(e.message, "auth.restore.failed"),
+                )
             )
         }
     }
@@ -170,6 +182,14 @@ class AuthController(
         return mapOf(
             "expiresIn" to expiresIn
         )
+    }
+
+    private fun normalizeErrorCode(candidate: String?, defaultCode: String): String {
+        val value = candidate?.trim().orEmpty()
+        if (value.isBlank()) {
+            return defaultCode
+        }
+        return if (codePattern.matches(value)) value else defaultCode
     }
 
 }

@@ -287,7 +287,7 @@ class TodoService(
             if (statusChanged) {
                 return toResponse(todo, member)
             }
-            throw IllegalArgumentException("orderedIds is required when reordering within the same status")
+            throw IllegalArgumentException("todo.reorder.orderedIds.required")
         }
 
         // Reorder all todos in target column based on orderedIds
