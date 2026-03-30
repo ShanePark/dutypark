@@ -355,7 +355,7 @@ export default {
     },
     statusShort: {
       todo: '할일',
-      inProgress: '진행',
+      inProgress: '진행중',
       done: '완료',
     },
     actions: {

@@ -542,7 +542,7 @@ export default {
       sectionTitle: 'プロフィール',
       name: '名前',
       team: 'チーム',
-      email: 'メールアドレス',
+      email: 'メール',
     },
     visibility: {
       ...en.member.visibility,
@@ -1673,7 +1673,7 @@ export default {
         joinedAt: '登録日',
         lastUpdated: '最終更新',
         lastActive: '最終活動',
-        email: 'メールアドレス',
+        email: 'メール',
         team: 'チーム',
         visibility: '公開範囲',
         loginMethods: 'ログイン方法',
