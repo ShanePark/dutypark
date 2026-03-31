@@ -57,7 +57,7 @@ class NotificationService(
     }
 
     @Transactional(readOnly = true)
-    fun getFriendRequestCount(memberId: Long): Int {
+    fun getPendingRequestCount(memberId: Long): Int {
         return friendRequestRepository.countByToMemberIdAndStatus(memberId, FriendRequestStatus.PENDING).toInt()
     }
 

@@ -248,6 +248,97 @@ describe('usePushNotification', () => {
     expect(mocks.buildPushSubscriptionRequest).toHaveBeenCalledWith(existingSubscription)
   })
 
+  it('unregisters stale registrations and retries with the current worker', async () => {
+    const staleRegistration = {
+      active: {
+        scriptURL: 'http://localhost:5173/sw-runtime.js?v=push-detail-v3',
+      },
+      unregister: vi.fn().mockResolvedValue(true),
+    } as unknown as ServiceWorkerRegistration
+    const currentRegistration = {
+      active: {
+        scriptURL: SERVICE_WORKER_SCRIPT_URL,
+      },
+      pushManager: {
+        getSubscription: vi.fn().mockResolvedValue(null),
+        subscribe: vi.fn().mockResolvedValue({
+          endpoint: 'https://push.example/subscription',
+        } as PushSubscription),
+      },
+    } as unknown as ServiceWorkerRegistration
+    const register = vi.fn()
+      .mockResolvedValueOnce(staleRegistration)
+      .mockResolvedValueOnce(currentRegistration)
+
+    Object.defineProperty(globalThis, 'navigator', {
+      value: {
+        serviceWorker: {
+          getRegistration: vi.fn().mockResolvedValue(staleRegistration),
+          getRegistrations: vi.fn().mockResolvedValue([staleRegistration]),
+          ready: Promise.resolve(currentRegistration),
+          register,
+        },
+      },
+      configurable: true,
+    })
+
+    const { usePushNotification } = await import('./usePushNotification')
+    const pushNotification = usePushNotification()
+    pushNotification.checkSupport()
+
+    const prepared = await pushNotification.prepareServiceWorker()
+
+    expect(staleRegistration.unregister).toHaveBeenCalledTimes(1)
+    expect(register).toHaveBeenCalledTimes(2)
+    expect(prepared).toBe(currentRegistration)
+    expect(mocks.syncServiceWorkerLocale).toHaveBeenCalledWith('ja', currentRegistration)
+  })
+
+  it('does not reuse a stale registration when no current worker becomes available', async () => {
+    const staleSubscription = {
+      endpoint: 'https://push.example/subscription',
+    } as PushSubscription
+    const staleRegistration = {
+      active: {
+        scriptURL: 'http://localhost:5173/sw-runtime.js?v=push-detail-v3',
+      },
+      unregister: vi.fn().mockResolvedValue(true),
+      pushManager: {
+        getSubscription: vi.fn().mockResolvedValue(staleSubscription),
+        subscribe: vi.fn(),
+      },
+    } as unknown as ServiceWorkerRegistration
+    const register = vi.fn()
+      .mockResolvedValueOnce(staleRegistration)
+      .mockResolvedValueOnce(staleRegistration)
+
+    Object.defineProperty(globalThis, 'navigator', {
+      value: {
+        serviceWorker: {
+          getRegistration: vi.fn().mockResolvedValue(staleRegistration),
+          getRegistrations: vi.fn().mockResolvedValue([staleRegistration]),
+          ready: Promise.resolve(staleRegistration),
+          register,
+        },
+      },
+      configurable: true,
+    })
+
+    mocks.pushApi.isEnabled.mockResolvedValue(true)
+    mocks.pushApi.getVapidPublicKey.mockResolvedValue('dGVzdA')
+
+    const { usePushNotification } = await import('./usePushNotification')
+    const pushNotification = usePushNotification()
+    pushNotification.checkSupport()
+
+    const result = await pushNotification.subscribe()
+
+    expect(result).toBe(false)
+    expect(staleRegistration.unregister).toHaveBeenCalledTimes(1)
+    expect(mocks.buildPushSubscriptionRequest).not.toHaveBeenCalled()
+    expect(mocks.pushApi.subscribe).not.toHaveBeenCalled()
+  })
+
   it('prepares the current service worker before subscription flow starts', async () => {
     const registration = {
       active: {

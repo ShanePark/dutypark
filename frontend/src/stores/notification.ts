@@ -125,7 +125,7 @@ export const useNotificationStore = defineStore('notification', () => {
   }
 
   /**
-   * Fetch friend request count (called on app start and when friend-related notifications arrive)
+   * Fetch pending relationship request count (friend + family)
    */
   async function fetchFriendRequestCount(): Promise<void> {
     try {
@@ -136,7 +136,7 @@ export const useNotificationStore = defineStore('notification', () => {
   }
 
   /**
-   * Check if new notifications include friend requests
+   * Check if new notifications include relationship requests that affect the badge
    */
   async function checkForNewFriendRequests(): Promise<void> {
     try {

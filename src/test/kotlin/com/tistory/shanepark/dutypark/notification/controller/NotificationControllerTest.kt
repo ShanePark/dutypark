@@ -64,7 +64,7 @@ class NotificationControllerTest : RestDocsTest() {
                         fieldWithPath("content[].referenceType").description("Reference entity type (FRIEND_REQUEST, SCHEDULE, TODO, MEMBER) (nullable)").optional(),
                         fieldWithPath("content[].referenceId").description("Reference entity ID (nullable)").optional(),
                         fieldWithPath("content[].actorId").description("Actor member ID who triggered the notification (nullable)").optional(),
-                        subsectionWithPath("content[].payload").description("Notification payload snapshot used for client-side rendering (invalid legacy payloads fall back to version 0 generic payload)").optional(),
+                        subsectionWithPath("content[].payload").description("Notification payload snapshot used for client-side rendering (missing or invalid payloads fall back to version 0 generic payload)").optional(),
                         fieldWithPath("content[].isRead").description("Whether notification has been read").optional(),
                         fieldWithPath("content[].createdAt").description("Notification created timestamp").optional(),
                         fieldWithPath("totalPages").description("Total pages"),
@@ -133,7 +133,7 @@ class NotificationControllerTest : RestDocsTest() {
                         fieldWithPath("[].referenceType").description("Reference entity type (FRIEND_REQUEST, SCHEDULE, TODO, MEMBER) (nullable)"),
                         fieldWithPath("[].referenceId").description("Reference entity ID (nullable)"),
                         fieldWithPath("[].actorId").description("Actor member ID who triggered the notification (nullable)"),
-                        subsectionWithPath("[].payload").description("Notification payload snapshot used for client-side rendering (invalid legacy payloads fall back to version 0 generic payload)"),
+                        subsectionWithPath("[].payload").description("Notification payload snapshot used for client-side rendering (missing or invalid payloads fall back to version 0 generic payload)"),
                         fieldWithPath("[].isRead").description("Whether notification has been read"),
                         fieldWithPath("[].createdAt").description("Notification created timestamp")
                     )
@@ -204,13 +204,21 @@ class NotificationControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `get friend request count`() {
+    fun `get pending request count includes friend and family requests`() {
         friendRequestRepository.save(
             FriendRequest(
                 fromMember = TestData.member2,
                 toMember = TestData.member,
                 status = FriendRequestStatus.PENDING,
                 requestType = FriendRequestType.FRIEND_REQUEST,
+            )
+        )
+        friendRequestRepository.save(
+            FriendRequest(
+                fromMember = TestData.admin,
+                toMember = TestData.member,
+                status = FriendRequestStatus.PENDING,
+                requestType = FriendRequestType.FAMILY_REQUEST,
             )
         )
         em.flush()
@@ -222,13 +230,13 @@ class NotificationControllerTest : RestDocsTest() {
                 .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.count").value(1))
+            .andExpect(jsonPath("$.count").value(2))
             .andDo(MockMvcResultHandlers.print())
             .andDo(
                 document(
                     "notifications/get-friend-request-count",
                     responseFields(
-                        fieldWithPath("count").description("Number of pending friend requests for the current member")
+                        fieldWithPath("count").description("Number of pending friend or family requests for the current member")
                     )
                 )
             )
@@ -262,7 +270,7 @@ class NotificationControllerTest : RestDocsTest() {
                         fieldWithPath("referenceType").description("Reference entity type (nullable)"),
                         fieldWithPath("referenceId").description("Reference entity ID (nullable)"),
                         fieldWithPath("actorId").description("Actor member ID (nullable)"),
-                        subsectionWithPath("payload").description("Notification payload snapshot used for client-side rendering (invalid legacy payloads fall back to version 0 generic payload)"),
+                        subsectionWithPath("payload").description("Notification payload snapshot used for client-side rendering (missing or invalid payloads fall back to version 0 generic payload)"),
                         fieldWithPath("isRead").description("Whether notification has been read"),
                         fieldWithPath("createdAt").description("Notification created timestamp")
                     )

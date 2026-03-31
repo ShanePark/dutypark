@@ -279,7 +279,7 @@ operation::notifications/get-unread[]
 
 operation::notifications/get-count[]
 
-=== Get Friend Request Count
+=== Get Pending Relationship Request Count
 
 operation::notifications/get-friend-request-count[]
 

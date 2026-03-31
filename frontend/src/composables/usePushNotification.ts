@@ -49,6 +49,37 @@ async function getRegistrationsIfPossible(): Promise<ServiceWorkerRegistration[]
   }
 }
 
+async function getCandidateRegistrations(): Promise<ServiceWorkerRegistration[]> {
+  const registrations = await getRegistrationsIfPossible()
+  const currentRegistration = await navigator.serviceWorker.getRegistration().catch(() => null)
+
+  return Array.from(
+    new Set(
+      [...registrations, currentRegistration].filter(
+        (value): value is ServiceWorkerRegistration => value != null,
+      ),
+    ),
+  )
+}
+
+async function unregisterRegistrations(
+  registrations: ServiceWorkerRegistration[],
+): Promise<void> {
+  await Promise.all(
+    registrations.map(async (registration) => {
+      if (typeof registration.unregister !== 'function') {
+        return false
+      }
+
+      try {
+        return await registration.unregister()
+      } catch {
+        return false
+      }
+    }),
+  )
+}
+
 function isCurrentServiceWorker(
   serviceWorker: ServiceWorker | null | undefined,
 ): boolean {
@@ -162,29 +193,34 @@ export function usePushNotification() {
   const ensureServiceWorker = async (): Promise<ServiceWorkerRegistration | null> => {
     if (!isSupported.value) return null
 
-    const existingRegistrations = await getRegistrationsIfPossible()
-    const existingRegistration = await navigator.serviceWorker.getRegistration().catch(() => null)
     const registration = await registerServiceWorker()
     if (isCurrentServiceWorkerRegistration(registration)) {
       return registration
     }
-    const currentExistingRegistration = existingRegistrations.find(isCurrentServiceWorkerRegistration)
-    if (currentExistingRegistration) {
-      return waitForCurrentServiceWorker(currentExistingRegistration)
-    }
-    if (existingRegistration && isCurrentServiceWorkerRegistration(existingRegistration)) {
-      return waitForCurrentServiceWorker(existingRegistration)
+
+    const currentRegistrations = (await getCandidateRegistrations())
+      .filter(isCurrentServiceWorkerRegistration)
+    for (const currentRegistration of currentRegistrations) {
+      const resolvedRegistration = await waitForCurrentServiceWorker(currentRegistration)
+      if (resolvedRegistration) {
+        return resolvedRegistration
+      }
     }
 
-    const fallbackRegistration = existingRegistration
-      ?? existingRegistrations.find((value) => value != null)
-      ?? null
-    if (fallbackRegistration) {
-      await syncServiceWorkerLocale(localeStore.locale, fallbackRegistration)
-      return fallbackRegistration
+    const staleRegistrations = (await getCandidateRegistrations())
+      .filter((candidate) => !isCurrentServiceWorkerRegistration(candidate))
+    if (staleRegistrations.length === 0) {
+      return null
     }
 
-    return registration
+    await unregisterRegistrations(staleRegistrations)
+
+    const retriedRegistration = await registerServiceWorker()
+    if (isCurrentServiceWorkerRegistration(retriedRegistration)) {
+      return retriedRegistration
+    }
+
+    return null
   }
 
   const getReadyRegistration = async (): Promise<ServiceWorkerRegistration | null> => {
@@ -197,9 +233,9 @@ export function usePushNotification() {
       const readyRegistration = await navigator.serviceWorker.ready
       return isCurrentServiceWorker(readyRegistration.active)
         ? readyRegistration
-        : registration
+        : null
     } catch {
-      return registration
+      return isCurrentServiceWorker(registration.active) ? registration : null
     }
   }
 

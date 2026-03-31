@@ -178,11 +178,11 @@ class NotificationServiceTest {
     }
 
     @Test
-    fun `getFriendRequestCount returns correct count`() {
+    fun `getPendingRequestCount returns correct count`() {
         whenever(friendRequestRepository.countByToMemberIdAndStatus(testMember.id!!, FriendRequestStatus.PENDING))
             .thenReturn(3L)
 
-        val result = notificationService.getFriendRequestCount(testMember.id!!)
+        val result = notificationService.getPendingRequestCount(testMember.id!!)
 
         assertThat(result).isEqualTo(3)
     }
