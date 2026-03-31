@@ -148,7 +148,7 @@ export function usePushNotification() {
     if (currentExistingRegistration) {
       return waitForCurrentServiceWorker(currentExistingRegistration)
     }
-    if (isCurrentServiceWorkerRegistration(existingRegistration)) {
+    if (existingRegistration && isCurrentServiceWorkerRegistration(existingRegistration)) {
       return waitForCurrentServiceWorker(existingRegistration)
     }
 

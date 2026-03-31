@@ -7,7 +7,7 @@ import {
   resolvePushNotificationId,
 } from './pushNotificationPresentation'
 
-const serviceWorker = self as ServiceWorkerGlobalScope
+const serviceWorker = self as unknown as ServiceWorkerGlobalScope
 
 const LOCALE_CACHE_NAME = 'dutypark-sw-settings-v1'
 const LOCALE_CACHE_KEY = 'https://dutypark.local/__settings/locale'
