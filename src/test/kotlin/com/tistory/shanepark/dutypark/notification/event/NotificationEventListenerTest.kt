@@ -17,6 +17,7 @@ import com.tistory.shanepark.dutypark.notification.domain.payload.TodoStatusInPr
 import com.tistory.shanepark.dutypark.notification.domain.payload.TodoStatusTodoPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.TodoTaggedPayload
 import com.tistory.shanepark.dutypark.notification.domain.repository.NotificationRepository
+import com.tistory.shanepark.dutypark.notification.dto.NotificationDto
 import com.tistory.shanepark.dutypark.notification.service.NotificationService
 import com.tistory.shanepark.dutypark.push.dto.PushNotificationPayload
 import com.tistory.shanepark.dutypark.push.service.WebPushService
@@ -97,6 +98,7 @@ class NotificationEventListenerTest {
         assertThat(payloadCaptor.firstValue.type).isEqualTo(NotificationType.FRIEND_REQUEST_RECEIVED)
         assertThat(payloadCaptor.firstValue.url).isEqualTo("/friends")
         assertThat(payloadCaptor.firstValue.unreadCount).isEqualTo(3)
+        assertThat(payloadCaptor.firstValue.notification).isEqualTo(NotificationDto.of(notification, payload))
     }
 
     @Test
@@ -146,6 +148,7 @@ class NotificationEventListenerTest {
         verify(webPushService).sendToMember(eq(member.id!!), payloadCaptor.capture())
         assertThat(payloadCaptor.firstValue.type).isEqualTo(NotificationType.FRIEND_REQUEST_RECEIVED)
         assertThat(payloadCaptor.firstValue.url).isEqualTo("/friends")
+        assertThat(payloadCaptor.firstValue.notification).isEqualTo(NotificationDto.of(notification, payload))
     }
 
     @Test
@@ -196,6 +199,7 @@ class NotificationEventListenerTest {
         verify(webPushService).sendToMember(eq(member.id!!), payloadCaptor.capture())
         assertThat(payloadCaptor.firstValue.type).isEqualTo(NotificationType.SCHEDULE_TAGGED)
         assertThat(payloadCaptor.firstValue.url).isEqualTo("/duty/${member.id}")
+        assertThat(payloadCaptor.firstValue.notification).isEqualTo(NotificationDto.of(notification, payload))
     }
 
     @Test
@@ -244,6 +248,7 @@ class NotificationEventListenerTest {
         assertThat(payloadCaptor.firstValue.type).isEqualTo(NotificationType.TODO_TAGGED)
         assertThat(payloadCaptor.firstValue.url).isEqualTo("/todo")
         assertThat(payloadCaptor.firstValue.unreadCount).isEqualTo(2)
+        assertThat(payloadCaptor.firstValue.notification).isEqualTo(NotificationDto.of(notification, payload))
     }
 
     @Test
@@ -300,6 +305,7 @@ class NotificationEventListenerTest {
         assertThat(payloadCaptor.firstValue.type).isEqualTo(NotificationType.TODO_STATUS_IN_PROGRESS)
         assertThat(payloadCaptor.firstValue.url).isEqualTo("/todo")
         assertThat(payloadCaptor.firstValue.unreadCount).isEqualTo(4)
+        assertThat(payloadCaptor.firstValue.notification).isEqualTo(NotificationDto.of(notification, payload))
     }
 
     @Test
@@ -377,6 +383,10 @@ class NotificationEventListenerTest {
             NotificationType.TODO_STATUS_DONE,
         )
         assertThat(payloadCaptor.allValues.map { it.url }).containsOnly("/todo")
+        assertThat(payloadCaptor.allValues.map { it.notification?.payload }).containsExactly(
+            cases[0].payload,
+            cases[1].payload,
+        )
     }
 
     @Test
@@ -411,6 +421,7 @@ class NotificationEventListenerTest {
         val payloadCaptor = argumentCaptor<PushNotificationPayload>()
         verify(webPushService).sendToMember(eq(member.id!!), payloadCaptor.capture())
         assertThat(payloadCaptor.firstValue.url).isEqualTo("/friends")
+        assertThat(payloadCaptor.firstValue.notification).isEqualTo(NotificationDto.of(notification, payload))
     }
 
     @Test
@@ -447,6 +458,7 @@ class NotificationEventListenerTest {
         verify(webPushService).sendToMember(eq(member.id!!), payloadCaptor.capture())
         assertThat(payloadCaptor.firstValue.type).isEqualTo(NotificationType.FAMILY_REQUEST_RECEIVED)
         assertThat(payloadCaptor.firstValue.url).isEqualTo("/friends")
+        assertThat(payloadCaptor.firstValue.notification).isEqualTo(NotificationDto.of(notification, payload))
     }
 
     @Test
@@ -482,6 +494,7 @@ class NotificationEventListenerTest {
         verify(webPushService).sendToMember(eq(member.id!!), payloadCaptor.capture())
         assertThat(payloadCaptor.firstValue.type).isEqualTo(NotificationType.FRIEND_REQUEST_ACCEPTED)
         assertThat(payloadCaptor.firstValue.url).isEqualTo("/friends")
+        assertThat(payloadCaptor.firstValue.notification).isEqualTo(NotificationDto.of(notification, payload))
     }
 
     @Test

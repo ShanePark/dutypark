@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.push.dto
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationType
+import com.tistory.shanepark.dutypark.notification.dto.NotificationDto
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 
@@ -27,5 +28,6 @@ data class PushNotificationPayload(
     val url: String? = null,
     val tag: String? = null,
     val notificationId: String? = null,
-    val unreadCount: Int? = null
+    val unreadCount: Int? = null,
+    val notification: NotificationDto? = null,
 )
