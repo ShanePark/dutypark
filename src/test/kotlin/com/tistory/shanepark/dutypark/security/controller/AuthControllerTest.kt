@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
+import java.time.LocalDateTime
 
 @AutoConfigureMockMvc
 class AuthControllerTest : DutyparkIntegrationTest() {
@@ -89,6 +90,68 @@ class AuthControllerTest : DutyparkIntegrationTest() {
             .andExpect(cookie().exists("refresh_token"))
             .andExpect(cookie().httpOnly("access_token", true))
             .andExpect(cookie().httpOnly("refresh_token", true))
+            .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
+    fun `refresh succeeds with valid refresh token cookie`() {
+        val loginDto = LoginDto(TestData.member.email, testPass, false)
+        val json = objectMapper.writeValueAsString(loginDto)
+
+        val loginResult = mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+        )
+            .andExpect(status().isOk)
+            .andReturn()
+
+        val refreshCookie = loginResult.response.getCookie("refresh_token") ?: error("refresh cookie missing")
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/refresh")
+                .cookie(refreshCookie)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.expiresIn").exists())
+            .andExpect(cookie().exists("access_token"))
+            .andExpect(cookie().exists("refresh_token"))
+            .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
+    fun `refresh returns invalid code when refresh token cookie is missing`() {
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/refresh")
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.status").value(401))
+            .andExpect(jsonPath("$.code").value("auth.refresh.invalid"))
+            .andExpect(cookie().exists("access_token"))
+            .andExpect(cookie().exists("refresh_token"))
+            .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
+    fun `refresh returns expired code when refresh token is expired`() {
+        val refreshToken = refreshTokenService.createRefreshToken(
+            memberId = TestData.member.id!!,
+            remoteAddr = "127.0.0.1",
+            userAgent = "test-agent"
+        )
+        refreshToken.validUntil = LocalDateTime.now().minusMinutes(1)
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/refresh")
+                .cookie(Cookie("refresh_token", refreshToken.token))
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.status").value(401))
+            .andExpect(jsonPath("$.code").value("auth.refresh.expired"))
+            .andExpect(cookie().exists("access_token"))
+            .andExpect(cookie().exists("refresh_token"))
             .andDo(MockMvcResultHandlers.print())
     }
 

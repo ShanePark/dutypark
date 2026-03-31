@@ -126,14 +126,17 @@ const apiErrors = {
     },
   },
   friend: {
+    notFriend: '友だちとしてつながっている相手ではありません。',
     request: {
       self: '自分自身には友だちリクエストを送れません。',
       alreadyFriend: 'すでに友だちです。',
       alreadyRequested: '保留中の友だちまたは家族リクエストがすでにあります。',
+      notFound: '保留中の友だちまたは家族リクエストが見つかりません。',
     },
     family: {
       notFriend: '家族に追加するには、先に友だちである必要があります。',
       alreadyFamily: 'すでに家族として設定されています。',
+      notFamily: '家族として設定されていません。',
     },
   },
   todo: {

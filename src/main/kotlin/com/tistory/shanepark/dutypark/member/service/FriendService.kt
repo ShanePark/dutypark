@@ -176,7 +176,7 @@ class FriendService(
     private fun updateFamilyStatus(member: Member, friend: Member) {
         friendRelationRepository.findByMemberAndFriend(member, friend)?.let {
             it.isFamily = true
-        } ?: throw IllegalArgumentException("Not friend")
+        } ?: throw BadRequestException("friend.family.notFriend")
     }
 
     fun demoteFromFamily(loginMember: LoginMember, toMemberId: Long) {
@@ -184,7 +184,7 @@ class FriendService(
         val friend = memberRepository.findById(toMemberId).orElseThrow()
 
         if (!isFamily(member, friend)) {
-            throw IllegalStateException("Not family")
+            throw BadRequestException("friend.family.notFamily")
         }
 
         removeFamilyStatus(member, friend)
@@ -194,7 +194,7 @@ class FriendService(
     private fun removeFamilyStatus(member: Member, friend: Member) {
         friendRelationRepository.findByMemberAndFriend(member, friend)?.let {
             it.isFamily = false
-        } ?: throw IllegalArgumentException("Not friend")
+        } ?: throw BadRequestException("friend.family.notFriend")
     }
 
     private fun deleteViceVersaRequestIfPresent(loginMember: Member, friend: Member) {
@@ -211,7 +211,7 @@ class FriendService(
 
         val isFriend = isFriend(loginMember, targetMember)
         if (!isFriend)
-            throw IllegalArgumentException("Not friend")
+            throw BadRequestException("friend.notFriend")
 
         friendRelationRepository.deleteByMemberAndFriend(loginMember, targetMember)
         friendRelationRepository.deleteByMemberAndFriend(targetMember, loginMember)
@@ -233,7 +233,7 @@ class FriendService(
     private fun findPendingFriendRequestOrThrow(from: Member, to: Member): FriendRequest {
         return friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(
             from, to, PENDING
-        ).firstOrNull() ?: throw IllegalArgumentException("No pending request")
+        ).firstOrNull() ?: throw BadRequestException("friend.request.notFound")
     }
 
     @Transactional(readOnly = true)

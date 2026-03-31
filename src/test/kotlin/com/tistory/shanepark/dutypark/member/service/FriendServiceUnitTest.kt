@@ -313,10 +313,27 @@ class FriendServiceUnitTest {
             .thenReturn(emptyList())
 
         // Then
-        assertThrows<IllegalArgumentException> {
+        assertThrows<BadRequestException> {
             friendService.cancelFriendRequest(loginMember(member1), member2.id!!)
         }
         verify(friendRequestRepository, never()).delete(any<FriendRequest>())
+    }
+
+    @Test
+    fun `Can't reject friend request if there is no pending request`() {
+        // Given
+        val member1 = createMember(1L, "member1")
+        val member2 = createMember(2L, "member2")
+
+        whenever(memberRepository.findById(member1.id!!)).thenReturn(Optional.of(member1))
+        whenever(memberRepository.findById(member2.id!!)).thenReturn(Optional.of(member2))
+        whenever(friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(member1, member2, FriendRequestStatus.PENDING))
+            .thenReturn(emptyList())
+
+        // Then
+        assertThrows<BadRequestException> {
+            friendService.rejectFriendRequest(loginMember(member2), member1.id!!)
+        }
     }
 
     @Test
@@ -375,10 +392,25 @@ class FriendServiceUnitTest {
             .thenReturn(emptyList())
 
         // Then
-        assertThrows<IllegalArgumentException> {
+        assertThrows<BadRequestException> {
             friendService.acceptFriendRequest(loginMember(member1), member2.id!!)
         }
         verify(friendRelationRepository, never()).save(any<FriendRelation>())
+    }
+
+    @Test
+    fun `cannot demote family member when target is not family`() {
+        // Given
+        val member1 = createMember(1L, "member1")
+        val member2 = createMember(2L, "member2")
+
+        whenever(memberRepository.findById(member1.id!!)).thenReturn(Optional.of(member1))
+        whenever(memberRepository.findById(member2.id!!)).thenReturn(Optional.of(member2))
+
+        // Then
+        assertThrows<BadRequestException> {
+            friendService.demoteFromFamily(loginMember(member1), member2.id!!)
+        }
     }
 
     @Test
@@ -474,7 +506,7 @@ class FriendServiceUnitTest {
         whenever(friendRelationRepository.findByMemberAndFriend(member1, member2)).thenReturn(null)
 
         // Then
-        assertThrows<IllegalArgumentException> {
+        assertThrows<BadRequestException> {
             friendService.unfriend(loginMember(member1), member2.id!!)
         }
         verify(friendRelationRepository, never()).deleteByMemberAndFriend(any(), any())

@@ -96,16 +96,15 @@ class AuthController(
     fun refreshToken(
         req: HttpServletRequest,
         resp: HttpServletResponse
-    ): ResponseEntity<Map<String, Any>> {
+    ): ResponseEntity<*> {
         val refreshToken = cookieService.extractRefreshToken(req.cookies)
-            ?: return ResponseEntity.status(401).build()
+            ?: return unauthorizedRefresh(resp, "auth.refresh.invalid")
         return try {
             val tokenResponse = authService.refreshAccessToken(refreshToken, req)
             cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)
             ResponseEntity.ok(tokenResponse.toPublicResponse())
         } catch (e: AuthException) {
-            cookieService.clearTokenCookies(resp)
-            ResponseEntity.status(401).build()
+            unauthorizedRefresh(resp, normalizeErrorCode(e.message, "auth.refresh.invalid"))
         }
     }
 
@@ -181,6 +180,16 @@ class AuthController(
     private fun TokenResponse.toPublicResponse(): Map<String, Any> {
         return mapOf(
             "expiresIn" to expiresIn
+        )
+    }
+
+    private fun unauthorizedRefresh(resp: HttpServletResponse, code: String): ResponseEntity<DutyParkErrorResponse> {
+        cookieService.clearTokenCookies(resp)
+        return ResponseEntity.status(401).body(
+            DutyParkErrorResponse.of(
+                status = 401,
+                code = code,
+            )
         )
     }
 

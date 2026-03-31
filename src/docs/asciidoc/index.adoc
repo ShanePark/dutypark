@@ -25,6 +25,14 @@ operation::auth/status[]
 
 operation::auth/status-unauthenticated[]
 
+=== Refresh Token
+
+operation::auth/refresh[]
+
+==== Refresh Token [Unauthorized]
+
+operation::auth/refresh-unauthorized[]
+
 === Change Password
 
 operation::auth/change-password[]
@@ -193,17 +201,33 @@ operation::friends/send-request-bad-request[]
 
 operation::friends/accept-request[]
 
+==== Accept Friend Request [Bad Request]
+
+operation::friends/accept-request-bad-request[]
+
 === Reject Friend Request
 
 operation::friends/reject-request[]
+
+==== Reject Friend Request [Bad Request]
+
+operation::friends/reject-request-bad-request[]
 
 === Cancel Friend Request
 
 operation::friends/cancel-request[]
 
+==== Cancel Friend Request [Bad Request]
+
+operation::friends/cancel-request-bad-request[]
+
 === Unfriend
 
 operation::friends/unfriend[]
+
+==== Unfriend [Bad Request]
+
+operation::friends/unfriend-bad-request[]
 
 === Pin Friend
 
@@ -224,6 +248,14 @@ operation::friends/send-family-request[]
 ==== Send Family Request [Bad Request]
 
 operation::friends/send-family-request-bad-request[]
+
+=== Demote Family Member
+
+operation::friends/demote-family[]
+
+==== Demote Family Member [Bad Request]
+
+operation::friends/demote-family-bad-request[]
 
 == Notifications
 
@@ -269,9 +301,17 @@ operation::push/vapid-public-key[]
 
 operation::push/subscribe[]
 
+==== Subscribe [Unauthorized]
+
+operation::push/subscribe-unauthorized[]
+
 === Unsubscribe
 
 operation::push/unsubscribe[]
+
+==== Unsubscribe [Unauthorized]
+
+operation::push/unsubscribe-unauthorized[]
 
 == Teams
 

@@ -208,6 +208,28 @@ class FriendControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `accept friend request returns code when request is missing`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/friends/request/accept/{fromMemberId}", TestData.member2.id!!)
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("friend.request.notFound"))
+            .andDo(
+                document(
+                    "friends/accept-request-bad-request",
+                    pathParameters(
+                        parameterWithName("fromMemberId").description("Member ID who sent the friend request")
+                    ),
+                    standardErrorResponseFields(
+                        "Machine-readable error code (`friend.request.notFound`)"
+                    )
+                )
+            )
+    }
+
+    @Test
     fun `reject friend request`() {
         friendRequestRepository.save(
             FriendRequest(
@@ -232,6 +254,28 @@ class FriendControllerTest : RestDocsTest() {
                     "friends/reject-request",
                     pathParameters(
                         parameterWithName("fromMemberId").description("Member ID who sent the friend request")
+                    )
+                )
+            )
+    }
+
+    @Test
+    fun `reject friend request returns code when request is missing`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/friends/request/reject/{fromMemberId}", TestData.member2.id!!)
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("friend.request.notFound"))
+            .andDo(
+                document(
+                    "friends/reject-request-bad-request",
+                    pathParameters(
+                        parameterWithName("fromMemberId").description("Member ID who sent the friend request")
+                    ),
+                    standardErrorResponseFields(
+                        "Machine-readable error code (`friend.request.notFound`)"
                     )
                 )
             )
@@ -268,6 +312,28 @@ class FriendControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `cancel friend request returns code when request is missing`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/friends/request/cancel/{toMemberId}", TestData.member2.id!!)
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("friend.request.notFound"))
+            .andDo(
+                document(
+                    "friends/cancel-request-bad-request",
+                    pathParameters(
+                        parameterWithName("toMemberId").description("Member ID to cancel friend request")
+                    ),
+                    standardErrorResponseFields(
+                        "Machine-readable error code (`friend.request.notFound`)"
+                    )
+                )
+            )
+    }
+
+    @Test
     fun unfriend() {
         makeThemFriend(TestData.member, TestData.member2)
         em.flush()
@@ -285,6 +351,28 @@ class FriendControllerTest : RestDocsTest() {
                     "friends/unfriend",
                     pathParameters(
                         parameterWithName("deleteMemberId").description("Member ID to unfriend")
+                    )
+                )
+            )
+    }
+
+    @Test
+    fun `unfriend returns code when target is not a friend`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/friends/{deleteMemberId}", TestData.member2.id!!)
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("friend.notFriend"))
+            .andDo(
+                document(
+                    "friends/unfriend-bad-request",
+                    pathParameters(
+                        parameterWithName("deleteMemberId").description("Member ID to unfriend")
+                    ),
+                    standardErrorResponseFields(
+                        "Machine-readable error code (`friend.notFriend`)"
                     )
                 )
             )
@@ -448,6 +536,56 @@ class FriendControllerTest : RestDocsTest() {
         )
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("friend.request.alreadyRequested"))
+    }
+
+    @Test
+    fun `demote family member`() {
+        makeThemFriend(TestData.member, TestData.member2)
+        friendRelationRepository.findByMemberAndFriend(TestData.member, TestData.member2)?.isFamily = true
+        friendRelationRepository.findByMemberAndFriend(TestData.member2, TestData.member)?.isFamily = true
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/friends/family/{friendId}", TestData.member2.id!!)
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andDo(
+                document(
+                    "friends/demote-family",
+                    pathParameters(
+                        parameterWithName("friendId").description("Family member ID to demote back to friend")
+                    )
+                )
+            )
+    }
+
+    @Test
+    fun `demote family member returns code when target is not family`() {
+        makeThemFriend(TestData.member, TestData.member2)
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/friends/family/{friendId}", TestData.member2.id!!)
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("friend.family.notFamily"))
+            .andDo(
+                document(
+                    "friends/demote-family-bad-request",
+                    pathParameters(
+                        parameterWithName("friendId").description("Family member ID to demote back to friend")
+                    ),
+                    standardErrorResponseFields(
+                        "Machine-readable error code (`friend.family.notFamily`)"
+                    )
+                )
+            )
     }
 
     private fun standardErrorResponseFields(codeDescription: String) = responseFields(
