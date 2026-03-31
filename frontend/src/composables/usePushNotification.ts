@@ -43,7 +43,7 @@ async function getRegistrationsIfPossible(): Promise<ServiceWorkerRegistration[]
   }
 
   try {
-    return await navigator.serviceWorker.getRegistrations()
+    return Array.from(await navigator.serviceWorker.getRegistrations())
   } catch {
     return []
   }
