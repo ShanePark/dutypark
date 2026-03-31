@@ -125,6 +125,17 @@ const apiErrors = {
       exceeded: 'ファイルサイズが大きすぎます。',
     },
   },
+  friend: {
+    request: {
+      self: '自分自身には友だちリクエストを送れません。',
+      alreadyFriend: 'すでに友だちです。',
+      alreadyRequested: '保留中の友だちまたは家族リクエストがすでにあります。',
+    },
+    family: {
+      notFriend: '家族に追加するには、先に友だちである必要があります。',
+      alreadyFamily: 'すでに家族として設定されています。',
+    },
+  },
   todo: {
     reorder: {
       orderedIds: {

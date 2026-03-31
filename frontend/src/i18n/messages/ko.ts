@@ -123,6 +123,17 @@ const apiErrors = {
       exceeded: '파일 크기가 너무 큽니다.',
     },
   },
+  friend: {
+    request: {
+      self: '자기 자신에게는 친구 요청을 보낼 수 없습니다.',
+      alreadyFriend: '이미 친구로 연결된 사용자입니다.',
+      alreadyRequested: '이미 대기 중인 친구 또는 가족 요청이 있습니다.',
+    },
+    family: {
+      notFriend: '가족으로 추가하려면 먼저 친구여야 합니다.',
+      alreadyFamily: '이미 가족으로 설정된 사용자입니다.',
+    },
+  },
   todo: {
     reorder: {
       orderedIds: {

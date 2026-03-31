@@ -123,6 +123,17 @@ const apiErrors = {
       exceeded: 'The file is too large.',
     },
   },
+  friend: {
+    request: {
+      self: 'You cannot send a friend request to yourself.',
+      alreadyFriend: 'You are already friends.',
+      alreadyRequested: 'A friend or family request is already pending.',
+    },
+    family: {
+      notFriend: 'Only friends can be added as family.',
+      alreadyFamily: 'This member is already marked as family.',
+    },
+  },
   todo: {
     reorder: {
       orderedIds: {

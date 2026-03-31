@@ -185,6 +185,10 @@ operation::friends/search[]
 
 operation::friends/send-request[]
 
+==== Send Friend Request [Bad Request]
+
+operation::friends/send-request-bad-request[]
+
 === Accept Friend Request
 
 operation::friends/accept-request[]
@@ -216,6 +220,10 @@ operation::friends/update-pin-order[]
 === Send Family Request
 
 operation::friends/send-family-request[]
+
+==== Send Family Request [Bad Request]
+
+operation::friends/send-family-request-bad-request[]
 
 == Notifications
 

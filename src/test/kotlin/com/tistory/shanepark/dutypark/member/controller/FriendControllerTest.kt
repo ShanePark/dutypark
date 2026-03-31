@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
+import org.springframework.restdocs.payload.JsonFieldType
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders
 import org.springframework.restdocs.payload.PayloadDocumentation.*
 import org.springframework.restdocs.request.RequestDocumentation.*
@@ -113,6 +114,67 @@ class FriendControllerTest : RestDocsTest() {
                     )
                 )
             )
+    }
+
+    @Test
+    fun `send friend request returns code when target is self`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/friends/request/send/{toMemberId}", TestData.member.id!!)
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(jsonPath("$.code").value("friend.request.self"))
+            .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "friends/send-request-bad-request",
+                    pathParameters(
+                        parameterWithName("toMemberId").description("Target member ID to send friend request")
+                    ),
+                    standardErrorResponseFields(
+                        "Machine-readable error code (`friend.request.self`, `friend.request.alreadyFriend`, `friend.request.alreadyRequested`)"
+                    )
+                )
+            )
+    }
+
+    @Test
+    fun `send friend request returns code when already friend`() {
+        makeThemFriend(TestData.member, TestData.member2)
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/friends/request/send/{toMemberId}", TestData.member2.id!!)
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("friend.request.alreadyFriend"))
+    }
+
+    @Test
+    fun `send friend request returns code when request is already pending`() {
+        friendRequestRepository.save(
+            FriendRequest(
+                fromMember = TestData.member,
+                toMember = TestData.member2,
+                status = FriendRequestStatus.PENDING,
+                requestType = FriendRequestType.FRIEND_REQUEST
+            )
+        )
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/friends/request/send/{toMemberId}", TestData.member2.id!!)
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("friend.request.alreadyRequested"))
     }
 
     @Test
@@ -323,5 +385,76 @@ class FriendControllerTest : RestDocsTest() {
                 )
             )
     }
+
+    @Test
+    fun `send family request returns code when target is not a friend`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/friends/family/{toMemberId}", TestData.member2.id!!)
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(jsonPath("$.code").value("friend.family.notFriend"))
+            .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "friends/send-family-request-bad-request",
+                    pathParameters(
+                        parameterWithName("toMemberId").description("Friend ID to upgrade to family")
+                    ),
+                    standardErrorResponseFields(
+                        "Machine-readable error code (`friend.family.notFriend`, `friend.family.alreadyFamily`, `friend.request.alreadyRequested`)"
+                    )
+                )
+            )
+    }
+
+    @Test
+    fun `send family request returns code when already family`() {
+        makeThemFriend(TestData.member, TestData.member2)
+        friendRelationRepository.findByMemberAndFriend(TestData.member, TestData.member2)?.isFamily = true
+        friendRelationRepository.findByMemberAndFriend(TestData.member2, TestData.member)?.isFamily = true
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/friends/family/{toMemberId}", TestData.member2.id!!)
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("friend.family.alreadyFamily"))
+    }
+
+    @Test
+    fun `send family request returns code when request is already pending`() {
+        makeThemFriend(TestData.member, TestData.member2)
+        friendRequestRepository.save(
+            FriendRequest(
+                fromMember = TestData.member,
+                toMember = TestData.member2,
+                status = FriendRequestStatus.PENDING,
+                requestType = FriendRequestType.FAMILY_REQUEST
+            )
+        )
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/friends/family/{toMemberId}", TestData.member2.id!!)
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("friend.request.alreadyRequested"))
+    }
+
+    private fun standardErrorResponseFields(codeDescription: String) = responseFields(
+        fieldWithPath("status").type(JsonFieldType.NUMBER).description("HTTP status code"),
+        fieldWithPath("code").type(JsonFieldType.STRING).description(codeDescription),
+        fieldWithPath("details").type(JsonFieldType.OBJECT).optional().description("Additional error details"),
+        fieldWithPath("fieldErrors").type(JsonFieldType.ARRAY).optional().description("Field validation errors")
+    )
 
 }

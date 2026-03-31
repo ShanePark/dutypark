@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberPreviewDto
 import com.tistory.shanepark.dutypark.member.domain.dto.toFriendDto
@@ -60,16 +61,16 @@ class FriendService(
         val toMember = memberRepository.findById(toMemberId).orElseThrow()
 
         if (fromMember == toMember)
-            throw IllegalArgumentException("Cannot send friend request to self")
+            throw BadRequestException("friend.request.self")
 
         if (isFriend(fromMember, toMember))
-            throw IllegalArgumentException("Already friend")
+            throw BadRequestException("friend.request.alreadyFriend")
 
         val pending =
             friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(fromMember, toMember, PENDING)
 
         if (pending.isNotEmpty())
-            throw IllegalArgumentException("Already requested")
+            throw BadRequestException("friend.request.alreadyRequested")
 
         val savedRequest = friendRequestRepository.save(FriendRequest(fromMember, toMember))
         eventPublisher.publishEvent(
@@ -87,16 +88,16 @@ class FriendService(
         val toMember = memberRepository.findById(toMemberId).orElseThrow()
 
         if (!isFriend(fromMember, toMember)) {
-            throw IllegalStateException("Not friend")
+            throw BadRequestException("friend.family.notFriend")
         }
 
         if (isFamily(fromMember, toMember)) {
-            throw IllegalStateException("Already family")
+            throw BadRequestException("friend.family.alreadyFamily")
         }
 
         val pending = friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(fromMember, toMember, PENDING)
         if (pending.isNotEmpty())
-            throw IllegalArgumentException("Already requested")
+            throw BadRequestException("friend.request.alreadyRequested")
 
         val savedRequest = friendRequestRepository.save(
             FriendRequest(
