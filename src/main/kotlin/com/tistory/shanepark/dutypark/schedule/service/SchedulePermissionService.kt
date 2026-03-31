@@ -20,7 +20,7 @@ class SchedulePermissionService(
         if (scheduleMember.isEquals(loginMember = loginMember)) return
         if (memberService.isManager(isManager = loginMember, target = scheduleMember)) return
 
-        throw AuthException("login member doesn't have permission to create or edit the schedule")
+        throw AuthException("schedule.write.forbidden")
     }
 
     fun checkScheduleWriteAuthority(loginMember: LoginMember, schedule: Schedule) {
@@ -38,7 +38,7 @@ class SchedulePermissionService(
 
         val availableVisibilities = friendService.availableScheduleVisibilities(loginMember, schedule.member)
         if (schedule.visibility !in availableVisibilities) {
-            throw AuthException("Schedule visibility ${schedule.visibility} is not accessible")
+            throw AuthException("schedule.visibility.forbidden")
         }
     }
 }

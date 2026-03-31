@@ -263,7 +263,7 @@ class ScheduleService(
 
     private fun addTagToSchedule(schedule: Schedule, friend: Member) {
         if (!friendService.isFriend(schedule.member, friend)) {
-            throw AuthException("$friend is not friend of ${schedule.member}")
+            throw AuthException("schedule.tag.notFriend")
         }
 
         schedule.addTag(friend)

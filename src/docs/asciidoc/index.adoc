@@ -351,6 +351,10 @@ operation::attachments/sessions/create-unauthorized[]
 
 operation::attachments/sessions/discard[]
 
+==== Discard Session [Forbidden]
+
+operation::attachments/sessions/discard-forbidden[]
+
 === Upload File
 
 operation::attachments/upload[]
@@ -367,6 +371,14 @@ operation::attachments/reorder[]
 
 operation::attachments/download[]
 
+==== Download Attachment [Session Unauthorized]
+
+operation::attachments/download-session-unauthorized[]
+
+==== Download Attachment [Missing Session]
+
+operation::attachments/download-session-missing-session[]
+
 === Get Thumbnail
 
 operation::attachments/thumbnail[]
@@ -374,3 +386,7 @@ operation::attachments/thumbnail[]
 === Delete Attachment
 
 operation::attachments/delete[]
+
+==== Delete Attachment [Missing Session]
+
+operation::attachments/delete-session-missing-session[]

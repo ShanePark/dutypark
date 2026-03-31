@@ -82,6 +82,8 @@ class PolicyControllerTest : DutyparkIntegrationTest() {
             MockMvcRequestBuilders.get("/api/policies/invalid")
         )
             .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(jsonPath("$.code").value("common.badRequest"))
     }
 
     @Test

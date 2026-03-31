@@ -249,7 +249,7 @@ class FriendService(
     @Transactional(readOnly = true)
     fun checkVisibility(login: LoginMember?, target: Member, scheduleVisibilityCheck: Boolean = false) {
         if (!isVisible(login, target.id, scheduleVisibilityCheck = scheduleVisibilityCheck))
-            throw AuthException("${target.name} Calendar is not visible to ${login?.name}")
+            throw AuthException("member.visibility.forbidden")
     }
 
     @Transactional(readOnly = true)

@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
+import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.ProfilePhotoService
@@ -11,6 +12,7 @@ import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import com.tistory.shanepark.dutypark.team.repository.TeamRepository
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.InjectMocks
@@ -41,6 +43,51 @@ class TeamServiceTest {
 
     @Mock
     lateinit var profilePhotoService: ProfilePhotoService
+
+    @Test
+    fun `checkCanManage returns code-first auth exception for non-manager`() {
+        val team = Team("Test Team")
+        ReflectionTestUtils.setField(team, "id", 1L)
+        `when`(teamRepository.findById(1L)).thenReturn(Optional.of(team))
+
+        val exception = assertThrows<AuthException> {
+            service.checkCanManage(LoginMember(id = 10L, name = "viewer"), 1L)
+        }
+
+        assertThat(exception.message).isEqualTo("team.manage.forbidden")
+    }
+
+    @Test
+    fun `checkCanAdmin returns code-first auth exception for non-admin`() {
+        val team = Team("Test Team")
+        val admin = Member(name = "Admin")
+        ReflectionTestUtils.setField(team, "id", 1L)
+        ReflectionTestUtils.setField(admin, "id", 1L)
+        team.changeAdmin(admin)
+        `when`(teamRepository.findById(1L)).thenReturn(Optional.of(team))
+
+        val exception = assertThrows<AuthException> {
+            service.checkCanAdmin(LoginMember(id = 2L, name = "manager"), 1L)
+        }
+
+        assertThat(exception.message).isEqualTo("team.admin.required")
+    }
+
+    @Test
+    fun `checkCanRead returns code-first auth exception for outsider`() {
+        val team = Team("Test Team")
+        val outsider = Member(name = "outsider")
+        ReflectionTestUtils.setField(team, "id", 1L)
+        ReflectionTestUtils.setField(outsider, "id", 3L)
+        `when`(teamRepository.findById(1L)).thenReturn(Optional.of(team))
+        `when`(memberRepository.findById(3L)).thenReturn(Optional.of(outsider))
+
+        val exception = assertThrows<AuthException> {
+            service.checkCanRead(LoginMember(id = 3L, name = "outsider"), 1L)
+        }
+
+        assertThat(exception.message).isEqualTo("team.member.required")
+    }
 
     @Test
     fun `loadShift should return empty shift if member is not in any team`() {

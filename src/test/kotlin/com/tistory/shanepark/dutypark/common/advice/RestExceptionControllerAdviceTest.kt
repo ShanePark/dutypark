@@ -52,11 +52,11 @@ class RestExceptionControllerAdviceTest {
     }
 
     @Test
-    fun `legacy raw messages are normalized to mapped codes`() {
-        val response = advice.illegalArgumentHandler(IllegalArgumentException("callbackUrl is required in state"))
+    fun `illegalArgumentHandler falls back to common badRequest for non-code messages`() {
+        val response = advice.illegalArgumentHandler(IllegalArgumentException("Callback URL is required"))
 
         assertThat(response.statusCode.value()).isEqualTo(400)
-        assertThat(response.body?.code).isEqualTo("auth.oauth.callbackUrl.required")
+        assertThat(response.body?.code).isEqualTo("common.badRequest")
     }
 
     @Test

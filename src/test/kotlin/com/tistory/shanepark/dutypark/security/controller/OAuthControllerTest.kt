@@ -31,6 +31,7 @@ import org.springframework.context.annotation.Primary
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.ResultActions
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
@@ -359,7 +360,10 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
         )
-            .andExpect(status().isBadRequest)
+            .expectValidationError(
+                code = "policy.terms.version.required",
+                field = "termsVersion"
+            )
 
         assertThat(memberRepository.findAll().none { it.name == "badtermv" }).isTrue
         assertThat(memberConsentRepository.findAll().none { it.member.name == "badtermv" }).isTrue
@@ -382,7 +386,10 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
         )
-            .andExpect(status().isBadRequest)
+            .expectValidationError(
+                code = "policy.privacy.version.required",
+                field = "privacyVersion"
+            )
 
         assertThat(memberRepository.findAll().none { it.name == "badprivv" }).isTrue
         assertThat(memberConsentRepository.findAll().none { it.member.name == "badprivv" }).isTrue
@@ -406,7 +413,10 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
         )
-            .andExpect(status().isBadRequest)
+            .expectValidationError(
+                code = "policy.terms.consent.required",
+                field = "termAgree"
+            )
 
         assertThat(memberRepository.findAll().none { it.name == "bad-user-1" }).isTrue
         assertThat(memberConsentRepository.findAll().none { it.member.name == "bad-user-1" }).isTrue
@@ -430,10 +440,39 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
         )
-            .andExpect(status().isBadRequest)
+            .expectValidationError(
+                code = "policy.privacy.consent.required",
+                field = "privacyAgree"
+            )
 
         assertThat(memberRepository.findAll().none { it.name == "bad-user-2" }).isTrue
         assertThat(memberConsentRepository.findAll().none { it.member.name == "bad-user-2" }).isTrue
+    }
+
+    @Test
+    fun `sso signup returns validation envelope when username exceeds max length`() {
+        val ssoRegister = memberSsoRegisterRepository.save(MemberSsoRegister(SsoType.KAKAO, "kakao-id-5"))
+        val request = SsoSignupRequest(
+            uuid = ssoRegister.uuid,
+            username = "toolongname",
+            termAgree = true,
+            privacyAgree = true,
+            termsVersion = "2025-01-15",
+            privacyVersion = "2026-03-10"
+        )
+        val json = objectMapper.writeValueAsString(request)
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/sso/signup/token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+        )
+            .expectValidationError(
+                code = "sso.username.length",
+                field = "username"
+            )
+
+        assertThat(memberRepository.findAll().none { it.name == "toolongname" }).isTrue
     }
 
     private fun stateJson(
@@ -476,6 +515,16 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
         memberSocialAccountRepository.saveAndFlush(
             MemberSocialAccount(member = member, provider = provider, socialId = socialId)
         )
+    }
+
+    private fun ResultActions.expectValidationError(code: String, field: String): ResultActions {
+        return this
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(jsonPath("$.code").value(code))
+            .andExpect(jsonPath("$.details").doesNotExist())
+            .andExpect(jsonPath("$.fieldErrors[0].field").value(field))
+            .andExpect(jsonPath("$.fieldErrors[0].code").value(code))
     }
 
     @TestConfiguration

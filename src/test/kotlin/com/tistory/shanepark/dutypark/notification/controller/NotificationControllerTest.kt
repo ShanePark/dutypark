@@ -117,6 +117,25 @@ class NotificationControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `get unread notifications skips rows with invalid payload`() {
+        createBrokenNotification(isRead = false)
+        createTestNotification(isRead = false)
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/notifications/unread")
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").isArray)
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].payload.version").value(1))
+            .andExpect(jsonPath("$[0].payload.actor.name").value(TestData.member2.name))
+    }
+
+    @Test
     fun `get notification count`() {
         createTestNotification(isRead = false)
         createTestNotification(isRead = true)
@@ -177,6 +196,21 @@ class NotificationControllerTest : RestDocsTest() {
                     )
                 )
             )
+    }
+
+    @Test
+    fun `mark notification as read returns explicit code for invalid payload`() {
+        val notification = createBrokenNotification(isRead = false)
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.patch("/api/notifications/{id}/read", notification.id)
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("notification.payload.invalid"))
     }
 
     @Test
@@ -269,6 +303,21 @@ class NotificationControllerTest : RestDocsTest() {
             actorId = TestData.member2.id,
             payloadJson = notificationPayloadCodec.serialize(payload),
             payloadVersion = payload.version
+        ).apply {
+            this.isRead = isRead
+        }
+        return notificationRepository.save(notification)
+    }
+
+    private fun createBrokenNotification(isRead: Boolean = false): Notification {
+        val notification = Notification(
+            member = TestData.member,
+            type = NotificationType.FRIEND_REQUEST_RECEIVED,
+            referenceType = NotificationReferenceType.FRIEND_REQUEST,
+            referenceId = "broken",
+            actorId = TestData.member2.id,
+            payloadJson = null,
+            payloadVersion = 1,
         ).apply {
             this.isRead = isRead
         }

@@ -15,6 +15,14 @@ const apiErrors = {
     refresh: {
       invalid: '유효하지 않은 리프레시 토큰입니다.',
       expired: '리프레시 토큰이 만료되었습니다.',
+      current: {
+        required: '현재 로그인 중인 리프레시 토큰 정보가 필요합니다.',
+      },
+    },
+    refreshToken: {
+      delete: {
+        forbidden: '이 리프레시 토큰을 삭제할 권한이 없습니다.',
+      },
     },
     token: {
       memberNotFound: '존재하지 않는 계정입니다.',
@@ -51,6 +59,7 @@ const apiErrors = {
   member: {
     notFound: '회원을 찾을 수 없습니다.',
     visibility: {
+      forbidden: '이 회원의 캘린더를 볼 권한이 없습니다.',
       update: {
         forbidden: '다른 회원의 공개 범위는 변경할 수 없습니다.',
       },
@@ -72,6 +81,20 @@ const apiErrors = {
     },
   },
   team: {
+    delete: {
+      membersExist: '구성원이 남아 있는 팀은 삭제할 수 없습니다.',
+    },
+    manage: {
+      forbidden: '이 팀을 관리할 권한이 없습니다.',
+    },
+    admin: {
+      required: '팀 관리자만 이 작업을 할 수 있습니다.',
+    },
+    member: {
+      alreadyAssigned: '이 사용자는 이미 다른 팀에 속해 있습니다.',
+      notInTeam: '이 사용자는 이 팀에 속해 있지 않습니다.',
+      required: '이 팀에 속한 사용자만 접근할 수 있습니다.',
+    },
     name: {
       required: '팀 이름은 필수입니다.',
       length: '팀 이름은 2자 이상 20자 이하로 입력해주세요.',
@@ -85,6 +108,40 @@ const apiErrors = {
       },
     },
   },
+  schedule: {
+    tag: {
+      notFriend: '친구만 이 일정에 태그할 수 있습니다.',
+    },
+    write: {
+      forbidden: '이 일정을 수정할 권한이 없습니다.',
+    },
+    visibility: {
+      forbidden: '이 일정을 볼 권한이 없습니다.',
+    },
+  },
+  policy: {
+    terms: {
+      consent: {
+        required: '서비스 이용약관에 동의해야 합니다.',
+      },
+      version: {
+        required: '이용약관 버전 정보가 필요합니다.',
+      },
+    },
+    privacy: {
+      consent: {
+        required: '개인정보 처리방침에 동의해야 합니다.',
+      },
+      version: {
+        required: '개인정보 처리방침 버전 정보가 필요합니다.',
+      },
+    },
+  },
+  notification: {
+    payload: {
+      invalid: '이 알림을 불러올 수 없습니다.',
+    },
+  },
   sso: {
     uuid: {
       required: '회원가입 세션 정보가 필요합니다.',
@@ -96,9 +153,17 @@ const apiErrors = {
     },
   },
   dday: {
+    access: {
+      forbidden: '이 D-Day에 접근할 권한이 없습니다.',
+    },
     title: {
       required: 'D-DAY 제목은 필수입니다.',
       length: 'D-DAY 제목은 1자 이상 30자 이하로 입력해주세요.',
+    },
+  },
+  duty: {
+    edit: {
+      forbidden: '이 근무를 수정할 권한이 없습니다.',
     },
   },
   dutyBatch: {
@@ -116,6 +181,34 @@ const apiErrors = {
     },
   },
   attachment: {
+    context: {
+      missing: '첨부파일의 컨텍스트 정보가 없습니다.',
+    },
+    session: {
+      auth: {
+        required: '임시 업로드 세션 첨부파일에 접근하려면 로그인이 필요합니다.',
+      },
+      forbidden: '이 업로드 세션에 접근할 권한이 없습니다.',
+      notFound: '이 첨부파일에 연결된 업로드 세션을 찾을 수 없습니다.',
+      contextMismatch: '업로드 세션과 대상 컨텍스트가 일치하지 않습니다.',
+      targetContext: {
+        missing: '업로드 세션의 대상 컨텍스트 정보가 없습니다.',
+      },
+    },
+    todo: {
+      auth: {
+        required: '이 할 일 첨부파일에 접근하려면 로그인이 필요합니다.',
+      },
+      access: {
+        forbidden: '이 할 일 첨부파일을 볼 권한이 없습니다.',
+      },
+      write: {
+        forbidden: '이 할 일 첨부파일을 수정할 권한이 없습니다.',
+      },
+    },
+    profile: {
+      forbidden: '이 프로필 첨부파일을 수정할 권한이 없습니다.',
+    },
     extension: {
       blocked: '허용되지 않는 파일 확장자입니다.',
     },
@@ -142,6 +235,9 @@ const apiErrors = {
       orderedIds: {
         required: '같은 상태에서 순서를 바꾸려면 정렬된 할 일 ID 목록이 필요합니다.',
       },
+    },
+    tag: {
+      notFriend: '친구만 이 할 일에 태그할 수 있습니다.',
     },
   },
 } as const

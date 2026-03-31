@@ -443,7 +443,7 @@ class TodoService(
             return
         }
         if (!friendService.isFriend(todo.member, friend)) {
-            throw AuthException("$friend is not friend of ${todo.member}")
+            throw AuthException("todo.tag.notFriend")
         }
         todo.addTag(friend)
         publishTodoTaggedEvent(todo, friend)

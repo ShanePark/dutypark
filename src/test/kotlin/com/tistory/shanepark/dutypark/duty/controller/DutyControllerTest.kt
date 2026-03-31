@@ -226,6 +226,7 @@ class DutyControllerTest : RestDocsTest() {
                 .withAuth(TestData.member2)
         )
             .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("duty.edit.forbidden"))
             .andDo(MockMvcResultHandlers.print())
     }
 

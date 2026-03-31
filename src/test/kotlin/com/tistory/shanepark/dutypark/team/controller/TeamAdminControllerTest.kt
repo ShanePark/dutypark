@@ -5,7 +5,6 @@ import com.tistory.shanepark.dutypark.team.domain.dto.TeamCreateDto
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.HttpHeaders
@@ -145,13 +144,11 @@ class TeamAdminControllerTest : DutyparkIntegrationTest() {
 
     @Test
     fun `delete fails for team with members`() {
-        val thrown = assertThrows<jakarta.servlet.ServletException> {
-            mockMvc.perform(
-                MockMvcRequestBuilders.delete("/admin/api/teams/{id}", TestData.team.id!!)
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.admin)}")
-            ).andReturn()
-        }
-
-        assertThat(thrown.rootCause).isInstanceOf(IllegalStateException::class.java)
+        mockMvc.perform(
+            MockMvcRequestBuilders.delete("/admin/api/teams/{id}", TestData.team.id!!)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.admin)}")
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("team.delete.membersExist"))
     }
 }

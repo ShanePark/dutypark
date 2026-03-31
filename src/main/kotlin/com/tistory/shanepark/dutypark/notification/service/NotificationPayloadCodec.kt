@@ -15,6 +15,14 @@ import org.springframework.stereotype.Component
 import tools.jackson.databind.ObjectMapper
 import tools.jackson.databind.node.ObjectNode
 
+sealed interface NotificationPayloadDecodeResult {
+    data class Success(val payload: NotificationPayload) : NotificationPayloadDecodeResult
+
+    data class Missing(val reason: String) : NotificationPayloadDecodeResult
+
+    data class Invalid(val reason: String) : NotificationPayloadDecodeResult
+}
+
 @Component
 class NotificationPayloadCodec(
     private val objectMapper: ObjectMapper,
@@ -23,13 +31,44 @@ class NotificationPayloadCodec(
         return objectMapper.writeValueAsString(payload)
     }
 
-    fun deserialize(type: NotificationType, payloadVersion: Int?, payloadJson: String?): NotificationPayload? {
-        if (payloadJson.isNullOrBlank()) {
-            return null
+    fun ensureCompatible(type: NotificationType, payload: NotificationPayload) {
+        val expectedClass = payloadClass(type, payload.version)
+        require(expectedClass.isInstance(payload)) {
+            "Notification payload type mismatch for $type version ${payload.version}: expected ${expectedClass.simpleName} but got ${payload::class.java.simpleName}"
         }
+    }
+
+    fun safeDeserialize(
+        type: NotificationType,
+        payloadVersion: Int?,
+        payloadJson: String?,
+    ): NotificationPayloadDecodeResult {
+        if (payloadJson.isNullOrBlank()) {
+            return NotificationPayloadDecodeResult.Missing("Notification payload JSON is blank")
+        }
+
         val normalizedPayloadJson = normalize(payloadJson)
         val version = resolveVersion(normalizedPayloadJson, payloadVersion)
-        return objectMapper.readValue(normalizedPayloadJson, payloadClass(type, version))
+        val payloadClass = runCatching { payloadClass(type, version) }
+            .getOrElse { return NotificationPayloadDecodeResult.Invalid(it.message ?: "Unsupported notification payload") }
+
+        return runCatching { objectMapper.readValue(normalizedPayloadJson, payloadClass) }
+            .fold(
+                onSuccess = { NotificationPayloadDecodeResult.Success(it) },
+                onFailure = {
+                    NotificationPayloadDecodeResult.Invalid(
+                        it.message ?: "Failed to decode notification payload"
+                    )
+                },
+            )
+    }
+
+    fun deserialize(type: NotificationType, payloadVersion: Int?, payloadJson: String?): NotificationPayload? {
+        return when (val result = safeDeserialize(type, payloadVersion, payloadJson)) {
+            is NotificationPayloadDecodeResult.Success -> result.payload
+            is NotificationPayloadDecodeResult.Missing -> null
+            is NotificationPayloadDecodeResult.Invalid -> throw IllegalArgumentException(result.reason)
+        }
     }
 
     @Suppress("LongMethod")

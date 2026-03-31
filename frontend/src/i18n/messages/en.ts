@@ -15,6 +15,14 @@ const apiErrors = {
     refresh: {
       invalid: 'Invalid refresh token.',
       expired: 'Refresh token has expired.',
+      current: {
+        required: 'The current refresh token is required.',
+      },
+    },
+    refreshToken: {
+      delete: {
+        forbidden: 'You do not have permission to delete this refresh token.',
+      },
     },
     token: {
       memberNotFound: 'Account does not exist.',
@@ -51,6 +59,7 @@ const apiErrors = {
   member: {
     notFound: 'Member not found.',
     visibility: {
+      forbidden: 'You do not have permission to view this member\'s calendar.',
       update: {
         forbidden: 'You cannot update another member\'s visibility.',
       },
@@ -72,6 +81,20 @@ const apiErrors = {
     },
   },
   team: {
+    delete: {
+      membersExist: 'You cannot delete a team that still has members.',
+    },
+    manage: {
+      forbidden: 'You do not have permission to manage this team.',
+    },
+    admin: {
+      required: 'Only team admins can perform this action.',
+    },
+    member: {
+      alreadyAssigned: 'This member already belongs to a team.',
+      notInTeam: 'This member does not belong to this team.',
+      required: 'You must belong to this team to access it.',
+    },
     name: {
       required: 'Team name is required.',
       length: 'Team names must be between 2 and 20 characters.',
@@ -85,6 +108,40 @@ const apiErrors = {
       },
     },
   },
+  schedule: {
+    tag: {
+      notFriend: 'Only friends can be tagged on this schedule.',
+    },
+    write: {
+      forbidden: 'You do not have permission to edit this schedule.',
+    },
+    visibility: {
+      forbidden: 'You do not have permission to view this schedule.',
+    },
+  },
+  policy: {
+    terms: {
+      consent: {
+        required: 'You must agree to the terms of service.',
+      },
+      version: {
+        required: 'Terms version information is required.',
+      },
+    },
+    privacy: {
+      consent: {
+        required: 'You must agree to the privacy policy.',
+      },
+      version: {
+        required: 'Privacy policy version information is required.',
+      },
+    },
+  },
+  notification: {
+    payload: {
+      invalid: 'This notification could not be loaded.',
+    },
+  },
   sso: {
     uuid: {
       required: 'Sign-up session information is required.',
@@ -96,9 +153,17 @@ const apiErrors = {
     },
   },
   dday: {
+    access: {
+      forbidden: 'You do not have permission to access this D-Day.',
+    },
     title: {
       required: 'D-Day title is required.',
       length: 'D-Day titles must be between 1 and 30 characters.',
+    },
+  },
+  duty: {
+    edit: {
+      forbidden: 'You do not have permission to edit this duty.',
     },
   },
   dutyBatch: {
@@ -116,6 +181,34 @@ const apiErrors = {
     },
   },
   attachment: {
+    context: {
+      missing: 'Attachment context information is missing.',
+    },
+    session: {
+      auth: {
+        required: 'Login is required to access session attachments.',
+      },
+      forbidden: 'You do not have permission to access this upload session.',
+      notFound: 'The upload session for this attachment could not be found.',
+      contextMismatch: 'The upload session does not match the target context.',
+      targetContext: {
+        missing: 'The upload session is missing target context information.',
+      },
+    },
+    todo: {
+      auth: {
+        required: 'Login is required to access this to-do attachment.',
+      },
+      access: {
+        forbidden: 'You do not have permission to view this to-do attachment.',
+      },
+      write: {
+        forbidden: 'You do not have permission to modify this to-do attachment.',
+      },
+    },
+    profile: {
+      forbidden: 'You do not have permission to modify this profile attachment.',
+    },
     extension: {
       blocked: 'This file extension is not allowed.',
     },
@@ -142,6 +235,9 @@ const apiErrors = {
       orderedIds: {
         required: 'The reordered to-do ID list is required.',
       },
+    },
+    tag: {
+      notFriend: 'Only friends can be tagged on this to-do.',
     },
   },
 } as const

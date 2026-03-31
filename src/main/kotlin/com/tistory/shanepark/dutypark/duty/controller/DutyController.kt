@@ -71,7 +71,7 @@ class DutyController(
         loginMember: LoginMember, dutyMemberId: Long
     ) {
         if (!dutyService.canEdit(loginMember, dutyMemberId)) {
-            throw AuthException("login member doesn't have permission to edit duty")
+            throw AuthException("duty.edit.forbidden")
         }
     }
 

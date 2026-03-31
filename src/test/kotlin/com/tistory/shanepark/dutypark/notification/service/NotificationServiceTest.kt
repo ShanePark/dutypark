@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.notification.service
 
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
@@ -128,6 +129,37 @@ class NotificationServiceTest {
         assertThat(result.content[0].payload).isEqualTo(payload)
         assertThat(result.content[0].actorId).isEqualTo(actorMember.id)
         assertThat(result.totalElements).isEqualTo(1)
+    }
+
+    @Test
+    fun `getNotifications skips invalid payload rows inside page`() {
+        val pageable = PageRequest.of(0, 10)
+        val validPayload = friendRequestPayload(actorMember)
+        val validNotification = storedNotification(
+            member = testMember,
+            type = NotificationType.FRIEND_REQUEST_RECEIVED,
+            payload = validPayload,
+            actorId = actorMember.id,
+        )
+        val invalidNotification = Notification(
+            member = testMember,
+            type = NotificationType.FRIEND_REQUEST_RECEIVED,
+            referenceType = NotificationReferenceType.FRIEND_REQUEST,
+            referenceId = "456",
+            actorId = actorMember.id,
+            payloadJson = notificationPayloadCodec.serialize(validPayload),
+            payloadVersion = 2,
+            isRead = false,
+        ).also {
+            ReflectionTestUtils.setField(it, "id", UUID.randomUUID())
+        }
+        whenever(notificationRepository.findByMemberIdOrderByCreatedDateDesc(testMember.id!!, pageable))
+            .thenReturn(PageImpl(listOf(validNotification, invalidNotification), pageable, 2))
+
+        val result = notificationService.getNotifications(testMember.id!!, pageable)
+
+        assertThat(result.content).hasSize(1)
+        assertThat(result.content[0].id).isEqualTo(validNotification.id)
     }
 
     @Test
@@ -272,6 +304,30 @@ class NotificationServiceTest {
     }
 
     @Test
+    fun `createNotification rejects incompatible payload type`() {
+        val payload = ScheduleTaggedPayload(
+            actor = actorSnapshot(actorMember),
+            scheduleTitle = "팀 회의",
+        )
+        whenever(memberRepository.findById(testMember.id!!)).thenReturn(Optional.of(testMember))
+
+        assertThatThrownBy {
+            notificationService.createNotification(
+                memberId = testMember.id!!,
+                type = NotificationType.FRIEND_REQUEST_RECEIVED,
+                actorId = actorMember.id,
+                referenceType = NotificationReferenceType.FRIEND_REQUEST,
+                referenceId = "123",
+                payload = payload,
+            )
+        }
+            .isInstanceOf(IllegalArgumentException::class.java)
+            .hasMessageContaining("Notification payload type mismatch for FRIEND_REQUEST_RECEIVED version 1")
+
+        verify(notificationRepository, never()).save(any<Notification>())
+    }
+
+    @Test
     fun `createNotification stores typed payloads without legacy text columns`() {
         val payload = ScheduleTaggedPayload(
             actor = actorSnapshot(actorMember),
@@ -312,8 +368,16 @@ class NotificationServiceTest {
     }
 
     @Test
-    fun `getUnreadNotifications fails loudly when payload data is missing`() {
-        val notification = Notification(
+    fun `getUnreadNotifications skips rows with missing payload data`() {
+        val validPayload = friendRequestPayload(actorMember)
+        val validNotification = storedNotification(
+            member = testMember,
+            type = NotificationType.FRIEND_REQUEST_RECEIVED,
+            payload = validPayload,
+            actorId = actorMember.id,
+            isRead = false,
+        )
+        val invalidNotification = Notification(
             member = testMember,
             type = NotificationType.FRIEND_REQUEST_RECEIVED,
             referenceType = NotificationReferenceType.FRIEND_REQUEST,
@@ -323,17 +387,18 @@ class NotificationServiceTest {
             payloadVersion = 1,
             isRead = false,
         )
-        ReflectionTestUtils.setField(notification, "id", UUID.randomUUID())
+        ReflectionTestUtils.setField(invalidNotification, "id", UUID.randomUUID())
         whenever(notificationRepository.findByMemberIdAndIsReadFalseOrderByCreatedDateDesc(testMember.id!!))
-            .thenReturn(listOf(notification))
+            .thenReturn(listOf(invalidNotification, validNotification))
 
-        assertThatThrownBy { notificationService.getUnreadNotifications(testMember.id!!) }
-            .isInstanceOf(IllegalStateException::class.java)
-            .hasMessageStartingWith("Notification payload is missing")
+        val result = notificationService.getUnreadNotifications(testMember.id!!)
+
+        assertThat(result).hasSize(1)
+        assertThat(result[0].id).isEqualTo(validNotification.id)
     }
 
     @Test
-    fun `markAsRead fails loudly when payload data is missing`() {
+    fun `markAsRead marks notification as read and throws explicit bad request when payload data is missing`() {
         val notification = Notification(
             member = testMember,
             type = NotificationType.FRIEND_REQUEST_RECEIVED,
@@ -350,8 +415,11 @@ class NotificationServiceTest {
         whenever(notificationRepository.save(notification)).thenReturn(notification)
 
         assertThatThrownBy { notificationService.markAsRead(testMember.id!!, notification.id) }
-            .isInstanceOf(IllegalStateException::class.java)
-            .hasMessageStartingWith("Notification payload is missing")
+            .isInstanceOf(BadRequestException::class.java)
+            .hasMessage("notification.payload.invalid")
+
+        assertThat(notification.isRead).isTrue()
+        verify(notificationRepository).save(notification)
     }
 
     private fun friendRequestPayload(actor: Member): FriendRequestReceivedPayload {

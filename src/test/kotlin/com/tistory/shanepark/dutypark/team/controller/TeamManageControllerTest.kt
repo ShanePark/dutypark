@@ -46,6 +46,7 @@ class TeamManageControllerTest : RestDocsTest() {
                 .withAuth(TestData.member2)
         )
             .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("team.manage.forbidden"))
     }
 
     @Test
@@ -201,6 +202,19 @@ class TeamManageControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `add member returns code-first bad request when member already belongs to a team`() {
+        setTeamAdmin(TestData.member.id!!)
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/teams/manage/{teamId}/members", TestData.team.id!!)
+                .param("memberId", TestData.member.id!!.toString())
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("team.member.alreadyAssigned"))
+    }
+
+    @Test
     fun `manager can remove member from team`() {
         setTeamAdmin(TestData.member.id!!)
         val member = memberRepository.save(Member("removee", "removee@duty.park", "pass"))
@@ -217,6 +231,20 @@ class TeamManageControllerTest : RestDocsTest() {
 
         val updatedMember = memberRepository.findById(member.id!!).orElseThrow()
         assertThat(updatedMember.team).isNull()
+    }
+
+    @Test
+    fun `remove member returns code-first bad request when member does not belong to team`() {
+        setTeamAdmin(TestData.member.id!!)
+        val outsider = memberRepository.save(Member("outsider", "outsider@duty.park", "pass"))
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.delete("/api/teams/manage/{teamId}/members", TestData.team.id!!)
+                .param("memberId", outsider.id!!.toString())
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("team.member.notInTeam"))
     }
 
     @Test
@@ -260,6 +288,34 @@ class TeamManageControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `add manager returns code-first bad request when member does not belong to team`() {
+        setTeamAdmin(TestData.member.id!!)
+        val outsider = memberRepository.save(Member("mgrout", "mgrout@duty.park", "pass"))
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/teams/manage/{teamId}/manager", TestData.team.id!!)
+                .param("memberId", outsider.id!!.toString())
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("team.member.notInTeam"))
+    }
+
+    @Test
+    fun `remove manager returns code-first bad request when member does not belong to team`() {
+        setTeamAdmin(TestData.member.id!!)
+        val outsider = memberRepository.save(Member("rmgout", "rmgout@duty.park", "pass"))
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.delete("/api/teams/manage/{teamId}/manager", TestData.team.id!!)
+                .param("memberId", outsider.id!!.toString())
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("team.member.notInTeam"))
+    }
+
+    @Test
     fun `only admin can add manager`() {
         mockMvc.perform(
             MockMvcRequestBuilders.post("/api/teams/manage/{teamId}/manager", TestData.team.id!!)
@@ -267,6 +323,7 @@ class TeamManageControllerTest : RestDocsTest() {
                 .withAuth(TestData.member)
         )
             .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("team.admin.required"))
     }
 
     private fun setTeamAdmin(memberId: Long) {

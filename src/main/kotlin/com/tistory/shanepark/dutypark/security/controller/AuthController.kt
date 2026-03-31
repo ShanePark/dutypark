@@ -30,7 +30,6 @@ class AuthController(
     private val loginAttemptService: LoginAttemptService,
 ) {
     private val log = logger()
-    private val codePattern = Regex("^[a-z][a-z0-9]*(\\.[a-zA-Z0-9]+)+$")
 
     @PutMapping("password")
     fun changePassword(
@@ -104,7 +103,7 @@ class AuthController(
             cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)
             ResponseEntity.ok(tokenResponse.toPublicResponse())
         } catch (e: AuthException) {
-            unauthorizedRefresh(resp, normalizeErrorCode(e.message, "auth.refresh.invalid"))
+            unauthorizedRefresh(resp, e.message ?: "auth.refresh.invalid")
         }
     }
 
@@ -146,7 +145,7 @@ class AuthController(
             ResponseEntity.status(403).body(
                 DutyParkErrorResponse.of(
                     status = 403,
-                    code = normalizeErrorCode(e.message, "auth.impersonation.failed"),
+                    code = e.message ?: "auth.impersonation.failed",
                 )
             )
         }
@@ -171,7 +170,7 @@ class AuthController(
             ResponseEntity.status(400).body(
                 DutyParkErrorResponse.of(
                     status = 400,
-                    code = normalizeErrorCode(e.message, "auth.restore.failed"),
+                    code = e.message ?: "auth.restore.failed",
                 )
             )
         }
@@ -191,14 +190,6 @@ class AuthController(
                 code = code,
             )
         )
-    }
-
-    private fun normalizeErrorCode(candidate: String?, defaultCode: String): String {
-        val value = candidate?.trim().orEmpty()
-        if (value.isBlank()) {
-            return defaultCode
-        }
-        return if (codePattern.matches(value)) value else defaultCode
     }
 
 }

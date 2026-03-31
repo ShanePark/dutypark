@@ -39,7 +39,7 @@ class RefreshTokenService(
         val refreshToken = refreshTokenRepository.findById(id).orElseThrow()
         if (!loginMember.isAdmin && refreshToken.member.id != loginMember.id) {
             log.warn("No authority to delete refresh token: loginMemberId={}, refreshTokenId={}", loginMember.id, id)
-            throw AuthException("No authority to delete refresh token.")
+            throw AuthException("auth.refreshToken.delete.forbidden")
         }
         refreshTokenRepository.delete(refreshToken)
     }

@@ -125,9 +125,10 @@ class DDayServiceTest {
         )
         whenever(dDayRepository.findById(event.id!!)).thenReturn(Optional.of(event))
 
-        assertThrows<AuthException> {
+        val exception = assertThrows<AuthException> {
             dDayService.findDDay(loginMember(member2), event.id!!)
         }
+        assertThat(exception.message).isEqualTo("dday.access.forbidden")
     }
 
     @Test
@@ -183,13 +184,14 @@ class DDayServiceTest {
     fun `findDDays blocks when calendar is not visible`() {
         val viewer = loginMember(member2)
         whenever(memberRepository.findById(member.id!!)).thenReturn(Optional.of(member))
-        doThrow(AuthException("not visible"))
+        doThrow(AuthException("member.visibility.forbidden"))
             .whenever(friendService)
             .checkVisibility(viewer, member)
 
-        assertThrows<AuthException> {
+        val exception = assertThrows<AuthException> {
             dDayService.findDDays(viewer, member.id!!)
         }
+        assertThat(exception.message).isEqualTo("member.visibility.forbidden")
     }
 
     @Test
@@ -246,7 +248,7 @@ class DDayServiceTest {
         )
         whenever(dDayRepository.findById(event.id!!)).thenReturn(Optional.of(event))
 
-        assertThrows<AuthException> {
+        val exception = assertThrows<AuthException> {
             dDayService.updateDDay(
                 loginMember(member2),
                 DDaySaveDto(
@@ -257,6 +259,7 @@ class DDayServiceTest {
                 )
             )
         }
+        assertThat(exception.message).isEqualTo("dday.access.forbidden")
     }
 
     @Test
@@ -286,8 +289,9 @@ class DDayServiceTest {
         )
         whenever(dDayRepository.findById(event.id!!)).thenReturn(Optional.of(event))
 
-        assertThrows<AuthException> {
+        val exception = assertThrows<AuthException> {
             dDayService.deleteDDay(loginMember(member2), event.id!!)
         }
+        assertThat(exception.message).isEqualTo("dday.access.forbidden")
     }
 }

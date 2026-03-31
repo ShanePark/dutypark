@@ -251,9 +251,10 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
 
         // Then
-        assertThrows<AuthException> {
+        val exception = assertThrows<AuthException> {
             scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
         }
+        assertThat(exception.message).isEqualTo("schedule.tag.notFriend")
     }
 
     @Test

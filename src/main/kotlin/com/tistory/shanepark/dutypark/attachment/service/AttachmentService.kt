@@ -10,6 +10,7 @@ import com.tistory.shanepark.dutypark.attachment.dto.ReorderAttachmentsRequest
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
@@ -100,10 +101,10 @@ class AttachmentService(
 
         if (sessionId != null) {
             if (loginMember == null) {
-                throw AuthException("Authentication required to view session attachments")
+                throw AuthException("attachment.session.auth.required")
             }
             val session = sessionService.findById(sessionId)
-                ?: throw IllegalStateException("Session not found for attachment: $attachmentId")
+                ?: throw BadRequestException("attachment.session.notFound")
             permissionEvaluator.checkSessionOwnership(loginMember, session)
         } else {
             permissionEvaluator.checkReadPermission(loginMember, attachment)
@@ -120,7 +121,7 @@ class AttachmentService(
         val sessionId = attachment.uploadSessionId
         if (sessionId != null) {
             val session = sessionService.findById(sessionId)
-                ?: throw IllegalStateException("Session not found for attachment: $attachmentId")
+                ?: throw BadRequestException("attachment.session.notFound")
             permissionEvaluator.checkSessionOwnership(loginMember, session)
         } else {
             permissionEvaluator.checkWritePermission(loginMember, attachment)
@@ -164,7 +165,7 @@ class AttachmentService(
         permissionEvaluator.checkSessionOwnership(loginMember, session)
 
         if (session.targetContextId != null && session.targetContextId != request.contextId) {
-            throw IllegalStateException("Context ID mismatch: expected ${session.targetContextId}, got ${request.contextId}")
+            throw BadRequestException("attachment.session.contextMismatch")
         }
 
         val allAttachments = attachmentRepository.findAllByUploadSessionId(sessionId)
@@ -319,7 +320,7 @@ class AttachmentService(
                 ?: throw IllegalArgumentException("Upload session not found: $attachmentSessionId")
 
             if (session.contextType != contextType) {
-                throw IllegalStateException("Session context mismatch: expected $contextType, got ${session.contextType}")
+                throw BadRequestException("attachment.session.contextMismatch")
             }
 
             val sessionAttachments = attachmentRepository.findAllByUploadSessionId(attachmentSessionId)

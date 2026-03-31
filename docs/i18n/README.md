@@ -12,8 +12,8 @@
 - [x] 서버는 사용자 표시 문구를 번역하지 않는다.
 - [x] 프론트와 서비스워커가 사용자-facing 문구를 렌더링한다.
 - [x] 인앱 알림은 `type + payload + payload.version` 구조를 사용한다.
-- [ ] 공통 API 에러는 모든 user-facing 경로에서 `status + code + details + fieldErrors` 구조로 완전히 수렴한다.
-- [ ] 현재 필수 잔여 작업 2개를 끝낸다.
+- [x] 공통 API 에러는 현재 관리 중인 user-facing outlier 경로에서 `status + code + details + fieldErrors` 구조로 수렴했다.
+- [x] 현재 필수 잔여 작업 2개를 끝냈다.
   server error contract outlier 정리
   notification read-side 안전화
 
@@ -60,78 +60,109 @@
 - [x] friend accept / reject / cancel / unfriend / demote 실패를 code-first `400`으로 정리
 - [x] `/api/auth/refresh` 실패를 빈 `401`이 아닌 표준 error envelope로 정리
 - [x] push subscribe / unsubscribe 인증 실패를 `401 + {"success": false}`에서 표준 error envelope로 정리
+- [x] `FriendService.checkVisibility`, `DDayService`, `RefreshTokenService`, `DutyController`, `DutyBatchController`, `ScheduleService`, `TodoService`의 raw prose `AuthException`을 code-first로 정리
 - [x] 위 변경에 맞춰 REST Docs, controller test, unit test, locale 메시지 키를 갱신
 
 ## 4. 현재 필수 잔여 이슈
 
 ### 4.1 Server Error Contract
 
-- [ ] `OAuthController.ssoSignup`의 빈 `400` / ad-hoc 검증 실패를 표준 error envelope로 통일
-- [ ] `RefreshTokenController.deleteOtherRefreshTokens`의 현재 토큰 쿠키 누락 실패를 표준 error envelope로 통일
-- [ ] `PolicyController.getCurrentPolicy`의 invalid type 실패를 표준 error envelope로 고정
-- [ ] `SchedulePermissionService`, `TeamService`의 raw prose / legacy `AuthException` 메시지를 code-first로 치환
-- [ ] 위 정리 후 `RestExceptionControllerAdvice.normalizeCode()`와 `AuthController.normalizeErrorCode()` 같은 runtime guessing 로직을 축소 또는 제거
+- [x] `OAuthController.ssoSignup`의 빈 `400` / ad-hoc 검증 실패를 표준 error envelope로 통일
+- [x] `RefreshTokenController.deleteOtherRefreshTokens`의 현재 토큰 쿠키 누락 실패를 표준 error envelope로 통일
+- [x] `PolicyController.getCurrentPolicy`의 invalid type 실패를 표준 error envelope로 고정
+- [x] `SchedulePermissionService`, `TeamService`의 raw prose / legacy `AuthException` 메시지를 code-first로 치환
+- [x] 위 정리 후 `RestExceptionControllerAdvice.normalizeCode()`와 `AuthController.normalizeErrorCode()` 같은 runtime guessing 로직을 축소 또는 제거
 
 완료 체크:
 
-- [ ] user-facing API 실패에서 빈 `400/401`이 남지 않는다
-- [ ] `{ "success": false }` 같은 별도 실패 계약이 남지 않는다
-- [ ] business-rule 실패가 500으로 새지 않는다
+- [x] user-facing API 실패에서 빈 `400/401`이 남지 않는다
+- [x] `{ "success": false }` 같은 별도 실패 계약이 남지 않는다
+- [x] business-rule 실패가 500으로 새지 않는다
+  verified: `AttachmentService`, `AttachmentPermissionEvaluator`의 잔여 user-facing `IllegalStateException` 경로를 `400/401 + code-first` 계약으로 정리
 
 ### 4.2 Notification Read-Side Safety
 
-- [ ] 손상된 notification row 1건이 목록 / unread / read 경로 전체에 영향을 주지 않도록 막는다
-- [ ] `NotificationPayloadCodec`에 safe decode 결과 타입을 도입한다
-- [ ] write-side에서 `(type, version, payload class)` compatibility check를 추가한다
-- [ ] `NotificationService.getNotifications`, `getUnreadNotifications`에서 invalid row skip + warning log 정책을 도입한다
-- [ ] `markAsRead`에서 invalid payload 정책을 명시적 error code로 고정한다
-- [ ] codec / service / controller 테스트로 corruption / unknown version 경로를 고정한다
+- [x] 손상된 notification row 1건이 목록 / unread / read 경로 전체에 영향을 주지 않도록 막는다
+- [x] `NotificationPayloadCodec`에 safe decode 결과 타입을 도입한다
+- [x] write-side에서 `(type, version, payload class)` compatibility check를 추가한다
+- [x] `NotificationService.getNotifications`, `getUnreadNotifications`에서 invalid row skip + warning log 정책을 도입한다
+- [x] `markAsRead`에서 invalid payload 정책을 명시적 error code로 고정한다
+- [x] codec / service / controller 테스트로 corruption / unknown version 경로를 고정한다
 
 완료 체크:
 
-- [ ] 손상된 row 1건이 notification UX 전체를 깨뜨리지 않는다
-- [ ] unsupported version이 전체 장애로 번지지 않는다
-- [ ] 저장 시 unsupported 조합이 차단된다
+- [x] 손상된 row 1건이 notification UX 전체를 깨뜨리지 않는다
+- [x] unsupported version이 전체 장애로 번지지 않는다
+- [x] 저장 시 unsupported 조합이 차단된다
 
 ## 5. 다음 작업 우선순위
 
 ### Priority 1. Controller Outlier 정리
 
-- [ ] `OAuthController`
-- [ ] `RefreshTokenController`
-- [ ] `PolicyController`
+- [x] `OAuthController`
+- [x] `RefreshTokenController`
+- [x] `PolicyController`
 
 검증:
 
-- [ ] `./gradlew test --tests "*OAuthControllerTest" --tests "*RefreshTokenControllerTest" --tests "*PolicyControllerTest"`
+- [x] `./gradlew test --tests "*OAuthControllerTest" --tests "*RefreshTokenControllerTest" --tests "*PolicyControllerTest"`
 
 ### Priority 2. Legacy Permission / Manager Error Code 정리
 
-- [ ] `SchedulePermissionService`
-- [ ] `TeamService`
+- [x] `SchedulePermissionService`
+- [x] `TeamService`
 
 검증:
 
-- [ ] 관련 controller / service test에서 `status`뿐 아니라 `code`까지 확인
+- [x] 관련 controller / service test에서 `status`뿐 아니라 `code`까지 확인
 
 ### Priority 3. Runtime Guessing 정리
 
-- [ ] `RestExceptionControllerAdvice.normalizeCode()`
-- [ ] `AuthController.normalizeErrorCode()`
+- [x] `RestExceptionControllerAdvice.normalizeCode()`
+- [x] `AuthController.normalizeErrorCode()`
 
 검증:
 
-- [ ] `./gradlew test --tests "*RestExceptionControllerAdviceTest" --tests "*AuthControllerTest"`
+- [x] `./gradlew test --tests "*RestExceptionControllerAdviceTest" --tests "*AuthControllerTest"`
 
 ### Priority 4. Notification Read-Side 안전화
 
-- [ ] `NotificationPayloadCodec`
-- [ ] `NotificationService`
-- [ ] `NotificationController`
+- [x] `NotificationPayloadCodec`
+- [x] `NotificationService`
+- [x] `NotificationController`
 
 검증:
 
-- [ ] `./gradlew test --tests "*NotificationPayloadCodecTest" --tests "*NotificationServiceTest" --tests "*NotificationControllerTest"`
+- [x] `./gradlew test --tests "*NotificationPayloadCodecTest" --tests "*NotificationServiceTest" --tests "*NotificationControllerTest"`
+
+### Priority 5. Legacy IllegalStateException 계약 정리
+
+- [x] `TeamService.delete/addMemberToTeam/removeMemberFromTeam/addTeamManager/removeTeamManager`
+- [x] `AttachmentService.findById/deleteAttachment/finalizeSession/synchronizeContextAttachments`
+- [x] `AttachmentPermissionEvaluator`의 session/context 누락 guard를 `400 + code-first`로 전환
+
+검증:
+
+- [x] `./gradlew test --tests "*TeamAdminControllerTest"`
+- [x] `./gradlew test --tests "*TeamManageControllerTest"`
+- [x] `./gradlew test --tests "*TeamServiceIntegrationTest"`
+- [x] 관련 controller / integration test에서 `500`이 `400 + code`로 바뀌는지 확인
+- [x] `./gradlew test --tests "*AttachmentServiceTest" --tests "*AttachmentPermissionEvaluatorTest" --tests "*AttachmentControllerEdgeCaseTest" --tests "*AttachmentSessionControllerTest" --tests "*AttachmentControllerTest"`
+
+### Priority 6. Raw Prose AuthException 정리
+
+- [x] `FriendService.checkVisibility`
+- [x] `DDayService`
+- [x] `RefreshTokenService`
+- [x] `DutyController`
+- [x] `DutyBatchController`
+- [x] `ScheduleService`
+- [x] `TodoService`
+
+검증:
+
+- [x] 관련 service / controller test에서 `status`뿐 아니라 `code`까지 확인
+- [x] `./gradlew test --tests "*DDayServiceTest" --tests "*CalendarDayServiceTest" --tests "*DDayControllerTest" --tests "*RefreshTokenServiceTest" --tests "*RefreshTokenControllerTest" --tests "*DutyControllerTest" --tests "*DutyBatchControllerTest" --tests "*FriendServiceIntegrationTest" --tests "*ScheduleServiceIntegrationTest" --tests "*ScheduleControllerTest" --tests "*TodoServiceTest" --tests "*TodoControllerTest"`
 
 ## 6. 후순위 Guardrail
 
@@ -140,6 +171,7 @@
 - [ ] 프론트 notification renderer / version coverage 테스트 강화
 - [ ] locale 메시지 키 존재 검증 자동화
 - [ ] generic fallback warning 강화
+- [x] `DutyController`, `DutyBatchController`, `ScheduleService`, `TodoService`, `DDayService`, `RefreshTokenService`의 raw prose `AuthException`을 code-first로 정리
 
 ## 7. 운영 규칙
 

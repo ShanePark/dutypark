@@ -17,6 +17,14 @@ const apiErrors = {
     refresh: {
       invalid: '無効なリフレッシュトークンです。',
       expired: 'リフレッシュトークンの有効期限が切れています。',
+      current: {
+        required: '現在のログインに使っているリフレッシュトークン情報が必要です。',
+      },
+    },
+    refreshToken: {
+      delete: {
+        forbidden: 'このリフレッシュトークンを削除する権限がありません。',
+      },
     },
     token: {
       memberNotFound: 'アカウントが存在しません。',
@@ -53,6 +61,7 @@ const apiErrors = {
   member: {
     notFound: '会員が見つかりません。',
     visibility: {
+      forbidden: 'この会員のカレンダーを閲覧する権限がありません。',
       update: {
         forbidden: '他の会員の公開範囲は変更できません。',
       },
@@ -74,6 +83,20 @@ const apiErrors = {
     },
   },
   team: {
+    delete: {
+      membersExist: 'メンバーが残っているチームは削除できません。',
+    },
+    manage: {
+      forbidden: 'このチームを管理する権限がありません。',
+    },
+    admin: {
+      required: 'チーム管理者のみ実行できます。',
+    },
+    member: {
+      alreadyAssigned: 'この利用者はすでに別のチームに所属しています。',
+      notInTeam: 'この利用者はこのチームに所属していません。',
+      required: 'このチームに所属している必要があります。',
+    },
     name: {
       required: 'チーム名は必須です。',
       length: 'チーム名は2文字以上20文字以下で入力してください。',
@@ -87,6 +110,40 @@ const apiErrors = {
       },
     },
   },
+  schedule: {
+    tag: {
+      notFriend: 'この予定には友だちだけをタグ付けできます。',
+    },
+    write: {
+      forbidden: 'この予定を編集する権限がありません。',
+    },
+    visibility: {
+      forbidden: 'この予定を閲覧する権限がありません。',
+    },
+  },
+  policy: {
+    terms: {
+      consent: {
+        required: '利用規約への同意が必要です。',
+      },
+      version: {
+        required: '利用規約のバージョン情報が必要です。',
+      },
+    },
+    privacy: {
+      consent: {
+        required: 'プライバシーポリシーへの同意が必要です。',
+      },
+      version: {
+        required: 'プライバシーポリシーのバージョン情報が必要です。',
+      },
+    },
+  },
+  notification: {
+    payload: {
+      invalid: 'この通知を読み込めませんでした。',
+    },
+  },
   sso: {
     uuid: {
       required: '会員登録セッション情報が必要です。',
@@ -98,9 +155,17 @@ const apiErrors = {
     },
   },
   dday: {
+    access: {
+      forbidden: 'このD-Dayにアクセスする権限がありません。',
+    },
     title: {
       required: 'D-Dayのタイトルは必須です。',
       length: 'D-Dayのタイトルは1文字以上30文字以下で入力してください。',
+    },
+  },
+  duty: {
+    edit: {
+      forbidden: 'この勤務を編集する権限がありません。',
     },
   },
   dutyBatch: {
@@ -118,6 +183,34 @@ const apiErrors = {
     },
   },
   attachment: {
+    context: {
+      missing: '添付ファイルのコンテキスト情報がありません。',
+    },
+    session: {
+      auth: {
+        required: '一時アップロードセッションの添付ファイルにアクセスするにはログインが必要です。',
+      },
+      forbidden: 'このアップロードセッションにアクセスする権限がありません。',
+      notFound: 'この添付ファイルに紐づくアップロードセッションが見つかりません。',
+      contextMismatch: 'アップロードセッションと対象コンテキストが一致しません。',
+      targetContext: {
+        missing: 'アップロードセッションに対象コンテキスト情報がありません。',
+      },
+    },
+    todo: {
+      auth: {
+        required: 'このTo-do添付ファイルにアクセスするにはログインが必要です。',
+      },
+      access: {
+        forbidden: 'このTo-do添付ファイルを閲覧する権限がありません。',
+      },
+      write: {
+        forbidden: 'このTo-do添付ファイルを変更する権限がありません。',
+      },
+    },
+    profile: {
+      forbidden: 'このプロフィール添付ファイルを変更する権限がありません。',
+    },
     extension: {
       blocked: '許可されていないファイル拡張子です。',
     },
@@ -144,6 +237,9 @@ const apiErrors = {
       orderedIds: {
         required: '同じ状態で並び替えるには、並び替え後のやることID一覧が必要です。',
       },
+    },
+    tag: {
+      notFriend: 'このTo-doには友だちだけをタグ付けできます。',
     },
   },
 } as const

@@ -19,12 +19,6 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 class RestExceptionControllerAdvice {
 
     private val codePattern = Regex("^[a-z][a-zA-Z0-9]*(\\.[a-zA-Z0-9]+)+$")
-    private val legacyCodeMappings = mapOf(
-        "callbackUrl is required in state" to "auth.oauth.callbackUrl.required",
-        "orderedIds is required when reordering within the same status" to "todo.reorder.orderedIds.required",
-        "templateName is required" to "dutyBatch.template.required",
-        "DutyTypes must belong to the same team" to "team.dutyType.sameTeam.required",
-    )
 
     @ResponseBody
     @ExceptionHandler
@@ -107,7 +101,6 @@ class RestExceptionControllerAdvice {
         if (value.isBlank()) {
             return defaultCode
         }
-        legacyCodeMappings[value]?.let { return it }
         return if (codePattern.matches(value)) value else defaultCode
     }
 }
