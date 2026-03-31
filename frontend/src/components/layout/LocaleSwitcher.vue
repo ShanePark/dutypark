@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Check, ChevronDown, Languages, Sparkles, X } from 'lucide-vue-next'
 import { getLocaleNativeLabel } from '@/i18n'
@@ -9,6 +9,7 @@ const localeStore = useLocaleStore()
 const { t } = useI18n()
 
 const isOpen = ref(false)
+const isSuggestionDismissedLocally = ref(false)
 const switcherRef = ref<HTMLDivElement | null>(null)
 const isSaving = ref(false)
 
@@ -21,7 +22,9 @@ const localeOptions = computed(() => {
 
 const currentLocaleCode = computed(() => localeStore.locale.toUpperCase())
 const detectedLocaleLabel = computed(() => getLocaleNativeLabel(localeStore.detectedLocale))
-const showSuggestion = computed(() => localeStore.shouldSuggestLocale && !isOpen.value)
+const showSuggestion = computed(() => {
+  return localeStore.shouldSuggestLocale && !isOpen.value && !isSuggestionDismissedLocally.value
+})
 
 function toggleDropdown() {
   isOpen.value = !isOpen.value
@@ -33,10 +36,15 @@ function closeDropdown() {
 
 function dismissSuggestion() {
   localeStore.dismissLocaleSuggestion()
+  isSuggestionDismissedLocally.value = false
 }
 
 function chooseAnotherLanguage() {
-  isOpen.value = true
+  isSuggestionDismissedLocally.value = true
+  isOpen.value = false
+  void nextTick(() => {
+    isOpen.value = true
+  })
 }
 
 async function acceptSuggestedLanguage() {
@@ -47,6 +55,8 @@ async function acceptSuggestedLanguage() {
   isSaving.value = true
   try {
     await localeStore.confirmDetectedLocale()
+    isSuggestionDismissedLocally.value = false
+    closeDropdown()
   } finally {
     isSaving.value = false
   }
@@ -61,6 +71,7 @@ async function changeLocale(nextLocale: SupportedLocale) {
   isSaving.value = true
   try {
     await localeStore.setLocale(nextLocale)
+    isSuggestionDismissedLocally.value = false
     closeDropdown()
   } finally {
     isSaving.value = false
@@ -114,14 +125,14 @@ onUnmounted(() => {
             <button
               type="button"
               class="locale-suggestion-primary px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold cursor-pointer"
-              @click="acceptSuggestedLanguage"
+              @click.stop="acceptSuggestedLanguage"
             >
               {{ t('locales.suggestion.accept', { language: detectedLocaleLabel }) }}
             </button>
             <button
               type="button"
               class="locale-suggestion-secondary px-3 py-2 rounded-xl text-xs sm:text-sm cursor-pointer"
-              @click="chooseAnotherLanguage"
+              @click.stop="chooseAnotherLanguage"
             >
               {{ t('locales.suggestion.chooseOther') }}
             </button>
@@ -131,7 +142,7 @@ onUnmounted(() => {
           type="button"
           class="locale-suggestion-close p-1.5 rounded-full cursor-pointer flex-shrink-0"
           :aria-label="t('locales.suggestion.dismiss')"
-          @click="dismissSuggestion"
+          @click.stop="dismissSuggestion"
         >
           <X class="w-4 h-4" />
         </button>
