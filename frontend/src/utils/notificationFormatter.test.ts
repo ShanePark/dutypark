@@ -135,6 +135,17 @@ describe('notificationFormatter', () => {
     })
   })
 
+  it('returns null actor for generic fallback payloads', () => {
+    const notification = createNotification({
+      payload: {
+        version: 0,
+      },
+    })
+
+    expect(getNotificationActor(notification)).toBeNull()
+    expect(formatNotificationMessage(notification, t)).toBe('새 알림이 도착했습니다.')
+  })
+
   it('falls back to a generic message for unsupported payload versions', () => {
     const notification = createNotification({
       payload: {

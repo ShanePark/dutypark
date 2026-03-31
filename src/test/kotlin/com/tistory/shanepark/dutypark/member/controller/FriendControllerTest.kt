@@ -425,6 +425,52 @@ class FriendControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `pin friend returns code when target is not a friend`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.patch("/api/friends/pin/{friendId}", TestData.member2.id!!)
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("friend.notFriend"))
+            .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "friends/pin-bad-request",
+                    pathParameters(
+                        parameterWithName("friendId").description("Friend ID to pin")
+                    ),
+                    standardErrorResponseFields(
+                        "Machine-readable error code (`friend.notFriend`)"
+                    )
+                )
+            )
+    }
+
+    @Test
+    fun `unpin friend returns code when target is not a friend`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.patch("/api/friends/unpin/{friendId}", TestData.member2.id!!)
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("friend.notFriend"))
+            .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "friends/unpin-bad-request",
+                    pathParameters(
+                        parameterWithName("friendId").description("Friend ID to unpin")
+                    ),
+                    standardErrorResponseFields(
+                        "Machine-readable error code (`friend.notFriend`)"
+                    )
+                )
+            )
+    }
+
+    @Test
     fun `update friends pin order`() {
         makeThemFriend(TestData.member, TestData.member2)
         em.flush()

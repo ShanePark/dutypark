@@ -13,7 +13,7 @@ export const notificationApi = {
   },
 
   /**
-   * Get unread notifications (max 10)
+   * Get unread notifications (max 50)
    */
   getUnreadNotifications: async (): Promise<NotificationDto[]> => {
     const response = await apiClient.get<NotificationDto[]>('/notifications/unread')
@@ -29,7 +29,7 @@ export const notificationApi = {
   },
 
   /**
-   * Get friend request count only
+   * Get pending relationship request count (friend + family)
    */
   getFriendRequestCount: async (): Promise<number> => {
     const response = await apiClient.get<{ count: number }>('/notifications/friend-request-count')

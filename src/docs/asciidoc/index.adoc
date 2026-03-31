@@ -233,9 +233,17 @@ operation::friends/unfriend-bad-request[]
 
 operation::friends/pin[]
 
+==== Pin Friend [Bad Request]
+
+operation::friends/pin-bad-request[]
+
 === Unpin Friend
 
 operation::friends/unpin[]
+
+==== Unpin Friend [Bad Request]
+
+operation::friends/unpin-bad-request[]
 
 === Update Pin Order
 
@@ -270,6 +278,10 @@ operation::notifications/get-unread[]
 === Get Notification Count
 
 operation::notifications/get-count[]
+
+=== Get Pending Relationship Request Count
+
+operation::notifications/get-friend-request-count[]
 
 === Mark as Read
 

@@ -13,6 +13,8 @@ interface NotificationRepository : JpaRepository<Notification, UUID> {
 
     fun findByMemberIdAndIsReadFalseOrderByCreatedDateDesc(memberId: Long): List<Notification>
 
+    fun findAllByMemberIdOrderByCreatedDateDesc(memberId: Long): List<Notification>
+
     fun findByMemberIdOrderByCreatedDateDesc(memberId: Long, pageable: Pageable): Page<Notification>
 
     fun countByMemberIdAndIsReadFalse(memberId: Long): Long

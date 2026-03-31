@@ -31,6 +31,26 @@ async function storeLocale(locale: string) {
   )
 }
 
+async function updateAppBadgeSafely(unreadCount: number) {
+  try {
+    if (unreadCount > 0 && typeof serviceWorker.navigator.setAppBadge === 'function') {
+      await serviceWorker.navigator.setAppBadge(unreadCount)
+      return
+    }
+
+    if (unreadCount <= 0 && typeof serviceWorker.navigator.clearAppBadge === 'function') {
+      await serviceWorker.navigator.clearAppBadge()
+      return
+    }
+
+    if (unreadCount <= 0 && typeof serviceWorker.navigator.setAppBadge === 'function') {
+      await serviceWorker.navigator.setAppBadge(0)
+    }
+  } catch (error) {
+    console.warn('Failed to update app badge in service worker:', error)
+  }
+}
+
 async function handlePush(payload: PushNotificationPayload) {
   const locale = await readStoredLocale()
   const notificationId = resolvePushNotificationId(payload)
@@ -49,12 +69,8 @@ async function handlePush(payload: PushNotificationPayload) {
 
   const title = ''
 
-  if ('setAppBadge' in serviceWorker.navigator && typeof payload.unreadCount === 'number') {
-    if (payload.unreadCount > 0) {
-      await serviceWorker.navigator.setAppBadge(payload.unreadCount)
-    } else {
-      await serviceWorker.navigator.clearAppBadge()
-    }
+  if (typeof payload.unreadCount === 'number') {
+    await updateAppBadgeSafely(payload.unreadCount)
   }
 
   await serviceWorker.registration.showNotification(title, options)

@@ -1,7 +1,6 @@
 package com.tistory.shanepark.dutypark.notification.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
-import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -9,6 +8,7 @@ import com.tistory.shanepark.dutypark.notification.domain.entity.Notification
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationReferenceType
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationType
 import com.tistory.shanepark.dutypark.notification.domain.payload.NotificationPayload
+import com.tistory.shanepark.dutypark.notification.domain.payload.UnknownNotificationPayload
 import com.tistory.shanepark.dutypark.notification.domain.repository.NotificationRepository
 import com.tistory.shanepark.dutypark.notification.dto.NotificationCountDto
 import com.tistory.shanepark.dutypark.notification.dto.NotificationDto
@@ -32,36 +32,35 @@ class NotificationService(
     @Transactional(readOnly = true)
     fun getUnreadNotifications(memberId: Long): List<NotificationDto> {
         val notifications = notificationRepository.findByMemberIdAndIsReadFalseOrderByCreatedDateDesc(memberId)
-            .take(50)
-
-        return notifications.mapNotNull { toDtoOrNull(memberId, it, "getUnreadNotifications") }
+        return notifications.take(50)
+            .map { toDto(memberId, it, "getUnreadNotifications") }
     }
 
     @Transactional(readOnly = true)
     fun getNotifications(memberId: Long, pageable: Pageable): Page<NotificationDto> {
-        val notificationPage = notificationRepository.findByMemberIdOrderByCreatedDateDesc(memberId, pageable)
-        val dtos = notificationPage.content.mapNotNull { toDtoOrNull(memberId, it, "getNotifications") }
+        if (pageable.isUnpaged) {
+            val notifications = notificationRepository.findAllByMemberIdOrderByCreatedDateDesc(memberId)
+            val content = notifications.map { toDto(memberId, it, "getNotifications") }
+            return PageImpl(content, pageable, content.size.toLong())
+        }
 
-        return PageImpl(dtos, pageable, notificationPage.totalElements)
+        return notificationRepository.findByMemberIdOrderByCreatedDateDesc(memberId, pageable)
+            .map { toDto(memberId, it, "getNotifications") }
     }
 
     @Transactional(readOnly = true)
     fun getUnreadCountSimple(memberId: Long): NotificationCountDto {
-        val unreadCount = notificationRepository.countByMemberIdAndIsReadFalse(memberId)
-        val totalCount = notificationRepository.countByMemberId(memberId)
-
         return NotificationCountDto(
-            unreadCount = unreadCount.toInt(),
-            totalCount = totalCount.toInt()
+            unreadCount = notificationRepository.countByMemberIdAndIsReadFalse(memberId).toInt(),
+            totalCount = notificationRepository.countByMemberId(memberId).toInt(),
         )
     }
 
     @Transactional(readOnly = true)
-    fun getFriendRequestCount(memberId: Long): Int {
+    fun getPendingRequestCount(memberId: Long): Int {
         return friendRequestRepository.countByToMemberIdAndStatus(memberId, FriendRequestStatus.PENDING).toInt()
     }
 
-    @Transactional(noRollbackFor = [BadRequestException::class])
     fun markAsRead(memberId: Long, notificationId: UUID): NotificationDto {
         val notification = notificationRepository.findByMemberIdAndId(memberId, notificationId)
             ?: throw NoSuchElementException("Notification not found")
@@ -69,7 +68,7 @@ class NotificationService(
         notification.isRead = true
         notificationRepository.save(notification)
 
-        return toDtoOrThrow(memberId, notification)
+        return toDto(memberId, notification, "markAsRead")
     }
 
     fun markAllAsRead(memberId: Long): Int {
@@ -116,40 +115,28 @@ class NotificationService(
         return notificationRepository.save(notification)
     }
 
-    private fun toDtoOrNull(memberId: Long, notification: Notification, source: String): NotificationDto? {
+    private fun toDto(memberId: Long, notification: Notification, source: String): NotificationDto {
+        return NotificationDto.of(
+            notification = notification,
+            payload = materializePayload(memberId, notification, source),
+        )
+    }
+
+    private fun materializePayload(memberId: Long, notification: Notification, source: String): NotificationPayload {
         return when (val result = notificationPayloadCodec.safeDeserialize(
             notification.type,
             notification.payloadVersion,
             notification.payloadJson,
         )) {
-            is NotificationPayloadDecodeResult.Success -> NotificationDto.of(notification, result.payload)
-            is NotificationPayloadDecodeResult.Missing -> {
-                logInvalidPayload(memberId, notification, source, result.reason)
-                null
-            }
-
-            is NotificationPayloadDecodeResult.Invalid -> {
-                logInvalidPayload(memberId, notification, source, result.reason)
-                null
-            }
+            is NotificationPayloadDecodeResult.Success -> result.payload
+            is NotificationPayloadDecodeResult.Missing -> fallbackPayload(memberId, notification, source, result.reason)
+            is NotificationPayloadDecodeResult.Invalid -> fallbackPayload(memberId, notification, source, result.reason)
         }
     }
 
-    private fun toDtoOrThrow(memberId: Long, notification: Notification): NotificationDto {
-        return when (val result = notificationPayloadCodec.safeDeserialize(
-            notification.type,
-            notification.payloadVersion,
-            notification.payloadJson,
-        )) {
-            is NotificationPayloadDecodeResult.Success -> NotificationDto.of(notification, result.payload)
-            is NotificationPayloadDecodeResult.Missing -> throwInvalidPayload(memberId, notification, "markAsRead", result.reason)
-            is NotificationPayloadDecodeResult.Invalid -> throwInvalidPayload(memberId, notification, "markAsRead", result.reason)
-        }
-    }
-
-    private fun logInvalidPayload(memberId: Long, notification: Notification, source: String, reason: String) {
+    private fun fallbackPayload(memberId: Long, notification: Notification, source: String, reason: String): NotificationPayload {
         log.warn(
-            "Skipping notification {} for member {} during {} because payload is invalid (type={}, version={}, reason={})",
+            "Falling back to generic payload for notification {} of member {} during {} because payload is invalid (type={}, version={}, reason={})",
             notification.id,
             memberId,
             source,
@@ -157,22 +144,6 @@ class NotificationService(
             notification.payloadVersion,
             reason,
         )
-    }
-
-    private fun throwInvalidPayload(memberId: Long, notification: Notification, source: String, reason: String): Nothing {
-        log.warn(
-            "Notification {} for member {} could not be materialized during {} because payload is invalid (type={}, version={}, reason={})",
-            notification.id,
-            memberId,
-            source,
-            notification.type,
-            notification.payloadVersion,
-            reason,
-        )
-        throw BadRequestException(INVALID_NOTIFICATION_PAYLOAD_CODE)
-    }
-
-    companion object {
-        private const val INVALID_NOTIFICATION_PAYLOAD_CODE = "notification.payload.invalid"
+        return UnknownNotificationPayload()
     }
 }
