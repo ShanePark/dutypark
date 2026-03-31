@@ -104,9 +104,10 @@ class RefreshTokenServiceTest {
             isAdmin = false,
         )
 
-        assertThrows<AuthException> {
+        val exception = assertThrows<AuthException> {
             refreshTokenService.deleteRefreshToken(loginMember, 1L)
         }
+        assertThat(exception.message).isEqualTo("auth.refreshToken.delete.forbidden")
     }
 
     @Test

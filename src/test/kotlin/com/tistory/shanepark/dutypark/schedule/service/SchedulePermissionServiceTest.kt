@@ -8,6 +8,7 @@ import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -63,9 +64,11 @@ class SchedulePermissionServiceTest {
         val loginMember = LoginMember(id = 1L, name = "other")
         whenever(memberService.isManager(eq(loginMember), eq(member))).thenReturn(false)
 
-        assertThrows<AuthException> {
+        val exception = assertThrows<AuthException> {
             service.checkScheduleWriteAuthority(loginMember, member)
         }
+
+        assertThat(exception.message).isEqualTo("schedule.write.forbidden")
     }
 
     @Test
@@ -87,9 +90,11 @@ class SchedulePermissionServiceTest {
         whenever(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
         whenever(friendService.availableScheduleVisibilities(eq(loginMember), eq(member))).thenReturn(setOf(Visibility.PUBLIC))
 
-        assertThrows<AuthException> {
+        val exception = assertThrows<AuthException> {
             service.checkScheduleReadAuthority(loginMember, schedule.id)
         }
+
+        assertThat(exception.message).isEqualTo("schedule.visibility.forbidden")
     }
 
     @Test

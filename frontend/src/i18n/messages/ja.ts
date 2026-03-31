@@ -1,5 +1,248 @@
 import en from './en'
-import { apiErrorMessagesJa } from './apiErrors'
+
+const apiErrors = {
+  auth: {
+    required: 'ログインが必要です。',
+    unauthorized: '認証が必要です。',
+    login: {
+      failed: 'メールアドレスまたはパスワードが正しくありません。',
+      rateLimited: 'ログイン試行回数が多すぎます。しばらくしてから再試行してください。',
+    },
+    password: {
+      memberNotFound: 'アカウントが存在しません。',
+      currentMismatch: '現在のパスワードが一致しません。',
+      changeUnauthorized: 'このパスワードを変更する権限がありません。',
+      changed: 'パスワードが変更されました。',
+    },
+    refresh: {
+      invalid: '無効なリフレッシュトークンです。',
+      expired: 'リフレッシュトークンの有効期限が切れています。',
+      current: {
+        required: '現在のログインに使っているリフレッシュトークン情報が必要です。',
+      },
+    },
+    refreshToken: {
+      delete: {
+        forbidden: 'このリフレッシュトークンを削除する権限がありません。',
+      },
+    },
+    token: {
+      memberNotFound: 'アカウントが存在しません。',
+    },
+    impersonation: {
+      alreadyImpersonating: 'すでに別のアカウントに切り替え中です。',
+      managerNotFound: '管理者アカウントが見つかりません。',
+      targetNotFound: '対象アカウントが見つかりません。',
+      forbidden: 'このアカウントを管理する権限がありません。',
+      failed: 'アカウント切り替えに失敗しました。',
+    },
+    restore: {
+      notImpersonating: '現在はアカウント切り替え状態ではありません。',
+      originalMissing: '元のアカウント情報がありません。',
+      originalNotFound: '元のアカウントが見つかりません。',
+      failed: '元のアカウントへ戻れませんでした。',
+    },
+    oauth: {
+      callbackUrl: {
+        required: 'コールバックURLが必要です。',
+      },
+    },
+  },
+  common: {
+    notFound: 'リソースが見つかりません。',
+    badRequest: '不正なリクエストです。',
+    validation: {
+      failed: 'リクエスト内容を確認してください。',
+    },
+    rateLimit: {
+      exceeded: 'リクエストが多すぎます。しばらくしてから再試行してください。',
+    },
+  },
+  member: {
+    notFound: '会員が見つかりません。',
+    visibility: {
+      forbidden: 'この会員のカレンダーを閲覧する権限がありません。',
+      update: {
+        forbidden: '他の会員の公開範囲は変更できません。',
+      },
+    },
+    auxiliary: {
+      name: {
+        required: '名前は必須です。',
+      },
+    },
+  },
+  dutyType: {
+    name: {
+      required: '勤務名は必須です。',
+      length: '勤務名は1文字以上10文字以下で入力してください。',
+      duplicate: '同じ名前の勤務タイプがすでに存在します。',
+    },
+    color: {
+      invalid: '色の形式が正しくありません。',
+    },
+  },
+  team: {
+    delete: {
+      membersExist: 'メンバーが残っているチームは削除できません。',
+    },
+    manage: {
+      forbidden: 'このチームを管理する権限がありません。',
+    },
+    admin: {
+      required: 'チーム管理者のみ実行できます。',
+    },
+    member: {
+      alreadyAssigned: 'この利用者はすでに別のチームに所属しています。',
+      notInTeam: 'この利用者はこのチームに所属していません。',
+      required: 'このチームに所属している必要があります。',
+    },
+    name: {
+      required: 'チーム名は必須です。',
+      length: 'チーム名は2文字以上20文字以下で入力してください。',
+    },
+    description: {
+      length: '説明は50文字以内で入力してください。',
+    },
+    dutyType: {
+      sameTeam: {
+        required: '勤務タイプは同じチームに属している必要があります。',
+      },
+    },
+  },
+  schedule: {
+    tag: {
+      notFriend: 'この予定には友だちだけをタグ付けできます。',
+    },
+    write: {
+      forbidden: 'この予定を編集する権限がありません。',
+    },
+    visibility: {
+      forbidden: 'この予定を閲覧する権限がありません。',
+    },
+  },
+  policy: {
+    terms: {
+      consent: {
+        required: '利用規約への同意が必要です。',
+      },
+      version: {
+        required: '利用規約のバージョン情報が必要です。',
+      },
+    },
+    privacy: {
+      consent: {
+        required: 'プライバシーポリシーへの同意が必要です。',
+      },
+      version: {
+        required: 'プライバシーポリシーのバージョン情報が必要です。',
+      },
+    },
+  },
+  notification: {
+    payload: {
+      invalid: 'この通知を読み込めませんでした。',
+    },
+  },
+  sso: {
+    uuid: {
+      required: '会員登録セッション情報が必要です。',
+      invalid: '会員登録セッションが無効か、期限切れです。',
+    },
+    username: {
+      required: 'ユーザー名は必須です。',
+      length: 'ユーザー名は1文字以上10文字以下で入力してください。',
+    },
+  },
+  dday: {
+    access: {
+      forbidden: 'このD-Dayにアクセスする権限がありません。',
+    },
+    title: {
+      required: 'D-Dayのタイトルは必須です。',
+      length: 'D-Dayのタイトルは1文字以上30文字以下で入力してください。',
+    },
+  },
+  duty: {
+    edit: {
+      forbidden: 'この勤務を編集する権限がありません。',
+    },
+  },
+  dutyBatch: {
+    unknown: '勤務表のアップロードに失敗しました。',
+    nameNotFound: 'アップロードしたファイルから利用者名を見つけられませんでした。',
+    multipleNameFound: 'アップロードしたファイルで同じ名前の利用者が複数見つかりました。',
+    notSupportedFile: 'このファイル形式には対応していません。対応形式: {supportedFile}',
+    dutyTypeNotSingle: '一括アップロードを使うには、チームの勤務タイプがちょうど1つ必要です。',
+    yearMonthNotMatch: 'アップロードしたファイルの年月が選択した勤務表年月（{year}-{month}）と一致しません。',
+    template: {
+      required: '先に一括アップロードテンプレートを選択してください。',
+    },
+    member: {
+      teamRequired: '勤務表の一括アップロードを使うには、チーム所属アカウントである必要があります。',
+    },
+  },
+  attachment: {
+    context: {
+      missing: '添付ファイルのコンテキスト情報がありません。',
+    },
+    session: {
+      auth: {
+        required: '一時アップロードセッションの添付ファイルにアクセスするにはログインが必要です。',
+      },
+      forbidden: 'このアップロードセッションにアクセスする権限がありません。',
+      notFound: 'この添付ファイルに紐づくアップロードセッションが見つかりません。',
+      contextMismatch: 'アップロードセッションと対象コンテキストが一致しません。',
+      targetContext: {
+        missing: 'アップロードセッションに対象コンテキスト情報がありません。',
+      },
+    },
+    todo: {
+      auth: {
+        required: 'このTo-do添付ファイルにアクセスするにはログインが必要です。',
+      },
+      access: {
+        forbidden: 'このTo-do添付ファイルを閲覧する権限がありません。',
+      },
+      write: {
+        forbidden: 'このTo-do添付ファイルを変更する権限がありません。',
+      },
+    },
+    profile: {
+      forbidden: 'このプロフィール添付ファイルを変更する権限がありません。',
+    },
+    extension: {
+      blocked: '許可されていないファイル拡張子です。',
+    },
+    size: {
+      exceeded: 'ファイルサイズが大きすぎます。',
+    },
+  },
+  friend: {
+    notFriend: '友だちとしてつながっている相手ではありません。',
+    request: {
+      self: '自分自身には友だちリクエストを送れません。',
+      alreadyFriend: 'すでに友だちです。',
+      alreadyRequested: '保留中の友だちまたは家族リクエストがすでにあります。',
+      notFound: '保留中の友だちまたは家族リクエストが見つかりません。',
+    },
+    family: {
+      notFriend: '家族に追加するには、先に友だちである必要があります。',
+      alreadyFamily: 'すでに家族として設定されています。',
+      notFamily: '家族として設定されていません。',
+    },
+  },
+  todo: {
+    reorder: {
+      orderedIds: {
+        required: '同じ状態で並び替えるには、並び替え後のやることID一覧が必要です。',
+      },
+    },
+    tag: {
+      notFriend: 'このTo-doには友だちだけをタグ付けできます。',
+    },
+  },
+} as const
 
 export default {
   ...en,
@@ -55,7 +298,7 @@ export default {
       message: 'ページが見つかりません',
     },
   },
-  apiErrors: apiErrorMessagesJa,
+  apiErrors,
   visibility: {
     ...en.visibility,
     labels: {

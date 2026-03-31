@@ -1,4 +1,246 @@
-import { apiErrorMessagesEn } from './apiErrors'
+const apiErrors = {
+  auth: {
+    required: 'Login is required.',
+    unauthorized: 'Unauthorized.',
+    login: {
+      failed: 'Email or password is incorrect.',
+      rateLimited: 'Too many login attempts. Please try again later.',
+    },
+    password: {
+      memberNotFound: 'Account does not exist.',
+      currentMismatch: 'Current password does not match.',
+      changeUnauthorized: 'You are not authorized to change this password.',
+      changed: 'Password changed.',
+    },
+    refresh: {
+      invalid: 'Invalid refresh token.',
+      expired: 'Refresh token has expired.',
+      current: {
+        required: 'The current refresh token is required.',
+      },
+    },
+    refreshToken: {
+      delete: {
+        forbidden: 'You do not have permission to delete this refresh token.',
+      },
+    },
+    token: {
+      memberNotFound: 'Account does not exist.',
+    },
+    impersonation: {
+      alreadyImpersonating: 'You are already impersonating another account.',
+      managerNotFound: 'Manager account could not be found.',
+      targetNotFound: 'Target account could not be found.',
+      forbidden: 'You do not have permission to manage this account.',
+      failed: 'Failed to switch accounts.',
+    },
+    restore: {
+      notImpersonating: 'You are not currently impersonating another account.',
+      originalMissing: 'Original account information is missing.',
+      originalNotFound: 'Original account could not be found.',
+      failed: 'Failed to restore the original account.',
+    },
+    oauth: {
+      callbackUrl: {
+        required: 'Callback URL is required.',
+      },
+    },
+  },
+  common: {
+    notFound: 'Resource not found.',
+    badRequest: 'Bad request.',
+    validation: {
+      failed: 'Please check the request fields.',
+    },
+    rateLimit: {
+      exceeded: 'Too many requests. Please try again later.',
+    },
+  },
+  member: {
+    notFound: 'Member not found.',
+    visibility: {
+      forbidden: 'You do not have permission to view this member\'s calendar.',
+      update: {
+        forbidden: 'You cannot update another member\'s visibility.',
+      },
+    },
+    auxiliary: {
+      name: {
+        required: 'Name is required.',
+      },
+    },
+  },
+  dutyType: {
+    name: {
+      required: 'Duty name is required.',
+      length: 'Duty names must be between 1 and 10 characters.',
+      duplicate: 'A duty type with the same name already exists.',
+    },
+    color: {
+      invalid: 'Invalid color format.',
+    },
+  },
+  team: {
+    delete: {
+      membersExist: 'You cannot delete a team that still has members.',
+    },
+    manage: {
+      forbidden: 'You do not have permission to manage this team.',
+    },
+    admin: {
+      required: 'Only team admins can perform this action.',
+    },
+    member: {
+      alreadyAssigned: 'This member already belongs to a team.',
+      notInTeam: 'This member does not belong to this team.',
+      required: 'You must belong to this team to access it.',
+    },
+    name: {
+      required: 'Team name is required.',
+      length: 'Team names must be between 2 and 20 characters.',
+    },
+    description: {
+      length: 'Descriptions must be 50 characters or fewer.',
+    },
+    dutyType: {
+      sameTeam: {
+        required: 'Duty types must belong to the same team.',
+      },
+    },
+  },
+  schedule: {
+    tag: {
+      notFriend: 'Only friends can be tagged on this schedule.',
+    },
+    write: {
+      forbidden: 'You do not have permission to edit this schedule.',
+    },
+    visibility: {
+      forbidden: 'You do not have permission to view this schedule.',
+    },
+  },
+  policy: {
+    terms: {
+      consent: {
+        required: 'You must agree to the terms of service.',
+      },
+      version: {
+        required: 'Terms version information is required.',
+      },
+    },
+    privacy: {
+      consent: {
+        required: 'You must agree to the privacy policy.',
+      },
+      version: {
+        required: 'Privacy policy version information is required.',
+      },
+    },
+  },
+  notification: {
+    payload: {
+      invalid: 'This notification could not be loaded.',
+    },
+  },
+  sso: {
+    uuid: {
+      required: 'Sign-up session information is required.',
+      invalid: 'The sign-up session is invalid or has expired.',
+    },
+    username: {
+      required: 'Username is required.',
+      length: 'Usernames must be between 1 and 10 characters.',
+    },
+  },
+  dday: {
+    access: {
+      forbidden: 'You do not have permission to access this D-Day.',
+    },
+    title: {
+      required: 'D-Day title is required.',
+      length: 'D-Day titles must be between 1 and 30 characters.',
+    },
+  },
+  duty: {
+    edit: {
+      forbidden: 'You do not have permission to edit this duty.',
+    },
+  },
+  dutyBatch: {
+    unknown: 'Failed to upload the duty schedule.',
+    nameNotFound: 'Could not find the member name in the uploaded file.',
+    multipleNameFound: 'Multiple matching names were found in the uploaded file.',
+    notSupportedFile: 'This file format is not supported. Supported formats: {supportedFile}',
+    dutyTypeNotSingle: 'The team must have exactly one duty type to use batch upload.',
+    yearMonthNotMatch: 'The uploaded file month does not match the selected schedule month ({year}-{month}).',
+    template: {
+      required: 'Select a batch upload template first.',
+    },
+    member: {
+      teamRequired: 'The account must belong to a team to use batch upload.',
+    },
+  },
+  attachment: {
+    context: {
+      missing: 'Attachment context information is missing.',
+    },
+    session: {
+      auth: {
+        required: 'Login is required to access session attachments.',
+      },
+      forbidden: 'You do not have permission to access this upload session.',
+      notFound: 'The upload session for this attachment could not be found.',
+      contextMismatch: 'The upload session does not match the target context.',
+      targetContext: {
+        missing: 'The upload session is missing target context information.',
+      },
+    },
+    todo: {
+      auth: {
+        required: 'Login is required to access this to-do attachment.',
+      },
+      access: {
+        forbidden: 'You do not have permission to view this to-do attachment.',
+      },
+      write: {
+        forbidden: 'You do not have permission to modify this to-do attachment.',
+      },
+    },
+    profile: {
+      forbidden: 'You do not have permission to modify this profile attachment.',
+    },
+    extension: {
+      blocked: 'This file extension is not allowed.',
+    },
+    size: {
+      exceeded: 'The file is too large.',
+    },
+  },
+  friend: {
+    notFriend: 'This member is not your friend.',
+    request: {
+      self: 'You cannot send a friend request to yourself.',
+      alreadyFriend: 'You are already friends.',
+      alreadyRequested: 'A friend or family request is already pending.',
+      notFound: 'No pending friend or family request was found.',
+    },
+    family: {
+      notFriend: 'Only friends can be added as family.',
+      alreadyFamily: 'This member is already marked as family.',
+      notFamily: 'This member is not marked as family.',
+    },
+  },
+  todo: {
+    reorder: {
+      orderedIds: {
+        required: 'The reordered to-do ID list is required.',
+      },
+    },
+    tag: {
+      notFriend: 'Only friends can be tagged on this to-do.',
+    },
+  },
+} as const
 
 export default {
   common: {
@@ -44,7 +286,7 @@ export default {
       message: 'Page not found',
     },
   },
-  apiErrors: apiErrorMessagesEn,
+  apiErrors,
   visibility: {
     labels: {
       public: 'Public',

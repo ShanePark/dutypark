@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.todo.service
 
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.attachment.dto.AttachmentDto
+import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -1797,6 +1798,25 @@ class TodoServiceTest {
         assertEquals(listOf(friend.id), todo.tags.mapNotNull { it.member.id })
         verifyNoInteractions(friendService)
         verify(eventPublisher, never()).publishEvent(any(TodoTaggedEvent::class.java))
+    }
+
+    @Test
+    fun `tagFriend should reject non-friend with code-first auth exception`() {
+        val todoId = UUID.randomUUID()
+        val friend = otherMember()
+        val todo = Todo(member, "task", "content", 0, TodoStatus.TODO)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(memberRepository.findById(friend.id!!)).thenReturn(Optional.of(friend))
+        `when`(todoRepository.findByIdForUpdate(todoId)).thenReturn(Optional.of(todo))
+        `when`(friendService.isFriend(member, friend)).thenReturn(false)
+
+        val exception = assertThrows<AuthException> {
+            todoService.tagFriend(loginMember, todoId, friend.id!!)
+        }
+
+        assertEquals("todo.tag.notFriend", exception.message)
     }
 
     @Test

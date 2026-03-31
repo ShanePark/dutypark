@@ -30,7 +30,6 @@ class AuthController(
     private val loginAttemptService: LoginAttemptService,
 ) {
     private val log = logger()
-    private val codePattern = Regex("^[a-z][a-z0-9]*(\\.[a-zA-Z0-9]+)+$")
 
     @PutMapping("password")
     fun changePassword(
@@ -96,16 +95,15 @@ class AuthController(
     fun refreshToken(
         req: HttpServletRequest,
         resp: HttpServletResponse
-    ): ResponseEntity<Map<String, Any>> {
+    ): ResponseEntity<*> {
         val refreshToken = cookieService.extractRefreshToken(req.cookies)
-            ?: return ResponseEntity.status(401).build()
+            ?: return unauthorizedRefresh(resp, "auth.refresh.invalid")
         return try {
             val tokenResponse = authService.refreshAccessToken(refreshToken, req)
             cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)
             ResponseEntity.ok(tokenResponse.toPublicResponse())
         } catch (e: AuthException) {
-            cookieService.clearTokenCookies(resp)
-            ResponseEntity.status(401).build()
+            unauthorizedRefresh(resp, e.message ?: "auth.refresh.invalid")
         }
     }
 
@@ -147,7 +145,7 @@ class AuthController(
             ResponseEntity.status(403).body(
                 DutyParkErrorResponse.of(
                     status = 403,
-                    code = normalizeErrorCode(e.message, "auth.impersonation.failed"),
+                    code = e.message ?: "auth.impersonation.failed",
                 )
             )
         }
@@ -172,7 +170,7 @@ class AuthController(
             ResponseEntity.status(400).body(
                 DutyParkErrorResponse.of(
                     status = 400,
-                    code = normalizeErrorCode(e.message, "auth.restore.failed"),
+                    code = e.message ?: "auth.restore.failed",
                 )
             )
         }
@@ -184,12 +182,14 @@ class AuthController(
         )
     }
 
-    private fun normalizeErrorCode(candidate: String?, defaultCode: String): String {
-        val value = candidate?.trim().orEmpty()
-        if (value.isBlank()) {
-            return defaultCode
-        }
-        return if (codePattern.matches(value)) value else defaultCode
+    private fun unauthorizedRefresh(resp: HttpServletResponse, code: String): ResponseEntity<DutyParkErrorResponse> {
+        cookieService.clearTokenCookies(resp)
+        return ResponseEntity.status(401).body(
+            DutyParkErrorResponse.of(
+                status = 401,
+                code = code,
+            )
+        )
     }
 
 }

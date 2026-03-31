@@ -51,6 +51,7 @@ class TeamManageDutyTypeControllerTest : RestDocsTest() {
                 .withAuth(TestData.member2)
         )
             .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("team.manage.forbidden"))
     }
 
     @Test

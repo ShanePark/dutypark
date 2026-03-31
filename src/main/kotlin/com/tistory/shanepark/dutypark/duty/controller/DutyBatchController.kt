@@ -41,7 +41,7 @@ class DutyBatchController(
         @RequestParam month: Int,
     ): DutyBatchResult {
         if (dutyService.canEdit(loginMember = loginMember, memberId = memberId).not())
-            throw AuthException("login member doesn't have permission to edit duty")
+            throw AuthException("duty.edit.forbidden")
 
         val dutyBatchTemplate =
             memberService.getDutyBatchTemplate(memberId) ?: throw IllegalArgumentException("dutyBatch.template.required")

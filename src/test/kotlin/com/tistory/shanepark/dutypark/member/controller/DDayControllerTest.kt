@@ -204,6 +204,7 @@ class DDayControllerTest : RestDocsTest() {
                 .accept(MediaType.APPLICATION_JSON)
         )
             .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("member.visibility.forbidden"))
     }
 
     @Test
@@ -234,6 +235,28 @@ class DDayControllerTest : RestDocsTest() {
                     )
                 )
             )
+    }
+
+    @Test
+    fun `delete dday forbidden for non-owner`() {
+        val saved = dDayRepository.save(
+            DDayEvent(
+                member = TestData.member,
+                title = "Protected",
+                date = fixedDate.plusDays(7),
+                isPrivate = false
+            )
+        )
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/dday/{id}", saved.id!!)
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member2)
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("dday.access.forbidden"))
     }
 
 }

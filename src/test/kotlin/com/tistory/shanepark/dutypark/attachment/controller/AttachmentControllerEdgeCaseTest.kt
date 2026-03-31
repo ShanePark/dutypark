@@ -15,14 +15,21 @@ import org.hamcrest.Matchers
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpHeaders
+import org.springframework.http.MediaType
 import org.springframework.mock.web.MockMultipartFile
+import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
+import org.springframework.restdocs.payload.JsonFieldType
+import org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath
+import org.springframework.restdocs.payload.PayloadDocumentation.responseFields
+import org.springframework.restdocs.request.RequestDocumentation.parameterWithName
+import org.springframework.restdocs.request.RequestDocumentation.pathParameters
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.*
-import org.springframework.http.HttpHeaders
-import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import java.nio.file.Files
 import java.time.Clock
@@ -88,6 +95,7 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
                 .param("sessionId", session.id.toString())
                 .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("attachment.session.forbidden"))
             .andDo(MockMvcResultHandlers.print())
     }
 
@@ -157,7 +165,117 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
             delete("/api/attachments/{id}", attachment.id)
                 .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("attachment.session.forbidden"))
             .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
+    fun `download session attachment without login returns code-first unauthorized`() {
+        val session = sessionRepository.save(
+            AttachmentUploadSession(
+                contextType = AttachmentContextType.SCHEDULE,
+                targetContextId = null,
+                ownerId = TestData.member.id!!,
+                expiresAt = clock.instant().plusSeconds(86400)
+            )
+        )
+
+        val attachment = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = null,
+                uploadSessionId = session.id,
+                originalFilename = "session.txt",
+                storedFilename = "session.txt",
+                contentType = "text/plain",
+                size = 100,
+                storagePath = pathResolver.resolveTemporaryDirectory(session.id).toString(),
+                createdBy = TestData.member.id!!,
+                orderIndex = 0
+            )
+        )
+
+        mockMvc.perform(
+            get("/api/attachments/{id}/download", attachment.id)
+        ).andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("attachment.session.auth.required"))
+            .andDo(
+                document(
+                    "attachments/download-session-unauthorized",
+                    pathParameters(
+                        parameterWithName("id").description("Session attachment ID to download")
+                    ),
+                    responseFields(*errorResponseFields("Error code (`attachment.session.auth.required`)"))
+                )
+            )
+    }
+
+    @Test
+    fun `download session attachment returns code-first bad request when session row is missing`() {
+        val missingSessionId = UUID.randomUUID()
+        val attachment = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = null,
+                uploadSessionId = missingSessionId,
+                originalFilename = "missing-session.txt",
+                storedFilename = "missing-session.txt",
+                contentType = "text/plain",
+                size = 100,
+                storagePath = pathResolver.resolveTemporaryDirectory(missingSessionId).toString(),
+                createdBy = TestData.member.id!!,
+                orderIndex = 0
+            )
+        )
+
+        mockMvc.perform(
+            get("/api/attachments/{id}/download", attachment.id)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
+        ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("attachment.session.notFound"))
+            .andDo(
+                document(
+                    "attachments/download-session-missing-session",
+                    pathParameters(
+                        parameterWithName("id").description("Session attachment ID to download")
+                    ),
+                    responseFields(*errorResponseFields("Error code (`attachment.session.notFound`)"))
+                )
+            )
+    }
+
+    @Test
+    fun `delete session attachment returns code-first bad request when session row is missing`() {
+        val missingSessionId = UUID.randomUUID()
+        val attachment = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = null,
+                uploadSessionId = missingSessionId,
+                originalFilename = "missing-session.txt",
+                storedFilename = "missing-session.txt",
+                contentType = "text/plain",
+                size = 100,
+                storagePath = pathResolver.resolveTemporaryDirectory(missingSessionId).toString(),
+                createdBy = TestData.member.id!!,
+                orderIndex = 0
+            )
+        )
+
+        mockMvc.perform(
+            delete("/api/attachments/{id}", attachment.id)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
+        ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("attachment.session.notFound"))
+            .andDo(
+                document(
+                    "attachments/delete-session-missing-session",
+                    pathParameters(
+                        parameterWithName("id").description("Session attachment ID to delete")
+                    ),
+                    responseFields(*errorResponseFields("Error code (`attachment.session.notFound`)"))
+                )
+            )
     }
 
     @Test
@@ -447,4 +565,11 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().isNotFound)
     }
+
+    private fun errorResponseFields(codeDescription: String) = arrayOf(
+        fieldWithPath("status").type(JsonFieldType.NUMBER).description("HTTP status code"),
+        fieldWithPath("code").type(JsonFieldType.STRING).description(codeDescription),
+        fieldWithPath("details").type(JsonFieldType.OBJECT).optional().description("Additional error details"),
+        fieldWithPath("fieldErrors").type(JsonFieldType.ARRAY).optional().description("Field validation errors")
+    )
 }

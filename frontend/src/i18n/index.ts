@@ -2,16 +2,16 @@ import { createI18n } from 'vue-i18n'
 import en from './messages/en'
 import ja from './messages/ja'
 import ko from './messages/ko'
+import {
+  DEFAULT_LOCALE,
+  LOCALE_NATIVE_LABELS,
+  SUPPORTED_LOCALES,
+  detectBrowserLocale,
+  isSupportedLocale,
+  normalizeLocale,
+  type SupportedLocale,
+} from './localeUtils'
 
-export const SUPPORTED_LOCALES = ['ko', 'en', 'ja'] as const
-export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
-export const LOCALE_NATIVE_LABELS: Record<SupportedLocale, string> = {
-  ko: '한국어',
-  en: 'English',
-  ja: '日本語',
-}
-
-export const DEFAULT_LOCALE: SupportedLocale = 'ko'
 export const LOCALE_STORAGE_KEY = 'dp-locale'
 export const LOCALE_SUGGESTION_STORAGE_KEY = 'dp-locale-suggestion'
 
@@ -21,36 +21,8 @@ const messages = {
   ja,
 }
 
-export function isSupportedLocale(value: string | null | undefined): value is SupportedLocale {
-  return value === 'ko' || value === 'en' || value === 'ja'
-}
-
-export function normalizeLocale(value: string | null | undefined): SupportedLocale {
-  const normalized = value?.toLowerCase()
-  if (!normalized) {
-    return DEFAULT_LOCALE
-  }
-  if (normalized.startsWith('en')) {
-    return 'en'
-  }
-  if (normalized.startsWith('ja')) {
-    return 'ja'
-  }
-  if (normalized.startsWith('ko')) {
-    return 'ko'
-  }
-  return DEFAULT_LOCALE
-}
-
 export function getLocaleNativeLabel(locale: SupportedLocale): string {
   return LOCALE_NATIVE_LABELS[locale]
-}
-
-export function detectBrowserLocale(): SupportedLocale {
-  if (typeof navigator === 'undefined') {
-    return DEFAULT_LOCALE
-  }
-  return normalizeLocale(navigator.language)
 }
 
 export function readStoredLocalePreference(): SupportedLocale | null {
@@ -143,3 +115,13 @@ export function getCurrentLocale(): SupportedLocale {
 export function translateGlobal(key: string, values?: Record<string, unknown>): string {
   return String(i18n.global.t(key, values ?? {}))
 }
+
+export {
+  DEFAULT_LOCALE,
+  LOCALE_NATIVE_LABELS,
+  SUPPORTED_LOCALES,
+  detectBrowserLocale,
+  isSupportedLocale,
+  normalizeLocale,
+}
+export type { SupportedLocale }

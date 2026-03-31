@@ -512,6 +512,28 @@ class ScheduleControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `tag friend endpoint returns code-first unauthorized when target is not friend`() {
+        val owner = TestData.member
+        val stranger = TestData.member2
+
+        val schedule = scheduleRepository.save(
+            Schedule(
+                member = owner,
+                content = "tagged",
+                startDateTime = fixedDateTime,
+                endDateTime = fixedDateTime.plusHours(1),
+                position = 0
+            )
+        )
+
+        mockMvc.perform(
+            post("/api/schedules/{scheduleId}/tags/{friendId}", schedule.id, stranger.id!!)
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(owner)}")
+        ).andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("schedule.tag.notFriend"))
+    }
+
+    @Test
     fun `untagSelf removes own tag`() {
         val owner = TestData.member
         val friend = TestData.member2

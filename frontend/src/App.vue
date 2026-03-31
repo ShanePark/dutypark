@@ -8,6 +8,10 @@ const authStore = useAuthStore()
 const pushNotification = usePushNotification()
 const hasAttemptedPush = ref(false)
 
+const preparePushServiceWorker = async () => {
+  await pushNotification.prepareServiceWorker()
+}
+
 const tryAutoSubscribe = async () => {
   if (hasAttemptedPush.value) return
   hasAttemptedPush.value = true
@@ -23,6 +27,7 @@ const tryAutoSubscribe = async () => {
 
 onMounted(async () => {
   await authStore.initialize()
+  await preparePushServiceWorker()
   if (authStore.isLoggedIn) {
     await tryAutoSubscribe()
   }
@@ -35,6 +40,7 @@ watch(
       hasAttemptedPush.value = false
       return
     }
+    await preparePushServiceWorker()
     await tryAutoSubscribe()
   }
 )

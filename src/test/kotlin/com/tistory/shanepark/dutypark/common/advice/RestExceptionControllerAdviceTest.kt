@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.common.advice
 import com.tistory.shanepark.dutypark.attachment.exception.AttachmentExtensionBlockedException
 import com.tistory.shanepark.dutypark.attachment.exception.AttachmentTooLargeException
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.core.MethodParameter
@@ -26,6 +27,15 @@ class RestExceptionControllerAdviceTest {
     }
 
     @Test
+    fun `dutyparkExceptionHandler preserves bad request codes`() {
+        val response = advice.dutyparkExceptionHandler(BadRequestException("friend.family.notFriend"))
+
+        assertThat(response.statusCode.value()).isEqualTo(400)
+        assertThat(response.body?.status).isEqualTo(400)
+        assertThat(response.body?.code).isEqualTo("friend.family.notFriend")
+    }
+
+    @Test
     fun `noSuchElementHandler keeps explicit code`() {
         val response = advice.noSuchElementHandler(NoSuchElementException("member.notFound"))
 
@@ -42,11 +52,11 @@ class RestExceptionControllerAdviceTest {
     }
 
     @Test
-    fun `legacy raw messages are normalized to mapped codes`() {
-        val response = advice.illegalArgumentHandler(IllegalArgumentException("callbackUrl is required in state"))
+    fun `illegalArgumentHandler falls back to common badRequest for non-code messages`() {
+        val response = advice.illegalArgumentHandler(IllegalArgumentException("Callback URL is required"))
 
         assertThat(response.statusCode.value()).isEqualTo(400)
-        assertThat(response.body?.code).isEqualTo("auth.oauth.callbackUrl.required")
+        assertThat(response.body?.code).isEqualTo("common.badRequest")
     }
 
     @Test

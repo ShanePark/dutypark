@@ -410,6 +410,30 @@ class TodoControllerTest : RestDocsTest() {
         org.assertj.core.api.Assertions.assertThat(refreshed.tags).isEmpty()
     }
 
+    @Test
+    fun `tag friend returns code-first unauthorized when target is not friend`() {
+        val owner = TestData.member
+        val stranger = TestData.member2
+
+        val todo = todoRepository.save(
+            Todo(
+                member = owner,
+                title = "Tagged Todo",
+                content = "Content",
+                position = 0
+            )
+        )
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/todos/{id}/tags/{friendId}", todo.id, stranger.id!!)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .withAuth(owner)
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("todo.tag.notFriend"))
+    }
+
     // ========== Kanban Board Endpoints ==========
 
     @Test

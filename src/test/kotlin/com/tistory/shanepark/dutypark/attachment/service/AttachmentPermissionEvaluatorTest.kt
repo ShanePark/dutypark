@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
 import com.tistory.shanepark.dutypark.attachment.domain.entity.AttachmentUploadSession
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.schedule.service.SchedulePermissionService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -53,8 +54,8 @@ class AttachmentPermissionEvaluatorTest {
 
         assertThatThrownBy {
             evaluator.checkReadPermission(loginMember, attachment)
-        }.isInstanceOf(IllegalStateException::class.java)
-            .hasMessageContaining("has no contextId")
+        }.isInstanceOf(BadRequestException::class.java)
+            .hasMessage("attachment.context.missing")
     }
 
     @Test
@@ -63,8 +64,8 @@ class AttachmentPermissionEvaluatorTest {
 
         assertThatThrownBy {
             evaluator.checkWritePermission(loginMember, attachment)
-        }.isInstanceOf(IllegalStateException::class.java)
-            .hasMessageContaining("has no contextId")
+        }.isInstanceOf(BadRequestException::class.java)
+            .hasMessage("attachment.context.missing")
     }
 
     @Test
@@ -111,7 +112,7 @@ class AttachmentPermissionEvaluatorTest {
         assertThatThrownBy {
             evaluator.checkWritePermission(loginMember, attachment)
         }.isInstanceOf(AuthException::class.java)
-            .hasMessageContaining("does not belong to user")
+            .hasMessage("attachment.profile.forbidden")
     }
 
     @Test
@@ -129,8 +130,8 @@ class AttachmentPermissionEvaluatorTest {
 
         assertThatThrownBy {
             evaluator.checkWritePermission(loginMember, attachment)
-        }.isInstanceOf(IllegalStateException::class.java)
-            .hasMessageContaining("has no contextId")
+        }.isInstanceOf(BadRequestException::class.java)
+            .hasMessage("attachment.context.missing")
     }
 
     @Test
@@ -140,7 +141,7 @@ class AttachmentPermissionEvaluatorTest {
         assertThatThrownBy {
             evaluator.checkWritePermission(loginMember, attachment)
         }.isInstanceOf(AuthException::class.java)
-            .hasMessageContaining("does not belong to user")
+            .hasMessage("attachment.profile.forbidden")
     }
 
     @Test
@@ -167,7 +168,7 @@ class AttachmentPermissionEvaluatorTest {
         assertThatThrownBy {
             evaluator.checkSessionOwnership(loginMember, session)
         }.isInstanceOf(AuthException::class.java)
-            .hasMessageContaining("does not belong to user")
+            .hasMessage("attachment.session.forbidden")
     }
 
     @Test
@@ -184,7 +185,7 @@ class AttachmentPermissionEvaluatorTest {
         assertThatThrownBy {
             evaluator.checkSessionWritePermission(loginMember, session)
         }.isInstanceOf(AuthException::class.java)
-            .hasMessageContaining("does not belong to user")
+            .hasMessage("attachment.session.forbidden")
     }
 
     @Test
@@ -211,7 +212,7 @@ class AttachmentPermissionEvaluatorTest {
         assertThatThrownBy {
             evaluator.checkSessionWritePermission(loginMember, session)
         }.isInstanceOf(AuthException::class.java)
-            .hasMessageContaining("does not belong to user")
+            .hasMessage("attachment.profile.forbidden")
     }
 
     @Test
@@ -265,7 +266,7 @@ class AttachmentPermissionEvaluatorTest {
         assertThatThrownBy {
             evaluator.checkReadPermission(loginMember, attachment)
         }.isInstanceOf(AuthException::class.java)
-            .hasMessageContaining("is not accessible")
+            .hasMessage("attachment.todo.access.forbidden")
     }
 
     @Test
@@ -276,7 +277,7 @@ class AttachmentPermissionEvaluatorTest {
         assertThatThrownBy {
             evaluator.checkReadPermission(null, attachment)
         }.isInstanceOf(AuthException::class.java)
-            .hasMessageContaining("Login required")
+            .hasMessage("attachment.todo.auth.required")
     }
 
     @Test
@@ -316,7 +317,7 @@ class AttachmentPermissionEvaluatorTest {
         assertThatThrownBy {
             evaluator.checkWritePermission(loginMember, attachment)
         }.isInstanceOf(AuthException::class.java)
-            .hasMessageContaining("does not belong to user")
+            .hasMessage("attachment.todo.write.forbidden")
     }
 
     @Test
@@ -351,7 +352,7 @@ class AttachmentPermissionEvaluatorTest {
         assertThatThrownBy {
             evaluator.checkSessionWritePermission(loginMember, session)
         }.isInstanceOf(AuthException::class.java)
-            .hasMessageContaining("does not belong to user")
+            .hasMessage("attachment.todo.write.forbidden")
     }
 
     private fun createAttachment(

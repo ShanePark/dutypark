@@ -743,3 +743,14 @@ export interface NotificationCountDto {
   unreadCount: number
   totalCount: number
 }
+
+export interface PushNotificationPayload {
+  type: NotificationType
+  icon?: string | null
+  badge?: string | null
+  url?: string | null
+  tag?: string | null
+  notificationId?: string | null
+  unreadCount?: number | null
+  notification?: NotificationDto | null
+}

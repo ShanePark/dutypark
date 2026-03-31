@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.policy.controller
 
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.policy.domain.dto.PolicyDto
 import com.tistory.shanepark.dutypark.policy.domain.enums.PolicyType
 import com.tistory.shanepark.dutypark.policy.service.PolicyService
@@ -27,7 +28,7 @@ class PolicyController(
         val policyType = try {
             PolicyType.valueOf(type.uppercase())
         } catch (e: IllegalArgumentException) {
-            return ResponseEntity.badRequest().build()
+            throw BadRequestException()
         }
 
         val policy = policyService.getCurrentPolicy(policyType)

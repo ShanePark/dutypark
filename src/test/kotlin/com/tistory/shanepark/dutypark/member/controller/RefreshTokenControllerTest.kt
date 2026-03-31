@@ -119,6 +119,7 @@ class RefreshTokenControllerTest : RestDocsTest() {
                 .withAuth(TestData.member2)
         )
             .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("auth.refreshToken.delete.forbidden"))
     }
 
     @Test
@@ -163,5 +164,7 @@ class RefreshTokenControllerTest : RestDocsTest() {
                 .withAuth(TestData.member)
         )
             .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(jsonPath("$.code").value("auth.refresh.current.required"))
     }
 }

@@ -1,4 +1,246 @@
-import { apiErrorMessagesKo } from './apiErrors'
+const apiErrors = {
+  auth: {
+    required: '로그인이 필요합니다.',
+    unauthorized: '인증이 필요합니다.',
+    login: {
+      failed: '이메일 또는 비밀번호가 올바르지 않습니다.',
+      rateLimited: '로그인 시도 횟수를 초과했습니다. 잠시 후 다시 시도해 주세요.',
+    },
+    password: {
+      memberNotFound: '존재하지 않는 계정입니다.',
+      currentMismatch: '현재 비밀번호가 일치하지 않습니다.',
+      changeUnauthorized: '이 비밀번호를 변경할 권한이 없습니다.',
+      changed: '비밀번호가 변경되었습니다.',
+    },
+    refresh: {
+      invalid: '유효하지 않은 리프레시 토큰입니다.',
+      expired: '리프레시 토큰이 만료되었습니다.',
+      current: {
+        required: '현재 로그인 중인 리프레시 토큰 정보가 필요합니다.',
+      },
+    },
+    refreshToken: {
+      delete: {
+        forbidden: '이 리프레시 토큰을 삭제할 권한이 없습니다.',
+      },
+    },
+    token: {
+      memberNotFound: '존재하지 않는 계정입니다.',
+    },
+    impersonation: {
+      alreadyImpersonating: '이미 다른 계정으로 전환된 상태입니다.',
+      managerNotFound: '관리자 계정을 찾을 수 없습니다.',
+      targetNotFound: '대상 계정을 찾을 수 없습니다.',
+      forbidden: '관리 권한이 없습니다.',
+      failed: '계정 전환에 실패했습니다.',
+    },
+    restore: {
+      notImpersonating: '전환된 계정 상태가 아닙니다.',
+      originalMissing: '원래 계정 정보가 없습니다.',
+      originalNotFound: '원래 계정을 찾을 수 없습니다.',
+      failed: '계정 복원에 실패했습니다.',
+    },
+    oauth: {
+      callbackUrl: {
+        required: '콜백 URL 정보가 필요합니다.',
+      },
+    },
+  },
+  common: {
+    notFound: '리소스를 찾을 수 없습니다.',
+    badRequest: '잘못된 요청입니다.',
+    validation: {
+      failed: '요청 값을 다시 확인해 주세요.',
+    },
+    rateLimit: {
+      exceeded: '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.',
+    },
+  },
+  member: {
+    notFound: '회원을 찾을 수 없습니다.',
+    visibility: {
+      forbidden: '이 회원의 캘린더를 볼 권한이 없습니다.',
+      update: {
+        forbidden: '다른 회원의 공개 범위는 변경할 수 없습니다.',
+      },
+    },
+    auxiliary: {
+      name: {
+        required: '이름은 필수입니다.',
+      },
+    },
+  },
+  dutyType: {
+    name: {
+      required: '근무명은 필수입니다.',
+      length: '근무명은 1자 이상 10자 이하로 입력해주세요.',
+      duplicate: '동일한 이름의 근무 유형이 이미 존재합니다.',
+    },
+    color: {
+      invalid: '올바른 색상 형식이 아닙니다.',
+    },
+  },
+  team: {
+    delete: {
+      membersExist: '구성원이 남아 있는 팀은 삭제할 수 없습니다.',
+    },
+    manage: {
+      forbidden: '이 팀을 관리할 권한이 없습니다.',
+    },
+    admin: {
+      required: '팀 관리자만 이 작업을 할 수 있습니다.',
+    },
+    member: {
+      alreadyAssigned: '이 사용자는 이미 다른 팀에 속해 있습니다.',
+      notInTeam: '이 사용자는 이 팀에 속해 있지 않습니다.',
+      required: '이 팀에 속한 사용자만 접근할 수 있습니다.',
+    },
+    name: {
+      required: '팀 이름은 필수입니다.',
+      length: '팀 이름은 2자 이상 20자 이하로 입력해주세요.',
+    },
+    description: {
+      length: '설명은 50자 이하로 입력해주세요.',
+    },
+    dutyType: {
+      sameTeam: {
+        required: '근무 유형은 같은 팀에 속해 있어야 합니다.',
+      },
+    },
+  },
+  schedule: {
+    tag: {
+      notFriend: '친구만 이 일정에 태그할 수 있습니다.',
+    },
+    write: {
+      forbidden: '이 일정을 수정할 권한이 없습니다.',
+    },
+    visibility: {
+      forbidden: '이 일정을 볼 권한이 없습니다.',
+    },
+  },
+  policy: {
+    terms: {
+      consent: {
+        required: '서비스 이용약관에 동의해야 합니다.',
+      },
+      version: {
+        required: '이용약관 버전 정보가 필요합니다.',
+      },
+    },
+    privacy: {
+      consent: {
+        required: '개인정보 처리방침에 동의해야 합니다.',
+      },
+      version: {
+        required: '개인정보 처리방침 버전 정보가 필요합니다.',
+      },
+    },
+  },
+  notification: {
+    payload: {
+      invalid: '이 알림을 불러올 수 없습니다.',
+    },
+  },
+  sso: {
+    uuid: {
+      required: '회원가입 세션 정보가 필요합니다.',
+      invalid: '회원가입 세션이 유효하지 않거나 만료되었습니다.',
+    },
+    username: {
+      required: '사용자명은 필수입니다.',
+      length: '사용자명은 1자 이상 10자 이하로 입력해주세요.',
+    },
+  },
+  dday: {
+    access: {
+      forbidden: '이 D-Day에 접근할 권한이 없습니다.',
+    },
+    title: {
+      required: 'D-DAY 제목은 필수입니다.',
+      length: 'D-DAY 제목은 1자 이상 30자 이하로 입력해주세요.',
+    },
+  },
+  duty: {
+    edit: {
+      forbidden: '이 근무를 수정할 권한이 없습니다.',
+    },
+  },
+  dutyBatch: {
+    unknown: '시간표 업로드에 실패했습니다.',
+    nameNotFound: '업로드한 파일에서 사용자의 이름을 찾을 수 없습니다.',
+    multipleNameFound: '업로드한 파일에서 같은 이름의 사용자가 여러 명 발견되었습니다.',
+    notSupportedFile: '지원하지 않는 파일 형식입니다. 지원 형식: {supportedFile}',
+    dutyTypeNotSingle: '일괄 업로드를 사용하려면 팀의 근무 유형이 정확히 1개여야 합니다.',
+    yearMonthNotMatch: '업로드한 파일의 연월이 현재 설정 중인 시간표({year}년 {month}월)와 일치하지 않습니다.',
+    template: {
+      required: '먼저 일괄 업로드 템플릿을 선택해주세요.',
+    },
+    member: {
+      teamRequired: '시간표 일괄 업로드를 사용하려면 팀에 속한 계정이어야 합니다.',
+    },
+  },
+  attachment: {
+    context: {
+      missing: '첨부파일의 컨텍스트 정보가 없습니다.',
+    },
+    session: {
+      auth: {
+        required: '임시 업로드 세션 첨부파일에 접근하려면 로그인이 필요합니다.',
+      },
+      forbidden: '이 업로드 세션에 접근할 권한이 없습니다.',
+      notFound: '이 첨부파일에 연결된 업로드 세션을 찾을 수 없습니다.',
+      contextMismatch: '업로드 세션과 대상 컨텍스트가 일치하지 않습니다.',
+      targetContext: {
+        missing: '업로드 세션의 대상 컨텍스트 정보가 없습니다.',
+      },
+    },
+    todo: {
+      auth: {
+        required: '이 할 일 첨부파일에 접근하려면 로그인이 필요합니다.',
+      },
+      access: {
+        forbidden: '이 할 일 첨부파일을 볼 권한이 없습니다.',
+      },
+      write: {
+        forbidden: '이 할 일 첨부파일을 수정할 권한이 없습니다.',
+      },
+    },
+    profile: {
+      forbidden: '이 프로필 첨부파일을 수정할 권한이 없습니다.',
+    },
+    extension: {
+      blocked: '허용되지 않는 파일 확장자입니다.',
+    },
+    size: {
+      exceeded: '파일 크기가 너무 큽니다.',
+    },
+  },
+  friend: {
+    notFriend: '친구로 연결된 사용자가 아닙니다.',
+    request: {
+      self: '자기 자신에게는 친구 요청을 보낼 수 없습니다.',
+      alreadyFriend: '이미 친구로 연결된 사용자입니다.',
+      alreadyRequested: '이미 대기 중인 친구 또는 가족 요청이 있습니다.',
+      notFound: '대기 중인 친구 또는 가족 요청을 찾을 수 없습니다.',
+    },
+    family: {
+      notFriend: '가족으로 추가하려면 먼저 친구여야 합니다.',
+      alreadyFamily: '이미 가족으로 설정된 사용자입니다.',
+      notFamily: '가족으로 설정된 사용자가 아닙니다.',
+    },
+  },
+  todo: {
+    reorder: {
+      orderedIds: {
+        required: '같은 상태에서 순서를 바꾸려면 정렬된 할 일 ID 목록이 필요합니다.',
+      },
+    },
+    tag: {
+      notFriend: '친구만 이 할 일에 태그할 수 있습니다.',
+    },
+  },
+} as const
 
 export default {
   common: {
@@ -44,7 +286,7 @@ export default {
       message: '페이지를 찾을 수 없습니다',
     },
   },
-  apiErrors: apiErrorMessagesKo,
+  apiErrors,
   visibility: {
     labels: {
       public: '전체공개',

@@ -25,6 +25,14 @@ operation::auth/status[]
 
 operation::auth/status-unauthenticated[]
 
+=== Refresh Token
+
+operation::auth/refresh[]
+
+==== Refresh Token [Unauthorized]
+
+operation::auth/refresh-unauthorized[]
+
 === Change Password
 
 operation::auth/change-password[]
@@ -185,21 +193,41 @@ operation::friends/search[]
 
 operation::friends/send-request[]
 
+==== Send Friend Request [Bad Request]
+
+operation::friends/send-request-bad-request[]
+
 === Accept Friend Request
 
 operation::friends/accept-request[]
+
+==== Accept Friend Request [Bad Request]
+
+operation::friends/accept-request-bad-request[]
 
 === Reject Friend Request
 
 operation::friends/reject-request[]
 
+==== Reject Friend Request [Bad Request]
+
+operation::friends/reject-request-bad-request[]
+
 === Cancel Friend Request
 
 operation::friends/cancel-request[]
 
+==== Cancel Friend Request [Bad Request]
+
+operation::friends/cancel-request-bad-request[]
+
 === Unfriend
 
 operation::friends/unfriend[]
+
+==== Unfriend [Bad Request]
+
+operation::friends/unfriend-bad-request[]
 
 === Pin Friend
 
@@ -216,6 +244,18 @@ operation::friends/update-pin-order[]
 === Send Family Request
 
 operation::friends/send-family-request[]
+
+==== Send Family Request [Bad Request]
+
+operation::friends/send-family-request-bad-request[]
+
+=== Demote Family Member
+
+operation::friends/demote-family[]
+
+==== Demote Family Member [Bad Request]
+
+operation::friends/demote-family-bad-request[]
 
 == Notifications
 
@@ -261,9 +301,17 @@ operation::push/vapid-public-key[]
 
 operation::push/subscribe[]
 
+==== Subscribe [Unauthorized]
+
+operation::push/subscribe-unauthorized[]
+
 === Unsubscribe
 
 operation::push/unsubscribe[]
+
+==== Unsubscribe [Unauthorized]
+
+operation::push/unsubscribe-unauthorized[]
 
 == Teams
 
@@ -303,6 +351,10 @@ operation::attachments/sessions/create-unauthorized[]
 
 operation::attachments/sessions/discard[]
 
+==== Discard Session [Forbidden]
+
+operation::attachments/sessions/discard-forbidden[]
+
 === Upload File
 
 operation::attachments/upload[]
@@ -319,6 +371,14 @@ operation::attachments/reorder[]
 
 operation::attachments/download[]
 
+==== Download Attachment [Session Unauthorized]
+
+operation::attachments/download-session-unauthorized[]
+
+==== Download Attachment [Missing Session]
+
+operation::attachments/download-session-missing-session[]
+
 === Get Thumbnail
 
 operation::attachments/thumbnail[]
@@ -326,3 +386,7 @@ operation::attachments/thumbnail[]
 === Delete Attachment
 
 operation::attachments/delete[]
+
+==== Delete Attachment [Missing Session]
+
+operation::attachments/delete-session-missing-session[]

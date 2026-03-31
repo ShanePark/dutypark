@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberPreviewDto
 import com.tistory.shanepark.dutypark.member.domain.dto.toFriendDto
@@ -60,16 +61,16 @@ class FriendService(
         val toMember = memberRepository.findById(toMemberId).orElseThrow()
 
         if (fromMember == toMember)
-            throw IllegalArgumentException("Cannot send friend request to self")
+            throw BadRequestException("friend.request.self")
 
         if (isFriend(fromMember, toMember))
-            throw IllegalArgumentException("Already friend")
+            throw BadRequestException("friend.request.alreadyFriend")
 
         val pending =
             friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(fromMember, toMember, PENDING)
 
         if (pending.isNotEmpty())
-            throw IllegalArgumentException("Already requested")
+            throw BadRequestException("friend.request.alreadyRequested")
 
         val savedRequest = friendRequestRepository.save(FriendRequest(fromMember, toMember))
         eventPublisher.publishEvent(
@@ -87,16 +88,16 @@ class FriendService(
         val toMember = memberRepository.findById(toMemberId).orElseThrow()
 
         if (!isFriend(fromMember, toMember)) {
-            throw IllegalStateException("Not friend")
+            throw BadRequestException("friend.family.notFriend")
         }
 
         if (isFamily(fromMember, toMember)) {
-            throw IllegalStateException("Already family")
+            throw BadRequestException("friend.family.alreadyFamily")
         }
 
         val pending = friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(fromMember, toMember, PENDING)
         if (pending.isNotEmpty())
-            throw IllegalArgumentException("Already requested")
+            throw BadRequestException("friend.request.alreadyRequested")
 
         val savedRequest = friendRequestRepository.save(
             FriendRequest(
@@ -175,7 +176,7 @@ class FriendService(
     private fun updateFamilyStatus(member: Member, friend: Member) {
         friendRelationRepository.findByMemberAndFriend(member, friend)?.let {
             it.isFamily = true
-        } ?: throw IllegalArgumentException("Not friend")
+        } ?: throw BadRequestException("friend.family.notFriend")
     }
 
     fun demoteFromFamily(loginMember: LoginMember, toMemberId: Long) {
@@ -183,7 +184,7 @@ class FriendService(
         val friend = memberRepository.findById(toMemberId).orElseThrow()
 
         if (!isFamily(member, friend)) {
-            throw IllegalStateException("Not family")
+            throw BadRequestException("friend.family.notFamily")
         }
 
         removeFamilyStatus(member, friend)
@@ -193,7 +194,7 @@ class FriendService(
     private fun removeFamilyStatus(member: Member, friend: Member) {
         friendRelationRepository.findByMemberAndFriend(member, friend)?.let {
             it.isFamily = false
-        } ?: throw IllegalArgumentException("Not friend")
+        } ?: throw BadRequestException("friend.family.notFriend")
     }
 
     private fun deleteViceVersaRequestIfPresent(loginMember: Member, friend: Member) {
@@ -210,7 +211,7 @@ class FriendService(
 
         val isFriend = isFriend(loginMember, targetMember)
         if (!isFriend)
-            throw IllegalArgumentException("Not friend")
+            throw BadRequestException("friend.notFriend")
 
         friendRelationRepository.deleteByMemberAndFriend(loginMember, targetMember)
         friendRelationRepository.deleteByMemberAndFriend(targetMember, loginMember)
@@ -232,7 +233,7 @@ class FriendService(
     private fun findPendingFriendRequestOrThrow(from: Member, to: Member): FriendRequest {
         return friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(
             from, to, PENDING
-        ).firstOrNull() ?: throw IllegalArgumentException("No pending request")
+        ).firstOrNull() ?: throw BadRequestException("friend.request.notFound")
     }
 
     @Transactional(readOnly = true)
@@ -248,7 +249,7 @@ class FriendService(
     @Transactional(readOnly = true)
     fun checkVisibility(login: LoginMember?, target: Member, scheduleVisibilityCheck: Boolean = false) {
         if (!isVisible(login, target.id, scheduleVisibilityCheck = scheduleVisibilityCheck))
-            throw AuthException("${target.name} Calendar is not visible to ${login?.name}")
+            throw AuthException("member.visibility.forbidden")
     }
 
     @Transactional(readOnly = true)

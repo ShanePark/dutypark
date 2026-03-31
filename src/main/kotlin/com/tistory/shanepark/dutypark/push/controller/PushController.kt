@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.push.controller
 
+import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.push.dto.PushSubscriptionRequest
@@ -38,8 +39,7 @@ class PushController(
         @Valid @RequestBody request: PushSubscriptionRequest,
         httpRequest: HttpServletRequest
     ): ResponseEntity<Map<String, Boolean>> {
-        val refreshToken = getValidRefreshToken(httpRequest, loginMember)
-            ?: return ResponseEntity.status(401).body(mapOf("success" to false))
+        val refreshToken = requireValidRefreshToken(httpRequest, loginMember)
 
         val success = webPushService.subscribe(refreshToken, request)
         return ResponseEntity.ok(mapOf("success" to success))
@@ -50,15 +50,15 @@ class PushController(
         @Login loginMember: LoginMember,
         httpRequest: HttpServletRequest
     ): ResponseEntity<Map<String, Boolean>> {
-        val refreshToken = getValidRefreshToken(httpRequest, loginMember)
-            ?: return ResponseEntity.status(401).body(mapOf("success" to false))
+        val refreshToken = requireValidRefreshToken(httpRequest, loginMember)
 
         val success = webPushService.unsubscribe(refreshToken)
         return ResponseEntity.ok(mapOf("success" to success))
     }
 
-    private fun getValidRefreshToken(request: HttpServletRequest, loginMember: LoginMember) =
+    private fun requireValidRefreshToken(request: HttpServletRequest, loginMember: LoginMember) =
         cookieService.extractRefreshToken(request.cookies)
             ?.let { refreshTokenService.findByToken(it) }
             ?.takeIf { it.member.id == loginMember.id && it.isValid() }
+            ?: throw AuthException()
 }
