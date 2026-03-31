@@ -337,7 +337,7 @@ class FriendService(
         val friend = memberRepository.findById(friendId).orElseThrow()
         friendRelationRepository.findByMemberAndFriend(member = login, friend = friend)?.let {
             it.pinOrder = System.currentTimeMillis()
-        } ?: throw IllegalArgumentException("Not friend")
+        } ?: throw BadRequestException("friend.notFriend")
     }
 
     fun unpinFriend(loginMember: LoginMember, friendId: Long) {
@@ -345,7 +345,7 @@ class FriendService(
         val friend = memberRepository.findById(friendId).orElseThrow()
         friendRelationRepository.findByMemberAndFriend(member = login, friend = friend)?.let {
             it.pinOrder = null
-        } ?: throw IllegalArgumentException("Not friend")
+        } ?: throw BadRequestException("friend.notFriend")
     }
 
     fun updateFriendsPin(loginMember: LoginMember, friendIds: List<Long>) {

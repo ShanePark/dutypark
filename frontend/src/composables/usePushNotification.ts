@@ -23,6 +23,32 @@ function wait(ms: number): Promise<void> {
   })
 }
 
+async function updateRegistrationIfPossible(
+  registration: ServiceWorkerRegistration,
+): Promise<void> {
+  if (typeof registration.update !== 'function') {
+    return
+  }
+
+  try {
+    await registration.update()
+  } catch {
+    // Ignore best-effort update failures while polling activation.
+  }
+}
+
+async function getRegistrationsIfPossible(): Promise<ServiceWorkerRegistration[]> {
+  if (typeof navigator.serviceWorker.getRegistrations !== 'function') {
+    return []
+  }
+
+  try {
+    return await navigator.serviceWorker.getRegistrations()
+  } catch {
+    return []
+  }
+}
+
 function isCurrentServiceWorker(
   serviceWorker: ServiceWorker | null | undefined,
 ): boolean {
@@ -70,7 +96,7 @@ export function usePushNotification() {
         return null
       }
 
-      await registration.update?.().catch(() => undefined)
+      await updateRegistrationIfPossible(registration)
       await wait(SERVICE_WORKER_ACTIVATION_POLL_INTERVAL_MS)
     }
 
@@ -136,9 +162,7 @@ export function usePushNotification() {
   const ensureServiceWorker = async (): Promise<ServiceWorkerRegistration | null> => {
     if (!isSupported.value) return null
 
-    const existingRegistrations = await navigator.serviceWorker.getRegistrations?.()
-      .catch(() => [] as ServiceWorkerRegistration[])
-      ?? []
+    const existingRegistrations = await getRegistrationsIfPossible()
     const existingRegistration = await navigator.serviceWorker.getRegistration().catch(() => null)
     const registration = await registerServiceWorker()
     if (isCurrentServiceWorkerRegistration(registration)) {
@@ -152,20 +176,12 @@ export function usePushNotification() {
       return waitForCurrentServiceWorker(existingRegistration)
     }
 
-    const staleRegistrations = Array.from(
-      new Set(
-        [existingRegistration, ...existingRegistrations].filter(
-          (value): value is ServiceWorkerRegistration => value != null,
-        ),
-      ),
-    )
-    if (staleRegistrations.length > 0) {
-      await Promise.all(
-        staleRegistrations.map((staleRegistration) => {
-          return staleRegistration.unregister?.().catch(() => false)
-        }),
-      )
-      return registerServiceWorker()
+    const fallbackRegistration = existingRegistration
+      ?? existingRegistrations.find((value) => value != null)
+      ?? null
+    if (fallbackRegistration) {
+      await syncServiceWorkerLocale(localeStore.locale, fallbackRegistration)
+      return fallbackRegistration
     }
 
     return registration

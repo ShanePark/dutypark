@@ -4,6 +4,10 @@ sealed interface NotificationPayload {
     val version: Int
 }
 
+data class UnknownNotificationPayload(
+    override val version: Int = 0,
+) : NotificationPayload
+
 sealed interface ActorNotificationPayload : NotificationPayload {
     val actor: NotificationActorSnapshot
 }

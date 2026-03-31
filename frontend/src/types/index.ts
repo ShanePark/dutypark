@@ -635,6 +635,10 @@ export interface NotificationActorSnapshotV1 {
 
 export type NotificationActorSnapshot = NotificationActorSnapshotV1
 
+export interface UnknownNotificationPayloadV0 {
+  version: 0
+}
+
 interface NotificationPayloadBaseV1 {
   version: 1
 }
@@ -683,7 +687,20 @@ export interface NotificationPayloadByTypeV1 {
   TODO_STATUS_DONE: TodoStatusDonePayloadV1
 }
 
+export interface NotificationPayloadByTypeV0 {
+  FRIEND_REQUEST_RECEIVED: UnknownNotificationPayloadV0
+  FRIEND_REQUEST_ACCEPTED: UnknownNotificationPayloadV0
+  FAMILY_REQUEST_RECEIVED: UnknownNotificationPayloadV0
+  FAMILY_REQUEST_ACCEPTED: UnknownNotificationPayloadV0
+  SCHEDULE_TAGGED: UnknownNotificationPayloadV0
+  TODO_TAGGED: UnknownNotificationPayloadV0
+  TODO_STATUS_TODO: UnknownNotificationPayloadV0
+  TODO_STATUS_IN_PROGRESS: UnknownNotificationPayloadV0
+  TODO_STATUS_DONE: UnknownNotificationPayloadV0
+}
+
 export interface NotificationPayloadRegistry {
+  0: NotificationPayloadByTypeV0
   1: NotificationPayloadByTypeV1
 }
 
@@ -700,6 +717,7 @@ export type TodoStatusTodoPayload = NotificationPayloadByTypeV1['TODO_STATUS_TOD
 export type TodoStatusInProgressPayload = NotificationPayloadByTypeV1['TODO_STATUS_IN_PROGRESS']
 export type TodoStatusDonePayload = NotificationPayloadByTypeV1['TODO_STATUS_DONE']
 
+export type NotificationPayloadV0 = NotificationPayloadByTypeV0[keyof NotificationPayloadByTypeV0]
 export type NotificationPayloadV1 = NotificationPayloadByTypeV1[keyof NotificationPayloadByTypeV1]
 export type NotificationPayload = {
   [V in NotificationPayloadVersion]: NotificationPayloadRegistry[V][keyof NotificationPayloadRegistry[V]]

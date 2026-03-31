@@ -1,6 +1,10 @@
 package com.tistory.shanepark.dutypark.notification.controller
 
 import com.tistory.shanepark.dutypark.RestDocsTest
+import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
+import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus
+import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestType
+import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import com.tistory.shanepark.dutypark.notification.domain.entity.Notification
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationReferenceType
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationType
@@ -23,6 +27,9 @@ class NotificationControllerTest : RestDocsTest() {
 
     @Autowired
     lateinit var notificationRepository: NotificationRepository
+
+    @Autowired
+    lateinit var friendRequestRepository: FriendRequestRepository
 
     @Autowired
     lateinit var notificationPayloadCodec: NotificationPayloadCodec
@@ -48,7 +55,7 @@ class NotificationControllerTest : RestDocsTest() {
                     "notifications/get-list",
                     queryParameters(
                         parameterWithName("page").description("Page number (0-based)"),
-                        parameterWithName("size").description("Page size (max 50)")
+                        parameterWithName("size").description("Page size")
                     ),
                     responseFields(
                         fieldWithPath("content").description("List of notifications"),
@@ -57,7 +64,7 @@ class NotificationControllerTest : RestDocsTest() {
                         fieldWithPath("content[].referenceType").description("Reference entity type (FRIEND_REQUEST, SCHEDULE, TODO, MEMBER) (nullable)").optional(),
                         fieldWithPath("content[].referenceId").description("Reference entity ID (nullable)").optional(),
                         fieldWithPath("content[].actorId").description("Actor member ID who triggered the notification (nullable)").optional(),
-                        subsectionWithPath("content[].payload").description("Notification payload snapshot used for client-side rendering").optional(),
+                        subsectionWithPath("content[].payload").description("Notification payload snapshot used for client-side rendering (invalid legacy payloads fall back to version 0 generic payload)").optional(),
                         fieldWithPath("content[].isRead").description("Whether notification has been read").optional(),
                         fieldWithPath("content[].createdAt").description("Notification created timestamp").optional(),
                         fieldWithPath("totalPages").description("Total pages"),
@@ -81,6 +88,24 @@ class NotificationControllerTest : RestDocsTest() {
                     )
                 )
             )
+    }
+
+    @Test
+    fun `get notifications with pagination returns generic payload for invalid rows`() {
+        createBrokenNotification(isRead = false)
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/notifications")
+                .param("page", "0")
+                .param("size", "20")
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.content[0].referenceId").value("broken"))
+            .andExpect(jsonPath("$.content[0].payload.version").value(0))
     }
 
     @Test
@@ -108,7 +133,7 @@ class NotificationControllerTest : RestDocsTest() {
                         fieldWithPath("[].referenceType").description("Reference entity type (FRIEND_REQUEST, SCHEDULE, TODO, MEMBER) (nullable)"),
                         fieldWithPath("[].referenceId").description("Reference entity ID (nullable)"),
                         fieldWithPath("[].actorId").description("Actor member ID who triggered the notification (nullable)"),
-                        subsectionWithPath("[].payload").description("Notification payload snapshot used for client-side rendering"),
+                        subsectionWithPath("[].payload").description("Notification payload snapshot used for client-side rendering (invalid legacy payloads fall back to version 0 generic payload)"),
                         fieldWithPath("[].isRead").description("Whether notification has been read"),
                         fieldWithPath("[].createdAt").description("Notification created timestamp")
                     )
@@ -117,9 +142,8 @@ class NotificationControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `get unread notifications skips rows with invalid payload`() {
+    fun `get unread notifications returns generic payload for invalid rows`() {
         createBrokenNotification(isRead = false)
-        createTestNotification(isRead = false)
         em.flush()
         em.clear()
 
@@ -131,8 +155,8 @@ class NotificationControllerTest : RestDocsTest() {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$").isArray)
             .andExpect(jsonPath("$.length()").value(1))
-            .andExpect(jsonPath("$[0].payload.version").value(1))
-            .andExpect(jsonPath("$[0].payload.actor.name").value(TestData.member2.name))
+            .andExpect(jsonPath("$[0].referenceId").value("broken"))
+            .andExpect(jsonPath("$[0].payload.version").value(0))
     }
 
     @Test
@@ -157,6 +181,54 @@ class NotificationControllerTest : RestDocsTest() {
                     responseFields(
                         fieldWithPath("unreadCount").description("Number of unread notifications"),
                         fieldWithPath("totalCount").description("Total number of notifications")
+                    )
+                )
+            )
+    }
+
+    @Test
+    fun `get notification count includes rows with fallback payload`() {
+        createBrokenNotification(isRead = false)
+        createTestNotification(isRead = false)
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/notifications/count")
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.unreadCount").value(2))
+            .andExpect(jsonPath("$.totalCount").value(2))
+    }
+
+    @Test
+    fun `get friend request count`() {
+        friendRequestRepository.save(
+            FriendRequest(
+                fromMember = TestData.member2,
+                toMember = TestData.member,
+                status = FriendRequestStatus.PENDING,
+                requestType = FriendRequestType.FRIEND_REQUEST,
+            )
+        )
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/notifications/friend-request-count")
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.count").value(1))
+            .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "notifications/get-friend-request-count",
+                    responseFields(
+                        fieldWithPath("count").description("Number of pending friend requests for the current member")
                     )
                 )
             )
@@ -190,7 +262,7 @@ class NotificationControllerTest : RestDocsTest() {
                         fieldWithPath("referenceType").description("Reference entity type (nullable)"),
                         fieldWithPath("referenceId").description("Reference entity ID (nullable)"),
                         fieldWithPath("actorId").description("Actor member ID (nullable)"),
-                        subsectionWithPath("payload").description("Notification payload snapshot used for client-side rendering"),
+                        subsectionWithPath("payload").description("Notification payload snapshot used for client-side rendering (invalid legacy payloads fall back to version 0 generic payload)"),
                         fieldWithPath("isRead").description("Whether notification has been read"),
                         fieldWithPath("createdAt").description("Notification created timestamp")
                     )
@@ -199,7 +271,7 @@ class NotificationControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `mark notification as read returns explicit code for invalid payload`() {
+    fun `mark notification as read returns generic payload for invalid rows`() {
         val notification = createBrokenNotification(isRead = false)
         em.flush()
         em.clear()
@@ -209,8 +281,9 @@ class NotificationControllerTest : RestDocsTest() {
                 .accept(MediaType.APPLICATION_JSON)
                 .withAuth(TestData.member)
         )
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.code").value("notification.payload.invalid"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.isRead").value(true))
+            .andExpect(jsonPath("$.payload.version").value(0))
     }
 
     @Test

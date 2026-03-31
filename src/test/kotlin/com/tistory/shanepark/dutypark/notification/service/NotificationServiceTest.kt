@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.notification.service
 
-import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
@@ -132,7 +131,7 @@ class NotificationServiceTest {
     }
 
     @Test
-    fun `getNotifications skips invalid payload rows inside page`() {
+    fun `getNotifications returns generic payload when page contains invalid rows`() {
         val pageable = PageRequest.of(0, 10)
         val validPayload = friendRequestPayload(actorMember)
         val validNotification = storedNotification(
@@ -158,21 +157,24 @@ class NotificationServiceTest {
 
         val result = notificationService.getNotifications(testMember.id!!, pageable)
 
-        assertThat(result.content).hasSize(1)
+        assertThat(result.content).hasSize(2)
         assertThat(result.content[0].id).isEqualTo(validNotification.id)
+        assertThat(result.content[1].id).isEqualTo(invalidNotification.id)
+        assertThat(result.content[1].payload.version).isEqualTo(0)
+        assertThat(result.totalElements).isEqualTo(2)
     }
 
     @Test
     fun `getUnreadCountSimple returns correct counts`() {
-        whenever(notificationRepository.countByMemberIdAndIsReadFalse(testMember.id!!))
-            .thenReturn(5L)
-        whenever(notificationRepository.countByMemberId(testMember.id!!))
-            .thenReturn(10L)
+        whenever(notificationRepository.countByMemberIdAndIsReadFalse(testMember.id!!)).thenReturn(1)
+        whenever(notificationRepository.countByMemberId(testMember.id!!)).thenReturn(2)
 
         val result = notificationService.getUnreadCountSimple(testMember.id!!)
 
-        assertThat(result.unreadCount).isEqualTo(5)
-        assertThat(result.totalCount).isEqualTo(10)
+        assertThat(result.unreadCount).isEqualTo(1)
+        assertThat(result.totalCount).isEqualTo(2)
+        verify(notificationRepository).countByMemberIdAndIsReadFalse(testMember.id!!)
+        verify(notificationRepository).countByMemberId(testMember.id!!)
     }
 
     @Test
@@ -368,7 +370,7 @@ class NotificationServiceTest {
     }
 
     @Test
-    fun `getUnreadNotifications skips rows with missing payload data`() {
+    fun `getUnreadNotifications returns generic payload when payload data is missing`() {
         val validPayload = friendRequestPayload(actorMember)
         val validNotification = storedNotification(
             member = testMember,
@@ -393,12 +395,59 @@ class NotificationServiceTest {
 
         val result = notificationService.getUnreadNotifications(testMember.id!!)
 
-        assertThat(result).hasSize(1)
-        assertThat(result[0].id).isEqualTo(validNotification.id)
+        assertThat(result).hasSize(2)
+        assertThat(result[0].id).isEqualTo(invalidNotification.id)
+        assertThat(result[0].payload.version).isEqualTo(0)
+        assertThat(result[1].id).isEqualTo(validNotification.id)
     }
 
     @Test
-    fun `markAsRead marks notification as read and throws explicit bad request when payload data is missing`() {
+    fun `getUnreadNotifications keeps latest 50 notifications even when payload data is missing`() {
+        val invalidNotifications = (1..50).map {
+            Notification(
+                member = testMember,
+                type = NotificationType.FRIEND_REQUEST_RECEIVED,
+                referenceType = NotificationReferenceType.FRIEND_REQUEST,
+                referenceId = "broken-$it",
+                actorId = actorMember.id,
+                payloadJson = null,
+                payloadVersion = 1,
+                isRead = false,
+            ).also { notification ->
+                ReflectionTestUtils.setField(notification, "id", UUID.randomUUID())
+            }
+        }
+        val validNotification = storedNotification(
+            member = testMember,
+            type = NotificationType.FRIEND_REQUEST_RECEIVED,
+            payload = friendRequestPayload(actorMember),
+            actorId = actorMember.id,
+            isRead = false,
+        )
+        whenever(notificationRepository.findByMemberIdAndIsReadFalseOrderByCreatedDateDesc(testMember.id!!))
+            .thenReturn(invalidNotifications + validNotification)
+
+        val result = notificationService.getUnreadNotifications(testMember.id!!)
+
+        assertThat(result).hasSize(50)
+        assertThat(result).allMatch { it.payload.version == 0 }
+    }
+
+    @Test
+    fun `getUnreadCountSimple uses repository counts without loading notification rows`() {
+        whenever(notificationRepository.countByMemberIdAndIsReadFalse(testMember.id!!)).thenReturn(2)
+        whenever(notificationRepository.countByMemberId(testMember.id!!)).thenReturn(5)
+
+        val result = notificationService.getUnreadCountSimple(testMember.id!!)
+
+        assertThat(result.unreadCount).isEqualTo(2)
+        assertThat(result.totalCount).isEqualTo(5)
+        verify(notificationRepository).countByMemberIdAndIsReadFalse(testMember.id!!)
+        verify(notificationRepository).countByMemberId(testMember.id!!)
+    }
+
+    @Test
+    fun `markAsRead returns generic payload and persists read state when payload data is missing`() {
         val notification = Notification(
             member = testMember,
             type = NotificationType.FRIEND_REQUEST_RECEIVED,
@@ -414,11 +463,11 @@ class NotificationServiceTest {
             .thenReturn(notification)
         whenever(notificationRepository.save(notification)).thenReturn(notification)
 
-        assertThatThrownBy { notificationService.markAsRead(testMember.id!!, notification.id) }
-            .isInstanceOf(BadRequestException::class.java)
-            .hasMessage("notification.payload.invalid")
+        val result = notificationService.markAsRead(testMember.id!!, notification.id)
 
         assertThat(notification.isRead).isTrue()
+        assertThat(result.isRead).isTrue()
+        assertThat(result.payload.version).isEqualTo(0)
         verify(notificationRepository).save(notification)
     }
 
