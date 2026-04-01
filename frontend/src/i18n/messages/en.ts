@@ -465,9 +465,11 @@ export default {
   },
   locales: {
     names: {
-      ko: 'Korean',
+      ko: '한국어',
       en: 'English',
-      ja: 'Japanese',
+      ja: '日本語',
+      zh: '简体中文',
+      es: 'Español',
     },
     suggestion: {
       title: 'Use {language}?',
@@ -803,11 +805,23 @@ export default {
       updateFailed: 'Failed to update the app language.',
       options: {
         ko: {
-          title: 'Korean',
+          title: '한국어',
           description: 'Default coverage',
         },
         en: {
           title: 'English',
+          description: 'Applied to translated areas first',
+        },
+        ja: {
+          title: '日本語',
+          description: 'Applied to translated areas first',
+        },
+        zh: {
+          title: '简体中文',
+          description: 'Applied to translated areas first',
+        },
+        es: {
+          title: 'Español',
           description: 'Applied to translated areas first',
         },
       },

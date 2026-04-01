@@ -514,9 +514,11 @@ export default {
   },
   locales: {
     names: {
-      ko: '韓国語',
-      en: '英語',
+      ko: '한국어',
+      en: 'English',
       ja: '日本語',
+      zh: '简体中文',
+      es: 'Español',
     },
     suggestion: {
       title: '{language}で表示しますか？',
@@ -873,7 +875,7 @@ export default {
       updateFailed: 'アプリ言語を更新できませんでした。',
       options: {
         ko: {
-          title: '韓国語',
+          title: '한국어',
           description: '基本言語',
         },
         en: {
@@ -883,6 +885,14 @@ export default {
         ja: {
           title: '日本語',
           description: '日本語対応済みの画面から適用',
+        },
+        zh: {
+          title: '简体中文',
+          description: '簡体字中国語対応済みの画面から適用',
+        },
+        es: {
+          title: 'Español',
+          description: 'スペイン語対応済みの画面から適用',
         },
       },
     },

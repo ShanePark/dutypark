@@ -108,6 +108,40 @@ describe('locale store', () => {
     expect(syncServiceWorkerLocale).toHaveBeenCalledWith('ja')
   })
 
+  it('supports chinese browser locales', async () => {
+    setNavigatorLanguage('zh-CN')
+
+    const { useLocaleStore } = await import('./locale')
+    const store = useLocaleStore()
+
+    store.initializeLocale()
+
+    expect(store.locale).toBe('zh')
+    expect(localStorageMock.setItem).not.toHaveBeenCalledWith('dp-locale', 'zh')
+    expect(store.explicitLocale).toBeNull()
+    expect(store.detectedLocale).toBe('zh')
+    expect(store.shouldSuggestLocale).toBe(true)
+    expect(document.documentElement.lang).toBe('zh')
+    expect(syncServiceWorkerLocale).toHaveBeenCalledWith('zh')
+  })
+
+  it('supports spanish browser locales', async () => {
+    setNavigatorLanguage('es-ES')
+
+    const { useLocaleStore } = await import('./locale')
+    const store = useLocaleStore()
+
+    store.initializeLocale()
+
+    expect(store.locale).toBe('es')
+    expect(localStorageMock.setItem).not.toHaveBeenCalledWith('dp-locale', 'es')
+    expect(store.explicitLocale).toBeNull()
+    expect(store.detectedLocale).toBe('es')
+    expect(store.shouldSuggestLocale).toBe(true)
+    expect(document.documentElement.lang).toBe('es')
+    expect(syncServiceWorkerLocale).toHaveBeenCalledWith('es')
+  })
+
   it('falls back to korean when the browser locale is unsupported', async () => {
     setNavigatorLanguage('fr-FR')
 
@@ -175,5 +209,18 @@ describe('locale store', () => {
 
     expect(store.locale).toBe('en')
     expect(document.documentElement.lang).toBe('en')
+  })
+
+  it('persists chinese locale changes', async () => {
+    const { useLocaleStore } = await import('./locale')
+    const store = useLocaleStore()
+
+    await store.setLocale('zh')
+
+    expect(store.locale).toBe('zh')
+    expect(localStorageMock.setItem).toHaveBeenCalledWith('dp-locale', 'zh')
+    expect(store.explicitLocale).toBe('zh')
+    expect(document.documentElement.lang).toBe('zh')
+    expect(syncServiceWorkerLocale).toHaveBeenCalledWith('zh')
   })
 })

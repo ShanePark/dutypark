@@ -1,7 +1,9 @@
 import { createI18n } from 'vue-i18n'
 import en from './messages/en'
+import es from './messages/es'
 import ja from './messages/ja'
 import ko from './messages/ko'
+import zh from './messages/zh'
 import {
   DEFAULT_LOCALE,
   LOCALE_NATIVE_LABELS,
@@ -19,6 +21,8 @@ const messages = {
   ko,
   en,
   ja,
+  zh,
+  es,
 }
 
 export function getLocaleNativeLabel(locale: SupportedLocale): string {
@@ -83,6 +87,8 @@ export const i18n = createI18n({
   legacy: false,
   locale: readStoredLocale(),
   fallbackLocale: {
+    zh: ['en', 'ko'],
+    es: ['en', 'ko'],
     ja: ['en', 'ko'],
     en: ['ko'],
     default: ['ko'],
