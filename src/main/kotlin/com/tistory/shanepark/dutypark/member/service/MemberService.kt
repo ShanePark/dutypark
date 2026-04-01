@@ -3,6 +3,8 @@ package com.tistory.shanepark.dutypark.member.service
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberCreateDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
+import com.tistory.shanepark.dutypark.member.domain.dto.MemberPreviewDto
+import com.tistory.shanepark.dutypark.member.domain.dto.toMemberPreviewDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberManager
 import com.tistory.shanepark.dutypark.member.domain.enums.ManagerRole
@@ -41,6 +43,12 @@ class MemberService(
     fun findById(memberId: Long): MemberDto {
         val member = memberRepository.findById(memberId).orElseThrow()
         return memberDtoAssembler.toDto(member)
+    }
+
+    @Transactional(readOnly = true)
+    fun findPreviewById(memberId: Long): MemberPreviewDto {
+        val member = memberRepository.findById(memberId).orElseThrow()
+        return member.toMemberPreviewDto()
     }
 
     fun createMember(memberCreateDto: MemberCreateDto): Member {
