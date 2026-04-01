@@ -86,7 +86,7 @@ function goToPage(page: number) {
   searchMembers()
 }
 
-async function addMember(member: MemberDto) {
+async function addMember(member: MemberInviteCandidateDto) {
   if (!member.id) return
   if (!await confirm(t('team.memberSearch.confirmAdd', { name: member.name }))) return
 
