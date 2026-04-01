@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { useSwal } from '@/composables/useSwal'
 import { teamApi } from '@/api/team'
-import type { MemberDto } from '@/types'
+import type { MemberInviteCandidateDto } from '@/types'
 import { Search, X, ChevronLeft, ChevronRight, Loader2 } from 'lucide-vue-next'
 
 const props = defineProps<{
@@ -24,7 +24,7 @@ const { t } = useI18n()
 
 const searchKeyword = ref('')
 const searchLoading = ref(false)
-const searchResult = ref<MemberDto[]>([])
+const searchResult = ref<MemberInviteCandidateDto[]>([])
 const currentPage = ref(0)
 const totalPages = ref(1)
 const totalElements = ref(0)
@@ -52,6 +52,7 @@ async function searchMembers() {
   searchLoading.value = true
   try {
     const response = await teamApi.searchMembersToInvite(
+      props.teamId,
       searchKeyword.value,
       currentPage.value,
       pageSize

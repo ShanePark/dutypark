@@ -12,7 +12,15 @@ import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
 import org.springframework.http.HttpHeaders
 import org.springframework.mock.web.MockMultipartFile
+import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
+import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders
+import org.springframework.restdocs.payload.JsonFieldType
+import org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath
+import org.springframework.restdocs.payload.PayloadDocumentation.responseFields
+import org.springframework.restdocs.request.RequestDocumentation.parameterWithName
+import org.springframework.restdocs.request.RequestDocumentation.queryParameters
 import org.springframework.test.context.bean.override.mockito.MockitoBean
+import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -248,18 +256,121 @@ class TeamManageControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `members endpoint returns candidates without team`() {
-        val member = memberRepository.save(Member("candidate", "candidate@duty.park", "pass"))
-
+    fun `members endpoint requires login`() {
         mockMvc.perform(
-            MockMvcRequestBuilders.get("/api/teams/manage/members")
+            RestDocumentationRequestBuilders.get("/api/teams/manage/members")
+                .param("teamId", TestData.team.id!!.toString())
                 .param("keyword", "candidate")
                 .param("page", "0")
                 .param("size", "10")
+                .accept(MediaType.APPLICATION_JSON)
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("auth.required"))
+            .andDo(
+                document(
+                    "teams/manage/search-members-unauthorized",
+                    queryParameters(
+                        parameterWithName("teamId").description("Team ID that the caller manages"),
+                        parameterWithName("keyword").description("Search keyword for member name"),
+                        parameterWithName("page").description("Page number (0-based)"),
+                        parameterWithName("size").description("Page size")
+                    ),
+                    standardErrorResponseFields("Machine-readable error code (`auth.required`)")
+                )
+            )
+    }
+
+    @Test
+    fun `non-manager cannot search invite members`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/teams/manage/members")
+                .param("teamId", TestData.team.id!!.toString())
+                .param("keyword", "candidate")
+                .param("page", "0")
+                .param("size", "10")
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member2)
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("team.manage.forbidden"))
+            .andDo(
+                document(
+                    "teams/manage/search-members-forbidden",
+                    queryParameters(
+                        parameterWithName("teamId").description("Team ID that the caller manages"),
+                        parameterWithName("keyword").description("Search keyword for member name"),
+                        parameterWithName("page").description("Page number (0-based)"),
+                        parameterWithName("size").description("Page size")
+                    ),
+                    standardErrorResponseFields("Machine-readable error code (`team.manage.forbidden`)")
+                )
+            )
+    }
+
+    @Test
+    fun `manager can search invite members for team`() {
+        setTeamAdmin(TestData.member.id!!)
+        val member = memberRepository.save(Member("candidate", "candidate@duty.park", "pass"))
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/teams/manage/members")
+                .param("teamId", TestData.team.id!!.toString())
+                .param("keyword", "candidate")
+                .param("page", "0")
+                .param("size", "10")
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.content.length()").value(1))
             .andExpect(jsonPath("$.content[0].id").value(member.id))
+            .andExpect(jsonPath("$.content[0].name").value(member.name))
+            .andExpect(jsonPath("$.content[0].email").value(member.email))
+            .andExpect(jsonPath("$.content[0].kakaoId").doesNotExist())
+            .andExpect(jsonPath("$.content[0].naverId").doesNotExist())
+            .andExpect(jsonPath("$.content[0].hasPassword").doesNotExist())
+            .andExpect(jsonPath("$.content[0].calendarVisibility").doesNotExist())
+            .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "teams/manage/search-members",
+                    queryParameters(
+                        parameterWithName("teamId").description("Team ID that the caller manages"),
+                        parameterWithName("keyword").description("Search keyword for member name"),
+                        parameterWithName("page").description("Page number (0-based)"),
+                        parameterWithName("size").description("Page size")
+                    ),
+                    responseFields(
+                        fieldWithPath("content").description("List of invite candidates"),
+                        fieldWithPath("content[].id").description("Member ID"),
+                        fieldWithPath("content[].name").description("Member name"),
+                        fieldWithPath("content[].email").description("Member email (nullable)"),
+                        fieldWithPath("content[].teamId").description("Assigned team ID (nullable)"),
+                        fieldWithPath("content[].team").description("Assigned team name (nullable)"),
+                        fieldWithPath("content[].hasProfilePhoto").description("Whether the member has a profile photo"),
+                        fieldWithPath("content[].profilePhotoVersion").description("Profile photo version for cache busting"),
+                        fieldWithPath("totalPages").description("Total pages"),
+                        fieldWithPath("totalElements").description("Total elements"),
+                        fieldWithPath("first").description("Is first page"),
+                        fieldWithPath("last").description("Is last page"),
+                        fieldWithPath("size").description("Page size"),
+                        fieldWithPath("number").description("Current page number"),
+                        fieldWithPath("numberOfElements").description("Number of elements in current page"),
+                        fieldWithPath("empty").description("Is empty"),
+                        fieldWithPath("pageable").description("Pageable info"),
+                        fieldWithPath("pageable.pageNumber").description("Page number"),
+                        fieldWithPath("pageable.pageSize").description("Page size"),
+                        fieldWithPath("pageable.sort").description("Sort info"),
+                        fieldWithPath("pageable.sort.empty").description("Is sort empty"),
+                        fieldWithPath("pageable.sort.sorted").description("Is sorted"),
+                        fieldWithPath("pageable.sort.unsorted").description("Is unsorted"),
+                        fieldWithPath("pageable.offset").description("Offset"),
+                        fieldWithPath("pageable.paged").description("Is paged"),
+                        fieldWithPath("pageable.unpaged").description("Is unpaged")
+                    )
+                )
+            )
     }
 
     @Test
@@ -343,4 +454,11 @@ class TeamManageControllerTest : RestDocsTest() {
             "dummy".toByteArray()
         )
     }
+
+    private fun standardErrorResponseFields(codeDescription: String) = responseFields(
+        fieldWithPath("status").type(JsonFieldType.NUMBER).description("HTTP status code"),
+        fieldWithPath("code").type(JsonFieldType.STRING).description(codeDescription),
+        fieldWithPath("details").type(JsonFieldType.OBJECT).optional().description("Additional error details"),
+        fieldWithPath("fieldErrors").type(JsonFieldType.ARRAY).optional().description("Field validation errors")
+    )
 }

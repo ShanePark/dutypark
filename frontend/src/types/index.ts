@@ -521,6 +521,16 @@ export interface MemberPreviewDto {
   profilePhotoVersion?: number
 }
 
+export interface MemberInviteCandidateDto {
+  id: number | null
+  name: string
+  email: string | null
+  teamId: number | null
+  team: string | null
+  hasProfilePhoto?: boolean
+  profilePhotoVersion?: number
+}
+
 export interface FriendDto {
   id: number
   name: string

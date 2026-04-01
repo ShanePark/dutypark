@@ -6,7 +6,7 @@ import type {
   TeamScheduleDto,
   TeamScheduleSaveDto,
   PageResponse,
-  MemberDto,
+  MemberInviteCandidateDto,
   DutyTypeCreateDto,
   DutyTypeUpdateDto,
   DutyBatchTemplateDto,
@@ -144,9 +144,9 @@ export const teamApi = {
   /**
    * Search members to invite to team
    */
-  searchMembersToInvite(keyword: string, page: number = 0, size: number = 10) {
-    return apiClient.get<PageResponse<MemberDto>>('/teams/manage/members', {
-      params: { keyword, page, size },
+  searchMembersToInvite(teamId: number, keyword: string, page: number = 0, size: number = 10) {
+    return apiClient.get<PageResponse<MemberInviteCandidateDto>>('/teams/manage/members', {
+      params: { teamId, keyword, page, size },
     })
   },
 

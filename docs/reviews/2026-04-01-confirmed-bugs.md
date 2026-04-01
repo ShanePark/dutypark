@@ -44,54 +44,7 @@
 정리:
 - 재현 후 생성한 일정은 삭제했고, 계정 가시성도 다시 `FRIENDS`로 복구했다.
 
-## 2. 팀 초대용 멤버 검색 API가 익명에게 공개됨
-
-상태: 재현 완료, 수정 대상
-
-영향:
-- 비로그인 사용자도 `/api/teams/manage/members`에 접근할 수 있다.
-- 응답 스키마에 `email`, `kakaoId`, `naverId`, `hasPassword`가 포함되어 있어 데이터 노출 면적이 과도하다.
-
-코드 근거:
-- `src/main/kotlin/com/tistory/shanepark/dutypark/team/controller/TeamManageController.kt:133`
-- `src/main/kotlin/com/tistory/shanepark/dutypark/member/domain/dto/MemberDto.kt:6`
-
-재현 절차:
-1. 인증 없이 `GET /api/teams/manage/members?keyword=&page=0&size=20`를 호출한다.
-
-실제 결과:
-- `200 OK`
-- 응답 예시:
-
-```json
-{
-  "content": [
-    {
-      "id": 68,
-      "name": "부계테스트",
-      "email": null,
-      "teamId": null,
-      "team": null,
-      "calendarVisibility": "FRIENDS",
-      "kakaoId": null,
-      "naverId": null,
-      "hasPassword": false,
-      "hasProfilePhoto": false,
-      "profilePhotoVersion": 0
-    }
-  ]
-}
-```
-
-기대 결과:
-- `401` 또는 `403`
-
-참고:
-- 현재 로컬 데이터에서는 해당 멤버의 `email`과 social ID 값이 `null`이었지만,
-  컨트롤러가 그대로 `MemberDto`를 반환하므로 값이 있는 계정은 민감 필드까지 함께 노출된다.
-- 동일 문제는 기존 테스트 `TeamManageControllerTest.members endpoint returns candidates without team`로도 재현 가능했다.
-
-## 3. 잘못된 Bearer 헤더가 유효한 access token 쿠키 인증을 가로막음
+## 2. 잘못된 Bearer 헤더가 유효한 access token 쿠키 인증을 가로막음
 
 상태: 재현 완료, 수정 대상
 
