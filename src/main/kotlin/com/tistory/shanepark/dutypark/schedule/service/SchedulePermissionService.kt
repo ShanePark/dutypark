@@ -34,9 +34,14 @@ class SchedulePermissionService(
 
     fun checkScheduleReadAuthority(loginMember: LoginMember?, scheduleId: UUID) {
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow()
-        friendService.checkVisibility(loginMember, schedule.member, scheduleVisibilityCheck = true)
+        checkScheduleReadAuthority(loginMember, schedule)
+    }
 
-        val availableVisibilities = friendService.availableScheduleVisibilities(loginMember, schedule.member)
+    fun checkScheduleReadAuthority(loginMember: LoginMember?, schedule: Schedule) {
+        val owner = schedule.member
+        friendService.checkVisibility(loginMember, owner, scheduleVisibilityCheck = true)
+
+        val availableVisibilities = friendService.availableScheduleVisibilities(loginMember, owner)
         if (schedule.visibility !in availableVisibilities) {
             throw AuthException("schedule.visibility.forbidden")
         }
