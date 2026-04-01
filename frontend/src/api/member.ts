@@ -25,7 +25,7 @@ export const memberApi = {
    * Get member info by ID (requires visibility permission)
    */
   getMemberById(memberId: number) {
-    return apiClient.get<MemberDto>(`/members/${memberId}`)
+    return apiClient.get<MemberPreviewDto>(`/members/${memberId}`)
   },
 
   /**

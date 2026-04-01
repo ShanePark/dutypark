@@ -453,6 +453,53 @@ class ScheduleControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `getSchedule denies private schedule even when owner's calendar is public`() {
+        val member = TestData.member
+        updateVisibility(member, com.tistory.shanepark.dutypark.member.domain.enums.Visibility.PUBLIC)
+        val schedule = scheduleRepository.save(
+            Schedule(
+                member = member,
+                content = "private-detail",
+                startDateTime = fixedDateTime,
+                endDateTime = fixedDateTime.plusHours(1),
+                position = 0,
+                visibility = com.tistory.shanepark.dutypark.member.domain.enums.Visibility.PRIVATE
+            )
+        )
+
+        mockMvc.perform(
+            get("/api/schedules/{id}", schedule.id)
+                .accept("application/json")
+        ).andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("schedule.visibility.forbidden"))
+    }
+
+    @Test
+    fun `getSchedule allows tagged member to retrieve family schedule basic info`() {
+        val taggedMember = TestData.member
+        val owner = TestData.member2
+        makeThemFriend(taggedMember, owner)
+        val schedule = Schedule(
+            member = owner,
+            content = "family-tagged",
+            startDateTime = fixedDateTime,
+            endDateTime = fixedDateTime.plusHours(1),
+            position = 0,
+            visibility = com.tistory.shanepark.dutypark.member.domain.enums.Visibility.FAMILY
+        )
+        schedule.addTag(taggedMember)
+        scheduleRepository.save(schedule)
+
+        mockMvc.perform(
+            get("/api/schedules/{id}", schedule.id)
+                .accept("application/json")
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(taggedMember)}")
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(schedule.id.toString()))
+            .andExpect(jsonPath("$.content").value("family-tagged"))
+    }
+
+    @Test
     fun `searchSchedule returns results`() {
         val member = TestData.member
         scheduleRepository.save(

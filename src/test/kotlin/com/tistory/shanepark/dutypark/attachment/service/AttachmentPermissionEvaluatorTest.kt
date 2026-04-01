@@ -44,7 +44,7 @@ class AttachmentPermissionEvaluatorTest {
 
         org.mockito.kotlin.verify(schedulePermissionService).checkScheduleReadAuthority(
             org.mockito.kotlin.eq(loginMember),
-            org.mockito.kotlin.any()
+            org.mockito.kotlin.any<UUID>()
         )
     }
 

@@ -3,6 +3,10 @@ package com.tistory.shanepark.dutypark.member.service
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberCreateDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
+import com.tistory.shanepark.dutypark.member.domain.dto.MemberInviteCandidateDto
+import com.tistory.shanepark.dutypark.member.domain.dto.MemberPreviewDto
+import com.tistory.shanepark.dutypark.member.domain.dto.toMemberInviteCandidateDto
+import com.tistory.shanepark.dutypark.member.domain.dto.toMemberPreviewDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberManager
 import com.tistory.shanepark.dutypark.member.domain.enums.ManagerRole
@@ -13,7 +17,6 @@ import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterReposit
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import org.springframework.data.domain.Page
-import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
@@ -43,6 +46,12 @@ class MemberService(
         return memberDtoAssembler.toDto(member)
     }
 
+    @Transactional(readOnly = true)
+    fun findPreviewById(memberId: Long): MemberPreviewDto {
+        val member = memberRepository.findById(memberId).orElseThrow()
+        return member.toMemberPreviewDto()
+    }
+
     fun createMember(memberCreateDto: MemberCreateDto): Member {
         val password = passwordEncoder.encode(memberCreateDto.password)
         val member = Member(
@@ -70,13 +79,9 @@ class MemberService(
     @Transactional(readOnly = true)
     fun searchMembersToInviteTeam(
         page: Pageable, keyword: String
-    ): Page<MemberDto> {
+    ): Page<MemberInviteCandidateDto> {
         val membersPage = memberRepository.findMembersByNameContainingIgnoreCaseAndTeamIsNull(keyword, page)
-        return PageImpl(
-            memberDtoAssembler.toDtos(membersPage.content),
-            membersPage.pageable,
-            membersPage.totalElements
-        )
+        return membersPage.map { it.toMemberInviteCandidateDto() }
     }
 
     fun updateCalendarVisibility(loginMember: LoginMember, visibility: Visibility) {

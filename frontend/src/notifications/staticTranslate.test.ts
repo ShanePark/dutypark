@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import es from '@/i18n/messages/es'
+import zh from '@/i18n/messages/zh'
 import { createStaticNotificationTranslate } from './staticTranslate'
 
 describe('createStaticNotificationTranslate', () => {
@@ -25,5 +27,17 @@ describe('createStaticNotificationTranslate', () => {
 
     expect(t('notifications.items.generic')).toBe('新しい通知があります。')
     expect(t('notifications.items.missingKey')).toBe('notifications.items.missingKey')
+  })
+
+  it('renders Spanish notification templates from the spanish locale map', () => {
+    const t = createStaticNotificationTranslate('es-ES')
+
+    expect(t('notifications.items.generic')).toBe(es.notifications.items.generic)
+  })
+
+  it('renders Chinese notification templates from the chinese locale map', () => {
+    const t = createStaticNotificationTranslate('zh-CN')
+
+    expect(t('notifications.items.generic')).toBe(zh.notifications.items.generic)
   })
 })

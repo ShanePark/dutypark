@@ -112,16 +112,12 @@ class AuthController(
      */
     @PostMapping("/logout")
     fun logout(
-        @Login loginMember: LoginMember,
         req: HttpServletRequest,
         resp: HttpServletResponse
     ): ResponseEntity<Void> {
         val refreshToken = cookieService.extractRefreshToken(req.cookies)
         if (refreshToken != null) {
-            val token = refreshTokenService.findByToken(refreshToken)
-            if (token != null && token.member.id == loginMember.id) {
-                refreshTokenService.deleteByToken(refreshToken)
-            }
+            refreshTokenService.deleteByToken(refreshToken)
         }
         cookieService.clearTokenCookies(resp)
         return ResponseEntity.noContent().build()

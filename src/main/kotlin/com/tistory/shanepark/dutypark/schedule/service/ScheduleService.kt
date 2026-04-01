@@ -96,12 +96,11 @@ class ScheduleService(
     @Transactional(readOnly = true)
     fun getScheduleBasicInfo(loginMember: LoginMember?, scheduleId: UUID): Map<String, Any> {
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow()
-        val owner = schedule.member
         val isTagged = loginMember != null && schedule.tags.any { it.member.id == loginMember.id }
-
         if (!isTagged) {
-            friendService.checkVisibility(loginMember, owner, scheduleVisibilityCheck = true)
+            schedulePermissionService.checkScheduleReadAuthority(loginMember, schedule)
         }
+        val owner = schedule.member
 
         return mapOf(
             "id" to schedule.id.toString(),

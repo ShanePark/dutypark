@@ -109,9 +109,9 @@ class MemberController(
     fun getMemberById(
         @Login(required = false) loginMember: LoginMember?,
         @PathVariable memberId: Long,
-    ): MemberDto {
+    ): MemberPreviewDto {
         friendService.checkVisibility(loginMember, memberId)
-        return memberService.findById(memberId)
+        return memberService.findPreviewById(memberId)
     }
 
     @PutMapping("/profile-photo")

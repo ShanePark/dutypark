@@ -5,8 +5,10 @@ import { useI18n } from 'vue-i18n'
 import { CheckCheck, ChevronRight } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
+import 'dayjs/locale/es'
 import 'dayjs/locale/ja'
 import 'dayjs/locale/ko'
+import 'dayjs/locale/zh-cn'
 import { useNotificationStore } from '@/stores/notification'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationNavigation } from '@/composables/useNotificationNavigation'
@@ -39,6 +41,8 @@ const { locale, t } = useI18n()
 const dayjsLocale = computed(() => {
   if (locale.value.startsWith('ja')) return 'ja'
   if (locale.value.startsWith('en')) return 'en'
+  if (locale.value.startsWith('es')) return 'es'
+  if (locale.value.startsWith('zh')) return 'zh-cn'
   return 'ko'
 })
 

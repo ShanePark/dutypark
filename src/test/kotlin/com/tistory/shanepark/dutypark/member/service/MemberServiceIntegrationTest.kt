@@ -26,6 +26,10 @@ class MemberServiceIntegrationTest : DutyparkIntegrationTest() {
         val searchXj = memberService.searchMembersToInviteTeam(page, "xj")
         assertThat(searchXj.content).hasSize(4)
         assertThat(searchXj.content).isSortedAccordingTo { o1, o2 -> o1.name.compareTo(o2.name) }
+        assertThat(searchXj.content).allSatisfy {
+            assertThat(it.teamId).isNull()
+            assertThat(it.email).isNotBlank()
+        }
 
         // verify exact match
         val searchXjohn = memberService.searchMembersToInviteTeam(page, "xjohn")

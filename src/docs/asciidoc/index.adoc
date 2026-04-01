@@ -33,6 +33,10 @@ operation::auth/refresh[]
 
 operation::auth/refresh-unauthorized[]
 
+=== Logout
+
+operation::auth/logout[]
+
 === Change Password
 
 operation::auth/change-password[]
@@ -338,6 +342,18 @@ operation::teams/my-summary[]
 === Get Shift
 
 operation::teams/shift[]
+
+=== Search Invite Members
+
+operation::teams/manage/search-members[]
+
+==== Search Invite Members [Unauthorized]
+
+operation::teams/manage/search-members-unauthorized[]
+
+==== Search Invite Members [Forbidden]
+
+operation::teams/manage/search-members-forbidden[]
 
 == Holiday
 

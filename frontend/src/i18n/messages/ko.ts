@@ -468,6 +468,8 @@ export default {
       ko: '한국어',
       en: 'English',
       ja: '日本語',
+      zh: '简体中文',
+      es: 'Español',
     },
     suggestion: {
       title: '{language}로 볼까요?',
@@ -809,6 +811,18 @@ export default {
         en: {
           title: 'English',
           description: '영어 지원 화면부터 순차 적용',
+        },
+        ja: {
+          title: '日本語',
+          description: '일본어 지원 화면부터 순차 적용',
+        },
+        zh: {
+          title: '简体中文',
+          description: '중국어(간체) 지원 화면부터 순차 적용',
+        },
+        es: {
+          title: 'Español',
+          description: '스페인어 지원 화면부터 순차 적용',
         },
       },
     },

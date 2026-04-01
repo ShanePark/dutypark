@@ -1,6 +1,8 @@
 import en from '@/i18n/messages/en'
+import es from '@/i18n/messages/es'
 import ja from '@/i18n/messages/ja'
 import ko from '@/i18n/messages/ko'
+import zh from '@/i18n/messages/zh'
 import {
   DEFAULT_LOCALE,
   normalizeLocale,
@@ -14,12 +16,16 @@ const notificationMessagesByLocale: Record<SupportedLocale, LocaleMessages> = {
   ko,
   en,
   ja,
+  zh,
+  es,
 }
 
 const notificationLocaleFallbacks: Record<SupportedLocale, SupportedLocale[]> = {
   ko: ['ko'],
   en: ['en', 'ko'],
   ja: ['ja', 'en', 'ko'],
+  zh: ['zh', 'en', 'ko'],
+  es: ['es', 'en', 'ko'],
 }
 
 function getNestedMessage(messages: LocaleMessages, key: string): string | null {

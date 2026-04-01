@@ -7,7 +7,7 @@ import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.duty.batch.exceptions.DutyBatchException
 import com.tistory.shanepark.dutypark.duty.batch.service.DutyBatchService
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
-import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
+import com.tistory.shanepark.dutypark.member.domain.dto.MemberInviteCandidateDto
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.dto.TeamDto
@@ -132,11 +132,14 @@ class TeamManageController(
 
     @GetMapping("/members")
     fun members(
+        @Login loginMember: LoginMember,
         @PageableDefault(page = 0, size = 10)
         @SortDefault(sort = ["name"], direction = Sort.Direction.ASC)
         page: Pageable,
+        @RequestParam teamId: Long,
         @RequestParam(required = false, defaultValue = "") keyword: String,
-    ): PageResponse<MemberDto> {
+    ): PageResponse<MemberInviteCandidateDto> {
+        checkCanManage(login = loginMember, teamId = teamId)
         return PageResponse(memberService.searchMembersToInviteTeam(page = page, keyword = keyword))
     }
 
