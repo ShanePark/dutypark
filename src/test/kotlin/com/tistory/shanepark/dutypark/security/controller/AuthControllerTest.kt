@@ -333,6 +333,23 @@ class AuthControllerTest : DutyparkIntegrationTest() {
     }
 
     @Test
+    fun `status falls back to access token cookie when bearer header is invalid`() {
+        val member = memberRepository.findByEmail(TestData.member.email).orElseThrow()
+        val accessToken = getJwt(member)
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.get("/api/auth/status")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer garbage")
+                .cookie(Cookie("access_token", accessToken))
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(member.id))
+            .andExpect(jsonPath("$.email").value(member.email))
+            .andExpect(jsonPath("$.name").value(member.name))
+            .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
     fun `even if not login, health point doesn't throws error`() {
         // Therefore
         mockMvc.perform(

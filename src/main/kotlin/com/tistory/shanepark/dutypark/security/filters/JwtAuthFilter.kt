@@ -31,11 +31,23 @@ class JwtAuthFilter(
         var jwt = ""
         var status = NOT_EXIST
 
-        // Try Bearer token first, then fall back to cookie
-        val token = extractBearerToken(request) ?: cookieService.extractAccessToken(request.cookies)
-        token?.let {
-            status = authService.validateToken(it)
-            jwt = it
+        val bearerToken = extractBearerToken(request)
+        if (bearerToken != null) {
+            status = authService.validateToken(bearerToken)
+            if (status == VALID) {
+                jwt = bearerToken
+            }
+        }
+
+        if (status != VALID) {
+            val cookieToken = cookieService.extractAccessToken(request.cookies)
+            if (cookieToken != null) {
+                val cookieStatus = authService.validateToken(cookieToken)
+                if (cookieStatus == VALID) {
+                    jwt = cookieToken
+                }
+                status = cookieStatus
+            }
         }
 
         if (status == VALID) {
