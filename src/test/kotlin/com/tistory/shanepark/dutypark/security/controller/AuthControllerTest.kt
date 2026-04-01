@@ -156,6 +156,62 @@ class AuthControllerTest : DutyparkIntegrationTest() {
     }
 
     @Test
+    fun `logout while impersonating invalidates original refresh token`() {
+        val manager = memberRepository.findByEmail(TestData.member.email).orElseThrow()
+        val managed = memberRepository.findByEmail(TestData.member2.email).orElseThrow()
+        makeManagerRelation(manager, managed)
+        em.flush()
+        em.clear()
+
+        val loginDto = LoginDto(TestData.member.email, testPass, false)
+        val loginJson = objectMapper.writeValueAsString(loginDto)
+
+        val loginResult = mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginJson)
+        )
+            .andExpect(status().isOk)
+            .andReturn()
+
+        val originalRefreshToken = loginResult.response.getCookie("refresh_token")
+            ?: error("original refresh token missing")
+        val managerAccessToken = loginResult.response.getCookie("access_token")?.value
+            ?: error("manager access token missing")
+
+        val impersonateResult = mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/impersonate/${managed.id}")
+                .header("Authorization", "Bearer $managerAccessToken")
+                .cookie(originalRefreshToken)
+        )
+            .andExpect(status().isOk)
+            .andReturn()
+
+        val impersonatedAccessToken = impersonateResult.response.getCookie("access_token")?.value
+            ?: error("impersonated access token missing")
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/logout")
+                .header("Authorization", "Bearer $impersonatedAccessToken")
+                .cookie(originalRefreshToken)
+        )
+            .andExpect(status().isNoContent)
+            .andExpect(cookie().maxAge("access_token", 0))
+            .andExpect(cookie().maxAge("refresh_token", 0))
+            .andDo(MockMvcResultHandlers.print())
+
+        assertThat(refreshTokenService.findByToken(originalRefreshToken.value)).isNull()
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/refresh")
+                .cookie(originalRefreshToken)
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("auth.refresh.invalid"))
+            .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
     fun `without login session can't ask update duty`() {
         // Given
         val member = memberRepository.findByEmail(TestData.member.email).orElseThrow()
