@@ -156,6 +156,28 @@ class AuthControllerTest : DutyparkIntegrationTest() {
     }
 
     @Test
+    fun `logout succeeds with refresh token cookie even when access token is missing`() {
+        val refreshToken = refreshTokenService.createRefreshToken(
+            memberId = TestData.member.id!!,
+            remoteAddr = "127.0.0.1",
+            userAgent = "test-agent"
+        )
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/logout")
+                .cookie(Cookie("refresh_token", refreshToken.token))
+        )
+            .andExpect(status().isNoContent)
+            .andExpect(cookie().maxAge("access_token", 0))
+            .andExpect(cookie().maxAge("refresh_token", 0))
+            .andDo(MockMvcResultHandlers.print())
+
+        assertThat(refreshTokenService.findByToken(refreshToken.token)).isNull()
+    }
+
+    @Test
     fun `logout while impersonating invalidates original refresh token`() {
         val manager = memberRepository.findByEmail(TestData.member.email).orElseThrow()
         val managed = memberRepository.findByEmail(TestData.member2.email).orElseThrow()

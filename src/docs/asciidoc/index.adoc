@@ -33,6 +33,10 @@ operation::auth/refresh[]
 
 operation::auth/refresh-unauthorized[]
 
+=== Logout
+
+operation::auth/logout[]
+
 === Change Password
 
 operation::auth/change-password[]

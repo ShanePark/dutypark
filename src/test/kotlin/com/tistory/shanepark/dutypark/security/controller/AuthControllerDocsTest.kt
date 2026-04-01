@@ -73,4 +73,28 @@ class AuthControllerDocsTest : RestDocsTest() {
                 )
             )
     }
+
+    @Test
+    fun `logout with refresh token only`() {
+        val refreshToken = refreshTokenService.createRefreshToken(
+            memberId = TestData.member.id!!,
+            remoteAddr = "127.0.0.1",
+            userAgent = "test-agent"
+        )
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/auth/logout")
+                .cookie(Cookie("refresh_token", refreshToken.token))
+                .accept(MediaType.APPLICATION_JSON)
+        )
+            .andExpect(status().isNoContent)
+            .andExpect(cookie().maxAge("access_token", 0))
+            .andExpect(cookie().maxAge("refresh_token", 0))
+            .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "auth/logout"
+                )
+            )
+    }
 }
