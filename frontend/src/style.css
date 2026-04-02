@@ -502,6 +502,34 @@ html.dark {
     border-right: 1px solid var(--dp-border-primary);
 }
 
+/* Dashboard panel headers */
+.dashboard-panel-header {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background: linear-gradient(to right, var(--dp-modal-header-bg), var(--dp-modal-header-bg-alt));
+}
+
+.dashboard-panel-header::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(to right, var(--dp-modal-header-bg-alt), var(--dp-bg-footer));
+    transition: opacity 0.24s ease-out;
+}
+
+.dashboard-panel-header:hover::after {
+    opacity: 0.88;
+}
+
+.dashboard-panel-header > * {
+    position: relative;
+    z-index: 1;
+}
+
 /* Friend Cards */
 .friend-card {
     @apply relative overflow-hidden transition-all duration-200 cursor-pointer;
@@ -532,7 +560,6 @@ html.dark {
 
 /* Friend schedule item */
 .friend-schedule-item {
-    background-color: var(--dp-bg-secondary);
     color: var(--dp-text-secondary);
 }
 
