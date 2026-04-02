@@ -502,15 +502,56 @@ html.dark {
     border-right: 1px solid var(--dp-border-primary);
 }
 
+/* Dashboard panel headers */
+.dashboard-panel-header {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background: linear-gradient(to right, var(--dp-modal-header-bg), var(--dp-modal-header-bg-alt));
+}
+
+.dashboard-panel-header::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(to right, var(--dp-modal-header-bg-alt), var(--dp-bg-footer));
+    transition: opacity 0.24s ease-out;
+}
+
+.dashboard-panel-header:hover::after {
+    opacity: 0.88;
+}
+
+.dashboard-panel-header > * {
+    position: relative;
+    z-index: 1;
+}
+
 /* Friend Cards */
 .friend-card {
-    @apply relative overflow-hidden transition-all duration-200 cursor-pointer;
+    @apply relative overflow-hidden cursor-pointer;
     background-color: var(--dp-bg-card);
+    box-shadow: var(--dp-shadow-sm);
+    transform: translateY(0) scale(1);
+    will-change: transform, box-shadow;
+    transition:
+        transform 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+        box-shadow 0.24s ease,
+        border-color 0.2s ease,
+        background-color 0.2s ease;
 }
 
 .friend-card:hover {
-    @apply shadow-md;
+    box-shadow: var(--dp-shadow-md);
+    transform: translateY(-2px) scale(1.018);
     background-color: var(--dp-bg-hover);
+}
+
+.friend-card:active {
+    transform: translateY(0) scale(1.006);
 }
 
 /* Pinned friend card highlight - neutral gray theme */
@@ -532,7 +573,6 @@ html.dark {
 
 /* Friend schedule item */
 .friend-schedule-item {
-    background-color: var(--dp-bg-secondary);
     color: var(--dp-text-secondary);
 }
 
@@ -620,8 +660,15 @@ html.dark {
 
 /* Friend section - prevent hover effects while sorting */
 .friend-section-sorting .friend-card:hover {
-    @apply shadow-none;
+    box-shadow: var(--dp-shadow-sm);
+    transform: none;
     background-color: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .friend-card {
+        transition: none;
+    }
 }
 
 /* Attachment Gallery */

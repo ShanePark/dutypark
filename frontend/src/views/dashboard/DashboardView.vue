@@ -418,7 +418,7 @@ watch(
       >
         <!-- Header -->
         <div
-          class="group px-5 py-3 bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt flex items-center justify-between cursor-pointer hover:from-dp-surface-strong-alt hover:to-dp-surface-strong-hover transition-all"
+          class="dashboard-panel-header group px-5 py-3 flex items-center justify-between cursor-pointer"
           @click="moveTo()"
         >
           <div class="flex items-center gap-3">
@@ -501,7 +501,7 @@ watch(
       <!-- Friends List Section -->
       <div ref="friendSectionRef" class="friend-section rounded-2xl shadow-sm border overflow-hidden bg-dp-bg-card border-dp-border-primary">
         <div
-          class="group bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt px-6 py-3 cursor-pointer hover:from-dp-surface-strong-alt hover:to-dp-surface-strong-hover transition-all"
+          class="dashboard-panel-header group px-6 py-3 cursor-pointer"
           @click="router.push('/friends')"
         >
           <div class="flex items-center justify-between">
@@ -543,7 +543,7 @@ watch(
               v-for="friend in sortedFriends"
               :key="friend.member.id ?? 'unknown'"
               :data-member-id="friend.member.id"
-              class="friend-card relative overflow-hidden rounded-xl sm:rounded-2xl cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
+              class="friend-card relative overflow-hidden rounded-xl sm:rounded-2xl cursor-pointer"
               :class="[
                 friend.pinOrder
                   ? 'pinned-friend pinned-friend-highlight border-2 shadow-md'
