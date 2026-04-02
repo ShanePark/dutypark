@@ -532,13 +532,26 @@ html.dark {
 
 /* Friend Cards */
 .friend-card {
-    @apply relative overflow-hidden transition-all duration-200 cursor-pointer;
+    @apply relative overflow-hidden cursor-pointer;
     background-color: var(--dp-bg-card);
+    box-shadow: var(--dp-shadow-sm);
+    transform: translateY(0) scale(1);
+    will-change: transform, box-shadow;
+    transition:
+        transform 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+        box-shadow 0.24s ease,
+        border-color 0.2s ease,
+        background-color 0.2s ease;
 }
 
 .friend-card:hover {
-    @apply shadow-md;
+    box-shadow: var(--dp-shadow-md);
+    transform: translateY(-2px) scale(1.018);
     background-color: var(--dp-bg-hover);
+}
+
+.friend-card:active {
+    transform: translateY(0) scale(1.006);
 }
 
 /* Pinned friend card highlight - neutral gray theme */
@@ -647,8 +660,15 @@ html.dark {
 
 /* Friend section - prevent hover effects while sorting */
 .friend-section-sorting .friend-card:hover {
-    @apply shadow-none;
+    box-shadow: var(--dp-shadow-sm);
+    transform: none;
     background-color: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .friend-card {
+        transition: none;
+    }
 }
 
 /* Attachment Gallery */

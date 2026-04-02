@@ -602,7 +602,7 @@ onUnmounted(() => {
               v-for="friend in sortedFriends"
               :key="friend.member.id ?? 'unknown'"
               :data-member-id="friend.member.id"
-              class="friend-card relative rounded-xl sm:rounded-2xl cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
+              class="friend-card relative overflow-hidden rounded-xl sm:rounded-2xl cursor-pointer"
               :class="[
                 friend.pinOrder
                   ? 'pinned-friend pinned-friend-highlight border-2 shadow-md'
