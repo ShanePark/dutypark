@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
@@ -57,10 +57,8 @@ const currentMonth = ref(now.getMonth() + 1)
 const isYearMonthPickerOpen = ref(false)
 
 function handleYearMonthSelect(year: number, month: number) {
-  currentYear.value = year
-  currentMonth.value = month
   isYearMonthPickerOpen.value = false
-  fetchTeamSummary()
+  void updateCurrentMonth(year, month)
 }
 
 // Today's date
@@ -68,6 +66,10 @@ const today = {
   year: now.getFullYear(),
   month: now.getMonth() + 1,
   day: now.getDate(),
+}
+
+function getLastDayOfMonth(year: number, month: number) {
+  return new Date(year, month, 0).getDate()
 }
 
 // Selected day
@@ -258,34 +260,38 @@ function selectDay(day: { year: number; month: number; day: number }, index: num
   fetchShift()
 }
 
-function prevMonth() {
-  if (currentMonth.value === 1) {
-    currentMonth.value = 12
-    currentYear.value--
-  } else {
-    currentMonth.value--
+function syncSelectedDayToMonth(year: number, month: number, day = 1) {
+  selectedDay.value = {
+    year,
+    month,
+    day: Math.min(day, getLastDayOfMonth(year, month)),
+    index: -1,
   }
-  fetchTeamSummary()
+}
+
+async function updateCurrentMonth(year: number, month: number, day = 1) {
+  currentYear.value = year
+  currentMonth.value = month
+  syncSelectedDayToMonth(year, month, day)
+  await fetchTeamSummary()
+  findSelectedDayIndex()
+  await fetchShift()
+}
+
+function prevMonth() {
+  const year = currentMonth.value === 1 ? currentYear.value - 1 : currentYear.value
+  const month = currentMonth.value === 1 ? 12 : currentMonth.value - 1
+  void updateCurrentMonth(year, month)
 }
 
 function nextMonth() {
-  if (currentMonth.value === 12) {
-    currentMonth.value = 1
-    currentYear.value++
-  } else {
-    currentMonth.value++
-  }
-  fetchTeamSummary()
+  const year = currentMonth.value === 12 ? currentYear.value + 1 : currentYear.value
+  const month = currentMonth.value === 12 ? 1 : currentMonth.value + 1
+  void updateCurrentMonth(year, month)
 }
 
 function goToToday() {
-  currentYear.value = today.year
-  currentMonth.value = today.month
-  selectedDay.value = { ...today, index: -1 }
-  fetchTeamSummary().then(() => {
-    findSelectedDayIndex()
-    fetchShift()
-  })
+  void updateCurrentMonth(today.year, today.month, today.day)
 }
 
 function goToTeamManage() {
