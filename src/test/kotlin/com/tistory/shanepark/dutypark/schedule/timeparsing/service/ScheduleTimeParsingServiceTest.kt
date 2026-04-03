@@ -8,6 +8,12 @@ import org.junit.jupiter.api.Test
 import org.springframework.ai.openai.OpenAiChatModel
 import org.springframework.ai.openai.OpenAiChatOptions
 import org.springframework.ai.openai.api.OpenAiApi
+import org.springframework.http.client.ReactorClientHttpRequestFactory
+import org.springframework.http.client.reactive.ReactorClientHttpConnector
+import org.springframework.web.client.RestClient
+import org.springframework.web.reactive.function.client.WebClient
+import reactor.netty.http.client.HttpClient
+import java.time.Duration
 import java.time.LocalDate
 
 @Disabled("External API test")
@@ -17,16 +23,34 @@ class ScheduleTimeParsingServiceTest {
     val service = makeService()
 
     private fun makeService(): ScheduleTimeParsingService {
+        val timeout = Duration.ofMinutes(2)
+        val httpClient = HttpClient.create()
+            .responseTimeout(timeout)
+        val requestFactory = ReactorClientHttpRequestFactory(httpClient).apply {
+            setConnectTimeout(timeout)
+            setReadTimeout(timeout)
+        }
+        val connector = ReactorClientHttpConnector(httpClient)
+
         val openapi = OpenAiApi
             .builder()
             .apiKey(apiKey)
             .baseUrl("https://generativelanguage.googleapis.com/v1beta/openai/")
             .completionsPath("/chat/completions")
+            .restClientBuilder(
+                RestClient.builder()
+                    .requestFactory(requestFactory)
+            )
+            .webClientBuilder(
+                WebClient.builder()
+                    .clientConnector(connector)
+            )
             .build()
 
         val chatOption = OpenAiChatOptions
             .builder()
-            .model("gemma-3-27b-it")
+            .model("gemma-4-31b-it")
+//            .model("gemma-3-27b-it")
             .temperature(0.0)
             .build()
 

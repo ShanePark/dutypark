@@ -351,7 +351,7 @@ export const PAGINATION_DEFAULTS = {
 
 **File:** `src/main/resources/application.yml` (line 29)
 
-**Problem:** Documentation (CLAUDE.md) states "Gemini 2.0 Flash Lite" but code uses `gemma-3-27b-it`.
+**Problem:** Documentation (CLAUDE.md) states "Gemini 2.0 Flash Lite" but code uses `gemma-4-31b-it`.
 
 **Recommendation:** Update documentation or configuration to be consistent.
 
