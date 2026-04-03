@@ -5,7 +5,7 @@ Use this file for repo-wide defaults only. Keep it lean; read the code and nearb
 ## 1. Current Snapshot
 
 - **Backend:** Kotlin 2.3, Java 25 toolchain, Spring Boot 4.0.1, Spring MVC + WebFlux + Security + Validation + Actuator + Cache + Flyway
-- **AI:** Spring AI OpenAI-compatible chat client against Google Generative Language, default model `gemma-3-27b-it`, queue-based schedule time parsing, disabled when `GEMINI_API_KEY` is blank or `EMPTY`
+- **AI:** Spring AI OpenAI-compatible chat client against Google Generative Language, default model `gemma-4-31b-it`, queue-based schedule time parsing, disabled when `GEMINI_API_KEY` is blank or `EMPTY`
 - **Frontend:** Vue 3.5 SPA, Vite 7, TypeScript 5.9, Pinia, Vue Router 4, Tailwind CSS 4, Vitest
 - **Persistence / Ops:** MySQL 8.0, Flyway migrations in `src/main/resources/db/migration/v1` and `v2`, Docker Compose stack for app/mysql/nginx/prometheus/grafana
 - **Auth:** HttpOnly cookie access/refresh flow for the SPA, Bearer header fallback still supported, Kakao + Naver OAuth, auxiliary accounts, impersonation
