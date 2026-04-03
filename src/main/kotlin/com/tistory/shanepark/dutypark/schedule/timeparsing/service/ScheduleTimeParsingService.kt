@@ -20,7 +20,6 @@ class ScheduleTimeParsingService(
         private val TIME_INDICATOR_PATTERN = Regex(
             """[0-9]|한|두|세|네|다섯|여섯|일곱|여덟|아홉|열|정오|자정"""
         )
-        private val CODE_BLOCK_PATTERN = Regex("""```(?:json)?\s*(.*?)```""", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
     }
 
     fun parseScheduleTime(request: ScheduleTimeParsingRequest): ScheduleTimeParsingResponse {
@@ -74,18 +73,9 @@ class ScheduleTimeParsingService(
     }
 
     private fun extractResponseJson(chatAnswer: String): String {
-        return jsonCandidateSources(chatAnswer)
-            .flatMap(::extractJsonObjectCandidates)
+        return extractJsonObjectCandidates(chatAnswer)
             .lastOrNull(::isResponseJsonCandidate)
             ?: chatAnswer
-    }
-
-    private fun jsonCandidateSources(chatAnswer: String): Sequence<String> {
-        val codeBlocks = CODE_BLOCK_PATTERN.findAll(chatAnswer)
-            .map { it.groupValues[1].trim() }
-            .filter { it.isNotBlank() }
-
-        return codeBlocks + sequenceOf(chatAnswer)
     }
 
     private fun isResponseJsonCandidate(candidate: String): Boolean {
