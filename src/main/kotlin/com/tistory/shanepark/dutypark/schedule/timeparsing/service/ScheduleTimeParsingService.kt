@@ -20,6 +20,7 @@ class ScheduleTimeParsingService(
         private val TIME_INDICATOR_PATTERN = Regex(
             """[0-9]|한|두|세|네|다섯|여섯|일곱|여덟|아홉|열|정오|자정"""
         )
+        private val CODE_BLOCK_PATTERN = Regex("""```(?:json)?\s*(.*?)```""", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
     }
 
     fun parseScheduleTime(request: ScheduleTimeParsingRequest): ScheduleTimeParsingResponse {
@@ -41,7 +42,14 @@ class ScheduleTimeParsingService(
                 errorMessage = "LLM API returned null response"
             )
         }
-        val chatAnswer = chatResponse.result.output.text
+        val generation = chatResponse.results.firstOrNull()
+        val chatAnswer = generation?.output?.text
+        if (chatAnswer.isNullOrBlank()) {
+            return ScheduleTimeParsingResponse(
+                result = false,
+                errorMessage = "LLM API returned empty response"
+            )
+        }
         val response = parseChatAnswer(chatAnswer)
         log.info("Time parsing result: request={}, hasTime={}, result={}", request, response.hasTime, response.result)
         return response
@@ -52,9 +60,7 @@ class ScheduleTimeParsingService(
     }
 
     private fun parseChatAnswer(chatAnswer: String): ScheduleTimeParsingResponse {
-        val json = chatAnswer.lines()
-            .filter { !it.contains("```") }
-            .joinToString("\n")
+        val json = extractResponseJson(chatAnswer)
         return try {
             jsonMapper.readValue(json, ScheduleTimeParsingResponse::class.java)
         } catch (e: Exception) {
@@ -65,6 +71,76 @@ class ScheduleTimeParsingService(
                 rawResponse = json.take(500)
             )
         }
+    }
+
+    private fun extractResponseJson(chatAnswer: String): String {
+        return jsonCandidateSources(chatAnswer)
+            .flatMap(::extractJsonObjectCandidates)
+            .lastOrNull(::isResponseJsonCandidate)
+            ?: chatAnswer
+    }
+
+    private fun jsonCandidateSources(chatAnswer: String): Sequence<String> {
+        val codeBlocks = CODE_BLOCK_PATTERN.findAll(chatAnswer)
+            .map { it.groupValues[1].trim() }
+            .filter { it.isNotBlank() }
+
+        return codeBlocks + sequenceOf(chatAnswer)
+    }
+
+    private fun isResponseJsonCandidate(candidate: String): Boolean {
+        return try {
+            val node = jsonMapper.readTree(candidate)
+            node.isObject && node.has("result") && node.has("hasTime")
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun extractJsonObjectCandidates(text: String): List<String> {
+        val candidates = mutableListOf<String>()
+        var startIndex = -1
+        var depth = 0
+        var inString = false
+        var escaping = false
+
+        text.forEachIndexed { index, ch ->
+            if (startIndex == -1) {
+                if (ch == '{') {
+                    startIndex = index
+                    depth = 1
+                    inString = false
+                    escaping = false
+                }
+                return@forEachIndexed
+            }
+
+            if (escaping) {
+                escaping = false
+                return@forEachIndexed
+            }
+
+            when (ch) {
+                '\\' -> if (inString) {
+                    escaping = true
+                }
+
+                '"' -> inString = !inString
+                '{' -> if (!inString) {
+                    depth++
+                }
+
+                '}' -> if (!inString) {
+                    depth--
+                    if (depth == 0) {
+                        candidates += text.substring(startIndex, index + 1)
+                        startIndex = -1
+                    }
+                }
+            }
+        }
+
+        return candidates
     }
 
     private fun generatePrompt(request: ScheduleTimeParsingRequest): String {

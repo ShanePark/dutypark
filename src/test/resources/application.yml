@@ -18,7 +18,7 @@ spring:
       chat:
         base-url: "https://generativelanguage.googleapis.com/v1beta/openai/"
         options:
-          model: "gemma-3-27b-it"
+          model: "gemma-4-31b-it"
           temperature: 0.0
         completions-path: "/chat/completions"
     rate-limit:
