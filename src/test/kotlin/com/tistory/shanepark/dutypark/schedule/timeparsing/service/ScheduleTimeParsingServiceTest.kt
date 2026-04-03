@@ -76,7 +76,6 @@ class ScheduleTimeParsingServiceTest {
             )
         )
 
-        System.err.println("response = ${response}")
         Assertions.assertThat(response.result).isTrue()
         Assertions.assertThat(response.hasTime).isTrue()
         Assertions.assertThat(response.startDateTime).isEqualTo("2025-02-28T14:50:00")
