@@ -1082,6 +1082,7 @@ export default {
       title: '一緒に見る',
       description: '最大 {count} 人の友だちを選んでカレンダーに重ねて表示できます。',
       empty: '比較できる友だちがいません。',
+      turnOff: '一緒に見るをオフ',
       selectionCount: '{selected} / {count} 人選択',
     },
     typesBar: {

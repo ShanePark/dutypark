@@ -1004,6 +1004,7 @@ export default {
       title: '一起查看',
       description: '最多选择 {count} 位朋友叠加在您的日历上。',
       empty: '没有朋友可以比较。',
+      turnOff: '关闭一起查看',
       selectionCount: '已选择 {selected} / {count}',
     },
     typesBar: {

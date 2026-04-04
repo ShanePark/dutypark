@@ -1218,6 +1218,16 @@ async function handleFriendToggle(friendId: number) {
   await loadOtherDuties()
 }
 
+async function handleOtherDutiesClear() {
+  if (selectedFriendIds.value.length === 0 && !showMyDuties.value) {
+    return
+  }
+
+  selectedFriendIds.value = []
+  showMyDuties.value = false
+  await loadOtherDuties()
+}
+
 async function handleMyDutiesToggle() {
   showMyDuties.value = !showMyDuties.value
   await loadOtherDuties()
@@ -1252,10 +1262,11 @@ async function loadOtherDuties() {
       currentYear.value,
       currentMonth.value
     )
-    // Map API response to local OtherDuty format (index-aligned with calendarDays)
-    otherDuties.value = response.map((item, index) => ({
-      memberId: memberIdsToFetch[index] || 0,
+    otherDuties.value = response.map((item) => ({
+      memberId: item.memberId,
       memberName: item.name,
+      hasProfilePhoto: item.hasProfilePhoto ?? false,
+      profilePhotoVersion: item.profilePhotoVersion ?? 0,
       duties: item.duties.map((d) => ({
         dutyType: d.dutyType || t('duty.common.off'),
         dutyColor: d.dutyColor || 'var(--dp-duty-fallback)',
@@ -1560,6 +1571,7 @@ async function showExcelUploadModal() {
       :is-other-duty-active="isOtherDutyActive"
       :team-has-duty-batch-template="teamHasDutyBatchTemplate"
       @toggle-other-duties="handleToggleOtherDuties"
+      @clear-other-duties="handleOtherDutiesClear"
       @show-batch-update-modal="showBatchUpdateModal"
       @toggle-batch-edit="batchEditMode = $event"
       @show-excel-upload-modal="showExcelUploadModal"
@@ -1680,6 +1692,7 @@ async function showExcelUploadModal() {
       :friends="friends"
       :selected-friend-ids="selectedFriendIds"
       @close="isOtherDutiesModalOpen = false"
+      @clear="handleOtherDutiesClear"
       @toggle="handleFriendToggle"
     />
 

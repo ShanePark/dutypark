@@ -227,17 +227,28 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
 
       <div v-if="!batchEditMode" class="mt-0.5">
         <!-- Other duties -->
-        <div v-if="otherDuties.length > 0" class="flex flex-wrap justify-center gap-1 mb-1">
+        <div v-if="otherDuties.length > 0" class="mb-1 grid gap-0.5 sm:flex sm:flex-wrap sm:justify-center sm:gap-1">
           <div
             v-for="otherDuty in otherDuties"
             :key="otherDuty.memberId"
-            class="text-[10px] sm:text-sm px-1.5 py-0.5 rounded-full border border-dp-overlay-light/50"
+            class="other-duty-chip w-full max-w-full border border-dp-overlay-light/50 sm:w-auto"
+            :title="`${otherDuty.memberName}: ${otherDuty.duties[index]?.dutyType ?? ''}`"
             :style="{
               backgroundColor: otherDuty.duties[index]?.dutyColor || 'var(--dp-duty-fallback)',
               color: getOtherDutyTextColor(otherDuty.duties[index]?.dutyColor || null),
             }"
           >
-            {{ otherDuty.memberName }}<template v-if="otherDuty.duties[index]?.dutyType">:{{ otherDuty.duties[index].dutyType.slice(0, 4) }}</template>
+            <ProfileAvatar
+              :member-id="otherDuty.memberId"
+              :name="otherDuty.memberName"
+              :has-profile-photo="otherDuty.hasProfilePhoto"
+              :profile-photo-version="otherDuty.profilePhotoVersion"
+              size="xs"
+              class="other-duty-chip__avatar"
+            />
+            <span class="other-duty-chip__label">
+              {{ otherDuty.duties[index]?.dutyType ?? '' }}
+            </span>
           </div>
         </div>
 
@@ -356,6 +367,27 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
   overflow-wrap: anywhere;
 }
 
+.other-duty-chip {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 1.05rem;
+  gap: 0.18rem;
+  padding: 0.08rem 0.22rem 0.08rem 0.12rem;
+  border-radius: 9999px;
+  box-sizing: border-box;
+  font-size: 10px;
+  line-height: 1.1;
+}
+
+.other-duty-chip__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
+}
+
 .schedule-tag {
   padding: 0;
   border-radius: 9999px;
@@ -401,6 +433,13 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
   font-weight: 600;
 }
 
+:deep(.other-duty-chip__avatar.profile-avatar) {
+  box-sizing: border-box;
+  border-width: 1px;
+  width: 0.62rem;
+  height: 0.62rem;
+}
+
 :deep(.schedule-tag-avatar.profile-avatar) {
   box-sizing: border-box;
   border-width: 1px;
@@ -409,6 +448,17 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
 }
 
 @media (min-width: 640px) {
+  .other-duty-chip {
+    gap: 0.28rem;
+    min-height: 1.5rem;
+    padding: 0.15rem 0.42rem 0.15rem 0.18rem;
+    font-size: 14px;
+  }
+
+  .other-duty-chip__label {
+    max-width: 4.5rem;
+  }
+
   .schedule-tag-with-avatar {
     min-height: 1.5rem;
     gap: 0.1rem;
@@ -425,6 +475,11 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
     min-height: 1.5rem;
     padding: 0 0.4rem;
     font-size: 12px;
+  }
+
+  :deep(.other-duty-chip__avatar.profile-avatar) {
+    width: 0.94rem;
+    height: 0.94rem;
   }
 
   :deep(.schedule-tag-avatar.profile-avatar) {

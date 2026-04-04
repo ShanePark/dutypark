@@ -86,6 +86,10 @@ class DutyControllerTest : RestDocsTest() {
                 .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
+            .andExpect(jsonPath("[0].memberId").value(TestData.member2.id))
+            .andExpect(jsonPath("[0].name").value(TestData.member2.name))
+            .andExpect(jsonPath("[0].hasProfilePhoto").value(false))
+            .andExpect(jsonPath("[0].profilePhotoVersion").value(0))
             .andDo(MockMvcResultHandlers.print())
             .andDo(
                 document(
@@ -96,7 +100,10 @@ class DutyControllerTest : RestDocsTest() {
                         parameterWithName("memberIds").description("List of member IDs to fetch duties for")
                     ),
                     responseFields(
+                        fieldWithPath("[].memberId").description("Member ID"),
                         fieldWithPath("[].name").description("Member name"),
+                        fieldWithPath("[].hasProfilePhoto").description("Whether the member has a profile photo"),
+                        fieldWithPath("[].profilePhotoVersion").description("Profile photo cache-busting version"),
                         fieldWithPath("[].duties").description("List of duties"),
                         fieldWithPath("[].duties[].year").description("Year"),
                         fieldWithPath("[].duties[].month").description("Month"),

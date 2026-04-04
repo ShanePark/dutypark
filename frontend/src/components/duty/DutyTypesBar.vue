@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ChevronLeft, ChevronRight, FileSpreadsheet, Loader2, Users } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, FileSpreadsheet, Loader2, Users, X } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { isLightColor } from '@/utils/color'
 import type { DutyType, DutyTypeWithCount } from '@/views/duty/dutyViewTypes'
@@ -22,6 +22,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'toggle-other-duties'): void
+  (e: 'clear-other-duties'): void
   (e: 'show-batch-update-modal'): void
   (e: 'toggle-batch-edit', value: boolean): void
   (e: 'show-excel-upload-modal'): void
@@ -103,27 +104,53 @@ function toggleBatchEdit() {
       </span>
     </div>
     <div class="inline-flex rounded-lg border overflow-hidden ml-auto border-dp-border-secondary">
+      <div
+        v-if="!batchEditMode && isOtherDutyActive"
+        class="flex min-h-[44px] items-stretch border-r border-dp-border-secondary bg-dp-accent-soft text-dp-accent-hover"
+      >
+        <button
+          type="button"
+          @click="emit('toggle-other-duties')"
+          class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm transition-colors duration-150 cursor-pointer hover:bg-dp-accent-soft-hover"
+        >
+          <Users class="w-4 h-4" />
+          <span class="hidden sm:inline font-medium">{{ t('duty.typesBar.compare') }}</span>
+          <span
+            class="inline-flex min-w-[22px] items-center justify-center rounded-full border border-dp-accent-border bg-dp-bg-primary px-1.5 py-0.5 text-[11px] font-semibold leading-none text-dp-accent-hover shadow-sm"
+          >
+            {{ otherDutyCount }}
+          </span>
+        </button>
+        <div class="my-2 w-px bg-dp-accent-border/80"></div>
+        <button
+          type="button"
+          @click="emit('clear-other-duties')"
+          class="grid min-w-[44px] place-items-center px-2 text-dp-accent-hover transition-colors duration-150 cursor-pointer hover:bg-dp-accent-soft-hover"
+          :aria-label="t('duty.otherDuties.turnOff')"
+          :title="t('duty.otherDuties.turnOff')"
+        >
+          <X class="w-4 h-4" />
+        </button>
+      </div>
       <button
-        v-if="!batchEditMode"
+        v-else-if="!batchEditMode"
         @click="emit('toggle-other-duties')"
-        class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1 border-r cursor-pointer border-dp-border-secondary"
-        :class="isOtherDutyActive ? 'bg-dp-accent-soft/70 text-dp-accent-hover hover:bg-dp-accent-soft' : 'hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover'"
+        class="px-2.5 sm:px-3 py-1.5 min-h-[44px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1.5 border-r cursor-pointer border-dp-border-secondary hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover text-dp-text-secondary"
       >
         <Users class="w-4 h-4" />
-        <span class="hidden xs:inline">{{ t('duty.typesBar.compare') }}</span>
-        <span v-if="isOtherDutyActive" class="text-xs">({{ otherDutyCount }})</span>
+        <span class="hidden sm:inline font-medium">{{ t('duty.typesBar.compare') }}</span>
       </button>
       <button
         v-if="canEditMyCalendar && batchEditMode"
         @click="emit('show-batch-update-modal')"
-        class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 border-r cursor-pointer hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover border-dp-border-secondary"
+        class="px-2 sm:px-3 py-1.5 min-h-[44px] text-xs sm:text-sm transition-colors duration-150 border-r cursor-pointer hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover border-dp-border-secondary"
       >
         {{ t('duty.typesBar.batchUpdate') }}
       </button>
       <button
         v-if="canEdit"
         @click="toggleBatchEdit"
-        class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 border-r last:border-r-0 cursor-pointer border-dp-border-secondary"
+        class="px-2 sm:px-3 py-1.5 min-h-[44px] text-xs sm:text-sm transition-colors duration-150 border-r last:border-r-0 cursor-pointer border-dp-border-secondary"
         :class="batchEditMode ? 'bg-dp-warning-soft/70 text-dp-warning hover:bg-dp-warning-soft' : 'hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover'"
       >
         {{ t('duty.typesBar.editMode') }}
@@ -131,7 +158,7 @@ function toggleBatchEdit() {
       <button
         v-if="canEditMyCalendar && teamHasDutyBatchTemplate && !batchEditMode"
         @click="emit('show-excel-upload-modal')"
-        class="px-2 sm:px-3 py-1.5 min-h-[36px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1 cursor-pointer hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover"
+        class="px-2 sm:px-3 py-1.5 min-h-[44px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1 cursor-pointer hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover"
       >
         <FileSpreadsheet class="w-4 h-4" />
         <span class="hidden sm:inline">{{ t('duty.typesBar.excel') }}</span>

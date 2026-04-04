@@ -402,7 +402,10 @@ export interface DutyCalendarDay {
 
 // Other duties response - for "view together" feature
 export interface OtherDutyResponse {
+  memberId: number
   name: string
+  hasProfilePhoto?: boolean
+  profilePhotoVersion?: number
   duties: DutyCalendarDay[]
 }
 

@@ -1004,6 +1004,7 @@ export default {
       title: '함께 보기',
       description: '최대 {count}명의 친구를 선택해 내 달력 위에 함께 표시할 수 있습니다.',
       empty: '비교할 친구가 없습니다.',
+      turnOff: '함께 보기 끄기',
       selectionCount: '{selected} / {count}명 선택됨',
     },
     typesBar: {

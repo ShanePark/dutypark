@@ -1004,6 +1004,7 @@ export default {
       title: 'View together',
       description: 'Choose up to {count} friends to overlay on your calendar.',
       empty: 'There are no friends to compare.',
+      turnOff: 'Turn off view together',
       selectionCount: '{selected} / {count} selected',
     },
     typesBar: {
