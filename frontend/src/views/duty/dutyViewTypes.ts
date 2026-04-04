@@ -93,6 +93,8 @@ export interface DutyDay {
 export interface OtherDuty {
   memberId: number
   memberName: string
+  hasProfilePhoto: boolean
+  profilePhotoVersion: number
   duties: Array<{
     dutyType: string
     dutyColor: string

@@ -190,7 +190,13 @@ class DutyService(
                         it.copy(dutyType = team.defaultDutyName, dutyColor = team.defaultDutyColor)
                     } else it
                 }
-            OtherDutyResponse(name = member.name, duties = duties)
+            OtherDutyResponse(
+                memberId = member.id!!,
+                name = member.name,
+                hasProfilePhoto = member.hasProfilePhoto(),
+                profilePhotoVersion = member.profilePhotoVersion,
+                duties = duties
+            )
         }.toList()
     }
 

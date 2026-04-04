@@ -1262,10 +1262,11 @@ async function loadOtherDuties() {
       currentYear.value,
       currentMonth.value
     )
-    // Map API response to local OtherDuty format (index-aligned with calendarDays)
-    otherDuties.value = response.map((item, index) => ({
-      memberId: memberIdsToFetch[index] || 0,
+    otherDuties.value = response.map((item) => ({
+      memberId: item.memberId,
       memberName: item.name,
+      hasProfilePhoto: item.hasProfilePhoto ?? false,
+      profilePhotoVersion: item.profilePhotoVersion ?? 0,
       duties: item.duties.map((d) => ({
         dutyType: d.dutyType || t('duty.common.off'),
         dutyColor: d.dutyColor || 'var(--dp-duty-fallback)',
