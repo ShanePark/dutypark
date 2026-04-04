@@ -62,6 +62,10 @@
     --color-dp-accent-soft: var(--dp-accent-bg);
     --color-dp-accent-soft-hover: var(--dp-accent-bg-hover);
     --color-dp-accent-border: var(--dp-accent-border);
+    --color-dp-search-action: var(--dp-search-action-bg);
+    --color-dp-search-action-hover: var(--dp-search-action-hover);
+    --color-dp-search-action-text: var(--dp-search-action-text);
+    --color-dp-search-action-border: var(--dp-search-action-border);
 
     --color-dp-success: var(--dp-success);
     --color-dp-success-hover: var(--dp-success-hover);
@@ -138,6 +142,10 @@
     --dp-accent-bg-hover: #dbeafe;
     --dp-accent-border: #93c5fd;
     --dp-accent-ring: rgba(59, 130, 246, 0.2);
+    --dp-search-action-bg: #eff6ff;
+    --dp-search-action-hover: #dbeafe;
+    --dp-search-action-text: #2563eb;
+    --dp-search-action-border: #bfdbfe;
 
     --dp-success: #22c55e;
     --dp-success-hover: #16a34a;
@@ -229,6 +237,10 @@
     --dp-accent-bg-hover: #1e40af;
     --dp-accent-border: #3b82f6;
     --dp-accent-ring: rgba(59, 130, 246, 0.3);
+    --dp-search-action-bg: #475569;
+    --dp-search-action-hover: #5b6b80;
+    --dp-search-action-text: #eff6ff;
+    --dp-search-action-border: #64748b;
 
     --dp-success: #22c55e;
     --dp-success-hover: #16a34a;

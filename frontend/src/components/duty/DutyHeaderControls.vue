@@ -69,21 +69,26 @@ function handleSearchClick() {
     </div>
 
     <!-- Right: Search -->
-    <div class="flex justify-end">
-      <div v-if="canSearch" class="flex items-stretch rounded-lg border overflow-hidden border-dp-border-secondary">
+    <div class="flex min-w-0 justify-end">
+      <div
+        v-if="canSearch"
+        class="flex min-h-[42px] min-w-0 w-full max-w-[8.5rem] items-stretch overflow-hidden rounded-lg border border-dp-border-secondary bg-dp-bg-card transition-colors focus-within:border-dp-accent sm:min-h-[44px] sm:max-w-[10rem] sm:rounded-xl sm:shadow-sm"
+      >
         <input
           :value="searchQuery"
           type="text"
           :placeholder="t('duty.header.searchPlaceholder')"
           @input="handleSearchInput"
           @keyup.enter="emit('search')"
-          class="px-2 py-1.5 text-sm focus:ring-2 focus:ring-dp-accent focus:outline-none w-24 sm:w-28 border-none bg-dp-bg-input text-dp-text-primary"
+          class="min-w-0 w-0 flex-1 border-none bg-dp-bg-input px-2 text-[13px] text-dp-text-primary placeholder:text-dp-text-muted focus:outline-none sm:px-2.5 sm:text-sm"
         />
         <button
+          type="button"
           @click="handleSearchClick"
-          class="px-2 py-1.5 bg-dp-surface-strong text-dp-text-on-dark hover:bg-dp-surface-strong-hover transition flex items-center justify-center cursor-pointer"
+          :aria-label="t('common.actions.search')"
+          class="flex min-h-[42px] min-w-[42px] shrink-0 items-center justify-center border-l border-dp-search-action-border bg-dp-search-action px-2.5 text-dp-search-action-text transition-colors hover:bg-dp-search-action-hover cursor-pointer sm:min-h-[44px] sm:min-w-[44px] sm:px-3"
         >
-          <Search class="w-4 h-4" />
+          <Search class="h-[15px] w-[15px] sm:h-4 sm:w-4" />
         </button>
       </div>
     </div>

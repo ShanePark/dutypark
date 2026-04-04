@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { X, ChevronLeft, ChevronRight, Calendar, Paperclip, Search, Loader2 } from 'lucide-vue-next'
+import { X, ChevronLeft, ChevronRight, Calendar, Paperclip, Loader2 } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { formatDateRange } from '@/utils/date'
@@ -98,15 +98,14 @@ const pagesToShow = computed(() => {
         </button>
       </div>
       <form @submit.prevent="handleSearch" class="flex gap-2">
-        <div class="relative flex-1">
+        <div class="flex-1">
           <input
             v-model="localQuery"
             type="text"
             :placeholder="t('duty.search.placeholder')"
-            class="form-control-card pl-10 pr-4 text-sm"
+            class="form-control-card text-sm"
             :disabled="isSearching"
           />
-          <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dp-text-muted" />
         </div>
         <button
           type="submit"
