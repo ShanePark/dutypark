@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { X, Users, Check } from 'lucide-vue-next'
+import { X, Users, Check, RotateCcw } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import type { TaggableFriend } from '@/types'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -20,6 +20,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'toggle', friendId: number): void
+  (e: 'clear'): void
 }>()
 
 const { t } = useI18n()
@@ -27,6 +28,8 @@ const { t } = useI18n()
 const canSelectMore = computed(() => {
   return props.selectedFriendIds.length < props.maxSelections
 })
+
+const hasSelection = computed(() => props.selectedFriendIds.length > 0)
 
 function isSelected(friendId: number) {
   return props.selectedFriendIds.includes(friendId)
@@ -37,6 +40,14 @@ function handleToggle(friendId: number) {
     return
   }
   emit('toggle', friendId)
+}
+
+function handleClear() {
+  if (!hasSelection.value) {
+    return
+  }
+
+  emit('clear')
 }
 </script>
 
@@ -128,12 +139,24 @@ function handleToggle(friendId: number) {
         <span class="text-sm text-center sm:text-left text-dp-text-muted">
           {{ t('duty.otherDuties.selectionCount', { selected: selectedFriendIds.length, count: maxSelections }) }}
         </span>
-        <button
-          @click="emit('close')"
-          class="w-full sm:w-auto px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
-        >
-          {{ t('common.actions.confirm') }}
-        </button>
+        <div class="flex flex-col sm:flex-row items-stretch gap-2 sm:w-auto">
+          <button
+            v-if="hasSelection"
+            type="button"
+            @click="handleClear"
+            class="inline-flex min-h-[44px] w-full items-center justify-center gap-1 rounded-lg border border-dp-border-secondary bg-dp-bg-secondary px-4 py-2 text-dp-text-primary transition hover:bg-dp-bg-hover cursor-pointer sm:w-auto"
+          >
+            <RotateCcw class="w-4 h-4" />
+            <span>{{ t('friendTagSelector.clearTitle') }}</span>
+          </button>
+          <button
+            type="button"
+            @click="emit('close')"
+            class="min-h-[44px] w-full sm:w-auto px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
+          >
+            {{ t('common.actions.confirm') }}
+          </button>
+        </div>
       </div>
     </div>
   </BaseModal>

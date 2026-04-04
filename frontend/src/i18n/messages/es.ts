@@ -1004,6 +1004,7 @@ export default {
       title: 'Ver juntos',
       description: 'Elige hasta {count} amigos para superponerlos en tu calendario.',
       empty: 'No hay amigos para comparar.',
+      turnOff: 'Desactivar vista conjunta',
       selectionCount: '{selected} / {count} seleccionado',
     },
     typesBar: {
