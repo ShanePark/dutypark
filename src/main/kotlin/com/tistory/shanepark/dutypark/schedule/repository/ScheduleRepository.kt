@@ -29,18 +29,19 @@ interface ScheduleRepository : JpaRepository<Schedule, UUID> {
 
     @Query(
         value = """
-        SELECT DISTINCT s
+        SELECT s.id
         FROM Schedule s
-        JOIN FETCH s.member m
-        LEFT JOIN FETCH s.tags t
-        LEFT JOIN FETCH t.member tm
+        JOIN s.member m
+        LEFT JOIN s.tags t
+        LEFT JOIN t.member tm
         WHERE (m = :member OR tm = :member)
         AND s.content LIKE %:content%
         AND s.visibility IN (:visibility)
-        ORDER BY s.startDateTime DESC
+        GROUP BY s.id, s.startDateTime
+        ORDER BY s.startDateTime DESC, s.id DESC
     """,
         countQuery = """
-        SELECT COUNT(DISTINCT s)
+        SELECT COUNT(DISTINCT s.id)
         FROM Schedule s
         JOIN s.member m
         LEFT JOIN s.tags t
@@ -50,12 +51,24 @@ interface ScheduleRepository : JpaRepository<Schedule, UUID> {
         AND s.visibility IN (:visibility)
     """
     )
-    fun findByMemberAndContentContainingAndVisibilityIn(
+    fun findSearchIdsByMemberAndContentContainingAndVisibilityIn(
         member: Member,
         content: String,
         visibility: Collection<Visibility>,
         pageable: Pageable
-    ): Page<Schedule>
+    ): Page<UUID>
+
+    @Query(
+        """
+        SELECT DISTINCT s
+        FROM Schedule s
+        JOIN FETCH s.member m
+        LEFT JOIN FETCH s.tags t
+        LEFT JOIN FETCH t.member tm
+        WHERE s.id IN :ids
+    """
+    )
+    fun findAllWithMemberAndTagsByIdIn(ids: Collection<UUID>): List<Schedule>
 
     @Query(
         "SELECT DISTINCT s" +

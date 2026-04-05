@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.RestDocsTest
 import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSaveDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
@@ -519,6 +520,94 @@ class ScheduleControllerTest : RestDocsTest() {
                 .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
         ).andExpect(status().isOk)
             .andExpect(jsonPath("$.content[0].content").value("team sync"))
+    }
+
+    @Test
+    fun `searchSchedule preserves paging metadata`() {
+        val member = TestData.member
+        for (i in 1..12) {
+            scheduleRepository.save(
+                Schedule(
+                    member = member,
+                    content = "team sync $i",
+                    startDateTime = fixedDateTime.plusMinutes(i.toLong()),
+                    endDateTime = fixedDateTime.plusMinutes(i.toLong()).plusHours(1),
+                    position = i
+                )
+            )
+        }
+
+        mockMvc.perform(
+            get("/api/schedules/{id}/search", member.id!!)
+                .param("q", "team")
+                .param("size", "10")
+                .accept("application/json")
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.totalElements").value(12))
+            .andExpect(jsonPath("$.totalPages").value(2))
+            .andExpect(jsonPath("$.size").value(10))
+            .andExpect(jsonPath("$.number").value(0))
+            .andExpect(jsonPath("$.content.length()").value(10))
+            .andExpect(jsonPath("$.content[0].content").value("team sync 12"))
+    }
+
+    @Test
+    fun `searchSchedule keeps tagged multi-tag schedules distinct across pages`() {
+        val taggedMember = TestData.member
+        val owner = TestData.member2
+        val anotherTaggedMember = memberRepository.save(
+            Member(
+                name = "dummy3",
+                email = "test3@duty.park",
+                password = TestData.testPass
+            )
+        )
+
+        val olderSchedule = Schedule(
+            member = owner,
+            content = "search target older",
+            startDateTime = fixedDateTime,
+            endDateTime = fixedDateTime.plusHours(1),
+            position = 0
+        )
+        olderSchedule.addTag(taggedMember)
+        olderSchedule.addTag(anotherTaggedMember)
+        scheduleRepository.save(olderSchedule)
+
+        val newerSchedule = Schedule(
+            member = owner,
+            content = "search target newer",
+            startDateTime = fixedDateTime.plusHours(2),
+            endDateTime = fixedDateTime.plusHours(3),
+            position = 1
+        )
+        newerSchedule.addTag(taggedMember)
+        scheduleRepository.save(newerSchedule)
+
+        mockMvc.perform(
+            get("/api/schedules/{id}/search", taggedMember.id!!)
+                .param("q", "search target")
+                .param("size", "1")
+                .accept("application/json")
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(taggedMember)}")
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.totalElements").value(2))
+            .andExpect(jsonPath("$.totalPages").value(2))
+            .andExpect(jsonPath("$.content.length()").value(1))
+            .andExpect(jsonPath("$.content[0].content").value("search target newer"))
+
+        mockMvc.perform(
+            get("/api/schedules/{id}/search", taggedMember.id!!)
+                .param("q", "search target")
+                .param("page", "1")
+                .param("size", "1")
+                .accept("application/json")
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(taggedMember)}")
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.totalElements").value(2))
+            .andExpect(jsonPath("$.content.length()").value(1))
+            .andExpect(jsonPath("$.content[0].content").value("search target older"))
     }
 
     @Test
