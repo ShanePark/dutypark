@@ -6,8 +6,10 @@ import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSearchResult
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 /**
  * When search engine is implemented, this service will be replaced with ScheduleSearchServiceESImpl
@@ -19,6 +21,7 @@ class ScheduleSearchServiceDBImpl(
     private val friendService: FriendService,
 ) : ScheduleSearchService {
 
+    @Transactional(readOnly = true)
     override fun search(
         loginMember: LoginMember?,
         targetMemberId: Long,
@@ -28,14 +31,22 @@ class ScheduleSearchServiceDBImpl(
         val target = memberRepository.findById(targetMemberId).orElseThrow()
         val availableVisibilities = friendService.availableScheduleVisibilities(loginMember, target)
 
-        val result = scheduleRepository.findByMemberAndContentContainingAndVisibilityIn(
+        val pageOfIds = scheduleRepository.findSearchIdsByMemberAndContentContainingAndVisibilityIn(
             member = target,
             content = query,
             visibility = availableVisibilities,
             pageable = page
-        ).map { ScheduleSearchResult.of(it) }
+        )
+        if (pageOfIds.isEmpty) {
+            return PageResponse(PageImpl(emptyList(), pageOfIds.pageable, pageOfIds.totalElements))
+        }
 
-        return PageResponse(result)
+        val schedulesById = scheduleRepository.findAllWithMemberAndTagsByIdIn(pageOfIds.content)
+            .associateBy { it.id }
+        val orderedSchedules = pageOfIds.content.map(schedulesById::getValue)
+        val result = orderedSchedules.map { ScheduleSearchResult.of(it) }
+
+        return PageResponse(PageImpl(result, pageOfIds.pageable, pageOfIds.totalElements))
     }
 
 }
