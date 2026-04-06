@@ -18,6 +18,17 @@ export function formatDateOnly(date: Date): string {
 }
 
 /**
+ * Format a date-only value as YYYY/M/D without UTC drift.
+ */
+export function formatDateNumeric(dateStr: string): string {
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(dateStr)
+    ? parseDateOnly(dateStr)
+    : new Date(dateStr)
+
+  return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`
+}
+
+/**
  * Parse a YYYY-MM-DD string as a local date to avoid UTC drift.
  */
 export function parseDateOnly(dateStr: string): Date {

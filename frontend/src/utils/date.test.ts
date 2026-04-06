@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDateOnly, parseDateOnly } from './date'
+import { formatDateNumeric, formatDateOnly, parseDateOnly } from './date'
 
 describe('date utils', () => {
   it('formats local dates as YYYY-MM-DD without UTC conversion', () => {
@@ -16,5 +16,9 @@ describe('date utils', () => {
     expect(date.getDate()).toBe(6)
     expect(date.getHours()).toBe(0)
     expect(date.getMinutes()).toBe(0)
+  })
+
+  it('formats date-only strings without UTC drift in numeric form', () => {
+    expect(formatDateNumeric('2026-04-06')).toBe('2026/4/6')
   })
 })
