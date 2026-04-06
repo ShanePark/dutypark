@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { CalendarCheck, MessageSquareText, CheckSquare } from 'lucide-vue-next'
 import { isLightColor } from '@/utils/color'
+import { parseDateOnly } from '@/utils/date'
 import CalendarGrid from '@/components/common/CalendarGrid.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import VisibilityHintIcon from '@/components/common/VisibilityHintIcon.vue'
@@ -84,7 +85,7 @@ function calcDDayForDay(day: CalendarDay) {
 
 function getDDaysForDay(day: CalendarDay): LocalDDay[] {
   return props.dDays.filter((dday) => {
-    const ddayDate = new Date(dday.date)
+    const ddayDate = parseDateOnly(dday.date)
     return (
       ddayDate.getFullYear() === day.year &&
       ddayDate.getMonth() + 1 === day.month &&
