@@ -257,7 +257,7 @@ async function loadTodos() {
 // Sort D-Days by date ascending (same as backend: OrderByDate)
 function sortDDays() {
   dDays.value.sort((a, b) => {
-    return new Date(a.date).getTime() - new Date(b.date).getTime()
+    return a.date.localeCompare(b.date)
   })
 }
 

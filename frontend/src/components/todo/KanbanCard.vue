@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { Paperclip, CalendarCheck } from 'lucide-vue-next'
 import MemberTagChips from '@/components/common/MemberTagChips.vue'
 import { toDisplayTagMember } from '@/utils/tagMembers'
+import { formatDateNumeric } from '@/utils/date'
 import type { Todo } from '@/types'
 
 interface Props {
@@ -17,11 +18,7 @@ const emit = defineEmits<{
 
 const formattedDueDate = computed(() => {
   if (!props.todo.dueDate) return null
-  const date = new Date(props.todo.dueDate)
-  const year = date.getFullYear()
-  const month = date.getMonth() + 1
-  const day = date.getDate()
-  return `${year}/${month}/${day}`
+  return formatDateNumeric(props.todo.dueDate)
 })
 
 const ownerTagMembers = computed(() => {

@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { X, Star, Pencil, Trash2, Lock, CalendarCheck } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
+import { parseDateOnly } from '@/utils/date'
 
 interface DDay {
   id: number
@@ -56,7 +57,7 @@ function handleTogglePin() {
 // Format date to Korean style
 const formattedDate = computed(() => {
   if (!props.dday) return ''
-  const date = new Date(props.dday.date)
+  const date = parseDateOnly(props.dday.date)
   return date.toLocaleDateString(locale.value, {
     year: 'numeric',
     month: 'long',

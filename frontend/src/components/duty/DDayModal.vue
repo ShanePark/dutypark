@@ -4,6 +4,7 @@ import { X, Plus, Minus, RotateCcw, Lock, Unlock } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
+import { formatDateOnly, parseDateOnly } from '@/utils/date'
 
 interface DDay {
   id?: number
@@ -42,7 +43,7 @@ watch(
         isPrivate.value = props.dday.isPrivate
       } else {
         title.value = ''
-        date.value = new Date().toISOString().slice(0, 10)
+        date.value = formatDateOnly(new Date())
         isPrivate.value = false
       }
     }
@@ -51,14 +52,14 @@ watch(
 
 function addDays(days: number) {
   if (date.value) {
-    const currentDate = new Date(date.value)
+    const currentDate = parseDateOnly(date.value)
     currentDate.setDate(currentDate.getDate() + days)
-    date.value = currentDate.toISOString().slice(0, 10)
+    date.value = formatDateOnly(currentDate)
   }
 }
 
 function resetToToday() {
-  date.value = new Date().toISOString().slice(0, 10)
+  date.value = formatDateOnly(new Date())
 }
 
 function handleSave() {

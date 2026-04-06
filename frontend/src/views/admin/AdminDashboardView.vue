@@ -8,12 +8,12 @@ import { authApi } from '@/api/auth'
 import { refreshTokenApi } from '@/api/member'
 import { useSwal } from '@/composables/useSwal'
 import type { AdminMemberDetailDto, AdminMemberDto, RefreshTokenDto } from '@/types'
-import { extractDatePart } from '@/utils/date'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import AdminMemberDetailModal from '@/components/admin/AdminMemberDetailModal.vue'
+import { countTodayLogins } from './adminDashboardStats'
 import {
   Users,
   Building2,
@@ -43,14 +43,11 @@ const totalElements = ref(0)
 const pageSize = 10
 
 const stats = computed(() => {
-  const today = extractDatePart(new Date().toISOString())
-  const todayTokens = allTokens.value.filter(t => t.lastUsed?.startsWith(today) ?? false)
-
   return {
     totalMembers: totalElements.value,
     totalTeams: new Set(members.value.map(m => m.teamId).filter(Boolean)).size,
     activeTokens: allTokens.value.length,
-    todayLogins: todayTokens.length,
+    todayLogins: countTodayLogins(allTokens.value),
   }
 })
 
