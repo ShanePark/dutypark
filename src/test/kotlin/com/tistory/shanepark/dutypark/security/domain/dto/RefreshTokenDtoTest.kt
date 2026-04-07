@@ -10,6 +10,13 @@ class RefreshTokenDtoTest {
 
     private val chromeUserAgent =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    private val longAndroidChromeUserAgent =
+        "Mozilla/5.0 (" +
+                "DutyParkApp/6.0; ".repeat(18) +
+                "Linux; Android 14; Pixel 8 Pro) " +
+                "AppleWebKit/537.36 (KHTML, like Gecko) " +
+                "Chrome/122.0.0.0 Mobile Safari/537.36"
+
     @Test
     fun `of parses raw user agent values`() {
         val refreshToken = refreshToken(userAgent = chromeUserAgent)
@@ -18,6 +25,18 @@ class RefreshTokenDtoTest {
 
         assertThat(result.userAgent?.browser).isEqualTo("Chrome")
         assertThat(result.userAgent?.os).isEqualTo("Windows NT")
+    }
+
+    @Test
+    fun `of preserves browser and device for user agents longer than legacy 255 limit`() {
+        val refreshToken = refreshToken(userAgent = longAndroidChromeUserAgent)
+
+        val result = RefreshTokenDto.of(refreshToken)
+
+        assertThat(longAndroidChromeUserAgent.length).isGreaterThan(255)
+        assertThat(result.userAgent?.os).isEqualTo("Android")
+        assertThat(result.userAgent?.browser).isEqualTo("Chrome")
+        assertThat(result.userAgent?.device).isEqualTo("Android Mobile")
     }
 
     @Test
