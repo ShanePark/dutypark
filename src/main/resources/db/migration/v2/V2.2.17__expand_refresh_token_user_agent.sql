@@ -1,0 +1,2 @@
+ALTER TABLE refresh_token
+    MODIFY COLUMN user_agent VARCHAR(1024) DEFAULT NULL;

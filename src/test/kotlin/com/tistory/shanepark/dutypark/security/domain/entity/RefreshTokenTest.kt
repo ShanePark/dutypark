@@ -17,6 +17,7 @@ class RefreshTokenTest {
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     private val firefoxUserAgent =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0"
+    private val longUserAgent = "dp-test-" + "x".repeat(320)
 
     init {
         member.team = team
@@ -55,6 +56,13 @@ class RefreshTokenTest {
         val refreshToken = RefreshToken(member, fixedDateTime.plusDays(1), "", chromeUserAgent)
 
         Assertions.assertThat(refreshToken.userAgent).isEqualTo(chromeUserAgent)
+    }
+
+    @Test
+    fun `refresh token keeps userAgent longer than legacy 255 limit`() {
+        val refreshToken = RefreshToken(member, fixedDateTime.plusDays(1), "", longUserAgent)
+
+        Assertions.assertThat(refreshToken.userAgent).isEqualTo(longUserAgent)
     }
 
 }

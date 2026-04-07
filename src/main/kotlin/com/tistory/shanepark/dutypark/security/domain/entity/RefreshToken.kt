@@ -76,7 +76,7 @@ class RefreshToken(
     private fun normalizeUserAgent(userAgent: String?): String? = userAgent?.take(USER_AGENT_MAX_LENGTH)
 
     companion object {
-        private const val USER_AGENT_MAX_LENGTH = 255
+        private const val USER_AGENT_MAX_LENGTH = 1024
     }
 
 }
