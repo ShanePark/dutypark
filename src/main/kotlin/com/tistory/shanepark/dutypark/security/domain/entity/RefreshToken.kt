@@ -3,7 +3,6 @@ package com.tistory.shanepark.dutypark.security.domain.entity
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.tistory.shanepark.dutypark.common.domain.entity.BaseTimeEntity
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
-import com.tistory.shanepark.dutypark.security.domain.dto.UserAgentInfo
 import jakarta.persistence.*
 import java.time.LocalDateTime
 import java.util.*
@@ -26,8 +25,8 @@ class RefreshToken(
 
     ) : BaseTimeEntity() {
 
-    @Column(name = "user_agent", nullable = true)
-    var userAgent: String? = UserAgentInfo.parse(userAgent)?.toJson()
+    @Column(name = "user_agent", nullable = true, length = USER_AGENT_MAX_LENGTH)
+    var userAgent: String? = normalizeUserAgent(userAgent)
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -71,7 +70,13 @@ class RefreshToken(
         validUntil = LocalDateTime.now().plusDays(validityDays)
         this.lastUsed = LocalDateTime.now()
         this.remoteAddr = remoteAddr
-        this.userAgent = UserAgentInfo.parse(userAgent)?.toJson()
+        this.userAgent = normalizeUserAgent(userAgent)
+    }
+
+    private fun normalizeUserAgent(userAgent: String?): String? = userAgent?.take(USER_AGENT_MAX_LENGTH)
+
+    companion object {
+        private const val USER_AGENT_MAX_LENGTH = 255
     }
 
 }

@@ -25,6 +25,8 @@ import java.util.*
 class RefreshTokenServiceTest {
 
     private val fixedDateTime = LocalDateTime.of(2025, 1, 15, 12, 0, 0)
+    private val chromeUserAgent =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
     @Mock
     private lateinit var memberRepository: MemberRepository
@@ -153,6 +155,20 @@ class RefreshTokenServiceTest {
         assertThat(result.remoteAddr).isEqualTo("127.0.0.1")
         verify(memberRepository).findById(1L)
         verify(refreshTokenRepository).save(any<RefreshToken>())
+    }
+
+    @Test
+    fun `createRefreshToken stores raw user agent without eager parsing`() {
+        val member = memberWithId(1L)
+        whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
+        whenever(refreshTokenRepository.save(any<RefreshToken>())).thenAnswer { invocation ->
+            val token = invocation.getArgument<RefreshToken>(0)
+            refreshTokenWithIdFrom(1L, token)
+        }
+
+        val result = refreshTokenService.createRefreshToken(1L, "127.0.0.1", chromeUserAgent)
+
+        assertThat(result.userAgent).isEqualTo(chromeUserAgent)
     }
 
     private fun memberWithId(id: Long): Member {

@@ -47,7 +47,14 @@ class RefreshTokenTest {
         refreshToken.slideValidUntil("", firefoxUserAgent, 7)
 
         Assertions.assertThat(refreshToken.userAgent).isNotEqualTo(originalUserAgent)
-        Assertions.assertThat(refreshToken.userAgent).contains("Firefox")
+        Assertions.assertThat(refreshToken.userAgent).isEqualTo(firefoxUserAgent)
+    }
+
+    @Test
+    fun `refresh token stores raw userAgent without eager parsing`() {
+        val refreshToken = RefreshToken(member, fixedDateTime.plusDays(1), "", chromeUserAgent)
+
+        Assertions.assertThat(refreshToken.userAgent).isEqualTo(chromeUserAgent)
     }
 
 }
