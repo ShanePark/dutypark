@@ -1,14 +1,19 @@
 package com.tistory.shanepark.dutypark.schedule.timeparsing.service
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.tistory.shanepark.dutypark.TestUtils.Companion.jsr310JsonMapper
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingRequest
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.messages.AssistantMessage
 import org.springframework.ai.chat.model.ChatModel
 import org.springframework.ai.chat.model.ChatResponse
@@ -21,11 +26,19 @@ class ScheduleTimeParsingServiceResponseParsingTest {
 
     private lateinit var chatModel: ChatModel
     private lateinit var service: ScheduleTimeParsingService
+    private lateinit var logAppender: ListAppender<ILoggingEvent>
 
     @BeforeEach
     fun setup() {
         chatModel = mock()
         service = ScheduleTimeParsingService(chatModel, jsr310JsonMapper())
+        logAppender = ListAppender<ILoggingEvent>().apply { start() }
+        serviceLogger().addAppender(logAppender)
+    }
+
+    @AfterEach
+    fun tearDown() {
+        serviceLogger().detachAppender(logAppender)
     }
 
     @Test
@@ -110,6 +123,35 @@ class ScheduleTimeParsingServiceResponseParsingTest {
     }
 
     @Test
+    fun `parseScheduleTime logs content before and after with parsed time`() {
+        whenever(chatModel.call(any<Prompt>())).thenReturn(
+            ChatResponse(
+                listOf(
+                    Generation(
+                        AssistantMessage(
+                            """{"result":true,"hasTime":true,"startDateTime":"2025-02-28T17:20:00","endDateTime":"2025-02-28T17:20:00","content":"이재상담"}"""
+                        )
+                    )
+                )
+            )
+        )
+
+        service.parseScheduleTime(
+            ScheduleTimeParsingRequest(
+                date = LocalDate.of(2025, 2, 28),
+                content = "이재상담5시20분"
+            )
+        )
+
+        val logMessage = logAppender.list.last().formattedMessage
+
+        assertThat(logMessage).contains("content='이재상담5시20분' -> '이재상담'")
+        assertThat(logMessage).contains("time=2025-02-28T17:20:00")
+        assertThat(logMessage).contains("hasTime=true")
+        assertThat(logMessage).contains("result=true")
+    }
+
+    @Test
     fun `parseScheduleTime returns failure when generation is empty`() {
         whenever(chatModel.call(any<Prompt>())).thenReturn(ChatResponse(emptyList()))
 
@@ -122,5 +164,9 @@ class ScheduleTimeParsingServiceResponseParsingTest {
 
         assertThat(response.result).isFalse()
         assertThat(response.errorMessage).isEqualTo("LLM API returned empty response")
+    }
+
+    private fun serviceLogger(): Logger {
+        return LoggerFactory.getLogger(ScheduleTimeParsingService::class.java) as Logger
     }
 }
