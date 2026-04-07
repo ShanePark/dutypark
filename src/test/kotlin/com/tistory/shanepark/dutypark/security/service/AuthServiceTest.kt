@@ -40,6 +40,10 @@ class AuthServiceTest {
     private val fixedDateTime = LocalDateTime.of(2025, 1, 15, 12, 0, 0)
     private val futureDateTime = LocalDateTime.now().plusDays(30)
     private val pastDateTime = LocalDateTime.now().minusDays(1)
+    private val chromeUserAgent =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    private val firefoxUserAgent =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0"
 
     private val memberRepository: MemberRepository = mock()
     private val memberSsoRegisterRepository: MemberSsoRegisterRepository = mock()
@@ -221,18 +225,19 @@ class AuthServiceTest {
             member = member,
             validUntil = futureDateTime,
             remoteAddr = "127.0.0.1",
-            userAgent = null
+            userAgent = chromeUserAgent
         )
         val before = refreshToken.validUntil
         whenever(refreshTokenService.findByToken("valid")).thenReturn(refreshToken)
         whenever(jwtProvider.createToken(member)).thenReturn("new-jwt")
-        val request = requestWith("127.0.0.1", "user@duty.park")
+        val request = requestWith("127.0.0.1", firefoxUserAgent)
 
         val result = authService.refreshAccessToken("valid", request)
 
         assertThat(result.accessToken).isEqualTo("new-jwt")
         assertThat(result.refreshToken).isEqualTo(refreshToken.token)
         assertThat(refreshToken.validUntil).isAfter(before)
+        assertThat(refreshToken.userAgent).isEqualTo(firefoxUserAgent)
     }
 
     @Test
@@ -283,10 +288,10 @@ class AuthServiceTest {
         }
     }
 
-    private fun requestWith(ip: String, email: String): MockHttpServletRequest {
+    private fun requestWith(ip: String, userAgent: String = "test-agent"): MockHttpServletRequest {
         val request = MockHttpServletRequest()
         request.remoteAddr = ip
-        request.addHeader(HttpHeaders.USER_AGENT, "test-agent")
+        request.addHeader(HttpHeaders.USER_AGENT, userAgent)
         return request
     }
 

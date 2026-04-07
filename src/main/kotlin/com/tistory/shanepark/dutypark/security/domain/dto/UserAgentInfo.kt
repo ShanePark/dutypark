@@ -45,5 +45,10 @@ data class UserAgentInfo(
                 null
             }
         }
+
+        fun fromStoredValue(value: String?): UserAgentInfo? {
+            if (value == null) return null
+            return fromJson(value) ?: parse(value)
+        }
     }
 }

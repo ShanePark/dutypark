@@ -23,24 +23,30 @@ class ScheduleTimeParsingService(
     }
 
     fun parseScheduleTime(request: ScheduleTimeParsingRequest): ScheduleTimeParsingResponse {
-        if (!hasAnyTimeIndicator(request.content)) {
-            return ScheduleTimeParsingResponse(
+        val response = if (!hasAnyTimeIndicator(request.content)) {
+            ScheduleTimeParsingResponse(
                 result = true,
                 hasTime = false,
                 content = request.content
             )
+        } else {
+            parseScheduleTimeWithLlm(request)
         }
 
+        log.info("Time parsing result: {}", response.toLogMessage(request))
+        return response
+    }
+
+    private fun parseScheduleTimeWithLlm(request: ScheduleTimeParsingRequest): ScheduleTimeParsingResponse {
         val prompt = generatePrompt(request)
         val chatResponse = chatClient.prompt(prompt)
             .call()
             .chatResponse()
-        if (chatResponse == null) {
-            return ScheduleTimeParsingResponse(
+            ?: return ScheduleTimeParsingResponse(
                 result = false,
                 errorMessage = "LLM API returned null response"
             )
-        }
+
         val generation = chatResponse.results.firstOrNull()
         val chatAnswer = generation?.output?.text
         if (chatAnswer.isNullOrBlank()) {
@@ -49,9 +55,8 @@ class ScheduleTimeParsingService(
                 errorMessage = "LLM API returned empty response"
             )
         }
-        val response = parseChatAnswer(chatAnswer)
-        log.info("Time parsing result: request={}, hasTime={}, result={}", request, response.hasTime, response.result)
-        return response
+
+        return parseChatAnswer(chatAnswer)
     }
 
     private fun hasAnyTimeIndicator(content: String): Boolean {
