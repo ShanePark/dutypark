@@ -35,6 +35,7 @@ const emit = defineEmits<{
   (e: 'day-click', day: CalendarDay, index: number): void
   (e: 'batch-duty-change', day: CalendarDay, dutyTypeId: number | null): void
   (e: 'todo-click', todo: TodoDueItem): void
+  (e: 'dday-click', dday: LocalDDay): void
 }>()
 
 const focusedCalendarDay = computed(() => {
@@ -146,6 +147,7 @@ function getCalendarTagLabel(name: string) {
 
 const MOBILE_CALENDAR_SCHEDULE_TITLE_LIMIT = 10
 const MOBILE_CALENDAR_DDAY_TITLE_LIMIT = 10
+const MOBILE_CALENDAR_TODO_TITLE_LIMIT = 6
 
 function truncateMobileCalendarText(text: string, limit: number) {
   const chars = Array.from(text)
@@ -161,6 +163,10 @@ function getMobileCalendarScheduleTitle(schedule: Schedule) {
 
 function getMobileCalendarDDayTitle(dday: LocalDDay) {
   return truncateMobileCalendarText(dday.title, MOBILE_CALENDAR_DDAY_TITLE_LIMIT)
+}
+
+function getMobileCalendarTodoTitle(todo: TodoDueItem) {
+  return truncateMobileCalendarText(todo.title, MOBILE_CALENDAR_TODO_TITLE_LIMIT)
 }
 
 function getMobileCalendarTagMembers(schedule: Schedule) {
@@ -254,12 +260,21 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
         </div>
 
         <!-- D-Days -->
-        <div
+        <button
           v-for="dday in getDDaysForDay(day)"
           :key="dday.id"
-          class="calendar-inline-text px-0.5 text-[10px] leading-snug sm:text-sm sm:whitespace-normal sm:break-words"
-          :style="{ color: getPrimaryTextColor(getDutyColorAt(index)) }"
-        ><CalendarCheck class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" /><span class="sm:hidden">{{ getMobileCalendarDDayTitle(dday) }}</span><span class="hidden sm:inline">{{ dday.title }}</span></div>
+          type="button"
+          :aria-label="dday.title"
+          :title="dday.title"
+          @click.stop="emit('dday-click', dday)"
+          class="calendar-action-bubble calendar-action-bubble--dday mt-0.5 text-[10px] sm:text-xs"
+        >
+          <span class="calendar-action-bubble__text">
+            <CalendarCheck class="calendar-action-bubble__icon" />
+            <span class="sm:hidden">{{ getMobileCalendarDDayTitle(dday) }}</span>
+            <span class="hidden sm:inline">{{ dday.title }}</span>
+          </span>
+        </button>
 
         <!-- Schedules -->
         <div
@@ -339,16 +354,22 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
 
         <!-- Due to-dos shown only on my calendar -->
         <template v-if="isMyCalendar && todosDueByDays[index]?.length">
-          <div
+          <button
             v-for="todo in todosDueByDays[index].slice(0, 2)"
             :key="'due-' + todo.id"
+            type="button"
+            :aria-label="todo.title"
+            :title="todo.title"
             @click.stop="emit('todo-click', todo)"
-            class="todo-due-bubble text-[10px] sm:text-xs leading-snug px-1 py-0.5 rounded cursor-pointer truncate mt-0.5"
-            :class="todo.status === 'IN_PROGRESS' ? 'todo-due-progress' : 'todo-due-todo'"
+            class="calendar-action-bubble mt-0.5 text-[10px] sm:text-xs"
+            :class="todo.status === 'IN_PROGRESS' ? 'calendar-action-bubble--progress' : 'calendar-action-bubble--todo'"
           >
-            <CheckSquare class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px]" />
-            {{ todo.title }}
-          </div>
+            <span class="calendar-action-bubble__text">
+              <CheckSquare class="calendar-action-bubble__icon" />
+              <span class="sm:hidden">{{ getMobileCalendarTodoTitle(todo) }}</span>
+              <span class="hidden sm:inline">{{ todo.title }}</span>
+            </span>
+          </button>
           <div
             v-if="todosDueByDays[index].length > 2"
             class="text-[10px] font-medium"
@@ -366,6 +387,90 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
 .calendar-inline-text {
   white-space: normal;
   overflow-wrap: anywhere;
+}
+
+.calendar-action-bubble {
+  display: block;
+  width: 100%;
+  min-height: 1.35rem;
+  padding: 0.14rem 0.35rem;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  box-sizing: border-box;
+  appearance: none;
+  line-height: 1.2;
+  text-align: left;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+}
+
+.calendar-action-bubble:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--dp-shadow-sm);
+}
+
+.calendar-action-bubble:focus-visible {
+  outline: none;
+}
+
+.calendar-action-bubble__icon {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-right: 0.18rem;
+  vertical-align: -0.08rem;
+  flex-shrink: 0;
+}
+
+.calendar-action-bubble__text {
+  display: block;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.calendar-action-bubble--dday {
+  background-color: var(--dp-success-bg);
+  border-color: var(--dp-success-border);
+  color: var(--dp-success-hover);
+}
+
+.calendar-action-bubble--dday:hover {
+  background-color: color-mix(in srgb, var(--dp-success-bg) 82%, var(--dp-success-border));
+}
+
+.calendar-action-bubble--todo {
+  background-color: var(--dp-accent-bg);
+  border-color: var(--dp-accent-border);
+  color: var(--dp-accent);
+}
+
+.calendar-action-bubble--todo:hover {
+  background-color: var(--dp-accent-bg-hover);
+}
+
+.calendar-action-bubble--progress {
+  background-color: var(--dp-warning-bg);
+  border-color: var(--dp-warning-border);
+  color: var(--dp-warning);
+}
+
+.calendar-action-bubble--progress:hover {
+  background-color: color-mix(in srgb, var(--dp-warning-bg) 78%, var(--dp-warning-border));
+}
+
+@media (min-width: 640px) {
+  .calendar-action-bubble {
+    min-height: 1.5rem;
+    padding: 0.16rem 0.42rem;
+  }
+
+  .calendar-action-bubble__icon {
+    width: 0.8rem;
+    height: 0.8rem;
+    margin-right: 0.22rem;
+    vertical-align: -0.12rem;
+  }
 }
 
 .other-duty-chip {
