@@ -264,6 +264,8 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
           v-for="dday in getDDaysForDay(day)"
           :key="dday.id"
           type="button"
+          :aria-label="dday.title"
+          :title="dday.title"
           @click.stop="emit('dday-click', dday)"
           class="calendar-action-bubble calendar-action-bubble--dday mt-0.5 text-[10px] sm:text-xs"
         >
@@ -356,6 +358,8 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
             v-for="todo in todosDueByDays[index].slice(0, 2)"
             :key="'due-' + todo.id"
             type="button"
+            :aria-label="todo.title"
+            :title="todo.title"
             @click.stop="emit('todo-click', todo)"
             class="calendar-action-bubble mt-0.5 text-[10px] sm:text-xs"
             :class="todo.status === 'IN_PROGRESS' ? 'calendar-action-bubble--progress' : 'calendar-action-bubble--todo'"
