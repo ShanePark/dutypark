@@ -146,6 +146,7 @@ function getCalendarTagLabel(name: string) {
 
 const MOBILE_CALENDAR_SCHEDULE_TITLE_LIMIT = 10
 const MOBILE_CALENDAR_DDAY_TITLE_LIMIT = 10
+const MOBILE_CALENDAR_TODO_TITLE_LIMIT = 6
 
 function truncateMobileCalendarText(text: string, limit: number) {
   const chars = Array.from(text)
@@ -161,6 +162,10 @@ function getMobileCalendarScheduleTitle(schedule: Schedule) {
 
 function getMobileCalendarDDayTitle(dday: LocalDDay) {
   return truncateMobileCalendarText(dday.title, MOBILE_CALENDAR_DDAY_TITLE_LIMIT)
+}
+
+function getMobileCalendarTodoTitle(todo: TodoDueItem) {
+  return truncateMobileCalendarText(todo.title, MOBILE_CALENDAR_TODO_TITLE_LIMIT)
 }
 
 function getMobileCalendarTagMembers(schedule: Schedule) {
@@ -343,11 +348,14 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
             v-for="todo in todosDueByDays[index].slice(0, 2)"
             :key="'due-' + todo.id"
             @click.stop="emit('todo-click', todo)"
-            class="todo-due-bubble text-[10px] sm:text-xs leading-snug px-1 py-0.5 rounded cursor-pointer truncate mt-0.5"
+            class="todo-due-bubble text-[10px] sm:text-xs leading-snug px-1 py-0.5 rounded cursor-pointer mt-0.5"
             :class="todo.status === 'IN_PROGRESS' ? 'todo-due-progress' : 'todo-due-todo'"
           >
-            <CheckSquare class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px]" />
-            {{ todo.title }}
+            <div class="calendar-inline-text">
+              <CheckSquare class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px]" />
+              <span class="sm:hidden">{{ getMobileCalendarTodoTitle(todo) }}</span>
+              <span class="hidden sm:inline">{{ todo.title }}</span>
+            </div>
           </div>
           <div
             v-if="todosDueByDays[index].length > 2"
