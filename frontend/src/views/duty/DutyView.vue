@@ -1600,6 +1600,7 @@ async function showExcelUploadModal() {
       :member-id="memberId"
       @day-click="handleDayClick"
       @batch-duty-change="handleBatchDutyChange"
+      @dday-click="openDDayDetail"
       @todo-click="handleTodoBubbleClick"
     />
 
