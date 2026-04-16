@@ -946,6 +946,12 @@ html.dark {
     font-weight: 600;
 }
 
+.footer-nav-active:hover {
+    background-color: var(--dp-footer-active-bg);
+    color: var(--dp-text-on-dark);
+    -webkit-text-fill-color: var(--dp-text-on-dark);
+}
+
 .footer-nav-inactive {
     background-color: transparent;
     color: var(--dp-text-on-dark-dim);
