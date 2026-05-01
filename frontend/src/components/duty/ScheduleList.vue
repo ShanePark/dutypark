@@ -153,6 +153,9 @@ function formatScheduleTime(schedule: Schedule) {
   if (startTime === '00:00' && endTime === '00:00') {
     return ''
   }
+  if (startTime === endTime) {
+    return `(${startTime})`
+  }
   if (startTime !== '00:00' && endTime === '00:00') {
     return `(${startTime})`
   }
