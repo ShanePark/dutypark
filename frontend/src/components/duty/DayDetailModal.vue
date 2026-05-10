@@ -490,7 +490,7 @@ function handleUploadError(message: string) {
               :disabled="isUploading"
               class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
-              {{ isUploading ? t('duty.common.uploading') : (isEditMode ? t('duty.schedule.actions.edit') : t('duty.schedule.actions.save')) }}
+              {{ isUploading ? t('duty.common.uploading') : t('duty.schedule.actions.save') }}
             </button>
           </div>
         </div>

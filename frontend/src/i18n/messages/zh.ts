@@ -266,6 +266,8 @@ export default {
     calendar: {
       previousYear: '上一年',
       nextYear: '明年',
+      previousMonth: '上个月',
+      nextMonth: '下个月',
       yearLabel: '{year}',
       thisMonth: '本月 ({date})',
     },

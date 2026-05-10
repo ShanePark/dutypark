@@ -274,6 +274,8 @@ export default {
       ...en.common.calendar,
       previousYear: '前年',
       nextYear: '翌年',
+      previousMonth: '前月',
+      nextMonth: '翌月',
       yearLabel: '{year}年',
       thisMonth: '今月 ({date})',
     },

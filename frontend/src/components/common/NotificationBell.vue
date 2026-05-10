@@ -13,20 +13,45 @@ const notificationStore = useNotificationStore()
 const authStore = useAuthStore()
 const { t } = useI18n()
 const isDropdownVisible = ref(false)
+let singleUnreadToMarkOnCloseId: string | null = null
 
-function toggleDropdown() {
-  isDropdownVisible.value = !isDropdownVisible.value
-  emit('toggle', isDropdownVisible.value)
-
-  // Fetch recent notifications when opening dropdown
-  if (isDropdownVisible.value) {
-    notificationStore.fetchRecentNotifications()
+async function refreshDropdownNotifications() {
+  singleUnreadToMarkOnCloseId = null
+  const loaded = await notificationStore.fetchRecentNotifications()
+  if (!loaded || !isDropdownVisible.value) {
+    return
   }
+
+  singleUnreadToMarkOnCloseId = notificationStore.getSingleUnreadRecentNotificationId()
+}
+
+function openDropdown() {
+  isDropdownVisible.value = true
+  emit('toggle', true)
+  void refreshDropdownNotifications()
 }
 
 function closeDropdown() {
-  isDropdownVisible.value = false
-  emit('toggle', false)
+  const notificationId = singleUnreadToMarkOnCloseId
+  singleUnreadToMarkOnCloseId = null
+
+  if (isDropdownVisible.value) {
+    isDropdownVisible.value = false
+    emit('toggle', false)
+  }
+
+  if (notificationId) {
+    void notificationStore.markSingleUnreadAsRead(notificationId)
+  }
+}
+
+function toggleDropdown() {
+  if (isDropdownVisible.value) {
+    closeDropdown()
+    return
+  }
+
+  openDropdown()
 }
 
 // Expose close method for parent component
@@ -39,6 +64,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  singleUnreadToMarkOnCloseId = null
   notificationStore.stopPolling()
 })
 </script>
