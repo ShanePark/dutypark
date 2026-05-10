@@ -266,6 +266,8 @@ export default {
     calendar: {
       previousYear: 'año anterior',
       nextYear: 'el año que viene',
+      previousMonth: 'Mes anterior',
+      nextMonth: 'Mes siguiente',
       yearLabel: '{year}',
       thisMonth: 'Este mes ({date})',
     },

@@ -266,6 +266,8 @@ export default {
     calendar: {
       previousYear: '이전 연도',
       nextYear: '다음 연도',
+      previousMonth: '이전 월',
+      nextMonth: '다음 월',
       yearLabel: '{year}년',
       thisMonth: '이번달 ({date})',
     },

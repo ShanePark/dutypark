@@ -3,8 +3,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
-  ChevronLeft,
-  ChevronRight,
   Settings,
   CalendarPlus,
   Pencil,
@@ -20,6 +18,7 @@ import { dutyApi } from '@/api/duty'
 import { useSwal } from '@/composables/useSwal'
 import { isLightColor } from '@/utils/color'
 import BaseModal from '@/components/common/BaseModal.vue'
+import CalendarMonthNavigator from '@/components/common/CalendarMonthNavigator.vue'
 import YearMonthPicker from '@/components/common/YearMonthPicker.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import CalendarGrid from '@/components/common/CalendarGrid.vue'
@@ -426,20 +425,13 @@ onMounted(() => {
         </div>
 
         <!-- Center: Year-Month Navigation -->
-        <div class="flex items-center justify-center">
-          <button @click="prevMonth" class="calendar-nav-btn p-1 sm:p-2 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer">
-            <ChevronLeft class="w-5 h-5 sm:w-6 sm:h-6" />
-          </button>
-          <button
-            @click="isYearMonthPickerOpen = true"
-            class="calendar-nav-btn px-2 sm:px-3 py-1 text-lg sm:text-2xl font-semibold rounded whitespace-nowrap cursor-pointer"
-          >
-            {{ currentYear }}-{{ String(currentMonth).padStart(2, '0') }}
-          </button>
-          <button @click="nextMonth" class="calendar-nav-btn p-1 sm:p-2 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer">
-            <ChevronRight class="w-5 h-5 sm:w-6 sm:h-6" />
-          </button>
-        </div>
+        <CalendarMonthNavigator
+          :current-year="currentYear"
+          :current-month="currentMonth"
+          @prev-month="prevMonth"
+          @next-month="nextMonth"
+          @open-year-month-picker="isYearMonthPickerOpen = true"
+        />
 
         <!-- Right: Team manage button -->
         <div class="flex-shrink-0">

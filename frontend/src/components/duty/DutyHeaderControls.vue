@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ChevronLeft, ChevronRight, Search } from 'lucide-vue-next'
+import { Search } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
+import CalendarMonthNavigator from '@/components/common/CalendarMonthNavigator.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 
 const props = defineProps<{
@@ -53,20 +54,13 @@ function handleSearchClick() {
     </div>
 
     <!-- Center: Year-Month Navigation -->
-    <div class="flex items-center justify-center">
-      <button @click="emit('prev-month')" class="calendar-nav-btn p-0.5 sm:p-2 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer">
-        <ChevronLeft class="w-5 h-5 sm:w-6 sm:h-6" />
-      </button>
-      <button
-        @click="emit('open-year-month-picker')"
-        class="calendar-nav-btn px-1 sm:px-3 py-1 text-lg sm:text-2xl font-semibold rounded whitespace-nowrap cursor-pointer"
-      >
-        {{ currentYear }}-{{ String(currentMonth).padStart(2, '0') }}
-      </button>
-      <button @click="emit('next-month')" class="calendar-nav-btn p-0.5 sm:p-2 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer">
-        <ChevronRight class="w-5 h-5 sm:w-6 sm:h-6" />
-      </button>
-    </div>
+    <CalendarMonthNavigator
+      :current-year="currentYear"
+      :current-month="currentMonth"
+      @prev-month="emit('prev-month')"
+      @next-month="emit('next-month')"
+      @open-year-month-picker="emit('open-year-month-picker')"
+    />
 
     <!-- Right: Search -->
     <div class="flex min-w-0 justify-end">
