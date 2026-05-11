@@ -3,7 +3,6 @@ import type { ReleaseNotesMessages } from '../types'
 
 export const enReleaseNotes = {
   title: "Changelog",
-  description: "Every merged PR is listed as one release note, based on its PR date and code changes.",
   count: "{count} release notes",
   loadMore: "Load more",
   latest: "Latest",
@@ -40,6 +39,15 @@ export const enReleaseNotes = {
     ui: "UI"
   },
   entries: {
+    "pr-362": {
+      title: "Add in-app release notes and GitHub release automation",
+      summary: "Add a guide changelog backed by localized PR release notes and prepare GitHub Releases from the same English release note entry.",
+      changes: [
+        "Show release notes at the bottom of the guide page with five entries loaded at a time.",
+        "Add localized release note data and validation for missing entries and vue-i18n message compilation.",
+        "Create future GitHub Releases from the matching English in-app release note when PRs are merged into main."
+      ]
+    },
     "pr-361": {
       title: "Improve calendar navigation and notification reads",
       summary: "Add reusable month navigation with swipe gestures for calendar headers.",

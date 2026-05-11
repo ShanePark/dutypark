@@ -51,7 +51,6 @@ export interface ReleaseNoteCopy {
 
 export interface ReleaseNotesMessages<ReleaseNoteId extends string = string> {
   title: string
-  description: string
   count: string
   loadMore: string
   latest: string

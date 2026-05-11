@@ -3,7 +3,6 @@ import type { ReleaseNotesMessages } from '../types'
 
 export const jaReleaseNotes = {
   title: "変更履歴",
-  description: "マージ済みPRごとに1件のリリースノートとして整理しました。バージョンはPRのマージ日基準です。",
   count: "{count}件の変更",
   loadMore: "もっと見る",
   latest: "最新",
@@ -40,6 +39,15 @@ export const jaReleaseNotes = {
     ui: "画面"
   },
   entries: {
+    "pr-362": {
+      title: "アプリ内リリースノートとGitHub Release自動化を追加",
+      summary: "多言語のPRリリースノートをガイドの変更履歴につなぎ、同じ英語リリースノート項目からGitHub Releaseを作成できるようにします。",
+      changes: [
+        "ガイド下部に変更履歴を表示し、一度に5件ずつ読み込めるようにします。",
+        "多言語リリースノートデータと、欠落項目およびvue-i18nメッセージコンパイルの検証を追加します。",
+        "PRがmainにマージされたら、一致する英語のアプリ内リリースノートからGitHub Releaseを作成します。"
+      ]
+    },
     "pr-361": {
       title: "カレンダーのナビゲーションと通知の読み取りを改善する",
       summary: "カレンダーヘッダーにスワイプジェスチャーを使用した再利用可能な月ナビゲーションを追加します。",

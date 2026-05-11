@@ -3,7 +3,6 @@ import type { ReleaseNotesMessages } from '../types'
 
 export const koReleaseNotes = {
   title: "변경사항",
-  description: "병합된 PR마다 하나의 릴리즈 노트로 정리했습니다. 버전은 PR 병합일 기준입니다.",
   count: "총 {count}개의 변경사항",
   loadMore: "더보기",
   latest: "최신",
@@ -40,6 +39,15 @@ export const koReleaseNotes = {
     ui: "화면"
   },
   entries: {
+    "pr-362": {
+      title: "앱 내 릴리즈 노트와 GitHub Release 자동화 추가",
+      summary: "다국어 PR 릴리즈 노트를 이용 안내 변경사항에 연결하고, 같은 영어 릴리즈 노트 항목으로 GitHub Release를 만들도록 준비합니다.",
+      changes: [
+        "이용 안내 하단에 변경사항을 추가하고 한 번에 5개씩 더 볼 수 있게 합니다.",
+        "다국어 릴리즈 노트 데이터와 누락 항목, vue-i18n 메시지 컴파일 검증을 추가합니다.",
+        "PR이 main에 병합되면 일치하는 영어 앱 릴리즈 노트로 GitHub Release를 생성합니다."
+      ]
+    },
     "pr-361": {
       title: "캘린더 탐색 및 알림 읽기 개선",
       summary: "캘린더 헤더에 스와이프 동작으로 재사용 가능한 월 탐색을 추가합니다.",

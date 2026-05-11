@@ -1,0 +1,49 @@
+name: GitHub Release
+
+on:
+  pull_request:
+    branches: [ "main" ]
+    types: [ "closed" ]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Merged PR number to publish as a GitHub Release"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: github-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare release notes
+        id: prepare
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pr_number || github.event.pull_request.number }}
+          TARGET_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || '' }}
+        run: node .github/scripts/prepare-github-release.mjs
+
+      - name: Create GitHub release
+        if: steps.prepare.outputs.exists != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.prepare.outputs.tag }}" \
+            --target "${{ steps.prepare.outputs.target }}" \
+            --title "${{ steps.prepare.outputs.title }}" \
+            --notes-file "${{ steps.prepare.outputs.notes_file }}" \
+            --latest
