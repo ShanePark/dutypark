@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { releaseNoteMetas } from '@/releaseNotes/meta'
+import type { ReleaseNoteArea, ReleaseNoteCategory } from '@/releaseNotes/types'
 import {
   BookOpen,
   Home,
@@ -31,6 +33,8 @@ import {
   Camera,
   Palette,
   UserCog,
+  History,
+  ExternalLink,
 } from 'lucide-vue-next'
 
 type GuideIcon = typeof Home
@@ -51,6 +55,19 @@ interface GuideSection {
   isOpen: boolean
   summary: string
   cards: GuideCard[]
+}
+
+interface ReleaseNote {
+  id: string
+  version: string
+  date: string
+  pr: number
+  url: string
+  category: ReleaseNoteCategory
+  areas: readonly ReleaseNoteArea[]
+  title: string
+  summary: string
+  changes: string[]
 }
 
 const { t, tm } = useI18n()
@@ -132,11 +149,43 @@ const sectionState = ref<Record<GuideSectionId, boolean>>({
   friends: false,
   settings: false,
 })
+const releaseNotesPageSize = 5
+const isReleaseNotesOpen = ref(false)
+const visibleReleaseNotesCount = ref(releaseNotesPageSize)
+
+const categoryClassMap: Record<ReleaseNoteCategory, string> = {
+  feature: 'bg-dp-accent-soft text-dp-accent border-dp-accent-border',
+  improvement: 'bg-dp-success-soft text-dp-success border-dp-success-border',
+  fix: 'bg-dp-danger-soft text-dp-danger border-dp-danger-border',
+  maintenance: 'bg-dp-bg-tertiary text-dp-text-secondary border-dp-border-secondary',
+  security: 'bg-dp-warning-soft text-dp-warning border-dp-warning-border',
+}
 
 function getItems(key: string): string[] {
   const items = tm(key)
   return Array.isArray(items) ? items.map(item => String(item)) : []
 }
+
+function formatReleaseDate(date: string) {
+  return date.split('-').join('.')
+}
+
+const releaseNotes = computed<ReleaseNote[]>(() => {
+  return releaseNoteMetas.map(note => ({
+    ...note,
+    title: t(`releaseNotes.entries.${note.id}.title`),
+    summary: t(`releaseNotes.entries.${note.id}.summary`),
+    changes: getItems(`releaseNotes.entries.${note.id}.changes`),
+  }))
+})
+
+const visibleReleaseNotes = computed(() => {
+  return releaseNotes.value.slice(0, visibleReleaseNotesCount.value)
+})
+
+const hasMoreReleaseNotes = computed(() => {
+  return visibleReleaseNotesCount.value < releaseNotes.value.length
+})
 
 const guideSections = computed<GuideSection[]>(() => {
   return sectionConfigs.map(section => ({
@@ -160,7 +209,23 @@ function toggleSection(id: GuideSectionId) {
   sectionState.value[id] = !sectionState.value[id]
 }
 
+function toggleReleaseNotes() {
+  isReleaseNotesOpen.value = !isReleaseNotesOpen.value
+  if (!isReleaseNotesOpen.value) {
+    visibleReleaseNotesCount.value = releaseNotesPageSize
+  }
+}
+
+function loadMoreReleaseNotes() {
+  visibleReleaseNotesCount.value = Math.min(
+    visibleReleaseNotesCount.value + releaseNotesPageSize,
+    releaseNotes.value.length,
+  )
+}
+
 function openAllSections() {
+  isReleaseNotesOpen.value = true
+  visibleReleaseNotesCount.value = releaseNotesPageSize
   sectionState.value = {
     dashboard: true,
     calendar: true,
@@ -171,6 +236,8 @@ function openAllSections() {
 }
 
 function closeAllSections() {
+  isReleaseNotesOpen.value = false
+  visibleReleaseNotesCount.value = releaseNotesPageSize
   sectionState.value = {
     dashboard: false,
     calendar: false,
@@ -257,6 +324,93 @@ function closeAllSections() {
                 <li v-for="(item, itemIndex) in card.items" :key="itemIndex">{{ item }}</li>
               </ul>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded-xl border shadow-sm overflow-hidden bg-dp-bg-card border-dp-border-primary">
+        <button
+          @click="toggleReleaseNotes"
+          class="w-full px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-opacity-50 transition bg-dp-bg-secondary"
+        >
+          <div class="min-w-0 flex flex-wrap items-center gap-3 text-left">
+            <History class="w-5 h-5 text-dp-accent" />
+            <span class="font-semibold text-dp-text-primary">{{ t('releaseNotes.title') }}</span>
+            <span class="rounded-full border px-2 py-1 text-xs border-dp-border-secondary text-dp-text-secondary">
+              {{ t('releaseNotes.count', { count: releaseNotes.length }) }}
+            </span>
+          </div>
+          <ChevronUp
+            v-if="isReleaseNotesOpen"
+            class="w-5 h-5 shrink-0"
+            :style="{ color: 'var(--dp-text-muted)' }"
+          />
+          <ChevronDown v-else class="w-5 h-5 shrink-0 text-dp-text-muted" />
+        </button>
+
+        <div v-if="isReleaseNotesOpen" class="p-5">
+          <div class="space-y-3">
+            <article
+              v-for="(note, noteIndex) in visibleReleaseNotes"
+              :key="note.id"
+              class="rounded-lg border p-4 bg-dp-bg-secondary border-dp-border-primary"
+            >
+              <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="font-semibold text-dp-text-primary">{{ note.version }}</span>
+                  <span
+                    v-if="noteIndex === 0"
+                    class="rounded-full border px-2 py-1 text-xs bg-dp-accent-soft text-dp-accent border-dp-accent-border"
+                  >
+                    {{ t('releaseNotes.latest') }}
+                  </span>
+                  <span
+                    class="rounded-full border px-2 py-1 text-xs"
+                    :class="categoryClassMap[note.category]"
+                  >
+                    {{ t(`releaseNotes.categories.${note.category}`) }}
+                  </span>
+                  <span class="text-xs text-dp-text-muted">{{ formatReleaseDate(note.date) }}</span>
+                </div>
+
+                <a
+                  :href="note.url"
+                  target="_blank"
+                  rel="noreferrer"
+                  class="inline-flex min-h-[44px] items-center gap-1.5 self-start text-sm transition-colors text-dp-accent hover:text-dp-accent-hover"
+                >
+                  {{ t('releaseNotes.pr', { number: note.pr }) }}
+                  <ExternalLink class="w-4 h-4" />
+                </a>
+              </div>
+
+              <h3 class="mb-2 text-base font-semibold text-dp-text-primary">{{ note.title }}</h3>
+              <p class="mb-3 text-sm leading-6 text-dp-text-secondary">{{ note.summary }}</p>
+
+              <ul class="mb-3 ml-5 list-disc space-y-1.5 text-sm leading-6 text-dp-text-secondary">
+                <li v-for="(change, changeIndex) in note.changes" :key="changeIndex">{{ change }}</li>
+              </ul>
+
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="text-xs text-dp-text-muted">{{ t('releaseNotes.areas') }}</span>
+                <span
+                  v-for="area in note.areas"
+                  :key="`${note.id}-${area}`"
+                  class="rounded-full border px-2 py-1 text-xs border-dp-border-secondary text-dp-text-secondary"
+                >
+                  {{ t(`releaseNotes.areaLabels.${area}`) }}
+                </span>
+              </div>
+            </article>
+
+            <button
+              v-if="hasMoreReleaseNotes"
+              type="button"
+              class="mx-auto flex min-h-[44px] items-center justify-center rounded-lg border px-4 py-2 text-sm transition hover:bg-dp-bg-hover border-dp-border-secondary text-dp-text-secondary"
+              @click="loadMoreReleaseNotes"
+            >
+              {{ t('releaseNotes.loadMore') }}
+            </button>
           </div>
         </div>
       </section>

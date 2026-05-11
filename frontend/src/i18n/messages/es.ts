@@ -1,3 +1,5 @@
+import { esReleaseNotes } from '../../releaseNotes/messages/es'
+
 const apiErrors = {
   auth: {
     required: 'Es necesario iniciar sesión.',
@@ -1438,6 +1440,7 @@ export default {
     },
     dismissForDays: 'Ocultar durante {days} días',
   },
+  releaseNotes: esReleaseNotes,
   guide: {
     title: 'Guía',
     description: 'Conozca las características principales de Dutypark y cómo utilizarlas.',

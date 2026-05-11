@@ -1,4 +1,5 @@
 import en from './en'
+import { jaReleaseNotes } from '../../releaseNotes/messages/ja'
 
 const apiErrors = {
   auth: {
@@ -1525,6 +1526,7 @@ export default {
     },
     dismissForDays: '{days}日間表示しない',
   },
+  releaseNotes: jaReleaseNotes,
   guide: {
     ...en.guide,
     title: 'ガイド',
