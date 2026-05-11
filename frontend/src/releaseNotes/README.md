@@ -12,6 +12,6 @@ When preparing a PR:
 
 The `ReleaseNotesMessages<ReleaseNoteId>` type intentionally fails type-checking when a locale is missing a PR entry.
 
-GitHub Releases are created only for future merges. The `GitHub Release` workflow creates a date-based release when a PR is merged into `main`. It reads the matching English in-app release note entry and uses that same content for the GitHub Release body. If the metadata or English copy is missing, the workflow fails instead of publishing a different release note.
+GitHub Releases are created only for future merges. The `GitHub Release` workflow creates a date-based release from the `main` merge commit. It resolves the merged PR, reads the matching English in-app release note entry, and uses that same content for the GitHub Release body. If the metadata or English copy is missing, the workflow fails instead of publishing a different release note.
 
-If the first merge that introduces the workflow does not run automatically, run the workflow manually with `workflow_dispatch` and the merged PR number.
+If a release ever needs to be retried, run the workflow manually with `workflow_dispatch` and the merged PR number.

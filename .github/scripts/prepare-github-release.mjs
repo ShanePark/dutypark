@@ -11,6 +11,10 @@ function requiredEnv(name) {
   return value
 }
 
+function optionalEnv(name) {
+  return process.env[name] || ''
+}
+
 function runGh(args) {
   return execFileSync('gh', args, {
     encoding: 'utf8',
@@ -139,12 +143,38 @@ ${changes}
 `
 }
 
+function readPrNumberFromTarget(target) {
+  const repository = requiredEnv('GITHUB_REPOSITORY')
+  const pullRequests = JSON.parse(runGh([
+    'api',
+    `repos/${repository}/commits/${target}/pulls`,
+    '-H',
+    'Accept: application/vnd.github+json',
+  ]))
+  const mergedPullRequest = pullRequests.find(pullRequest => pullRequest.merged_at)
+
+  if (!mergedPullRequest) {
+    throw new Error(`No merged PR found for commit ${target}`)
+  }
+
+  return String(mergedPullRequest.number)
+}
+
 function writeOutput(key, value) {
   const outputPath = requiredEnv('GITHUB_OUTPUT')
   fs.appendFileSync(outputPath, `${key}<<EOF\n${value}\nEOF\n`)
 }
 
-const prNumber = requiredEnv('PR_NUMBER')
+const targetFromEnv = optionalEnv('TARGET_SHA')
+let prNumber = optionalEnv('PR_NUMBER')
+if (!prNumber && !targetFromEnv) {
+  throw new Error('PR_NUMBER or TARGET_SHA is required')
+}
+
+if (!prNumber) {
+  prNumber = readPrNumberFromTarget(targetFromEnv)
+}
+
 const pr = JSON.parse(runGh([
   'pr',
   'view',
@@ -157,7 +187,7 @@ if (!pr.mergedAt) {
   throw new Error(`PR #${prNumber} is not merged`)
 }
 
-const target = process.env.TARGET_SHA || pr.mergeCommit?.oid
+const target = targetFromEnv || pr.mergeCommit?.oid
 if (!target) {
   throw new Error(`PR #${prNumber} does not have a merge commit SHA`)
 }
