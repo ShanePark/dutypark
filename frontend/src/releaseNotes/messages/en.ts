@@ -39,13 +39,22 @@ export const enReleaseNotes = {
     ui: "UI"
   },
   entries: {
+    "pr-364": {
+      title: "Automate GitHub Releases from in-app release notes",
+      summary: "Create GitHub Releases from the matching English in-app release note whenever a PR is merged into main.",
+      changes: [
+        "Add a GitHub Release workflow that runs on merged PRs and supports manual dispatch for recovery.",
+        "Generate release tags, titles, and notes from release note metadata and English copy instead of the PR body.",
+        "Document the future PR release note workflow and fail release preparation when the in-app note is missing."
+      ]
+    },
     "pr-362": {
-      title: "Add in-app release notes and GitHub release automation",
-      summary: "Add a guide changelog backed by localized PR release notes and prepare GitHub Releases from the same English release note entry.",
+      title: "Add in-app release notes",
+      summary: "Add a localized guide changelog with one release note per merged PR and validation for future entries.",
       changes: [
         "Show release notes at the bottom of the guide page with five entries loaded at a time.",
-        "Add localized release note data and validation for missing entries and vue-i18n message compilation.",
-        "Create future GitHub Releases from the matching English in-app release note when PRs are merged into main."
+        "Backfill PR-based release note metadata and localized copy across supported languages.",
+        "Add validation for duplicate metadata, missing locale entries, and vue-i18n message compilation."
       ]
     },
     "pr-361": {
