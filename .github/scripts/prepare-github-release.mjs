@@ -139,7 +139,7 @@ function releaseNotesFromInAppEntry(note, pr) {
 ${changes}
 
 ## Pull Request
-- #${pr.number} ${pr.url}
+- [#${pr.number}](${pr.url})
 `
 }
 
