@@ -42,6 +42,7 @@ Use this file for repo-wide defaults only. Keep it lean; read the code and nearb
 - Use `useSwal()` for confirmations and user-facing alerts.
 - Auth is cookie-based through the shared Axios client. Do not add access-token persistence in localStorage.
 - Put user-facing UI copy in `frontend/src/i18n/messages/*.ts`; do not leave hardcoded Korean or English strings in components, composables, or view files unless the string is truly non-user-facing.
+- For user-facing PRs, add exactly one release note entry before PR review: update `frontend/src/releaseNotes/meta.ts` and every `frontend/src/releaseNotes/messages/*.ts` locale file. Use the PR date in Asia/Seoul as `YYYY.MM.DD`, then `.02`, `.03`, and so on for additional PRs on the same date. Run `cd frontend && npm run release-notes:check`; GitHub Releases are created on merge from the matching English in-app release note, so do not rely on the PR body as the release note source.
 - Keep auto-detected locale separate from explicit user choice. Browser locale may drive first render or language suggestions, but it should not be treated as a confirmed preference until the user accepts or picks a language.
 - In locale pickers and language settings, show language names in their native forms (`한국어`, `English`, `日本語`) rather than translating the language names to the current UI language.
 - Style with Tailwind utilities and `--dp-*` tokens from `frontend/src/style.css`. Avoid hardcoded hex colors or theme-blind utility colors for surfaces, borders, and text.

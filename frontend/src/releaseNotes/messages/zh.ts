@@ -3,7 +3,6 @@ import type { ReleaseNotesMessages } from '../types'
 
 export const zhReleaseNotes = {
   title: "变更记录",
-  description: "每个已合并 PR 都整理为一条发布说明，版本号基于 PR 合并日期。",
   count: "共 {count} 条变更",
   loadMore: "查看更多",
   latest: "最新",
@@ -40,6 +39,24 @@ export const zhReleaseNotes = {
     ui: "界面"
   },
   entries: {
+    "pr-364": {
+      title: "从应用内发布说明自动创建 GitHub Release",
+      summary: "每当 PR 合并到 main 时，使用匹配的英文应用内发布说明创建 GitHub Release。",
+      changes: [
+        "添加在已合并 PR 上运行的 GitHub Release 工作流，并支持手动触发恢复。",
+        "从发布说明元数据和英文文案生成标签、标题和正文，而不是使用 PR 正文。",
+        "记录未来 PR 发布说明流程，并在缺少应用内条目时让发布准备失败。"
+      ]
+    },
+    "pr-362": {
+      title: "添加应用内发布说明",
+      summary: "添加多语言指南变更记录，为每个已合并 PR 显示一条发布说明，并验证未来条目。",
+      changes: [
+        "在指南页面底部显示发布说明，并一次加载5条。",
+        "补齐基于 PR 的发布说明元数据和所有支持语言的文案。",
+        "添加重复元数据、缺失语言条目和vue-i18n消息编译校验。"
+      ]
+    },
     "pr-361": {
       title: "改进日历导航和通知读取",
       summary: "通过日历标题的滑动手势添加可重复使用的月份导航。",

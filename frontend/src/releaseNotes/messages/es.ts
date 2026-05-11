@@ -3,7 +3,6 @@ import type { ReleaseNotesMessages } from '../types'
 
 export const esReleaseNotes = {
   title: "Cambios",
-  description: "Cada PR fusionado aparece como una nota de versión, con versión basada en la fecha de fusión del PR.",
   count: "{count} cambios",
   loadMore: "Ver más",
   latest: "Más reciente",
@@ -40,6 +39,24 @@ export const esReleaseNotes = {
     ui: "Interfaz"
   },
   entries: {
+    "pr-364": {
+      title: "Automatizar GitHub Releases desde notas de versión de la app",
+      summary: "Crea GitHub Releases desde la nota de versión en inglés correspondiente cada vez que un PR se fusiona en main.",
+      changes: [
+        "Agrega un flujo de GitHub Release que se ejecuta en PR fusionados y admite ejecución manual para recuperación.",
+        "Genera etiquetas, títulos y notas desde los metadatos de notas de versión y el texto en inglés en lugar del cuerpo del PR.",
+        "Documenta el flujo futuro de notas de versión por PR y falla la preparación si falta la entrada en la app."
+      ]
+    },
+    "pr-362": {
+      title: "Agregar notas de versión en la app",
+      summary: "Agrega un registro de cambios localizado en la guía con una nota por cada PR fusionado y validación para entradas futuras.",
+      changes: [
+        "Muestra las notas de versión al final de la página de guía con cinco entradas cargadas cada vez.",
+        "Completa metadatos de notas de versión por PR y textos localizados para los idiomas compatibles.",
+        "Agrega validación para metadatos duplicados, entradas de idioma faltantes y compilación de mensajes vue-i18n."
+      ]
+    },
     "pr-361": {
       title: "Mejorar la navegación del calendario y las lecturas de notificaciones.",
       summary: "Agregue navegación mensual reutilizable con gestos de deslizamiento para los encabezados del calendario.",
