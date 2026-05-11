@@ -1,3 +1,5 @@
+import { enReleaseNotes } from '../../releaseNotes/messages/en'
+
 const apiErrors = {
   auth: {
     required: 'Login is required.',
@@ -1438,6 +1440,7 @@ export default {
     },
     dismissForDays: 'Hide for {days} days',
   },
+  releaseNotes: enReleaseNotes,
   guide: {
     title: 'Guide',
     description: 'Learn the main features of Dutypark and how to use them.',

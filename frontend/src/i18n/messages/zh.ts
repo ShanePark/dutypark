@@ -1,3 +1,5 @@
+import { zhReleaseNotes } from '../../releaseNotes/messages/zh'
+
 const apiErrors = {
   auth: {
     required: '需要登录。',
@@ -1438,6 +1440,7 @@ export default {
     },
     dismissForDays: '隐藏 {days} 天',
   },
+  releaseNotes: zhReleaseNotes,
   guide: {
     title: '指南',
     description: '了解 Dutypark 的主要功能以及如何使用它们。',

@@ -1,3 +1,5 @@
+import { koReleaseNotes } from '../../releaseNotes/messages/ko'
+
 const apiErrors = {
   auth: {
     required: '로그인이 필요합니다.',
@@ -1438,6 +1440,7 @@ export default {
     },
     dismissForDays: '{days}일간 보지 않기',
   },
+  releaseNotes: koReleaseNotes,
   guide: {
     title: '이용 안내',
     description: 'Dutypark의 주요 기능과 사용 방법을 안내합니다.',
