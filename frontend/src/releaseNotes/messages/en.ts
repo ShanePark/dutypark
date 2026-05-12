@@ -39,6 +39,14 @@ export const enReleaseNotes = {
     ui: "UI"
   },
   entries: {
+    "pr-367": {
+      title: "Add missing release notes for the modal button fix",
+      summary: "Adds the in-app release note entries needed for GitHub Release automation to publish the modal button layout fix.",
+      changes: [
+        "Add PR #366 release note metadata and localized copy across supported languages.",
+        "Add this maintenance release note so the follow-up PR also passes release preparation after merge."
+      ]
+    },
     "pr-366": {
       title: "Normalize modal action buttons",
       summary: "Keeps todo and schedule modal save actions from collapsing into tall, narrow buttons on small screens.",

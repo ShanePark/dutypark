@@ -39,6 +39,14 @@ export const esReleaseNotes = {
     ui: "Interfaz"
   },
   entries: {
+    "pr-367": {
+      title: "Agregar las notas de versión faltantes para la corrección de botones",
+      summary: "Agrega las entradas de notas de versión en la app necesarias para que la automatización de GitHub Release publique la corrección del diseño de botones.",
+      changes: [
+        "Agrega los metadatos de la nota de versión del PR #366 y el texto localizado en los idiomas compatibles.",
+        "Agrega esta nota de mantenimiento para que el PR de seguimiento también supere la preparación de release tras fusionarse."
+      ]
+    },
     "pr-366": {
       title: "Normalizar los botones de acción de los modales",
       summary: "Evita que las acciones de guardar en los modales de Todo y agenda se colapsen en botones altos y estrechos en pantallas pequeñas.",
