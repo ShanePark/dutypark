@@ -463,7 +463,14 @@ function onUploadError(message: string) {
         </template>
       </div>
 
-      <div class="modal-footer-safe p-3 sm:p-4 flex-shrink-0 border-t border-dp-border-primary">
+      <div
+        :class="[
+          'modal-footer-safe',
+          isEditMode
+            ? 'modal-actions-compact modal-actions-end'
+            : 'p-3 sm:p-4 flex-shrink-0 border-t border-dp-border-primary',
+        ]"
+      >
         <template v-if="!isEditMode">
           <div class="flex items-center justify-between gap-2">
             <button
@@ -530,23 +537,19 @@ function onUploadError(message: string) {
           </div>
         </template>
         <template v-else>
-          <div class="flex justify-end">
-            <div class="flex flex-row gap-2 justify-end">
-            <button
-              @click="cancelEdit"
-              class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
-            >
-              {{ t('common.actions.cancel') }}
-            </button>
-            <button
-              @click="saveEdit"
-              :disabled="isEditSaveDisabled"
-              class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-            >
-              {{ isUploading ? t('duty.common.uploading') : t('duty.todo.actions.save') }}
-            </button>
-            </div>
-          </div>
+          <button
+            @click="cancelEdit"
+            class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
+          >
+            {{ t('common.actions.cancel') }}
+          </button>
+          <button
+            @click="saveEdit"
+            :disabled="isEditSaveDisabled"
+            class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
+            {{ isUploading ? t('duty.common.uploading') : t('duty.todo.actions.save') }}
+          </button>
         </template>
       </div>
     </template>
