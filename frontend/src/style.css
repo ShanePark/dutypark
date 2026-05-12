@@ -404,6 +404,18 @@ html.dark {
     background-color: var(--dp-bg-tertiary);
 }
 
+.form-control[aria-invalid="true"],
+.form-control-neutral[aria-invalid="true"],
+.form-control-card[aria-invalid="true"] {
+    border-color: var(--dp-warning);
+}
+
+.form-control[aria-invalid="true"]:focus,
+.form-control-neutral[aria-invalid="true"]:focus,
+.form-control-card[aria-invalid="true"]:focus {
+    --tw-ring-color: var(--dp-warning);
+}
+
 .form-control-neutral {
     @apply w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-text-primary focus:border-transparent;
     background-color: var(--dp-bg-input);

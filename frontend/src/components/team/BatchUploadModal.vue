@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { useSwal } from '@/composables/useSwal'
@@ -26,6 +26,21 @@ const batchForm = ref({
   year: new Date().getFullYear(),
   month: new Date().getMonth() + 1,
 })
+const currentYear = new Date().getFullYear()
+const maxYear = currentYear + 1
+
+const isFileMissing = computed(() => !batchForm.value.file)
+const isPeriodInvalid = computed(() => {
+  const year = Number(batchForm.value.year)
+  const month = Number(batchForm.value.month)
+  return !Number.isInteger(year) || !Number.isInteger(month) ||
+    year < currentYear || year > maxYear || month < 1 || month > 12
+})
+const periodFeedbackMessage = computed(() => {
+  if (!isPeriodInvalid.value) return ''
+  return t('team.batchUpload.validation.period')
+})
+const isUploadDisabled = computed(() => props.saving || isFileMissing.value || isPeriodInvalid.value)
 
 watch(() => props.isOpen, (open) => {
   if (!open) return
@@ -50,6 +65,10 @@ function handleFileChange(event: Event) {
 async function uploadBatch() {
   if (!batchForm.value.file) {
     showWarning(t('team.batchUpload.selectFile'))
+    return
+  }
+  if (isPeriodInvalid.value) {
+    showWarning(periodFeedbackMessage.value)
     return
   }
 
@@ -105,6 +124,7 @@ async function uploadBatch() {
           accept=".xlsx"
           @change="handleFileChange"
           class="form-control"
+          :aria-invalid="isFileMissing"
         />
       </div>
 
@@ -116,9 +136,10 @@ async function uploadBatch() {
           <input
             v-model.number="batchForm.year"
             type="number"
-            :min="new Date().getFullYear()"
-            :max="new Date().getFullYear() + 1"
+            :min="currentYear"
+            :max="maxYear"
             class="form-control"
+            :aria-invalid="isPeriodInvalid"
           />
         </div>
         <div>
@@ -131,6 +152,7 @@ async function uploadBatch() {
             min="1"
             max="12"
             class="form-control"
+            :aria-invalid="isPeriodInvalid"
           />
         </div>
       </div>
@@ -139,7 +161,7 @@ async function uploadBatch() {
     <div class="modal-actions modal-actions-end modal-footer-safe">
       <button
         @click="uploadBatch"
-        :disabled="saving || !batchForm.file"
+        :disabled="isUploadDisabled"
         class="px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
       >
         <Loader2 v-if="saving" class="w-4 h-4 animate-spin" />

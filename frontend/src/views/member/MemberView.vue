@@ -497,6 +497,23 @@ const passwordErrors = ref({
   newPassword: '',
   confirmPassword: '',
 })
+const changingPassword = ref(false)
+const passwordSubmitHint = computed(() => {
+  if (!passwordForm.value.currentPassword) return t('member.password.validation.currentRequired')
+  if (!passwordForm.value.newPassword) return t('member.password.validation.newRequired')
+  if (passwordForm.value.newPassword.length < 8 || passwordForm.value.newPassword.length > 20) {
+    return t('member.password.validation.length')
+  }
+  if (passwordForm.value.currentPassword === passwordForm.value.newPassword) {
+    return t('member.password.validation.sameAsCurrent')
+  }
+  if (!passwordForm.value.confirmPassword) return t('member.password.validation.confirmRequired')
+  if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
+    return t('member.password.validation.mismatch')
+  }
+  return ''
+})
+const isPasswordSubmitDisabled = computed(() => changingPassword.value || !!passwordSubmitHint.value)
 
 function openPasswordModal() {
   passwordForm.value = { currentPassword: '', newPassword: '', confirmPassword: '' }
@@ -534,8 +551,6 @@ function validatePasswordForm(): boolean {
 
   return isValid
 }
-
-const changingPassword = ref(false)
 
 async function changePassword() {
   if (!validatePasswordForm()) return
@@ -1090,8 +1105,8 @@ onMounted(async () => {
       <div class="modal-actions modal-footer-safe sm:px-6 sm:py-6">
         <button
           @click="changePassword"
-          :disabled="changingPassword"
-          class="flex-1 px-4 py-3 sm:py-2 min-h-11 bg-dp-accent hover:bg-dp-accent-hover rounded-lg text-dp-text-on-dark font-medium transition disabled:opacity-50 flex items-center justify-center gap-2"
+          :disabled="isPasswordSubmitDisabled"
+          class="flex-1 px-4 py-3 sm:py-2 min-h-11 bg-dp-accent hover:bg-dp-accent-hover rounded-lg text-dp-text-on-dark font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           <Loader2 v-if="changingPassword" class="w-4 h-4 animate-spin" />
           {{ changingPassword ? t('member.password.submitting') : t('member.password.submit') }}

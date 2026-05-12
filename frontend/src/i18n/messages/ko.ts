@@ -1297,6 +1297,9 @@ export default {
       month: '월',
       success: '근무표 업로드가 완료되었습니다.',
       failed: '근무표 업로드에 실패했습니다.',
+      validation: {
+        period: '올바른 연도와 월을 입력해주세요.',
+      },
     },
     dutyType: {
       titleAdd: '근무 유형 추가',
@@ -1398,6 +1401,7 @@ export default {
     validationFailed: '선택한 이미지를 사용할 수 없습니다.',
     imagesOnly: '이미지 파일만 업로드할 수 있습니다.',
     readFailed: '이미지 파일을 읽지 못했습니다.',
+    cropFailed: '자른 이미지를 준비하지 못했습니다. 이미지를 다시 선택해주세요.',
     uploadTitle: '이미지 선택',
     uploadHint: 'PNG, JPG, WEBP, GIF 파일을 지원합니다.',
     maxSize: '최대 {size}',

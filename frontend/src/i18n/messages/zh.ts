@@ -1297,6 +1297,9 @@ export default {
       month: '月份',
       success: '值班表已上传。',
       failed: '上传值班表失败。',
+      validation: {
+        period: '请输入有效的年份和月份。',
+      },
     },
     dutyType: {
       titleAdd: '添加班次类型',
@@ -1398,6 +1401,7 @@ export default {
     validationFailed: '无法使用所选图像。',
     imagesOnly: '只能上传图像文件。',
     readFailed: '无法读取图像文件。',
+    cropFailed: '无法准备裁剪后的图片。请重新选择图片。',
     uploadTitle: '选择图像',
     uploadHint: '支持 PNG、JPG、WEBP 和 GIF 文件。',
     maxSize: '最多 {size}',

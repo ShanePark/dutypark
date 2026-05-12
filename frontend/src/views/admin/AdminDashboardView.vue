@@ -70,6 +70,7 @@ const passwordTargetMember = ref<{ id: number; name: string } | null>(null)
 const newPassword = ref('')
 const confirmPassword = ref('')
 const passwordError = ref('')
+const changingPassword = ref(false)
 const showMemberDetailModal = ref(false)
 const selectedMemberId = ref<number | null>(null)
 const selectedMemberDetail = ref<AdminMemberDetailDto | null>(null)
@@ -81,6 +82,22 @@ const selectedMemberForDetail = computed(() => {
   if (selectedMemberId.value == null) return null
   return members.value.find(member => member.id === selectedMemberId.value) ?? null
 })
+
+const adminPasswordSubmitHint = computed(() => {
+  if (!newPassword.value || !confirmPassword.value) {
+    return t('admin.dashboard.password.validation.required')
+  }
+  if (newPassword.value.length < 8) {
+    return t('admin.dashboard.password.validation.min')
+  }
+  if (newPassword.value !== confirmPassword.value) {
+    return t('admin.dashboard.password.validation.mismatch')
+  }
+  return ''
+})
+const isAdminPasswordSubmitDisabled = computed(() =>
+  changingPassword.value || !!adminPasswordSubmitHint.value
+)
 
 function openPasswordModal(member: { id: number; name: string }) {
   passwordTargetMember.value = member
@@ -94,8 +111,6 @@ function closePasswordModal() {
   showPasswordModal.value = false
   passwordTargetMember.value = null
 }
-
-const changingPassword = ref(false)
 
 async function handleChangePassword() {
   if (!newPassword.value || !confirmPassword.value) {
@@ -510,8 +525,8 @@ onMounted(async () => {
         </button>
         <button
           @click="handleChangePassword"
-          :disabled="changingPassword"
-          class="px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-surface-strong hover:bg-dp-surface-strong-hover rounded-lg transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+          :disabled="isAdminPasswordSubmitDisabled"
+          class="px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-surface-strong hover:bg-dp-surface-strong-hover rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
         >
           <Loader2 v-if="changingPassword" class="w-4 h-4 animate-spin" />
           {{ changingPassword ? t('admin.dashboard.password.changing') : t('admin.dashboard.password.change') }}

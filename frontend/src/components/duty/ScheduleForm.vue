@@ -63,6 +63,12 @@ const { t } = useI18n()
 
 const fileUploaderRef = ref<InstanceType<typeof FileUploader> | null>(null)
 
+const isTitleMissing = computed(() => !props.form.content.trim())
+const isTimeRangeInvalid = computed(() => {
+  if (!props.form.startDateTime || !props.form.endDateTime) return false
+  return props.form.endDateTime < props.form.startDateTime
+})
+
 function getSessionId() {
   return fileUploaderRef.value?.getSessionId() || null
 }
@@ -100,6 +106,7 @@ defineExpose({
           maxlength="50"
           class="schedule-form__input schedule-form__input--with-counter w-full px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
           :placeholder="t('duty.schedule.placeholders.title')"
+          :aria-invalid="isTitleMissing"
         />
         <div class="schedule-form__counter pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
           <CharacterCounter :current="form.content.length" :max="50" />
@@ -115,6 +122,8 @@ defineExpose({
           v-model="startTime"
           type="time"
           class="schedule-form__input flex-1 min-w-0 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
+          :class="{ 'schedule-form__input--invalid': isTimeRangeInvalid }"
+          :aria-invalid="isTimeRangeInvalid"
         />
       </div>
       <!-- Edit mode: full datetime (allow changing date) -->
@@ -124,6 +133,8 @@ defineExpose({
           v-model="form.startDateTime"
           type="datetime-local"
           class="schedule-form__input flex-1 min-w-0 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
+          :class="{ 'schedule-form__input--invalid': isTimeRangeInvalid }"
+          :aria-invalid="isTimeRangeInvalid"
         />
       </div>
       <div class="flex items-center gap-2">
@@ -132,6 +143,8 @@ defineExpose({
           v-model="form.endDateTime"
           type="datetime-local"
           class="schedule-form__input flex-1 min-w-0 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
+          :class="{ 'schedule-form__input--invalid': isTimeRangeInvalid }"
+          :aria-invalid="isTimeRangeInvalid"
         />
       </div>
     </div>
@@ -233,6 +246,10 @@ defineExpose({
   border-color: var(--dp-accent-border);
   background-color: var(--dp-bg-secondary);
   opacity: 0.92;
+}
+
+.schedule-form__input--invalid {
+  border-color: var(--dp-warning);
 }
 
 @media (max-width: 639px) {

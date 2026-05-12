@@ -144,7 +144,7 @@ function handleConfirm() {
 
   const result = cropperRef.value?.getResult()
   if (!result?.canvas) {
-    emit('close')
+    showError(t('imageCropModal.cropFailed'))
     return
   }
 
@@ -154,7 +154,7 @@ function handleConfirm() {
     (blob) => {
       if (!blob) {
         isProcessing.value = false
-        emit('close')
+        showError(t('imageCropModal.cropFailed'))
         return
       }
 
