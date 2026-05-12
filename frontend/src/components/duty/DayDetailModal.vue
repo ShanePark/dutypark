@@ -189,6 +189,16 @@ const visibilityOptions = computed(() => [
   },
 ])
 
+const isScheduleTitleMissing = computed(() => !newSchedule.value.content.trim())
+const isScheduleTimeRangeInvalid = computed(() => {
+  const { startDateTime, endDateTime } = newSchedule.value
+  if (!startDateTime || !endDateTime) return false
+  return endDateTime < startDateTime
+})
+const isScheduleSaveDisabled = computed(() =>
+  isScheduleTitleMissing.value || isScheduleTimeRangeInvalid.value || isUploading.value
+)
+
 watch(
   () => props.isOpen,
   (open) => {
@@ -336,6 +346,9 @@ function saveSchedule() {
   if (!newSchedule.value.content.trim()) {
     return
   }
+  if (isScheduleTimeRangeInvalid.value) {
+    return
+  }
 
   // Check if upload is in progress
   if (scheduleFormRef.value?.isUploading()) {
@@ -478,7 +491,8 @@ function handleUploadError(message: string) {
             </button>
           </div>
           <!-- Create/Edit mode: Save/Cancel buttons -->
-          <div v-else-if="isCreateMode || isEditMode" class="flex flex-row gap-2 justify-end">
+          <div v-else-if="isCreateMode || isEditMode" class="flex justify-end">
+            <div class="flex flex-row gap-2 justify-end">
             <button
               @click="cancelEdit"
               class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
@@ -487,11 +501,13 @@ function handleUploadError(message: string) {
             </button>
             <button
               @click="saveSchedule"
-              :disabled="isUploading"
+              :disabled="isScheduleSaveDisabled"
+              :aria-label="t('duty.schedule.actions.save')"
               class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {{ isUploading ? t('duty.common.uploading') : t('duty.schedule.actions.save') }}
             </button>
+            </div>
           </div>
         </div>
   </BaseModal>

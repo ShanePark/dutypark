@@ -47,6 +47,8 @@ const { showWarning, showError } = useSwal()
 
 const { t } = useI18n()
 
+const isTitleMissing = computed(() => !title.value.trim())
+
 const statusOptions = computed<Array<{ value: TodoStatus; label: string; icon: typeof ListTodo; colorClass: string }>>(() => [
   { value: 'TODO', label: t('duty.todo.status.todo'), icon: ListTodo, colorClass: 'status-card-todo' },
   { value: 'IN_PROGRESS', label: t('duty.todo.status.inProgress'), icon: Clock, colorClass: 'status-card-in-progress' },
@@ -196,6 +198,7 @@ function onUploadError(message: string) {
           maxlength="50"
           class="form-control"
           :placeholder="t('duty.todo.placeholders.title')"
+          :aria-invalid="isTitleMissing"
         />
       </div>
 
@@ -256,7 +259,7 @@ function onUploadError(message: string) {
       </button>
       <button
         @click="handleSave"
-        :disabled="!title.trim() || isUploading"
+        :disabled="isTitleMissing || isUploading"
         class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
       >
         {{ isUploading ? t('duty.common.uploading') : t('duty.todo.actions.save') }}

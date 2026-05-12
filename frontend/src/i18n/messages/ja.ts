@@ -1380,6 +1380,9 @@ export default {
       month: '月',
       success: '勤務表をアップロードしました。',
       failed: '勤務表のアップロードに失敗しました。',
+      validation: {
+        period: '正しい年と月を入力してください。',
+      },
     },
     dutyType: {
       ...en.team.dutyType,
@@ -1483,6 +1486,7 @@ export default {
     validationFailed: '選択した画像は使用できません。',
     imagesOnly: '画像ファイルのみアップロードできます。',
     readFailed: '画像ファイルを読み込めませんでした。',
+    cropFailed: '切り抜いた画像を準備できませんでした。画像をもう一度選択してください。',
     uploadTitle: '画像を選択',
     uploadHint: 'PNG, JPG, WEBP, GIF に対応しています。',
     maxSize: '{size} まで',

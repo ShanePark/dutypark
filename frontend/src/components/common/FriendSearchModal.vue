@@ -70,7 +70,8 @@ function handleKeywordInput(event: Event) {
           />
         </div>
         <button
-          class="flex-shrink-0 px-4 sm:px-5 py-3 bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt text-dp-text-on-dark rounded-xl hover:from-dp-surface-strong-alt hover:to-dp-surface-strong-hover transition-all shadow-lg flex items-center gap-2 font-medium cursor-pointer whitespace-nowrap"
+          class="flex-shrink-0 px-4 sm:px-5 py-3 bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt text-dp-text-on-dark rounded-xl hover:from-dp-surface-strong-alt hover:to-dp-surface-strong-hover transition-all shadow-lg flex items-center gap-2 font-medium cursor-pointer whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="!keyword.trim() || loading"
           @click="emit('search')"
         >
           <Search class="w-4 h-4" />

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { X, Plus, Minus, RotateCcw, Lock, Unlock } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -32,6 +32,9 @@ const { t } = useI18n()
 const title = ref('')
 const date = ref('')
 const isPrivate = ref(false)
+
+const isTitleMissing = computed(() => !title.value.trim())
+const isDateMissing = computed(() => !date.value)
 
 watch(
   () => props.isOpen,
@@ -109,6 +112,7 @@ const isEditMode = props.dday !== null && props.dday !== undefined
           maxlength="30"
           class="form-control"
           :placeholder="t('duty.ddayModal.placeholders.title')"
+          :aria-invalid="isTitleMissing"
         />
       </div>
 
@@ -120,6 +124,7 @@ const isEditMode = props.dday !== null && props.dday !== undefined
           v-model="date"
           type="date"
           class="form-control"
+          :aria-invalid="isDateMissing"
         />
       </div>
 
@@ -191,7 +196,7 @@ const isEditMode = props.dday !== null && props.dday !== undefined
       </button>
       <button
         @click="handleSave"
-        :disabled="!title.trim() || !date"
+        :disabled="isTitleMissing || isDateMissing"
         class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
       >
         {{ t('duty.ddayModal.save') }}

@@ -103,6 +103,15 @@ const scheduleForm = ref({
   startDate: '',
   endDate: '',
 })
+const isTeamScheduleTitleMissing = computed(() => !scheduleForm.value.content.trim())
+const isTeamScheduleDateRangeInvalid = computed(() => {
+  const { startDate, endDate } = scheduleForm.value
+  if (!startDate || !endDate) return true
+  return endDate < startDate
+})
+const isTeamScheduleSaveDisabled = computed(() =>
+  saving.value || isTeamScheduleTitleMissing.value || isTeamScheduleDateRangeInvalid.value
+)
 
 // Load calendar structure from backend API (cached)
 async function loadCalendar() {
@@ -343,7 +352,10 @@ function closeScheduleModal() {
 }
 
 async function saveSchedule() {
-  if (!team.value || !scheduleForm.value.content.trim()) return
+  if (!team.value) return
+  if (isTeamScheduleTitleMissing.value || isTeamScheduleDateRangeInvalid.value) {
+    return
+  }
 
   saving.value = true
   const isNew = !scheduleForm.value.id
@@ -637,6 +649,7 @@ onMounted(() => {
             maxlength="50"
             class="form-control"
             :placeholder="t('team.view.schedule.modal.contentPlaceholder')"
+            :aria-invalid="isTeamScheduleTitleMissing"
           />
         </div>
 
@@ -671,7 +684,9 @@ onMounted(() => {
             <input
               v-model="scheduleForm.endDate"
               type="date"
+              :min="scheduleForm.startDate"
               class="form-control"
+              :aria-invalid="isTeamScheduleDateRangeInvalid"
             />
           </div>
         </div>
@@ -680,7 +695,7 @@ onMounted(() => {
       <div class="modal-actions modal-actions-end modal-footer-safe">
         <button
           @click="saveSchedule"
-          :disabled="saving || !scheduleForm.content.trim()"
+          :disabled="isTeamScheduleSaveDisabled"
           class="px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
         >
           <Loader2 v-if="saving" class="w-4 h-4 animate-spin" />

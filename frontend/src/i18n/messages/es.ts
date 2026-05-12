@@ -1297,6 +1297,9 @@ export default {
       month: 'Mes',
       success: 'Se ha subido la lista de turnos.',
       failed: 'No se pudo cargar la lista de turnos.',
+      validation: {
+        period: 'Introduce un año y un mes válidos.',
+      },
     },
     dutyType: {
       titleAdd: 'Agregar tipo de turno',
@@ -1398,6 +1401,7 @@ export default {
     validationFailed: 'La imagen seleccionada no se puede utilizar.',
     imagesOnly: 'Sólo se pueden cargar archivos de imágenes.',
     readFailed: 'No se pudo leer el archivo de imagen.',
+    cropFailed: 'No se pudo preparar la imagen recortada. Vuelve a elegir la imagen.',
     uploadTitle: 'Elige una imagen',
     uploadHint: 'Se admiten archivos PNG, JPG, WEBP y GIF.',
     maxSize: 'Hasta {size}',

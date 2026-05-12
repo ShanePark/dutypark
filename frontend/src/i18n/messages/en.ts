@@ -1297,6 +1297,9 @@ export default {
       month: 'Month',
       success: 'The duty roster has been uploaded.',
       failed: 'Failed to upload the duty roster.',
+      validation: {
+        period: 'Enter a valid year and month.',
+      },
     },
     dutyType: {
       titleAdd: 'Add duty type',
@@ -1398,6 +1401,7 @@ export default {
     validationFailed: 'The selected image cannot be used.',
     imagesOnly: 'Only image files can be uploaded.',
     readFailed: 'Failed to read the image file.',
+    cropFailed: 'Could not prepare the cropped image. Try choosing the image again.',
     uploadTitle: 'Choose an image',
     uploadHint: 'PNG, JPG, WEBP, and GIF files are supported.',
     maxSize: 'Up to {size}',

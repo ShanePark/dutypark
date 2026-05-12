@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, nextTick, onUnmounted } from 'vue'
+import { computed, ref, watch, nextTick, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { useSwal } from '@/composables/useSwal'
@@ -35,6 +35,14 @@ const dutyTypeForm = ref({
   color: defaultDutyColor,
   isDefault: false,
 })
+const trimmedDutyTypeName = computed(() => dutyTypeForm.value.name.trim())
+const hasDuplicateDutyTypeName = computed(() =>
+  props.dutyTypes.some(
+    dt => dt.name === trimmedDutyTypeName.value && dt.id !== dutyTypeForm.value.id
+  )
+)
+const isDutyTypeNameInvalid = computed(() => !trimmedDutyTypeName.value || hasDuplicateDutyTypeName.value)
+const isDutyTypeSaveDisabled = computed(() => props.saving || isDutyTypeNameInvalid.value)
 
 let pickrInstance: Pickr | null = null
 const colorPickerRef = ref<HTMLElement | null>(null)
@@ -120,16 +128,13 @@ function close() {
 }
 
 async function saveDutyType() {
-  if (!dutyTypeForm.value.name) {
+  if (!trimmedDutyTypeName.value) {
     showWarning(t('team.dutyType.warnings.nameRequired'))
     return
   }
 
-  const exists = props.dutyTypes.some(
-    dt => dt.name === dutyTypeForm.value.name && dt.id !== dutyTypeForm.value.id
-  )
-  if (exists) {
-    showWarning(t('team.dutyType.warnings.duplicate', { name: dutyTypeForm.value.name }))
+  if (hasDuplicateDutyTypeName.value) {
+    showWarning(t('team.dutyType.warnings.duplicate', { name: trimmedDutyTypeName.value }))
     return
   }
 
@@ -138,19 +143,19 @@ async function saveDutyType() {
     if (dutyTypeForm.value.isDefault) {
       await teamApi.updateDefaultDuty(
         props.teamId,
-        dutyTypeForm.value.name,
+        trimmedDutyTypeName.value,
         dutyTypeForm.value.color
       )
     } else if (dutyTypeForm.value.id) {
       await teamApi.updateDutyType(props.teamId, {
         id: dutyTypeForm.value.id,
-        name: dutyTypeForm.value.name,
+        name: trimmedDutyTypeName.value,
         color: dutyTypeForm.value.color,
       })
     } else {
       await teamApi.addDutyType(props.teamId, {
         teamId: props.teamId,
-        name: dutyTypeForm.value.name,
+        name: trimmedDutyTypeName.value,
         color: dutyTypeForm.value.color,
       })
     }
@@ -207,6 +212,7 @@ async function saveDutyType() {
           maxlength="10"
           :placeholder="t('team.dutyType.placeholders.name')"
           class="form-control"
+          :aria-invalid="isDutyTypeNameInvalid"
         />
       </div>
 
@@ -235,7 +241,7 @@ async function saveDutyType() {
     <div class="modal-actions modal-actions-end modal-footer-safe">
       <button
         @click="saveDutyType"
-        :disabled="!dutyTypeForm.name.trim()"
+        :disabled="isDutyTypeSaveDisabled"
         class="px-4 py-2 bg-dp-success text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-success-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
       >
         {{ dutyTypeForm.id !== null || dutyTypeForm.isDefault ? t('common.actions.save') : t('common.actions.add') }}

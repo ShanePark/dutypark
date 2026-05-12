@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
@@ -46,6 +46,12 @@ const newTeamDescription = ref('')
 const nameCheckResult = ref<TeamNameCheckResult | null>(null)
 const isCheckingName = ref(false)
 const isCreating = ref(false)
+const newTeamNameFeedbackId = 'new-team-name-feedback'
+const trimmedNewTeamName = computed(() => newTeamName.value.trim())
+const trimmedNewTeamDescription = computed(() => newTeamDescription.value.trim())
+const isCreateTeamDisabled = computed(() =>
+  nameCheckResult.value !== 'OK' || !trimmedNewTeamDescription.value || isCreating.value
+)
 
 // Fetch teams from API
 async function fetchTeams() {
@@ -75,18 +81,18 @@ function closeNewTeamModal() {
 }
 
 async function checkTeamName() {
-  if (newTeamName.value.length < 2) {
+  if (trimmedNewTeamName.value.length < 2) {
     nameCheckResult.value = 'TOO_SHORT'
     return
   }
-  if (newTeamName.value.length > 20) {
+  if (trimmedNewTeamName.value.length > 20) {
     nameCheckResult.value = 'TOO_LONG'
     return
   }
 
   isCheckingName.value = true
   try {
-    const response = await adminApi.checkTeamName(newTeamName.value)
+    const response = await adminApi.checkTeamName(trimmedNewTeamName.value)
     nameCheckResult.value = response.data
   } catch (error) {
     console.error('Failed to check team name:', error)
@@ -113,13 +119,13 @@ function getNameCheckMessage(): string {
 
 async function handleCreateTeam() {
   if (nameCheckResult.value !== 'OK') return
-  if (!newTeamDescription.value) return
+  if (!trimmedNewTeamDescription.value) return
 
   isCreating.value = true
   try {
     const response = await adminApi.createTeam({
-      name: newTeamName.value,
-      description: newTeamDescription.value,
+      name: trimmedNewTeamName.value,
+      description: trimmedNewTeamDescription.value,
     })
     toastSuccess(t('admin.teamList.messages.createSuccess'))
     closeNewTeamModal()
@@ -442,11 +448,13 @@ onMounted(() => {
               minlength="2"
               class="form-control-neutral flex-1"
               :placeholder="t('admin.teamList.modal.namePlaceholder')"
+              :aria-invalid="!trimmedNewTeamName || nameCheckResult === 'TOO_SHORT' || nameCheckResult === 'TOO_LONG' || nameCheckResult === 'DUPLICATED'"
+              :aria-describedby="nameCheckResult ? newTeamNameFeedbackId : undefined"
               @input="nameCheckResult = null"
             />
             <button
               @click="checkTeamName"
-              :disabled="isCheckingName"
+              :disabled="isCheckingName || trimmedNewTeamName.length < 2"
               class="px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-accent hover:bg-dp-accent-hover rounded-lg transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <Loader2 v-if="isCheckingName" class="w-4 h-4 animate-spin" />
@@ -455,6 +463,7 @@ onMounted(() => {
           </div>
           <p
             v-if="nameCheckResult"
+            :id="newTeamNameFeedbackId"
             class="mt-1 text-sm flex items-center gap-1"
             :class="nameCheckResult === 'OK' ? 'text-dp-success' : 'text-dp-danger'"
           >
@@ -474,13 +483,14 @@ onMounted(() => {
             maxlength="50"
             class="form-control-neutral"
             :placeholder="t('admin.teamList.modal.descriptionPlaceholder')"
+            :aria-invalid="!trimmedNewTeamDescription"
           />
         </div>
       </div>
       <div class="modal-actions modal-actions-end modal-footer-safe">
         <button
           @click="handleCreateTeam"
-          :disabled="nameCheckResult !== 'OK' || !newTeamDescription || isCreating"
+          :disabled="isCreateTeamDisabled"
           class="px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-accent hover:bg-dp-accent-hover rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2"
         >
           <Loader2 v-if="isCreating" class="w-4 h-4 animate-spin" />

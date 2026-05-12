@@ -110,6 +110,9 @@ const selectedTagSummaries = computed(() => {
   })
 })
 
+const isEditTitleMissing = computed(() => !editTitle.value.trim())
+const isEditSaveDisabled = computed(() => isEditTitleMissing.value || isUploading.value)
+
 watch(
   () => props.isOpen,
   async (open) => {
@@ -244,7 +247,10 @@ function cancelEdit() {
 }
 
 function saveEdit() {
-  if (!props.todo || !editTitle.value.trim()) return
+  if (!props.todo) return
+  if (!editTitle.value.trim()) {
+    return
+  }
   if (isUploading.value) {
     showWarning(t('duty.todo.warnings.uploadInProgress'))
     return
@@ -405,6 +411,7 @@ function onUploadError(message: string) {
               type="text"
               maxlength="50"
               class="form-control"
+              :aria-invalid="isEditTitleMissing"
             />
           </div>
 
@@ -523,7 +530,8 @@ function onUploadError(message: string) {
           </div>
         </template>
         <template v-else>
-          <div class="flex flex-row gap-2 justify-end">
+          <div class="flex justify-end">
+            <div class="flex flex-row gap-2 justify-end">
             <button
               @click="cancelEdit"
               class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
@@ -532,11 +540,12 @@ function onUploadError(message: string) {
             </button>
             <button
               @click="saveEdit"
-              :disabled="!editTitle.trim() || isUploading"
-              class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 cursor-pointer"
+              :disabled="isEditSaveDisabled"
+              class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {{ isUploading ? t('duty.common.uploading') : t('duty.todo.actions.save') }}
             </button>
+            </div>
           </div>
         </template>
       </div>
