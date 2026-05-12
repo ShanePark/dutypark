@@ -491,8 +491,7 @@ function handleUploadError(message: string) {
             </button>
           </div>
           <!-- Create/Edit mode: Save/Cancel buttons -->
-          <div v-else-if="isCreateMode || isEditMode" class="flex justify-end">
-            <div class="flex flex-row gap-2 justify-end">
+          <div v-else-if="isCreateMode || isEditMode" class="flex justify-end gap-2">
             <button
               @click="cancelEdit"
               class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
@@ -507,7 +506,6 @@ function handleUploadError(message: string) {
             >
               {{ isUploading ? t('duty.common.uploading') : t('duty.schedule.actions.save') }}
             </button>
-            </div>
           </div>
         </div>
   </BaseModal>
