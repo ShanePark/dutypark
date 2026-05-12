@@ -39,6 +39,23 @@ export const enReleaseNotes = {
     ui: "UI"
   },
   entries: {
+    "pr-367": {
+      title: "Gate PR release notes before merge",
+      summary: "Adds the missing modal button release notes and a PR check that catches missing release note entries before merge.",
+      changes: [
+        "Add PR #366 release note metadata and localized copy across supported languages.",
+        "Add a PR-number-specific CI check that fails when a main-targeting PR lacks matching release note metadata or locale copy.",
+        "Document the create-PR-then-add-release-note workflow for future PRs."
+      ]
+    },
+    "pr-366": {
+      title: "Normalize modal action buttons",
+      summary: "Keeps todo and schedule modal save actions from collapsing into tall, narrow buttons on small screens.",
+      changes: [
+        "Todo detail: reuse the compact modal action footer in edit mode so cancel and save share the available width.",
+        "Schedule detail: remove a shrink-wrapping wrapper around create/edit actions so mobile buttons stay horizontal."
+      ]
+    },
     "pr-364": {
       title: "Automate GitHub Releases from in-app release notes",
       summary: "Create GitHub Releases from the matching English in-app release note whenever a PR is merged into main.",
