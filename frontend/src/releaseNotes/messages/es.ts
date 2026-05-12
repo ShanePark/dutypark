@@ -40,11 +40,12 @@ export const esReleaseNotes = {
   },
   entries: {
     "pr-367": {
-      title: "Agregar las notas de versión faltantes para la corrección de botones",
-      summary: "Agrega las entradas de notas de versión en la app necesarias para que la automatización de GitHub Release publique la corrección del diseño de botones.",
+      title: "Validar las notas de versión del PR antes de fusionar",
+      summary: "Agrega las notas faltantes de la corrección de botones y una comprobación de PR que detecta entradas de notas de versión faltantes antes de fusionar.",
       changes: [
         "Agrega los metadatos de la nota de versión del PR #366 y el texto localizado en los idiomas compatibles.",
-        "Agrega esta nota de mantenimiento para que el PR de seguimiento también supere la preparación de release tras fusionarse."
+        "Agrega una comprobación de CI basada en el número de PR que falla cuando un PR hacia main no tiene metadatos o texto localizado de notas de versión.",
+        "Documenta el flujo de crear primero el PR y luego agregar el commit de notas de versión."
       ]
     },
     "pr-366": {

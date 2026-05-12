@@ -40,11 +40,12 @@ export const enReleaseNotes = {
   },
   entries: {
     "pr-367": {
-      title: "Add missing release notes for the modal button fix",
-      summary: "Adds the in-app release note entries needed for GitHub Release automation to publish the modal button layout fix.",
+      title: "Gate PR release notes before merge",
+      summary: "Adds the missing modal button release notes and a PR check that catches missing release note entries before merge.",
       changes: [
         "Add PR #366 release note metadata and localized copy across supported languages.",
-        "Add this maintenance release note so the follow-up PR also passes release preparation after merge."
+        "Add a PR-number-specific CI check that fails when a main-targeting PR lacks matching release note metadata or locale copy.",
+        "Document the create-PR-then-add-release-note workflow for future PRs."
       ]
     },
     "pr-366": {
