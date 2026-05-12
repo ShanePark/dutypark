@@ -39,6 +39,14 @@ export const zhReleaseNotes = {
     ui: "界面"
   },
   entries: {
+    "pr-366": {
+      title: "规范化弹窗操作按钮布局",
+      summary: "避免 Todo 和日程弹窗的保存操作在小屏幕上压缩成又高又窄的按钮。",
+      changes: [
+        "Todo 详情：在编辑模式复用紧凑弹窗操作页脚，让取消和保存按钮共享可用宽度。",
+        "日程详情：移除会压缩创建/编辑操作的包裹层，使移动端按钮保持横向排列。"
+      ]
+    },
     "pr-364": {
       title: "从应用内发布说明自动创建 GitHub Release",
       summary: "每当 PR 合并到 main 时，使用匹配的英文应用内发布说明创建 GitHub Release。",

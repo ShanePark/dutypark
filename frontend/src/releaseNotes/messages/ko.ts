@@ -39,6 +39,14 @@ export const koReleaseNotes = {
     ui: "화면"
   },
   entries: {
+    "pr-366": {
+      title: "모달 저장 버튼 레이아웃 정리",
+      summary: "작은 화면에서 Todo와 일정 모달의 저장 버튼이 세로로 길게 눌리지 않도록 액션 영역을 정리합니다.",
+      changes: [
+        "Todo 상세: 수정 모드에서 compact 모달 액션 푸터를 사용해 취소와 저장 버튼이 가로 폭을 나누도록 맞췄습니다.",
+        "일정 상세: 생성/수정 액션을 좁게 감싸던 래퍼를 제거해 모바일에서도 버튼이 가로형으로 유지되게 했습니다."
+      ]
+    },
     "pr-364": {
       title: "앱 내 릴리즈 노트 기반 GitHub Release 자동화",
       summary: "PR이 main에 병합될 때 일치하는 영어 앱 릴리즈 노트로 GitHub Release를 생성합니다.",

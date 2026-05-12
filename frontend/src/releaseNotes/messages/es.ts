@@ -39,6 +39,14 @@ export const esReleaseNotes = {
     ui: "Interfaz"
   },
   entries: {
+    "pr-366": {
+      title: "Normalizar los botones de acción de los modales",
+      summary: "Evita que las acciones de guardar en los modales de Todo y agenda se colapsen en botones altos y estrechos en pantallas pequeñas.",
+      changes: [
+        "Detalle de Todo: reutiliza el pie compacto de acciones del modal en modo edición para que cancelar y guardar compartan el ancho disponible.",
+        "Detalle de agenda: elimina un contenedor que encogía las acciones de crear/editar para mantener los botones horizontales en móvil."
+      ]
+    },
     "pr-364": {
       title: "Automatizar GitHub Releases desde notas de versión de la app",
       summary: "Crea GitHub Releases desde la nota de versión en inglés correspondiente cada vez que un PR se fusiona en main.",
