@@ -403,7 +403,9 @@ export default {
     list: {
       title: 'Notificaciones',
       markAllAsRead: 'Marcar todo como leído',
+      markAllAsReadShort: 'Leer todo',
       deleteRead: 'Eliminar leídas',
+      deleteReadShort: 'Borrar leídas',
       retentionNotice: 'Las notificaciones se conservan durante 30 días.',
       loadMore: 'Cargar más',
       deleteConfirmMessage: '¿Eliminar esta notificación?',

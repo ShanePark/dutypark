@@ -403,7 +403,9 @@ export default {
     list: {
       title: '알림',
       markAllAsRead: '전체 읽음',
+      markAllAsReadShort: '전체 읽음',
       deleteRead: '읽은 알림 삭제',
+      deleteReadShort: '읽음 삭제',
       retentionNotice: '알림은 30일간 보관됩니다.',
       loadMore: '더보기',
       deleteConfirmMessage: '이 알림을 삭제하시겠습니까?',

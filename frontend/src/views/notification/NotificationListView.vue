@@ -241,26 +241,28 @@ watch(
 <template>
   <div class="notification-list-view max-w-2xl mx-auto px-4 py-6">
     <!-- Header -->
-    <div class="notification-list-header flex items-center justify-between mb-4">
-      <div class="flex items-center gap-3">
+    <div class="notification-list-header flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div class="flex items-center gap-3 min-w-0">
         <Bell class="w-6 h-6" />
         <h1 class="text-xl font-bold">{{ t('notifications.list.title') }}</h1>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center justify-end gap-2">
         <button
           type="button"
-          class="notification-action-btn cursor-pointer flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg transition-all duration-150 min-h-[44px]"
+          class="notification-action-btn cursor-pointer flex items-center gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3 py-2 rounded-lg transition-all duration-150 min-h-[44px]"
           @click="handleMarkAllAsRead"
         >
           <CheckCheck class="w-4 h-4" />
+          <span class="sm:hidden">{{ t('notifications.list.markAllAsReadShort') }}</span>
           <span class="hidden sm:inline">{{ t('notifications.list.markAllAsRead') }}</span>
         </button>
         <button
           type="button"
-          class="notification-delete-btn cursor-pointer flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg transition-all duration-150 min-h-[44px]"
+          class="notification-delete-btn cursor-pointer flex items-center gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3 py-2 rounded-lg transition-all duration-150 min-h-[44px]"
           @click="handleDeleteAllRead"
         >
           <Trash2 class="w-4 h-4" />
+          <span class="sm:hidden">{{ t('notifications.list.deleteReadShort') }}</span>
           <span class="hidden sm:inline">{{ t('notifications.list.deleteRead') }}</span>
         </button>
       </div>
@@ -291,10 +293,16 @@ watch(
           :class="{ 'notification-unread': !notification.isRead }"
           @click="handleNotificationClick(notification)"
         >
-          <ProfileAvatar
-            v-bind="getAvatarProps(notification)"
-            size="md"
-          />
+          <div class="notification-avatar-wrap relative flex-shrink-0">
+            <ProfileAvatar
+              v-bind="getAvatarProps(notification)"
+              size="md"
+            />
+            <span
+              v-if="!notification.isRead"
+              class="notification-unread-dot absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full"
+            />
+          </div>
           <div class="flex-1 min-w-0">
             <div class="flex items-start justify-between gap-2">
               <p class="notification-list-item-title text-sm font-medium line-clamp-2">
@@ -383,6 +391,7 @@ watch(
 }
 
 .notification-list-item {
+  position: relative;
   border-bottom: 1px solid var(--dp-border-primary);
 }
 
@@ -395,15 +404,21 @@ watch(
 }
 
 .notification-unread {
-  background-color: var(--dp-bg-secondary);
+  background-color: color-mix(in srgb, var(--dp-accent-bg) 45%, var(--dp-bg-card));
+  box-shadow: inset 4px 0 0 var(--dp-accent);
+}
+
+.notification-unread:hover {
+  background-color: color-mix(in srgb, var(--dp-accent-bg-hover) 48%, var(--dp-bg-hover));
 }
 
 .notification-unread .notification-list-item-title {
-  font-weight: 600;
+  color: var(--dp-text-primary);
+  font-weight: 700;
 }
 
 .notification-list-item-title {
-  color: var(--dp-text-primary);
+  color: var(--dp-text-secondary);
 }
 
 .notification-list-item-content {
@@ -417,6 +432,11 @@ watch(
 .notification-list-item-date {
   color: var(--dp-text-muted);
   opacity: 0.7;
+}
+
+.notification-unread-dot {
+  background-color: var(--dp-accent);
+  border: 2px solid var(--dp-bg-card);
 }
 
 .notification-delete-icon-btn {

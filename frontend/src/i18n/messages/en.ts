@@ -403,7 +403,9 @@ export default {
     list: {
       title: 'Notifications',
       markAllAsRead: 'Mark all as read',
+      markAllAsReadShort: 'Read all',
       deleteRead: 'Delete read',
+      deleteReadShort: 'Delete read',
       retentionNotice: 'Notifications are kept for 30 days.',
       loadMore: 'Load more',
       deleteConfirmMessage: 'Delete this notification?',

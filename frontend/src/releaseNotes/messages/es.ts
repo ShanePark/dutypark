@@ -39,6 +39,15 @@ export const esReleaseNotes = {
     ui: "Interfaz"
   },
   entries: {
+    "pr-368": {
+      title: "Aclara los estados de lectura de notificaciones",
+      summary: "Hace que las notificaciones leídas y no leídas sean más fáciles de distinguir y mantiene visibles las acciones en móvil.",
+      changes: [
+        "Notificaciones del encabezado: muestra la acción de marcar todo como leído cuando hay elementos no leídos cargados y añade bordes visibles al botón.",
+        "Lista de notificaciones: añade indicadores de no leído con barra de acento, punto en el avatar y más contraste en el título.",
+        "Acciones móviles: añade etiquetas localizadas cortas para que las acciones de lectura y eliminación sigan visibles en pantallas estrechas."
+      ]
+    },
     "pr-367": {
       title: "Validar las notas de versión del PR antes de fusionar",
       summary: "Agrega las notas faltantes de la corrección de botones y una comprobación de PR que detecta entradas de notas de versión faltantes antes de fusionar.",
