@@ -39,6 +39,15 @@ export const enReleaseNotes = {
     ui: "UI"
   },
   entries: {
+    "pr-368": {
+      title: "Clarify notification read states",
+      summary: "Makes notification read and unread states easier to distinguish and keeps notification actions visible on mobile.",
+      changes: [
+        "Header notifications: show the mark-all-read action when unread items are loaded and add visible button borders.",
+        "Notification list: add unread indicators with an accent bar, avatar dot, and stronger title contrast.",
+        "Mobile actions: add short localized labels so read and delete actions remain visible on narrow screens."
+      ]
+    },
     "pr-367": {
       title: "Gate PR release notes before merge",
       summary: "Adds the missing modal button release notes and a PR check that catches missing release note entries before merge.",
