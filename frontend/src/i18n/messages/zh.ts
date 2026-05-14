@@ -403,7 +403,9 @@ export default {
     list: {
       title: '通知',
       markAllAsRead: '全部标记为已读',
+      markAllAsReadShort: '全已读',
       deleteRead: '删除已读',
+      deleteReadShort: '删已读',
       retentionNotice: '通知保留 30 天。',
       loadMore: '加载更多',
       deleteConfirmMessage: '删除该通知吗？',
