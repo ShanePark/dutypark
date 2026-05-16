@@ -93,24 +93,25 @@ Tag friends in your schedules. They'll see it on their dashboard instantly. No m
 
 | Feature | Description |
 |:--------|:------------|
-| **Kakao OAuth** | One-click login with Korea's most popular messenger |
+| **Kakao + Naver OAuth** | One-click social login and SSO onboarding for Korean users |
 | **Holiday Sync** | Korean public holidays auto-imported from Data.go.kr with caching |
-| **Dark Mode** | Eye-friendly theme that respects your system preference |
+| **Dark Mode** | User-selectable light/dark theme persisted locally |
+| **Localized UI** | Korean, English, Japanese, Simplified Chinese, and Spanish with browser-locale suggestions |
 | **Mobile-First** | Responsive design optimized for phones and tablets |
 | **Web Push** | Native browser push notifications for tags, requests, and updates |
-| **PWA Support** | Installable on iOS and Android home screens with offline capability |
+| **PWA Support** | Installable on iOS and Android home screens with push, badge, and notification-click support |
 | **Account Impersonation** | Managers can switch to managed accounts for viewing/editing |
 
 ---
 
 ## Tech Stack
 
-- **Backend:** Kotlin 2.3, Spring Boot 4.0 (Data JPA, Security, WebFlux, Scheduling, Caching, AI), Java 21
-- **Frontend:** Vue 3.5 SPA (Vite 7 + TypeScript + Pinia + Tailwind CSS 4)
-- **Database:** MySQL 8.0 + Flyway migrations (47+ versioned migrations)
-- **AI:** Spring AI + Gemini for schedule time parsing with async queue
-- **Auth:** JWT Bearer tokens + sliding refresh + Kakao OAuth SSO
-- **PWA:** Web Push notifications with VAPID, installable on iOS/Android
+- **Backend:** Kotlin 2.3, Spring Boot 4.0.1 (Data JPA, Security, WebFlux, Scheduling, Caching, AI), Java 25 toolchain
+- **Frontend:** Vue 3.5 SPA (Vite 7 + TypeScript 5.9 + Pinia 3 + Vue Router 4 + Vue I18n 11 + Tailwind CSS 4)
+- **Database:** MySQL 8.0 + versioned Flyway migrations
+- **AI:** Spring AI OpenAI-compatible client against Gemini for async schedule time parsing
+- **Auth:** HttpOnly cookie access/refresh flow + Bearer fallback + Kakao/Naver OAuth SSO
+- **PWA:** Web Push notifications with VAPID, refresh-token-bound subscriptions, installable on iOS/Android
 - **Observability:** Prometheus, Grafana, Slack webhooks, rolling logs
 
 ---
@@ -119,7 +120,7 @@ Tag friends in your schedules. They'll see it on their dashboard instantly. No m
 
 ### Requirements
 
-- JDK 21+, Node.js 20+, Docker (recommended)
+- JDK 25+, Node.js 20+, Docker (recommended)
 
 ### Development Setup
 
@@ -167,7 +168,7 @@ Full production setup (TLS, Prometheus, Grafana) is included in the Compose stac
              ▼
 ┌─────────────────────────────────────────┐
 │   Spring Boot Backend (:8080)           │
-│   REST API + JWT Auth                   │
+│   REST API + Cookie/JWT Auth            │
 └────────────┬────────────────────────────┘
              │
              ▼
@@ -190,19 +191,24 @@ Full production setup (TLS, Prometheus, Grafana) is included in the Compose stac
 | `push/` | Web Push notifications with VAPID, iOS PWA support |
 | `attachment/` | Session-based uploads, thumbnails, nightly cleanup scheduler |
 | `holiday/` | Korean public holidays from Data.go.kr with concurrency-safe caching |
+| `policy/` | Terms/privacy policy versions and member consent tracking |
 | `security/` | JWT, OAuth, rate limiting, permissions, admin filtering |
+| `admin/` | Admin member/team inspection, session controls, and impersonation support |
+| `common/` | Shared configuration, error responses, paging, logging, and test helpers |
 
 ### Frontend Structure
 
 ```
 frontend/src/
-├── api/           # 13 Axios clients (duty, schedule, todo, team, member, notification, push, etc.)
-├── components/    # 45+ Vue SFCs (FileUploader, Modals, KanbanBoard, Layout, etc.)
-├── composables/   # 7 hooks (useSwal, useKakao, usePushNotification, useEscapeKey, etc.)
-├── stores/        # Pinia stores (auth, notification with polling, theme)
+├── api/           # Axios clients (duty, schedule, todo, team, member, notification, push, etc.)
+├── components/    # Vue SFCs (FileUploader, Modals, KanbanBoard, Layout, etc.)
+├── composables/   # Hooks (useSwal, useKakao, useNaver, usePushNotification, useEscapeKey, etc.)
+├── stores/        # Pinia stores (auth, notification with polling, theme, locale)
 ├── views/         # 19 page components (Dashboard, Duty, TodoBoard, Member, Team, Admin)
+├── i18n/          # Locale bundles for ko/en/ja/zh/es
+├── releaseNotes/  # In-app changelog metadata and localized copy
 ├── utils/         # Helpers (color, date, visibility)
-└── types/         # 50+ TypeScript interfaces
+└── types/         # Shared TypeScript interfaces
 ```
 
 ---
@@ -215,6 +221,10 @@ frontend/src/
 |:---------|:--------|
 | `JWT_SECRET` | Base64-encoded secret for token signing |
 | `KAKAO_REST_API_KEY` | Kakao OAuth client credential |
+| `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | Naver OAuth client credentials |
+| `VITE_KAKAO_APP_KEY` | Kakao JavaScript SDK app key for the SPA |
+| `VITE_NAVER_CLIENT_ID` | Naver OAuth client ID exposed to the SPA |
+| `VITE_API_BASE_URL` | Optional absolute backend base URL for OAuth redirects |
 | `GEMINI_API_KEY` | Google AI Studio key for schedule parsing (optional) |
 | `SLACK_TOKEN` | Ops notification bot token |
 | `DATA_GO_KR_SERVICE_KEY` | Korean public holiday API key |
@@ -223,6 +233,7 @@ frontend/src/
 | `ADMIN_EMAIL` | Admin user email address |
 
 See `.env.sample` for the complete list including DB credentials, domain settings, and Docker configuration.
+Vite reads `VITE_*` values from `frontend/.env.development`, `frontend/.env.production`, or process environment when building the SPA.
 
 ---
 
@@ -233,6 +244,8 @@ See `.env.sample` for the complete list including DB credentials, domain setting
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+For PRs targeting `main`, add exactly one in-app release note entry after the PR number is known and run `cd frontend && npm run release-notes:check`. See `frontend/src/releaseNotes/README.md` for the release-note workflow.
 
 ---
 
