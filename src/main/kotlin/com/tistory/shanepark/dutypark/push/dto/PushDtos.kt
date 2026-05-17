@@ -23,8 +23,8 @@ data class PushSubscriptionKeys(
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class PushNotificationPayload(
     val type: NotificationType,
-    val icon: String = "/android-chrome-192x192.png",
-    val badge: String = "/android-chrome-192x192.png",
+    val icon: String = "/android-chrome-192x192-v20260517b.png",
+    val badge: String = "/android-chrome-192x192-v20260517b.png",
     val url: String? = null,
     val tag: String? = null,
     val notificationId: String? = null,
