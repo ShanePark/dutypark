@@ -106,8 +106,20 @@ onUnmounted(() => {
   >
     <div class="max-w-4xl mx-auto px-3 sm:px-4">
       <div class="flex justify-between items-center h-12 sm:h-14">
-        <router-link to="/" class="text-lg sm:text-xl font-bold header-title">
-          Dutypark
+        <router-link
+          to="/"
+          class="header-brand min-h-[44px] flex items-center gap-2 rounded-xl pr-2 transition-colors"
+          aria-label="Dutypark"
+        >
+          <img
+            src="/android-chrome-192x192-v20260517b.png"
+            alt=""
+            class="header-brand-icon"
+            width="36"
+            height="36"
+            aria-hidden="true"
+          />
+          <span class="text-lg sm:text-xl font-bold header-title">Dutypark</span>
         </router-link>
         <nav class="flex items-center gap-0.5 sm:gap-1">
           <LocaleSwitcher />
@@ -267,6 +279,31 @@ onUnmounted(() => {
 
 .header-title {
   color: var(--dp-text-primary);
+}
+
+.header-brand:hover .header-title {
+  color: var(--dp-accent-hover);
+}
+
+.header-brand:focus-visible {
+  outline: 2px solid var(--dp-accent);
+  outline-offset: 2px;
+}
+
+.header-brand-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.7rem;
+  box-shadow: var(--dp-shadow-sm);
+  flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+  .header-brand-icon {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.8rem;
+  }
 }
 
 .theme-toggle-btn {

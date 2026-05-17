@@ -57,8 +57,8 @@ async function handlePush(payload: PushNotificationPayload) {
 
   const options = {
     body: resolvePushNotificationBody(payload, locale),
-    icon: payload.icon || '/android-chrome-192x192.png',
-    badge: payload.badge || '/android-chrome-192x192.png',
+    icon: payload.icon || '/android-chrome-192x192-v20260517b.png',
+    badge: payload.badge || '/android-chrome-192x192-v20260517b.png',
     tag: payload.tag || notificationId || payload.type || 'dutypark-notification',
     renotify: true,
     data: {
