@@ -39,6 +39,15 @@ export const esReleaseNotes = {
     ui: "Interfaz"
   },
   entries: {
+    "pr-369": {
+      title: "Actualizar el icono de la app Dutypark",
+      summary: "Cambia el icono de la app por el diseño elegido de calendario con luna y añade rutas de icono con renovación de caché.",
+      changes: [
+        "Reemplaza el favicon, Apple touch icon, iconos Android/PWA, mosaico MS, máscara Safari y marca SVG con el nuevo diseño de calendario con luna.",
+        "Usa iconos con esquinas transparentes y nombres de archivo versionados para que los navegadores y las PWA instaladas carguen limpiamente el nuevo arte.",
+        "Añade el nuevo icono junto al logotipo de texto Dutypark en el encabezado autenticado."
+      ]
+    },
     "pr-368": {
       title: "Aclara los estados de lectura de notificaciones",
       summary: "Hace que las notificaciones leídas y no leídas sean más fáciles de distinguir y mantiene visibles las acciones en móvil.",

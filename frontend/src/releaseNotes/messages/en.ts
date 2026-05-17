@@ -39,6 +39,15 @@ export const enReleaseNotes = {
     ui: "UI"
   },
   entries: {
+    "pr-369": {
+      title: "Refresh the Dutypark app icon",
+      summary: "Updates the app icon with the selected moon calendar artwork and adds cache-busted icon paths.",
+      changes: [
+        "Replace the favicon, Apple touch icon, Android/PWA icons, MS tile, Safari mask, and SVG mark with the refreshed moon calendar design.",
+        "Use transparent-corner icon assets and versioned filenames so browsers and installed PWAs pick up the new artwork cleanly.",
+        "Add the new icon next to the Dutypark wordmark in the authenticated header."
+      ]
+    },
     "pr-368": {
       title: "Clarify notification read states",
       summary: "Makes notification read and unread states easier to distinguish and keeps notification actions visible on mobile.",
