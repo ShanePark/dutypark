@@ -39,6 +39,15 @@ export const zhReleaseNotes = {
     ui: "界面"
   },
   entries: {
+    "pr-369": {
+      title: "更新 Dutypark 应用图标",
+      summary: "将应用图标替换为选定的月亮日历图稿，并添加用于刷新缓存的图标路径。",
+      changes: [
+        "将 favicon、Apple touch icon、Android/PWA 图标、MS 磁贴、Safari mask 和 SVG 标记替换为新的月亮日历设计。",
+        "使用透明角图标和带版本的文件名，确保浏览器和已安装的 PWA 能干净地获取新图标。",
+        "在登录后的页眉中，将新图标放在 Dutypark 字样旁边。"
+      ]
+    },
     "pr-368": {
       title: "优化通知已读状态区分",
       summary: "让通知的已读和未读状态更容易区分，并在移动端保持通知操作文字可见。",
