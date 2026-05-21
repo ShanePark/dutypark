@@ -45,7 +45,7 @@ function handleSearchClick() {
     <!-- Left: Profile Photo + Name -->
     <div class="flex items-center gap-1.5 min-w-0">
       <!-- Profile Photo (smaller on mobile) -->
-      <ProfileAvatar :member-id="memberId" :has-profile-photo="memberHasProfilePhoto" :profile-photo-version="memberProfilePhotoVersion" size="lg" class="flex-shrink-0 sm:hidden" :name="memberName" />
+      <ProfileAvatar :member-id="memberId" :has-profile-photo="memberHasProfilePhoto" :profile-photo-version="memberProfilePhotoVersion" size="md" class="flex-shrink-0 sm:hidden" :name="memberName" />
       <ProfileAvatar :member-id="memberId" :has-profile-photo="memberHasProfilePhoto" :profile-photo-version="memberProfilePhotoVersion" size="xl" class="flex-shrink-0 hidden sm:block" :name="memberName" />
       <!-- Name -->
       <span
