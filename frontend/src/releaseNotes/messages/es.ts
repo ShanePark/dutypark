@@ -39,6 +39,14 @@ export const esReleaseNotes = {
     ui: "Interfaz"
   },
   entries: {
+    "pr-370": {
+      title: "Mejorar los nombres del encabezado móvil del calendario",
+      summary: "Mantiene legibles los nombres en el encabezado del calendario de turnos sin desalinear la navegación mensual ni el control de búsqueda.",
+      changes: [
+        "Reduce solo el tamaño del avatar móvil para dar más espacio al nombre del miembro.",
+        "Mantiene equilibrada la cuadrícula de tres columnas para que la navegación mensual siga centrada y la búsqueda sea usable."
+      ]
+    },
     "pr-369": {
       title: "Actualizar el icono de la app Dutypark",
       summary: "Cambia el icono de la app por el diseño elegido de calendario con luna y añade rutas de icono con renovación de caché.",

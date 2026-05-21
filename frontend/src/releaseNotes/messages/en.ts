@@ -39,6 +39,14 @@ export const enReleaseNotes = {
     ui: "UI"
   },
   entries: {
+    "pr-370": {
+      title: "Improve mobile calendar header names",
+      summary: "Keeps member names readable in the duty calendar header without pushing the month navigation or search control out of alignment.",
+      changes: [
+        "Reduce only the mobile profile avatar size so the member name has enough room.",
+        "Keep the balanced three-column header grid so the month navigator remains centered and search stays usable."
+      ]
+    },
     "pr-369": {
       title: "Refresh the Dutypark app icon",
       summary: "Updates the app icon with the selected moon calendar artwork and adds cache-busted icon paths.",
