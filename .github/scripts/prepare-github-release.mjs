@@ -180,7 +180,7 @@ const pr = JSON.parse(runGh([
   'view',
   prNumber,
   '--json',
-  'number,url,mergedAt,mergeCommit',
+  'number,url,mergedAt,mergeCommit,headRefName,author',
 ]))
 
 if (!pr.mergedAt) {
@@ -190,6 +190,16 @@ if (!pr.mergedAt) {
 const target = targetFromEnv || pr.mergeCommit?.oid
 if (!target) {
   throw new Error(`PR #${prNumber} does not have a merge commit SHA`)
+}
+
+const authorLogin = pr.author?.login || ''
+const isDependabotPr = authorLogin === 'dependabot[bot]' || pr.headRefName?.startsWith('dependabot/')
+
+if (isDependabotPr) {
+  writeOutput('skipped', 'true')
+  writeOutput('reason', `PR #${pr.number} is a Dependabot dependency update`)
+  writeOutput('target', target)
+  process.exit(0)
 }
 
 const inAppReleaseNoteMeta = readInAppReleaseNoteMeta(pr.number)
@@ -223,3 +233,4 @@ writeOutput('title', `${tag} - ${inAppReleaseNote.title}`)
 writeOutput('target', target)
 writeOutput('notes_file', notesFile)
 writeOutput('exists', String(releaseExists))
+writeOutput('skipped', 'false')
