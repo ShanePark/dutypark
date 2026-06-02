@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   release-note:
-    if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.event.pull_request.draft == false
+    if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.event.pull_request.draft == false && github.event.pull_request.user.login != 'dependabot[bot]' && !startsWith(github.event.pull_request.head.ref, 'dependabot/')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

@@ -4,6 +4,8 @@ const SERVICE_WORKER_URL = import.meta.env.DEV
   ? '/sw.js?v=push-detail-v4'
   : '/sw-runtime.js?v=push-detail-v4'
 const SERVICE_WORKER_SCRIPT_URL = `http://localhost:5173${SERVICE_WORKER_URL}`
+const decodeBase64 = (value: string) =>
+  globalThis.atob(value.padEnd(value.length + ((4 - value.length % 4) % 4), '='))
 
 const mocks = vi.hoisted(() => ({
   pushApi: {
@@ -60,7 +62,7 @@ describe('usePushNotification', () => {
       value: {
         Notification: notificationApi,
         PushManager: function PushManager() {},
-        atob: (value: string) => Buffer.from(value, 'base64').toString('binary'),
+        atob: decodeBase64,
       },
       configurable: true,
     })
@@ -385,7 +387,7 @@ describe('usePushNotification', () => {
       value: {
         Notification: deniedNotificationApi,
         PushManager: function PushManager() {},
-        atob: (value: string) => Buffer.from(value, 'base64').toString('binary'),
+        atob: decodeBase64,
       },
       configurable: true,
     })
