@@ -9,7 +9,7 @@ describe('buildPushSubscriptionRequest', () => {
   it('builds a request without locale and encodes keys as base64url', () => {
     Object.defineProperty(globalThis, 'window', {
       value: {
-        btoa: (value: string) => Buffer.from(value, 'binary').toString('base64'),
+        btoa: (value: string) => globalThis.btoa(value),
       },
       configurable: true,
     })
