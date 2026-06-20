@@ -39,6 +39,14 @@ export const enReleaseNotes = {
     ui: "UI"
   },
   entries: {
+    "pr-374": {
+      title: "Show todo action labels on mobile",
+      summary: "Makes todo detail modal actions easier to understand on mobile by keeping the text labels visible next to their icons.",
+      changes: [
+        "Keep the board, edit, delete, complete, reopen, tag removal, and status action labels visible on narrow screens.",
+        "Allow the modal footer actions to wrap while preserving comfortable mobile tap targets."
+      ]
+    },
     "pr-370": {
       title: "Improve mobile calendar header names",
       summary: "Keeps member names readable in the duty calendar header without pushing the month navigation or search control out of alignment.",

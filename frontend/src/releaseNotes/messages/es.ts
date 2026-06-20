@@ -39,6 +39,14 @@ export const esReleaseNotes = {
     ui: "Interfaz"
   },
   entries: {
+    "pr-374": {
+      title: "Mostrar etiquetas de acciones Todo en móvil",
+      summary: "Mantiene visibles las etiquetas de texto junto a los iconos en el modal de detalle Todo para que las acciones sean más claras en móvil.",
+      changes: [
+        "Muestra en pantallas estrechas las etiquetas de tablero, editar, eliminar, completar, reabrir, quitar etiqueta y cambio de estado.",
+        "Permite que las acciones del pie del modal pasen a otra línea sin perder objetivos táctiles cómodos."
+      ]
+    },
     "pr-370": {
       title: "Mejorar los nombres del encabezado móvil del calendario",
       summary: "Mantiene legibles los nombres en el encabezado del calendario de turnos sin desalinear la navegación mensual ni el control de búsqueda.",

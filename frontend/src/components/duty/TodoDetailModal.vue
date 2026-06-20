@@ -472,65 +472,65 @@ function onUploadError(message: string) {
         ]"
       >
         <template v-if="!isEditMode">
-          <div class="flex items-center justify-between gap-2">
+          <div class="flex flex-wrap items-center justify-between gap-2">
             <button
               @click="emit('backToList')"
-              class="flex items-center gap-1 px-3 py-2 rounded-lg transition btn-outline cursor-pointer"
+              class="flex min-h-11 items-center gap-1 px-3 py-2 text-sm rounded-lg transition btn-outline cursor-pointer"
               :title="t('duty.todo.actions.backToList')"
             >
               <List class="w-4 h-4" />
-              <span class="hidden sm:inline">{{ t('duty.todo.actions.list') }}</span>
+              <span class="whitespace-nowrap">{{ t('duty.todo.actions.list') }}</span>
             </button>
 
-            <div class="flex gap-2">
+            <div class="flex flex-wrap justify-end gap-2">
               <template v-if="isTaggedTodo">
                 <button
                   v-for="option in statusActionOptions"
                   :key="option.value"
                   @click="emit('change-status', { id: todo.id, status: option.value })"
-                  class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-accent-border text-dp-accent rounded-lg hover:bg-dp-accent-soft transition cursor-pointer"
+                  class="flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm border border-dp-accent-border text-dp-accent rounded-lg hover:bg-dp-accent-soft transition cursor-pointer"
                 >
                   <component :is="option.icon" class="w-4 h-4" />
-                  <span class="hidden sm:inline">{{ option.label }}</span>
+                  <span class="whitespace-nowrap">{{ option.label }}</span>
                 </button>
                 <button
                   @click="emit('untagSelf', todo.id)"
-                  class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-warning-border text-dp-warning rounded-lg hover:bg-dp-warning-soft transition cursor-pointer"
+                  class="flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm border border-dp-warning-border text-dp-warning rounded-lg hover:bg-dp-warning-soft transition cursor-pointer"
                 >
                   <X class="w-4 h-4" />
-                  <span class="hidden sm:inline">{{ t('duty.todo.actions.removeTag') }}</span>
+                  <span class="whitespace-nowrap">{{ t('duty.todo.actions.removeTag') }}</span>
                 </button>
               </template>
               <template v-else>
                 <button
                   @click="enterEditMode"
-                  class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-accent-border text-dp-accent rounded-lg hover:bg-dp-accent-soft transition cursor-pointer"
+                  class="flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm border border-dp-accent-border text-dp-accent rounded-lg hover:bg-dp-accent-soft transition cursor-pointer"
                 >
                   <Pencil class="w-4 h-4" />
-                  <span class="hidden sm:inline">{{ t('duty.todo.actions.edit') }}</span>
+                  <span class="whitespace-nowrap">{{ t('duty.todo.actions.edit') }}</span>
                 </button>
                 <button
                   @click="emit('delete', todo.id)"
-                  class="flex items-center justify-center gap-1 px-3 py-2 border border-dp-danger-border text-dp-danger rounded-lg hover:bg-dp-danger-soft transition cursor-pointer"
+                  class="flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm border border-dp-danger-border text-dp-danger rounded-lg hover:bg-dp-danger-soft transition cursor-pointer"
                 >
                   <Trash2 class="w-4 h-4" />
-                  <span class="hidden sm:inline">{{ t('common.actions.delete') }}</span>
+                  <span class="whitespace-nowrap">{{ t('common.actions.delete') }}</span>
                 </button>
                 <button
                   v-if="isActive"
                   @click="emit('complete', todo.id)"
-                  class="flex items-center justify-center gap-1 px-3 py-2 bg-dp-success text-dp-text-on-dark rounded-lg hover:bg-dp-success-hover transition cursor-pointer"
+                  class="flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm bg-dp-success text-dp-text-on-dark rounded-lg hover:bg-dp-success-hover transition cursor-pointer"
                 >
                   <Check class="w-4 h-4" />
-                  <span class="hidden sm:inline">{{ t('duty.todo.actions.complete') }}</span>
+                  <span class="whitespace-nowrap">{{ t('duty.todo.actions.complete') }}</span>
                 </button>
                 <button
                   v-else
                   @click="emit('reopen', todo.id)"
-                  class="flex items-center justify-center gap-1 px-3 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
+                  class="flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
                 >
                   <RotateCcw class="w-4 h-4" />
-                  <span class="hidden sm:inline">{{ t('duty.todo.actions.reopen') }}</span>
+                  <span class="whitespace-nowrap">{{ t('duty.todo.actions.reopen') }}</span>
                 </button>
               </template>
             </div>
