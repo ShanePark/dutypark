@@ -35,10 +35,6 @@ function isActiveTodo(status: string): boolean {
   return status === 'TODO' || status === 'IN_PROGRESS'
 }
 
-function isDoneTodo(status: string): boolean {
-  return status === 'DONE'
-}
-
 function getStatusLabel(status: string): string {
   switch (status) {
     case 'TODO':
@@ -57,10 +53,12 @@ interface Props {
   todo: TodoDetailItem | null
   friends?: TaggableFriend[]
   startInEditMode?: boolean
+  showBackToList?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   startInEditMode: false,
+  showBackToList: true,
   friends: () => [],
 })
 
@@ -207,13 +205,6 @@ const todoTagMembers = computed(() => {
     .filter((tag) => tag.name)
     .map((tag, index) => toDisplayTagMember(tag, `todo-tag-${tag.id ?? `${todoId}-${index}`}`))
 })
-
-const statusActionOptions = computed(() => {
-  if (!props.todo) return []
-  const { status } = props.todo
-  return statusOptions.value.filter((option) => option.value !== status)
-})
-
 
 function enterEditMode() {
   if (!props.todo || props.todo.isTagged) return
@@ -474,6 +465,7 @@ function onUploadError(message: string) {
         <template v-if="!isEditMode">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <button
+              v-if="showBackToList"
               @click="emit('backToList')"
               class="flex min-h-11 items-center gap-1 px-3 py-2 text-sm rounded-lg transition btn-outline cursor-pointer"
               :title="t('duty.todo.actions.backToList')"
@@ -485,20 +477,27 @@ function onUploadError(message: string) {
             <div class="flex flex-wrap justify-end gap-2">
               <template v-if="isTaggedTodo">
                 <button
-                  v-for="option in statusActionOptions"
-                  :key="option.value"
-                  @click="emit('change-status', { id: todo.id, status: option.value })"
-                  class="flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm border border-dp-accent-border text-dp-accent rounded-lg hover:bg-dp-accent-soft transition cursor-pointer"
-                >
-                  <component :is="option.icon" class="w-4 h-4" />
-                  <span class="whitespace-nowrap">{{ option.label }}</span>
-                </button>
-                <button
                   @click="emit('untagSelf', todo.id)"
                   class="flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm border border-dp-warning-border text-dp-warning rounded-lg hover:bg-dp-warning-soft transition cursor-pointer"
                 >
                   <X class="w-4 h-4" />
                   <span class="whitespace-nowrap">{{ t('duty.todo.actions.removeTag') }}</span>
+                </button>
+                <button
+                  v-if="isActive"
+                  @click="emit('complete', todo.id)"
+                  class="flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm bg-dp-success text-dp-text-on-dark rounded-lg hover:bg-dp-success-hover transition cursor-pointer"
+                >
+                  <Check class="w-4 h-4" />
+                  <span class="whitespace-nowrap">{{ t('duty.todo.actions.complete') }}</span>
+                </button>
+                <button
+                  v-else
+                  @click="emit('reopen', todo.id)"
+                  class="flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
+                >
+                  <RotateCcw class="w-4 h-4" />
+                  <span class="whitespace-nowrap">{{ t('duty.todo.actions.reopen') }}</span>
                 </button>
               </template>
               <template v-else>

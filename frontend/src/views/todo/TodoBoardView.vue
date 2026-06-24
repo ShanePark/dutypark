@@ -661,6 +661,7 @@ onBeforeUnmount(() => {
       :todo="selectedTodo"
       :friends="friends"
       :start-in-edit-mode="startInEditMode"
+      :show-back-to-list="false"
       @close="closeDetailModal"
       @update="handleUpdateTodo"
       @complete="handleCompleteTodo"

@@ -39,6 +39,14 @@ export const zhReleaseNotes = {
     ui: "界面"
   },
   entries: {
+    "pr-376": {
+      title: "整理被标记 Todo 详情操作",
+      summary: "让被标记 Todo 的详情弹窗与自己创建的 Todo 使用相同的完成或重新打开操作，并聚焦于移除标签。",
+      changes: [
+        "移除被标记 Todo 详情操作中多余的状态选择按钮。",
+        "让被标记 Todo 和自己创建的 Todo 使用相同的完成与重新打开按钮。"
+      ]
+    },
     "pr-374": {
       title: "在移动端显示 Todo 操作标签",
       summary: "在移动端 Todo 详情弹窗中保留图标旁的文字标签，让每个操作更容易识别。",
