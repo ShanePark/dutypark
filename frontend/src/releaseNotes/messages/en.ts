@@ -39,6 +39,14 @@ export const enReleaseNotes = {
     ui: "UI"
   },
   entries: {
+    "pr-376": {
+      title: "Align tagged todo detail actions",
+      summary: "Makes tagged todo detail modal actions match owner todos by focusing on tag removal and the same complete or reopen action.",
+      changes: [
+        "Remove the extra status choice buttons from tagged todo detail actions.",
+        "Use the same complete and reopen buttons for tagged todos and owner todos."
+      ]
+    },
     "pr-374": {
       title: "Show todo action labels on mobile",
       summary: "Makes todo detail modal actions easier to understand on mobile by keeping the text labels visible next to their icons.",

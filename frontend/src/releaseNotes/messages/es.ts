@@ -39,6 +39,14 @@ export const esReleaseNotes = {
     ui: "Interfaz"
   },
   entries: {
+    "pr-376": {
+      title: "Alinear acciones del detalle Todo etiquetado",
+      summary: "Hace que el modal de detalle de Todo etiquetado use las mismas acciones de completar o reabrir que los Todo propios y se centre en quitar la etiqueta.",
+      changes: [
+        "Elimina los botones extra de selección de estado de las acciones del detalle de Todo etiquetado.",
+        "Usa los mismos botones de completar y reabrir para Todo etiquetados y Todo propios."
+      ]
+    },
     "pr-374": {
       title: "Mostrar etiquetas de acciones Todo en móvil",
       summary: "Mantiene visibles las etiquetas de texto junto a los iconos en el modal de detalle Todo para que las acciones sean más claras en móvil.",
