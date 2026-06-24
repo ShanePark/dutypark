@@ -53,10 +53,12 @@ interface Props {
   todo: TodoDetailItem | null
   friends?: TaggableFriend[]
   startInEditMode?: boolean
+  showBackToList?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   startInEditMode: false,
+  showBackToList: true,
   friends: () => [],
 })
 
@@ -463,6 +465,7 @@ function onUploadError(message: string) {
         <template v-if="!isEditMode">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <button
+              v-if="showBackToList"
               @click="emit('backToList')"
               class="flex min-h-11 items-center gap-1 px-3 py-2 text-sm rounded-lg transition btn-outline cursor-pointer"
               :title="t('duty.todo.actions.backToList')"
