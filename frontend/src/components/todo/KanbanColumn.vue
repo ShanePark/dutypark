@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { Plus, ListTodo, Clock, CheckCircle2 } from 'lucide-vue-next'
 import type { TodoStatus } from '@/types'
 import type { Component } from 'vue'
@@ -6,29 +7,37 @@ import type { Component } from 'vue'
 interface Props {
   status: TodoStatus
   count: number
+  clickableHeader?: boolean
 }
 
-defineProps<Props>()
+withDefaults(defineProps<Props>(), {
+  clickableHeader: false,
+})
 
 const emit = defineEmits<{
   (e: 'add'): void
+  (e: 'select', status: TodoStatus): void
 }>()
+const { t } = useI18n()
 
-const statusConfig: Record<TodoStatus, { label: string; bgClass: string; textClass: string; icon: Component }> = {
+const statusConfig: Record<TodoStatus, { labelKey: string; shortLabelKey: string; bgClass: string; textClass: string; icon: Component }> = {
   TODO: {
-    label: '할일',
+    labelKey: 'todoBoard.status.todo',
+    shortLabelKey: 'todoBoard.statusShort.todo',
     bgClass: 'kanban-column-todo',
     textClass: 'kanban-title-todo',
     icon: ListTodo,
   },
   IN_PROGRESS: {
-    label: '진행중',
+    labelKey: 'todoBoard.status.inProgress',
+    shortLabelKey: 'todoBoard.statusShort.inProgress',
     bgClass: 'kanban-column-in-progress',
     textClass: 'kanban-title-in-progress',
     icon: Clock,
   },
   DONE: {
-    label: '완료',
+    labelKey: 'todoBoard.status.done',
+    shortLabelKey: 'todoBoard.statusShort.done',
     bgClass: 'kanban-column-done',
     textClass: 'kanban-title-done',
     icon: CheckCircle2,
@@ -39,20 +48,30 @@ const statusConfig: Record<TodoStatus, { label: string; bgClass: string; textCla
 <template>
   <div class="kanban-column" :class="statusConfig[status].bgClass">
     <div class="kanban-column-header">
-      <h3 class="kanban-column-title" :class="statusConfig[status].textClass">
-        <component :is="statusConfig[status].icon" class="kanban-column-icon" />
-        {{ statusConfig[status].label }}
-      </h3>
-      <div class="kanban-column-header-right">
+      <div
+        class="kanban-column-header-main"
+        :class="{ 'kanban-column-header-main-clickable': clickableHeader }"
+        :role="clickableHeader ? 'button' : undefined"
+        :tabindex="clickableHeader ? 0 : -1"
+        @click="clickableHeader && emit('select', status)"
+        @keydown.enter.prevent="clickableHeader && emit('select', status)"
+        @keydown.space.prevent="clickableHeader && emit('select', status)"
+      >
+        <h3 class="kanban-column-title" :class="statusConfig[status].textClass">
+          <component :is="statusConfig[status].icon" class="kanban-column-icon" />
+          <span class="sm:hidden">{{ t(statusConfig[status].shortLabelKey) }}</span>
+          <span class="hidden sm:inline">{{ t(statusConfig[status].labelKey) }}</span>
+        </h3>
         <span class="kanban-column-count" :class="statusConfig[status].textClass">{{ count }}</span>
-        <button
-          class="kanban-column-add-btn"
-          @click="emit('add')"
-          title="새 할일 추가"
-        >
-          <Plus class="w-4 h-4" />
-        </button>
       </div>
+      <button
+        type="button"
+        class="kanban-column-add-btn"
+        @click="emit('add')"
+        :title="t('todoBoard.actions.addNew')"
+      >
+        <Plus class="w-4 h-4" />
+      </button>
     </div>
     <div class="kanban-column-content">
       <slot></slot>
@@ -108,6 +127,7 @@ const statusConfig: Record<TodoStatus, { label: string; bgClass: string; textCla
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.5rem;
   margin-bottom: 0.75rem;
   padding: 0.25rem 0.5rem;
   border-radius: 0.5rem;
@@ -115,10 +135,36 @@ const statusConfig: Record<TodoStatus, { label: string; bgClass: string; textCla
   flex-shrink: 0;
 }
 
-.kanban-column-header-right {
+.kanban-column-header-main {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  outline: none;
+}
+
+.kanban-column-header-main-clickable {
+  min-height: 44px;
+  margin: -0.25rem 0;
+  padding: 0.25rem 0;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.kanban-column-header-main-clickable:hover {
+  background-color: var(--dp-bg-hover);
+}
+
+.kanban-column-header-main-clickable:focus-visible {
+  outline: 2px solid var(--dp-accent);
+  outline-offset: 2px;
 }
 
 .kanban-column-title {
@@ -127,6 +173,7 @@ const statusConfig: Record<TodoStatus, { label: string; bgClass: string; textCla
   gap: 0.375rem;
   font-size: 0.875rem;
   font-weight: 700;
+  min-width: 0;
 }
 
 .kanban-column-icon {

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, watch, toRef } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
+import BaseModal from '@/components/common/BaseModal.vue'
 
 const props = defineProps<{
   isOpen: boolean
@@ -16,11 +16,13 @@ const emit = defineEmits<{
   goToThisMonth: []
 }>()
 
+const { t, locale } = useI18n()
 const pickerYear = ref(props.currentYear)
-const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월']
-
-useBodyScrollLock(toRef(props, 'isOpen'))
-useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
+const monthFormatter = computed(() => new Intl.DateTimeFormat(locale.value, { month: 'long' }))
+const dateFormatter = computed(() => new Intl.DateTimeFormat(locale.value, { year: 'numeric', month: 'long' }))
+const monthNames = computed(() =>
+  Array.from({ length: 12 }, (_, index) => monthFormatter.value.format(new Date(2024, index, 1))),
+)
 
 // Sync pickerYear when modal opens
 watch(() => props.isOpen, (open) => {
@@ -39,78 +41,68 @@ function handleGoToThisMonth() {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      v-if="isOpen"
-      class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-2 sm:p-4"
-      @click.self="emit('close')"
-    >
-      <div
-        class="rounded-xl shadow-xl w-full max-w-[95vw] sm:max-w-sm mx-2 sm:mx-4"
-        :style="{
-          backgroundColor: 'var(--dp-bg-modal)',
-          border: '1px solid var(--dp-border-primary)',
-        }"
+  <BaseModal
+    :is-open="isOpen"
+    size="sm"
+    height="fit"
+    rounded
+    panel-class="border border-dp-border-primary"
+    @close="emit('close')"
+  >
+    <div class="modal-header">
+      <button
+        @click="pickerYear--"
+        class="calendar-nav-btn p-2 rounded-full cursor-pointer"
+        :aria-label="t('common.calendar.previousYear')"
       >
-        <!-- Year Navigation -->
-        <div
-          class="flex items-center justify-between p-3 sm:p-4 border-b border-dp-border-primary"
+        <ChevronLeft class="w-6 h-6 sm:w-5 sm:h-5" />
+      </button>
+      <span class="text-xl font-bold text-dp-text-primary">{{ t('common.calendar.yearLabel', { year: pickerYear }) }}</span>
+      <button
+        @click="pickerYear++"
+        class="calendar-nav-btn p-2 rounded-full cursor-pointer"
+        :aria-label="t('common.calendar.nextYear')"
+      >
+        <ChevronRight class="w-6 h-6 sm:w-5 sm:h-5" />
+      </button>
+    </div>
+
+    <div class="modal-body-form-compact !space-y-0">
+      <div class="grid grid-cols-4 gap-1.5 sm:gap-2">
+        <button
+          v-for="(name, idx) in monthNames"
+          :key="idx"
+          @click="selectYearMonth(idx + 1)"
+          class="py-2.5 sm:py-3 px-1.5 sm:px-2 rounded-lg text-sm font-medium transition cursor-pointer"
+          :class="
+            pickerYear === currentYear && idx + 1 === currentMonth
+              ? 'bg-dp-accent text-dp-text-on-dark'
+              : 'month-btn'
+          "
+          :style="
+            pickerYear === currentYear && idx + 1 === currentMonth
+              ? {}
+              : { color: 'var(--dp-text-secondary)' }
+          "
         >
-          <button
-            @click="pickerYear--"
-            class="calendar-nav-btn p-2 rounded-full cursor-pointer"
-          >
-            <ChevronLeft class="w-6 h-6 sm:w-5 sm:h-5" />
-          </button>
-          <span class="text-xl font-bold text-dp-text-primary">{{ pickerYear }}년</span>
-          <button
-            @click="pickerYear++"
-            class="calendar-nav-btn p-2 rounded-full cursor-pointer"
-          >
-            <ChevronRight class="w-6 h-6 sm:w-5 sm:h-5" />
-          </button>
-        </div>
-
-        <!-- Month Grid -->
-        <div class="p-3 sm:p-4">
-          <div class="grid grid-cols-4 gap-1.5 sm:gap-2">
-            <button
-              v-for="(name, idx) in monthNames"
-              :key="idx"
-              @click="selectYearMonth(idx + 1)"
-              class="py-2.5 sm:py-3 px-1.5 sm:px-2 rounded-lg text-sm font-medium transition cursor-pointer"
-              :class="
-                pickerYear === currentYear && idx + 1 === currentMonth
-                  ? 'bg-dp-accent text-dp-text-on-dark'
-                  : 'month-btn'
-              "
-              :style="
-                pickerYear === currentYear && idx + 1 === currentMonth
-                  ? {}
-                  : { color: 'var(--dp-text-secondary)' }
-              "
-            >
-              {{ name }}
-            </button>
-          </div>
-        </div>
-
-        <!-- Buttons -->
-        <div class="p-3 sm:p-4 border-t flex flex-row gap-2 border-dp-border-primary">
-          <button
-            @click="handleGoToThisMonth"
-            class="flex-[3] px-3 sm:px-4 py-2 bg-dp-accent hover:bg-dp-accent-hover rounded-lg text-dp-text-on-dark font-medium transition text-sm cursor-pointer"
-          >
-            이번달 ({{ new Date().getFullYear() }}년{{ new Date().getMonth() + 1 }}월)
-          </button>
-          <button
-            @click="emit('close')"
-            class="close-btn flex-1 px-3 sm:px-4 py-2 rounded-lg font-medium transition text-sm cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"
-          >
-            닫기
-          </button>
-        </div>
+          {{ name }}
+        </button>
       </div>
     </div>
-  </Teleport>
+
+    <div class="modal-actions modal-footer-safe">
+      <button
+        @click="handleGoToThisMonth"
+        class="flex-[3] px-3 sm:px-4 py-2 bg-dp-accent hover:bg-dp-accent-hover rounded-lg text-dp-text-on-dark font-medium transition text-sm cursor-pointer"
+      >
+        {{ t('common.calendar.thisMonth', { date: dateFormatter.format(new Date()) }) }}
+      </button>
+      <button
+        @click="emit('close')"
+        class="close-btn flex-1 px-3 sm:px-4 py-2 rounded-lg font-medium transition text-sm cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"
+      >
+        {{ t('common.actions.close') }}
+      </button>
+    </div>
+  </BaseModal>
 </template>

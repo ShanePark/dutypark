@@ -22,4 +22,6 @@ interface FriendRequestRepository : JpaRepository<FriendRequest, Long> {
 
     fun countByToMemberIdAndStatus(toMemberId: Long, status: FriendRequestStatus): Long
 
+    fun countByFromMemberIdAndStatus(fromMemberId: Long, status: FriendRequestStatus): Long
+
 }

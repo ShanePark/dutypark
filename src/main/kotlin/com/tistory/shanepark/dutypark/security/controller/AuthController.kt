@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.security.controller
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.domain.dto.DutyParkErrorResponse
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.common.exceptions.RateLimitException
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
@@ -13,6 +14,7 @@ import com.tistory.shanepark.dutypark.security.domain.dto.TokenResponse
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import com.tistory.shanepark.dutypark.security.service.CookieService
 import com.tistory.shanepark.dutypark.security.service.LoginAttemptService
+import jakarta.validation.Valid
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.http.ResponseEntity
@@ -32,14 +34,14 @@ class AuthController(
     @PutMapping("password")
     fun changePassword(
         @Login loginMember: LoginMember,
-        @RequestBody(required = true) param: PasswordChangeDto
-    ): ResponseEntity<String> {
+        @Valid @RequestBody(required = true) param: PasswordChangeDto
+    ): ResponseEntity<Void> {
         if (loginMember.id != param.memberId && !loginMember.isAdmin) {
-            throw AuthException("You are not authorized to change this password")
+            throw AuthException("auth.password.changeUnauthorized")
         }
         val byAdmin = loginMember.isAdmin && loginMember.id != param.memberId
         authService.changePassword(param, byAdmin)
-        return ResponseEntity.ok().body("Password Changed")
+        return ResponseEntity.noContent().build()
     }
 
     @GetMapping("/status")
@@ -55,7 +57,7 @@ class AuthController(
      */
     @PostMapping("/token")
     fun loginForToken(
-        @RequestBody loginDto: LoginDto,
+        @Valid @RequestBody loginDto: LoginDto,
         req: HttpServletRequest,
         resp: HttpServletResponse
     ): ResponseEntity<*> {
@@ -64,15 +66,23 @@ class AuthController(
             cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)
             ResponseEntity.ok(tokenResponse.toPublicResponse())
         } catch (e: RateLimitException) {
-            ResponseEntity.status(429).body(mapOf("error" to e.message))
+            ResponseEntity.status(429).body(
+                DutyParkErrorResponse.of(
+                    status = 429,
+                    code = "auth.login.rateLimited",
+                )
+            )
         } catch (e: AuthException) {
             val email = loginDto.email ?: ""
             val ipAddress = req.remoteAddr ?: "unknown"
             val remainingAttempts = loginAttemptService.getRemainingAttempts(ipAddress, email)
             ResponseEntity.status(401).body(
-                mapOf(
-                    "error" to (e.message ?: "로그인에 실패했습니다."),
-                    "remainingAttempts" to remainingAttempts
+                DutyParkErrorResponse.of(
+                    status = 401,
+                    code = "auth.login.failed",
+                    details = mapOf(
+                        "remainingAttempts" to remainingAttempts,
+                    ),
                 )
             )
         }
@@ -85,16 +95,15 @@ class AuthController(
     fun refreshToken(
         req: HttpServletRequest,
         resp: HttpServletResponse
-    ): ResponseEntity<Map<String, Any>> {
+    ): ResponseEntity<*> {
         val refreshToken = cookieService.extractRefreshToken(req.cookies)
-            ?: return ResponseEntity.status(401).build()
+            ?: return unauthorizedRefresh(resp, "auth.refresh.invalid")
         return try {
             val tokenResponse = authService.refreshAccessToken(refreshToken, req)
             cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)
             ResponseEntity.ok(tokenResponse.toPublicResponse())
         } catch (e: AuthException) {
-            cookieService.clearTokenCookies(resp)
-            ResponseEntity.status(401).build()
+            unauthorizedRefresh(resp, e.message ?: "auth.refresh.invalid")
         }
     }
 
@@ -103,16 +112,12 @@ class AuthController(
      */
     @PostMapping("/logout")
     fun logout(
-        @Login loginMember: LoginMember,
         req: HttpServletRequest,
         resp: HttpServletResponse
     ): ResponseEntity<Void> {
         val refreshToken = cookieService.extractRefreshToken(req.cookies)
         if (refreshToken != null) {
-            val token = refreshTokenService.findByToken(refreshToken)
-            if (token != null && token.member.id == loginMember.id) {
-                refreshTokenService.deleteByToken(refreshToken)
-            }
+            refreshTokenService.deleteByToken(refreshToken)
         }
         cookieService.clearTokenCookies(resp)
         return ResponseEntity.noContent().build()
@@ -133,7 +138,12 @@ class AuthController(
             cookieService.setAccessTokenCookie(resp, accessToken)
             ResponseEntity.ok(mapOf("expiresIn" to jwtConfig.tokenValidityInSeconds))
         } catch (e: AuthException) {
-            ResponseEntity.status(403).body(mapOf("error" to (e.message ?: "계정 전환에 실패했습니다.")))
+            ResponseEntity.status(403).body(
+                DutyParkErrorResponse.of(
+                    status = 403,
+                    code = e.message ?: "auth.impersonation.failed",
+                )
+            )
         }
     }
 
@@ -153,13 +163,28 @@ class AuthController(
             cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)
             ResponseEntity.ok(tokenResponse.toPublicResponse())
         } catch (e: AuthException) {
-            ResponseEntity.status(400).body(mapOf("error" to (e.message ?: "계정 복원에 실패했습니다.")))
+            ResponseEntity.status(400).body(
+                DutyParkErrorResponse.of(
+                    status = 400,
+                    code = e.message ?: "auth.restore.failed",
+                )
+            )
         }
     }
 
     private fun TokenResponse.toPublicResponse(): Map<String, Any> {
         return mapOf(
             "expiresIn" to expiresIn
+        )
+    }
+
+    private fun unauthorizedRefresh(resp: HttpServletResponse, code: String): ResponseEntity<DutyParkErrorResponse> {
+        cookieService.clearTokenCookies(resp)
+        return ResponseEntity.status(401).body(
+            DutyParkErrorResponse.of(
+                status = 401,
+                code = code,
+            )
         )
     }
 

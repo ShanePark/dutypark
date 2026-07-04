@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { CalendarCheck, Lock, MessageSquareText, CheckSquare } from 'lucide-vue-next'
+import { CalendarCheck, MessageSquareText, CheckSquare } from 'lucide-vue-next'
 import { isLightColor } from '@/utils/color'
+import { parseDateOnly } from '@/utils/date'
 import CalendarGrid from '@/components/common/CalendarGrid.vue'
+import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
+import VisibilityHintIcon from '@/components/common/VisibilityHintIcon.vue'
 import type { HolidayDto } from '@/types'
 import type { CalendarDay, DutyType, Schedule, OtherDuty, LocalDDay, DutyDay, TodoDueItem } from '@/views/duty/dutyViewTypes'
+import { buildDisplayTagMembers } from '@/utils/tagMembers'
 
 const props = defineProps<{
   days: CalendarDay[]
@@ -30,8 +34,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'day-click', day: CalendarDay, index: number): void
   (e: 'batch-duty-change', day: CalendarDay, dutyTypeId: number | null): void
-  (e: 'schedule-click', schedule: Schedule): void
   (e: 'todo-click', todo: TodoDueItem): void
+  (e: 'dday-click', dday: LocalDDay): void
 }>()
 
 const focusedCalendarDay = computed(() => {
@@ -40,6 +44,7 @@ const focusedCalendarDay = computed(() => {
 })
 
 const displayHolidays = computed(() => (props.batchEditMode ? [] : props.holidays))
+const MOBILE_VISIBLE_CALENDAR_TAGS = 3
 
 function getDutyColorAt(index: number): string | null {
   return props.duties[index]?.dutyColor ?? null
@@ -81,7 +86,7 @@ function calcDDayForDay(day: CalendarDay) {
 
 function getDDaysForDay(day: CalendarDay): LocalDDay[] {
   return props.dDays.filter((dday) => {
-    const ddayDate = new Date(dday.date)
+    const ddayDate = parseDateOnly(dday.date)
     return (
       ddayDate.getFullYear() === day.year &&
       ddayDate.getMonth() + 1 === day.month &&
@@ -123,10 +128,59 @@ function hasScheduleDetails(schedule: Schedule) {
   return !!(schedule.description || schedule.attachments?.length)
 }
 
-function handleScheduleClick(schedule: Schedule, event: Event) {
-  event.stopPropagation()
-  emit('schedule-click', schedule)
+function getDisplayTagMembers(schedule: Schedule) {
+  return buildDisplayTagMembers({
+    itemKey: schedule.id,
+    isTagged: schedule.isTagged,
+    owner: schedule.owner,
+    taggedBy: schedule.taggedBy,
+    taggedByMember: schedule.taggedByMember,
+    tags: schedule.tags,
+    excludeMemberId: props.memberId,
+  })
 }
+
+function getCalendarTagLabel(name: string) {
+  const chars = Array.from(name)
+  return chars.length > 3 ? `${chars.slice(0, 2).join('')}…` : name
+}
+
+const MOBILE_CALENDAR_SCHEDULE_TITLE_LIMIT = 10
+const MOBILE_CALENDAR_DDAY_TITLE_LIMIT = 10
+const MOBILE_CALENDAR_TODO_TITLE_LIMIT = 6
+
+function truncateMobileCalendarText(text: string, limit: number) {
+  const chars = Array.from(text)
+  return chars.length > limit
+    ? `${chars.slice(0, limit).join('')}…`
+    : text
+}
+
+function getMobileCalendarScheduleTitle(schedule: Schedule) {
+  const title = schedule.contentWithoutTime || schedule.content
+  return truncateMobileCalendarText(title, MOBILE_CALENDAR_SCHEDULE_TITLE_LIMIT)
+}
+
+function getMobileCalendarDDayTitle(dday: LocalDDay) {
+  return truncateMobileCalendarText(dday.title, MOBILE_CALENDAR_DDAY_TITLE_LIMIT)
+}
+
+function getMobileCalendarTodoTitle(todo: TodoDueItem) {
+  return truncateMobileCalendarText(todo.title, MOBILE_CALENDAR_TODO_TITLE_LIMIT)
+}
+
+function getMobileCalendarTagMembers(schedule: Schedule) {
+  return getDisplayTagMembers(schedule).slice(0, MOBILE_VISIBLE_CALENDAR_TAGS)
+}
+
+function getHiddenMobileCalendarTagCount(schedule: Schedule) {
+  return Math.max(getDisplayTagMembers(schedule).length - MOBILE_VISIBLE_CALENDAR_TAGS, 0)
+}
+
+function shouldShowPrivateVisibility(schedule: Schedule) {
+  return props.isMyCalendar && schedule.isMine && schedule.visibility === 'PRIVATE'
+}
+
 </script>
 
 <template>
@@ -138,7 +192,7 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
     :get-duty-color="getDutyColorForDay"
     :highlight-day="highlightDay"
     :focused-day="focusedCalendarDay"
-    :clickable="canEdit"
+    :clickable="!batchEditMode || canEdit"
     @day-click="(day, index) => emit('day-click', day, index)"
   >
     <!-- D-Day indicator in header -->
@@ -180,52 +234,114 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
 
       <div v-if="!batchEditMode" class="mt-0.5">
         <!-- Other duties -->
-        <div v-if="otherDuties.length > 0" class="flex flex-wrap justify-center gap-1 mb-1">
+        <div v-if="otherDuties.length > 0" class="mb-1 grid gap-0.5 sm:flex sm:flex-wrap sm:justify-center sm:gap-1">
           <div
             v-for="otherDuty in otherDuties"
             :key="otherDuty.memberId"
-            class="text-[10px] sm:text-sm px-1.5 py-0.5 rounded-full border border-dp-overlay-light/50"
+            class="other-duty-chip w-full max-w-full border border-dp-overlay-light/50 sm:w-auto"
+            :title="`${otherDuty.memberName}: ${otherDuty.duties[index]?.dutyType ?? ''}`"
             :style="{
               backgroundColor: otherDuty.duties[index]?.dutyColor || 'var(--dp-duty-fallback)',
               color: getOtherDutyTextColor(otherDuty.duties[index]?.dutyColor || null),
             }"
           >
-            {{ otherDuty.memberName }}<template v-if="otherDuty.duties[index]?.dutyType">:{{ otherDuty.duties[index].dutyType.slice(0, 4) }}</template>
+            <ProfileAvatar
+              :member-id="otherDuty.memberId"
+              :name="otherDuty.memberName"
+              :has-profile-photo="otherDuty.hasProfilePhoto"
+              :profile-photo-version="otherDuty.profilePhotoVersion"
+              size="xs"
+              class="other-duty-chip__avatar"
+            />
+            <span class="other-duty-chip__label">
+              {{ otherDuty.duties[index]?.dutyType ?? '' }}
+            </span>
           </div>
         </div>
 
         <!-- D-Days -->
-        <div
+        <button
           v-for="dday in getDDaysForDay(day)"
           :key="dday.id"
-          class="text-[10px] sm:text-sm leading-snug px-0.5 break-words"
-          :style="{ color: getPrimaryTextColor(getDutyColorAt(index)) }"
-        ><CalendarCheck class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" />{{ dday.title }}</div>
+          type="button"
+          :aria-label="dday.title"
+          :title="dday.title"
+          @click.stop="emit('dday-click', dday)"
+          class="calendar-action-bubble calendar-action-bubble--dday mt-0.5 text-[10px] sm:text-xs"
+        >
+          <span class="calendar-action-bubble__text">
+            <CalendarCheck class="calendar-action-bubble__icon" />
+            <span class="sm:hidden">{{ getMobileCalendarDDayTitle(dday) }}</span>
+            <span class="hidden sm:inline">{{ dday.title }}</span>
+          </span>
+        </button>
 
         <!-- Schedules -->
         <div
           v-for="schedule in schedulesByDays[index]?.slice(0, 3)"
           :key="schedule.id"
-          class="text-[10px] sm:text-sm leading-snug px-0.5 border-t-2 border-dashed break-words"
-          :class="{ 'cursor-pointer hover:underline': !canEdit && hasScheduleDetails(schedule) }"
+          class="px-0.5 text-[10px] leading-snug border-t-2 border-dashed sm:text-sm"
           :style="{ color: getPrimaryTextColor(getDutyColorAt(index)), borderColor: getBorderColor(getDutyColorAt(index)) }"
-          @click="!canEdit && hasScheduleDetails(schedule) ? handleScheduleClick(schedule, $event) : null"
-        ><Lock v-if="schedule.visibility === 'PRIVATE'" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 inline align-[-1px] sm:align-[-2px]" :style="{ color: getMutedTextColor(getDutyColorAt(index)) }" />{{ schedule.contentWithoutTime || schedule.content }}{{ formatScheduleTime(schedule) }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
-          v-if="hasScheduleDetails(schedule)"
-          class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px] ml-0.5"
-          :style="{ color: getIconTextColor(getDutyColorAt(index)) }"
-        />
+        >
+          <div class="calendar-inline-text sm:whitespace-normal sm:break-words">
+            <VisibilityHintIcon
+              v-if="shouldShowPrivateVisibility(schedule)"
+              :visibility="schedule.visibility"
+              size="xs"
+              align="end"
+              class="mr-0.5 inline-flex align-[-2px] sm:align-[-3px]"
+            /><span class="sm:hidden">{{ getMobileCalendarScheduleTitle(schedule) }}</span><span class="hidden sm:inline">{{ schedule.contentWithoutTime || schedule.content }}</span>{{ formatScheduleTime(schedule) }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
+              v-if="hasScheduleDetails(schedule)"
+              class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px] ml-0.5"
+              :style="{ color: getIconTextColor(getDutyColorAt(index)) }"
+            />
+          </div>
           <!-- Tags display -->
-          <div v-if="schedule.tags?.length || schedule.isTagged" class="flex flex-wrap gap-0.5 justify-end">
+          <div
+            v-if="getDisplayTagMembers(schedule).length"
+            class="mt-px flex flex-wrap justify-end gap-px sm:hidden"
+          >
             <span
-              v-for="tag in schedule.tags?.filter(t => t.id !== memberId)"
-              :key="tag.id"
-              class="schedule-tag"
-            >{{ tag.name }}</span>
+              v-for="tag in getMobileCalendarTagMembers(schedule)"
+              :key="tag.key"
+              class="schedule-tag schedule-tag-with-avatar"
+            >
+              <ProfileAvatar
+                :member-id="tag.id ?? null"
+                :name="tag.name"
+                :has-profile-photo="tag.hasProfilePhoto"
+                :profile-photo-version="tag.profilePhotoVersion"
+                size="xs"
+                class="schedule-tag-avatar"
+              />
+              <span class="schedule-tag-label">{{ getCalendarTagLabel(tag.name) }}</span>
+            </span>
             <span
-              v-if="schedule.isTagged"
-              class="schedule-tag"
-            ><span class="text-[6px] sm:text-[10px]">by</span> {{ schedule.owner }}</span>
+              v-if="getHiddenMobileCalendarTagCount(schedule) > 0"
+              class="schedule-tag schedule-tag-count"
+            >
+              +{{ getHiddenMobileCalendarTagCount(schedule) }}
+            </span>
+          </div>
+          <div
+            v-if="getDisplayTagMembers(schedule).length"
+            class="mt-px hidden flex-wrap justify-end gap-px sm:mt-0.5 sm:flex sm:gap-0.5"
+          >
+            <span
+              v-for="tag in getDisplayTagMembers(schedule)"
+              :key="tag.key"
+              class="schedule-tag schedule-tag-with-avatar"
+            >
+              <ProfileAvatar
+                :member-id="tag.id ?? null"
+                :name="tag.name"
+                :has-profile-photo="tag.hasProfilePhoto"
+                :profile-photo-version="tag.profilePhotoVersion"
+                size="xs"
+                class="schedule-tag-avatar"
+              />
+              <span class="schedule-tag-label">{{ getCalendarTagLabel(tag.name) }}</span>
+            </span>
           </div>
         </div>
         <div
@@ -236,18 +352,24 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
           +{{ (schedulesByDays[index]?.length ?? 0) - 3 }}
         </div>
 
-        <!-- Due Todos (마감일 할일) - 내 달력에서만 표시 -->
+        <!-- Due to-dos shown only on my calendar -->
         <template v-if="isMyCalendar && todosDueByDays[index]?.length">
-          <div
+          <button
             v-for="todo in todosDueByDays[index].slice(0, 2)"
             :key="'due-' + todo.id"
+            type="button"
+            :aria-label="todo.title"
+            :title="todo.title"
             @click.stop="emit('todo-click', todo)"
-            class="todo-due-bubble text-[10px] sm:text-xs leading-snug px-1 py-0.5 rounded cursor-pointer truncate mt-0.5"
-            :class="todo.status === 'IN_PROGRESS' ? 'todo-due-progress' : 'todo-due-todo'"
+            class="calendar-action-bubble mt-0.5 text-[10px] sm:text-xs"
+            :class="todo.status === 'IN_PROGRESS' ? 'calendar-action-bubble--progress' : 'calendar-action-bubble--todo'"
           >
-            <CheckSquare class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px]" />
-            {{ todo.title }}
-          </div>
+            <span class="calendar-action-bubble__text">
+              <CheckSquare class="calendar-action-bubble__icon" />
+              <span class="sm:hidden">{{ getMobileCalendarTodoTitle(todo) }}</span>
+              <span class="hidden sm:inline">{{ todo.title }}</span>
+            </span>
+          </button>
           <div
             v-if="todosDueByDays[index].length > 2"
             class="text-[10px] font-medium"
@@ -260,3 +382,215 @@ function handleScheduleClick(schedule: Schedule, event: Event) {
     </template>
   </CalendarGrid>
 </template>
+
+<style scoped>
+.calendar-inline-text {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.calendar-action-bubble {
+  display: block;
+  width: 100%;
+  min-height: 1.35rem;
+  padding: 0.14rem 0.35rem;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  box-sizing: border-box;
+  appearance: none;
+  line-height: 1.2;
+  text-align: left;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+}
+
+.calendar-action-bubble:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--dp-shadow-sm);
+}
+
+.calendar-action-bubble:focus-visible {
+  outline: none;
+}
+
+.calendar-action-bubble__icon {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-right: 0.18rem;
+  vertical-align: -0.08rem;
+  flex-shrink: 0;
+}
+
+.calendar-action-bubble__text {
+  display: block;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.calendar-action-bubble--dday {
+  background-color: var(--dp-success-bg);
+  border-color: var(--dp-success-border);
+  color: var(--dp-success-hover);
+}
+
+.calendar-action-bubble--dday:hover {
+  background-color: color-mix(in srgb, var(--dp-success-bg) 82%, var(--dp-success-border));
+}
+
+.calendar-action-bubble--todo {
+  background-color: var(--dp-accent-bg);
+  border-color: var(--dp-accent-border);
+  color: var(--dp-accent);
+}
+
+.calendar-action-bubble--todo:hover {
+  background-color: var(--dp-accent-bg-hover);
+}
+
+.calendar-action-bubble--progress {
+  background-color: var(--dp-warning-bg);
+  border-color: var(--dp-warning-border);
+  color: var(--dp-warning);
+}
+
+.calendar-action-bubble--progress:hover {
+  background-color: color-mix(in srgb, var(--dp-warning-bg) 78%, var(--dp-warning-border));
+}
+
+@media (min-width: 640px) {
+  .calendar-action-bubble {
+    min-height: 1.5rem;
+    padding: 0.16rem 0.42rem;
+  }
+
+  .calendar-action-bubble__icon {
+    width: 0.8rem;
+    height: 0.8rem;
+    margin-right: 0.22rem;
+    vertical-align: -0.12rem;
+  }
+}
+
+.other-duty-chip {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 1.05rem;
+  gap: 0.18rem;
+  padding: 0.08rem 0.22rem 0.08rem 0.12rem;
+  border-radius: 9999px;
+  box-sizing: border-box;
+  font-size: 10px;
+  line-height: 1.1;
+}
+
+.other-duty-chip__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
+}
+
+.schedule-tag {
+  padding: 0;
+  border-radius: 9999px;
+  box-shadow: none;
+  background: var(--dp-bg-primary);
+  border-color: var(--dp-border-primary);
+  color: var(--dp-text-secondary);
+}
+
+.schedule-tag-with-avatar {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  align-items: center;
+  min-width: 0;
+  min-height: 1.05rem;
+  gap: 0.04rem;
+  padding-right: 0.12rem;
+  padding-left: 0.04rem;
+  font-size: 10px;
+  line-height: 1.05;
+}
+
+.schedule-tag-label {
+  display: block;
+  min-width: 0;
+  max-width: 3em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.schedule-tag-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.05rem;
+  padding: 0 0.28rem;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+:deep(.other-duty-chip__avatar.profile-avatar) {
+  box-sizing: border-box;
+  border-width: 1px;
+  width: 0.62rem;
+  height: 0.62rem;
+}
+
+:deep(.schedule-tag-avatar.profile-avatar) {
+  box-sizing: border-box;
+  border-width: 1px;
+  width: 0.58rem;
+  height: 0.58rem;
+}
+
+@media (min-width: 640px) {
+  .other-duty-chip {
+    gap: 0.28rem;
+    min-height: 1.5rem;
+    padding: 0.15rem 0.42rem 0.15rem 0.18rem;
+    font-size: 14px;
+  }
+
+  .other-duty-chip__label {
+    max-width: 4.5rem;
+  }
+
+  .schedule-tag-with-avatar {
+    min-height: 1.5rem;
+    gap: 0.1rem;
+    padding-right: 0.28rem;
+    padding-left: 0.1rem;
+    font-size: 14px;
+  }
+
+  .schedule-tag-label {
+    max-width: 3em;
+  }
+
+  .schedule-tag-count {
+    min-height: 1.5rem;
+    padding: 0 0.4rem;
+    font-size: 12px;
+  }
+
+  :deep(.other-duty-chip__avatar.profile-avatar) {
+    width: 0.94rem;
+    height: 0.94rem;
+  }
+
+  :deep(.schedule-tag-avatar.profile-avatar) {
+    width: 0.94rem;
+    height: 0.94rem;
+  }
+}
+</style>

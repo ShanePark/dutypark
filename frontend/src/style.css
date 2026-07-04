@@ -62,6 +62,10 @@
     --color-dp-accent-soft: var(--dp-accent-bg);
     --color-dp-accent-soft-hover: var(--dp-accent-bg-hover);
     --color-dp-accent-border: var(--dp-accent-border);
+    --color-dp-search-action: var(--dp-search-action-bg);
+    --color-dp-search-action-hover: var(--dp-search-action-hover);
+    --color-dp-search-action-text: var(--dp-search-action-text);
+    --color-dp-search-action-border: var(--dp-search-action-border);
 
     --color-dp-success: var(--dp-success);
     --color-dp-success-hover: var(--dp-success-hover);
@@ -110,6 +114,7 @@
     --dp-bg-input: #ffffff;
     --dp-bg-modal: #ffffff;
     --dp-bg-footer: #1f2937;
+    --dp-modal-inline-gutter: 1rem;
 
     --dp-text-primary: #111827;
     --dp-text-secondary: #4b5563;
@@ -137,6 +142,10 @@
     --dp-accent-bg-hover: #dbeafe;
     --dp-accent-border: #93c5fd;
     --dp-accent-ring: rgba(59, 130, 246, 0.2);
+    --dp-search-action-bg: #eff6ff;
+    --dp-search-action-hover: #dbeafe;
+    --dp-search-action-text: #2563eb;
+    --dp-search-action-border: #bfdbfe;
 
     --dp-success: #22c55e;
     --dp-success-hover: #16a34a;
@@ -228,6 +237,10 @@
     --dp-accent-bg-hover: #1e40af;
     --dp-accent-border: #3b82f6;
     --dp-accent-ring: rgba(59, 130, 246, 0.3);
+    --dp-search-action-bg: #475569;
+    --dp-search-action-hover: #5b6b80;
+    --dp-search-action-text: #eff6ff;
+    --dp-search-action-border: #64748b;
 
     --dp-success: #22c55e;
     --dp-success-hover: #16a34a;
@@ -391,6 +404,44 @@ html.dark {
     background-color: var(--dp-bg-tertiary);
 }
 
+.form-control[aria-invalid="true"],
+.form-control-neutral[aria-invalid="true"],
+.form-control-card[aria-invalid="true"] {
+    border-color: var(--dp-warning);
+}
+
+.form-control[aria-invalid="true"]:focus,
+.form-control-neutral[aria-invalid="true"]:focus,
+.form-control-card[aria-invalid="true"]:focus {
+    --tw-ring-color: var(--dp-warning);
+}
+
+.form-control-neutral {
+    @apply w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-text-primary focus:border-transparent;
+    background-color: var(--dp-bg-input);
+    border: 1px solid var(--dp-border-input);
+    color: var(--dp-text-primary);
+}
+
+.form-control-neutral:disabled,
+.form-control-neutral[readonly] {
+    @apply cursor-not-allowed;
+    background-color: var(--dp-bg-tertiary);
+}
+
+.form-control-card {
+    @apply w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-accent;
+    background-color: var(--dp-bg-primary);
+    border: 1px solid var(--dp-border-primary);
+    color: var(--dp-text-primary);
+}
+
+.form-control-card:disabled,
+.form-control-card[readonly] {
+    @apply cursor-not-allowed;
+    background-color: var(--dp-bg-tertiary);
+}
+
 .form-label {
     @apply block text-sm font-medium mb-1;
     color: var(--dp-text-secondary);
@@ -475,15 +526,56 @@ html.dark {
     border-right: 1px solid var(--dp-border-primary);
 }
 
+/* Dashboard panel headers */
+.dashboard-panel-header {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background: linear-gradient(to right, var(--dp-modal-header-bg), var(--dp-modal-header-bg-alt));
+}
+
+.dashboard-panel-header::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(to right, var(--dp-modal-header-bg-alt), var(--dp-bg-footer));
+    transition: opacity 0.24s ease-out;
+}
+
+.dashboard-panel-header:hover::after {
+    opacity: 0.88;
+}
+
+.dashboard-panel-header > * {
+    position: relative;
+    z-index: 1;
+}
+
 /* Friend Cards */
 .friend-card {
-    @apply relative overflow-hidden transition-all duration-200 cursor-pointer;
+    @apply relative overflow-hidden cursor-pointer;
     background-color: var(--dp-bg-card);
+    box-shadow: var(--dp-shadow-sm);
+    transform: translateY(0) scale(1);
+    will-change: transform, box-shadow;
+    transition:
+        transform 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+        box-shadow 0.24s ease,
+        border-color 0.2s ease,
+        background-color 0.2s ease;
 }
 
 .friend-card:hover {
-    @apply shadow-md;
+    box-shadow: var(--dp-shadow-md);
+    transform: translateY(-2px) scale(1.018);
     background-color: var(--dp-bg-hover);
+}
+
+.friend-card:active {
+    transform: translateY(0) scale(1.006);
 }
 
 /* Pinned friend card highlight - neutral gray theme */
@@ -505,7 +597,6 @@ html.dark {
 
 /* Friend schedule item */
 .friend-schedule-item {
-    background-color: var(--dp-bg-secondary);
     color: var(--dp-text-secondary);
 }
 
@@ -593,8 +684,15 @@ html.dark {
 
 /* Friend section - prevent hover effects while sorting */
 .friend-section-sorting .friend-card:hover {
-    @apply shadow-none;
+    box-shadow: var(--dp-shadow-sm);
+    transform: none;
     background-color: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .friend-card {
+        transition: none;
+    }
 }
 
 /* Attachment Gallery */
@@ -618,8 +716,40 @@ html.dark {
 }
 
 /* Modal */
+.modal-overlay {
+    @apply fixed inset-0 flex justify-center bg-dp-overlay-dark/50;
+    align-items: center;
+}
+
+.modal-overlay-padding-default {
+    padding:
+        max(1rem, env(safe-area-inset-top))
+        var(--dp-modal-inline-gutter)
+        max(1rem, env(safe-area-inset-bottom));
+}
+
+.modal-overlay-padding-compact {
+    padding:
+        max(0.5rem, env(safe-area-inset-top))
+        var(--dp-modal-inline-gutter)
+        max(0.5rem, env(safe-area-inset-bottom));
+}
+
+.modal-overlay-padding-nav-safe {
+    padding:
+        max(1rem, env(safe-area-inset-top))
+        var(--dp-modal-inline-gutter)
+        max(4rem, calc(4rem + env(safe-area-inset-bottom)));
+}
+
+.modal-overlay-padding-none {
+    padding: 0;
+}
+
 .modal-container {
-    @apply rounded-lg shadow-xl overflow-hidden w-full mx-2 sm:mx-4 flex flex-col;
+    @apply rounded-lg shadow-xl overflow-hidden flex flex-col;
+    width: min(100%, calc(100vw - (var(--dp-modal-inline-gutter) * 2)));
+    margin-inline: auto;
     background-color: var(--dp-bg-modal);
 }
 
@@ -627,8 +757,40 @@ html.dark {
     @apply rounded-2xl;
 }
 
+.modal-height-fit {
+    max-height: calc(100dvh - 2rem);
+}
+
+.modal-height-default {
+    max-height: 90dvh;
+}
+
+.modal-height-search {
+    max-height: 85dvh;
+}
+
+.modal-height-viewport {
+    max-height: calc(100dvh - 2rem);
+}
+
+.modal-height-schedule {
+    max-height: calc(100dvh - 5rem);
+}
+
 .modal-header {
     @apply flex items-center justify-between px-4 py-3 sm:px-5 sm:py-4 flex-shrink-0;
+    background-color: var(--dp-bg-tertiary);
+    border-bottom: 1px solid var(--dp-border-primary);
+}
+
+.modal-header-compact {
+    @apply flex items-center justify-between px-4 py-2.5 flex-shrink-0;
+    background-color: var(--dp-bg-tertiary);
+    border-bottom: 1px solid var(--dp-border-primary);
+}
+
+.modal-header-stack {
+    @apply p-3 sm:p-4 flex-shrink-0 space-y-3;
     background-color: var(--dp-bg-tertiary);
     border-bottom: 1px solid var(--dp-border-primary);
 }
@@ -645,6 +807,109 @@ html.dark {
 
 .modal-body {
     @apply max-h-[580px] overflow-y-auto;
+}
+
+.modal-body-form {
+    @apply p-4 space-y-4 flex-1 min-h-0;
+    max-height: 580px;
+    overflow-y: auto;
+}
+
+.modal-body-form-lg {
+    @apply p-4 sm:p-6 space-y-4 flex-1 min-h-0;
+    max-height: 580px;
+    overflow-y: auto;
+}
+
+.modal-body-form-compact {
+    @apply p-3 sm:p-4 space-y-4 flex-1 min-h-0;
+    max-height: 580px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.modal-actions {
+    @apply p-4 flex flex-row gap-2 flex-shrink-0 border-t border-dp-border-primary;
+}
+
+.modal-actions-compact {
+    @apply p-3 sm:p-4 flex flex-row gap-2 flex-shrink-0 border-t border-dp-border-primary;
+}
+
+.modal-actions-end {
+    @apply justify-end;
+}
+
+.modal-actions-between {
+    @apply items-center justify-between;
+}
+
+.modal-actions-center {
+    @apply justify-center;
+}
+
+@media (max-width: 639px) {
+    .modal-footer-safe {
+        padding-bottom: 1rem;
+        padding-bottom: max(1rem, calc(env(safe-area-inset-bottom) - 0.25rem));
+    }
+}
+
+@media (min-width: 640px) {
+    .modal-overlay-padding-nav-safe {
+        padding:
+            max(1rem, env(safe-area-inset-top))
+            var(--dp-modal-inline-gutter)
+            max(1rem, env(safe-area-inset-bottom));
+    }
+
+    .modal-size-sm {
+        max-width: 24rem;
+    }
+
+    .modal-size-md {
+        max-width: 28rem;
+    }
+
+    .modal-size-lg {
+        max-width: 32rem;
+    }
+
+    .modal-size-xl {
+        max-width: 36rem;
+    }
+
+    .modal-size-2xl {
+        max-width: 42rem;
+    }
+
+    .modal-size-3xl {
+        max-width: 48rem;
+    }
+
+    .modal-size-5xl {
+        max-width: 64rem;
+    }
+
+    .modal-height-fit {
+        max-height: calc(100vh - 2rem);
+    }
+
+    .modal-height-default {
+        max-height: 90vh;
+    }
+
+    .modal-height-search {
+        max-height: 70vh;
+    }
+
+    .modal-height-viewport {
+        max-height: 90vh;
+    }
+
+    .modal-height-schedule {
+        max-height: 85vh;
+    }
 }
 
 /* Todo Button Group */
@@ -689,17 +954,26 @@ html.dark {
 .footer-nav-active {
     background-color: var(--dp-footer-active-bg);
     color: var(--dp-text-on-dark);
+    -webkit-text-fill-color: var(--dp-text-on-dark);
     font-weight: 600;
+}
+
+.footer-nav-active:hover {
+    background-color: var(--dp-footer-active-bg);
+    color: var(--dp-text-on-dark);
+    -webkit-text-fill-color: var(--dp-text-on-dark);
 }
 
 .footer-nav-inactive {
     background-color: transparent;
     color: var(--dp-text-on-dark-dim);
+    -webkit-text-fill-color: var(--dp-text-on-dark-dim);
 }
 
 .footer-nav-inactive:hover {
     background-color: var(--dp-footer-hover-bg);
     color: var(--dp-text-on-dark-strong);
+    -webkit-text-fill-color: var(--dp-text-on-dark-strong);
 }
 
 /* Schedule Tags */
@@ -1455,40 +1729,4 @@ div.swal2-popup.swal2-toast.colored-toast-info {
 
 .todo-btn-add:hover .todo-btn-add-icon {
     transform: rotate(90deg);
-}
-
-/* ====================================
-   Todo Due Date Bubbles (Calendar)
-   ==================================== */
-
-.todo-due-bubble {
-    transition: all 0.15s ease;
-    border: 1px solid transparent;
-}
-
-.todo-due-bubble:hover {
-    transform: translateY(-1px);
-    box-shadow: var(--dp-shadow-sm);
-}
-
-/* TODO status - Blue */
-.todo-due-todo {
-    background-color: var(--dp-accent-bg);
-    border-color: var(--dp-accent-border);
-    color: var(--dp-accent);
-}
-
-.todo-due-todo:hover {
-    background-color: var(--dp-accent-bg-hover);
-}
-
-/* IN_PROGRESS status - Orange/Warning */
-.todo-due-progress {
-    background-color: var(--dp-warning-bg);
-    border-color: var(--dp-warning);
-    color: var(--dp-warning);
-}
-
-.todo-due-progress:hover {
-    background-color: color-mix(in srgb, var(--dp-warning) 25%, var(--dp-bg-card));
 }

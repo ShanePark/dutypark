@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, watch, toRef, nextTick, onUnmounted } from 'vue'
+import { computed, ref, watch, nextTick, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
+import BaseModal from '@/components/common/BaseModal.vue'
 import { useSwal } from '@/composables/useSwal'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
 import { teamApi } from '@/api/team'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import Pickr from '@simonwep/pickr'
@@ -25,10 +25,7 @@ const emit = defineEmits<{
 }>()
 
 const { showWarning, showError, toastSuccess } = useSwal()
-const isOpenRef = toRef(props, 'isOpen')
-
-useBodyScrollLock(isOpenRef)
-useEscapeKey(isOpenRef, () => emit('close'))
+const { t } = useI18n()
 
 const defaultDutyColor = '#ffb3ba'
 
@@ -38,6 +35,14 @@ const dutyTypeForm = ref({
   color: defaultDutyColor,
   isDefault: false,
 })
+const trimmedDutyTypeName = computed(() => dutyTypeForm.value.name.trim())
+const hasDuplicateDutyTypeName = computed(() =>
+  props.dutyTypes.some(
+    dt => dt.name === trimmedDutyTypeName.value && dt.id !== dutyTypeForm.value.id
+  )
+)
+const isDutyTypeNameInvalid = computed(() => !trimmedDutyTypeName.value || hasDuplicateDutyTypeName.value)
+const isDutyTypeSaveDisabled = computed(() => props.saving || isDutyTypeNameInvalid.value)
 
 let pickrInstance: Pickr | null = null
 const colorPickerRef = ref<HTMLElement | null>(null)
@@ -123,16 +128,13 @@ function close() {
 }
 
 async function saveDutyType() {
-  if (!dutyTypeForm.value.name) {
-    showWarning('근무유형 이름을 입력해주세요.')
+  if (!trimmedDutyTypeName.value) {
+    showWarning(t('team.dutyType.warnings.nameRequired'))
     return
   }
 
-  const exists = props.dutyTypes.some(
-    dt => dt.name === dutyTypeForm.value.name && dt.id !== dutyTypeForm.value.id
-  )
-  if (exists) {
-    showWarning(`${dutyTypeForm.value.name} 이름의 근무유형이 이미 존재합니다.`)
+  if (hasDuplicateDutyTypeName.value) {
+    showWarning(t('team.dutyType.warnings.duplicate', { name: trimmedDutyTypeName.value }))
     return
   }
 
@@ -141,28 +143,28 @@ async function saveDutyType() {
     if (dutyTypeForm.value.isDefault) {
       await teamApi.updateDefaultDuty(
         props.teamId,
-        dutyTypeForm.value.name,
+        trimmedDutyTypeName.value,
         dutyTypeForm.value.color
       )
     } else if (dutyTypeForm.value.id) {
       await teamApi.updateDutyType(props.teamId, {
         id: dutyTypeForm.value.id,
-        name: dutyTypeForm.value.name,
+        name: trimmedDutyTypeName.value,
         color: dutyTypeForm.value.color,
       })
     } else {
       await teamApi.addDutyType(props.teamId, {
         teamId: props.teamId,
-        name: dutyTypeForm.value.name,
+        name: trimmedDutyTypeName.value,
         color: dutyTypeForm.value.color,
       })
     }
-    toastSuccess('근무 유형이 저장되었습니다.')
+    toastSuccess(t('team.dutyType.messages.saveSuccess'))
     emit('saved')
     close()
   } catch (error) {
     console.error('Failed to save duty type:', error)
-    showError('근무 유형 저장에 실패했습니다.')
+    showError(t('team.dutyType.messages.saveFailed'))
   } finally {
     emit('update:saving', false)
   }
@@ -170,87 +172,86 @@ async function saveDutyType() {
 </script>
 
 <template>
-  <div
-    v-if="isOpen"
-    class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
-    @click.self="close"
+  <BaseModal
+    :is-open="isOpen"
+    size="md"
+    height="fit"
+    @close="close"
   >
-    <div class="rounded-lg shadow-xl w-full max-w-md bg-dp-bg-modal">
-      <div class="flex items-center justify-between p-4 border-b border-dp-border-primary">
-        <h3 class="text-lg font-bold text-dp-text-primary">
-          {{ dutyTypeForm.id !== null || dutyTypeForm.isDefault ? '근무 유형 수정' : '근무 유형 추가' }}
-        </h3>
-        <button
-          @click="close"
-          class="p-1.5 rounded-full hover-close-btn cursor-pointer"
-        >
-          <X class="w-5 h-5" />
-        </button>
+    <div class="modal-header">
+      <h2>{{ dutyTypeForm.id !== null || dutyTypeForm.isDefault ? t('team.dutyType.titleEdit') : t('team.dutyType.titleAdd') }}</h2>
+      <button
+        @click="close"
+        class="p-1.5 rounded-full hover-close-btn cursor-pointer"
+        :aria-label="t('common.actions.close')"
+      >
+        <X class="w-5 h-5" />
+      </button>
+    </div>
+
+    <div class="modal-body-form">
+      <p class="text-sm text-dp-text-secondary">
+        {{ t('team.dutyType.description') }}
+      </p>
+
+      <div
+        v-if="dutyTypeForm.isDefault"
+        class="bg-dp-accent-soft border border-dp-accent-border rounded-lg p-3 text-sm text-dp-accent-hover"
+      >
+        {{ t('team.dutyType.defaultNoticeStart') }} <strong>{{ t('team.dutyType.defaultNoticeStrong') }}</strong>{{ t('team.dutyType.defaultNoticeEnd') }}
       </div>
 
-      <div class="p-4 space-y-4">
-        <p class="text-sm text-dp-text-secondary">
-          해당 근무유형의 명칭 및 색상을 선택해주세요.
-        </p>
+      <div>
+        <label class="form-label">
+          {{ t('team.dutyType.fields.name') }}
+          <CharacterCounter :current="dutyTypeForm.name.length" :max="10" />
+        </label>
+        <input
+          v-model="dutyTypeForm.name"
+          type="text"
+          maxlength="10"
+          :placeholder="t('team.dutyType.placeholders.name')"
+          class="form-control"
+          :aria-invalid="isDutyTypeNameInvalid"
+        />
+      </div>
 
+      <div class="color-picker-container">
+        <label class="form-label mb-2">
+          {{ t('team.dutyType.fields.color') }}
+        </label>
+        <div class="color-picker-wrapper flex justify-center items-center">
+          <div ref="colorPickerRef" class="color-picker"></div>
+        </div>
+      </div>
+
+      <div>
+        <label class="form-label">
+          {{ t('team.dutyType.fields.preview') }}
+        </label>
         <div
-          v-if="dutyTypeForm.isDefault"
-          class="bg-dp-accent-soft border border-dp-accent-border rounded-lg p-3 text-sm text-dp-accent-hover"
+          class="inline-block px-4 py-2 rounded-lg border font-medium"
+          :style="{ backgroundColor: dutyTypeForm.color, borderColor: 'var(--dp-border-primary)' }"
         >
-          현재 선택한 근무 유형은 <strong>휴무일</strong>에 해당합니다.
+          {{ dutyTypeForm.name || t('team.dutyType.placeholders.preview') }}
         </div>
-
-        <div>
-          <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
-            근무명
-            <CharacterCounter :current="dutyTypeForm.name.length" :max="10" />
-          </label>
-          <input
-            v-model="dutyTypeForm.name"
-            type="text"
-            maxlength="10"
-            placeholder="근무명"
-            class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent bg-dp-bg-input border-dp-border-input text-dp-text-primary"
-          />
-        </div>
-
-        <div class="color-picker-container">
-          <label class="block text-sm font-medium mb-2 text-dp-text-secondary">
-            색상 선택
-          </label>
-          <div class="color-picker-wrapper flex justify-center items-center">
-            <div ref="colorPickerRef" class="color-picker"></div>
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
-            미리보기
-          </label>
-          <div
-            class="inline-block px-4 py-2 rounded-lg border font-medium"
-            :style="{ backgroundColor: dutyTypeForm.color, borderColor: 'var(--dp-border-primary)' }"
-          >
-            {{ dutyTypeForm.name || '근무명 입력' }}
-          </div>
-        </div>
-      </div>
-
-      <div class="flex justify-end gap-2 p-4 border-t border-dp-border-primary">
-        <button
-          @click="saveDutyType"
-          :disabled="!dutyTypeForm.name.trim()"
-          class="px-4 py-2 bg-dp-success text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-success-hover transition disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {{ dutyTypeForm.id !== null || dutyTypeForm.isDefault ? '저장' : '추가' }}
-        </button>
-        <button
-          @click="close"
-          class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"
-        >
-          취소
-        </button>
       </div>
     </div>
-  </div>
+
+    <div class="modal-actions modal-actions-end modal-footer-safe">
+      <button
+        @click="saveDutyType"
+        :disabled="isDutyTypeSaveDisabled"
+        class="px-4 py-2 bg-dp-success text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-success-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+      >
+        {{ dutyTypeForm.id !== null || dutyTypeForm.isDefault ? t('common.actions.save') : t('common.actions.add') }}
+      </button>
+      <button
+        @click="close"
+        class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"
+      >
+        {{ t('common.actions.cancel') }}
+      </button>
+    </div>
+  </BaseModal>
 </template>

@@ -1,3 +1,5 @@
+import { getCurrentLocale } from '@/i18n'
+
 /**
  * Extract date part from ISO datetime string (YYYY-MM-DD)
  */
@@ -6,16 +8,58 @@ export function extractDatePart(dateTimeStr: string): string {
 }
 
 /**
+ * Format a Date as a local YYYY-MM-DD string.
+ */
+export function formatDateOnly(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+/**
+ * Format a date-only value as YYYY/M/D without UTC drift.
+ */
+export function formatDateNumeric(dateStr: string): string {
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(dateStr)
+    ? parseDateOnly(dateStr)
+    : new Date(dateStr)
+
+  return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`
+}
+
+/**
+ * Parse a YYYY-MM-DD string as a local date to avoid UTC drift.
+ */
+export function parseDateOnly(dateStr: string): Date {
+  const [yearPart = '0', monthPart = '1', dayPart = '1'] = dateStr.split('-')
+  const year = Number(yearPart)
+  const month = Number(monthPart)
+  const day = Number(dayPart)
+  return new Date(year, month - 1, day)
+}
+
+function getLocale() {
+  return getCurrentLocale()
+}
+
+function formatWithLocale(date: Date, options: Intl.DateTimeFormatOptions): string {
+  return new Intl.DateTimeFormat(getLocale(), options).format(date)
+}
+
+/**
  * Format datetime to ISO-like format (YYYY-MM-DD HH:mm)
  */
 export function formatDateTime(dateTimeStr: string): string {
   const date = new Date(dateTimeStr)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  return `${year}-${month}-${day} ${hours}:${minutes}`
+  return formatWithLocale(date, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
 }
 
 /**
@@ -30,7 +74,11 @@ export function formatDateRange(start: string, end: string): string {
   const startStr = formatDateTime(start)
 
   if (startDate.toDateString() === endDate.toDateString()) {
-    const endTime = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`
+    const endTime = formatWithLocale(endDate, {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })
     if (endTime === '00:00') {
       return startStr
     }
@@ -41,26 +89,37 @@ export function formatDateRange(start: string, end: string): string {
 }
 
 /**
- * Format date in Korean style (YYYY년 M월 D일)
- * Optionally includes time if the input contains time information
+ * Format a date with the active locale.
+ * Optionally includes time if the input contains time information.
  */
 export function formatDateKorean(dateStr: string): string {
-  // Date-only format (YYYY-MM-DD) should not show time
-  // This avoids timezone issues where UTC midnight becomes 09:00 in KST
+  // Date-only values should not show time.
+  // This avoids timezone drift where UTC midnight becomes local morning time.
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-    const [year, month, day] = dateStr.split('-').map(Number)
-    return `${year}년 ${month}월 ${day}일`
+    return formatWithLocale(parseDateOnly(dateStr), {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
   }
 
   const date = new Date(dateStr)
-  const year = date.getFullYear()
-  const month = date.getMonth() + 1
-  const day = date.getDate()
   const hours = date.getHours()
   const minutes = date.getMinutes()
 
   if (hours === 0 && minutes === 0) {
-    return `${year}년 ${month}월 ${day}일`
+    return formatWithLocale(date, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
   }
-  return `${year}년 ${month}월 ${day}일 ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+  return formatWithLocale(date, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
 }

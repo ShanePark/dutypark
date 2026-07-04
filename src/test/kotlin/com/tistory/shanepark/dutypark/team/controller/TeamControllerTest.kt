@@ -125,7 +125,14 @@ class TeamControllerTest : RestDocsTest() {
                         parameterWithName("day").description("Day")
                     ),
                     responseFields(
-                        subsectionWithPath("[]").description("List of shifts by duty type")
+                        subsectionWithPath("[].dutyType").description("Duty type information"),
+                        fieldWithPath("[].members").description("Members assigned to the duty type"),
+                        fieldWithPath("[].members[].id").description("Member ID"),
+                        fieldWithPath("[].members[].name").description("Member name"),
+                        fieldWithPath("[].members[].teamId").description("Member team ID (nullable)"),
+                        fieldWithPath("[].members[].team").description("Member team name (nullable)"),
+                        fieldWithPath("[].members[].hasProfilePhoto").description("Whether member has profile photo"),
+                        fieldWithPath("[].members[].profilePhotoVersion").description("Profile photo version for cache busting"),
                     )
                 )
             )

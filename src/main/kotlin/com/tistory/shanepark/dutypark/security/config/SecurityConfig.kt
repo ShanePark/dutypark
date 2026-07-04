@@ -23,7 +23,8 @@ import org.springframework.web.filter.ForwardedHeaderFilter
 class SecurityConfig(
     private val authService: AuthService,
     private val cookieService: CookieService,
-    @param:Value("\${dutypark.cors.allowed-origins:}") private val corsAllowedOrigins: String
+    @param:Value("\${dutypark.cors.allowed-origins:}") private val corsAllowedOrigins: String,
+    @param:Value("\${dutypark.cors.allowed-origin-patterns:}") private val corsAllowedOriginPatterns: String,
 ) {
 
     private val log = logger()
@@ -51,8 +52,14 @@ class SecurityConfig(
         val origins = corsAllowedOrigins.split(",")
             .map { it.trim() }
             .filter { it.isNotEmpty() }
-            .ifEmpty { listOf("http://localhost:5173") }
+            .ifEmpty { listOf("http://localhost:5173", "http://127.0.0.1:5173") }
+        val originPatterns = corsAllowedOriginPatterns.split(",")
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
         configuration.allowedOrigins = origins
+        if (originPatterns.isNotEmpty()) {
+            configuration.allowedOriginPatterns = originPatterns
+        }
         configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
         configuration.allowedHeaders = listOf("*")
         configuration.allowCredentials = true

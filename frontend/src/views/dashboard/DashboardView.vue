@@ -1,21 +1,21 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { dashboardApi } from '@/api/dashboard'
 import { friendApi } from '@/api/member'
 import { useSwal } from '@/composables/useSwal'
 import { isLightColor } from '@/utils/color'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
 import Sortable from 'sortablejs'
 import type {
   DashboardMyDetail,
   DashboardFriendInfo,
   DashboardScheduleDto,
-  FriendDto,
+  MemberPreviewDto,
 } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
+import FriendSearchModal from '@/components/common/FriendSearchModal.vue'
 import IntroSection from '@/components/intro/IntroSection.vue'
 import {
   Calendar,
@@ -25,16 +25,13 @@ import {
   Users,
   Star,
   GripVertical,
-  UserPlus,
   Home,
-  X,
-  Search,
-  ChevronLeft,
   ChevronRight,
 } from 'lucide-vue-next'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { t, locale } = useI18n()
 const { showWarning, confirm, toastSuccess } = useSwal()
 
 // Loading states
@@ -48,7 +45,7 @@ const friendInfoError = ref<string | null>(null)
 
 // Today's date formatted
 const today = computed(() => {
-  return new Date().toLocaleDateString('ko-KR', {
+  return new Date().toLocaleDateString(locale.value, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -70,7 +67,7 @@ async function loadMyDashboard() {
     myInfo.value = await dashboardApi.getMyDashboard()
   } catch (error) {
     console.error('Failed to load my dashboard:', error)
-    myInfoError.value = '대시보드 정보를 불러오는데 실패했습니다.'
+    myInfoError.value = t('dashboard.messages.loadMyFailed')
   } finally {
     myInfoLoading.value = false
   }
@@ -87,7 +84,7 @@ async function loadFriendsDashboard() {
     friendInfoInitialized.value = true
   } catch (error) {
     console.error('Failed to load friends dashboard:', error)
-    friendInfoError.value = '친구 정보를 불러오는데 실패했습니다.'
+    friendInfoError.value = t('dashboard.messages.loadFriendsFailed')
   } finally {
     friendInfoLoading.value = false
   }
@@ -95,10 +92,8 @@ async function loadFriendsDashboard() {
 
 // Search modal state
 const showSearchModal = ref(false)
-useBodyScrollLock(showSearchModal)
-useEscapeKey(showSearchModal, () => { showSearchModal.value = false })
 const searchKeyword = ref('')
-const searchResult = ref<FriendDto[]>([])
+const searchResult = ref<MemberPreviewDto[]>([])
 const searchPage = ref(0)
 const searchTotalPage = ref(0)
 const searchTotalElements = ref(0)
@@ -157,7 +152,7 @@ function printScheduleTime(startDateTime: string) {
   if (date.getHours() === 0 && date.getMinutes() === 0) {
     return ''
   }
-  return date.toLocaleTimeString('ko-KR', {
+  return date.toLocaleTimeString(locale.value, {
     hour: '2-digit',
     minute: '2-digit',
   })
@@ -180,7 +175,7 @@ async function pinFriend(member: { id: number | null; name: string }) {
       console.error('Failed to pin friend:', error)
       friend.pinOrder = null
       sortFriendsByPinOrder()
-      showWarning('친구 고정에 실패했습니다.')
+      showWarning(t('dashboard.messages.pinFailed'))
     }
   }
 }
@@ -201,7 +196,7 @@ async function unpinFriend(member: { id: number | null; name: string }) {
       console.error('Failed to unpin friend:', error)
       friend.pinOrder = oldPinOrder
       sortFriendsByPinOrder()
-      showWarning('친구 고정 해제에 실패했습니다.')
+      showWarning(t('dashboard.messages.unpinFailed'))
     }
   }
 }
@@ -262,33 +257,22 @@ async function search() {
   }
 }
 
-async function requestFriend(member: FriendDto) {
+async function requestFriend(member: MemberPreviewDto) {
   if (!member.id) return
-  if (!await confirm(`${member.name}님에게 친구 요청을 보내시겠습니까?`, '친구 요청')) return
+  if (!await confirm(
+    t('dashboard.friendRequest.confirm', { name: member.name }),
+    t('dashboard.friendRequest.title'),
+  )) return
   try {
     await friendApi.sendFriendRequest(member.id)
     // Remove from search results to show it's been requested
     searchResult.value = searchResult.value.filter((m) => m.id !== member.id)
     // Refresh friend requests section
     await loadFriendsDashboard()
-    toastSuccess(`${member.name}님에게 친구 요청을 보냈습니다.`)
+    toastSuccess(t('dashboard.friendRequest.success', { name: member.name }))
   } catch (error) {
     console.error('Failed to send friend request:', error)
-    showWarning('친구 요청을 보내는데 실패했습니다.')
-  }
-}
-
-function prevPage() {
-  if (searchPage.value > 0) {
-    searchPage.value--
-    search()
-  }
-}
-
-function nextPage() {
-  if (searchPage.value < searchTotalPage.value - 1) {
-    searchPage.value++
-    search()
+    showWarning(t('dashboard.messages.friendRequestFailed'))
   }
 }
 
@@ -356,7 +340,7 @@ async function updateFriendsPin() {
     await friendApi.updateFriendsPinOrder(friendIds)
   } catch (error) {
     console.error('Failed to update friend pin order:', error)
-    showWarning('친구 순서 변경에 실패했습니다.')
+    showWarning(t('dashboard.messages.reorderFailed'))
   }
 }
 
@@ -434,7 +418,7 @@ watch(
       >
         <!-- Header -->
         <div
-          class="group px-5 py-3 bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt flex items-center justify-between cursor-pointer hover:from-dp-surface-strong-alt hover:to-dp-surface-strong-hover transition-all"
+          class="dashboard-panel-header group px-5 py-3 flex items-center justify-between cursor-pointer"
           @click="moveTo()"
         >
           <div class="flex items-center gap-3">
@@ -445,7 +429,7 @@ watch(
               :profile-photo-version="myInfo?.member.profilePhotoVersion"
               size="md"
             />
-            <span class="text-lg font-bold text-dp-text-on-dark">{{ myInfo?.member.name || '로딩중...' }}</span>
+            <span class="text-lg font-bold text-dp-text-on-dark">{{ myInfo?.member.name || t('dashboard.labels.loadingName') }}</span>
           </div>
           <ChevronRight class="w-5 h-5 text-dp-text-muted group-hover:text-dp-text-on-dark group-hover:translate-x-1 transition-all" />
         </div>
@@ -466,7 +450,7 @@ watch(
 
               <div class="flex items-center gap-2">
                 <Briefcase class="w-5 h-5 text-dp-text-muted" />
-                <span class="text-dp-text-secondary">근무:</span>
+                <span class="text-dp-text-secondary">{{ t('dashboard.labels.duty') }}</span>
                 <template v-if="myInfoLoading">
                   <div class="w-4 h-4 border-2 rounded-full animate-spin" :style="{ borderColor: 'var(--dp-border-secondary)', borderTopColor: 'var(--dp-text-primary)' }"></div>
                 </template>
@@ -478,10 +462,10 @@ watch(
                       color: isLightColor(myInfo.duty.dutyColor) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
                     }"
                   >
-                    {{ myInfo.duty.dutyType || '휴무' }}
+                    {{ myInfo.duty.dutyType || t('dashboard.labels.offDuty') }}
                   </span>
                 </template>
-                <span class="text-dp-text-muted" v-else>없음</span>
+                <span class="text-dp-text-muted" v-else>{{ t('dashboard.labels.none') }}</span>
               </div>
             </div>
 
@@ -489,7 +473,7 @@ watch(
             <div class="border-t pt-4 md:border-t-0 md:pt-0 md:border-l md:pl-5 border-dp-border-primary">
               <div class="flex items-center gap-2 mb-2">
                 <ClipboardList class="w-5 h-5 text-dp-text-muted" />
-                <span class="font-medium text-dp-text-primary">오늘 일정</span>
+                <span class="font-medium text-dp-text-primary">{{ t('dashboard.labels.todaySchedules') }}</span>
               </div>
               <template v-if="myInfoLoading">
                 <div class="flex justify-center py-3">
@@ -506,7 +490,7 @@ watch(
                   <span class="ml-2 text-sm flex-shrink-0 text-dp-text-muted">{{ printScheduleTime(schedule.startDateTime) }}</span>
                 </li>
                 <li v-if="!myInfo?.schedules?.length" class="text-sm text-dp-text-muted">
-                  오늘의 일정이 없습니다.
+                  {{ t('dashboard.labels.noSchedules') }}
                 </li>
               </ul>
             </div>
@@ -517,13 +501,13 @@ watch(
       <!-- Friends List Section -->
       <div ref="friendSectionRef" class="friend-section rounded-2xl shadow-sm border overflow-hidden bg-dp-bg-card border-dp-border-primary">
         <div
-          class="group bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt px-6 py-3 cursor-pointer hover:from-dp-surface-strong-alt hover:to-dp-surface-strong-hover transition-all"
+          class="dashboard-panel-header group px-6 py-3 cursor-pointer"
           @click="router.push('/friends')"
         >
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <Users class="w-5 h-5 text-dp-text-on-dark" />
-              <span class="text-dp-text-on-dark font-bold">친구관리</span>
+              <span class="text-dp-text-on-dark font-bold">{{ t('dashboard.labels.friends') }}</span>
               <span v-if="friendInfo?.friends.length" class="ml-2 px-2 py-0.5 bg-dp-overlay-light/20 rounded-full text-xs text-dp-text-on-dark">
                 {{ friendInfo.friends.length }}
               </span>
@@ -544,12 +528,12 @@ watch(
           <!-- Empty state -->
           <div v-else-if="sortedFriends.length === 0" class="text-center py-8">
             <Users class="w-12 h-12 mx-auto mb-3 text-dp-text-muted" />
-            <p class="text-sm text-dp-text-secondary">아직 친구가 없습니다.</p>
+            <p class="text-sm text-dp-text-secondary">{{ t('dashboard.labels.noFriends') }}</p>
             <button
               class="mt-4 px-4 py-2 text-sm font-medium bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
               @click="openSearchModal"
             >
-              친구 추가하기
+              {{ t('dashboard.actions.addFriend') }}
             </button>
           </div>
 
@@ -559,7 +543,7 @@ watch(
               v-for="friend in sortedFriends"
               :key="friend.member.id ?? 'unknown'"
               :data-member-id="friend.member.id"
-              class="friend-card relative overflow-hidden rounded-xl sm:rounded-2xl cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
+              class="friend-card relative overflow-hidden rounded-xl sm:rounded-2xl cursor-pointer"
               :class="[
                 friend.pinOrder
                   ? 'pinned-friend pinned-friend-highlight border-2 shadow-md'
@@ -586,7 +570,7 @@ watch(
                   <div class="flex items-center justify-between mb-1.5">
                     <div class="flex items-center gap-1.5 min-w-0">
                       <span class="font-medium text-sm truncate text-dp-text-primary">{{ friend.member.name }}</span>
-                      <Home v-if="friend.isFamily" class="w-3.5 h-3.5 flex-shrink-0 text-dp-warning" title="Family member" />
+                      <Home v-if="friend.isFamily" class="w-3.5 h-3.5 flex-shrink-0 text-dp-warning" :title="t('dashboard.labels.familyMember')" />
                     </div>
                     <div class="flex items-center flex-shrink-0" @click.stop>
                     <!-- Pin/Unpin button -->
@@ -594,7 +578,7 @@ watch(
                       v-if="friend.pinOrder"
                       class="p-1 text-dp-warning hover:text-dp-warning transition cursor-pointer"
                       @click.stop="unpinFriend(friend.member)"
-                      title="고정 해제"
+                      :title="t('dashboard.actions.unpin')"
                     >
                       <Star class="w-4 h-4" fill="currentColor" />
                     </button>
@@ -602,7 +586,7 @@ watch(
                       v-else
                       class="p-1 text-dp-text-muted hover:text-dp-warning transition cursor-pointer"
                       @click.stop="pinFriend(friend.member)"
-                      title="고정"
+                      :title="t('dashboard.actions.pin')"
                     >
                       <Star class="w-4 h-4" />
                     </button>
@@ -612,8 +596,8 @@ watch(
                   <!-- Duty info -->
                   <div class="flex items-center gap-1.5 mb-1.5">
                     <Briefcase class="w-3.5 h-3.5 flex-shrink-0 text-dp-text-muted" />
-                    <span class="text-xs text-dp-text-secondary">근무:</span>
-                    <span v-if="friend.duty" class="text-xs font-medium truncate text-dp-text-primary">{{ friend.duty.dutyType || '휴무' }}</span>
+                    <span class="text-xs text-dp-text-secondary">{{ t('dashboard.labels.duty') }}</span>
+                    <span v-if="friend.duty" class="text-xs font-medium truncate text-dp-text-primary">{{ friend.duty.dutyType || t('dashboard.labels.offDuty') }}</span>
                     <span v-else class="text-xs text-dp-text-muted">-</span>
                   </div>
 
@@ -627,7 +611,7 @@ watch(
                       {{ printSchedule(schedule) }}
                     </div>
                     <div v-if="friend.schedules.length > 2" class="text-xs pl-1" :style="{ color: 'var(--dp-text-muted)' }">
-                      +{{ friend.schedules.length - 2 }}개 더보기
+                      {{ t('dashboard.labels.moreSchedules', { count: friend.schedules.length - 2 }) }}
                     </div>
                   </div>
                 </div>
@@ -637,7 +621,7 @@ watch(
               <div v-if="friend.pinOrder" class="absolute bottom-2 right-2" @click.stop>
                 <div
                   class="handle friend-drag-handle rounded-lg p-1.5 transition hover:bg-dp-overlay-dark/10 !cursor-grab active:!cursor-grabbing"
-                  title="드래그하여 순서 변경"
+                  :title="t('dashboard.actions.dragToReorder')"
                 >
                   <GripVertical class="w-4 h-4" />
                 </div>
@@ -648,143 +632,19 @@ watch(
         </div>
       </div>
 
-    <!-- Search Modal -->
-    <Teleport to="body">
-      <div
-        v-if="showSearchModal"
-        class="fixed inset-0 z-50 flex items-center justify-center"
-        @click.self="closeSearchModal"
-      >
-        <!-- Backdrop -->
-        <div class="absolute inset-0 bg-dp-overlay-dark/60 backdrop-blur-sm" @click="closeSearchModal"></div>
-
-        <!-- Modal Content -->
-        <div class="relative rounded-2xl shadow-2xl w-full max-w-2xl mx-2 sm:mx-4 max-h-[90vh] overflow-hidden bg-dp-bg-modal">
-          <!-- Header -->
-          <div class="flex items-center justify-between p-5 border-b bg-dp-bg-secondary border-dp-border-primary">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-gradient-to-br from-dp-accent to-dp-accent-hover rounded-xl flex items-center justify-center">
-                <UserPlus class="w-5 h-5 text-dp-text-on-dark" />
-              </div>
-              <h3 class="text-xl font-bold text-dp-text-primary">친구 추가</h3>
-            </div>
-            <button
-              class="p-2 rounded-full hover-close-btn cursor-pointer text-dp-text-muted"
-              @click="closeSearchModal"
-            >
-              <X class="w-5 h-5" />
-            </button>
-          </div>
-
-          <!-- Body -->
-          <div class="p-5 overflow-y-auto max-h-[calc(90vh-180px)]">
-            <!-- Search Input -->
-            <div class="flex gap-2 mb-5">
-              <div class="flex-grow relative">
-                <Search class="w-5 h-5 absolute left-3.5 top-1/2 transform -translate-y-1/2 text-dp-text-muted" />
-                <input
-                  v-model="searchKeyword"
-                  type="text"
-                  placeholder="이름 또는 팀 검색"
-                  class="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-dp-accent/20 focus:border-dp-accent outline-none transition-all bg-dp-bg-input border-dp-border-input text-dp-text-primary"
-                  @keyup.enter="search"
-                />
-              </div>
-              <button
-                class="px-5 py-3 bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt text-dp-text-on-dark rounded-xl hover:from-dp-surface-strong-alt hover:to-dp-surface-strong-hover transition-all shadow-lg flex items-center gap-2 font-medium cursor-pointer"
-                @click="search"
-              >
-                <Search class="w-4 h-4" />
-                검색
-              </button>
-            </div>
-
-            <!-- Search Loading -->
-            <div v-if="searchLoading" class="flex justify-center py-10">
-              <div class="w-8 h-8 border-3 rounded-full animate-spin" :style="{ borderColor: 'var(--dp-border-secondary)', borderTopColor: 'var(--dp-accent)' }"></div>
-            </div>
-
-            <!-- Search Results -->
-            <div v-else-if="searchResult.length > 0">
-              <div class="space-y-2">
-                <div
-                  v-for="(member, index) in searchResult"
-                  :key="member.id ?? index"
-                  class="flex items-center justify-between p-4 rounded-xl hover-bg-light bg-dp-bg-secondary"
-                >
-                  <div class="flex items-center gap-3">
-                    <ProfileAvatar
-                      :member-id="member.id"
-                      :name="member.name"
-                      :has-profile-photo="member.hasProfilePhoto"
-                      :profile-photo-version="member.profilePhotoVersion"
-                      size="md"
-                    />
-                    <div>
-                      <p class="font-semibold text-dp-text-primary">{{ member.name }}</p>
-                      <p class="text-sm text-dp-text-secondary">{{ member.team ?? '팀 없음' }}</p>
-                    </div>
-                  </div>
-                  <button
-                    class="px-4 py-2 text-sm font-medium bg-dp-success text-dp-text-on-dark rounded-xl hover:bg-dp-success-hover transition shadow-sm cursor-pointer"
-                    @click="requestFriend(member)"
-                  >
-                    친구 요청
-                  </button>
-                </div>
-              </div>
-
-              <!-- Pagination -->
-              <div v-if="searchTotalPage > 1" class="flex justify-center items-center gap-2 mt-6">
-                <button
-                  class="p-2.5 rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed hover-bg-light cursor-pointer border-dp-border-primary"
-                  :disabled="searchPage === 0"
-                  @click="prevPage"
-                >
-                  <ChevronLeft class="w-4 h-4" />
-                </button>
-
-                <template v-for="i in searchTotalPage" :key="i">
-                  <button
-                    class="w-10 h-10 rounded-xl border font-medium hover-bg-light cursor-pointer"
-                    :class="(i - 1) === searchPage ? 'bg-dp-accent text-dp-text-on-dark border-dp-accent' : ''"
-                    :style="(i - 1) !== searchPage ? { borderColor: 'var(--dp-border-primary)' } : {}"
-                    @click="goToPage(i - 1)"
-                  >
-                    {{ i }}
-                  </button>
-                </template>
-
-                <button
-                  class="p-2.5 rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed hover-bg-light cursor-pointer border-dp-border-primary"
-                  :disabled="searchPage >= searchTotalPage - 1"
-                  @click="nextPage"
-                >
-                  <ChevronRight class="w-4 h-4" />
-                </button>
-              </div>
-
-              <p class="text-center text-sm mt-4 text-dp-text-secondary">
-                페이지 {{ searchPage + 1 }} / {{ searchTotalPage }} | 전체 결과: {{ searchTotalElements }}
-              </p>
-            </div>
-            <div v-else class="text-center py-12">
-              <Search class="w-12 h-12 mx-auto mb-3 text-dp-border-secondary" />
-              <p class="text-dp-text-secondary">검색어를 입력하고 검색해주세요.</p>
-            </div>
-          </div>
-
-          <!-- Footer -->
-          <div class="flex justify-end p-5 border-t bg-dp-bg-secondary border-dp-border-primary">
-            <button
-              class="px-5 py-2.5 rounded-xl font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-primary"
-              @click="closeSearchModal"
-            >
-              닫기
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <FriendSearchModal
+      :is-open="showSearchModal"
+      :keyword="searchKeyword"
+      :results="searchResult"
+      :current-page="searchPage"
+      :total-pages="searchTotalPage"
+      :total-elements="searchTotalElements"
+      :loading="searchLoading"
+      @close="closeSearchModal"
+      @update:keyword="searchKeyword = $event"
+      @search="search"
+      @request-friend="requestFriend"
+      @change-page="goToPage"
+    />
   </div>
 </template>

@@ -27,6 +27,7 @@ Skip Playwright for straightforward CRUD, simple styling tweaks, or changes alre
 4. Exercise the smallest realistic flow that proves the change.
 5. Inspect both the visible result and browser failures. Check console and network requests when the UI behavior is ambiguous.
 6. If the flow mutates data, clean up when practical or state clearly what test data was left behind.
+7. When verification is complete, close the Playwright MCP browser session with `browser_close` so tabs and sessions do not linger between tasks.
 
 ## Dutypark-Specific Notes
 
@@ -37,4 +38,5 @@ Skip Playwright for straightforward CRUD, simple styling tweaks, or changes alre
 ## Guardrails
 
 - Report blockers exactly if the dev servers are unavailable or local credentials stop working.
+- Close any Playwright MCP browser you opened before finishing the task, even when verification fails or ends early.
 - Prefer code-path verification over brittle full OAuth automation when a provider redirect cannot be completed locally.

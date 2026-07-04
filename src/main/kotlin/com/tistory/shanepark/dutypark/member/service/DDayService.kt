@@ -75,7 +75,7 @@ class DDayService(
     ) {
         if (dDayEvent.member.id != loginMember?.id) {
             log.warn("D-Day access denied: loginMemberId={}, dDayEventId={}", loginMember?.id, dDayEvent.id)
-            throw AuthException("Can't access other member's d-day event")
+            throw AuthException("dday.access.forbidden")
         }
     }
 

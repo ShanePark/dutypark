@@ -1,4 +1,5 @@
 import apiClient from './client'
+import { translateGlobal } from '@/i18n'
 import type {
   AttachmentContextType,
   AttachmentDto,
@@ -12,12 +13,14 @@ export const attachmentValidation = {
   maxFileSizeBytes: 50 * 1024 * 1024, // 50MB
   maxFileSizeLabel: '50MB',
   tooLargeMessage(filename?: string): string {
-    const prefix = filename ? `${filename} 파일은` : '파일이'
-    return `${prefix} 허용 용량(${this.maxFileSizeLabel})을 초과해 업로드할 수 없습니다.`
+    return filename
+      ? translateGlobal('attachmentValidation.tooLargeFile', { filename, size: this.maxFileSizeLabel })
+      : translateGlobal('attachmentValidation.tooLargeGeneric', { size: this.maxFileSizeLabel })
   },
   blockedExtensionMessage(filename?: string): string {
-    const target = filename ? `${filename} 파일은` : '이 파일은'
-    return `${target} 업로드할 수 없는 확장자입니다.`
+    return filename
+      ? translateGlobal('attachmentValidation.blockedExtensionFile', { filename })
+      : translateGlobal('attachmentValidation.blockedExtensionGeneric')
   },
 }
 
@@ -124,7 +127,7 @@ export function getAttachmentIcon(
 // Validate file before upload
 export function validateFile(file: File): { valid: boolean; message?: string } {
   if (!file) {
-    return { valid: false, message: '업로드할 파일을 찾지 못했습니다.' }
+    return { valid: false, message: translateGlobal('attachmentValidation.missingFile') }
   }
   if (file.size > attachmentValidation.maxFileSizeBytes) {
     return {

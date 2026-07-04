@@ -25,6 +25,18 @@ operation::auth/status[]
 
 operation::auth/status-unauthenticated[]
 
+=== Refresh Token
+
+operation::auth/refresh[]
+
+==== Refresh Token [Unauthorized]
+
+operation::auth/refresh-unauthorized[]
+
+=== Logout
+
+operation::auth/logout[]
+
 === Change Password
 
 operation::auth/change-password[]
@@ -49,6 +61,12 @@ operation::dashboard/friends[]
 
 operation::members/update-visibility[]
 
+== Admin
+
+=== Member Detail
+
+operation::admin/members-detail[]
+
 == Duty
 
 === Get Duties
@@ -72,6 +90,10 @@ operation::duty/update-unauthorized[]
 operation::duty/batch-update[]
 
 == Schedules
+
+=== Get List
+
+operation::schedules/get-list[]
 
 === Create
 
@@ -110,6 +132,18 @@ operation::todos/create[]
 === UPDATE
 
 operation::todos/update[]
+
+=== TAG FRIEND
+
+operation::todos/tag-friend[]
+
+=== UNTAG FRIEND
+
+operation::todos/untag-friend[]
+
+=== UNTAG SELF
+
+operation::todos/untag-self[]
 
 === UPDATE-POSITION
 
@@ -163,29 +197,57 @@ operation::friends/search[]
 
 operation::friends/send-request[]
 
+==== Send Friend Request [Bad Request]
+
+operation::friends/send-request-bad-request[]
+
 === Accept Friend Request
 
 operation::friends/accept-request[]
+
+==== Accept Friend Request [Bad Request]
+
+operation::friends/accept-request-bad-request[]
 
 === Reject Friend Request
 
 operation::friends/reject-request[]
 
+==== Reject Friend Request [Bad Request]
+
+operation::friends/reject-request-bad-request[]
+
 === Cancel Friend Request
 
 operation::friends/cancel-request[]
+
+==== Cancel Friend Request [Bad Request]
+
+operation::friends/cancel-request-bad-request[]
 
 === Unfriend
 
 operation::friends/unfriend[]
 
+==== Unfriend [Bad Request]
+
+operation::friends/unfriend-bad-request[]
+
 === Pin Friend
 
 operation::friends/pin[]
 
+==== Pin Friend [Bad Request]
+
+operation::friends/pin-bad-request[]
+
 === Unpin Friend
 
 operation::friends/unpin[]
+
+==== Unpin Friend [Bad Request]
+
+operation::friends/unpin-bad-request[]
 
 === Update Pin Order
 
@@ -194,6 +256,18 @@ operation::friends/update-pin-order[]
 === Send Family Request
 
 operation::friends/send-family-request[]
+
+==== Send Family Request [Bad Request]
+
+operation::friends/send-family-request-bad-request[]
+
+=== Demote Family Member
+
+operation::friends/demote-family[]
+
+==== Demote Family Member [Bad Request]
+
+operation::friends/demote-family-bad-request[]
 
 == Notifications
 
@@ -208,6 +282,10 @@ operation::notifications/get-unread[]
 === Get Notification Count
 
 operation::notifications/get-count[]
+
+=== Get Pending Relationship Request Count
+
+operation::notifications/get-friend-request-count[]
 
 === Mark as Read
 
@@ -239,9 +317,17 @@ operation::push/vapid-public-key[]
 
 operation::push/subscribe[]
 
+==== Subscribe [Unauthorized]
+
+operation::push/subscribe-unauthorized[]
+
 === Unsubscribe
 
 operation::push/unsubscribe[]
+
+==== Unsubscribe [Unauthorized]
+
+operation::push/unsubscribe-unauthorized[]
 
 == Teams
 
@@ -256,6 +342,18 @@ operation::teams/my-summary[]
 === Get Shift
 
 operation::teams/shift[]
+
+=== Search Invite Members
+
+operation::teams/manage/search-members[]
+
+==== Search Invite Members [Unauthorized]
+
+operation::teams/manage/search-members-unauthorized[]
+
+==== Search Invite Members [Forbidden]
+
+operation::teams/manage/search-members-forbidden[]
 
 == Holiday
 
@@ -281,6 +379,10 @@ operation::attachments/sessions/create-unauthorized[]
 
 operation::attachments/sessions/discard[]
 
+==== Discard Session [Forbidden]
+
+operation::attachments/sessions/discard-forbidden[]
+
 === Upload File
 
 operation::attachments/upload[]
@@ -297,6 +399,14 @@ operation::attachments/reorder[]
 
 operation::attachments/download[]
 
+==== Download Attachment [Session Unauthorized]
+
+operation::attachments/download-session-unauthorized[]
+
+==== Download Attachment [Missing Session]
+
+operation::attachments/download-session-missing-session[]
+
 === Get Thumbnail
 
 operation::attachments/thumbnail[]
@@ -304,3 +414,7 @@ operation::attachments/thumbnail[]
 === Delete Attachment
 
 operation::attachments/delete[]
+
+==== Delete Attachment [Missing Session]
+
+operation::attachments/delete-session-missing-session[]

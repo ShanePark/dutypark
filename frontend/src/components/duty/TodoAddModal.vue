@@ -1,23 +1,24 @@
 <script setup lang="ts">
-import { ref, watch, toRef } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { X, Calendar, ListTodo, Clock, CheckCircle2 } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
+import BaseModal from '@/components/common/BaseModal.vue'
 import FileUploader from '@/components/common/FileUploader.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
-import type { NormalizedAttachment, TodoStatus } from '@/types'
+import FriendTagSelector from '@/components/common/FriendTagSelector.vue'
+import type { NormalizedAttachment, TaggableFriend, TodoStatus } from '@/types'
 import { useSwal } from '@/composables/useSwal'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
 
 interface Props {
   isOpen: boolean
   initialStatus?: TodoStatus
+  friends?: TaggableFriend[]
 }
 
 const props = withDefaults(defineProps<Props>(), {
   initialStatus: 'TODO',
+  friends: () => [],
 })
-
-useBodyScrollLock(toRef(props, 'isOpen'))
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -26,17 +27,17 @@ const emit = defineEmits<{
     content: string
     status: TodoStatus
     dueDate?: string
+    tagFriendIds?: number[]
     attachmentSessionId?: string
     orderedAttachmentIds?: string[]
   }): void
 }>()
 
-useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
-
 const title = ref('')
 const content = ref('')
 const status = ref<TodoStatus>('TODO')
 const dueDate = ref('')
+const tagFriendIds = ref<number[]>([])
 const attachments = ref<NormalizedAttachment[]>([])
 const sessionId = ref<string | null>(null)
 const isUploading = ref(false)
@@ -44,11 +45,22 @@ const fileUploaderRef = ref<InstanceType<typeof FileUploader> | null>(null)
 
 const { showWarning, showError } = useSwal()
 
-const statusOptions: Array<{ value: TodoStatus; label: string; icon: typeof ListTodo; colorClass: string }> = [
-  { value: 'TODO', label: '할일', icon: ListTodo, colorClass: 'status-card-todo' },
-  { value: 'IN_PROGRESS', label: '진행중', icon: Clock, colorClass: 'status-card-in-progress' },
-  { value: 'DONE', label: '완료', icon: CheckCircle2, colorClass: 'status-card-done' },
-]
+const { t } = useI18n()
+
+const isTitleMissing = computed(() => !title.value.trim())
+
+const statusOptions = computed<Array<{ value: TodoStatus; label: string; icon: typeof ListTodo; colorClass: string }>>(() => [
+  { value: 'TODO', label: t('duty.todo.status.todo'), icon: ListTodo, colorClass: 'status-card-todo' },
+  { value: 'IN_PROGRESS', label: t('duty.todo.status.inProgress'), icon: Clock, colorClass: 'status-card-in-progress' },
+  { value: 'DONE', label: t('duty.todo.status.done'), icon: CheckCircle2, colorClass: 'status-card-done' },
+])
+
+const selectedTagSummaries = computed(() => {
+  return tagFriendIds.value.flatMap((id) => {
+    const friend = props.friends.find((candidate) => candidate.id === id)
+    return friend ? [{ id: friend.id, name: friend.name }] : []
+  })
+})
 
 watch(
   () => props.isOpen,
@@ -59,6 +71,7 @@ watch(
       content.value = ''
       status.value = props.initialStatus
       dueDate.value = ''
+      tagFriendIds.value = []
       attachments.value = []
       sessionId.value = null
       isUploading.value = false
@@ -75,6 +88,7 @@ function handleClose() {
   content.value = ''
   status.value = 'TODO'
   dueDate.value = ''
+  tagFriendIds.value = []
   attachments.value = []
   sessionId.value = null
   isUploading.value = false
@@ -86,7 +100,7 @@ function handleSave() {
     return
   }
   if (isUploading.value) {
-    showWarning('파일 업로드가 진행 중입니다. 완료 후 다시 시도해주세요.')
+    showWarning(t('duty.todo.warnings.uploadInProgress'))
     return
   }
 
@@ -97,6 +111,7 @@ function handleSave() {
     content: content.value.trim(),
     status: status.value,
     dueDate: dueDate.value || undefined,
+    tagFriendIds: tagFriendIds.value.length ? [...tagFriendIds.value] : undefined,
     attachmentSessionId: sessionId.value || undefined,
     orderedAttachmentIds: orderedAttachmentIds.length > 0 ? orderedAttachmentIds : undefined,
   })
@@ -109,6 +124,7 @@ function handleSave() {
   content.value = ''
   status.value = 'TODO'
   dueDate.value = ''
+  tagFriendIds.value = []
   attachments.value = []
   sessionId.value = null
   isUploading.value = false
@@ -137,115 +153,119 @@ function onUploadError(message: string) {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50"
-      @click.self="handleClose"
-    >
-      <div class="modal-container max-w-[95vw] sm:max-w-xl max-h-[90dvh] sm:max-h-[90vh]">
-        <!-- Header -->
-        <div class="modal-header">
-          <h2>할 일 추가</h2>
-          <button @click="handleClose" class="p-2 hover-bg-light rounded-full transition cursor-pointer">
-            <X class="w-6 h-6 text-dp-text-primary" />
-          </button>
-        </div>
+  <BaseModal
+    :is-open="isOpen"
+    size="xl"
+    height="default"
+    @close="handleClose"
+  >
+    <!-- Header -->
+    <div class="modal-header">
+      <h2>{{ t('duty.todo.actions.add') }}</h2>
+      <button @click="handleClose" class="p-2 rounded-full hover-close-btn cursor-pointer">
+        <X class="w-6 h-6 text-dp-text-primary" />
+      </button>
+    </div>
 
-        <!-- Content -->
-        <div class="p-3 sm:p-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
-          <div class="space-y-4">
-            <!-- Status Selection -->
-            <div>
-              <label class="block text-sm font-medium mb-2 text-dp-text-secondary">상태</label>
-              <div class="grid grid-cols-3 gap-2">
-                <button
-                  v-for="option in statusOptions"
-                  :key="option.value"
-                  type="button"
-                  @click="status = option.value"
-                  class="status-card cursor-pointer"
-                  :class="[option.colorClass, { 'status-card-selected': status === option.value }]"
-                >
-                  <component :is="option.icon" class="w-4 h-4" />
-                  <span class="text-xs font-medium">{{ option.label }}</span>
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
-                제목 <span class="text-dp-danger">*</span>
-                <CharacterCounter :current="title.length" :max="50" />
-              </label>
-              <input
-                v-model="title"
-                type="text"
-                maxlength="50"
-                class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
-                placeholder="할 일 제목을 입력하세요"
-              />
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium mb-1 text-dp-text-secondary">내용</label>
-              <textarea
-                v-model="content"
-                rows="6"
-                class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
-                placeholder="상세 내용을 입력하세요 (선택사항)"
-              ></textarea>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
-                <Calendar class="w-4 h-4 inline-block mr-1 -mt-0.5" />
-                마감일
-                <span class="ml-1 text-xs font-normal due-date-optional">(선택)</span>
-              </label>
-              <input
-                v-model="dueDate"
-                type="date"
-                class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent form-control"
-              />
-            </div>
-
-            <!-- Attachment Upload -->
-            <div>
-              <label class="block text-sm font-medium mb-1 text-dp-text-secondary">첨부파일</label>
-              <FileUploader
-                v-if="isOpen"
-                ref="fileUploaderRef"
-                context-type="TODO"
-                @session-created="onSessionCreated"
-                @update:attachments="onAttachmentsUpdate"
-                @upload-start="onUploadStart"
-                @upload-complete="onUploadComplete"
-                @error="onUploadError"
-              />
-            </div>
-          </div>
-        </div>
-
-        <!-- Footer (sticky at bottom) -->
-        <div class="p-3 sm:p-4 flex-shrink-0 flex flex-row gap-2 justify-end border-t border-dp-border-primary">
+    <!-- Content -->
+    <div class="modal-body-form-compact">
+      <!-- Status Selection -->
+      <div>
+        <label class="block text-sm font-medium mb-2 text-dp-text-secondary">{{ t('duty.todo.fields.status') }}</label>
+        <div class="grid grid-cols-3 gap-2">
           <button
-            @click="handleClose"
-            class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
+            v-for="option in statusOptions"
+            :key="option.value"
+            type="button"
+            @click="status = option.value"
+            class="status-card cursor-pointer"
+            :class="[option.colorClass, { 'status-card-selected': status === option.value }]"
           >
-            취소
-          </button>
-          <button
-            @click="handleSave"
-            :disabled="!title.trim() || isUploading"
-            class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-          >
-            {{ isUploading ? '업로드 중...' : '저장' }}
+            <component :is="option.icon" class="w-4 h-4" />
+            <span class="text-xs font-medium">{{ option.label }}</span>
           </button>
         </div>
       </div>
+
+      <div>
+        <label class="form-label">
+          {{ t('duty.todo.fields.title') }} <span class="text-dp-danger">*</span>
+          <CharacterCounter :current="title.length" :max="50" />
+        </label>
+        <input
+          v-model="title"
+          type="text"
+          maxlength="50"
+          class="form-control"
+          :placeholder="t('duty.todo.placeholders.title')"
+          :aria-invalid="isTitleMissing"
+        />
+      </div>
+
+      <div>
+        <label class="form-label">{{ t('duty.todo.fields.content') }}</label>
+        <textarea
+          v-model="content"
+          rows="6"
+          class="form-control"
+          :placeholder="t('duty.todo.placeholders.content')"
+        ></textarea>
+      </div>
+
+      <div>
+        <label class="form-label">
+          <Calendar class="w-4 h-4 inline-block mr-1 -mt-0.5" />
+          {{ t('duty.todo.fields.dueDate') }}
+        </label>
+        <input
+          v-model="dueDate"
+          type="date"
+          class="form-control"
+        />
+      </div>
+
+      <div v-if="props.friends.length > 0">
+        <label class="block text-sm font-medium mb-2 text-dp-text-secondary">{{ t('duty.todo.fields.friendTag') }}</label>
+        <FriendTagSelector
+          v-model="tagFriendIds"
+          :friends="props.friends"
+          :selected-summaries="selectedTagSummaries"
+        />
+      </div>
+
+      <!-- Attachment Upload -->
+      <div>
+        <label class="form-label">{{ t('duty.todo.fields.attachments') }}</label>
+        <FileUploader
+          v-if="isOpen"
+          ref="fileUploaderRef"
+          context-type="TODO"
+          @session-created="onSessionCreated"
+          @update:attachments="onAttachmentsUpdate"
+          @upload-start="onUploadStart"
+          @upload-complete="onUploadComplete"
+          @error="onUploadError"
+        />
+      </div>
     </div>
-  </Teleport>
+
+    <!-- Footer (sticky at bottom) -->
+    <div class="modal-actions-compact modal-actions-end modal-footer-safe">
+      <button
+        @click="handleClose"
+        class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
+      >
+        {{ t('common.actions.cancel') }}
+      </button>
+      <button
+        @click="handleSave"
+        :disabled="isTitleMissing || isUploading"
+        class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+      >
+        {{ isUploading ? t('duty.common.uploading') : t('duty.todo.actions.save') }}
+      </button>
+    </div>
+  </BaseModal>
 </template>
 
 <style scoped>
@@ -313,7 +333,4 @@ function onUploadError(message: string) {
   box-shadow: 0 0 0 3px var(--dp-success-ring);
 }
 
-.due-date-optional {
-  color: var(--dp-text-muted);
-}
 </style>

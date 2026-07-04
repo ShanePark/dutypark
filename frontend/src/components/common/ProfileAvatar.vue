@@ -5,7 +5,7 @@ import { fetchAuthenticatedImage } from '@/api/attachment'
 
 interface Props {
   memberId?: number | null
-  size?: 'sm' | 'md' | 'lg' | 'xl'
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
   name?: string
   hasProfilePhoto?: boolean
   profilePhotoVersion?: number
@@ -26,6 +26,8 @@ const photoUrl = computed(() => {
 
 const sizeClasses = computed(() => {
   switch (props.size) {
+    case 'xs':
+      return 'w-3.5 h-3.5 sm:w-4 sm:h-4'
     case 'sm':
       return 'w-6 h-6 sm:w-8 sm:h-8'
     case 'md':
@@ -41,6 +43,8 @@ const sizeClasses = computed(() => {
 
 const iconSizeClasses = computed(() => {
   switch (props.size) {
+    case 'xs':
+      return 'w-2 h-2 sm:w-2.5 sm:h-2.5'
     case 'sm':
       return 'w-3 h-3 sm:w-4 sm:h-4'
     case 'md':

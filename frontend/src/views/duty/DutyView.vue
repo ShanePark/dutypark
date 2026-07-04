@@ -1,21 +1,21 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import Swal from 'sweetalert2'
 import { useSwal } from '@/composables/useSwal'
 import { isLightColor } from '@/utils/color'
+import { resolveApiCodeMessage, resolveApiErrorMessage } from '@/utils/resolveApiError'
 import { Loader2 } from 'lucide-vue-next'
 
 // Modal Components
 import DayDetailModal from '@/components/duty/DayDetailModal.vue'
 import TodoAddModal from '@/components/duty/TodoAddModal.vue'
 import TodoDetailModal from '@/components/duty/TodoDetailModal.vue'
-import TodoOverviewModal from '@/components/duty/TodoOverviewModal.vue'
 import DDayModal from '@/components/duty/DDayModal.vue'
 import DDayDetailModal from '@/components/duty/DDayDetailModal.vue'
 import SearchResultModal from '@/components/duty/SearchResultModal.vue'
 import OtherDutiesModal from '@/components/duty/OtherDutiesModal.vue'
-import ScheduleViewModal from '@/components/duty/ScheduleViewModal.vue'
 import DutyHeaderControls from '@/components/duty/DutyHeaderControls.vue'
 import DutyTodoRow from '@/components/duty/DutyTodoRow.vue'
 import DutyTypesBar from '@/components/duty/DutyTypesBar.vue'
@@ -28,15 +28,16 @@ import { todoApi } from '@/api/todo'
 import { dutyApi } from '@/api/duty'
 import { ddayApi, memberApi, friendApi } from '@/api/member'
 import { scheduleApi, type ScheduleDto } from '@/api/schedule'
-import type { DutyCalendarDay, TeamDto, DDayDto, DDaySaveDto, HolidayDto, TodoStatus } from '@/types'
-import type { LocalTodo, DutyType, Schedule, LocalDDay, Friend, CalendarDay, OtherDuty, DutyTypeWithCount, DutyDay, TodoDueItem } from './dutyViewTypes'
+import type { DutyCalendarDay, TeamDto, DDayDto, DDaySaveDto, HolidayDto, TaggableFriend, Todo as TodoDto, TodoStatus } from '@/types'
+import type { LocalTodo, DutyType, Schedule, LocalDDay, CalendarDay, OtherDuty, DutyTypeWithCount, DutyDay, TodoDueItem } from './dutyViewTypes'
 
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const { showError, confirmDelete, toastSuccess } = useSwal()
+const { showError, confirm, confirmDelete, toastSuccess } = useSwal()
+const { t } = useI18n()
 
 // State
 const today = new Date()
@@ -79,16 +80,12 @@ const lastDayInMonth = computed(() => new Date(currentYear.value, currentMonth.v
 // Modal states
 const isDayDetailModalOpen = ref(false)
 const isTodoAddModalOpen = ref(false)
-const isTodoAddFromOverview = ref(false)
 const isTodoDetailModalOpen = ref(false)
-const startTodoEditMode = ref(false)
-const isTodoOverviewModalOpen = ref(false)
 const isDDayModalOpen = ref(false)
 const isDDayDetailModalOpen = ref(false)
 const isDDayEditFromDetail = ref(false)
 const isSearchResultModalOpen = ref(false)
 const isOtherDutiesModalOpen = ref(false)
-const isScheduleDetailModalOpen = ref(false)
 
 // Search highlight - tracks the date to highlight after search navigation
 const searchDay = ref<{ year: number; month: number; day: number } | null>(null)
@@ -103,10 +100,8 @@ function handleYearMonthSelect(year: number, month: number) {
 
 // Selected items
 const selectedDay = ref<CalendarDay | null>(null)
-const selectedDayDuty = ref<DutyDay | undefined>(undefined)
 const selectedTodo = ref<LocalTodo | null>(null)
 const selectedDDay = ref<LocalDDay | null>(null)
-const selectedSchedule = ref<Schedule | null>(null)
 const pinnedDDay = ref<LocalDDay | null>(null)
 
 // Data
@@ -194,19 +189,39 @@ function handleTodoBubbleClick(todo: LocalTodo | { id: string }) {
 }
 
 // Convert API Todo to LocalTodo
-function mapToLocalTodo(apiTodo: { id: string; title: string; content: string; position: number | null; status: 'TODO' | 'IN_PROGRESS' | 'DONE'; createdDate: string; completedDate: string | null; dueDate?: string | null; isOverdue?: boolean }): LocalTodo {
+function mapToLocalTodo(apiTodo: TodoDto): LocalTodo {
   return {
     id: apiTodo.id,
     title: apiTodo.title,
     content: apiTodo.content,
+    position: apiTodo.position,
     status: apiTodo.status,
     createdDate: apiTodo.createdDate,
-    completedDate: apiTodo.completedDate ?? undefined,
-    dueDate: apiTodo.dueDate ?? undefined,
-    isOverdue: apiTodo.isOverdue ?? false,
-    hasAttachments: false,
+    completedDate: apiTodo.completedDate,
+    dueDate: apiTodo.dueDate,
+    isOverdue: apiTodo.isOverdue,
+    isTagged: apiTodo.isTagged,
+    owner: apiTodo.owner,
+    taggedByMember: apiTodo.taggedByMember ?? null,
+    tags: apiTodo.tags,
+    hasAttachments: apiTodo.hasAttachments ?? false,
     attachments: [],
   }
+}
+
+function applyTodoUpdate(apiTodo: TodoDto) {
+  const localTodo = mapToLocalTodo(apiTodo)
+
+  todos.value = todos.value.filter((t) => t.id !== apiTodo.id)
+  completedTodos.value = completedTodos.value.filter((t) => t.id !== apiTodo.id)
+
+  if (apiTodo.status === 'DONE') {
+    completedTodos.value.unshift(localTodo)
+  } else {
+    todos.value.unshift(localTodo)
+  }
+
+  selectedTodo.value = localTodo
 }
 
 // Convert API DDayDto to LocalDDay
@@ -242,7 +257,7 @@ async function loadTodos() {
 // Sort D-Days by date ascending (same as backend: OrderByDate)
 function sortDDays() {
   dDays.value.sort((a, b) => {
-    return new Date(a.date).getTime() - new Date(b.date).getTime()
+    return a.date.localeCompare(b.date)
   })
 }
 
@@ -268,6 +283,15 @@ async function loadDDays() {
 
 // Convert ScheduleDto to Schedule for UI
 function mapToSchedule(dto: ScheduleDto): Schedule {
+  const taggedByMember = dto.isTagged && dto.taggedByMember?.id != null
+    ? {
+      id: dto.taggedByMember.id,
+      name: dto.taggedByMember.name,
+      hasProfilePhoto: dto.taggedByMember.hasProfilePhoto ?? false,
+      profilePhotoVersion: dto.taggedByMember.profilePhotoVersion ?? 0,
+    }
+    : undefined
+
   return {
     id: dto.id,
     content: dto.content,
@@ -279,7 +303,8 @@ function mapToSchedule(dto: ScheduleDto): Schedule {
     isMine: !dto.isTagged,
     isTagged: dto.isTagged,
     owner: dto.owner,
-    taggedBy: dto.isTagged ? dto.owner : undefined,
+    taggedBy: taggedByMember?.name ?? (dto.isTagged ? dto.owner : undefined),
+    taggedByMember,
     attachments: dto.attachments.map((a) => ({
       id: a.id,
       originalFilename: a.originalFilename,
@@ -288,7 +313,12 @@ function mapToSchedule(dto: ScheduleDto): Schedule {
       thumbnailUrl: a.thumbnailUrl ?? undefined,
       hasThumbnail: a.hasThumbnail,
     })),
-    tags: dto.tags.map((t) => ({ id: t.id ?? 0, name: t.name })),
+    tags: dto.tags.flatMap((tag) => tag.id == null ? [] : [{
+      id: tag.id,
+      name: tag.name,
+      hasProfilePhoto: tag.hasProfilePhoto ?? false,
+      profilePhotoVersion: tag.profilePhotoVersion ?? 0,
+    }]),
     daysFromStart: dto.daysFromStart,
     totalDays: dto.totalDays,
   }
@@ -382,7 +412,7 @@ const dutyTypesWithCount = computed<DutyTypeWithCount[]>(() => {
 const dDays = ref<LocalDDay[]>([])
 const isLoadingDDays = ref(false)
 
-const friends = ref<Friend[]>([])
+const friends = ref<TaggableFriend[]>([])
 const isLoadingFriends = ref(false)
 
 const selectedFriendIds = ref<number[]>([])
@@ -462,6 +492,36 @@ const duties = computed<Array<DutyDay | null>>(() => {
   })
 })
 
+const selectedDayDuty = computed<DutyDay | undefined>(() => {
+  const day = selectedDay.value
+  if (!day) return undefined
+
+  const dayIndex = calendarDays.value.findIndex(
+    (calendarDay) =>
+      calendarDay.year === day.year &&
+      calendarDay.month === day.month &&
+      calendarDay.day === day.day
+  )
+
+  if (dayIndex === -1) return undefined
+  return duties.value[dayIndex] ?? undefined
+})
+
+const selectedDaySchedules = computed(() => {
+  const day = selectedDay.value
+  if (!day) return []
+
+  const dayIndex = calendarDays.value.findIndex(
+    (calendarDay) =>
+      calendarDay.year === day.year &&
+      calendarDay.month === day.month &&
+      calendarDay.day === day.day
+  )
+
+  if (dayIndex === -1) return []
+  return schedulesByDays.value[dayIndex] ?? []
+})
+
 // Get duty for the currently focused day (for highlighting quick input buttons)
 const focusedDayDuty = computed(() => {
   if (!focusedDay.value) return null
@@ -509,7 +569,7 @@ async function loadDuties() {
     )
   } catch (error) {
     console.error('Failed to load duties:', error)
-    loadError.value = '근무 정보를 불러오는데 실패했습니다.'
+    loadError.value = t('duty.view.loadDutiesFailed')
   } finally {
     isLoadingDuties.value = false
   }
@@ -613,7 +673,7 @@ onMounted(async () => {
     }
   } catch (error) {
     console.error('Failed to initialize duty view:', error)
-    loadError.value = '데이터를 불러오는데 실패했습니다.'
+    loadError.value = t('duty.view.loadDataFailed')
   } finally {
     isLoading.value = false
   }
@@ -697,7 +757,7 @@ watch(
       }
     } catch (error) {
       console.error('Failed to reload duty view:', error)
-      loadError.value = '데이터를 불러오는데 실패했습니다.'
+      loadError.value = t('duty.view.loadDataFailed')
     } finally {
       isLoading.value = false
     }
@@ -747,9 +807,7 @@ async function handleGoToDate(event: Event) {
 }
 
 // Day click handler
-function handleDayClick(day: CalendarDay, index: number) {
-  if (!canEdit.value) return // Disable click if no edit permission
-
+function handleDayClick(day: CalendarDay, _index: number) {
   // In batch edit mode, clicking a day moves the focus to that day
   if (batchEditMode.value) {
     if (day.isCurrentMonth) {
@@ -759,14 +817,7 @@ function handleDayClick(day: CalendarDay, index: number) {
   }
 
   selectedDay.value = day
-  selectedDayDuty.value = duties.value[index] || undefined
   isDayDetailModalOpen.value = true
-}
-
-// Schedule click handler (for read-only view on other's calendar)
-function handleScheduleClick(schedule: Schedule) {
-  selectedSchedule.value = schedule
-  isScheduleDetailModalOpen.value = true
 }
 
 // Batch edit mode: change duty type directly on cell
@@ -781,7 +832,7 @@ async function handleBatchDutyChange(day: CalendarDay, dutyTypeId: number | null
     await loadDuties()
   } catch (error) {
     console.error('Failed to change duty type:', error)
-    showError('근무 변경에 실패했습니다.')
+    showError(t('duty.view.changeDutyFailed'))
   }
 }
 
@@ -918,7 +969,7 @@ async function handleDDaySave(dday: { id?: number; title: string; date: string; 
     sortDDays()
   } catch (error) {
     console.error('Failed to save D-Day:', error)
-    showError('D-Day 저장에 실패했습니다.')
+    showError(t('duty.dday.messages.saveFailed'))
   }
   isDDayModalOpen.value = false
   // Return to detail modal if editing from there
@@ -929,7 +980,7 @@ async function handleDDaySave(dday: { id?: number; title: string; date: string; 
 }
 
 async function deleteDDay(dday: LocalDDay) {
-  if (!await confirmDelete(`[${dday.title}]을(를) 정말로 삭제하시겠습니까?`)) return
+  if (!await confirmDelete(t('duty.dday.messages.deleteConfirm', { title: dday.title }))) return
 
   try {
     await ddayApi.deleteDDay(dday.id)
@@ -940,7 +991,7 @@ async function deleteDDay(dday: LocalDDay) {
     }
   } catch (error) {
     console.error('Failed to delete D-Day:', error)
-    showError('D-Day 삭제에 실패했습니다.')
+    showError(t('duty.dday.messages.deleteFailed'))
   }
 }
 
@@ -956,6 +1007,7 @@ async function handleTodoUpdate(data: {
   content: string
   status: TodoStatus
   dueDate?: string | null
+  tagFriendIds?: number[]
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }) {
@@ -965,46 +1017,25 @@ async function handleTodoUpdate(data: {
       content: data.content,
       status: data.status,
       dueDate: data.dueDate,
+      tagFriendIds: data.tagFriendIds,
       attachmentSessionId: data.attachmentSessionId,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
-    const localTodo = mapToLocalTodo(updatedTodo)
-
-    // Remove from both lists first
-    const activeIdx = todos.value.findIndex((t) => t.id === data.id)
-    if (activeIdx >= 0) {
-      todos.value.splice(activeIdx, 1)
-    }
-    const completedIdx = completedTodos.value.findIndex((t) => t.id === data.id)
-    if (completedIdx >= 0) {
-      completedTodos.value.splice(completedIdx, 1)
-    }
-
-    // Add to appropriate list based on status
-    if (updatedTodo.status === 'DONE') {
-      completedTodos.value.unshift(localTodo)
-    } else {
-      todos.value.unshift(localTodo)
-    }
-
-    // Update selectedTodo for the detail modal
-    selectedTodo.value = localTodo
-    toastSuccess('할 일이 수정되었습니다.')
+    applyTodoUpdate(updatedTodo)
   } catch (error) {
     console.error('Failed to update todo:', error)
-    showError('할 일 수정에 실패했습니다.')
+    showError(t('duty.todo.messages.updateFailed'))
   }
 }
 
 async function handleTodoComplete(id: string) {
   const fromDetailModal = isTodoDetailModalOpen.value
   try {
-    const completedTodo = await todoApi.completeTodo(id)
-    todos.value = todos.value.filter((t) => t.id !== id)
-    completedTodos.value.unshift(mapToLocalTodo(completedTodo))
+    await todoApi.completeTodo(id)
+    await loadTodos()
   } catch (error) {
     console.error('Failed to complete todo:', error)
-    showError('할 일 완료 처리에 실패했습니다.')
+    showError(t('duty.todo.messages.completeFailed'))
   }
   // Only close detail modal and return to overview if called from detail modal
   if (fromDetailModal) {
@@ -1015,12 +1046,11 @@ async function handleTodoComplete(id: string) {
 async function handleTodoReopen(id: string) {
   const fromDetailModal = isTodoDetailModalOpen.value
   try {
-    const reopenedTodo = await todoApi.reopenTodo(id)
-    completedTodos.value = completedTodos.value.filter((t) => t.id !== id)
-    todos.value.push(mapToLocalTodo(reopenedTodo))
+    await todoApi.reopenTodo(id)
+    await loadTodos()
   } catch (error) {
     console.error('Failed to reopen todo:', error)
-    showError('할 일 재오픈에 실패했습니다.')
+    showError(t('duty.todo.messages.reopenFailed'))
   }
   // Only close detail modal if called from detail modal
   if (fromDetailModal) {
@@ -1028,8 +1058,23 @@ async function handleTodoReopen(id: string) {
   }
 }
 
+async function handleTodoStatusChange(data: { id: string; status: TodoStatus }) {
+  const fromDetailModal = isTodoDetailModalOpen.value
+  try {
+    await todoApi.changeStatus(data.id, { status: data.status })
+    await loadTodos()
+    toastSuccess(t('duty.todo.messages.statusChanged'))
+  } catch (error) {
+    console.error('Failed to change todo status:', error)
+    showError(t('duty.todo.messages.statusChangeFailed'))
+  }
+  if (fromDetailModal) {
+    isTodoDetailModalOpen.value = false
+  }
+}
+
 async function handleTodoDelete(id: string) {
-  if (!await confirmDelete('할 일을 삭제하시겠습니까?')) return
+  if (!await confirmDelete(t('duty.todo.messages.deleteConfirm'))) return
   const fromDetailModal = isTodoDetailModalOpen.value
   try {
     await todoApi.deleteTodo(id)
@@ -1037,7 +1082,7 @@ async function handleTodoDelete(id: string) {
     completedTodos.value = completedTodos.value.filter((t) => t.id !== id)
   } catch (error) {
     console.error('Failed to delete todo:', error)
-    showError('할 일 삭제에 실패했습니다.')
+    showError(t('duty.todo.messages.deleteFailed'))
   }
   // Only close detail modal if called from detail modal
   if (fromDetailModal) {
@@ -1049,6 +1094,8 @@ async function handleTodoAdd(data: {
   title: string
   content: string
   status: TodoStatus
+  dueDate?: string
+  tagFriendIds?: number[]
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }) {
@@ -1057,6 +1104,8 @@ async function handleTodoAdd(data: {
       title: data.title,
       content: data.content,
       status: data.status,
+      dueDate: data.dueDate,
+      tagFriendIds: data.tagFriendIds,
       attachmentSessionId: data.attachmentSessionId,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
@@ -1066,32 +1115,32 @@ async function handleTodoAdd(data: {
     } else {
       todos.value.unshift(mapToLocalTodo(newTodo))
     }
-    toastSuccess('할 일이 추가되었습니다.')
+    toastSuccess(t('duty.todo.messages.added'))
   } catch (error) {
     console.error('Failed to add todo:', error)
-    showError('할 일 추가에 실패했습니다.')
+    showError(t('duty.todo.messages.addFailed'))
   }
   isTodoAddModalOpen.value = false
-  // Only return to overview modal if added from overview
-  if (isTodoAddFromOverview.value) {
-    isTodoOverviewModalOpen.value = true
-    isTodoAddFromOverview.value = false
+}
+
+async function handleTodoUntagSelf(id: string) {
+  if (!await confirm(t('duty.todo.messages.untagConfirm'), t('duty.todo.messages.untagTitle'))) return
+
+  try {
+    await todoApi.untagSelf(id)
+    todos.value = todos.value.filter((todo) => todo.id !== id)
+    completedTodos.value = completedTodos.value.filter((todo) => todo.id !== id)
+    isTodoDetailModalOpen.value = false
+    toastSuccess(t('duty.todo.messages.untagged'))
+  } catch (error) {
+    console.error('Failed to untag todo:', error)
+    showError(t('duty.todo.messages.untagFailed'))
   }
 }
 
-// Todo position update for drag-and-drop
-async function handleTodoPositionUpdate(orderedIds: string[]) {
-  try {
-    await todoApi.updatePositions({ status: 'TODO', orderedIds })
-    // Reorder local todos array to match the new order
-    const todoMap = new Map(todos.value.map((t) => [t.id, t]))
-    todos.value = orderedIds.map((id) => todoMap.get(id)).filter((t): t is LocalTodo => t !== undefined)
-  } catch (error) {
-    console.error('Failed to update todo positions:', error)
-    showError('할 일 순서 변경에 실패했습니다.')
-    // Reload todos to restore correct order
-    await loadTodos()
-  }
+function handleTodoBackToList() {
+  isTodoDetailModalOpen.value = false
+  router.push('/todo')
 }
 
 // Search handler
@@ -1130,7 +1179,7 @@ async function handleSearch(page: number = 0) {
     isSearchResultModalOpen.value = true
   } catch (error) {
     console.error('Failed to search schedules:', error)
-    showError('검색에 실패했습니다.')
+    showError(t('duty.search.failed'))
   } finally {
     isSearching.value = false
   }
@@ -1169,6 +1218,16 @@ async function handleFriendToggle(friendId: number) {
   await loadOtherDuties()
 }
 
+async function handleOtherDutiesClear() {
+  if (selectedFriendIds.value.length === 0 && !showMyDuties.value) {
+    return
+  }
+
+  selectedFriendIds.value = []
+  showMyDuties.value = false
+  await loadOtherDuties()
+}
+
 async function handleMyDutiesToggle() {
   showMyDuties.value = !showMyDuties.value
   await loadOtherDuties()
@@ -1203,18 +1262,19 @@ async function loadOtherDuties() {
       currentYear.value,
       currentMonth.value
     )
-    // Map API response to local OtherDuty format (index-aligned with calendarDays)
-    otherDuties.value = response.map((item, index) => ({
-      memberId: memberIdsToFetch[index] || 0,
+    otherDuties.value = response.map((item) => ({
+      memberId: item.memberId,
       memberName: item.name,
+      hasProfilePhoto: item.hasProfilePhoto ?? false,
+      profilePhotoVersion: item.profilePhotoVersion ?? 0,
       duties: item.duties.map((d) => ({
-        dutyType: d.dutyType || 'OFF',
+        dutyType: d.dutyType || t('duty.common.off'),
         dutyColor: d.dutyColor || 'var(--dp-duty-fallback)',
       })),
     }))
   } catch (error) {
     console.error('Failed to load other duties:', error)
-    showError('친구 근무 정보를 불러오는데 실패했습니다.')
+    showError(t('duty.view.loadOtherDutiesFailed'))
   }
 }
 
@@ -1225,10 +1285,7 @@ async function loadFriends() {
   isLoadingFriends.value = true
   try {
     const response = await friendApi.getFriends()
-    friends.value = response.data.map((f) => ({
-      id: f.id ?? 0,
-      name: f.name,
-    }))
+    friends.value = response.data
   } catch (error) {
     console.error('Failed to load friends:', error)
   } finally {
@@ -1244,6 +1301,7 @@ interface ScheduleSaveData {
   startDateTime: string
   endDateTime: string
   visibility: 'PUBLIC' | 'FRIENDS' | 'FAMILY' | 'PRIVATE'
+  tagFriendIds: number[]
   attachmentSessionId?: string | null
   orderedAttachmentIds?: string[]
 }
@@ -1259,14 +1317,15 @@ async function handleCreateSchedule(data: ScheduleSaveData) {
       startDateTime: data.startDateTime,
       endDateTime: data.endDateTime,
       visibility: data.visibility,
+      tagFriendIds: data.tagFriendIds,
       attachmentSessionId: data.attachmentSessionId || undefined,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
     await loadSchedules()
-    toastSuccess('일정이 추가되었습니다.')
+    toastSuccess(t('duty.schedule.messages.created'))
   } catch (error) {
     console.error('Failed to create schedule:', error)
-    showError('일정 생성에 실패했습니다.')
+    showError(t('duty.schedule.messages.createFailed'))
   }
 }
 
@@ -1282,27 +1341,27 @@ async function handleEditSchedule(data: ScheduleSaveData) {
       startDateTime: data.startDateTime,
       endDateTime: data.endDateTime,
       visibility: data.visibility,
+      tagFriendIds: data.tagFriendIds,
       attachmentSessionId: data.attachmentSessionId || undefined,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
     await loadSchedules()
-    toastSuccess('일정이 수정되었습니다.')
   } catch (error) {
     console.error('Failed to update schedule:', error)
-    showError('일정 수정에 실패했습니다.')
+    showError(t('duty.schedule.messages.updateFailed'))
   }
 }
 
 async function handleDeleteSchedule(scheduleId: string) {
-  if (!await confirmDelete('이 일정을 삭제하시겠습니까?')) return
+  if (!await confirmDelete(t('duty.schedule.messages.deleteConfirm'))) return
 
   try {
     await scheduleApi.deleteSchedule(scheduleId)
     await loadSchedules()
-    toastSuccess('일정이 삭제되었습니다.')
+    toastSuccess(t('duty.schedule.messages.deleted'))
   } catch (error) {
     console.error('Failed to delete schedule:', error)
-    showError('일정 삭제에 실패했습니다.')
+    showError(t('duty.schedule.messages.deleteFailed'))
   }
 }
 
@@ -1310,30 +1369,10 @@ async function handleReorderSchedules(scheduleIds: string[]) {
   try {
     await scheduleApi.reorderSchedulePositions(scheduleIds)
     await loadSchedules()
-    toastSuccess('일정 순서가 변경되었습니다.')
+    toastSuccess(t('duty.schedule.messages.reordered'))
   } catch (error) {
     console.error('Failed to reorder schedules:', error)
-    showError('일정 순서 변경에 실패했습니다.')
-  }
-}
-
-async function handleAddTag(scheduleId: string, friendId: number) {
-  try {
-    await scheduleApi.tagFriend(scheduleId, friendId)
-    await loadSchedules()
-  } catch (error) {
-    console.error('Failed to add tag:', error)
-    showError('태그 추가에 실패했습니다.')
-  }
-}
-
-async function handleRemoveTag(scheduleId: string, friendId: number) {
-  try {
-    await scheduleApi.untagFriend(scheduleId, friendId)
-    await loadSchedules()
-  } catch (error) {
-    console.error('Failed to remove tag:', error)
-    showError('태그 삭제에 실패했습니다.')
+    showError(t('duty.schedule.messages.reorderFailed'))
   }
 }
 
@@ -1341,10 +1380,10 @@ async function handleUntagSelf(scheduleId: string) {
   try {
     await scheduleApi.untagSelf(scheduleId)
     await loadSchedules()
-    toastSuccess('태그가 해제되었습니다.')
+    toastSuccess(t('duty.schedule.messages.untagged'))
   } catch (error) {
     console.error('Failed to untag self:', error)
-    showError('태그 해제에 실패했습니다.')
+    showError(t('duty.schedule.messages.untagFailed'))
   }
 }
 
@@ -1360,7 +1399,7 @@ async function handleChangeDutyType(dutyTypeId: number | null) {
     await loadDuties()
   } catch (error) {
     console.error('Failed to change duty type:', error)
-    showError('근무 변경에 실패했습니다.')
+    showError(t('duty.view.changeDutyFailed'))
   }
 }
 
@@ -1376,16 +1415,16 @@ async function showBatchUpdateModal() {
     .join('')
 
   const result = await Swal.fire({
-    title: '한번에 수정',
+    title: t('duty.batchUpdate.title'),
     html: `
-      <p>${currentYear.value}년 ${currentMonth.value}월의 기본 근무를 선택해주세요.</p>
-      <p>현재 월의 모든 날짜가 선택한 근무로 설정됩니다.</p>
-      <p class="text-sm text-dp-warning font-semibold mt-2">클릭시 바로 변경됩니다.</p>
+      <p>${t('duty.batchUpdate.description1', { year: currentYear.value, month: currentMonth.value })}</p>
+      <p>${t('duty.batchUpdate.description2')}</p>
+      <p class="text-sm text-dp-warning font-semibold mt-2">${t('duty.batchUpdate.warning')}</p>
       <div class="mt-4">${buttonsHtml}</div>
     `,
     showConfirmButton: false,
     showCancelButton: true,
-    cancelButtonText: '취소',
+    cancelButtonText: t('common.actions.cancel'),
     didOpen: () => {
       const buttons = document.querySelectorAll('.duty-type-btn')
       buttons.forEach((button) => {
@@ -1402,7 +1441,7 @@ async function showBatchUpdateModal() {
             await loadDuties()
           } catch (error) {
             console.error('Failed to batch update duties:', error)
-            showError('일괄 수정에 실패했습니다.')
+            showError(t('duty.batchUpdate.failed'))
           }
         })
       })
@@ -1417,16 +1456,16 @@ async function showExcelUploadModal() {
   const fileExtensions = team.value.dutyBatchTemplate.fileExtensions || ['.xlsx', '.xls']
 
   const { value: file } = await Swal.fire({
-    title: '시간표 파일 업로드',
+    title: t('duty.excelUpload.title'),
     input: 'file',
-    html: `시간표 파일을 업로드해주세요.<br/>자동으로 파일에 맞춰 시간표를 업데이트 합니다.<br/><span class="text-dp-warning font-semibold">업로드하는 시간표가 ${currentYear.value}년 ${currentMonth.value}월에 맞는지 꼭 확인해주세요.</span>`,
+    html: `${t('duty.excelUpload.description1')}<br/>${t('duty.excelUpload.description2', { year: currentYear.value, month: currentMonth.value })}`,
     inputAttributes: {
       accept: fileExtensions.join(','),
-      'aria-label': '시간표 파일을 업로드해주세요.',
+      'aria-label': t('duty.excelUpload.ariaLabel'),
     },
-    confirmButtonText: '등록',
+    confirmButtonText: t('duty.excelUpload.confirm'),
     showCancelButton: true,
-    cancelButtonText: '취소',
+    cancelButtonText: t('common.actions.cancel'),
   })
 
   if (!file) return
@@ -1440,21 +1479,33 @@ async function showExcelUploadModal() {
     )
 
     if (!result.result) {
-      showError(result.errorMessage || '파일 업로드에 실패했습니다.', '시간표 파일 업로드 실패')
+      showError(
+        resolveApiCodeMessage(result, { fallbackKey: 'duty.excelUpload.failed' }, t),
+        t('duty.excelUpload.failureTitle'),
+      )
       return
     }
 
     await Swal.fire({
       icon: 'success',
-      title: '시간표 적용 완료',
-      html: `시간표가 업로드 되었습니다.<br/>[${result.startDate}] ~ [${result.endDate}]<br/>총 ${result.workingDays + result.offDays}일 중 근무일은 ${result.workingDays}, 휴무일은 ${result.offDays}일 입니다.`,
-      confirmButtonText: '확인',
+      title: t('duty.excelUpload.successTitle'),
+      html: t('duty.excelUpload.successSummary', {
+        startDate: result.startDate,
+        endDate: result.endDate,
+        totalDays: result.workingDays + result.offDays,
+        workingDays: result.workingDays,
+        offDays: result.offDays,
+      }),
+      confirmButtonText: t('common.actions.confirm'),
     })
 
     await loadDuties()
   } catch (error) {
     console.error('Failed to upload duty batch:', error)
-    showError('파일 업로드에 실패했습니다.')
+    showError(
+      resolveApiErrorMessage(error, { fallbackKey: 'duty.excelUpload.failed' }, t),
+      t('duty.excelUpload.failureTitle'),
+    )
   }
 }
 </script>
@@ -1464,7 +1515,7 @@ async function showExcelUploadModal() {
     <!-- Loading State -->
     <div v-if="isLoading" class="flex items-center justify-center py-20">
       <Loader2 class="w-8 h-8 text-dp-accent animate-spin" />
-      <span class="ml-2 text-dp-text-secondary">데이터를 불러오는 중...</span>
+      <span class="ml-2 text-dp-text-secondary">{{ t('duty.view.loading') }}</span>
     </div>
 
     <!-- Error State -->
@@ -1474,7 +1525,7 @@ async function showExcelUploadModal() {
         @click="loadDuties"
         class="mt-2 px-4 py-2 bg-dp-danger text-dp-text-on-dark rounded hover:bg-dp-danger-hover transition cursor-pointer"
       >
-        다시 시도
+        {{ t('duty.view.retry') }}
       </button>
     </div>
 
@@ -1520,6 +1571,7 @@ async function showExcelUploadModal() {
       :is-other-duty-active="isOtherDutyActive"
       :team-has-duty-batch-template="teamHasDutyBatchTemplate"
       @toggle-other-duties="handleToggleOtherDuties"
+      @clear-other-duties="handleOtherDutiesClear"
       @show-batch-update-modal="showBatchUpdateModal"
       @toggle-batch-edit="batchEditMode = $event"
       @show-excel-upload-modal="showExcelUploadModal"
@@ -1548,7 +1600,7 @@ async function showExcelUploadModal() {
       :member-id="memberId"
       @day-click="handleDayClick"
       @batch-duty-change="handleBatchDutyChange"
-      @schedule-click="handleScheduleClick"
+      @dday-click="openDDayDetail"
       @todo-click="handleTodoBubbleClick"
     />
 
@@ -1568,7 +1620,7 @@ async function showExcelUploadModal() {
       :is-open="isDayDetailModalOpen"
       :date="selectedDay || { year: currentYear, month: currentMonth, day: 1 }"
       :duty="selectedDayDuty"
-      :schedules="selectedDay ? (schedulesByDays[calendarDays.findIndex(d => d.year === selectedDay!.year && d.month === selectedDay!.month && d.day === selectedDay!.day)] ?? []) : []"
+      :schedules="selectedDaySchedules"
       :duty-types="dutyTypes"
       :can-edit="canEdit"
       :batch-edit-mode="batchEditMode"
@@ -1580,8 +1632,6 @@ async function showExcelUploadModal() {
       @edit-schedule="handleEditSchedule"
       @delete-schedule="handleDeleteSchedule"
       @reorder-schedules="handleReorderSchedules"
-      @add-tag="handleAddTag"
-      @remove-tag="handleRemoveTag"
       @untag-self="handleUntagSelf"
       @change-duty-type="handleChangeDutyType"
     />
@@ -1589,34 +1639,23 @@ async function showExcelUploadModal() {
     <TodoAddModal
       :is-open="isTodoAddModalOpen"
       initial-status="IN_PROGRESS"
-      @close="isTodoAddModalOpen = false; if (isTodoAddFromOverview) { isTodoOverviewModalOpen = true; isTodoAddFromOverview = false; }"
+      :friends="friends"
+      @close="isTodoAddModalOpen = false"
       @save="handleTodoAdd"
     />
 
     <TodoDetailModal
       :is-open="isTodoDetailModalOpen"
       :todo="selectedTodo"
-      :start-in-edit-mode="startTodoEditMode"
-      @close="isTodoDetailModalOpen = false; startTodoEditMode = false"
+      :friends="friends"
+      @close="isTodoDetailModalOpen = false"
       @update="handleTodoUpdate"
       @complete="handleTodoComplete"
       @reopen="handleTodoReopen"
+      @change-status="handleTodoStatusChange"
       @delete="handleTodoDelete"
-      @back-to-list="isTodoDetailModalOpen = false; startTodoEditMode = false; isTodoOverviewModalOpen = true"
-    />
-
-    <TodoOverviewModal
-      :is-open="isTodoOverviewModalOpen"
-      :todos="todos"
-      :completed-todos="completedTodos"
-      @close="isTodoOverviewModalOpen = false"
-      @show-detail="(todo: LocalTodo) => { selectedTodo = todo; isTodoDetailModalOpen = true; isTodoOverviewModalOpen = false; }"
-      @edit="(todo: LocalTodo) => { selectedTodo = todo; startTodoEditMode = true; isTodoDetailModalOpen = true; isTodoOverviewModalOpen = false; }"
-      @complete="handleTodoComplete"
-      @reopen="handleTodoReopen"
-      @delete="handleTodoDelete"
-      @reorder="handleTodoPositionUpdate"
-      @add="isTodoOverviewModalOpen = false; isTodoAddModalOpen = true; isTodoAddFromOverview = true"
+      @untag-self="handleTodoUntagSelf"
+      @back-to-list="handleTodoBackToList"
     />
 
     <DDayModal
@@ -1654,14 +1693,8 @@ async function showExcelUploadModal() {
       :friends="friends"
       :selected-friend-ids="selectedFriendIds"
       @close="isOtherDutiesModalOpen = false"
+      @clear="handleOtherDutiesClear"
       @toggle="handleFriendToggle"
-    />
-
-    <ScheduleViewModal
-      :is-open="isScheduleDetailModalOpen"
-      :schedule="selectedSchedule"
-      :member-id="memberId"
-      @close="isScheduleDetailModalOpen = false"
     />
 
     </template>

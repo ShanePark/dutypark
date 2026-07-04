@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.RestDocsTest
 import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSaveDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
@@ -12,6 +13,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
+import org.springframework.restdocs.payload.JsonFieldType
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.*
 import org.springframework.restdocs.payload.PayloadDocumentation.*
 import org.springframework.restdocs.request.RequestDocumentation.*
@@ -36,6 +38,8 @@ class ScheduleControllerTest : RestDocsTest() {
     fun `createSchedule test`() {
         // Given
         val member = TestData.member
+        val friend = TestData.member2
+        makeThemFriend(member, friend)
 
         val jwt = getJwt(member)
         val updateScheduleDto = ScheduleSaveDto(
@@ -43,6 +47,7 @@ class ScheduleControllerTest : RestDocsTest() {
             content = "test",
             startDateTime = fixedDateTime,
             endDateTime = fixedDateTime.plusHours(1),
+            tagFriendIds = listOf(friend.id!!),
         )
         val json = objectMapper.writeValueAsString(updateScheduleDto)
         val sizeBefore = scheduleRepository.findAll().size
@@ -66,6 +71,8 @@ class ScheduleControllerTest : RestDocsTest() {
                         fieldWithPath("startDateTime").description("Schedule Start DateTime"),
                         fieldWithPath("endDateTime").description("Schedule End DateTime"),
                         fieldWithPath("visibility").description("Schedule Visibility"),
+                        fieldWithPath("tagFriendIds").description("Friend member IDs to tag with the schedule")
+                            .type("Array").optional(),
                         fieldWithPath("id").description("Schedule Id (optional, for update)").type("UUID").optional(),
                         fieldWithPath("attachmentSessionId").description("Attachment Session Id (optional)")
                             .type("UUID").optional(),
@@ -75,6 +82,9 @@ class ScheduleControllerTest : RestDocsTest() {
                 )
             )
         assertThat(scheduleRepository.findAll().size).isEqualTo(sizeBefore + 1)
+        val createdSchedule = scheduleRepository.findAll()
+            .first { it.member.id == member.id && it.content == updateScheduleDto.content }
+        assertThat(createdSchedule.tags).hasSize(1)
     }
 
     @Test
@@ -99,8 +109,10 @@ class ScheduleControllerTest : RestDocsTest() {
             .andDo(
                 document(
                     "schedules/create-unauthorized", responseFields(
-                        fieldWithPath("errorCode").description("401"),
-                        fieldWithPath("message").description("Error Message")
+                        fieldWithPath("status").description("HTTP status"),
+                        fieldWithPath("code").description("Machine-readable error code"),
+                        fieldWithPath("details").type(JsonFieldType.OBJECT).optional().description("Additional error details"),
+                        fieldWithPath("fieldErrors").type(JsonFieldType.ARRAY).optional().description("Field validation errors")
                     )
                 )
             )
@@ -110,6 +122,8 @@ class ScheduleControllerTest : RestDocsTest() {
     fun `update schedule test`() {
         // Given
         val member = TestData.member
+        val friend = TestData.member2
+        makeThemFriend(member, friend)
         val oldSchedule = scheduleRepository.save(
             Schedule(
                 member = member,
@@ -126,7 +140,8 @@ class ScheduleControllerTest : RestDocsTest() {
             memberId = member.id!!,
             content = "test2",
             startDateTime = fixedDateTime.plusHours(2),
-            endDateTime = fixedDateTime.plusHours(3)
+            endDateTime = fixedDateTime.plusHours(3),
+            tagFriendIds = listOf(friend.id!!)
         )
         val json = objectMapper.writeValueAsString(updateScheduleDto)
 
@@ -150,6 +165,8 @@ class ScheduleControllerTest : RestDocsTest() {
                         fieldWithPath("startDateTime").description("Schedule Start DateTime"),
                         fieldWithPath("endDateTime").description("Schedule End DateTime"),
                         fieldWithPath("visibility").description("Schedule Visibility"),
+                        fieldWithPath("tagFriendIds").description("Friend member IDs to tag with the schedule")
+                            .type("Array").optional(),
                         fieldWithPath("attachmentSessionId").description("Attachment Session Id (optional)")
                             .type("UUID").optional(),
                         fieldWithPath("orderedAttachmentIds").description("Ordered Attachment Ids (optional)")
@@ -161,6 +178,7 @@ class ScheduleControllerTest : RestDocsTest() {
             assertThat(this.content).isEqualTo(updateScheduleDto.content)
             assertThat(this.startDateTime).isEqualTo(updateScheduleDto.startDateTime)
             assertThat(this.endDateTime).isEqualTo(updateScheduleDto.endDateTime)
+            assertThat(this.tags).hasSize(1)
         }
     }
 
@@ -202,15 +220,33 @@ class ScheduleControllerTest : RestDocsTest() {
     @Test
     fun `getSchedules returns schedules with attachments field`() {
         // Given
-        val member = TestData.member
+        val owner = TestData.member
+        val member = TestData.member2
+        makeThemFriend(owner, member)
         val dateTime = LocalDateTime.of(2024, 3, 10, 0, 0)
-        scheduleRepository.save(
+        val schedule = scheduleRepository.save(
             Schedule(
-                member = member,
+                member = owner,
                 content = "test schedule",
                 startDateTime = dateTime,
                 endDateTime = dateTime,
                 position = 0
+            )
+        )
+        schedule.addTag(member)
+        scheduleRepository.save(schedule)
+
+        attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = schedule.id.toString(),
+                originalFilename = "test.jpg",
+                storedFilename = "stored-test.jpg",
+                contentType = "image/jpeg",
+                size = 1000L,
+                storagePath = "/test/path",
+                createdBy = owner.id!!,
+                orderIndex = 0
             )
         )
 
@@ -227,7 +263,42 @@ class ScheduleControllerTest : RestDocsTest() {
         ).andExpect(status().isOk)
             .andExpect(jsonPath("$..content").value(hasItem("test schedule")))
             .andExpect(jsonPath("$..attachments").exists())
+            .andExpect(jsonPath("$..taggedByMember.name").value(hasItem(owner.name)))
             .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "schedules/get-list",
+                    queryParameters(
+                        parameterWithName("memberId").description("조회할 캘린더 주인의 member id"),
+                        parameterWithName("year").description("조회할 연도"),
+                        parameterWithName("month").description("조회할 월")
+                    ),
+                    relaxedResponseFields(
+                        fieldWithPath("[].[]").description("월간 캘린더의 각 날짜 칸에 해당하는 일정 목록").optional(),
+                        fieldWithPath("[].[].id").description("일정 ID").optional(),
+                        fieldWithPath("[].[].content").description("일정 내용").optional(),
+                        fieldWithPath("[].[].description").description("일정 설명").optional(),
+                        fieldWithPath("[].[].position").description("일정 정렬 순서").optional(),
+                        fieldWithPath("[].[].year").description("현재 셀의 연도").optional(),
+                        fieldWithPath("[].[].month").description("현재 셀의 월").optional(),
+                        fieldWithPath("[].[].dayOfMonth").description("현재 셀의 일").optional(),
+                        fieldWithPath("[].[].startDateTime").description("일정 시작 일시").optional(),
+                        fieldWithPath("[].[].endDateTime").description("일정 종료 일시").optional(),
+                        fieldWithPath("[].[].isTagged").description("태그된 일정인지 여부").optional(),
+                        fieldWithPath("[].[].owner").description("일정 작성자 이름").optional(),
+                        subsectionWithPath("[].[].taggedByMember").description("태그된 일정일 때 태그한 사람의 요약 정보").optional(),
+                        subsectionWithPath("[].[].tags").description("태그된 멤버 요약 정보 목록").optional(),
+                        fieldWithPath("[].[].visibility").description("일정 공개 범위").optional(),
+                        fieldWithPath("[].[].dateToCompare").description("현재 셀 기준 날짜").optional(),
+                        subsectionWithPath("[].[].attachments").description("첨부파일 목록").optional(),
+                        fieldWithPath("[].[].startDate").description("일정 시작 날짜").optional(),
+                        fieldWithPath("[].[].daysFromStart").description("현재 셀 기준 시작일로부터 경과 일수").optional(),
+                        fieldWithPath("[].[].endDate").description("일정 종료 날짜").optional(),
+                        fieldWithPath("[].[].curDate").description("현재 셀의 실제 날짜").optional(),
+                        fieldWithPath("[].[].totalDays").description("전체 일정 일수").optional()
+                    )
+                )
+            )
     }
 
     @Test
@@ -334,6 +405,32 @@ class ScheduleControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `admin can get private member schedules`() {
+        val member = TestData.member
+        member.calendarVisibility = com.tistory.shanepark.dutypark.member.domain.enums.Visibility.PRIVATE
+        memberRepository.save(member)
+        scheduleRepository.save(
+            Schedule(
+                member = member,
+                content = "admin visible schedule",
+                startDateTime = LocalDateTime.of(2024, 3, 1, 0, 0),
+                endDateTime = LocalDateTime.of(2024, 3, 1, 1, 0),
+                position = 0
+            )
+        )
+
+        mockMvc.perform(
+            get("/api/schedules")
+                .param("memberId", member.id.toString())
+                .param("year", "2024")
+                .param("month", "3")
+                .accept("application/json")
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.admin)}")
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$..content").value(hasItem("admin visible schedule")))
+    }
+
+    @Test
     fun `getSchedule returns basic info`() {
         val member = TestData.member
         val schedule = scheduleRepository.save(
@@ -357,6 +454,53 @@ class ScheduleControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `getSchedule denies private schedule even when owner's calendar is public`() {
+        val member = TestData.member
+        updateVisibility(member, com.tistory.shanepark.dutypark.member.domain.enums.Visibility.PUBLIC)
+        val schedule = scheduleRepository.save(
+            Schedule(
+                member = member,
+                content = "private-detail",
+                startDateTime = fixedDateTime,
+                endDateTime = fixedDateTime.plusHours(1),
+                position = 0,
+                visibility = com.tistory.shanepark.dutypark.member.domain.enums.Visibility.PRIVATE
+            )
+        )
+
+        mockMvc.perform(
+            get("/api/schedules/{id}", schedule.id)
+                .accept("application/json")
+        ).andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("schedule.visibility.forbidden"))
+    }
+
+    @Test
+    fun `getSchedule allows tagged member to retrieve family schedule basic info`() {
+        val taggedMember = TestData.member
+        val owner = TestData.member2
+        makeThemFriend(taggedMember, owner)
+        val schedule = Schedule(
+            member = owner,
+            content = "family-tagged",
+            startDateTime = fixedDateTime,
+            endDateTime = fixedDateTime.plusHours(1),
+            position = 0,
+            visibility = com.tistory.shanepark.dutypark.member.domain.enums.Visibility.FAMILY
+        )
+        schedule.addTag(taggedMember)
+        scheduleRepository.save(schedule)
+
+        mockMvc.perform(
+            get("/api/schedules/{id}", schedule.id)
+                .accept("application/json")
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(taggedMember)}")
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(schedule.id.toString()))
+            .andExpect(jsonPath("$.content").value("family-tagged"))
+    }
+
+    @Test
     fun `searchSchedule returns results`() {
         val member = TestData.member
         scheduleRepository.save(
@@ -376,6 +520,94 @@ class ScheduleControllerTest : RestDocsTest() {
                 .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
         ).andExpect(status().isOk)
             .andExpect(jsonPath("$.content[0].content").value("team sync"))
+    }
+
+    @Test
+    fun `searchSchedule preserves paging metadata`() {
+        val member = TestData.member
+        for (i in 1..12) {
+            scheduleRepository.save(
+                Schedule(
+                    member = member,
+                    content = "team sync $i",
+                    startDateTime = fixedDateTime.plusMinutes(i.toLong()),
+                    endDateTime = fixedDateTime.plusMinutes(i.toLong()).plusHours(1),
+                    position = i
+                )
+            )
+        }
+
+        mockMvc.perform(
+            get("/api/schedules/{id}/search", member.id!!)
+                .param("q", "team")
+                .param("size", "10")
+                .accept("application/json")
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.totalElements").value(12))
+            .andExpect(jsonPath("$.totalPages").value(2))
+            .andExpect(jsonPath("$.size").value(10))
+            .andExpect(jsonPath("$.number").value(0))
+            .andExpect(jsonPath("$.content.length()").value(10))
+            .andExpect(jsonPath("$.content[0].content").value("team sync 12"))
+    }
+
+    @Test
+    fun `searchSchedule keeps tagged multi-tag schedules distinct across pages`() {
+        val taggedMember = TestData.member
+        val owner = TestData.member2
+        val anotherTaggedMember = memberRepository.save(
+            Member(
+                name = "dummy3",
+                email = "test3@duty.park",
+                password = TestData.testPass
+            )
+        )
+
+        val olderSchedule = Schedule(
+            member = owner,
+            content = "search target older",
+            startDateTime = fixedDateTime,
+            endDateTime = fixedDateTime.plusHours(1),
+            position = 0
+        )
+        olderSchedule.addTag(taggedMember)
+        olderSchedule.addTag(anotherTaggedMember)
+        scheduleRepository.save(olderSchedule)
+
+        val newerSchedule = Schedule(
+            member = owner,
+            content = "search target newer",
+            startDateTime = fixedDateTime.plusHours(2),
+            endDateTime = fixedDateTime.plusHours(3),
+            position = 1
+        )
+        newerSchedule.addTag(taggedMember)
+        scheduleRepository.save(newerSchedule)
+
+        mockMvc.perform(
+            get("/api/schedules/{id}/search", taggedMember.id!!)
+                .param("q", "search target")
+                .param("size", "1")
+                .accept("application/json")
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(taggedMember)}")
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.totalElements").value(2))
+            .andExpect(jsonPath("$.totalPages").value(2))
+            .andExpect(jsonPath("$.content.length()").value(1))
+            .andExpect(jsonPath("$.content[0].content").value("search target newer"))
+
+        mockMvc.perform(
+            get("/api/schedules/{id}/search", taggedMember.id!!)
+                .param("q", "search target")
+                .param("page", "1")
+                .param("size", "1")
+                .accept("application/json")
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(taggedMember)}")
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.totalElements").value(2))
+            .andExpect(jsonPath("$.content.length()").value(1))
+            .andExpect(jsonPath("$.content[0].content").value("search target older"))
     }
 
     @Test
@@ -413,6 +645,28 @@ class ScheduleControllerTest : RestDocsTest() {
         em.clear()
         val untaggedSchedule = scheduleRepository.findById(schedule.id).orElseThrow()
         assertThat(untaggedSchedule.tags).isEmpty()
+    }
+
+    @Test
+    fun `tag friend endpoint returns code-first unauthorized when target is not friend`() {
+        val owner = TestData.member
+        val stranger = TestData.member2
+
+        val schedule = scheduleRepository.save(
+            Schedule(
+                member = owner,
+                content = "tagged",
+                startDateTime = fixedDateTime,
+                endDateTime = fixedDateTime.plusHours(1),
+                position = 0
+            )
+        )
+
+        mockMvc.perform(
+            post("/api/schedules/{scheduleId}/tags/{friendId}", schedule.id, stranger.id!!)
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(owner)}")
+        ).andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("schedule.tag.notFriend"))
     }
 
     @Test

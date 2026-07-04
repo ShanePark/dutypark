@@ -2,6 +2,7 @@ import apiClient from './client'
 import type {
   MemberDto,
   FriendDto,
+  MemberPreviewDto,
   DDayDto,
   DDaySaveDto,
   RefreshTokenDto,
@@ -24,7 +25,7 @@ export const memberApi = {
    * Get member info by ID (requires visibility permission)
    */
   getMemberById(memberId: number) {
-    return apiClient.get<MemberDto>(`/members/${memberId}`)
+    return apiClient.get<MemberPreviewDto>(`/members/${memberId}`)
   },
 
   /**
@@ -52,7 +53,7 @@ export const memberApi = {
    * Get family members
    */
   getFamilyMembers() {
-    return apiClient.get<FriendDto[]>('/members/family')
+    return apiClient.get<MemberPreviewDto[]>('/members/family')
   },
 
   /**
@@ -108,7 +109,7 @@ export const friendApi = {
    * Search possible friends to add
    */
   searchPossibleFriends(keyword: string, page = 0, size = 10) {
-    return apiClient.get<Page<FriendDto>>('/friends/search', {
+    return apiClient.get<Page<MemberPreviewDto>>('/friends/search', {
       params: { keyword, page, size },
     })
   },

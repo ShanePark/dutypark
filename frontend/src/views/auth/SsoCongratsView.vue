@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { getSafeRedirect } from '@/utils/redirect'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const { t } = useI18n()
 
 const username = computed(() => authStore.user?.name || '')
 const redirectTarget = computed(() => getSafeRedirect(route.query.redirect) || '/')
@@ -27,17 +29,17 @@ function goHome() {
     <div class="w-full max-w-md">
       <div class="rounded-2xl shadow-lg sm:shadow-xl p-6 sm:p-8 text-center bg-dp-bg-card">
         <h1 class="text-2xl sm:text-3xl font-bold mb-6 text-dp-text-primary">
-          회원 가입 성공 🎉
+          {{ t('auth.ssoCongrats.title') }} 🎉
         </h1>
 
         <hr class="mb-6 border-dp-border-primary">
 
         <div class="space-y-4 mb-8">
           <p class="text-lg sm:text-xl font-medium text-dp-text-primary">
-            {{ username }} 님, 환영합니다!
+            {{ t('auth.ssoCongrats.welcome', { username }) }}
           </p>
           <p class="text-dp-text-secondary">
-            지금부터 Dutypark 서비스를 이용하실 수 있습니다.
+            {{ t('auth.ssoCongrats.description') }}
           </p>
         </div>
 
@@ -46,7 +48,7 @@ function goHome() {
           @click="goHome"
           class="w-full bg-dp-accent text-dp-text-on-dark py-3 px-4 rounded-lg font-medium hover:bg-dp-accent-hover transition cursor-pointer"
         >
-          홈으로
+          {{ t('auth.ssoCongrats.cta') }}
         </button>
       </div>
     </div>

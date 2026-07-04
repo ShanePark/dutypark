@@ -6,6 +6,7 @@ import type {
   TeamDto,
   TeamNameCheckResult,
   AdminMemberDto,
+  AdminMemberDetailDto,
   RefreshTokenDto,
 } from '@/types'
 
@@ -33,6 +34,13 @@ export const adminApi = {
     return adminClient.get<PageResponse<AdminMemberDto>>('/members', {
       params: { keyword: keyword || undefined, page, size },
     })
+  },
+
+  /**
+   * Get detailed member stats for admin modal
+   */
+  getMemberDetail(memberId: number) {
+    return adminClient.get<AdminMemberDetailDto>(`/members/${memberId}`)
   },
 
   /**

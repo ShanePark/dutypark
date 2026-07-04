@@ -8,6 +8,7 @@
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
     "type-check": "vue-tsc -b --noEmit",
+    "release-notes:check": "node scripts/check-release-notes.mjs",
     "test": "vitest run"
   },
   "dependencies": {
@@ -16,7 +17,7 @@
     "@uppy/drag-drop": "^5.0.2",
     "@uppy/status-bar": "^5.0.2",
     "@uppy/xhr-upload": "^5.0.2",
-    "axios": "^1.13.5",
+    "axios": "^1.16.0",
     "dayjs": "^1.11.19",
     "lucide-vue-next": "^0.562.0",
     "marked": "^17.0.1",
@@ -25,18 +26,19 @@
     "sweetalert2": "^11.26.3",
     "vue": "^3.5.24",
     "vue-advanced-cropper": "^2.8.9",
+    "vue-i18n": "^11.3.0",
     "vue-router": "^4.6.3"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.1.17",
+    "@tailwindcss/vite": "^4.3.1",
     "@types/node": "^25.0.6",
     "@types/sortablejs": "^1.15.9",
     "@vitejs/plugin-vue": "^6.0.1",
     "@vue/tsconfig": "^0.8.1",
     "tailwindcss": "^4.1.17",
     "typescript": "~5.9.3",
-    "vite": "^7.2.4",
-    "vitest": "^3.2.4",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.0",
     "vue-tsc": "^3.1.4"
   }
 }

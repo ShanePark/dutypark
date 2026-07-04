@@ -15,23 +15,21 @@ data class MemberDto(
     val hasPassword: Boolean = false,
     val hasProfilePhoto: Boolean = false,
     val profilePhotoVersion: Long = 0,
-) {
-    companion object {
-        fun of(member: Member, kakaoId: String? = null, naverId: String? = null): MemberDto {
-            return MemberDto(
-                id = member.id,
-                name = member.name,
-                email = member.email,
-                teamId = member.team?.id,
-                team = member.team?.name,
-                calendarVisibility = member.calendarVisibility,
-                kakaoId = kakaoId,
-                naverId = naverId,
-                hasPassword = member.password != null,
-                hasProfilePhoto = member.hasProfilePhoto(),
-                profilePhotoVersion = member.profilePhotoVersion,
-            )
-        }
+)
 
-    }
+internal fun Member.toMemberDto(kakaoId: String? = null, naverId: String? = null): MemberDto {
+    val preview = toMemberPreviewDto()
+    return MemberDto(
+        id = preview.id,
+        name = preview.name,
+        email = email,
+        teamId = preview.teamId,
+        team = preview.team,
+        calendarVisibility = calendarVisibility,
+        kakaoId = kakaoId,
+        naverId = naverId,
+        hasPassword = password != null,
+        hasProfilePhoto = preview.hasProfilePhoto,
+        profilePhotoVersion = preview.profilePhotoVersion,
+    )
 }

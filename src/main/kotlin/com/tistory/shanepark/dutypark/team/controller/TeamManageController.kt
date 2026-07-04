@@ -7,7 +7,7 @@ import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.duty.batch.exceptions.DutyBatchException
 import com.tistory.shanepark.dutypark.duty.batch.service.DutyBatchService
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
-import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
+import com.tistory.shanepark.dutypark.member.domain.dto.MemberInviteCandidateDto
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.dto.TeamDto
@@ -83,7 +83,7 @@ class TeamManageController(
     ): DutyBatchTeamResult {
         checkCanManage(login = loginMember, teamId = teamId)
         val team = teamRepository.findById(teamId).orElseThrow()
-        val batchTemplate = team.dutyBatchTemplate ?: throw IllegalArgumentException("templateName is required")
+        val batchTemplate = team.dutyBatchTemplate ?: throw IllegalArgumentException("dutyBatch.template.required")
         val dutyBatchService = applicationContext.getBean(batchTemplate.batchServiceClass) as DutyBatchService
         return try {
             log.info("Batch duty upload: teamId={}, year={}, month={}, by={}", team.id, year, month, loginMember.id)
@@ -93,7 +93,7 @@ class TeamManageController(
                 yearMonth = YearMonth.of(year, month)
             )
         } catch (e: DutyBatchException) {
-            DutyBatchTeamResult.fail(e.message ?: "알 수 없는 원인으로 시간표 업로드 실패.")
+            DutyBatchTeamResult.fail(e.errorCode, e.errorDetails)
         }
     }
 
@@ -132,11 +132,14 @@ class TeamManageController(
 
     @GetMapping("/members")
     fun members(
+        @Login loginMember: LoginMember,
         @PageableDefault(page = 0, size = 10)
         @SortDefault(sort = ["name"], direction = Sort.Direction.ASC)
         page: Pageable,
+        @RequestParam teamId: Long,
         @RequestParam(required = false, defaultValue = "") keyword: String,
-    ): PageResponse<MemberDto> {
+    ): PageResponse<MemberInviteCandidateDto> {
+        checkCanManage(login = loginMember, teamId = teamId)
         return PageResponse(memberService.searchMembersToInviteTeam(page = page, keyword = keyword))
     }
 

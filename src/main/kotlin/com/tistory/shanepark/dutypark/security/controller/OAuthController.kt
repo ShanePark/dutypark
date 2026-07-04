@@ -15,6 +15,7 @@ import com.tistory.shanepark.dutypark.security.oauth.naver.NaverLoginService
 import com.tistory.shanepark.dutypark.security.oauth.SocialAccountAlreadyLinkedException
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import com.tistory.shanepark.dutypark.security.service.CookieService
+import jakarta.validation.Valid
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.http.HttpStatus
@@ -73,7 +74,7 @@ class OAuthController(
         }
 
         val callbackUrl = state["callbackUrl"] as String?
-            ?: throw IllegalArgumentException("callbackUrl is required in state")
+            ?: throw IllegalArgumentException("auth.oauth.callbackUrl.required")
         return kakaoLoginService.login(
             req = httpServletRequest,
             resp = httpServletResponse,
@@ -114,7 +115,7 @@ class OAuthController(
         }
 
         val callbackUrl = state["callbackUrl"] as String?
-            ?: throw IllegalArgumentException("callbackUrl is required in state")
+            ?: throw IllegalArgumentException("auth.oauth.callbackUrl.required")
         return naverLoginService.login(
             req = httpServletRequest,
             resp = httpServletResponse,
@@ -128,16 +129,10 @@ class OAuthController(
     @PostMapping("sso/signup/token")
     @SlackNotification
     fun ssoSignup(
-        @RequestBody request: SsoSignupRequest,
+        @Valid @RequestBody request: SsoSignupRequest,
         httpServletRequest: HttpServletRequest,
         httpServletResponse: HttpServletResponse
     ): ResponseEntity<Map<String, Any>> {
-        if (!request.termAgree || !request.privacyAgree) {
-            return ResponseEntity.badRequest().build()
-        }
-        val termsVersion = request.termsVersion?.takeIf { it.isNotBlank() } ?: return ResponseEntity.badRequest().build()
-        val privacyVersion = request.privacyVersion?.takeIf { it.isNotBlank() } ?: return ResponseEntity.badRequest().build()
-
         val member = memberService.createSsoMember(
             username = request.username,
             memberSsoRegisterUUID = request.uuid
@@ -149,14 +144,14 @@ class OAuthController(
         consentService.recordConsent(
             member = member,
             policyType = PolicyType.TERMS,
-            consentVersion = termsVersion,
+            consentVersion = request.termsVersion!!,
             ipAddress = ipAddress,
             userAgent = userAgent
         )
         consentService.recordConsent(
             member = member,
             policyType = PolicyType.PRIVACY,
-            consentVersion = privacyVersion,
+            consentVersion = request.privacyVersion!!,
             ipAddress = ipAddress,
             userAgent = userAgent
         )

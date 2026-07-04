@@ -1,16 +1,21 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Sortable from 'sortablejs'
+import type { MoveEvent, SortableEvent } from 'sortablejs'
 import { HelpCircle, X, ListTodo, Clock, CheckCircle2, Lightbulb, LayoutGrid, Plus } from 'lucide-vue-next'
 import { todoApi } from '@/api/todo'
+import { friendApi } from '@/api/member'
 import { useSwal } from '@/composables/useSwal'
+import BaseModal from '@/components/common/BaseModal.vue'
 import KanbanColumn from '@/components/todo/KanbanColumn.vue'
 import KanbanCard from '@/components/todo/KanbanCard.vue'
 import TodoAddModal from '@/components/duty/TodoAddModal.vue'
 import TodoDetailModal from '@/components/duty/TodoDetailModal.vue'
-import type { Todo, TodoBoard, TodoStatus } from '@/types'
+import type { TaggableFriend, Todo, TodoBoard, TodoStatus } from '@/types'
 
-const { showSuccess, showError, confirmDelete } = useSwal()
+const { t } = useI18n()
+const { showSuccess, showError, confirm, confirmDelete, toastSuccess } = useSwal()
 
 const isHelpModalOpen = ref(false)
 
@@ -23,6 +28,7 @@ const isDetailModalOpen = ref(false)
 const selectedTodo = ref<Todo | null>(null)
 const startInEditMode = ref(false)
 const activeStatus = ref<TodoStatus>('IN_PROGRESS')
+const friends = ref<TaggableFriend[]>([])
 let scrollRafId: number | null = null
 
 // Sortable instances for each column
@@ -33,11 +39,11 @@ const inProgressList = computed(() => board.value?.inProgress ?? [])
 const doneList = computed(() => board.value?.done ?? [])
 
 const counts = computed(() => board.value?.counts ?? { todo: 0, inProgress: 0, done: 0, total: 0 })
-const statusTabs: Array<{ status: TodoStatus; label: string; icon: typeof ListTodo }> = [
-  { status: 'TODO', label: '할일', icon: ListTodo },
-  { status: 'IN_PROGRESS', label: '진행중', icon: Clock },
-  { status: 'DONE', label: '완료', icon: CheckCircle2 },
-]
+const statusTabs = computed<Array<{ status: TodoStatus; label: string; icon: typeof ListTodo }>>(() => [
+  { status: 'TODO', label: t('todoBoard.statusShort.todo'), icon: ListTodo },
+  { status: 'IN_PROGRESS', label: t('todoBoard.statusShort.inProgress'), icon: Clock },
+  { status: 'DONE', label: t('todoBoard.statusShort.done'), icon: CheckCircle2 },
+])
 
 function getStatusCount(status: TodoStatus): number {
   switch (status) {
@@ -67,7 +73,7 @@ async function loadBoard() {
     }, 50)
   } catch (error) {
     console.error('Failed to load board:', error)
-    showError('보드를 불러오는데 실패했습니다.')
+    showError(t('todoBoard.messages.loadFailed'))
   } finally {
     isLoading.value = false
   }
@@ -103,9 +109,100 @@ function initSortables() {
       scrollSensitivity: 80,
       scrollSpeed: 10,
       swapThreshold: 0.65,
+      onMove: handleDragMove,
+      onChange: handleDragChange,
       onEnd: handleDragEnd,
     })
   })
+}
+
+function isTaggedCard(element: Element | null): boolean {
+  return element?.getAttribute('data-is-tagged') === 'true'
+}
+
+function getColumnCards(container: Element | null, exclude: Element | null = null): HTMLElement[] {
+  if (!(container instanceof HTMLElement)) {
+    return []
+  }
+
+  return Array.from(container.children).filter((child): child is HTMLElement => {
+    return child instanceof HTMLElement && child !== exclude
+  })
+}
+
+function getLeadingTaggedCount(cards: Element[]): number {
+  let index = 0
+  while (index < cards.length && isTaggedCard(cards[index] ?? null)) {
+    index += 1
+  }
+  return index
+}
+
+function pinTaggedCardToColumnTop(container: Element | null, card: Element | null) {
+  if (!(container instanceof HTMLElement) || !(card instanceof HTMLElement)) {
+    return
+  }
+
+  const anchor = Array.from(container.children).find((child) => child !== card)
+  if (anchor) {
+    container.insertBefore(card, anchor)
+    return
+  }
+
+  if (card.parentElement !== container) {
+    container.appendChild(card)
+  }
+}
+
+function keepOwnedCardBelowTaggedBlock(container: Element | null, card: Element | null) {
+  if (!(container instanceof HTMLElement) || !(card instanceof HTMLElement)) {
+    return
+  }
+
+  const cardsWithoutDragged = getColumnCards(container, card)
+  const leadingTaggedCount = getLeadingTaggedCount(cardsWithoutDragged)
+  if (leadingTaggedCount === 0) {
+    return
+  }
+
+  const currentCards = getColumnCards(container)
+  const currentIndex = currentCards.indexOf(card)
+  if (currentIndex < 0 || currentIndex >= leadingTaggedCount) {
+    return
+  }
+
+  const anchor = cardsWithoutDragged[leadingTaggedCount]
+  if (anchor) {
+    container.insertBefore(card, anchor)
+    return
+  }
+
+  container.appendChild(card)
+}
+
+function normalizeDraggedCardPosition(container: Element | null, card: Element | null) {
+  if (isTaggedCard(card)) {
+    pinTaggedCardToColumnTop(container, card)
+    return
+  }
+
+  keepOwnedCardBelowTaggedBlock(container, card)
+}
+
+function handleDragMove(evt: MoveEvent) {
+  if (isTaggedCard(evt.dragged)) {
+    return true
+  }
+
+  if (isTaggedCard(evt.related)) {
+    return 1
+  }
+
+  return true
+}
+
+function handleDragChange(evt: SortableEvent) {
+  normalizeDraggedCardPosition(evt.to, evt.item)
 }
 
 function destroySortables() {
@@ -117,16 +214,24 @@ function destroySortables() {
   sortableInstances = {}
 }
 
-async function handleDragEnd(evt: Sortable.SortableEvent) {
+async function handleDragEnd(evt: SortableEvent) {
   const todoId = evt.item.getAttribute('data-id')
   if (!todoId) return
 
   const fromColumn = evt.from.getAttribute('data-column') as TodoStatus
   const toColumn = evt.to.getAttribute('data-column') as TodoStatus
+  const draggedIsTagged = isTaggedCard(evt.item)
+
+  normalizeDraggedCardPosition(evt.to, evt.item)
+
+  if (draggedIsTagged && fromColumn === toColumn) {
+    await loadBoard()
+    return
+  }
 
   if (fromColumn === toColumn) {
     // Within-column reordering
-    const columnItems = evt.to.querySelectorAll('[data-id]')
+    const columnItems = evt.to.querySelectorAll('[data-id][data-is-tagged="false"]')
     const orderedIds: string[] = []
     columnItems.forEach((item) => {
       const id = item.getAttribute('data-id')
@@ -141,29 +246,33 @@ async function handleDragEnd(evt: Sortable.SortableEvent) {
       await loadBoard()
     } catch (error) {
       console.error('Failed to update positions:', error)
-      showError('순서 변경에 실패했습니다.')
+      showError(t('todoBoard.messages.reorderFailed'))
       await loadBoard()
     }
   } else {
-    // Cross-column move (status change)
-    // Extract full order from DOM after SortableJS has moved the item
-    const columnItems = evt.to.querySelectorAll('[data-id]')
-    const orderedIds: string[] = []
-    columnItems.forEach((item) => {
-      const id = item.getAttribute('data-id')
-      if (id) orderedIds.push(id)
-    })
-
     try {
-      await todoApi.changeStatus(todoId, {
-        status: toColumn,
-        orderedIds,
-      })
+      if (draggedIsTagged) {
+        await todoApi.changeStatus(todoId, { status: toColumn })
+      } else {
+        // Cross-column move (status change)
+        // Extract full order from DOM after SortableJS has moved the item
+        const columnItems = evt.to.querySelectorAll('[data-id][data-is-tagged="false"]')
+        const orderedIds: string[] = []
+        columnItems.forEach((item) => {
+          const id = item.getAttribute('data-id')
+          if (id) orderedIds.push(id)
+        })
+
+        await todoApi.changeStatus(todoId, {
+          status: toColumn,
+          orderedIds,
+        })
+      }
       focusStatus(toColumn, 'smooth')
       await loadBoard()
     } catch (error) {
       console.error('Failed to change status:', error)
-      showError('상태 변경에 실패했습니다.')
+      showError(t('todoBoard.messages.changeStatusFailed'))
       await loadBoard()
     }
   }
@@ -245,6 +354,7 @@ async function handleAddTodo(data: {
   content: string
   status: TodoStatus
   dueDate?: string
+  tagFriendIds?: number[]
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }) {
@@ -254,15 +364,16 @@ async function handleAddTodo(data: {
       content: data.content,
       status: data.status,
       dueDate: data.dueDate,
+      tagFriendIds: data.tagFriendIds,
       attachmentSessionId: data.attachmentSessionId,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
-    showSuccess('할 일이 추가되었습니다.')
+    toastSuccess(t('todoBoard.messages.createSuccess'))
     isAddModalOpen.value = false
     await loadBoard()
   } catch (error) {
     console.error('Failed to create todo:', error)
-    showError('할 일 추가에 실패했습니다.')
+    showError(t('todoBoard.messages.createFailed'))
   }
 }
 
@@ -272,6 +383,7 @@ async function handleUpdateTodo(data: {
   content: string
   status: TodoStatus
   dueDate?: string | null
+  tagFriendIds?: number[]
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }) {
@@ -281,10 +393,10 @@ async function handleUpdateTodo(data: {
       content: data.content,
       status: data.status,
       dueDate: data.dueDate,
+      tagFriendIds: data.tagFriendIds,
       attachmentSessionId: data.attachmentSessionId,
       orderedAttachmentIds: data.orderedAttachmentIds,
     })
-    showSuccess('할 일이 수정되었습니다.')
     await loadBoard()
     // Update selectedTodo with fresh data from the board so modal shows updated content
     if (selectedTodo.value && board.value) {
@@ -296,46 +408,85 @@ async function handleUpdateTodo(data: {
     }
   } catch (error) {
     console.error('Failed to update todo:', error)
-    showError('할 일 수정에 실패했습니다.')
+    showError(t('todoBoard.messages.updateFailed'))
   }
 }
 
 async function handleCompleteTodo(id: string) {
   try {
     await todoApi.completeTodo(id)
-    showSuccess('할 일을 완료했습니다.')
+    showSuccess(t('todoBoard.messages.completeSuccess'))
     closeDetailModal()
     await loadBoard()
   } catch (error) {
     console.error('Failed to complete todo:', error)
-    showError('완료 처리에 실패했습니다.')
+    showError(t('todoBoard.messages.completeFailed'))
   }
 }
 
 async function handleReopenTodo(id: string) {
   try {
     await todoApi.reopenTodo(id)
-    showSuccess('할 일을 재오픈했습니다.')
+    showSuccess(t('todoBoard.messages.reopenSuccess'))
     closeDetailModal()
     await loadBoard()
   } catch (error) {
     console.error('Failed to reopen todo:', error)
-    showError('재오픈에 실패했습니다.')
+    showError(t('todoBoard.messages.reopenFailed'))
+  }
+}
+
+async function handleChangeTodoStatus(data: { id: string; status: TodoStatus }) {
+  try {
+    await todoApi.changeStatus(data.id, { status: data.status })
+    showSuccess(t('todoBoard.messages.changeStatusSuccess'))
+    closeDetailModal()
+    await loadBoard()
+  } catch (error) {
+    console.error('Failed to change todo status:', error)
+    showError(t('todoBoard.messages.changeStatusFailed'))
   }
 }
 
 async function handleDeleteTodo(id: string) {
-  const confirmed = await confirmDelete('정말 삭제하시겠습니까?')
+  const confirmed = await confirmDelete(t('todoBoard.messages.deleteConfirm'))
   if (!confirmed) return
 
   try {
     await todoApi.deleteTodo(id)
-    showSuccess('할 일이 삭제되었습니다.')
+    toastSuccess(t('todoBoard.messages.deleteSuccess'))
     closeDetailModal()
     await loadBoard()
   } catch (error) {
     console.error('Failed to delete todo:', error)
-    showError('삭제에 실패했습니다.')
+    showError(t('todoBoard.messages.deleteFailed'))
+  }
+}
+
+async function handleUntagSelf(id: string) {
+  const confirmed = await confirm(
+    t('todoBoard.messages.untagConfirm'),
+    t('todoBoard.messages.untagTitle'),
+  )
+  if (!confirmed) return
+
+  try {
+    await todoApi.untagSelf(id)
+    showSuccess(t('todoBoard.messages.untagSuccess'))
+    closeDetailModal()
+    await loadBoard()
+  } catch (error) {
+    console.error('Failed to untag self:', error)
+    showError(t('todoBoard.messages.untagFailed'))
+  }
+}
+
+async function loadFriends() {
+  try {
+    const response = await friendApi.getFriends()
+    friends.value = response.data
+  } catch (error) {
+    console.error('Failed to load friends:', error)
   }
 }
 
@@ -345,6 +496,7 @@ function handleBackToList() {
 
 onMounted(() => {
   loadBoard()
+  loadFriends()
 })
 
 onBeforeUnmount(() => {
@@ -361,19 +513,19 @@ onBeforeUnmount(() => {
     <!-- Header -->
     <div class="todo-board-header">
       <div class="todo-board-header-left">
-        <h1 class="todo-board-title">할일</h1>
+        <h1 class="todo-board-title">{{ t('todoBoard.title') }}</h1>
         <span class="todo-board-count">{{ counts.total }}</span>
       </div>
       <button
         class="todo-board-help-btn"
         @click="isHelpModalOpen = true"
-        aria-label="도움말"
+        :aria-label="t('todoBoard.help.openAriaLabel')"
       >
         <HelpCircle />
       </button>
     </div>
 
-    <div class="todo-board-tabs" role="tablist" aria-label="할일 상태">
+    <div class="todo-board-tabs" role="tablist" :aria-label="t('todoBoard.statusTabsAriaLabel')">
       <button
         v-for="tab in statusTabs"
         :key="tab.status"
@@ -395,7 +547,7 @@ onBeforeUnmount(() => {
     <!-- Loading State -->
     <div v-if="isLoading && !board" class="todo-board-loading">
       <div class="todo-board-spinner"></div>
-      <p>로딩 중...</p>
+      <p>{{ t('todoBoard.loading') }}</p>
     </div>
 
     <!-- Board -->
@@ -407,12 +559,19 @@ onBeforeUnmount(() => {
     >
       <div class="todo-board-columns">
         <!-- TODO Column -->
-        <KanbanColumn status="TODO" :count="counts.todo" @add="openAddModal('TODO')">
+        <KanbanColumn
+          status="TODO"
+          :count="counts.todo"
+          clickable-header
+          @select="focusStatus"
+          @add="openAddModal('TODO')"
+        >
           <div data-column="TODO" class="kanban-column-drop-zone">
             <div
               v-for="todo in todoList"
               :key="todo.id"
               :data-id="todo.id"
+              :data-is-tagged="todo.isTagged"
               class="kanban-card-wrapper"
             >
               <KanbanCard :todo="todo" @click="openDetailModal(todo)" />
@@ -423,18 +582,25 @@ onBeforeUnmount(() => {
               @click="openAddModal('TODO')"
             >
               <Plus class="kanban-empty-icon" />
-              <span>클릭하여 할 일 추가</span>
+              <span>{{ t('todoBoard.actions.clickToAdd') }}</span>
             </button>
           </div>
         </KanbanColumn>
 
         <!-- IN_PROGRESS Column -->
-        <KanbanColumn status="IN_PROGRESS" :count="counts.inProgress" @add="openAddModal('IN_PROGRESS')">
+        <KanbanColumn
+          status="IN_PROGRESS"
+          :count="counts.inProgress"
+          clickable-header
+          @select="focusStatus"
+          @add="openAddModal('IN_PROGRESS')"
+        >
           <div data-column="IN_PROGRESS" class="kanban-column-drop-zone">
             <div
               v-for="todo in inProgressList"
               :key="todo.id"
               :data-id="todo.id"
+              :data-is-tagged="todo.isTagged"
               class="kanban-card-wrapper"
             >
               <KanbanCard :todo="todo" @click="openDetailModal(todo)" />
@@ -445,18 +611,25 @@ onBeforeUnmount(() => {
               @click="openAddModal('IN_PROGRESS')"
             >
               <Plus class="kanban-empty-icon" />
-              <span>클릭하여 할 일 추가</span>
+              <span>{{ t('todoBoard.actions.clickToAdd') }}</span>
             </button>
           </div>
         </KanbanColumn>
 
         <!-- DONE Column -->
-        <KanbanColumn status="DONE" :count="counts.done" @add="openAddModal('DONE')">
+        <KanbanColumn
+          status="DONE"
+          :count="counts.done"
+          clickable-header
+          @select="focusStatus"
+          @add="openAddModal('DONE')"
+        >
           <div data-column="DONE" class="kanban-column-drop-zone">
             <div
               v-for="todo in doneList"
               :key="todo.id"
               :data-id="todo.id"
+              :data-is-tagged="todo.isTagged"
               class="kanban-card-wrapper"
             >
               <KanbanCard :todo="todo" @click="openDetailModal(todo)" />
@@ -467,7 +640,7 @@ onBeforeUnmount(() => {
               @click="openAddModal('DONE')"
             >
               <Plus class="kanban-empty-icon" />
-              <span>클릭하여 할 일 추가</span>
+              <span>{{ t('todoBoard.actions.clickToAdd') }}</span>
             </button>
           </div>
         </KanbanColumn>
@@ -478,6 +651,7 @@ onBeforeUnmount(() => {
     <TodoAddModal
       :is-open="isAddModalOpen"
       :initial-status="addModalInitialStatus"
+      :friends="friends"
       @close="isAddModalOpen = false"
       @save="handleAddTodo"
     />
@@ -485,98 +659,87 @@ onBeforeUnmount(() => {
     <TodoDetailModal
       :is-open="isDetailModalOpen"
       :todo="selectedTodo"
+      :friends="friends"
       :start-in-edit-mode="startInEditMode"
+      :show-back-to-list="false"
       @close="closeDetailModal"
       @update="handleUpdateTodo"
       @complete="handleCompleteTodo"
       @reopen="handleReopenTodo"
+      @change-status="handleChangeTodoStatus"
       @delete="handleDeleteTodo"
+      @untag-self="handleUntagSelf"
       @back-to-list="handleBackToList"
     />
 
-    <!-- Help Modal -->
-    <Teleport to="body">
-      <Transition name="modal">
-        <div
-          v-if="isHelpModalOpen"
-          class="help-modal-overlay"
-          @click.self="isHelpModalOpen = false"
+    <BaseModal
+      :is-open="isHelpModalOpen"
+      size="lg"
+      height="default"
+      rounded
+      overlay-class="backdrop-blur-sm"
+      panel-class="border border-dp-border-primary"
+      :panel-style="{ backgroundColor: 'var(--dp-bg-card)' }"
+      @close="isHelpModalOpen = false"
+    >
+      <div class="modal-header">
+        <h2>{{ t('todoBoard.help.title') }}</h2>
+        <button
+          class="p-2 rounded-full hover-close-btn cursor-pointer text-dp-text-muted"
+          @click="isHelpModalOpen = false"
+          :aria-label="t('common.actions.close')"
         >
-          <div class="help-modal">
-            <div class="help-modal-header">
-              <h2 class="help-modal-title">할일 보드 사용법</h2>
-              <button
-                class="help-modal-close"
-                @click="isHelpModalOpen = false"
-                aria-label="닫기"
-              >
-                <X />
-              </button>
-            </div>
-            <div class="help-modal-content">
-              <section class="help-section">
-                <h3 class="help-section-title">
-                  <LayoutGrid class="help-section-icon" />
-                  칸반 보드란?
-                </h3>
-                <p class="help-section-text">
-                  할일을 <strong>할일</strong>, <strong>진행중</strong>, <strong>완료</strong> 세 단계로 나누어 관리하는 방식입니다.
-                  카드를 드래그하여 상태를 쉽게 변경할 수 있습니다.
-                </p>
-              </section>
+          <X class="w-5 h-5" />
+        </button>
+      </div>
+      <div class="modal-body-form-lg">
+        <section class="help-section">
+          <h3 class="help-section-title">
+            <LayoutGrid class="help-section-icon" />
+            {{ t('todoBoard.help.whatIsKanbanTitle') }}
+          </h3>
+          <p class="help-section-text">{{ t('todoBoard.help.whatIsKanbanText') }}</p>
+        </section>
 
-              <section class="help-section">
-                <h3 class="help-section-title">
-                  <ListTodo class="help-section-icon" />
-                  할일 (TODO)
-                </h3>
-                <p class="help-section-text">
-                  아직 시작하지 않은 할일들이 여기에 표시됩니다.
-                  <strong>+</strong> 버튼을 눌러 새로운 할일을 추가하세요.
-                </p>
-              </section>
+        <section class="help-section">
+          <h3 class="help-section-title">
+            <ListTodo class="help-section-icon" />
+            {{ t('todoBoard.help.todoTitle') }}
+          </h3>
+          <p class="help-section-text">{{ t('todoBoard.help.todoText') }}</p>
+        </section>
 
-              <section class="help-section">
-                <h3 class="help-section-title">
-                  <Clock class="help-section-icon" />
-                  진행중 (IN PROGRESS)
-                </h3>
-                <p class="help-section-text">
-                  현재 작업 중인 할일들입니다.
-                  <strong class="help-highlight">진행중 상태의 할일은 내 달력에 표시</strong>되어
-                  오늘 집중해야 할 일을 한눈에 확인할 수 있습니다.
-                </p>
-              </section>
+        <section class="help-section">
+          <h3 class="help-section-title">
+            <Clock class="help-section-icon" />
+            {{ t('todoBoard.help.inProgressTitle') }}
+          </h3>
+          <p class="help-section-text">{{ t('todoBoard.help.inProgressText') }}</p>
+        </section>
 
-              <section class="help-section">
-                <h3 class="help-section-title">
-                  <CheckCircle2 class="help-section-icon" />
-                  완료 (DONE)
-                </h3>
-                <p class="help-section-text">
-                  완료된 할일들이 여기에 보관됩니다.
-                  필요하면 다시 진행중이나 할일로 되돌릴 수 있습니다.
-                </p>
-              </section>
+        <section class="help-section">
+          <h3 class="help-section-title">
+            <CheckCircle2 class="help-section-icon" />
+            {{ t('todoBoard.help.doneTitle') }}
+          </h3>
+          <p class="help-section-text">{{ t('todoBoard.help.doneText') }}</p>
+        </section>
 
-              <section class="help-section">
-                <h3 class="help-section-title">
-                  <Lightbulb class="help-section-icon" />
-                  사용 팁
-                </h3>
-                <ul class="help-tips-list">
-                  <li>카드를 <strong>드래그&드롭</strong>하여 상태를 변경하세요</li>
-                  <li>같은 컬럼 내에서도 드래그로 <strong>순서를 조정</strong>할 수 있습니다</li>
-                  <li>카드를 클릭하면 <strong>상세 내용</strong>을 확인하고 수정할 수 있습니다</li>
-                  <li><strong>마감일</strong>을 설정하면 기한 관리가 편리합니다</li>
-                  <li>필요한 경우 <strong>파일을 첨부</strong>할 수도 있습니다</li>
-                </ul>
-              </section>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
+        <section class="help-section">
+          <h3 class="help-section-title">
+            <Lightbulb class="help-section-icon" />
+            {{ t('todoBoard.help.tipsTitle') }}
+          </h3>
+          <ul class="help-tips-list">
+            <li>{{ t('todoBoard.help.tips.drag') }}</li>
+            <li>{{ t('todoBoard.help.tips.reorder') }}</li>
+            <li>{{ t('todoBoard.help.tips.details') }}</li>
+            <li>{{ t('todoBoard.help.tips.dueDate') }}</li>
+            <li>{{ t('todoBoard.help.tips.attachments') }}</li>
+          </ul>
+        </section>
+      </div>
+    </BaseModal>
   </div>
 </template>
 
@@ -709,6 +872,7 @@ onBeforeUnmount(() => {
 
 .todo-board-tab-label {
   text-align: left;
+  white-space: nowrap;
 }
 
 .todo-board-tab-count {
@@ -894,75 +1058,6 @@ onBeforeUnmount(() => {
   opacity: 1;
 }
 
-/* Help Modal Styles */
-.help-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: var(--dp-overlay-scrim);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-  z-index: 1000;
-}
-
-.help-modal {
-  background-color: var(--dp-bg-card);
-  border-radius: 1rem;
-  max-width: 500px;
-  width: 100%;
-  max-height: 85vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  box-shadow: var(--dp-shadow-lg);
-}
-
-.help-modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--dp-border-primary);
-  flex-shrink: 0;
-}
-
-.help-modal-title {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: var(--dp-text-primary);
-}
-
-.help-modal-close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  border: none;
-  background-color: transparent;
-  color: var(--dp-text-muted);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.help-modal-close:hover {
-  background-color: var(--dp-bg-tertiary);
-  color: var(--dp-text-secondary);
-}
-
-.help-modal-close svg {
-  width: 1.25rem;
-  height: 1.25rem;
-}
-
-.help-modal-content {
-  padding: 1.25rem;
-  overflow-y: auto;
-  flex: 1;
-}
-
 .help-section {
   margin-bottom: 1.25rem;
 }
@@ -1035,27 +1130,6 @@ onBeforeUnmount(() => {
   color: var(--dp-text-primary);
   font-weight: 600;
 }
-
-/* Modal Transition */
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.2s ease;
-}
-
-.modal-enter-active .help-modal,
-.modal-leave-active .help-modal {
-  transition: transform 0.2s ease;
-}
-
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
-
-.modal-enter-from .help-modal,
-.modal-leave-to .help-modal {
-  transform: scale(0.95);
-}
 </style>
 
 <style>
@@ -1083,10 +1157,7 @@ onBeforeUnmount(() => {
 }
 
 .kanban-fallback {
-  opacity: 0.95 !important;
-  box-shadow: var(--dp-shadow-lg) !important;
-  transform: rotate(2deg) !important;
-  background-color: var(--dp-bg-card) !important;
-  border-radius: 0.5rem;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 </style>

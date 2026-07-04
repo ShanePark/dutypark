@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { marked } from 'marked'
 import { authApi } from '@/api/auth'
 import { policyApi, type CurrentPoliciesDto } from '@/api/policy'
@@ -8,8 +9,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useSwal } from '@/composables/useSwal'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import PolicyModal from '@/components/common/PolicyModal.vue'
-import type { AxiosError } from 'axios'
 import { getSafeRedirect } from '@/utils/redirect'
+import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 
 marked.setOptions({
   breaks: true,
@@ -19,6 +20,7 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const { showError } = useSwal()
+const { t } = useI18n()
 
 const uuid = ref('')
 const username = ref('')
@@ -58,13 +60,13 @@ const missingRequiredItems = computed(() => {
   const items: string[] = []
 
   if (isUsernameMissing.value) {
-    items.push('사용자명 입력')
+    items.push(t('auth.ssoSignup.requiredItems.username'))
   } else if (isUsernameTooLong.value) {
-    items.push('사용자명 10자 이하 입력')
+    items.push(t('auth.ssoSignup.requiredItems.usernameMax'))
   }
 
-  if (!termAgree.value) items.push('이용약관 동의')
-  if (!privacyAgree.value) items.push('개인정보 처리방침 동의')
+  if (!termAgree.value) items.push(t('auth.ssoSignup.requiredItems.terms'))
+  if (!privacyAgree.value) items.push(t('auth.ssoSignup.requiredItems.privacy'))
 
   return items
 })
@@ -76,21 +78,23 @@ const shouldHighlightUsername = computed(() => {
 const usernameHelperText = computed(() => {
   if (isUsernameMissing.value) {
     return hasStartedFormInput.value
-      ? '사용자명을 입력해야 가입할 수 있어요.'
-      : '가입 시 사용할 사용자명을 1-10자로 입력해주세요.'
+      ? t('auth.ssoSignup.username.helper.emptyActive')
+      : t('auth.ssoSignup.username.helper.emptyIdle')
   }
-  if (isUsernameTooLong.value) return '사용자명은 10자 이내로 입력해주세요.'
-  return '가입 후 프로필과 일정에 표시될 이름입니다.'
+  if (isUsernameTooLong.value) return t('auth.ssoSignup.username.helper.tooLong')
+  return t('auth.ssoSignup.username.helper.valid')
 })
 
 const submitHint = computed(() => {
-  if (isPoliciesLoading.value) return '약관 정보를 불러오는 중입니다.'
+  if (isPoliciesLoading.value) return t('auth.ssoSignup.hints.loadingPolicies')
   if (!policies.value?.terms || !policies.value?.privacy) {
-    return '약관 정보를 불러오지 못해 지금은 가입할 수 없어요.'
+    return t('auth.ssoSignup.hints.missingPolicies')
   }
-  if (!uuid.value) return '소셜 로그인 정보를 확인할 수 없어 다시 로그인해야 합니다.'
+  if (!uuid.value) return t('auth.ssoSignup.hints.missingUuid')
   if (missingRequiredItems.value.length === 0) return ''
-  return `필수 항목을 완료해주세요: ${missingRequiredItems.value.join(', ')}`
+  return t('auth.ssoSignup.hints.requiredPrefix', {
+    items: missingRequiredItems.value.join(', '),
+  })
 })
 
 const submitHintClass = computed(() => {
@@ -123,7 +127,7 @@ onMounted(async () => {
   if (typeof uuidParam === 'string' && uuidParam) {
     uuid.value = uuidParam
   } else {
-    showError('잘못된 접근입니다. 소셜 로그인을 다시 시도해주세요.')
+    showError(t('auth.ssoSignup.errors.invalidAccess'))
     router.push('/auth/login')
     return
   }
@@ -165,10 +169,7 @@ async function handleSubmit() {
       query: redirectTarget.value ? { redirect: redirectTarget.value } : undefined,
     })
   } catch (error) {
-    const axiosError = error as AxiosError<{ message?: string }>
-    const message =
-      axiosError.response?.data?.message ||
-      '회원가입 중 오류가 발생했습니다. 다시 시도해주세요.'
+    const message = resolveApiErrorMessage(error, { fallbackKey: 'auth.ssoSignup.errors.submitFailed' }, t)
     showError(message)
   } finally {
     isLoading.value = false
@@ -181,8 +182,8 @@ async function handleSubmit() {
   <div class="min-h-screen flex items-center justify-center px-4 pb-safe pt-safe bg-dp-bg-secondary">
     <div class="max-w-md sm:max-w-xl lg:max-w-2xl w-full">
       <div class="text-center mb-6 sm:mb-8">
-        <h1 class="text-2xl sm:text-3xl font-bold text-dp-text-primary">회원가입</h1>
-        <p class="mt-2 text-dp-text-secondary">Dutypark에 오신 것을 환영합니다</p>
+        <h1 class="text-2xl sm:text-3xl font-bold text-dp-text-primary">{{ t('auth.ssoSignup.title') }}</h1>
+        <p class="mt-2 text-dp-text-secondary">{{ t('auth.ssoSignup.subtitle') }}</p>
       </div>
 
       <div class="rounded-lg shadow-md p-5 sm:p-6 bg-dp-bg-card">
@@ -190,7 +191,7 @@ async function handleSubmit() {
           <!-- Username input -->
           <div>
             <label for="username" class="block text-sm font-medium mb-1 text-dp-text-secondary">
-              사용자명
+              {{ t('auth.ssoSignup.username.label') }}
               <CharacterCounter :current="username.length" :max="10" />
             </label>
             <input
@@ -208,7 +209,7 @@ async function handleSubmit() {
                 backgroundColor: isLoading ? 'var(--dp-bg-tertiary)' : 'var(--dp-bg-input)',
                 color: 'var(--dp-text-primary)'
               }"
-              placeholder="사용자명을 입력하세요 (1-10자)"
+              :placeholder="t('auth.ssoSignup.username.placeholder')"
             />
             <p
               class="mt-1 text-sm"
@@ -222,14 +223,14 @@ async function handleSubmit() {
           <div>
             <div class="flex items-center justify-between mb-2">
               <label class="block text-sm font-medium text-dp-text-secondary">
-                이용약관
+                {{ t('auth.ssoSignup.policy.termsTitle') }}
               </label>
               <button
                 type="button"
                 class="text-xs text-dp-accent hover:text-dp-accent-hover hover:underline"
                 @click="openPolicyModal('terms')"
               >
-                전체보기 →
+                {{ t('auth.ssoSignup.policy.viewAll') }} →
               </button>
             </div>
             <div
@@ -250,7 +251,7 @@ async function handleSubmit() {
                 backgroundColor: 'var(--dp-bg-tertiary)',
               }"
             >
-              <p class="text-sm text-dp-danger">이용약관을 불러올 수 없습니다.</p>
+              <p class="text-sm text-dp-danger">{{ t('auth.ssoSignup.policy.termsLoadError') }}</p>
             </div>
             <div
               v-else
@@ -276,7 +277,7 @@ async function handleSubmit() {
               class="h-5 w-5 text-dp-accent focus:ring-dp-accent rounded cursor-pointer disabled:cursor-not-allowed border-dp-border-input"
             />
             <label for="termAgree" class="ml-2 text-sm cursor-pointer text-dp-text-secondary">
-              이용약관에 동의합니다 <span class="text-dp-danger">*</span>
+              {{ t('auth.ssoSignup.policy.agreeTerms') }} <span class="text-dp-danger">*</span>
             </label>
           </div>
 
@@ -284,14 +285,14 @@ async function handleSubmit() {
           <div>
             <div class="flex items-center justify-between mb-2">
               <label class="block text-sm font-medium text-dp-text-secondary">
-                개인정보 처리방침
+                {{ t('auth.ssoSignup.policy.privacyTitle') }}
               </label>
               <button
                 type="button"
                 class="text-xs text-dp-accent hover:text-dp-accent-hover hover:underline"
                 @click="openPolicyModal('privacy')"
               >
-                전체보기 →
+                {{ t('auth.ssoSignup.policy.viewAll') }} →
               </button>
             </div>
             <div
@@ -312,7 +313,7 @@ async function handleSubmit() {
                 backgroundColor: 'var(--dp-bg-tertiary)',
               }"
             >
-              <p class="text-sm text-dp-danger">개인정보 처리방침을 불러올 수 없습니다.</p>
+              <p class="text-sm text-dp-danger">{{ t('auth.ssoSignup.policy.privacyLoadError') }}</p>
             </div>
             <div
               v-else
@@ -338,7 +339,7 @@ async function handleSubmit() {
               class="h-5 w-5 text-dp-accent focus:ring-dp-accent rounded cursor-pointer disabled:cursor-not-allowed border-dp-border-input"
             />
             <label for="privacyAgree" class="ml-2 text-sm cursor-pointer text-dp-text-secondary">
-              개인정보 처리방침에 동의합니다 <span class="text-dp-danger">*</span>
+              {{ t('auth.ssoSignup.policy.agreePrivacy') }} <span class="text-dp-danger">*</span>
             </label>
           </div>
 
@@ -369,9 +370,9 @@ async function handleSubmit() {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 />
               </svg>
-              가입 처리 중...
+              {{ t('auth.ssoSignup.submit.loading') }}
             </template>
-            <template v-else>가입하기</template>
+            <template v-else>{{ t('auth.ssoSignup.submit.idle') }}</template>
           </button>
           <p v-if="submitHint" class="text-sm" :class="submitHintClass">
             {{ submitHint }}
@@ -386,7 +387,7 @@ async function handleSubmit() {
           class="text-xs transition hover:underline text-dp-text-muted"
           @click="openPolicyModal('terms')"
         >
-          이용약관
+          {{ t('auth.ssoSignup.footer.terms') }}
         </button>
         <span class="mx-2 text-xs text-dp-text-muted">|</span>
         <button
@@ -394,7 +395,7 @@ async function handleSubmit() {
           class="text-xs transition hover:underline text-dp-text-muted"
           @click="openPolicyModal('privacy')"
         >
-          개인정보 처리방침
+          {{ t('auth.ssoSignup.footer.privacy') }}
         </button>
       </div>
     </div>

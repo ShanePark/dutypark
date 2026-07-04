@@ -40,7 +40,7 @@ class DutyTypeService(
             .filter { it.id != dutyType.id }
             .forEach {
                 if (it.name == dutyTypeUpdateDto.name) {
-                    throw IllegalArgumentException("중복된 근무명이 존재합니다.")
+                    throw IllegalArgumentException("dutyType.name.duplicate")
                 }
             }
 

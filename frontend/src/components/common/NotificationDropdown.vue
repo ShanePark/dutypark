@@ -1,18 +1,25 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { CheckCheck, ChevronRight } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
+import 'dayjs/locale/es'
+import 'dayjs/locale/ja'
 import 'dayjs/locale/ko'
+import 'dayjs/locale/zh-cn'
 import { useNotificationStore } from '@/stores/notification'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationNavigation } from '@/composables/useNotificationNavigation'
 import type { NotificationDto } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
+import {
+  formatNotificationMessage,
+  getNotificationActor,
+} from '@/utils/notificationFormatter'
 
 dayjs.extend(relativeTime)
-dayjs.locale('ko')
 
 interface Props {
   visible: boolean
@@ -29,13 +36,42 @@ const router = useRouter()
 const notificationStore = useNotificationStore()
 const authStore = useAuthStore()
 const { navigateToNotification } = useNotificationNavigation()
+const { locale, t } = useI18n()
+const isMarkingAllAsRead = ref(false)
+
+const dayjsLocale = computed(() => {
+  if (locale.value.startsWith('ja')) return 'ja'
+  if (locale.value.startsWith('en')) return 'en'
+  if (locale.value.startsWith('es')) return 'es'
+  if (locale.value.startsWith('zh')) return 'zh-cn'
+  return 'ko'
+})
 
 const displayNotifications = computed(() => {
   return notificationStore.recentNotifications.slice(0, 10)
 })
 
+const canMarkAllAsRead = computed(() => {
+  return notificationStore.hasUnread ||
+    displayNotifications.value.some(notification => !notification.isRead)
+})
+
 function formatTimeAgo(dateString: string): string {
-  return dayjs(dateString).fromNow()
+  return dayjs(dateString).locale(dayjsLocale.value).fromNow()
+}
+
+function getNotificationMessage(notification: NotificationDto): string {
+  return formatNotificationMessage(notification, t)
+}
+
+function getAvatarProps(notification: NotificationDto) {
+  const actor = getNotificationActor(notification)
+  return {
+    memberId: notification.actorId,
+    name: actor?.name ?? '',
+    hasProfilePhoto: actor?.hasProfilePhoto ?? false,
+    profilePhotoVersion: actor?.profilePhotoVersion ?? 0,
+  }
 }
 
 async function handleNotificationClick(notification: NotificationDto) {
@@ -60,10 +96,17 @@ async function handleNotificationClick(notification: NotificationDto) {
 }
 
 async function handleMarkAllAsRead() {
+  if (isMarkingAllAsRead.value) {
+    return
+  }
+
+  isMarkingAllAsRead.value = true
   try {
     await notificationStore.markAllAsRead()
   } catch {
     // Error already logged in store
+  } finally {
+    isMarkingAllAsRead.value = false
   }
 }
 
@@ -101,26 +144,27 @@ function handleOverlayClick() {
       >
       <!-- Header -->
       <div class="notification-dropdown-header flex items-center justify-between px-4 py-3">
-        <h3 class="text-sm font-semibold">알림</h3>
+        <h3 class="text-sm font-semibold">{{ t('notifications.dropdown.title') }}</h3>
         <button
-          v-if="notificationStore.hasUnread"
+          v-if="canMarkAllAsRead"
           type="button"
-          class="notification-mark-all-btn cursor-pointer flex items-center gap-1 text-xs px-2 py-1 rounded transition-all duration-150"
+          class="notification-action-btn notification-mark-all-btn cursor-pointer flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg transition-all duration-150 min-h-[44px]"
+          :disabled="isMarkingAllAsRead"
           @click="handleMarkAllAsRead"
         >
-          <CheckCheck class="w-3.5 h-3.5" />
-          전체 읽음
+          <CheckCheck class="w-4 h-4" />
+          {{ t('notifications.dropdown.markAllAsRead') }}
         </button>
       </div>
 
       <!-- Notification List -->
       <div class="notification-dropdown-body max-h-80 overflow-y-auto">
         <div v-if="notificationStore.isLoading" class="p-4 text-center">
-          <span class="notification-loading-text text-sm">불러오는 중...</span>
+          <span class="notification-loading-text text-sm">{{ t('notifications.common.loading') }}</span>
         </div>
 
         <div v-else-if="displayNotifications.length === 0" class="p-8 text-center">
-          <span class="notification-empty-text text-sm">알림이 없습니다</span>
+          <span class="notification-empty-text text-sm">{{ t('notifications.common.empty') }}</span>
         </div>
 
         <template v-else>
@@ -134,10 +178,7 @@ function handleOverlayClick() {
           >
             <div class="relative">
               <ProfileAvatar
-                :member-id="notification.actorId"
-                :name="notification.actorName || ''"
-                :has-profile-photo="notification.actorHasProfilePhoto ?? false"
-                :profile-photo-version="notification.actorProfilePhotoVersion ?? 0"
+                v-bind="getAvatarProps(notification)"
                 size="sm"
               />
               <span
@@ -150,7 +191,7 @@ function handleOverlayClick() {
                 class="text-sm truncate"
                 :class="notification.isRead ? 'notification-item-title-read' : 'notification-item-title'"
               >
-                {{ notification.title }}
+                {{ getNotificationMessage(notification) }}
               </p>
               <p class="notification-item-time text-xs mt-0.5">
                 {{ formatTimeAgo(notification.createdAt) }}
@@ -167,7 +208,7 @@ function handleOverlayClick() {
           class="notification-view-all-btn cursor-pointer w-full flex items-center justify-center gap-1 text-sm py-2 rounded transition-all duration-150"
           @click="handleViewAll"
         >
-          더보기
+          {{ t('notifications.dropdown.viewAll') }}
           <ChevronRight class="w-4 h-4" />
         </button>
       </div>
@@ -205,13 +246,29 @@ function handleOverlayClick() {
   color: var(--dp-text-primary);
 }
 
-.notification-mark-all-btn {
-  color: var(--dp-text-muted);
+.notification-action-btn {
+  color: var(--dp-text-secondary);
+  background-color: var(--dp-bg-tertiary);
+  border: 1px solid var(--dp-border-secondary);
+  box-shadow: var(--dp-shadow-sm);
 }
 
-.notification-mark-all-btn:hover {
+.notification-action-btn:hover {
   color: var(--dp-text-primary);
   background-color: var(--dp-bg-hover);
+  border-color: var(--dp-border-hover);
+}
+
+.notification-action-btn:focus-visible {
+  outline: none;
+  box-shadow:
+    var(--dp-shadow-sm),
+    0 0 0 3px var(--dp-accent-ring);
+}
+
+.notification-action-btn:disabled {
+  cursor: progress;
+  opacity: 0.65;
 }
 
 .notification-dropdown-body {

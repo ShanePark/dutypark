@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
 import com.tistory.shanepark.dutypark.attachment.domain.entity.AttachmentUploadSession
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.schedule.service.SchedulePermissionService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -43,7 +44,7 @@ class AttachmentPermissionEvaluatorTest {
 
         org.mockito.kotlin.verify(schedulePermissionService).checkScheduleReadAuthority(
             org.mockito.kotlin.eq(loginMember),
-            org.mockito.kotlin.any()
+            org.mockito.kotlin.any<UUID>()
         )
     }
 
@@ -53,8 +54,8 @@ class AttachmentPermissionEvaluatorTest {
 
         assertThatThrownBy {
             evaluator.checkReadPermission(loginMember, attachment)
-        }.isInstanceOf(IllegalStateException::class.java)
-            .hasMessageContaining("has no contextId")
+        }.isInstanceOf(BadRequestException::class.java)
+            .hasMessage("attachment.context.missing")
     }
 
     @Test
@@ -63,8 +64,8 @@ class AttachmentPermissionEvaluatorTest {
 
         assertThatThrownBy {
             evaluator.checkWritePermission(loginMember, attachment)
-        }.isInstanceOf(IllegalStateException::class.java)
-            .hasMessageContaining("has no contextId")
+        }.isInstanceOf(BadRequestException::class.java)
+            .hasMessage("attachment.context.missing")
     }
 
     @Test
@@ -111,7 +112,7 @@ class AttachmentPermissionEvaluatorTest {
         assertThatThrownBy {
             evaluator.checkWritePermission(loginMember, attachment)
         }.isInstanceOf(AuthException::class.java)
-            .hasMessageContaining("does not belong to user")
+            .hasMessage("attachment.profile.forbidden")
     }
 
     @Test
@@ -129,8 +130,8 @@ class AttachmentPermissionEvaluatorTest {
 
         assertThatThrownBy {
             evaluator.checkWritePermission(loginMember, attachment)
-        }.isInstanceOf(IllegalStateException::class.java)
-            .hasMessageContaining("has no contextId")
+        }.isInstanceOf(BadRequestException::class.java)
+            .hasMessage("attachment.context.missing")
     }
 
     @Test
@@ -140,7 +141,7 @@ class AttachmentPermissionEvaluatorTest {
         assertThatThrownBy {
             evaluator.checkWritePermission(loginMember, attachment)
         }.isInstanceOf(AuthException::class.java)
-            .hasMessageContaining("does not belong to user")
+            .hasMessage("attachment.profile.forbidden")
     }
 
     @Test
@@ -167,7 +168,7 @@ class AttachmentPermissionEvaluatorTest {
         assertThatThrownBy {
             evaluator.checkSessionOwnership(loginMember, session)
         }.isInstanceOf(AuthException::class.java)
-            .hasMessageContaining("does not belong to user")
+            .hasMessage("attachment.session.forbidden")
     }
 
     @Test
@@ -184,7 +185,7 @@ class AttachmentPermissionEvaluatorTest {
         assertThatThrownBy {
             evaluator.checkSessionWritePermission(loginMember, session)
         }.isInstanceOf(AuthException::class.java)
-            .hasMessageContaining("does not belong to user")
+            .hasMessage("attachment.session.forbidden")
     }
 
     @Test
@@ -211,7 +212,7 @@ class AttachmentPermissionEvaluatorTest {
         assertThatThrownBy {
             evaluator.checkSessionWritePermission(loginMember, session)
         }.isInstanceOf(AuthException::class.java)
-            .hasMessageContaining("does not belong to user")
+            .hasMessage("attachment.profile.forbidden")
     }
 
     @Test
@@ -232,9 +233,9 @@ class AttachmentPermissionEvaluatorTest {
     fun `checkReadPermission succeeds for TODO context when owner`() {
         val todoId = UUID.randomUUID()
         val attachment = createAttachment(contextType = AttachmentContextType.TODO, contextId = todoId.toString())
-        val todo = createTodo(createMember(loginMember.id), todoId)
 
-        whenever(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        whenever(todoRepository.existsById(todoId)).thenReturn(true)
+        whenever(todoRepository.existsAccessibleTodo(todoId, loginMember.id)).thenReturn(true)
 
         assertThatCode {
             evaluator.checkReadPermission(loginMember, attachment)
@@ -242,17 +243,30 @@ class AttachmentPermissionEvaluatorTest {
     }
 
     @Test
-    fun `checkReadPermission throws AuthException for TODO context when not owner`() {
+    fun `checkReadPermission succeeds for TODO context when tagged member`() {
         val todoId = UUID.randomUUID()
         val attachment = createAttachment(contextType = AttachmentContextType.TODO, contextId = todoId.toString())
-        val todo = createTodo(createMember(otherMember.id), todoId)
 
-        whenever(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        whenever(todoRepository.existsById(todoId)).thenReturn(true)
+        whenever(todoRepository.existsAccessibleTodo(todoId, loginMember.id)).thenReturn(true)
+
+        assertThatCode {
+            evaluator.checkReadPermission(loginMember, attachment)
+        }.doesNotThrowAnyException()
+    }
+
+    @Test
+    fun `checkReadPermission throws AuthException for TODO context when not accessible`() {
+        val todoId = UUID.randomUUID()
+        val attachment = createAttachment(contextType = AttachmentContextType.TODO, contextId = todoId.toString())
+
+        whenever(todoRepository.existsById(todoId)).thenReturn(true)
+        whenever(todoRepository.existsAccessibleTodo(todoId, loginMember.id)).thenReturn(false)
 
         assertThatThrownBy {
             evaluator.checkReadPermission(loginMember, attachment)
         }.isInstanceOf(AuthException::class.java)
-            .hasMessageContaining("does not belong to user")
+            .hasMessage("attachment.todo.access.forbidden")
     }
 
     @Test
@@ -263,7 +277,7 @@ class AttachmentPermissionEvaluatorTest {
         assertThatThrownBy {
             evaluator.checkReadPermission(null, attachment)
         }.isInstanceOf(AuthException::class.java)
-            .hasMessageContaining("Login required")
+            .hasMessage("attachment.todo.auth.required")
     }
 
     @Test
@@ -271,7 +285,7 @@ class AttachmentPermissionEvaluatorTest {
         val todoId = UUID.randomUUID()
         val attachment = createAttachment(contextType = AttachmentContextType.TODO, contextId = todoId.toString())
 
-        whenever(todoRepository.findById(todoId)).thenReturn(Optional.empty())
+        whenever(todoRepository.existsById(todoId)).thenReturn(false)
 
         assertThatThrownBy {
             evaluator.checkReadPermission(loginMember, attachment)
@@ -283,9 +297,9 @@ class AttachmentPermissionEvaluatorTest {
     fun `checkWritePermission succeeds for TODO context when owner`() {
         val todoId = UUID.randomUUID()
         val attachment = createAttachment(contextType = AttachmentContextType.TODO, contextId = todoId.toString())
-        val todo = createTodo(createMember(loginMember.id), todoId)
 
-        whenever(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        whenever(todoRepository.existsById(todoId)).thenReturn(true)
+        whenever(todoRepository.existsByIdAndMemberId(todoId, loginMember.id)).thenReturn(true)
 
         assertThatCode {
             evaluator.checkWritePermission(loginMember, attachment)
@@ -296,14 +310,14 @@ class AttachmentPermissionEvaluatorTest {
     fun `checkWritePermission throws AuthException for TODO context when not owner`() {
         val todoId = UUID.randomUUID()
         val attachment = createAttachment(contextType = AttachmentContextType.TODO, contextId = todoId.toString())
-        val todo = createTodo(createMember(otherMember.id), todoId)
 
-        whenever(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        whenever(todoRepository.existsById(todoId)).thenReturn(true)
+        whenever(todoRepository.existsByIdAndMemberId(todoId, loginMember.id)).thenReturn(false)
 
         assertThatThrownBy {
             evaluator.checkWritePermission(loginMember, attachment)
         }.isInstanceOf(AuthException::class.java)
-            .hasMessageContaining("does not belong to user")
+            .hasMessage("attachment.todo.write.forbidden")
     }
 
     @Test
@@ -314,9 +328,9 @@ class AttachmentPermissionEvaluatorTest {
             contextType = AttachmentContextType.TODO,
             targetContextId = todoId.toString()
         )
-        val todo = createTodo(createMember(loginMember.id), todoId)
 
-        whenever(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        whenever(todoRepository.existsById(todoId)).thenReturn(true)
+        whenever(todoRepository.existsByIdAndMemberId(todoId, loginMember.id)).thenReturn(true)
 
         assertThatCode {
             evaluator.checkSessionWritePermission(loginMember, session)
@@ -331,14 +345,14 @@ class AttachmentPermissionEvaluatorTest {
             contextType = AttachmentContextType.TODO,
             targetContextId = todoId.toString()
         )
-        val todo = createTodo(createMember(otherMember.id), todoId)
 
-        whenever(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        whenever(todoRepository.existsById(todoId)).thenReturn(true)
+        whenever(todoRepository.existsByIdAndMemberId(todoId, loginMember.id)).thenReturn(false)
 
         assertThatThrownBy {
             evaluator.checkSessionWritePermission(loginMember, session)
         }.isInstanceOf(AuthException::class.java)
-            .hasMessageContaining("does not belong to user")
+            .hasMessage("attachment.todo.write.forbidden")
     }
 
     private fun createAttachment(

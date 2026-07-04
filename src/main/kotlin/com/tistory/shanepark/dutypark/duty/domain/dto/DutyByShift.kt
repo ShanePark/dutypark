@@ -1,8 +1,8 @@
 package com.tistory.shanepark.dutypark.duty.domain.dto
 
-import com.tistory.shanepark.dutypark.member.domain.dto.SimpleMemberDto
+import com.tistory.shanepark.dutypark.member.domain.dto.MemberPreviewDto
 
 data class DutyByShift(
     val dutyType: DutyTypeDto,
-    val members: List<SimpleMemberDto>
+    val members: List<MemberPreviewDto>
 )

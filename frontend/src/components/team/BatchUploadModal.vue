@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, watch, toRef } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import BaseModal from '@/components/common/BaseModal.vue'
 import { useSwal } from '@/composables/useSwal'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
 import { teamApi } from '@/api/team'
+import { resolveApiCodeMessage, resolveApiErrorMessage } from '@/utils/resolveApiError'
 import { X, Loader2 } from 'lucide-vue-next'
 
 const props = defineProps<{
@@ -18,16 +19,28 @@ const emit = defineEmits<{
 }>()
 
 const { showWarning, showError, toastSuccess } = useSwal()
-const isOpenRef = toRef(props, 'isOpen')
-
-useBodyScrollLock(isOpenRef)
-useEscapeKey(isOpenRef, () => emit('close'))
+const { t } = useI18n()
 
 const batchForm = ref({
   file: null as File | null,
   year: new Date().getFullYear(),
   month: new Date().getMonth() + 1,
 })
+const currentYear = new Date().getFullYear()
+const maxYear = currentYear + 1
+
+const isFileMissing = computed(() => !batchForm.value.file)
+const isPeriodInvalid = computed(() => {
+  const year = Number(batchForm.value.year)
+  const month = Number(batchForm.value.month)
+  return !Number.isInteger(year) || !Number.isInteger(month) ||
+    year < currentYear || year > maxYear || month < 1 || month > 12
+})
+const periodFeedbackMessage = computed(() => {
+  if (!isPeriodInvalid.value) return ''
+  return t('team.batchUpload.validation.period')
+})
+const isUploadDisabled = computed(() => props.saving || isFileMissing.value || isPeriodInvalid.value)
 
 watch(() => props.isOpen, (open) => {
   if (!open) return
@@ -51,7 +64,11 @@ function handleFileChange(event: Event) {
 
 async function uploadBatch() {
   if (!batchForm.value.file) {
-    showWarning('파일을 선택해주세요.')
+    showWarning(t('team.batchUpload.selectFile'))
+    return
+  }
+  if (isPeriodInvalid.value) {
+    showWarning(periodFeedbackMessage.value)
     return
   }
 
@@ -63,15 +80,15 @@ async function uploadBatch() {
       batchForm.value.year,
       batchForm.value.month
     )
-    if (result.data.success) {
-      toastSuccess('근무표가 업로드되었습니다.')
+    if (result.data.result) {
+      toastSuccess(t('team.batchUpload.success'))
       close()
     } else {
-      showError(result.data.message || '근무표 업로드에 실패했습니다.')
+      showError(resolveApiCodeMessage(result.data, { fallbackKey: 'team.batchUpload.failed' }, t))
     }
   } catch (error: any) {
     console.error('Failed to upload batch:', error)
-    const message = error.response?.data?.message || '근무표 업로드에 실패했습니다.'
+    const message = resolveApiErrorMessage(error, { fallbackKey: 'team.batchUpload.failed' }, t)
     showError(message)
   } finally {
     emit('update:saving', false)
@@ -80,79 +97,82 @@ async function uploadBatch() {
 </script>
 
 <template>
-  <div
-    v-if="isOpen"
-    class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
-    @click.self="close"
+  <BaseModal
+    :is-open="isOpen"
+    size="md"
+    height="fit"
+    @close="close"
   >
-    <div class="rounded-lg shadow-xl w-full max-w-md bg-dp-bg-modal">
-      <div class="flex items-center justify-between p-4 border-b border-dp-border-primary">
-        <h3 class="text-lg font-bold text-dp-text-primary">근무표 업로드</h3>
-        <button
-          @click="close"
-          class="p-1.5 rounded-full hover-close-btn cursor-pointer"
-        >
-          <X class="w-5 h-5" />
-        </button>
+    <div class="modal-header">
+      <h2>{{ t('team.batchUpload.title') }}</h2>
+      <button
+        @click="close"
+        class="p-1.5 rounded-full hover-close-btn cursor-pointer"
+        :aria-label="t('common.actions.close')"
+      >
+        <X class="w-5 h-5" />
+      </button>
+    </div>
+
+    <div class="modal-body-form">
+      <div>
+        <label class="form-label">
+          {{ t('team.batchUpload.fileLabel') }}
+        </label>
+        <input
+          type="file"
+          accept=".xlsx"
+          @change="handleFileChange"
+          class="form-control"
+          :aria-invalid="isFileMissing"
+        />
       </div>
 
-      <div class="p-4 space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
-            근무표 파일 업로드 (.xlsx)
+          <label class="form-label">
+            {{ t('team.batchUpload.year') }}
           </label>
           <input
-            type="file"
-            accept=".xlsx"
-            @change="handleFileChange"
-            class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent bg-dp-bg-input border-dp-border-input text-dp-text-primary"
+            v-model.number="batchForm.year"
+            type="number"
+            :min="currentYear"
+            :max="maxYear"
+            class="form-control"
+            :aria-invalid="isPeriodInvalid"
           />
         </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
-              연도
-            </label>
-            <input
-              v-model.number="batchForm.year"
-              type="number"
-              :min="new Date().getFullYear()"
-              :max="new Date().getFullYear() + 1"
-              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent bg-dp-bg-input border-dp-border-input text-dp-text-primary"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1 text-dp-text-secondary">
-              월
-            </label>
-            <input
-              v-model.number="batchForm.month"
-              type="number"
-              min="1"
-              max="12"
-              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent bg-dp-bg-input border-dp-border-input text-dp-text-primary"
-            />
-          </div>
+        <div>
+          <label class="form-label">
+            {{ t('team.batchUpload.month') }}
+          </label>
+          <input
+            v-model.number="batchForm.month"
+            type="number"
+            min="1"
+            max="12"
+            class="form-control"
+            :aria-invalid="isPeriodInvalid"
+          />
         </div>
       </div>
-
-      <div class="flex justify-end gap-2 p-4 border-t border-dp-border-primary">
-        <button
-          @click="uploadBatch"
-          :disabled="saving || !batchForm.file"
-          class="px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-        >
-          <Loader2 v-if="saving" class="w-4 h-4 animate-spin" />
-          업로드
-        </button>
-        <button
-          @click="close"
-          class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"
-        >
-          취소
-        </button>
-      </div>
     </div>
-  </div>
+
+    <div class="modal-actions modal-actions-end modal-footer-safe">
+      <button
+        @click="uploadBatch"
+        :disabled="isUploadDisabled"
+        class="px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
+      >
+        <Loader2 v-if="saving" class="w-4 h-4 animate-spin" />
+        {{ t('common.actions.upload') }}
+      </button>
+      <button
+        @click="close"
+        class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"
+      >
+        {{ t('common.actions.cancel') }}
+      </button>
+    </div>
+  </BaseModal>
 </template>

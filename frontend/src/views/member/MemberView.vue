@@ -1,21 +1,22 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore, type ThemeMode } from '@/stores/theme'
 import { memberApi, refreshTokenApi } from '@/api/member'
 import { authApi } from '@/api/auth'
 import { useSwal } from '@/composables/useSwal'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
 import { useKakao } from '@/composables/useKakao'
 import { useNaver } from '@/composables/useNaver'
 import { usePushNotification } from '@/composables/usePushNotification'
-import type { FriendDto, MemberDto, RefreshTokenDto, CalendarVisibility } from '@/types'
+import type { MemberPreviewDto, MemberDto, RefreshTokenDto, CalendarVisibility } from '@/types'
 import { VISIBILITY_COLORS } from '@/utils/visibility'
+import BaseModal from '@/components/common/BaseModal.vue'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
 import ProfilePhotoUploader from '@/components/common/ProfilePhotoUploader.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
+import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import {
   User,
   Building2,
@@ -46,6 +47,7 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const themeStore = useThemeStore()
+const { t } = useI18n()
 const { showSuccess, showError, showInfo, confirm, toastSuccess } = useSwal()
 
 // Managed members (accounts I manage)
@@ -57,8 +59,6 @@ const impersonating = ref<number | null>(null)
 const showAuxiliaryModal = ref(false)
 const auxiliaryName = ref('')
 const creatingAuxiliary = ref(false)
-useBodyScrollLock(showAuxiliaryModal)
-useEscapeKey(showAuxiliaryModal, () => { showAuxiliaryModal.value = false })
 
 async function fetchManagedMembers() {
   managedMembersLoading.value = true
@@ -80,11 +80,11 @@ function openAuxiliaryModal() {
 async function createAuxiliaryAccount() {
   const name = auxiliaryName.value.trim()
   if (!name) {
-    showError('이름을 입력해주세요.')
+    showError(t('member.auxiliary.validation.required'))
     return
   }
   if (name.length > 10) {
-    showError('이름은 10자 이내로 입력해주세요.')
+    showError(t('member.auxiliary.validation.max'))
     return
   }
 
@@ -93,10 +93,10 @@ async function createAuxiliaryAccount() {
     await memberApi.createAuxiliaryAccount(name)
     await fetchManagedMembers()
     showAuxiliaryModal.value = false
-    toastSuccess('보조 계정이 생성되었습니다.')
+    toastSuccess(t('member.auxiliary.success'))
   } catch (error: any) {
     console.error('Failed to create auxiliary account:', error)
-    const errorMessage = error.response?.data?.message || '보조 계정 생성에 실패했습니다.'
+    const errorMessage = resolveApiErrorMessage(error, { fallbackKey: 'member.auxiliary.createFailed' }, t)
     showError(errorMessage)
   } finally {
     creatingAuxiliary.value = false
@@ -107,8 +107,8 @@ async function handleImpersonate(member: MemberDto) {
   if (!member.id) return
 
   const confirmed = await confirm(
-    `${member.name} 계정으로 전환하시겠습니까?\n\n전환 후에는 해당 계정의 모든 기능을 사용할 수 있습니다.`,
-    '계정 전환'
+    t('member.manager.impersonateMessage', { name: member.name }),
+    t('member.manager.impersonateTitle')
   )
 
   if (!confirmed) return
@@ -119,7 +119,7 @@ async function handleImpersonate(member: MemberDto) {
     router.push('/')
   } catch (error: any) {
     console.error('Failed to impersonate:', error)
-    const errorMessage = error.response?.data?.error || '계정 전환에 실패했습니다.'
+    const errorMessage = resolveApiErrorMessage(error, { fallbackKey: 'member.manager.impersonateFailed' }, t)
     showError(errorMessage)
   } finally {
     impersonating.value = null
@@ -144,11 +144,13 @@ const showPushSettings = computed(() => {
 })
 
 const pushStatusText = computed(() => {
-  if (!pushNotification.isSupported.value) return '이 기기에서 지원하지 않음'
-  if (!pushNotification.isEnabled.value) return '서버에서 비활성화됨'
-  if (pushNotification.permission.value === 'denied') return '차단됨 (브라우저 설정에서 변경 필요)'
-  if (pushNotification.permission.value === 'granted' && pushNotification.isSubscribed.value) return '활성화됨'
-  return '비활성화됨'
+  if (!pushNotification.isSupported.value) return t('member.push.status.unsupported')
+  if (!pushNotification.isEnabled.value) return t('member.push.status.serverDisabled')
+  if (pushNotification.permission.value === 'denied') return t('member.push.status.denied')
+  if (pushNotification.permission.value === 'granted' && pushNotification.isSubscribed.value) {
+    return t('member.push.status.enabled')
+  }
+  return t('member.push.status.disabled')
 })
 
 async function togglePushNotification() {
@@ -158,18 +160,18 @@ async function togglePushNotification() {
   try {
     if (pushNotification.permission.value === 'granted' && pushNotification.isSubscribed.value) {
       await pushNotification.unsubscribe()
-      toastSuccess('알림이 해제되었습니다.')
+      toastSuccess(t('member.push.messages.disabled'))
     } else {
       const success = await pushNotification.subscribe()
       if (success) {
-        toastSuccess('알림이 활성화되었습니다.')
+        toastSuccess(t('member.push.messages.enabled'))
       } else if (pushNotification.permission.value === 'denied') {
-        showError('알림이 차단되어 있습니다. 브라우저 설정에서 알림을 허용해주세요.')
+        showError(t('member.push.messages.deniedHelp'))
       }
     }
   } catch (error) {
     console.error('Failed to toggle push notification:', error)
-    showError('알림 설정 변경에 실패했습니다.')
+    showError(t('member.push.messages.updateFailed'))
   } finally {
     togglingPush.value = false
   }
@@ -183,10 +185,16 @@ async function initPushNotification() {
 }
 
 // Theme settings
-const themeOptions: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
-  { value: 'light', label: '라이트', icon: Sun },
-  { value: 'dark', label: '다크', icon: Moon },
-]
+const themeOptions = computed<{ value: ThemeMode; label: string; icon: typeof Sun }[]>(() => [
+  { value: 'light', label: t('member.theme.options.light'), icon: Sun },
+  { value: 'dark', label: t('member.theme.options.dark'), icon: Moon },
+])
+
+const currentThemeLabel = computed(() => {
+  return themeStore.mode === 'dark'
+    ? t('member.theme.options.dark')
+    : t('member.theme.options.light')
+})
 
 function setTheme(mode: ThemeMode) {
   themeStore.setTheme(mode)
@@ -204,25 +212,45 @@ const connectingSso = ref<SsoProvider | null>(null)
 // Visibility settings
 const calendarVisibility = ref<CalendarVisibility>('FRIENDS')
 const showVisibilityModal = ref(false)
-useBodyScrollLock(showVisibilityModal)
-useEscapeKey(showVisibilityModal, () => { showVisibilityModal.value = false })
 
 const visibilityLabel = computed(() => {
   const labels: Record<CalendarVisibility, string> = {
-    PUBLIC: '누구나',
-    FRIENDS: '친구만',
-    FAMILY: '가족만',
-    PRIVATE: '비공개',
+    PUBLIC: t('member.visibility.options.public.label'),
+    FRIENDS: t('member.visibility.options.friends.label'),
+    FAMILY: t('member.visibility.options.family.label'),
+    PRIVATE: t('member.visibility.options.private.label'),
   }
   return labels[calendarVisibility.value]
 })
 
-const visibilityOptions: { value: CalendarVisibility; label: string; color: string; description: string }[] = [
-  { value: 'PUBLIC', label: '누구나', color: VISIBILITY_COLORS.PUBLIC, description: '모든 사용자가 내 시간표를 볼 수 있습니다' },
-  { value: 'FRIENDS', label: '친구만', color: VISIBILITY_COLORS.FRIENDS, description: '친구로 등록된 사용자만 볼 수 있습니다' },
-  { value: 'FAMILY', label: '가족만', color: VISIBILITY_COLORS.FAMILY, description: '가족으로 등록된 사용자만 볼 수 있습니다' },
-  { value: 'PRIVATE', label: '비공개', color: VISIBILITY_COLORS.PRIVATE, description: '나만 볼 수 있습니다' },
-]
+const visibilityOptions = computed<
+  { value: CalendarVisibility; label: string; color: string; description: string }[]
+>(() => [
+  {
+    value: 'PUBLIC',
+    label: t('member.visibility.options.public.label'),
+    color: VISIBILITY_COLORS.PUBLIC,
+    description: t('member.visibility.options.public.description'),
+  },
+  {
+    value: 'FRIENDS',
+    label: t('member.visibility.options.friends.label'),
+    color: VISIBILITY_COLORS.FRIENDS,
+    description: t('member.visibility.options.friends.description'),
+  },
+  {
+    value: 'FAMILY',
+    label: t('member.visibility.options.family.label'),
+    color: VISIBILITY_COLORS.FAMILY,
+    description: t('member.visibility.options.family.description'),
+  },
+  {
+    value: 'PRIVATE',
+    label: t('member.visibility.options.private.label'),
+    color: VISIBILITY_COLORS.PRIVATE,
+    description: t('member.visibility.options.private.description'),
+  },
+])
 
 const visibilityColorClass = computed(() => VISIBILITY_COLORS[calendarVisibility.value] ?? 'bg-dp-accent')
 
@@ -236,14 +264,14 @@ async function setVisibility(value: CalendarVisibility) {
     showVisibilityModal.value = false
   } catch (error) {
     console.error('Failed to update visibility:', error)
-    showError('공개 설정 변경에 실패했습니다.')
+    showError(t('member.visibility.updateFailed'))
   } finally {
     savingVisibility.value = false
   }
 }
 
 // Manager delegation
-const familyMembers = ref<FriendDto[]>([])
+const familyMembers = ref<MemberPreviewDto[]>([])
 const managers = ref<MemberDto[]>([])
 const selectedManagerToAdd = ref<string>('')
 
@@ -275,25 +303,25 @@ async function assignManager() {
     await memberApi.assignManager(memberId)
     await fetchFamilyAndManagers()
     selectedManagerToAdd.value = ''
-    toastSuccess('관리자가 추가되었습니다.')
+    toastSuccess(t('member.manager.assignSuccess'))
   } catch (error) {
     console.error('Failed to assign manager:', error)
-    showError('관리자 추가에 실패했습니다.')
+    showError(t('member.manager.assignFailed'))
   } finally {
     savingManager.value = false
   }
 }
 
 async function unAssignManager(manager: MemberDto) {
-  if (!await confirm(`정말 ${manager.name} 님의 관리자 권한을 해제하시겠습니까?`)) return
+  if (!await confirm(t('member.manager.unassignConfirm', { name: manager.name }))) return
 
   try {
     await memberApi.unassignManager(manager.id!)
     await fetchFamilyAndManagers()
-    toastSuccess('관리자 권한이 해제되었습니다.')
+    toastSuccess(t('member.manager.unassignSuccess'))
   } catch (error) {
     console.error('Failed to unassign manager:', error)
-    showError('관리자 권한 해제에 실패했습니다.')
+    showError(t('member.manager.unassignFailed'))
   }
 }
 
@@ -313,15 +341,19 @@ async function fetchTokens() {
 }
 
 async function deleteToken(tokenId: number) {
-  if (!await confirm('정말 로그아웃 하시겠습니까? 해당 기기에서 로그아웃 됩니다.')) return
+  const confirmed = await confirm(
+    t('member.sessions.signOutCurrentConfirm'),
+    t('member.sessions.signOutCurrentTitle')
+  )
+  if (!confirmed) return
 
   try {
     await refreshTokenApi.deleteRefreshToken(tokenId)
     await fetchTokens()
-    toastSuccess('세션이 종료되었습니다.')
+    toastSuccess(t('member.sessions.signOutCurrentSuccess'))
   } catch (error) {
     console.error('Failed to delete token:', error)
-    showError('세션 종료에 실패했습니다.')
+    showError(t('member.sessions.signOutFailed'))
   }
 }
 
@@ -330,20 +362,24 @@ const deletingOtherTokens = ref(false)
 async function deleteOtherTokens() {
   const otherTokensCount = tokens.value.filter(t => !t.isCurrentLogin).length
   if (otherTokensCount === 0) {
-    showInfo('현재 접속 외에 다른 세션이 없습니다.')
+    showInfo(t('member.sessions.noOtherSessions'))
     return
   }
 
-  if (!await confirm(`현재 접속을 제외한 ${otherTokensCount}개의 다른 기기에서 모두 로그아웃 됩니다. 진행하시겠습니까?`, '전체 접속 종료')) return
+  const confirmed = await confirm(
+    t('member.sessions.signOutOthersConfirm', { count: otherTokensCount }),
+    t('member.sessions.signOutOthersTitle')
+  )
+  if (!confirmed) return
 
   deletingOtherTokens.value = true
   try {
     const response = await refreshTokenApi.deleteOtherRefreshTokens()
     await fetchTokens()
-    toastSuccess(`${response.data.deletedCount}개의 세션이 종료되었습니다.`)
+    toastSuccess(t('member.sessions.signOutOthersSuccess', { count: response.data.deletedCount }))
   } catch (error) {
     console.error('Failed to delete other tokens:', error)
-    showError('세션 종료에 실패했습니다.')
+    showError(t('member.sessions.signOutFailed'))
   } finally {
     deletingOtherTokens.value = false
   }
@@ -364,13 +400,13 @@ function buildSsoConnections(member: MemberDto | null): SsoConnection[] {
   const connections: SsoConnection[] = [
     {
       provider: 'Kakao',
-      label: '카카오',
+      label: t('member.sso.providers.kakao'),
       icon: '/img/kakao.png',
       connected: !!member?.kakaoId,
     },
     {
       provider: 'Naver',
-      label: '네이버',
+      label: t('member.sso.providers.naver'),
       icon: '/img/naver.svg',
       connected: !!member?.naverId,
     },
@@ -384,13 +420,13 @@ async function connectSso(provider: SsoProvider) {
 
   const prompts: Record<SsoProvider, { message: string; title: string; connect: () => void }> = {
     Kakao: {
-      message: '카카오 계정을 연동하면 카카오 로그인으로 간편하게 접속할 수 있습니다. 카카오 로그인 페이지로 이동합니다.',
-      title: '카카오 계정 연동',
+      message: t('member.sso.prompts.kakaoMessage'),
+      title: t('member.sso.prompts.kakaoTitle'),
       connect: () => kakaoLink(),
     },
     Naver: {
-      message: '네이버 계정을 연동하면 네이버 로그인으로 간편하게 접속할 수 있습니다. 네이버 로그인 페이지로 이동합니다.',
-      title: '네이버 계정 연동',
+      message: t('member.sso.prompts.naverMessage'),
+      title: t('member.sso.prompts.naverTitle'),
       connect: () => naverLink(),
     },
   }
@@ -405,7 +441,7 @@ async function connectSso(provider: SsoProvider) {
   } catch (error) {
     console.error('Failed to connect sso:', error)
     connectingSso.value = null
-    showError('소셜 계정 연동을 시작하지 못했습니다.')
+    showError(t('member.sso.startFailed'))
     return
   }
 }
@@ -439,27 +475,45 @@ async function handleSocialLinkQuery() {
 
   if (socialLinkError !== 'already_linked') return
 
-  const providerLabel = socialProvider === 'kakao' ? '카카오' : '네이버'
+  const providerLabel = socialProvider === 'kakao'
+    ? t('member.sso.providers.kakao')
+    : t('member.sso.providers.naver')
   await showError(
-    `이미 다른 Dutypark 계정에 연동된 ${providerLabel} 계정입니다. 다른 ${providerLabel} 계정으로 다시 시도해주세요.`,
-    '소셜 계정 연동 실패'
+    t('member.sso.alreadyLinkedMessage', { provider: providerLabel }),
+    t('member.sso.alreadyLinkedTitle')
   )
 }
 
 // Password change
 const showPasswordModal = ref(false)
-useBodyScrollLock(showPasswordModal)
-useEscapeKey(showPasswordModal, () => { showPasswordModal.value = false })
 const passwordForm = ref({
   currentPassword: '',
   newPassword: '',
   confirmPassword: '',
 })
+const memberModalPanelStyle = { backgroundColor: 'var(--dp-bg-card)' }
 const passwordErrors = ref({
   currentPassword: '',
   newPassword: '',
   confirmPassword: '',
 })
+const changingPassword = ref(false)
+const passwordSubmitHint = computed(() => {
+  if (!passwordForm.value.currentPassword) return t('member.password.validation.currentRequired')
+  if (!passwordForm.value.newPassword) return t('member.password.validation.newRequired')
+  if (passwordForm.value.newPassword.length < 8 || passwordForm.value.newPassword.length > 20) {
+    return t('member.password.validation.length')
+  }
+  if (passwordForm.value.currentPassword === passwordForm.value.newPassword) {
+    return t('member.password.validation.sameAsCurrent')
+  }
+  if (!passwordForm.value.confirmPassword) return t('member.password.validation.confirmRequired')
+  if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
+    return t('member.password.validation.mismatch')
+  }
+  return ''
+})
+const isPasswordSubmitDisabled = computed(() => changingPassword.value || !!passwordSubmitHint.value)
 
 function openPasswordModal() {
   passwordForm.value = { currentPassword: '', newPassword: '', confirmPassword: '' }
@@ -472,33 +526,31 @@ function validatePasswordForm(): boolean {
   let isValid = true
 
   if (!passwordForm.value.currentPassword) {
-    passwordErrors.value.currentPassword = '현재 비밀번호를 입력해주세요'
+    passwordErrors.value.currentPassword = t('member.password.validation.currentRequired')
     isValid = false
   }
 
   if (!passwordForm.value.newPassword) {
-    passwordErrors.value.newPassword = '새 비밀번호를 입력해주세요'
+    passwordErrors.value.newPassword = t('member.password.validation.newRequired')
     isValid = false
   } else if (passwordForm.value.newPassword.length < 8 || passwordForm.value.newPassword.length > 20) {
-    passwordErrors.value.newPassword = '비밀번호는 8-20자여야 합니다'
+    passwordErrors.value.newPassword = t('member.password.validation.length')
     isValid = false
   } else if (passwordForm.value.currentPassword === passwordForm.value.newPassword) {
-    passwordErrors.value.newPassword = '현재 비밀번호와 동일합니다'
+    passwordErrors.value.newPassword = t('member.password.validation.sameAsCurrent')
     isValid = false
   }
 
   if (!passwordForm.value.confirmPassword) {
-    passwordErrors.value.confirmPassword = '비밀번호 확인을 입력해주세요'
+    passwordErrors.value.confirmPassword = t('member.password.validation.confirmRequired')
     isValid = false
   } else if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
-    passwordErrors.value.confirmPassword = '비밀번호가 일치하지 않습니다'
+    passwordErrors.value.confirmPassword = t('member.password.validation.mismatch')
     isValid = false
   }
 
   return isValid
 }
-
-const changingPassword = ref(false)
 
 async function changePassword() {
   if (!validatePasswordForm()) return
@@ -511,12 +563,12 @@ async function changePassword() {
       currentPassword: passwordForm.value.currentPassword,
       newPassword: passwordForm.value.newPassword,
     })
-    await showSuccess('비밀번호가 변경되었습니다. 다시 로그인 해주세요.')
+    await showSuccess(t('member.password.changedReLogin'))
     showPasswordModal.value = false
     authStore.logout()
     router.push('/auth/login')
   } catch (error: any) {
-    const message = error.response?.data?.message || '비밀번호 변경에 실패했습니다.'
+    const message = resolveApiErrorMessage(error, { fallbackKey: 'member.password.changeFailed' }, t)
     showError(message)
   } finally {
     changingPassword.value = false
@@ -525,12 +577,15 @@ async function changePassword() {
 
 // Account deletion
 function deleteAccount() {
-  showInfo('회원 탈퇴는 관리자에게 문의해주세요.')
+  showInfo(t('member.account.deleteInfo'))
 }
 
 // Logout
 async function logout() {
-  const confirmed = await confirm('정말 로그아웃 하시겠습니까?', '로그아웃')
+  const confirmed = await confirm(
+    t('member.logoutDialog.message'),
+    t('member.logoutDialog.title')
+  )
   if (confirmed) {
     authStore.logout()
     router.push('/auth/login')
@@ -541,8 +596,13 @@ async function logout() {
 const memberInfo = ref<MemberDto | null>(null)
 
 async function fetchMemberInfo() {
-  const response = await memberApi.getMyInfo()
-  memberInfo.value = response.data
+  try {
+    const response = await memberApi.getMyInfo()
+    memberInfo.value = response.data
+  } catch (error) {
+    console.error('Failed to fetch member info:', error)
+    showError(t('member.errors.loadFailed'))
+  }
 }
 
 // Initialize data
@@ -576,7 +636,7 @@ onMounted(async () => {
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-6">
-    <h1 class="text-2xl font-bold mb-6 text-dp-text-primary">내 정보</h1>
+    <h1 class="text-2xl font-bold mb-6 text-dp-text-primary">{{ t('member.title') }}</h1>
 
     <!-- Loading State -->
     <div v-if="loading" class="flex items-center justify-center py-20">
@@ -588,7 +648,7 @@ onMounted(async () => {
       <section class="rounded-xl shadow-sm p-6 mb-4 bg-dp-bg-card border border-dp-border-primary">
         <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-dp-text-primary">
           <User class="w-5 h-5 text-dp-text-secondary" />
-          기본 정보
+          {{ t('member.profile.sectionTitle') }}
         </h2>
 
         <div class="flex items-center gap-4 sm:gap-6">
@@ -618,17 +678,17 @@ onMounted(async () => {
           <div class="flex flex-col justify-center space-y-2 sm:space-y-3 min-w-0">
             <div class="flex items-center gap-2 sm:gap-3">
               <User class="w-4 h-4 flex-shrink-0 text-dp-text-secondary" />
-              <span class="text-sm w-12 sm:w-14 flex-shrink-0 text-dp-text-secondary">이름</span>
+              <span class="text-sm w-12 sm:w-14 flex-shrink-0 text-dp-text-secondary">{{ t('member.profile.name') }}</span>
               <span class="font-medium truncate text-dp-text-primary">{{ memberInfo?.name }}</span>
             </div>
             <div class="flex items-center gap-2 sm:gap-3">
               <Building2 class="w-4 h-4 flex-shrink-0 text-dp-text-secondary" />
-              <span class="text-sm w-12 sm:w-14 flex-shrink-0 text-dp-text-secondary">소속</span>
+              <span class="text-sm w-12 sm:w-14 flex-shrink-0 text-dp-text-secondary">{{ t('member.profile.team') }}</span>
               <span class="font-medium truncate text-dp-text-primary">{{ memberInfo?.team || '-' }}</span>
             </div>
             <div v-if="memberInfo?.email" class="flex items-center gap-2 sm:gap-3">
               <Mail class="w-4 h-4 flex-shrink-0 text-dp-text-secondary" />
-              <span class="text-sm w-12 sm:w-14 flex-shrink-0 text-dp-text-secondary">이메일</span>
+              <span class="text-sm w-12 sm:w-14 flex-shrink-0 text-dp-text-secondary">{{ t('member.profile.email') }}</span>
               <span class="font-medium truncate text-sm sm:text-base text-dp-text-primary">{{ memberInfo?.email }}</span>
             </div>
           </div>
@@ -639,12 +699,12 @@ onMounted(async () => {
       <section class="rounded-xl shadow-sm p-6 mb-4 bg-dp-bg-card border border-dp-border-primary">
         <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-dp-text-primary">
           <Eye class="w-5 h-5 text-dp-text-secondary" />
-          시간표 공개 설정
+          {{ t('member.visibility.sectionTitle') }}
         </h2>
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <p class="text-dp-text-primary">현재 공개 대상</p>
-            <p class="text-sm mt-1 text-dp-text-secondary">내 시간표를 볼 수 있는 사람을 설정합니다</p>
+            <p class="text-dp-text-primary">{{ t('member.visibility.currentLabel') }}</p>
+            <p class="text-sm mt-1 text-dp-text-secondary">{{ t('member.visibility.description') }}</p>
           </div>
           <button
             @click="showVisibilityModal = true"
@@ -664,7 +724,7 @@ onMounted(async () => {
       <section class="rounded-xl shadow-sm p-6 mb-4 bg-dp-bg-card border border-dp-border-primary">
         <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-dp-text-primary">
           <Sun class="w-5 h-5 text-dp-text-secondary" />
-          화면 테마 설정
+          {{ t('member.theme.sectionTitle') }}
         </h2>
         <div class="flex flex-col sm:flex-row gap-3">
           <button
@@ -685,7 +745,7 @@ onMounted(async () => {
           </button>
         </div>
         <p class="text-sm mt-3 text-dp-text-muted">
-          {{ themeStore.mode === 'dark' ? '다크 모드가 적용됩니다' : '라이트 모드가 적용됩니다' }}
+          {{ t('member.theme.current', { theme: currentThemeLabel }) }}
         </p>
       </section>
 
@@ -693,11 +753,11 @@ onMounted(async () => {
       <section v-if="showPushSettings" class="rounded-xl shadow-sm p-6 mb-4 bg-dp-bg-card border border-dp-border-primary">
         <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-dp-text-primary">
           <Bell class="w-5 h-5 text-dp-text-secondary" />
-          푸시 알림 설정
+          {{ t('member.push.sectionTitle') }}
         </h2>
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <p class="text-dp-text-primary">알림 상태</p>
+            <p class="text-dp-text-primary">{{ t('member.push.statusLabel') }}</p>
             <p class="text-sm mt-1 text-dp-text-secondary">{{ pushStatusText }}</p>
           </div>
           <button
@@ -718,11 +778,13 @@ onMounted(async () => {
               <BellOff v-if="pushNotification.permission.value === 'granted' && pushNotification.isSubscribed.value" class="w-4 h-4" />
               <Bell v-else class="w-4 h-4" />
             </template>
-            {{ pushNotification.permission.value === 'granted' && pushNotification.isSubscribed.value ? '알림 끄기' : '알림 허용' }}
+            {{ pushNotification.permission.value === 'granted' && pushNotification.isSubscribed.value
+              ? t('member.push.buttonDisable')
+              : t('member.push.buttonEnable') }}
           </button>
         </div>
         <p v-if="isIOSPWA && pushNotification.permission.value === 'denied'" class="text-sm mt-3 text-dp-text-muted">
-          알림을 다시 허용하려면 홈 화면에서 앱을 삭제 후 다시 추가해주세요.
+          {{ t('member.push.iosHint') }}
         </p>
       </section>
 
@@ -730,12 +792,12 @@ onMounted(async () => {
       <section class="rounded-xl shadow-sm p-6 mb-4 bg-dp-bg-card border border-dp-border-primary">
         <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-dp-text-primary">
           <Shield class="w-5 h-5 text-dp-text-secondary" />
-          관리 권한 위임
+          {{ t('member.manager.sectionTitle') }}
         </h2>
         <div class="space-y-4">
           <div class="flex items-center gap-2 text-sm text-dp-text-secondary">
             <Info class="w-4 h-4" />
-            <span>가족만 관리자로 추가할 수 있어요</span>
+            <span>{{ t('member.manager.info') }}</span>
           </div>
 
           <!-- Add Manager -->
@@ -747,7 +809,7 @@ onMounted(async () => {
               class="flex-1 px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-accent focus:border-transparent disabled:opacity-50"
               :style="{ borderWidth: '1px', borderColor: 'var(--dp-border-primary)', backgroundColor: 'var(--dp-bg-secondary)', color: 'var(--dp-text-primary)' }"
             >
-              <option value="">관리자 추가</option>
+              <option value="">{{ t('member.manager.addPlaceholder') }}</option>
               <option v-for="member in availableFamilyMembers" :key="member.id ?? 'none'" :value="member.id">
                 {{ member.name }}
               </option>
@@ -771,13 +833,13 @@ onMounted(async () => {
               </button>
             </div>
           </div>
-          <p v-else class="text-sm text-dp-text-muted">등록된 관리자가 없습니다</p>
+          <p v-else class="text-sm text-dp-text-muted">{{ t('member.manager.empty') }}</p>
 
           <!-- Managed Members (accounts I manage) -->
           <div class="mt-6 pt-4 border-t border-dp-border-primary">
             <div class="flex items-center gap-2 mb-3">
               <Users class="w-4 h-4 text-dp-text-secondary" />
-              <h3 class="text-sm font-medium text-dp-text-primary">내가 관리 중인 계정</h3>
+              <h3 class="text-sm font-medium text-dp-text-primary">{{ t('member.manager.managedAccountsTitle') }}</h3>
             </div>
             <div class="space-y-2">
               <div
@@ -799,7 +861,7 @@ onMounted(async () => {
                 >
                   <Loader2 v-if="impersonating === member.id" class="w-4 h-4 animate-spin" />
                   <LogIn v-else class="w-4 h-4" />
-                  <span class="hidden sm:inline">로그인하기</span>
+                  <span class="hidden sm:inline">{{ t('member.manager.login') }}</span>
                 </button>
               </div>
               <!-- Add auxiliary account card -->
@@ -808,7 +870,7 @@ onMounted(async () => {
                 class="w-full flex items-center justify-center gap-2 p-3 rounded-lg border-2 border-dashed transition cursor-pointer hover:border-solid border-dp-border-primary text-dp-text-muted"
               >
                 <Plus class="w-5 h-5" />
-                <span class="text-sm font-medium">보조 계정 추가</span>
+                <span class="text-sm font-medium">{{ t('member.manager.addAuxiliary') }}</span>
               </button>
             </div>
           </div>
@@ -820,7 +882,7 @@ onMounted(async () => {
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-semibold flex items-center gap-2 text-dp-text-primary">
             <Smartphone class="w-5 h-5 text-dp-text-secondary" />
-            접속 세션 관리
+            {{ t('member.sessions.sectionTitle') }}
           </h2>
           <button
             v-if="tokens.filter(t => !t.isCurrentLogin).length > 0"
@@ -830,7 +892,7 @@ onMounted(async () => {
           >
             <Loader2 v-if="deletingOtherTokens" class="w-4 h-4 animate-spin" />
             <LogOut v-else class="w-4 h-4" />
-            전체 접속 종료
+            {{ t('member.sessions.signOutOthersButton') }}
           </button>
         </div>
         <SessionTokenList
@@ -845,7 +907,7 @@ onMounted(async () => {
       <section class="rounded-xl shadow-sm p-6 mb-4 bg-dp-bg-card border border-dp-border-primary">
         <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-dp-text-primary">
           <Link class="w-5 h-5 text-dp-text-secondary" />
-          소셜 계정 연동
+          {{ t('member.sso.sectionTitle') }}
         </h2>
         <div class="space-y-3">
           <div
@@ -865,7 +927,7 @@ onMounted(async () => {
             <div>
               <span v-if="sso.connected" class="flex items-center gap-1 text-dp-success text-sm">
                 <Check class="w-4 h-4" />
-                연동중
+                {{ t('member.sso.connected') }}
               </span>
               <button
                 v-else
@@ -873,7 +935,7 @@ onMounted(async () => {
                 :disabled="!!connectingSso"
                 class="px-4 py-2.5 sm:py-1.5 min-h-11 sm:min-h-0 text-sm font-medium text-dp-accent bg-dp-accent-soft hover:bg-dp-accent-soft rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
-                {{ connectingSso === sso.provider ? '연동 중...' : '연동하기' }}
+                {{ connectingSso === sso.provider ? t('member.sso.connecting') : t('member.sso.connect') }}
               </button>
             </div>
           </div>
@@ -884,7 +946,7 @@ onMounted(async () => {
       <section class="rounded-xl shadow-sm p-6 mb-4 bg-dp-bg-card border border-dp-border-primary">
         <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-dp-text-primary">
           <Lock class="w-5 h-5 text-dp-text-secondary" />
-          회원정보 관리
+          {{ t('member.account.sectionTitle') }}
         </h2>
         <div class="flex flex-wrap gap-3">
           <button
@@ -893,14 +955,14 @@ onMounted(async () => {
             class="px-4 py-3 sm:py-2 min-h-11 text-sm font-medium text-dp-accent bg-dp-accent-soft hover:bg-dp-accent-soft rounded-lg transition flex items-center gap-2 cursor-pointer"
           >
             <Lock class="w-4 h-4" />
-            비밀번호 변경
+            {{ t('member.account.changePassword') }}
           </button>
           <button
             @click="deleteAccount"
             class="px-4 py-3 sm:py-2 min-h-11 text-sm font-medium text-dp-danger bg-dp-danger-soft hover:bg-dp-danger-soft rounded-lg transition flex items-center gap-2 cursor-pointer"
           >
             <UserX class="w-4 h-4" />
-            회원 탈퇴
+            {{ t('member.account.deleteAccount') }}
           </button>
         </div>
       </section>
@@ -912,223 +974,204 @@ onMounted(async () => {
           class="w-full px-4 py-3 min-h-12 text-dp-warning bg-dp-warning-soft hover:bg-dp-warning-soft rounded-lg font-medium transition flex items-center justify-center gap-2 cursor-pointer"
         >
           <LogOut class="w-5 h-5" />
-          로그아웃
+          {{ t('member.logout') }}
         </button>
       </section>
     </template>
 
     <!-- Visibility Modal -->
-    <Teleport to="body">
-      <div
-        v-if="showVisibilityModal"
-        class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
-        @click.self="showVisibilityModal = false"
-      >
-        <div class="rounded-xl shadow-xl max-w-md w-full bg-dp-bg-card">
-          <div class="flex items-center justify-between p-4 border-b border-dp-border-primary">
-            <h3 class="text-lg font-bold text-dp-text-primary">시간표 공개 대상 설정</h3>
-            <button @click="showVisibilityModal = false" class="p-1.5 rounded-full hover-close-btn cursor-pointer text-dp-text-muted">
-              <X class="w-5 h-5" />
-            </button>
-          </div>
-          <div class="p-4 sm:p-6">
-            <p class="mb-4 text-dp-text-secondary">내 달력을 공개할 범위를 설정하세요.</p>
-            <p class="text-sm mb-4 text-dp-text-muted">선택시 변경사항이 즉시 저장됩니다.</p>
-            <div class="space-y-2">
-              <button
-                v-for="option in visibilityOptions"
-                :key="option.value"
-                @click="setVisibility(option.value)"
-                :disabled="savingVisibility"
-                class="w-full p-4 min-h-16 rounded-lg transition text-left disabled:opacity-50 hover:scale-[1.01] cursor-pointer"
-                :class="{ 'hover:bg-opacity-80': calendarVisibility !== option.value }"
-                :style="{
-                  borderWidth: '2px',
-                  borderColor: calendarVisibility === option.value ? 'var(--dp-accent)' : 'var(--dp-border-primary)',
-                  backgroundColor: calendarVisibility === option.value ? 'var(--dp-accent-bg)' : 'var(--dp-bg-secondary)'
-                }"
-              >
-                <div class="flex items-center gap-3">
-                  <span class="w-3 h-3 rounded-full" :class="option.color"></span>
-                  <span class="font-medium text-dp-text-primary">{{ option.label }}</span>
-                  <Check
-                    v-if="calendarVisibility === option.value"
-                    class="w-5 h-5 text-dp-accent ml-auto"
-                  />
-                  <Loader2
-                    v-if="savingVisibility && calendarVisibility !== option.value"
-                    class="w-5 h-5 animate-spin ml-auto text-dp-text-muted"
-                  />
-                </div>
-                <p class="text-sm mt-1 ml-6 text-dp-text-secondary">{{ option.description }}</p>
-              </button>
+    <BaseModal
+      :is-open="showVisibilityModal"
+      size="md"
+      height="fit"
+      rounded
+      :panel-style="memberModalPanelStyle"
+      @close="showVisibilityModal = false"
+    >
+      <div class="modal-header">
+        <h2>{{ t('member.visibility.modalTitle') }}</h2>
+        <button @click="showVisibilityModal = false" class="p-1.5 rounded-full hover-close-btn cursor-pointer text-dp-text-muted">
+          <X class="w-5 h-5" />
+        </button>
+      </div>
+      <div class="modal-body-form-lg">
+        <p class="text-dp-text-secondary">{{ t('member.visibility.modalDescription') }}</p>
+        <p class="text-sm text-dp-text-muted">{{ t('member.visibility.modalHint') }}</p>
+        <div class="space-y-2">
+          <button
+            v-for="option in visibilityOptions"
+            :key="option.value"
+            @click="setVisibility(option.value)"
+            :disabled="savingVisibility"
+            class="w-full p-4 min-h-16 rounded-lg transition text-left disabled:opacity-50 hover:scale-[1.01] cursor-pointer"
+            :class="{ 'hover:bg-opacity-80': calendarVisibility !== option.value }"
+            :style="{
+              borderWidth: '2px',
+              borderColor: calendarVisibility === option.value ? 'var(--dp-accent)' : 'var(--dp-border-primary)',
+              backgroundColor: calendarVisibility === option.value ? 'var(--dp-accent-bg)' : 'var(--dp-bg-secondary)'
+            }"
+          >
+            <div class="flex items-center gap-3">
+              <span class="w-3 h-3 rounded-full" :class="option.color"></span>
+              <span class="font-medium text-dp-text-primary">{{ option.label }}</span>
+              <Check
+                v-if="calendarVisibility === option.value"
+                class="w-5 h-5 text-dp-accent ml-auto"
+              />
+              <Loader2
+                v-if="savingVisibility && calendarVisibility !== option.value"
+                class="w-5 h-5 animate-spin ml-auto text-dp-text-muted"
+              />
             </div>
-          </div>
-          <div class="p-4 sm:p-6 border-t border-dp-border-primary">
-            <button
-              @click="showVisibilityModal = false"
-              class="w-full px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-primary"
-            >
-              닫기
-            </button>
-          </div>
+            <p class="text-sm mt-1 ml-6 text-dp-text-secondary">{{ option.description }}</p>
+          </button>
         </div>
       </div>
-    </Teleport>
+      <div class="modal-actions modal-footer-safe sm:px-6 sm:py-6">
+        <button
+          @click="showVisibilityModal = false"
+          class="w-full px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-primary"
+        >
+          {{ t('member.visibility.closeButton') }}
+        </button>
+      </div>
+    </BaseModal>
 
     <!-- Password Change Modal -->
-    <Teleport to="body">
-      <div
-        v-if="showPasswordModal"
-        class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
-        @click.self="showPasswordModal = false"
-      >
-        <div class="rounded-xl shadow-xl max-w-md w-full bg-dp-bg-card">
-          <div class="flex items-center justify-between p-4 border-b border-dp-border-primary">
-            <h3 class="text-lg font-bold text-dp-text-primary">비밀번호 변경</h3>
-            <button @click="showPasswordModal = false" class="p-1.5 rounded-full hover-close-btn cursor-pointer text-dp-text-muted">
-              <X class="w-5 h-5" />
-            </button>
-          </div>
-          <div class="p-4 sm:p-6 space-y-4">
-            <div>
-              <label class="block text-sm font-medium mb-1 text-dp-text-primary">현재 비밀번호</label>
-              <input
-                v-model="passwordForm.currentPassword"
-                type="password"
-                maxlength="20"
-                class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-accent"
-                :style="{
-                  borderWidth: '1px',
-                  borderColor: passwordErrors.currentPassword ? 'var(--dp-danger)' : 'var(--dp-border-primary)',
-                  backgroundColor: 'var(--dp-bg-primary)',
-                  color: 'var(--dp-text-primary)'
-                }"
-                placeholder="현재 비밀번호"
-              />
-              <p v-if="passwordErrors.currentPassword" class="text-sm text-dp-danger mt-1">
-                {{ passwordErrors.currentPassword }}
-              </p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-1 text-dp-text-primary">새 비밀번호</label>
-              <input
-                v-model="passwordForm.newPassword"
-                type="password"
-                maxlength="20"
-                class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-accent"
-                :style="{
-                  borderWidth: '1px',
-                  borderColor: passwordErrors.newPassword ? 'var(--dp-danger)' : 'var(--dp-border-primary)',
-                  backgroundColor: 'var(--dp-bg-primary)',
-                  color: 'var(--dp-text-primary)'
-                }"
-                placeholder="새 비밀번호 (8-20자)"
-              />
-              <p v-if="passwordErrors.newPassword" class="text-sm text-dp-danger mt-1">
-                {{ passwordErrors.newPassword }}
-              </p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-1 text-dp-text-primary">새 비밀번호 확인</label>
-              <input
-                v-model="passwordForm.confirmPassword"
-                type="password"
-                maxlength="20"
-                class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-accent"
-                :style="{
-                  borderWidth: '1px',
-                  borderColor: passwordErrors.confirmPassword ? 'var(--dp-danger)' : 'var(--dp-border-primary)',
-                  backgroundColor: 'var(--dp-bg-primary)',
-                  color: 'var(--dp-text-primary)'
-                }"
-                placeholder="새 비밀번호 확인"
-              />
-              <p v-if="passwordErrors.confirmPassword" class="text-sm text-dp-danger mt-1">
-                {{ passwordErrors.confirmPassword }}
-              </p>
-            </div>
-          </div>
-          <div class="p-4 sm:p-6 flex gap-2 border-t border-dp-border-primary">
-            <button
-              @click="changePassword"
-              :disabled="changingPassword"
-              class="flex-1 px-4 py-3 sm:py-2 min-h-11 bg-dp-accent hover:bg-dp-accent-hover rounded-lg text-dp-text-on-dark font-medium transition disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              <Loader2 v-if="changingPassword" class="w-4 h-4 animate-spin" />
-              {{ changingPassword ? '변경 중...' : '변경' }}
-            </button>
-            <button
-              @click="showPasswordModal = false"
-              :disabled="changingPassword"
-              class="flex-1 px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer disabled:opacity-50"
-              :style="{ backgroundColor: 'var(--dp-bg-hover)', color: 'var(--dp-text-primary)' }"
-            >
-              취소
-            </button>
-          </div>
+    <BaseModal
+      :is-open="showPasswordModal"
+      size="md"
+      height="fit"
+      rounded
+      :panel-style="memberModalPanelStyle"
+      @close="showPasswordModal = false"
+    >
+      <div class="modal-header">
+        <h2>{{ t('member.password.modalTitle') }}</h2>
+        <button @click="showPasswordModal = false" class="p-1.5 rounded-full hover-close-btn cursor-pointer text-dp-text-muted">
+          <X class="w-5 h-5" />
+        </button>
+      </div>
+      <div class="modal-body-form-lg">
+        <div>
+          <label class="form-label text-dp-text-primary">{{ t('member.password.currentLabel') }}</label>
+          <input
+            v-model="passwordForm.currentPassword"
+            type="password"
+            maxlength="20"
+            class="form-control-card"
+            :style="{
+              borderColor: passwordErrors.currentPassword ? 'var(--dp-danger)' : 'var(--dp-border-primary)'
+            }"
+            :placeholder="t('member.password.currentPlaceholder')"
+          />
+          <p v-if="passwordErrors.currentPassword" class="text-sm text-dp-danger mt-1">
+            {{ passwordErrors.currentPassword }}
+          </p>
+        </div>
+        <div>
+          <label class="form-label text-dp-text-primary">{{ t('member.password.newLabel') }}</label>
+          <input
+            v-model="passwordForm.newPassword"
+            type="password"
+            maxlength="20"
+            class="form-control-card"
+            :style="{
+              borderColor: passwordErrors.newPassword ? 'var(--dp-danger)' : 'var(--dp-border-primary)'
+            }"
+            :placeholder="t('member.password.newPlaceholder')"
+          />
+          <p v-if="passwordErrors.newPassword" class="text-sm text-dp-danger mt-1">
+            {{ passwordErrors.newPassword }}
+          </p>
+        </div>
+        <div>
+          <label class="form-label text-dp-text-primary">{{ t('member.password.confirmLabel') }}</label>
+          <input
+            v-model="passwordForm.confirmPassword"
+            type="password"
+            maxlength="20"
+            class="form-control-card"
+            :style="{
+              borderColor: passwordErrors.confirmPassword ? 'var(--dp-danger)' : 'var(--dp-border-primary)'
+            }"
+            :placeholder="t('member.password.confirmPlaceholder')"
+          />
+          <p v-if="passwordErrors.confirmPassword" class="text-sm text-dp-danger mt-1">
+            {{ passwordErrors.confirmPassword }}
+          </p>
         </div>
       </div>
-    </Teleport>
+      <div class="modal-actions modal-footer-safe sm:px-6 sm:py-6">
+        <button
+          @click="changePassword"
+          :disabled="isPasswordSubmitDisabled"
+          class="flex-1 px-4 py-3 sm:py-2 min-h-11 bg-dp-accent hover:bg-dp-accent-hover rounded-lg text-dp-text-on-dark font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          <Loader2 v-if="changingPassword" class="w-4 h-4 animate-spin" />
+          {{ changingPassword ? t('member.password.submitting') : t('member.password.submit') }}
+        </button>
+        <button
+          @click="showPasswordModal = false"
+          :disabled="changingPassword"
+          class="flex-1 px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer disabled:opacity-50"
+          :style="{ backgroundColor: 'var(--dp-bg-hover)', color: 'var(--dp-text-primary)' }"
+        >
+          {{ t('common.actions.cancel') }}
+        </button>
+      </div>
+    </BaseModal>
 
     <!-- Auxiliary Account Modal -->
-    <Teleport to="body">
-      <div
-        v-if="showAuxiliaryModal"
-        class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
-        @click.self="showAuxiliaryModal = false"
-      >
-        <div class="rounded-xl shadow-xl max-w-md w-full bg-dp-bg-card">
-          <div class="flex items-center justify-between p-4 border-b border-dp-border-primary">
-            <h3 class="text-lg font-bold text-dp-text-primary">보조 계정 추가</h3>
-            <button @click="showAuxiliaryModal = false" class="p-1.5 rounded-full hover-close-btn cursor-pointer text-dp-text-muted">
-              <X class="w-5 h-5" />
-            </button>
-          </div>
-          <div class="p-4 sm:p-6 space-y-4">
-            <p class="text-sm text-dp-text-secondary">
-              자녀, 부업 등 별도 시간표 관리용 계정을 만들 수 있습니다.<br>
-              이 화면에서 바로 전환하여 사용할 수 있습니다.
-            </p>
-            <div>
-              <label class="block text-sm font-medium mb-1 text-dp-text-primary">계정 이름</label>
-              <input
-                v-model="auxiliaryName"
-                type="text"
-                maxlength="10"
-                class="w-full px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-accent"
-                :style="{
-                  borderWidth: '1px',
-                  borderColor: 'var(--dp-border-primary)',
-                  backgroundColor: 'var(--dp-bg-primary)',
-                  color: 'var(--dp-text-primary)'
-                }"
-                placeholder="예: 둘째 아이, 부업"
-                @keyup.enter="createAuxiliaryAccount"
-              />
-              <p class="text-xs mt-1 text-dp-text-muted">최대 10자</p>
-            </div>
-          </div>
-          <div class="p-4 sm:p-6 flex gap-2 border-t border-dp-border-primary">
-            <button
-              @click="createAuxiliaryAccount"
-              :disabled="creatingAuxiliary || !auxiliaryName.trim()"
-              class="flex-1 px-4 py-3 sm:py-2 min-h-11 bg-dp-accent hover:bg-dp-accent-hover rounded-lg text-dp-text-on-dark font-medium transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Loader2 v-if="creatingAuxiliary" class="w-4 h-4 animate-spin" />
-              {{ creatingAuxiliary ? '생성 중...' : '생성' }}
-            </button>
-            <button
-              @click="showAuxiliaryModal = false"
-              :disabled="creatingAuxiliary"
-              class="flex-1 px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer disabled:opacity-50"
-              :style="{ backgroundColor: 'var(--dp-bg-hover)', color: 'var(--dp-text-primary)' }"
-            >
-              취소
-            </button>
-          </div>
+    <BaseModal
+      :is-open="showAuxiliaryModal"
+      size="md"
+      height="fit"
+      rounded
+      :panel-style="memberModalPanelStyle"
+      @close="showAuxiliaryModal = false"
+    >
+      <div class="modal-header">
+        <h2>{{ t('member.auxiliary.modalTitle') }}</h2>
+        <button @click="showAuxiliaryModal = false" class="p-1.5 rounded-full hover-close-btn cursor-pointer text-dp-text-muted">
+          <X class="w-5 h-5" />
+        </button>
+      </div>
+      <div class="modal-body-form-lg">
+        <p class="text-sm text-dp-text-secondary whitespace-pre-line">
+          {{ t('member.auxiliary.description') }}
+        </p>
+        <div>
+          <label class="form-label text-dp-text-primary">{{ t('member.auxiliary.nameLabel') }}</label>
+          <input
+            v-model="auxiliaryName"
+            type="text"
+            maxlength="10"
+            class="form-control-card"
+            :placeholder="t('member.auxiliary.namePlaceholder')"
+            @keyup.enter="createAuxiliaryAccount"
+          />
+          <p class="text-xs mt-1 text-dp-text-muted">{{ t('member.auxiliary.maxLength') }}</p>
         </div>
       </div>
-    </Teleport>
+      <div class="modal-actions modal-footer-safe sm:px-6 sm:py-6">
+        <button
+          @click="createAuxiliaryAccount"
+          :disabled="creatingAuxiliary || !auxiliaryName.trim()"
+          class="flex-1 px-4 py-3 sm:py-2 min-h-11 bg-dp-accent hover:bg-dp-accent-hover rounded-lg text-dp-text-on-dark font-medium transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+        >
+          <Loader2 v-if="creatingAuxiliary" class="w-4 h-4 animate-spin" />
+          {{ creatingAuxiliary ? t('member.auxiliary.submitting') : t('member.auxiliary.submit') }}
+        </button>
+        <button
+          @click="showAuxiliaryModal = false"
+          :disabled="creatingAuxiliary"
+          class="flex-1 px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer disabled:opacity-50"
+          :style="{ backgroundColor: 'var(--dp-bg-hover)', color: 'var(--dp-text-primary)' }"
+        >
+          {{ t('common.actions.cancel') }}
+        </button>
+      </div>
+    </BaseModal>
   </div>
 </template>

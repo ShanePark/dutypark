@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders
+import org.springframework.restdocs.payload.FieldDescriptor
 import org.springframework.restdocs.payload.PayloadDocumentation.*
 import org.springframework.restdocs.request.RequestDocumentation.parameterWithName
 import org.springframework.restdocs.request.RequestDocumentation.pathParameters
@@ -58,18 +59,7 @@ class TodoControllerTest : RestDocsTest() {
             .andDo(
                 document(
                     "todos/get-list",
-                    responseFields(
-                        fieldWithPath("[].id").description("Todo ID"),
-                        fieldWithPath("[].title").description("Todo Title"),
-                        fieldWithPath("[].content").description("Todo Content"),
-                        fieldWithPath("[].position").description("Todo Position"),
-                        fieldWithPath("[].status").description("Todo Status"),
-                        fieldWithPath("[].createdDate").description("createdDate"),
-                        fieldWithPath("[].completedDate").description("completedDate"),
-                        fieldWithPath("[].dueDate").description("Due date for the todo"),
-                        fieldWithPath("[].isOverdue").description("Whether the todo is overdue"),
-                        fieldWithPath("[].hasAttachments").description("Whether todo has attachments")
-                    )
+                    responseFields(*todoResponseFields("[]."))
                 )
             )
     }
@@ -100,25 +90,8 @@ class TodoControllerTest : RestDocsTest() {
             .andDo(
                 document(
                     "todos/create",
-                    requestFields(
-                        fieldWithPath("title").description("Todo Title"),
-                        fieldWithPath("content").description("Todo Content"),
-                        fieldWithPath("dueDate").optional().description("Due date for the todo (YYYY-MM-DD)"),
-                        fieldWithPath("attachmentSessionId").optional().description("첨부 업로드 세션 ID"),
-                        fieldWithPath("orderedAttachmentIds").optional().description("저장 순서를 유지할 첨부 ID 배열")
-                    ),
-                    responseFields(
-                        fieldWithPath("id").description("Todo ID"),
-                        fieldWithPath("title").description("Todo Title"),
-                        fieldWithPath("content").description("Todo Content"),
-                        fieldWithPath("position").description("Todo Position"),
-                        fieldWithPath("status").description("Todo Status"),
-                        fieldWithPath("createdDate").description("createdDate"),
-                        fieldWithPath("completedDate").description("completedDate"),
-                        fieldWithPath("dueDate").description("Due date for the todo"),
-                        fieldWithPath("isOverdue").description("Whether the todo is overdue"),
-                        fieldWithPath("hasAttachments").description("Whether todo has attachments")
-                    )
+                    requestFields(*todoRequestFields()),
+                    responseFields(*todoResponseFields())
                 )
             )
     }
@@ -162,25 +135,8 @@ class TodoControllerTest : RestDocsTest() {
                     pathParameters(
                         parameterWithName("id").description("Todo ID")
                     ),
-                    requestFields(
-                        fieldWithPath("title").description("Todo Title"),
-                        fieldWithPath("content").description("Todo Content"),
-                        fieldWithPath("dueDate").optional().description("Due date for the todo (YYYY-MM-DD)"),
-                        fieldWithPath("attachmentSessionId").optional().description("첨부 업로드 세션 ID"),
-                        fieldWithPath("orderedAttachmentIds").optional().description("저장 순서를 유지할 첨부 ID 배열")
-                    ),
-                    responseFields(
-                        fieldWithPath("id").description("Todo ID"),
-                        fieldWithPath("title").description("Updated Todo Title"),
-                        fieldWithPath("content").description("Updated Todo Content"),
-                        fieldWithPath("position").description("Todo Position"),
-                        fieldWithPath("status").description("Todo Status"),
-                        fieldWithPath("createdDate").description("createdDate"),
-                        fieldWithPath("completedDate").description("completedDate"),
-                        fieldWithPath("dueDate").description("Due date for the todo"),
-                        fieldWithPath("isOverdue").description("Whether the todo is overdue"),
-                        fieldWithPath("hasAttachments").description("Whether todo has attachments")
-                    )
+                    requestFields(*todoRequestFields()),
+                    responseFields(*todoResponseFields())
                 )
             )
     }
@@ -287,18 +243,7 @@ class TodoControllerTest : RestDocsTest() {
             .andDo(
                 document(
                     "todos/get-completed-list",
-                    responseFields(
-                        fieldWithPath("[].id").description("Todo ID"),
-                        fieldWithPath("[].title").description("Todo Title"),
-                        fieldWithPath("[].content").description("Todo Content"),
-                        fieldWithPath("[].position").description("Todo Position"),
-                        fieldWithPath("[].status").description("Todo Status"),
-                        fieldWithPath("[].createdDate").description("createdDate"),
-                        fieldWithPath("[].completedDate").description("completedDate"),
-                        fieldWithPath("[].dueDate").description("Due date for the todo"),
-                        fieldWithPath("[].isOverdue").description("Whether the todo is overdue"),
-                        fieldWithPath("[].hasAttachments").description("Whether todo has attachments")
-                    )
+                    responseFields(*todoResponseFields("[]."))
                 )
             )
     }
@@ -329,18 +274,7 @@ class TodoControllerTest : RestDocsTest() {
                     pathParameters(
                         parameterWithName("id").description("Todo ID")
                     ),
-                    responseFields(
-                        fieldWithPath("id").description("Todo ID"),
-                        fieldWithPath("title").description("Todo Title"),
-                        fieldWithPath("content").description("Todo Content"),
-                        fieldWithPath("position").description("Todo Position"),
-                        fieldWithPath("status").description("Todo Status"),
-                        fieldWithPath("createdDate").description("createdDate"),
-                        fieldWithPath("completedDate").description("completedDate"),
-                        fieldWithPath("dueDate").description("Due date for the todo"),
-                        fieldWithPath("isOverdue").description("Whether the todo is overdue"),
-                        fieldWithPath("hasAttachments").description("Whether todo has attachments")
-                    )
+                    responseFields(*todoResponseFields())
                 )
             )
     }
@@ -372,20 +306,132 @@ class TodoControllerTest : RestDocsTest() {
                     pathParameters(
                         parameterWithName("id").description("Todo ID")
                     ),
-                    responseFields(
-                        fieldWithPath("id").description("Todo ID"),
-                        fieldWithPath("title").description("Todo Title"),
-                        fieldWithPath("content").description("Todo Content"),
-                        fieldWithPath("position").description("Todo Position"),
-                        fieldWithPath("status").description("Todo Status"),
-                        fieldWithPath("createdDate").description("createdDate"),
-                        fieldWithPath("completedDate").description("completedDate"),
-                        fieldWithPath("dueDate").description("Due date for the todo"),
-                        fieldWithPath("isOverdue").description("Whether the todo is overdue"),
-                        fieldWithPath("hasAttachments").description("Whether todo has attachments")
+                    responseFields(*todoResponseFields())
+                )
+            )
+    }
+
+    @Test
+    fun `tag and untag friend endpoints`() {
+        val owner = TestData.member
+        val friend = TestData.member2
+        makeThemFriend(owner, friend)
+
+        val todo = todoRepository.save(
+            Todo(
+                member = owner,
+                title = "Tagged Todo",
+                content = "Content",
+                position = 0
+            )
+        )
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/todos/{id}/tags/{friendId}", todo.id, friend.id!!)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .withAuth(owner)
+        )
+            .andExpect(status().isOk)
+            .andDo(
+                document(
+                    "todos/tag-friend",
+                    pathParameters(
+                        parameterWithName("id").description("Todo ID"),
+                        parameterWithName("friendId").description("Friend member ID to tag")
                     )
                 )
             )
+
+        em.flush()
+        em.clear()
+        val taggedTodo = todoRepository.findById(todo.id).orElseThrow()
+        org.assertj.core.api.Assertions.assertThat(taggedTodo.tags).hasSize(1)
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/todos/{id}/tags/{friendId}", todo.id, friend.id!!)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .withAuth(owner)
+        )
+            .andExpect(status().isOk)
+            .andDo(
+                document(
+                    "todos/untag-friend",
+                    pathParameters(
+                        parameterWithName("id").description("Todo ID"),
+                        parameterWithName("friendId").description("Friend member ID to untag")
+                    )
+                )
+            )
+
+        em.flush()
+        em.clear()
+        val untaggedTodo = todoRepository.findById(todo.id).orElseThrow()
+        org.assertj.core.api.Assertions.assertThat(untaggedTodo.tags).isEmpty()
+    }
+
+    @Test
+    fun `untagSelf removes own tag`() {
+        val owner = TestData.member
+        val friend = TestData.member2
+        makeThemFriend(owner, friend)
+
+        val todo = todoRepository.save(
+            Todo(
+                member = owner,
+                title = "Tagged Todo",
+                content = "Content",
+                position = 0
+            ).apply { addTag(friend) }
+        )
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/todos/{id}/tags", todo.id)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .withAuth(friend)
+        )
+            .andExpect(status().isOk)
+            .andDo(
+                document(
+                    "todos/untag-self",
+                    pathParameters(
+                        parameterWithName("id").description("Todo ID")
+                    )
+                )
+            )
+
+        em.flush()
+        em.clear()
+        val refreshed = todoRepository.findById(todo.id).orElseThrow()
+        org.assertj.core.api.Assertions.assertThat(refreshed.tags).isEmpty()
+    }
+
+    @Test
+    fun `tag friend returns code-first unauthorized when target is not friend`() {
+        val owner = TestData.member
+        val stranger = TestData.member2
+
+        val todo = todoRepository.save(
+            Todo(
+                member = owner,
+                title = "Tagged Todo",
+                content = "Content",
+                position = 0
+            )
+        )
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/todos/{id}/tags/{friendId}", todo.id, stranger.id!!)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .withAuth(owner)
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("todo.tag.notFriend"))
     }
 
     // ========== Kanban Board Endpoints ==========
@@ -435,46 +481,7 @@ class TodoControllerTest : RestDocsTest() {
             .andDo(
                 document(
                     "todos/get-board",
-                    responseFields(
-                        fieldWithPath("todo").description("List of TODO status todos"),
-                        fieldWithPath("todo[].id").description("Todo ID"),
-                        fieldWithPath("todo[].title").description("Todo Title"),
-                        fieldWithPath("todo[].content").description("Todo Content"),
-                        fieldWithPath("todo[].position").description("Todo Position"),
-                        fieldWithPath("todo[].status").description("Todo Status"),
-                        fieldWithPath("todo[].createdDate").description("Created date"),
-                        fieldWithPath("todo[].completedDate").description("Completed date"),
-                        fieldWithPath("todo[].dueDate").description("Due date"),
-                        fieldWithPath("todo[].isOverdue").description("Whether overdue"),
-                        fieldWithPath("todo[].hasAttachments").description("Has attachments"),
-                        fieldWithPath("inProgress").description("List of IN_PROGRESS status todos"),
-                        fieldWithPath("inProgress[].id").description("Todo ID"),
-                        fieldWithPath("inProgress[].title").description("Todo Title"),
-                        fieldWithPath("inProgress[].content").description("Todo Content"),
-                        fieldWithPath("inProgress[].position").description("Todo Position"),
-                        fieldWithPath("inProgress[].status").description("Todo Status"),
-                        fieldWithPath("inProgress[].createdDate").description("Created date"),
-                        fieldWithPath("inProgress[].completedDate").description("Completed date"),
-                        fieldWithPath("inProgress[].dueDate").description("Due date"),
-                        fieldWithPath("inProgress[].isOverdue").description("Whether overdue"),
-                        fieldWithPath("inProgress[].hasAttachments").description("Has attachments"),
-                        fieldWithPath("done").description("List of DONE status todos"),
-                        fieldWithPath("done[].id").description("Todo ID"),
-                        fieldWithPath("done[].title").description("Todo Title"),
-                        fieldWithPath("done[].content").description("Todo Content"),
-                        fieldWithPath("done[].position").description("Todo Position"),
-                        fieldWithPath("done[].status").description("Todo Status"),
-                        fieldWithPath("done[].createdDate").description("Created date"),
-                        fieldWithPath("done[].completedDate").description("Completed date"),
-                        fieldWithPath("done[].dueDate").description("Due date"),
-                        fieldWithPath("done[].isOverdue").description("Whether overdue"),
-                        fieldWithPath("done[].hasAttachments").description("Has attachments"),
-                        fieldWithPath("counts").description("Todo counts by status"),
-                        fieldWithPath("counts.todo").description("Count of TODO status todos"),
-                        fieldWithPath("counts.inProgress").description("Count of IN_PROGRESS status todos"),
-                        fieldWithPath("counts.done").description("Count of DONE status todos"),
-                        fieldWithPath("counts.total").description("Total count of all todos")
-                    )
+                    responseFields(*todoBoardResponseFields())
                 )
             )
     }
@@ -518,18 +525,7 @@ class TodoControllerTest : RestDocsTest() {
                     pathParameters(
                         parameterWithName("status").description("Todo status (TODO, IN_PROGRESS, DONE)")
                     ),
-                    responseFields(
-                        fieldWithPath("[].id").description("Todo ID"),
-                        fieldWithPath("[].title").description("Todo Title"),
-                        fieldWithPath("[].content").description("Todo Content"),
-                        fieldWithPath("[].position").description("Todo Position"),
-                        fieldWithPath("[].status").description("Todo Status"),
-                        fieldWithPath("[].createdDate").description("Created date"),
-                        fieldWithPath("[].completedDate").description("Completed date"),
-                        fieldWithPath("[].dueDate").description("Due date"),
-                        fieldWithPath("[].isOverdue").description("Whether overdue"),
-                        fieldWithPath("[].hasAttachments").description("Has attachments")
-                    )
+                    responseFields(*todoResponseFields("[]."))
                 )
             )
     }
@@ -573,20 +569,9 @@ class TodoControllerTest : RestDocsTest() {
                     ),
                     requestFields(
                         fieldWithPath("status").description("New status (TODO, IN_PROGRESS, DONE)"),
-                        fieldWithPath("orderedIds").description("Ordered list of todo IDs in the target column after the move")
+                        fieldWithPath("orderedIds").description("Ordered list of todo IDs in the target column after the move").optional()
                     ),
-                    responseFields(
-                        fieldWithPath("id").description("Todo ID"),
-                        fieldWithPath("title").description("Todo Title"),
-                        fieldWithPath("content").description("Todo Content"),
-                        fieldWithPath("position").description("Todo Position"),
-                        fieldWithPath("status").description("Todo Status"),
-                        fieldWithPath("createdDate").description("Created date"),
-                        fieldWithPath("completedDate").description("Completed date"),
-                        fieldWithPath("dueDate").description("Due date"),
-                        fieldWithPath("isOverdue").description("Whether overdue"),
-                        fieldWithPath("hasAttachments").description("Has attachments")
-                    )
+                    responseFields(*todoResponseFields())
                 )
             )
     }
@@ -676,18 +661,7 @@ class TodoControllerTest : RestDocsTest() {
                         parameterWithName("year").description("Year to query"),
                         parameterWithName("month").description("Month to query (1-12)")
                     ),
-                    responseFields(
-                        fieldWithPath("[].id").description("Todo ID"),
-                        fieldWithPath("[].title").description("Todo Title"),
-                        fieldWithPath("[].content").description("Todo Content"),
-                        fieldWithPath("[].position").description("Todo Position"),
-                        fieldWithPath("[].status").description("Todo Status"),
-                        fieldWithPath("[].createdDate").description("Created date"),
-                        fieldWithPath("[].completedDate").description("Completed date"),
-                        fieldWithPath("[].dueDate").description("Due date"),
-                        fieldWithPath("[].isOverdue").description("Whether overdue"),
-                        fieldWithPath("[].hasAttachments").description("Has attachments")
-                    )
+                    responseFields(*todoResponseFields("[]."))
                 )
             )
     }
@@ -722,18 +696,7 @@ class TodoControllerTest : RestDocsTest() {
                     queryParameters(
                         parameterWithName("date").description("Date to query (YYYY-MM-DD format)")
                     ),
-                    responseFields(
-                        fieldWithPath("[].id").description("Todo ID"),
-                        fieldWithPath("[].title").description("Todo Title"),
-                        fieldWithPath("[].content").description("Todo Content"),
-                        fieldWithPath("[].position").description("Todo Position"),
-                        fieldWithPath("[].status").description("Todo Status"),
-                        fieldWithPath("[].createdDate").description("Created date"),
-                        fieldWithPath("[].completedDate").description("Completed date"),
-                        fieldWithPath("[].dueDate").description("Due date"),
-                        fieldWithPath("[].isOverdue").description("Whether overdue"),
-                        fieldWithPath("[].hasAttachments").description("Has attachments")
-                    )
+                    responseFields(*todoResponseFields("[]."))
                 )
             )
     }
@@ -764,18 +727,7 @@ class TodoControllerTest : RestDocsTest() {
             .andDo(
                 document(
                     "todos/get-overdue",
-                    responseFields(
-                        fieldWithPath("[].id").description("Todo ID"),
-                        fieldWithPath("[].title").description("Todo Title"),
-                        fieldWithPath("[].content").description("Todo Content"),
-                        fieldWithPath("[].position").description("Todo Position"),
-                        fieldWithPath("[].status").description("Todo Status"),
-                        fieldWithPath("[].createdDate").description("Created date"),
-                        fieldWithPath("[].completedDate").description("Completed date"),
-                        fieldWithPath("[].dueDate").description("Due date"),
-                        fieldWithPath("[].isOverdue").description("Whether overdue"),
-                        fieldWithPath("[].hasAttachments").description("Has attachments")
-                    )
+                    responseFields(*todoResponseFields("[]."))
                 )
             )
     }
@@ -1209,6 +1161,38 @@ class TodoControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `tagged member sees tagged todos before own todos in list`() {
+        val taggedTodo = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Tagged Todo",
+                content = "Content",
+                position = 999
+            ).apply { addTag(TestData.member2) }
+        )
+        val ownTodo = todoRepository.save(
+            Todo(
+                member = TestData.member2,
+                title = "Own Todo",
+                content = "Content",
+                position = -10
+            )
+        )
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/todos")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member2)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].id").value(taggedTodo.id.toString()))
+            .andExpect(jsonPath("$[0].isTagged").value(true))
+            .andExpect(jsonPath("$[1].id").value(ownTodo.id.toString()))
+            .andExpect(jsonPath("$[1].isTagged").value(false))
+    }
+
+    @Test
     fun `member can only see own todos in board`() {
         // Given: member1 creates todos in all statuses
         todoRepository.saveAll(
@@ -1228,6 +1212,109 @@ class TodoControllerTest : RestDocsTest() {
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.counts.total").value(0))
+    }
+
+    @Test
+    fun `tagged member can see tagged todo in board`() {
+        val todo = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Tagged Todo",
+                content = "Content",
+                position = 0,
+                status = TodoStatus.TODO
+            ).apply { addTag(TestData.member2) }
+        )
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/todos/board")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member2)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.counts.total").value(1))
+            .andExpect(jsonPath("$.todo[0].id").value(todo.id.toString()))
+            .andExpect(jsonPath("$.todo[0].isTagged").value(true))
+            .andExpect(jsonPath("$.todo[0].owner").value(TestData.member.name))
+    }
+
+    @Test
+    fun `tagged todos are placed before own todos in board`() {
+        todoRepository.save(
+            Todo(
+                member = TestData.member2,
+                title = "Own Todo",
+                content = "Content",
+                position = -10,
+                status = TodoStatus.TODO
+            )
+        )
+        val taggedTodo = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Tagged Todo",
+                content = "Content",
+                position = 99,
+                status = TodoStatus.TODO
+            ).apply { addTag(TestData.member2) }
+        )
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/todos/board")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member2)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.todo[0].id").value(taggedTodo.id.toString()))
+            .andExpect(jsonPath("$.todo[0].isTagged").value(true))
+            .andExpect(jsonPath("$.todo[1].title").value("Own Todo"))
+            .andExpect(jsonPath("$.todo[1].isTagged").value(false))
+    }
+
+    @Test
+    fun `tagged todos are sorted by modified date desc in board`() {
+        todoRepository.save(
+            Todo(
+                member = TestData.member2,
+                title = "Own Todo",
+                content = "Content",
+                position = -10,
+                status = TodoStatus.TODO
+            )
+        )
+        todoRepository.saveAndFlush(
+            Todo(
+                member = TestData.member,
+                title = "Older Tagged Todo",
+                content = "Content",
+                position = 0,
+                status = TodoStatus.TODO
+            ).apply { addTag(TestData.member2) }
+        )
+        Thread.sleep(20)
+        val newerTaggedTodo = todoRepository.saveAndFlush(
+            Todo(
+                member = TestData.member,
+                title = "Newer Tagged Todo",
+                content = "Content",
+                position = 99,
+                status = TodoStatus.TODO
+            ).apply { addTag(TestData.member2) }
+        )
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/todos/board")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member2)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.todo[0].id").value(newerTaggedTodo.id.toString()))
+            .andExpect(jsonPath("$.todo[0].title").value("Newer Tagged Todo"))
+            .andExpect(jsonPath("$.todo[1].title").value("Older Tagged Todo"))
+            .andExpect(jsonPath("$.todo[2].title").value("Own Todo"))
     }
 
     @Test
@@ -1254,6 +1341,103 @@ class TodoControllerTest : RestDocsTest() {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value("DONE"))
             .andExpect(jsonPath("$.completedDate").isNotEmpty)
+    }
+
+    @Test
+    fun `tagged member can change status without orderedIds`() {
+        todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Existing In Progress",
+                content = "Content",
+                position = 1,
+                status = TodoStatus.IN_PROGRESS
+            )
+        )
+        val taggedTodo = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Tagged Todo",
+                content = "Content",
+                position = 0,
+                status = TodoStatus.TODO
+            ).apply { addTag(TestData.member2) }
+        )
+
+        val json = """{"status": "IN_PROGRESS"}"""
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.patch("/api/todos/{id}/status", taggedTodo.id)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member2)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+            .andExpect(jsonPath("$.position").value(0))
+            .andExpect(jsonPath("$.isTagged").value(true))
+    }
+
+    @Test
+    fun `owner can change status without orderedIds`() {
+        todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Existing In Progress",
+                content = "Content",
+                position = 1,
+                status = TodoStatus.IN_PROGRESS
+            )
+        )
+        val saved = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Todo",
+                content = "Content",
+                position = 0,
+                status = TodoStatus.TODO
+            )
+        )
+
+        val json = """{"status": "IN_PROGRESS"}"""
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.patch("/api/todos/{id}/status", saved.id)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+            .andExpect(jsonPath("$.position").value(0))
+            .andExpect(jsonPath("$.isTagged").value(false))
+    }
+
+    @Test
+    fun `owner cannot reorder within same status without orderedIds`() {
+        val saved = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Todo",
+                content = "Content",
+                position = 0,
+                status = TodoStatus.TODO
+            )
+        )
+
+        val json = """{"status": "TODO"}"""
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.patch("/api/todos/{id}/status", saved.id)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("todo.reorder.orderedIds.required"))
     }
 
     @Test
@@ -1737,5 +1921,46 @@ class TodoControllerTest : RestDocsTest() {
             .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
             .andExpect(jsonPath("$.dueDate").value("2025-12-31"))
     }
+
+    private fun todoRequestFields(): Array<FieldDescriptor> = arrayOf(
+        fieldWithPath("title").description("Todo Title"),
+        fieldWithPath("content").description("Todo Content"),
+        fieldWithPath("status").type("String").optional().description("Todo status (TODO, IN_PROGRESS, DONE)"),
+        fieldWithPath("dueDate").type("String").optional().description("Due date for the todo (YYYY-MM-DD)"),
+        fieldWithPath("tagFriendIds").type("Array").optional().description("Friend member IDs to tag with the todo"),
+        fieldWithPath("attachmentSessionId").type("UUID").optional().description("첨부 업로드 세션 ID"),
+        fieldWithPath("orderedAttachmentIds").type("Array").optional().description("저장 순서를 유지할 첨부 ID 배열")
+    )
+
+    private fun todoResponseFields(prefix: String = ""): Array<FieldDescriptor> = arrayOf(
+        fieldWithPath("${prefix}id").description("Todo ID"),
+        fieldWithPath("${prefix}title").description("Todo Title"),
+        fieldWithPath("${prefix}content").description("Todo Content"),
+        fieldWithPath("${prefix}position").description("Todo Position"),
+        fieldWithPath("${prefix}status").description("Todo Status"),
+        fieldWithPath("${prefix}createdDate").description("Created date"),
+        fieldWithPath("${prefix}completedDate").description("Completed date"),
+        fieldWithPath("${prefix}dueDate").description("Due date"),
+        fieldWithPath("${prefix}isOverdue").description("Whether overdue"),
+        fieldWithPath("${prefix}isTagged").description("Whether the todo is tagged from another member's board"),
+        fieldWithPath("${prefix}owner").description("Owner name of the todo"),
+        subsectionWithPath("${prefix}taggedByMember").description("태그된 TODO일 때 소유자 요약 정보").optional(),
+        subsectionWithPath("${prefix}tags").description("태그된 멤버 요약 정보 목록").optional(),
+        fieldWithPath("${prefix}hasAttachments").description("Has attachments")
+    )
+
+    private fun todoBoardResponseFields(): Array<FieldDescriptor> = arrayOf(
+        fieldWithPath("todo").description("List of TODO status todos"),
+        *todoResponseFields("todo[]."),
+        fieldWithPath("inProgress").description("List of IN_PROGRESS status todos"),
+        *todoResponseFields("inProgress[]."),
+        fieldWithPath("done").description("List of DONE status todos"),
+        *todoResponseFields("done[]."),
+        fieldWithPath("counts").description("Todo counts by status"),
+        fieldWithPath("counts.todo").description("Count of TODO status todos"),
+        fieldWithPath("counts.inProgress").description("Count of IN_PROGRESS status todos"),
+        fieldWithPath("counts.done").description("Count of DONE status todos"),
+        fieldWithPath("counts.total").description("Total count of all todos")
+    )
 
 }

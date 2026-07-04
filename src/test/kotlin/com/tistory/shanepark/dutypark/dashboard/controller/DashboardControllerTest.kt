@@ -102,6 +102,7 @@ class DashboardControllerTest : RestDocsTest() {
                         fieldWithPath("schedules[].endDateTime").description("End date time"),
                         fieldWithPath("schedules[].isTagged").description("Is tagged"),
                         fieldWithPath("schedules[].owner").description("Owner name"),
+                        fieldWithPath("schedules[].taggedByMember").description("Tagged-by member summary").optional(),
                         fieldWithPath("schedules[].tags").description("Tagged members"),
                         fieldWithPath("schedules[].visibility").description("Visibility"),
                         fieldWithPath("schedules[].dateToCompare").description("Date for comparison"),

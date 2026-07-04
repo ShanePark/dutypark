@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.member.controller
 
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -47,7 +48,7 @@ class RefreshTokenController(
         request: HttpServletRequest,
     ): ResponseEntity<Map<String, Int>> {
         val currentToken = cookieService.extractRefreshToken(request.cookies)
-            ?: return ResponseEntity.badRequest().build()
+            ?: throw BadRequestException("auth.refresh.current.required")
         val deletedCount = refreshTokenService.deleteOtherRefreshTokens(loginMember.id, currentToken)
         return ResponseEntity.ok(mapOf("deletedCount" to deletedCount))
     }

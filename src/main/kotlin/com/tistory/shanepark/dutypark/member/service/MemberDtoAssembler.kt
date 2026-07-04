@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
+import com.tistory.shanepark.dutypark.member.domain.dto.toMemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import org.springframework.stereotype.Service
@@ -13,10 +14,9 @@ class MemberDtoAssembler(
 ) {
 
     fun toDto(member: Member): MemberDto {
-        val memberId = member.id ?: return MemberDto.of(member)
+        val memberId = member.id ?: return member.toMemberDto()
         val providerMap = memberSocialAccountService.findProviderMapByMemberIds(setOf(memberId))[memberId].orEmpty()
-        return MemberDto.of(
-            member = member,
+        return member.toMemberDto(
             kakaoId = providerMap[SsoType.KAKAO],
             naverId = providerMap[SsoType.NAVER],
         )
@@ -31,8 +31,7 @@ class MemberDtoAssembler(
 
         return members.map { member ->
             val providerMap = member.id?.let { providerMapByMemberId[it] }.orEmpty()
-            MemberDto.of(
-                member = member,
+            member.toMemberDto(
                 kakaoId = providerMap[SsoType.KAKAO],
                 naverId = providerMap[SsoType.NAVER],
             )

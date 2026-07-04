@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { X, Share, Download, MoreVertical, Plus, Smartphone, Ellipsis } from 'lucide-vue-next'
 
 const STORAGE_KEY = 'pwa-install-guide-dismissed-until'
@@ -7,6 +8,7 @@ const DISMISS_DAYS = 7
 const isVisible = ref(false)
 const deferredPrompt = ref<BeforeInstallPromptEvent | null>(null)
 const forceMode = ref<'ios' | 'android' | null>(null)
+const { t } = useI18n()
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -114,13 +116,13 @@ defineExpose({ checkVisibility })
         <div class="pwa-guide-header">
           <div class="flex items-center gap-2">
             <Smartphone class="w-5 h-5 pwa-guide-icon" />
-            <span class="font-semibold">앱처럼 사용하기</span>
+            <span class="font-semibold">{{ t('pwaInstallGuide.title') }}</span>
           </div>
           <button
             type="button"
             class="pwa-guide-close-btn"
             @click="dismiss"
-            aria-label="닫기"
+            :aria-label="t('pwaInstallGuide.closeAria')"
           >
             <X class="w-5 h-5" />
           </button>
@@ -129,8 +131,8 @@ defineExpose({ checkVisibility })
         <!-- Content -->
         <div class="pwa-guide-content">
           <p class="pwa-guide-benefit">
-            홈 화면에 추가하면 앱처럼 사용하고<br />
-            <strong>실시간 푸시 알림</strong>을 받을 수 있어요!
+            {{ t('pwaInstallGuide.descriptionStart') }}<br />
+            <strong>{{ t('pwaInstallGuide.descriptionStrong') }}</strong>{{ t('pwaInstallGuide.descriptionEnd') }}
           </p>
 
           <!-- iOS Instructions -->
@@ -139,11 +141,11 @@ defineExpose({ checkVisibility })
               <div class="pwa-guide-step-number">1</div>
               <div class="pwa-guide-step-content">
                 <div class="flex items-center gap-2">
-                  <span>주소창 옆</span>
+                  <span>{{ t('pwaInstallGuide.ios.step1Prefix') }}</span>
                   <span class="pwa-guide-icon-badge">
                     <Ellipsis class="w-4 h-4" />
                   </span>
-                  <span>버튼을 탭하세요</span>
+                  <span>{{ t('pwaInstallGuide.ios.step1Action') }}</span>
                 </div>
               </div>
             </div>
@@ -154,7 +156,7 @@ defineExpose({ checkVisibility })
                   <span class="pwa-guide-icon-badge">
                     <Share class="w-4 h-4" />
                   </span>
-                  <span><strong>공유</strong> 버튼을 탭하세요</span>
+                  <span><strong>{{ t('pwaInstallGuide.ios.shareLabel') }}</strong> {{ t('pwaInstallGuide.ios.shareAction') }}</span>
                 </div>
               </div>
             </div>
@@ -165,7 +167,7 @@ defineExpose({ checkVisibility })
                   <span class="pwa-guide-icon-badge">
                     <Plus class="w-4 h-4" />
                   </span>
-                  <span><strong>홈 화면에 추가</strong>를 선택하세요</span>
+                  <span><strong>{{ t('pwaInstallGuide.ios.addToHomeLabel') }}</strong>{{ t('pwaInstallGuide.ios.addToHomeAction') }}</span>
                 </div>
               </div>
             </div>
@@ -181,7 +183,7 @@ defineExpose({ checkVisibility })
               @click="handleInstallClick"
             >
               <Download class="w-5 h-5" />
-              <span>앱 설치하기</span>
+              <span>{{ t('pwaInstallGuide.android.installButton') }}</span>
             </button>
 
             <!-- Manual Instructions -->
@@ -190,22 +192,22 @@ defineExpose({ checkVisibility })
                 <div class="pwa-guide-step-number">1</div>
                 <div class="pwa-guide-step-content">
                   <div class="flex items-center gap-2">
-                    <span>브라우저 상단의</span>
+                    <span>{{ t('pwaInstallGuide.android.step1Prefix') }}</span>
                     <span class="pwa-guide-icon-badge">
                       <MoreVertical class="w-4 h-4" />
                     </span>
-                    <span>메뉴를 탭하세요</span>
+                    <span>{{ t('pwaInstallGuide.android.step1Action') }}</span>
                   </div>
                 </div>
               </div>
               <div class="pwa-guide-step">
                 <div class="pwa-guide-step-number">2</div>
                 <div class="pwa-guide-step-content">
-                  <div class="flex items-center gap-2">
-                    <span class="pwa-guide-icon-badge">
-                      <Download class="w-4 h-4" />
-                    </span>
-                    <span><strong>앱 설치</strong> 또는 <strong>홈 화면에 추가</strong>를 선택하세요</span>
+                <div class="flex items-center gap-2">
+                  <span class="pwa-guide-icon-badge">
+                    <Download class="w-4 h-4" />
+                  </span>
+                    <span><strong>{{ t('pwaInstallGuide.android.installLabel') }}</strong> {{ t('pwaInstallGuide.android.installAction') }} <strong>{{ t('pwaInstallGuide.android.addToHomeLabel') }}</strong>{{ t('pwaInstallGuide.android.addToHomeAction') }}</span>
                   </div>
                 </div>
               </div>
@@ -220,7 +222,7 @@ defineExpose({ checkVisibility })
             class="pwa-guide-dismiss-btn"
             @click="dismissForDays"
           >
-            7일간 보지 않기
+            {{ t('pwaInstallGuide.dismissForDays', { days: DISMISS_DAYS }) }}
           </button>
         </div>
       </div>

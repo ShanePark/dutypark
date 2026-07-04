@@ -34,9 +34,31 @@ class Todo(
 
     ) : EntityBase() {
 
+    @OneToMany(mappedBy = "todo", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+    val tags: MutableList<TodoTag> = mutableListOf()
+
     fun update(title: String, content: String) {
         this.title = title
         this.content = content
+    }
+
+    fun hasTag(member: Member): Boolean {
+        return tags.any { it.member.id == member.id }
+    }
+
+    fun addTag(member: Member) {
+        tags.find { it.member.id == member.id }
+            ?.let { throw IllegalArgumentException("$member is already tagged in todo $this") }
+
+        val todoTag = TodoTag(this, member)
+        tags.add(todoTag)
+    }
+
+    fun removeTag(member: Member) {
+        val removed = tags.removeAll { it.member.id == member.id }
+        if (!removed) {
+            throw IllegalArgumentException("$member is not tagged in todo $this")
+        }
     }
 
     fun changeStatus(newStatus: TodoStatus, newPosition: Int) {

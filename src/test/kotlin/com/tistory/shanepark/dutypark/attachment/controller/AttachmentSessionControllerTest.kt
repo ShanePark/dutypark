@@ -113,8 +113,10 @@ class AttachmentSessionControllerTest : RestDocsTest() {
                 document(
                     "attachments/sessions/create-unauthorized",
                     responseFields(
-                        fieldWithPath("errorCode").type(JsonFieldType.NUMBER).description("401"),
-                        fieldWithPath("message").type(JsonFieldType.STRING).description("Error message")
+                        fieldWithPath("status").type(JsonFieldType.NUMBER).description("HTTP status"),
+                        fieldWithPath("code").type(JsonFieldType.STRING).description("Machine-readable error code"),
+                        fieldWithPath("details").type(JsonFieldType.OBJECT).optional().description("Additional error details"),
+                        fieldWithPath("fieldErrors").type(JsonFieldType.ARRAY).optional().description("Field validation errors")
                     )
                 )
             )
@@ -190,10 +192,26 @@ class AttachmentSessionControllerTest : RestDocsTest() {
         mockMvc.perform(
             delete("/api/attachments/sessions/{sessionId}", session.id)
                 .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
-        ).andExpect(status().is4xxClientError)
+        ).andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("attachment.session.forbidden"))
             .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "attachments/sessions/discard-forbidden",
+                    pathParameters(
+                        parameterWithName("sessionId").description("Upload session ID to discard")
+                    ),
+                    responseFields(*errorResponseFields("Error code (`attachment.session.forbidden`)"))
+                )
+            )
 
         assertThat(sessionRepository.count()).isEqualTo(1)
     }
 
+    private fun errorResponseFields(codeDescription: String) = arrayOf(
+        fieldWithPath("status").type(JsonFieldType.NUMBER).description("HTTP status"),
+        fieldWithPath("code").type(JsonFieldType.STRING).description(codeDescription),
+        fieldWithPath("details").type(JsonFieldType.OBJECT).optional().description("Additional error details"),
+        fieldWithPath("fieldErrors").type(JsonFieldType.ARRAY).optional().description("Field validation errors")
+    )
 }

@@ -137,9 +137,7 @@ class AttachmentValidationServiceTest {
             ByteArray(1024)
         )
 
-        assertThatThrownBy { validationService.validateFile(file) }
-            .isInstanceOf(AttachmentExtensionBlockedException::class.java)
-            .hasMessageContaining("bat")
+        assertBlockedExtension(file, "script.bat", "bat")
     }
 
     @Test
@@ -151,9 +149,7 @@ class AttachmentValidationServiceTest {
             ByteArray(1024)
         )
 
-        assertThatThrownBy { validationService.validateFile(file) }
-            .isInstanceOf(AttachmentExtensionBlockedException::class.java)
-            .hasMessageContaining("sh")
+        assertBlockedExtension(file, "script.sh", "sh")
     }
 
     @Test
@@ -165,9 +161,7 @@ class AttachmentValidationServiceTest {
             ByteArray(1024)
         )
 
-        assertThatThrownBy { validationService.validateFile(file) }
-            .isInstanceOf(AttachmentExtensionBlockedException::class.java)
-            .hasMessageContaining("js")
+        assertBlockedExtension(file, "code.js", "js")
     }
 
     @Test
@@ -179,9 +173,7 @@ class AttachmentValidationServiceTest {
             ByteArray(1024)
         )
 
-        assertThatThrownBy { validationService.validateFile(fileUppercase) }
-            .isInstanceOf(AttachmentExtensionBlockedException::class.java)
-            .hasMessageContaining("EXE")
+        assertBlockedExtension(fileUppercase, "malicious.EXE", "EXE")
 
         val fileMixedCase = MockMultipartFile(
             "file",
@@ -190,9 +182,7 @@ class AttachmentValidationServiceTest {
             ByteArray(1024)
         )
 
-        assertThatThrownBy { validationService.validateFile(fileMixedCase) }
-            .isInstanceOf(AttachmentExtensionBlockedException::class.java)
-            .hasMessageContaining("ExE")
+        assertBlockedExtension(fileMixedCase, "malicious.ExE", "ExE")
     }
 
     @Test
@@ -214,5 +204,21 @@ class AttachmentValidationServiceTest {
         )
 
         permissiveService.validateFile(exeFile)
+    }
+
+    private fun assertBlockedExtension(
+        file: MockMultipartFile,
+        expectedFilename: String,
+        expectedExtension: String
+    ) {
+        try {
+            validationService.validateFile(file)
+            throw AssertionError("Expected AttachmentExtensionBlockedException")
+        } catch (e: AttachmentExtensionBlockedException) {
+            assertThat(e.filename).isEqualTo(expectedFilename)
+            assertThat(e.extension).isEqualTo(expectedExtension)
+            assertThat(e.errorCode).isEqualTo(400)
+            assertThat(e.message).isEqualTo("attachment.extension.blocked")
+        }
     }
 }

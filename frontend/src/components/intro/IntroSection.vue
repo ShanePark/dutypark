@@ -1,21 +1,23 @@
 <script setup lang="ts">
-import { ref, provide } from 'vue'
+import { ref, provide, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import '@/styles/intro.css'
 import IntroHero from './IntroHero.vue'
 import IntroShowcase, { type Feature } from './IntroShowcase.vue'
 import IntroCTA from './IntroCTA.vue'
 
 const containerRef = ref<HTMLElement | null>(null)
+const { t } = useI18n()
 provide('introContainer', containerRef)
 
-const features: Feature[] = [
+const features = computed<Feature[]>(() => [
   {
     id: 'share',
     icon: 'heart',
-    title: '일상을 함께',
+    title: t('intro.features.share.title'),
     descriptionLines: [
-      '가족, 친구와 서로의 일정을 공유하세요.',
-      '"오늘 뭐 해?" 더 이상 물어볼 필요 없어요.',
+      t('intro.features.share.descriptionLine1'),
+      t('intro.features.share.descriptionLine2'),
     ],
     mockupType: 'image',
     mockupSrc: '/img/intro/schedule.png',
@@ -23,10 +25,10 @@ const features: Feature[] = [
   {
     id: 'duty',
     icon: 'clock',
-    title: '근무 & 연차 관리',
+    title: t('intro.features.duty.title'),
     descriptionLines: [
-      '교대근무도, 평일 근무도 한눈에 정리.',
-      '연차는 휴무로 바꾸고, 팀원들과 공유하세요.',
+      t('intro.features.duty.descriptionLine1'),
+      t('intro.features.duty.descriptionLine2'),
     ],
     mockupType: 'image',
     mockupSrc: '/img/intro/duty.png',
@@ -34,20 +36,20 @@ const features: Feature[] = [
   {
     id: 'life',
     icon: 'users',
-    title: '다양한 일상',
+    title: t('intro.features.life.title'),
     descriptionLines: [
-      '아이 등하원, 응원팀 경기 일정, 모임까지.',
-      '내 일상의 모든 것을 한 곳에서 관리하세요.',
+      t('intro.features.life.descriptionLine1'),
+      t('intro.features.life.descriptionLine2'),
     ],
     mockupType: 'placeholder',
   },
   {
     id: 'todo',
     icon: 'check',
-    title: '할일 관리',
+    title: t('intro.features.todo.title'),
     descriptionLines: [
-      '까먹지 않는 일상을 위한 투두 보드.',
-      '드래그로 순서 변경, 완료 체크까지.',
+      t('intro.features.todo.descriptionLine1'),
+      t('intro.features.todo.descriptionLine2'),
     ],
     mockupType: 'image',
     mockupSrc: '/img/intro/todo.png',
@@ -55,10 +57,10 @@ const features: Feature[] = [
   {
     id: 'dday',
     icon: 'flag',
-    title: 'D-Day 카운트다운',
+    title: t('intro.features.dday.title'),
     descriptionLines: [
-      '기념일, 마감일, 중요한 날.',
-      '함께 기다리고, 함께 기억해요.',
+      t('intro.features.dday.descriptionLine1'),
+      t('intro.features.dday.descriptionLine2'),
     ],
     mockupType: 'image',
     mockupSrc: '/img/intro/dday.png',
@@ -66,15 +68,15 @@ const features: Feature[] = [
   {
     id: 'holiday',
     icon: 'sun',
-    title: '공휴일 자동 연동',
+    title: t('intro.features.holiday.title'),
     descriptionLines: [
-      '대한민국 공휴일이 자동으로 표시됩니다.',
-      '일정 계획이 더 쉬워집니다.',
+      t('intro.features.holiday.descriptionLine1'),
+      t('intro.features.holiday.descriptionLine2'),
     ],
     mockupType: 'image',
     mockupSrc: '/img/intro/holiday.png',
   },
-]
+])
 </script>
 
 <template>

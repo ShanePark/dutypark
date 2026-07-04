@@ -64,6 +64,7 @@ apiClient.interceptors.request.use((config) => {
   if (config.data instanceof FormData) {
     delete config.headers['Content-Type']
   }
+
   return config
 })
 
@@ -116,7 +117,13 @@ apiClient.interceptors.response.use(
 
       try {
         // Cookie is sent automatically via withCredentials
-        await axios.post('/api/auth/refresh', {}, { withCredentials: true })
+        await axios.post(
+          '/api/auth/refresh',
+          {},
+          {
+            withCredentials: true,
+          }
+        )
 
         // Reset refresh failure flag on successful refresh
         refreshFailed = false

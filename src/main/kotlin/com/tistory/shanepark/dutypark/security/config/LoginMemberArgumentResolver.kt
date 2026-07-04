@@ -34,7 +34,7 @@ class LoginMemberArgumentResolver : HandlerMethodArgumentResolver {
     ) {
         val required = parameter.getParameterAnnotation(Login::class.java)?.required ?: true
         if (loginMember == null && required) {
-            throw AuthException("login is required")
+            throw AuthException("auth.required")
         }
     }
 

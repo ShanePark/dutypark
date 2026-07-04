@@ -33,4 +33,20 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      input: {
+        index: fileURLToPath(new URL('./index.html', import.meta.url)),
+        'sw-runtime': fileURLToPath(new URL('./src/push/sw-runtime.ts', import.meta.url)),
+      },
+      output: {
+        entryFileNames: (chunkInfo) => {
+          if (chunkInfo.name === 'sw-runtime') {
+            return 'sw-runtime.js'
+          }
+          return 'assets/[name]-[hash].js'
+        },
+      },
+    },
+  },
 })

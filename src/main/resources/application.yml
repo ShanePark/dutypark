@@ -26,7 +26,7 @@ spring:
       chat:
         base-url: "https://generativelanguage.googleapis.com/v1beta/openai/"
         options:
-          model: "gemma-3-27b-it"
+          model: "gemma-4-31b-it"
           temperature: 0.0
         completions-path: "/chat/completions"
     rate-limit:
@@ -56,6 +56,10 @@ cookie:
   domain: ${DOMAIN_NAME:}
 
 dutypark:
+  ai:
+    chat:
+      connect-timeout: ${AI_CHAT_CONNECT_TIMEOUT:30s}
+      read-timeout: ${AI_CHAT_READ_TIMEOUT:120s}
   adminEmails:
     - ${ADMIN_EMAIL:ADMIN@EMAIL.HERE}
   webpush:
@@ -67,6 +71,9 @@ dutypark:
       max-attempts: ${LOGIN_MAX_ATTEMPTS:5}
       window-minutes: ${LOGIN_WINDOW_MINUTES:15}
       cleanup-retention-days: ${LOGIN_CLEANUP_DAYS:7}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
+    allowed-origin-patterns: ${CORS_ALLOWED_ORIGIN_PATTERNS:}
   slack:
     token: "${SLACK_TOKEN: }"
   data-go-kr:

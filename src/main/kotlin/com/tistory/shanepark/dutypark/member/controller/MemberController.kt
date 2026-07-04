@@ -1,13 +1,15 @@
 package com.tistory.shanepark.dutypark.member.controller
 
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
-import com.tistory.shanepark.dutypark.member.domain.dto.FriendDto
+import com.tistory.shanepark.dutypark.member.domain.dto.AuxiliaryAccountCreateRequest
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
+import com.tistory.shanepark.dutypark.member.domain.dto.MemberPreviewDto
 import com.tistory.shanepark.dutypark.member.domain.dto.VisibilityUpdateRequest
 import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.member.service.ProfilePhotoService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import jakarta.validation.Valid
 import org.springframework.core.io.Resource
 import org.springframework.core.io.UrlResource
 import org.springframework.http.CacheControl
@@ -41,7 +43,7 @@ class MemberController(
         @RequestBody visibilityUpdateRequest: VisibilityUpdateRequest,
     ) {
         if (memberId != loginMember.id) {
-            throw IllegalArgumentException("You can't update other member's visibility")
+            throw IllegalArgumentException("member.visibility.update.forbidden")
         }
         val visibility = visibilityUpdateRequest.visibility
         memberService.updateCalendarVisibility(loginMember, visibility)
@@ -66,7 +68,7 @@ class MemberController(
     @GetMapping("/family")
     fun getFamilyMembers(
         @Login loginMember: LoginMember,
-    ): List<FriendDto> {
+    ): List<MemberPreviewDto> {
         return friendService.findAllFamilyMembers(loginMember.id)
     }
 
@@ -87,10 +89,9 @@ class MemberController(
     @PostMapping("/auxiliary")
     fun createAuxiliaryAccount(
         @Login loginMember: LoginMember,
-        @RequestBody request: Map<String, String>,
+        @Valid @RequestBody request: AuxiliaryAccountCreateRequest,
     ): MemberDto {
-        val name = request["name"] ?: throw IllegalArgumentException("name is required")
-        return memberService.createAuxiliaryAccount(loginMember, name)
+        return memberService.createAuxiliaryAccount(loginMember, request.name!!.trim())
     }
 
     @GetMapping("/{memberId}/canManage")
@@ -108,9 +109,9 @@ class MemberController(
     fun getMemberById(
         @Login(required = false) loginMember: LoginMember?,
         @PathVariable memberId: Long,
-    ): MemberDto {
+    ): MemberPreviewDto {
         friendService.checkVisibility(loginMember, memberId)
-        return memberService.findById(memberId)
+        return memberService.findPreviewById(memberId)
     }
 
     @PutMapping("/profile-photo")

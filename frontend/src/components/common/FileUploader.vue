@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, shallowRef, onMounted, onUnmounted, watch, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Uppy from '@uppy/core'
 import XHRUpload from '@uppy/xhr-upload'
 import { Upload, X, FileIcon, Image, Loader2 } from 'lucide-vue-next'
@@ -18,6 +19,7 @@ import {
   validateFile,
   fetchAuthenticatedImage,
 } from '@/api/attachment'
+import { resolveFileUploaderErrorMessage } from './fileUploaderError'
 
 // Props
 interface Props {
@@ -42,6 +44,7 @@ const emit = defineEmits<{
   (e: 'error', message: string): void
 }>()
 
+const { t } = useI18n()
 // Refs
 const uploadedAttachments = ref<NormalizedAttachment[]>([...props.existingAttachments])
 const uploadProgress = ref<Record<string, number>>({})
@@ -158,7 +161,7 @@ function setupUppy() {
     const validation = validateFile(fileData)
     if (!validation.valid) {
       uppyInstance.removeFile(file.id)
-      emit('error', validation.message || '파일 검증 실패')
+      emit('error', validation.message || t('fileUploader.validationFailed'))
       return
     }
 
@@ -210,7 +213,7 @@ function setupUppy() {
         }
       })
     } catch (error) {
-      emit('error', '파일 업로드 세션 생성에 실패했습니다.')
+      emit('error', t('fileUploader.createSessionFailed'))
       fileIDs.forEach((fileId) => {
         removeFileFromState(fileId)
         const file = uppyInstance.getFile(fileId)
@@ -272,14 +275,14 @@ function setupUppy() {
 
     removeFileFromState(file.id)
 
-    let message = '파일 업로드에 실패했습니다.'
-    if (response?.status === 413) {
-      message = attachmentValidation.tooLargeMessage(file.name)
-    } else if (response?.status === 400 && response?.body?.code === 'ATTACHMENT_EXTENSION_BLOCKED') {
-      message = attachmentValidation.blockedExtensionMessage(file.name)
-    } else if (response?.body?.message) {
-      message = response.body.message
-    }
+    const message = resolveFileUploaderErrorMessage(
+      file.name,
+      response as {
+        status?: number
+        body?: { code?: unknown; errorCode?: unknown; details?: unknown; errorDetails?: unknown }
+      } | undefined,
+      t,
+    )
 
     emit('error', message)
   })
@@ -289,7 +292,7 @@ function setupUppy() {
     if (error && /maximum allowed size/i.test(error.message || '')) {
       emit('error', attachmentValidation.tooLargeMessage(file?.name))
     } else {
-      emit('error', '파일 추가에 실패했습니다.')
+      emit('error', t('fileUploader.addFailed'))
     }
   })
 
@@ -500,9 +503,9 @@ async function loadExistingImages() {
       @click="fileInputRef?.click()"
     >
       <Upload class="upload-icon" :size="20" />
-      <span class="drop-text-desktop">파일을 드래그하거나 클릭하여 업로드</span>
-      <span class="drop-text-mobile">파일 추가</span>
-      <span class="drop-hint-desktop">최대 {{ attachmentValidation.maxFileSizeLabel }}</span>
+      <span class="drop-text-desktop">{{ t('fileUploader.dropDesktop') }}</span>
+      <span class="drop-text-mobile">{{ t('fileUploader.dropMobile') }}</span>
+      <span class="drop-hint-desktop">{{ t('fileUploader.maxSize', { size: attachmentValidation.maxFileSizeLabel }) }}</span>
     </div>
 
     <input

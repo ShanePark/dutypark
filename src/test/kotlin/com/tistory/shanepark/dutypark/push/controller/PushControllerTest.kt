@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.http.MediaType
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
+import org.springframework.restdocs.payload.JsonFieldType
 import org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath
 import org.springframework.restdocs.payload.PayloadDocumentation.requestFields
 import org.springframework.restdocs.payload.PayloadDocumentation.responseFields
@@ -19,6 +20,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import jakarta.servlet.http.Cookie
+import java.time.LocalDateTime
 
 @TestPropertySource(
     properties = [
@@ -120,6 +122,8 @@ class PushControllerTest : RestDocsTest() {
 
         val updatedToken = refreshTokenRepository.findByToken(refreshToken.token)
         assertThat(updatedToken?.pushEndpoint).isEqualTo("https://example.com/endpoint")
+        assertThat(updatedToken?.pushP256dh).isEqualTo("test-p256dh")
+        assertThat(updatedToken?.pushAuth).isEqualTo("test-auth")
     }
 
     @Test
@@ -176,7 +180,20 @@ class PushControllerTest : RestDocsTest() {
                 .content(requestBody)
         )
             .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.status").value(401))
+            .andExpect(jsonPath("$.code").value("auth.unauthorized"))
+            .andDo(
+                document(
+                    "push/subscribe-unauthorized",
+                    requestFields(
+                        fieldWithPath("endpoint").description("Push endpoint URL"),
+                        fieldWithPath("keys").description("Subscription keys"),
+                        fieldWithPath("keys.p256dh").description("P-256 ECDH key (Base64)"),
+                        fieldWithPath("keys.auth").description("Auth secret (Base64)")
+                    ),
+                    standardErrorResponseFields("Machine-readable error code (`auth.unauthorized`)")
+                )
+            )
     }
 
     @Test
@@ -193,6 +210,82 @@ class PushControllerTest : RestDocsTest() {
                 .cookie(Cookie("refresh_token", refreshToken.token))
         )
             .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.status").value(401))
+            .andExpect(jsonPath("$.code").value("auth.unauthorized"))
+            .andDo(
+                document(
+                    "push/unsubscribe-unauthorized",
+                    standardErrorResponseFields("Machine-readable error code (`auth.unauthorized`)")
+                )
+            )
     }
+
+    @Test
+    fun `subscribe returns 400 when nested push keys are blank`() {
+        val refreshToken = refreshTokenService.createRefreshToken(
+            memberId = TestData.member.id!!,
+            remoteAddr = "127.0.0.1",
+            userAgent = "test-agent"
+        )
+
+        val requestBody = """
+            {
+              "endpoint": "https://example.com/endpoint",
+              "keys": {
+                "p256dh": "test-p256dh",
+                "auth": ""
+              }
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/auth/push/subscribe")
+                .withAuth(TestData.member)
+                .cookie(Cookie("refresh_token", refreshToken.token))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("common.validation.failed"))
+            .andExpect(jsonPath("$.fieldErrors[0].field").value("keys.auth"))
+    }
+
+    @Test
+    fun `subscribe returns 401 when refresh token is expired`() {
+        val refreshToken = refreshTokenService.createRefreshToken(
+            memberId = TestData.member.id!!,
+            remoteAddr = "127.0.0.1",
+            userAgent = "test-agent"
+        )
+        refreshToken.validUntil = LocalDateTime.now().minusMinutes(1)
+        refreshTokenRepository.save(refreshToken)
+
+        val requestBody = """
+            {
+              "endpoint": "https://example.com/endpoint",
+              "keys": {
+                "p256dh": "test-p256dh",
+                "auth": "test-auth"
+              }
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/auth/push/subscribe")
+                .withAuth(TestData.member)
+                .cookie(Cookie("refresh_token", refreshToken.token))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody)
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.status").value(401))
+            .andExpect(jsonPath("$.code").value("auth.unauthorized"))
+    }
+
+    private fun standardErrorResponseFields(codeDescription: String) = responseFields(
+        fieldWithPath("status").type(JsonFieldType.NUMBER).description("HTTP status code"),
+        fieldWithPath("code").type(JsonFieldType.STRING).description(codeDescription),
+        fieldWithPath("details").type(JsonFieldType.OBJECT).optional().description("Additional error details"),
+        fieldWithPath("fieldErrors").type(JsonFieldType.ARRAY).optional().description("Field validation errors")
+    )
 }

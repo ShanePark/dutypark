@@ -1,14 +1,6 @@
-import type { CalendarVisibility } from '@/types'
+import type { CalendarVisibility, TaggableFriend, Todo as SharedTodo } from '@/types'
 
-export interface LocalTodo {
-  id: string
-  title: string
-  content: string
-  status: 'TODO' | 'IN_PROGRESS' | 'DONE'
-  createdDate: string
-  completedDate?: string
-  dueDate?: string
-  isOverdue?: boolean
+export type LocalTodo = Omit<SharedTodo, 'attachments'> & {
   hasAttachments: boolean
   attachments: Array<{
     id: string
@@ -47,6 +39,12 @@ export interface Schedule {
   isTagged: boolean
   owner?: string
   taggedBy?: string
+  taggedByMember?: {
+    id: number
+    name: string
+    hasProfilePhoto?: boolean
+    profilePhotoVersion?: number
+  }
   attachments?: Array<{
     id: string
     originalFilename: string
@@ -55,7 +53,12 @@ export interface Schedule {
     thumbnailUrl?: string
     hasThumbnail: boolean
   }>
-  tags?: Array<{ id: number; name: string }>
+  tags?: Array<{
+    id: number
+    name: string
+    hasProfilePhoto?: boolean
+    profilePhotoVersion?: number
+  }>
   daysFromStart: number
   totalDays: number
 }
@@ -69,10 +72,7 @@ export interface LocalDDay {
   dDayText: string
 }
 
-export interface Friend {
-  id: number
-  name: string
-}
+export type Friend = TaggableFriend
 
 export interface CalendarDay {
   year: number
@@ -93,6 +93,8 @@ export interface DutyDay {
 export interface OtherDuty {
   memberId: number
   memberName: string
+  hasProfilePhoto: boolean
+  profilePhotoVersion: number
   duties: Array<{
     dutyType: string
     dutyColor: string

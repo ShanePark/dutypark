@@ -125,7 +125,7 @@ export const useNotificationStore = defineStore('notification', () => {
   }
 
   /**
-   * Fetch friend request count (called on app start and when friend-related notifications arrive)
+   * Fetch pending relationship request count (friend + family)
    */
   async function fetchFriendRequestCount(): Promise<void> {
     try {
@@ -136,7 +136,7 @@ export const useNotificationStore = defineStore('notification', () => {
   }
 
   /**
-   * Check if new notifications include friend requests
+   * Check if new notifications include relationship requests that affect the badge
    */
   async function checkForNewFriendRequests(): Promise<void> {
     try {
@@ -173,15 +173,17 @@ export const useNotificationStore = defineStore('notification', () => {
   /**
    * Fetch recent notifications (read + unread) for dropdown
    */
-  async function fetchRecentNotifications(): Promise<void> {
+  async function fetchRecentNotifications(): Promise<boolean> {
     isLoading.value = true
     try {
       const page = await notificationApi.getNotifications(0, 10)
       recentNotifications.value = page.content
       consecutiveFailures.value = 0
+      return true
     } catch (error) {
       consecutiveFailures.value++
       console.warn('Failed to fetch recent notifications:', error)
+      return false
     } finally {
       isLoading.value = false
     }
@@ -211,6 +213,34 @@ export const useNotificationStore = defineStore('notification', () => {
     } catch (error) {
       console.error('Failed to mark notification as read:', error)
       throw error
+    }
+  }
+
+  function getSingleUnreadRecentNotificationId(): string | null {
+    if (unreadCount.value !== 1) {
+      return null
+    }
+
+    const unreadRecentNotifications = recentNotifications.value.filter(n => !n.isRead)
+    const [notification] = unreadRecentNotifications
+
+    return unreadRecentNotifications.length === 1 && notification ? notification.id : null
+  }
+
+  /**
+   * Mark the single unread notification as read when the dropdown itself is the confirmation.
+   */
+  async function markSingleUnreadAsRead(expectedId?: string): Promise<void> {
+    const notificationId = getSingleUnreadRecentNotificationId()
+
+    if (!notificationId || (expectedId && notificationId !== expectedId)) {
+      return
+    }
+
+    try {
+      await markAsRead(notificationId)
+    } catch {
+      // markAsRead already logs the failure; dropdown visibility should not be blocked.
     }
   }
 
@@ -358,6 +388,8 @@ export const useNotificationStore = defineStore('notification', () => {
     fetchUnreadNotifications,
     fetchRecentNotifications,
     markAsRead,
+    getSingleUnreadRecentNotificationId,
+    markSingleUnreadAsRead,
     markAllAsRead,
     startPolling,
     stopPolling,

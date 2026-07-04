@@ -116,7 +116,7 @@ class DutyBatchSungsimServiceTest {
         val exception = assertThrows<IllegalArgumentException> {
             dutyBatchService.batchUploadMember(file, 1L, yearMonth)
         }
-        assertThat(exception.message).startsWith("Member has no team")
+        assertThat(exception.message).isEqualTo("dutyBatch.member.teamRequired")
     }
 
     @Test
@@ -323,7 +323,10 @@ class DutyBatchSungsimServiceTest {
         verify(dutyRepository, never()).saveAll(any<List<Duty>>())
 
         assertThat(result.dutyBatchResult).hasSize(1)
-        val expectedFailResult = DutyBatchResult.fail(MultipleNameFoundException::class.simpleName!!)
+        val expectedFailResult = DutyBatchResult.fail(
+            errorCode = "dutyBatch.multipleNameFound",
+            errorDetails = mapOf("names" to listOf("Charlie", "Charles")),
+        )
         assertThat(result.dutyBatchResult.first().second).isEqualTo(expectedFailResult)
     }
 
@@ -352,7 +355,7 @@ class DutyBatchSungsimServiceTest {
 
         val result = dutyBatchService.batchUploadTeam(file, 1L, yearMonth)
         assertThat(result.dutyBatchResult).hasSize(1)
-        val expectedFailResult = DutyBatchResult.fail(NameNotFoundException::class.simpleName!!)
+        val expectedFailResult = DutyBatchResult.fail("dutyBatch.nameNotFound")
         assertThat(result.dutyBatchResult.first().second).isEqualTo(expectedFailResult)
     }
 

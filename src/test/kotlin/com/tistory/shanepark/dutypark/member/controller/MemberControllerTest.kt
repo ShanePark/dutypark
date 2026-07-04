@@ -2,20 +2,26 @@ package com.tistory.shanepark.dutypark.member.controller
 
 import com.tistory.shanepark.dutypark.RestDocsTest
 import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
+import com.tistory.shanepark.dutypark.member.domain.entity.MemberSocialAccount
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
+import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
+import com.tistory.shanepark.dutypark.member.repository.MemberSocialAccountRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpHeaders
+import org.springframework.http.MediaType
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders
 import org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath
 import org.springframework.restdocs.payload.PayloadDocumentation.requestFields
+import org.springframework.restdocs.payload.PayloadDocumentation.responseFields
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.imageio.ImageIO
@@ -25,6 +31,9 @@ class MemberControllerTest : RestDocsTest() {
 
     @Autowired
     lateinit var storagePathResolver: StoragePathResolver
+
+    @Autowired
+    lateinit var memberSocialAccountRepository: MemberSocialAccountRepository
 
     private val createdDirectories = mutableListOf<Path>()
 
@@ -131,12 +140,15 @@ class MemberControllerTest : RestDocsTest() {
 
         mockMvc.perform(
             RestDocumentationRequestBuilders.post("/api/members/auxiliary")
+                .header(HttpHeaders.ACCEPT_LANGUAGE, "en")
                 .accept("application/json")
                 .contentType("application/json")
                 .content("{}")
                 .withAuth(member)
         )
             .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("member.auxiliary.name.required"))
+            .andExpect(jsonPath("$.fieldErrors[0].field").value("name"))
     }
 
     @Test
@@ -148,6 +160,40 @@ class MemberControllerTest : RestDocsTest() {
         )
             .andExpect(status().isOk)
             .andExpect(content().string("false"))
+    }
+
+    @Test
+    fun `admin can get private member details`() {
+        val member = TestData.member
+        member.calendarVisibility = Visibility.PRIVATE
+        memberRepository.save(member)
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/members/${member.id}")
+                .withAuth(TestData.admin)
+        )
+            .andExpect(status().isOk)
+            .andExpect(content().string(org.hamcrest.Matchers.containsString(member.name)))
+    }
+
+    @Test
+    fun `public profile lookup does not expose sensitive account fields`() {
+        val member = TestData.member
+        member.calendarVisibility = Visibility.PUBLIC
+        memberRepository.save(member)
+        memberSocialAccountRepository.save(MemberSocialAccount(member, SsoType.KAKAO, "kakao-public"))
+        memberSocialAccountRepository.save(MemberSocialAccount(member, SsoType.NAVER, "naver-public"))
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/members/${member.id}")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(member.id))
+            .andExpect(jsonPath("$.name").value(member.name))
+            .andExpect(jsonPath("$.email").doesNotExist())
+            .andExpect(jsonPath("$.kakaoId").doesNotExist())
+            .andExpect(jsonPath("$.naverId").doesNotExist())
+            .andExpect(jsonPath("$.hasPassword").doesNotExist())
     }
 
     @Test

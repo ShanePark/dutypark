@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.notification.event
 
+import com.tistory.shanepark.dutypark.todo.domain.entity.TodoStatus
 import java.util.*
 
 data class FriendRequestSentEvent(
@@ -31,4 +32,19 @@ data class ScheduleTaggedEvent(
     val ownerId: Long,
     val taggedMemberId: Long,
     val scheduleTitle: String
+)
+
+data class TodoTaggedEvent(
+    val todoId: UUID,
+    val ownerId: Long,
+    val taggedMemberId: Long,
+    val todoTitle: String
+)
+
+data class TodoStatusChangedEvent(
+    val todoId: UUID,
+    val actorId: Long,
+    val recipientMemberId: Long,
+    val todoTitle: String,
+    val newStatus: TodoStatus
 )

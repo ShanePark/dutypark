@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, toRef } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { X, Plus } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
+import BaseModal from '@/components/common/BaseModal.vue'
 import ScheduleList from '@/components/duty/ScheduleList.vue'
 import ScheduleForm from '@/components/duty/ScheduleForm.vue'
 import UntagConfirmModal from '@/components/duty/UntagConfirmModal.vue'
-import type { NormalizedAttachment } from '@/types'
+import type { NormalizedAttachment, TaggableFriend } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
 import { VISIBILITY_ICONS, VISIBILITY_COLORS, type CalendarVisibility } from '@/utils/visibility'
 
 const { showWarning, showError } = useSwal()
@@ -50,7 +50,7 @@ interface Props {
   dutyTypes: DutyType[]
   canEdit: boolean
   batchEditMode: boolean
-  friends: Array<{ id: number; name: string }>
+  friends: TaggableFriend[]
   memberId: number
   isMyCalendar: boolean
 }
@@ -61,7 +61,7 @@ const props = withDefaults(defineProps<Props>(), {
   friends: () => [],
 })
 
-useBodyScrollLock(toRef(props, 'isOpen'))
+const { t, locale } = useI18n()
 
 interface ScheduleSaveData {
   id?: string
@@ -70,8 +70,14 @@ interface ScheduleSaveData {
   startDateTime: string
   endDateTime: string
   visibility: 'PUBLIC' | 'FRIENDS' | 'FAMILY' | 'PRIVATE'
+  tagFriendIds: number[]
   attachmentSessionId?: string | null
   orderedAttachmentIds?: string[]
+}
+
+interface SelectedTagSummary {
+  id: number
+  name: string
 }
 
 const emit = defineEmits<{
@@ -81,12 +87,8 @@ const emit = defineEmits<{
   (e: 'editSchedule', data: ScheduleSaveData): void
   (e: 'deleteSchedule', scheduleId: string): void
   (e: 'reorderSchedules', scheduleIds: string[]): void
-  (e: 'addTag', scheduleId: string, friendId: number): void
-  (e: 'removeTag', scheduleId: string, friendId: number): void
   (e: 'untagSelf', scheduleId: string): void
 }>()
-
-useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 
 const isCreateMode = ref(false)
 const isEditMode = ref(false)
@@ -98,11 +100,12 @@ const contentRef = ref<HTMLElement | null>(null)
 // Local duty state for immediate UI feedback
 const selectedDutyType = ref<string | null>(null)
 
-// Sync selectedDutyType with props.duty
+// Sync selectedDutyType with both the selected date and duty prop.
+// The modal instance is reused across days, so date changes must also reset this state.
 watch(
-  () => props.duty?.dutyType,
-  (newVal) => {
-    selectedDutyType.value = newVal ?? null
+  () => [props.date.year, props.date.month, props.date.day, props.duty?.dutyType] as const,
+  ([, , , dutyType]) => {
+    selectedDutyType.value = dutyType ?? null
   },
   { immediate: true }
 )
@@ -119,8 +122,10 @@ const newSchedule = ref({
   startDateTime: '',
   endDateTime: '',
   visibility: 'FAMILY' as 'PUBLIC' | 'FRIENDS' | 'FAMILY' | 'PRIVATE',
+  tagFriendIds: [] as number[],
 })
 const editAttachments = ref<NormalizedAttachment[]>([])
+const selectedTagSummaries = ref<SelectedTagSummary[]>([])
 
 const untagConfirmScheduleId = ref<string | null>(null)
 
@@ -142,41 +147,57 @@ function confirmUntag() {
 const formattedDate = computed(() => {
   const { year, month, day } = props.date
   const date = new Date(year, month - 1, day)
-  const weekDays = ['일', '월', '화', '수', '목', '금', '토']
-  const dayOfWeek = weekDays[date.getDay()]
-  return `${year}년 ${month}월 ${day}일 (${dayOfWeek})`
+  const formatted = new Intl.DateTimeFormat(locale.value, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(date)
+  const dayOfWeek = new Intl.DateTimeFormat(locale.value, {
+    weekday: 'short',
+  }).format(date)
+  return `${formatted} (${dayOfWeek})`
 })
 
 const visibilityOptions = computed(() => [
   {
     value: 'PUBLIC' as CalendarVisibility,
-    label: '전체공개',
-    description: '모든 사람에게 공개',
+    label: t('visibility.labels.public'),
+    description: t('visibility.descriptions.public'),
     icon: VISIBILITY_ICONS.PUBLIC,
     color: VISIBILITY_COLORS.PUBLIC,
   },
   {
     value: 'FRIENDS' as CalendarVisibility,
-    label: '친구공개',
-    description: '친구에게만 공개',
+    label: t('visibility.labels.friends'),
+    description: t('visibility.descriptions.friends'),
     icon: VISIBILITY_ICONS.FRIENDS,
     color: VISIBILITY_COLORS.FRIENDS,
   },
   {
     value: 'FAMILY' as CalendarVisibility,
-    label: '가족공개',
-    description: '가족에게만 공개',
+    label: t('visibility.labels.family'),
+    description: t('visibility.descriptions.family'),
     icon: VISIBILITY_ICONS.FAMILY,
     color: VISIBILITY_COLORS.FAMILY,
   },
   {
     value: 'PRIVATE' as CalendarVisibility,
-    label: '비공개',
-    description: '나만 볼 수 있음',
+    label: t('visibility.labels.private'),
+    description: t('visibility.descriptions.private'),
     icon: VISIBILITY_ICONS.PRIVATE,
     color: VISIBILITY_COLORS.PRIVATE,
   },
 ])
+
+const isScheduleTitleMissing = computed(() => !newSchedule.value.content.trim())
+const isScheduleTimeRangeInvalid = computed(() => {
+  const { startDateTime, endDateTime } = newSchedule.value
+  if (!startDateTime || !endDateTime) return false
+  return endDateTime < startDateTime
+})
+const isScheduleSaveDisabled = computed(() =>
+  isScheduleTitleMissing.value || isScheduleTimeRangeInvalid.value || isUploading.value
+)
 
 watch(
   () => props.isOpen,
@@ -190,6 +211,8 @@ watch(
       const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
       newSchedule.value.startDateTime = `${dateStr}T00:00`
       newSchedule.value.endDateTime = `${dateStr}T00:00`
+      newSchedule.value.tagFriendIds = []
+      selectedTagSummaries.value = []
     } else {
       // Cleanup when modal closes
       scheduleFormRef.value?.cleanup()
@@ -222,7 +245,9 @@ function startCreateMode() {
     startDateTime: `${dateStr}T00:00`,
     endDateTime: `${dateStr}T00:00`,
     visibility: 'FAMILY',
+    tagFriendIds: [],
   }
+  selectedTagSummaries.value = []
   // Scroll to top when entering create mode
   nextTick(() => {
     if (contentRef.value) {
@@ -248,7 +273,12 @@ function startEditMode(schedule: Schedule) {
     startDateTime: formatDateTime(start),
     endDateTime: formatDateTime(end),
     visibility: schedule.visibility,
+    tagFriendIds: schedule.tags?.map((tag) => tag.id) || [],
   }
+  selectedTagSummaries.value = (schedule.tags || []).map((tag) => ({
+    id: tag.id,
+    name: tag.name,
+  }))
 
   // Load existing attachments
   editAttachments.value = (schedule.attachments || []).map((a) =>
@@ -280,6 +310,7 @@ function cancelEdit() {
   isEditMode.value = false
   editingScheduleId.value = null
   editAttachments.value = []
+  selectedTagSummaries.value = []
   scheduleFormRef.value?.cleanup()
 }
 
@@ -305,6 +336,7 @@ function buildScheduleData(): ScheduleSaveData {
     startDateTime,
     endDateTime,
     visibility: newSchedule.value.visibility,
+    tagFriendIds: [...newSchedule.value.tagFriendIds],
     attachmentSessionId: sessionId,
     orderedAttachmentIds: orderedIds.length > 0 ? orderedIds : undefined,
   }
@@ -314,10 +346,13 @@ function saveSchedule() {
   if (!newSchedule.value.content.trim()) {
     return
   }
+  if (isScheduleTimeRangeInvalid.value) {
+    return
+  }
 
   // Check if upload is in progress
   if (scheduleFormRef.value?.isUploading()) {
-    showWarning('파일 업로드가 진행 중입니다. 잠시 후 다시 시도해주세요.')
+    showWarning(t('duty.schedule.warnings.uploadInProgress'))
     return
   }
 
@@ -349,73 +384,69 @@ function handleUploadError(message: string) {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50 pb-16 sm:pb-0"
-      @click.self="emit('close')"
-    >
-      <div class="modal-container max-w-[95vw] sm:max-w-2xl max-h-[calc(100dvh-5rem)] sm:max-h-[90vh]">
-        <!-- Header -->
-        <div class="p-3 sm:p-4 flex-shrink-0 bg-dp-bg-tertiary border-b border-dp-border-primary">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span v-if="isCreateMode" class="px-2 py-0.5 bg-dp-success-soft text-dp-success text-xs font-medium rounded">일정 추가</span>
-              <span v-else-if="isEditMode" class="px-2 py-0.5 bg-dp-accent-soft text-dp-accent-hover text-xs font-medium rounded">일정 수정</span>
-              <h2 class="text-base sm:text-lg font-bold text-dp-text-primary">{{ formattedDate }}</h2>
-            </div>
-            <button @click="emit('close')" class="p-2 rounded-full flex-shrink-0 hover-close-btn cursor-pointer">
-              <X class="w-6 h-6 text-dp-text-primary" />
-            </button>
+  <BaseModal
+    :is-open="isOpen"
+    size="2xl"
+    height="viewport"
+    z-index="detail"
+    @close="emit('close')"
+  >
+    <div class="day-detail-modal-header modal-header">
+      <div class="w-full">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2 min-w-0">
+            <span v-if="isCreateMode" class="px-2 py-0.5 bg-dp-success-soft text-dp-success text-xs font-medium rounded">{{ t('duty.schedule.dayDetail.createBadge') }}</span>
+            <span v-else-if="isEditMode" class="px-2 py-0.5 bg-dp-accent-soft text-dp-accent-hover text-xs font-medium rounded">{{ t('duty.schedule.dayDetail.editBadge') }}</span>
+            <h2>{{ formattedDate }}</h2>
           </div>
-          <!-- Duty Type Selection (my calendar only, hidden in add/edit mode) -->
-          <div v-if="!isCreateMode && !isEditMode && canEdit && dutyTypes.length > 0" class="flex flex-wrap gap-1.5 mt-2">
-            <button
-              v-for="dutyType in dutyTypes"
-              :key="dutyType.id ?? 'off'"
-              @click="handleDutyTypeChange(dutyType.id, dutyType.name)"
-              class="duty-type-btn px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 cursor-pointer"
-              :class="{
-                'duty-type-btn-selected': selectedDutyType === dutyType.name,
-              }"
-              :style="{
-                color: 'var(--dp-text-primary)',
-                backgroundColor: selectedDutyType === dutyType.name && dutyType.color ? dutyType.color + '30' : undefined
-              }"
-            >
-              <span
-                class="inline-block w-3 h-3 rounded border"
-                :style="{ backgroundColor: dutyType.color || 'var(--dp-duty-fallback)', borderColor: 'var(--dp-border-secondary)' }"
-              ></span>
-              {{ dutyType.name }}
-            </button>
-          </div>
-          <!-- Current Duty (other's calendar only) -->
-          <div v-else-if="duty && !canEdit" class="mt-2">
-            <span
-              class="px-2.5 py-1 rounded-md text-xs font-medium text-dp-text-on-dark"
-              :style="{ backgroundColor: duty.dutyColor || 'var(--dp-duty-fallback)' }"
-            >
-              {{ duty.dutyType || 'OFF' }}
-            </span>
-          </div>
+          <button @click="emit('close')" class="p-2 rounded-full flex-shrink-0 hover-close-btn cursor-pointer">
+            <X class="w-6 h-6 text-dp-text-primary" />
+          </button>
         </div>
+        <div v-if="!isCreateMode && !isEditMode && canEdit && dutyTypes.length > 0" class="flex flex-wrap gap-1.5 mt-2">
+          <button
+            v-for="dutyType in dutyTypes"
+            :key="dutyType.id ?? 'off'"
+            @click="handleDutyTypeChange(dutyType.id, dutyType.name)"
+            class="duty-type-btn px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 cursor-pointer"
+            :class="{
+              'duty-type-btn-selected': selectedDutyType === dutyType.name,
+            }"
+            :style="{
+              color: 'var(--dp-text-primary)',
+              backgroundColor: selectedDutyType === dutyType.name && dutyType.color ? dutyType.color + '30' : undefined
+            }"
+          >
+            <span
+              class="inline-block w-3 h-3 rounded border"
+              :style="{ backgroundColor: dutyType.color || 'var(--dp-duty-fallback)', borderColor: 'var(--dp-border-secondary)' }"
+            ></span>
+            {{ dutyType.name }}
+          </button>
+        </div>
+        <div v-else-if="duty && !canEdit" class="mt-2">
+          <span
+            class="px-2.5 py-1 rounded-md text-xs font-medium text-dp-text-on-dark"
+            :style="{ backgroundColor: duty.dutyColor || 'var(--dp-duty-fallback)' }"
+          >
+            {{ duty.dutyType || t('duty.common.off') }}
+          </span>
+        </div>
+      </div>
+    </div>
 
         <!-- Content -->
-        <div ref="contentRef" class="p-3 sm:p-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
+        <div ref="contentRef" class="day-detail-modal-content px-3 py-2.5 sm:p-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
 
           <ScheduleList
             v-if="!isCreateMode && !isEditMode"
             :schedules="schedules"
             :can-edit="canEdit"
-            :friends="friends"
             :is-my-calendar="isMyCalendar"
             :member-id="memberId"
             @edit="startEditMode"
             @delete="(scheduleId) => emit('deleteSchedule', scheduleId)"
             @reorder="(scheduleIds) => emit('reorderSchedules', scheduleIds)"
-            @add-tag="(scheduleId, friendId) => emit('addTag', scheduleId, friendId)"
-            @remove-tag="(scheduleId, friendId) => emit('removeTag', scheduleId, friendId)"
             @request-untag="openUntagConfirmModal"
           />
 
@@ -427,6 +458,9 @@ function handleUploadError(message: string) {
             :edit-attachments="editAttachments"
             :visibility-options="visibilityOptions"
             :is-edit-mode="isEditMode"
+            :friends="friends"
+            :can-tag-friends="isMyCalendar"
+            :selected-tag-summaries="selectedTagSummaries"
             @upload-start="handleUploadStart"
             @upload-complete="handleUploadComplete"
             @error="handleUploadError"
@@ -434,7 +468,10 @@ function handleUploadError(message: string) {
         </div>
 
         <!-- Footer (sticky at bottom) -->
-        <div class="p-3 sm:p-4 flex-shrink-0 border-t border-dp-border-primary">
+        <div
+          v-if="canEdit || isCreateMode || isEditMode"
+          class="day-detail-modal-footer modal-footer-safe px-3 py-2.5 sm:p-4 flex-shrink-0 border-t border-dp-border-primary"
+        >
           <!-- List mode: Add schedule button -->
           <div v-if="!isCreateMode && !isEditMode && canEdit" class="flex justify-end">
             <button
@@ -442,29 +479,36 @@ function handleUploadError(message: string) {
               class="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-dp-success text-dp-text-on-dark rounded-lg hover:bg-dp-success-hover transition cursor-pointer"
             >
               <Plus class="w-4 h-4" />
-              일정 추가
+              {{ t('duty.schedule.dayDetail.add') }}
+            </button>
+          </div>
+          <div v-else-if="!isCreateMode && !isEditMode" class="flex justify-end">
+            <button
+              @click="emit('close')"
+              class="w-full sm:w-auto px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
+            >
+              {{ t('common.actions.close') }}
             </button>
           </div>
           <!-- Create/Edit mode: Save/Cancel buttons -->
-          <div v-else-if="isCreateMode || isEditMode" class="flex flex-row gap-2 justify-end">
+          <div v-else-if="isCreateMode || isEditMode" class="flex justify-end gap-2">
             <button
               @click="cancelEdit"
               class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
             >
-              취소
+              {{ t('common.actions.cancel') }}
             </button>
             <button
               @click="saveSchedule"
-              :disabled="isUploading"
+              :disabled="isScheduleSaveDisabled"
+              :aria-label="t('duty.schedule.actions.save')"
               class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
-              {{ isUploading ? '업로드 중...' : (isEditMode ? '수정' : '저장') }}
+              {{ isUploading ? t('duty.common.uploading') : t('duty.schedule.actions.save') }}
             </button>
           </div>
         </div>
-      </div>
-    </div>
-  </Teleport>
+  </BaseModal>
 
   <!-- Untag Confirm Modal -->
   <UntagConfirmModal
@@ -473,3 +517,22 @@ function handleUploadError(message: string) {
     @confirm="confirmUntag"
   />
 </template>
+
+<style scoped>
+@media (max-width: 639px) {
+  .day-detail-modal-header {
+    padding: 0.75rem 0.875rem;
+  }
+
+  .day-detail-modal-content {
+    padding: 0.625rem 0.875rem;
+  }
+
+  .day-detail-modal-footer {
+    padding-top: 0.625rem;
+    padding-left: 0.875rem;
+    padding-right: 0.875rem;
+  }
+}
+
+</style>

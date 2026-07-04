@@ -23,12 +23,6 @@ class Notification(
     @Column(name = "type", nullable = false, length = 50)
     val type: NotificationType,
 
-    @Column(name = "title", nullable = false, length = 255)
-    val title: String,
-
-    @Column(name = "content", columnDefinition = "TEXT")
-    val content: String? = null,
-
     @Enumerated(EnumType.STRING)
     @Column(name = "reference_type", length = 50)
     val referenceType: NotificationReferenceType? = null,
@@ -38,6 +32,12 @@ class Notification(
 
     @Column(name = "actor_id")
     val actorId: Long? = null,
+
+    @Column(name = "payload_json", columnDefinition = "JSON")
+    var payloadJson: String? = null,
+
+    @Column(name = "payload_version", nullable = false)
+    var payloadVersion: Int = 1,
 
     @Column(name = "is_read", nullable = false)
     var isRead: Boolean = false

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, reactive, computed, type Component } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   Download,
   Paperclip,
@@ -29,6 +30,7 @@ const props = withDefaults(defineProps<Props>(), {
   columns: 2,
 })
 
+const { t } = useI18n()
 const thumbnailBlobUrls = reactive<Record<string, string>>({})
 
 // Image viewer state
@@ -203,7 +205,7 @@ const gridColsClass = {
       class="flex items-center gap-1 text-sm mb-2 text-dp-text-muted"
     >
       <Paperclip class="w-3 h-3" />
-      첨부파일 ({{ attachments.length }})
+      {{ t('attachmentGrid.label', { count: attachments.length }) }}
     </div>
     <div class="grid gap-2" :class="gridColsClass[columns]">
       <div
@@ -244,7 +246,7 @@ const gridColsClass = {
         <button
           class="absolute top-1 right-1 p-2.5 sm:p-1.5 bg-dp-overlay-dark/50 rounded text-dp-text-on-dark hover:bg-dp-overlay-dark/70 active:bg-dp-overlay-dark/80 transition-colors cursor-pointer"
           @click.stop="downloadAttachment(attachment.id, attachment.originalFilename)"
-          title="다운로드"
+          :title="t('common.actions.download')"
         >
           <Download class="w-5 h-5 sm:w-4 sm:h-4" />
         </button>

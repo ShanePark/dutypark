@@ -12,11 +12,13 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
+import java.time.LocalDateTime
 
 @AutoConfigureMockMvc
 class AuthControllerTest : DutyparkIntegrationTest() {
@@ -88,6 +90,146 @@ class AuthControllerTest : DutyparkIntegrationTest() {
             .andExpect(cookie().exists("refresh_token"))
             .andExpect(cookie().httpOnly("access_token", true))
             .andExpect(cookie().httpOnly("refresh_token", true))
+            .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
+    fun `refresh succeeds with valid refresh token cookie`() {
+        val loginDto = LoginDto(TestData.member.email, testPass, false)
+        val json = objectMapper.writeValueAsString(loginDto)
+
+        val loginResult = mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+        )
+            .andExpect(status().isOk)
+            .andReturn()
+
+        val refreshCookie = loginResult.response.getCookie("refresh_token") ?: error("refresh cookie missing")
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/refresh")
+                .cookie(refreshCookie)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.expiresIn").exists())
+            .andExpect(cookie().exists("access_token"))
+            .andExpect(cookie().exists("refresh_token"))
+            .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
+    fun `refresh returns invalid code when refresh token cookie is missing`() {
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/refresh")
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.status").value(401))
+            .andExpect(jsonPath("$.code").value("auth.refresh.invalid"))
+            .andExpect(cookie().exists("access_token"))
+            .andExpect(cookie().exists("refresh_token"))
+            .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
+    fun `refresh returns expired code when refresh token is expired`() {
+        val refreshToken = refreshTokenService.createRefreshToken(
+            memberId = TestData.member.id!!,
+            remoteAddr = "127.0.0.1",
+            userAgent = "test-agent"
+        )
+        refreshToken.validUntil = LocalDateTime.now().minusMinutes(1)
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/refresh")
+                .cookie(Cookie("refresh_token", refreshToken.token))
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.status").value(401))
+            .andExpect(jsonPath("$.code").value("auth.refresh.expired"))
+            .andExpect(cookie().exists("access_token"))
+            .andExpect(cookie().exists("refresh_token"))
+            .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
+    fun `logout succeeds with refresh token cookie even when access token is missing`() {
+        val refreshToken = refreshTokenService.createRefreshToken(
+            memberId = TestData.member.id!!,
+            remoteAddr = "127.0.0.1",
+            userAgent = "test-agent"
+        )
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/logout")
+                .cookie(Cookie("refresh_token", refreshToken.token))
+        )
+            .andExpect(status().isNoContent)
+            .andExpect(cookie().maxAge("access_token", 0))
+            .andExpect(cookie().maxAge("refresh_token", 0))
+            .andDo(MockMvcResultHandlers.print())
+
+        assertThat(refreshTokenService.findByToken(refreshToken.token)).isNull()
+    }
+
+    @Test
+    fun `logout while impersonating invalidates original refresh token`() {
+        val manager = memberRepository.findByEmail(TestData.member.email).orElseThrow()
+        val managed = memberRepository.findByEmail(TestData.member2.email).orElseThrow()
+        makeManagerRelation(manager, managed)
+        em.flush()
+        em.clear()
+
+        val loginDto = LoginDto(TestData.member.email, testPass, false)
+        val loginJson = objectMapper.writeValueAsString(loginDto)
+
+        val loginResult = mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginJson)
+        )
+            .andExpect(status().isOk)
+            .andReturn()
+
+        val originalRefreshToken = loginResult.response.getCookie("refresh_token")
+            ?: error("original refresh token missing")
+        val managerAccessToken = loginResult.response.getCookie("access_token")?.value
+            ?: error("manager access token missing")
+
+        val impersonateResult = mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/impersonate/${managed.id}")
+                .header("Authorization", "Bearer $managerAccessToken")
+                .cookie(originalRefreshToken)
+        )
+            .andExpect(status().isOk)
+            .andReturn()
+
+        val impersonatedAccessToken = impersonateResult.response.getCookie("access_token")?.value
+            ?: error("impersonated access token missing")
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/logout")
+                .header("Authorization", "Bearer $impersonatedAccessToken")
+                .cookie(originalRefreshToken)
+        )
+            .andExpect(status().isNoContent)
+            .andExpect(cookie().maxAge("access_token", 0))
+            .andExpect(cookie().maxAge("refresh_token", 0))
+            .andDo(MockMvcResultHandlers.print())
+
+        assertThat(refreshTokenService.findByToken(originalRefreshToken.value)).isNull()
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/refresh")
+                .cookie(originalRefreshToken)
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("auth.refresh.invalid"))
             .andDo(MockMvcResultHandlers.print())
     }
 
@@ -191,6 +333,23 @@ class AuthControllerTest : DutyparkIntegrationTest() {
     }
 
     @Test
+    fun `status falls back to access token cookie when bearer header is invalid`() {
+        val member = memberRepository.findByEmail(TestData.member.email).orElseThrow()
+        val accessToken = getJwt(member)
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.get("/api/auth/status")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer garbage")
+                .cookie(Cookie("access_token", accessToken))
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(member.id))
+            .andExpect(jsonPath("$.email").value(member.email))
+            .andExpect(jsonPath("$.name").value(member.name))
+            .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
     fun `even if not login, health point doesn't throws error`() {
         // Therefore
         mockMvc.perform(
@@ -235,7 +394,7 @@ class AuthControllerTest : DutyparkIntegrationTest() {
             MockMvcRequestBuilders.post("/api/auth/impersonate/${notManaged.id}")
                 .header("Authorization", "Bearer $accessToken")
         ).andExpect(status().isForbidden)
-            .andExpect(jsonPath("$.error").exists())
+            .andExpect(jsonPath("$.code").exists())
             .andDo(MockMvcResultHandlers.print())
     }
 
@@ -325,7 +484,21 @@ class AuthControllerTest : DutyparkIntegrationTest() {
             MockMvcRequestBuilders.post("/api/auth/restore")
                 .header("Authorization", "Bearer $accessToken")
         ).andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.error").exists())
+            .andExpect(jsonPath("$.code").exists())
+            .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
+    fun `restore failure message follows accept language`() {
+        val member = memberRepository.findByEmail(TestData.member.email).orElseThrow()
+        val accessToken = getJwt(member)
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/restore")
+                .header("Authorization", "Bearer $accessToken")
+                .header(HttpHeaders.ACCEPT_LANGUAGE, "en")
+        ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("auth.restore.notImpersonating"))
             .andDo(MockMvcResultHandlers.print())
     }
 
@@ -354,7 +527,7 @@ class AuthControllerTest : DutyparkIntegrationTest() {
             MockMvcRequestBuilders.post("/api/auth/impersonate/${managed.id}")
                 .header("Authorization", "Bearer $impersonatedToken")
         ).andExpect(status().isForbidden)
-            .andExpect(jsonPath("$.error").exists())
+            .andExpect(jsonPath("$.code").exists())
             .andDo(MockMvcResultHandlers.print())
     }
 

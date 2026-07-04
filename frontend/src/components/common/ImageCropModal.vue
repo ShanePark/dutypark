@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, toRef, watch, computed } from 'vue'
+import { ref, watch, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { X, ZoomIn, ZoomOut, Upload, ImagePlus, Trash2 } from 'lucide-vue-next'
 import { Cropper, CircleStencil } from 'vue-advanced-cropper'
 import 'vue-advanced-cropper/dist/style.css'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
 import { attachmentValidation, validateFile } from '@/api/attachment'
+import BaseModal from '@/components/common/BaseModal.vue'
 import { useSwal } from '@/composables/useSwal'
 
 interface Props {
@@ -25,10 +25,8 @@ const emit = defineEmits<{
   (e: 'delete'): void
 }>()
 
-useBodyScrollLock(toRef(props, 'isOpen'))
-useEscapeKey(toRef(props, 'isOpen'), () => handleClose())
-
 const { showError } = useSwal()
+const { t } = useI18n()
 
 const cropperRef = ref<InstanceType<typeof Cropper> | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -77,12 +75,12 @@ function onFileSelect(event: Event) {
 function processFile(file: File) {
   const validation = validateFile(file)
   if (!validation.valid) {
-    showError(validation.message || 'File validation failed')
+    showError(validation.message || t('imageCropModal.validationFailed'))
     return
   }
 
   if (!file.type.startsWith('image/')) {
-    showError('이미지 파일만 업로드할 수 있습니다')
+    showError(t('imageCropModal.imagesOnly'))
     return
   }
 
@@ -94,7 +92,7 @@ function processFile(file: File) {
     zoom.value = 1
   }
   reader.onerror = () => {
-    showError('이미지 파일을 읽지 못했습니다')
+    showError(t('imageCropModal.readFailed'))
   }
   reader.readAsDataURL(file)
 }
@@ -146,7 +144,7 @@ function handleConfirm() {
 
   const result = cropperRef.value?.getResult()
   if (!result?.canvas) {
-    emit('close')
+    showError(t('imageCropModal.cropFailed'))
     return
   }
 
@@ -156,7 +154,7 @@ function handleConfirm() {
     (blob) => {
       if (!blob) {
         isProcessing.value = false
-        emit('close')
+        showError(t('imageCropModal.cropFailed'))
         return
       }
 
@@ -200,19 +198,20 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-dp-overlay-dark/50"
-      @mousedown.self="handleClose"
-    >
-      <div class="modal-container crop-modal max-w-[95vw] sm:max-w-xl max-h-[90dvh] sm:max-h-[90vh]">
+  <BaseModal
+    :is-open="isOpen"
+    size="xl"
+    height="default"
+    panel-class="crop-modal"
+    backdrop-event="mousedown"
+    @close="handleClose"
+  >
         <!-- Header -->
         <div class="modal-header">
-          <h2>프로필 사진 편집</h2>
+          <h2>{{ t('imageCropModal.title') }}</h2>
           <button
             @click="handleClose"
-            class="p-2 rounded-full transition hover-bg-light cursor-pointer"
+            class="p-2 rounded-full hover-close-btn cursor-pointer"
             :disabled="isProcessing"
           >
             <X class="w-6 h-6 text-dp-text-primary" />
@@ -233,9 +232,9 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
           >
             <div class="upload-content">
               <ImagePlus class="w-12 h-12 mb-3" />
-              <p class="upload-title">이미지를 선택하세요</p>
-              <p class="upload-hint">클릭하거나 파일을 드래그하세요</p>
-              <p class="upload-size">최대 {{ attachmentValidation.maxFileSizeLabel }}</p>
+              <p class="upload-title">{{ t('imageCropModal.uploadTitle') }}</p>
+              <p class="upload-hint">{{ t('imageCropModal.uploadHint') }}</p>
+              <p class="upload-size">{{ t('imageCropModal.maxSize', { size: attachmentValidation.maxFileSizeLabel }) }}</p>
             </div>
           </div>
 
@@ -265,7 +264,7 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
               <Transition name="fade">
                 <div v-if="isDragging" class="drag-overlay">
                   <ImagePlus class="w-12 h-12" />
-                  <span>이미지 변경</span>
+                  <span>{{ t('imageCropModal.changeImageDuringDrag') }}</span>
                 </div>
               </Transition>
             </div>
@@ -311,20 +310,20 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
               :disabled="isProcessing"
             >
               <Upload class="w-4 h-4" />
-              <span>다른 이미지 선택</span>
+              <span>{{ t('imageCropModal.chooseAnother') }}</span>
             </button>
           </template>
         </div>
 
         <!-- Footer -->
-        <div class="modal-footer flex-shrink-0">
+        <div class="modal-actions modal-actions-end modal-footer-safe flex-shrink-0">
           <button
             type="button"
             @click="handleClose"
             class="btn-cancel"
             :disabled="isProcessing"
           >
-            취소
+            {{ t('common.actions.cancel') }}
           </button>
           <button
             v-if="hasExistingPhoto"
@@ -334,7 +333,7 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
             :disabled="isProcessing"
           >
             <Trash2 class="w-4 h-4" />
-            삭제
+            {{ t('common.actions.delete') }}
           </button>
           <button
             type="button"
@@ -342,7 +341,7 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
             class="btn-confirm"
             :disabled="isProcessing || !hasImage"
           >
-            {{ isProcessing ? '저장 중...' : '저장' }}
+            {{ isProcessing ? t('imageCropModal.saving') : t('common.actions.save') }}
           </button>
         </div>
 
@@ -354,9 +353,7 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
           class="hidden"
           @change="onFileSelect"
         />
-      </div>
-    </div>
-  </Teleport>
+  </BaseModal>
 </template>
 
 <style scoped>
@@ -569,14 +566,6 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
 .change-image-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--dp-border-primary);
 }
 
 .btn-cancel,

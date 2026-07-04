@@ -39,7 +39,7 @@ class DutyBatchSungsimService(
             val batchParseResult = sungsimCakeParser.parseDayOff(yearMonth, input)
             val member = memberRepository.findById(memberId).orElseThrow()
             val team =
-                member.team ?: throw IllegalArgumentException("Member has no team: id=$memberId")
+                member.team ?: throw IllegalArgumentException("dutyBatch.member.teamRequired")
 
             val validName = batchParseResult.findValidNames(member.name)
             if (validName.isEmpty())
@@ -102,7 +102,10 @@ class DutyBatchSungsimService(
                 dutyBatchResults.add(
                     Pair(
                         it.name,
-                        DutyBatchResult.fail(MultipleNameFoundException::class.simpleName)
+                        DutyBatchResult.fail(
+                            errorCode = "dutyBatch.multipleNameFound",
+                            errorDetails = mapOf("names" to validNames),
+                        )
                     )
                 )
                 return@forEach
@@ -112,7 +115,7 @@ class DutyBatchSungsimService(
                 dutyBatchResults.add(
                     Pair(
                         it.name,
-                        DutyBatchResult.fail(NameNotFoundException::class.simpleName)
+                        DutyBatchResult.fail("dutyBatch.nameNotFound")
                     )
                 )
                 return@forEach

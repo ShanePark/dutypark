@@ -7,12 +7,13 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.data.domain.PageRequest
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager
 import java.time.LocalDateTime
 import java.util.UUID
 
-@DataJpaTest
+@DataJpaTest(properties = ["spring.jpa.properties.hibernate.query.fail_on_pagination_over_collection_fetch=true"])
 class ScheduleRepositoryTest {
 
     @Autowired
@@ -59,8 +60,8 @@ class ScheduleRepositoryTest {
             member = owner2,
             content = "schedule2",
             description = "",
-            startDateTime = start,
-            endDateTime = end,
+            startDateTime = start.plusHours(2),
+            endDateTime = end.plusHours(2),
             visibility = Visibility.PUBLIC
         )
         schedule2.addTag(taggedMember)
@@ -118,5 +119,85 @@ class ScheduleRepositoryTest {
         val schedule1 = result.first { it.id == schedule1Id }
         val tagMemberIds = schedule1.tags.map { it.member.id }
         assertThat(tagMemberIds).containsExactlyInAnyOrder(taggedMemberId, otherTagMemberId)
+    }
+
+    @Test
+    fun `findSearchIdsByMemberAndContentContainingAndVisibilityIn paginates distinct ids for tagged schedules`() {
+        val taggedMember = requireNotNull(entityManager.find(Member::class.java, taggedMemberId))
+
+        val firstPage = repository.findSearchIdsByMemberAndContentContainingAndVisibilityIn(
+            member = taggedMember,
+            content = "schedule",
+            visibility = Visibility.all(),
+            pageable = PageRequest.of(0, 1)
+        )
+        val secondPage = repository.findSearchIdsByMemberAndContentContainingAndVisibilityIn(
+            member = taggedMember,
+            content = "schedule",
+            visibility = Visibility.all(),
+            pageable = PageRequest.of(1, 1)
+        )
+
+        assertThat(firstPage.totalElements).isEqualTo(2)
+        assertThat(firstPage.content).containsExactly(schedule2Id)
+        assertThat(secondPage.content).containsExactly(schedule1Id)
+    }
+
+    @Test
+    fun `findSearchIdsByMemberAndContentContainingAndVisibilityIn uses id as tie breaker for same start time`() {
+        val owner1 = requireNotNull(entityManager.find(Member::class.java, owner1Id))
+        val sameStartTime = LocalDateTime.of(2025, 1, 2, 9, 0)
+        val sameTimeA = entityManager.persist(
+            Schedule(
+                member = owner1,
+                content = "same-time-a",
+                description = "",
+                startDateTime = sameStartTime,
+                endDateTime = sameStartTime.plusHours(1),
+                visibility = Visibility.PUBLIC
+            )
+        )
+        val sameTimeB = entityManager.persist(
+            Schedule(
+                member = owner1,
+                content = "same-time-b",
+                description = "",
+                startDateTime = sameStartTime,
+                endDateTime = sameStartTime.plusHours(1),
+                visibility = Visibility.PUBLIC
+            )
+        )
+
+        entityManager.flush()
+        entityManager.clear()
+
+        val expectedOrder = listOf(sameTimeA.id, sameTimeB.id).sortedByDescending { it.toString() }
+        val firstPage = repository.findSearchIdsByMemberAndContentContainingAndVisibilityIn(
+            member = owner1,
+            content = "same-time",
+            visibility = Visibility.all(),
+            pageable = PageRequest.of(0, 1)
+        )
+        val secondPage = repository.findSearchIdsByMemberAndContentContainingAndVisibilityIn(
+            member = owner1,
+            content = "same-time",
+            visibility = Visibility.all(),
+            pageable = PageRequest.of(1, 1)
+        )
+
+        assertThat(firstPage.totalElements).isEqualTo(2)
+        assertThat(firstPage.content).containsExactly(expectedOrder[0])
+        assertThat(secondPage.content).containsExactly(expectedOrder[1])
+    }
+
+    @Test
+    fun `findAllWithMemberAndTagsByIdIn loads full tags for search page ids`() {
+        val result = repository.findAllWithMemberAndTagsByIdIn(listOf(schedule1Id, schedule2Id))
+
+        assertThat(result.map { it.id }).containsExactlyInAnyOrder(schedule1Id, schedule2Id)
+
+        val schedule1 = result.first { it.id == schedule1Id }
+        assertThat(schedule1.member.name).isEqualTo("owner1")
+        assertThat(schedule1.tags.map { it.member.id }).containsExactlyInAnyOrder(taggedMemberId, otherTagMemberId)
     }
 }

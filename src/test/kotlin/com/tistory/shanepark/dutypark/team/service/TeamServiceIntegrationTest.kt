@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.team.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.service.DutyService
@@ -87,9 +88,11 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
         team.addMember(TestData.member2)
 
         // When
-        assertThrows<IllegalStateException> {
+        val exception = assertThrows<BadRequestException> {
             service.delete(created.id)
         }
+
+        assertThat(exception.message).isEqualTo("team.delete.membersExist")
     }
 
     @Test
@@ -210,9 +213,11 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
         assertThat(member2.team).isEqualTo(team)
 
         // When
-        assertThrows<IllegalStateException> {
+        val exception = assertThrows<BadRequestException> {
             service.removeMemberFromTeam(team2.id!!, member.id!!)
         }
+
+        assertThat(exception.message).isEqualTo("team.member.notInTeam")
     }
 
     @Test
@@ -252,12 +257,15 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
         assertThat(member2.team).isEqualTo(team)
 
         // When
-        assertThrows(IllegalStateException::class.java) {
+        val first = assertThrows(BadRequestException::class.java) {
             service.addMemberToTeam(team.id!!, member.id!!)
         }
-        assertThrows(IllegalStateException::class.java) {
+        val second = assertThrows(BadRequestException::class.java) {
             service.addMemberToTeam(team.id!!, member2.id!!)
         }
+
+        assertThat(first.message).isEqualTo("team.member.alreadyAssigned")
+        assertThat(second.message).isEqualTo("team.member.alreadyAssigned")
 
         // Then
         assertThat(team.members).hasSize(2)
@@ -324,9 +332,11 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
         val member = TestData.member
 
         // Then
-        assertThrows<IllegalStateException> {
+        val exception = assertThrows<BadRequestException> {
             service.addTeamManager(teamId = TestData.team2.id!!, memberId = member.id!!)
         }
+
+        assertThat(exception.message).isEqualTo("team.member.notInTeam")
     }
 
     @Test
@@ -381,9 +391,11 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
         val member = TestData.member
 
         // When
-        assertThrows<IllegalStateException> {
+        val exception = assertThrows<BadRequestException> {
             service.removeTeamManager(teamId = TestData.team2.id!!, memberId = member.id!!)
         }
+
+        assertThat(exception.message).isEqualTo("team.member.notInTeam")
     }
 
 

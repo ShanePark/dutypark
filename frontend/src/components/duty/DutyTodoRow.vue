@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Plus, ChevronRight, ListTodo, FileText } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 import type { LocalTodo } from '@/views/duty/dutyViewTypes'
 
-type DutyTodoRowItem = Pick<LocalTodo, 'id' | 'title' | 'status' | 'content' | 'hasAttachments'>
+type DutyTodoRowItem = Pick<LocalTodo, 'id' | 'title' | 'status' | 'content' | 'hasAttachments' | 'isTagged' | 'owner'>
 
 defineProps<{
   showTodoTodo: boolean
@@ -15,6 +16,8 @@ const emit = defineEmits<{
   (e: 'add-todo'): void
   (e: 'todo-click', todo: DutyTodoRowItem): void
 }>()
+
+const { t } = useI18n()
 </script>
 
 <template>
@@ -26,14 +29,14 @@ const emit = defineEmits<{
         @click="emit('open-todo-board')"
         class="todo-manage-btn h-7 px-2 flex items-center gap-1 transition-all duration-150 cursor-pointer rounded-l-lg border bg-dp-bg-card border-dp-border-secondary"
       >
-        <span class="text-xs font-medium text-dp-text-secondary">할일</span>
+        <span class="text-xs font-medium text-dp-text-secondary">{{ t('todoBoard.title') }}</span>
         <ChevronRight class="w-3 h-3 text-dp-text-muted" />
       </button>
       <!-- Add Todo Button -->
       <button
         @click="emit('add-todo')"
         class="todo-btn-add h-7 px-2 flex items-center justify-center transition-all duration-150 cursor-pointer rounded-r-lg border border-l-0 bg-dp-bg-card border-dp-border-secondary text-dp-text-secondary"
-        title="새 할일 추가"
+        :title="t('duty.todo.actions.add')"
       >
         <Plus class="todo-btn-add-icon w-4 h-4 transition-transform duration-200" />
       </button>
@@ -46,7 +49,7 @@ const emit = defineEmits<{
         @click="emit('toggle-filter')"
         class="todo-filter-btn flex-shrink-0 h-7 w-7 flex items-center justify-center transition-all duration-150 cursor-pointer rounded-md"
         :class="showTodoTodo ? 'todo-filter-btn-active-todo' : 'todo-filter-btn-inactive'"
-        title="할일 표시"
+        :title="t('duty.todoRow.filterTitle')"
       >
         <ListTodo class="w-4 h-4" />
       </button>
@@ -59,12 +62,12 @@ const emit = defineEmits<{
             @click="emit('todo-click', todo)"
             class="todo-item-bubble flex-shrink-0 max-w-[120px] sm:max-w-[160px] flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] sm:text-xs cursor-pointer transition-all duration-150 border"
             :style="{
-              backgroundColor: todo.status === 'IN_PROGRESS' ? 'var(--dp-warning-bg)' : 'var(--dp-accent-bg)',
-              borderColor: todo.status === 'IN_PROGRESS' ? 'var(--dp-warning)' : 'var(--dp-accent)',
+              backgroundColor: todo.isTagged ? 'var(--dp-accent-soft)' : (todo.status === 'IN_PROGRESS' ? 'var(--dp-warning-bg)' : 'var(--dp-accent-bg)'),
+              borderColor: todo.isTagged ? 'var(--dp-accent-border)' : (todo.status === 'IN_PROGRESS' ? 'var(--dp-warning)' : 'var(--dp-accent)'),
               color: 'var(--dp-text-primary)'
             }"
           >
-            <span class="truncate">{{ todo.title }}</span>
+            <span class="truncate">{{ todo.isTagged ? `${todo.owner} · ${todo.title}` : todo.title }}</span>
             <FileText v-if="todo.content || todo.hasAttachments" class="w-2.5 h-2.5 flex-shrink-0 text-dp-text-muted" />
           </button>
         </div>

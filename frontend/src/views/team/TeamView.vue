@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import {
-  ChevronLeft,
-  ChevronRight,
   Settings,
   CalendarPlus,
   Pencil,
@@ -17,9 +16,9 @@ import { useAuthStore } from '@/stores/auth'
 import { teamApi } from '@/api/team'
 import { dutyApi } from '@/api/duty'
 import { useSwal } from '@/composables/useSwal'
-import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useEscapeKey } from '@/composables/useEscapeKey'
 import { isLightColor } from '@/utils/color'
+import BaseModal from '@/components/common/BaseModal.vue'
+import CalendarMonthNavigator from '@/components/common/CalendarMonthNavigator.vue'
 import YearMonthPicker from '@/components/common/YearMonthPicker.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import CalendarGrid from '@/components/common/CalendarGrid.vue'
@@ -27,13 +26,14 @@ import type {
   TeamDto,
   TeamScheduleDto,
   DutyByShift,
-  SimpleMemberDto,
+  MemberPreviewDto,
   DutyCalendarDay,
   HolidayDto,
 } from '@/types'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { t } = useI18n()
 const { showError, confirmDelete, toastSuccess } = useSwal()
 
 // Loading state
@@ -56,10 +56,8 @@ const currentMonth = ref(now.getMonth() + 1)
 const isYearMonthPickerOpen = ref(false)
 
 function handleYearMonthSelect(year: number, month: number) {
-  currentYear.value = year
-  currentMonth.value = month
   isYearMonthPickerOpen.value = false
-  fetchTeamSummary()
+  void updateCurrentMonth(year, month)
 }
 
 // Today's date
@@ -67,6 +65,10 @@ const today = {
   year: now.getFullYear(),
   month: now.getMonth() + 1,
   day: now.getDate(),
+}
+
+function getLastDayOfMonth(year: number, month: number) {
+  return new Date(year, month, 0).getDate()
 }
 
 // Selected day
@@ -94,8 +96,6 @@ const rawCalendarDays = ref<Array<{ year: number; month: number; day: number }>>
 
 // Schedule Modal
 const showScheduleModal = ref(false)
-useBodyScrollLock(showScheduleModal)
-useEscapeKey(showScheduleModal, () => { showScheduleModal.value = false })
 const scheduleForm = ref({
   id: null as string | null,
   content: '',
@@ -103,6 +103,15 @@ const scheduleForm = ref({
   startDate: '',
   endDate: '',
 })
+const isTeamScheduleTitleMissing = computed(() => !scheduleForm.value.content.trim())
+const isTeamScheduleDateRangeInvalid = computed(() => {
+  const { startDate, endDate } = scheduleForm.value
+  if (!startDate || !endDate) return true
+  return endDate < startDate
+})
+const isTeamScheduleSaveDisabled = computed(() =>
+  saving.value || isTeamScheduleTitleMissing.value || isTeamScheduleDateRangeInvalid.value
+)
 
 // Load calendar structure from backend API (cached)
 async function loadCalendar() {
@@ -191,7 +200,7 @@ async function fetchShift() {
     // Add isMyGroup flag based on loginMemberId
     shift.value = response.data.map(group => ({
       ...group,
-      isMyGroup: group.members.some((m: SimpleMemberDto) => m.id === loginMemberId.value),
+      isMyGroup: group.members.some((m: MemberPreviewDto) => m.id === loginMemberId.value),
     }))
   } catch (error) {
     console.error('Failed to fetch shift:', error)
@@ -259,34 +268,38 @@ function selectDay(day: { year: number; month: number; day: number }, index: num
   fetchShift()
 }
 
-function prevMonth() {
-  if (currentMonth.value === 1) {
-    currentMonth.value = 12
-    currentYear.value--
-  } else {
-    currentMonth.value--
+function syncSelectedDayToMonth(year: number, month: number, day = 1) {
+  selectedDay.value = {
+    year,
+    month,
+    day: Math.min(day, getLastDayOfMonth(year, month)),
+    index: -1,
   }
-  fetchTeamSummary()
+}
+
+async function updateCurrentMonth(year: number, month: number, day = 1) {
+  currentYear.value = year
+  currentMonth.value = month
+  syncSelectedDayToMonth(year, month, day)
+  await fetchTeamSummary()
+  findSelectedDayIndex()
+  await fetchShift()
+}
+
+function prevMonth() {
+  const year = currentMonth.value === 1 ? currentYear.value - 1 : currentYear.value
+  const month = currentMonth.value === 1 ? 12 : currentMonth.value - 1
+  void updateCurrentMonth(year, month)
 }
 
 function nextMonth() {
-  if (currentMonth.value === 12) {
-    currentMonth.value = 1
-    currentYear.value++
-  } else {
-    currentMonth.value++
-  }
-  fetchTeamSummary()
+  const year = currentMonth.value === 12 ? currentYear.value + 1 : currentYear.value
+  const month = currentMonth.value === 12 ? 1 : currentMonth.value + 1
+  void updateCurrentMonth(year, month)
 }
 
 function goToToday() {
-  currentYear.value = today.year
-  currentMonth.value = today.month
-  selectedDay.value = { ...today, index: -1 }
-  fetchTeamSummary().then(() => {
-    findSelectedDayIndex()
-    fetchShift()
-  })
+  void updateCurrentMonth(today.year, today.month, today.day)
 }
 
 function goToTeamManage() {
@@ -297,6 +310,17 @@ function goToTeamManage() {
 
 function goToMemberDuty(memberId: number) {
   router.push(`/duty/${memberId}`)
+}
+
+function goToMemberDutyIfAvailable(member: MemberPreviewDto) {
+  if (member.id == null) {
+    return
+  }
+  goToMemberDuty(member.id)
+}
+
+function getShiftMemberKey(group: DutyByShift, member: MemberPreviewDto) {
+  return member.id ?? `${group.dutyType.id ?? group.dutyType.name}-${member.name}`
 }
 
 // Schedule Modal functions
@@ -328,7 +352,10 @@ function closeScheduleModal() {
 }
 
 async function saveSchedule() {
-  if (!team.value || !scheduleForm.value.content.trim()) return
+  if (!team.value) return
+  if (isTeamScheduleTitleMissing.value || isTeamScheduleDateRangeInvalid.value) {
+    return
+  }
 
   saving.value = true
   const isNew = !scheduleForm.value.id
@@ -343,25 +370,27 @@ async function saveSchedule() {
     })
     showScheduleModal.value = false
     await fetchTeamSchedules()
-    toastSuccess(isNew ? '일정이 등록되었습니다.' : '일정이 수정되었습니다.')
+    if (isNew) {
+      toastSuccess(t('team.view.schedule.saveSuccess'))
+    }
   } catch (error) {
     console.error('Failed to save schedule:', error)
-    showError('일정 저장에 실패했습니다.')
+    showError(t('team.view.schedule.saveFailed'))
   } finally {
     saving.value = false
   }
 }
 
 async function deleteSchedule(scheduleId: string) {
-  if (!await confirmDelete('정말 삭제하시겠습니까?\n삭제된 일정은 복구할 수 없습니다.')) return
+  if (!await confirmDelete(t('team.view.schedule.deleteConfirm'))) return
 
   try {
     await teamApi.deleteTeamSchedule(scheduleId)
     await fetchTeamSchedules()
-    toastSuccess('일정이 삭제되었습니다.')
+    toastSuccess(t('team.view.schedule.deleteSuccess'))
   } catch (error) {
     console.error('Failed to delete schedule:', error)
-    showError('일정 삭제에 실패했습니다.')
+    showError(t('team.view.schedule.deleteFailed'))
   }
 }
 
@@ -385,12 +414,12 @@ onMounted(() => {
     <template v-else-if="!hasTeam">
       <div class="rounded-lg shadow overflow-hidden bg-dp-bg-card">
         <div class="bg-dp-surface-strong text-dp-text-on-dark font-bold text-xl text-center py-3">
-          내 팀
+          {{ t('header.menu.myTeam') }}
         </div>
         <div class="flex flex-col items-center justify-center p-12 text-dp-text-secondary">
           <Building2 class="w-16 h-16 mb-4 text-dp-text-muted" />
-          <p class="text-xl font-bold mb-2">어느 팀에도 속해있지 않습니다.</p>
-          <p class="text-lg">팀 관리자에게 가입을 요청해주세요.</p>
+          <p class="text-xl font-bold mb-2">{{ t('team.view.emptyTitle') }}</p>
+          <p class="text-lg">{{ t('team.view.emptyDescription') }}</p>
         </div>
       </div>
     </template>
@@ -408,20 +437,13 @@ onMounted(() => {
         </div>
 
         <!-- Center: Year-Month Navigation -->
-        <div class="flex items-center justify-center">
-          <button @click="prevMonth" class="calendar-nav-btn p-1 sm:p-2 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer">
-            <ChevronLeft class="w-5 h-5 sm:w-6 sm:h-6" />
-          </button>
-          <button
-            @click="isYearMonthPickerOpen = true"
-            class="calendar-nav-btn px-2 sm:px-3 py-1 text-lg sm:text-2xl font-semibold rounded whitespace-nowrap cursor-pointer"
-          >
-            {{ currentYear }}-{{ String(currentMonth).padStart(2, '0') }}
-          </button>
-          <button @click="nextMonth" class="calendar-nav-btn p-1 sm:p-2 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer">
-            <ChevronRight class="w-5 h-5 sm:w-6 sm:h-6" />
-          </button>
-        </div>
+        <CalendarMonthNavigator
+          :current-year="currentYear"
+          :current-month="currentMonth"
+          @prev-month="prevMonth"
+          @next-month="nextMonth"
+          @open-year-month-picker="isYearMonthPickerOpen = true"
+        />
 
         <!-- Right: Team manage button -->
         <div class="flex-shrink-0">
@@ -431,7 +453,7 @@ onMounted(() => {
             class="px-3 py-2 border rounded-lg flex items-center gap-1 hover-interactive cursor-pointer border-dp-border-secondary"
           >
             <Settings class="w-4 h-4" />
-            <span class="hidden sm:inline">팀 관리</span>
+            <span class="hidden sm:inline">{{ t('team.view.actions.manage') }}</span>
           </button>
           <div v-else class="w-16 sm:w-20"></div>
         </div>
@@ -484,7 +506,7 @@ onMounted(() => {
       <div class="rounded-lg border shadow-sm p-3 bg-dp-bg-card border-dp-border-secondary">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
           <h3 class="text-lg font-bold text-dp-text-primary">
-            {{ selectedDay.year }}년 {{ selectedDay.month }}월 {{ selectedDay.day }}일
+            {{ t('team.view.selectedDate', selectedDay) }}
           </h3>
           <button
             v-if="isTeamManager"
@@ -492,7 +514,7 @@ onMounted(() => {
             class="px-3 py-1.5 bg-dp-success text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-success-hover transition flex items-center gap-1 w-full sm:w-auto justify-center cursor-pointer"
           >
             <CalendarPlus class="w-4 h-4" />
-            팀 일정 추가
+            {{ t('team.view.actions.addSchedule') }}
           </button>
         </div>
 
@@ -511,7 +533,7 @@ onMounted(() => {
                 <div class="font-bold mb-1 text-dp-text-primary">
                   {{ schedule.content }}
                   <span class="text-sm font-normal text-dp-text-secondary">
-                    (by: <strong>{{ schedule.createMember }}</strong>)
+                    ({{ t('team.view.schedule.createdBy') }} <strong>{{ schedule.createMember }}</strong>)
                   </span>
                 </div>
                 <div v-if="schedule.description" class="text-sm whitespace-pre-wrap break-words text-dp-text-secondary">
@@ -522,14 +544,14 @@ onMounted(() => {
                 <button
                   @click="openEditScheduleModal(schedule)"
                   class="p-1.5 text-dp-accent rounded-lg hover:bg-dp-accent-soft transition cursor-pointer"
-                  title="수정"
+                  :title="t('team.view.actions.editSchedule')"
                 >
                   <Pencil class="w-4 h-4" />
                 </button>
                 <button
                   @click="deleteSchedule(schedule.id)"
                   class="p-1.5 text-dp-danger rounded-lg hover:bg-dp-danger-soft transition cursor-pointer"
-                  title="삭제"
+                  :title="t('team.view.actions.deleteSchedule')"
                 >
                   <Trash2 class="w-4 h-4" />
                 </button>
@@ -538,7 +560,7 @@ onMounted(() => {
           </div>
         </div>
         <div v-else class="text-center py-6 text-dp-text-muted">
-          이 날의 팀 일정이 없습니다.
+          {{ t('team.view.schedule.empty') }}
         </div>
       </div>
 
@@ -565,7 +587,7 @@ onMounted(() => {
             >
               <span class="font-bold" :style="{ color: getDutyTypeHeaderTextColor(group.dutyType.color) }">{{ group.dutyType.name }}</span>
               <span class="px-2 py-0.5 rounded-full text-sm font-medium" :style="{ backgroundColor: 'var(--dp-chip-on-dark-bg)', color: 'var(--dp-text-on-light)' }">
-                {{ group.members.length }}명
+                {{ t('team.view.shift.memberCount', { count: group.members.length }) }}
               </span>
             </div>
 
@@ -573,10 +595,14 @@ onMounted(() => {
             <div class="p-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
               <div
                 v-for="member in group.members"
-                :key="member.id"
-                @click="goToMemberDuty(member.id)"
-                class="flex flex-col items-center p-2 border rounded-lg cursor-pointer hover-card-select"
-                :class="{ 'ring-2': member.id === loginMemberId }"
+                :key="getShiftMemberKey(group, member)"
+                @click="goToMemberDutyIfAvailable(member)"
+                class="flex flex-col items-center p-2 border rounded-lg hover-card-select"
+                :class="{
+                  'cursor-pointer': member.id != null,
+                  'cursor-default': member.id == null,
+                  'ring-2': member.id === loginMemberId,
+                }"
                 :style="{
                   borderColor: 'var(--dp-border-secondary)',
                   backgroundColor: 'var(--dp-bg-secondary)',
@@ -595,116 +621,94 @@ onMounted(() => {
     </template>
 
     <!-- Schedule Modal -->
-    <div
-      v-if="showScheduleModal"
-      class="fixed inset-0 bg-dp-overlay-dark/50 flex items-center justify-center z-50 p-4"
-      @click.self="closeScheduleModal"
+    <BaseModal
+      :is-open="showScheduleModal"
+      size="lg"
+      height="fit"
+      @close="closeScheduleModal"
     >
-      <div class="rounded-lg shadow-xl w-full max-w-lg bg-dp-bg-modal">
-        <div class="flex items-center justify-between p-4 border-b border-dp-border-primary">
-          <h3 class="text-lg font-bold">팀 일정 저장</h3>
-          <button
-            @click="closeScheduleModal"
-            class="p-1.5 rounded-full hover-close-btn cursor-pointer"
-          >
-            <X class="w-5 h-5" />
-          </button>
+      <div class="modal-header">
+        <h2>{{ t('team.view.schedule.modal.title') }}</h2>
+        <button
+          @click="closeScheduleModal"
+          class="p-1.5 rounded-full hover-close-btn cursor-pointer"
+        >
+          <X class="w-5 h-5 text-dp-text-primary" />
+        </button>
+      </div>
+
+      <div class="modal-body-form">
+        <div>
+          <label class="form-label text-dp-text-primary">
+            {{ t('team.view.schedule.modal.contentLabel') }}
+            <CharacterCounter :current="scheduleForm.content.length" :max="50" />
+          </label>
+          <input
+            v-model="scheduleForm.content"
+            type="text"
+            maxlength="50"
+            class="form-control"
+            :placeholder="t('team.view.schedule.modal.contentPlaceholder')"
+            :aria-invalid="isTeamScheduleTitleMissing"
+          />
         </div>
 
-        <div class="p-4 space-y-4">
+        <div>
+          <label class="form-label text-dp-text-primary">
+            {{ t('team.view.schedule.modal.descriptionLabel') }}
+          </label>
+          <textarea
+            v-model="scheduleForm.description"
+            rows="4"
+            class="form-control resize-none"
+            :placeholder="t('team.view.schedule.modal.descriptionPlaceholder')"
+          ></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium mb-1 text-dp-text-primary">
-              제목(필수)
-              <CharacterCounter :current="scheduleForm.content.length" :max="50" />
+            <label class="form-label text-dp-text-primary">
+              {{ t('team.view.schedule.modal.startDate') }}
             </label>
             <input
-              v-model="scheduleForm.content"
-              type="text"
-              maxlength="50"
-              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent"
-              :style="{
-                backgroundColor: 'var(--dp-bg-input)',
-                borderColor: 'var(--dp-border-input)',
-                color: 'var(--dp-text-primary)'
-              }"
-              placeholder="일정 제목을 입력하세요"
+              v-model="scheduleForm.startDate"
+              type="date"
+              readonly
+              class="form-control"
             />
           </div>
-
           <div>
-            <label class="block text-sm font-medium mb-1 text-dp-text-primary">
-              상세(옵션)
+            <label class="form-label text-dp-text-primary">
+              {{ t('team.view.schedule.modal.endDate') }}
             </label>
-            <textarea
-              v-model="scheduleForm.description"
-              rows="4"
-              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent resize-none"
-              :style="{
-                backgroundColor: 'var(--dp-bg-input)',
-                borderColor: 'var(--dp-border-input)',
-                color: 'var(--dp-text-primary)'
-              }"
-              placeholder="상세 내용을 입력하세요"
-            ></textarea>
+            <input
+              v-model="scheduleForm.endDate"
+              type="date"
+              :min="scheduleForm.startDate"
+              class="form-control"
+              :aria-invalid="isTeamScheduleDateRangeInvalid"
+            />
           </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium mb-1 text-dp-text-primary">
-                시작일
-              </label>
-              <input
-                v-model="scheduleForm.startDate"
-                type="date"
-                readonly
-                class="w-full px-3 py-2 border rounded-lg"
-                :style="{
-                  backgroundColor: 'var(--dp-bg-tertiary)',
-                  borderColor: 'var(--dp-border-input)',
-                  color: 'var(--dp-text-primary)'
-                }"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-1 text-dp-text-primary">
-                종료일
-              </label>
-              <input
-                v-model="scheduleForm.endDate"
-                type="date"
-                class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent"
-                :style="{
-                  backgroundColor: 'var(--dp-bg-input)',
-                  borderColor: 'var(--dp-border-input)',
-                  color: 'var(--dp-text-primary)'
-                }"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div class="flex justify-end gap-2 p-4 border-t border-dp-border-primary">
-          <button
-            @click="saveSchedule"
-            :disabled="saving || !scheduleForm.content.trim()"
-            class="px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
-          >
-            <Loader2 v-if="saving" class="w-4 h-4 animate-spin" />
-            저장
-          </button>
-          <button
-            @click="closeScheduleModal"
-            class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer"
-            :style="{
-              backgroundColor: 'var(--dp-bg-tertiary)',
-              color: 'var(--dp-text-primary)'
-            }"
-          >
-            취소
-          </button>
         </div>
       </div>
-    </div>
+
+      <div class="modal-actions modal-actions-end modal-footer-safe">
+        <button
+          @click="saveSchedule"
+          :disabled="isTeamScheduleSaveDisabled"
+          class="px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
+        >
+          <Loader2 v-if="saving" class="w-4 h-4 animate-spin" />
+          {{ t('team.view.schedule.modal.save') }}
+        </button>
+        <button
+          @click="closeScheduleModal"
+          class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-primary"
+        >
+          {{ t('common.actions.cancel') }}
+        </button>
+      </div>
+    </BaseModal>
 
     <YearMonthPicker
       :is-open="isYearMonthPickerOpen"

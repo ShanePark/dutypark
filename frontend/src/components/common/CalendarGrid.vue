@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { isLightColor } from '@/utils/color'
 import type { HolidayDto } from '@/types'
 
@@ -38,7 +39,11 @@ const emit = defineEmits<{
   (e: 'day-click', day: CalendarDay, index: number): void
 }>()
 
-const weekDays = ['일', '월', '화', '수', '목', '금', '토']
+const { locale } = useI18n()
+const weekDays = computed(() => {
+  const formatter = new Intl.DateTimeFormat(locale.value, { weekday: 'short' })
+  return Array.from({ length: 7 }, (_, index) => formatter.format(new Date(2024, 0, 7 + index)))
+})
 
 // Determine if a day is the current month
 function isCurrentMonth(day: CalendarDay): boolean {
@@ -151,7 +156,7 @@ function handleDayClick(day: CalendarDay, index: number) {
         v-for="(day, idx) in days"
         :key="idx"
         @click="handleDayClick(day, idx)"
-        class="min-h-[70px] sm:min-h-[80px] md:min-h-[100px] border-b border-r p-0.5 sm:p-1 transition-all duration-150 relative"
+        class="min-h-[60px] sm:min-h-[80px] md:min-h-[100px] border-b border-r p-0.5 sm:p-1 transition-all duration-150 relative"
         :class="[
           clickable ? 'cursor-pointer hover:brightness-95 hover:shadow-inner' : '',
           {
@@ -186,7 +191,8 @@ function handleDayClick(day: CalendarDay, index: number) {
         <div
           v-for="holiday in (holidays[idx] ?? [])"
           :key="holiday.localDate + holiday.dateName"
-          class="text-[10px] sm:text-sm leading-snug px-0.5"
+          class="block truncate text-[10px] sm:text-sm leading-snug px-0.5"
+          :title="holiday.dateName"
           :style="{ color: getHolidayColor(day, holiday) }"
         >
           {{ holiday.dateName }}

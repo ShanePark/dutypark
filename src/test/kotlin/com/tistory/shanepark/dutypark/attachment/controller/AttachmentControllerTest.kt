@@ -146,6 +146,36 @@ class AttachmentControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `upload blocked extension returns code only error response`() {
+        val member = TestData.member
+
+        val session = sessionRepository.save(
+            AttachmentUploadSession(
+                contextType = AttachmentContextType.SCHEDULE,
+                targetContextId = null,
+                ownerId = member.id!!,
+                expiresAt = clock.instant().plusSeconds(86400)
+            )
+        )
+
+        val file = MockMultipartFile(
+            "file",
+            "virus.exe",
+            "application/octet-stream",
+            "danger".toByteArray()
+        )
+
+        mockMvc.perform(
+            multipart("/api/attachments")
+                .file(file)
+                .param("sessionId", session.id.toString())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
+        ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("attachment.extension.blocked"))
+            .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
     fun `delete attachment successfully`() {
         val member = TestData.member
 

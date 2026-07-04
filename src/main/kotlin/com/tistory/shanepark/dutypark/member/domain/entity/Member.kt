@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.member.domain.entity
 
+import com.tistory.shanepark.dutypark.common.domain.entity.BaseTimeEntity
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
@@ -16,7 +17,7 @@ class Member(
     @Column
     var password: String? = null,
 
-    ) {
+    ) : BaseTimeEntity() {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null

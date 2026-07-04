@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ChevronLeft, ChevronRight, Search } from 'lucide-vue-next'
+import { Search } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
+import CalendarMonthNavigator from '@/components/common/CalendarMonthNavigator.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 
 const props = defineProps<{
@@ -22,6 +24,8 @@ const emit = defineEmits<{
   (e: 'update:searchQuery', value: string): void
 }>()
 
+const { t } = useI18n()
+
 function handleSearchInput(event: Event) {
   emit('update:searchQuery', (event.target as HTMLInputElement).value)
 }
@@ -37,11 +41,11 @@ function handleSearchClick() {
 
 <template>
   <!-- Header: Profile + Year-Month (centered) + Search -->
-  <div class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center mb-2 px-1 gap-1">
+  <div class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center mb-2 px-1 gap-0.5 sm:gap-1">
     <!-- Left: Profile Photo + Name -->
     <div class="flex items-center gap-1.5 min-w-0">
       <!-- Profile Photo (smaller on mobile) -->
-      <ProfileAvatar :member-id="memberId" :has-profile-photo="memberHasProfilePhoto" :profile-photo-version="memberProfilePhotoVersion" size="lg" class="flex-shrink-0 sm:hidden" :name="memberName" />
+      <ProfileAvatar :member-id="memberId" :has-profile-photo="memberHasProfilePhoto" :profile-photo-version="memberProfilePhotoVersion" size="md" class="flex-shrink-0 sm:hidden" :name="memberName" />
       <ProfileAvatar :member-id="memberId" :has-profile-photo="memberHasProfilePhoto" :profile-photo-version="memberProfilePhotoVersion" size="xl" class="flex-shrink-0 hidden sm:block" :name="memberName" />
       <!-- Name -->
       <span
@@ -50,37 +54,35 @@ function handleSearchClick() {
     </div>
 
     <!-- Center: Year-Month Navigation -->
-    <div class="flex items-center justify-center">
-      <button @click="emit('prev-month')" class="calendar-nav-btn p-0.5 sm:p-2 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer">
-        <ChevronLeft class="w-5 h-5 sm:w-6 sm:h-6" />
-      </button>
-      <button
-        @click="emit('open-year-month-picker')"
-        class="calendar-nav-btn px-1 sm:px-3 py-1 text-lg sm:text-2xl font-semibold rounded whitespace-nowrap cursor-pointer"
-      >
-        {{ currentYear }}-{{ String(currentMonth).padStart(2, '0') }}
-      </button>
-      <button @click="emit('next-month')" class="calendar-nav-btn p-0.5 sm:p-2 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer">
-        <ChevronRight class="w-5 h-5 sm:w-6 sm:h-6" />
-      </button>
-    </div>
+    <CalendarMonthNavigator
+      :current-year="currentYear"
+      :current-month="currentMonth"
+      @prev-month="emit('prev-month')"
+      @next-month="emit('next-month')"
+      @open-year-month-picker="emit('open-year-month-picker')"
+    />
 
     <!-- Right: Search -->
-    <div class="flex justify-end">
-      <div v-if="canSearch" class="flex items-stretch rounded-lg border overflow-hidden border-dp-border-secondary">
+    <div class="flex min-w-0 justify-end">
+      <div
+        v-if="canSearch"
+        class="flex min-h-[42px] min-w-0 w-full max-w-[8.5rem] items-stretch overflow-hidden rounded-lg border border-dp-border-secondary bg-dp-bg-card transition-colors focus-within:border-dp-accent sm:min-h-[44px] sm:max-w-[10rem] sm:rounded-xl sm:shadow-sm"
+      >
         <input
           :value="searchQuery"
           type="text"
-          placeholder="검색"
+          :placeholder="t('duty.header.searchPlaceholder')"
           @input="handleSearchInput"
           @keyup.enter="emit('search')"
-          class="px-2 py-1.5 text-sm focus:ring-2 focus:ring-dp-accent focus:outline-none w-12 sm:w-20 border-none bg-dp-bg-input text-dp-text-primary"
+          class="min-w-0 w-0 flex-1 border-none bg-dp-bg-input px-2 text-[13px] text-dp-text-primary placeholder:text-dp-text-muted focus:outline-none sm:px-2.5 sm:text-sm"
         />
         <button
+          type="button"
           @click="handleSearchClick"
-          class="px-2 py-1.5 bg-dp-surface-strong text-dp-text-on-dark hover:bg-dp-surface-strong-hover transition flex items-center justify-center cursor-pointer"
+          :aria-label="t('common.actions.search')"
+          class="flex min-h-[42px] min-w-[42px] shrink-0 items-center justify-center border-l border-dp-search-action-border bg-dp-search-action px-2.5 text-dp-search-action-text transition-colors hover:bg-dp-search-action-hover cursor-pointer sm:min-h-[44px] sm:min-w-[44px] sm:px-3"
         >
-          <Search class="w-4 h-4" />
+          <Search class="h-[15px] w-[15px] sm:h-4 sm:w-4" />
         </button>
       </div>
     </div>

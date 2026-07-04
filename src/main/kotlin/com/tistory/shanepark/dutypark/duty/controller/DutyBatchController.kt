@@ -41,17 +41,17 @@ class DutyBatchController(
         @RequestParam month: Int,
     ): DutyBatchResult {
         if (dutyService.canEdit(loginMember = loginMember, memberId = memberId).not())
-            throw AuthException("login member doesn't have permission to edit duty")
+            throw AuthException("duty.edit.forbidden")
 
         val dutyBatchTemplate =
-            memberService.getDutyBatchTemplate(memberId) ?: throw IllegalArgumentException("No duty-batch template")
+            memberService.getDutyBatchTemplate(memberId) ?: throw IllegalArgumentException("dutyBatch.template.required")
 
         val dutyBatchService = applicationContext.getBean(dutyBatchTemplate.batchServiceClass) as DutyBatchService
         return try {
             dutyBatchService.batchUploadMember(memberId = memberId, file = file, yearMonth = YearMonth.of(year, month))
         } catch (e: DutyBatchException) {
-            log.warn("Batch duty upload failed: memberId={}, year={}, month={}, error={}", memberId, year, month, e.batchErrorMessage)
-            DutyBatchResult.fail(e.batchErrorMessage)
+            log.warn("Batch duty upload failed: memberId={}, year={}, month={}, error={}", memberId, year, month, e.errorCode)
+            DutyBatchResult.fail(e.errorCode, e.errorDetails)
         }
     }
 

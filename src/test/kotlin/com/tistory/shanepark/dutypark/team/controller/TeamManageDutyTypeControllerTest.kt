@@ -51,6 +51,7 @@ class TeamManageDutyTypeControllerTest : RestDocsTest() {
                 .withAuth(TestData.member2)
         )
             .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("team.manage.forbidden"))
     }
 
     @Test
@@ -96,7 +97,7 @@ class TeamManageDutyTypeControllerTest : RestDocsTest() {
                 .withAuth(TestData.member)
         )
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.error").exists())
+            .andExpect(jsonPath("$.code").value("dutyType.name.duplicate"))
     }
 
     @Test
@@ -135,7 +136,7 @@ class TeamManageDutyTypeControllerTest : RestDocsTest() {
                 .withAuth(TestData.member)
         )
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.error").value("DutyTypes must belong to the same team"))
+            .andExpect(jsonPath("$.code").value("team.dutyType.sameTeam.required"))
     }
 
     @Test

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { marked } from 'marked'
+import BaseModal from '@/components/common/BaseModal.vue'
 import { policyApi, type CurrentPoliciesDto } from '@/api/policy'
 
 marked.setOptions({
@@ -12,6 +14,7 @@ const props = defineProps<{
   policies?: CurrentPoliciesDto | null
 }>()
 
+const { t } = useI18n()
 const emit = defineEmits<{
   close: []
 }>()
@@ -22,7 +25,13 @@ const isLoading = ref(false)
 const effectivePolicies = computed(() => props.policies ?? localPolicies.value)
 
 const modalTitle = computed(() => {
-  return props.type === 'terms' ? '이용약관' : '개인정보 처리방침'
+  if (props.type === 'terms') {
+    return t('policy.terms.title')
+  }
+  if (props.type === 'privacy') {
+    return t('policy.privacy.title')
+  }
+  return ''
 })
 
 const modalContent = computed(() => {
@@ -52,20 +61,19 @@ function close() {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      v-if="type"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4"
-      @click.self="close"
-    >
-      <div class="fixed inset-0 bg-dp-overlay-dark/50" @click="close"></div>
-      <div class="modal-container relative max-w-[95vw] sm:max-w-3xl max-h-[90vh]">
+  <BaseModal
+    :is-open="!!type"
+    size="3xl"
+    height="viewport"
+    @close="close"
+  >
         <!-- Modal Header -->
         <div class="modal-header">
           <h2>{{ modalTitle }}</h2>
           <button
             type="button"
             class="p-2 rounded-full hover-close-btn"
+            :aria-label="t('common.actions.close')"
             @click="close"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -78,15 +86,18 @@ function close() {
           class="flex-1 overflow-y-auto p-6 prose prose-sm sm:prose-base max-w-none text-dp-text-secondary"
         >
           <div v-if="isLoading" class="flex items-center justify-center h-32">
-            <div class="animate-spin rounded-full h-6 w-6 border-2 border-dp-accent-border border-t-transparent"></div>
+            <div class="flex flex-col items-center">
+              <div class="animate-spin rounded-full h-6 w-6 border-2 border-dp-accent-border border-t-transparent"></div>
+              <p class="mt-3 text-sm text-dp-text-muted">{{ t('policy.loading') }}</p>
+            </div>
           </div>
           <div v-else-if="!modalContent" class="flex items-center justify-center h-32 text-sm">
-            내용을 불러올 수 없습니다.
+            {{ t('policy.unavailable') }}
           </div>
           <div v-else v-html="modalContent"></div>
         </div>
         <!-- Modal Footer -->
-        <div class="flex-shrink-0 p-4 border-t border-dp-border-primary">
+        <div class="modal-footer-safe flex-shrink-0 p-4 border-t border-dp-border-primary">
           <button
             type="button"
             class="w-full py-2.5 px-4 rounded-lg font-medium transition"
@@ -96,10 +107,8 @@ function close() {
             }"
             @click="close"
           >
-            닫기
+            {{ t('common.actions.close') }}
           </button>
         </div>
-      </div>
-    </div>
-  </Teleport>
+  </BaseModal>
 </template>

@@ -1,12 +1,16 @@
 package com.tistory.shanepark.dutypark.attachment.service
 
+import com.tistory.shanepark.dutypark.attachment.dto.FinalizeSessionRequest
 import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
 import com.tistory.shanepark.dutypark.attachment.domain.entity.AttachmentUploadSession
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.attachment.domain.enums.ThumbnailStatus
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
+import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
@@ -381,6 +385,130 @@ class AttachmentServiceTest {
         assertThat(attachmentRepository.count()).isEqualTo(0)
         assertThat(Files.exists(tempDir)).isFalse()
         org.mockito.kotlin.verify(sessionService).deleteSession(sessionId)
+    }
+
+    @Test
+    fun `findById requires login for session attachment`() {
+        val sessionId = UUID.randomUUID()
+        val session = AttachmentUploadSession(
+            contextType = AttachmentContextType.SCHEDULE,
+            targetContextId = null,
+            ownerId = loginMember.id,
+            expiresAt = clock.instant().plusSeconds(3600)
+        )
+        org.mockito.kotlin.whenever(sessionService.findById(sessionId)).thenReturn(session)
+        val attachment = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = null,
+                uploadSessionId = sessionId,
+                originalFilename = "session.txt",
+                storedFilename = "session.txt",
+                contentType = "text/plain",
+                size = 1,
+                storagePath = tempDir.toString(),
+                createdBy = loginMember.id
+            )
+        )
+
+        assertThatThrownBy { service.findById(null, attachment.id) }
+            .isInstanceOf(AuthException::class.java)
+            .hasMessage("attachment.session.auth.required")
+    }
+
+    @Test
+    fun `findById returns code-first bad request when session is missing`() {
+        val sessionId = UUID.randomUUID()
+        org.mockito.kotlin.whenever(sessionService.findById(sessionId)).thenReturn(null)
+        val attachment = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = null,
+                uploadSessionId = sessionId,
+                originalFilename = "session.txt",
+                storedFilename = "session.txt",
+                contentType = "text/plain",
+                size = 1,
+                storagePath = tempDir.toString(),
+                createdBy = loginMember.id
+            )
+        )
+
+        assertThatThrownBy { service.findById(loginMember, attachment.id) }
+            .isInstanceOf(BadRequestException::class.java)
+            .hasMessage("attachment.session.notFound")
+    }
+
+    @Test
+    fun `deleteAttachment returns code-first bad request when session is missing`() {
+        val sessionId = UUID.randomUUID()
+        org.mockito.kotlin.whenever(sessionService.findById(sessionId)).thenReturn(null)
+        val attachment = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = null,
+                uploadSessionId = sessionId,
+                originalFilename = "session.txt",
+                storedFilename = "session.txt",
+                contentType = "text/plain",
+                size = 1,
+                storagePath = tempDir.toString(),
+                createdBy = loginMember.id
+            )
+        )
+
+        assertThatThrownBy { service.deleteAttachment(loginMember, attachment.id) }
+            .isInstanceOf(BadRequestException::class.java)
+            .hasMessage("attachment.session.notFound")
+    }
+
+    @Test
+    fun `finalizeSession returns code-first bad request when target context mismatches`() {
+        val sessionId = UUID.randomUUID()
+        val session = AttachmentUploadSession(
+            contextType = AttachmentContextType.SCHEDULE,
+            targetContextId = "expected-context",
+            ownerId = loginMember.id,
+            expiresAt = clock.instant().plusSeconds(3600)
+        )
+        org.mockito.kotlin.whenever(sessionService.findById(sessionId)).thenReturn(session)
+
+        assertThatThrownBy {
+            service.finalizeSession(
+                loginMember = loginMember,
+                sessionId = sessionId,
+                request = FinalizeSessionRequest(
+                    contextId = "actual-context",
+                    orderedAttachmentIds = emptyList()
+                )
+            )
+        }
+            .isInstanceOf(BadRequestException::class.java)
+            .hasMessage("attachment.session.contextMismatch")
+    }
+
+    @Test
+    fun `synchronizeContextAttachments returns code-first bad request when session context mismatches`() {
+        val sessionId = UUID.randomUUID()
+        val session = AttachmentUploadSession(
+            contextType = AttachmentContextType.TODO,
+            targetContextId = null,
+            ownerId = loginMember.id,
+            expiresAt = clock.instant().plusSeconds(3600)
+        )
+        org.mockito.kotlin.whenever(sessionService.findById(sessionId)).thenReturn(session)
+
+        assertThatThrownBy {
+            service.synchronizeContextAttachments(
+                loginMember = loginMember,
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = UUID.randomUUID().toString(),
+                attachmentSessionId = sessionId,
+                orderedAttachmentIds = emptyList()
+            )
+        }
+            .isInstanceOf(BadRequestException::class.java)
+            .hasMessage("attachment.session.contextMismatch")
     }
 
     class FakeAttachmentRepository : AttachmentRepository {

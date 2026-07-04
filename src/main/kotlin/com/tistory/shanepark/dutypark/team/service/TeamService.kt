@@ -2,11 +2,12 @@ package com.tistory.shanepark.dutypark.team.service
 
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyByShift
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
-import com.tistory.shanepark.dutypark.member.domain.dto.SimpleMemberDto
+import com.tistory.shanepark.dutypark.member.domain.dto.toMemberPreviewDto
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.dto.*
@@ -66,7 +67,7 @@ class TeamService(
     fun delete(id: Long) {
         val team = teamRepository.findById(id).orElseThrow()
         if (team.members.isNotEmpty()) {
-            throw IllegalStateException("team has members")
+            throw BadRequestException("team.delete.membersExist")
         }
 
         dutyRepository.deleteAllByDutyTypeIn(team.dutyTypes)
@@ -82,7 +83,7 @@ class TeamService(
         val member = memberRepository.findById(memberId).orElseThrow()
 
         if (member.team != null) {
-            throw IllegalStateException("The member already belongs to team")
+            throw BadRequestException("team.member.alreadyAssigned")
         }
         team.addMember(member)
     }
@@ -92,7 +93,7 @@ class TeamService(
         val member = memberRepository.findById(memberId).orElseThrow()
 
         if (member.team != team) {
-            throw IllegalStateException("Member does not belong to team")
+            throw BadRequestException("team.member.notInTeam")
         }
         team.removeMember(member)
     }
@@ -110,7 +111,7 @@ class TeamService(
         val member = memberRepository.findById(memberId).orElseThrow()
 
         if (member.team != team) {
-            throw IllegalStateException("Member does not belong to team")
+            throw BadRequestException("team.member.notInTeam")
         }
         if (team.isManager(memberId)) {
             return
@@ -123,7 +124,7 @@ class TeamService(
         val member = memberRepository.findById(memberId).orElseThrow()
 
         if (member.team != team) {
-            throw IllegalStateException("Member does not belong to team")
+            throw BadRequestException("team.member.notInTeam")
         }
         if (!team.isManager(memberId)) {
             return
@@ -170,7 +171,7 @@ class TeamService(
                     dutyMemberMap.filter { (duty, _) -> duty.dutyType?.id == id }.values
                 } ?: offMembers
                 val members = sourceMembers
-                    .map { member -> SimpleMemberDto(member.id!!, member.name, member.hasProfilePhoto(), member.profilePhotoVersion) }
+                    .map { it.toMemberPreviewDto() }
                     .sortedBy { it.name }
                 DutyByShift(dutyTypeDto, members)
             }
@@ -207,7 +208,7 @@ class TeamService(
         if (login.isAdmin)
             return
         if (!team.isManager(login)) {
-            throw AuthException("Member is not a team manager")
+            throw AuthException("team.manage.forbidden")
         }
     }
 
@@ -216,7 +217,7 @@ class TeamService(
         if (login.isAdmin)
             return
         if (!team.isAdmin(login.id)) {
-            throw AuthException("Member is not a team admin")
+            throw AuthException("team.admin.required")
         }
 
     }
@@ -227,7 +228,7 @@ class TeamService(
             return
         val member = memberRepository.findById(login.id).orElseThrow()
         if (member.team != team) {
-            throw AuthException("Member is not a team member, team: $team, member: $member")
+            throw AuthException("team.member.required")
         }
     }
 

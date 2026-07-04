@@ -93,24 +93,25 @@
 
 | 기능 | 설명 |
 |:-----|:-----|
-| **카카오 로그인** | 한 번의 클릭으로 로그인 |
+| **카카오 + 네이버 로그인** | 한국 사용자를 위한 소셜 로그인과 SSO 온보딩 |
 | **공휴일 동기화** | 공공데이터포털에서 한국 공휴일 자동 연동 (캐시 지원) |
-| **다크 모드** | 시스템 설정을 따르는 눈 편한 테마 |
+| **다크 모드** | 사용자가 선택하고 로컬에 저장되는 라이트/다크 테마 |
+| **다국어 UI** | 한국어, 영어, 일본어, 중국어 간체, 스페인어와 브라우저 언어 제안 |
 | **모바일 우선** | 스마트폰과 태블릿에 최적화된 반응형 디자인 |
 | **웹 푸시** | 태그, 요청, 업데이트에 대한 네이티브 브라우저 푸시 알림 |
-| **PWA 지원** | iOS, Android 홈 화면에 설치 가능, 오프라인 지원 |
+| **PWA 지원** | iOS, Android 홈 화면 설치와 푸시, 배지, 알림 클릭 지원 |
 | **계정 대리 로그인** | 관리자가 피관리 계정으로 전환하여 조회/편집 |
 
 ---
 
 ## 기술 스택
 
-- **백엔드:** Kotlin 2.3, Spring Boot 4.0 (Data JPA, Security, WebFlux, Scheduling, Caching, AI), Java 21
-- **프론트엔드:** Vue 3.5 SPA (Vite 7 + TypeScript + Pinia + Tailwind CSS 4)
-- **데이터베이스:** MySQL 8.0 + Flyway 마이그레이션 (47개 이상의 버전 관리)
-- **AI:** Spring AI + Gemini (비동기 큐를 통한 일정 시간 파싱)
-- **인증:** JWT Bearer 토큰 + 슬라이딩 리프레시 + 카카오 OAuth SSO
-- **PWA:** VAPID 기반 웹 푸시 알림, iOS/Android 설치 가능
+- **백엔드:** Kotlin 2.3, Spring Boot 4.0.1 (Data JPA, Security, WebFlux, Scheduling, Caching, AI), Java 25 toolchain
+- **프론트엔드:** Vue 3.5 SPA (Vite 7 + TypeScript 5.9 + Pinia 3 + Vue Router 4 + Vue I18n 11 + Tailwind CSS 4)
+- **데이터베이스:** MySQL 8.0 + 버전 관리되는 Flyway 마이그레이션
+- **AI:** Gemini에 연결되는 Spring AI OpenAI-compatible client (비동기 큐 기반 일정 시간 파싱)
+- **인증:** HttpOnly 쿠키 access/refresh 흐름 + Bearer fallback + 카카오/네이버 OAuth SSO
+- **PWA:** VAPID 기반 웹 푸시 알림, refresh token에 묶인 구독, iOS/Android 설치 가능
 - **관측성:** Prometheus, Grafana, Slack 웹훅, 롤링 로그
 
 ---
@@ -119,7 +120,7 @@
 
 ### 요구사항
 
-- JDK 21+, Node.js 20+, Docker (권장)
+- JDK 25+, Node.js 20+, Docker (권장)
 
 ### 개발 환경 설정
 
@@ -167,7 +168,7 @@ docker compose up -d
              ▼
 ┌─────────────────────────────────────────┐
 │   Spring Boot Backend (:8080)           │
-│   REST API + JWT Auth                   │
+│   REST API + Cookie/JWT Auth            │
 └────────────┬────────────────────────────┘
              │
              ▼
@@ -190,19 +191,24 @@ docker compose up -d
 | `push/` | VAPID 기반 웹 푸시 알림, iOS PWA 지원 |
 | `attachment/` | 세션 기반 업로드, 썸네일, 야간 정리 스케줄러 |
 | `holiday/` | 공공데이터포털 공휴일 (동시성 안전 캐싱) |
+| `policy/` | 약관/개인정보처리방침 버전과 멤버 동의 추적 |
 | `security/` | JWT, OAuth, 요청 제한, 권한, 관리자 필터링 |
+| `admin/` | 관리자 멤버/팀 조회, 세션 제어, 대리 로그인 지원 |
+| `common/` | 공통 설정, 에러 응답, 페이징, 로깅, 테스트 헬퍼 |
 
 ### 프론트엔드 구조
 
 ```
 frontend/src/
-├── api/           # 13개 Axios 클라이언트 (duty, schedule, todo, team, member, notification, push 등)
-├── components/    # 45개 이상 Vue SFC (FileUploader, Modals, KanbanBoard, Layout 등)
-├── composables/   # 7개 훅 (useSwal, useKakao, usePushNotification, useEscapeKey 등)
-├── stores/        # Pinia 스토어 (auth, notification 폴링, theme)
+├── api/           # Axios 클라이언트 (duty, schedule, todo, team, member, notification, push 등)
+├── components/    # Vue SFC (FileUploader, Modals, KanbanBoard, Layout 등)
+├── composables/   # 훅 (useSwal, useKakao, useNaver, usePushNotification, useEscapeKey 등)
+├── stores/        # Pinia 스토어 (auth, notification 폴링, theme, locale)
 ├── views/         # 19개 페이지 컴포넌트 (Dashboard, Duty, TodoBoard, Member, Team, Admin)
+├── i18n/          # ko/en/ja/zh/es 로케일 번들
+├── releaseNotes/  # 인앱 변경 로그 메타데이터와 다국어 문구
 ├── utils/         # 헬퍼 (color, date, visibility)
-└── types/         # 50개 이상 TypeScript 인터페이스
+└── types/         # 공유 TypeScript 인터페이스
 ```
 
 ---
@@ -215,6 +221,10 @@ frontend/src/
 |:-----|:-----|
 | `JWT_SECRET` | 토큰 서명용 Base64 인코딩 시크릿 |
 | `KAKAO_REST_API_KEY` | 카카오 OAuth 클라이언트 자격 증명 |
+| `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | 네이버 OAuth 클라이언트 자격 증명 |
+| `VITE_KAKAO_APP_KEY` | SPA에서 사용하는 카카오 JavaScript SDK 앱 키 |
+| `VITE_NAVER_CLIENT_ID` | SPA에 노출되는 네이버 OAuth 클라이언트 ID |
+| `VITE_API_BASE_URL` | OAuth 리다이렉트에 사용할 선택적 백엔드 절대 URL |
 | `GEMINI_API_KEY` | 일정 파싱용 Google AI Studio 키 (선택) |
 | `SLACK_TOKEN` | 운영 알림 봇 토큰 |
 | `DATA_GO_KR_SERVICE_KEY` | 한국 공휴일 API 키 |
@@ -223,6 +233,7 @@ frontend/src/
 | `ADMIN_EMAIL` | 관리자 이메일 주소 |
 
 전체 목록은 `.env.sample`을 참조하세요 (DB 자격 증명, 도메인 설정, Docker 설정 포함).
+SPA 빌드 시 `VITE_*` 값은 `frontend/.env.development`, `frontend/.env.production` 또는 프로세스 환경 변수에서 읽습니다.
 
 ---
 
@@ -233,6 +244,8 @@ frontend/src/
 3. 변경사항 커밋 (`git commit -m 'Add amazing feature'`)
 4. 브랜치에 푸시 (`git push origin feature/amazing-feature`)
 5. Pull Request 열기
+
+`main` 대상 PR은 PR 번호가 확정된 뒤 인앱 릴리스 노트 항목을 정확히 하나 추가하고 `cd frontend && npm run release-notes:check`를 실행하세요. 자세한 흐름은 `frontend/src/releaseNotes/README.md`를 참고하면 됩니다.
 
 ---
 

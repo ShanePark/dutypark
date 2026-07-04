@@ -27,7 +27,7 @@ data class RefreshTokenDto(
                 remoteAddr = refreshToken.remoteAddr,
                 id = refreshToken.id!!,
                 token = refreshToken.token,
-                userAgent = UserAgentInfo.fromJson(refreshToken.userAgent),
+                userAgent = UserAgentInfo.fromStoredValue(refreshToken.userAgent),
             )
         }
     }

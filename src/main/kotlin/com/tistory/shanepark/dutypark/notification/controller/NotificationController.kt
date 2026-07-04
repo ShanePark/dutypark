@@ -44,10 +44,10 @@ class NotificationController(
     }
 
     @GetMapping("/friend-request-count")
-    fun getFriendRequestCount(
+    fun getPendingRequestCount(
         @Login loginMember: LoginMember
     ): Map<String, Int> {
-        return mapOf("count" to notificationService.getFriendRequestCount(loginMember.id))
+        return mapOf("count" to notificationService.getPendingRequestCount(loginMember.id))
     }
 
     @PatchMapping("/{id}/read")
