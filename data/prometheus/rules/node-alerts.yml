@@ -1,0 +1,25 @@
+groups:
+  - name: node-alerts
+    rules:
+      - alert: RootDiskUsageHigh
+        expr: |
+          100 * (
+            1 - (
+              node_filesystem_avail_bytes{
+                job="node-exporter",
+                mountpoint="/",
+                fstype!~"tmpfs|overlay|squashfs|proc|sysfs|devtmpfs"
+              }
+              /
+              node_filesystem_size_bytes{
+                job="node-exporter",
+                mountpoint="/",
+                fstype!~"tmpfs|overlay|squashfs|proc|sysfs|devtmpfs"
+              }
+            )
+          ) >= 50
+        labels:
+          severity: warning
+        annotations:
+          summary: "Root disk usage is high"
+          description: "Root disk usage is {{ $value | printf \"%.1f\" }}% on {{ $labels.instance }}."

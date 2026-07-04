@@ -73,12 +73,48 @@ services:
     image: prom/prometheus
     volumes:
       - ./data/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./data/prometheus/rules:/etc/prometheus/rules:ro
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
     restart: unless-stopped
+    networks:
+      - dutypark-network
+
+  alertmanager:
+    image: prom/alertmanager
+    container_name: dutypark-alertmanager
+    restart: unless-stopped
+    environment:
+      SLACK_TOKEN: ${SLACK_TOKEN}
+      ALERTMANAGER_SLACK_WEBHOOK_URL: ${ALERTMANAGER_SLACK_WEBHOOK_URL:-}
+    volumes:
+      - ./data/alertmanager/alertmanager.yml.template:/etc/alertmanager/alertmanager.yml.template:ro
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        webhook_url="$${ALERTMANAGER_SLACK_WEBHOOK_URL:-https://hooks.slack.com/services/$${SLACK_TOKEN}}"
+        sed "s|__SLACK_WEBHOOK_URL__|$${webhook_url}|g" /etc/alertmanager/alertmanager.yml.template > /tmp/alertmanager.yml
+        exec /bin/alertmanager --config.file=/tmp/alertmanager.yml --storage.path=/alertmanager
+    networks:
+      - dutypark-network
+
+  node-exporter:
+    image: prom/node-exporter
+    container_name: dutypark-node-exporter
+    restart: unless-stopped
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro,rslave
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
     networks:
       - dutypark-network
 
