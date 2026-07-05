@@ -56,3 +56,4 @@ data/storage/
 .env
 
 .playwright-mcp/
+.DS_Store
