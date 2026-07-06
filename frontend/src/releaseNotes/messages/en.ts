@@ -39,6 +39,14 @@ export const enReleaseNotes = {
     ui: "UI"
   },
   entries: {
+    "pr-377": {
+      title: "Fix friend menu position on mobile",
+      summary: "Fixes the friend management menu opening far away from its button after scrolling on mobile, and keeps it fully visible near the bottom of the screen.",
+      changes: [
+        "Open the friend management menu right next to its button even after scrolling the friend list.",
+        "Open the menu above the button when there is not enough space below."
+      ]
+    },
     "pr-376": {
       title: "Align tagged todo detail actions",
       summary: "Makes tagged todo detail modal actions match owner todos by focusing on tag removal and the same complete or reopen action.",

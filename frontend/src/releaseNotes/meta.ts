@@ -2,6 +2,18 @@ import type { ReleaseNoteMeta } from './types'
 
 export const releaseNoteMetas = [
   {
+    id: "pr-377",
+    version: "2026.07.06",
+    date: "2026-07-06",
+    pr: 377,
+    url: "https://github.com/ShanePark/dutypark/pull/377",
+    category: "fix",
+    areas: [
+      "friends",
+      "ui"
+    ]
+  },
+  {
     id: "pr-376",
     version: "2026.06.24",
     date: "2026-06-24",

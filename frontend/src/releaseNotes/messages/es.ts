@@ -39,6 +39,14 @@ export const esReleaseNotes = {
     ui: "Interfaz"
   },
   entries: {
+    "pr-377": {
+      title: "Corregir posición del menú de amigos en móvil",
+      summary: "Corrige que el menú de gestión de amigos se abriera lejos de su botón tras desplazar la lista en móvil y lo mantiene visible cerca de la parte inferior de la pantalla.",
+      changes: [
+        "Abre el menú de gestión de amigos junto a su botón incluso después de desplazar la lista de amigos.",
+        "Abre el menú por encima del botón cuando no hay espacio suficiente debajo."
+      ]
+    },
     "pr-376": {
       title: "Alinear acciones del detalle Todo etiquetado",
       summary: "Hace que el modal de detalle de Todo etiquetado use las mismas acciones de completar o reabrir que los Todo propios y se centre en quitar la etiqueta.",

@@ -41,6 +41,7 @@ const friendInfo = ref<DashboardFriendInfo | null>(null)
 // Dropdown state for friend management
 const openDropdownId = ref<number | null>(null)
 const dropdownPosition = ref({ top: 0, left: 0 })
+const dropdownRef = ref<HTMLElement | null>(null)
 
 // Sortable instance
 let friendSortable: Sortable | null = null
@@ -273,15 +274,26 @@ function toggleDropdown(memberId: number, event: Event) {
   event.stopPropagation()
   if (openDropdownId.value === memberId) {
     openDropdownId.value = null
-  } else {
-    openDropdownId.value = memberId
-    const button = event.currentTarget as HTMLElement
-    const rect = button.getBoundingClientRect()
-    dropdownPosition.value = {
-      top: rect.bottom + window.scrollY + 4,
-      left: rect.right + window.scrollX - 128 // 128px = dropdown width (w-32)
-    }
+    return
   }
+  openDropdownId.value = memberId
+  const button = event.currentTarget as HTMLElement
+  const rect = button.getBoundingClientRect()
+  // The dropdown is position: fixed, so it takes viewport coordinates without scroll offsets
+  dropdownPosition.value = {
+    top: rect.bottom + 4,
+    left: Math.max(8, rect.right - 128) // 128px = dropdown width (w-32)
+  }
+  nextTick(() => {
+    const menu = dropdownRef.value
+    if (!menu) return
+    if (rect.bottom + 4 + menu.offsetHeight > window.innerHeight - 8) {
+      dropdownPosition.value = {
+        ...dropdownPosition.value,
+        top: Math.max(8, rect.top - 4 - menu.offsetHeight)
+      }
+    }
+  })
 }
 
 function closeDropdown() {
@@ -692,6 +704,7 @@ onUnmounted(() => {
     <Teleport to="body">
       <div
         v-if="openDropdownId && openDropdownFriend"
+        ref="dropdownRef"
         class="fixed w-32 border rounded-xl shadow-xl z-[9999] overflow-hidden"
         :style="{
           top: dropdownPosition.top + 'px',
