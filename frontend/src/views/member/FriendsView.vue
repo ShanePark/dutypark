@@ -20,6 +20,7 @@ import {
   GripVertical,
   MoreVertical,
   Trash2,
+  X,
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -42,6 +43,7 @@ const friendInfo = ref<DashboardFriendInfo | null>(null)
 const openDropdownId = ref<number | null>(null)
 const dropdownPosition = ref({ top: 0, left: 0 })
 const dropdownRef = ref<HTMLElement | null>(null)
+const MENU_WIDTH = 176 // w-44
 
 // Sortable instance
 let friendSortable: Sortable | null = null
@@ -279,18 +281,20 @@ function toggleDropdown(memberId: number, event: Event) {
   openDropdownId.value = memberId
   const button = event.currentTarget as HTMLElement
   const rect = button.getBoundingClientRect()
-  // The dropdown is position: fixed, so it takes viewport coordinates without scroll offsets
+  const cardTop = (button.closest('.friend-card')?.getBoundingClientRect().top ?? rect.top)
+  // The popover is position: absolute in the document, so it scrolls along with the friend list.
+  // Align it with the top of the friend's own card so it covers that card instead of the one below.
   dropdownPosition.value = {
-    top: rect.bottom + 4,
-    left: Math.max(8, rect.right - 128) // 128px = dropdown width (w-32)
+    top: cardTop + window.scrollY,
+    left: Math.max(8, rect.right - MENU_WIDTH) + window.scrollX
   }
   nextTick(() => {
     const menu = dropdownRef.value
     if (!menu) return
-    if (rect.bottom + 4 + menu.offsetHeight > window.innerHeight - 8) {
+    if (cardTop + menu.offsetHeight > window.innerHeight - 8) {
       dropdownPosition.value = {
         ...dropdownPosition.value,
-        top: Math.max(8, rect.top - 4 - menu.offsetHeight)
+        top: Math.max(window.scrollY + 8, window.scrollY + window.innerHeight - 8 - menu.offsetHeight)
       }
     }
   })
@@ -441,8 +445,13 @@ function destroyFriendSortable() {
   }
 }
 
+function onDocumentKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') closeDropdown()
+}
+
 onMounted(async () => {
   document.addEventListener('click', closeDropdown)
+  document.addEventListener('keydown', onDocumentKeydown)
   await loadFriendInfo()
   nextTick(() => {
     initFriendSortable()
@@ -451,6 +460,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   document.removeEventListener('click', closeDropdown)
+  document.removeEventListener('keydown', onDocumentKeydown)
   destroyFriendSortable()
 })
 </script>
@@ -700,44 +710,61 @@ onUnmounted(() => {
       </div>
     </template>
 
-    <!-- Friend Dropdown Menu (Teleported to body) -->
+    <!-- Friend Menu (Teleported to body): bottom sheet on mobile, anchored popover on desktop -->
     <Teleport to="body">
-      <div
-        v-if="openDropdownId && openDropdownFriend"
-        ref="dropdownRef"
-        class="fixed w-32 border rounded-xl shadow-xl z-[9999] overflow-hidden"
-        :style="{
-          top: dropdownPosition.top + 'px',
-          left: dropdownPosition.left + 'px',
-          backgroundColor: 'var(--dp-bg-card)',
-          borderColor: 'var(--dp-border-primary)'
-        }"
-        @click.stop
-      >
-        <button
-          v-if="!openDropdownFriend.isFamily"
-          class="w-full px-3 py-2.5 text-left text-sm text-dp-accent hover:bg-dp-accent-soft flex items-center gap-2 transition cursor-pointer"
-          @click="addFamily(openDropdownFriend.member)"
+      <Transition name="friend-menu-overlay">
+        <div
+          v-if="openDropdownId && openDropdownFriend"
+          class="friend-menu-overlay fixed inset-0 z-[9998]"
+          @click.stop="closeDropdown"
+        />
+      </Transition>
+      <Transition name="friend-menu-pop">
+        <div
+          v-if="openDropdownId && openDropdownFriend"
+          ref="dropdownRef"
+          class="friend-menu absolute w-44 rounded-xl z-[9999] overflow-hidden"
+          :style="{
+            top: dropdownPosition.top + 'px',
+            left: dropdownPosition.left + 'px'
+          }"
+          @click.stop
         >
-          <Home class="w-4 h-4" />
-          {{ t('friends.actions.addFamily') }}
-        </button>
-        <button
-          v-if="openDropdownFriend.isFamily"
-          class="w-full px-3 py-2.5 text-left text-sm text-dp-warning hover:bg-dp-warning-soft flex items-center gap-2 transition cursor-pointer"
-          @click="demoteFromFamily(openDropdownFriend.member)"
-        >
-          <UserMinus class="w-4 h-4" />
-          {{ t('friends.actions.removeFamily') }}
-        </button>
-        <button
-          class="w-full px-3 py-2.5 text-left text-sm text-dp-danger hover:bg-dp-danger-soft flex items-center gap-2 transition cursor-pointer"
-          @click="unfriend(openDropdownFriend.member)"
-        >
-          <Trash2 class="w-4 h-4" />
-          {{ t('friends.actions.removeFriend') }}
-        </button>
-      </div>
+          <div class="friend-menu-header flex items-center justify-between gap-2 pl-4 pr-1.5 py-1.5">
+            <span class="text-sm font-semibold truncate text-dp-text-primary">{{ openDropdownFriend.member.name }}</span>
+            <button
+              class="p-2.5 rounded-lg text-dp-text-muted hover:text-dp-text-primary hover:bg-dp-bg-hover transition cursor-pointer"
+              :aria-label="t('common.actions.close')"
+              @click="closeDropdown"
+            >
+              <X class="w-5 h-5" />
+            </button>
+          </div>
+          <button
+            v-if="!openDropdownFriend.isFamily"
+            class="w-full min-h-[44px] px-4 py-2.5 text-left text-sm text-dp-accent hover:bg-dp-accent-soft flex items-center gap-2.5 transition cursor-pointer"
+            @click="addFamily(openDropdownFriend.member)"
+          >
+            <Home class="w-4 h-4 flex-shrink-0" />
+            {{ t('friends.actions.addFamily') }}
+          </button>
+          <button
+            v-if="openDropdownFriend.isFamily"
+            class="w-full min-h-[44px] px-4 py-2.5 text-left text-sm text-dp-warning hover:bg-dp-warning-soft flex items-center gap-2.5 transition cursor-pointer"
+            @click="demoteFromFamily(openDropdownFriend.member)"
+          >
+            <UserMinus class="w-4 h-4 flex-shrink-0" />
+            {{ t('friends.actions.removeFamily') }}
+          </button>
+          <button
+            class="w-full min-h-[44px] px-4 py-2.5 text-left text-sm text-dp-danger hover:bg-dp-danger-soft flex items-center gap-2.5 transition cursor-pointer"
+            @click="unfriend(openDropdownFriend.member)"
+          >
+            <Trash2 class="w-4 h-4 flex-shrink-0" />
+            {{ t('friends.actions.removeFriend') }}
+          </button>
+        </div>
+      </Transition>
     </Teleport>
 
     <FriendSearchModal
@@ -756,3 +783,52 @@ onUnmounted(() => {
     />
   </div>
 </template>
+
+<style scoped>
+/* Dim background on mobile so the sheet stands out; transparent on desktop like NotificationDropdown */
+.friend-menu-overlay {
+  background-color: var(--dp-overlay-scrim-soft);
+}
+
+@media (min-width: 640px) {
+  .friend-menu-overlay {
+    background-color: transparent;
+  }
+}
+
+.friend-menu {
+  background-color: var(--dp-bg-card);
+  border: 1px solid var(--dp-border-primary);
+  box-shadow: var(--dp-shadow-dropdown);
+}
+
+:global(.dark) .friend-menu {
+  box-shadow: var(--dp-shadow-dropdown-dark);
+}
+
+.friend-menu-header {
+  background-color: var(--dp-bg-tertiary);
+  border-bottom: 1px solid var(--dp-border-primary);
+}
+
+.friend-menu-overlay-enter-active,
+.friend-menu-overlay-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.friend-menu-overlay-enter-from,
+.friend-menu-overlay-leave-to {
+  opacity: 0;
+}
+
+.friend-menu-pop-enter-active,
+.friend-menu-pop-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.friend-menu-pop-enter-from,
+.friend-menu-pop-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+</style>

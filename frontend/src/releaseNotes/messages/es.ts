@@ -39,6 +39,15 @@ export const esReleaseNotes = {
     ui: "Interfaz"
   },
   entries: {
+    "pr-378": {
+      title: "Mejorar la experiencia del menú de amigos",
+      summary: "El menú de gestión de amigos ahora se abre junto al amigo tocado, se mueve con la lista al desplazarse y es más fácil de cerrar.",
+      changes: [
+        "Muestra el nombre del amigo y un botón de cierre en el menú de gestión de amigos.",
+        "Atenúa el fondo en móvil para que cerrar tocando fuera resulte natural.",
+        "Mantiene el menú unido a la lista de amigos al desplazarse."
+      ]
+    },
     "pr-377": {
       title: "Corregir posición del menú de amigos en móvil",
       summary: "Corrige que el menú de gestión de amigos se abriera lejos de su botón tras desplazar la lista en móvil y lo mantiene visible cerca de la parte inferior de la pantalla.",

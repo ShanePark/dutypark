@@ -39,6 +39,15 @@ export const enReleaseNotes = {
     ui: "UI"
   },
   entries: {
+    "pr-378": {
+      title: "Improve friend menu experience",
+      summary: "Makes the friend management menu easier to use: it opens next to the tapped friend, moves with the list while scrolling, and is simpler to close.",
+      changes: [
+        "Show the friend's name and a close button on the friend management menu.",
+        "Dim the background on mobile so closing by tapping outside feels natural.",
+        "Keep the menu attached to the friend list while scrolling."
+      ]
+    },
     "pr-377": {
       title: "Fix friend menu position on mobile",
       summary: "Fixes the friend management menu opening far away from its button after scrolling on mobile, and keeps it fully visible near the bottom of the screen.",
