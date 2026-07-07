@@ -1150,12 +1150,12 @@ onBeforeUnmount(() => {
   opacity: 0.5;
   background-color: var(--dp-accent-bg) !important;
   border: 2px dashed var(--dp-accent) !important;
-  border-radius: 0.5rem;
+  border-radius: 0.875rem;
 }
 
 .kanban-chosen {
   box-shadow: 0 0 0 2px var(--dp-accent), var(--dp-shadow-lg) !important;
-  border-radius: 0.5rem;
+  border-radius: 0.875rem;
 }
 
 .kanban-drag {
