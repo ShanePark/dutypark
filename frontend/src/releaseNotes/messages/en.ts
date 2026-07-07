@@ -39,6 +39,16 @@ export const enReleaseNotes = {
     ui: "UI"
   },
   entries: {
+    "pr-379": {
+      title: "Polish kanban card design",
+      summary: "Refreshes the kanban todo cards with a softer design, shows who shared a tagged todo with a by-chip, and keeps tagged todos from jumping when dragged within their column.",
+      changes: [
+        "Soften kanban cards with rounder corners, a resting shadow, and a hover lift.",
+        "Show the owner of a shared todo as a 'by name' chip on the card.",
+        "Keep tagged todos in place when dragged within the same column.",
+        "Tidy up the project documentation."
+      ]
+    },
     "pr-378": {
       title: "Improve friend menu experience",
       summary: "Makes the friend management menu easier to use: it opens next to the tapped friend, moves with the list while scrolling, and is simpler to close.",

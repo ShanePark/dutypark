@@ -1,19 +1,19 @@
 # Dutypark Frontend
 
-Vue 3.5 SPA for Dutypark. The frontend is Vite-based, cookie-authenticated through the shared backend client, localized across five languages, and installable as a PWA with web push support.
+Vue 3 SPA for Dutypark. The frontend is Vite-based, cookie-authenticated through the shared backend client, localized, and installable as a PWA with web push support.
 
 ## Tech Stack
 
 | Category | Technology |
 |----------|------------|
-| Framework | Vue 3.5 with `<script setup lang="ts">` |
-| Build | Vite 7.3 + `@vitejs/plugin-vue` |
-| Language | TypeScript 5.9 |
-| State | Pinia 3 |
-| Routing | Vue Router 4 |
-| Localization | Vue I18n 11 (`ko`, `en`, `ja`, `zh`, `es`) |
+| Framework | Vue 3 with `<script setup lang="ts">` |
+| Build | Vite + `@vitejs/plugin-vue` |
+| Language | TypeScript |
+| State | Pinia |
+| Routing | Vue Router |
+| Localization | Vue I18n (`ko`, `en`, `ja`, `zh`, `es`) |
 | Styling | Tailwind CSS 4 + `--dp-*` design tokens |
-| Tests | Vitest 3 |
+| Tests | Vitest |
 | UI helpers | Lucide Vue, SweetAlert2, Uppy, SortableJS, Pickr |
 
 ## Quick Start

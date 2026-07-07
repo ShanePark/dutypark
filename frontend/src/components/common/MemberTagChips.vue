@@ -15,6 +15,7 @@ const props = withDefaults(defineProps<{
   density?: ChipDensity
   align?: ChipAlign
   maxVisible?: number | null
+  labelPrefix?: string
 }>(), {
   interactive: false,
   buttonTitle: undefined,
@@ -22,6 +23,7 @@ const props = withDefaults(defineProps<{
   density: 'compact',
   align: 'start',
   maxVisible: null,
+  labelPrefix: undefined,
 })
 
 const emit = defineEmits<{
@@ -66,10 +68,12 @@ function handleChipClick(member: DisplayTagMember) {
         `member-tag-chip--${variant}`,
         `member-tag-chip--${density}`,
         interactive ? 'member-tag-chip--interactive' : 'member-tag-chip--static',
+        labelPrefix ? 'member-tag-chip--prefixed' : '',
       ]"
       :title="interactive ? buttonTitle : undefined"
       @click="handleChipClick(member)"
     >
+      <span v-if="labelPrefix" class="member-tag-chip__prefix">{{ labelPrefix }}</span>
       <ProfileAvatar
         :member-id="member.id ?? null"
         :name="member.name"
@@ -174,6 +178,21 @@ function handleChipClick(member: DisplayTagMember) {
   padding-right: 0.625rem;
   color: var(--dp-text-muted);
   font-weight: 600;
+}
+
+.member-tag-chip--prefixed.member-tag-chip--regular {
+  padding-left: 0.625rem;
+}
+
+.member-tag-chip--prefixed.member-tag-chip--compact {
+  padding-left: 0.5rem;
+}
+
+.member-tag-chip__prefix {
+  flex-shrink: 0;
+  font-size: 0.85em;
+  font-weight: 500;
+  color: var(--dp-text-muted);
 }
 
 .member-tag-chip__label {

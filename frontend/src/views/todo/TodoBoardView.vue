@@ -191,7 +191,9 @@ function normalizeDraggedCardPosition(container: Element | null, card: Element |
 
 function handleDragMove(evt: MoveEvent) {
   if (isTaggedCard(evt.dragged)) {
-    return true
+    // Tagged todos have no viewer-side position, so only cross-column moves
+    // (status changes) are allowed; moves inside the current column are ignored.
+    return evt.to !== evt.dragged.parentElement
   }
 
   if (isTaggedCard(evt.related)) {
@@ -222,12 +224,16 @@ async function handleDragEnd(evt: SortableEvent) {
   const toColumn = evt.to.getAttribute('data-column') as TodoStatus
   const draggedIsTagged = isTaggedCard(evt.item)
 
-  normalizeDraggedCardPosition(evt.to, evt.item)
-
   if (draggedIsTagged && fromColumn === toColumn) {
-    await loadBoard()
+    // Same-column moves were cancelled in handleDragMove; the card only ends up
+    // displaced if it visited another column mid-drag, so reload just then.
+    if (evt.oldIndex !== evt.newIndex) {
+      await loadBoard()
+    }
     return
   }
+
+  normalizeDraggedCardPosition(evt.to, evt.item)
 
   if (fromColumn === toColumn) {
     // Within-column reordering
@@ -1144,12 +1150,12 @@ onBeforeUnmount(() => {
   opacity: 0.5;
   background-color: var(--dp-accent-bg) !important;
   border: 2px dashed var(--dp-accent) !important;
-  border-radius: 0.5rem;
+  border-radius: 0.875rem;
 }
 
 .kanban-chosen {
   box-shadow: 0 0 0 2px var(--dp-accent), var(--dp-shadow-lg) !important;
-  border-radius: 0.5rem;
+  border-radius: 0.875rem;
 }
 
 .kanban-drag {

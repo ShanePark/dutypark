@@ -106,8 +106,8 @@
 
 ## 기술 스택
 
-- **백엔드:** Kotlin 2.3, Spring Boot 4.0.1 (Data JPA, Security, WebFlux, Scheduling, Caching, AI), Java 25 toolchain
-- **프론트엔드:** Vue 3.5 SPA (Vite 7 + TypeScript 5.9 + Pinia 3 + Vue Router 4 + Vue I18n 11 + Tailwind CSS 4)
+- **백엔드:** Kotlin, Spring Boot 4 (Data JPA, Security, WebFlux, Scheduling, Caching, AI), Java 25 toolchain
+- **프론트엔드:** Vue 3 SPA (Vite + TypeScript + Pinia + Vue Router + Vue I18n + Tailwind CSS 4)
 - **데이터베이스:** MySQL 8.0 + 버전 관리되는 Flyway 마이그레이션
 - **AI:** Gemini에 연결되는 Spring AI OpenAI-compatible client (비동기 큐 기반 일정 시간 파싱)
 - **인증:** HttpOnly 쿠키 access/refresh 흐름 + Bearer fallback + 카카오/네이버 OAuth SSO
@@ -204,7 +204,7 @@ frontend/src/
 ├── components/    # Vue SFC (FileUploader, Modals, KanbanBoard, Layout 등)
 ├── composables/   # 훅 (useSwal, useKakao, useNaver, usePushNotification, useEscapeKey 등)
 ├── stores/        # Pinia 스토어 (auth, notification 폴링, theme, locale)
-├── views/         # 19개 페이지 컴포넌트 (Dashboard, Duty, TodoBoard, Member, Team, Admin)
+├── views/         # 페이지 컴포넌트 (Dashboard, Duty, TodoBoard, Member, Team, Admin)
 ├── i18n/          # ko/en/ja/zh/es 로케일 번들
 ├── releaseNotes/  # 인앱 변경 로그 메타데이터와 다국어 문구
 ├── utils/         # 헬퍼 (color, date, visibility)

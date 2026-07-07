@@ -39,6 +39,16 @@ export const esReleaseNotes = {
     ui: "Interfaz"
   },
   entries: {
+    "pr-379": {
+      title: "Pulir el diseño de las tarjetas kanban",
+      summary: "Renueva las tarjetas de tareas del tablero kanban con un diseño más suave, muestra quién compartió una tarea etiquetada con un chip 'by' y corrige el salto de las tareas etiquetadas al arrastrarlas dentro de su columna.",
+      changes: [
+        "Suaviza las tarjetas kanban con esquinas más redondeadas, una sombra en reposo y una elevación al pasar el cursor.",
+        "Muestra al dueño de una tarea compartida con un chip 'by nombre' en la tarjeta.",
+        "Mantiene las tareas etiquetadas en su lugar al arrastrarlas dentro de la misma columna.",
+        "Ordena la documentación del proyecto."
+      ]
+    },
     "pr-378": {
       title: "Mejorar la experiencia del menú de amigos",
       summary: "El menú de gestión de amigos ahora se abre junto al amigo tocado, se mueve con la lista al desplazarse y es más fácil de cerrar.",

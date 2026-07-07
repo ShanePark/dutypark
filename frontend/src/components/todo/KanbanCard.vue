@@ -77,11 +77,14 @@ const visibleTags = computed(() => {
         v-if="ownerTagMembers.length > 0"
         :members="ownerTagMembers"
         density="compact"
+        align="end"
+        label-prefix="by"
       />
       <MemberTagChips
         v-else
         :members="visibleTags"
         density="compact"
+        align="end"
         :max-visible="2"
       />
     </div>
@@ -98,20 +101,23 @@ const visibleTags = computed(() => {
 
 <style scoped>
 .kanban-card {
-  padding: 0.75rem;
-  border-radius: 0.5rem;
+  padding: 0.875rem;
+  border-radius: 0.875rem;
   background-color: var(--dp-bg-card);
   border: 1px solid var(--dp-border-primary);
+  box-shadow: var(--dp-shadow-sm);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
   user-select: none;
 }
 
 .kanban-card:hover {
   border-color: var(--dp-accent-border);
-  background-color: var(--dp-accent-bg);
-  transform: translateY(-1px);
-  box-shadow: var(--dp-shadow-sm);
+  transform: translateY(-2px);
+  box-shadow: var(--dp-shadow-md);
 }
 
 .kanban-card-header {
@@ -159,8 +165,8 @@ const visibleTags = computed(() => {
   align-items: center;
   gap: 0.25rem;
   margin-top: 0.5rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
   background-color: var(--dp-bg-tertiary);
   font-size: 0.75rem;
   color: var(--dp-text-secondary);
