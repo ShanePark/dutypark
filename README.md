@@ -106,8 +106,8 @@ Tag friends in your schedules. They'll see it on their dashboard instantly. No m
 
 ## Tech Stack
 
-- **Backend:** Kotlin 2.3, Spring Boot 4.0.1 (Data JPA, Security, WebFlux, Scheduling, Caching, AI), Java 25 toolchain
-- **Frontend:** Vue 3.5 SPA (Vite 7 + TypeScript 5.9 + Pinia 3 + Vue Router 4 + Vue I18n 11 + Tailwind CSS 4)
+- **Backend:** Kotlin, Spring Boot 4 (Data JPA, Security, WebFlux, Scheduling, Caching, AI), Java 25 toolchain
+- **Frontend:** Vue 3 SPA (Vite + TypeScript + Pinia + Vue Router + Vue I18n + Tailwind CSS 4)
 - **Database:** MySQL 8.0 + versioned Flyway migrations
 - **AI:** Spring AI OpenAI-compatible client against Gemini for async schedule time parsing
 - **Auth:** HttpOnly cookie access/refresh flow + Bearer fallback + Kakao/Naver OAuth SSO
@@ -204,7 +204,7 @@ frontend/src/
 ├── components/    # Vue SFCs (FileUploader, Modals, KanbanBoard, Layout, etc.)
 ├── composables/   # Hooks (useSwal, useKakao, useNaver, usePushNotification, useEscapeKey, etc.)
 ├── stores/        # Pinia stores (auth, notification with polling, theme, locale)
-├── views/         # 19 page components (Dashboard, Duty, TodoBoard, Member, Team, Admin)
+├── views/         # Page components (Dashboard, Duty, TodoBoard, Member, Team, Admin)
 ├── i18n/          # Locale bundles for ko/en/ja/zh/es
 ├── releaseNotes/  # In-app changelog metadata and localized copy
 ├── utils/         # Helpers (color, date, visibility)

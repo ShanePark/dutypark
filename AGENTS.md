@@ -4,9 +4,9 @@ Use this file for repo-wide defaults only. Keep it lean; read the code and nearb
 
 ## 1. Current Snapshot
 
-- **Backend:** Kotlin 2.3, Java 25 toolchain, Spring Boot 4.0.1, Spring MVC + WebFlux + Security + Validation + Actuator + Cache + Flyway
+- **Backend:** Kotlin, Java 25 toolchain, Spring Boot 4, Spring MVC + WebFlux + Security + Validation + Actuator + Cache + Flyway
 - **AI:** Spring AI OpenAI-compatible chat client against Google Generative Language, default model `gemma-4-31b-it`, queue-based schedule time parsing, disabled when `GEMINI_API_KEY` is blank or `EMPTY`
-- **Frontend:** Vue 3.5 SPA, Vite 7, TypeScript 5.9, Pinia, Vue Router 4, Vue I18n 11 (`ko`, `en`, `ja`, `zh`, `es`), Tailwind CSS 4, Vitest
+- **Frontend:** Vue 3 SPA, Vite, TypeScript, Pinia, Vue Router, Vue I18n (`ko`, `en`, `ja`, `zh`, `es`), Tailwind CSS 4, Vitest
 - **Persistence / Ops:** MySQL 8.0, Flyway migrations in `src/main/resources/db/migration/v1` and `v2`, Docker Compose stack for app/mysql/nginx/prometheus/grafana, in-app release notes powering PR checks and GitHub Releases
 - **Auth:** HttpOnly cookie access/refresh flow for the SPA, Bearer header fallback still supported, Kakao + Naver OAuth, auxiliary accounts, impersonation
 - **PWA / Push:** service worker at `frontend/public/sw.js` backed by `frontend/src/push/sw-runtime.ts`, VAPID web push, localized notification text, notification-click routing, and app badge support
