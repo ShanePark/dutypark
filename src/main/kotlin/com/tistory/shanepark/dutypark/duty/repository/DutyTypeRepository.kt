@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository
 interface DutyTypeRepository : JpaRepository<DutyType, Long> {
 
     fun findAllByTeam(team: Team): List<DutyType>
+
+    fun findAllByTeamAndHiddenFalse(team: Team): List<DutyType>
 }

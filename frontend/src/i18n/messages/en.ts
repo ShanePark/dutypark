@@ -770,6 +770,14 @@ export default {
   },
   member: {
     title: 'My Account',
+    dutyPattern: {
+      sectionTitle: 'Default work pattern', description: 'Save recurring workdays to apply them automatically. Date-specific changes take priority.',
+      dutyType: 'Duty type', automatic: 'Selected from team settings', noDutyType: 'No duty type is available.', weekdaysLabel: 'Workdays', holidayOff: 'Take public holidays off', holidayOffHint: 'Selected workdays become days off on public holidays.', effectiveFrom: 'Effective from {month}',
+      weekdays: { monday: 'Mon', tuesday: 'Tue', wednesday: 'Wed', thursday: 'Thu', friday: 'Fri', saturday: 'Sat', sunday: 'Sun' },
+      unavailable: { title: 'The pattern cannot be configured right now.', team: 'Only members assigned to a team can configure a default work pattern.', none: 'Add one visible team duty type to use this setting.', multiple: 'Exactly one visible team duty type is required.', default: 'Check the team duty type settings.' },
+      actions: { save: 'Save pattern', update: 'Update pattern', delete: 'Disable pattern' }, validation: { weekdayRequired: 'Select at least one workday.' },
+      messages: { loadFailed: 'Failed to load the default work pattern.', saveSuccess: 'The default work pattern has been saved.', saveFailed: 'Failed to save the default work pattern.', deleteConfirm: 'Disable the default work pattern from this month? Manual changes will remain.', deleteSuccess: 'The default work pattern has been disabled.', deleteFailed: 'Failed to disable the default work pattern.' },
+    },
     profile: {
       sectionTitle: 'Profile',
       name: 'Name',
@@ -976,6 +984,7 @@ export default {
     common: {
       off: 'Off',
       uploading: 'Uploading...',
+      usePattern: 'Use default pattern',
     },
     view: {
       loading: 'Loading calendar...',
@@ -984,6 +993,7 @@ export default {
       loadDutiesFailed: 'Failed to load duties.',
       loadOtherDutiesFailed: 'Failed to load shared duty overlays.',
       changeDutyFailed: 'Failed to update duty.',
+      restorePatternFailed: 'Failed to restore the default pattern.',
     },
     batchUpdate: {
       title: 'Batch duty update',
@@ -1233,11 +1243,12 @@ export default {
         removeMember: 'Remove',
         assignManager: 'Make manager',
         addDutyType: 'Add',
+        hideDutyType: 'Hide',
+        restoreDutyType: 'Restore',
       },
       fields: {
         description: 'Team description',
         admin: 'Team lead',
-        workType: 'Work type',
         batchTemplate: 'Duty import template',
         dutyUpload: 'Duty roster upload',
         members: 'Team members',
@@ -1247,6 +1258,7 @@ export default {
         dutyTypes: 'Duty types',
         dutyName: 'Duty name',
         color: 'Color',
+        status: 'Status',
       },
       labels: {
         notAvailable: 'N/A',
@@ -1254,12 +1266,8 @@ export default {
         noMembers: 'This team has no members.',
         offDuty: 'Off',
         noDutyTypes: 'There are no duty types.',
-      },
-      workTypes: {
-        weekday: 'Weekday duty',
-        weekend: 'Weekend duty',
-        fixed: 'Fixed duty',
-        flexible: 'Flexible duty',
+        visible: 'Active',
+        hidden: 'Hidden',
       },
       messages: {
         fetchFailed: 'Failed to load team information.',
@@ -1277,13 +1285,14 @@ export default {
         changeAdminSuccess: '{name} is now the team lead.',
         resetAdminSuccess: 'The team lead has been reset.',
         changeAdminFailed: 'Failed to change the team lead.',
-        updateWorkTypeSuccess: 'The work type has been updated.',
-        updateWorkTypeFailed: 'Failed to update the work type.',
         updateBatchTemplateSuccess: 'The duty import template has been updated.',
         updateBatchTemplateFailed: 'Failed to update the duty import template.',
-        deleteDutyTypeConfirm: 'Delete duty type [{name}]?\nThis cannot be undone, and all duties using this type will be removed.',
-        deleteDutyTypeSuccess: 'The duty type has been deleted.',
-        deleteDutyTypeFailed: 'Failed to delete the duty type.',
+        hideDutyTypeConfirm: 'Hide duty type [{name}]? Historical duties will be preserved.',
+        restoreDutyTypeConfirm: 'Restore duty type [{name}]?',
+        hideDutyTypeSuccess: 'The duty type has been hidden.',
+        restoreDutyTypeSuccess: 'The duty type has been restored.',
+        updateDutyTypeVisibilityFailed: 'Failed to update the duty type status.',
+        patternTerminationWarning: 'This change will end every team member’s active default work pattern. Patterns will not return automatically when the team has exactly one duty type again; each member must configure theirs again. Continue?',
         reorderDutyTypesSuccess: 'The order has been updated.',
         reorderDutyTypesFailed: 'Failed to update the order.',
         deleteTeamConfirm: 'Delete this team?',
@@ -1617,7 +1626,7 @@ export default {
           dutyTypes: {
             title: 'Duty type management (team managers)',
             items: [
-              'You can add, edit, and delete duty types used by the team.',
+              'You can add, edit, hide, and restore team duty types. Hidden types remain in historical duty records.',
               'Each duty type can have its own name and color.',
               'The display order of duty types can be changed.',
               'The default OFF type can also have its name and color updated.',

@@ -4,7 +4,7 @@ import com.tistory.shanepark.dutypark.dashboard.domain.DashboardFriendDetail
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardFriendInfo
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardMyDetail
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
-import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
+import com.tistory.shanepark.dutypark.duty.service.DutyResolver
 import com.tistory.shanepark.dutypark.member.domain.dto.toFriendRequestDto
 import com.tistory.shanepark.dutypark.member.domain.dto.toMemberPreviewDto
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
@@ -26,7 +26,7 @@ import java.time.LocalDate
 @Transactional(readOnly = true)
 class DashboardService(
     private val memberRepository: MemberRepository,
-    private val dutyRepository: DutyRepository,
+    private val dutyResolver: DutyResolver,
     private val scheduleRepository: ScheduleRepository,
     private val friendRelationRepository: FriendRelationRepository,
     private val friendService: FriendService,
@@ -65,15 +65,26 @@ class DashboardService(
     private fun todayDuty(member: Member): DutyDto? {
         val team = member.team ?: return null
         val today = LocalDate.now()
-        return dutyRepository.findByMemberAndDutyDate(member, today)
-            ?.takeIf { it.dutyType != null }?.let(::DutyDto)
-            ?: DutyDto(
+        val resolved = dutyResolver.resolve(member, today)
+        return resolved.dutyType?.let { dutyType ->
+            DutyDto(
+                year = today.year,
+                month = today.monthValue,
+                day = today.dayOfMonth,
+                dutyType = dutyType.name,
+                dutyColor = dutyType.color,
+                isOff = false,
+                dutyTypeId = dutyType.id,
+                source = resolved.source,
+            )
+        } ?: DutyDto(
                 year = today.year,
                 month = today.monthValue,
                 day = today.dayOfMonth,
                 dutyType = team.defaultDutyName,
                 dutyColor = team.defaultDutyColor,
-                isOff = true
+                isOff = true,
+                source = resolved.source,
             )
     }
 
@@ -111,25 +122,32 @@ class DashboardService(
         }
 
         val today = LocalDate.now()
-        val duties = dutyRepository.findByDutyDateAndMemberIn(today, members)
-            .associateBy { it.member.id!! }
-
+        val resolvedByMemberId = dutyResolver.resolve(members, today)
         return members.associate { member ->
             val memberId = member.id ?: throw IllegalStateException("Member id is null")
             if (member.team == null) {
                 memberId to null
             } else {
-                val duty = duties[memberId]
-                val dto = duty
-                    ?.takeIf { it.dutyType != null }
-                    ?.let(::DutyDto)
-                    ?: DutyDto(
+                val resolved = requireNotNull(resolvedByMemberId[memberId])
+                val dto = resolved.dutyType?.let { dutyType ->
+                    DutyDto(
+                        year = today.year,
+                        month = today.monthValue,
+                        day = today.dayOfMonth,
+                        dutyType = dutyType.name,
+                        dutyColor = dutyType.color,
+                        isOff = false,
+                        dutyTypeId = dutyType.id,
+                        source = resolved.source,
+                    )
+                } ?: DutyDto(
                         year = today.year,
                         month = today.monthValue,
                         day = today.dayOfMonth,
                         dutyType = member.team!!.defaultDutyName,
                         dutyColor = member.team!!.defaultDutyColor,
-                        isOff = true
+                        isOff = true,
+                        source = resolved.source,
                     )
                 memberId to dto
             }

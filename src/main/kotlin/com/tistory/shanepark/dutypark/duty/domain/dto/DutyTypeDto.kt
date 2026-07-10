@@ -8,12 +8,14 @@ data class DutyTypeDto(
     val name: String,
     val position: Int,
     val color: String?,
+    val hidden: Boolean = false,
 ) {
     constructor(dutyType: DutyType) : this(
         dutyType.id,
         dutyType.team.id!!,
         dutyType.name,
         dutyType.position,
-        dutyType.color
+        dutyType.color,
+        dutyType.hidden,
     )
 }

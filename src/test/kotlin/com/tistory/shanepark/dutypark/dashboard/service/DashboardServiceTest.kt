@@ -1,7 +1,9 @@
 package com.tistory.shanepark.dutypark.dashboard.service
 
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardFriendDetail
-import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
+import com.tistory.shanepark.dutypark.duty.domain.dto.DutySource
+import com.tistory.shanepark.dutypark.duty.service.DutyResolver
+import com.tistory.shanepark.dutypark.duty.service.ResolvedDuty
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -34,7 +36,7 @@ class DashboardServiceTest {
     private val fixedDate = LocalDate.of(2025, 1, 15)
 
     private val memberRepository: MemberRepository = mock()
-    private val dutyRepository: DutyRepository = mock()
+    private val dutyResolver: DutyResolver = mock()
     private val scheduleRepository: ScheduleRepository = mock()
     private val friendRelationRepository: FriendRelationRepository = mock()
     private val friendService: FriendService = mock()
@@ -46,7 +48,7 @@ class DashboardServiceTest {
     fun setUp() {
         dashboardService = DashboardService(
             memberRepository = memberRepository,
-            dutyRepository = dutyRepository,
+            dutyResolver = dutyResolver,
             scheduleRepository = scheduleRepository,
             friendRelationRepository = friendRelationRepository,
             friendService = friendService,
@@ -85,7 +87,9 @@ class DashboardServiceTest {
         whenever(
             scheduleRepository.findTaggedSchedulesOfRange(eq(member), any(), any(), any())
         ).thenReturn(listOf(taggedSchedule))
-        whenever(dutyRepository.findByMemberAndDutyDate(member, today)).thenReturn(null)
+        whenever(dutyResolver.resolve(eq(member), any<LocalDate>())).thenAnswer {
+            ResolvedDuty(it.getArgument(1), null, DutySource.DEFAULT_OFF)
+        }
         whenever(memberDtoAssembler.toDto(member)).thenReturn(memberDtoOf(member))
 
         val result = dashboardService.my(loginMember)
@@ -113,7 +117,11 @@ class DashboardServiceTest {
         )
         whenever(scheduleRepository.findSchedulesOfMembersRangeIn(any(), any(), any(), any())).thenReturn(emptyList())
         whenever(scheduleRepository.findTaggedSchedulesOfMembersRangeIn(any(), any(), any(), any())).thenReturn(emptyList())
-        whenever(dutyRepository.findByDutyDateAndMemberIn(any(), any())).thenReturn(emptyList())
+        whenever(dutyResolver.resolve(any<Collection<Member>>(), any<LocalDate>())).thenAnswer { invocation ->
+            val members = invocation.getArgument<Collection<Member>>(0)
+            val date = invocation.getArgument<LocalDate>(1)
+            members.associate { it.id!! to ResolvedDuty(date, null, DutySource.DEFAULT_OFF) }
+        }
 
         val relation1 = FriendRelation(member, friend1).apply {
             isFamily = true
@@ -184,7 +192,11 @@ class DashboardServiceTest {
                 emptyList()
             }
         }
-        whenever(dutyRepository.findByDutyDateAndMemberIn(any(), any())).thenReturn(emptyList())
+        whenever(dutyResolver.resolve(any<Collection<Member>>(), any<LocalDate>())).thenAnswer { invocation ->
+            val members = invocation.getArgument<Collection<Member>>(0)
+            val date = invocation.getArgument<LocalDate>(1)
+            members.associate { it.id!! to ResolvedDuty(date, null, DutySource.DEFAULT_OFF) }
+        }
 
         val result = dashboardService.friend(loginMember)
 

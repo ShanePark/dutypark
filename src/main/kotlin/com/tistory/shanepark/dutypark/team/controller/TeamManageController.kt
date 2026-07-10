@@ -11,7 +11,6 @@ import com.tistory.shanepark.dutypark.member.domain.dto.MemberInviteCandidateDto
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.dto.TeamDto
-import com.tistory.shanepark.dutypark.team.domain.enums.WorkType
 import com.tistory.shanepark.dutypark.team.repository.TeamRepository
 import com.tistory.shanepark.dutypark.team.service.TeamService
 import org.springframework.context.ApplicationContext
@@ -61,16 +60,6 @@ class TeamManageController(
     ) {
         checkCanManage(login = loginMember, teamId = teamId)
         teamService.updateBatchTemplate(teamId, dutyBatchTemplate)
-    }
-
-    @PatchMapping("/{teamId}/work-type")
-    fun updateWorkType(
-        @Login loginMember: LoginMember,
-        @PathVariable teamId: Long,
-        @RequestParam workType: WorkType,
-    ) {
-        checkCanManage(login = loginMember, teamId = teamId)
-        teamService.updateWorkType(teamId, workType)
     }
 
     @PostMapping("/{teamId}/duty")

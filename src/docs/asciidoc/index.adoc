@@ -89,6 +89,28 @@ operation::duty/update-unauthorized[]
 
 operation::duty/batch-update[]
 
+=== Reset Duty Override
+
+operation::duty/reset-override[]
+
+=== Get My Weekly Duty Pattern
+
+operation::duty-pattern/get-mine[]
+
+=== Update My Weekly Duty Pattern
+
+operation::duty-pattern/update-mine[]
+
+=== Delete My Weekly Duty Pattern
+
+operation::duty-pattern/delete-mine[]
+
+== Team Duty Types
+
+=== Hide or Restore Duty Type
+
+operation::teams/duty-types/update-visibility[]
+
 == Schedules
 
 === Get List

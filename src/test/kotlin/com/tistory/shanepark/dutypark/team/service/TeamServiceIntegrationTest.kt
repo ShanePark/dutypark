@@ -133,23 +133,26 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
         // Given
         val created = service.create(TeamCreateDto("teamName", "teamDesc"))
         val team = teamRepository.findById(created.id).orElseThrow()
-        val member = TestData.member
+        val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
 
-        team.addMember(member)
+        member.team = team
         val dutyType1 = team.addDutyType("오전", "#ffb3ba")
         em.flush()
 
         val dutyUpdateDto =
             DutyUpdateDto(year = 2023, month = 4, day = 8, dutyTypeId = dutyType1.id!!, memberId = member.id!!)
         dutyService.update(dutyUpdateDto)
+        dutyService.update(
+            DutyUpdateDto(year = 2023, month = 4, day = 9, dutyTypeId = null, memberId = member.id!!)
+        )
 
-        val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2023, 4, loginMember(member))
+        val duties = dutyService.getDuties(member.id!!, 2023, 4, loginMember(member))
         assertThat(duties.filter { !it.isOff }).hasSize(1)
         val apr8 = duties.first { it.year == 2023 && it.month == 4 && it.day == 8 }
         assertThat(apr8.dutyType).isNotNull
 
         // When
-        team.removeMember(member)
+        service.removeMemberFromTeam(team.id!!, member.id!!)
         service.delete(team.id!!)
 
         // Then
@@ -158,6 +161,8 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
 
         val theDuty = dutyRepository.findByMemberAndDutyDate(member = member, dutyDate = LocalDate.of(2023, 4, 8))
         assertThat(theDuty).isNull()
+        val explicitOff = dutyRepository.findByMemberAndDutyDate(member = member, dutyDate = LocalDate.of(2023, 4, 9))
+        assertThat(explicitOff).isNull()
     }
 
     @Test

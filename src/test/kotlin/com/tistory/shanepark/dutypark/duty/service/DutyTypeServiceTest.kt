@@ -26,13 +26,16 @@ class DutyTypeServiceTest {
     @Mock
     private lateinit var teamRepository: TeamRepository
 
+    @Mock
+    private lateinit var dutyPatternService: DutyPatternService
+
     private lateinit var dutyTypeService: DutyTypeService
 
     private lateinit var team: Team
 
     @BeforeEach
     fun setUp() {
-        dutyTypeService = DutyTypeService(dutyTypeRepository, teamRepository)
+        dutyTypeService = DutyTypeService(dutyTypeRepository, teamRepository, dutyPatternService)
         team = Team("testTeam")
         ReflectionTestUtils.setField(team, "id", 1L)
     }

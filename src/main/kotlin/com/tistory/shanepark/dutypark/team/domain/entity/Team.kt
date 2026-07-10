@@ -5,7 +5,6 @@ import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
-import com.tistory.shanepark.dutypark.team.domain.enums.WorkType
 import jakarta.persistence.*
 
 @Entity
@@ -35,10 +34,6 @@ class Team(
 
     @Column(nullable = false, name = "default_duty_name")
     var defaultDutyName: String = "OFF"
-
-    @Column(nullable = false, name = "work_type")
-    @Enumerated(EnumType.STRING)
-    var workType: WorkType = WorkType.FLEXIBLE
 
     @OneToMany(mappedBy = "team", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
     @OrderBy("position ASC")

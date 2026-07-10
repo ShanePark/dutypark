@@ -16,6 +16,7 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
 import ProfilePhotoUploader from '@/components/common/ProfilePhotoUploader.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
+import DutyPatternCard from '@/components/member/DutyPatternCard.vue'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import {
   User,
@@ -694,6 +695,8 @@ onMounted(async () => {
           </div>
         </div>
       </section>
+
+      <DutyPatternCard />
 
       <!-- Privacy Settings Section -->
       <section class="rounded-xl shadow-sm p-6 mb-4 bg-dp-bg-card border border-dp-border-primary">

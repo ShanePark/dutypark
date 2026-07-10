@@ -13,6 +13,7 @@ import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
+import org.mockito.kotlin.verify
 import java.time.LocalDate
 
 @ExtendWith(MockitoExtension::class)
@@ -26,6 +27,9 @@ class HolidayServiceTest {
 
     @Mock
     lateinit var holidayRepository: HolidayRepository
+
+    @Mock
+    lateinit var holidayPersistenceService: HolidayPersistenceService
 
     @Test
     fun `findHolidaysTest-loadFromMemory`() {
@@ -69,6 +73,7 @@ class HolidayServiceTest {
 
         // Then
         assert2023MayResult(result)
+        verify(holidayPersistenceService).saveAll(any())
     }
 
     @Test

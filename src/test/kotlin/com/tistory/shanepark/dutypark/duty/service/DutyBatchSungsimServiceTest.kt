@@ -25,6 +25,7 @@ import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.*
 import org.springframework.mock.web.MockMultipartFile
+import org.springframework.test.util.ReflectionTestUtils
 import org.springframework.web.multipart.MultipartFile
 import java.io.InputStream
 import java.time.LocalDate
@@ -77,7 +78,9 @@ class DutyBatchSungsimServiceTest {
     }
 
     private fun createDummyMember(name: String, team: Team?): Member {
-        val member = Member(name = name, email = null, password = "")
+        val member = Member(name = name, email = null, password = "").also {
+            ReflectionTestUtils.setField(it, "id", 1L)
+        }
         member.team = team
         return member
     }
@@ -96,7 +99,7 @@ class DutyBatchSungsimServiceTest {
         val yearMonth = YearMonth.of(2023, 1)
         val dummyBatchResult = mock<BatchParseResult> {}
         whenever(sungsimCakeParser.parseDayOff(eq(yearMonth), any<InputStream>())).thenReturn(dummyBatchResult)
-        whenever(memberRepository.findById(1L)).thenReturn(Optional.empty())
+        whenever(memberRepository.findMemberWithTeamForUpdate(1L)).thenReturn(Optional.empty())
 
         assertThrows<NoSuchElementException> {
             dutyBatchService.batchUploadMember(file, 1L, yearMonth)
@@ -111,7 +114,7 @@ class DutyBatchSungsimServiceTest {
         val dummyBatchResult = mock<BatchParseResult> {}
         whenever(sungsimCakeParser.parseDayOff(eq(yearMonth), any<InputStream>())).thenReturn(dummyBatchResult)
         val member = createDummyMember("John", null)
-        whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
+        whenever(memberRepository.findMemberWithTeamForUpdate(1L)).thenReturn(Optional.of(member))
 
         val exception = assertThrows<IllegalArgumentException> {
             dutyBatchService.batchUploadMember(file, 1L, yearMonth)
@@ -128,7 +131,7 @@ class DutyBatchSungsimServiceTest {
         }
         whenever(sungsimCakeParser.parseDayOff(eq(yearMonth), any<InputStream>())).thenReturn(dummyBatchResult)
         val member = createDummyMember("홍길동", Team("dummy"))
-        whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
+        whenever(memberRepository.findMemberWithTeamForUpdate(1L)).thenReturn(Optional.of(member))
 
         assertThrows<MultipleNameFoundException> {
             dutyBatchService.batchUploadMember(file, 1L, yearMonth)
@@ -144,7 +147,7 @@ class DutyBatchSungsimServiceTest {
         }
         whenever(sungsimCakeParser.parseDayOff(eq(yearMonth), any<InputStream>())).thenReturn(dummyBatchResult)
         val member = createDummyMember("John", Team("dummy"))
-        whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
+        whenever(memberRepository.findMemberWithTeamForUpdate(1L)).thenReturn(Optional.of(member))
 
         assertThrows<NameNotFoundException> {
             dutyBatchService.batchUploadMember(file, 1L, yearMonth)
@@ -172,9 +175,9 @@ class DutyBatchSungsimServiceTest {
         )
         val team = Team("dummy")
         val member = createDummyMember("John", team)
-        whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
+        whenever(memberRepository.findMemberWithTeamForUpdate(1L)).thenReturn(Optional.of(member))
         val dutyType = DutyType(name = "dummy", position = 0, team = team, "#ffb3ba")
-        whenever(dutyTypeRepository.findAllByTeam(team)).thenReturn(listOf(dutyType))
+        whenever(dutyTypeRepository.findAllByTeamAndHiddenFalse(team)).thenReturn(listOf(dutyType))
 
         // When
         dutyBatchService.batchUploadMember(createValidXlsxFile(), 1L, yearMonth)
@@ -190,15 +193,11 @@ class DutyBatchSungsimServiceTest {
             verify(dutyRepository).saveAll(capture())
             val capturedDuties = firstValue
             assertThat(capturedDuties.size)
-                .isEqualTo(ChronoUnit.DAYS.between(startDate, endDate) + 1 - offDays.size)
-            assertThat(capturedDuties.map { it.dutyDate })
-                .containsExactlyElementsOf(
-                    BatchParseResult(
-                        startDate = startDate,
-                        endDate = endDate,
-                        offDayResult = mapOf("John" to offDays.toSet())
-                    ).getWorkDays("John")
-                )
+                .isEqualTo(ChronoUnit.DAYS.between(startDate, endDate) + 1)
+            assertThat(capturedDuties.filter { it.dutyType == null }.map { it.dutyDate })
+                .containsExactlyElementsOf(offDays)
+            assertThat(capturedDuties.filter { it.dutyType != null }.map { it.dutyDate })
+                .doesNotContainAnyElementsOf(offDays)
         }
     }
 
@@ -230,7 +229,7 @@ class DutyBatchSungsimServiceTest {
         // dutyTypeRepository 가 여러 개의 DutyType 을 반환하면 예외 발생
         val dutyType1 = DutyType(name = "dummy1", position = 0, team = team, "#98fb98")
         val dutyType2 = DutyType(name = "dummy2", position = 1, team = team, "#f0f8ff")
-        whenever(dutyTypeRepository.findAllByTeam(team)).thenReturn(listOf(dutyType1, dutyType2))
+        whenever(dutyTypeRepository.findAllByTeamAndHiddenFalse(team)).thenReturn(listOf(dutyType1, dutyType2))
 
         assertThrows<DutyTypeNotSingleException> {
             dutyBatchService.batchUploadTeam(file, 1L, yearMonth)
@@ -263,9 +262,10 @@ class DutyBatchSungsimServiceTest {
         val alice = createDummyMember("Alice", team)
         team.members.add(alice)
         whenever(teamRepository.findById(1L)).thenReturn(Optional.of(team))
+        whenever(memberRepository.findMemberWithTeamForUpdate(alice.id!!)).thenReturn(Optional.of(alice))
 
         val dutyType = DutyType(name = "dummyDuty", position = 0, team = team, "#ffb3ba")
-        whenever(dutyTypeRepository.findAllByTeam(team)).thenReturn(listOf(dutyType))
+        whenever(dutyTypeRepository.findAllByTeamAndHiddenFalse(team)).thenReturn(listOf(dutyType))
 
         val result = dutyBatchService.batchUploadTeam(file, 1L, yearMonth)
 
@@ -280,9 +280,10 @@ class DutyBatchSungsimServiceTest {
         argumentCaptor<List<Duty>>().apply {
             verify(dutyRepository).saveAll(capture())
             val duties = firstValue
-            assertThat(duties.size).isEqualTo(2)
-            assertThat(duties.map { it.dutyDate })
+            assertThat(duties.size).isEqualTo(31)
+            assertThat(duties.filter { it.dutyType != null }.map { it.dutyDate })
                 .containsExactlyElementsOf(listOf(LocalDate.of(2023, 1, 5), LocalDate.of(2023, 1, 6)))
+            assertThat(duties.filter { it.dutyType == null }).hasSize(29)
         }
 
         assertThat(result.startDate).isEqualTo(startDate)
@@ -315,7 +316,7 @@ class DutyBatchSungsimServiceTest {
         whenever(teamRepository.findById(1L)).thenReturn(Optional.of(team))
 
         val dutyType = DutyType(name = "dummyDuty", position = 0, team = team, "#ffb3ba")
-        whenever(dutyTypeRepository.findAllByTeam(team)).thenReturn(listOf(dutyType))
+        whenever(dutyTypeRepository.findAllByTeamAndHiddenFalse(team)).thenReturn(listOf(dutyType))
 
         val result = dutyBatchService.batchUploadTeam(file, 1L, yearMonth)
 
@@ -351,7 +352,7 @@ class DutyBatchSungsimServiceTest {
         whenever(teamRepository.findById(1L)).thenReturn(Optional.of(team))
 
         val dutyType = DutyType(name = "dummyDuty", position = 0, team = team, "#ffb3ba")
-        whenever(dutyTypeRepository.findAllByTeam(team)).thenReturn(listOf(dutyType))
+        whenever(dutyTypeRepository.findAllByTeamAndHiddenFalse(team)).thenReturn(listOf(dutyType))
 
         val result = dutyBatchService.batchUploadTeam(file, 1L, yearMonth)
         assertThat(result.dutyBatchResult).hasSize(1)

@@ -770,6 +770,15 @@ export default {
   },
   member: {
     title: '내 정보',
+    dutyPattern: {
+      sectionTitle: '기본 근무 패턴', description: '반복 근무 요일을 저장하면 달력에 자동으로 적용됩니다. 날짜별 변경은 기본 패턴보다 우선합니다.',
+      dutyType: '적용 근무 유형', automatic: '팀 설정에서 자동 선택', noDutyType: '사용 가능한 근무 유형이 없습니다.',
+      weekdaysLabel: '근무 요일', holidayOff: '공휴일에는 쉬기', holidayOffHint: '선택한 근무 요일이 공휴일이면 휴무로 적용합니다.', effectiveFrom: '{month}부터 적용',
+      weekdays: { monday: '월', tuesday: '화', wednesday: '수', thursday: '목', friday: '금', saturday: '토', sunday: '일' },
+      unavailable: { title: '지금은 패턴을 설정할 수 없습니다.', team: '팀에 소속된 회원만 기본 근무 패턴을 설정할 수 있습니다.', none: '팀에 보이는 근무 유형을 하나 등록하면 사용할 수 있습니다.', multiple: '팀에 보이는 근무 유형이 정확히 하나일 때 사용할 수 있습니다.', default: '팀 근무 유형 설정을 확인해주세요.' },
+      actions: { save: '패턴 저장', update: '패턴 변경', delete: '패턴 해제' }, validation: { weekdayRequired: '근무 요일을 하나 이상 선택해주세요.' },
+      messages: { loadFailed: '기본 근무 패턴을 불러오지 못했습니다.', saveSuccess: '기본 근무 패턴을 저장했습니다.', saveFailed: '기본 근무 패턴을 저장하지 못했습니다.', deleteConfirm: '현재 달부터 기본 근무 패턴을 해제하시겠습니까? 수동으로 변경한 근무는 유지됩니다.', deleteSuccess: '기본 근무 패턴을 해제했습니다.', deleteFailed: '기본 근무 패턴을 해제하지 못했습니다.' },
+    },
     profile: {
       sectionTitle: '기본 정보',
       name: '이름',
@@ -976,6 +985,7 @@ export default {
     common: {
       off: '휴무',
       uploading: '업로드 중...',
+      usePattern: '기본 패턴 사용',
     },
     view: {
       loading: '시간표를 불러오는 중...',
@@ -984,6 +994,7 @@ export default {
       loadDutiesFailed: '근무표를 불러오는데 실패했습니다.',
       loadOtherDutiesFailed: '함께 보기 근무표를 불러오는데 실패했습니다.',
       changeDutyFailed: '근무 변경에 실패했습니다.',
+      restorePatternFailed: '기본 패턴으로 되돌리지 못했습니다.',
     },
     batchUpdate: {
       title: '근무 일괄 변경',
@@ -1233,11 +1244,12 @@ export default {
         removeMember: '탈퇴',
         assignManager: '매니저 지정',
         addDutyType: '추가',
+        hideDutyType: '숨기기',
+        restoreDutyType: '복원',
       },
       fields: {
         description: '팀 설명',
         admin: '팀 대표',
-        workType: '근무 형태',
         batchTemplate: '근무 반입 양식',
         dutyUpload: '근무표 업로드',
         members: '팀 멤버',
@@ -1247,6 +1259,7 @@ export default {
         dutyTypes: '근무 유형',
         dutyName: '근무명',
         color: '색상',
+        status: '상태',
       },
       labels: {
         notAvailable: 'N/A',
@@ -1254,12 +1267,8 @@ export default {
         noMembers: '이 팀에 멤버가 없습니다.',
         offDuty: '휴무',
         noDutyTypes: '근무 유형이 없습니다.',
-      },
-      workTypes: {
-        weekday: '평일 근무',
-        weekend: '주말 근무',
-        fixed: '고정 근무',
-        flexible: '유연 근무',
+        visible: '사용 중',
+        hidden: '숨김',
       },
       messages: {
         fetchFailed: '팀 정보를 불러오는데 실패했습니다.',
@@ -1277,13 +1286,14 @@ export default {
         changeAdminSuccess: '{name} 님이 대표로 변경되었습니다.',
         resetAdminSuccess: '대표가 초기화되었습니다.',
         changeAdminFailed: '대표 변경에 실패했습니다.',
-        updateWorkTypeSuccess: '근무 형태가 변경되었습니다.',
-        updateWorkTypeFailed: '근무 형태 변경에 실패했습니다.',
         updateBatchTemplateSuccess: '근무 반입 양식이 변경되었습니다.',
         updateBatchTemplateFailed: '근무 반입 양식 변경에 실패했습니다.',
-        deleteDutyTypeConfirm: '[{name}] 근무 유형을 삭제하시겠습니까?\n삭제는 되돌릴 수 없으며 해당 유형으로 표시된 근무는 모두 제거됩니다.',
-        deleteDutyTypeSuccess: '근무 유형이 삭제되었습니다.',
-        deleteDutyTypeFailed: '근무 유형 삭제에 실패했습니다.',
+        hideDutyTypeConfirm: '[{name}] 근무 유형을 숨기시겠습니까? 과거 근무 기록은 유지됩니다.',
+        restoreDutyTypeConfirm: '[{name}] 근무 유형을 다시 사용하시겠습니까?',
+        hideDutyTypeSuccess: '근무 유형을 숨겼습니다.',
+        restoreDutyTypeSuccess: '근무 유형을 복원했습니다.',
+        updateDutyTypeVisibilityFailed: '근무 유형 상태를 변경하지 못했습니다.',
+        patternTerminationWarning: '이 변경으로 모든 팀원의 활성 기본 근무 패턴이 종료됩니다. 근무 유형을 다시 하나로 맞춰도 패턴은 자동 복구되지 않으며, 각 회원이 다시 설정해야 합니다. 계속하시겠습니까?',
         reorderDutyTypesSuccess: '순서가 변경되었습니다.',
         reorderDutyTypesFailed: '순서 변경에 실패했습니다.',
         deleteTeamConfirm: '정말로 이 팀을 삭제하겠습니까?',
@@ -1617,7 +1627,7 @@ export default {
           dutyTypes: {
             title: '근무 타입 관리 (팀 관리자)',
             items: [
-              '팀에서 사용할 근무 타입을 추가, 수정, 삭제할 수 있습니다.',
+              '팀에서 사용할 근무 타입을 추가·수정하고 숨기거나 복원할 수 있습니다. 숨겨도 과거 근무 기록은 유지됩니다.',
               '각 근무 타입의 이름과 색상을 설정할 수 있습니다.',
               '근무 타입의 표시 순서를 변경할 수 있습니다.',
               '기본 휴무(OFF) 타입의 이름과 색상도 변경 가능합니다.',

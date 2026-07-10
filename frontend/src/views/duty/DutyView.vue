@@ -482,12 +482,11 @@ const duties = computed<Array<DutyDay | null>>(() => {
     )
     if (!duty) return null
 
-    // Find duty type ID from name
-    const dutyType = dutyTypes.value.find((dt) => dt.name === duty.dutyType)
     return {
       dutyType: duty.dutyType || 'OFF',
       dutyColor: duty.dutyColor || 'var(--dp-duty-fallback)',
-      dutyTypeId: dutyType?.id ?? null,
+      dutyTypeId: duty.dutyTypeId,
+      source: duty.source,
     }
   })
 })
@@ -530,6 +529,7 @@ const focusedDayDuty = computed(() => {
   return duties.value[dayIndex]
 })
 const focusedDayDutyType = computed(() => focusedDayDuty.value?.dutyType ?? null)
+const focusedDayDutySource = computed(() => focusedDayDuty.value?.source ?? null)
 
 // Get duty color for CalendarGrid component
 function getDutyColorForDay(day: CalendarDay): string | null {
@@ -546,7 +546,7 @@ async function loadTeam() {
   try {
     team.value = await dutyApi.getTeam(teamId.value)
     // Map duty types from team
-    dutyTypes.value = team.value.dutyTypes.map((dt) => ({
+    dutyTypes.value = team.value.dutyTypes.filter((dt) => !dt.hidden).map((dt) => ({
       id: dt.id,
       name: dt.name,
       color: dt.color,
@@ -877,6 +877,8 @@ function handleQuickDutyChange(dutyTypeId: number | null) {
     dutyType: existingDuty.dutyType,
     dutyColor: existingDuty.dutyColor,
     isOff: existingDuty.isOff,
+    dutyTypeId: existingDuty.dutyTypeId,
+    source: existingDuty.source,
   } : null
 
   if (dutyIndex !== -1 && existingDuty) {
@@ -887,6 +889,8 @@ function handleQuickDutyChange(dutyTypeId: number | null) {
       dutyType: newDutyType,
       dutyColor: newDutyColor,
       isOff: dutyTypeId === null,
+      dutyTypeId,
+      source: 'OVERRIDE',
     }
   }
 
@@ -1403,6 +1407,33 @@ async function handleChangeDutyType(dutyTypeId: number | null) {
   }
 }
 
+async function restorePatternForDate(year: number, month: number, day: number): Promise<boolean> {
+  if (!memberId.value || (!isMyCalendar.value && !amIManager.value)) return false
+  const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+
+  try {
+    await dutyApi.deleteDutyOverride(memberId.value, date)
+    await loadDuties()
+    return true
+  } catch (error) {
+    console.error('Failed to restore duty pattern:', error)
+    showError(t('duty.view.restorePatternFailed'))
+    return false
+  }
+}
+
+async function handleRestoreSelectedDayPattern() {
+  if (!selectedDay.value) return
+  await restorePatternForDate(selectedDay.value.year, selectedDay.value.month, selectedDay.value.day)
+}
+
+async function handleRestoreFocusedDayPattern() {
+  if (!focusedDay.value) return
+  const day = focusedDay.value
+  const restored = await restorePatternForDate(currentYear.value, currentMonth.value, day)
+  if (restored && focusedDay.value < lastDayInMonth.value) focusedDay.value++
+}
+
 // Batch update modal - update all days in current month to a single duty type
 async function showBatchUpdateModal() {
   if (!memberId.value || dutyTypes.value.length === 0) return
@@ -1564,6 +1595,7 @@ async function showExcelUploadModal() {
       :is-loading-duties="isLoadingDuties"
       :focused-day="focusedDay"
       :focused-day-duty-type="focusedDayDutyType"
+      :focused-day-duty-source="focusedDayDutySource"
       :last-day-in-month="lastDayInMonth"
       :can-edit="canEdit"
       :can-edit-my-calendar="canEditMyCalendar"
@@ -1576,6 +1608,7 @@ async function showExcelUploadModal() {
       @toggle-batch-edit="batchEditMode = $event"
       @show-excel-upload-modal="showExcelUploadModal"
       @quick-duty-change="handleQuickDutyChange"
+      @restore-pattern="handleRestoreFocusedDayPattern"
       @update:focusedDay="focusedDay = $event"
     />
 
@@ -1634,6 +1667,7 @@ async function showExcelUploadModal() {
       @reorder-schedules="handleReorderSchedules"
       @untag-self="handleUntagSelf"
       @change-duty-type="handleChangeDutyType"
+      @restore-pattern="handleRestoreSelectedDayPattern"
     />
 
     <TodoAddModal

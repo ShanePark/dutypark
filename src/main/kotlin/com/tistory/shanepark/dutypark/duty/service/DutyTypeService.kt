@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional
 class DutyTypeService(
     private val dutyTypeRepository: DutyTypeRepository,
     private val teamRepository: TeamRepository,
+    private val dutyPatternService: DutyPatternService,
 ) {
 
     fun findById(id: Long): DutyTypeDto {
@@ -21,14 +22,18 @@ class DutyTypeService(
         return DutyTypeDto(dutyType)
     }
 
-    fun delete(dutyTypeId: Long) {
+    fun updateVisibility(dutyTypeId: Long, hidden: Boolean): DutyType {
         val dutyType = dutyTypeRepository.findById(dutyTypeId).orElseThrow()
-        dutyTypeRepository.delete(dutyType)
+        dutyType.hidden = hidden
+        terminatePatternsIfTypeCountIsNotSingle(dutyType.team)
+        return dutyType
     }
 
     fun addDutyType(dutyTypeCreateDto: DutyTypeCreateDto): DutyType {
         val team = teamRepository.findByIdWithDutyTypes(dutyTypeCreateDto.teamId).orElseThrow()
-        return team.addDutyType(dutyTypeCreateDto.name, dutyTypeCreateDto.color)
+        val dutyType = team.addDutyType(dutyTypeCreateDto.name, dutyTypeCreateDto.color)
+        terminatePatternsIfTypeCountIsNotSingle(team)
+        return dutyType
     }
 
     fun update(dutyTypeUpdateDto: DutyTypeUpdateDto): DutyType {
@@ -57,6 +62,12 @@ class DutyTypeService(
         val dutyType2 = dutyTypeRepository.findById(dutyTypeId2).orElseThrow()
 
         dutyType1.position = dutyType2.position.also { dutyType2.position = dutyType1.position }
+    }
+
+    private fun terminatePatternsIfTypeCountIsNotSingle(team: com.tistory.shanepark.dutypark.team.domain.entity.Team) {
+        if (team.dutyTypes.count { !it.hidden } != 1) {
+            dutyPatternService.terminateActivePatternsForTeam(team)
+        }
     }
 
 }

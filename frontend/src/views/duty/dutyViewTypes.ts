@@ -1,4 +1,4 @@
-import type { CalendarVisibility, TaggableFriend, Todo as SharedTodo } from '@/types'
+import type { CalendarVisibility, DutySource, TaggableFriend, Todo as SharedTodo } from '@/types'
 
 export type LocalTodo = Omit<SharedTodo, 'attachments'> & {
   hasAttachments: boolean
@@ -88,6 +88,7 @@ export interface DutyDay {
   dutyType: string
   dutyColor: string
   dutyTypeId: number | null
+  source: DutySource
 }
 
 export interface OtherDuty {

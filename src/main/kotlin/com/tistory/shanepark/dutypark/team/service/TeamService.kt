@@ -7,12 +7,13 @@ import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyByShift
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
+import com.tistory.shanepark.dutypark.duty.service.DutyPatternService
+import com.tistory.shanepark.dutypark.duty.service.DutyResolver
 import com.tistory.shanepark.dutypark.member.domain.dto.toMemberPreviewDto
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.dto.*
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
-import com.tistory.shanepark.dutypark.team.domain.enums.WorkType
 import com.tistory.shanepark.dutypark.team.repository.TeamRepository
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -27,6 +28,8 @@ class TeamService(
     private val dutyTypeRepository: DutyTypeRepository,
     private val dutyRepository: DutyRepository,
     private val memberRepository: MemberRepository,
+    private val dutyPatternService: DutyPatternService,
+    private val dutyResolver: DutyResolver,
 ) {
 
     @Transactional(readOnly = true)
@@ -43,6 +46,7 @@ class TeamService(
             team = withMembers,
             members = withMembers.members,
             dutyTypes = withDutyTypes.dutyTypes,
+            includeHiddenDutyTypes = true,
         )
     }
 
@@ -70,6 +74,8 @@ class TeamService(
             throw BadRequestException("team.delete.membersExist")
         }
 
+        dutyPatternService.deleteHistoryForTeam(team)
+        dutyRepository.deleteAllByTeamId(requireNotNull(team.id))
         dutyRepository.deleteAllByDutyTypeIn(team.dutyTypes)
         teamRepository.deleteById(id)
     }
@@ -95,6 +101,7 @@ class TeamService(
         if (member.team != team) {
             throw BadRequestException("team.member.notInTeam")
         }
+        dutyPatternService.terminateActivePattern(member)
         team.removeMember(member)
     }
 
@@ -156,19 +163,21 @@ class TeamService(
     private fun loadShift(team: Team, localDate: LocalDate): List<DutyByShift> {
         val teamMembers = memberRepository.findMembersByTeam(team)
 
-        val dutyMemberMap = dutyRepository.findByDutyDateAndMemberIn(localDate, teamMembers)
-            .associateBy({ it }, { it.member })
-
-        // OFF members: no duty record OR duty record with null dutyType
-        val membersWithDutyType = dutyMemberMap.filter { (duty, _) -> duty.dutyType != null }.values.toSet()
-        val offMembers = teamMembers.filterNot { m -> membersWithDutyType.contains(m) }
-
+        val resolvedByMemberId = dutyResolver.resolve(teamMembers, localDate)
+        val offMembers = teamMembers.filter { resolvedByMemberId[it.id]?.dutyType == null }
+        val usedDutyTypeIds = resolvedByMemberId.values.mapNotNull { it.dutyType?.id }.toSet()
         val dutyTypes = dutyTypeRepository.findAllByTeam(team)
-        val dutyTypeMembers = TeamDto.of(team, teamMembers, dutyTypes)
+            .filter { !it.hidden || it.id in usedDutyTypeIds }
+        val dutyTypeMembers = TeamDto.of(
+            team = team,
+            members = teamMembers,
+            dutyTypes = dutyTypes,
+            includeHiddenDutyTypes = true,
+        )
             .dutyTypes
             .map { dutyTypeDto ->
                 val sourceMembers = dutyTypeDto.id?.let { id ->
-                    dutyMemberMap.filter { (duty, _) -> duty.dutyType?.id == id }.values
+                    teamMembers.filter { resolvedByMemberId[it.id]?.dutyType?.id == id }
                 } ?: offMembers
                 val members = sourceMembers
                     .map { it.toMemberPreviewDto() }
@@ -230,11 +239,6 @@ class TeamService(
         if (member.team != team) {
             throw AuthException("team.member.required")
         }
-    }
-
-    fun updateWorkType(teamId: Long, workType: WorkType) {
-        val team = teamRepository.findById(teamId).orElseThrow()
-        team.workType = workType
     }
 
 }

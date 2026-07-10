@@ -770,6 +770,9 @@ export default {
   },
   member: {
     title: 'Mi cuenta',
+    dutyPattern: {
+      sectionTitle: 'Patrón de trabajo predeterminado', description: 'Guarda los días de trabajo recurrentes para aplicarlos automáticamente. Los cambios por fecha tienen prioridad.', dutyType: 'Tipo de turno', automatic: 'Seleccionado desde el equipo', noDutyType: 'No hay ningún tipo de turno disponible.', weekdaysLabel: 'Días de trabajo', holidayOff: 'Descansar en festivos', holidayOffHint: 'Los días seleccionados serán descanso cuando sean festivos.', effectiveFrom: 'Vigente desde {month}', weekdays: { monday: 'Lun', tuesday: 'Mar', wednesday: 'Mié', thursday: 'Jue', friday: 'Vie', saturday: 'Sáb', sunday: 'Dom' }, unavailable: { title: 'No se puede configurar el patrón ahora.', team: 'Solo los miembros asignados a un equipo pueden configurar un patrón predeterminado.', none: 'Añade un tipo de turno visible al equipo.', multiple: 'Debe haber exactamente un tipo de turno visible.', default: 'Comprueba los tipos de turno del equipo.' }, actions: { save: 'Guardar patrón', update: 'Cambiar patrón', delete: 'Desactivar patrón' }, validation: { weekdayRequired: 'Selecciona al menos un día de trabajo.' }, messages: { loadFailed: 'No se pudo cargar el patrón.', saveSuccess: 'El patrón se ha guardado.', saveFailed: 'No se pudo guardar el patrón.', deleteConfirm: '¿Desactivar el patrón desde este mes? Los cambios manuales se conservarán.', deleteSuccess: 'El patrón se ha desactivado.', deleteFailed: 'No se pudo desactivar el patrón.' },
+    },
     profile: {
       sectionTitle: 'Perfil',
       name: 'Nombre',
@@ -976,6 +979,7 @@ export default {
     common: {
       off: 'Libre',
       uploading: 'Subiendo...',
+      usePattern: 'Usar patrón predeterminado',
     },
     view: {
       loading: 'Cargando calendario...',
@@ -984,6 +988,7 @@ export default {
       loadDutiesFailed: 'No se pudieron cargar las tareas.',
       loadOtherDutiesFailed: 'No se pudieron cargar las superposiciones de tareas compartidas.',
       changeDutyFailed: 'No se pudo actualizar la tarea.',
+      restorePatternFailed: 'No se pudo restaurar el patrón predeterminado.',
     },
     batchUpdate: {
       title: 'Actualización de tareas por lotes',
@@ -1233,11 +1238,12 @@ export default {
         removeMember: 'Quitar',
         assignManager: 'Hacer gerente',
         addDutyType: 'Añadir',
+        hideDutyType: 'Ocultar',
+        restoreDutyType: 'Restaurar',
       },
       fields: {
         description: 'Descripción del equipo',
         admin: 'líder del equipo',
-        workType: 'Tipo de trabajo',
         batchTemplate: 'Plantilla de importación de derechos',
         dutyUpload: 'Subir lista de turnos',
         members: 'Miembros del equipo',
@@ -1247,6 +1253,7 @@ export default {
         dutyTypes: 'Tipos de derechos',
         dutyName: 'Nombre del deber',
         color: 'Color',
+        status: 'Estado',
       },
       labels: {
         notAvailable: 'N/A',
@@ -1254,12 +1261,8 @@ export default {
         noMembers: 'Este equipo no tiene miembros.',
         offDuty: 'Libre',
         noDutyTypes: 'No hay tipos de derechos.',
-      },
-      workTypes: {
-        weekday: 'Deber entre semana',
-        weekend: 'Servicio de fin de semana',
-        fixed: 'Servicio fijo',
-        flexible: 'Servicio flexible',
+        visible: 'Activo',
+        hidden: 'Oculto',
       },
       messages: {
         fetchFailed: 'No se pudo cargar la información del equipo.',
@@ -1277,13 +1280,14 @@ export default {
         changeAdminSuccess: '{name} es ahora el líder del equipo.',
         resetAdminSuccess: 'El líder del equipo se ha restablecido.',
         changeAdminFailed: 'No se pudo cambiar el líder del equipo.',
-        updateWorkTypeSuccess: 'El tipo de trabajo ha sido actualizado.',
-        updateWorkTypeFailed: 'No se pudo actualizar el tipo de trabajo.',
         updateBatchTemplateSuccess: 'Se actualizó la plantilla de importación de derechos.',
         updateBatchTemplateFailed: 'No se pudo actualizar la plantilla de importación de derechos.',
-        deleteDutyTypeConfirm: '¿Eliminar el tipo de tarea [{name}]?\\nEsto no se puede deshacer y todas las tareas que utilicen este tipo se eliminarán.',
-        deleteDutyTypeSuccess: 'Se ha eliminado el tipo de turno.',
-        deleteDutyTypeFailed: 'No se pudo eliminar el tipo de turno.',
+        hideDutyTypeConfirm: '¿Ocultar el tipo de turno [{name}]? Se conservarán los registros históricos.',
+        restoreDutyTypeConfirm: '¿Restaurar el tipo de turno [{name}]?',
+        hideDutyTypeSuccess: 'El tipo de turno se ha ocultado.',
+        restoreDutyTypeSuccess: 'El tipo de turno se ha restaurado.',
+        updateDutyTypeVisibilityFailed: 'No se pudo cambiar el estado del tipo de turno.',
+        patternTerminationWarning: 'Este cambio finalizará el patrón predeterminado activo de todos los miembros. Los patrones no se restaurarán automáticamente aunque el equipo vuelva a tener exactamente un tipo de turno; cada miembro deberá configurarlo de nuevo. ¿Continuar?',
         reorderDutyTypesSuccess: 'Se ha actualizado el orden.',
         reorderDutyTypesFailed: 'No se pudo actualizar el orden.',
         deleteTeamConfirm: '¿Eliminar este equipo?',
@@ -1617,7 +1621,7 @@ export default {
           dutyTypes: {
             title: 'Gestión del tipo de tareas (directores de equipo)',
             items: [
-              'Puede agregar, editar y eliminar tipos de tareas utilizadas por el equipo.',
+              'Puede añadir, editar, ocultar y restaurar tipos de turno. Los registros históricos se conservan al ocultarlos.',
               'Cada tipo de turno puede tener su propio nombre y color.',
               'El orden de visualización de los tipos de tareas se puede cambiar.',
               'El tipo APAGADO predeterminado también puede actualizar su nombre y color.',

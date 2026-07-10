@@ -9,6 +9,7 @@ import Pickr from '@simonwep/pickr'
 import '@simonwep/pickr/dist/themes/monolith.min.css'
 import type { DutyTypeDto } from '@/types'
 import { X } from 'lucide-vue-next'
+import { countVisibleDutyTypes, leavesSingleVisibleDutyType } from '@/utils/dutyTypeVisibility'
 
 const props = defineProps<{
   isOpen: boolean
@@ -24,7 +25,7 @@ const emit = defineEmits<{
   'update:saving': [boolean]
 }>()
 
-const { showWarning, showError, toastSuccess } = useSwal()
+const { confirm, showWarning, showError, toastSuccess } = useSwal()
 const { t } = useI18n()
 
 const defaultDutyColor = '#ffb3ba'
@@ -137,6 +138,14 @@ async function saveDutyType() {
     showWarning(t('team.dutyType.warnings.duplicate', { name: trimmedDutyTypeName.value }))
     return
   }
+
+  const isAddingDutyType = !dutyTypeForm.value.isDefault && dutyTypeForm.value.id === null
+  const visibleCount = countVisibleDutyTypes(props.dutyTypes)
+  if (
+    isAddingDutyType &&
+    leavesSingleVisibleDutyType(visibleCount, visibleCount + 1) &&
+    !await confirm(t('team.manage.messages.patternTerminationWarning'))
+  ) return
 
   emit('update:saving', true)
   try {

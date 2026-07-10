@@ -15,7 +15,10 @@ class DutyType(
     val team: Team,
 
     @Column(length = 7)
-    var color: String
+    var color: String,
+
+    @Column(nullable = false)
+    var hidden: Boolean = false,
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

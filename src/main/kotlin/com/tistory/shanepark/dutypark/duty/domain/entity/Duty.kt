@@ -16,6 +16,9 @@ class Duty(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
     val member: Member,
+
+    @Column(name = "team_id")
+    var teamId: Long? = member.team?.id,
 ) {
     constructor(
         dutyYear: Int,

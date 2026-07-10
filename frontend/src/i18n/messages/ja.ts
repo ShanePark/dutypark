@@ -837,6 +837,10 @@ export default {
   member: {
     ...en.member,
     title: 'マイアカウント',
+    dutyPattern: {
+      sectionTitle: '基本勤務パターン', description: '繰り返す勤務曜日を保存すると、カレンダーに自動適用されます。日付ごとの変更が優先されます。', dutyType: '適用する勤務タイプ', automatic: 'チーム設定から自動選択', noDutyType: '利用可能な勤務タイプがありません。', weekdaysLabel: '勤務曜日', holidayOff: '祝日は休む', holidayOffHint: '選択した勤務曜日が祝日の場合は休みになります。', effectiveFrom: '{month}から適用',
+      weekdays: { monday: '月', tuesday: '火', wednesday: '水', thursday: '木', friday: '金', saturday: '土', sunday: '日' }, unavailable: { title: '現在パターンを設定できません。', team: 'チームに所属しているメンバーのみ基本勤務パターンを設定できます。', none: '表示中の勤務タイプを1つ登録してください。', multiple: '表示中の勤務タイプが1つの場合のみ利用できます。', default: 'チームの勤務タイプ設定を確認してください。' }, actions: { save: 'パターンを保存', update: 'パターンを変更', delete: 'パターンを解除' }, validation: { weekdayRequired: '勤務曜日を1つ以上選択してください。' }, messages: { loadFailed: '基本勤務パターンを読み込めませんでした。', saveSuccess: '基本勤務パターンを保存しました。', saveFailed: '基本勤務パターンを保存できませんでした。', deleteConfirm: '今月から基本勤務パターンを解除しますか？手動変更は維持されます。', deleteSuccess: '基本勤務パターンを解除しました。', deleteFailed: '基本勤務パターンを解除できませんでした。' },
+    },
     profile: {
       sectionTitle: 'プロフィール',
       name: '名前',
@@ -1053,6 +1057,7 @@ export default {
     common: {
       off: '休み',
       uploading: 'アップロード中...',
+      usePattern: '基本パターンを使用',
     },
     view: {
       loading: 'カレンダーを読み込んでいます...',
@@ -1061,6 +1066,7 @@ export default {
       loadDutiesFailed: '勤務情報を読み込めませんでした。',
       loadOtherDutiesFailed: '共有勤務の重ね表示を読み込めませんでした。',
       changeDutyFailed: '勤務を更新できませんでした。',
+      restorePatternFailed: '基本パターンに戻せませんでした。',
     },
     batchUpdate: {
       title: '勤務一括変更',
@@ -1316,11 +1322,12 @@ export default {
         removeMember: '削除',
         assignManager: 'マネージャーにする',
         addDutyType: '追加',
+        hideDutyType: '非表示',
+        restoreDutyType: '復元',
       },
       fields: {
         description: 'チーム説明',
         admin: 'チームリーダー',
-        workType: '勤務タイプ',
         batchTemplate: '勤務インポートテンプレート',
         dutyUpload: '勤務表アップロード',
         members: 'チームメンバー',
@@ -1330,6 +1337,7 @@ export default {
         dutyTypes: '勤務タイプ',
         dutyName: '勤務名',
         color: '色',
+        status: '状態',
       },
       labels: {
         notAvailable: 'なし',
@@ -1337,12 +1345,8 @@ export default {
         noMembers: 'このチームにメンバーがいません。',
         offDuty: '休み',
         noDutyTypes: '勤務タイプがありません。',
-      },
-      workTypes: {
-        weekday: '平日勤務',
-        weekend: '週末勤務',
-        fixed: '固定勤務',
-        flexible: '柔軟勤務',
+        visible: '使用中',
+        hidden: '非表示',
       },
       messages: {
         fetchFailed: 'チーム情報を読み込めませんでした。',
@@ -1360,13 +1364,14 @@ export default {
         changeAdminSuccess: '{name}さんをチームリーダーにしました。',
         resetAdminSuccess: 'チームリーダーをリセットしました。',
         changeAdminFailed: 'チームリーダーを変更できませんでした。',
-        updateWorkTypeSuccess: '勤務タイプを更新しました。',
-        updateWorkTypeFailed: '勤務タイプを更新できませんでした。',
         updateBatchTemplateSuccess: '勤務インポートテンプレートを更新しました。',
         updateBatchTemplateFailed: '勤務インポートテンプレートを更新できませんでした。',
-        deleteDutyTypeConfirm: '勤務タイプ [{name}] を削除しますか？\nこの操作は元に戻せず、このタイプを使っている勤務も一緒に削除されます。',
-        deleteDutyTypeSuccess: '勤務タイプを削除しました。',
-        deleteDutyTypeFailed: '勤務タイプを削除できませんでした。',
+        hideDutyTypeConfirm: '勤務タイプ [{name}] を非表示にしますか？過去の勤務記録は維持されます。',
+        restoreDutyTypeConfirm: '勤務タイプ [{name}] を復元しますか？',
+        hideDutyTypeSuccess: '勤務タイプを非表示にしました。',
+        restoreDutyTypeSuccess: '勤務タイプを復元しました。',
+        updateDutyTypeVisibilityFailed: '勤務タイプの状態を変更できませんでした。',
+        patternTerminationWarning: 'この変更により、全メンバーの有効な基本勤務パターンが終了します。勤務タイプを再び1つにしても自動復元されず、各メンバーが再設定する必要があります。続行しますか？',
         reorderDutyTypesSuccess: '順序を更新しました。',
         reorderDutyTypesFailed: '順序を更新できませんでした。',
         deleteTeamConfirm: 'このチームを削除しますか？',
@@ -1707,7 +1712,7 @@ export default {
           dutyTypes: {
             title: '勤務タイプ管理 (チーム管理者)',
             items: [
-              'チームで使う勤務タイプの追加、編集、削除ができます。',
+              'チームで使う勤務タイプを追加・編集・非表示・復元できます。非表示にしても過去の勤務記録は維持されます。',
               '各勤務タイプには名前と色を設定できます。',
               '表示順の変更もできます。',
               '基本の OFF タイプも名前と色を変更できます。',

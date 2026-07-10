@@ -6,6 +6,8 @@ import type {
   HolidayDto,
   DutyBatchResult,
   TeamDay,
+  MyDutyPatternDto,
+  DutyPatternUpdateDto,
 } from '@/types'
 
 export const dutyApi = {
@@ -59,6 +61,27 @@ export const dutyApi = {
       dutyTypeId,
     })
     return response.data
+  },
+
+  /** Remove a manual override and inherit the member's weekly pattern again. */
+  deleteDutyOverride: async (memberId: number, date: string): Promise<void> => {
+    await apiClient.delete('/duty/override', {
+      params: { memberId, date },
+    })
+  },
+
+  getMyPattern: async (): Promise<MyDutyPatternDto> => {
+    const response = await apiClient.get<MyDutyPatternDto>('/duty/pattern/me')
+    return response.data
+  },
+
+  updateMyPattern: async (dto: DutyPatternUpdateDto): Promise<MyDutyPatternDto> => {
+    const response = await apiClient.put<MyDutyPatternDto>('/duty/pattern/me', dto)
+    return response.data
+  },
+
+  deleteMyPattern: async (): Promise<void> => {
+    await apiClient.delete('/duty/pattern/me')
   },
 
   /**

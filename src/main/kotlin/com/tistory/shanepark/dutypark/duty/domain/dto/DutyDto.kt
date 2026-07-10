@@ -11,6 +11,8 @@ data class DutyDto(
     val dutyType: String?,
     val dutyColor: String?,
     val isOff: Boolean,
+    val dutyTypeId: Long? = null,
+    val source: DutySource = DutySource.OVERRIDE,
 ) {
     constructor(duty: Duty) : this(
         year = duty.dutyDate.year,
@@ -18,7 +20,9 @@ data class DutyDto(
         day = duty.dutyDate.dayOfMonth,
         dutyType = duty.dutyType?.name,
         dutyColor = dutyColor(duty),
-        isOff = duty.dutyType == null
+        isOff = duty.dutyType == null,
+        dutyTypeId = duty.dutyType?.id,
+        source = DutySource.OVERRIDE,
     )
 
     companion object {
@@ -30,14 +34,16 @@ data class DutyDto(
             return dutyType.color
         }
 
-        fun offDuty(date: LocalDate, team: Team): DutyDto {
+        fun offDuty(date: LocalDate, team: Team, source: DutySource = DutySource.DEFAULT_OFF): DutyDto {
             return DutyDto(
                 year = date.year,
                 month = date.monthValue,
                 day = date.dayOfMonth,
                 dutyType = team.defaultDutyName,
                 dutyColor = team.defaultDutyColor,
-                isOff = true
+                isOff = true,
+                dutyTypeId = null,
+                source = source,
             )
         }
     }
