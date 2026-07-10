@@ -402,7 +402,7 @@ export interface DutyCalendarDay {
   source: DutySource
 }
 
-export type DutySource = 'OVERRIDE' | 'PATTERN' | 'LOCKED_PATTERN' | 'DEFAULT_OFF'
+export type DutySource = 'OVERRIDE' | 'PATTERN' | 'PATTERN_PAUSED' | 'DEFAULT_OFF'
 
 export type DutyPatternWeekday =
   | 'MONDAY'

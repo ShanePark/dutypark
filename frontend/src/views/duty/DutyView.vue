@@ -832,7 +832,8 @@ async function handleBatchDutyChange(day: CalendarDay, dutyTypeId: number | null
     await loadDuties()
   } catch (error) {
     console.error('Failed to change duty type:', error)
-    showError(t('duty.view.changeDutyFailed'))
+    await loadDuties()
+    showError(resolveApiErrorMessage(error, { fallbackKey: 'duty.view.changeDutyFailed' }, t))
   }
 }
 
@@ -903,6 +904,8 @@ function handleQuickDutyChange(dutyTypeId: number | null) {
       if (previousDuty && dutyIndex !== -1) {
         rawDuties.value[dutyIndex] = previousDuty
       }
+      void loadDuties()
+      showError(resolveApiErrorMessage(error, { fallbackKey: 'duty.view.changeDutyFailed' }, t))
     })
 }
 
@@ -1403,7 +1406,8 @@ async function handleChangeDutyType(dutyTypeId: number | null) {
     await loadDuties()
   } catch (error) {
     console.error('Failed to change duty type:', error)
-    showError(t('duty.view.changeDutyFailed'))
+    await loadDuties()
+    showError(resolveApiErrorMessage(error, { fallbackKey: 'duty.view.changeDutyFailed' }, t))
   }
 }
 
@@ -1417,7 +1421,8 @@ async function restorePatternForDate(year: number, month: number, day: number): 
     return true
   } catch (error) {
     console.error('Failed to restore duty pattern:', error)
-    showError(t('duty.view.restorePatternFailed'))
+    await loadDuties()
+    showError(resolveApiErrorMessage(error, { fallbackKey: 'duty.view.restorePatternFailed' }, t))
     return false
   }
 }
@@ -1472,7 +1477,8 @@ async function showBatchUpdateModal() {
             await loadDuties()
           } catch (error) {
             console.error('Failed to batch update duties:', error)
-            showError(t('duty.batchUpdate.failed'))
+            await loadDuties()
+            showError(resolveApiErrorMessage(error, { fallbackKey: 'duty.batchUpdate.failed' }, t))
           }
         })
       })

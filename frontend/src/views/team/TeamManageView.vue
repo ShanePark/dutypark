@@ -11,9 +11,7 @@ import DutyTypeModal from '@/components/team/DutyTypeModal.vue'
 import adminApi from '@/api/admin'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import {
-  countVisibleDutyTypes,
   findVisibleDutyTypeNeighbor,
-  leavesSingleVisibleDutyType,
 } from '@/utils/dutyTypeVisibility'
 import type {
   TeamDto,
@@ -205,34 +203,31 @@ async function updateBatchTemplate(templateName: string) {
 }
 
 function openAddDutyTypeModal() {
+  if (saving.value) return
   dutyTypeModalTarget.value = null
   showDutyTypeModal.value = true
 }
 
 function openEditDutyTypeModal(dutyType: DutyTypeDto) {
+  if (saving.value) return
   dutyTypeModalTarget.value = dutyType
   showDutyTypeModal.value = true
 }
 
 function closeDutyTypeModal() {
+  if (saving.value) return
   showDutyTypeModal.value = false
 }
 
 async function updateDutyTypeVisibility(dutyType: DutyTypeDto) {
-  if (!dutyType.id) return
+  if (saving.value || !dutyType.id) return
+  saving.value = true
   const nextHidden = !dutyType.hidden
   const messageKey = nextHidden
     ? 'team.manage.messages.hideDutyTypeConfirm'
     : 'team.manage.messages.restoreDutyTypeConfirm'
-  const currentVisibleCount = countVisibleDutyTypes(team.value?.dutyTypes ?? [])
-  const nextVisibleCount = currentVisibleCount + (nextHidden ? -1 : 1)
-  const patternWarning = leavesSingleVisibleDutyType(currentVisibleCount, nextVisibleCount)
-    ? `\n\n${t('team.manage.messages.patternTerminationWarning')}`
-    : ''
-  if (!await confirm(`${t(messageKey, { name: dutyType.name })}${patternWarning}`)) return
-
-  saving.value = true
   try {
+    if (!await confirm(t(messageKey, { name: dutyType.name }))) return
     await teamApi.updateDutyTypeVisibility(teamId, dutyType.id, nextHidden)
     toastSuccess(t(nextHidden
       ? 'team.manage.messages.hideDutyTypeSuccess'
@@ -240,7 +235,10 @@ async function updateDutyTypeVisibility(dutyType: DutyTypeDto) {
     await fetchTeam()
   } catch (error) {
     console.error('Failed to update duty type visibility:', error)
-    showError(t('team.manage.messages.updateDutyTypeVisibilityFailed'))
+    await fetchTeam()
+    showError(resolveApiErrorMessage(error, {
+      fallbackKey: 'team.manage.messages.updateDutyTypeVisibilityFailed',
+    }, t))
   } finally {
     saving.value = false
   }
@@ -261,7 +259,7 @@ function moveDutyType(index: number, direction: -1 | 1) {
 }
 
 async function swapPosition(index1: number, index2: number) {
-  if (!team.value) return
+  if (saving.value || !team.value) return
   const dt1 = team.value.dutyTypes[index1]
   const dt2 = team.value.dutyTypes[index2]
   if (!dt1?.id || !dt2?.id) return
@@ -599,7 +597,8 @@ onMounted(() => {
         <h3 class="font-bold">{{ t('team.manage.fields.dutyTypes') }}</h3>
         <button
           @click="openAddDutyTypeModal"
-          class="px-3 py-1.5 rounded-lg text-sm font-medium hover-interactive cursor-pointer flex items-center gap-1 bg-dp-bg-card text-dp-text-primary"
+          :disabled="saving"
+          class="px-3 py-1.5 rounded-lg text-sm font-medium hover-interactive cursor-pointer flex items-center gap-1 bg-dp-bg-card text-dp-text-primary disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Plus class="w-4 h-4" />
           {{ t('team.manage.actions.addDutyType') }}
@@ -652,7 +651,7 @@ onMounted(() => {
                 <div class="flex flex-wrap items-center justify-center gap-1">
                   <button
                     v-if="dutyType.id"
-                    :disabled="!canMoveDutyType(index, 1)"
+                    :disabled="saving || !canMoveDutyType(index, 1)"
                     @click="moveDutyType(index, 1)"
                     class="min-w-11 min-h-11 p-2 border rounded hover-bg-light transition disabled:opacity-50 disabled:cursor-not-allowed border-dp-border-secondary"
                   >
@@ -660,7 +659,7 @@ onMounted(() => {
                   </button>
                   <button
                     v-if="dutyType.id"
-                    :disabled="!canMoveDutyType(index, -1)"
+                    :disabled="saving || !canMoveDutyType(index, -1)"
                     @click="moveDutyType(index, -1)"
                     class="min-w-11 min-h-11 p-2 border rounded hover-bg-light transition disabled:opacity-50 disabled:cursor-not-allowed border-dp-border-secondary"
                   >
@@ -668,14 +667,16 @@ onMounted(() => {
                   </button>
                   <button
                     @click="openEditDutyTypeModal(dutyType)"
-                    class="min-w-11 min-h-11 p-2 border border-dp-accent-border text-dp-accent rounded hover:bg-dp-accent-soft transition"
+                    :disabled="saving"
+                    class="min-w-11 min-h-11 p-2 border border-dp-accent-border text-dp-accent rounded hover:bg-dp-accent-soft transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Pencil class="w-3 h-3 sm:w-4 sm:h-4" />
                   </button>
                   <button
                     v-if="dutyType.id"
                     @click="updateDutyTypeVisibility(dutyType)"
-                    class="min-w-11 min-h-11 p-2 border rounded transition"
+                    :disabled="saving"
+                    class="min-w-11 min-h-11 p-2 border rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
                     :class="dutyType.hidden
                       ? 'border-dp-success-border text-dp-success hover:bg-dp-success-soft'
                       : 'border-dp-warning-border text-dp-warning hover:bg-dp-warning-soft'"

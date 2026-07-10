@@ -51,6 +51,7 @@ const apiErrors = {
   common: {
     notFound: '未找到资源。',
     badRequest: '不好的请求。',
+    concurrentUpdate: '其他排班更改正在处理中，请稍后重试。',
     validation: {
       failed: '请检查请求字段。',
     },
@@ -771,7 +772,7 @@ export default {
   member: {
     title: '我的帐户',
     dutyPattern: {
-      sectionTitle: '默认工作模式', description: '保存重复工作日后会自动应用到日历，单日修改优先。', dutyType: '工作类型', automatic: '从团队设置自动选择', noDutyType: '没有可用的工作类型。', weekdaysLabel: '工作日', holidayOff: '公共假日休息', holidayOffHint: '所选工作日遇到公共假日时按休息处理。', effectiveFrom: '从 {month} 起生效', weekdays: { monday: '一', tuesday: '二', wednesday: '三', thursday: '四', friday: '五', saturday: '六', sunday: '日' }, unavailable: { title: '目前无法设置工作模式。', team: '只有已加入团队的成员才能设置默认工作模式。', none: '添加一个可见的团队工作类型后即可使用。', multiple: '仅当团队恰好有一个可见工作类型时可用。', default: '请检查团队工作类型设置。' }, actions: { save: '保存模式', update: '更改模式', delete: '停用模式' }, validation: { weekdayRequired: '请至少选择一个工作日。' }, messages: { loadFailed: '无法加载默认工作模式。', saveSuccess: '默认工作模式已保存。', saveFailed: '无法保存默认工作模式。', deleteConfirm: '从本月起停用默认工作模式吗？手动修改将保留。', deleteSuccess: '默认工作模式已停用。', deleteFailed: '无法停用默认工作模式。' },
+      sectionTitle: '默认工作模式', description: '打开日历时，空白日期会按照重复工作日自动保存。更改或停用模式时，今天及之后的所有班次（包括手动输入）都会被重置。', dutyType: '工作类型', automatic: '从团队设置自动选择', noDutyType: '无法确定唯一的工作类型用于自动应用。', weekdaysLabel: '工作日', holidayOff: '公共假日休息', holidayOffHint: '所选工作日遇到公共假日时按休息处理。', effectiveFrom: '从 {month} 起生效', weekdays: { monday: '一', tuesday: '二', wednesday: '三', thursday: '四', friday: '五', saturday: '六', sunday: '日' }, unavailable: { title: '目前无法设置工作模式。', team: '只有已加入团队的成员才能设置默认工作模式。', none: '添加一个可见的团队工作类型后即可使用。', multiple: '仅当团队恰好有一个可见工作类型时可用。', default: '请检查团队工作类型设置。' }, paused: { title: '自动应用已暂时暂停。', description: '星期设置会保留；当团队恰好只有一个可见工作类型时将自动恢复。' }, actions: { save: '保存模式', update: '更改模式', delete: '停用模式' }, validation: { weekdayRequired: '请至少选择一个工作日。' }, messages: { loadFailed: '无法加载默认工作模式。', saveConfirm: '保存后，今天及之后的所有班次都会被删除，并按新的星期规则重新登记。是否继续？', saveSuccess: '默认工作模式已保存。', saveFailed: '无法保存默认工作模式。', deleteConfirm: '从今天起停用默认工作模式吗？今天及之后的手动班次也会被删除。', deleteSuccess: '默认工作模式已停用。', deleteFailed: '无法停用模式。' },
     },
     profile: {
       sectionTitle: '公司简介',
@@ -980,6 +981,9 @@ export default {
       off: '休息',
       uploading: '正在上传...',
       usePattern: '使用默认模式',
+      currentPattern: '当前默认模式',
+      pausedPattern: '默认模式 · 自动应用已暂停',
+      patternNotSet: '未设置模式 · 默认休息',
     },
     view: {
       loading: '加载日历...',
@@ -994,7 +998,7 @@ export default {
       title: '批量更新班次',
       description1: '选择一个班次，并将其应用到 {month}/{year} 的所有日期。',
       description2: '所选班次将立即应用到整个月。',
-      warning: '本月已有的班次将被替换。',
+      warning: '本月已有班次将被替换。以后更改默认模式时，今天及之后的批量输入班次也会被删除。',
       failed: '批量更新班次失败。',
     },
     excelUpload: {
@@ -1287,7 +1291,6 @@ export default {
         hideDutyTypeSuccess: '班次类型已隐藏。',
         restoreDutyTypeSuccess: '班次类型已恢复。',
         updateDutyTypeVisibilityFailed: '无法更改班次类型状态。',
-        patternTerminationWarning: '此更改将终止所有团队成员当前的默认工作模式。即使团队之后恢复为一个可见班次类型，模式也不会自动恢复，每位成员都需要重新设置。是否继续？',
         reorderDutyTypesSuccess: '顺序已更新。',
         reorderDutyTypesFailed: '无法更新订单。',
         deleteTeamConfirm: '删除这个团队？',

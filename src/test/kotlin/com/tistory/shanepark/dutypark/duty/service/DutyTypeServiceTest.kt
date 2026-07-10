@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.duty.service
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeCreateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
+import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import com.tistory.shanepark.dutypark.team.repository.TeamRepository
@@ -13,8 +14,14 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
+import org.mockito.Mockito.verify
+import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.junit.jupiter.MockitoExtension
 import org.springframework.test.util.ReflectionTestUtils
+import java.time.Clock
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 import java.util.*
 
 @ExtendWith(MockitoExtension::class)
@@ -27,7 +34,9 @@ class DutyTypeServiceTest {
     private lateinit var teamRepository: TeamRepository
 
     @Mock
-    private lateinit var dutyPatternService: DutyPatternService
+    private lateinit var dutyRepository: DutyRepository
+
+    private val clock = Clock.fixed(Instant.parse("2026-07-11T00:00:00Z"), ZoneOffset.UTC)
 
     private lateinit var dutyTypeService: DutyTypeService
 
@@ -35,7 +44,7 @@ class DutyTypeServiceTest {
 
     @BeforeEach
     fun setUp() {
-        dutyTypeService = DutyTypeService(dutyTypeRepository, teamRepository, dutyPatternService)
+        dutyTypeService = DutyTypeService(dutyTypeRepository, teamRepository, dutyRepository, clock)
         team = Team("testTeam")
         ReflectionTestUtils.setField(team, "id", 1L)
     }
@@ -44,7 +53,7 @@ class DutyTypeServiceTest {
     fun `Create duty Type success`() {
         // Given
         val dutyTypeCreateDto = DutyTypeCreateDto(team.id!!, "dutyType", "#f0f8ff")
-        `when`(teamRepository.findByIdWithDutyTypes(team.id!!)).thenReturn(Optional.of(team))
+        `when`(teamRepository.findByIdForUpdate(team.id!!)).thenReturn(Optional.of(team))
 
         // When
         val created = dutyTypeService.addDutyType(dutyTypeCreateDto)
@@ -58,9 +67,53 @@ class DutyTypeServiceTest {
     }
 
     @Test
+    fun `adding a second visible type does not alter existing types`() {
+        val existing = DutyType("existing", 0, team, "#111111")
+        ReflectionTestUtils.setField(existing, "id", 10L)
+        team.dutyTypes.add(existing)
+        `when`(teamRepository.findByIdForUpdate(team.id!!)).thenReturn(Optional.of(team))
+        dutyTypeService.addDutyType(DutyTypeCreateDto(team.id!!, "second", "#222222"))
+
+        assertThat(team.dutyTypes.count { !it.hidden }).isEqualTo(2)
+        verify(dutyRepository).deleteAutomaticByTeamIdAndDutyDateGreaterThanEqual(
+            team.id!!,
+            LocalDate.of(2026, 7, 11),
+        )
+    }
+
+    @Test
+    fun `adding while visible count is already non-single still succeeds`() {
+        team.dutyTypes.add(DutyType("first", 0, team, "#111111"))
+        team.dutyTypes.add(DutyType("second", 1, team, "#222222"))
+        `when`(teamRepository.findByIdForUpdate(team.id!!)).thenReturn(Optional.of(team))
+
+        dutyTypeService.addDutyType(DutyTypeCreateDto(team.id!!, "third", "#333333"))
+
+        assertThat(team.dutyTypes.count { !it.hidden }).isEqualTo(3)
+        verifyNoInteractions(dutyRepository)
+    }
+
+    @Test
+    fun `hiding the sole visible type is idempotent`() {
+        val dutyType = DutyType("visible", 0, team, "#111111")
+        ReflectionTestUtils.setField(dutyType, "id", 10L)
+        team.dutyTypes.add(dutyType)
+        `when`(dutyTypeRepository.findTeamIdById(dutyType.id!!)).thenReturn(team.id!!)
+        `when`(teamRepository.findByIdForUpdate(team.id!!)).thenReturn(Optional.of(team))
+        dutyTypeService.updateVisibility(dutyType.id!!, true)
+        dutyTypeService.updateVisibility(dutyType.id!!, true)
+
+        assertThat(dutyType.hidden).isTrue()
+        verify(dutyRepository).deleteAutomaticByTeamIdAndDutyDateGreaterThanEqual(
+            team.id!!,
+            LocalDate.of(2026, 7, 11),
+        )
+    }
+
+    @Test
     fun `can't create same duty type name in same team`() {
         // Given
-        `when`(teamRepository.findByIdWithDutyTypes(team.id!!)).thenReturn(Optional.of(team))
+        `when`(teamRepository.findByIdForUpdate(team.id!!)).thenReturn(Optional.of(team))
 
         val dutyTypeCreateDto = DutyTypeCreateDto(team.id!!, "dutyType", "#f0f8ff")
         dutyTypeService.addDutyType(dutyTypeCreateDto)

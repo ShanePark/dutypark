@@ -5,6 +5,7 @@ import { CalendarDays, Loader2, RotateCcw } from 'lucide-vue-next'
 import { dutyApi } from '@/api/duty'
 import { useSwal } from '@/composables/useSwal'
 import type { DutyPatternWeekday, MyDutyPatternDto } from '@/types'
+import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 
 const { t } = useI18n()
 const { confirm, showError, toastSuccess } = useSwal()
@@ -28,6 +29,7 @@ const holidayOff = ref(true)
 
 const hasPattern = computed(() => response.value?.pattern != null)
 const configurable = computed(() => response.value?.configurable === true)
+const applicationPaused = computed(() => hasPattern.value && !configurable.value)
 const unavailableReason = computed(() => {
   if (!response.value?.reason) return t('member.dutyPattern.unavailable.default')
   if (response.value.reason === 'TEAM_REQUIRED') {
@@ -74,6 +76,10 @@ async function savePattern() {
     showError(t('member.dutyPattern.validation.weekdayRequired'))
     return
   }
+  if (!await confirm(
+    t('member.dutyPattern.messages.saveConfirm'),
+    hasPattern.value ? t('member.dutyPattern.actions.update') : t('member.dutyPattern.actions.save')
+  )) return
 
   saving.value = true
   try {
@@ -84,7 +90,14 @@ async function savePattern() {
     toastSuccess(t('member.dutyPattern.messages.saveSuccess'))
   } catch (error) {
     console.error('Failed to save duty pattern:', error)
-    showError(t('member.dutyPattern.messages.saveFailed'))
+    try {
+      syncForm(await dutyApi.getMyPattern())
+    } catch (refreshError) {
+      console.error('Failed to refresh duty pattern after save error:', refreshError)
+    }
+    showError(resolveApiErrorMessage(error, {
+      fallbackKey: 'member.dutyPattern.messages.saveFailed',
+    }, t))
   } finally {
     saving.value = false
   }
@@ -106,7 +119,14 @@ async function removePattern() {
     toastSuccess(t('member.dutyPattern.messages.deleteSuccess'))
   } catch (error) {
     console.error('Failed to delete duty pattern:', error)
-    showError(t('member.dutyPattern.messages.deleteFailed'))
+    try {
+      syncForm(await dutyApi.getMyPattern())
+    } catch (refreshError) {
+      console.error('Failed to refresh duty pattern after delete error:', refreshError)
+    }
+    showError(resolveApiErrorMessage(error, {
+      fallbackKey: 'member.dutyPattern.messages.deleteFailed',
+    }, t))
   } finally {
     saving.value = false
   }
@@ -134,8 +154,12 @@ onMounted(loadPattern)
         v-if="!configurable"
         class="rounded-lg border p-4 bg-dp-warning-soft border-dp-warning-border text-dp-warning"
       >
-        <p class="font-medium">{{ t('member.dutyPattern.unavailable.title') }}</p>
-        <p class="text-sm mt-1">{{ unavailableReason }}</p>
+        <p class="font-medium">
+          {{ t(applicationPaused ? 'member.dutyPattern.paused.title' : 'member.dutyPattern.unavailable.title') }}
+        </p>
+        <p class="text-sm mt-1">
+          {{ applicationPaused ? t('member.dutyPattern.paused.description') : unavailableReason }}
+        </p>
       </div>
 
       <div class="space-y-5" :class="{ 'opacity-60': !configurable }">

@@ -32,6 +32,7 @@ class DutyBatchSungsimService(
     private val dutyRepository: DutyRepository,
     private val dutyTypeRepository: DutyTypeRepository
 ) : DutyBatchService {
+    @Transactional(timeout = 25)
     override fun batchUploadMember(file: MultipartFile, memberId: Long, yearMonth: YearMonth): DutyBatchResult {
         DutyBatchTemplate.SUNGSIM_CAKE.checkSupportedFile(file)
 
@@ -67,6 +68,7 @@ class DutyBatchSungsimService(
         }
     }
 
+    @Transactional(timeout = 25)
     override fun batchUploadTeam(
         file: MultipartFile,
         teamId: Long,

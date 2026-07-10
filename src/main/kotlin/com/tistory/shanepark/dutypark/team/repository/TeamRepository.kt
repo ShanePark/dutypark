@@ -5,10 +5,19 @@ import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Query
+import org.springframework.data.jpa.repository.QueryHints
+import jakarta.persistence.LockModeType
+import jakarta.persistence.QueryHint
 import java.util.*
 
 interface TeamRepository : JpaRepository<Team, Long> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @QueryHints(QueryHint(name = "jakarta.persistence.lock.timeout", value = "5000"))
+    @Query("select t from Team t where t.id = :teamId")
+    fun findByIdForUpdate(teamId: Long): Optional<Team>
 
     override fun findById(id: Long): Optional<Team>
 

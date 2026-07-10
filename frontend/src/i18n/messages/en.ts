@@ -51,6 +51,7 @@ const apiErrors = {
   common: {
     notFound: 'Resource not found.',
     badRequest: 'Bad request.',
+    concurrentUpdate: 'Another duty update is in progress. Please try again shortly.',
     validation: {
       failed: 'Please check the request fields.',
     },
@@ -771,12 +772,13 @@ export default {
   member: {
     title: 'My Account',
     dutyPattern: {
-      sectionTitle: 'Default work pattern', description: 'Save recurring workdays to apply them automatically. Date-specific changes take priority.',
-      dutyType: 'Duty type', automatic: 'Selected from team settings', noDutyType: 'No duty type is available.', weekdaysLabel: 'Workdays', holidayOff: 'Take public holidays off', holidayOffHint: 'Selected workdays become days off on public holidays.', effectiveFrom: 'Effective from {month}',
+      sectionTitle: 'Default work pattern', description: 'Opening the calendar automatically saves missing dates from your recurring weekdays. Changing or disabling the pattern resets every duty from today, including manual entries.',
+      dutyType: 'Duty type', automatic: 'Selected from team settings', noDutyType: 'A single duty type cannot be selected for automatic application.', weekdaysLabel: 'Workdays', holidayOff: 'Take public holidays off', holidayOffHint: 'Selected workdays become days off on public holidays.', effectiveFrom: 'Effective from {month}',
       weekdays: { monday: 'Mon', tuesday: 'Tue', wednesday: 'Wed', thursday: 'Thu', friday: 'Fri', saturday: 'Sat', sunday: 'Sun' },
       unavailable: { title: 'The pattern cannot be configured right now.', team: 'Only members assigned to a team can configure a default work pattern.', none: 'Add one visible team duty type to use this setting.', multiple: 'Exactly one visible team duty type is required.', default: 'Check the team duty type settings.' },
+      paused: { title: 'Automatic application is temporarily paused.', description: 'Your weekday settings are preserved and will resume automatically when the team has exactly one visible duty type.' },
       actions: { save: 'Save pattern', update: 'Update pattern', delete: 'Disable pattern' }, validation: { weekdayRequired: 'Select at least one workday.' },
-      messages: { loadFailed: 'Failed to load the default work pattern.', saveSuccess: 'The default work pattern has been saved.', saveFailed: 'Failed to save the default work pattern.', deleteConfirm: 'Disable the default work pattern from this month? Manual changes will remain.', deleteSuccess: 'The default work pattern has been disabled.', deleteFailed: 'Failed to disable the default work pattern.' },
+      messages: { loadFailed: 'Failed to load the default work pattern.', saveConfirm: 'Saving this pattern deletes every duty from today onward and recreates them from the new weekdays. Continue?', saveSuccess: 'The default work pattern has been saved.', saveFailed: 'Failed to save the default work pattern.', deleteConfirm: 'Disable the default work pattern from today? Manual duties from today onward will also be deleted.', deleteSuccess: 'The default work pattern has been disabled.', deleteFailed: 'Failed to disable the default work pattern.' },
     },
     profile: {
       sectionTitle: 'Profile',
@@ -985,6 +987,9 @@ export default {
       off: 'Off',
       uploading: 'Uploading...',
       usePattern: 'Use default pattern',
+      currentPattern: 'Current default pattern',
+      pausedPattern: 'Default pattern · Auto-apply paused',
+      patternNotSet: 'No pattern · Off by default',
     },
     view: {
       loading: 'Loading calendar...',
@@ -999,7 +1004,7 @@ export default {
       title: 'Batch duty update',
       description1: 'Choose a duty to apply to all dates in {month}/{year}.',
       description2: 'The selected duty will be applied to the entire month at once.',
-      warning: 'Existing duties for this month will be replaced.',
+      warning: 'Existing duties will be replaced. A later default-pattern change will delete these batch entries from today onward.',
       failed: 'Failed to update duties in bulk.',
     },
     excelUpload: {
@@ -1292,7 +1297,6 @@ export default {
         hideDutyTypeSuccess: 'The duty type has been hidden.',
         restoreDutyTypeSuccess: 'The duty type has been restored.',
         updateDutyTypeVisibilityFailed: 'Failed to update the duty type status.',
-        patternTerminationWarning: 'This change will end every team member’s active default work pattern. Patterns will not return automatically when the team has exactly one duty type again; each member must configure theirs again. Continue?',
         reorderDutyTypesSuccess: 'The order has been updated.',
         reorderDutyTypesFailed: 'Failed to update the order.',
         deleteTeamConfirm: 'Delete this team?',

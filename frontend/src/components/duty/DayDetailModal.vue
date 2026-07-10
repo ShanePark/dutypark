@@ -10,6 +10,7 @@ import type { DutySource, NormalizedAttachment, TaggableFriend } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
 import { VISIBILITY_ICONS, VISIBILITY_COLORS, type CalendarVisibility } from '@/utils/visibility'
+import { dutySourcePatternLabelKey, isInheritedDutySource } from '@/utils/dutySource'
 
 const { showWarning, showError } = useSwal()
 
@@ -101,6 +102,10 @@ const contentRef = ref<HTMLElement | null>(null)
 // Local duty state for immediate UI feedback
 const selectedDutyType = ref<string | null>(null)
 const inheritSelected = ref(false)
+const patternButtonLabel = computed(() => {
+  if (!inheritSelected.value && props.duty?.source !== 'DEFAULT_OFF') return t('duty.common.usePattern')
+  return t(dutySourcePatternLabelKey(props.duty?.source))
+})
 
 // Sync selectedDutyType with both the selected date and duty prop.
 // The modal instance is reused across days, so date changes must also reset this state.
@@ -108,7 +113,7 @@ watch(
   () => [props.date.year, props.date.month, props.date.day, props.duty?.dutyType, props.duty?.source] as const,
   ([, , , dutyType, source]) => {
     selectedDutyType.value = dutyType ?? null
-    inheritSelected.value = source !== undefined && source !== 'OVERRIDE'
+    inheritSelected.value = isInheritedDutySource(source)
   },
   { immediate: true }
 )
@@ -419,7 +424,7 @@ function handleUploadError(message: string) {
             @click="restorePattern"
           >
             <RotateCcw class="w-3.5 h-3.5" />
-            {{ t('duty.common.usePattern') }}
+            {{ patternButtonLabel }}
           </button>
           <button
             v-for="dutyType in dutyTypes"

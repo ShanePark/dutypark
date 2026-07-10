@@ -9,7 +9,6 @@ import com.tistory.shanepark.dutypark.holiday.service.holidayAPI.HolidayAPI
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 import java.util.concurrent.ConcurrentHashMap
@@ -19,7 +18,6 @@ import java.util.concurrent.locks.ReentrantLock
 @Transactional
 class HolidayService(
     private val holidayRepository: HolidayRepository,
-    private val holidayPersistenceService: HolidayPersistenceService,
     @param:Qualifier("holidayAPIDataGoKr")
     private val holidayAPI: HolidayAPI,
 ) {
@@ -83,7 +81,7 @@ class HolidayService(
 
             val holidays = holidayAPI.requestHolidays(year)
                 .map { holiday -> Holiday(holiday.dateName, holiday.isHoliday, holiday.localDate) }
-            holidayPersistenceService.saveAll(holidays)
+            holidayRepository.saveAll(holidays)
             holidayMap[year] = holidays.map { HolidayDto.of(it) }
             return holidays.map { HolidayDto.of(it) }
         } finally {
@@ -91,14 +89,4 @@ class HolidayService(
         }
     }
 
-}
-
-@Service
-class HolidayPersistenceService(
-    private val holidayRepository: HolidayRepository,
-) {
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    fun saveAll(holidays: List<Holiday>) {
-        holidayRepository.saveAll(holidays)
-    }
 }

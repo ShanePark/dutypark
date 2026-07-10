@@ -4,6 +4,8 @@ import { ChevronLeft, ChevronRight, FileSpreadsheet, Loader2, RotateCcw, Users, 
 import { useI18n } from 'vue-i18n'
 import { isLightColor } from '@/utils/color'
 import type { DutyType, DutyTypeWithCount } from '@/views/duty/dutyViewTypes'
+import type { DutySource } from '@/types'
+import { dutySourcePatternLabelKey, isInheritedDutySource } from '@/utils/dutySource'
 
 const props = defineProps<{
   batchEditMode: boolean
@@ -12,7 +14,7 @@ const props = defineProps<{
   isLoadingDuties: boolean
   focusedDay: number | null
   focusedDayDutyType: string | null
-  focusedDayDutySource: string | null
+  focusedDayDutySource: DutySource | null
   lastDayInMonth: number
   canEdit: boolean
   canEditMyCalendar: boolean
@@ -35,6 +37,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const focusedDayValue = computed(() => props.focusedDay ?? 1)
+const patternButtonLabel = computed(() => t(dutySourcePatternLabelKey(props.focusedDayDutySource)))
 
 function moveFocusDay(delta: number) {
   const next = Math.min(props.lastDayInMonth, Math.max(1, focusedDayValue.value + delta))
@@ -72,12 +75,12 @@ function toggleBatchEdit() {
         <button
           type="button"
           class="duty-quick-btn min-h-11"
-          :class="{ 'duty-quick-btn-active': focusedDayDutySource !== 'OVERRIDE' }"
+          :class="{ 'duty-quick-btn-active': isInheritedDutySource(focusedDayDutySource) }"
           @click="emit('restore-pattern')"
         >
           <span class="duty-quick-btn-inner flex items-center gap-1">
             <RotateCcw class="w-3.5 h-3.5" />
-            {{ t('duty.common.usePattern') }}
+            {{ patternButtonLabel }}
           </span>
         </button>
         <button

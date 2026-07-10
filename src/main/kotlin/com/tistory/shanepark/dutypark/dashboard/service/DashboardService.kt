@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 
 @Service
-@Transactional(readOnly = true)
+@Transactional
 class DashboardService(
     private val memberRepository: MemberRepository,
     private val dutyResolver: DutyResolver,

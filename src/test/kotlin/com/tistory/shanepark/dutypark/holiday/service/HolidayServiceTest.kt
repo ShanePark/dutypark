@@ -28,9 +28,6 @@ class HolidayServiceTest {
     @Mock
     lateinit var holidayRepository: HolidayRepository
 
-    @Mock
-    lateinit var holidayPersistenceService: HolidayPersistenceService
-
     @Test
     fun `findHolidaysTest-loadFromMemory`() {
         // Given
@@ -73,7 +70,7 @@ class HolidayServiceTest {
 
         // Then
         assert2023MayResult(result)
-        verify(holidayPersistenceService).saveAll(any())
+        verify(holidayRepository).saveAll(any<List<Holiday>>())
     }
 
     @Test

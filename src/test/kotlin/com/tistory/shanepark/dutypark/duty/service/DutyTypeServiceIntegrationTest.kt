@@ -4,11 +4,13 @@ import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyPatternUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeCreateDto
+import com.tistory.shanepark.dutypark.duty.domain.dto.DutySource
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import java.time.DayOfWeek.MONDAY
+import java.time.LocalDate
 
 class DutyTypeServiceIntegrationTest : DutyparkIntegrationTest() {
 
@@ -20,6 +22,9 @@ class DutyTypeServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Autowired
     private lateinit var dutyPatternService: DutyPatternService
+
+    @Autowired
+    private lateinit var dutyResolver: DutyResolver
 
     @Test
     fun `When DutyType is hidden, related duties are preserved`() {
@@ -59,25 +64,30 @@ class DutyTypeServiceIntegrationTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `adding a second visible duty type terminates active patterns`() {
+    fun `adding a second visible duty type pauses but preserves active patterns`() {
         leaveOnlyFirstDutyTypeVisible()
-        dutyPatternService.updateMine(TestData.member.id!!, DutyPatternUpdateDto(setOf(MONDAY), true))
+        dutyPatternService.updateMine(TestData.member.id!!, DutyPatternUpdateDto(setOf(MONDAY), false))
 
         dutyTypeService.addDutyType(
             DutyTypeCreateDto(TestData.team.id!!, "추가근무", "#123456")
         )
 
-        assertThat(dutyPatternService.getMine(TestData.member.id!!).pattern).isNull()
+        assertThat(dutyPatternService.getMine(TestData.member.id!!).pattern).isNotNull()
+        assertThat(dutyPatternService.getMine(TestData.member.id!!).configurable).isFalse()
     }
 
     @Test
-    fun `hiding the sole visible duty type terminates active patterns`() {
+    fun `hiding and restoring the sole visible duty type pauses and resumes the pattern`() {
         leaveOnlyFirstDutyTypeVisible()
-        dutyPatternService.updateMine(TestData.member.id!!, DutyPatternUpdateDto(setOf(MONDAY), true))
-
+        dutyPatternService.updateMine(TestData.member.id!!, DutyPatternUpdateDto(setOf(MONDAY), false))
+        val monday = generateSequence(LocalDate.now()) { it.plusDays(1) }.first { it.dayOfWeek == MONDAY }
         dutyTypeService.updateVisibility(TestData.dutyTypes.first().id!!, true)
+        assertThat(dutyResolver.resolve(TestData.member, monday).source).isEqualTo(DutySource.PATTERN_PAUSED)
+        assertThat(dutyPatternService.getMine(TestData.member.id!!).pattern).isNotNull()
 
-        assertThat(dutyPatternService.getMine(TestData.member.id!!).pattern).isNull()
+        dutyTypeService.updateVisibility(TestData.dutyTypes.first().id!!, false)
+
+        assertThat(dutyResolver.resolve(TestData.member, monday).source).isEqualTo(DutySource.PATTERN)
     }
 
     private fun leaveOnlyFirstDutyTypeVisible() {

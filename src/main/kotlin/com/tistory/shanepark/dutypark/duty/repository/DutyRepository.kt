@@ -23,7 +23,20 @@ interface DutyRepository : JpaRepository<Duty, Long> {
 
     fun deleteByMemberAndDutyDate(member: Member, dutyDate: LocalDate)
 
-    fun findTopByMemberOrderByDutyDateDesc(member: Member): Duty?
+    @Modifying(flushAutomatically = true)
+    @Query("delete from Duty d where d.member = :member and d.dutyDate >= :from")
+    fun deleteAllByMemberAndDutyDateGreaterThanEqual(member: Member, from: LocalDate)
+
+    @Modifying(flushAutomatically = true)
+    @Query(
+        """
+        delete from Duty d
+        where d.teamId = :teamId
+          and d.manualOverride = false
+          and d.dutyDate >= :from
+        """
+    )
+    fun deleteAutomaticByTeamIdAndDutyDateGreaterThanEqual(teamId: Long, from: LocalDate)
 
     @EntityGraph(attributePaths = ["dutyType"])
     fun findByDutyDateAndMemberIn(dutyDate: LocalDate, members: List<Member>): List<Duty>

@@ -128,7 +128,14 @@ class DutyPatternControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `get reports that exactly one visible duty type is required`() {
+    fun `get reports that automatic application is paused while preserving the pattern`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/duty/pattern/me")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"weekdays":["MONDAY"],"holidayOff":true}""")
+                .withAuth(TestData.member)
+        ).andExpect(status().isOk)
+
         TestData.dutyTypes[1].hidden = false
         dutyTypeRepository.save(TestData.dutyTypes[1])
         em.flush()
@@ -141,6 +148,7 @@ class DutyPatternControllerTest : RestDocsTest() {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.configurable").value(false))
             .andExpect(jsonPath("$.reason").value("SINGLE_DUTY_TYPE_REQUIRED"))
+            .andExpect(jsonPath("$.pattern.weekdays[0]").value("MONDAY"))
     }
 
     @Test
@@ -172,7 +180,7 @@ class DutyPatternControllerTest : RestDocsTest() {
     }
 
     private fun patternResponseFields() = responseFields(
-        fieldWithPath("configurable").description("Whether the team has exactly one visible duty type"),
+        fieldWithPath("configurable").description("Whether the saved pattern can currently be edited and automatically applied"),
         fieldWithPath("reason").optional().description("Reason pattern editing is unavailable"),
         subsectionWithPath("dutyType").optional().description("The team's single visible duty type"),
         subsectionWithPath("pattern").optional().description("Current personal weekly pattern"),

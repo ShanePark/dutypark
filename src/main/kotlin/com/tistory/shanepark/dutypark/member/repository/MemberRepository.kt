@@ -2,12 +2,14 @@ package com.tistory.shanepark.dutypark.member.repository
 
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
+import jakarta.persistence.QueryHint
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.EntityGraph
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Query
+import org.springframework.data.jpa.repository.QueryHints
 import jakarta.persistence.LockModeType
 import java.util.*
 
@@ -26,8 +28,10 @@ interface MemberRepository : JpaRepository<Member, Long> {
     fun findMemberWithTeam(memberId: Long): Optional<Member>
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select m from Member m left join fetch m.team t where m.id = :memberId")
+    @QueryHints(QueryHint(name = "jakarta.persistence.lock.timeout", value = "5000"))
+    @Query("select m from Member m where m.id = :memberId")
     fun findMemberWithTeamForUpdate(memberId: Long): Optional<Member>
+
     fun findMembersByTeam(team: Team): List<Member>
 
     @Query(

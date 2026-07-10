@@ -3,10 +3,14 @@ package com.tistory.shanepark.dutypark.common.advice
 import com.tistory.shanepark.dutypark.common.domain.dto.DutyParkErrorResponse
 import com.tistory.shanepark.dutypark.common.domain.dto.DutyParkFieldError
 import com.tistory.shanepark.dutypark.common.exceptions.DutyparkException
+import jakarta.persistence.LockTimeoutException
+import jakarta.persistence.PessimisticLockException
 import org.springframework.core.Ordered
 import org.springframework.core.annotation.Order
+import org.springframework.dao.PessimisticLockingFailureException
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
+import org.springframework.transaction.TransactionTimedOutException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.ResponseBody
@@ -84,6 +88,17 @@ class RestExceptionControllerAdvice {
     @ExceptionHandler
     fun httpMessageNotReadableHandler(e: HttpMessageNotReadableException): ResponseEntity<DutyParkErrorResponse> {
         return errorResponse(status = 400, code = "common.badRequest")
+    }
+
+    @ResponseBody
+    @ExceptionHandler(
+        PessimisticLockingFailureException::class,
+        PessimisticLockException::class,
+        LockTimeoutException::class,
+        TransactionTimedOutException::class,
+    )
+    fun concurrentUpdateHandler(e: Exception): ResponseEntity<DutyParkErrorResponse> {
+        return errorResponse(status = 409, code = "common.concurrentUpdate")
     }
 
     private fun errorResponse(

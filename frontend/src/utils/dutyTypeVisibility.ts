@@ -3,14 +3,6 @@ export interface DutyTypeVisibilityItem {
   hidden: boolean
 }
 
-export function countVisibleDutyTypes(types: DutyTypeVisibilityItem[]): number {
-  return types.filter((type) => type.id !== null && !type.hidden).length
-}
-
-export function leavesSingleVisibleDutyType(currentCount: number, nextCount: number): boolean {
-  return currentCount === 1 && nextCount !== 1
-}
-
 export function findVisibleDutyTypeNeighbor(
   types: DutyTypeVisibilityItem[],
   index: number,

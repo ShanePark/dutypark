@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.duty.service
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyBatchUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
+import com.tistory.shanepark.dutypark.duty.domain.dto.DutySource
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.OtherDutyResponse
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
@@ -14,6 +15,7 @@ import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.team.repository.TeamRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
@@ -29,8 +31,10 @@ class DutyService(
     private val friendService: FriendService,
     private val memberService: MemberService,
     private val dutyResolver: DutyResolver,
+    private val teamRepository: TeamRepository,
 ) {
 
+    @Transactional(timeout = 20)
     fun update(dutyUpdateDto: DutyUpdateDto) {
         val member = memberRepository.findMemberWithTeamForUpdate(dutyUpdateDto.memberId).orElseThrow()
         val dutyType: DutyType? = dutyUpdateDto.dutyTypeId?.let {
@@ -50,8 +54,10 @@ class DutyService(
         )
         duty.dutyType = dutyType
         duty.teamId = member.team?.id
+        duty.manualOverride = true
     }
 
+    @Transactional(timeout = 20)
     fun update(dutyBatchUpdateDto: DutyBatchUpdateDto) {
         val member = memberRepository.findMemberWithTeamForUpdate(dutyBatchUpdateDto.memberId).orElseThrow()
         val dutyType: DutyType? = dutyBatchUpdateDto.dutyTypeId?.let {
@@ -85,32 +91,41 @@ class DutyService(
                 || memberService.isManager(isManager = loginMember, target = member)
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(timeout = 20)
     fun getDuties(memberId: Long, year: Int, month: Int, loginMember: LoginMember?): List<DutyDto> {
-        val member = memberRepository.findMemberWithTeam(memberId).orElseThrow()
-        friendService.checkVisibility(loginMember, member)
+        val preview = memberRepository.findMemberWithTeam(memberId).orElseThrow()
+        friendService.checkVisibility(loginMember, preview)
 
-        val team = member.team ?: return emptyList()
+        val previewTeam = preview.team ?: return emptyList()
         val calendarView = CalendarView(year = year, month = month)
-        return dutyResolver.resolve(member, calendarView.dates).map { resolved ->
-            val dutyType = resolved.dutyType
-            if (dutyType == null) {
-                DutyDto.offDuty(resolved.date, team, resolved.source)
-            } else {
-                DutyDto(
-                    year = resolved.date.year,
-                    month = resolved.date.monthValue,
-                    day = resolved.date.dayOfMonth,
-                    dutyType = dutyType.name,
-                    dutyColor = dutyType.color,
-                    isOff = false,
-                    dutyTypeId = dutyType.id,
-                    source = resolved.source,
+        val previewDuties = dutyResolver.resolve(preview, calendarView.dates)
+        if (previewDuties.none { !it.persisted && it.source == DutySource.PATTERN }) {
+            return previewDuties.map { it.toDto(previewTeam) }
+        }
+
+        teamRepository.findByIdForUpdate(requireNotNull(previewTeam.id)).orElseThrow()
+        val member = memberRepository.findMemberWithTeamForUpdate(memberId).orElseThrow()
+        val team = member.team ?: return emptyList()
+        val resolvedDuties = dutyResolver.resolve(member, calendarView.dates)
+        val automaticDuties = resolvedDuties
+            .filter { !it.persisted && it.source == DutySource.PATTERN }
+            .map { resolved ->
+                Duty(
+                    member = member,
+                    dutyDate = resolved.date,
+                    dutyType = resolved.dutyType,
+                    teamId = resolved.sourceTeamId ?: team.id,
+                    manualOverride = false,
                 )
             }
+        dutyRepository.saveAll(automaticDuties)
+
+        return resolvedDuties.map { resolved ->
+            resolved.toDto(team)
         }
     }
 
+    @Transactional(timeout = 20)
     fun resetOverride(memberId: Long, date: LocalDate) {
         val member = memberRepository.findMemberWithTeamForUpdate(memberId).orElseThrow()
         dutyRepository.deleteByMemberAndDutyDate(member, date)
@@ -123,12 +138,30 @@ class DutyService(
         }
     }
 
+    private fun ResolvedDuty.toDto(team: com.tistory.shanepark.dutypark.team.domain.entity.Team): DutyDto {
+        val resolvedDutyType = dutyType
+        if (resolvedDutyType == null) {
+            return DutyDto.offDuty(date, team, source)
+        }
+        return DutyDto(
+            year = date.year,
+            month = date.monthValue,
+            day = date.dayOfMonth,
+            dutyType = resolvedDutyType.name,
+            dutyColor = resolvedDutyType.color,
+            isOff = false,
+            dutyTypeId = resolvedDutyType.id,
+            source = source,
+        )
+    }
+
+    @Transactional(timeout = 25)
     fun getOtherDuties(
         loginMember: LoginMember,
         memberIds: List<Long>,
         year: Int, month: Int
     ): List<OtherDutyResponse> {
-        return memberIds.map { id ->
+        val responsesByMemberId = memberIds.distinct().sorted().associateWith { id ->
             val member = memberRepository.findById(id).orElseThrow()
             val team = member.team ?: throw IllegalArgumentException("Member with id $id does not belong to any team")
             val duties =
@@ -144,7 +177,8 @@ class DutyService(
                 profilePhotoVersion = member.profilePhotoVersion,
                 duties = duties
             )
-        }.toList()
+        }
+        return memberIds.map { requireNotNull(responsesByMemberId[it]) }
     }
 
 }

@@ -51,6 +51,7 @@ const apiErrors = {
   common: {
     notFound: 'Recurso no encontrado.',
     badRequest: 'Mala petición.',
+    concurrentUpdate: 'Se está procesando otro cambio de turno. Inténtelo de nuevo en unos instantes.',
     validation: {
       failed: 'Por favor revise los campos de solicitud.',
     },
@@ -771,7 +772,7 @@ export default {
   member: {
     title: 'Mi cuenta',
     dutyPattern: {
-      sectionTitle: 'Patrón de trabajo predeterminado', description: 'Guarda los días de trabajo recurrentes para aplicarlos automáticamente. Los cambios por fecha tienen prioridad.', dutyType: 'Tipo de turno', automatic: 'Seleccionado desde el equipo', noDutyType: 'No hay ningún tipo de turno disponible.', weekdaysLabel: 'Días de trabajo', holidayOff: 'Descansar en festivos', holidayOffHint: 'Los días seleccionados serán descanso cuando sean festivos.', effectiveFrom: 'Vigente desde {month}', weekdays: { monday: 'Lun', tuesday: 'Mar', wednesday: 'Mié', thursday: 'Jue', friday: 'Vie', saturday: 'Sáb', sunday: 'Dom' }, unavailable: { title: 'No se puede configurar el patrón ahora.', team: 'Solo los miembros asignados a un equipo pueden configurar un patrón predeterminado.', none: 'Añade un tipo de turno visible al equipo.', multiple: 'Debe haber exactamente un tipo de turno visible.', default: 'Comprueba los tipos de turno del equipo.' }, actions: { save: 'Guardar patrón', update: 'Cambiar patrón', delete: 'Desactivar patrón' }, validation: { weekdayRequired: 'Selecciona al menos un día de trabajo.' }, messages: { loadFailed: 'No se pudo cargar el patrón.', saveSuccess: 'El patrón se ha guardado.', saveFailed: 'No se pudo guardar el patrón.', deleteConfirm: '¿Desactivar el patrón desde este mes? Los cambios manuales se conservarán.', deleteSuccess: 'El patrón se ha desactivado.', deleteFailed: 'No se pudo desactivar el patrón.' },
+      sectionTitle: 'Patrón de trabajo predeterminado', description: 'Al abrir el calendario, las fechas vacías se guardan según los días recurrentes. Al cambiar o desactivar el patrón se reinician todos los turnos desde hoy, incluidos los manuales.', dutyType: 'Tipo de turno', automatic: 'Seleccionado desde el equipo', noDutyType: 'No se puede determinar un único tipo de turno para la aplicación automática.', weekdaysLabel: 'Días de trabajo', holidayOff: 'Descansar en festivos', holidayOffHint: 'Los días seleccionados serán descanso cuando sean festivos.', effectiveFrom: 'Vigente desde {month}', weekdays: { monday: 'Lun', tuesday: 'Mar', wednesday: 'Mié', thursday: 'Jue', friday: 'Vie', saturday: 'Sáb', sunday: 'Dom' }, unavailable: { title: 'No se puede configurar el patrón ahora.', team: 'Solo los miembros asignados a un equipo pueden configurar un patrón predeterminado.', none: 'Añade un tipo de turno visible al equipo.', multiple: 'Debe haber exactamente un tipo de turno visible.', default: 'Comprueba los tipos de turno del equipo.' }, paused: { title: 'La aplicación automática está temporalmente en pausa.', description: 'La configuración de los días se conserva y se reanudará cuando el equipo tenga exactamente un tipo de turno visible.' }, actions: { save: 'Guardar patrón', update: 'Cambiar patrón', delete: 'Desactivar patrón' }, validation: { weekdayRequired: 'Selecciona al menos un día de trabajo.' }, messages: { loadFailed: 'No se pudo cargar el patrón.', saveConfirm: 'Al guardar, se eliminan todos los turnos desde hoy y se vuelven a registrar con los nuevos días. ¿Continuar?', saveSuccess: 'El patrón se ha guardado.', saveFailed: 'No se pudo guardar el patrón.', deleteConfirm: '¿Desactivar el patrón desde hoy? También se eliminarán los turnos manuales desde hoy.', deleteSuccess: 'El patrón se ha desactivado.', deleteFailed: 'No se pudo desactivar el patrón.' },
     },
     profile: {
       sectionTitle: 'Perfil',
@@ -980,6 +981,9 @@ export default {
       off: 'Libre',
       uploading: 'Subiendo...',
       usePattern: 'Usar patrón predeterminado',
+      currentPattern: 'Patrón predeterminado actual',
+      pausedPattern: 'Patrón predeterminado · Aplicación pausada',
+      patternNotSet: 'Sin patrón · Descanso predeterminado',
     },
     view: {
       loading: 'Cargando calendario...',
@@ -994,7 +998,7 @@ export default {
       title: 'Actualización de tareas por lotes',
       description1: 'Elija un turno para aplicar a todas las fechas en {month}/{year}.',
       description2: 'El impuesto seleccionado se aplicará a todo el mes de una vez.',
-      warning: 'Se reemplazarán los aranceles existentes para este mes.',
+      warning: 'Los turnos existentes se reemplazarán. Si luego cambia el patrón, también se eliminarán estas cargas por lote desde hoy.',
       failed: 'No se pudieron actualizar las tareas de forma masiva.',
     },
     excelUpload: {
@@ -1287,7 +1291,6 @@ export default {
         hideDutyTypeSuccess: 'El tipo de turno se ha ocultado.',
         restoreDutyTypeSuccess: 'El tipo de turno se ha restaurado.',
         updateDutyTypeVisibilityFailed: 'No se pudo cambiar el estado del tipo de turno.',
-        patternTerminationWarning: 'Este cambio finalizará el patrón predeterminado activo de todos los miembros. Los patrones no se restaurarán automáticamente aunque el equipo vuelva a tener exactamente un tipo de turno; cada miembro deberá configurarlo de nuevo. ¿Continuar?',
         reorderDutyTypesSuccess: 'Se ha actualizado el orden.',
         reorderDutyTypesFailed: 'No se pudo actualizar el orden.',
         deleteTeamConfirm: '¿Eliminar este equipo?',

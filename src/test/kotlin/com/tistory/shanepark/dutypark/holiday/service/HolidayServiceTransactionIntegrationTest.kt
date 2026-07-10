@@ -22,7 +22,13 @@ import java.time.LocalDate
 
 @SpringBootTest
 @Import(HolidayServiceTransactionIntegrationTest.Config::class)
-@TestPropertySource(properties = ["spring.datasource.url=jdbc:h2:mem:holiday-service-tx"])
+@TestPropertySource(
+    properties = [
+        "spring.datasource.url=jdbc:h2:mem:holiday-service-tx",
+        "spring.datasource.hikari.maximum-pool-size=1",
+        "spring.datasource.hikari.connection-timeout=1000",
+    ]
+)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class HolidayServiceTransactionIntegrationTest {
 
@@ -33,7 +39,7 @@ class HolidayServiceTransactionIntegrationTest {
     lateinit var holidayRepository: HolidayRepository
 
     @Autowired
-    lateinit var readOnlyLookup: ReadOnlyLookup
+    lateinit var transactionalLookup: TransactionalLookup
 
     @MockitoBean
     lateinit var holidayAPI: HolidayAPIDataGoKr
@@ -49,13 +55,13 @@ class HolidayServiceTransactionIntegrationTest {
     }
 
     @Test
-    fun `first holiday lookup persists API results outside the caller read-only transaction`() {
+    fun `first holiday lookup persists API results with a single connection pool`() {
         val date = LocalDate.of(2041, 5, 5)
         whenever(holidayAPI.requestHolidays(2041)).thenReturn(
             listOf(HolidayDto("어린이날", true, date))
         )
 
-        readOnlyLookup.find(CalendarView(2041, 5))
+        transactionalLookup.find(CalendarView(2041, 5))
 
         val persisted = holidayRepository.findAllByLocalDateBetween(date, date)
         assertThat(persisted).hasSize(1)
@@ -63,16 +69,16 @@ class HolidayServiceTransactionIntegrationTest {
         assertThat(persisted.single().isHoliday).isTrue()
     }
 
-    open class ReadOnlyLookup(
+    open class TransactionalLookup(
         private val holidayService: HolidayService,
     ) {
-        @Transactional(readOnly = true)
+        @Transactional
         open fun find(calendarView: CalendarView) = holidayService.findHolidays(calendarView)
     }
 
     @TestConfiguration
     class Config {
         @Bean
-        fun readOnlyLookup(holidayService: HolidayService) = ReadOnlyLookup(holidayService)
+        fun transactionalLookup(holidayService: HolidayService) = TransactionalLookup(holidayService)
     }
 }

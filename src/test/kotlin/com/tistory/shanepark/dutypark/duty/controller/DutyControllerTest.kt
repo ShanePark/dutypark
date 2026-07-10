@@ -60,7 +60,7 @@ class DutyControllerTest : RestDocsTest() {
                         fieldWithPath("[].dutyColor").description("Duty type color (hex)"),
                         fieldWithPath("[].isOff").description("Whether this day is off"),
                         fieldWithPath("[].dutyTypeId").optional().description("Duty type ID"),
-                        fieldWithPath("[].source").description("Resolved duty source"),
+                        fieldWithPath("[].source").description("Resolved duty source, including PATTERN_PAUSED when the saved pattern has no single visible duty type"),
                     )
                 )
             )
@@ -114,7 +114,7 @@ class DutyControllerTest : RestDocsTest() {
                         fieldWithPath("[].duties[].dutyColor").description("Duty type color"),
                         fieldWithPath("[].duties[].isOff").description("Whether this day is off"),
                         fieldWithPath("[].duties[].dutyTypeId").optional().description("Duty type ID"),
-                        fieldWithPath("[].duties[].source").description("Resolved duty source"),
+                        fieldWithPath("[].duties[].source").description("Resolved duty source, including PATTERN_PAUSED when the saved pattern has no single visible duty type"),
                     )
                 )
             )

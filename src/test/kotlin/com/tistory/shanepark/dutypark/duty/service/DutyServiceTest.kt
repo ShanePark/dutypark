@@ -11,6 +11,7 @@ import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
+import com.tistory.shanepark.dutypark.team.repository.TeamRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -52,6 +53,9 @@ internal class DutyServiceTest {
     @Mock
     lateinit var dutyResolver: DutyResolver
 
+    @Mock
+    lateinit var teamRepository: TeamRepository
+
     @BeforeEach
     fun setUp() {
         dutyService = DutyService(
@@ -61,6 +65,7 @@ internal class DutyServiceTest {
             friendService = friendService,
             memberService = memberService,
             dutyResolver = dutyResolver,
+            teamRepository = teamRepository,
         )
     }
 
@@ -135,7 +140,8 @@ internal class DutyServiceTest {
         val existingDuty = Duty(
             dutyDate = LocalDate.of(2022, 10, 10),
             dutyType = oldDutyType,
-            member = member
+            member = member,
+            manualOverride = false,
         )
 
         val dto = DutyUpdateDto(
@@ -156,6 +162,7 @@ internal class DutyServiceTest {
 
         // Then
         assertThat(existingDuty.dutyType).isEqualTo(newDutyType)
+        assertThat(existingDuty.manualOverride).isTrue()
         verify(dutyRepository, never()).save(any<Duty>())
     }
 

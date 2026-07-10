@@ -94,6 +94,7 @@ class TeamService(
         team.addMember(member)
     }
 
+    @Transactional(timeout = 20)
     fun removeMemberFromTeam(teamId: Long, memberId: Long) {
         val team = teamRepository.findById(teamId).orElseThrow()
         val member = memberRepository.findById(memberId).orElseThrow()

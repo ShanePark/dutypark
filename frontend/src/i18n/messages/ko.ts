@@ -51,6 +51,7 @@ const apiErrors = {
   common: {
     notFound: '리소스를 찾을 수 없습니다.',
     badRequest: '잘못된 요청입니다.',
+    concurrentUpdate: '다른 근무 변경이 처리 중입니다. 잠시 후 다시 시도해 주세요.',
     validation: {
       failed: '요청 값을 다시 확인해 주세요.',
     },
@@ -771,13 +772,14 @@ export default {
   member: {
     title: '내 정보',
     dutyPattern: {
-      sectionTitle: '기본 근무 패턴', description: '반복 근무 요일을 저장하면 달력에 자동으로 적용됩니다. 날짜별 변경은 기본 패턴보다 우선합니다.',
-      dutyType: '적용 근무 유형', automatic: '팀 설정에서 자동 선택', noDutyType: '사용 가능한 근무 유형이 없습니다.',
+      sectionTitle: '기본 근무 패턴', description: '달력을 조회하면 비어 있는 날짜가 반복 요일에 맞춰 자동 등록됩니다. 패턴을 변경하거나 해제하면 오늘 이후 근무는 수동 입력을 포함해 모두 새 규칙에 맞게 초기화됩니다.',
+      dutyType: '적용 근무 유형', automatic: '팀 설정에서 자동 선택', noDutyType: '자동 적용할 근무 유형을 하나로 결정할 수 없습니다.',
       weekdaysLabel: '근무 요일', holidayOff: '공휴일에는 쉬기', holidayOffHint: '선택한 근무 요일이 공휴일이면 휴무로 적용합니다.', effectiveFrom: '{month}부터 적용',
       weekdays: { monday: '월', tuesday: '화', wednesday: '수', thursday: '목', friday: '금', saturday: '토', sunday: '일' },
       unavailable: { title: '지금은 패턴을 설정할 수 없습니다.', team: '팀에 소속된 회원만 기본 근무 패턴을 설정할 수 있습니다.', none: '팀에 보이는 근무 유형을 하나 등록하면 사용할 수 있습니다.', multiple: '팀에 보이는 근무 유형이 정확히 하나일 때 사용할 수 있습니다.', default: '팀 근무 유형 설정을 확인해주세요.' },
+      paused: { title: '자동 적용이 잠시 중지되었습니다.', description: '요일 설정은 그대로 보존됩니다. 팀에 보이는 근무 유형이 정확히 하나가 되면 다시 자동 적용됩니다.' },
       actions: { save: '패턴 저장', update: '패턴 변경', delete: '패턴 해제' }, validation: { weekdayRequired: '근무 요일을 하나 이상 선택해주세요.' },
-      messages: { loadFailed: '기본 근무 패턴을 불러오지 못했습니다.', saveSuccess: '기본 근무 패턴을 저장했습니다.', saveFailed: '기본 근무 패턴을 저장하지 못했습니다.', deleteConfirm: '현재 달부터 기본 근무 패턴을 해제하시겠습니까? 수동으로 변경한 근무는 유지됩니다.', deleteSuccess: '기본 근무 패턴을 해제했습니다.', deleteFailed: '기본 근무 패턴을 해제하지 못했습니다.' },
+      messages: { loadFailed: '기본 근무 패턴을 불러오지 못했습니다.', saveConfirm: '패턴을 저장하면 오늘 이후의 모든 근무가 삭제되고 새 요일 규칙으로 다시 등록됩니다. 계속하시겠습니까?', saveSuccess: '기본 근무 패턴을 저장했습니다.', saveFailed: '기본 근무 패턴을 저장하지 못했습니다.', deleteConfirm: '오늘부터 기본 근무 패턴을 해제하시겠습니까? 오늘 이후의 수동 입력 근무도 함께 삭제됩니다.', deleteSuccess: '기본 근무 패턴을 해제했습니다.', deleteFailed: '기본 근무 패턴을 해제하지 못했습니다.' },
     },
     profile: {
       sectionTitle: '기본 정보',
@@ -986,6 +988,9 @@ export default {
       off: '휴무',
       uploading: '업로드 중...',
       usePattern: '기본 패턴 사용',
+      currentPattern: '현재 기본 패턴',
+      pausedPattern: '기본 패턴 · 자동 적용 중지',
+      patternNotSet: '패턴 미설정 · 기본 휴무',
     },
     view: {
       loading: '시간표를 불러오는 중...',
@@ -1000,7 +1005,7 @@ export default {
       title: '근무 일괄 변경',
       description1: '{year}년 {month}월 전체에 적용할 근무를 선택하세요.',
       description2: '선택한 근무가 해당 월 전체에 일괄 적용됩니다.',
-      warning: '기존 근무표가 덮어써집니다.',
+      warning: '기존 근무표가 덮어써집니다. 이후 기본 패턴을 변경하면 오늘 이후의 일괄 입력 근무도 삭제됩니다.',
       failed: '근무 일괄 변경에 실패했습니다.',
     },
     excelUpload: {
@@ -1293,7 +1298,6 @@ export default {
         hideDutyTypeSuccess: '근무 유형을 숨겼습니다.',
         restoreDutyTypeSuccess: '근무 유형을 복원했습니다.',
         updateDutyTypeVisibilityFailed: '근무 유형 상태를 변경하지 못했습니다.',
-        patternTerminationWarning: '이 변경으로 모든 팀원의 활성 기본 근무 패턴이 종료됩니다. 근무 유형을 다시 하나로 맞춰도 패턴은 자동 복구되지 않으며, 각 회원이 다시 설정해야 합니다. 계속하시겠습니까?',
         reorderDutyTypesSuccess: '순서가 변경되었습니다.',
         reorderDutyTypesFailed: '순서 변경에 실패했습니다.',
         deleteTeamConfirm: '정말로 이 팀을 삭제하겠습니까?',

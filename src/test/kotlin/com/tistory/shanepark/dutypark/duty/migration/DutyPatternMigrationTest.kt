@@ -15,24 +15,24 @@ class DutyPatternMigrationTest {
     private val dataMigration = projectRoot.resolve(
         "src/main/resources/db/migration/v2/V2.2.19__migrate_weekday_patterns_and_hide_duty_types.sql"
     )
+    private val materializationMigration = projectRoot.resolve(
+        "src/main/resources/db/migration/v2/V2.2.20__materialize_personal_duty_patterns.sql"
+    )
 
     @Test
-    fun `pattern schema keeps history weekdays month locks and one override per date`() {
+    fun `pattern schema keeps history weekdays and one duty per date`() {
         val sql = Files.readString(schemaMigration)
 
         assertThat(sql).contains("CREATE TABLE member_duty_pattern")
         assertThat(sql).contains("effective_from")
         assertThat(sql).contains("effective_until_exclusive")
         assertThat(sql).contains("CREATE TABLE member_duty_pattern_weekday")
-        assertThat(sql).contains("CREATE TABLE member_duty_pattern_month_lock")
-        assertThat(sql).contains("UNIQUE (member_id, team_id, month_start)")
-        assertThat(sql).contains("CREATE TABLE member_duty_pattern_month_lock_workday")
         assertThat(sql).contains("UNIQUE (member_id, duty_date)")
         assertThat(sql).contains("ADD COLUMN team_id BIGINT NULL")
     }
 
     @Test
-    fun `weekday backfill is limited to single-type teams and preserves exceptional months`() {
+    fun `weekday backfill is limited to single-type teams before work type removal`() {
         val sql = Files.readString(dataMigration)
 
         assertThat(sql).contains("WHERE t.work_type = 'WEEKDAY'")
@@ -65,5 +65,14 @@ class DutyPatternMigrationTest {
         }
 
         assertThat(referencedFiles).isEmpty()
+    }
+
+    @Test
+    fun `materialized duties distinguish manual rows and remove legacy month locks`() {
+        val sql = Files.readString(materializationMigration)
+
+        assertThat(sql).contains("ADD COLUMN manual_override")
+        assertThat(sql).contains("DROP TABLE member_duty_pattern_month_lock_workday")
+        assertThat(sql).contains("DROP TABLE member_duty_pattern_month_lock")
     }
 }

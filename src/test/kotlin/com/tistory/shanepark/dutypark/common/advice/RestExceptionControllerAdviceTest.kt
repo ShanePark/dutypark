@@ -7,6 +7,7 @@ import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.core.MethodParameter
+import org.springframework.dao.CannotAcquireLockException
 import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.FieldError
 import org.springframework.web.bind.MethodArgumentNotValidException
@@ -80,6 +81,15 @@ class RestExceptionControllerAdviceTest {
         assertThat(blocked.body?.code).isEqualTo("attachment.extension.blocked")
         assertThat(tooLarge.statusCode.value()).isEqualTo(413)
         assertThat(tooLarge.body?.code).isEqualTo("attachment.size.exceeded")
+    }
+
+    @Test
+    fun `lock contention returns retryable conflict code`() {
+        val response = advice.concurrentUpdateHandler(CannotAcquireLockException("member is busy"))
+
+        assertThat(response.statusCode.value()).isEqualTo(409)
+        assertThat(response.body?.status).isEqualTo(409)
+        assertThat(response.body?.code).isEqualTo("common.concurrentUpdate")
     }
 
     @Test
