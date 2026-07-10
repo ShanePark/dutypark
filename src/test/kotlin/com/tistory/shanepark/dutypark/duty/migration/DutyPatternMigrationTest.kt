@@ -18,6 +18,9 @@ class DutyPatternMigrationTest {
     private val materializationMigration = projectRoot.resolve(
         "src/main/resources/db/migration/v2/V2.2.20__materialize_personal_duty_patterns.sql"
     )
+    private val automaticDutyIndexMigration = projectRoot.resolve(
+        "src/main/resources/db/migration/v2/V2.2.21__index_automatic_duties.sql"
+    )
 
     @Test
     fun `pattern schema keeps history weekdays and one duty per date`() {
@@ -71,8 +74,36 @@ class DutyPatternMigrationTest {
     fun `materialized duties distinguish manual rows and remove legacy month locks`() {
         val sql = Files.readString(materializationMigration)
 
-        assertThat(sql).contains("ADD COLUMN manual_override")
+        assertThat(sql).contains("ADD COLUMN manual_override BIT NOT NULL DEFAULT 1")
         assertThat(sql).contains("DROP TABLE member_duty_pattern_month_lock_workday")
         assertThat(sql).contains("DROP TABLE member_duty_pattern_month_lock")
+        assertThat(sql.indexOf("DROP TABLE member_duty_pattern_month_lock_workday"))
+            .isLessThan(sql.indexOf("DROP TABLE member_duty_pattern_month_lock;"))
+    }
+
+    @Test
+    fun `production Kotlin no longer references the removed month lock model`() {
+        val sourceRoot = projectRoot.resolve("src/main/kotlin")
+        val referencedFiles = Files.walk(sourceRoot).use { paths ->
+            paths
+                .filter { Files.isRegularFile(it) && it.toString().endsWith(".kt") }
+                .filter {
+                    val source = Files.readString(it)
+                    source.contains("MemberDutyPatternMonthLock") || source.contains("LOCKED_PATTERN")
+                }
+                .map { sourceRoot.relativize(it).toString() }
+                .sorted()
+                .collect(Collectors.toList())
+        }
+
+        assertThat(referencedFiles).isEmpty()
+    }
+
+    @Test
+    fun `future automatic duty invalidation has a supporting index`() {
+        val sql = Files.readString(automaticDutyIndexMigration)
+
+        assertThat(sql).contains("CREATE INDEX idx_duty_automatic_date")
+        assertThat(sql).contains("ON duty (manual_override, duty_date)")
     }
 }

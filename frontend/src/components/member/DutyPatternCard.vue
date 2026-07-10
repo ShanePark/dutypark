@@ -6,25 +6,22 @@ import { dutyApi } from '@/api/duty'
 import { useSwal } from '@/composables/useSwal'
 import type { DutyPatternWeekday, MyDutyPatternDto } from '@/types'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
+import {
+  createDutyPatternFormState,
+  DUTY_PATTERN_WEEKDAYS,
+  DEFAULT_DUTY_PATTERN_WEEKDAYS,
+  toggleDutyPatternWeekday,
+} from '@/utils/dutyPatternForm'
 
 const { t } = useI18n()
 const { confirm, showError, toastSuccess } = useSwal()
 
-const weekdays: DutyPatternWeekday[] = [
-  'MONDAY',
-  'TUESDAY',
-  'WEDNESDAY',
-  'THURSDAY',
-  'FRIDAY',
-  'SATURDAY',
-  'SUNDAY',
-]
-const defaultWeekdays: DutyPatternWeekday[] = weekdays.slice(0, 5)
+const weekdays = DUTY_PATTERN_WEEKDAYS
 
 const loading = ref(true)
 const saving = ref(false)
 const response = ref<MyDutyPatternDto | null>(null)
-const selectedWeekdays = ref<DutyPatternWeekday[]>([...defaultWeekdays])
+const selectedWeekdays = ref<DutyPatternWeekday[]>([...DEFAULT_DUTY_PATTERN_WEEKDAYS])
 const holidayOff = ref(true)
 
 const hasPattern = computed(() => response.value?.pattern != null)
@@ -45,11 +42,10 @@ const unavailableReason = computed(() => {
 })
 
 function syncForm(data: MyDutyPatternDto) {
+  const form = createDutyPatternFormState(data)
   response.value = data
-  selectedWeekdays.value = data.pattern
-    ? [...data.pattern.weekdays]
-    : [...defaultWeekdays]
-  holidayOff.value = data.pattern?.holidayOff ?? true
+  selectedWeekdays.value = form.selectedWeekdays
+  holidayOff.value = form.holidayOff
 }
 
 async function loadPattern() {
@@ -66,9 +62,7 @@ async function loadPattern() {
 
 function toggleWeekday(day: DutyPatternWeekday) {
   if (!configurable.value || saving.value) return
-  selectedWeekdays.value = selectedWeekdays.value.includes(day)
-    ? selectedWeekdays.value.filter((item) => item !== day)
-    : weekdays.filter((item) => item === day || selectedWeekdays.value.includes(item))
+  selectedWeekdays.value = toggleDutyPatternWeekday(selectedWeekdays.value, day)
 }
 
 async function savePattern() {

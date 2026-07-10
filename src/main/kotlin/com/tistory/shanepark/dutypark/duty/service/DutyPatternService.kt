@@ -61,6 +61,15 @@ class DutyPatternService(
         if (visibleTypes.size != 1) {
             throw IllegalArgumentException("duty.pattern.singleDutyType.required")
         }
+        val active = patternRepository.findFirstByMemberAndEffectiveUntilExclusiveIsNullOrderByIdDesc(member)
+        if (
+            active != null &&
+            active.team.id == team.id &&
+            active.weekdays == request.weekdays &&
+            active.holidayOff == request.holidayOff
+        ) {
+            return getMine(memberId)
+        }
 
         replaceCurrentPattern(member, today)
         dutyRepository.deleteAllByMemberAndDutyDateGreaterThanEqual(member, today)
@@ -81,8 +90,11 @@ class DutyPatternService(
     fun deleteMine(memberId: Long) {
         val today = today()
         val member = memberRepository.findMemberWithTeamForUpdate(memberId).orElseThrow()
+        val active = patternRepository.findFirstByMemberAndEffectiveUntilExclusiveIsNullOrderByIdDesc(member)
+            ?.takeIf { it.team.id == member.team?.id }
+            ?: return
         dutyRepository.deleteAllByMemberAndDutyDateGreaterThanEqual(member, today)
-        terminateCurrentPattern(member, today)
+        terminatePattern(active, today)
     }
 
     /** Team transfer/removal flows call this before changing member.team. */
@@ -109,6 +121,10 @@ class DutyPatternService(
 
     private fun terminateCurrentPattern(member: Member, today: LocalDate) {
         val active = patternRepository.findFirstByMemberAndEffectiveUntilExclusiveIsNullOrderByIdDesc(member) ?: return
+        terminatePattern(active, today)
+    }
+
+    private fun terminatePattern(active: MemberDutyPattern, today: LocalDate) {
         if (active.effectiveFrom == today) {
             patternRepository.delete(active)
         } else {

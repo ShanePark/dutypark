@@ -46,7 +46,7 @@ interface DutyType {
 interface Props {
   isOpen: boolean
   date: { year: number; month: number; day: number }
-  duty?: { dutyType: string; dutyColor: string; source: DutySource }
+  duty?: { dutyType: string; dutyColor: string; dutyTypeId: number | null; source: DutySource }
   schedules: Schedule[]
   dutyTypes: DutyType[]
   canEdit: boolean
@@ -105,6 +105,12 @@ const inheritSelected = ref(false)
 const patternButtonLabel = computed(() => {
   if (!inheritSelected.value && props.duty?.source !== 'DEFAULT_OFF') return t('duty.common.usePattern')
   return t(dutySourcePatternLabelKey(props.duty?.source))
+})
+const unavailableCurrentDuty = computed(() => {
+  if (!props.duty || props.duty.dutyTypeId === null) return null
+  return props.dutyTypes.some((dutyType) => dutyType.id === props.duty?.dutyTypeId)
+    ? null
+    : props.duty
 })
 
 // Sync selectedDutyType with both the selected date and duty prop.
@@ -426,6 +432,18 @@ function handleUploadError(message: string) {
             <RotateCcw class="w-3.5 h-3.5" />
             {{ patternButtonLabel }}
           </button>
+          <span
+            v-if="unavailableCurrentDuty"
+            class="duty-type-btn duty-type-btn-selected min-h-11 px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5"
+            :title="t('team.manage.labels.hidden')"
+          >
+            <span
+              class="inline-block w-3 h-3 rounded border"
+              :style="{ backgroundColor: unavailableCurrentDuty.dutyColor || 'var(--dp-duty-fallback)', borderColor: 'var(--dp-border-secondary)' }"
+            ></span>
+            {{ unavailableCurrentDuty.dutyType }}
+            <span class="text-dp-text-muted">({{ t('team.manage.labels.hidden') }})</span>
+          </span>
           <button
             v-for="dutyType in dutyTypes"
             :key="dutyType.id ?? 'off'"

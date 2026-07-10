@@ -36,7 +36,8 @@ class DutyTypeServiceTest {
     @Mock
     private lateinit var dutyRepository: DutyRepository
 
-    private val clock = Clock.fixed(Instant.parse("2026-07-11T00:00:00Z"), ZoneOffset.UTC)
+    // UTC is still July 10, but Asia/Seoul is already July 11.
+    private val clock = Clock.fixed(Instant.parse("2026-07-10T16:00:00Z"), ZoneOffset.UTC)
 
     private lateinit var dutyTypeService: DutyTypeService
 
@@ -104,6 +105,50 @@ class DutyTypeServiceTest {
         dutyTypeService.updateVisibility(dutyType.id!!, true)
 
         assertThat(dutyType.hidden).isTrue()
+        verify(dutyRepository).deleteAutomaticByTeamIdAndDutyDateGreaterThanEqual(
+            team.id!!,
+            LocalDate.of(2026, 7, 11),
+        )
+    }
+
+    @Test
+    fun `hiding one of two visible types resumes single-type mode without cleanup`() {
+        val first = dutyType(10L, "first", hidden = false)
+        val second = dutyType(11L, "second", hidden = false)
+        team.dutyTypes.addAll(listOf(first, second))
+        `when`(dutyTypeRepository.findTeamIdById(second.id!!)).thenReturn(team.id!!)
+        `when`(teamRepository.findByIdForUpdate(team.id!!)).thenReturn(Optional.of(team))
+
+        dutyTypeService.updateVisibility(second.id!!, true)
+
+        assertThat(team.dutyTypes.count { !it.hidden }).isEqualTo(1)
+        verifyNoInteractions(dutyRepository)
+    }
+
+    @Test
+    fun `restoring a type from zero to one resumes without cleanup`() {
+        val hidden = dutyType(10L, "hidden", hidden = true)
+        team.dutyTypes.add(hidden)
+        `when`(dutyTypeRepository.findTeamIdById(hidden.id!!)).thenReturn(team.id!!)
+        `when`(teamRepository.findByIdForUpdate(team.id!!)).thenReturn(Optional.of(team))
+
+        dutyTypeService.updateVisibility(hidden.id!!, false)
+
+        assertThat(hidden.hidden).isFalse()
+        verifyNoInteractions(dutyRepository)
+    }
+
+    @Test
+    fun `restoring a hidden type when one is already visible cleans automatic duties`() {
+        val visible = dutyType(10L, "visible", hidden = false)
+        val hidden = dutyType(11L, "hidden", hidden = true)
+        team.dutyTypes.addAll(listOf(visible, hidden))
+        `when`(dutyTypeRepository.findTeamIdById(hidden.id!!)).thenReturn(team.id!!)
+        `when`(teamRepository.findByIdForUpdate(team.id!!)).thenReturn(Optional.of(team))
+
+        dutyTypeService.updateVisibility(hidden.id!!, false)
+
+        assertThat(team.dutyTypes.count { !it.hidden }).isEqualTo(2)
         verify(dutyRepository).deleteAutomaticByTeamIdAndDutyDateGreaterThanEqual(
             team.id!!,
             LocalDate.of(2026, 7, 11),
@@ -198,6 +243,13 @@ class DutyTypeServiceTest {
         // When & Then
         assertThrows<IllegalArgumentException> {
             dutyTypeService.swapDutyTypePosition(1L, 1L)
+        }
+    }
+
+    private fun dutyType(id: Long, name: String, hidden: Boolean): DutyType {
+        return DutyType(name, team.dutyTypes.size, team, "#111111").also {
+            ReflectionTestUtils.setField(it, "id", id)
+            it.hidden = hidden
         }
     }
 

@@ -103,7 +103,7 @@ class DutyService(
             return previewDuties.map { it.toDto(previewTeam) }
         }
 
-        teamRepository.findByIdForUpdate(requireNotNull(previewTeam.id)).orElseThrow()
+        teamRepository.findByIdForShare(requireNotNull(previewTeam.id)).orElseThrow()
         val member = memberRepository.findMemberWithTeamForUpdate(memberId).orElseThrow()
         val team = member.team ?: return emptyList()
         val resolvedDuties = dutyResolver.resolve(member, calendarView.dates)

@@ -172,6 +172,34 @@ class TeamServiceTest {
     }
 
     @Test
+    fun `loadShift keeps a hidden type visible when a resolved historical duty uses it`() {
+        val team = Team("Test Team")
+        ReflectionTestUtils.setField(team, "id", 1L)
+        val member = Member(name = "Alice").also {
+            it.team = team
+            ReflectionTestUtils.setField(it, "id", 1L)
+        }
+        val hiddenType = DutyType("Legacy", 0, team, "#ffb3ba", hidden = true).also {
+            ReflectionTestUtils.setField(it, "id", 10L)
+        }
+        val dutyDate = LocalDate.of(2025, 3, 12)
+        val loginMember = LoginMember(id = 1L, name = "Alice")
+
+        `when`(memberRepository.findById(1L)).thenReturn(Optional.of(member))
+        `when`(memberRepository.findMembersByTeam(team)).thenReturn(listOf(member))
+        `when`(dutyResolver.resolve(listOf(member), dutyDate)).thenReturn(
+            mapOf(1L to ResolvedDuty(dutyDate, hiddenType, DutySource.OVERRIDE))
+        )
+        `when`(dutyTypeRepository.findAllByTeam(team)).thenReturn(listOf(hiddenType))
+
+        val shifts = service.loadShift(loginMember, dutyDate)
+
+        val hiddenShift = shifts.single { it.dutyType.id == hiddenType.id }
+        assertThat(hiddenShift.dutyType.hidden).isTrue()
+        assertThat(hiddenShift.members.map { it.name }).containsExactly("Alice")
+    }
+
+    @Test
     fun `loadShift should include members without duty record in OFF group`() {
         // Given
         val team = Team("Test Team")

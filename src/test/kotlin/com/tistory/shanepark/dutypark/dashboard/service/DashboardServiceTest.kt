@@ -96,8 +96,34 @@ class DashboardServiceTest {
 
         assertThat(result.duty?.dutyType).isEqualTo(team.defaultDutyName)
         assertThat(result.duty?.isOff).isTrue
+        assertThat(result.duty?.source).isEqualTo(DutySource.DEFAULT_OFF)
         assertThat(result.schedules).hasSize(2)
         assertThat(result.schedules.count { it.isTagged }).isEqualTo(1)
+    }
+
+    @Test
+    fun `my preserves paused pattern source while presenting the team off label`() {
+        val team = Team("team")
+        val member = memberWithId(1L, team)
+        val loginMember = LoginMember(id = 1L, name = "user")
+        whenever(memberRepository.findMemberWithTeam(1L)).thenReturn(Optional.of(member))
+        whenever(friendService.availableScheduleVisibilities(eq(loginMember), eq(member))).thenReturn(
+            setOf(Visibility.FRIENDS)
+        )
+        whenever(scheduleRepository.findSchedulesOfMemberRangeIn(eq(member), any(), any(), any()))
+            .thenReturn(emptyList())
+        whenever(scheduleRepository.findTaggedSchedulesOfRange(eq(member), any(), any(), any()))
+            .thenReturn(emptyList())
+        whenever(dutyResolver.resolve(eq(member), any<LocalDate>())).thenAnswer {
+            ResolvedDuty(it.getArgument(1), null, DutySource.PATTERN_PAUSED)
+        }
+        whenever(memberDtoAssembler.toDto(member)).thenReturn(memberDtoOf(member))
+
+        val result = dashboardService.my(loginMember)
+
+        assertThat(result.duty?.dutyType).isEqualTo(team.defaultDutyName)
+        assertThat(result.duty?.isOff).isTrue
+        assertThat(result.duty?.source).isEqualTo(DutySource.PATTERN_PAUSED)
     }
 
     @Test

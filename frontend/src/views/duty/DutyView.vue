@@ -6,6 +6,7 @@ import Swal from 'sweetalert2'
 import { useSwal } from '@/composables/useSwal'
 import { isLightColor } from '@/utils/color'
 import { resolveApiCodeMessage, resolveApiErrorMessage } from '@/utils/resolveApiError'
+import { buildDutyTypeCounts } from '@/utils/dutyTypeCounts'
 import { Loader2 } from 'lucide-vue-next'
 
 // Modal Components
@@ -388,25 +389,12 @@ const rawDuties = ref<DutyCalendarDay[]>([])
 
 // Computed duty types with count - reactive to both dutyTypes and rawDuties
 const dutyTypesWithCount = computed<DutyTypeWithCount[]>(() => {
-  if (dutyTypes.value.length === 0) return []
-
-  const daysInMonth = new Date(currentYear.value, currentMonth.value, 0).getDate()
-  let offCount = daysInMonth
-
-  const counts = new Map<string, number>()
-  rawDuties.value
-    .filter((d) => d.month === currentMonth.value)
-    .forEach((duty) => {
-      if (duty.dutyType) {
-        counts.set(duty.dutyType, (counts.get(duty.dutyType) || 0) + 1)
-        offCount--
-      }
-    })
-
-  return dutyTypes.value.map((dt) => ({
-    ...dt,
-    cnt: dt.id === null ? offCount : (counts.get(dt.name) || 0),
-  }))
+  return buildDutyTypeCounts(
+    dutyTypes.value,
+    rawDuties.value,
+    currentYear.value,
+    currentMonth.value,
+  )
 })
 
 const dDays = ref<LocalDDay[]>([])
@@ -567,6 +555,7 @@ async function loadDuties() {
       currentYear.value,
       currentMonth.value
     )
+    loadError.value = null
   } catch (error) {
     console.error('Failed to load duties:', error)
     loadError.value = t('duty.view.loadDutiesFailed')

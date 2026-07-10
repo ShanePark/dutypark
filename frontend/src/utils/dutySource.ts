@@ -1,7 +1,7 @@
 import type { DutySource } from '@/types'
 
 export function isInheritedDutySource(source: DutySource | null | undefined): boolean {
-  return source === 'PATTERN' || source === 'PATTERN_PAUSED'
+  return source === 'PATTERN' || source === 'PATTERN_PAUSED' || source === 'DEFAULT_OFF'
 }
 
 export function dutySourcePatternLabelKey(source: DutySource | null | undefined): string {

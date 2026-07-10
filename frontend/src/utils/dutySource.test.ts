@@ -10,10 +10,12 @@ describe('duty source presentation', () => {
     expect(dutySourcePatternLabelKey(null)).toBe('duty.common.usePattern')
   })
 
-  it('only treats calculated pattern sources as inherited', () => {
+  it('treats every non-manual default result as inherited', () => {
     expect(isInheritedDutySource('PATTERN')).toBe(true)
     expect(isInheritedDutySource('PATTERN_PAUSED')).toBe(true)
-    expect(isInheritedDutySource('DEFAULT_OFF')).toBe(false)
+    expect(isInheritedDutySource('DEFAULT_OFF')).toBe(true)
     expect(isInheritedDutySource('OVERRIDE')).toBe(false)
+    expect(isInheritedDutySource(null)).toBe(false)
+    expect(isInheritedDutySource(undefined)).toBe(false)
   })
 })

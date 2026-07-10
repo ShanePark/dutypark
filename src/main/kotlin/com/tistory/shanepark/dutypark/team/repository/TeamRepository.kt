@@ -14,6 +14,11 @@ import java.util.*
 
 interface TeamRepository : JpaRepository<Team, Long> {
 
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @QueryHints(QueryHint(name = "jakarta.persistence.lock.timeout", value = "5000"))
+    @Query("select t from Team t where t.id = :teamId")
+    fun findByIdForShare(teamId: Long): Optional<Team>
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints(QueryHint(name = "jakarta.persistence.lock.timeout", value = "5000"))
     @Query("select t from Team t where t.id = :teamId")

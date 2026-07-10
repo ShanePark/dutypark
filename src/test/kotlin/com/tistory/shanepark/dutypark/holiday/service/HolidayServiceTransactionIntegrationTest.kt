@@ -8,7 +8,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.whenever
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.TestConfiguration
@@ -19,6 +22,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.context.TestPropertySource
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @SpringBootTest
 @Import(HolidayServiceTransactionIntegrationTest.Config::class)
@@ -69,11 +75,64 @@ class HolidayServiceTransactionIntegrationTest {
         assertThat(persisted.single().isHoliday).isTrue()
     }
 
+    @Test
+    fun `rolled back API load is evicted from memory and retried on the next lookup`() {
+        val date = LocalDate.of(2042, 10, 3)
+        val calendarView = CalendarView(2042, 10)
+        whenever(holidayAPI.requestHolidays(2042)).thenReturn(
+            listOf(HolidayDto("개천절", true, date))
+        )
+
+        assertThrows<IllegalStateException> {
+            transactionalLookup.findThenRollback(calendarView)
+        }
+        assertThat(holidayRepository.findAllByLocalDateBetween(date, date)).isEmpty()
+
+        transactionalLookup.find(calendarView)
+
+        assertThat(holidayRepository.findAllByLocalDateBetween(date, date)).hasSize(1)
+        verify(holidayAPI, times(2)).requestHolidays(2042)
+    }
+
+    @Test
+    fun `concurrent first lookups with a single connection pool load and persist a year once`() {
+        val date = LocalDate.of(2043, 5, 5)
+        val calendarView = CalendarView(2043, 5)
+        whenever(holidayAPI.requestHolidays(2043)).thenReturn(
+            listOf(HolidayDto("어린이날", true, date))
+        )
+        val start = CountDownLatch(1)
+        val executor = Executors.newFixedThreadPool(2)
+        val futures = List(2) {
+            executor.submit {
+                start.await()
+                transactionalLookup.find(calendarView)
+            }
+        }
+        try {
+            start.countDown()
+            futures.forEach { it.get(5, TimeUnit.SECONDS) }
+        } finally {
+            futures.filterNot { it.isDone }.forEach { it.cancel(true) }
+            executor.shutdownNow()
+            executor.awaitTermination(5, TimeUnit.SECONDS)
+        }
+
+        assertThat(holidayRepository.findAllByLocalDateBetween(date, date)).hasSize(1)
+        verify(holidayAPI).requestHolidays(2043)
+    }
+
     open class TransactionalLookup(
         private val holidayService: HolidayService,
     ) {
         @Transactional
         open fun find(calendarView: CalendarView) = holidayService.findHolidays(calendarView)
+
+        @Transactional
+        open fun findThenRollback(calendarView: CalendarView) {
+            holidayService.findHolidays(calendarView)
+            throw IllegalStateException("force rollback")
+        }
     }
 
     @TestConfiguration

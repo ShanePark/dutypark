@@ -102,7 +102,7 @@ function toggleBatchEdit() {
 
       <!-- Normal mode: Duty type badges with counts -->
       <template v-else-if="dutyTypesWithCount.length > 0">
-        <div v-for="dutyType in dutyTypesWithCount" :key="dutyType.name" class="flex items-center gap-1">
+        <div v-for="dutyType in dutyTypesWithCount" :key="dutyType.id ?? 'off'" class="flex items-center gap-1">
           <span
             class="w-4 h-4 rounded border-2"
             :style="{ backgroundColor: dutyType.color || 'var(--dp-duty-fallback)', borderColor: 'var(--dp-border-primary)' }"
