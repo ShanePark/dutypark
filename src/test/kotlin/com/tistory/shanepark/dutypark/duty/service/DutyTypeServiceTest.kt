@@ -76,10 +76,7 @@ class DutyTypeServiceTest {
         dutyTypeService.addDutyType(DutyTypeCreateDto(team.id!!, "second", "#222222"))
 
         assertThat(team.dutyTypes.count { !it.hidden }).isEqualTo(2)
-        verify(dutyRepository).deleteAutomaticByTeamIdAndDutyDateGreaterThanEqual(
-            team.id!!,
-            LocalDate.of(2026, 7, 11),
-        )
+        verifyNoInteractions(dutyRepository)
     }
 
     @Test
@@ -105,14 +102,14 @@ class DutyTypeServiceTest {
         dutyTypeService.updateVisibility(dutyType.id!!, true)
 
         assertThat(dutyType.hidden).isTrue()
-        verify(dutyRepository).deleteAutomaticByTeamIdAndDutyDateGreaterThanEqual(
-            team.id!!,
+        verify(dutyRepository).deleteAutomaticByDutyTypeAndDutyDateGreaterThanEqual(
+            dutyType,
             LocalDate.of(2026, 7, 11),
         )
     }
 
     @Test
-    fun `hiding one of two visible types resumes single-type mode without cleanup`() {
+    fun `hiding one of two visible types cleans only that type's automatic duties`() {
         val first = dutyType(10L, "first", hidden = false)
         val second = dutyType(11L, "second", hidden = false)
         team.dutyTypes.addAll(listOf(first, second))
@@ -122,7 +119,10 @@ class DutyTypeServiceTest {
         dutyTypeService.updateVisibility(second.id!!, true)
 
         assertThat(team.dutyTypes.count { !it.hidden }).isEqualTo(1)
-        verifyNoInteractions(dutyRepository)
+        verify(dutyRepository).deleteAutomaticByDutyTypeAndDutyDateGreaterThanEqual(
+            second,
+            LocalDate.of(2026, 7, 11),
+        )
     }
 
     @Test
@@ -139,7 +139,7 @@ class DutyTypeServiceTest {
     }
 
     @Test
-    fun `restoring a hidden type when one is already visible cleans automatic duties`() {
+    fun `restoring a hidden type when one is already visible does not clean duties`() {
         val visible = dutyType(10L, "visible", hidden = false)
         val hidden = dutyType(11L, "hidden", hidden = true)
         team.dutyTypes.addAll(listOf(visible, hidden))
@@ -149,10 +149,7 @@ class DutyTypeServiceTest {
         dutyTypeService.updateVisibility(hidden.id!!, false)
 
         assertThat(team.dutyTypes.count { !it.hidden }).isEqualTo(2)
-        verify(dutyRepository).deleteAutomaticByTeamIdAndDutyDateGreaterThanEqual(
-            team.id!!,
-            LocalDate.of(2026, 7, 11),
-        )
+        verifyNoInteractions(dutyRepository)
     }
 
     @Test

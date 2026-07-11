@@ -1,7 +1,6 @@
 package com.tistory.shanepark.dutypark.duty.controller
 
 import com.tistory.shanepark.dutypark.RestDocsTest
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
@@ -15,21 +14,15 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 class DutyPatternControllerTest : RestDocsTest() {
 
-    @BeforeEach
-    fun leaveSingleVisibleDutyType() {
-        TestData.dutyTypes.drop(1).forEach {
-            it.hidden = true
-            dutyTypeRepository.save(it)
-        }
-        em.flush()
-        em.clear()
-    }
-
     @Test
     fun `create and get my duty pattern`() {
         val request = """
             {
-              "weekdays": ["FRIDAY", "SATURDAY", "SUNDAY"],
+              "days": [
+                { "weekday": "FRIDAY", "dutyTypeId": ${TestData.dutyTypes[0].id} },
+                { "weekday": "SATURDAY", "dutyTypeId": ${TestData.dutyTypes[1].id} },
+                { "weekday": "SUNDAY", "dutyTypeId": ${TestData.dutyTypes[1].id} }
+              ],
               "holidayOff": true
             }
         """.trimIndent()
@@ -42,12 +35,17 @@ class DutyPatternControllerTest : RestDocsTest() {
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.configurable").value(true))
-            .andExpect(jsonPath("$.pattern.weekdays.length()").value(3))
+            .andExpect(jsonPath("$.dutyTypes.length()").value(TestData.dutyTypes.size))
+            .andExpect(jsonPath("$.pattern.days.length()").value(3))
+            .andExpect(jsonPath("$.pattern.days[0].dutyType.id").value(TestData.dutyTypes[0].id))
+            .andExpect(jsonPath("$.pattern.days[1].dutyType.id").value(TestData.dutyTypes[1].id))
             .andDo(
                 document(
                     "duty-pattern/update-mine",
                     requestFields(
-                        fieldWithPath("weekdays").description("Working weekdays"),
+                        fieldWithPath("days").description("Weekday-specific duty type assignments"),
+                        fieldWithPath("days[].weekday").description("Working weekday"),
+                        fieldWithPath("days[].dutyTypeId").description("Visible duty type selected for the weekday"),
                         fieldWithPath("holidayOff").description("Whether public holidays are off"),
                     ),
                     patternResponseFields(),
@@ -82,7 +80,7 @@ class DutyPatternControllerTest : RestDocsTest() {
         mockMvc.perform(
             RestDocumentationRequestBuilders.put("/api/duty/pattern/me")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"weekdays":["MONDAY"],"holidayOff":true}""")
+                .content("""{"days":[{"weekday":"MONDAY","dutyTypeId":${TestData.dutyTypes[0].id}}],"holidayOff":true}""")
         )
             .andExpect(status().isUnauthorized)
 
@@ -105,7 +103,7 @@ class DutyPatternControllerTest : RestDocsTest() {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.configurable").value(false))
             .andExpect(jsonPath("$.reason").value("TEAM_REQUIRED"))
-            .andExpect(jsonPath("$.dutyType").doesNotExist())
+            .andExpect(jsonPath("$.dutyTypes").isEmpty)
             .andExpect(jsonPath("$.pattern").doesNotExist())
     }
 
@@ -128,27 +126,15 @@ class DutyPatternControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `get reports that automatic application is paused while preserving the pattern`() {
-        mockMvc.perform(
-            RestDocumentationRequestBuilders.put("/api/duty/pattern/me")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"weekdays":["MONDAY"],"holidayOff":true}""")
-                .withAuth(TestData.member)
-        ).andExpect(status().isOk)
-
-        TestData.dutyTypes[1].hidden = false
-        dutyTypeRepository.save(TestData.dutyTypes[1])
-        em.flush()
-        em.clear()
-
+    fun `multiple visible duty types remain configurable`() {
         mockMvc.perform(
             RestDocumentationRequestBuilders.get("/api/duty/pattern/me")
                 .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.configurable").value(false))
-            .andExpect(jsonPath("$.reason").value("SINGLE_DUTY_TYPE_REQUIRED"))
-            .andExpect(jsonPath("$.pattern.weekdays[0]").value("MONDAY"))
+            .andExpect(jsonPath("$.configurable").value(true))
+            .andExpect(jsonPath("$.reason").doesNotExist())
+            .andExpect(jsonPath("$.dutyTypes.length()").value(TestData.dutyTypes.size))
     }
 
     @Test
@@ -156,33 +142,59 @@ class DutyPatternControllerTest : RestDocsTest() {
         mockMvc.perform(
             RestDocumentationRequestBuilders.put("/api/duty/pattern/me")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"weekdays":[],"holidayOff":true}""")
+                .content("""{"days":[],"holidayOff":true}""")
                 .withAuth(TestData.member)
         )
             .andExpect(status().isBadRequest)
     }
 
     @Test
-    fun `update rejects a request when visible duty types are not single`() {
-        TestData.dutyTypes[1].hidden = false
-        dutyTypeRepository.save(TestData.dutyTypes[1])
+    fun `update rejects duplicate weekdays`() {
+        val dutyTypeId = TestData.dutyTypes[0].id
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/duty/pattern/me")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"days":[{"weekday":"MONDAY","dutyTypeId":$dutyTypeId},{"weekday":"MONDAY","dutyTypeId":$dutyTypeId}],"holidayOff":true}""")
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("duty.pattern.weekdays.duplicate"))
+    }
+
+    @Test
+    fun `update rejects a weekday without a duty type`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/duty/pattern/me")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"days":[{"weekday":"MONDAY","dutyTypeId":null}],"holidayOff":true}""")
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+    }
+
+    @Test
+    fun `update rejects a hidden duty type`() {
+        val hidden = TestData.dutyTypes[0]
+        hidden.hidden = true
+        dutyTypeRepository.save(hidden)
         em.flush()
         em.clear()
 
         mockMvc.perform(
             RestDocumentationRequestBuilders.put("/api/duty/pattern/me")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"weekdays":["MONDAY"],"holidayOff":true}""")
+                .content("""{"days":[{"weekday":"MONDAY","dutyTypeId":${hidden.id}}],"holidayOff":true}""")
                 .withAuth(TestData.member)
         )
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.code").value("duty.pattern.singleDutyType.required"))
+            .andExpect(jsonPath("$.code").value("duty.pattern.dutyType.invalid"))
     }
 
     private fun patternResponseFields() = responseFields(
         fieldWithPath("configurable").description("Whether the saved pattern can currently be edited and automatically applied"),
         fieldWithPath("reason").optional().description("Reason pattern editing is unavailable"),
-        subsectionWithPath("dutyType").optional().description("The team's single visible duty type"),
+        subsectionWithPath("dutyTypes").description("Visible team duty types available for weekday assignment"),
         subsectionWithPath("pattern").optional().description("Current personal weekly pattern"),
     )
 }

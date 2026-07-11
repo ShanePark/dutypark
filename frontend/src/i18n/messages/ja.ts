@@ -169,6 +169,11 @@ const apiErrors = {
     edit: {
       forbidden: 'この勤務を編集する権限がありません。',
     },
+    pattern: {
+      team: { required: '基本勤務パターンを設定するには、チームに所属する必要があります。' },
+      weekdays: { required: '勤務曜日を1つ以上選択してください。', duplicate: '同じ曜日を重複して設定することはできません。' },
+      dutyType: { invalid: '選択した勤務タイプは使用できません。チーム設定を確認してください。' },
+    },
   },
   dutyBatch: {
     unknown: '勤務表のアップロードに失敗しました。',
@@ -839,8 +844,8 @@ export default {
     ...en.member,
     title: 'マイアカウント',
     dutyPattern: {
-      sectionTitle: '基本勤務パターン', description: 'カレンダーを開くと、未登録の日付が繰り返し曜日に従って自動登録されます。パターンの変更・解除時は、手動入力を含む本日以降の勤務がすべて初期化されます。', dutyType: '適用する勤務タイプ', automatic: 'チーム設定から自動選択', noDutyType: '自動適用する勤務タイプを1つに決定できません。', weekdaysLabel: '勤務曜日', holidayOff: '祝日は休む', holidayOffHint: '選択した勤務曜日が祝日の場合は休みになります。', effectiveFrom: '{month}から適用',
-      weekdays: { monday: '月', tuesday: '火', wednesday: '水', thursday: '木', friday: '金', saturday: '土', sunday: '日' }, unavailable: { title: '現在パターンを設定できません。', team: 'チームに所属しているメンバーのみ基本勤務パターンを設定できます。', none: '表示中の勤務タイプを1つ登録してください。', multiple: '表示中の勤務タイプが1つの場合のみ利用できます。', default: 'チームの勤務タイプ設定を確認してください。' }, paused: { title: '自動適用は一時停止中です。', description: '曜日設定は保持されます。表示中の勤務タイプが1つになると自動的に再開します。' }, actions: { save: 'パターンを保存', update: 'パターンを変更', delete: 'パターンを解除' }, validation: { weekdayRequired: '勤務曜日を1つ以上選択してください。' }, messages: { loadFailed: '基本勤務パターンを読み込めませんでした。', saveConfirm: '保存すると本日以降のすべての勤務が削除され、新しい曜日で再登録されます。続行しますか？', saveSuccess: '基本勤務パターンを保存しました。', saveFailed: '基本勤務パターンを保存できませんでした。', deleteConfirm: '本日から基本勤務パターンを解除しますか？本日以降の手動入力勤務も削除されます。', deleteSuccess: '基本勤務パターンを解除しました。', deleteFailed: '基本勤務パターンを解除できませんでした。' },
+      sectionTitle: '基本勤務パターン', description: 'カレンダーを開くと、未登録の日付が繰り返し曜日に従って自動登録されます。パターンの変更・解除時は、手動入力を含む本日以降の勤務がすべて初期化されます。', dutyType: '適用する勤務タイプ', dutyTypeByDay: '曜日別の勤務タイプ', automatic: '曜日ごとに選択', noDutyType: '選択できる勤務タイプがありません。', weekdaysLabel: '勤務曜日', holidayOff: '祝日は休む', holidayOffHint: '選択した勤務曜日が祝日の場合は休みになります。', effectiveFrom: '{month}から適用',
+      weekdays: { monday: '月', tuesday: '火', wednesday: '水', thursday: '木', friday: '金', saturday: '土', sunday: '日' }, unavailable: { title: '現在パターンを設定できません。', team: 'チームに所属しているメンバーのみ基本勤務パターンを設定できます。', none: '表示中の勤務タイプを1つ以上登録してください。', multiple: '曜日ごとに勤務タイプを選択できます。', default: 'チームの勤務タイプ設定を確認してください。' }, paused: { title: '一部の曜日は自動適用が停止中です。', description: '非表示の勤務タイプを設定した曜日は、別のタイプを選択するかタイプを復元するまで停止します。' }, actions: { save: 'パターンを保存', update: 'パターンを変更', delete: 'パターンを解除' }, validation: { weekdayRequired: '勤務曜日を1つ以上選択してください。', dutyTypeRequired: 'すべての勤務曜日に表示中の勤務タイプを選択してください。' }, messages: { loadFailed: '基本勤務パターンを読み込めませんでした。', saveConfirm: '保存すると本日以降のすべての勤務が削除され、新しい曜日で再登録されます。続行しますか？', saveSuccess: '基本勤務パターンを保存しました。', saveFailed: '基本勤務パターンを保存できませんでした。', deleteConfirm: '本日から基本勤務パターンを解除しますか？本日以降の手動入力勤務も削除されます。', deleteSuccess: '基本勤務パターンを解除しました。', deleteFailed: '基本勤務パターンを解除できませんでした。' },
     },
     profile: {
       sectionTitle: 'プロフィール',

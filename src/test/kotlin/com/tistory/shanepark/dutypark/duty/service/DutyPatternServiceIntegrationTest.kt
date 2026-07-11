@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.duty.service
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyPatternUpdateDto
+import com.tistory.shanepark.dutypark.duty.domain.dto.DutyPatternDayUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutySource
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeCreateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
@@ -16,6 +17,7 @@ import com.tistory.shanepark.dutypark.holiday.repository.HolidayRepository
 import com.tistory.shanepark.dutypark.holiday.service.HolidayService
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import java.time.Clock
@@ -222,8 +224,7 @@ class DutyPatternServiceIntegrationTest : DutyparkIntegrationTest() {
         val oldPattern = MemberDutyPattern(
             member = member,
             team = member.team!!,
-            dutyType = dutyType,
-            weekdays = mutableSetOf(today.minusDays(1).dayOfWeek),
+            dayTypes = mapOf(today.minusDays(1).dayOfWeek to dutyType),
             holidayOff = false,
             effectiveFrom = today.minusMonths(2),
         )
@@ -254,7 +255,7 @@ class DutyPatternServiceIntegrationTest : DutyparkIntegrationTest() {
 
         val patterns = patternRepository.findAllByMemberOrderByEffectiveFromDescIdDesc(member)
         assertThat(patterns).hasSize(1)
-        assertThat(patterns.single().weekdays).containsExactly(FRIDAY)
+        assertThat(patterns.single().days.map { it.weekday }).containsExactly(FRIDAY)
         assertThat(patterns.single().holidayOff).isTrue()
         assertThat(patterns.single().effectiveFrom).isEqualTo(today())
     }
@@ -372,7 +373,7 @@ class DutyPatternServiceIntegrationTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `multiple duty types pause materialization and remove only automatic future duties`() {
+    fun `adding another duty type does not pause or remove an existing pattern`() {
         val (member, originalType) = moveMemberToSingleDutyTypeTeam()
         val team = member.team!!
         val futureMonth = YearMonth.from(today()).plusMonths(1)
@@ -386,7 +387,7 @@ class DutyPatternServiceIntegrationTest : DutyparkIntegrationTest() {
         val added = dutyTypeService.addDutyType(DutyTypeCreateDto(team.id!!, "추가", "#654321"))
         dutyTypeRepository.saveAndFlush(added)
 
-        val pausedResult = dutyService.getDuties(
+        val result = dutyService.getDuties(
             member.id!!,
             futureMonth.year,
             futureMonth.monthValue,
@@ -394,23 +395,22 @@ class DutyPatternServiceIntegrationTest : DutyparkIntegrationTest() {
         )
 
         assertThat(dutyRepository.findByMemberAndDutyDate(member, manualDate)?.manualOverride).isTrue()
-        assertThat(
-            dutyRepository.findAllByMemberAndDutyDateBetween(member, today(), futureMonth.atEndOfMonth())
-                .filter { !it.manualOverride }
-        ).isEmpty()
+        assertThat(dutyRepository.findAllByMemberAndDutyDateBetween(member, today(), futureMonth.atEndOfMonth()))
+            .anyMatch { !it.manualOverride }
         val missingMonday = daysOf(futureMonth).first { it.dayOfWeek == MONDAY && it != manualDate }
-        assertThat(dutyResolver.resolve(member, missingMonday).source).isEqualTo(DutySource.PATTERN_PAUSED)
-        assertThat(pausedResult.single {
+        assertThat(dutyResolver.resolve(member, missingMonday).source).isEqualTo(DutySource.PATTERN)
+        assertThat(result.single {
             it.year == manualDate.year && it.month == manualDate.monthValue && it.day == manualDate.dayOfMonth
         }.source).isEqualTo(DutySource.OVERRIDE)
-        assertThat(pausedResult.single {
+        assertThat(result.single {
             it.year == missingMonday.year && it.month == missingMonday.monthValue && it.day == missingMonday.dayOfMonth
-        }.source).isEqualTo(DutySource.PATTERN_PAUSED)
+        }.source).isEqualTo(DutySource.PATTERN)
+        assertThat(dutyPatternService.getMine(member.id!!).configurable).isTrue()
         assertThat(dutyPatternService.getMine(member.id!!).pattern).isNotNull()
     }
 
     @Test
-    fun `pattern resumes with the remaining single type and materializes missing dates`() {
+    fun `hiding a selected type pauses its weekdays until the pattern selects a visible type`() {
         val (member, originalType) = moveMemberToSingleDutyTypeTeam()
         val team = member.team!!
         val futureMonth = YearMonth.from(today()).plusMonths(1)
@@ -419,13 +419,126 @@ class DutyPatternServiceIntegrationTest : DutyparkIntegrationTest() {
         dutyTypeRepository.saveAndFlush(replacement)
         dutyTypeService.updateVisibility(originalType.id!!, true)
 
+        val monday = daysOf(futureMonth).first { it.dayOfWeek == MONDAY }
+        assertThat(dutyResolver.resolve(member, monday).source).isEqualTo(DutySource.PATTERN_PAUSED)
+        assertThat(dutyPatternService.getMine(member.id!!).configurable).isTrue()
+
+        dutyPatternService.updateMine(
+            member.id!!,
+            DutyPatternUpdateDto(listOf(DutyPatternDayUpdateDto(MONDAY, replacement.id)), false),
+        )
         dutyService.getDuties(member.id!!, futureMonth.year, futureMonth.monthValue, loginMember(member))
 
-        val monday = daysOf(futureMonth).first { it.dayOfWeek == MONDAY }
         val generated = dutyRepository.findByMemberAndDutyDate(member, monday)
         assertThat(generated?.manualOverride).isFalse()
         assertThat(generated?.dutyType?.id).isEqualTo(replacement.id)
-        assertThat(dutyPatternService.getMine(member.id!!).pattern?.weekdays).containsExactly(MONDAY)
+        assertThat(dutyPatternService.getMine(member.id!!).pattern?.days?.map { it.weekday }).containsExactly(MONDAY)
+    }
+
+    @Test
+    fun `different weekdays materialize their individually selected duty types`() {
+        val (member, dayType) = moveMemberToSingleDutyTypeTeam()
+        val team = member.team!!
+        val nightType = dutyTypeService.addDutyType(DutyTypeCreateDto(team.id!!, "야간", "#654321"))
+        dutyTypeRepository.saveAndFlush(nightType)
+        val targetMonth = YearMonth.from(today()).plusMonths(1)
+        dutyPatternService.updateMine(
+            member.id!!,
+            DutyPatternUpdateDto(
+                listOf(
+                    DutyPatternDayUpdateDto(MONDAY, dayType.id),
+                    DutyPatternDayUpdateDto(FRIDAY, nightType.id),
+                    DutyPatternDayUpdateDto(SUNDAY, nightType.id),
+                ),
+                false,
+            ),
+        )
+
+        dutyService.getDuties(member.id!!, targetMonth.year, targetMonth.monthValue, loginMember(member))
+
+        val monday = daysOf(targetMonth).first { it.dayOfWeek == MONDAY }
+        val friday = daysOf(targetMonth).first { it.dayOfWeek == FRIDAY }
+        val sunday = daysOf(targetMonth).first { it.dayOfWeek == SUNDAY }
+        val wednesday = daysOf(targetMonth).first { it.dayOfWeek == WEDNESDAY }
+        assertThat(dutyRepository.findByMemberAndDutyDate(member, monday)?.dutyType?.id).isEqualTo(dayType.id)
+        assertThat(dutyRepository.findByMemberAndDutyDate(member, friday)?.dutyType?.id).isEqualTo(nightType.id)
+        assertThat(dutyRepository.findByMemberAndDutyDate(member, sunday)?.dutyType?.id).isEqualTo(nightType.id)
+        assertThat(dutyRepository.findByMemberAndDutyDate(member, wednesday)?.dutyType).isNull()
+    }
+
+    @Test
+    fun `changing only a weekday duty type replaces future duties and manual overrides`() {
+        val (member, dayType) = moveMemberToSingleDutyTypeTeam()
+        val team = member.team!!
+        val nightType = dutyTypeService.addDutyType(DutyTypeCreateDto(team.id!!, "야간", "#654321"))
+        dutyTypeRepository.saveAndFlush(nightType)
+        val targetMonth = YearMonth.from(today()).plusMonths(1)
+        val monday = daysOf(targetMonth).first { it.dayOfWeek == MONDAY }
+        dutyPatternService.updateMine(
+            member.id!!,
+            DutyPatternUpdateDto(listOf(DutyPatternDayUpdateDto(MONDAY, dayType.id)), false),
+        )
+        dutyService.update(DutyUpdateDto(monday.year, monday.monthValue, monday.dayOfMonth, dayType.id, member.id!!))
+
+        dutyPatternService.updateMine(
+            member.id!!,
+            DutyPatternUpdateDto(listOf(DutyPatternDayUpdateDto(MONDAY, nightType.id)), false),
+        )
+
+        assertThat(dutyRepository.findByMemberAndDutyDate(member, monday)).isNull()
+        dutyService.getDuties(member.id!!, targetMonth.year, targetMonth.monthValue, loginMember(member))
+        assertThat(dutyRepository.findByMemberAndDutyDate(member, monday)?.dutyType?.id).isEqualTo(nightType.id)
+        assertThat(dutyRepository.findByMemberAndDutyDate(member, monday)?.manualOverride).isFalse()
+    }
+
+    @Test
+    fun `pattern rejects a duty type owned by another team`() {
+        val (member, _) = moveMemberToSingleDutyTypeTeam()
+        val otherTeam = teamRepository.save(Team("other-${System.nanoTime().toString().takeLast(12)}"))
+        val otherType = dutyTypeRepository.saveAndFlush(otherTeam.addDutyType("외부", "#abcdef"))
+
+        assertThatThrownBy {
+            dutyPatternService.updateMine(
+                member.id!!,
+                DutyPatternUpdateDto(listOf(DutyPatternDayUpdateDto(MONDAY, otherType.id)), false),
+            )
+        }
+            .isInstanceOf(IllegalArgumentException::class.java)
+            .hasMessage("duty.pattern.dutyType.invalid")
+    }
+
+    @Test
+    fun `hiding one selected type pauses only weekdays assigned to that type`() {
+        val (member, dayType) = moveMemberToSingleDutyTypeTeam()
+        val team = member.team!!
+        val nightType = dutyTypeService.addDutyType(DutyTypeCreateDto(team.id!!, "야간", "#654321"))
+        dutyTypeRepository.saveAndFlush(nightType)
+        val targetMonth = YearMonth.from(today()).plusMonths(1)
+        dutyPatternService.updateMine(
+            member.id!!,
+            DutyPatternUpdateDto(
+                listOf(
+                    DutyPatternDayUpdateDto(MONDAY, dayType.id),
+                    DutyPatternDayUpdateDto(FRIDAY, nightType.id),
+                ),
+                false,
+            ),
+        )
+        dutyService.getDuties(member.id!!, targetMonth.year, targetMonth.monthValue, loginMember(member))
+
+        dutyTypeService.updateVisibility(nightType.id!!, true)
+
+        val monday = daysOf(targetMonth).first { it.dayOfWeek == MONDAY }
+        val friday = daysOf(targetMonth).first { it.dayOfWeek == FRIDAY }
+        assertThat(dutyResolver.resolve(member, monday).dutyType?.id).isEqualTo(dayType.id)
+        assertThat(dutyResolver.resolve(member, monday).source).isEqualTo(DutySource.PATTERN)
+        assertThat(dutyResolver.resolve(member, friday).dutyType).isNull()
+        assertThat(dutyResolver.resolve(member, friday).source).isEqualTo(DutySource.PATTERN_PAUSED)
+        assertThat(dutyRepository.findByMemberAndDutyDate(member, friday)).isNull()
+        val response = dutyPatternService.getMine(member.id!!)
+        assertThat(response.configurable).isTrue()
+        assertThat(response.dutyTypes.map { it.id }).contains(dayType.id).doesNotContain(nightType.id)
+        assertThat(response.pattern?.days?.single { it.weekday == FRIDAY }?.dutyType?.id).isEqualTo(nightType.id)
     }
 
     @Test
@@ -576,8 +689,7 @@ class DutyPatternServiceIntegrationTest : DutyparkIntegrationTest() {
         val oldPattern = MemberDutyPattern(
             member = member,
             team = oldTeam,
-            dutyType = oldDutyType,
-            weekdays = mutableSetOf(MONDAY),
+            dayTypes = mapOf(MONDAY to oldDutyType),
             holidayOff = false,
             effectiveFrom = pastMonth.atDay(1),
         ).also { it.closeAt(today()) }
@@ -605,8 +717,7 @@ class DutyPatternServiceIntegrationTest : DutyparkIntegrationTest() {
         val oldPattern = MemberDutyPattern(
             member = member,
             team = team,
-            dutyType = oldDutyType,
-            weekdays = mutableSetOf(MONDAY),
+            dayTypes = mapOf(MONDAY to oldDutyType),
             holidayOff = false,
             effectiveFrom = pastMonth.atDay(1),
         ).also { it.closeAt(today()) }

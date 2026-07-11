@@ -168,6 +168,11 @@ const apiErrors = {
     edit: {
       forbidden: 'You do not have permission to edit this duty.',
     },
+    pattern: {
+      team: { required: 'You must belong to a team to configure a default duty pattern.' },
+      weekdays: { required: 'Select at least one workday.', duplicate: 'The same weekday cannot be configured twice.' },
+      dutyType: { invalid: 'The selected duty type is unavailable. Check the team settings.' },
+    },
   },
   dutyBatch: {
     unknown: 'Failed to upload the duty schedule.',
@@ -773,11 +778,11 @@ export default {
     title: 'My Account',
     dutyPattern: {
       sectionTitle: 'Default work pattern', description: 'Opening the calendar automatically saves missing dates from your recurring weekdays. Changing or disabling the pattern resets every duty from today, including manual entries.',
-      dutyType: 'Duty type', automatic: 'Selected from team settings', noDutyType: 'A single duty type cannot be selected for automatic application.', weekdaysLabel: 'Workdays', holidayOff: 'Take public holidays off', holidayOffHint: 'Selected workdays become days off on public holidays.', effectiveFrom: 'Effective from {month}',
+      dutyType: 'Duty type', dutyTypeByDay: 'Duty type by weekday', automatic: 'Selected per weekday', noDutyType: 'No duty type is available.', weekdaysLabel: 'Workdays', holidayOff: 'Take public holidays off', holidayOffHint: 'Selected workdays become days off on public holidays.', effectiveFrom: 'Effective from {month}',
       weekdays: { monday: 'Mon', tuesday: 'Tue', wednesday: 'Wed', thursday: 'Thu', friday: 'Fri', saturday: 'Sat', sunday: 'Sun' },
-      unavailable: { title: 'The pattern cannot be configured right now.', team: 'Only members assigned to a team can configure a default work pattern.', none: 'Add one visible team duty type to use this setting.', multiple: 'Exactly one visible team duty type is required.', default: 'Check the team duty type settings.' },
-      paused: { title: 'Automatic application is temporarily paused.', description: 'Your weekday settings are preserved and will resume automatically when the team has exactly one visible duty type.' },
-      actions: { save: 'Save pattern', update: 'Update pattern', delete: 'Disable pattern' }, validation: { weekdayRequired: 'Select at least one workday.' },
+      unavailable: { title: 'The pattern cannot be configured right now.', team: 'Only members assigned to a team can configure a default work pattern.', none: 'Add at least one visible team duty type to use this setting.', multiple: 'Choose a duty type for each weekday.', default: 'Check the team duty type settings.' },
+      paused: { title: 'Some weekdays are temporarily paused.', description: 'Weekdays assigned to hidden duty types remain paused until you select another type or restore the hidden type.' },
+      actions: { save: 'Save pattern', update: 'Update pattern', delete: 'Disable pattern' }, validation: { weekdayRequired: 'Select at least one workday.', dutyTypeRequired: 'Select a visible duty type for every workday.' },
       messages: { loadFailed: 'Failed to load the default work pattern.', saveConfirm: 'Saving this pattern deletes every duty from today onward and recreates them from the new weekdays. Continue?', saveSuccess: 'The default work pattern has been saved.', saveFailed: 'Failed to save the default work pattern.', deleteConfirm: 'Disable the default work pattern from today? Manual duties from today onward will also be deleted.', deleteSuccess: 'The default work pattern has been disabled.', deleteFailed: 'Failed to disable the default work pattern.' },
     },
     profile: {

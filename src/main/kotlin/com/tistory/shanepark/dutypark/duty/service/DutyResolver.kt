@@ -24,6 +24,11 @@ data class ResolvedDuty(
     val sourceTeamId: Long? = null,
 )
 
+private data class PatternDuty(
+    val dutyType: DutyType?,
+    val source: DutySource,
+)
+
 @Service
 @Transactional
 class DutyResolver(
@@ -41,18 +46,15 @@ class DutyResolver(
             .filter { isTeamApplicable(member, it.teamId, it.dutyDate, today) }
             .associateBy { it.dutyDate }
         val patterns = patternRepository.findAllByMemberOrderByEffectiveFromDescIdDesc(member)
-        val automaticDutyTypes = automaticDutyTypes(listOf(member))
+        val visibleDutyTypeIds = visibleDutyTypeIds(listOf(member))
         val needsHolidays = sortedDates.any { date ->
             val effectivePattern = patterns.firstOrNull {
                 it.appliesOn(date) && isTeamApplicable(member, it.team.id, date, today)
             }
-            effectivePattern?.holidayOff == true && effectiveDutyType(
-                member,
-                effectivePattern,
-                date,
-                today,
-                automaticDutyTypes,
-            ) != null
+            val selectedType = effectivePattern?.dutyTypeOn(date.dayOfWeek)
+            effectivePattern?.holidayOff == true && selectedType != null && isDutyTypeAvailable(
+                member, effectivePattern, selectedType, date, today, visibleDutyTypeIds,
+            )
         }
         val holidayDates = holidayDates(sortedDates, needsHolidays)
 
@@ -71,18 +73,16 @@ class DutyResolver(
             val pattern = patterns.firstOrNull {
                 it.appliesOn(date) && isTeamApplicable(member, it.team.id, date, today)
             }
-            val dutyType = pattern?.let {
-                effectiveDutyType(member, it, date, today, automaticDutyTypes)
-            }
-            if (pattern != null && dutyType != null) {
+            if (pattern != null) {
+                val resolved = resolvePatternDuty(
+                    member, pattern, date, today, visibleDutyTypeIds, holidayDates,
+                )
                 ResolvedDuty(
                     date = date,
-                    dutyType = dutyTypeFor(pattern, dutyType, date, holidayDates),
-                    source = DutySource.PATTERN,
+                    dutyType = resolved.dutyType,
+                    source = resolved.source,
                     sourceTeamId = pattern.team.id,
                 )
-            } else if (pattern != null) {
-                ResolvedDuty(date, null, DutySource.PATTERN_PAUSED, sourceTeamId = pattern.team.id)
             } else {
                 ResolvedDuty(date, null, DutySource.DEFAULT_OFF)
             }
@@ -101,18 +101,20 @@ class DutyResolver(
             .associateBy { requireNotNull(it.member.id) }
         val patterns = patternRepository.findAllByMemberInOrderByEffectiveFromDescIdDesc(members)
         val patternsByMember = patterns.groupBy { requireNotNull(it.member.id) }
-        val automaticDutyTypes = automaticDutyTypes(members)
+        val visibleDutyTypeIds = visibleDutyTypeIds(members)
         val needsHolidays = memberIds.any { memberId ->
             val effectivePattern = patternsByMember[memberId].orEmpty().firstOrNull {
                 it.appliesOn(date) && isTeamApplicable(requireNotNull(membersById[memberId]), it.team.id, date, today)
             }
-            effectivePattern?.holidayOff == true && effectiveDutyType(
+            val selectedType = effectivePattern?.dutyTypeOn(date.dayOfWeek)
+            effectivePattern?.holidayOff == true && selectedType != null && isDutyTypeAvailable(
                 requireNotNull(membersById[memberId]),
                 effectivePattern,
+                selectedType,
                 date,
                 today,
-                automaticDutyTypes,
-            ) != null
+                visibleDutyTypeIds,
+            )
         }
         val holidayDates = holidayDates(listOf(date), needsHolidays)
 
@@ -131,55 +133,61 @@ class DutyResolver(
                 it.appliesOn(date) && isTeamApplicable(requireNotNull(membersById[memberId]), it.team.id, date, today)
             }
             val member = requireNotNull(membersById[memberId])
-            val dutyType = pattern?.let {
-                effectiveDutyType(member, it, date, today, automaticDutyTypes)
-            }
-            if (pattern != null && dutyType != null) {
+            if (pattern != null) {
+                val resolved = resolvePatternDuty(
+                    member, pattern, date, today, visibleDutyTypeIds, holidayDates,
+                )
                 ResolvedDuty(
                     date = date,
-                    dutyType = dutyTypeFor(pattern, dutyType, date, holidayDates),
-                    source = DutySource.PATTERN,
+                    dutyType = resolved.dutyType,
+                    source = resolved.source,
                     sourceTeamId = pattern.team.id,
                 )
-            } else if (pattern != null) {
-                ResolvedDuty(date, null, DutySource.PATTERN_PAUSED, sourceTeamId = pattern.team.id)
             } else {
                 ResolvedDuty(date, null, DutySource.DEFAULT_OFF)
             }
         }
     }
 
-    private fun dutyTypeFor(
-        pattern: MemberDutyPattern,
-        dutyType: DutyType,
-        date: LocalDate,
-        holidayDates: Set<LocalDate>,
-    ): DutyType? {
-        if (date.dayOfWeek !in pattern.weekdays) return null
-        if (pattern.holidayOff && date in holidayDates) return null
-        return dutyType
-    }
-
-    private fun automaticDutyTypes(members: Collection<Member>): Map<Long, DutyType> {
-        val teams = members.mapNotNull { it.team }.distinctBy { it.id }
-        if (teams.isEmpty()) return emptyMap()
-        return dutyTypeRepository.findAllByTeamInAndHiddenFalse(teams)
-            .groupBy { requireNotNull(it.team.id) }
-            .mapNotNull { (teamId, dutyTypes) -> dutyTypes.singleOrNull()?.let { teamId to it } }
-            .toMap()
-    }
-
-    private fun effectiveDutyType(
+    private fun resolvePatternDuty(
         member: Member,
         pattern: MemberDutyPattern,
         date: LocalDate,
         today: LocalDate,
-        automaticDutyTypes: Map<Long, DutyType>,
-    ): DutyType? {
-        if (date.isBefore(today)) return pattern.dutyType
+        visibleDutyTypeIds: Map<Long, Set<Long>>,
+        holidayDates: Set<LocalDate>,
+    ): PatternDuty {
+        val dutyType = pattern.dutyTypeOn(date.dayOfWeek)
+            ?: return PatternDuty(null, DutySource.PATTERN)
+        if (!isDutyTypeAvailable(member, pattern, dutyType, date, today, visibleDutyTypeIds)) {
+            return PatternDuty(null, DutySource.PATTERN_PAUSED)
+        }
+        if (pattern.holidayOff && date in holidayDates) {
+            return PatternDuty(null, DutySource.PATTERN)
+        }
+        return PatternDuty(dutyType, DutySource.PATTERN)
+    }
+
+    private fun visibleDutyTypeIds(members: Collection<Member>): Map<Long, Set<Long>> {
+        val teams = members.mapNotNull { it.team }.distinctBy { it.id }
+        if (teams.isEmpty()) return emptyMap()
+        return dutyTypeRepository.findAllByTeamInAndHiddenFalse(teams)
+            .groupBy { requireNotNull(it.team.id) }
+            .mapValues { (_, dutyTypes) -> dutyTypes.map { requireNotNull(it.id) }.toSet() }
+    }
+
+    private fun isDutyTypeAvailable(
+        member: Member,
+        pattern: MemberDutyPattern,
+        dutyType: DutyType,
+        date: LocalDate,
+        today: LocalDate,
+        visibleDutyTypeIds: Map<Long, Set<Long>>,
+    ): Boolean {
+        if (date.isBefore(today)) return true
         val patternTeamId = pattern.team.id
-        if (patternTeamId == null || patternTeamId != member.team?.id) return null
-        return automaticDutyTypes[patternTeamId]
+        if (patternTeamId == null || patternTeamId != member.team?.id) return false
+        return dutyType.id in visibleDutyTypeIds[patternTeamId].orEmpty()
     }
 
     private fun holidayDates(

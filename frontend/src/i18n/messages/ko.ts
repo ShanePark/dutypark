@@ -168,6 +168,11 @@ const apiErrors = {
     edit: {
       forbidden: '이 근무를 수정할 권한이 없습니다.',
     },
+    pattern: {
+      team: { required: '팀에 소속된 회원만 기본 근무 패턴을 설정할 수 있습니다.' },
+      weekdays: { required: '근무 요일을 하나 이상 선택해주세요.', duplicate: '같은 요일을 두 번 설정할 수 없습니다.' },
+      dutyType: { invalid: '선택한 근무 유형을 사용할 수 없습니다. 팀 설정을 확인해주세요.' },
+    },
   },
   dutyBatch: {
     unknown: '시간표 업로드에 실패했습니다.',
@@ -773,12 +778,12 @@ export default {
     title: '내 정보',
     dutyPattern: {
       sectionTitle: '기본 근무 패턴', description: '달력을 조회하면 비어 있는 날짜가 반복 요일에 맞춰 자동 등록됩니다. 패턴을 변경하거나 해제하면 오늘 이후 근무는 수동 입력을 포함해 모두 새 규칙에 맞게 초기화됩니다.',
-      dutyType: '적용 근무 유형', automatic: '팀 설정에서 자동 선택', noDutyType: '자동 적용할 근무 유형을 하나로 결정할 수 없습니다.',
+      dutyType: '적용 근무 유형', dutyTypeByDay: '요일별 근무 유형', automatic: '요일별로 선택', noDutyType: '선택할 수 있는 근무 유형이 없습니다.',
       weekdaysLabel: '근무 요일', holidayOff: '공휴일에는 쉬기', holidayOffHint: '선택한 근무 요일이 공휴일이면 휴무로 적용합니다.', effectiveFrom: '{month}부터 적용',
       weekdays: { monday: '월', tuesday: '화', wednesday: '수', thursday: '목', friday: '금', saturday: '토', sunday: '일' },
-      unavailable: { title: '지금은 패턴을 설정할 수 없습니다.', team: '팀에 소속된 회원만 기본 근무 패턴을 설정할 수 있습니다.', none: '팀에 보이는 근무 유형을 하나 등록하면 사용할 수 있습니다.', multiple: '팀에 보이는 근무 유형이 정확히 하나일 때 사용할 수 있습니다.', default: '팀 근무 유형 설정을 확인해주세요.' },
-      paused: { title: '자동 적용이 잠시 중지되었습니다.', description: '요일 설정은 그대로 보존됩니다. 팀에 보이는 근무 유형이 정확히 하나가 되면 다시 자동 적용됩니다.' },
-      actions: { save: '패턴 저장', update: '패턴 변경', delete: '패턴 해제' }, validation: { weekdayRequired: '근무 요일을 하나 이상 선택해주세요.' },
+      unavailable: { title: '지금은 패턴을 설정할 수 없습니다.', team: '팀에 소속된 회원만 기본 근무 패턴을 설정할 수 있습니다.', none: '팀에 보이는 근무 유형을 하나 이상 등록하면 사용할 수 있습니다.', multiple: '요일마다 근무 유형을 선택할 수 있습니다.', default: '팀 근무 유형 설정을 확인해주세요.' },
+      paused: { title: '일부 요일의 자동 적용이 중지되었습니다.', description: '숨겨진 근무 유형이 지정된 요일은 다른 유형을 선택하거나 해당 유형을 복원할 때까지 적용되지 않습니다.' },
+      actions: { save: '패턴 저장', update: '패턴 변경', delete: '패턴 해제' }, validation: { weekdayRequired: '근무 요일을 하나 이상 선택해주세요.', dutyTypeRequired: '모든 근무 요일에 보이는 근무 유형을 선택해주세요.' },
       messages: { loadFailed: '기본 근무 패턴을 불러오지 못했습니다.', saveConfirm: '패턴을 저장하면 오늘 이후의 모든 근무가 삭제되고 새 요일 규칙으로 다시 등록됩니다. 계속하시겠습니까?', saveSuccess: '기본 근무 패턴을 저장했습니다.', saveFailed: '기본 근무 패턴을 저장하지 못했습니다.', deleteConfirm: '오늘부터 기본 근무 패턴을 해제하시겠습니까? 오늘 이후의 수동 입력 근무도 함께 삭제됩니다.', deleteSuccess: '기본 근무 패턴을 해제했습니다.', deleteFailed: '기본 근무 패턴을 해제하지 못했습니다.' },
     },
     profile: {

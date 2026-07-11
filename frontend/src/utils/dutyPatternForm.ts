@@ -14,28 +14,44 @@ export const DEFAULT_DUTY_PATTERN_WEEKDAYS: DutyPatternWeekday[] =
   DUTY_PATTERN_WEEKDAYS.slice(0, 5)
 
 export interface DutyPatternFormState {
-  selectedWeekdays: DutyPatternWeekday[]
+  assignments: DutyPatternAssignment[]
   holidayOff: boolean
+}
+
+export interface DutyPatternAssignment {
+  weekday: DutyPatternWeekday
+  dutyTypeId: number
 }
 
 export function createDutyPatternFormState(data: MyDutyPatternDto): DutyPatternFormState {
   return {
-    selectedWeekdays: data.pattern
-      ? [...data.pattern.weekdays]
-      : [...DEFAULT_DUTY_PATTERN_WEEKDAYS],
+    assignments: data.pattern
+      ? data.pattern.days.map((day) => ({
+          weekday: day.weekday,
+          dutyTypeId: day.dutyType.id,
+        }))
+      : data.dutyTypes[0]
+        ? DEFAULT_DUTY_PATTERN_WEEKDAYS.map((weekday) => ({
+            weekday,
+            dutyTypeId: data.dutyTypes[0]!.id,
+          }))
+        : [],
     holidayOff: data.pattern?.holidayOff ?? true,
   }
 }
 
 export function toggleDutyPatternWeekday(
-  selectedWeekdays: DutyPatternWeekday[],
+  assignments: DutyPatternAssignment[],
   day: DutyPatternWeekday,
-): DutyPatternWeekday[] {
-  if (selectedWeekdays.includes(day)) {
-    return selectedWeekdays.filter((item) => item !== day)
+  defaultDutyTypeId: number | null,
+): DutyPatternAssignment[] {
+  if (assignments.some((item) => item.weekday === day)) {
+    return assignments.filter((item) => item.weekday !== day)
   }
+  if (defaultDutyTypeId === null) return assignments
 
-  return DUTY_PATTERN_WEEKDAYS.filter(
-    (item) => item === day || selectedWeekdays.includes(item),
+  const next = [...assignments, { weekday: day, dutyTypeId: defaultDutyTypeId }]
+  return DUTY_PATTERN_WEEKDAYS.flatMap((weekday) =>
+    next.filter((item) => item.weekday === weekday),
   )
 }

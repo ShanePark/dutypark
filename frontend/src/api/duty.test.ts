@@ -40,26 +40,38 @@ describe('duty pattern API contract', () => {
     })
   })
 
-  it('updates weekdays and holiday policy without accepting a duty type choice', async () => {
+  it('updates weekday-specific duty types and holiday policy', async () => {
     const updated = {
       configurable: true,
       reason: null,
       pattern: {
-        weekdays: ['FRIDAY', 'SATURDAY', 'SUNDAY'] as const,
+        days: [
+          { weekday: 'FRIDAY' as const, dutyType: { id: 7, name: '주간', color: null } },
+          { weekday: 'SATURDAY' as const, dutyType: { id: 8, name: '야간', color: null } },
+        ],
         holidayOff: false,
         effectiveFrom: '2026-07-11',
       },
-      dutyType: { id: 7, name: '주간', color: null },
+      dutyTypes: [
+        { id: 7, name: '주간', color: null },
+        { id: 8, name: '야간', color: null },
+      ],
     }
     vi.mocked(apiClient.put).mockResolvedValue({ data: updated })
 
     const result = await dutyApi.updateMyPattern({
-      weekdays: ['FRIDAY', 'SATURDAY', 'SUNDAY'],
+      days: [
+        { weekday: 'FRIDAY', dutyTypeId: 7 },
+        { weekday: 'SATURDAY', dutyTypeId: 8 },
+      ],
       holidayOff: false,
     })
 
     expect(apiClient.put).toHaveBeenCalledWith('/duty/pattern/me', {
-      weekdays: ['FRIDAY', 'SATURDAY', 'SUNDAY'],
+      days: [
+        { weekday: 'FRIDAY', dutyTypeId: 7 },
+        { weekday: 'SATURDAY', dutyTypeId: 8 },
+      ],
       holidayOff: false,
     })
     expect(result).toBe(updated)
@@ -70,7 +82,7 @@ describe('duty pattern API contract', () => {
       configurable: false,
       reason: 'DUTY_TYPE_REQUIRED',
       pattern: null,
-      dutyType: null,
+      dutyTypes: [],
     }
     vi.mocked(apiClient.get).mockResolvedValue({ data: current })
     vi.mocked(apiClient.delete).mockResolvedValue({ data: undefined })

@@ -33,9 +33,13 @@ class DutyTypeService(
         val team = teamRepository.findByIdForUpdate(teamId).orElseThrow()
         val dutyType = team.dutyTypes.firstOrNull { it.id == dutyTypeId } ?: throw NoSuchElementException()
         if (dutyType.hidden == hidden) return dutyType
-        val beforeCount = team.dutyTypes.count { !it.hidden }
         dutyType.hidden = hidden
-        cleanupAutomaticDutiesWhenAmbiguous(team.id, beforeCount, beforeCount + if (hidden) -1 else 1)
+        if (hidden) {
+            dutyRepository.deleteAutomaticByDutyTypeAndDutyDateGreaterThanEqual(
+                dutyType,
+                LocalDate.now(clock.withZone(SEOUL)),
+            )
+        }
         return dutyType
     }
 
@@ -45,10 +49,7 @@ class DutyTypeService(
         if (team.dutyTypes.any { it.name == dutyTypeCreateDto.name }) {
             throw IllegalArgumentException("DutyType already exists")
         }
-        val beforeCount = team.dutyTypes.count { !it.hidden }
-        return team.addDutyType(dutyTypeCreateDto.name, dutyTypeCreateDto.color).also {
-            cleanupAutomaticDutiesWhenAmbiguous(team.id, beforeCount, beforeCount + 1)
-        }
+        return team.addDutyType(dutyTypeCreateDto.name, dutyTypeCreateDto.color)
     }
 
     fun update(dutyTypeUpdateDto: DutyTypeUpdateDto): DutyType {
@@ -77,15 +78,6 @@ class DutyTypeService(
         val dutyType2 = dutyTypeRepository.findById(dutyTypeId2).orElseThrow()
 
         dutyType1.position = dutyType2.position.also { dutyType2.position = dutyType1.position }
-    }
-
-    private fun cleanupAutomaticDutiesWhenAmbiguous(teamId: Long?, beforeCount: Int, afterCount: Int) {
-        if (beforeCount == 1 && afterCount != 1) {
-            dutyRepository.deleteAutomaticByTeamIdAndDutyDateGreaterThanEqual(
-                requireNotNull(teamId),
-                LocalDate.now(clock.withZone(SEOUL)),
-            )
-        }
     }
 
     companion object {

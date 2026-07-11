@@ -9,9 +9,14 @@ const locales = { ko, en, ja, zh, es }
 
 const requiredKeys = [
   'apiErrors.common.concurrentUpdate',
+  'apiErrors.duty.pattern.team.required',
+  'apiErrors.duty.pattern.weekdays.required',
+  'apiErrors.duty.pattern.weekdays.duplicate',
+  'apiErrors.duty.pattern.dutyType.invalid',
   'member.dutyPattern.sectionTitle',
   'member.dutyPattern.description',
   'member.dutyPattern.dutyType',
+  'member.dutyPattern.dutyTypeByDay',
   'member.dutyPattern.automatic',
   'member.dutyPattern.noDutyType',
   'member.dutyPattern.weekdaysLabel',
@@ -29,6 +34,7 @@ const requiredKeys = [
   'member.dutyPattern.actions.update',
   'member.dutyPattern.actions.delete',
   'member.dutyPattern.validation.weekdayRequired',
+  'member.dutyPattern.validation.dutyTypeRequired',
   'member.dutyPattern.messages.loadFailed',
   'member.dutyPattern.messages.saveConfirm',
   'member.dutyPattern.messages.saveSuccess',

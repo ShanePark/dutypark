@@ -17,18 +17,7 @@ class MemberDutyPattern(
     @JoinColumn(name = "team_id", nullable = false)
     val team: Team,
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "duty_type_id", nullable = false)
-    val dutyType: DutyType,
-
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(
-        name = "member_duty_pattern_weekday",
-        joinColumns = [JoinColumn(name = "pattern_id")]
-    )
-    @Column(name = "weekday", nullable = false, length = 16)
-    @Enumerated(EnumType.STRING)
-    val weekdays: MutableSet<DayOfWeek> = mutableSetOf(),
+    dayTypes: Map<DayOfWeek, DutyType>,
 
     @Column(name = "holiday_off", nullable = false)
     val holidayOff: Boolean,
@@ -45,10 +34,21 @@ class MemberDutyPattern(
     var effectiveUntilExclusive: LocalDate? = null
         protected set
 
+    @OneToMany(mappedBy = "pattern", cascade = [CascadeType.ALL], orphanRemoval = true, fetch = FetchType.EAGER)
+    val days: MutableList<MemberDutyPatternDay> = dayTypes
+        .map { (weekday, dutyType) -> MemberDutyPatternDay(this, weekday, dutyType) }
+        .toMutableList()
+
     fun closeAt(date: LocalDate) {
         effectiveUntilExclusive = date
     }
 
     fun appliesOn(date: LocalDate): Boolean =
         !date.isBefore(effectiveFrom) && (effectiveUntilExclusive == null || date.isBefore(effectiveUntilExclusive))
+
+    fun dutyTypeOn(weekday: DayOfWeek): DutyType? =
+        days.firstOrNull { it.weekday == weekday }?.dutyType
+
+    fun dayTypeIds(): Map<DayOfWeek, Long?> =
+        days.associate { it.weekday to it.dutyType.id }
 }

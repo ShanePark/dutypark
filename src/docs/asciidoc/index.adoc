@@ -99,11 +99,10 @@ operation::duty-pattern/get-mine[]
 
 [NOTE]
 ====
-The saved weekday pattern is independent of duty-type visibility. Automatic
-application is available only while the team has exactly one visible duty
-type. With zero or multiple visible types, the pattern remains saved and duty
-responses use `PATTERN_PAUSED`; automatic application resumes with the single
-visible type when the ambiguity is removed.
+Each selected weekday stores its own team duty type, so teams with multiple
+visible duty types can use personal patterns. If a selected type is hidden,
+only weekdays assigned to that type return `PATTERN_PAUSED`; assignments using
+other visible types continue normally. Restoring the type resumes those days.
 
 Calendar lookup materializes missing pattern dates as `Duty` rows without
 overwriting existing dates. Pattern update or deletion takes effect from today

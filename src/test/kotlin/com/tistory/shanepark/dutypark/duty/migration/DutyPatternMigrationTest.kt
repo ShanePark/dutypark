@@ -21,6 +21,9 @@ class DutyPatternMigrationTest {
     private val automaticDutyIndexMigration = projectRoot.resolve(
         "src/main/resources/db/migration/v2/V2.2.21__index_automatic_duties.sql"
     )
+    private val weekdayDutyTypeMigration = projectRoot.resolve(
+        "src/main/resources/db/migration/v2/V2.2.22__assign_duty_types_by_weekday.sql"
+    )
 
     @Test
     fun `pattern schema keeps history weekdays and one duty per date`() {
@@ -105,5 +108,16 @@ class DutyPatternMigrationTest {
 
         assertThat(sql).contains("CREATE INDEX idx_duty_automatic_date")
         assertThat(sql).contains("ON duty (manual_override, duty_date)")
+    }
+
+    @Test
+    fun `existing single-type patterns migrate to weekday-specific duty types`() {
+        val sql = Files.readString(weekdayDutyTypeMigration)
+
+        assertThat(sql).contains("ADD COLUMN duty_type_id BIGINT NULL")
+        assertThat(sql).contains("SET pattern_day.duty_type_id = pattern.duty_type_id")
+        assertThat(sql).contains("MODIFY duty_type_id BIGINT NOT NULL")
+        assertThat(sql).contains("FOREIGN KEY (duty_type_id) REFERENCES duty_type (id)")
+        assertThat(sql).contains("DROP COLUMN duty_type_id")
     }
 }

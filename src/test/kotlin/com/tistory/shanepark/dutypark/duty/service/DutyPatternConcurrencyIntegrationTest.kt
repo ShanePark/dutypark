@@ -138,7 +138,7 @@ class DutyPatternConcurrencyIntegrationTest {
     }
 
     @RepeatedTest(3)
-    fun `adding a second duty type cannot leave stale automatic duties from a concurrent lookup`() {
+    fun `adding a second duty type racing with lookup keeps selected automatic duties consistent`() {
         val teamIdAndMemberId = transactionTemplate.execute {
             val team = teamRepository.save(Team("t-${System.nanoTime().toString().takeLast(12)}"))
             dutyTypeRepository.saveAndFlush(team.addDutyType("근무", "#123456"))
@@ -187,10 +187,10 @@ class DutyPatternConcurrencyIntegrationTest {
             transactionTemplate.execute {
                 val member = memberRepository.findById(memberId).orElseThrow()
                 val view = CalendarView(month.year, month.monthValue)
-                assertThat(
-                    dutyRepository.findAllByMemberAndDutyDateBetween(member, view.startDate, view.endDate)
-                        .filter { !it.manualOverride }
-                ).isEmpty()
+                val duties = dutyRepository.findAllByMemberAndDutyDateBetween(member, view.startDate, view.endDate)
+                assertThat(duties).hasSize(CalendarView.SIZE)
+                assertThat(duties.filter { !it.manualOverride && it.dutyType != null })
+                    .allMatch { it.dutyDate.dayOfWeek == MONDAY }
                 val manualDuty = dutyRepository.findByMemberAndDutyDate(member, manualDate)
                 assertThat(manualDuty).isNotNull
                 assertThat(requireNotNull(manualDuty).manualOverride).isTrue()
@@ -316,10 +316,8 @@ class DutyPatternConcurrencyIntegrationTest {
                 val member = memberRepository.findById(memberId).orElseThrow()
                 val view = CalendarView(month.year, month.monthValue)
                 val duties = dutyRepository.findAllByMemberAndDutyDateBetween(member, view.startDate, view.endDate)
-                assertThat(duties.filter { !it.manualOverride }).isEmpty()
-                assertThat(duties).hasSize(1)
-                assertThat(duties.single().dutyDate).isEqualTo(manualDate)
-                assertThat(duties.single().manualOverride).isTrue()
+                assertThat(duties.filter { !it.manualOverride && it.dutyType != null }).isEmpty()
+                assertThat(duties.single { it.dutyDate == manualDate }.manualOverride).isTrue()
             }
         } finally {
             deleteMemberAndTeam(memberId)

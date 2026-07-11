@@ -414,16 +414,21 @@ export type DutyPatternWeekday =
   | 'SUNDAY'
 
 export interface DutyPatternDto {
-  weekdays: DutyPatternWeekday[]
+  days: DutyPatternDayDto[]
   holidayOff: boolean
   effectiveFrom: string
+}
+
+export interface DutyPatternDayDto {
+  weekday: DutyPatternWeekday
+  dutyType: DutyPatternDutyTypeDto
 }
 
 export interface MyDutyPatternDto {
   configurable: boolean
   reason: string | null
   pattern: DutyPatternDto | null
-  dutyType: DutyPatternDutyTypeDto | null
+  dutyTypes: DutyPatternDutyTypeDto[]
 }
 
 export interface DutyPatternDutyTypeDto {
@@ -433,7 +438,10 @@ export interface DutyPatternDutyTypeDto {
 }
 
 export interface DutyPatternUpdateDto {
-  weekdays: DutyPatternWeekday[]
+  days: Array<{
+    weekday: DutyPatternWeekday
+    dutyTypeId: number
+  }>
   holidayOff: boolean
 }
 

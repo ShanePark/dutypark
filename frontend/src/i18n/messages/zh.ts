@@ -168,6 +168,11 @@ const apiErrors = {
     edit: {
       forbidden: '您无权编辑此班次。',
     },
+    pattern: {
+      team: { required: '只有团队成员才能设置默认值班模式。' },
+      weekdays: { required: '请至少选择一个工作日。', duplicate: '同一星期不能重复设置。' },
+      dutyType: { invalid: '所选值班类型不可用，请检查团队设置。' },
+    },
   },
   dutyBatch: {
     unknown: '上传值班表失败。',
@@ -772,7 +777,7 @@ export default {
   member: {
     title: '我的帐户',
     dutyPattern: {
-      sectionTitle: '默认工作模式', description: '打开日历时，空白日期会按照重复工作日自动保存。更改或停用模式时，今天及之后的所有班次（包括手动输入）都会被重置。', dutyType: '工作类型', automatic: '从团队设置自动选择', noDutyType: '无法确定唯一的工作类型用于自动应用。', weekdaysLabel: '工作日', holidayOff: '公共假日休息', holidayOffHint: '所选工作日遇到公共假日时按休息处理。', effectiveFrom: '从 {month} 起生效', weekdays: { monday: '一', tuesday: '二', wednesday: '三', thursday: '四', friday: '五', saturday: '六', sunday: '日' }, unavailable: { title: '目前无法设置工作模式。', team: '只有已加入团队的成员才能设置默认工作模式。', none: '添加一个可见的团队工作类型后即可使用。', multiple: '仅当团队恰好有一个可见工作类型时可用。', default: '请检查团队工作类型设置。' }, paused: { title: '自动应用已暂时暂停。', description: '星期设置会保留；当团队恰好只有一个可见工作类型时将自动恢复。' }, actions: { save: '保存模式', update: '更改模式', delete: '停用模式' }, validation: { weekdayRequired: '请至少选择一个工作日。' }, messages: { loadFailed: '无法加载默认工作模式。', saveConfirm: '保存后，今天及之后的所有班次都会被删除，并按新的星期规则重新登记。是否继续？', saveSuccess: '默认工作模式已保存。', saveFailed: '无法保存默认工作模式。', deleteConfirm: '从今天起停用默认工作模式吗？今天及之后的手动班次也会被删除。', deleteSuccess: '默认工作模式已停用。', deleteFailed: '无法停用模式。' },
+      sectionTitle: '默认工作模式', description: '打开日历时，空白日期会按照重复工作日自动保存。更改或停用模式时，今天及之后的所有班次（包括手动输入）都会被重置。', dutyType: '工作类型', dutyTypeByDay: '按星期设置工作类型', automatic: '按星期选择', noDutyType: '没有可选的工作类型。', weekdaysLabel: '工作日', holidayOff: '公共假日休息', holidayOffHint: '所选工作日遇到公共假日时按休息处理。', effectiveFrom: '从 {month} 起生效', weekdays: { monday: '一', tuesday: '二', wednesday: '三', thursday: '四', friday: '五', saturday: '六', sunday: '日' }, unavailable: { title: '目前无法设置工作模式。', team: '只有已加入团队的成员才能设置默认工作模式。', none: '至少添加一个可见的团队工作类型后即可使用。', multiple: '可以为每个星期选择工作类型。', default: '请检查团队工作类型设置。' }, paused: { title: '部分星期的自动应用已暂停。', description: '使用隐藏工作类型的星期会暂停，直到选择其他类型或恢复该类型。' }, actions: { save: '保存模式', update: '更改模式', delete: '停用模式' }, validation: { weekdayRequired: '请至少选择一个工作日。', dutyTypeRequired: '请为每个工作日选择可见的工作类型。' }, messages: { loadFailed: '无法加载默认工作模式。', saveConfirm: '保存后，今天及之后的所有班次都会被删除，并按新的星期规则重新登记。是否继续？', saveSuccess: '默认工作模式已保存。', saveFailed: '无法保存默认工作模式。', deleteConfirm: '从今天起停用默认工作模式吗？今天及之后的手动班次也会被删除。', deleteSuccess: '默认工作模式已停用。', deleteFailed: '无法停用模式。' },
     },
     profile: {
       sectionTitle: '公司简介',

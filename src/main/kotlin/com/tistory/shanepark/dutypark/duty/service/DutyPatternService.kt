@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.duty.service
 
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyPatternDetailsDto
+import com.tistory.shanepark.dutypark.duty.domain.dto.DutyPatternDayDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyPatternDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyPatternDutyTypeDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyPatternUpdateDto
@@ -27,45 +28,52 @@ class DutyPatternService(
     fun getMine(memberId: Long): DutyPatternDto {
         val member = memberRepository.findMemberWithTeam(memberId).orElseThrow()
         val team = member.team
-            ?: return DutyPatternDto(false, "TEAM_REQUIRED", null, null)
-        val visibleTypes = team.dutyTypes.filterNot { it.hidden }
-        val reason = when (visibleTypes.size) {
-            0 -> "DUTY_TYPE_REQUIRED"
-            1 -> null
-            else -> "SINGLE_DUTY_TYPE_REQUIRED"
-        }
-        val dutyType = visibleTypes.singleOrNull()?.let {
-            DutyPatternDutyTypeDto(requireNotNull(it.id), it.name, it.color)
-        }
+            ?: return DutyPatternDto(false, "TEAM_REQUIRED", emptyList(), null)
+        val visibleTypes = team.dutyTypes.filterNot { it.hidden }.sortedBy { it.position }
+        val reason = "DUTY_TYPE_REQUIRED".takeIf { visibleTypes.isEmpty() }
+        val dutyTypes = visibleTypes.map(::toDto)
         val active = patternRepository.findFirstByMemberAndEffectiveUntilExclusiveIsNullOrderByIdDesc(member)
             ?.takeIf { it.team.id == team.id }
         val pattern = active?.let {
             DutyPatternDetailsDto(
-                weekdays = it.weekdays.toSet(),
+                days = it.days
+                    .sortedBy { day -> day.weekday.value }
+                    .map { day -> DutyPatternDayDto(day.weekday, toDto(day.dutyType)) },
                 holidayOff = it.holidayOff,
                 effectiveFrom = it.effectiveFrom.toString(),
             )
         }
-        return DutyPatternDto(reason == null, reason, dutyType, pattern)
+        return DutyPatternDto(reason == null, reason, dutyTypes, pattern)
     }
 
     @Transactional(timeout = 20)
     fun updateMine(memberId: Long, request: DutyPatternUpdateDto): DutyPatternDto {
-        if (request.weekdays.isEmpty()) {
+        if (request.days.isEmpty()) {
             throw IllegalArgumentException("duty.pattern.weekdays.required")
+        }
+        if (request.days.map { it.weekday }.distinct().size != request.days.size) {
+            throw IllegalArgumentException("duty.pattern.weekdays.duplicate")
         }
         val today = today()
         val member = memberRepository.findMemberWithTeamForUpdate(memberId).orElseThrow()
         val team = member.team ?: throw IllegalArgumentException("duty.pattern.team.required")
-        val visibleTypes = team.dutyTypes.filterNot { it.hidden }
-        if (visibleTypes.size != 1) {
-            throw IllegalArgumentException("duty.pattern.singleDutyType.required")
+        val visibleTypesById = team.dutyTypes
+            .filterNot { it.hidden }
+            .associateBy { requireNotNull(it.id) }
+        val dayTypes = request.days.associate { day ->
+            val dutyType = if (day.dutyTypeId == null) {
+                visibleTypesById.values.singleOrNull()
+            } else {
+                visibleTypesById[day.dutyTypeId]
+            } ?: throw IllegalArgumentException("duty.pattern.dutyType.invalid")
+            day.weekday to dutyType
         }
+        val requestedDayTypeIds = dayTypes.mapValues { it.value.id }
         val active = patternRepository.findFirstByMemberAndEffectiveUntilExclusiveIsNullOrderByIdDesc(member)
         if (
             active != null &&
             active.team.id == team.id &&
-            active.weekdays == request.weekdays &&
+            active.dayTypeIds() == requestedDayTypeIds &&
             active.holidayOff == request.holidayOff
         ) {
             return getMine(memberId)
@@ -77,8 +85,7 @@ class DutyPatternService(
             MemberDutyPattern(
                 member = member,
                 team = team,
-                dutyType = visibleTypes.single(),
-                weekdays = request.weekdays.toMutableSet(),
+                dayTypes = dayTypes,
                 holidayOff = request.holidayOff,
                 effectiveFrom = today,
             )
@@ -133,6 +140,9 @@ class DutyPatternService(
     }
 
     private fun today(): LocalDate = LocalDate.now(clock.withZone(SEOUL))
+
+    private fun toDto(dutyType: com.tistory.shanepark.dutypark.duty.domain.entity.DutyType) =
+        DutyPatternDutyTypeDto(requireNotNull(dutyType.id), dutyType.name, dutyType.color)
 
     companion object {
         private val SEOUL: ZoneId = ZoneId.of("Asia/Seoul")

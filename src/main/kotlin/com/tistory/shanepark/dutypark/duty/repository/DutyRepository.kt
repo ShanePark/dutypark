@@ -28,15 +28,8 @@ interface DutyRepository : JpaRepository<Duty, Long> {
     fun deleteAllByMemberAndDutyDateGreaterThanEqual(member: Member, from: LocalDate)
 
     @Modifying(flushAutomatically = true)
-    @Query(
-        """
-        delete from Duty d
-        where d.teamId = :teamId
-          and d.manualOverride = false
-          and d.dutyDate >= :from
-        """
-    )
-    fun deleteAutomaticByTeamIdAndDutyDateGreaterThanEqual(teamId: Long, from: LocalDate)
+    @Query("delete from Duty d where d.dutyType = :dutyType and d.manualOverride = false and d.dutyDate >= :from")
+    fun deleteAutomaticByDutyTypeAndDutyDateGreaterThanEqual(dutyType: DutyType, from: LocalDate)
 
     @Modifying(flushAutomatically = true)
     @Query("delete from Duty d where d.manualOverride = false and d.dutyDate >= :from")

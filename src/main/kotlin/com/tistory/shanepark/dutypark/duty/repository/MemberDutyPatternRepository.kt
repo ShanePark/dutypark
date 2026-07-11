@@ -7,13 +7,13 @@ import org.springframework.data.jpa.repository.EntityGraph
 import org.springframework.data.jpa.repository.JpaRepository
 
 interface MemberDutyPatternRepository : JpaRepository<MemberDutyPattern, Long> {
-    @EntityGraph(attributePaths = ["dutyType", "weekdays"])
+    @EntityGraph(attributePaths = ["days", "days.dutyType"])
     fun findFirstByMemberAndEffectiveUntilExclusiveIsNullOrderByIdDesc(member: Member): MemberDutyPattern?
 
-    @EntityGraph(attributePaths = ["dutyType", "weekdays"])
+    @EntityGraph(attributePaths = ["days", "days.dutyType"])
     fun findAllByMemberOrderByEffectiveFromDescIdDesc(member: Member): List<MemberDutyPattern>
 
-    @EntityGraph(attributePaths = ["dutyType", "weekdays"])
+    @EntityGraph(attributePaths = ["days", "days.dutyType"])
     fun findAllByMemberInOrderByEffectiveFromDescIdDesc(members: Collection<Member>): List<MemberDutyPattern>
 
     fun deleteAllByTeam(team: Team)

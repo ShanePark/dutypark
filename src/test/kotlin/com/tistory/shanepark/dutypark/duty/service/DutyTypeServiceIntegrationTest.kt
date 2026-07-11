@@ -64,7 +64,7 @@ class DutyTypeServiceIntegrationTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `adding a second visible duty type pauses but preserves active patterns`() {
+    fun `adding a second visible duty type keeps active patterns configurable`() {
         leaveOnlyFirstDutyTypeVisible()
         dutyPatternService.updateMine(TestData.member.id!!, DutyPatternUpdateDto(setOf(MONDAY), false))
 
@@ -73,7 +73,7 @@ class DutyTypeServiceIntegrationTest : DutyparkIntegrationTest() {
         )
 
         assertThat(dutyPatternService.getMine(TestData.member.id!!).pattern).isNotNull()
-        assertThat(dutyPatternService.getMine(TestData.member.id!!).configurable).isFalse()
+        assertThat(dutyPatternService.getMine(TestData.member.id!!).configurable).isTrue()
     }
 
     @Test
