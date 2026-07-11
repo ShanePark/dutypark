@@ -39,6 +39,16 @@ export const esReleaseNotes = {
     ui: "Interfaz"
   },
   entries: {
+    "pr-380": {
+      title: "Añadir patrones semanales personales de turnos",
+      summary: "Cada miembro puede configurar días recurrentes y un tipo de turno por día para completar automáticamente el calendario.",
+      changes: [
+        "Permite elegir distintos tipos de turno por día, como turno diurno el lunes y nocturno el viernes.",
+        "Permite descansar en festivos y reconstruye los turnos desde hoy cuando cambia el patrón.",
+        "Oculta y restaura tipos de turno del equipo sin perder información histórica del calendario.",
+        "Incluye un nuevo selector adaptable para escritorio y móvil."
+      ]
+    },
     "pr-379": {
       title: "Pulir el diseño de las tarjetas kanban",
       summary: "Renueva las tarjetas de tareas del tablero kanban con un diseño más suave, muestra quién compartió una tarea etiquetada con un chip 'by' y corrige el salto de las tareas etiquetadas al arrastrarlas dentro de su columna.",

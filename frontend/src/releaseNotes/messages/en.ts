@@ -39,6 +39,16 @@ export const enReleaseNotes = {
     ui: "UI"
   },
   entries: {
+    "pr-380": {
+      title: "Add personal weekly duty patterns",
+      summary: "Lets each member set recurring workdays and choose a duty type for every weekday, so calendars can fill routine duties automatically.",
+      changes: [
+        "Choose different duty types for different weekdays, such as day shifts on Monday and night shifts on Friday.",
+        "Keep public holidays off when desired and regenerate duties from today when the pattern changes.",
+        "Hide and restore team duty types without losing historical calendar information.",
+        "Use the new responsive duty type picker on desktop and mobile."
+      ]
+    },
     "pr-379": {
       title: "Polish kanban card design",
       summary: "Refreshes the kanban todo cards with a softer design, shows who shared a tagged todo with a by-chip, and keeps tagged todos from jumping when dragged within their column.",
