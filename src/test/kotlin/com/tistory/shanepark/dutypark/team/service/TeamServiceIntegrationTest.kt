@@ -3,7 +3,10 @@ package com.tistory.shanepark.dutypark.team.service
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
+import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
+import com.tistory.shanepark.dutypark.duty.domain.entity.MemberDutyPattern
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
+import com.tistory.shanepark.dutypark.duty.repository.MemberDutyPatternRepository
 import com.tistory.shanepark.dutypark.duty.service.DutyService
 import com.tistory.shanepark.dutypark.team.domain.dto.TeamCreateDto
 import org.assertj.core.api.Assertions.assertThat
@@ -12,7 +15,10 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.Pageable
+import java.time.Clock
+import java.time.DayOfWeek.MONDAY
 import java.time.LocalDate
+import java.time.ZoneId
 
 class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
 
@@ -133,23 +139,26 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
         // Given
         val created = service.create(TeamCreateDto("teamName", "teamDesc"))
         val team = teamRepository.findById(created.id).orElseThrow()
-        val member = TestData.member
+        val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
 
-        team.addMember(member)
+        member.team = team
         val dutyType1 = team.addDutyType("오전", "#ffb3ba")
         em.flush()
 
         val dutyUpdateDto =
             DutyUpdateDto(year = 2023, month = 4, day = 8, dutyTypeId = dutyType1.id!!, memberId = member.id!!)
         dutyService.update(dutyUpdateDto)
+        dutyService.update(
+            DutyUpdateDto(year = 2023, month = 4, day = 9, dutyTypeId = null, memberId = member.id!!)
+        )
 
-        val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2023, 4, loginMember(member))
+        val duties = dutyService.getDuties(member.id!!, 2023, 4, loginMember(member))
         assertThat(duties.filter { !it.isOff }).hasSize(1)
         val apr8 = duties.first { it.year == 2023 && it.month == 4 && it.day == 8 }
         assertThat(apr8.dutyType).isNotNull
 
         // When
-        team.removeMember(member)
+        service.removeMemberFromTeam(team.id!!, member.id!!)
         service.delete(team.id!!)
 
         // Then
@@ -158,6 +167,8 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
 
         val theDuty = dutyRepository.findByMemberAndDutyDate(member = member, dutyDate = LocalDate.of(2023, 4, 8))
         assertThat(theDuty).isNull()
+        val explicitOff = dutyRepository.findByMemberAndDutyDate(member = member, dutyDate = LocalDate.of(2023, 4, 9))
+        assertThat(explicitOff).isNull()
     }
 
     @Test
@@ -199,6 +210,49 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
         assertThat(team.members).isEmpty()
         assertThat(member.team).isNull()
         assertThat(member2.team).isNull()
+    }
+
+    @Test
+    fun `removing a member closes the active pattern and deletes future duties`(
+        @Autowired patternRepository: MemberDutyPatternRepository,
+        @Autowired dutyRepository: DutyRepository,
+        @Autowired clock: Clock,
+    ) {
+        val created = service.create(TeamCreateDto("pattern-team", ""))
+        val team = teamRepository.findById(created.id).orElseThrow()
+        val dutyType = team.addDutyType("주간", "#123456")
+        val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
+        team.addMember(member)
+        em.flush()
+        val today = LocalDate.now(clock.withZone(ZoneId.of("Asia/Seoul")))
+        val pattern = patternRepository.saveAndFlush(
+            MemberDutyPattern(
+                member = member,
+                team = team,
+                dayTypes = mapOf(MONDAY to dutyType),
+                holidayOff = false,
+                effectiveFrom = today.minusMonths(1),
+            )
+        )
+        val futureDuty = dutyRepository.saveAndFlush(
+            Duty(today.plusDays(7), dutyType, member, manualOverride = true)
+        )
+
+        service.removeMemberFromTeam(team.id!!, member.id!!)
+        em.flush()
+        em.clear()
+
+        val closedPattern = patternRepository.findById(pattern.id!!).orElseThrow()
+        assertThat(closedPattern.effectiveUntilExclusive).isEqualTo(today)
+        assertThat(dutyRepository.findById(futureDuty.id!!)).isEmpty
+        assertThat(memberRepository.findById(member.id!!).orElseThrow().team).isNull()
+
+        service.delete(team.id!!)
+        em.flush()
+
+        assertThat(patternRepository.findById(pattern.id!!)).isEmpty
+        assertThat(teamRepository.findById(team.id!!)).isEmpty
+        assertThat(dutyTypeRepository.findById(dutyType.id!!)).isEmpty
     }
 
     @Test

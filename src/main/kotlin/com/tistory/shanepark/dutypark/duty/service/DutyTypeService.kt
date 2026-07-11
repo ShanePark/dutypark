@@ -5,15 +5,21 @@ import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
+import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.team.repository.TeamRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Clock
+import java.time.LocalDate
+import java.time.ZoneId
 
 @Service
 @Transactional
 class DutyTypeService(
     private val dutyTypeRepository: DutyTypeRepository,
     private val teamRepository: TeamRepository,
+    private val dutyRepository: DutyRepository,
+    private val clock: Clock,
 ) {
 
     fun findById(id: Long): DutyTypeDto {
@@ -21,13 +27,28 @@ class DutyTypeService(
         return DutyTypeDto(dutyType)
     }
 
-    fun delete(dutyTypeId: Long) {
-        val dutyType = dutyTypeRepository.findById(dutyTypeId).orElseThrow()
-        dutyTypeRepository.delete(dutyType)
+    @Transactional(timeout = 20)
+    fun updateVisibility(dutyTypeId: Long, hidden: Boolean): DutyType {
+        val teamId = dutyTypeRepository.findTeamIdById(dutyTypeId) ?: throw NoSuchElementException()
+        val team = teamRepository.findByIdForUpdate(teamId).orElseThrow()
+        val dutyType = team.dutyTypes.firstOrNull { it.id == dutyTypeId } ?: throw NoSuchElementException()
+        if (dutyType.hidden == hidden) return dutyType
+        dutyType.hidden = hidden
+        if (hidden) {
+            dutyRepository.deleteAutomaticByDutyTypeAndDutyDateGreaterThanEqual(
+                dutyType,
+                LocalDate.now(clock.withZone(SEOUL)),
+            )
+        }
+        return dutyType
     }
 
+    @Transactional(timeout = 20)
     fun addDutyType(dutyTypeCreateDto: DutyTypeCreateDto): DutyType {
-        val team = teamRepository.findByIdWithDutyTypes(dutyTypeCreateDto.teamId).orElseThrow()
+        val team = teamRepository.findByIdForUpdate(dutyTypeCreateDto.teamId).orElseThrow()
+        if (team.dutyTypes.any { it.name == dutyTypeCreateDto.name }) {
+            throw IllegalArgumentException("DutyType already exists")
+        }
         return team.addDutyType(dutyTypeCreateDto.name, dutyTypeCreateDto.color)
     }
 
@@ -59,4 +80,7 @@ class DutyTypeService(
         dutyType1.position = dutyType2.position.also { dutyType2.position = dutyType1.position }
     }
 
+    companion object {
+        private val SEOUL: ZoneId = ZoneId.of("Asia/Seoul")
+    }
 }

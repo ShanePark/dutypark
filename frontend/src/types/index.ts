@@ -395,9 +395,54 @@ export interface DutyCalendarDay {
   year: number
   month: number
   day: number
+  dutyTypeId: number | null
   dutyType: string | null
   dutyColor: string | null
   isOff: boolean
+  source: DutySource
+}
+
+export type DutySource = 'OVERRIDE' | 'PATTERN' | 'PATTERN_PAUSED' | 'DEFAULT_OFF'
+
+export type DutyPatternWeekday =
+  | 'MONDAY'
+  | 'TUESDAY'
+  | 'WEDNESDAY'
+  | 'THURSDAY'
+  | 'FRIDAY'
+  | 'SATURDAY'
+  | 'SUNDAY'
+
+export interface DutyPatternDto {
+  days: DutyPatternDayDto[]
+  holidayOff: boolean
+  effectiveFrom: string
+}
+
+export interface DutyPatternDayDto {
+  weekday: DutyPatternWeekday
+  dutyType: DutyPatternDutyTypeDto
+}
+
+export interface MyDutyPatternDto {
+  configurable: boolean
+  reason: string | null
+  pattern: DutyPatternDto | null
+  dutyTypes: DutyPatternDutyTypeDto[]
+}
+
+export interface DutyPatternDutyTypeDto {
+  id: number
+  name: string
+  color: string | null
+}
+
+export interface DutyPatternUpdateDto {
+  days: Array<{
+    weekday: DutyPatternWeekday
+    dutyTypeId: number
+  }>
+  holidayOff: boolean
 }
 
 // Other duties response - for "view together" feature
@@ -414,7 +459,6 @@ export interface TeamDto {
   id: number
   name: string
   description: string | null
-  workType: string
   dutyTypes: DutyTypeDto[]
   members: TeamMemberDto[]
   createdDate: string
@@ -429,6 +473,7 @@ export interface DutyTypeDto {
   name: string
   position: number
   color: string | null
+  hidden: boolean
 }
 
 export interface TeamMemberDto {

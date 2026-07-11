@@ -1,7 +1,9 @@
 package com.tistory.shanepark.dutypark.dashboard.service
 
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardFriendDetail
-import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
+import com.tistory.shanepark.dutypark.duty.domain.dto.DutySource
+import com.tistory.shanepark.dutypark.duty.service.DutyResolver
+import com.tistory.shanepark.dutypark.duty.service.ResolvedDuty
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -24,8 +26,11 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.util.Optional
 
 @ExtendWith(org.mockito.junit.jupiter.MockitoExtension::class)
@@ -34,11 +39,12 @@ class DashboardServiceTest {
     private val fixedDate = LocalDate.of(2025, 1, 15)
 
     private val memberRepository: MemberRepository = mock()
-    private val dutyRepository: DutyRepository = mock()
+    private val dutyResolver: DutyResolver = mock()
     private val scheduleRepository: ScheduleRepository = mock()
     private val friendRelationRepository: FriendRelationRepository = mock()
     private val friendService: FriendService = mock()
     private val memberDtoAssembler: MemberDtoAssembler = mock()
+    private val clock = Clock.fixed(Instant.parse("2025-01-14T15:30:00Z"), ZoneOffset.UTC)
 
     private lateinit var dashboardService: DashboardService
 
@@ -46,12 +52,38 @@ class DashboardServiceTest {
     fun setUp() {
         dashboardService = DashboardService(
             memberRepository = memberRepository,
-            dutyRepository = dutyRepository,
+            dutyResolver = dutyResolver,
             scheduleRepository = scheduleRepository,
             friendRelationRepository = friendRelationRepository,
             friendService = friendService,
-            memberDtoAssembler = memberDtoAssembler
+            memberDtoAssembler = memberDtoAssembler,
+            clock = clock,
         )
+    }
+
+    @Test
+    fun `dashboard resolves today in Asia Seoul at the UTC date boundary`() {
+        val team = Team("team")
+        val member = memberWithId(1L, team)
+        val loginMember = LoginMember(id = 1L, name = "user")
+        whenever(memberRepository.findMemberWithTeam(1L)).thenReturn(Optional.of(member))
+        whenever(friendService.availableScheduleVisibilities(eq(loginMember), eq(member))).thenReturn(
+            setOf(Visibility.FRIENDS)
+        )
+        whenever(scheduleRepository.findSchedulesOfMemberRangeIn(eq(member), any(), any(), any()))
+            .thenReturn(emptyList())
+        whenever(scheduleRepository.findTaggedSchedulesOfRange(eq(member), any(), any(), any()))
+            .thenReturn(emptyList())
+        whenever(dutyResolver.resolve(eq(member), any<LocalDate>())).thenAnswer {
+            ResolvedDuty(it.getArgument(1), null, DutySource.DEFAULT_OFF)
+        }
+        whenever(memberDtoAssembler.toDto(member)).thenReturn(memberDtoOf(member))
+
+        val result = dashboardService.my(loginMember)
+
+        assertThat(result.duty?.year).isEqualTo(2025)
+        assertThat(result.duty?.month).isEqualTo(1)
+        assertThat(result.duty?.day).isEqualTo(15)
     }
 
     @Test
@@ -85,15 +117,43 @@ class DashboardServiceTest {
         whenever(
             scheduleRepository.findTaggedSchedulesOfRange(eq(member), any(), any(), any())
         ).thenReturn(listOf(taggedSchedule))
-        whenever(dutyRepository.findByMemberAndDutyDate(member, today)).thenReturn(null)
+        whenever(dutyResolver.resolve(eq(member), any<LocalDate>())).thenAnswer {
+            ResolvedDuty(it.getArgument(1), null, DutySource.DEFAULT_OFF)
+        }
         whenever(memberDtoAssembler.toDto(member)).thenReturn(memberDtoOf(member))
 
         val result = dashboardService.my(loginMember)
 
         assertThat(result.duty?.dutyType).isEqualTo(team.defaultDutyName)
         assertThat(result.duty?.isOff).isTrue
+        assertThat(result.duty?.source).isEqualTo(DutySource.DEFAULT_OFF)
         assertThat(result.schedules).hasSize(2)
         assertThat(result.schedules.count { it.isTagged }).isEqualTo(1)
+    }
+
+    @Test
+    fun `my preserves paused pattern source while presenting the team off label`() {
+        val team = Team("team")
+        val member = memberWithId(1L, team)
+        val loginMember = LoginMember(id = 1L, name = "user")
+        whenever(memberRepository.findMemberWithTeam(1L)).thenReturn(Optional.of(member))
+        whenever(friendService.availableScheduleVisibilities(eq(loginMember), eq(member))).thenReturn(
+            setOf(Visibility.FRIENDS)
+        )
+        whenever(scheduleRepository.findSchedulesOfMemberRangeIn(eq(member), any(), any(), any()))
+            .thenReturn(emptyList())
+        whenever(scheduleRepository.findTaggedSchedulesOfRange(eq(member), any(), any(), any()))
+            .thenReturn(emptyList())
+        whenever(dutyResolver.resolve(eq(member), any<LocalDate>())).thenAnswer {
+            ResolvedDuty(it.getArgument(1), null, DutySource.PATTERN_PAUSED)
+        }
+        whenever(memberDtoAssembler.toDto(member)).thenReturn(memberDtoOf(member))
+
+        val result = dashboardService.my(loginMember)
+
+        assertThat(result.duty?.dutyType).isEqualTo(team.defaultDutyName)
+        assertThat(result.duty?.isOff).isTrue
+        assertThat(result.duty?.source).isEqualTo(DutySource.PATTERN_PAUSED)
     }
 
     @Test
@@ -113,7 +173,11 @@ class DashboardServiceTest {
         )
         whenever(scheduleRepository.findSchedulesOfMembersRangeIn(any(), any(), any(), any())).thenReturn(emptyList())
         whenever(scheduleRepository.findTaggedSchedulesOfMembersRangeIn(any(), any(), any(), any())).thenReturn(emptyList())
-        whenever(dutyRepository.findByDutyDateAndMemberIn(any(), any())).thenReturn(emptyList())
+        whenever(dutyResolver.resolve(any<Collection<Member>>(), any<LocalDate>())).thenAnswer { invocation ->
+            val members = invocation.getArgument<Collection<Member>>(0)
+            val date = invocation.getArgument<LocalDate>(1)
+            members.associate { it.id!! to ResolvedDuty(date, null, DutySource.DEFAULT_OFF) }
+        }
 
         val relation1 = FriendRelation(member, friend1).apply {
             isFamily = true
@@ -184,7 +248,11 @@ class DashboardServiceTest {
                 emptyList()
             }
         }
-        whenever(dutyRepository.findByDutyDateAndMemberIn(any(), any())).thenReturn(emptyList())
+        whenever(dutyResolver.resolve(any<Collection<Member>>(), any<LocalDate>())).thenAnswer { invocation ->
+            val members = invocation.getArgument<Collection<Member>>(0)
+            val date = invocation.getArgument<LocalDate>(1)
+            members.associate { it.id!! to ResolvedDuty(date, null, DutySource.DEFAULT_OFF) }
+        }
 
         val result = dashboardService.friend(loginMember)
 

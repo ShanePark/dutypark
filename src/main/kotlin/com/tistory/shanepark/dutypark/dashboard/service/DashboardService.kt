@@ -4,7 +4,7 @@ import com.tistory.shanepark.dutypark.dashboard.domain.DashboardFriendDetail
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardFriendInfo
 import com.tistory.shanepark.dutypark.dashboard.domain.DashboardMyDetail
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
-import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
+import com.tistory.shanepark.dutypark.duty.service.DutyResolver
 import com.tistory.shanepark.dutypark.member.domain.dto.toFriendRequestDto
 import com.tistory.shanepark.dutypark.member.domain.dto.toMemberPreviewDto
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
@@ -20,17 +20,20 @@ import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Clock
 import java.time.LocalDate
+import java.time.ZoneId
 
 @Service
-@Transactional(readOnly = true)
+@Transactional
 class DashboardService(
     private val memberRepository: MemberRepository,
-    private val dutyRepository: DutyRepository,
+    private val dutyResolver: DutyResolver,
     private val scheduleRepository: ScheduleRepository,
     private val friendRelationRepository: FriendRelationRepository,
     private val friendService: FriendService,
     private val memberDtoAssembler: MemberDtoAssembler,
+    private val clock: Clock,
 ) {
 
     fun my(loginMember: LoginMember): DashboardMyDetail {
@@ -43,7 +46,7 @@ class DashboardService(
     }
 
     private fun todaySchedules(loginMember: LoginMember, member: Member): List<ScheduleDto> {
-        val today = LocalDate.now()
+        val today = today()
         val visibilities = friendService.availableScheduleVisibilities(loginMember = loginMember, member = member)
 
         val personal = scheduleRepository.findSchedulesOfMemberRangeIn(
@@ -64,16 +67,27 @@ class DashboardService(
 
     private fun todayDuty(member: Member): DutyDto? {
         val team = member.team ?: return null
-        val today = LocalDate.now()
-        return dutyRepository.findByMemberAndDutyDate(member, today)
-            ?.takeIf { it.dutyType != null }?.let(::DutyDto)
-            ?: DutyDto(
+        val today = today()
+        val resolved = dutyResolver.resolve(member, today)
+        return resolved.dutyType?.let { dutyType ->
+            DutyDto(
+                year = today.year,
+                month = today.monthValue,
+                day = today.dayOfMonth,
+                dutyType = dutyType.name,
+                dutyColor = dutyType.color,
+                isOff = false,
+                dutyTypeId = dutyType.id,
+                source = resolved.source,
+            )
+        } ?: DutyDto(
                 year = today.year,
                 month = today.monthValue,
                 day = today.dayOfMonth,
                 dutyType = team.defaultDutyName,
                 dutyColor = team.defaultDutyColor,
-                isOff = true
+                isOff = true,
+                source = resolved.source,
             )
     }
 
@@ -110,26 +124,33 @@ class DashboardService(
             return emptyMap()
         }
 
-        val today = LocalDate.now()
-        val duties = dutyRepository.findByDutyDateAndMemberIn(today, members)
-            .associateBy { it.member.id!! }
-
+        val today = today()
+        val resolvedByMemberId = dutyResolver.resolve(members, today)
         return members.associate { member ->
             val memberId = member.id ?: throw IllegalStateException("Member id is null")
             if (member.team == null) {
                 memberId to null
             } else {
-                val duty = duties[memberId]
-                val dto = duty
-                    ?.takeIf { it.dutyType != null }
-                    ?.let(::DutyDto)
-                    ?: DutyDto(
+                val resolved = requireNotNull(resolvedByMemberId[memberId])
+                val dto = resolved.dutyType?.let { dutyType ->
+                    DutyDto(
+                        year = today.year,
+                        month = today.monthValue,
+                        day = today.dayOfMonth,
+                        dutyType = dutyType.name,
+                        dutyColor = dutyType.color,
+                        isOff = false,
+                        dutyTypeId = dutyType.id,
+                        source = resolved.source,
+                    )
+                } ?: DutyDto(
                         year = today.year,
                         month = today.monthValue,
                         day = today.dayOfMonth,
                         dutyType = member.team!!.defaultDutyName,
                         dutyColor = member.team!!.defaultDutyColor,
-                        isOff = true
+                        isOff = true,
+                        source = resolved.source,
                     )
                 memberId to dto
             }
@@ -144,7 +165,7 @@ class DashboardService(
             return emptyMap()
         }
 
-        val today = LocalDate.now()
+        val today = today()
         val start = today.atStartOfDay()
         val end = today.atTime(23, 59, 59)
         val friends = friendRelations.map { it.friend }
@@ -182,6 +203,12 @@ class DashboardService(
                 .map { schedule -> ScheduleDto.ofSimple(friend, schedule, today) }
             friendId to schedules
         }
+    }
+
+    private fun today(): LocalDate = LocalDate.now(clock.withZone(SEOUL))
+
+    companion object {
+        private val SEOUL: ZoneId = ZoneId.of("Asia/Seoul")
     }
 
 }

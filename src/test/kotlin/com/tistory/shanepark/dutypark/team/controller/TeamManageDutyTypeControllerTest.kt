@@ -7,6 +7,12 @@ import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
+import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
+import org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath
+import org.springframework.restdocs.payload.PayloadDocumentation.requestFields
+import org.springframework.restdocs.request.RequestDocumentation.parameterWithName
+import org.springframework.restdocs.request.RequestDocumentation.pathParameters
+import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -140,19 +146,95 @@ class TeamManageDutyTypeControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `manager can delete duty type`() {
+    fun `manager can hide and restore duty type`() {
         setTeamAdmin(TestData.member.id!!)
         val dutyType = dutyTypeRepository.save(
             DutyType("DeleteDuty", 5, TestData.team, "#999999")
         )
 
         mockMvc.perform(
-            MockMvcRequestBuilders.delete("/api/teams/manage/{teamId}/duty-types/{id}", TestData.team.id!!, dutyType.id!!)
+            RestDocumentationRequestBuilders.patch(
+                "/api/teams/manage/{teamId}/duty-types/{id}/visibility",
+                TestData.team.id!!,
+                dutyType.id!!
+            )
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"hidden":true}""")
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andDo(
+                document(
+                    "teams/duty-types/update-visibility",
+                    pathParameters(
+                        parameterWithName("teamId").description("Team ID"),
+                        parameterWithName("id").description("Duty type ID"),
+                    ),
+                    requestFields(
+                        fieldWithPath("hidden").description("Whether the duty type is hidden"),
+                    ),
+                )
+            )
+
+        assertThat(dutyTypeRepository.findById(dutyType.id!!).orElseThrow().hidden).isTrue()
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.patch(
+                "/api/teams/manage/{teamId}/duty-types/{id}/visibility",
+                TestData.team.id!!,
+                dutyType.id!!
+            )
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"hidden":false}""")
                 .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
 
-        assertThat(dutyTypeRepository.findById(dutyType.id!!)).isEmpty
+        assertThat(dutyTypeRepository.findById(dutyType.id!!).orElseThrow().hidden).isFalse()
+    }
+
+    @Test
+    fun `visibility update rejects a duty type from a different path team`() {
+        setTeamAdmin(TestData.member.id!!)
+        val team2DutyType = dutyTypeRepository.save(
+            DutyType("타팀근무", 0, TestData.team2, "#222222")
+        )
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.patch(
+                "/api/teams/manage/{teamId}/duty-types/{id}/visibility",
+                TestData.team.id!!,
+                team2DutyType.id!!
+            )
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"hidden":true}""")
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+
+        assertThat(dutyTypeRepository.findById(team2DutyType.id!!).orElseThrow().hidden).isFalse()
+    }
+
+    @Test
+    fun `non-manager cannot change duty type visibility`() {
+        val dutyType = dutyTypeRepository.save(
+            DutyType("보호근무", 5, TestData.team, "#333333")
+        )
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.patch(
+                "/api/teams/manage/{teamId}/duty-types/{id}/visibility",
+                TestData.team.id!!,
+                dutyType.id!!
+            )
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"hidden":true}""")
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("team.manage.forbidden"))
+
+        assertThat(dutyTypeRepository.findById(dutyType.id!!).orElseThrow().hidden).isFalse()
     }
 
     private fun setTeamAdmin(memberId: Long) {

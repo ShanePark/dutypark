@@ -51,6 +51,7 @@ const apiErrors = {
   common: {
     notFound: '未找到资源。',
     badRequest: '不好的请求。',
+    concurrentUpdate: '其他排班更改正在处理中，请稍后重试。',
     validation: {
       failed: '请检查请求字段。',
     },
@@ -166,6 +167,11 @@ const apiErrors = {
   duty: {
     edit: {
       forbidden: '您无权编辑此班次。',
+    },
+    pattern: {
+      team: { required: '只有团队成员才能设置默认值班模式。' },
+      weekdays: { required: '请至少选择一个工作日。', duplicate: '同一星期不能重复设置。' },
+      dutyType: { invalid: '所选值班类型不可用，请检查团队设置。' },
     },
   },
   dutyBatch: {
@@ -770,6 +776,9 @@ export default {
   },
   member: {
     title: '我的帐户',
+    dutyPattern: {
+      sectionTitle: '默认工作模式', description: '打开日历时，空白日期会按照重复工作日自动保存。更改或停用模式时，今天及之后的所有班次（包括手动输入）都会被重置。', dutyType: '工作类型', dutyTypeByDay: '按星期设置工作类型', automatic: '按星期选择', noDutyType: '没有可选的工作类型。', weekdaysLabel: '工作日', holidayOff: '公共假日休息', holidayOffHint: '所选工作日遇到公共假日时按休息处理。', effectiveFrom: '从 {month} 起生效', weekdays: { monday: '一', tuesday: '二', wednesday: '三', thursday: '四', friday: '五', saturday: '六', sunday: '日' }, unavailable: { title: '目前无法设置工作模式。', team: '只有已加入团队的成员才能设置默认工作模式。', none: '至少添加一个可见的团队工作类型后即可使用。', multiple: '可以为每个星期选择工作类型。', default: '请检查团队工作类型设置。' }, paused: { title: '部分星期的自动应用已暂停。', description: '使用隐藏工作类型的星期会暂停，直到选择其他类型或恢复该类型。' }, actions: { save: '保存模式', update: '更改模式', delete: '停用模式' }, validation: { weekdayRequired: '请至少选择一个工作日。', dutyTypeRequired: '请为每个工作日选择可见的工作类型。' }, messages: { loadFailed: '无法加载默认工作模式。', saveConfirm: '保存后，今天及之后的所有班次都会被删除，并按新的星期规则重新登记。是否继续？', saveSuccess: '默认工作模式已保存。', saveFailed: '无法保存默认工作模式。', deleteConfirm: '从今天起停用默认工作模式吗？今天及之后的手动班次也会被删除。', deleteSuccess: '默认工作模式已停用。', deleteFailed: '无法停用模式。' },
+    },
     profile: {
       sectionTitle: '公司简介',
       name: '名称',
@@ -976,6 +985,10 @@ export default {
     common: {
       off: '休息',
       uploading: '正在上传...',
+      usePattern: '使用默认模式',
+      currentPattern: '当前默认模式',
+      pausedPattern: '默认模式 · 自动应用已暂停',
+      patternNotSet: '未设置模式 · 默认休息',
     },
     view: {
       loading: '加载日历...',
@@ -984,12 +997,13 @@ export default {
       loadDutiesFailed: '加载班次失败。',
       loadOtherDutiesFailed: '无法加载共享班次覆盖。',
       changeDutyFailed: '更新班次失败。',
+      restorePatternFailed: '无法恢复默认模式。',
     },
     batchUpdate: {
       title: '批量更新班次',
       description1: '选择一个班次，并将其应用到 {month}/{year} 的所有日期。',
       description2: '所选班次将立即应用到整个月。',
-      warning: '本月已有的班次将被替换。',
+      warning: '本月已有班次将被替换。以后更改默认模式时，今天及之后的批量输入班次也会被删除。',
       failed: '批量更新班次失败。',
     },
     excelUpload: {
@@ -1020,6 +1034,9 @@ export default {
       compare: '比较班次',
       batchUpdate: '批量更新',
       editMode: '编辑模式',
+      editModeActive: '正在使用编辑模式',
+      editModeDescription: '选择班次类型后，将立即应用到所选日期并移至下一天。',
+      exitEditMode: '退出编辑模式',
       excel: 'Excel',
     },
     dday: {
@@ -1233,11 +1250,12 @@ export default {
         removeMember: '删除',
         assignManager: '做经理',
         addDutyType: '添加',
+        hideDutyType: '隐藏',
+        restoreDutyType: '恢复',
       },
       fields: {
         description: '团队描述',
         admin: '团队负责人',
-        workType: '工作类型',
         batchTemplate: '班次导入模板',
         dutyUpload: '值班表上传',
         members: '团队成员',
@@ -1247,6 +1265,7 @@ export default {
         dutyTypes: '班次类型',
         dutyName: '班次名称',
         color: '颜色',
+        status: '状态',
       },
       labels: {
         notAvailable: '不适用',
@@ -1254,12 +1273,8 @@ export default {
         noMembers: '这个团队没有成员。',
         offDuty: '休息',
         noDutyTypes: '没有班次类型。',
-      },
-      workTypes: {
-        weekday: '平日值班',
-        weekend: '周末值班',
-        fixed: '固定值班',
-        flexible: '灵活的工作制',
+        visible: '使用中',
+        hidden: '已隐藏',
       },
       messages: {
         fetchFailed: '无法加载团队信息。',
@@ -1277,13 +1292,13 @@ export default {
         changeAdminSuccess: '{name} 现在是团队负责人。',
         resetAdminSuccess: '团队领导已重置。',
         changeAdminFailed: '更换团队领导失败。',
-        updateWorkTypeSuccess: '工作类型已更新。',
-        updateWorkTypeFailed: '无法更新工作类型。',
         updateBatchTemplateSuccess: '班次导入模板已更新。',
         updateBatchTemplateFailed: '更新班次导入模板失败。',
-        deleteDutyTypeConfirm: '删除班次类型 [{name}]？\\n此操作无法撤消，并且使用此类型的所有职责都将被删除。',
-        deleteDutyTypeSuccess: '班次类型已删除。',
-        deleteDutyTypeFailed: '删除班次类型失败。',
+        hideDutyTypeConfirm: '隐藏班次类型 [{name}]？历史记录将被保留。',
+        restoreDutyTypeConfirm: '恢复班次类型 [{name}]？',
+        hideDutyTypeSuccess: '班次类型已隐藏。',
+        restoreDutyTypeSuccess: '班次类型已恢复。',
+        updateDutyTypeVisibilityFailed: '无法更改班次类型状态。',
         reorderDutyTypesSuccess: '顺序已更新。',
         reorderDutyTypesFailed: '无法更新订单。',
         deleteTeamConfirm: '删除这个团队？',
@@ -1617,7 +1632,7 @@ export default {
           dutyTypes: {
             title: '班次类型管理（团队经理）',
             items: [
-              '您可以添加、编辑和删除团队使用的班次类型。',
+              '您可以添加、编辑、隐藏和恢复团队班次类型。隐藏后仍会保留历史班次记录。',
               '每种班次类型都可以有自己的名称和颜色。',
               '任务类型的显示顺序可以更改。',
               '默认的 OFF 类型也可以更新其名称和颜色。',

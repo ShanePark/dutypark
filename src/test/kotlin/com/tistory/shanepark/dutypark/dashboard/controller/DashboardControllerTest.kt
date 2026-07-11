@@ -17,8 +17,9 @@ import org.springframework.restdocs.payload.PayloadDocumentation.*
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.time.Clock
 import java.time.LocalDate
-import java.time.LocalDateTime
+import java.time.ZoneId
 
 class DashboardControllerTest : RestDocsTest() {
 
@@ -31,11 +32,12 @@ class DashboardControllerTest : RestDocsTest() {
     @Autowired
     lateinit var memberSocialAccountRepository: MemberSocialAccountRepository
 
+    @Autowired
+    lateinit var clock: Clock
+
     @Test
     fun `get my dashboard`() {
-        // Dashboard endpoint returns data for "today" using LocalDate.now() internally
-        // So test data must use the actual current date for the response to include schedules
-        val today = LocalDate.now()
+        val today = LocalDate.now(clock.withZone(ZoneId.of("Asia/Seoul")))
         val todayDateTime = today.atTime(12, 0)
         dutyRepository.save(
             Duty(
@@ -90,6 +92,8 @@ class DashboardControllerTest : RestDocsTest() {
                         fieldWithPath("duty.dutyType").description("Duty type name").optional(),
                         fieldWithPath("duty.dutyColor").description("Duty color").optional(),
                         fieldWithPath("duty.isOff").description("Is off day").optional(),
+                        fieldWithPath("duty.dutyTypeId").description("Duty type ID").optional(),
+                        fieldWithPath("duty.source").description("Resolved duty source, including PATTERN_PAUSED while automatic pattern application is paused").optional(),
                         fieldWithPath("schedules").description("Today's schedules"),
                         fieldWithPath("schedules[].id").description("Schedule ID"),
                         fieldWithPath("schedules[].content").description("Schedule content"),
@@ -121,8 +125,7 @@ class DashboardControllerTest : RestDocsTest() {
     fun `get friends dashboard`() {
         makeThemFriend(TestData.member, TestData.member2)
 
-        // Dashboard endpoint uses LocalDate.now() internally
-        val today = LocalDate.now()
+        val today = LocalDate.now(clock.withZone(ZoneId.of("Asia/Seoul")))
         dutyRepository.save(
             Duty(
                 dutyDate = today,
@@ -157,6 +160,8 @@ class DashboardControllerTest : RestDocsTest() {
                         fieldWithPath("friends[].duty.dutyType").description("Duty type").optional(),
                         fieldWithPath("friends[].duty.dutyColor").description("Duty color").optional(),
                         fieldWithPath("friends[].duty.isOff").description("Is off").optional(),
+                        fieldWithPath("friends[].duty.dutyTypeId").description("Duty type ID").optional(),
+                        fieldWithPath("friends[].duty.source").description("Resolved duty source, including PATTERN_PAUSED while automatic pattern application is paused").optional(),
                         fieldWithPath("friends[].schedules").description("Friend's today schedules"),
                         fieldWithPath("friends[].isFamily").description("Is family member"),
                         fieldWithPath("friends[].pinOrder").description("Pin order for sorting"),

@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ChevronLeft, ChevronRight, FileSpreadsheet, Loader2, Users, X } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, FileSpreadsheet, Loader2, PencilLine, RotateCcw, Users, X } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { isLightColor } from '@/utils/color'
 import type { DutyType, DutyTypeWithCount } from '@/views/duty/dutyViewTypes'
+import type { DutySource } from '@/types'
+import { dutySourcePatternLabelKey, isInheritedDutySource } from '@/utils/dutySource'
 
 const props = defineProps<{
   batchEditMode: boolean
@@ -12,6 +14,7 @@ const props = defineProps<{
   isLoadingDuties: boolean
   focusedDay: number | null
   focusedDayDutyType: string | null
+  focusedDayDutySource: DutySource | null
   lastDayInMonth: number
   canEdit: boolean
   canEditMyCalendar: boolean
@@ -27,12 +30,14 @@ const emit = defineEmits<{
   (e: 'toggle-batch-edit', value: boolean): void
   (e: 'show-excel-upload-modal'): void
   (e: 'quick-duty-change', dutyTypeId: number | null): void
+  (e: 'restore-pattern'): void
   (e: 'update:focusedDay', value: number): void
 }>()
 
 const { t } = useI18n()
 
 const focusedDayValue = computed(() => props.focusedDay ?? 1)
+const patternButtonLabel = computed(() => t(dutySourcePatternLabelKey(props.focusedDayDutySource)))
 
 function moveFocusDay(delta: number) {
   const next = Math.min(props.lastDayInMonth, Math.max(1, focusedDayValue.value + delta))
@@ -45,6 +50,34 @@ function toggleBatchEdit() {
 </script>
 
 <template>
+  <div
+    v-if="batchEditMode"
+    role="status"
+    class="mb-2 flex flex-col gap-3 rounded-xl border border-dp-warning-border bg-dp-warning-soft px-3 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-4"
+  >
+    <div class="flex min-w-0 items-start gap-2.5">
+      <span class="grid size-9 shrink-0 place-items-center rounded-full bg-dp-bg-primary text-dp-warning shadow-sm">
+        <PencilLine class="size-4.5" aria-hidden="true" />
+      </span>
+      <div class="min-w-0 pt-0.5">
+        <p class="text-sm font-bold text-dp-text-primary">
+          {{ t('duty.typesBar.editModeActive') }}
+        </p>
+        <p class="mt-0.5 text-xs leading-relaxed text-dp-text-secondary sm:text-sm">
+          {{ t('duty.typesBar.editModeDescription') }}
+        </p>
+      </div>
+    </div>
+    <button
+      type="button"
+      @click="toggleBatchEdit"
+      class="flex min-h-[44px] shrink-0 items-center justify-center gap-1.5 rounded-lg border border-dp-warning-border bg-dp-bg-primary px-3.5 py-2 text-sm font-bold text-dp-warning-hover shadow-sm transition-colors hover:bg-dp-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dp-warning cursor-pointer sm:self-center"
+    >
+      <X class="size-4" aria-hidden="true" />
+      {{ t('duty.typesBar.exitEditMode') }}
+    </button>
+  </div>
+
   <div class="flex flex-wrap items-center justify-between gap-1 mb-1.5">
     <div class="flex flex-wrap items-center gap-2 sm:gap-3">
       <!-- Edit mode: Clickable duty type buttons for quick input -->
@@ -68,11 +101,22 @@ function toggleBatchEdit() {
           </button>
         </div>
         <button
+          type="button"
+          class="duty-quick-btn min-h-11"
+          :class="{ 'duty-quick-btn-active': isInheritedDutySource(focusedDayDutySource) }"
+          @click="emit('restore-pattern')"
+        >
+          <span class="duty-quick-btn-inner flex items-center gap-1">
+            <RotateCcw class="w-3.5 h-3.5" />
+            {{ patternButtonLabel }}
+          </span>
+        </button>
+        <button
           v-for="dutyType in dutyTypes"
           :key="dutyType.id ?? 'off'"
           @click="emit('quick-duty-change', dutyType.id)"
           class="duty-quick-btn"
-          :class="{ 'duty-quick-btn-active': focusedDayDutyType === dutyType.name || (!focusedDayDutyType && dutyType.id === null) }"
+          :class="{ 'duty-quick-btn-active': focusedDayDutySource === 'OVERRIDE' && (focusedDayDutyType === dutyType.name || (!focusedDayDutyType && dutyType.id === null)) }"
           :style="{
             '--duty-color': dutyType.color || 'var(--dp-duty-fallback)',
             '--duty-text': isLightColor(dutyType.color) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
@@ -86,7 +130,7 @@ function toggleBatchEdit() {
 
       <!-- Normal mode: Duty type badges with counts -->
       <template v-else-if="dutyTypesWithCount.length > 0">
-        <div v-for="dutyType in dutyTypesWithCount" :key="dutyType.name" class="flex items-center gap-1">
+        <div v-for="dutyType in dutyTypesWithCount" :key="dutyType.id ?? 'off'" class="flex items-center gap-1">
           <span
             class="w-4 h-4 rounded border-2"
             :style="{ backgroundColor: dutyType.color || 'var(--dp-duty-fallback)', borderColor: 'var(--dp-border-primary)' }"
@@ -148,10 +192,9 @@ function toggleBatchEdit() {
         {{ t('duty.typesBar.batchUpdate') }}
       </button>
       <button
-        v-if="canEdit"
+        v-if="canEdit && !batchEditMode"
         @click="toggleBatchEdit"
-        class="px-2 sm:px-3 py-1.5 min-h-[44px] text-xs sm:text-sm transition-colors duration-150 border-r last:border-r-0 cursor-pointer border-dp-border-secondary"
-        :class="batchEditMode ? 'bg-dp-warning-soft/70 text-dp-warning hover:bg-dp-warning-soft' : 'hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover'"
+        class="px-2 sm:px-3 py-1.5 min-h-[44px] text-xs sm:text-sm transition-colors duration-150 border-r last:border-r-0 cursor-pointer border-dp-border-secondary hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover"
       >
         {{ t('duty.typesBar.editMode') }}
       </button>

@@ -9,6 +9,7 @@ import Pickr from '@simonwep/pickr'
 import '@simonwep/pickr/dist/themes/monolith.min.css'
 import type { DutyTypeDto } from '@/types'
 import { X } from 'lucide-vue-next'
+import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 
 const props = defineProps<{
   isOpen: boolean
@@ -36,13 +37,14 @@ const dutyTypeForm = ref({
   isDefault: false,
 })
 const trimmedDutyTypeName = computed(() => dutyTypeForm.value.name.trim())
+const submitting = ref(false)
 const hasDuplicateDutyTypeName = computed(() =>
   props.dutyTypes.some(
     dt => dt.name === trimmedDutyTypeName.value && dt.id !== dutyTypeForm.value.id
   )
 )
 const isDutyTypeNameInvalid = computed(() => !trimmedDutyTypeName.value || hasDuplicateDutyTypeName.value)
-const isDutyTypeSaveDisabled = computed(() => props.saving || isDutyTypeNameInvalid.value)
+const isDutyTypeSaveDisabled = computed(() => props.saving || submitting.value || isDutyTypeNameInvalid.value)
 
 let pickrInstance: Pickr | null = null
 const colorPickerRef = ref<HTMLElement | null>(null)
@@ -124,10 +126,12 @@ onUnmounted(() => {
 })
 
 function close() {
+  if (props.saving || submitting.value) return
   emit('close')
 }
 
 async function saveDutyType() {
+  if (props.saving || submitting.value) return
   if (!trimmedDutyTypeName.value) {
     showWarning(t('team.dutyType.warnings.nameRequired'))
     return
@@ -138,7 +142,9 @@ async function saveDutyType() {
     return
   }
 
+  submitting.value = true
   emit('update:saving', true)
+  let succeeded = false
   try {
     if (dutyTypeForm.value.isDefault) {
       await teamApi.updateDefaultDuty(
@@ -161,13 +167,18 @@ async function saveDutyType() {
     }
     toastSuccess(t('team.dutyType.messages.saveSuccess'))
     emit('saved')
-    close()
+    succeeded = true
   } catch (error) {
     console.error('Failed to save duty type:', error)
-    showError(t('team.dutyType.messages.saveFailed'))
+    emit('saved')
+    showError(resolveApiErrorMessage(error, {
+      fallbackKey: 'team.dutyType.messages.saveFailed',
+    }, t))
   } finally {
     emit('update:saving', false)
+    submitting.value = false
   }
+  if (succeeded) emit('close')
 }
 </script>
 
@@ -248,7 +259,8 @@ async function saveDutyType() {
       </button>
       <button
         @click="close"
-        class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"
+        :disabled="saving || submitting"
+        class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {{ t('common.actions.cancel') }}
       </button>

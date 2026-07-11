@@ -32,12 +32,13 @@ class DutyBatchSungsimService(
     private val dutyRepository: DutyRepository,
     private val dutyTypeRepository: DutyTypeRepository
 ) : DutyBatchService {
+    @Transactional(timeout = 25)
     override fun batchUploadMember(file: MultipartFile, memberId: Long, yearMonth: YearMonth): DutyBatchResult {
         DutyBatchTemplate.SUNGSIM_CAKE.checkSupportedFile(file)
 
         file.inputStream.use { input ->
             val batchParseResult = sungsimCakeParser.parseDayOff(yearMonth, input)
-            val member = memberRepository.findById(memberId).orElseThrow()
+            val member = memberRepository.findMemberWithTeamForUpdate(memberId).orElseThrow()
             val team =
                 member.team ?: throw IllegalArgumentException("dutyBatch.member.teamRequired")
 
@@ -67,6 +68,7 @@ class DutyBatchSungsimService(
         }
     }
 
+    @Transactional(timeout = 25)
     override fun batchUploadTeam(
         file: MultipartFile,
         teamId: Long,
@@ -124,8 +126,9 @@ class DutyBatchSungsimService(
             val nameOnXlsx = validNames.first()
             val workDays = batchParseResult.getWorkDays(nameOnXlsx)
 
+            val lockedMember = memberRepository.findMemberWithTeamForUpdate(requireNotNull(it.id)).orElseThrow()
             saveBatchDuty(
-                member = it,
+                member = lockedMember,
                 batchParseResult = batchParseResult,
                 workDays = workDays,
                 dutyType = dutyType
@@ -175,14 +178,21 @@ class DutyBatchSungsimService(
             start = batchParseResult.startDate,
             end = batchParseResult.endDate
         )
-        val duties = workDays.map {
-            Duty(dutyDate = it, dutyType = dutyType, member = member)
+        val workDaySet = workDays.toSet()
+        val duties = generateSequence(batchParseResult.startDate) { date ->
+            date.plusDays(1).takeIf { it <= batchParseResult.endDate }
+        }.map { date ->
+            Duty(
+                dutyDate = date,
+                dutyType = dutyType.takeIf { date in workDaySet },
+                member = member,
+            )
         }
-        dutyRepository.saveAll(duties)
+        dutyRepository.saveAll(duties.toList())
     }
 
     private fun findOnlyDutyType(team: Team): DutyType {
-        val dutyTypes = dutyTypeRepository.findAllByTeam(team)
+        val dutyTypes = dutyTypeRepository.findAllByTeamAndHiddenFalse(team)
         if (dutyTypes.size != 1) {
             throw DutyTypeNotSingleException(dutyTypes)
         }

@@ -10,6 +10,9 @@ import BatchUploadModal from '@/components/team/BatchUploadModal.vue'
 import DutyTypeModal from '@/components/team/DutyTypeModal.vue'
 import adminApi from '@/api/admin'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
+import {
+  findVisibleDutyTypeNeighbor,
+} from '@/utils/dutyTypeVisibility'
 import type {
   TeamDto,
   TeamMemberDto,
@@ -30,6 +33,8 @@ import {
   ShieldOff,
   Crown,
   Loader2,
+  Eye,
+  EyeOff,
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -53,13 +58,6 @@ const teamLoaded = ref(false)
 const team = ref<TeamDto | null>(null)
 
 const dutyBatchTemplates = ref<DutyBatchTemplateDto[]>([])
-
-const workTypes = computed(() => [
-  { value: 'WEEKDAY', label: t('team.manage.workTypes.weekday') },
-  { value: 'WEEKEND', label: t('team.manage.workTypes.weekend') },
-  { value: 'FIXED', label: t('team.manage.workTypes.fixed') },
-  { value: 'FLEXIBLE', label: t('team.manage.workTypes.flexible') },
-])
 
 // Computed
 const hasMember = computed(() => team.value?.members && team.value.members.length > 0)
@@ -186,20 +184,6 @@ async function changeAdmin(member?: TeamMemberDto) {
   }
 }
 
-async function updateWorkType(workType: string) {
-  saving.value = true
-  try {
-    await teamApi.updateWorkType(teamId, workType)
-    if (team.value) team.value.workType = workType
-    toastSuccess(t('team.manage.messages.updateWorkTypeSuccess'))
-  } catch (error) {
-    console.error('Failed to update work type:', error)
-    showError(t('team.manage.messages.updateWorkTypeFailed'))
-  } finally {
-    saving.value = false
-  }
-}
-
 async function updateBatchTemplate(templateName: string) {
   saving.value = true
   try {
@@ -219,38 +203,63 @@ async function updateBatchTemplate(templateName: string) {
 }
 
 function openAddDutyTypeModal() {
+  if (saving.value) return
   dutyTypeModalTarget.value = null
   showDutyTypeModal.value = true
 }
 
 function openEditDutyTypeModal(dutyType: DutyTypeDto) {
+  if (saving.value) return
   dutyTypeModalTarget.value = dutyType
   showDutyTypeModal.value = true
 }
 
 function closeDutyTypeModal() {
+  if (saving.value) return
   showDutyTypeModal.value = false
 }
 
-async function removeDutyType(dutyType: DutyTypeDto) {
-  if (!dutyType.id) return
-  if (!await confirmDelete(t('team.manage.messages.deleteDutyTypeConfirm', { name: dutyType.name }))) return
-
+async function updateDutyTypeVisibility(dutyType: DutyTypeDto) {
+  if (saving.value || !dutyType.id) return
   saving.value = true
+  const nextHidden = !dutyType.hidden
+  const messageKey = nextHidden
+    ? 'team.manage.messages.hideDutyTypeConfirm'
+    : 'team.manage.messages.restoreDutyTypeConfirm'
   try {
-    await teamApi.deleteDutyType(teamId, dutyType.id)
-    toastSuccess(t('team.manage.messages.deleteDutyTypeSuccess'))
+    if (!await confirm(t(messageKey, { name: dutyType.name }))) return
+    await teamApi.updateDutyTypeVisibility(teamId, dutyType.id, nextHidden)
+    toastSuccess(t(nextHidden
+      ? 'team.manage.messages.hideDutyTypeSuccess'
+      : 'team.manage.messages.restoreDutyTypeSuccess'))
     await fetchTeam()
   } catch (error) {
-    console.error('Failed to delete duty type:', error)
-    showError(t('team.manage.messages.deleteDutyTypeFailed'))
+    console.error('Failed to update duty type visibility:', error)
+    await fetchTeam()
+    showError(resolveApiErrorMessage(error, {
+      fallbackKey: 'team.manage.messages.updateDutyTypeVisibilityFailed',
+    }, t))
   } finally {
     saving.value = false
   }
 }
 
+function visibleNeighborIndex(index: number, direction: -1 | 1): number | null {
+  return findVisibleDutyTypeNeighbor(team.value?.dutyTypes ?? [], index, direction)
+}
+
+function canMoveDutyType(index: number, direction: -1 | 1): boolean {
+  const dutyType = team.value?.dutyTypes[index]
+  return !!dutyType?.id && !dutyType.hidden && visibleNeighborIndex(index, direction) !== null
+}
+
+function moveDutyType(index: number, direction: -1 | 1) {
+  const neighborIndex = visibleNeighborIndex(index, direction)
+  if (neighborIndex !== null) void swapPosition(index, neighborIndex)
+}
+
 async function swapPosition(index1: number, index2: number) {
-  if (!team.value) return
+  if (saving.value || !team.value) return
   const dt1 = team.value.dutyTypes[index1]
   const dt2 = team.value.dutyTypes[index2]
   if (!dt1?.id || !dt2?.id) return
@@ -362,21 +371,6 @@ onMounted(() => {
 
         <div class="px-4 py-3">
           <label class="text-xs font-medium text-dp-text-muted">
-            {{ t('team.manage.fields.workType') }}
-          </label>
-          <select
-            :value="team.workType"
-            @change="updateWorkType(($event.target as HTMLSelectElement).value)"
-            class="mt-1.5 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent bg-dp-bg-input border-dp-border-input text-dp-text-primary"
-          >
-            <option v-for="wt in workTypes" :key="wt.value" :value="wt.value">
-              {{ wt.label }}
-            </option>
-          </select>
-        </div>
-
-        <div class="px-4 py-3">
-          <label class="text-xs font-medium text-dp-text-muted">
             {{ t('team.manage.fields.batchTemplate') }}
           </label>
           <select
@@ -432,22 +426,6 @@ onMounted(() => {
                     {{ t('team.manage.actions.cancelAdmin') }}
                   </button>
                 </div>
-              </td>
-            </tr>
-            <tr class="border-b border-dp-border-primary">
-              <th class="px-4 py-3 text-left font-medium bg-dp-bg-secondary text-dp-text-secondary">
-                {{ t('team.manage.fields.workType') }}
-              </th>
-              <td class="px-4 py-3">
-                <select
-                  :value="team.workType"
-                  @change="updateWorkType(($event.target as HTMLSelectElement).value)"
-                  class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent bg-dp-bg-input border-dp-border-input text-dp-text-primary"
-                >
-                  <option v-for="wt in workTypes" :key="wt.value" :value="wt.value">
-                    {{ wt.label }}
-                  </option>
-                </select>
               </td>
             </tr>
             <tr class="border-b border-dp-border-primary">
@@ -619,7 +597,8 @@ onMounted(() => {
         <h3 class="font-bold">{{ t('team.manage.fields.dutyTypes') }}</h3>
         <button
           @click="openAddDutyTypeModal"
-          class="px-3 py-1.5 rounded-lg text-sm font-medium hover-interactive cursor-pointer flex items-center gap-1 bg-dp-bg-card text-dp-text-primary"
+          :disabled="saving"
+          class="px-3 py-1.5 rounded-lg text-sm font-medium hover-interactive cursor-pointer flex items-center gap-1 bg-dp-bg-card text-dp-text-primary disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Plus class="w-4 h-4" />
           {{ t('team.manage.actions.addDutyType') }}
@@ -633,11 +612,17 @@ onMounted(() => {
               <th class="px-4 py-2 text-center w-12">#</th>
               <th class="px-4 py-2 text-left">{{ t('team.manage.fields.dutyName') }}</th>
               <th class="px-4 py-2 text-center">{{ t('team.manage.fields.color') }}</th>
+              <th class="px-4 py-2 text-center">{{ t('team.manage.fields.status') }}</th>
               <th class="px-4 py-2 text-center">{{ t('team.manage.fields.tools') }}</th>
             </tr>
           </thead>
           <tbody class="border-dp-border-primary">
-            <tr v-for="(dutyType, index) in team.dutyTypes" :key="dutyType.id || 'default'" class="hover-bg-light border-b border-dp-border-primary">
+            <tr
+              v-for="(dutyType, index) in team.dutyTypes"
+              :key="dutyType.id || 'default'"
+              class="hover-bg-light border-b border-dp-border-primary"
+              :class="{ 'opacity-60': dutyType.hidden }"
+            >
               <td class="px-4 py-3 text-center text-dp-text-muted">{{ index + 1 }}</td>
               <td class="px-4 py-3 font-medium text-dp-text-primary">
                 {{ dutyType.name }}
@@ -650,36 +635,55 @@ onMounted(() => {
                   :style="{ backgroundColor: dutyType.color || 'var(--dp-duty-type-fallback)', borderColor: 'var(--dp-border-primary)' }"
                 ></span>
               </td>
+              <td class="px-4 py-3 text-center">
+                <span
+                  class="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium"
+                  :class="dutyType.hidden
+                    ? 'bg-dp-bg-tertiary text-dp-text-muted'
+                    : 'bg-dp-success-soft text-dp-success'"
+                >
+                  <EyeOff v-if="dutyType.hidden" class="w-3 h-3" />
+                  <Eye v-else class="w-3 h-3" />
+                  {{ dutyType.hidden ? t('team.manage.labels.hidden') : t('team.manage.labels.visible') }}
+                </span>
+              </td>
               <td class="px-4 py-3">
                 <div class="flex flex-wrap items-center justify-center gap-1">
                   <button
                     v-if="dutyType.id"
-                    :disabled="index === 0 || index === team.dutyTypes.length - 1"
-                    @click="swapPosition(index, index + 1)"
-                    class="p-1 sm:p-1.5 border rounded hover-bg-light transition disabled:opacity-50 disabled:cursor-not-allowed border-dp-border-secondary"
+                    :disabled="saving || !canMoveDutyType(index, 1)"
+                    @click="moveDutyType(index, 1)"
+                    class="min-w-11 min-h-11 p-2 border rounded hover-bg-light transition disabled:opacity-50 disabled:cursor-not-allowed border-dp-border-secondary"
                   >
                     <ArrowDown class="w-3 h-3 sm:w-4 sm:h-4" />
                   </button>
                   <button
                     v-if="dutyType.id"
-                    :disabled="index <= 1"
-                    @click="swapPosition(index, index - 1)"
-                    class="p-1 sm:p-1.5 border rounded hover-bg-light transition disabled:opacity-50 disabled:cursor-not-allowed border-dp-border-secondary"
+                    :disabled="saving || !canMoveDutyType(index, -1)"
+                    @click="moveDutyType(index, -1)"
+                    class="min-w-11 min-h-11 p-2 border rounded hover-bg-light transition disabled:opacity-50 disabled:cursor-not-allowed border-dp-border-secondary"
                   >
                     <ArrowUp class="w-3 h-3 sm:w-4 sm:h-4" />
                   </button>
                   <button
                     @click="openEditDutyTypeModal(dutyType)"
-                    class="p-1 sm:p-1.5 border border-dp-accent-border text-dp-accent rounded hover:bg-dp-accent-soft transition"
+                    :disabled="saving"
+                    class="min-w-11 min-h-11 p-2 border border-dp-accent-border text-dp-accent rounded hover:bg-dp-accent-soft transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Pencil class="w-3 h-3 sm:w-4 sm:h-4" />
                   </button>
                   <button
                     v-if="dutyType.id"
-                    @click="removeDutyType(dutyType)"
-                    class="p-1 sm:p-1.5 border border-dp-danger-border text-dp-danger rounded hover:bg-dp-danger-soft transition"
+                    @click="updateDutyTypeVisibility(dutyType)"
+                    :disabled="saving"
+                    class="min-w-11 min-h-11 p-2 border rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    :class="dutyType.hidden
+                      ? 'border-dp-success-border text-dp-success hover:bg-dp-success-soft'
+                      : 'border-dp-warning-border text-dp-warning hover:bg-dp-warning-soft'"
+                    :title="dutyType.hidden ? t('team.manage.actions.restoreDutyType') : t('team.manage.actions.hideDutyType')"
                   >
-                    <Trash2 class="w-3 h-3 sm:w-4 sm:h-4" />
+                    <Eye v-if="dutyType.hidden" class="w-4 h-4 mx-auto" />
+                    <EyeOff v-else class="w-4 h-4 mx-auto" />
                   </button>
                 </div>
               </td>

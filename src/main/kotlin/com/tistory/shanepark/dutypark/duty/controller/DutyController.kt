@@ -10,6 +10,7 @@ import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import java.time.LocalDate
 
 @RestController
 @RequestMapping("/api/duty")
@@ -24,7 +25,7 @@ class DutyController(
         @RequestParam month: Int,
         @RequestParam memberId: Long,
     ): List<DutyDto> {
-        return dutyService.getDutiesAndInitLazyIfNeeded(
+        return dutyService.getDuties(
             loginMember = loginMember,
             memberId = memberId,
             year = year,
@@ -65,6 +66,17 @@ class DutyController(
         checkAuthentication(loginMember, dutyBatchUpdateDto.memberId)
         dutyService.update(dutyBatchUpdateDto)
         return ResponseEntity.ok(true)
+    }
+
+    @DeleteMapping("override")
+    fun resetOverride(
+        @RequestParam memberId: Long,
+        @RequestParam date: LocalDate,
+        @Login loginMember: LoginMember,
+    ): ResponseEntity<Void> {
+        checkAuthentication(loginMember, memberId)
+        dutyService.resetOverride(memberId, date)
+        return ResponseEntity.noContent().build()
     }
 
     private fun checkAuthentication(

@@ -89,6 +89,49 @@ operation::duty/update-unauthorized[]
 
 operation::duty/batch-update[]
 
+=== Reset Duty Override
+
+operation::duty/reset-override[]
+
+=== Get My Weekly Duty Pattern
+
+operation::duty-pattern/get-mine[]
+
+[NOTE]
+====
+Each selected weekday stores its own team duty type, so teams with multiple
+visible duty types can use personal patterns. If a selected type is hidden,
+only weekdays assigned to that type return `PATTERN_PAUSED`; assignments using
+other visible types continue normally. Restoring the type resumes those days.
+
+Calendar lookup materializes missing pattern dates as `Duty` rows without
+overwriting existing dates. Pattern update or deletion takes effect from today
+in Asia/Seoul and deletes every duty from today onward, including manual
+entries, before the new pattern is materialized on the next lookup.
+====
+
+=== Update My Weekly Duty Pattern
+
+operation::duty-pattern/update-mine[]
+
+=== Delete My Weekly Duty Pattern
+
+operation::duty-pattern/delete-mine[]
+
+[NOTE]
+====
+Duty and weekly-pattern mutation endpoints can return HTTP `409` with code
+`common.concurrentUpdate` when another update holds the member lock or the
+bounded transaction cannot finish in time. Clients should refresh the current
+state before retrying.
+====
+
+== Team Duty Types
+
+=== Hide or Restore Duty Type
+
+operation::teams/duty-types/update-visibility[]
+
 == Schedules
 
 === Get List

@@ -2,33 +2,19 @@ package com.tistory.shanepark.dutypark.duty.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.duty.domain.dto.DutyBatchUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
-import com.tistory.shanepark.dutypark.holiday.domain.Holiday
-import com.tistory.shanepark.dutypark.holiday.repository.HolidayRepository
-import com.tistory.shanepark.dutypark.holiday.service.HolidayService
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.service.FriendService
-import com.tistory.shanepark.dutypark.team.domain.entity.Team
-import com.tistory.shanepark.dutypark.team.domain.enums.WorkType
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.mockito.Mockito.reset
-import org.mockito.Mockito.times
-import org.mockito.Mockito.verify
-import org.mockito.kotlin.any
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import java.time.LocalDate
-import java.util.UUID
+import java.time.YearMonth
 
 internal class DutyServiceIntegrationTest : DutyparkIntegrationTest() {
-
-    @Autowired
-    private lateinit var holidayRepository: HolidayRepository
 
     @Autowired
     lateinit var dutyService: DutyService
@@ -38,28 +24,6 @@ internal class DutyServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var friendService: FriendService
-
-    @MockitoSpyBean
-    lateinit var holidayServiceSpy: HolidayService
-
-    @BeforeEach
-    fun populateAllTestHolidays() {
-        // Pre-populate holidays for all years used in tests (2024-2028)
-        // This avoids repeated DB inserts across multiple test methods
-        (2024..2028).forEach { year ->
-            val holidays = generateSequence(LocalDate.of(year, 1, 1)) { it.plusDays(1) }
-                .takeWhile { it.year == year }
-                .filter { it.dayOfWeek.value <= 5 }
-                .map { Holiday("weekday", false, it) }
-                .toList()
-            holidayRepository.saveAll(holidays)
-        }
-    }
-
-    @AfterEach
-    fun clearHolidayCache() {
-        holidayServiceSpy.resetHolidayInfo()
-    }
 
     @Test
     fun `test getDuties`() {
@@ -86,7 +50,7 @@ internal class DutyServiceIntegrationTest : DutyparkIntegrationTest() {
         )
 
         // When
-        val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2023, 4, loginMember(member))
+        val duties = dutyService.getDuties(member.id!!, 2023, 4, loginMember(member))
 
         // Then
         assertThat(duties).hasSize(42)
@@ -137,7 +101,7 @@ internal class DutyServiceIntegrationTest : DutyparkIntegrationTest() {
 
         // Then
         assertThrows<AuthException> {
-            dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2023, 4, loginMember(member2))
+            dutyService.getDuties(member.id!!, 2023, 4, loginMember(member2))
         }
     }
 
@@ -172,7 +136,7 @@ internal class DutyServiceIntegrationTest : DutyparkIntegrationTest() {
         friendService.acceptFriendRequest(loginMember(target), login.id!!)
 
         // When
-        val duties = dutyService.getDutiesAndInitLazyIfNeeded(target.id!!, 2023, 4, loginMember(login))
+        val duties = dutyService.getDuties(target.id!!, 2023, 4, loginMember(login))
 
         // Then
         assertThat(duties).hasSize(42)
@@ -193,7 +157,7 @@ internal class DutyServiceIntegrationTest : DutyparkIntegrationTest() {
 
         // Then
         assertThrows<AuthException> {
-            dutyService.getDutiesAndInitLazyIfNeeded(target.id!!, 2023, 4, loginMember(login))
+            dutyService.getDuties(target.id!!, 2023, 4, loginMember(login))
         }
     }
 
@@ -211,234 +175,35 @@ internal class DutyServiceIntegrationTest : DutyparkIntegrationTest() {
         updateVisibility(target, Visibility.PRIVATE)
 
         // Then does not throw exception
-        dutyService.getDutiesAndInitLazyIfNeeded(target.id!!, 2023, 4, loginMember(login))
+        dutyService.getDuties(target.id!!, 2023, 4, loginMember(login))
     }
 
     @Test
-    fun `init weekdays duties if workType is weekday`() {
-        // Given
+    fun `batch update replaces existing monthly overrides without unique constraint collisions`() {
         val member = TestData.member
-        val team = member.team ?: throw NoSuchElementException("Team not found for member")
-        team.workType = WorkType.WEEKDAY
-        val dutyName = "근무"
-        team.addDutyType(dutyName = dutyName, dutyColor = "#f0f8ff")
-        teamRepository.save(team)
+        val month = YearMonth.of(2026, 8)
+        val oldType = TestData.dutyTypes[0]
+        val newType = TestData.dutyTypes[1]
+        dutyRepository.saveAndFlush(Duty(month.atDay(1), oldType, member))
 
-        // Weekday holidays already populated in @BeforeEach; add actual public holidays
-        val actualHolidays = listOf(
-            Holiday("신정", true, LocalDate.of(2025, 1, 1)),
-            Holiday("임시공휴일", true, LocalDate.of(2025, 1, 27)),
-            Holiday("설날", true, LocalDate.of(2025, 1, 28)),
-            Holiday("설날", true, LocalDate.of(2025, 1, 29)),
-            Holiday("설날", true, LocalDate.of(2025, 1, 30))
-        )
-        holidayRepository.saveAll(actualHolidays)
-
-        // When
-        val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2025, 1, loginMember(member))
-
-        // Then - filter only January 2025 duties (CalendarView includes padding days)
-        val januaryDuties = duties.filter { it.year == 2025 && it.month == 1 }
-        assertThat(januaryDuties.filter { it.dutyType == dutyName }).hasSize(18) // 23 weekdays - 5 holidays = 18
-        for (duty in januaryDuties) {
-            val date = LocalDate.of(duty.year, duty.month, duty.day)
-            if (date.dayOfWeek.value > 5 || actualHolidays.any { it.localDate == date }) {
-                assertThat(duty.dutyType).isNull()
-                continue
-            }
-            assertThat(duty.dutyType).isEqualTo(dutyName)
-        }
-    }
-
-    @Test
-    fun `lazy init requests holiday data only once per calendar view`() {
-        // Given
-        val member = TestData.member
-        val weekdayTeam =
-            teamRepository.save(Team("wd-${UUID.randomUUID().toString().take(10)}").apply { workType = WorkType.WEEKDAY })
-        weekdayTeam.addDutyType(dutyName = "근무", dutyColor = "#123456")
-        weekdayTeam.addMember(member)
-        memberRepository.save(member)
-        teamRepository.save(weekdayTeam)
-
-        holidayRepository.saveAll(
-            listOf(
-                Holiday("dummy1", false, LocalDate.of(2024, 12, 31)),
-                Holiday("dummy2", false, LocalDate.of(2025, 1, 1))
+        dutyService.update(
+            DutyBatchUpdateDto(
+                year = month.year,
+                month = month.monthValue,
+                dutyTypeId = newType.id,
+                memberId = member.id!!,
             )
         )
-        reset(holidayServiceSpy)
+        dutyRepository.flush()
 
-        // When
-        dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2025, 1, loginMember(member))
-
-        // Then
-        verify(holidayServiceSpy, times(1)).findHolidays(any())
-    }
-
-    @Test
-    fun `init weekdays without any holidays in database`() {
-        // Given
-        val member = TestData.member
-        val weekdayTeam =
-            teamRepository.save(Team("wd-${UUID.randomUUID().toString().take(10)}").apply { workType = WorkType.WEEKDAY })
-        weekdayTeam.addDutyType(dutyName = "근무", dutyColor = "#123456")
-        weekdayTeam.addMember(member)
-        memberRepository.save(member)
-        teamRepository.save(weekdayTeam)
-
-        // When (holidays already populated in @BeforeEach)
-        val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2026, 1, loginMember(member))
-
-        // Then
-        val weekdayDuties = duties.filter { duty ->
-            val date = LocalDate.of(duty.year, duty.month, duty.day)
-            date.dayOfWeek.value <= 5
-        }
-        assertThat(weekdayDuties.all { it.dutyType != null }).isTrue()
-    }
-
-    @Test
-    fun `weekend holidays are correctly handled as off duty`() {
-        // Given
-        val member = TestData.member
-        val team = member.team ?: throw NoSuchElementException("Team not found for member")
-        team.workType = WorkType.WEEKDAY
-        val dutyName = "근무"
-        team.addDutyType(dutyName = dutyName, dutyColor = "#f0f8ff")
-        teamRepository.save(team)
-
-        // Holidays already populated in @BeforeEach
-        val saturdayHoliday = LocalDate.of(2026, 1, 3)
-        val sundayHoliday = LocalDate.of(2026, 1, 4)
-        holidayRepository.saveAll(
-            listOf(
-                Holiday("토요일 휴일", true, saturdayHoliday),
-                Holiday("일요일 휴일", true, sundayHoliday)
-            )
+        val replaced = dutyRepository.findAllByMemberAndDutyDateBetween(
+            member,
+            month.atDay(1),
+            month.atEndOfMonth(),
         )
-
-        // When
-        val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2026, 1, loginMember(member))
-
-        // Then
-        val saturdayDuty = duties.find { it.day == 3 }
-        val sundayDuty = duties.find { it.day == 4 }
-        assertThat(saturdayDuty?.dutyType).isNull()
-        assertThat(sundayDuty?.dutyType).isNull()
-    }
-
-    @Test
-    fun `holidays in padding area of calendar view are handled correctly`() {
-        // Given
-        val member = TestData.member
-        val team = member.team ?: throw NoSuchElementException("Team not found for member")
-        team.workType = WorkType.WEEKDAY
-        val dutyName = "근무"
-        team.addDutyType(dutyName = dutyName, dutyColor = "#f0f8ff")
-        teamRepository.save(team)
-
-        // Holidays already populated in @BeforeEach
-        val previousMonthHoliday = LocalDate.of(2026, 12, 31)
-        val nextMonthHoliday = LocalDate.of(2027, 2, 2)
-        holidayRepository.saveAll(
-            listOf(
-                Holiday("전월 휴일", true, previousMonthHoliday),
-                Holiday("다음월 휴일", true, nextMonthHoliday)
-            )
-        )
-
-        // When
-        val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2027, 1, loginMember(member))
-
-        // Then
-        val decDuty = duties.find { it.month == 12 && it.day == 31 }
-        val febDuty = duties.find { it.month == 2 && it.day == 2 }
-
-        assertThat(decDuty?.dutyType).isNull()
-        assertThat(febDuty?.dutyType).isNull()
-    }
-
-    @Test
-    fun `all weekdays are holidays results in no duty assignments`() {
-        // Given
-        val member = TestData.member
-        val team = member.team ?: throw NoSuchElementException("Team not found for member")
-        team.workType = WorkType.WEEKDAY
-        val dutyName = "근무"
-        team.addDutyType(dutyName = dutyName, dutyColor = "#f0f8ff")
-        teamRepository.save(team)
-
-        // Holidays already populated in @BeforeEach
-        val allWeekdaysAsHolidays = generateSequence(LocalDate.of(2027, 2, 1)) { it.plusDays(1) }
-            .takeWhile { it.month.value == 2 }
-            .filter { it.dayOfWeek.value <= 5 }
-            .map { Holiday("전부 휴일", true, it) }
-            .toList()
-        holidayRepository.saveAll(allWeekdaysAsHolidays)
-
-        // When
-        val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2027, 2, loginMember(member))
-
-        // Then
-        val weekdayDuties = duties.filter { duty ->
-            val date = LocalDate.of(duty.year, duty.month, duty.day)
-            date.month.value == 2 && date.dayOfWeek.value <= 5
-        }
-        assertThat(weekdayDuties.all { it.dutyType == null }).isTrue()
-    }
-
-    @Test
-    fun `existing duties are preserved during lazy initialization`() {
-        // Given
-        val member = TestData.member
-        val team = member.team ?: throw NoSuchElementException("Team not found for member")
-        team.workType = WorkType.WEEKDAY
-        val dutyName = "근무"
-        team.addDutyType(dutyName = dutyName, dutyColor = "#f0f8ff")
-        teamRepository.save(team)
-
-        // Holidays already populated in @BeforeEach
-        val customDutyType = TestData.dutyTypes[0]
-        val existingDuty = Duty(
-            dutyYear = 2028,
-            dutyMonth = 3,
-            dutyDay = 2,
-            dutyType = customDutyType,
-            member = member
-        )
-        dutyRepository.save(existingDuty)
-
-        // When
-        val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2028, 3, loginMember(member))
-
-        // Then
-        val dutyOnMar2 = duties.find { it.day == 2 }
-        assertThat(dutyOnMar2?.dutyType).isEqualTo(customDutyType.name)
-    }
-
-    @Test
-    fun `multiple consecutive holidays are all handled correctly`() {
-        // Given
-        val member = TestData.member
-        val team = member.team ?: throw NoSuchElementException("Team not found for member")
-        team.workType = WorkType.WEEKDAY
-        val dutyName = "근무"
-        team.addDutyType(dutyName = dutyName, dutyColor = "#f0f8ff")
-        teamRepository.save(team)
-
-        // Holidays already populated in @BeforeEach
-        val consecutiveHolidays = (10..14).map {
-            Holiday("연휴 $it", true, LocalDate.of(2028, 4, it))
-        }
-        holidayRepository.saveAll(consecutiveHolidays)
-
-        // When
-        val duties = dutyService.getDutiesAndInitLazyIfNeeded(member.id!!, 2028, 4, loginMember(member))
-
-        // Then
-        val holidayDuties = duties.filter { it.day in 10..14 && it.month == 4 }
-        assertThat(holidayDuties.all { it.dutyType == null }).isTrue()
+        assertThat(replaced).hasSize(month.lengthOfMonth())
+        assertThat(replaced.map { it.dutyDate }).doesNotHaveDuplicates()
+        assertThat(replaced).allMatch { it.dutyType?.id == newType.id }
     }
 
 }

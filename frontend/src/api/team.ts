@@ -93,15 +93,6 @@ export const teamApi = {
   },
 
   /**
-   * Update work type
-   */
-  updateWorkType(teamId: number, workType: string) {
-    return apiClient.patch(`/teams/manage/${teamId}/work-type`, null, {
-      params: { workType },
-    })
-  },
-
-  /**
    * Upload duty batch file
    */
   uploadDutyBatch(teamId: number, file: File, year: number, month: number) {
@@ -194,10 +185,12 @@ export const teamApi = {
   },
 
   /**
-   * Delete duty type
+   * Hide or restore a duty type while preserving historical records.
    */
-  deleteDutyType(teamId: number, dutyTypeId: number) {
-    return apiClient.delete(`/teams/manage/${teamId}/duty-types/${dutyTypeId}`)
+  updateDutyTypeVisibility(teamId: number, dutyTypeId: number, hidden: boolean) {
+    return apiClient.patch(`/teams/manage/${teamId}/duty-types/${dutyTypeId}/visibility`, {
+      hidden,
+    })
   },
 
   /**

@@ -58,7 +58,9 @@ class DutyControllerTest : RestDocsTest() {
                         fieldWithPath("[].day").description("Day of month"),
                         fieldWithPath("[].dutyType").description("Duty type name (null if off)"),
                         fieldWithPath("[].dutyColor").description("Duty type color (hex)"),
-                        fieldWithPath("[].isOff").description("Whether this day is off")
+                        fieldWithPath("[].isOff").description("Whether this day is off"),
+                        fieldWithPath("[].dutyTypeId").optional().description("Duty type ID"),
+                        fieldWithPath("[].source").description("Resolved duty source, including PATTERN_PAUSED when the saved pattern has no single visible duty type"),
                     )
                 )
             )
@@ -110,7 +112,9 @@ class DutyControllerTest : RestDocsTest() {
                         fieldWithPath("[].duties[].day").description("Day of month"),
                         fieldWithPath("[].duties[].dutyType").description("Duty type name"),
                         fieldWithPath("[].duties[].dutyColor").description("Duty type color"),
-                        fieldWithPath("[].duties[].isOff").description("Whether this day is off")
+                        fieldWithPath("[].duties[].isOff").description("Whether this day is off"),
+                        fieldWithPath("[].duties[].dutyTypeId").optional().description("Duty type ID"),
+                        fieldWithPath("[].duties[].source").description("Resolved duty source, including PATTERN_PAUSED when the saved pattern has no single visible duty type"),
                     )
                 )
             )
@@ -210,6 +214,57 @@ class DutyControllerTest : RestDocsTest() {
             .andExpect(status().isUnauthorized)
             .andDo(MockMvcResultHandlers.print())
             .andDo(document("duty/update-unauthorized"))
+    }
+
+    @Test
+    fun `reset duty override to pattern`() {
+        val today = fixedDate
+        dutyRepository.save(Duty(today, TestData.dutyTypes[0], TestData.member))
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/duty/override")
+                .queryParam("memberId", TestData.member.id.toString())
+                .queryParam("date", today.toString())
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isNoContent)
+            .andDo(
+                document(
+                    "duty/reset-override",
+                    queryParameters(
+                        parameterWithName("memberId").description("Member ID"),
+                        parameterWithName("date").description("Date to return to pattern inheritance"),
+                    )
+                )
+            )
+    }
+
+    @Test
+    fun `reset duty override is forbidden for a member without edit permission`() {
+        val today = fixedDate
+        dutyRepository.save(Duty(today, TestData.dutyTypes[0], TestData.member))
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/duty/override")
+                .queryParam("memberId", TestData.member.id.toString())
+                .queryParam("date", today.toString())
+                .withAuth(TestData.member2)
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("duty.edit.forbidden"))
+
+        val override = dutyRepository.findByMemberAndDutyDate(TestData.member, today)
+        org.assertj.core.api.Assertions.assertThat(override).isNotNull
+    }
+
+    @Test
+    fun `reset duty override requires authentication`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/duty/override")
+                .queryParam("memberId", TestData.member.id.toString())
+                .queryParam("date", fixedDate.toString())
+        )
+            .andExpect(status().isUnauthorized)
     }
 
     @Test

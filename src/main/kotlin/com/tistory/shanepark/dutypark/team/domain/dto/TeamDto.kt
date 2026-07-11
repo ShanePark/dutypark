@@ -10,7 +10,6 @@ data class TeamDto(
     val id: Long,
     val name: String,
     val description: String?,
-    val workType: String,
     val dutyTypes: List<DutyTypeDto>,
     val members: List<TeamMemberDto>,
     val createdDate: String,
@@ -39,16 +38,20 @@ data class TeamDto(
             team: Team,
             members: List<Member>,
             dutyTypes: List<DutyType>,
+            includeHiddenDutyTypes: Boolean = false,
         ): TeamDto {
             val teamId = team.id ?: -1L
-            val sortedTypes = dutyTypes.sortedBy { it.position }
+            val sortedTypes = dutyTypes
+                .filter { includeHiddenDutyTypes || !it.hidden }
+                .sortedBy { it.position }
                 .map {
                     DutyTypeDto(
                         id = it.id,
                         teamId = teamId,
                         name = it.name,
                         position = it.position,
-                        color = it.color.toString()
+                        color = it.color.toString(),
+                        hidden = it.hidden,
                     )
                 }.toMutableList()
             sortedTypes.add(
@@ -66,7 +69,6 @@ data class TeamDto(
                 id = team.id ?: -1L,
                 name = team.name,
                 description = team.description,
-                workType = team.workType.name,
                 dutyTypes = sortedTypes,
                 members = members.map { member ->
                     TeamMemberDto.of(team, member)

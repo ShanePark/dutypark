@@ -16,6 +16,12 @@ class Duty(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
     val member: Member,
+
+    @Column(name = "team_id")
+    var teamId: Long? = member.team?.id,
+
+    @Column(name = "manual_override", nullable = false)
+    var manualOverride: Boolean = true,
 ) {
     constructor(
         dutyYear: Int,

@@ -4,6 +4,10 @@ import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
+import com.tistory.shanepark.dutypark.duty.service.DutyPatternService
+import com.tistory.shanepark.dutypark.duty.service.DutyResolver
+import com.tistory.shanepark.dutypark.duty.service.ResolvedDuty
+import com.tistory.shanepark.dutypark.duty.domain.dto.DutySource
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -40,6 +44,12 @@ class TeamServiceTest {
 
     @Mock
     lateinit var memberRepository: MemberRepository
+
+    @Mock
+    lateinit var dutyPatternService: DutyPatternService
+
+    @Mock
+    lateinit var dutyResolver: DutyResolver
 
     @Mock
     lateinit var profilePhotoService: ProfilePhotoService
@@ -138,8 +148,12 @@ class TeamServiceTest {
         ReflectionTestUtils.setField(duty2, "id", 2L)
 
         `when`(memberRepository.findMembersByTeam(team)).thenReturn(listOf(member1, member2))
-        `when`(dutyRepository.findByDutyDateAndMemberIn(dutyDate, listOf(member1, member2)))
-            .thenReturn(listOf(duty1, duty2))
+        `when`(dutyResolver.resolve(listOf(member1, member2), dutyDate)).thenReturn(
+            mapOf(
+                1L to ResolvedDuty(dutyDate, dutyType1, DutySource.OVERRIDE),
+                2L to ResolvedDuty(dutyDate, dutyType2, DutySource.OVERRIDE),
+            )
+        )
         `when`(dutyTypeRepository.findAllByTeam(team)).thenReturn(dutyTypes)
         `when`(memberRepository.findById(1L)).thenReturn(Optional.of(member1))
 
@@ -155,6 +169,34 @@ class TeamServiceTest {
 
         assertThat(shifts[2].members.size).isEqualTo(1)
         assertThat(shifts[2].members.first().id).isEqualTo(2L)
+    }
+
+    @Test
+    fun `loadShift keeps a hidden type visible when a resolved historical duty uses it`() {
+        val team = Team("Test Team")
+        ReflectionTestUtils.setField(team, "id", 1L)
+        val member = Member(name = "Alice").also {
+            it.team = team
+            ReflectionTestUtils.setField(it, "id", 1L)
+        }
+        val hiddenType = DutyType("Legacy", 0, team, "#ffb3ba", hidden = true).also {
+            ReflectionTestUtils.setField(it, "id", 10L)
+        }
+        val dutyDate = LocalDate.of(2025, 3, 12)
+        val loginMember = LoginMember(id = 1L, name = "Alice")
+
+        `when`(memberRepository.findById(1L)).thenReturn(Optional.of(member))
+        `when`(memberRepository.findMembersByTeam(team)).thenReturn(listOf(member))
+        `when`(dutyResolver.resolve(listOf(member), dutyDate)).thenReturn(
+            mapOf(1L to ResolvedDuty(dutyDate, hiddenType, DutySource.OVERRIDE))
+        )
+        `when`(dutyTypeRepository.findAllByTeam(team)).thenReturn(listOf(hiddenType))
+
+        val shifts = service.loadShift(loginMember, dutyDate)
+
+        val hiddenShift = shifts.single { it.dutyType.id == hiddenType.id }
+        assertThat(hiddenShift.dutyType.hidden).isTrue()
+        assertThat(hiddenShift.members.map { it.name }).containsExactly("Alice")
     }
 
     @Test
@@ -182,8 +224,12 @@ class TeamServiceTest {
         ReflectionTestUtils.setField(duty1, "id", 1L)
 
         `when`(memberRepository.findMembersByTeam(team)).thenReturn(listOf(member1, member2))
-        `when`(dutyRepository.findByDutyDateAndMemberIn(dutyDate, listOf(member1, member2)))
-            .thenReturn(listOf(duty1))
+        `when`(dutyResolver.resolve(listOf(member1, member2), dutyDate)).thenReturn(
+            mapOf(
+                1L to ResolvedDuty(dutyDate, dutyType1, DutySource.OVERRIDE),
+                2L to ResolvedDuty(dutyDate, null, DutySource.DEFAULT_OFF),
+            )
+        )
         `when`(dutyTypeRepository.findAllByTeam(team)).thenReturn(dutyTypes)
         `when`(memberRepository.findById(1L)).thenReturn(Optional.of(member1))
 
@@ -233,8 +279,12 @@ class TeamServiceTest {
         ReflectionTestUtils.setField(duty2, "id", 2L)
 
         `when`(memberRepository.findMembersByTeam(team)).thenReturn(listOf(member1, member2))
-        `when`(dutyRepository.findByDutyDateAndMemberIn(dutyDate, listOf(member1, member2)))
-            .thenReturn(listOf(duty1, duty2))
+        `when`(dutyResolver.resolve(listOf(member1, member2), dutyDate)).thenReturn(
+            mapOf(
+                1L to ResolvedDuty(dutyDate, dutyType1, DutySource.OVERRIDE),
+                2L to ResolvedDuty(dutyDate, null, DutySource.OVERRIDE),
+            )
+        )
         `when`(dutyTypeRepository.findAllByTeam(team)).thenReturn(dutyTypes)
         `when`(memberRepository.findById(1L)).thenReturn(Optional.of(member1))
 
@@ -286,8 +336,13 @@ class TeamServiceTest {
         ReflectionTestUtils.setField(duty2, "id", 2L)
 
         `when`(memberRepository.findMembersByTeam(team)).thenReturn(listOf(member1, member2, member3))
-        `when`(dutyRepository.findByDutyDateAndMemberIn(dutyDate, listOf(member1, member2, member3)))
-            .thenReturn(listOf(duty1, duty2))
+        `when`(dutyResolver.resolve(listOf(member1, member2, member3), dutyDate)).thenReturn(
+            mapOf(
+                1L to ResolvedDuty(dutyDate, dutyType1, DutySource.OVERRIDE),
+                2L to ResolvedDuty(dutyDate, null, DutySource.OVERRIDE),
+                3L to ResolvedDuty(dutyDate, null, DutySource.DEFAULT_OFF),
+            )
+        )
         `when`(dutyTypeRepository.findAllByTeam(team)).thenReturn(dutyTypes)
         `when`(memberRepository.findById(1L)).thenReturn(Optional.of(member1))
 
@@ -333,8 +388,12 @@ class TeamServiceTest {
         // No duty records for anyone
 
         `when`(memberRepository.findMembersByTeam(team)).thenReturn(listOf(member1, member2))
-        `when`(dutyRepository.findByDutyDateAndMemberIn(dutyDate, listOf(member1, member2)))
-            .thenReturn(emptyList())
+        `when`(dutyResolver.resolve(listOf(member1, member2), dutyDate)).thenReturn(
+            mapOf(
+                1L to ResolvedDuty(dutyDate, null, DutySource.DEFAULT_OFF),
+                2L to ResolvedDuty(dutyDate, null, DutySource.DEFAULT_OFF),
+            )
+        )
         `when`(dutyTypeRepository.findAllByTeam(team)).thenReturn(dutyTypes)
         `when`(memberRepository.findById(1L)).thenReturn(Optional.of(member1))
 

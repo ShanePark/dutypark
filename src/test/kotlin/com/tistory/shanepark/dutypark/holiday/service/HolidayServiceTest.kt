@@ -1,24 +1,28 @@
 package com.tistory.shanepark.dutypark.holiday.service
 
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
+import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.holiday.domain.Holiday
 import com.tistory.shanepark.dutypark.holiday.domain.HolidayDto
 import com.tistory.shanepark.dutypark.holiday.repository.HolidayRepository
 import com.tistory.shanepark.dutypark.holiday.service.holidayAPI.HolidayAPI
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
+import org.mockito.kotlin.verify
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 
 @ExtendWith(MockitoExtension::class)
 class HolidayServiceTest {
 
-    @InjectMocks
     lateinit var holidayService: HolidayService
 
     @Mock
@@ -26,6 +30,24 @@ class HolidayServiceTest {
 
     @Mock
     lateinit var holidayRepository: HolidayRepository
+
+    @Mock
+    lateinit var dutyRepository: DutyRepository
+
+    private val clock = Clock.fixed(Instant.parse("2026-07-10T16:00:00Z"), ZoneOffset.UTC)
+
+    @BeforeEach
+    fun setUp() {
+        holidayService = HolidayService(holidayRepository, holidayAPI, dutyRepository, clock)
+    }
+
+    @Test
+    fun `reset clears future automatic duties from the Seoul current date`() {
+        holidayService.resetHolidayInfo()
+
+        verify(dutyRepository).deleteAutomaticByDutyDateGreaterThanEqual(LocalDate.of(2026, 7, 11))
+        verify(holidayRepository).deleteAll()
+    }
 
     @Test
     fun `findHolidaysTest-loadFromMemory`() {
@@ -69,6 +91,7 @@ class HolidayServiceTest {
 
         // Then
         assert2023MayResult(result)
+        verify(holidayRepository).saveAll(any<List<Holiday>>())
     }
 
     @Test

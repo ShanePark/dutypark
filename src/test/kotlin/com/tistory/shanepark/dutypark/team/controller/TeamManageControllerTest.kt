@@ -6,7 +6,6 @@ import com.tistory.shanepark.dutypark.duty.batch.exceptions.NotSupportedFileExce
 import com.tistory.shanepark.dutypark.duty.batch.exceptions.YearMonthNotMatchException
 import com.tistory.shanepark.dutypark.duty.batch.service.DutyBatchSungsimService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
-import com.tistory.shanepark.dutypark.team.domain.enums.WorkType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
@@ -85,21 +84,6 @@ class TeamManageControllerTest : RestDocsTest() {
 
         val updated = teamRepository.findById(TestData.team.id!!).orElseThrow()
         assertThat(updated.dutyBatchTemplate).isEqualTo(DutyBatchTemplate.SUNGSIM_CAKE)
-    }
-
-    @Test
-    fun `manager can update work type`() {
-        setTeamAdmin(TestData.member.id!!)
-
-        mockMvc.perform(
-            MockMvcRequestBuilders.patch("/api/teams/manage/{teamId}/work-type", TestData.team.id!!)
-                .param("workType", WorkType.FLEXIBLE.name)
-                .withAuth(TestData.member)
-        )
-            .andExpect(status().isOk)
-
-        val updated = teamRepository.findById(TestData.team.id!!).orElseThrow()
-        assertThat(updated.workType).isEqualTo(WorkType.FLEXIBLE)
     }
 
     @Test
