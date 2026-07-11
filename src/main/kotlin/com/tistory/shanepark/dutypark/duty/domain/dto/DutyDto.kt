@@ -22,7 +22,7 @@ data class DutyDto(
         dutyColor = dutyColor(duty),
         isOff = duty.dutyType == null,
         dutyTypeId = duty.dutyType?.id,
-        source = DutySource.OVERRIDE,
+        source = if (duty.manualOverride) DutySource.OVERRIDE else DutySource.PATTERN,
     )
 
     companion object {

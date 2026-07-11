@@ -17,8 +17,9 @@ import org.springframework.restdocs.payload.PayloadDocumentation.*
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.time.Clock
 import java.time.LocalDate
-import java.time.LocalDateTime
+import java.time.ZoneId
 
 class DashboardControllerTest : RestDocsTest() {
 
@@ -31,11 +32,12 @@ class DashboardControllerTest : RestDocsTest() {
     @Autowired
     lateinit var memberSocialAccountRepository: MemberSocialAccountRepository
 
+    @Autowired
+    lateinit var clock: Clock
+
     @Test
     fun `get my dashboard`() {
-        // Dashboard endpoint returns data for "today" using LocalDate.now() internally
-        // So test data must use the actual current date for the response to include schedules
-        val today = LocalDate.now()
+        val today = LocalDate.now(clock.withZone(ZoneId.of("Asia/Seoul")))
         val todayDateTime = today.atTime(12, 0)
         dutyRepository.save(
             Duty(
@@ -123,8 +125,7 @@ class DashboardControllerTest : RestDocsTest() {
     fun `get friends dashboard`() {
         makeThemFriend(TestData.member, TestData.member2)
 
-        // Dashboard endpoint uses LocalDate.now() internally
-        val today = LocalDate.now()
+        val today = LocalDate.now(clock.withZone(ZoneId.of("Asia/Seoul")))
         dutyRepository.save(
             Duty(
                 dutyDate = today,

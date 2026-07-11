@@ -46,7 +46,8 @@ function toggle() {
     const rect = triggerRef.value?.getBoundingClientRect()
     if (rect) {
       const estimatedMenuHeight = Math.min(props.options.length * 48 + 16, 288)
-      const spaceBelow = window.innerHeight - rect.bottom - 80
+      const footerTop = document.querySelector('footer')?.getBoundingClientRect().top ?? window.innerHeight
+      const spaceBelow = footerTop - rect.bottom - 8
       const spaceAbove = rect.top - 8
       openUpward.value = spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow
     }

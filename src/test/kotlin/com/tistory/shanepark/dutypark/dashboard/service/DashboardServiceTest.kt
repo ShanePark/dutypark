@@ -26,8 +26,11 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.util.Optional
 
 @ExtendWith(org.mockito.junit.jupiter.MockitoExtension::class)
@@ -41,6 +44,7 @@ class DashboardServiceTest {
     private val friendRelationRepository: FriendRelationRepository = mock()
     private val friendService: FriendService = mock()
     private val memberDtoAssembler: MemberDtoAssembler = mock()
+    private val clock = Clock.fixed(Instant.parse("2025-01-14T15:30:00Z"), ZoneOffset.UTC)
 
     private lateinit var dashboardService: DashboardService
 
@@ -52,8 +56,34 @@ class DashboardServiceTest {
             scheduleRepository = scheduleRepository,
             friendRelationRepository = friendRelationRepository,
             friendService = friendService,
-            memberDtoAssembler = memberDtoAssembler
+            memberDtoAssembler = memberDtoAssembler,
+            clock = clock,
         )
+    }
+
+    @Test
+    fun `dashboard resolves today in Asia Seoul at the UTC date boundary`() {
+        val team = Team("team")
+        val member = memberWithId(1L, team)
+        val loginMember = LoginMember(id = 1L, name = "user")
+        whenever(memberRepository.findMemberWithTeam(1L)).thenReturn(Optional.of(member))
+        whenever(friendService.availableScheduleVisibilities(eq(loginMember), eq(member))).thenReturn(
+            setOf(Visibility.FRIENDS)
+        )
+        whenever(scheduleRepository.findSchedulesOfMemberRangeIn(eq(member), any(), any(), any()))
+            .thenReturn(emptyList())
+        whenever(scheduleRepository.findTaggedSchedulesOfRange(eq(member), any(), any(), any()))
+            .thenReturn(emptyList())
+        whenever(dutyResolver.resolve(eq(member), any<LocalDate>())).thenAnswer {
+            ResolvedDuty(it.getArgument(1), null, DutySource.DEFAULT_OFF)
+        }
+        whenever(memberDtoAssembler.toDto(member)).thenReturn(memberDtoOf(member))
+
+        val result = dashboardService.my(loginMember)
+
+        assertThat(result.duty?.year).isEqualTo(2025)
+        assertThat(result.duty?.month).isEqualTo(1)
+        assertThat(result.duty?.day).isEqualTo(15)
     }
 
     @Test
