@@ -1029,6 +1029,9 @@ export default {
       compare: 'Comparar turnos',
       batchUpdate: 'Actualización por lotes',
       editMode: 'Modo de edición',
+      editModeActive: 'Modo de edición activo',
+      editModeDescription: 'Selecciona un turno para aplicarlo al día elegido y avanzar al día siguiente.',
+      exitEditMode: 'Salir del modo de edición',
       excel: 'excel',
     },
     dday: {

@@ -1107,6 +1107,9 @@ export default {
       compare: '勤務比較',
       batchUpdate: '一括変更',
       editMode: '編集モード',
+      editModeActive: '編集モード使用中',
+      editModeDescription: '勤務タイプを選択すると、選択した日にすぐ反映され、次の日に移動します。',
+      exitEditMode: '編集モードを終了',
       excel: 'Excel',
     },
     dday: {

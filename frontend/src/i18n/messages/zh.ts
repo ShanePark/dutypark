@@ -1029,6 +1029,9 @@ export default {
       compare: '比较班次',
       batchUpdate: '批量更新',
       editMode: '编辑模式',
+      editModeActive: '正在使用编辑模式',
+      editModeDescription: '选择班次类型后，将立即应用到所选日期并移至下一天。',
+      exitEditMode: '退出编辑模式',
       excel: 'Excel',
     },
     dday: {

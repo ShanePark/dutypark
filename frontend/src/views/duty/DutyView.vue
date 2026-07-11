@@ -1574,7 +1574,7 @@ async function showExcelUploadModal() {
     />
 
     <DutyTodoRow
-      v-if="isMyCalendar"
+      v-if="isMyCalendar && !batchEditMode"
       :show-todo-todo="showTodoTodo"
       :filtered-todos="filteredTodos"
       @toggle-filter="toggleTodoFilter"

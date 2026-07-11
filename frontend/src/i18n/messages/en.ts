@@ -1035,6 +1035,9 @@ export default {
       compare: 'Compare duties',
       batchUpdate: 'Batch update',
       editMode: 'Edit mode',
+      editModeActive: 'Edit mode is active',
+      editModeDescription: 'Select a duty type to apply it to the selected day and move to the next day.',
+      exitEditMode: 'Exit edit mode',
       excel: 'Excel',
     },
     dday: {

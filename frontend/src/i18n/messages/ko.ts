@@ -1036,6 +1036,9 @@ export default {
       compare: '함께 보기',
       batchUpdate: '일괄 변경',
       editMode: '편집 모드',
+      editModeActive: '편집 모드 사용 중',
+      editModeDescription: '근무 유형을 선택하면 선택한 날짜에 바로 반영되고 다음 날짜로 이동합니다.',
+      exitEditMode: '편집 모드 종료',
       excel: '엑셀',
     },
     dday: {
