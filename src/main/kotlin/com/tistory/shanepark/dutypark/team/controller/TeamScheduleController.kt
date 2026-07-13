@@ -36,8 +36,8 @@ class TeamScheduleController(
         @Login login: LoginMember,
         @RequestBody @Validated saveDto: TeamScheduleSaveDto,
     ): TeamScheduleDto {
-        checkCanManage(login = login, teamId = saveDto.teamId)
         if (saveDto.id == null) {
+            checkCanManage(login = login, teamId = saveDto.teamId)
             return teamScheduleService.create(login = login, saveDto = saveDto)
         }
         return teamScheduleService.update(login = login, saveDto = saveDto)
