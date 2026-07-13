@@ -15,6 +15,7 @@ import VisibilityHintIcon from '@/components/common/VisibilityHintIcon.vue'
 import type { NormalizedAttachment } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { buildDisplayTagMembers } from '@/utils/tagMembers'
+import { canEditCalendarSchedule } from '@/utils/schedulePermissions'
 
 interface Schedule {
   id: string
@@ -194,7 +195,7 @@ function getDisplayTagMembers(schedule: Schedule) {
 }
 
 function canEditSchedule(schedule: Schedule) {
-  return !schedule.isTagged && (schedule.isMine || props.canEdit)
+  return canEditCalendarSchedule(props.canEdit, schedule.isTagged)
 }
 
 function canUntagSchedule(schedule: Schedule) {

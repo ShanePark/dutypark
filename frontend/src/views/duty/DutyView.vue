@@ -7,6 +7,7 @@ import { useSwal } from '@/composables/useSwal'
 import { isLightColor } from '@/utils/color'
 import { resolveApiCodeMessage, resolveApiErrorMessage } from '@/utils/resolveApiError'
 import { buildDutyTypeCounts } from '@/utils/dutyTypeCounts'
+import { isOwnedCalendarSchedule } from '@/utils/schedulePermissions'
 import { Loader2 } from 'lucide-vue-next'
 
 // Modal Components
@@ -301,7 +302,7 @@ function mapToSchedule(dto: ScheduleDto): Schedule {
     startDateTime: dto.startDateTime,
     endDateTime: dto.endDateTime,
     visibility: dto.visibility || 'FRIENDS',
-    isMine: !dto.isTagged,
+    isMine: isOwnedCalendarSchedule(isMyCalendar.value, dto.isTagged),
     isTagged: dto.isTagged,
     owner: dto.owner,
     taggedBy: taggedByMember?.name ?? (dto.isTagged ? dto.owner : undefined),
@@ -566,10 +567,16 @@ async function loadDuties() {
 
 // Check if user can manage this member's duties
 async function checkCanManage() {
+  amIManager.value = false
   if (!authStore.user?.id || !memberId.value) return
 
+  const targetMemberId = memberId.value
+
   try {
-    amIManager.value = await dutyApi.canManage(memberId.value)
+    const canManage = await dutyApi.canManage(targetMemberId)
+    if (memberId.value === targetMemberId) {
+      amIManager.value = canManage
+    }
   } catch (error) {
     console.error('Failed to check management permission:', error)
   }
@@ -721,6 +728,7 @@ watch(
     memberName.value = ''
     memberHasProfilePhoto.value = false
     memberProfilePhotoVersion.value = 0
+    amIManager.value = false
 
     try {
       // Load calendar first to ensure index alignment
