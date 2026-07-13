@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.team.service
 
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.schedule.domain.dto.TeamScheduleDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -18,6 +19,7 @@ class TeamScheduleService(
     private val teamScheduleRepository: TeamScheduleRepository,
     private val teamRepository: TeamRepository,
     private val memberRepository: MemberRepository,
+    private val teamService: TeamService,
 ) {
     fun create(login: LoginMember, saveDto: TeamScheduleSaveDto): TeamScheduleDto {
         val author = memberRepository.findById(login.id).orElseThrow()
@@ -71,8 +73,14 @@ class TeamScheduleService(
     }
 
     fun update(login: LoginMember, saveDto: TeamScheduleSaveDto): TeamScheduleDto {
-        val author = memberRepository.findById(login.id).orElseThrow()
         val schedule = teamScheduleRepository.findById(saveDto.id!!).orElseThrow()
+        val actualTeamId = schedule.team.id ?: throw IllegalStateException("Team ID is null")
+        teamService.checkCanManage(login = login, teamId = actualTeamId)
+        if (saveDto.teamId != actualTeamId) {
+            throw BadRequestException("team.schedule.teamMismatch")
+        }
+
+        val author = memberRepository.findById(login.id).orElseThrow()
         schedule.update(saveDto = saveDto, updateMember = author)
         return TeamScheduleDto.ofSimple(schedule)
     }
