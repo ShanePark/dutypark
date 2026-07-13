@@ -39,6 +39,15 @@ export const esReleaseNotes = {
     ui: "Interfaz"
   },
   entries: {
+    "pr-381": {
+      title: "Reforzar los permisos de edición de agendas",
+      summary: "Impide que quienes no tienen permisos de gestión cambien agendas ajenas y oculta las acciones de editar o eliminar cuando no están autorizadas.",
+      changes: [
+        "Valida los permisos de una agenda de equipo según el equipo al que realmente pertenece antes de actualizarla.",
+        "Rechaza solicitudes que intentan actualizar una agenda usando el ID de otro equipo.",
+        "Muestra las acciones de editar y eliminar solo al propietario del calendario o a un administrador autorizado."
+      ]
+    },
     "pr-380": {
       title: "Añadir patrones semanales personales de turnos",
       summary: "Cada miembro puede configurar días recurrentes y un tipo de turno por día para completar automáticamente el calendario.",
