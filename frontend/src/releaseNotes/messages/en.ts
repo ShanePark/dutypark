@@ -39,6 +39,15 @@ export const enReleaseNotes = {
     ui: "UI"
   },
   entries: {
+    "pr-381": {
+      title: "Harden schedule editing permissions",
+      summary: "Prevents people from changing schedules they do not manage and hides edit or delete actions on calendars where they lack permission.",
+      changes: [
+        "Validate team schedule permissions against the schedule's actual team before applying updates.",
+        "Reject requests that try to update a schedule using a different team ID.",
+        "Show edit and delete actions only to the calendar owner or an authorized manager."
+      ]
+    },
     "pr-380": {
       title: "Add personal weekly duty patterns",
       summary: "Lets each member set recurring workdays and choose a duty type for every weekday, so calendars can fill routine duties automatically.",

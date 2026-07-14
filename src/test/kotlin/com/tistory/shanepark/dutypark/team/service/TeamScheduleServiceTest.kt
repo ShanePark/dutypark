@@ -1,6 +1,8 @@
 package com.tistory.shanepark.dutypark.team.service
 
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
+import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.common.exceptions.InvalidScheduleTimeRangeExeption
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -19,6 +21,7 @@ import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.test.util.ReflectionTestUtils
@@ -39,6 +42,9 @@ class TeamScheduleServiceTest {
 
     @Mock
     lateinit var memberRepository: MemberRepository
+
+    @Mock
+    lateinit var teamService: TeamService
 
     @InjectMocks
     lateinit var teamScheduleService: TeamScheduleService
@@ -184,11 +190,78 @@ class TeamScheduleServiceTest {
         assertThat(oldSchedule.startDateTime).isEqualTo(updatedStart)
         assertThat(oldSchedule.endDateTime).isEqualTo(updatedEnd)
         assertThat(oldSchedule.updateMember).isEqualTo(author)
+        verify(teamService).checkCanManage(login = loginMember, teamId = team.id!!)
     }
 
-    private fun makeTeam(name: String = "Team A"): Team {
+    @Test
+    fun `update should reject direct service call without actual team permission`() {
+        val loginMember = LoginMember(id = 1L, name = "Unauthorized manager")
+        val actualTeam = makeTeam(name = "Actual Team", id = 20L)
+        val originalMember = Member("Original")
+        val schedule = TeamSchedule(
+            team = actualTeam,
+            createMember = originalMember,
+            content = "Original",
+            startDateTime = fixedDateTime,
+            endDateTime = fixedDateTime,
+            position = 0,
+        )
+        val saveDto = TeamScheduleSaveDto(
+            id = schedule.id,
+            teamId = actualTeam.id!!,
+            content = "Unauthorized update",
+            startDateTime = fixedDateTime,
+            endDateTime = fixedDateTime,
+        )
+
+        whenever(teamScheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
+        whenever(teamService.checkCanManage(login = loginMember, teamId = actualTeam.id!!))
+            .thenThrow(AuthException("team.manage.forbidden"))
+
+        assertThrows<AuthException> {
+            teamScheduleService.update(loginMember, saveDto)
+        }
+
+        assertThat(schedule.content).isEqualTo("Original")
+        verify(memberRepository, never()).findById(loginMember.id)
+    }
+
+    @Test
+    fun `update should reject team id mismatch without changing schedule`() {
+        val loginMember = LoginMember(id = 1L, name = "Actual team manager")
+        val actualTeam = makeTeam(name = "Actual Team", id = 20L)
+        val originalMember = Member("Original")
+        val schedule = TeamSchedule(
+            team = actualTeam,
+            createMember = originalMember,
+            content = "Original",
+            startDateTime = fixedDateTime,
+            endDateTime = fixedDateTime,
+            position = 0,
+        )
+        val saveDto = TeamScheduleSaveDto(
+            id = schedule.id,
+            teamId = 10L,
+            content = "Mismatched update",
+            startDateTime = fixedDateTime,
+            endDateTime = fixedDateTime,
+        )
+
+        whenever(teamScheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
+
+        val exception = assertThrows<BadRequestException> {
+            teamScheduleService.update(loginMember, saveDto)
+        }
+
+        assertThat(exception.message).isEqualTo("team.schedule.teamMismatch")
+        assertThat(schedule.content).isEqualTo("Original")
+        verify(teamService).checkCanManage(login = loginMember, teamId = actualTeam.id!!)
+        verify(memberRepository, never()).findById(loginMember.id)
+    }
+
+    private fun makeTeam(name: String = "Team A", id: Long = 1L): Team {
         val team = Team(name)
-        ReflectionTestUtils.setField(team, "id", 1L)
+        ReflectionTestUtils.setField(team, "id", id)
         return team
     }
 
@@ -203,7 +276,6 @@ class TeamScheduleServiceTest {
         )
         val loginMember = LoginMember(id = 1L, name = "Editor")
 
-        whenever(memberRepository.findById(1L)).thenReturn(Optional.of(Member("Editor")))
         whenever(teamScheduleRepository.findById(saveDto.id!!)).thenReturn(Optional.empty())
 
         assertThrows<NoSuchElementException> {
