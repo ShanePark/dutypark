@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref } from 'vue'
-import { Check, ChevronDown, X } from 'lucide-vue-next'
+import { nextTick, onMounted, onUnmounted, ref, type CSSProperties } from 'vue'
+import { Check, ChevronDown } from 'lucide-vue-next'
 import { useEscapeKey } from '@/composables/useEscapeKey'
 import type { DutyPatternDutyTypeDto } from '@/types'
 
@@ -23,6 +23,11 @@ const pickerRef = ref<HTMLDivElement | null>(null)
 const triggerRef = ref<HTMLButtonElement | null>(null)
 const isOpen = ref(false)
 const openUpward = ref(false)
+// On mobile the modal body clips absolutely-positioned menus, so the menu is
+// fixed-positioned from the trigger's viewport rect instead (the invisible
+// full-screen scrim blocks scrolling, keeping the anchor valid while open).
+const menuStyle = ref<CSSProperties | undefined>()
+const listMaxHeight = ref<string | undefined>()
 
 function selectedOption(): DutyPatternDutyTypeDto | undefined {
   return props.options.find((option) => option.id === props.modelValue)
@@ -51,6 +56,21 @@ function toggle() {
       const spaceBelow = footerTop - rect.bottom - 8
       const spaceAbove = rect.top - 8
       openUpward.value = spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow
+      if (window.matchMedia('(min-width: 640px)').matches) {
+        menuStyle.value = undefined
+        listMaxHeight.value = undefined
+      } else {
+        const available = Math.max(openUpward.value ? spaceAbove : spaceBelow, 160)
+        menuStyle.value = {
+          position: 'fixed',
+          left: `${rect.left}px`,
+          width: `${rect.width}px`,
+          ...(openUpward.value
+            ? { bottom: `${window.innerHeight - rect.top + 8}px` }
+            : { top: `${rect.bottom + 8}px` }),
+        }
+        listMaxHeight.value = `${Math.min(available, 288)}px`
+      }
     }
     void nextTick(() => {
       pickerRef.value
@@ -70,6 +90,14 @@ function handleDocumentClick(event: MouseEvent) {
   if (!pickerRef.value?.contains(event.target as Node)) {
     close()
   }
+}
+
+// The fixed-positioned mobile menu cannot follow its trigger, so close it if
+// anything outside the picker scrolls while it is open.
+function handleScrollCapture(event: Event) {
+  if (!menuStyle.value) return
+  if (pickerRef.value?.contains(event.target as Node)) return
+  close()
 }
 
 useEscapeKey(isOpen, () => close({ restoreFocus: true }))
@@ -99,10 +127,12 @@ function handleOptionKeydown(event: KeyboardEvent) {
 
 onMounted(() => {
   document.addEventListener('click', handleDocumentClick)
+  document.addEventListener('scroll', handleScrollCapture, { capture: true, passive: true })
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleDocumentClick)
+  document.removeEventListener('scroll', handleScrollCapture, { capture: true })
 })
 </script>
 
@@ -117,7 +147,7 @@ onUnmounted(() => {
       aria-haspopup="listbox"
       :aria-expanded="isOpen"
       :aria-label="`${label}: ${selectedOption()?.name ?? ''}`"
-      @click.stop="toggle"
+      @click="toggle"
     >
       <span
         class="size-3.5 shrink-0 rounded-full border border-dp-border-secondary"
@@ -143,31 +173,25 @@ onUnmounted(() => {
     <template v-if="isOpen">
       <button
         type="button"
-        class="fixed inset-0 z-40 bg-dp-overlay-scrim-soft sm:hidden"
+        class="fixed inset-0 z-40 sm:hidden"
         :aria-label="closeLabel"
         @click.stop="close({ restoreFocus: true })"
       ></button>
 
       <Transition name="picker">
         <div
-          class="fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-50 max-h-[min(24rem,70vh)] overflow-hidden rounded-2xl border shadow-xl sm:absolute sm:inset-x-0 sm:max-h-72 sm:rounded-xl bg-dp-bg-card border-dp-border-secondary"
+          class="z-50 overflow-hidden rounded-xl border shadow-xl sm:absolute sm:inset-x-0 bg-dp-bg-card border-dp-border-secondary"
           :class="openUpward
             ? 'sm:bottom-full sm:top-auto sm:mb-2 sm:mt-0'
             : 'sm:bottom-auto sm:top-full sm:mb-0 sm:mt-2'"
+          :style="menuStyle"
         >
-          <div class="flex min-h-12 items-center justify-between gap-3 border-b px-4 border-dp-border-primary sm:hidden">
-            <p class="truncate font-semibold text-dp-text-primary">{{ label }}</p>
-            <button
-              type="button"
-              class="grid min-h-11 min-w-11 place-items-center rounded-full text-dp-text-secondary hover:bg-dp-bg-hover"
-              :aria-label="closeLabel"
-              @click.stop="close({ restoreFocus: true })"
-            >
-              <X class="size-5" aria-hidden="true" />
-            </button>
-          </div>
-
-          <div role="listbox" :aria-label="label" class="max-h-[min(20rem,60vh)] overflow-y-auto p-2 sm:max-h-64">
+          <div
+            role="listbox"
+            :aria-label="label"
+            class="overflow-y-auto p-2 sm:max-h-64"
+            :style="listMaxHeight ? { maxHeight: listMaxHeight } : undefined"
+          >
             <button
               v-for="option in options"
               :key="option.id"
@@ -213,13 +237,6 @@ onUnmounted(() => {
 .picker-enter-from,
 .picker-leave-to {
   opacity: 0;
-  transform: translateY(0.5rem);
-}
-
-@media (min-width: 640px) {
-  .picker-enter-from,
-  .picker-leave-to {
-    transform: translateY(-0.25rem);
-  }
+  transform: translateY(-0.25rem);
 }
 </style>
