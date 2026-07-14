@@ -794,6 +794,14 @@ export default {
       modalHint: '当您选择一个选项时，更改会立即保存。',
       closeButton: '关闭',
       updateFailed: '无法更新可见性设置。',
+      audience: {
+        friendsCount: '{count}位好友可以查看',
+        familyCount: '{count}位家人可以查看',
+        moreNames: '{names}和其他{count}人',
+        nameSeparator: '、',
+        emptyFriends: '还没有好友，目前只有您可以查看',
+        emptyFamily: '还没有设为家人的好友，目前只有您可以查看',
+      },
       options: {
         public: {
           label: '大家',

@@ -794,6 +794,14 @@ export default {
       modalHint: 'Los cambios se guardan inmediatamente cuando selecciona una opción.',
       closeButton: 'Cerrar',
       updateFailed: 'No se pudo actualizar la configuración de visibilidad.',
+      audience: {
+        friendsCount: 'Visible para {count} amigo | Visible para {count} amigos',
+        familyCount: 'Visible para {count} familiar | Visible para {count} familiares',
+        moreNames: '{names} y {count} más',
+        nameSeparator: ', ',
+        emptyFriends: 'Aún no tienes amigos; por ahora solo tú puedes verlo',
+        emptyFamily: 'Aún no tienes familiares designados; por ahora solo tú puedes verlo',
+      },
       options: {
         public: {
           label: 'todos',

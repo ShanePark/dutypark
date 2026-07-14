@@ -863,6 +863,14 @@ export default {
       modalHint: '選択するとすぐに保存されます。',
       closeButton: '閉じる',
       updateFailed: '公開範囲を更新できませんでした。',
+      audience: {
+        friendsCount: '友達{count}人が見られます',
+        familyCount: '家族{count}人が見られます',
+        moreNames: '{names} 他{count}人',
+        nameSeparator: '、',
+        emptyFriends: 'まだ友達がいないため、今は自分だけが見られます',
+        emptyFamily: '家族に設定した友達がいないため、今は自分だけが見られます',
+      },
       options: {
         public: {
           label: '全員',

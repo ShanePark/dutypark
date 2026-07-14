@@ -801,6 +801,14 @@ export default {
       modalHint: '선택시 변경사항이 즉시 저장됩니다.',
       closeButton: '닫기',
       updateFailed: '공개 설정 변경에 실패했습니다.',
+      audience: {
+        friendsCount: '친구 {count}명이 볼 수 있습니다',
+        familyCount: '가족 {count}명이 볼 수 있습니다',
+        moreNames: '{names} 외 {count}명',
+        nameSeparator: ', ',
+        emptyFriends: '아직 친구가 없어 지금은 나만 볼 수 있습니다',
+        emptyFamily: '가족으로 지정한 친구가 없어 지금은 나만 볼 수 있습니다',
+      },
       options: {
         public: {
           label: '누구나',

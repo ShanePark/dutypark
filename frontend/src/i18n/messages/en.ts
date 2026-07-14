@@ -800,6 +800,14 @@ export default {
       modalHint: 'Changes are saved immediately when you select an option.',
       closeButton: 'Close',
       updateFailed: 'Failed to update the visibility setting.',
+      audience: {
+        friendsCount: '{count} friend can see it | {count} friends can see it',
+        familyCount: '{count} family member can see it | {count} family members can see it',
+        moreNames: '{names} and {count} more',
+        nameSeparator: ', ',
+        emptyFriends: 'No friends yet — only you can see it for now',
+        emptyFamily: 'No friends marked as family yet — only you can see it for now',
+      },
       options: {
         public: {
           label: 'Everyone',
