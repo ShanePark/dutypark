@@ -1071,10 +1071,6 @@ export default {
     common: {
       off: '休み',
       uploading: 'アップロード中...',
-      usePattern: '基本パターンを使用',
-      currentPattern: '現在の基本パターン',
-      pausedPattern: '基本パターン・自動適用停止中',
-      patternNotSet: 'パターン未設定・基本は休み',
     },
     view: {
       loading: 'カレンダーを読み込んでいます...',
@@ -1083,7 +1079,6 @@ export default {
       loadDutiesFailed: '勤務情報を読み込めませんでした。',
       loadOtherDutiesFailed: '共有勤務の重ね表示を読み込めませんでした。',
       changeDutyFailed: '勤務を更新できませんでした。',
-      restorePatternFailed: '基本パターンに戻せませんでした。',
     },
     batchUpdate: {
       title: '勤務一括変更',

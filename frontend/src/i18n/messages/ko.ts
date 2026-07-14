@@ -1000,10 +1000,6 @@ export default {
     common: {
       off: '휴무',
       uploading: '업로드 중...',
-      usePattern: '기본 패턴 사용',
-      currentPattern: '현재 기본 패턴',
-      pausedPattern: '기본 패턴 · 자동 적용 중지',
-      patternNotSet: '패턴 미설정 · 기본 휴무',
     },
     view: {
       loading: '시간표를 불러오는 중...',
@@ -1012,7 +1008,6 @@ export default {
       loadDutiesFailed: '근무표를 불러오는데 실패했습니다.',
       loadOtherDutiesFailed: '함께 보기 근무표를 불러오는데 실패했습니다.',
       changeDutyFailed: '근무 변경에 실패했습니다.',
-      restorePatternFailed: '기본 패턴으로 되돌리지 못했습니다.',
     },
     batchUpdate: {
       title: '근무 일괄 변경',

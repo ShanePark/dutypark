@@ -1,16 +1,15 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
-import { X, Plus, RotateCcw } from 'lucide-vue-next'
+import { X, Plus } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ScheduleList from '@/components/duty/ScheduleList.vue'
 import ScheduleForm from '@/components/duty/ScheduleForm.vue'
 import UntagConfirmModal from '@/components/duty/UntagConfirmModal.vue'
-import type { DutySource, NormalizedAttachment, TaggableFriend } from '@/types'
+import type { NormalizedAttachment, TaggableFriend } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
 import { VISIBILITY_ICONS, VISIBILITY_COLORS, type CalendarVisibility } from '@/utils/visibility'
-import { dutySourcePatternLabelKey, isInheritedDutySource } from '@/utils/dutySource'
 
 const { showWarning, showError } = useSwal()
 
@@ -46,7 +45,7 @@ interface DutyType {
 interface Props {
   isOpen: boolean
   date: { year: number; month: number; day: number }
-  duty?: { dutyType: string; dutyColor: string; dutyTypeId: number | null; source: DutySource }
+  duty?: { dutyType: string; dutyColor: string; dutyTypeId: number | null }
   schedules: Schedule[]
   dutyTypes: DutyType[]
   canEdit: boolean
@@ -84,7 +83,6 @@ interface SelectedTagSummary {
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'changeDutyType', dutyTypeId: number | null): void
-  (e: 'restorePattern'): void
   (e: 'createSchedule', data: ScheduleSaveData): void
   (e: 'editSchedule', data: ScheduleSaveData): void
   (e: 'deleteSchedule', scheduleId: string): void
@@ -101,11 +99,6 @@ const contentRef = ref<HTMLElement | null>(null)
 
 // Local duty state for immediate UI feedback
 const selectedDutyType = ref<string | null>(null)
-const inheritSelected = ref(false)
-const patternButtonLabel = computed(() => {
-  if (!inheritSelected.value && props.duty?.source !== 'DEFAULT_OFF') return t('duty.common.usePattern')
-  return t(dutySourcePatternLabelKey(props.duty?.source))
-})
 const unavailableCurrentDuty = computed(() => {
   if (!props.duty || props.duty.dutyTypeId === null) return null
   return props.dutyTypes.some((dutyType) => dutyType.id === props.duty?.dutyTypeId)
@@ -116,10 +109,9 @@ const unavailableCurrentDuty = computed(() => {
 // Sync selectedDutyType with both the selected date and duty prop.
 // The modal instance is reused across days, so date changes must also reset this state.
 watch(
-  () => [props.date.year, props.date.month, props.date.day, props.duty?.dutyType, props.duty?.source] as const,
-  ([, , , dutyType, source]) => {
+  () => [props.date.year, props.date.month, props.date.day, props.duty?.dutyType] as const,
+  ([, , , dutyType]) => {
     selectedDutyType.value = dutyType ?? null
-    inheritSelected.value = isInheritedDutySource(source)
   },
   { immediate: true }
 )
@@ -127,12 +119,7 @@ watch(
 // Handle duty type change with immediate UI feedback
 function handleDutyTypeChange(dutyTypeId: number | null, dutyTypeName: string) {
   selectedDutyType.value = dutyTypeName
-  inheritSelected.value = false
   emit('changeDutyType', dutyTypeId)
-}
-
-function restorePattern() {
-  emit('restorePattern')
 }
 
 const newSchedule = ref({
@@ -423,15 +410,6 @@ function handleUploadError(message: string) {
           </button>
         </div>
         <div v-if="!isCreateMode && !isEditMode && canEdit && dutyTypes.length > 0" class="flex flex-wrap gap-1.5 mt-2">
-          <button
-            type="button"
-            class="duty-type-btn min-h-11 px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 cursor-pointer"
-            :class="{ 'duty-type-btn-selected': inheritSelected }"
-            @click="restorePattern"
-          >
-            <RotateCcw class="w-3.5 h-3.5" />
-            {{ patternButtonLabel }}
-          </button>
           <span
             v-if="unavailableCurrentDuty"
             class="duty-type-btn duty-type-btn-selected min-h-11 px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5"
@@ -450,11 +428,11 @@ function handleUploadError(message: string) {
             @click="handleDutyTypeChange(dutyType.id, dutyType.name)"
             class="duty-type-btn min-h-11 px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 cursor-pointer"
             :class="{
-              'duty-type-btn-selected': !inheritSelected && selectedDutyType === dutyType.name,
+              'duty-type-btn-selected': selectedDutyType === dutyType.name,
             }"
             :style="{
               color: 'var(--dp-text-primary)',
-              backgroundColor: !inheritSelected && selectedDutyType === dutyType.name && dutyType.color ? dutyType.color + '30' : undefined
+              backgroundColor: selectedDutyType === dutyType.name && dutyType.color ? dutyType.color + '30' : undefined
             }"
           >
             <span

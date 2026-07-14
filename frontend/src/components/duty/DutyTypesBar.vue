@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ChevronLeft, ChevronRight, FileSpreadsheet, Loader2, PencilLine, RotateCcw, Users, X } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, FileSpreadsheet, Loader2, PencilLine, Users, X } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { isLightColor } from '@/utils/color'
 import type { DutyType, DutyTypeWithCount } from '@/views/duty/dutyViewTypes'
-import type { DutySource } from '@/types'
-import { dutySourcePatternLabelKey, isInheritedDutySource } from '@/utils/dutySource'
 
 const props = defineProps<{
   batchEditMode: boolean
@@ -14,7 +12,6 @@ const props = defineProps<{
   isLoadingDuties: boolean
   focusedDay: number | null
   focusedDayDutyType: string | null
-  focusedDayDutySource: DutySource | null
   lastDayInMonth: number
   canEdit: boolean
   canEditMyCalendar: boolean
@@ -30,14 +27,12 @@ const emit = defineEmits<{
   (e: 'toggle-batch-edit', value: boolean): void
   (e: 'show-excel-upload-modal'): void
   (e: 'quick-duty-change', dutyTypeId: number | null): void
-  (e: 'restore-pattern'): void
   (e: 'update:focusedDay', value: number): void
 }>()
 
 const { t } = useI18n()
 
 const focusedDayValue = computed(() => props.focusedDay ?? 1)
-const patternButtonLabel = computed(() => t(dutySourcePatternLabelKey(props.focusedDayDutySource)))
 
 function moveFocusDay(delta: number) {
   const next = Math.min(props.lastDayInMonth, Math.max(1, focusedDayValue.value + delta))
@@ -101,22 +96,11 @@ function toggleBatchEdit() {
           </button>
         </div>
         <button
-          type="button"
-          class="duty-quick-btn min-h-11"
-          :class="{ 'duty-quick-btn-active': isInheritedDutySource(focusedDayDutySource) }"
-          @click="emit('restore-pattern')"
-        >
-          <span class="duty-quick-btn-inner flex items-center gap-1">
-            <RotateCcw class="w-3.5 h-3.5" />
-            {{ patternButtonLabel }}
-          </span>
-        </button>
-        <button
           v-for="dutyType in dutyTypes"
           :key="dutyType.id ?? 'off'"
           @click="emit('quick-duty-change', dutyType.id)"
           class="duty-quick-btn"
-          :class="{ 'duty-quick-btn-active': focusedDayDutySource === 'OVERRIDE' && (focusedDayDutyType === dutyType.name || (!focusedDayDutyType && dutyType.id === null)) }"
+          :class="{ 'duty-quick-btn-active': focusedDayDutyType === dutyType.name || (!focusedDayDutyType && dutyType.id === null) }"
           :style="{
             '--duty-color': dutyType.color || 'var(--dp-duty-fallback)',
             '--duty-text': isLightColor(dutyType.color) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'

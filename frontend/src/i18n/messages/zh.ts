@@ -993,10 +993,6 @@ export default {
     common: {
       off: '休息',
       uploading: '正在上传...',
-      usePattern: '使用默认模式',
-      currentPattern: '当前默认模式',
-      pausedPattern: '默认模式 · 自动应用已暂停',
-      patternNotSet: '未设置模式 · 默认休息',
     },
     view: {
       loading: '加载日历...',
@@ -1005,7 +1001,6 @@ export default {
       loadDutiesFailed: '加载班次失败。',
       loadOtherDutiesFailed: '无法加载共享班次覆盖。',
       changeDutyFailed: '更新班次失败。',
-      restorePatternFailed: '无法恢复默认模式。',
     },
     batchUpdate: {
       title: '批量更新班次',

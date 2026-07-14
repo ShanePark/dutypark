@@ -993,10 +993,6 @@ export default {
     common: {
       off: 'Libre',
       uploading: 'Subiendo...',
-      usePattern: 'Usar patrón predeterminado',
-      currentPattern: 'Patrón predeterminado actual',
-      pausedPattern: 'Patrón predeterminado · Aplicación pausada',
-      patternNotSet: 'Sin patrón · Descanso predeterminado',
     },
     view: {
       loading: 'Cargando calendario...',
@@ -1005,7 +1001,6 @@ export default {
       loadDutiesFailed: 'No se pudieron cargar las tareas.',
       loadOtherDutiesFailed: 'No se pudieron cargar las superposiciones de tareas compartidas.',
       changeDutyFailed: 'No se pudo actualizar la tarea.',
-      restorePatternFailed: 'No se pudo restaurar el patrón predeterminado.',
     },
     batchUpdate: {
       title: 'Actualización de tareas por lotes',

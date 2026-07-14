@@ -999,10 +999,6 @@ export default {
     common: {
       off: 'Off',
       uploading: 'Uploading...',
-      usePattern: 'Use default pattern',
-      currentPattern: 'Current default pattern',
-      pausedPattern: 'Default pattern · Auto-apply paused',
-      patternNotSet: 'No pattern · Off by default',
     },
     view: {
       loading: 'Loading calendar...',
@@ -1011,7 +1007,6 @@ export default {
       loadDutiesFailed: 'Failed to load duties.',
       loadOtherDutiesFailed: 'Failed to load shared duty overlays.',
       changeDutyFailed: 'Failed to update duty.',
-      restorePatternFailed: 'Failed to restore the default pattern.',
     },
     batchUpdate: {
       title: 'Batch duty update',
