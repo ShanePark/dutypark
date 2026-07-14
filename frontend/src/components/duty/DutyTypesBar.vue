@@ -167,7 +167,7 @@ function toggleBatchEdit() {
       <button
         v-else-if="!batchEditMode"
         @click="emit('toggle-other-duties')"
-        class="px-2.5 sm:px-3 py-1.5 min-h-[44px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1.5 border-r cursor-pointer border-dp-border-secondary hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover text-dp-text-secondary"
+        class="px-2.5 sm:px-3 py-1.5 min-h-[44px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1.5 border-r cursor-pointer border-dp-border-secondary hover:bg-dp-bg-hover hover:text-dp-text-primary text-dp-text-secondary"
       >
         <Users class="w-4 h-4" />
         <span class="hidden sm:inline font-medium">{{ t('duty.typesBar.compare') }}</span>
@@ -175,21 +175,21 @@ function toggleBatchEdit() {
       <button
         v-if="canEditMyCalendar && batchEditMode"
         @click="emit('show-batch-update-modal')"
-        class="px-2 sm:px-3 py-1.5 min-h-[44px] text-xs sm:text-sm transition-colors duration-150 border-r cursor-pointer hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover border-dp-border-secondary"
+        class="px-2 sm:px-3 py-1.5 min-h-[44px] text-xs sm:text-sm transition-colors duration-150 border-r cursor-pointer hover:bg-dp-bg-hover border-dp-border-secondary"
       >
         {{ t('duty.typesBar.batchUpdate') }}
       </button>
       <button
         v-if="canEdit && !batchEditMode"
         @click="toggleBatchEdit"
-        class="px-2 sm:px-3 py-1.5 min-h-[44px] text-xs sm:text-sm transition-colors duration-150 border-r last:border-r-0 cursor-pointer border-dp-border-secondary hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover"
+        class="px-2 sm:px-3 py-1.5 min-h-[44px] text-xs sm:text-sm transition-colors duration-150 border-r last:border-r-0 cursor-pointer border-dp-border-secondary hover:bg-dp-bg-hover"
       >
         {{ t('duty.typesBar.editMode') }}
       </button>
       <button
         v-if="canEditMyCalendar && teamHasDutyBatchTemplate && !batchEditMode"
         @click="emit('show-excel-upload-modal')"
-        class="px-2 sm:px-3 py-1.5 min-h-[44px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1 cursor-pointer hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover"
+        class="px-2 sm:px-3 py-1.5 min-h-[44px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1 cursor-pointer hover:bg-dp-bg-hover"
       >
         <FileSpreadsheet class="w-4 h-4" />
         <span class="hidden sm:inline">{{ t('duty.typesBar.excel') }}</span>
