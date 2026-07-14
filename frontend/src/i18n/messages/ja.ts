@@ -1110,6 +1110,8 @@ export default {
     },
     typesBar: {
       focusedDay: '{day}日を編集中',
+      prevDay: '前の日',
+      nextDay: '次の日',
       loading: '勤務タイプを読み込んでいます...',
       empty: '利用できる勤務タイプがありません。',
       compare: '勤務比較',

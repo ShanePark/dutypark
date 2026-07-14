@@ -77,22 +77,26 @@ function toggleBatchEdit() {
     <div class="flex flex-wrap items-center gap-2 sm:gap-3">
       <!-- Edit mode: Clickable duty type buttons for quick input -->
       <template v-if="batchEditMode && dutyTypes.length > 0">
-        <!-- Current focus indicator with navigation -->
-        <div class="flex items-center rounded-md border bg-dp-bg-tertiary border-dp-border-secondary">
+        <!-- Current focus indicator with navigation; stretches to match the duty quick buttons' height -->
+        <div class="flex items-stretch self-stretch min-h-8 sm:min-h-[38px] overflow-hidden rounded-lg border bg-dp-bg-tertiary border-dp-border-secondary">
           <button
+            type="button"
             @click="moveFocusDay(-1)"
             :disabled="focusedDayValue === 1"
-            class="p-1 rounded-l-md transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-dp-bg-hover"
+            :aria-label="t('duty.typesBar.prevDay')"
+            class="flex min-w-10 sm:min-w-11 items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-dp-bg-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-dp-warning"
           >
-            <ChevronLeft class="w-4 h-4 text-dp-text-secondary" />
+            <ChevronLeft class="w-5 h-5 text-dp-text-secondary" />
           </button>
-          <span class="px-1 text-xs sm:text-sm font-bold text-dp-warning">{{ t('duty.typesBar.focusedDay', { day: focusedDayValue }) }}</span>
+          <span class="flex items-center px-1 text-xs sm:text-sm font-bold text-dp-warning">{{ t('duty.typesBar.focusedDay', { day: focusedDayValue }) }}</span>
           <button
+            type="button"
             @click="moveFocusDay(1)"
             :disabled="focusedDayValue === lastDayInMonth"
-            class="p-1 rounded-r-md transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-dp-bg-hover"
+            :aria-label="t('duty.typesBar.nextDay')"
+            class="flex min-w-10 sm:min-w-11 items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-dp-bg-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-dp-warning"
           >
-            <ChevronRight class="w-4 h-4 text-dp-text-secondary" />
+            <ChevronRight class="w-5 h-5 text-dp-text-secondary" />
           </button>
         </div>
         <button

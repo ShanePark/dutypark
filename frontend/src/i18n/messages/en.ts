@@ -1038,6 +1038,8 @@ export default {
     },
     typesBar: {
       focusedDay: 'Editing day {day}',
+      prevDay: 'Previous day',
+      nextDay: 'Next day',
       loading: 'Loading duty types...',
       empty: 'No duty types available.',
       compare: 'Compare duties',

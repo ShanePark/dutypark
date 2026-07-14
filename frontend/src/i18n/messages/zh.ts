@@ -1032,6 +1032,8 @@ export default {
     },
     typesBar: {
       focusedDay: '编辑日 {day}',
+      prevDay: '前一天',
+      nextDay: '后一天',
       loading: '正在加载班次类型...',
       empty: '没有可用的班次类型。',
       compare: '比较班次',

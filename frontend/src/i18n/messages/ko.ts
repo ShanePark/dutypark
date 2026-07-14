@@ -1039,6 +1039,8 @@ export default {
     },
     typesBar: {
       focusedDay: '{day}일 기준',
+      prevDay: '이전 날짜',
+      nextDay: '다음 날짜',
       loading: '근무 유형을 불러오는 중...',
       empty: '등록된 근무 유형이 없습니다.',
       compare: '함께 보기',

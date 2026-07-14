@@ -1032,6 +1032,8 @@ export default {
     },
     typesBar: {
       focusedDay: 'Día de edición {day}',
+      prevDay: 'Día anterior',
+      nextDay: 'Día siguiente',
       loading: 'Cargando tipos de derechos...',
       empty: 'No hay tipos de derechos disponibles.',
       compare: 'Comparar turnos',
