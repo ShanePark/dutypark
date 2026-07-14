@@ -859,22 +859,14 @@ export default {
     },
     push: {
       sectionTitle: 'Notificaciones push',
-      statusLabel: 'Estado de notificación',
-      buttonEnable: 'Habilitar notificaciones',
-      buttonDisable: 'Desactivar notificaciones',
+      toggleLabel: 'Recibir notificaciones push',
+      toggleDescription: 'Recibe un aviso en este dispositivo cuando haya novedades.',
       iosHint: 'Para permitir notificaciones nuevamente, elimine la aplicación de la pantalla de inicio y agréguela nuevamente.',
       messages: {
         disabled: 'Se han desactivado las notificaciones.',
         enabled: 'Se han habilitado las notificaciones.',
         deniedHelp: 'Las notificaciones están bloqueadas. Permítalos en la configuración de su navegador.',
         updateFailed: 'No se pudo actualizar la configuración de notificaciones.',
-      },
-      status: {
-        unsupported: 'No compatible con este dispositivo',
-        serverDisabled: 'Deshabilitado en el servidor',
-        denied: 'Bloqueado (cambiarlo en la configuración del navegador)',
-        enabled: 'Habilitado',
-        disabled: 'Desactivado',
       },
     },
     manager: {

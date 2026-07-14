@@ -859,22 +859,14 @@ export default {
     },
     push: {
       sectionTitle: '推送通知',
-      statusLabel: '通知状态',
-      buttonEnable: '启用通知',
-      buttonDisable: '关闭通知',
+      toggleLabel: '接收推送通知',
+      toggleDescription: '有新消息时，会向此设备发送通知。',
       iosHint: '要再次允许通知，请从主屏幕中删除该应用程序，然后重新添加。',
       messages: {
         disabled: '通知已关闭。',
         enabled: '通知已启用。',
         deniedHelp: '通知被阻止。请在您的浏览器设置中允许它们。',
         updateFailed: '无法更新通知设置。',
-      },
-      status: {
-        unsupported: '此设备不支持',
-        serverDisabled: '在服务器上禁用',
-        denied: '已阻止（在浏览器设置中更改）',
-        enabled: '启用',
-        disabled: '已禁用',
       },
     },
     manager: {

@@ -931,22 +931,14 @@ export default {
     push: {
       ...en.member.push,
       sectionTitle: 'プッシュ通知',
-      statusLabel: '通知状態',
-      buttonEnable: '通知を有効にする',
-      buttonDisable: '通知をオフにする',
+      toggleLabel: 'プッシュ通知を受け取る',
+      toggleDescription: '新しいお知らせがあると、この端末に通知します。',
       iosHint: '再度通知を許可するには、ホーム画面からアプリを削除してもう一度追加してください。',
       messages: {
         disabled: '通知をオフにしました。',
         enabled: '通知を有効にしました。',
         deniedHelp: '通知がブロックされています。ブラウザ設定から許可してください。',
         updateFailed: '通知設定を更新できませんでした。',
-      },
-      status: {
-        unsupported: 'この端末では利用できません',
-        serverDisabled: 'サーバー側で無効になっています',
-        denied: 'ブロック中 (ブラウザ設定で変更してください)',
-        enabled: '有効',
-        disabled: '無効',
       },
     },
     manager: {

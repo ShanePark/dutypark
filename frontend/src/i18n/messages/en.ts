@@ -865,22 +865,14 @@ export default {
     },
     push: {
       sectionTitle: 'Push Notifications',
-      statusLabel: 'Notification status',
-      buttonEnable: 'Enable notifications',
-      buttonDisable: 'Turn off notifications',
+      toggleLabel: 'Receive push notifications',
+      toggleDescription: 'Get notified on this device when something new happens.',
       iosHint: 'To allow notifications again, remove the app from the home screen and add it again.',
       messages: {
         disabled: 'Notifications have been turned off.',
         enabled: 'Notifications have been enabled.',
         deniedHelp: 'Notifications are blocked. Please allow them in your browser settings.',
         updateFailed: 'Failed to update notification settings.',
-      },
-      status: {
-        unsupported: 'Not supported on this device',
-        serverDisabled: 'Disabled on the server',
-        denied: 'Blocked (change it in browser settings)',
-        enabled: 'Enabled',
-        disabled: 'Disabled',
       },
     },
     manager: {

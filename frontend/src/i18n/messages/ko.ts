@@ -866,22 +866,14 @@ export default {
     },
     push: {
       sectionTitle: '푸시 알림 설정',
-      statusLabel: '알림 상태',
-      buttonEnable: '알림 허용',
-      buttonDisable: '알림 끄기',
+      toggleLabel: '푸시 알림 받기',
+      toggleDescription: '새로운 알림이 있을 때 이 기기로 알려드려요.',
       iosHint: '알림을 다시 허용하려면 홈 화면에서 앱을 삭제 후 다시 추가해주세요.',
       messages: {
         disabled: '알림이 해제되었습니다.',
         enabled: '알림이 활성화되었습니다.',
         deniedHelp: '알림이 차단되어 있습니다. 브라우저 설정에서 알림을 허용해주세요.',
         updateFailed: '알림 설정 변경에 실패했습니다.',
-      },
-      status: {
-        unsupported: '이 기기에서 지원하지 않음',
-        serverDisabled: '서버에서 비활성화됨',
-        denied: '차단됨 (브라우저 설정에서 변경 필요)',
-        enabled: '활성화됨',
-        disabled: '비활성화됨',
       },
     },
     manager: {
