@@ -8,6 +8,7 @@ import { todoApi } from '@/api/todo'
 import { friendApi } from '@/api/member'
 import { useSwal } from '@/composables/useSwal'
 import BaseModal from '@/components/common/BaseModal.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 import KanbanColumn from '@/components/todo/KanbanColumn.vue'
 import KanbanCard from '@/components/todo/KanbanCard.vue'
 import TodoAddModal from '@/components/duty/TodoAddModal.vue'
@@ -516,12 +517,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="todo-board-container">
-    <!-- Header -->
-    <div class="todo-board-header">
-      <div class="todo-board-header-left">
-        <h1 class="todo-board-title">{{ t('todoBoard.title') }}</h1>
-        <span class="todo-board-count">{{ counts.total }}</span>
-      </div>
+    <PageHeader :title="t('header.menu.todo')" :icon="ListTodo" class="shrink-0">
       <button
         class="todo-board-help-btn"
         @click="isHelpModalOpen = true"
@@ -529,7 +525,7 @@ onBeforeUnmount(() => {
       >
         <HelpCircle />
       </button>
-    </div>
+    </PageHeader>
 
     <div class="todo-board-tabs" role="tablist" :aria-label="t('todoBoard.statusTabsAriaLabel')">
       <button
@@ -772,37 +768,23 @@ onBeforeUnmount(() => {
   }
 }
 
-.todo-board-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  flex-shrink: 0;
-}
-
-.todo-board-header-left {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
 .todo-board-help-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 50%;
-  border: none;
-  background-color: transparent;
+  width: 2.75rem;
+  min-height: 44px;
+  border-radius: 0.75rem;
+  border: 1px solid var(--dp-border-primary);
+  background-color: var(--dp-bg-card);
   color: var(--dp-text-muted);
   cursor: pointer;
   transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
 .todo-board-help-btn:hover {
-  background-color: var(--dp-bg-tertiary);
+  background-color: var(--dp-bg-hover);
   color: var(--dp-text-secondary);
 }
 
@@ -904,29 +886,10 @@ onBeforeUnmount(() => {
   color: var(--dp-text-on-dark);
 }
 
-.todo-board-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--dp-text-primary);
-}
-
 @media (min-width: 640px) {
   .todo-board-tabs {
     display: none;
   }
-
-  .todo-board-title {
-    font-size: 1.75rem;
-  }
-}
-
-.todo-board-count {
-  font-size: 0.875rem;
-  font-weight: 600;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  background-color: var(--dp-accent);
-  color: var(--dp-text-on-dark);
 }
 
 .todo-board-loading {

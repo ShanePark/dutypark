@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { Check, ChevronDown, X } from 'lucide-vue-next'
+import { useEscapeKey } from '@/composables/useEscapeKey'
 import type { DutyPatternDutyTypeDto } from '@/types'
 
 const props = defineProps<{
@@ -71,11 +72,7 @@ function handleDocumentClick(event: MouseEvent) {
   }
 }
 
-function handleDocumentKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape') {
-    close({ restoreFocus: true })
-  }
-}
+useEscapeKey(isOpen, () => close({ restoreFocus: true }))
 
 function handleOptionKeydown(event: KeyboardEvent) {
   if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
@@ -102,12 +99,10 @@ function handleOptionKeydown(event: KeyboardEvent) {
 
 onMounted(() => {
   document.addEventListener('click', handleDocumentClick)
-  document.addEventListener('keydown', handleDocumentKeydown)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleDocumentClick)
-  document.removeEventListener('keydown', handleDocumentKeydown)
 })
 </script>
 
@@ -117,7 +112,7 @@ onUnmounted(() => {
       ref="triggerRef"
       :id="triggerId"
       type="button"
-      class="flex min-h-11 w-full items-center gap-3 rounded-lg border px-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring disabled:cursor-not-allowed disabled:opacity-60 bg-dp-bg-secondary border-dp-border-primary hover:bg-dp-bg-hover"
+      class="flex min-h-11 w-full items-center gap-3 rounded-lg border px-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring disabled:cursor-not-allowed disabled:opacity-60 bg-dp-bg-secondary border-dp-border-primary hover:bg-dp-bg-tertiary hover:border-dp-border-hover"
       :disabled="disabled"
       aria-haspopup="listbox"
       :aria-expanded="isOpen"
@@ -180,7 +175,7 @@ onUnmounted(() => {
               role="option"
               class="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-dp-accent-ring"
               :class="[
-                option.id === modelValue ? 'bg-dp-accent-bg text-dp-accent' : 'text-dp-text-primary hover:bg-dp-bg-hover',
+                option.id === modelValue ? 'bg-dp-accent-soft text-dp-accent' : 'text-dp-text-primary hover:bg-dp-bg-hover',
                 optionDisabled(option) ? 'cursor-not-allowed opacity-55' : 'cursor-pointer',
               ]"
               :aria-selected="option.id === modelValue"

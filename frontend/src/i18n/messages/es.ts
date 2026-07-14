@@ -407,7 +407,6 @@ export default {
       },
     },
     list: {
-      title: 'Notificaciones',
       markAllAsRead: 'Marcar todo como leído',
       markAllAsReadShort: 'Leer todo',
       deleteRead: 'Eliminar leídas',
@@ -576,7 +575,6 @@ export default {
     },
   },
   friends: {
-    title: 'Amigos',
     sections: {
       requests: 'Solicitudes de amistad',
       list: 'Lista de amigos',
@@ -775,9 +773,9 @@ export default {
     },
   },
   member: {
-    title: 'Mi cuenta',
     dutyPattern: {
-      sectionTitle: 'Patrón de trabajo predeterminado', description: 'Al abrir el calendario, las fechas vacías se guardan según los días recurrentes. Al cambiar o desactivar el patrón se reinician todos los turnos desde hoy, incluidos los manuales.', dutyType: 'Tipo de turno', dutyTypeByDay: 'Tipo de turno por día', automatic: 'Seleccionado por día', noDutyType: 'No hay tipos de turno disponibles.', weekdaysLabel: 'Días de trabajo', holidayOff: 'Descansar en festivos', holidayOffHint: 'Los días seleccionados serán descanso cuando sean festivos.', effectiveFrom: 'Vigente desde {month}', weekdays: { monday: 'Lun', tuesday: 'Mar', wednesday: 'Mié', thursday: 'Jue', friday: 'Vie', saturday: 'Sáb', sunday: 'Dom' }, unavailable: { title: 'No se puede configurar el patrón ahora.', team: 'Solo los miembros asignados a un equipo pueden configurar un patrón predeterminado.', none: 'Añade al menos un tipo de turno visible al equipo.', multiple: 'Puedes elegir un tipo de turno para cada día.', default: 'Comprueba los tipos de turno del equipo.' }, paused: { title: 'Algunos días están temporalmente en pausa.', description: 'Los días asignados a tipos ocultos se pausarán hasta elegir otro tipo o restaurarlo.' }, actions: { save: 'Guardar patrón', update: 'Cambiar patrón', delete: 'Desactivar patrón' }, validation: { weekdayRequired: 'Selecciona al menos un día de trabajo.', dutyTypeRequired: 'Selecciona un tipo de turno visible para cada día de trabajo.' }, messages: { loadFailed: 'No se pudo cargar el patrón.', saveConfirm: 'Al guardar, se eliminan todos los turnos desde hoy y se vuelven a registrar con los nuevos días. ¿Continuar?', saveSuccess: 'El patrón se ha guardado.', saveFailed: 'No se pudo guardar el patrón.', deleteConfirm: '¿Desactivar el patrón desde hoy? También se eliminarán los turnos manuales desde hoy.', deleteSuccess: 'El patrón se ha desactivado.', deleteFailed: 'No se pudo desactivar el patrón.' },
+      sectionTitle: 'Patrón de trabajo predeterminado', modalTitle: 'Configurar patrón de trabajo', description: 'Al abrir el calendario, las fechas vacías se guardan según los días recurrentes. Al cambiar o desactivar el patrón se reinician todos los turnos desde hoy, incluidos los manuales.',
+      summary: { edit: 'Editar', offDay: 'Libre', holidayOffBadge: 'Festivos libres', setupTitle: 'Aún no hay patrón de trabajo', setupDescription: 'Registra tus días de trabajo recurrentes y el calendario se completará solo.', setupAction: 'Configurar patrón' }, dutyType: 'Tipo de turno', dutyTypeByDay: 'Tipo de turno por día', automatic: 'Seleccionado por día', noDutyType: 'No hay tipos de turno disponibles.', weekdaysLabel: 'Días de trabajo', holidayOff: 'Descansar en festivos', holidayOffHint: 'Los días seleccionados serán descanso cuando sean festivos.', effectiveFrom: 'Vigente desde {month}', weekdays: { monday: 'Lun', tuesday: 'Mar', wednesday: 'Mié', thursday: 'Jue', friday: 'Vie', saturday: 'Sáb', sunday: 'Dom' }, unavailable: { title: 'No se puede configurar el patrón ahora.', team: 'Solo los miembros asignados a un equipo pueden configurar un patrón predeterminado.', none: 'Añade al menos un tipo de turno visible al equipo.', multiple: 'Puedes elegir un tipo de turno para cada día.', default: 'Comprueba los tipos de turno del equipo.' }, paused: { title: 'Algunos días están temporalmente en pausa.', description: 'Los días asignados a tipos ocultos se pausarán hasta elegir otro tipo o restaurarlo.' }, actions: { save: 'Guardar patrón', update: 'Cambiar patrón', delete: 'Desactivar patrón' }, validation: { weekdayRequired: 'Selecciona al menos un día de trabajo.', dutyTypeRequired: 'Selecciona un tipo de turno visible para cada día de trabajo.' }, messages: { loadFailed: 'No se pudo cargar el patrón.', saveConfirm: 'Al guardar, se eliminan todos los turnos desde hoy y se vuelven a registrar con los nuevos días. ¿Continuar?', saveSuccess: 'El patrón se ha guardado.', saveFailed: 'No se pudo guardar el patrón.', deleteConfirm: '¿Desactivar el patrón desde hoy? También se eliminarán los turnos manuales desde hoy.', deleteSuccess: 'El patrón se ha desactivado.', deleteFailed: 'No se pudo desactivar el patrón.' },
     },
     profile: {
       sectionTitle: 'Perfil',

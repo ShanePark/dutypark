@@ -10,6 +10,7 @@ import Sortable from 'sortablejs'
 import type { DashboardFriendInfo, MemberPreviewDto } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import FriendSearchModal from '@/components/common/FriendSearchModal.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 import {
   Users,
   UserCheck,
@@ -468,13 +469,7 @@ onUnmounted(() => {
 <template>
   <div class="max-w-4xl mx-auto px-4 py-6">
     <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 bg-gradient-to-br from-dp-surface-strong to-dp-surface-strong-alt rounded-xl flex items-center justify-center">
-          <Users class="w-5 h-5 text-dp-text-on-dark" />
-        </div>
-        <h1 class="text-xl font-bold text-dp-text-primary">{{ t('friends.title') }}</h1>
-      </div>
+    <PageHeader :title="t('header.menu.friends')" :icon="UserPlus">
       <button
         class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt text-dp-text-on-dark rounded-xl hover:from-dp-surface-strong-alt hover:to-dp-surface-strong-hover transition-all shadow-lg font-medium cursor-pointer"
         @click="openSearchModal"
@@ -482,7 +477,7 @@ onUnmounted(() => {
         <UserPlus class="w-4 h-4" />
         {{ t('friends.actions.addFriend') }}
       </button>
-    </div>
+    </PageHeader>
 
     <!-- Loading -->
     <div v-if="loading" class="flex justify-center py-16">

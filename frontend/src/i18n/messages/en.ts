@@ -407,7 +407,6 @@ export default {
       },
     },
     list: {
-      title: 'Notifications',
       markAllAsRead: 'Mark all as read',
       markAllAsReadShort: 'Read all',
       deleteRead: 'Delete read',
@@ -576,7 +575,6 @@ export default {
     },
   },
   friends: {
-    title: 'Friends',
     sections: {
       requests: 'Friend requests',
       list: 'Friends list',
@@ -775,9 +773,9 @@ export default {
     },
   },
   member: {
-    title: 'My Account',
     dutyPattern: {
-      sectionTitle: 'Default work pattern', description: 'Opening the calendar automatically saves missing dates from your recurring weekdays. Changing or disabling the pattern resets every duty from today, including manual entries.',
+      sectionTitle: 'Default work pattern', modalTitle: 'Set default work pattern', description: 'Opening the calendar automatically saves missing dates from your recurring weekdays. Changing or disabling the pattern resets every duty from today, including manual entries.',
+      summary: { edit: 'Edit', offDay: 'Off', holidayOffBadge: 'Holidays off', setupTitle: 'No default work pattern yet', setupDescription: 'Register your recurring workdays and the calendar fills in automatically.', setupAction: 'Set up pattern' },
       dutyType: 'Duty type', dutyTypeByDay: 'Duty type by weekday', automatic: 'Selected per weekday', noDutyType: 'No duty type is available.', weekdaysLabel: 'Workdays', holidayOff: 'Take public holidays off', holidayOffHint: 'Selected workdays become days off on public holidays.', effectiveFrom: 'Effective from {month}',
       weekdays: { monday: 'Mon', tuesday: 'Tue', wednesday: 'Wed', thursday: 'Thu', friday: 'Fri', saturday: 'Sat', sunday: 'Sun' },
       unavailable: { title: 'The pattern cannot be configured right now.', team: 'Only members assigned to a team can configure a default work pattern.', none: 'Add at least one visible team duty type to use this setting.', multiple: 'Choose a duty type for each weekday.', default: 'Check the team duty type settings.' },

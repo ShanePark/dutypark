@@ -407,7 +407,6 @@ export default {
       },
     },
     list: {
-      title: '알림',
       markAllAsRead: '전체 읽음',
       markAllAsReadShort: '전체 읽음',
       deleteRead: '읽은 알림 삭제',
@@ -576,7 +575,6 @@ export default {
     },
   },
   friends: {
-    title: '친구 관리',
     sections: {
       requests: '친구 요청',
       list: '친구 목록',
@@ -775,9 +773,9 @@ export default {
     },
   },
   member: {
-    title: '내 정보',
     dutyPattern: {
-      sectionTitle: '기본 근무 패턴', description: '달력을 조회하면 비어 있는 날짜가 반복 요일에 맞춰 자동 등록됩니다. 패턴을 변경하거나 해제하면 오늘 이후 근무는 수동 입력을 포함해 모두 새 규칙에 맞게 초기화됩니다.',
+      sectionTitle: '기본 근무 패턴', modalTitle: '기본 근무 패턴 설정', description: '달력을 조회하면 비어 있는 날짜가 반복 요일에 맞춰 자동 등록됩니다. 패턴을 변경하거나 해제하면 오늘 이후 근무는 수동 입력을 포함해 모두 새 규칙에 맞게 초기화됩니다.',
+      summary: { edit: '변경', offDay: '휴무', holidayOffBadge: '공휴일 휴무', setupTitle: '아직 기본 근무 패턴이 없어요', setupDescription: '반복되는 근무 요일을 등록하면 달력이 자동으로 채워집니다.', setupAction: '패턴 설정하기' },
       dutyType: '적용 근무 유형', dutyTypeByDay: '요일별 근무 유형', automatic: '요일별로 선택', noDutyType: '선택할 수 있는 근무 유형이 없습니다.',
       weekdaysLabel: '근무 요일', holidayOff: '공휴일에는 쉬기', holidayOffHint: '선택한 근무 요일이 공휴일이면 휴무로 적용합니다.', effectiveFrom: '{month}부터 적용',
       weekdays: { monday: '월', tuesday: '화', wednesday: '수', thursday: '목', friday: '금', saturday: '토', sunday: '일' },

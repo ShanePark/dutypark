@@ -13,6 +13,7 @@ import { usePushNotification } from '@/composables/usePushNotification'
 import type { MemberPreviewDto, MemberDto, RefreshTokenDto, CalendarVisibility, FriendDto } from '@/types'
 import { VISIBILITY_COLORS } from '@/utils/visibility'
 import BaseModal from '@/components/common/BaseModal.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
 import ProfilePhotoUploader from '@/components/common/ProfilePhotoUploader.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
@@ -42,6 +43,7 @@ import {
   Plus,
   Bell,
   BellOff,
+  Settings,
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -706,7 +708,7 @@ onMounted(async () => {
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-6">
-    <h1 class="text-2xl font-bold mb-6 text-dp-text-primary">{{ t('member.title') }}</h1>
+    <PageHeader :title="t('header.menu.settings')" :icon="Settings" />
 
     <!-- Loading State -->
     <div v-if="loading" class="flex items-center justify-center py-20">
