@@ -39,6 +39,17 @@ export const esReleaseNotes = {
     ui: "Interfaz"
   },
   entries: {
+    "pr-382": {
+      title: "Pulido de los ajustes y del calendario de turnos",
+      summary: "Organiza la página de ajustes con un modal de patrón de turnos y una tarjeta resumen, facilita la edición de turnos y muestra quién puede ver tu calendario.",
+      changes: [
+        "Configura tu patrón de turnos predeterminado en un modal dedicado y revisa un resumen semanal compacto en los ajustes.",
+        "Elige el tipo de turno de cada día desde un desplegable que se abre junto al día pulsado, también en el móvil.",
+        "Previsualiza quién puede ver tu calendario al elegir visibilidad de amigos o familia, con un aviso cuando no hay nadie.",
+        "Activa o desactiva las notificaciones push con un interruptor claro.",
+        "Disfruta de flechas de navegación más grandes en el modo de edición y de una respuesta visual más clara en ambos temas."
+      ]
+    },
     "pr-381": {
       title: "Reforzar los permisos de edición de agendas",
       summary: "Impide que quienes no tienen permisos de gestión cambien agendas ajenas y oculta las acciones de editar o eliminar cuando no están autorizadas.",

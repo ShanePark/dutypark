@@ -30,16 +30,6 @@ describe('duty pattern API contract', () => {
     })
   })
 
-  it('deletes only the dated override when restoring pattern inheritance', async () => {
-    vi.mocked(apiClient.delete).mockResolvedValue({ data: undefined })
-
-    await dutyApi.deleteDutyOverride(11, '2026-08-15')
-
-    expect(apiClient.delete).toHaveBeenCalledWith('/duty/override', {
-      params: { memberId: 11, date: '2026-08-15' },
-    })
-  })
-
   it('updates weekday-specific duty types and holiday policy', async () => {
     const updated = {
       configurable: true,

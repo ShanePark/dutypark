@@ -407,7 +407,6 @@ export default {
       },
     },
     list: {
-      title: '通知',
       markAllAsRead: '全部标记为已读',
       markAllAsReadShort: '全已读',
       deleteRead: '删除已读',
@@ -576,7 +575,6 @@ export default {
     },
   },
   friends: {
-    title: '好友',
     sections: {
       requests: '好友请求',
       list: '好友列表',
@@ -775,9 +773,9 @@ export default {
     },
   },
   member: {
-    title: '我的帐户',
     dutyPattern: {
-      sectionTitle: '默认工作模式', description: '打开日历时，空白日期会按照重复工作日自动保存。更改或停用模式时，今天及之后的所有班次（包括手动输入）都会被重置。', dutyType: '工作类型', dutyTypeByDay: '按星期设置工作类型', automatic: '按星期选择', noDutyType: '没有可选的工作类型。', weekdaysLabel: '工作日', holidayOff: '公共假日休息', holidayOffHint: '所选工作日遇到公共假日时按休息处理。', effectiveFrom: '从 {month} 起生效', weekdays: { monday: '一', tuesday: '二', wednesday: '三', thursday: '四', friday: '五', saturday: '六', sunday: '日' }, unavailable: { title: '目前无法设置工作模式。', team: '只有已加入团队的成员才能设置默认工作模式。', none: '至少添加一个可见的团队工作类型后即可使用。', multiple: '可以为每个星期选择工作类型。', default: '请检查团队工作类型设置。' }, paused: { title: '部分星期的自动应用已暂停。', description: '使用隐藏工作类型的星期会暂停，直到选择其他类型或恢复该类型。' }, actions: { save: '保存模式', update: '更改模式', delete: '停用模式' }, validation: { weekdayRequired: '请至少选择一个工作日。', dutyTypeRequired: '请为每个工作日选择可见的工作类型。' }, messages: { loadFailed: '无法加载默认工作模式。', saveConfirm: '保存后，今天及之后的所有班次都会被删除，并按新的星期规则重新登记。是否继续？', saveSuccess: '默认工作模式已保存。', saveFailed: '无法保存默认工作模式。', deleteConfirm: '从今天起停用默认工作模式吗？今天及之后的手动班次也会被删除。', deleteSuccess: '默认工作模式已停用。', deleteFailed: '无法停用模式。' },
+      sectionTitle: '默认工作模式', modalTitle: '设置默认工作模式', description: '打开日历时，空白日期会按照重复工作日自动保存。更改或停用模式时，今天及之后的所有班次（包括手动输入）都会被重置。',
+      summary: { edit: '更改', offDay: '休息', holidayOffBadge: '公共假日休息', setupTitle: '尚未设置默认工作模式', setupDescription: '登记重复的工作日后，日历会自动填充。', setupAction: '设置模式' }, dutyType: '工作类型', dutyTypeByDay: '按星期设置工作类型', automatic: '按星期选择', noDutyType: '没有可选的工作类型。', weekdaysLabel: '工作日', holidayOff: '公共假日休息', holidayOffHint: '所选工作日遇到公共假日时按休息处理。', effectiveFrom: '从 {month} 起生效', weekdays: { monday: '一', tuesday: '二', wednesday: '三', thursday: '四', friday: '五', saturday: '六', sunday: '日' }, unavailable: { title: '目前无法设置工作模式。', team: '只有已加入团队的成员才能设置默认工作模式。', none: '至少添加一个可见的团队工作类型后即可使用。', multiple: '可以为每个星期选择工作类型。', default: '请检查团队工作类型设置。' }, paused: { title: '部分星期的自动应用已暂停。', description: '使用隐藏工作类型的星期会暂停，直到选择其他类型或恢复该类型。' }, actions: { save: '保存模式', update: '更改模式', delete: '停用模式' }, validation: { weekdayRequired: '请至少选择一个工作日。', dutyTypeRequired: '请为每个工作日选择可见的工作类型。' }, messages: { loadFailed: '无法加载默认工作模式。', saveConfirm: '保存后，今天及之后的所有班次都会被删除，并按新的星期规则重新登记。是否继续？', saveSuccess: '默认工作模式已保存。', saveFailed: '无法保存默认工作模式。', deleteConfirm: '从今天起停用默认工作模式吗？今天及之后的手动班次也会被删除。', deleteSuccess: '默认工作模式已停用。', deleteFailed: '无法停用模式。' },
     },
     profile: {
       sectionTitle: '公司简介',
@@ -794,6 +792,14 @@ export default {
       modalHint: '当您选择一个选项时，更改会立即保存。',
       closeButton: '关闭',
       updateFailed: '无法更新可见性设置。',
+      audience: {
+        friendsCount: '{count}位好友可以查看',
+        familyCount: '{count}位家人可以查看',
+        moreNames: '{names}和其他{count}人',
+        nameSeparator: '、',
+        emptyFriends: '还没有好友，目前只有您可以查看',
+        emptyFamily: '还没有设为家人的好友，目前只有您可以查看',
+      },
       options: {
         public: {
           label: '大家',
@@ -853,22 +859,14 @@ export default {
     },
     push: {
       sectionTitle: '推送通知',
-      statusLabel: '通知状态',
-      buttonEnable: '启用通知',
-      buttonDisable: '关闭通知',
+      toggleLabel: '接收推送通知',
+      toggleDescription: '有新消息时，会向此设备发送通知。',
       iosHint: '要再次允许通知，请从主屏幕中删除该应用程序，然后重新添加。',
       messages: {
         disabled: '通知已关闭。',
         enabled: '通知已启用。',
         deniedHelp: '通知被阻止。请在您的浏览器设置中允许它们。',
         updateFailed: '无法更新通知设置。',
-      },
-      status: {
-        unsupported: '此设备不支持',
-        serverDisabled: '在服务器上禁用',
-        denied: '已阻止（在浏览器设置中更改）',
-        enabled: '启用',
-        disabled: '已禁用',
       },
     },
     manager: {
@@ -985,10 +983,6 @@ export default {
     common: {
       off: '休息',
       uploading: '正在上传...',
-      usePattern: '使用默认模式',
-      currentPattern: '当前默认模式',
-      pausedPattern: '默认模式 · 自动应用已暂停',
-      patternNotSet: '未设置模式 · 默认休息',
     },
     view: {
       loading: '加载日历...',
@@ -997,7 +991,6 @@ export default {
       loadDutiesFailed: '加载班次失败。',
       loadOtherDutiesFailed: '无法加载共享班次覆盖。',
       changeDutyFailed: '更新班次失败。',
-      restorePatternFailed: '无法恢复默认模式。',
     },
     batchUpdate: {
       title: '批量更新班次',
@@ -1029,6 +1022,8 @@ export default {
     },
     typesBar: {
       focusedDay: '编辑日 {day}',
+      prevDay: '前一天',
+      nextDay: '后一天',
       loading: '正在加载班次类型...',
       empty: '没有可用的班次类型。',
       compare: '比较班次',

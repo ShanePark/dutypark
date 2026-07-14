@@ -407,7 +407,6 @@ export default {
       },
     },
     list: {
-      title: 'Notificaciones',
       markAllAsRead: 'Marcar todo como leído',
       markAllAsReadShort: 'Leer todo',
       deleteRead: 'Eliminar leídas',
@@ -576,7 +575,6 @@ export default {
     },
   },
   friends: {
-    title: 'Amigos',
     sections: {
       requests: 'Solicitudes de amistad',
       list: 'Lista de amigos',
@@ -775,9 +773,9 @@ export default {
     },
   },
   member: {
-    title: 'Mi cuenta',
     dutyPattern: {
-      sectionTitle: 'Patrón de trabajo predeterminado', description: 'Al abrir el calendario, las fechas vacías se guardan según los días recurrentes. Al cambiar o desactivar el patrón se reinician todos los turnos desde hoy, incluidos los manuales.', dutyType: 'Tipo de turno', dutyTypeByDay: 'Tipo de turno por día', automatic: 'Seleccionado por día', noDutyType: 'No hay tipos de turno disponibles.', weekdaysLabel: 'Días de trabajo', holidayOff: 'Descansar en festivos', holidayOffHint: 'Los días seleccionados serán descanso cuando sean festivos.', effectiveFrom: 'Vigente desde {month}', weekdays: { monday: 'Lun', tuesday: 'Mar', wednesday: 'Mié', thursday: 'Jue', friday: 'Vie', saturday: 'Sáb', sunday: 'Dom' }, unavailable: { title: 'No se puede configurar el patrón ahora.', team: 'Solo los miembros asignados a un equipo pueden configurar un patrón predeterminado.', none: 'Añade al menos un tipo de turno visible al equipo.', multiple: 'Puedes elegir un tipo de turno para cada día.', default: 'Comprueba los tipos de turno del equipo.' }, paused: { title: 'Algunos días están temporalmente en pausa.', description: 'Los días asignados a tipos ocultos se pausarán hasta elegir otro tipo o restaurarlo.' }, actions: { save: 'Guardar patrón', update: 'Cambiar patrón', delete: 'Desactivar patrón' }, validation: { weekdayRequired: 'Selecciona al menos un día de trabajo.', dutyTypeRequired: 'Selecciona un tipo de turno visible para cada día de trabajo.' }, messages: { loadFailed: 'No se pudo cargar el patrón.', saveConfirm: 'Al guardar, se eliminan todos los turnos desde hoy y se vuelven a registrar con los nuevos días. ¿Continuar?', saveSuccess: 'El patrón se ha guardado.', saveFailed: 'No se pudo guardar el patrón.', deleteConfirm: '¿Desactivar el patrón desde hoy? También se eliminarán los turnos manuales desde hoy.', deleteSuccess: 'El patrón se ha desactivado.', deleteFailed: 'No se pudo desactivar el patrón.' },
+      sectionTitle: 'Patrón de trabajo predeterminado', modalTitle: 'Configurar patrón de trabajo', description: 'Al abrir el calendario, las fechas vacías se guardan según los días recurrentes. Al cambiar o desactivar el patrón se reinician todos los turnos desde hoy, incluidos los manuales.',
+      summary: { edit: 'Editar', offDay: 'Libre', holidayOffBadge: 'Festivos libres', setupTitle: 'Aún no hay patrón de trabajo', setupDescription: 'Registra tus días de trabajo recurrentes y el calendario se completará solo.', setupAction: 'Configurar patrón' }, dutyType: 'Tipo de turno', dutyTypeByDay: 'Tipo de turno por día', automatic: 'Seleccionado por día', noDutyType: 'No hay tipos de turno disponibles.', weekdaysLabel: 'Días de trabajo', holidayOff: 'Descansar en festivos', holidayOffHint: 'Los días seleccionados serán descanso cuando sean festivos.', effectiveFrom: 'Vigente desde {month}', weekdays: { monday: 'Lun', tuesday: 'Mar', wednesday: 'Mié', thursday: 'Jue', friday: 'Vie', saturday: 'Sáb', sunday: 'Dom' }, unavailable: { title: 'No se puede configurar el patrón ahora.', team: 'Solo los miembros asignados a un equipo pueden configurar un patrón predeterminado.', none: 'Añade al menos un tipo de turno visible al equipo.', multiple: 'Puedes elegir un tipo de turno para cada día.', default: 'Comprueba los tipos de turno del equipo.' }, paused: { title: 'Algunos días están temporalmente en pausa.', description: 'Los días asignados a tipos ocultos se pausarán hasta elegir otro tipo o restaurarlo.' }, actions: { save: 'Guardar patrón', update: 'Cambiar patrón', delete: 'Desactivar patrón' }, validation: { weekdayRequired: 'Selecciona al menos un día de trabajo.', dutyTypeRequired: 'Selecciona un tipo de turno visible para cada día de trabajo.' }, messages: { loadFailed: 'No se pudo cargar el patrón.', saveConfirm: 'Al guardar, se eliminan todos los turnos desde hoy y se vuelven a registrar con los nuevos días. ¿Continuar?', saveSuccess: 'El patrón se ha guardado.', saveFailed: 'No se pudo guardar el patrón.', deleteConfirm: '¿Desactivar el patrón desde hoy? También se eliminarán los turnos manuales desde hoy.', deleteSuccess: 'El patrón se ha desactivado.', deleteFailed: 'No se pudo desactivar el patrón.' },
     },
     profile: {
       sectionTitle: 'Perfil',
@@ -794,6 +792,14 @@ export default {
       modalHint: 'Los cambios se guardan inmediatamente cuando selecciona una opción.',
       closeButton: 'Cerrar',
       updateFailed: 'No se pudo actualizar la configuración de visibilidad.',
+      audience: {
+        friendsCount: 'Visible para {count} amigo | Visible para {count} amigos',
+        familyCount: 'Visible para {count} familiar | Visible para {count} familiares',
+        moreNames: '{names} y {count} más',
+        nameSeparator: ', ',
+        emptyFriends: 'Aún no tienes amigos; por ahora solo tú puedes verlo',
+        emptyFamily: 'Aún no tienes familiares designados; por ahora solo tú puedes verlo',
+      },
       options: {
         public: {
           label: 'todos',
@@ -853,22 +859,14 @@ export default {
     },
     push: {
       sectionTitle: 'Notificaciones push',
-      statusLabel: 'Estado de notificación',
-      buttonEnable: 'Habilitar notificaciones',
-      buttonDisable: 'Desactivar notificaciones',
+      toggleLabel: 'Recibir notificaciones push',
+      toggleDescription: 'Recibe un aviso en este dispositivo cuando haya novedades.',
       iosHint: 'Para permitir notificaciones nuevamente, elimine la aplicación de la pantalla de inicio y agréguela nuevamente.',
       messages: {
         disabled: 'Se han desactivado las notificaciones.',
         enabled: 'Se han habilitado las notificaciones.',
         deniedHelp: 'Las notificaciones están bloqueadas. Permítalos en la configuración de su navegador.',
         updateFailed: 'No se pudo actualizar la configuración de notificaciones.',
-      },
-      status: {
-        unsupported: 'No compatible con este dispositivo',
-        serverDisabled: 'Deshabilitado en el servidor',
-        denied: 'Bloqueado (cambiarlo en la configuración del navegador)',
-        enabled: 'Habilitado',
-        disabled: 'Desactivado',
       },
     },
     manager: {
@@ -985,10 +983,6 @@ export default {
     common: {
       off: 'Libre',
       uploading: 'Subiendo...',
-      usePattern: 'Usar patrón predeterminado',
-      currentPattern: 'Patrón predeterminado actual',
-      pausedPattern: 'Patrón predeterminado · Aplicación pausada',
-      patternNotSet: 'Sin patrón · Descanso predeterminado',
     },
     view: {
       loading: 'Cargando calendario...',
@@ -997,7 +991,6 @@ export default {
       loadDutiesFailed: 'No se pudieron cargar las tareas.',
       loadOtherDutiesFailed: 'No se pudieron cargar las superposiciones de tareas compartidas.',
       changeDutyFailed: 'No se pudo actualizar la tarea.',
-      restorePatternFailed: 'No se pudo restaurar el patrón predeterminado.',
     },
     batchUpdate: {
       title: 'Actualización de tareas por lotes',
@@ -1029,6 +1022,8 @@ export default {
     },
     typesBar: {
       focusedDay: 'Día de edición {day}',
+      prevDay: 'Día anterior',
+      nextDay: 'Día siguiente',
       loading: 'Cargando tipos de derechos...',
       empty: 'No hay tipos de derechos disponibles.',
       compare: 'Comparar turnos',

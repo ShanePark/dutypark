@@ -39,6 +39,17 @@ export const enReleaseNotes = {
     ui: "UI"
   },
   entries: {
+    "pr-382": {
+      title: "Polish settings and duty calendar experience",
+      summary: "Cleans up the settings page with a duty pattern modal and compact summary, makes duty editing controls easier to use, and previews who can see your calendar.",
+      changes: [
+        "Set your default duty pattern in a focused modal and see a compact weekly summary on the settings page.",
+        "Pick weekday duty types from a dropdown that opens right next to the tapped day, on mobile too.",
+        "Preview exactly who can see your calendar when choosing friends or family visibility, with a warning when nobody matches.",
+        "Turn push notifications on and off with a clear toggle switch.",
+        "Enjoy larger day navigation arrows in duty edit mode and clearer hover and focus feedback across both themes."
+      ]
+    },
     "pr-381": {
       title: "Harden schedule editing permissions",
       summary: "Prevents people from changing schedules they do not manage and hides edit or delete actions on calendars where they lack permission.",

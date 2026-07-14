@@ -1,5 +1,9 @@
 @import 'tailwindcss';
 
+/* Theme is toggled via the .dark class on <html>, not the OS setting —
+   without this, dark: utilities would follow prefers-color-scheme. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ====================================
    Font Face Declarations
    ==================================== */
@@ -62,6 +66,7 @@
     --color-dp-accent-soft: var(--dp-accent-bg);
     --color-dp-accent-soft-hover: var(--dp-accent-bg-hover);
     --color-dp-accent-border: var(--dp-accent-border);
+    --color-dp-accent-ring: var(--dp-accent-ring);
     --color-dp-search-action: var(--dp-search-action-bg);
     --color-dp-search-action-hover: var(--dp-search-action-hover);
     --color-dp-search-action-text: var(--dp-search-action-text);
@@ -70,16 +75,19 @@
     --color-dp-success: var(--dp-success);
     --color-dp-success-hover: var(--dp-success-hover);
     --color-dp-success-soft: var(--dp-success-bg);
+    --color-dp-success-soft-hover: var(--dp-success-bg-hover);
     --color-dp-success-border: var(--dp-success-border);
 
     --color-dp-danger: var(--dp-danger);
     --color-dp-danger-hover: var(--dp-danger-hover);
     --color-dp-danger-soft: var(--dp-danger-bg);
+    --color-dp-danger-soft-hover: var(--dp-danger-bg-hover);
     --color-dp-danger-border: var(--dp-danger-border);
 
     --color-dp-warning: var(--dp-warning);
     --color-dp-warning-hover: var(--dp-warning-hover);
     --color-dp-warning-soft: var(--dp-warning-bg);
+    --color-dp-warning-soft-hover: var(--dp-warning-bg-hover);
     --color-dp-warning-border: var(--dp-warning-border);
 
     --color-dp-surface-strong: var(--dp-modal-header-bg);
@@ -109,7 +117,9 @@
     --dp-bg-primary: #ffffff;
     --dp-bg-secondary: #f9fafb;
     --dp-bg-tertiary: #f3f4f6;
-    --dp-bg-hover: #f8f9fa;
+    /* Hover wash must stay distinguishable from bg-primary/secondary/tertiary
+       so hovers read on every surface tier. */
+    --dp-bg-hover: #e5e7eb;
     --dp-bg-card: #ffffff;
     --dp-bg-input: #ffffff;
     --dp-bg-modal: #ffffff;
@@ -150,16 +160,19 @@
     --dp-success: #22c55e;
     --dp-success-hover: #16a34a;
     --dp-success-bg: #f0fdf4;
+    --dp-success-bg-hover: #dcfce7;
     --dp-success-border: #86efac;
 
     --dp-danger: #ef4444;
     --dp-danger-hover: #dc2626;
     --dp-danger-bg: #fef2f2;
+    --dp-danger-bg-hover: #fee2e2;
     --dp-danger-border: #fecaca;
 
     --dp-warning: #f59e0b;
     --dp-warning-hover: #d97706;
     --dp-warning-bg: #fffbeb;
+    --dp-warning-bg-hover: #fef3c7;
     --dp-warning-border: #fcd34d;
     --dp-warning-ring: rgba(245, 158, 11, 0.2);
     --dp-success-ring: rgba(34, 197, 94, 0.2);
@@ -206,7 +219,9 @@
     --dp-bg-primary: #111827;
     --dp-bg-secondary: #1f2937;
     --dp-bg-tertiary: #374151;
-    --dp-bg-hover: #374151;
+    /* Hover wash must stay distinguishable from bg-primary/secondary/tertiary
+       so hovers read on every surface tier. */
+    --dp-bg-hover: #4b5563;
     --dp-bg-card: #1f2937;
     --dp-bg-input: #374151;
     --dp-bg-modal: #1f2937;
@@ -245,16 +260,19 @@
     --dp-success: #22c55e;
     --dp-success-hover: #16a34a;
     --dp-success-bg: #14532d;
+    --dp-success-bg-hover: #166534;
     --dp-success-border: #22c55e;
 
     --dp-danger: #ef4444;
     --dp-danger-hover: #dc2626;
     --dp-danger-bg: #450a0a;
+    --dp-danger-bg-hover: #7f1d1d;
     --dp-danger-border: #ef4444;
 
     --dp-warning: #f59e0b;
     --dp-warning-hover: #d97706;
     --dp-warning-bg: #451a03;
+    --dp-warning-bg-hover: #78350f;
     --dp-warning-border: #f59e0b;
     --dp-warning-ring: rgba(245, 158, 11, 0.2);
     --dp-success-ring: rgba(34, 197, 94, 0.2);
@@ -1044,10 +1062,37 @@ html.dark {
 .hover-interactive:hover {
     background-color: var(--dp-bg-hover);
     transform: translateY(-1px);
+    /* brightness still applies when an inline :style background overrides
+       the background-color above */
+    filter: brightness(0.97);
+}
+
+.dark .hover-interactive:hover {
+    filter: brightness(1.12);
 }
 
 .hover-interactive:active {
     transform: translateY(0);
+}
+
+/* For buttons whose colors come from inline :style — filter/shadow/transform
+   still apply on top of inline background/border, unlike hover:bg-* classes. */
+.hover-lift {
+    transition: all 0.15s ease;
+}
+
+.hover-lift:hover:not(:disabled) {
+    filter: brightness(0.96);
+    box-shadow: var(--dp-shadow-md);
+    transform: translateY(-1px);
+}
+
+.hover-lift:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.dark .hover-lift:hover:not(:disabled) {
+    filter: brightness(1.15);
 }
 
 /* Close button hover effect */

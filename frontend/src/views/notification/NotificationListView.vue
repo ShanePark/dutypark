@@ -3,6 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Bell, Trash2, CheckCheck } from 'lucide-vue-next'
+import PageHeader from '@/components/common/PageHeader.vue'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/es'
@@ -241,32 +242,26 @@ watch(
 <template>
   <div class="notification-list-view max-w-2xl mx-auto px-4 py-6">
     <!-- Header -->
-    <div class="notification-list-header flex flex-wrap items-center justify-between gap-3 mb-4">
-      <div class="flex items-center gap-3 min-w-0">
-        <Bell class="w-6 h-6" />
-        <h1 class="text-xl font-bold">{{ t('notifications.list.title') }}</h1>
-      </div>
-      <div class="flex flex-wrap items-center justify-end gap-2">
-        <button
-          type="button"
-          class="notification-action-btn cursor-pointer flex items-center gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3 py-2 rounded-lg transition-all duration-150 min-h-[44px]"
-          @click="handleMarkAllAsRead"
-        >
-          <CheckCheck class="w-4 h-4" />
-          <span class="sm:hidden">{{ t('notifications.list.markAllAsReadShort') }}</span>
-          <span class="hidden sm:inline">{{ t('notifications.list.markAllAsRead') }}</span>
-        </button>
-        <button
-          type="button"
-          class="notification-delete-btn cursor-pointer flex items-center gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3 py-2 rounded-lg transition-all duration-150 min-h-[44px]"
-          @click="handleDeleteAllRead"
-        >
-          <Trash2 class="w-4 h-4" />
-          <span class="sm:hidden">{{ t('notifications.list.deleteReadShort') }}</span>
-          <span class="hidden sm:inline">{{ t('notifications.list.deleteRead') }}</span>
-        </button>
-      </div>
-    </div>
+    <PageHeader :title="t('header.menu.notifications')" :icon="Bell">
+      <button
+        type="button"
+        class="notification-action-btn cursor-pointer flex items-center gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3 py-2 rounded-lg transition-all duration-150 min-h-[44px]"
+        @click="handleMarkAllAsRead"
+      >
+        <CheckCheck class="w-4 h-4" />
+        <span class="sm:hidden">{{ t('notifications.list.markAllAsReadShort') }}</span>
+        <span class="hidden sm:inline">{{ t('notifications.list.markAllAsRead') }}</span>
+      </button>
+      <button
+        type="button"
+        class="notification-delete-btn cursor-pointer flex items-center gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3 py-2 rounded-lg transition-all duration-150 min-h-[44px]"
+        @click="handleDeleteAllRead"
+      >
+        <Trash2 class="w-4 h-4" />
+        <span class="sm:hidden">{{ t('notifications.list.deleteReadShort') }}</span>
+        <span class="hidden sm:inline">{{ t('notifications.list.deleteRead') }}</span>
+      </button>
+    </PageHeader>
 
     <!-- Retention Notice -->
     <p class="notification-retention-notice text-xs mb-4">
@@ -345,10 +340,6 @@ watch(
 </template>
 
 <style scoped>
-.notification-list-header {
-  color: var(--dp-text-primary);
-}
-
 .notification-retention-notice {
   color: var(--dp-text-muted);
 }

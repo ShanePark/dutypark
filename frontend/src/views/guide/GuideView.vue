@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useAuthStore } from '@/stores/auth'
 import { releaseNoteMetas } from '@/releaseNotes/meta'
 import type { ReleaseNoteArea, ReleaseNoteCategory } from '@/releaseNotes/types'
 import {
@@ -71,6 +72,7 @@ interface ReleaseNote {
 }
 
 const { t, tm } = useI18n()
+const authStore = useAuthStore()
 
 const sectionConfigs = [
   {
@@ -252,6 +254,7 @@ function closeAllSections() {
   <div class="max-w-4xl mx-auto px-4 py-6">
     <div class="mb-8">
       <router-link
+        v-if="!authStore.isLoggedIn"
         to="/"
         class="inline-flex items-center gap-1.5 mb-4 text-sm transition-colors hover:opacity-80 text-dp-text-secondary"
       >

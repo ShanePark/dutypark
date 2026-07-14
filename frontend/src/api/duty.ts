@@ -63,13 +63,6 @@ export const dutyApi = {
     return response.data
   },
 
-  /** Remove a manual override and inherit the member's weekly pattern again. */
-  deleteDutyOverride: async (memberId: number, date: string): Promise<void> => {
-    await apiClient.delete('/duty/override', {
-      params: { memberId, date },
-    })
-  },
-
   getMyPattern: async (): Promise<MyDutyPatternDto> => {
     const response = await apiClient.get<MyDutyPatternDto>('/duty/pattern/me')
     return response.data

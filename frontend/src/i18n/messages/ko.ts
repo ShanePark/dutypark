@@ -407,7 +407,6 @@ export default {
       },
     },
     list: {
-      title: '알림',
       markAllAsRead: '전체 읽음',
       markAllAsReadShort: '전체 읽음',
       deleteRead: '읽은 알림 삭제',
@@ -576,7 +575,6 @@ export default {
     },
   },
   friends: {
-    title: '친구 관리',
     sections: {
       requests: '친구 요청',
       list: '친구 목록',
@@ -775,9 +773,9 @@ export default {
     },
   },
   member: {
-    title: '내 정보',
     dutyPattern: {
-      sectionTitle: '기본 근무 패턴', description: '달력을 조회하면 비어 있는 날짜가 반복 요일에 맞춰 자동 등록됩니다. 패턴을 변경하거나 해제하면 오늘 이후 근무는 수동 입력을 포함해 모두 새 규칙에 맞게 초기화됩니다.',
+      sectionTitle: '기본 근무 패턴', modalTitle: '기본 근무 패턴 설정', description: '달력을 조회하면 비어 있는 날짜가 반복 요일에 맞춰 자동 등록됩니다. 패턴을 변경하거나 해제하면 오늘 이후 근무는 수동 입력을 포함해 모두 새 규칙에 맞게 초기화됩니다.',
+      summary: { edit: '변경', offDay: '휴무', holidayOffBadge: '공휴일 휴무', setupTitle: '아직 기본 근무 패턴이 없어요', setupDescription: '반복되는 근무 요일을 등록하면 달력이 자동으로 채워집니다.', setupAction: '패턴 설정하기' },
       dutyType: '적용 근무 유형', dutyTypeByDay: '요일별 근무 유형', automatic: '요일별로 선택', noDutyType: '선택할 수 있는 근무 유형이 없습니다.',
       weekdaysLabel: '근무 요일', holidayOff: '공휴일에는 쉬기', holidayOffHint: '선택한 근무 요일이 공휴일이면 휴무로 적용합니다.', effectiveFrom: '{month}부터 적용',
       weekdays: { monday: '월', tuesday: '화', wednesday: '수', thursday: '목', friday: '금', saturday: '토', sunday: '일' },
@@ -801,6 +799,14 @@ export default {
       modalHint: '선택시 변경사항이 즉시 저장됩니다.',
       closeButton: '닫기',
       updateFailed: '공개 설정 변경에 실패했습니다.',
+      audience: {
+        friendsCount: '친구 {count}명이 볼 수 있습니다',
+        familyCount: '가족 {count}명이 볼 수 있습니다',
+        moreNames: '{names} 외 {count}명',
+        nameSeparator: ', ',
+        emptyFriends: '아직 친구가 없어 지금은 나만 볼 수 있습니다',
+        emptyFamily: '가족으로 지정한 친구가 없어 지금은 나만 볼 수 있습니다',
+      },
       options: {
         public: {
           label: '누구나',
@@ -860,22 +866,14 @@ export default {
     },
     push: {
       sectionTitle: '푸시 알림 설정',
-      statusLabel: '알림 상태',
-      buttonEnable: '알림 허용',
-      buttonDisable: '알림 끄기',
+      toggleLabel: '푸시 알림 받기',
+      toggleDescription: '새로운 알림이 있을 때 이 기기로 알려드려요.',
       iosHint: '알림을 다시 허용하려면 홈 화면에서 앱을 삭제 후 다시 추가해주세요.',
       messages: {
         disabled: '알림이 해제되었습니다.',
         enabled: '알림이 활성화되었습니다.',
         deniedHelp: '알림이 차단되어 있습니다. 브라우저 설정에서 알림을 허용해주세요.',
         updateFailed: '알림 설정 변경에 실패했습니다.',
-      },
-      status: {
-        unsupported: '이 기기에서 지원하지 않음',
-        serverDisabled: '서버에서 비활성화됨',
-        denied: '차단됨 (브라우저 설정에서 변경 필요)',
-        enabled: '활성화됨',
-        disabled: '비활성화됨',
       },
     },
     manager: {
@@ -992,10 +990,6 @@ export default {
     common: {
       off: '휴무',
       uploading: '업로드 중...',
-      usePattern: '기본 패턴 사용',
-      currentPattern: '현재 기본 패턴',
-      pausedPattern: '기본 패턴 · 자동 적용 중지',
-      patternNotSet: '패턴 미설정 · 기본 휴무',
     },
     view: {
       loading: '시간표를 불러오는 중...',
@@ -1004,7 +998,6 @@ export default {
       loadDutiesFailed: '근무표를 불러오는데 실패했습니다.',
       loadOtherDutiesFailed: '함께 보기 근무표를 불러오는데 실패했습니다.',
       changeDutyFailed: '근무 변경에 실패했습니다.',
-      restorePatternFailed: '기본 패턴으로 되돌리지 못했습니다.',
     },
     batchUpdate: {
       title: '근무 일괄 변경',
@@ -1036,6 +1029,8 @@ export default {
     },
     typesBar: {
       focusedDay: '{day}일 기준',
+      prevDay: '이전 날짜',
+      nextDay: '다음 날짜',
       loading: '근무 유형을 불러오는 중...',
       empty: '등록된 근무 유형이 없습니다.',
       compare: '함께 보기',

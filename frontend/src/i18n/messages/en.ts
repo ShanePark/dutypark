@@ -407,7 +407,6 @@ export default {
       },
     },
     list: {
-      title: 'Notifications',
       markAllAsRead: 'Mark all as read',
       markAllAsReadShort: 'Read all',
       deleteRead: 'Delete read',
@@ -576,7 +575,6 @@ export default {
     },
   },
   friends: {
-    title: 'Friends',
     sections: {
       requests: 'Friend requests',
       list: 'Friends list',
@@ -775,9 +773,9 @@ export default {
     },
   },
   member: {
-    title: 'My Account',
     dutyPattern: {
-      sectionTitle: 'Default work pattern', description: 'Opening the calendar automatically saves missing dates from your recurring weekdays. Changing or disabling the pattern resets every duty from today, including manual entries.',
+      sectionTitle: 'Default work pattern', modalTitle: 'Set default work pattern', description: 'Opening the calendar automatically saves missing dates from your recurring weekdays. Changing or disabling the pattern resets every duty from today, including manual entries.',
+      summary: { edit: 'Edit', offDay: 'Off', holidayOffBadge: 'Holidays off', setupTitle: 'No default work pattern yet', setupDescription: 'Register your recurring workdays and the calendar fills in automatically.', setupAction: 'Set up pattern' },
       dutyType: 'Duty type', dutyTypeByDay: 'Duty type by weekday', automatic: 'Selected per weekday', noDutyType: 'No duty type is available.', weekdaysLabel: 'Workdays', holidayOff: 'Take public holidays off', holidayOffHint: 'Selected workdays become days off on public holidays.', effectiveFrom: 'Effective from {month}',
       weekdays: { monday: 'Mon', tuesday: 'Tue', wednesday: 'Wed', thursday: 'Thu', friday: 'Fri', saturday: 'Sat', sunday: 'Sun' },
       unavailable: { title: 'The pattern cannot be configured right now.', team: 'Only members assigned to a team can configure a default work pattern.', none: 'Add at least one visible team duty type to use this setting.', multiple: 'Choose a duty type for each weekday.', default: 'Check the team duty type settings.' },
@@ -800,6 +798,14 @@ export default {
       modalHint: 'Changes are saved immediately when you select an option.',
       closeButton: 'Close',
       updateFailed: 'Failed to update the visibility setting.',
+      audience: {
+        friendsCount: '{count} friend can see it | {count} friends can see it',
+        familyCount: '{count} family member can see it | {count} family members can see it',
+        moreNames: '{names} and {count} more',
+        nameSeparator: ', ',
+        emptyFriends: 'No friends yet — only you can see it for now',
+        emptyFamily: 'No friends marked as family yet — only you can see it for now',
+      },
       options: {
         public: {
           label: 'Everyone',
@@ -859,22 +865,14 @@ export default {
     },
     push: {
       sectionTitle: 'Push Notifications',
-      statusLabel: 'Notification status',
-      buttonEnable: 'Enable notifications',
-      buttonDisable: 'Turn off notifications',
+      toggleLabel: 'Receive push notifications',
+      toggleDescription: 'Get notified on this device when something new happens.',
       iosHint: 'To allow notifications again, remove the app from the home screen and add it again.',
       messages: {
         disabled: 'Notifications have been turned off.',
         enabled: 'Notifications have been enabled.',
         deniedHelp: 'Notifications are blocked. Please allow them in your browser settings.',
         updateFailed: 'Failed to update notification settings.',
-      },
-      status: {
-        unsupported: 'Not supported on this device',
-        serverDisabled: 'Disabled on the server',
-        denied: 'Blocked (change it in browser settings)',
-        enabled: 'Enabled',
-        disabled: 'Disabled',
       },
     },
     manager: {
@@ -991,10 +989,6 @@ export default {
     common: {
       off: 'Off',
       uploading: 'Uploading...',
-      usePattern: 'Use default pattern',
-      currentPattern: 'Current default pattern',
-      pausedPattern: 'Default pattern · Auto-apply paused',
-      patternNotSet: 'No pattern · Off by default',
     },
     view: {
       loading: 'Loading calendar...',
@@ -1003,7 +997,6 @@ export default {
       loadDutiesFailed: 'Failed to load duties.',
       loadOtherDutiesFailed: 'Failed to load shared duty overlays.',
       changeDutyFailed: 'Failed to update duty.',
-      restorePatternFailed: 'Failed to restore the default pattern.',
     },
     batchUpdate: {
       title: 'Batch duty update',
@@ -1035,6 +1028,8 @@ export default {
     },
     typesBar: {
       focusedDay: 'Editing day {day}',
+      prevDay: 'Previous day',
+      nextDay: 'Next day',
       loading: 'Loading duty types...',
       empty: 'No duty types available.',
       compare: 'Compare duties',

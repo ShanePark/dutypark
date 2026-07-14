@@ -446,7 +446,6 @@ export default {
     },
     list: {
       ...en.notifications.list,
-      title: '通知',
       markAllAsRead: 'すべて既読',
       markAllAsReadShort: '全既読',
       deleteRead: '既読通知を削除',
@@ -633,7 +632,6 @@ export default {
   },
   friends: {
     ...en.friends,
-    title: '友だち',
     sections: {
       requests: '申請一覧',
       list: '友だち一覧',
@@ -842,9 +840,9 @@ export default {
   },
   member: {
     ...en.member,
-    title: 'マイアカウント',
     dutyPattern: {
-      sectionTitle: '基本勤務パターン', description: 'カレンダーを開くと、未登録の日付が繰り返し曜日に従って自動登録されます。パターンの変更・解除時は、手動入力を含む本日以降の勤務がすべて初期化されます。', dutyType: '適用する勤務タイプ', dutyTypeByDay: '曜日別の勤務タイプ', automatic: '曜日ごとに選択', noDutyType: '選択できる勤務タイプがありません。', weekdaysLabel: '勤務曜日', holidayOff: '祝日は休む', holidayOffHint: '選択した勤務曜日が祝日の場合は休みになります。', effectiveFrom: '{month}から適用',
+      sectionTitle: '基本勤務パターン', modalTitle: '基本勤務パターンの設定', description: 'カレンダーを開くと、未登録の日付が繰り返し曜日に従って自動登録されます。パターンの変更・解除時は、手動入力を含む本日以降の勤務がすべて初期化されます。',
+      summary: { edit: '変更', offDay: '休み', holidayOffBadge: '祝日は休み', setupTitle: '基本勤務パターンが未設定です', setupDescription: '繰り返しの勤務曜日を登録すると、カレンダーが自動で埋まります。', setupAction: 'パターンを設定' }, dutyType: '適用する勤務タイプ', dutyTypeByDay: '曜日別の勤務タイプ', automatic: '曜日ごとに選択', noDutyType: '選択できる勤務タイプがありません。', weekdaysLabel: '勤務曜日', holidayOff: '祝日は休む', holidayOffHint: '選択した勤務曜日が祝日の場合は休みになります。', effectiveFrom: '{month}から適用',
       weekdays: { monday: '月', tuesday: '火', wednesday: '水', thursday: '木', friday: '金', saturday: '土', sunday: '日' }, unavailable: { title: '現在パターンを設定できません。', team: 'チームに所属しているメンバーのみ基本勤務パターンを設定できます。', none: '表示中の勤務タイプを1つ以上登録してください。', multiple: '曜日ごとに勤務タイプを選択できます。', default: 'チームの勤務タイプ設定を確認してください。' }, paused: { title: '一部の曜日は自動適用が停止中です。', description: '非表示の勤務タイプを設定した曜日は、別のタイプを選択するかタイプを復元するまで停止します。' }, actions: { save: 'パターンを保存', update: 'パターンを変更', delete: 'パターンを解除' }, validation: { weekdayRequired: '勤務曜日を1つ以上選択してください。', dutyTypeRequired: 'すべての勤務曜日に表示中の勤務タイプを選択してください。' }, messages: { loadFailed: '基本勤務パターンを読み込めませんでした。', saveConfirm: '保存すると本日以降のすべての勤務が削除され、新しい曜日で再登録されます。続行しますか？', saveSuccess: '基本勤務パターンを保存しました。', saveFailed: '基本勤務パターンを保存できませんでした。', deleteConfirm: '本日から基本勤務パターンを解除しますか？本日以降の手動入力勤務も削除されます。', deleteSuccess: '基本勤務パターンを解除しました。', deleteFailed: '基本勤務パターンを解除できませんでした。' },
     },
     profile: {
@@ -863,6 +861,14 @@ export default {
       modalHint: '選択するとすぐに保存されます。',
       closeButton: '閉じる',
       updateFailed: '公開範囲を更新できませんでした。',
+      audience: {
+        friendsCount: '友達{count}人が見られます',
+        familyCount: '家族{count}人が見られます',
+        moreNames: '{names} 他{count}人',
+        nameSeparator: '、',
+        emptyFriends: 'まだ友達がいないため、今は自分だけが見られます',
+        emptyFamily: '家族に設定した友達がいないため、今は自分だけが見られます',
+      },
       options: {
         public: {
           label: '全員',
@@ -925,22 +931,14 @@ export default {
     push: {
       ...en.member.push,
       sectionTitle: 'プッシュ通知',
-      statusLabel: '通知状態',
-      buttonEnable: '通知を有効にする',
-      buttonDisable: '通知をオフにする',
+      toggleLabel: 'プッシュ通知を受け取る',
+      toggleDescription: '新しいお知らせがあると、この端末に通知します。',
       iosHint: '再度通知を許可するには、ホーム画面からアプリを削除してもう一度追加してください。',
       messages: {
         disabled: '通知をオフにしました。',
         enabled: '通知を有効にしました。',
         deniedHelp: '通知がブロックされています。ブラウザ設定から許可してください。',
         updateFailed: '通知設定を更新できませんでした。',
-      },
-      status: {
-        unsupported: 'この端末では利用できません',
-        serverDisabled: 'サーバー側で無効になっています',
-        denied: 'ブロック中 (ブラウザ設定で変更してください)',
-        enabled: '有効',
-        disabled: '無効',
       },
     },
     manager: {
@@ -1063,10 +1061,6 @@ export default {
     common: {
       off: '休み',
       uploading: 'アップロード中...',
-      usePattern: '基本パターンを使用',
-      currentPattern: '現在の基本パターン',
-      pausedPattern: '基本パターン・自動適用停止中',
-      patternNotSet: 'パターン未設定・基本は休み',
     },
     view: {
       loading: 'カレンダーを読み込んでいます...',
@@ -1075,7 +1069,6 @@ export default {
       loadDutiesFailed: '勤務情報を読み込めませんでした。',
       loadOtherDutiesFailed: '共有勤務の重ね表示を読み込めませんでした。',
       changeDutyFailed: '勤務を更新できませんでした。',
-      restorePatternFailed: '基本パターンに戻せませんでした。',
     },
     batchUpdate: {
       title: '勤務一括変更',
@@ -1107,6 +1100,8 @@ export default {
     },
     typesBar: {
       focusedDay: '{day}日を編集中',
+      prevDay: '前の日',
+      nextDay: '次の日',
       loading: '勤務タイプを読み込んでいます...',
       empty: '利用できる勤務タイプがありません。',
       compare: '勤務比較',

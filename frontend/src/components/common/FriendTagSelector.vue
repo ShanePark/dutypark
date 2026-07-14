@@ -275,7 +275,7 @@ function getSubtitle(friend: TaggableFriend) {
           class="inline-flex h-8 flex-shrink-0 items-center rounded-full border px-2.5 text-xs font-semibold transition"
           :class="showSelectedOnly
             ? 'border-dp-accent bg-dp-accent text-dp-text-on-dark'
-            : 'border-dp-accent-border bg-dp-accent-soft text-dp-text-primary hover:border-dp-accent hover:bg-dp-accent-bg'"
+            : 'border-dp-accent-border bg-dp-accent-soft text-dp-text-primary hover:border-dp-accent hover:bg-dp-accent-soft-hover'"
           :aria-label="showSelectedOnly
             ? t('friendTagSelector.selectedOnlyActive', { count: selectedCount })
             : t('friendTagSelector.selectedOnly', { count: selectedCount })"

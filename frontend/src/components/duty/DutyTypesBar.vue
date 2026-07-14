@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ChevronLeft, ChevronRight, FileSpreadsheet, Loader2, PencilLine, RotateCcw, Users, X } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, FileSpreadsheet, Loader2, PencilLine, Users, X } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { isLightColor } from '@/utils/color'
 import type { DutyType, DutyTypeWithCount } from '@/views/duty/dutyViewTypes'
-import type { DutySource } from '@/types'
-import { dutySourcePatternLabelKey, isInheritedDutySource } from '@/utils/dutySource'
 
 const props = defineProps<{
   batchEditMode: boolean
@@ -14,7 +12,6 @@ const props = defineProps<{
   isLoadingDuties: boolean
   focusedDay: number | null
   focusedDayDutyType: string | null
-  focusedDayDutySource: DutySource | null
   lastDayInMonth: number
   canEdit: boolean
   canEditMyCalendar: boolean
@@ -30,14 +27,12 @@ const emit = defineEmits<{
   (e: 'toggle-batch-edit', value: boolean): void
   (e: 'show-excel-upload-modal'): void
   (e: 'quick-duty-change', dutyTypeId: number | null): void
-  (e: 'restore-pattern'): void
   (e: 'update:focusedDay', value: number): void
 }>()
 
 const { t } = useI18n()
 
 const focusedDayValue = computed(() => props.focusedDay ?? 1)
-const patternButtonLabel = computed(() => t(dutySourcePatternLabelKey(props.focusedDayDutySource)))
 
 function moveFocusDay(delta: number) {
   const next = Math.min(props.lastDayInMonth, Math.max(1, focusedDayValue.value + delta))
@@ -82,41 +77,34 @@ function toggleBatchEdit() {
     <div class="flex flex-wrap items-center gap-2 sm:gap-3">
       <!-- Edit mode: Clickable duty type buttons for quick input -->
       <template v-if="batchEditMode && dutyTypes.length > 0">
-        <!-- Current focus indicator with navigation -->
-        <div class="flex items-center rounded-md border bg-dp-bg-tertiary border-dp-border-secondary">
+        <!-- Current focus indicator with navigation; stretches to match the duty quick buttons' height -->
+        <div class="flex items-stretch self-stretch min-h-8 sm:min-h-[38px] overflow-hidden rounded-lg border bg-dp-bg-tertiary border-dp-border-secondary">
           <button
+            type="button"
             @click="moveFocusDay(-1)"
             :disabled="focusedDayValue === 1"
-            class="p-1 rounded-l-md transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-dp-bg-hover"
+            :aria-label="t('duty.typesBar.prevDay')"
+            class="flex min-w-10 sm:min-w-11 items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-dp-bg-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-dp-warning"
           >
-            <ChevronLeft class="w-4 h-4 text-dp-text-secondary" />
+            <ChevronLeft class="w-5 h-5 text-dp-text-secondary" />
           </button>
-          <span class="px-1 text-xs sm:text-sm font-bold text-dp-warning">{{ t('duty.typesBar.focusedDay', { day: focusedDayValue }) }}</span>
+          <span class="flex items-center px-1 text-xs sm:text-sm font-bold text-dp-warning">{{ t('duty.typesBar.focusedDay', { day: focusedDayValue }) }}</span>
           <button
+            type="button"
             @click="moveFocusDay(1)"
             :disabled="focusedDayValue === lastDayInMonth"
-            class="p-1 rounded-r-md transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-dp-bg-hover"
+            :aria-label="t('duty.typesBar.nextDay')"
+            class="flex min-w-10 sm:min-w-11 items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-dp-bg-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-dp-warning"
           >
-            <ChevronRight class="w-4 h-4 text-dp-text-secondary" />
+            <ChevronRight class="w-5 h-5 text-dp-text-secondary" />
           </button>
         </div>
-        <button
-          type="button"
-          class="duty-quick-btn min-h-11"
-          :class="{ 'duty-quick-btn-active': isInheritedDutySource(focusedDayDutySource) }"
-          @click="emit('restore-pattern')"
-        >
-          <span class="duty-quick-btn-inner flex items-center gap-1">
-            <RotateCcw class="w-3.5 h-3.5" />
-            {{ patternButtonLabel }}
-          </span>
-        </button>
         <button
           v-for="dutyType in dutyTypes"
           :key="dutyType.id ?? 'off'"
           @click="emit('quick-duty-change', dutyType.id)"
           class="duty-quick-btn"
-          :class="{ 'duty-quick-btn-active': focusedDayDutySource === 'OVERRIDE' && (focusedDayDutyType === dutyType.name || (!focusedDayDutyType && dutyType.id === null)) }"
+          :class="{ 'duty-quick-btn-active': focusedDayDutyType === dutyType.name || (!focusedDayDutyType && dutyType.id === null) }"
           :style="{
             '--duty-color': dutyType.color || 'var(--dp-duty-fallback)',
             '--duty-text': isLightColor(dutyType.color) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
@@ -179,7 +167,7 @@ function toggleBatchEdit() {
       <button
         v-else-if="!batchEditMode"
         @click="emit('toggle-other-duties')"
-        class="px-2.5 sm:px-3 py-1.5 min-h-[44px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1.5 border-r cursor-pointer border-dp-border-secondary hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover text-dp-text-secondary"
+        class="px-2.5 sm:px-3 py-1.5 min-h-[44px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1.5 border-r cursor-pointer border-dp-border-secondary hover:bg-dp-bg-hover hover:text-dp-text-primary text-dp-text-secondary"
       >
         <Users class="w-4 h-4" />
         <span class="hidden sm:inline font-medium">{{ t('duty.typesBar.compare') }}</span>
@@ -187,21 +175,21 @@ function toggleBatchEdit() {
       <button
         v-if="canEditMyCalendar && batchEditMode"
         @click="emit('show-batch-update-modal')"
-        class="px-2 sm:px-3 py-1.5 min-h-[44px] text-xs sm:text-sm transition-colors duration-150 border-r cursor-pointer hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover border-dp-border-secondary"
+        class="px-2 sm:px-3 py-1.5 min-h-[44px] text-xs sm:text-sm transition-colors duration-150 border-r cursor-pointer hover:bg-dp-bg-hover border-dp-border-secondary"
       >
         {{ t('duty.typesBar.batchUpdate') }}
       </button>
       <button
         v-if="canEdit && !batchEditMode"
         @click="toggleBatchEdit"
-        class="px-2 sm:px-3 py-1.5 min-h-[44px] text-xs sm:text-sm transition-colors duration-150 border-r last:border-r-0 cursor-pointer border-dp-border-secondary hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover"
+        class="px-2 sm:px-3 py-1.5 min-h-[44px] text-xs sm:text-sm transition-colors duration-150 border-r last:border-r-0 cursor-pointer border-dp-border-secondary hover:bg-dp-bg-hover"
       >
         {{ t('duty.typesBar.editMode') }}
       </button>
       <button
         v-if="canEditMyCalendar && teamHasDutyBatchTemplate && !batchEditMode"
         @click="emit('show-excel-upload-modal')"
-        class="px-2 sm:px-3 py-1.5 min-h-[44px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1 cursor-pointer hover:bg-dp-bg-hover dark:hover:bg-dp-bg-hover"
+        class="px-2 sm:px-3 py-1.5 min-h-[44px] text-xs sm:text-sm transition-colors duration-150 flex items-center gap-1 cursor-pointer hover:bg-dp-bg-hover"
       >
         <FileSpreadsheet class="w-4 h-4" />
         <span class="hidden sm:inline">{{ t('duty.typesBar.excel') }}</span>

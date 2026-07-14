@@ -4,15 +4,16 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore, type ThemeMode } from '@/stores/theme'
-import { memberApi, refreshTokenApi } from '@/api/member'
+import { friendApi, memberApi, refreshTokenApi } from '@/api/member'
 import { authApi } from '@/api/auth'
 import { useSwal } from '@/composables/useSwal'
 import { useKakao } from '@/composables/useKakao'
 import { useNaver } from '@/composables/useNaver'
 import { usePushNotification } from '@/composables/usePushNotification'
-import type { MemberPreviewDto, MemberDto, RefreshTokenDto, CalendarVisibility } from '@/types'
+import type { MemberPreviewDto, MemberDto, RefreshTokenDto, CalendarVisibility, FriendDto } from '@/types'
 import { VISIBILITY_COLORS } from '@/utils/visibility'
 import BaseModal from '@/components/common/BaseModal.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
 import ProfilePhotoUploader from '@/components/common/ProfilePhotoUploader.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
@@ -41,7 +42,7 @@ import {
   LogIn,
   Plus,
   Bell,
-  BellOff,
+  Settings,
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -144,22 +145,18 @@ const showPushSettings = computed(() => {
   return pushNotification.isSupported.value && pushNotification.isEnabled.value
 })
 
-const pushStatusText = computed(() => {
-  if (!pushNotification.isSupported.value) return t('member.push.status.unsupported')
-  if (!pushNotification.isEnabled.value) return t('member.push.status.serverDisabled')
-  if (pushNotification.permission.value === 'denied') return t('member.push.status.denied')
-  if (pushNotification.permission.value === 'granted' && pushNotification.isSubscribed.value) {
-    return t('member.push.status.enabled')
-  }
-  return t('member.push.status.disabled')
+const isPushOn = computed(() => {
+  return pushNotification.permission.value === 'granted' && pushNotification.isSubscribed.value
 })
+
+const isPushBlocked = computed(() => pushNotification.permission.value === 'denied')
 
 async function togglePushNotification() {
   if (togglingPush.value) return
   togglingPush.value = true
 
   try {
-    if (pushNotification.permission.value === 'granted' && pushNotification.isSubscribed.value) {
+    if (isPushOn.value) {
       await pushNotification.unsubscribe()
       toastSuccess(t('member.push.messages.disabled'))
     } else {
@@ -224,34 +221,103 @@ const visibilityLabel = computed(() => {
   return labels[calendarVisibility.value]
 })
 
+interface VisibilityAudience {
+  viewers: FriendDto[]
+  countLabel: string
+  emptyText: string
+}
+
+const AUDIENCE_MAX_AVATARS = 5
+const AUDIENCE_MAX_NAMES = 3
+
+const audienceFriends = ref<FriendDto[]>([])
+const audienceLoading = ref(false)
+const audienceLoaded = ref(false)
+
+function openVisibilityModal() {
+  showVisibilityModal.value = true
+  loadVisibilityAudience()
+}
+
+async function loadVisibilityAudience() {
+  if (audienceLoading.value) return
+  audienceLoading.value = true
+  try {
+    const response = await friendApi.getFriends()
+    audienceFriends.value = response.data
+    audienceLoaded.value = true
+  } catch (error) {
+    console.error('Failed to load visibility audience:', error)
+  } finally {
+    audienceLoading.value = false
+  }
+}
+
+function audienceNames(viewers: FriendDto[]): string {
+  const names = viewers
+    .slice(0, AUDIENCE_MAX_NAMES)
+    .map((viewer) => viewer.name)
+    .join(t('member.visibility.audience.nameSeparator'))
+  const rest = viewers.length - AUDIENCE_MAX_NAMES
+  return rest > 0 ? t('member.visibility.audience.moreNames', { names, count: rest }) : names
+}
+
 const visibilityOptions = computed<
-  { value: CalendarVisibility; label: string; color: string; description: string }[]
->(() => [
   {
-    value: 'PUBLIC',
-    label: t('member.visibility.options.public.label'),
-    color: VISIBILITY_COLORS.PUBLIC,
-    description: t('member.visibility.options.public.description'),
-  },
-  {
-    value: 'FRIENDS',
-    label: t('member.visibility.options.friends.label'),
-    color: VISIBILITY_COLORS.FRIENDS,
-    description: t('member.visibility.options.friends.description'),
-  },
-  {
-    value: 'FAMILY',
-    label: t('member.visibility.options.family.label'),
-    color: VISIBILITY_COLORS.FAMILY,
-    description: t('member.visibility.options.family.description'),
-  },
-  {
-    value: 'PRIVATE',
-    label: t('member.visibility.options.private.label'),
-    color: VISIBILITY_COLORS.PRIVATE,
-    description: t('member.visibility.options.private.description'),
-  },
-])
+    value: CalendarVisibility
+    label: string
+    color: string
+    description: string
+    audience?: VisibilityAudience
+  }[]
+>(() => {
+  const friends = audienceFriends.value
+  const family = friends.filter((friend) => friend.isFamily)
+  return [
+    {
+      value: 'PUBLIC',
+      label: t('member.visibility.options.public.label'),
+      color: VISIBILITY_COLORS.PUBLIC,
+      description: t('member.visibility.options.public.description'),
+    },
+    {
+      value: 'FRIENDS',
+      label: t('member.visibility.options.friends.label'),
+      color: VISIBILITY_COLORS.FRIENDS,
+      description: t('member.visibility.options.friends.description'),
+      audience: {
+        viewers: friends,
+        countLabel: t(
+          'member.visibility.audience.friendsCount',
+          { count: friends.length },
+          friends.length
+        ),
+        emptyText: t('member.visibility.audience.emptyFriends'),
+      },
+    },
+    {
+      value: 'FAMILY',
+      label: t('member.visibility.options.family.label'),
+      color: VISIBILITY_COLORS.FAMILY,
+      description: t('member.visibility.options.family.description'),
+      audience: {
+        viewers: family,
+        countLabel: t(
+          'member.visibility.audience.familyCount',
+          { count: family.length },
+          family.length
+        ),
+        emptyText: t('member.visibility.audience.emptyFamily'),
+      },
+    },
+    {
+      value: 'PRIVATE',
+      label: t('member.visibility.options.private.label'),
+      color: VISIBILITY_COLORS.PRIVATE,
+      description: t('member.visibility.options.private.description'),
+    },
+  ]
+})
 
 const visibilityColorClass = computed(() => VISIBILITY_COLORS[calendarVisibility.value] ?? 'bg-dp-accent')
 
@@ -637,7 +703,7 @@ onMounted(async () => {
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-6">
-    <h1 class="text-2xl font-bold mb-6 text-dp-text-primary">{{ t('member.title') }}</h1>
+    <PageHeader :title="t('header.menu.settings')" :icon="Settings" />
 
     <!-- Loading State -->
     <div v-if="loading" class="flex items-center justify-center py-20">
@@ -710,8 +776,8 @@ onMounted(async () => {
             <p class="text-sm mt-1 text-dp-text-secondary">{{ t('member.visibility.description') }}</p>
           </div>
           <button
-            @click="showVisibilityModal = true"
-            class="px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium transition flex items-center justify-center gap-2 hover:brightness-95 cursor-pointer bg-dp-bg-tertiary text-dp-text-primary"
+            @click="openVisibilityModal"
+            class="px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium flex items-center justify-center gap-2 hover-lift cursor-pointer bg-dp-bg-tertiary text-dp-text-primary"
           >
             <span
               class="w-2 h-2 rounded-full"
@@ -734,8 +800,7 @@ onMounted(async () => {
             v-for="option in themeOptions"
             :key="option.value"
             @click="setTheme(option.value)"
-            class="flex-1 px-4 py-3 rounded-lg font-medium transition flex items-center justify-center gap-2 hover:brightness-95 cursor-pointer"
-            :class="{ 'hover:scale-[1.02]': themeStore.mode !== option.value }"
+            class="flex-1 px-4 py-3 rounded-lg font-medium flex items-center justify-center gap-2 hover-lift cursor-pointer"
             :style="{
               borderWidth: '2px',
               borderColor: themeStore.mode === option.value ? 'var(--dp-accent)' : 'var(--dp-border-primary)',
@@ -758,35 +823,33 @@ onMounted(async () => {
           <Bell class="w-5 h-5 text-dp-text-secondary" />
           {{ t('member.push.sectionTitle') }}
         </h2>
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <p class="text-dp-text-primary">{{ t('member.push.statusLabel') }}</p>
-            <p class="text-sm mt-1 text-dp-text-secondary">{{ pushStatusText }}</p>
-          </div>
-          <button
-            @click="togglePushNotification"
-            :disabled="togglingPush || pushNotification.permission.value === 'denied'"
-            class="px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            :style="{
-              backgroundColor: pushNotification.permission.value === 'granted' && pushNotification.isSubscribed.value
-                ? 'var(--dp-bg-tertiary)'
-                : 'var(--dp-accent)',
-              color: pushNotification.permission.value === 'granted' && pushNotification.isSubscribed.value
-                ? 'var(--dp-text-primary)'
-                : 'var(--dp-text-on-dark)'
-            }"
+        <button
+          type="button"
+          role="switch"
+          :aria-checked="isPushOn"
+          :disabled="togglingPush || isPushBlocked"
+          @click="togglePushNotification"
+          class="push-toggle-row w-full min-h-11 flex items-center justify-between gap-4 p-3 -mx-3 rounded-lg text-left cursor-pointer disabled:cursor-not-allowed"
+        >
+          <span class="min-w-0">
+            <span class="block font-medium text-dp-text-primary">{{ t('member.push.toggleLabel') }}</span>
+            <span class="block text-sm mt-1 text-dp-text-secondary">{{ t('member.push.toggleDescription') }}</span>
+          </span>
+          <span
+            class="push-switch"
+            :class="{ 'push-switch-on': isPushOn, 'push-switch-blocked': isPushBlocked }"
+            aria-hidden="true"
           >
-            <Loader2 v-if="togglingPush" class="w-4 h-4 animate-spin" />
-            <template v-else>
-              <BellOff v-if="pushNotification.permission.value === 'granted' && pushNotification.isSubscribed.value" class="w-4 h-4" />
-              <Bell v-else class="w-4 h-4" />
-            </template>
-            {{ pushNotification.permission.value === 'granted' && pushNotification.isSubscribed.value
-              ? t('member.push.buttonDisable')
-              : t('member.push.buttonEnable') }}
-          </button>
-        </div>
-        <p v-if="isIOSPWA && pushNotification.permission.value === 'denied'" class="text-sm mt-3 text-dp-text-muted">
+            <span class="push-switch-thumb">
+              <Loader2 v-if="togglingPush" class="w-3.5 h-3.5 animate-spin text-dp-accent" />
+            </span>
+          </span>
+        </button>
+        <p v-if="isPushBlocked" class="flex items-start gap-1.5 text-sm mt-3 text-dp-warning">
+          <Info class="w-4 h-4 shrink-0 mt-0.5" />
+          <span>{{ t('member.push.messages.deniedHelp') }}</span>
+        </p>
+        <p v-if="isIOSPWA && isPushBlocked" class="text-sm mt-2 text-dp-text-muted">
           {{ t('member.push.iosHint') }}
         </p>
       </section>
@@ -860,7 +923,7 @@ onMounted(async () => {
                 <button
                   @click="handleImpersonate(member)"
                   :disabled="impersonating === member.id"
-                  class="flex items-center gap-1.5 px-3 py-2 min-h-10 text-sm font-medium text-dp-accent bg-dp-accent-soft hover:bg-dp-accent-soft rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  class="flex items-center gap-1.5 px-3 py-2 min-h-10 text-sm font-medium text-dp-accent bg-dp-accent-soft hover:bg-dp-accent-soft-hover rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <Loader2 v-if="impersonating === member.id" class="w-4 h-4 animate-spin" />
                   <LogIn v-else class="w-4 h-4" />
@@ -870,7 +933,7 @@ onMounted(async () => {
               <!-- Add auxiliary account card -->
               <button
                 @click="openAuxiliaryModal"
-                class="w-full flex items-center justify-center gap-2 p-3 rounded-lg border-2 border-dashed transition cursor-pointer hover:border-solid border-dp-border-primary text-dp-text-muted"
+                class="w-full flex items-center justify-center gap-2 p-3 rounded-lg border-2 border-dashed transition cursor-pointer hover:border-solid border-dp-border-primary hover:border-dp-border-hover hover:bg-dp-bg-hover hover:text-dp-text-secondary text-dp-text-muted"
               >
                 <Plus class="w-5 h-5" />
                 <span class="text-sm font-medium">{{ t('member.manager.addAuxiliary') }}</span>
@@ -891,7 +954,7 @@ onMounted(async () => {
             v-if="tokens.filter(t => !t.isCurrentLogin).length > 0"
             @click="deleteOtherTokens"
             :disabled="deletingOtherTokens"
-            class="px-3 py-2 min-h-10 text-xs font-medium text-dp-danger bg-dp-danger-soft hover:bg-dp-danger-soft rounded-lg transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+            class="px-3 py-2 min-h-10 text-xs font-medium text-dp-danger bg-dp-danger-soft hover:bg-dp-danger-soft-hover rounded-lg transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
           >
             <Loader2 v-if="deletingOtherTokens" class="w-4 h-4 animate-spin" />
             <LogOut v-else class="w-4 h-4" />
@@ -936,7 +999,7 @@ onMounted(async () => {
                 v-else
                 @click="connectSso(sso.provider)"
                 :disabled="!!connectingSso"
-                class="px-4 py-2.5 sm:py-1.5 min-h-11 sm:min-h-0 text-sm font-medium text-dp-accent bg-dp-accent-soft hover:bg-dp-accent-soft rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                class="px-4 py-2.5 sm:py-1.5 min-h-11 sm:min-h-0 text-sm font-medium text-dp-accent bg-dp-accent-soft hover:bg-dp-accent-soft-hover rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {{ connectingSso === sso.provider ? t('member.sso.connecting') : t('member.sso.connect') }}
               </button>
@@ -955,14 +1018,14 @@ onMounted(async () => {
           <button
             v-if="memberInfo?.hasPassword"
             @click="openPasswordModal"
-            class="px-4 py-3 sm:py-2 min-h-11 text-sm font-medium text-dp-accent bg-dp-accent-soft hover:bg-dp-accent-soft rounded-lg transition flex items-center gap-2 cursor-pointer"
+            class="px-4 py-3 sm:py-2 min-h-11 text-sm font-medium text-dp-accent bg-dp-accent-soft hover:bg-dp-accent-soft-hover rounded-lg transition flex items-center gap-2 cursor-pointer"
           >
             <Lock class="w-4 h-4" />
             {{ t('member.account.changePassword') }}
           </button>
           <button
             @click="deleteAccount"
-            class="px-4 py-3 sm:py-2 min-h-11 text-sm font-medium text-dp-danger bg-dp-danger-soft hover:bg-dp-danger-soft rounded-lg transition flex items-center gap-2 cursor-pointer"
+            class="px-4 py-3 sm:py-2 min-h-11 text-sm font-medium text-dp-danger bg-dp-danger-soft hover:bg-dp-danger-soft-hover rounded-lg transition flex items-center gap-2 cursor-pointer"
           >
             <UserX class="w-4 h-4" />
             {{ t('member.account.deleteAccount') }}
@@ -974,7 +1037,7 @@ onMounted(async () => {
       <section class="rounded-xl shadow-sm p-4 sm:p-6 bg-dp-bg-card border border-dp-border-primary">
         <button
           @click="logout"
-          class="w-full px-4 py-3 min-h-12 text-dp-warning bg-dp-warning-soft hover:bg-dp-warning-soft rounded-lg font-medium transition flex items-center justify-center gap-2 cursor-pointer"
+          class="w-full px-4 py-3 min-h-12 text-dp-warning bg-dp-warning-soft hover:bg-dp-warning-soft-hover rounded-lg font-medium transition flex items-center justify-center gap-2 cursor-pointer"
         >
           <LogOut class="w-5 h-5" />
           {{ t('member.logout') }}
@@ -1006,8 +1069,7 @@ onMounted(async () => {
             :key="option.value"
             @click="setVisibility(option.value)"
             :disabled="savingVisibility"
-            class="w-full p-4 min-h-16 rounded-lg transition text-left disabled:opacity-50 hover:scale-[1.01] cursor-pointer"
-            :class="{ 'hover:bg-opacity-80': calendarVisibility !== option.value }"
+            class="w-full p-4 min-h-16 rounded-lg text-left disabled:opacity-50 disabled:cursor-not-allowed hover-lift cursor-pointer"
             :style="{
               borderWidth: '2px',
               borderColor: calendarVisibility === option.value ? 'var(--dp-accent)' : 'var(--dp-border-primary)',
@@ -1027,6 +1089,49 @@ onMounted(async () => {
               />
             </div>
             <p class="text-sm mt-1 ml-6 text-dp-text-secondary">{{ option.description }}</p>
+            <div v-if="option.audience" class="mt-2.5 ml-6">
+              <div v-if="audienceLoading && !audienceLoaded" class="flex items-center min-h-6">
+                <Loader2 class="w-4 h-4 animate-spin text-dp-text-muted" />
+              </div>
+              <template v-else-if="audienceLoaded">
+                <div
+                  v-if="option.audience.viewers.length > 0"
+                  class="flex items-center gap-2.5"
+                >
+                  <div class="flex shrink-0">
+                    <ProfileAvatar
+                      v-for="viewer in option.audience.viewers.slice(0, AUDIENCE_MAX_AVATARS)"
+                      :key="viewer.id"
+                      :member-id="viewer.id"
+                      :name="viewer.name"
+                      :has-profile-photo="viewer.hasProfilePhoto"
+                      :profile-photo-version="viewer.profilePhotoVersion"
+                      size="sm"
+                      class="audience-avatar"
+                      :title="viewer.name"
+                    />
+                    <span
+                      v-if="option.audience.viewers.length > AUDIENCE_MAX_AVATARS"
+                      class="audience-avatar audience-overflow-badge w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-semibold"
+                    >
+                      +{{ option.audience.viewers.length - AUDIENCE_MAX_AVATARS }}
+                    </span>
+                  </div>
+                  <div class="min-w-0">
+                    <p class="text-xs font-medium text-dp-text-primary">
+                      {{ option.audience.countLabel }}
+                    </p>
+                    <p class="text-xs mt-0.5 text-dp-text-muted truncate">
+                      {{ audienceNames(option.audience.viewers) }}
+                    </p>
+                  </div>
+                </div>
+                <p v-else class="flex items-center gap-1.5 text-xs text-dp-warning">
+                  <Info class="w-3.5 h-3.5 shrink-0" />
+                  {{ option.audience.emptyText }}
+                </p>
+              </template>
+            </div>
           </button>
         </div>
       </div>
@@ -1178,3 +1283,65 @@ onMounted(async () => {
     </BaseModal>
   </div>
 </template>
+
+<style scoped>
+.push-toggle-row {
+  transition: background-color 0.15s ease;
+}
+
+.push-toggle-row:hover:not(:disabled) {
+  background-color: var(--dp-bg-hover);
+}
+
+.push-toggle-row:hover:not(:disabled) .push-switch {
+  box-shadow: 0 0 0 4px var(--dp-accent-bg);
+}
+
+.push-switch {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 3rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  background-color: var(--dp-border-secondary);
+  transition: background-color 0.2s ease, box-shadow 0.15s ease;
+}
+
+.push-switch-on {
+  background-color: var(--dp-accent);
+}
+
+.push-switch-blocked {
+  opacity: 0.5;
+}
+
+.push-switch-thumb {
+  position: absolute;
+  top: 0.25rem;
+  left: 0.25rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--dp-text-on-dark);
+  box-shadow: var(--dp-shadow-sm);
+  transition: transform 0.2s ease;
+}
+
+.push-switch-on .push-switch-thumb {
+  transform: translateX(1.25rem);
+}
+
+.audience-avatar + .audience-avatar {
+  margin-left: -0.375rem;
+}
+
+.audience-overflow-badge {
+  background-color: var(--dp-bg-tertiary);
+  border: 2px solid var(--dp-border-primary);
+  color: var(--dp-text-secondary);
+}
+</style>

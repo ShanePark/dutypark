@@ -144,7 +144,7 @@ function handleClear() {
             v-if="hasSelection"
             type="button"
             @click="handleClear"
-            class="inline-flex min-h-[44px] w-full items-center justify-center gap-1 rounded-lg border border-dp-border-secondary bg-dp-bg-secondary px-4 py-2 text-dp-text-primary transition hover:bg-dp-bg-hover cursor-pointer sm:w-auto"
+            class="inline-flex min-h-[44px] w-full items-center justify-center gap-1 rounded-lg border border-dp-border-secondary bg-dp-bg-secondary px-4 py-2 text-dp-text-primary transition hover:bg-dp-bg-hover hover:border-dp-border-hover cursor-pointer sm:w-auto"
           >
             <RotateCcw class="w-4 h-4" />
             <span>{{ t('friendTagSelector.clearTitle') }}</span>
