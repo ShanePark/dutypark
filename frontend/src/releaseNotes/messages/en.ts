@@ -39,6 +39,15 @@ export const enReleaseNotes = {
     ui: "UI"
   },
   entries: {
+    "pr-384": {
+      title: "Add copy actions and safer modal interactions",
+      summary: "Makes schedule descriptions and Todo details easy to copy while preventing text-selection drags from accidentally closing modal screens.",
+      changes: [
+        "Copy a schedule description or Todo content with one tap and see immediate success feedback.",
+        "Use localized copy labels and failure messages in every supported language.",
+        "Keep modals, image previews, and install or notification guides open when selecting text across their backdrop."
+      ]
+    },
     "pr-382": {
       title: "Polish settings and duty calendar experience",
       summary: "Cleans up the settings page with a duty pattern modal and compact summary, makes duty editing controls easier to use, and previews who can see your calendar.",

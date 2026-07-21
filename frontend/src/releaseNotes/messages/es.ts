@@ -39,6 +39,15 @@ export const esReleaseNotes = {
     ui: "Interfaz"
   },
   entries: {
+    "pr-384": {
+      title: "Añadir acciones de copia y mejorar los modales",
+      summary: "Permite copiar fácilmente las descripciones de agenda y el contenido Todo, y evita que los modales se cierren por accidente al seleccionar texto.",
+      changes: [
+        "Copia una descripción de agenda o el contenido de un Todo con un toque y comprueba al instante que se ha copiado.",
+        "Muestra etiquetas de copia y mensajes de error en todos los idiomas compatibles.",
+        "Mantiene abiertos los modales, las vistas previas de imágenes y las guías de instalación o notificaciones al arrastrar una selección de texto hasta el fondo."
+      ]
+    },
     "pr-382": {
       title: "Pulido de los ajustes y del calendario de turnos",
       summary: "Organiza la página de ajustes con un modal de patrón de turnos y una tarjeta resumen, facilita la edición de turnos y muestra quién puede ver tu calendario.",
