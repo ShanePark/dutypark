@@ -311,23 +311,29 @@ function onUploadError(message: string) {
     <template v-if="todo">
       <div class="modal-header">
         <div class="min-w-0 flex-1">
-          <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
             <h2 class="truncate">{{ todo.title }}</h2>
             <span
               :class="[
-                'px-2 py-0.5 text-xs rounded-full flex-shrink-0',
+                'inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full flex-shrink-0',
                 todo.status === 'TODO' ? 'bg-dp-bg-tertiary text-dp-text-primary' : '',
                 todo.status === 'IN_PROGRESS' ? 'bg-dp-warning-soft text-dp-warning' : '',
-                todo.status === 'DONE' ? 'bg-dp-success-soft text-dp-success line-through' : '',
+                todo.status === 'DONE' ? 'bg-dp-success-soft text-dp-success' : '',
               ]"
             >
+              <CheckCircle2 v-if="todo.status === 'DONE'" class="w-3.5 h-3.5 flex-shrink-0" />
               {{ getStatusLabel(todo.status) }}
+              <template v-if="todo.status === 'DONE' && todo.completedDate">
+                {{ formatDateKorean(todo.completedDate) }}
+              </template>
             </span>
           </div>
-          <p class="text-xs text-dp-text-muted">
-            {{ formatDateKorean(todo.createdDate) }}
-            <span v-if="todo.completedDate"> · {{ t('duty.todo.labels.completed') }} {{ formatDateKorean(todo.completedDate) }}</span>
-          </p>
+          <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span class="inline-flex items-center gap-1 text-xs text-dp-text-muted">
+              <Clock class="w-3.5 h-3.5 flex-shrink-0" />
+              {{ formatDateKorean(todo.createdDate) }}
+            </span>
+          </div>
         </div>
         <button @click="handleClose" class="p-2 hover-close-btn rounded-full transition flex-shrink-0 cursor-pointer">
           <X class="w-6 h-6 text-dp-text-primary" />
