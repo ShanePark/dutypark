@@ -30,6 +30,22 @@ const emit = defineEmits<{
 
 useEscapeKey(toRef(props, 'isOpen'), () => emit('close'))
 
+// A text-selection drag that starts inside the panel and ends on the overlay makes the
+// overlay the click target (nearest common ancestor), so only close on a click that also began there.
+let pressStartedOnOverlay = false
+
+function handleOverlayMousedown(event: MouseEvent) {
+  pressStartedOnOverlay = event.target === event.currentTarget
+}
+
+function handleOverlayClick(event: MouseEvent) {
+  const pressedOnOverlay = pressStartedOnOverlay
+  pressStartedOnOverlay = false
+  if (event.target === event.currentTarget && pressedOnOverlay) {
+    emit('close')
+  }
+}
+
 const currentIndex = ref(0)
 const fullImageUrls = ref<Record<string, string>>({})
 const isLoading = ref(false)
@@ -162,7 +178,8 @@ onUnmounted(() => {
     <div
       v-if="isOpen && images.length > 0"
       class="fixed inset-0 z-[60] flex items-center justify-center bg-dp-overlay-dark/90"
-      @click.self="emit('close')"
+      @mousedown="handleOverlayMousedown"
+      @click="handleOverlayClick"
       @touchstart="handleTouchStart"
       @touchmove="handleTouchMove"
       @touchend="handleTouchEnd"
