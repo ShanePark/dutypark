@@ -39,6 +39,18 @@ export const enReleaseNotes = {
     ui: "UI"
   },
   entries: {
+    "pr-385": {
+      title: "Todo board polish and web push upgrade",
+      summary: "Reorder tagged todos on the kanban board, refine the todo detail view and notifications, and update the web push dependency stack.",
+      changes: [
+        "Drag to reorder tagged todos on the kanban board.",
+        "Show the completed date inside the DONE badge in the todo detail view.",
+        "Polish the hover states of todo board column headers.",
+        "Remove the \"by\" prefix from tagged todo cards.",
+        "Mark all notifications as read when you open the bell dropdown.",
+        "Update web push and server framework dependencies to their latest versions."
+      ]
+    },
     "pr-384": {
       title: "Add copy actions and safer modal interactions",
       summary: "Makes schedule descriptions and Todo details easy to copy while preventing text-selection drags from accidentally closing modal screens.",

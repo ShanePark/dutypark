@@ -39,6 +39,18 @@ export const esReleaseNotes = {
     ui: "Interfaz"
   },
   entries: {
+    "pr-385": {
+      title: "Mejoras en el tablero de Todo y actualización de web push",
+      summary: "Reordena los todos etiquetados en el tablero kanban, refina la vista de detalle de Todo y las notificaciones, y actualiza las dependencias de web push.",
+      changes: [
+        "Arrastra para reordenar los todos etiquetados en el tablero kanban.",
+        "Muestra la fecha de finalización dentro de la insignia DONE en la vista de detalle de Todo.",
+        "Pule los estados hover de los encabezados de columna del tablero de Todo.",
+        "Elimina el prefijo «by» de las tarjetas de todos etiquetados.",
+        "Marca todas las notificaciones como leídas al abrir el menú de la campana.",
+        "Actualiza las dependencias de web push y del framework del servidor a sus últimas versiones."
+      ]
+    },
     "pr-384": {
       title: "Añadir acciones de copia y mejorar los modales",
       summary: "Permite copiar fácilmente las descripciones de agenda y el contenido Todo, y evita que los modales se cierren por accidente al seleccionar texto.",
