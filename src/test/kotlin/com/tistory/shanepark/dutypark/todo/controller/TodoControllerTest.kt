@@ -1161,14 +1161,17 @@ class TodoControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `tagged member sees tagged todos before own todos in list`() {
+    fun `tagged member sees tagged and own todos ordered by their order value in list`() {
         val taggedTodo = todoRepository.save(
             Todo(
                 member = TestData.member,
                 title = "Tagged Todo",
                 content = "Content",
                 position = 999
-            ).apply { addTag(TestData.member2) }
+            ).apply {
+                addTag(TestData.member2)
+                tags.first().tagOrder = -20
+            }
         )
         val ownTodo = todoRepository.save(
             Todo(
@@ -1240,24 +1243,36 @@ class TodoControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `tagged todos are placed before own todos in board`() {
+    fun `tagged and own todos interleave by order in board`() {
         todoRepository.save(
             Todo(
                 member = TestData.member2,
-                title = "Own Todo",
+                title = "Own First",
                 content = "Content",
-                position = -10,
+                position = 0,
+                status = TodoStatus.TODO
+            )
+        )
+        todoRepository.save(
+            Todo(
+                member = TestData.member2,
+                title = "Own Last",
+                content = "Content",
+                position = 2,
                 status = TodoStatus.TODO
             )
         )
         val taggedTodo = todoRepository.save(
             Todo(
                 member = TestData.member,
-                title = "Tagged Todo",
+                title = "Tagged Middle",
                 content = "Content",
                 position = 99,
                 status = TodoStatus.TODO
-            ).apply { addTag(TestData.member2) }
+            ).apply {
+                addTag(TestData.member2)
+                tags.first().tagOrder = 1
+            }
         )
 
         mockMvc.perform(
@@ -1267,14 +1282,16 @@ class TodoControllerTest : RestDocsTest() {
                 .withAuth(TestData.member2)
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.todo[0].id").value(taggedTodo.id.toString()))
-            .andExpect(jsonPath("$.todo[0].isTagged").value(true))
-            .andExpect(jsonPath("$.todo[1].title").value("Own Todo"))
-            .andExpect(jsonPath("$.todo[1].isTagged").value(false))
+            .andExpect(jsonPath("$.todo[0].title").value("Own First"))
+            .andExpect(jsonPath("$.todo[0].isTagged").value(false))
+            .andExpect(jsonPath("$.todo[1].id").value(taggedTodo.id.toString()))
+            .andExpect(jsonPath("$.todo[1].isTagged").value(true))
+            .andExpect(jsonPath("$.todo[2].title").value("Own Last"))
+            .andExpect(jsonPath("$.todo[2].isTagged").value(false))
     }
 
     @Test
-    fun `tagged todos are sorted by modified date desc in board`() {
+    fun `tagged todos are sorted by tag order in board`() {
         todoRepository.save(
             Todo(
                 member = TestData.member2,
@@ -1284,24 +1301,29 @@ class TodoControllerTest : RestDocsTest() {
                 status = TodoStatus.TODO
             )
         )
-        todoRepository.saveAndFlush(
+        val firstTagged = todoRepository.save(
             Todo(
                 member = TestData.member,
-                title = "Older Tagged Todo",
+                title = "First Tagged Todo",
                 content = "Content",
                 position = 0,
                 status = TodoStatus.TODO
-            ).apply { addTag(TestData.member2) }
+            ).apply {
+                addTag(TestData.member2)
+                tags.first().tagOrder = -30
+            }
         )
-        Thread.sleep(20)
-        val newerTaggedTodo = todoRepository.saveAndFlush(
+        val secondTagged = todoRepository.save(
             Todo(
                 member = TestData.member,
-                title = "Newer Tagged Todo",
+                title = "Second Tagged Todo",
                 content = "Content",
                 position = 99,
                 status = TodoStatus.TODO
-            ).apply { addTag(TestData.member2) }
+            ).apply {
+                addTag(TestData.member2)
+                tags.first().tagOrder = -20
+            }
         )
 
         mockMvc.perform(
@@ -1311,9 +1333,10 @@ class TodoControllerTest : RestDocsTest() {
                 .withAuth(TestData.member2)
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.todo[0].id").value(newerTaggedTodo.id.toString()))
-            .andExpect(jsonPath("$.todo[0].title").value("Newer Tagged Todo"))
-            .andExpect(jsonPath("$.todo[1].title").value("Older Tagged Todo"))
+            .andExpect(jsonPath("$.todo[0].id").value(firstTagged.id.toString()))
+            .andExpect(jsonPath("$.todo[0].title").value("First Tagged Todo"))
+            .andExpect(jsonPath("$.todo[1].id").value(secondTagged.id.toString()))
+            .andExpect(jsonPath("$.todo[1].title").value("Second Tagged Todo"))
             .andExpect(jsonPath("$.todo[2].title").value("Own Todo"))
     }
 
@@ -1920,6 +1943,165 @@ class TodoControllerTest : RestDocsTest() {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
             .andExpect(jsonPath("$.dueDate").value("2025-12-31"))
+    }
+
+    // ========== Tagged Todo Ordering Endpoints ==========
+
+    @Test
+    fun `tagged member reorders tagged cards via positions endpoint`() {
+        val first = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Tagged A",
+                content = "Content",
+                position = 100,
+                status = TodoStatus.TODO
+            ).apply {
+                addTag(TestData.member2)
+                tags.first().tagOrder = 0
+            }
+        )
+        val second = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Tagged B",
+                content = "Content",
+                position = 200,
+                status = TodoStatus.TODO
+            ).apply {
+                addTag(TestData.member2)
+                tags.first().tagOrder = 1
+            }
+        )
+
+        val json = """{"status": "TODO", "orderedIds": ["${second.id}", "${first.id}"]}"""
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.patch("/api/todos/positions")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member2)
+        )
+            .andExpect(status().isOk)
+
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/todos/board")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member2)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.todo[0].id").value(second.id.toString()))
+            .andExpect(jsonPath("$.todo[0].isTagged").value(true))
+            .andExpect(jsonPath("$.todo[1].id").value(first.id.toString()))
+            .andExpect(jsonPath("$.todo[1].isTagged").value(true))
+    }
+
+    @Test
+    fun `owner reorders mixed own and tagged column and order persists`() {
+        val own = todoRepository.save(
+            Todo(
+                member = TestData.member2,
+                title = "Own Card",
+                content = "Content",
+                position = 0,
+                status = TodoStatus.TODO
+            )
+        )
+        val tagged = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Tagged Card",
+                content = "Content",
+                position = 99,
+                status = TodoStatus.TODO
+            ).apply {
+                addTag(TestData.member2)
+                tags.first().tagOrder = 1
+            }
+        )
+
+        val json = """{"status": "TODO", "orderedIds": ["${tagged.id}", "${own.id}"]}"""
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.patch("/api/todos/positions")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member2)
+        )
+            .andExpect(status().isOk)
+
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/todos/board")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member2)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.todo[0].id").value(tagged.id.toString()))
+            .andExpect(jsonPath("$.todo[0].isTagged").value(true))
+            .andExpect(jsonPath("$.todo[1].id").value(own.id.toString()))
+            .andExpect(jsonPath("$.todo[1].isTagged").value(false))
+    }
+
+    @Test
+    fun `tagged member drags tagged card across columns with orderedIds`() {
+        val existing = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Existing In Progress",
+                content = "Content",
+                position = 0,
+                status = TodoStatus.IN_PROGRESS
+            ).apply {
+                addTag(TestData.member2)
+                tags.first().tagOrder = 0
+            }
+        )
+        val moving = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Moving Card",
+                content = "Content",
+                position = 0,
+                status = TodoStatus.TODO
+            ).apply { addTag(TestData.member2) }
+        )
+
+        val json = """{"status": "IN_PROGRESS", "orderedIds": ["${existing.id}", "${moving.id}"]}"""
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.patch("/api/todos/{id}/status", moving.id)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member2)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+            .andExpect(jsonPath("$.isTagged").value(true))
+
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/todos/board")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member2)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.todo.length()").value(0))
+            .andExpect(jsonPath("$.inProgress[0].id").value(existing.id.toString()))
+            .andExpect(jsonPath("$.inProgress[1].id").value(moving.id.toString()))
     }
 
     private fun todoRequestFields(): Array<FieldDescriptor> = arrayOf(

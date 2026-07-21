@@ -4,7 +4,7 @@ plugins {
     kotlin("jvm") version "2.3.0"
     kotlin("plugin.spring") version "2.3.0"
     kotlin("plugin.jpa") version "2.3.0"
-    id("org.springframework.boot") version "4.0.1"
+    id("org.springframework.boot") version "4.1.0"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.asciidoctor.jvm.convert") version "4.0.5"
     id("com.gorylenko.gradle-git-properties") version "2.5.4"
@@ -47,7 +47,6 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-cache")
-    runtimeOnly("io.netty:netty-resolver-dns-native-macos:4.1.93.Final:osx-aarch_64")
     implementation("org.springframework.ai:spring-ai-starter-model-openai")
 
     // Monitoring
@@ -87,8 +86,11 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
 
     // Web Push
-    implementation("nl.martijndwars:web-push:5.1.1")
-    implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
+    implementation("nl.martijndwars:web-push:5.1.2")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.84")
+    // web-push 5.1.2 demotes httpcomponents to runtime scope, but PushService.send()
+    // still returns org.apache.http.HttpResponse, so httpcore must be on the compile classpath.
+    implementation("org.apache.httpcomponents:httpcore:4.4.16")
 }
 
 dependencyManagement {

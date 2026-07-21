@@ -7,7 +7,6 @@ import com.tistory.shanepark.dutypark.push.dto.PushSubscriptionRequest
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import nl.martijndwars.webpush.Notification
 import nl.martijndwars.webpush.PushService
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
@@ -19,8 +18,7 @@ import java.time.LocalDateTime
 class WebPushService(
     private val refreshTokenRepository: RefreshTokenRepository,
     private val objectMapper: ObjectMapper,
-    @Autowired(required = false)
-    private val pushService: PushService?
+    private val pushService: PushService?,
 ) {
     private val log = logger()
 

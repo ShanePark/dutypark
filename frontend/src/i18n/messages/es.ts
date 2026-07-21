@@ -350,7 +350,6 @@ export default {
     },
     dropdown: {
       title: 'Notificaciones',
-      markAllAsRead: 'Marcar todo como leído',
       viewAll: 'Ver todo',
     },
     items: {

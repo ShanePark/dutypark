@@ -133,6 +133,25 @@ const statusConfig: Record<TodoStatus, { labelKey: string; shortLabelKey: string
   border-radius: 0.5rem;
   background-color: var(--dp-bg-card);
   flex-shrink: 0;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Hovering the clickable title region tints the WHOLE header bar edge-to-edge
+   with the column's accent color (plus a thin accent ring), instead of drawing
+   a smaller nested box that looked like a stray rectangle. Works in light/dark. */
+.kanban-column-todo .kanban-column-header:has(.kanban-column-header-main-clickable:hover) {
+  background-color: color-mix(in srgb, var(--dp-accent) 12%, var(--dp-bg-card));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dp-accent) 40%, transparent);
+}
+
+.kanban-column-in-progress .kanban-column-header:has(.kanban-column-header-main-clickable:hover) {
+  background-color: color-mix(in srgb, var(--dp-warning) 14%, var(--dp-bg-card));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dp-warning) 45%, transparent);
+}
+
+.kanban-column-done .kanban-column-header:has(.kanban-column-header-main-clickable:hover) {
+  background-color: color-mix(in srgb, var(--dp-success) 14%, var(--dp-bg-card));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dp-success) 45%, transparent);
 }
 
 .kanban-column-header-main {
@@ -151,20 +170,23 @@ const statusConfig: Record<TodoStatus, { labelKey: string; shortLabelKey: string
 
 .kanban-column-header-main-clickable {
   min-height: 44px;
-  margin: -0.25rem 0;
-  padding: 0.25rem 0;
   border-radius: 0.5rem;
   cursor: pointer;
-  transition: background-color 0.15s ease, transform 0.15s ease;
 }
 
-.kanban-column-header-main-clickable:hover {
-  background-color: var(--dp-bg-hover);
-}
-
-.kanban-column-header-main-clickable:focus-visible {
+.kanban-column-todo .kanban-column-header-main-clickable:focus-visible {
   outline: 2px solid var(--dp-accent);
-  outline-offset: 2px;
+  outline-offset: 3px;
+}
+
+.kanban-column-in-progress .kanban-column-header-main-clickable:focus-visible {
+  outline: 2px solid var(--dp-warning);
+  outline-offset: 3px;
+}
+
+.kanban-column-done .kanban-column-header-main-clickable:focus-visible {
+  outline: 2px solid var(--dp-success);
+  outline-offset: 3px;
 }
 
 .kanban-column-title {

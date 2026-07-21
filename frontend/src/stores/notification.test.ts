@@ -6,6 +6,7 @@ import type { NotificationDto } from '@/types'
 vi.mock('@/api/notification', () => ({
   notificationApi: {
     markAsRead: vi.fn(),
+    markAllAsRead: vi.fn(),
   },
 }))
 
@@ -32,6 +33,7 @@ function createNotification(id: string, isRead = false): NotificationDto {
 describe('notification store', async () => {
   const { useNotificationStore } = await import('./notification')
   const markAsRead = vi.mocked(notificationApi.markAsRead)
+  const markAllAsRead = vi.mocked(notificationApi.markAllAsRead)
 
   beforeEach(() => {
     Object.defineProperty(globalThis, 'navigator', {
@@ -40,45 +42,23 @@ describe('notification store', async () => {
     })
     setActivePinia(createPinia())
     markAsRead.mockReset()
+    markAllAsRead.mockReset()
   })
 
-  it('marks the only unread notification as read', async () => {
-    const unreadNotification = createNotification('notification-1')
-    const readNotification = createNotification('notification-2', true)
-    const store = useNotificationStore()
-    store.unreadCount = 1
-    store.recentNotifications = [unreadNotification, readNotification]
-    markAsRead.mockResolvedValue({ ...unreadNotification, isRead: true })
-
-    await store.markSingleUnreadAsRead()
-
-    expect(markAsRead).toHaveBeenCalledWith('notification-1')
-    expect(store.unreadCount).toBe(0)
-    expect(store.recentNotifications[0]?.isRead).toBe(true)
-  })
-
-  it('does not mark a different single unread notification than the one captured on open', async () => {
-    const store = useNotificationStore()
-    store.unreadCount = 1
-    store.recentNotifications = [createNotification('notification-2')]
-
-    await store.markSingleUnreadAsRead('notification-1')
-
-    expect(markAsRead).not.toHaveBeenCalled()
-    expect(store.unreadCount).toBe(1)
-  })
-
-  it('does not auto-read when multiple notifications are unread', async () => {
+  it('marks every notification as read', async () => {
     const store = useNotificationStore()
     store.unreadCount = 2
     store.recentNotifications = [
       createNotification('notification-1'),
-      createNotification('notification-2'),
+      createNotification('notification-2', true),
+      createNotification('notification-3'),
     ]
+    markAllAsRead.mockResolvedValue({ count: 2 })
 
-    await store.markSingleUnreadAsRead()
+    await store.markAllAsRead()
 
-    expect(markAsRead).not.toHaveBeenCalled()
-    expect(store.unreadCount).toBe(2)
+    expect(markAllAsRead).toHaveBeenCalledTimes(1)
+    expect(store.unreadCount).toBe(0)
+    expect(store.recentNotifications.every(n => n.isRead)).toBe(true)
   })
 })

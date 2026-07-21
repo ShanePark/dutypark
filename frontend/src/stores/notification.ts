@@ -216,34 +216,6 @@ export const useNotificationStore = defineStore('notification', () => {
     }
   }
 
-  function getSingleUnreadRecentNotificationId(): string | null {
-    if (unreadCount.value !== 1) {
-      return null
-    }
-
-    const unreadRecentNotifications = recentNotifications.value.filter(n => !n.isRead)
-    const [notification] = unreadRecentNotifications
-
-    return unreadRecentNotifications.length === 1 && notification ? notification.id : null
-  }
-
-  /**
-   * Mark the single unread notification as read when the dropdown itself is the confirmation.
-   */
-  async function markSingleUnreadAsRead(expectedId?: string): Promise<void> {
-    const notificationId = getSingleUnreadRecentNotificationId()
-
-    if (!notificationId || (expectedId && notificationId !== expectedId)) {
-      return
-    }
-
-    try {
-      await markAsRead(notificationId)
-    } catch {
-      // markAsRead already logs the failure; dropdown visibility should not be blocked.
-    }
-  }
-
   /**
    * Mark all notifications as read
    */
@@ -388,8 +360,6 @@ export const useNotificationStore = defineStore('notification', () => {
     fetchUnreadNotifications,
     fetchRecentNotifications,
     markAsRead,
-    getSingleUnreadRecentNotificationId,
-    markSingleUnreadAsRead,
     markAllAsRead,
     startPolling,
     stopPolling,

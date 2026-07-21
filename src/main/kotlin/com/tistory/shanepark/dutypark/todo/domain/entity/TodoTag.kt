@@ -15,6 +15,9 @@ class TodoTag(
     @JoinColumn(name = "member_id", nullable = false)
     val member: Member,
 
+    @Column(name = "tag_order", nullable = false)
+    var tagOrder: Int = 0,
+
 ) : BaseTimeEntity() {
 
     @Id
