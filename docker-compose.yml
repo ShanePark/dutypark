@@ -3,8 +3,6 @@ services:
     image: mysql:8.0
     container_name: dutypark-db
     restart: unless-stopped
-    ports:
-      - "3306:3306"
     environment:
       TZ: ${TZ:-Asia/Seoul}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -16,7 +14,7 @@ services:
       - ./data/my.cnf:/etc/mysql/my.cnf:ro
       - ./data/db:/var/lib/mysql
     networks:
-      - dutypark-network
+      - db
 
   app:
     build: .
@@ -42,7 +40,9 @@ services:
       COOKIE_SSL_ENABLED: ${COOKIE_SSL_ENABLED}
       DOMAIN_NAME: ${DOMAIN_NAME}
     networks:
-      - dutypark-network
+      - app-network
+      - db
+      - monitoring
     volumes:
       - ./data/logs:/dutypark/logs
       - ./data/storage:/dutypark/storage
@@ -67,7 +67,8 @@ services:
       app:
         condition: service_started
     networks:
-      - dutypark-network
+      - edge
+      - app-network
 
   prometheus:
     image: prom/prometheus
@@ -81,7 +82,7 @@ services:
       - '--web.console.templates=/usr/share/prometheus/consoles'
     restart: unless-stopped
     networks:
-      - dutypark-network
+      - monitoring
 
   alertmanager:
     image: prom/alertmanager
@@ -100,7 +101,7 @@ services:
         sed "s|__SLACK_WEBHOOK_URL__|$${webhook_url}|g" /etc/alertmanager/alertmanager.yml.template > /tmp/alertmanager.yml
         exec /bin/alertmanager --config.file=/tmp/alertmanager.yml --storage.path=/alertmanager
     networks:
-      - dutypark-network
+      - monitoring
 
   node-exporter:
     image: prom/node-exporter
@@ -116,19 +117,28 @@ services:
       - '--path.sysfs=/host/sys'
       - '--path.rootfs=/rootfs'
     networks:
-      - dutypark-network
+      - monitoring
 
   grafana:
     image: grafana/grafana
     user: "${UID:-1000}:${GID:-1000}"
-    ports:
-      - "3000:3000"
+    environment:
+      GF_SERVER_ROOT_URL: https://dutypark.o-r.kr/grafana/
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
     volumes:
       - ./data/grafana:/var/lib/grafana
     restart: unless-stopped
     networks:
-      - dutypark-network
+      - edge
+      - monitoring
 
 networks:
-  dutypark-network:
-    driver: bridge
+  edge:
+    name: dutypark_edge
+  app-network:
+    name: dutypark_app
+  db:
+    name: dutypark_db
+    internal: true
+  monitoring:
+    name: dutypark_monitoring
