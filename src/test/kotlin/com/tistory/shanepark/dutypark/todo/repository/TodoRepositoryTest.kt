@@ -163,6 +163,89 @@ class TodoRepositoryTest {
     }
 
     @Nested
+    @DisplayName("findMinTagOrderByMemberAndStatus Tests")
+    inner class FindMinTagOrderByMemberAndStatusTests {
+
+        @Test
+        fun `should return null when member has no tagged todos in status`() {
+            todoRepository.save(Todo(member1, "Own Task", "Content", 0, TodoStatus.TODO))
+            entityManager.flush()
+            entityManager.clear()
+
+            val result = todoRepository.findMinTagOrderByMemberAndStatus(member2, TodoStatus.TODO)
+
+            assertThat(result).isNull()
+        }
+
+        @Test
+        fun `should return minimum tagOrder for member and status`() {
+            val first = Todo(member1, "Task 1", "Content", 0, TodoStatus.TODO)
+            first.addTag(member2)
+            first.tags.first().tagOrder = 5
+            val second = Todo(member1, "Task 2", "Content", 0, TodoStatus.TODO)
+            second.addTag(member2)
+            second.tags.first().tagOrder = 2
+            todoRepository.saveAll(listOf(first, second))
+            entityManager.flush()
+            entityManager.clear()
+
+            val result = todoRepository.findMinTagOrderByMemberAndStatus(member2, TodoStatus.TODO)
+
+            assertThat(result).isEqualTo(2)
+        }
+
+        @Test
+        fun `should handle negative tagOrder values`() {
+            val todo = Todo(member1, "Task", "Content", 0, TodoStatus.TODO)
+            todo.addTag(member2)
+            todo.tags.first().tagOrder = -7
+            todoRepository.save(todo)
+            entityManager.flush()
+            entityManager.clear()
+
+            val result = todoRepository.findMinTagOrderByMemberAndStatus(member2, TodoStatus.TODO)
+
+            assertThat(result).isEqualTo(-7)
+        }
+
+        @Test
+        fun `should scope tagOrder by status`() {
+            val todoStatusTagged = Todo(member1, "TODO Task", "Content", 0, TodoStatus.TODO)
+            todoStatusTagged.addTag(member2)
+            todoStatusTagged.tags.first().tagOrder = 3
+            val inProgressTagged = Todo(member1, "IN_PROGRESS Task", "Content", 0, TodoStatus.IN_PROGRESS)
+            inProgressTagged.addTag(member2)
+            inProgressTagged.tags.first().tagOrder = -9
+            todoRepository.saveAll(listOf(todoStatusTagged, inProgressTagged))
+            entityManager.flush()
+            entityManager.clear()
+
+            val result = todoRepository.findMinTagOrderByMemberAndStatus(member2, TodoStatus.TODO)
+
+            // The IN_PROGRESS tag (-9) must not leak into the TODO query.
+            assertThat(result).isEqualTo(3)
+        }
+
+        @Test
+        fun `should scope tagOrder by member`() {
+            val taggedMember2 = Todo(member1, "For member2", "Content", 0, TodoStatus.TODO)
+            taggedMember2.addTag(member2)
+            taggedMember2.tags.first().tagOrder = 4
+            val taggedMember1 = Todo(member2, "For member1", "Content", 0, TodoStatus.TODO)
+            taggedMember1.addTag(member1)
+            taggedMember1.tags.first().tagOrder = -50
+            todoRepository.saveAll(listOf(taggedMember2, taggedMember1))
+            entityManager.flush()
+            entityManager.clear()
+
+            val result = todoRepository.findMinTagOrderByMemberAndStatus(member2, TodoStatus.TODO)
+
+            // member1's tag (-50) must not leak into member2's query.
+            assertThat(result).isEqualTo(4)
+        }
+    }
+
+    @Nested
     @DisplayName("Member Isolation Tests")
     inner class MemberIsolationTests {
 

@@ -55,6 +55,16 @@ class TodoServiceTest {
         eventPublisher = mock(ApplicationEventPublisher::class.java)
         ReflectionTestUtils.setField(member, "id", loginMember.id)
         todoService = TodoService(memberRepository, todoRepository, attachmentService, friendService, eventPublisher)
+        // Mockito returns 0 (not null) by default for a nullable Int repository method;
+        // mirror the real "no tagged rows" result so top-position math stays correct.
+        `when`(todoRepository.findMinTagOrderByMemberAndStatus(anyArg(), anyArg()))
+            .thenReturn(null)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <T> anyArg(): T {
+        any<T>()
+        return null as T
     }
 
     @Test
@@ -451,49 +461,47 @@ class TodoServiceTest {
     }
 
     @Test
-    fun `getBoard should sort tagged todos by modified date before own todos`() {
+    fun `getBoard should order tagged todos by their tag order`() {
         val owner = otherMember()
         ReflectionTestUtils.setField(owner, "id", 3L)
 
-        val olderTagged = Todo(owner, "older-tagged", "content", 0, TodoStatus.TODO).apply {
-            addTag(member)
-            lastModifiedDate = LocalDateTime.of(2025, 1, 10, 9, 0)
-            createdDate = LocalDateTime.of(2025, 1, 10, 9, 0)
-        }
-        val newerTagged = Todo(owner, "newer-tagged", "content", 10, TodoStatus.TODO).apply {
-            addTag(member)
-            lastModifiedDate = LocalDateTime.of(2025, 1, 10, 10, 0)
-            createdDate = LocalDateTime.of(2025, 1, 10, 10, 0)
-        }
-        val ownTodo = createTodo("own", TodoStatus.TODO, -10)
+        val viewer = member
+        val higher = Todo(owner, "higher", "content", 99, TodoStatus.TODO)
+        higher.addTag(viewer)
+        higher.tags.first().tagOrder = 0
+        val lower = Todo(owner, "lower", "content", 99, TodoStatus.TODO)
+        lower.addTag(viewer)
+        lower.tags.first().tagOrder = 5
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findAccessibleTodos(member))
-            .thenReturn(listOf(olderTagged, newerTagged, ownTodo))
+            .thenReturn(listOf(lower, higher))
 
         val board = todoService.getBoard(loginMember)
 
-        assertEquals(listOf("newer-tagged", "older-tagged", "own"), board.todo.map { it.title })
+        assertEquals(listOf("higher", "lower"), board.todo.map { it.title })
     }
 
     @Test
-    fun `getBoard should place tagged todos before own todos`() {
+    fun `getBoard should interleave tagged and owned todos by effective order`() {
         val owner = otherMember()
         ReflectionTestUtils.setField(owner, "id", 3L)
 
-        val ownTodo = createTodo("own", TodoStatus.TODO, -10)
-        val taggedTodo = Todo(owner, "tagged", "content", 99, TodoStatus.TODO)
-        taggedTodo.addTag(member)
+        val viewer = member
+        val ownFirst = createTodo("own-0", TodoStatus.TODO, 0)
+        val ownLast = createTodo("own-2", TodoStatus.TODO, 2)
+        val tagged = Todo(owner, "tagged-1", "content", 99, TodoStatus.TODO)
+        tagged.addTag(viewer)
+        tagged.tags.first().tagOrder = 1
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findAccessibleTodos(member))
-            .thenReturn(listOf(ownTodo, taggedTodo))
+            .thenReturn(listOf(ownLast, tagged, ownFirst))
 
         val board = todoService.getBoard(loginMember)
 
-        assertEquals(listOf("tagged", "own"), board.todo.map { it.title })
-        assertEquals(true, board.todo[0].isTagged)
-        assertEquals(false, board.todo[1].isTagged)
+        assertEquals(listOf("own-0", "tagged-1", "own-2"), board.todo.map { it.title })
+        assertEquals(listOf(false, true, false), board.todo.map { it.isTagged })
     }
 
     @Test
@@ -1746,16 +1754,17 @@ class TodoServiceTest {
     }
 
     @Test
-    fun `todoList should place tagged todos before own todos`() {
+    fun `todoList orders tagged and own todos by their order value`() {
         val friend = otherMember()
         ReflectionTestUtils.setField(friend, "name", "owner")
         val ownTodo = createTodo("own", TodoStatus.TODO, 0)
         val taggedTodo = Todo(friend, "tagged", "content", 0, TodoStatus.TODO)
         taggedTodo.addTag(member)
+        taggedTodo.tags.first().tagOrder = -1
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findAccessibleTodosByStatus(member, TodoStatus.TODO))
-            .thenReturn(listOf(taggedTodo, ownTodo))
+            .thenReturn(listOf(ownTodo, taggedTodo))
 
         val response = todoService.todoList(loginMember)
 
@@ -1834,6 +1843,258 @@ class TodoServiceTest {
         todoService.untagSelf(loginMember, todoId)
 
         assertTrue(todo.tags.none { it.member.id == member.id })
+    }
+
+    // ========== Tagged Todo Ordering Tests ==========
+
+    @Test
+    fun `updatePositionsByStatus should reorder tagged todos by tag order for tagged viewer`() {
+        val owner = otherMember()
+        val viewer = member
+        val tagged1 = Todo(owner, "tagged1", "content", 100, TodoStatus.TODO)
+        tagged1.addTag(viewer)
+        tagged1.tags.first().tagOrder = 5
+        val tagged2 = Todo(owner, "tagged2", "content", 200, TodoStatus.TODO)
+        tagged2.addTag(viewer)
+        tagged2.tags.first().tagOrder = 9
+        val id1 = UUID.randomUUID()
+        val id2 = UUID.randomUUID()
+        ReflectionTestUtils.setField(tagged1, "id", id1)
+        ReflectionTestUtils.setField(tagged2, "id", id2)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findAllById(listOf(id2, id1))).thenReturn(listOf(tagged1, tagged2))
+
+        todoService.updatePositionsByStatus(loginMember, TodoStatus.TODO, listOf(id2, id1))
+
+        // Viewer is tagged (not owner): their TodoTag.tagOrder is set to the index.
+        assertEquals(0, tagged2.tags.first().tagOrder)
+        assertEquals(1, tagged1.tags.first().tagOrder)
+        // The owner's Todo.position must stay untouched.
+        assertEquals(100, tagged1.position)
+        assertEquals(200, tagged2.position)
+    }
+
+    @Test
+    fun `updatePositionsByStatus should update owned position and tagged tag order in mixed column`() {
+        val owner = otherMember()
+        val viewer = member
+        val ownTodo = createTodo("own", TodoStatus.TODO, 3)
+        val taggedTodo = Todo(owner, "tagged", "content", 100, TodoStatus.TODO)
+        taggedTodo.addTag(viewer)
+        taggedTodo.tags.first().tagOrder = 7
+        val ownId = UUID.randomUUID()
+        val taggedId = UUID.randomUUID()
+        ReflectionTestUtils.setField(ownTodo, "id", ownId)
+        ReflectionTestUtils.setField(taggedTodo, "id", taggedId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findAllById(listOf(ownId, taggedId))).thenReturn(listOf(ownTodo, taggedTodo))
+
+        todoService.updatePositionsByStatus(loginMember, TodoStatus.TODO, listOf(ownId, taggedId))
+
+        // Owned todo updates Todo.position; tagged todo updates the viewer's tagOrder.
+        assertEquals(0, ownTodo.position)
+        assertEquals(1, taggedTodo.tags.first().tagOrder)
+        assertEquals(100, taggedTodo.position)
+    }
+
+    @Test
+    fun `updatePositionsByStatus should throw when todo is tagged to another member not viewer`() {
+        val owner = otherMember()
+        val stranger = memberWithId(3L)
+        val todo = Todo(owner, "task", "content", 0, TodoStatus.TODO)
+        todo.addTag(stranger)
+        val todoId = UUID.randomUUID()
+        ReflectionTestUtils.setField(todo, "id", todoId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findAllById(listOf(todoId))).thenReturn(listOf(todo))
+
+        val exception = assertThrows<IllegalArgumentException> {
+            todoService.updatePositionsByStatus(loginMember, TodoStatus.TODO, listOf(todoId))
+        }
+        assertEquals("Todo is not yours", exception.message)
+    }
+
+    @Test
+    fun `changeStatus by tagged actor with orderedIds persists tag order and bumps owner`() {
+        val owner = otherMember()
+        val viewer = member
+        val movingId = UUID.randomUUID()
+        val existingId = UUID.randomUUID()
+        val moving = Todo(owner, "moving", "content", 0, TodoStatus.TODO)
+        moving.addTag(viewer)
+        val existing = Todo(owner, "existing", "content", 0, TodoStatus.IN_PROGRESS)
+        existing.addTag(viewer)
+        existing.tags.first().tagOrder = 0
+        ReflectionTestUtils.setField(moving, "id", movingId)
+        ReflectionTestUtils.setField(existing, "id", existingId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(movingId)).thenReturn(Optional.of(moving))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(owner, TodoStatus.IN_PROGRESS)).thenReturn(4)
+        `when`(todoRepository.findAllById(listOf(existingId, movingId))).thenReturn(listOf(existing, moving))
+
+        val result = todoService.changeStatus(loginMember, movingId, TodoStatus.IN_PROGRESS, listOf(existingId, movingId))
+
+        assertEquals(TodoStatus.IN_PROGRESS, result.status)
+        // Owner is bumped to the top of the owner's IN_PROGRESS column (min 4 - 1).
+        assertEquals(3, moving.position)
+        // The tagged actor's exact column order is persisted by index.
+        assertEquals(1, moving.tags.first().tagOrder)
+        assertEquals(0, existing.tags.first().tagOrder)
+    }
+
+    @Test
+    fun `changeStatus by owner bumps every tagged member to top of their own column`() {
+        val memberA = otherMember()
+        val memberB = memberWithId(3L)
+        val todoId = UUID.randomUUID()
+        val todo = createTodo("task", TodoStatus.TODO, 0)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+        todo.addTag(memberA)
+        todo.addTag(memberB)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.IN_PROGRESS)).thenReturn(0)
+        `when`(todoRepository.findMinPositionByMemberAndStatus(memberA, TodoStatus.IN_PROGRESS)).thenReturn(10)
+        `when`(todoRepository.findMinPositionByMemberAndStatus(memberB, TodoStatus.IN_PROGRESS)).thenReturn(20)
+
+        val result = todoService.changeStatus(loginMember, todoId, TodoStatus.IN_PROGRESS, emptyList())
+
+        assertEquals(TodoStatus.IN_PROGRESS, result.status)
+        // Owner top: 0 - 1
+        assertEquals(-1, todo.position)
+        val tagA = todo.tags.first { it.member.id == memberA.id }
+        val tagB = todo.tags.first { it.member.id == memberB.id }
+        // Each tagged member is bumped to the top of THEIR own target column.
+        assertEquals(9, tagA.tagOrder)
+        assertEquals(19, tagB.tagOrder)
+        verify(todoRepository, never()).findAllById(anyList())
+    }
+
+    @Test
+    fun `getBoard sorts todo with no matching viewer tag last`() {
+        val owner = otherMember()
+        val stranger = memberWithId(3L)
+        val ownTodo = createTodo("own", TodoStatus.TODO, 0)
+        val foreign = Todo(owner, "foreign", "content", 0, TodoStatus.TODO)
+        foreign.addTag(stranger)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findAccessibleTodos(member)).thenReturn(listOf(foreign, ownTodo))
+
+        val board = todoService.getBoard(loginMember)
+
+        // A todo the viewer neither owns nor is tagged in sorts last (Int.MAX effective order).
+        assertEquals(listOf("own", "foreign"), board.todo.map { it.title })
+    }
+
+    @Test
+    fun `tagFriend should set new tag order to top of friend's column`() {
+        val todoId = UUID.randomUUID()
+        val friend = otherMember()
+        val todo = Todo(member, "task", "content", 0, TodoStatus.TODO)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(memberRepository.findById(friend.id!!)).thenReturn(Optional.of(friend))
+        `when`(todoRepository.findByIdForUpdate(todoId)).thenReturn(Optional.of(todo))
+        `when`(friendService.isFriend(member, friend)).thenReturn(true)
+        `when`(todoRepository.findMinPositionByMemberAndStatus(friend, TodoStatus.TODO)).thenReturn(4)
+
+        todoService.tagFriend(loginMember, todoId, friend.id!!)
+
+        val tag = todo.tags.first { it.member.id == friend.id }
+        // Top of the friend's TODO column: 4 - 1
+        assertEquals(3, tag.tagOrder)
+    }
+
+    @Test
+    fun `addTodo should set tagged friend order to top of friend's column`() {
+        val friend = otherMember()
+        var savedTodo: Todo? = null
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(memberRepository.findById(friend.id!!)).thenReturn(Optional.of(friend))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.TODO)).thenReturn(0)
+        `when`(todoRepository.findMinPositionByMemberAndStatus(friend, TodoStatus.TODO)).thenReturn(8)
+        `when`(friendService.isFriend(member, friend)).thenReturn(true)
+        `when`(todoRepository.save(any(Todo::class.java))).thenAnswer { invocation ->
+            savedTodo = invocation.getArgument<Todo>(0)
+            savedTodo
+        }
+
+        todoService.addTodo(loginMember, "task", "content", tagFriendIds = listOf(friend.id!!))
+
+        val tag = savedTodo!!.tags.first { it.member.id == friend.id }
+        // Top of the friend's TODO column: 8 - 1
+        assertEquals(7, tag.tagOrder)
+    }
+
+    @Test
+    fun `completeTodo top position considers viewer's tagged minimum`() {
+        val todoId = UUID.randomUUID()
+        val todo = createTodo("task", TodoStatus.TODO, 0)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.DONE)).thenReturn(0)
+        `when`(todoRepository.findMinTagOrderByMemberAndStatus(member, TodoStatus.DONE)).thenReturn(-5)
+
+        val result = todoService.completeTodo(loginMember, todoId)
+
+        assertEquals(TodoStatus.DONE, result.status)
+        // top = minOf(ownedMin 0, taggedMin -5) - 1
+        assertEquals(-6, result.position)
+    }
+
+    @Test
+    fun `completeTodo by tagged member bumps that member's tag order`() {
+        val todoId = UUID.randomUUID()
+        val owner = otherMember()
+        val todo = Todo(owner, "task", "content", 5, TodoStatus.IN_PROGRESS)
+        todo.addTag(member)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(owner, TodoStatus.DONE)).thenReturn(4)
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.DONE)).thenReturn(10)
+
+        val result = todoService.completeTodo(loginMember, todoId)
+
+        assertEquals(TodoStatus.DONE, result.status)
+        // Owner is bumped to top of the owner's DONE column (4 - 1).
+        assertEquals(3, result.position)
+        // The tagged member is bumped to top of THEIR own DONE column (10 - 1).
+        assertEquals(9, todo.tags.first().tagOrder)
+    }
+
+    @Test
+    fun `reopenTodo by tagged member bumps that member's tag order`() {
+        val todoId = UUID.randomUUID()
+        val owner = otherMember()
+        val todo = Todo(owner, "task", "content", 0, TodoStatus.DONE)
+        todo.markCompleted(0)
+        todo.addTag(member)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(owner, TodoStatus.TODO)).thenReturn(2)
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.TODO)).thenReturn(6)
+
+        val result = todoService.reopenTodo(loginMember, todoId)
+
+        assertEquals(TodoStatus.TODO, result.status)
+        // Owner is bumped to top of the owner's TODO column (2 - 1).
+        assertEquals(1, result.position)
+        // The tagged member is bumped to top of THEIR own TODO column (6 - 1).
+        assertEquals(5, todo.tags.first().tagOrder)
     }
 
     // ========== Helper Methods ==========

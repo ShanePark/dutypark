@@ -157,8 +157,7 @@ class TodoService(
         // Handle status change if provided and different from current
         val changedStatus = status?.takeIf { it != todo.status }
         if (changedStatus != null) {
-            val newPosition = todoRepository.findMinPositionByMemberAndStatus(member, changedStatus) - 1
-            todo.changeStatus(changedStatus, newPosition)
+            bumpTodoToTopOfStatus(todo, changedStatus)
         }
         tagFriendIds?.let { syncTodoTags(todo, it) }
         if (changedStatus != null) {
@@ -197,17 +196,7 @@ class TodoService(
         orderedIds: List<UUID>
     ) {
         val member = findMember(loginMember)
-
-        val indexMap = orderedIds.mapIndexed { index, id -> id to index }.toMap()
-        val todos = todoRepository.findAllById(orderedIds)
-
-        todos.forEach { todo ->
-            verifyOwnership(todo, member)
-            if (todo.status != status) {
-                throw IllegalArgumentException("Todo ${todo.id} is not in $status status")
-            }
-            todo.position = indexMap.getValue(todo.id)
-        }
+        applyViewerOrder(member, status, orderedIds)
     }
 
     fun deleteTodo(loginMember: LoginMember, id: UUID) {
@@ -233,8 +222,7 @@ class TodoService(
         verifyStatusChangePermission(todo, member)
 
         if (todo.status == TodoStatus.TODO || todo.status == TodoStatus.IN_PROGRESS) {
-            val newPosition = findStatusChangePosition(todo, member, TodoStatus.DONE)
-            todo.markCompleted(newPosition)
+            bumpTodoToTopOfStatus(todo, TodoStatus.DONE)
             publishTodoStatusChangedEvents(todo, member, TodoStatus.DONE)
         }
 
@@ -250,8 +238,7 @@ class TodoService(
         verifyStatusChangePermission(todo, member)
 
         if (todo.status == TodoStatus.DONE) {
-            val newPosition = findStatusChangePosition(todo, member, TodoStatus.TODO)
-            todo.markActive(newPosition)
+            bumpTodoToTopOfStatus(todo, TodoStatus.TODO)
             publishTodoStatusChangedEvents(todo, member, TodoStatus.TODO)
         }
 
@@ -269,37 +256,20 @@ class TodoService(
             .orElseThrow { IllegalArgumentException("Todo not found") }
 
         verifyStatusChangePermission(todo, member)
-        val isOwner = isOwner(todo, member)
         val statusChanged = todo.status != newStatus
 
-        // Change status first
+        // Change status first, bumping every stakeholder (owner + tagged members)
+        // to the top of their own target column so the moved card surfaces on top.
         if (statusChanged) {
-            val targetPosition = if (isOwner && orderedIds.isNotEmpty()) 0 else findStatusChangePosition(todo, member, newStatus)
-            todo.changeStatus(newStatus, targetPosition)
+            bumpTodoToTopOfStatus(todo, newStatus)
             publishTodoStatusChangedEvents(todo, member, newStatus)
         }
 
-        if (!isOwner) {
-            return toResponse(todo, member)
-        }
-
-        if (orderedIds.isEmpty()) {
-            if (statusChanged) {
-                return toResponse(todo, member)
-            }
+        // Persist the exact order of the actor's target column, if provided.
+        if (orderedIds.isNotEmpty()) {
+            applyViewerOrder(member, newStatus, orderedIds)
+        } else if (!statusChanged) {
             throw IllegalArgumentException("todo.reorder.orderedIds.required")
-        }
-
-        // Reorder all todos in target column based on orderedIds
-        val indexMap = orderedIds.mapIndexed { index, todoId -> todoId to index }.toMap()
-        val todos = todoRepository.findAllById(orderedIds)
-
-        todos.forEach { t ->
-            verifyOwnership(t, member)
-            if (t.status != newStatus) {
-                throw IllegalArgumentException("Todo ${t.id} is not in $newStatus status")
-            }
-            t.position = indexMap.getValue(t.id)
         }
 
         return toResponse(todo, member)
@@ -388,17 +358,70 @@ class TodoService(
         return todoEntity.tags.any { it.member.id == member.id }
     }
 
-    private fun findStatusChangePosition(todoEntity: Todo, actor: Member, targetStatus: TodoStatus): Int {
-        val owner = todoEntity.member
-        return todoRepository.findMinPositionByMemberAndStatus(owner, targetStatus) - 1
+    /**
+     * The order value to place a todo on top of [viewer]'s [status] column. Considers
+     * both the viewer's own todos (Todo.position) and the todos the viewer is tagged in
+     * (TodoTag.tagOrder), which share a single ordering space on the viewer's board.
+     */
+    private fun topPositionForViewer(viewer: Member, status: TodoStatus): Int {
+        val ownedMin = todoRepository.findMinPositionByMemberAndStatus(viewer, status)
+        val taggedMin = todoRepository.findMinTagOrderByMemberAndStatus(viewer, status)
+        return minOf(ownedMin, taggedMin ?: ownedMin) - 1
+    }
+
+    /**
+     * Move [todo] to [newStatus] and place it on top of every stakeholder's target column:
+     * the owner via Todo.position and each tagged member via their TodoTag.tagOrder.
+     * Tops are captured before the status change so the todo itself is not counted.
+     */
+    private fun bumpTodoToTopOfStatus(todo: Todo, newStatus: TodoStatus) {
+        val ownerTop = topPositionForViewer(todo.member, newStatus)
+        val tagTops = todo.tags.associate { tag ->
+            tag.member.id to topPositionForViewer(tag.member, newStatus)
+        }
+        todo.changeStatus(newStatus, ownerTop)
+        todo.tags.forEach { tag ->
+            tagTops[tag.member.id]?.let { tag.tagOrder = it }
+        }
+    }
+
+    /**
+     * Persist the exact order of [viewer]'s [status] column from [orderedIds]. Each todo
+     * must be in [status] and accessible to the viewer; owned todos update Todo.position,
+     * tagged todos update the viewer's TodoTag.tagOrder.
+     */
+    private fun applyViewerOrder(viewer: Member, status: TodoStatus, orderedIds: List<UUID>) {
+        val indexMap = orderedIds.mapIndexed { index, id -> id to index }.toMap()
+        val todos = todoRepository.findAllById(orderedIds)
+
+        todos.forEach { todo ->
+            if (todo.status != status) {
+                throw IllegalArgumentException("Todo ${todo.id} is not in $status status")
+            }
+            setViewerOrder(todo, viewer, indexMap.getValue(todo.id))
+        }
+    }
+
+    private fun setViewerOrder(todo: Todo, viewer: Member, order: Int) {
+        if (todo.member.id == viewer.id) {
+            todo.position = order
+            return
+        }
+        val tag = todo.tags.find { it.member.id == viewer.id }
+            ?: throw IllegalArgumentException("Todo is not yours")
+        tag.tagOrder = order
     }
 
     private fun ownerScopedSortKey(todo: Todo, viewer: Member): Long {
         return if (todo.member.id == viewer.id) Long.MIN_VALUE else todo.member.id ?: Long.MAX_VALUE
     }
 
-    private fun isTaggedForViewer(todo: Todo, viewer: Member): Boolean {
-        return todo.member.id != viewer.id
+    private fun effectiveOrder(todo: Todo, viewer: Member): Int {
+        return if (todo.member.id == viewer.id) {
+            todo.position ?: Int.MAX_VALUE
+        } else {
+            todo.tags.find { it.member.id == viewer.id }?.tagOrder ?: Int.MAX_VALUE
+        }
     }
 
     private fun findMember(loginMember: LoginMember): Member =
@@ -445,7 +468,11 @@ class TodoService(
         if (!friendService.isFriend(todo.member, friend)) {
             throw AuthException("todo.tag.notFriend")
         }
+        // Compute the top of the friend's target column before adding the tag so the
+        // freshly-tagged todo lands on top of the friend's board.
+        val tagOrder = topPositionForViewer(friend, todo.status)
         todo.addTag(friend)
+        todo.tags.find { it.member.id == friend.id }?.tagOrder = tagOrder
         publishTodoTaggedEvent(todo, friend)
     }
 
@@ -482,30 +509,11 @@ class TodoService(
     }
 
     private fun boardOrderComparator(viewer: Member): Comparator<Todo> {
-        return Comparator { left, right ->
-            val leftTagged = isTaggedForViewer(left, viewer)
-            val rightTagged = isTaggedForViewer(right, viewer)
-
-            when {
-                leftTagged && rightTagged -> compareValuesBy(
-                    right,
-                    left,
-                    { it.lastModifiedDate },
-                    { it.createdDate },
-                    { it.id.toString() }
-                )
-
-                leftTagged != rightTagged -> if (leftTagged) -1 else 1
-
-                else -> compareValuesBy(
-                    left,
-                    right,
-                    { it.position ?: Int.MAX_VALUE },
-                    { it.createdDate },
-                    { it.id.toString() }
-                )
-            }
-        }
+        // Owned todos (Todo.position) and tagged todos (TodoTag.tagOrder) share one
+        // ordering space per column, so both interleave freely by drag-and-drop.
+        return compareBy<Todo>({ effectiveOrder(it, viewer) })
+            .thenBy { it.createdDate }
+            .thenBy { it.id.toString() }
     }
 
     private fun completedOrderComparator(viewer: Member): Comparator<Todo> {

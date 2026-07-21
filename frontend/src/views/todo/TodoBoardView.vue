@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Sortable from 'sortablejs'
-import type { MoveEvent, SortableEvent } from 'sortablejs'
+import type { SortableEvent } from 'sortablejs'
 import { HelpCircle, X, ListTodo, Clock, CheckCircle2, Lightbulb, LayoutGrid, Plus } from 'lucide-vue-next'
 import { todoApi } from '@/api/todo'
 import { friendApi } from '@/api/member'
@@ -110,102 +110,22 @@ function initSortables() {
       scrollSensitivity: 80,
       scrollSpeed: 10,
       swapThreshold: 0.65,
-      onMove: handleDragMove,
-      onChange: handleDragChange,
       onEnd: handleDragEnd,
     })
   })
 }
 
-function isTaggedCard(element: Element | null): boolean {
-  return element?.getAttribute('data-is-tagged') === 'true'
-}
-
-function getColumnCards(container: Element | null, exclude: Element | null = null): HTMLElement[] {
+function collectOrderedIds(container: Element | null): string[] {
   if (!(container instanceof HTMLElement)) {
     return []
   }
-
-  return Array.from(container.children).filter((child): child is HTMLElement => {
-    return child instanceof HTMLElement && child !== exclude
+  // Tagged and own cards share one ordering space per column, so persist every card.
+  const orderedIds: string[] = []
+  container.querySelectorAll('[data-id]').forEach((item) => {
+    const id = item.getAttribute('data-id')
+    if (id) orderedIds.push(id)
   })
-}
-
-function getLeadingTaggedCount(cards: Element[]): number {
-  let index = 0
-  while (index < cards.length && isTaggedCard(cards[index] ?? null)) {
-    index += 1
-  }
-  return index
-}
-
-function pinTaggedCardToColumnTop(container: Element | null, card: Element | null) {
-  if (!(container instanceof HTMLElement) || !(card instanceof HTMLElement)) {
-    return
-  }
-
-  const anchor = Array.from(container.children).find((child) => child !== card)
-  if (anchor) {
-    container.insertBefore(card, anchor)
-    return
-  }
-
-  if (card.parentElement !== container) {
-    container.appendChild(card)
-  }
-}
-
-function keepOwnedCardBelowTaggedBlock(container: Element | null, card: Element | null) {
-  if (!(container instanceof HTMLElement) || !(card instanceof HTMLElement)) {
-    return
-  }
-
-  const cardsWithoutDragged = getColumnCards(container, card)
-  const leadingTaggedCount = getLeadingTaggedCount(cardsWithoutDragged)
-  if (leadingTaggedCount === 0) {
-    return
-  }
-
-  const currentCards = getColumnCards(container)
-  const currentIndex = currentCards.indexOf(card)
-  if (currentIndex < 0 || currentIndex >= leadingTaggedCount) {
-    return
-  }
-
-  const anchor = cardsWithoutDragged[leadingTaggedCount]
-  if (anchor) {
-    container.insertBefore(card, anchor)
-    return
-  }
-
-  container.appendChild(card)
-}
-
-function normalizeDraggedCardPosition(container: Element | null, card: Element | null) {
-  if (isTaggedCard(card)) {
-    pinTaggedCardToColumnTop(container, card)
-    return
-  }
-
-  keepOwnedCardBelowTaggedBlock(container, card)
-}
-
-function handleDragMove(evt: MoveEvent) {
-  if (isTaggedCard(evt.dragged)) {
-    // Tagged todos have no viewer-side position, so only cross-column moves
-    // (status changes) are allowed; moves inside the current column are ignored.
-    return evt.to !== evt.dragged.parentElement
-  }
-
-  if (isTaggedCard(evt.related)) {
-    return 1
-  }
-
-  return true
-}
-
-function handleDragChange(evt: SortableEvent) {
-  normalizeDraggedCardPosition(evt.to, evt.item)
+  return orderedIds
 }
 
 function destroySortables() {
@@ -223,28 +143,12 @@ async function handleDragEnd(evt: SortableEvent) {
 
   const fromColumn = evt.from.getAttribute('data-column') as TodoStatus
   const toColumn = evt.to.getAttribute('data-column') as TodoStatus
-  const draggedIsTagged = isTaggedCard(evt.item)
 
-  if (draggedIsTagged && fromColumn === toColumn) {
-    // Same-column moves were cancelled in handleDragMove; the card only ends up
-    // displaced if it visited another column mid-drag, so reload just then.
-    if (evt.oldIndex !== evt.newIndex) {
-      await loadBoard()
-    }
-    return
-  }
-
-  normalizeDraggedCardPosition(evt.to, evt.item)
+  // Full order of the destination column after SortableJS moved the card.
+  const orderedIds = collectOrderedIds(evt.to)
 
   if (fromColumn === toColumn) {
-    // Within-column reordering
-    const columnItems = evt.to.querySelectorAll('[data-id][data-is-tagged="false"]')
-    const orderedIds: string[] = []
-    columnItems.forEach((item) => {
-      const id = item.getAttribute('data-id')
-      if (id) orderedIds.push(id)
-    })
-
+    // Within-column reordering (own or tagged cards alike)
     try {
       await todoApi.updatePositions({
         status: toColumn,
@@ -257,24 +161,12 @@ async function handleDragEnd(evt: SortableEvent) {
       await loadBoard()
     }
   } else {
+    // Cross-column move (status change) — persist the destination column order too.
     try {
-      if (draggedIsTagged) {
-        await todoApi.changeStatus(todoId, { status: toColumn })
-      } else {
-        // Cross-column move (status change)
-        // Extract full order from DOM after SortableJS has moved the item
-        const columnItems = evt.to.querySelectorAll('[data-id][data-is-tagged="false"]')
-        const orderedIds: string[] = []
-        columnItems.forEach((item) => {
-          const id = item.getAttribute('data-id')
-          if (id) orderedIds.push(id)
-        })
-
-        await todoApi.changeStatus(todoId, {
-          status: toColumn,
-          orderedIds,
-        })
-      }
+      await todoApi.changeStatus(todoId, {
+        status: toColumn,
+        orderedIds,
+      })
       focusStatus(toColumn, 'smooth')
       await loadBoard()
     } catch (error) {

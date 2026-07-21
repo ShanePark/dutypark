@@ -49,6 +49,17 @@ interface TodoRepository : JpaRepository<Todo, UUID> {
         @Param("status") status: TodoStatus
     ): Int
 
+    @Query(
+        "SELECT MIN(tt.tagOrder) " +
+                "FROM TodoTag tt " +
+                "WHERE tt.member = :member " +
+                "AND tt.todo.status = :status"
+    )
+    fun findMinTagOrderByMemberAndStatus(
+        @Param("member") member: Member,
+        @Param("status") status: TodoStatus
+    ): Int?
+
     fun findAllByMemberAndStatusOrderByPosition(member: Member, status: TodoStatus): List<Todo>
 
     fun findAllByMemberAndStatusOrderByPositionAsc(member: Member, status: TodoStatus): List<Todo>
