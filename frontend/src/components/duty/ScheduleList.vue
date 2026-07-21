@@ -12,6 +12,7 @@ import {
 import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
 import MemberTagChips from '@/components/common/MemberTagChips.vue'
 import VisibilityHintIcon from '@/components/common/VisibilityHintIcon.vue'
+import CopyTextButton from '@/components/common/CopyTextButton.vue'
 import type { NormalizedAttachment } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { buildDisplayTagMembers } from '@/utils/tagMembers'
@@ -317,8 +318,9 @@ function handleTagClick(schedule: Schedule) {
             </div>
 
             <!-- Description -->
-            <div v-if="schedule.description" class="mt-2 pt-2 border-t border-dp-border-primary">
-              <div class="text-sm whitespace-pre-wrap text-dp-text-secondary">{{ schedule.description }}</div>
+            <div v-if="schedule.description" class="mt-2 pt-2 border-t border-dp-border-primary flex items-start gap-2">
+              <div class="flex-1 min-w-0 text-sm whitespace-pre-wrap text-dp-text-secondary">{{ schedule.description }}</div>
+              <CopyTextButton :text="schedule.description" class="shrink-0" />
             </div>
 
             <!-- Attachments -->

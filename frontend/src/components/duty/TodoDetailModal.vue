@@ -19,6 +19,7 @@ import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import FriendTagSelector from '@/components/common/FriendTagSelector.vue'
 import MemberTagChips from '@/components/common/MemberTagChips.vue'
+import CopyTextButton from '@/components/common/CopyTextButton.vue'
 import { attachmentApi } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
 import { formatDateKorean } from '@/utils/date'
@@ -360,8 +361,9 @@ function onUploadError(message: string) {
             <MemberTagChips :members="todoTagMembers" density="compact" />
           </div>
 
-          <div v-if="todo.content">
-            <p class="whitespace-pre-wrap break-all text-dp-text-primary">{{ todo.content }}</p>
+          <div v-if="todo.content" class="flex items-start gap-2">
+            <p class="flex-1 min-w-0 whitespace-pre-wrap break-all text-dp-text-primary">{{ todo.content }}</p>
+            <CopyTextButton :text="todo.content" class="shrink-0" />
           </div>
 
           <div v-if="isLoadingAttachments" class="text-sm text-dp-text-secondary">
