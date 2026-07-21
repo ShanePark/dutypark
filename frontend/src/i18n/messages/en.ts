@@ -264,6 +264,8 @@ export default {
       download: 'Download',
       retry: 'Retry',
       change: 'Change',
+      copy: 'Copy',
+      copied: 'Copied',
     },
     labels: {
       or: 'or',
@@ -289,6 +291,9 @@ export default {
     },
     relativeTime: {
       justNow: 'just now',
+    },
+    messages: {
+      copyFailed: 'Failed to copy',
     },
   },
   errors: {

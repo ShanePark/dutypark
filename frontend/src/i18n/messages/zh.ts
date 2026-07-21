@@ -264,6 +264,8 @@ export default {
       download: '下载',
       retry: '重试',
       change: '更改',
+      copy: '复制',
+      copied: '已复制',
     },
     labels: {
       or: '或',
@@ -289,6 +291,9 @@ export default {
     },
     relativeTime: {
       justNow: '刚才',
+    },
+    messages: {
+      copyFailed: '复制失败',
     },
   },
   errors: {

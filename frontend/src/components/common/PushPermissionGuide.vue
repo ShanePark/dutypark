@@ -91,6 +91,22 @@ function dismiss() {
   isVisible.value = false
 }
 
+// A text-selection drag that starts inside the panel and ends on the backdrop makes the
+// backdrop the click target (nearest common ancestor), so only dismiss on a click that also began there.
+let pressStartedOnBackdrop = false
+
+function handleBackdropMousedown(event: MouseEvent) {
+  pressStartedOnBackdrop = event.target === event.currentTarget
+}
+
+function handleBackdropClick(event: MouseEvent) {
+  const pressedOnBackdrop = pressStartedOnBackdrop
+  pressStartedOnBackdrop = false
+  if (event.target === event.currentTarget && pressedOnBackdrop) {
+    dismiss()
+  }
+}
+
 function dismissForDays() {
   const dismissUntil = Date.now() + (DISMISS_DAYS * 24 * 60 * 60 * 1000)
   localStorage.setItem(STORAGE_KEY, dismissUntil.toString())
@@ -109,7 +125,8 @@ defineExpose({ checkVisibility })
     <div
       v-if="isVisible"
       class="push-guide-backdrop"
-      @click.self="dismiss"
+      @mousedown="handleBackdropMousedown"
+      @click="handleBackdropClick"
     >
       <div class="push-guide-container">
         <!-- Header -->

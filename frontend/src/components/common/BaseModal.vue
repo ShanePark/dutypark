@@ -68,12 +68,33 @@ const panelClasses = computed(() => [
   props.panelClass,
 ])
 
+// A text-selection drag that starts inside the panel and ends on the overlay
+// makes the overlay the click event's target (the nearest common ancestor of the
+// differing mousedown/mouseup targets). Track where the press began so a click that
+// merely *ended* on the overlay does not count as a backdrop click.
+let pressStartedOnOverlay = false
+
 function handleBackdrop(eventType: ModalBackdropEvent) {
   if (!props.closeOnBackdrop || props.backdropEvent !== eventType) {
     return
   }
 
   emit('close')
+}
+
+function handleOverlayMousedown(event: MouseEvent) {
+  pressStartedOnOverlay = event.target === event.currentTarget
+  if (pressStartedOnOverlay) {
+    handleBackdrop('mousedown')
+  }
+}
+
+function handleOverlayClick(event: MouseEvent) {
+  const pressedOnOverlay = pressStartedOnOverlay
+  pressStartedOnOverlay = false
+  if (event.target === event.currentTarget && pressedOnOverlay) {
+    handleBackdrop('click')
+  }
 }
 </script>
 
@@ -82,8 +103,8 @@ function handleBackdrop(eventType: ModalBackdropEvent) {
     <div
       v-if="isOpen"
       :class="overlayClasses"
-      @click.self="handleBackdrop('click')"
-      @mousedown.self="handleBackdrop('mousedown')"
+      @mousedown="handleOverlayMousedown"
+      @click="handleOverlayClick"
     >
       <div
         :class="panelClasses"
