@@ -72,6 +72,7 @@ Use this file for repo-wide defaults only. Keep it lean; read the code and nearb
 - **Frontend changes:** `cd frontend && npm run type-check` and `cd frontend && npm run build`
 - **Frontend unit-level logic:** `cd frontend && npm run test` when touching existing Vitest-covered stores or utils, or when adding new unit tests
 - **Release notes:** `cd frontend && npm run release-notes:check` when touching `frontend/src/releaseNotes` or preparing a `main` PR
+- **Local dev login (for in-browser verification only):** email `test@duty.park`, password `12345678`. Use this account to sign in to the running local dev instance (`http://localhost:5173`, backend `http://localhost:8080`) when a task needs authenticated in-browser checks. Do not start the dev servers yourself unless the user asks; these credentials are for the developer's already-running local stack and are not real/production secrets.
 
 ## 5. Skills To Use
 
