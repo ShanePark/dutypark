@@ -369,7 +369,6 @@ export default {
     dropdown: {
       ...en.notifications.dropdown,
       title: '通知',
-      markAllAsRead: 'すべて既読',
       viewAll: 'すべて見る',
     },
     items: {

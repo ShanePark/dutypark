@@ -350,7 +350,6 @@ export default {
     },
     dropdown: {
       title: 'Notifications',
-      markAllAsRead: 'Mark all as read',
       viewAll: 'View all',
     },
     items: {

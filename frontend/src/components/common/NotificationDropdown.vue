@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { CheckCheck, ChevronRight } from 'lucide-vue-next'
+import { ChevronRight } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/es'
@@ -37,7 +37,6 @@ const notificationStore = useNotificationStore()
 const authStore = useAuthStore()
 const { navigateToNotification } = useNotificationNavigation()
 const { locale, t } = useI18n()
-const isMarkingAllAsRead = ref(false)
 
 const dayjsLocale = computed(() => {
   if (locale.value.startsWith('ja')) return 'ja'
@@ -49,11 +48,6 @@ const dayjsLocale = computed(() => {
 
 const displayNotifications = computed(() => {
   return notificationStore.recentNotifications.slice(0, 10)
-})
-
-const canMarkAllAsRead = computed(() => {
-  return notificationStore.hasUnread ||
-    displayNotifications.value.some(notification => !notification.isRead)
 })
 
 function formatTimeAgo(dateString: string): string {
@@ -95,21 +89,6 @@ async function handleNotificationClick(notification: NotificationDto) {
   emit('close')
 }
 
-async function handleMarkAllAsRead() {
-  if (isMarkingAllAsRead.value) {
-    return
-  }
-
-  isMarkingAllAsRead.value = true
-  try {
-    await notificationStore.markAllAsRead()
-  } catch {
-    // Error already logged in store
-  } finally {
-    isMarkingAllAsRead.value = false
-  }
-}
-
 function handleViewAll() {
   router.push('/notifications')
   emit('close')
@@ -145,16 +124,6 @@ function handleOverlayClick() {
       <!-- Header -->
       <div class="notification-dropdown-header flex items-center justify-between px-4 py-3">
         <h3 class="text-sm font-semibold">{{ t('notifications.dropdown.title') }}</h3>
-        <button
-          v-if="canMarkAllAsRead"
-          type="button"
-          class="notification-action-btn notification-mark-all-btn cursor-pointer flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg transition-all duration-150 min-h-[44px]"
-          :disabled="isMarkingAllAsRead"
-          @click="handleMarkAllAsRead"
-        >
-          <CheckCheck class="w-4 h-4" />
-          {{ t('notifications.dropdown.markAllAsRead') }}
-        </button>
       </div>
 
       <!-- Notification List -->
@@ -244,31 +213,6 @@ function handleOverlayClick() {
   background-color: var(--dp-bg-tertiary);
   border-bottom: 1px solid var(--dp-border-primary);
   color: var(--dp-text-primary);
-}
-
-.notification-action-btn {
-  color: var(--dp-text-secondary);
-  background-color: var(--dp-bg-tertiary);
-  border: 1px solid var(--dp-border-secondary);
-  box-shadow: var(--dp-shadow-sm);
-}
-
-.notification-action-btn:hover {
-  color: var(--dp-text-primary);
-  background-color: var(--dp-bg-hover);
-  border-color: var(--dp-border-hover);
-}
-
-.notification-action-btn:focus-visible {
-  outline: none;
-  box-shadow:
-    var(--dp-shadow-sm),
-    0 0 0 3px var(--dp-accent-ring);
-}
-
-.notification-action-btn:disabled {
-  cursor: progress;
-  opacity: 0.65;
 }
 
 .notification-dropdown-body {

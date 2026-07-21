@@ -13,16 +13,20 @@ const notificationStore = useNotificationStore()
 const authStore = useAuthStore()
 const { t } = useI18n()
 const isDropdownVisible = ref(false)
-let singleUnreadToMarkOnCloseId: string | null = null
+let shouldMarkAllReadOnClose = false
 
 async function refreshDropdownNotifications() {
-  singleUnreadToMarkOnCloseId = null
+  shouldMarkAllReadOnClose = false
   const loaded = await notificationStore.fetchRecentNotifications()
   if (!loaded || !isDropdownVisible.value) {
     return
   }
 
-  singleUnreadToMarkOnCloseId = notificationStore.getSingleUnreadRecentNotificationId()
+  // Opening the bell counts as reading the notifications the user came to see,
+  // so every notification that was unread at open time is marked read on close.
+  shouldMarkAllReadOnClose =
+    notificationStore.hasUnread ||
+    notificationStore.recentNotifications.some(n => !n.isRead)
 }
 
 function openDropdown() {
@@ -32,16 +36,16 @@ function openDropdown() {
 }
 
 function closeDropdown() {
-  const notificationId = singleUnreadToMarkOnCloseId
-  singleUnreadToMarkOnCloseId = null
+  const markAll = shouldMarkAllReadOnClose
+  shouldMarkAllReadOnClose = false
 
   if (isDropdownVisible.value) {
     isDropdownVisible.value = false
     emit('toggle', false)
   }
 
-  if (notificationId) {
-    void notificationStore.markSingleUnreadAsRead(notificationId)
+  if (markAll) {
+    void notificationStore.markAllAsRead()
   }
 }
 
@@ -64,7 +68,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  singleUnreadToMarkOnCloseId = null
+  shouldMarkAllReadOnClose = false
   notificationStore.stopPolling()
 })
 </script>

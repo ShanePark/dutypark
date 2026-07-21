@@ -350,7 +350,6 @@ export default {
     },
     dropdown: {
       title: '알림',
-      markAllAsRead: '전체 읽음',
       viewAll: '더보기',
     },
     items: {

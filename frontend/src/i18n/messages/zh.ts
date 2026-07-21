@@ -350,7 +350,6 @@ export default {
     },
     dropdown: {
       title: '通知',
-      markAllAsRead: '全部标记为已读',
       viewAll: '查看全部',
     },
     items: {
