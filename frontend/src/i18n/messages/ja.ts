@@ -268,6 +268,8 @@ export default {
       download: 'ダウンロード',
       retry: '再試行',
       change: '変更',
+      copy: 'コピー',
+      copied: 'コピーしました',
     },
     labels: {
       ...en.common.labels,
@@ -298,6 +300,9 @@ export default {
     relativeTime: {
       ...en.common.relativeTime,
       justNow: 'たった今',
+    },
+    messages: {
+      copyFailed: 'コピーできませんでした',
     },
   },
   errors: {

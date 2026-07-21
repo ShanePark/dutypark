@@ -264,6 +264,8 @@ export default {
       download: '다운로드',
       retry: '다시 시도',
       change: '변경',
+      copy: '복사',
+      copied: '복사됨',
     },
     labels: {
       or: '또는',
@@ -289,6 +291,9 @@ export default {
     },
     relativeTime: {
       justNow: '방금 전',
+    },
+    messages: {
+      copyFailed: '복사에 실패했습니다',
     },
   },
   errors: {
