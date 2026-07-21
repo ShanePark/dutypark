@@ -78,7 +78,6 @@ const visibleTags = computed(() => {
         :members="ownerTagMembers"
         density="compact"
         align="end"
-        label-prefix="by"
       />
       <MemberTagChips
         v-else
