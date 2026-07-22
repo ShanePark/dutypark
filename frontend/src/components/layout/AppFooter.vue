@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Calendar, Home, ListTodo, Settings, Users } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
+import { useDragClickGuard } from '@/composables/useDragClickGuard'
 
 type FooterNavItem = {
   id: string
@@ -16,6 +17,7 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const { t } = useI18n()
+const dragClickGuard = useDragClickGuard({ resetDelay: 320 })
 const navListRef = ref<HTMLElement | null>(null)
 const navItemRefs = ref<Array<HTMLElement | null>>([])
 const indicatorStyle = ref<Record<string, string>>({
@@ -31,7 +33,6 @@ const touchStartY = ref(0)
 const touchCurrentX = ref(0)
 const touchCurrentY = ref(0)
 const gestureAxis = ref<'horizontal' | 'vertical' | null>(null)
-const suppressClickUntil = ref(0)
 let resizeObserver: ResizeObserver | null = null
 
 const SWIPE_ACTIVATION_THRESHOLD = 12
@@ -144,10 +145,6 @@ function setupResizeObserver() {
   resizeObserver.observe(navListRef.value)
 }
 
-function isClickSuppressed() {
-  return Date.now() < suppressClickUntil.value
-}
-
 function resetSwipeState() {
   touchStartX.value = 0
   touchStartY.value = 0
@@ -205,11 +202,6 @@ function getSwipeTargetIndex(deltaX: number) {
 }
 
 function handleNavClick(item: FooterNavItem, event: MouseEvent) {
-  if (isClickSuppressed()) {
-    event.preventDefault()
-    return
-  }
-
   if (item.id === 'calendar' && isActive(item.path)) {
     event.preventDefault()
     window.dispatchEvent(new CustomEvent('duty-go-to-today'))
@@ -281,7 +273,7 @@ function handleTouchEnd() {
     return
   }
 
-  suppressClickUntil.value = Date.now() + 320
+  dragClickGuard.suppressNextClick()
 
   const targetIndex = getSwipeTargetIndex(deltaX)
 
@@ -354,6 +346,8 @@ watch(
         @touchmove="handleTouchMove"
         @touchend="handleTouchEnd"
         @touchcancel="handleTouchCancel"
+        @pointerdown.capture="dragClickGuard.handlePointerDown"
+        @click.capture="dragClickGuard.handleClick"
       >
         <div
           aria-hidden="true"

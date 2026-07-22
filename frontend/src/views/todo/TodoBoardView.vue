@@ -7,6 +7,7 @@ import { HelpCircle, X, ListTodo, Clock, CheckCircle2, Lightbulb, LayoutGrid, Pl
 import { todoApi } from '@/api/todo'
 import { friendApi } from '@/api/member'
 import { useSwal } from '@/composables/useSwal'
+import { useDragClickGuard } from '@/composables/useDragClickGuard'
 import BaseModal from '@/components/common/BaseModal.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import KanbanColumn from '@/components/todo/KanbanColumn.vue'
@@ -17,6 +18,7 @@ import type { TaggableFriend, Todo, TodoBoard, TodoStatus } from '@/types'
 
 const { t } = useI18n()
 const { showSuccess, showError, confirm, confirmDelete, toastSuccess } = useSwal()
+const dragClickGuard = useDragClickGuard()
 
 const isHelpModalOpen = ref(false)
 
@@ -110,7 +112,11 @@ function initSortables() {
       scrollSensitivity: 80,
       scrollSpeed: 10,
       swapThreshold: 0.65,
-      onEnd: handleDragEnd,
+      onStart: dragClickGuard.startDrag,
+      onEnd: (event) => {
+        dragClickGuard.endDrag()
+        void handleDragEnd(event)
+      },
     })
   })
 }
@@ -135,6 +141,9 @@ function destroySortables() {
     }
   })
   sortableInstances = {}
+  if (dragClickGuard.isDragging.value) {
+    dragClickGuard.cancelDrag()
+  }
 }
 
 async function handleDragEnd(evt: SortableEvent) {
@@ -450,6 +459,8 @@ onBeforeUnmount(() => {
       ref="boardScroller"
       class="todo-board-content"
       @scroll.passive="handleBoardScroll"
+      @pointerdown.capture="dragClickGuard.handlePointerDown"
+      @click.capture="dragClickGuard.handleClick"
     >
       <div class="todo-board-columns">
         <!-- TODO Column -->

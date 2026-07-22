@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { useDragClickGuard } from '@/composables/useDragClickGuard'
 
 defineProps<{
   currentYear: number
@@ -15,6 +15,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const dragClickGuard = useDragClickGuard({ resetDelay: 250 })
 
 const MONTH_SWIPE_THRESHOLD = 44
 const MONTH_SWIPE_VERTICAL_TOLERANCE = 28
@@ -24,8 +25,6 @@ let monthTouchStartY = 0
 let monthTouchLastX = 0
 let monthTouchLastY = 0
 let isMonthTouching = false
-let suppressMonthPickerClick = false
-let suppressClickTimer: number | null = null
 
 function resetMonthTouch() {
   monthTouchStartX = 0
@@ -33,17 +32,6 @@ function resetMonthTouch() {
   monthTouchLastX = 0
   monthTouchLastY = 0
   isMonthTouching = false
-}
-
-function scheduleSuppressClickReset() {
-  if (suppressClickTimer !== null) {
-    window.clearTimeout(suppressClickTimer)
-  }
-
-  suppressClickTimer = window.setTimeout(() => {
-    suppressMonthPickerClick = false
-    suppressClickTimer = null
-  }, 250)
 }
 
 function handleMonthTouchStart(event: TouchEvent) {
@@ -87,33 +75,18 @@ function handleMonthTouchEnd(event: TouchEvent) {
     event.preventDefault()
   }
   event.stopPropagation()
-  suppressMonthPickerClick = true
+  dragClickGuard.suppressNextClick()
 
   if (deltaX > 0) {
     emit('prev-month')
   } else {
     emit('next-month')
   }
-
-  scheduleSuppressClickReset()
 }
 
-function handleMonthButtonClick(event: MouseEvent) {
-  if (suppressMonthPickerClick) {
-    event.preventDefault()
-    event.stopPropagation()
-    suppressMonthPickerClick = false
-    return
-  }
-
+function handleMonthButtonClick() {
   emit('open-year-month-picker')
 }
-
-onBeforeUnmount(() => {
-  if (suppressClickTimer !== null) {
-    window.clearTimeout(suppressClickTimer)
-  }
-})
 </script>
 
 <template>
@@ -133,6 +106,8 @@ onBeforeUnmount(() => {
       @touchmove.passive="handleMonthTouchMove"
       @touchend="handleMonthTouchEnd"
       @touchcancel="resetMonthTouch"
+      @pointerdown.capture="dragClickGuard.handlePointerDown"
+      @click.capture="dragClickGuard.handleClick"
       class="calendar-nav-btn flex min-h-11 min-w-[5.5rem] touch-pan-y select-none items-center justify-center whitespace-nowrap rounded px-1 py-1 text-lg font-semibold cursor-pointer sm:min-w-[6.75rem] sm:px-3 sm:text-2xl"
     >
       {{ currentYear }}-{{ String(currentMonth).padStart(2, '0') }}
