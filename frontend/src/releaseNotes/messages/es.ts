@@ -39,6 +39,15 @@ export const esReleaseNotes = {
     ui: "Interfaz"
   },
   entries: {
+    "pr-386": {
+      title: "Gestos de arrastre y análisis horario más seguros",
+      summary: "Evita clics no deseados después de arrastrar o deslizar y evita que un análisis horario tardío de la IA sobrescriba cambios posteriores de una agenda.",
+      changes: [
+        "Evita abrir, cerrar o navegar por accidente después de arrastrar o deslizar calendarios, agendas, Todo, amigos, pestañas inferiores o imágenes.",
+        "Al cambiar el título, la fecha o la hora de una agenda, elimina el título anterior generado por la IA y muestra el contenido actualizado de inmediato.",
+        "Ignora resultados de análisis antiguos o duplicados tras una edición más reciente y procesa las tareas con seguridad durante commits, reintentos y cierres."
+      ]
+    },
     "pr-385": {
       title: "Mejoras en el tablero de Todo y actualización de web push",
       summary: "Reordena los todos etiquetados en el tablero kanban, refina la vista de detalle de Todo y las notificaciones, y actualiza las dependencias de web push.",
