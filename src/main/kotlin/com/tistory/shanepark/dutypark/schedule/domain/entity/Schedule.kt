@@ -5,9 +5,14 @@ import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus
 import jakarta.persistence.*
+import org.hibernate.annotations.DynamicUpdate
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import java.time.LocalDateTime
+import java.util.UUID
 
 @Entity
+@DynamicUpdate
 class Schedule(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
@@ -42,6 +47,11 @@ class Schedule(
     @Column(name = "content_without_time")
     var contentWithoutTime: String = ""
 
+    @Column(name = "parsing_generation", nullable = false, columnDefinition = "char(36)")
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    var parsingGeneration: UUID = UUID.randomUUID()
+        protected set
+
     @OneToMany(mappedBy = "schedule", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
     val tags: MutableList<ScheduleTag> = mutableListOf()
 
@@ -67,6 +77,26 @@ class Schedule(
 
     fun content(): String {
         return contentWithoutTime.ifBlank { content }
+    }
+
+    fun updateParsingInput(
+        content: String,
+        startDateTime: LocalDateTime,
+        endDateTime: LocalDateTime,
+    ): Boolean {
+        val contentChanged = content != content()
+        val timeChanged = this.startDateTime != startDateTime || this.endDateTime != endDateTime
+        val changed = contentChanged || timeChanged
+
+        if (!changed) return false
+
+        this.content = content
+        this.startDateTime = startDateTime
+        this.endDateTime = endDateTime
+        contentWithoutTime = ""
+        parsingTimeStatus = ParsingTimeStatus.WAIT
+        parsingGeneration = UUID.randomUUID()
+        return true
     }
 
 }

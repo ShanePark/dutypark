@@ -8,7 +8,9 @@ import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSaveDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
+import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
+import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingTask
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -24,6 +26,151 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var scheduleRepository: ScheduleRepository
+
+    @Test
+    fun `updating a parsed schedule persists the new authoritative title and clears derived title`() {
+        // Given
+        val member = TestData.member
+        val original = Schedule(
+            member = member,
+            content = "꿈아띠 12~14시",
+            startDateTime = LocalDateTime.of(2026, 7, 24, 12, 0),
+            endDateTime = LocalDateTime.of(2026, 7, 24, 14, 0),
+            parsingTimeStatus = ParsingTimeStatus.PARSED,
+        ).apply {
+            contentWithoutTime = "꿈아띠"
+        }
+        val previousGeneration = original.parsingGeneration
+        scheduleRepository.saveAndFlush(original)
+
+        // When
+        scheduleService.updateSchedule(
+            loginMember(member),
+            ScheduleSaveDto(
+                id = original.id,
+                memberId = member.id!!,
+                content = "꿈아띠 10~12시",
+                startDateTime = LocalDateTime.of(2026, 7, 25, 0, 0),
+                endDateTime = LocalDateTime.of(2026, 7, 25, 0, 0),
+            )
+        )
+        em.flush()
+        em.clear()
+
+        // Then
+        val updated = scheduleRepository.findById(original.id).orElseThrow()
+        assertThat(updated.content).isEqualTo("꿈아띠 10~12시")
+        assertThat(updated.contentWithoutTime).isEmpty()
+        assertThat(updated.content()).isEqualTo("꿈아띠 10~12시")
+        assertThat(updated.parsingTimeStatus).isEqualTo(ParsingTimeStatus.WAIT)
+        assertThat(updated.parsingGeneration).isNotEqualTo(previousGeneration)
+
+        val calendar = scheduleService.findSchedulesByYearAndMonth(
+            loginMember = loginMember(member),
+            memberId = member.id!!,
+            year = 2026,
+            month = 7,
+        )
+        assertThat(calendar.flatMap { it }.single { it.id == original.id }.content).isEqualTo("꿈아띠 10~12시")
+    }
+
+    @Test
+    fun `atomic parsing update rejects a stale generation and applies the current generation`() {
+        // Given
+        val member = TestData.member
+        val schedule = Schedule(
+            member = member,
+            content = "꿈아띠 12~14시",
+            startDateTime = LocalDateTime.of(2026, 7, 24, 0, 0),
+            endDateTime = LocalDateTime.of(2026, 7, 24, 0, 0),
+        )
+        scheduleRepository.saveAndFlush(schedule)
+        val staleTask = ScheduleTimeParsingTask(schedule)
+
+        schedule.updateParsingInput(
+            content = "새 제목 10시",
+            startDateTime = LocalDateTime.of(2026, 7, 25, 0, 0),
+            endDateTime = LocalDateTime.of(2026, 7, 25, 0, 0),
+        )
+        scheduleRepository.saveAndFlush(schedule)
+        em.clear()
+
+        // When: an old AI response arrives after the user update
+        val staleUpdatedRows = scheduleRepository.applyParsingResultIfCurrent(
+            id = schedule.id,
+            parsingGeneration = staleTask.parsingGeneration,
+            expectedStatus = ParsingTimeStatus.WAIT,
+            newStatus = ParsingTimeStatus.PARSED,
+            startDateTime = LocalDateTime.of(2026, 7, 24, 12, 0),
+            endDateTime = LocalDateTime.of(2026, 7, 24, 14, 0),
+            contentWithoutTime = "꿈아띠",
+        )
+
+        // Then: stale result is ignored without overwriting the user edit
+        assertThat(staleUpdatedRows).isZero()
+        var current = scheduleRepository.findById(schedule.id).orElseThrow()
+        assertThat(current.content).isEqualTo("새 제목 10시")
+        assertThat(current.startDateTime).isEqualTo(LocalDateTime.of(2026, 7, 25, 0, 0))
+        assertThat(current.parsingTimeStatus).isEqualTo(ParsingTimeStatus.WAIT)
+
+        // And: the response for the current generation is applied
+        val currentTask = ScheduleTimeParsingTask(current)
+        val currentUpdatedRows = scheduleRepository.applyParsingResultIfCurrent(
+            id = current.id,
+            parsingGeneration = currentTask.parsingGeneration,
+            expectedStatus = ParsingTimeStatus.WAIT,
+            newStatus = ParsingTimeStatus.PARSED,
+            startDateTime = LocalDateTime.of(2026, 7, 25, 10, 0),
+            endDateTime = LocalDateTime.of(2026, 7, 25, 10, 0),
+            contentWithoutTime = "새 제목",
+        )
+        em.clear()
+        current = scheduleRepository.findById(schedule.id).orElseThrow()
+        assertThat(currentUpdatedRows).isEqualTo(1)
+        assertThat(current.content).isEqualTo("새 제목 10시")
+        assertThat(current.contentWithoutTime).isEqualTo("새 제목")
+        assertThat(current.startDateTime).isEqualTo(LocalDateTime.of(2026, 7, 25, 10, 0))
+        assertThat(current.parsingTimeStatus).isEqualTo(ParsingTimeStatus.PARSED)
+    }
+
+    @Test
+    fun `metadata flush does not overwrite an atomic AI result from a stale persistence context`() {
+        // Given: keep a managed WAIT entity that becomes stale after the bulk AI update
+        val schedule = Schedule(
+            member = TestData.member,
+            content = "10시 회의",
+            startDateTime = LocalDateTime.of(2026, 7, 24, 0, 0),
+            endDateTime = LocalDateTime.of(2026, 7, 24, 0, 0),
+        )
+        scheduleRepository.saveAndFlush(schedule)
+        val task = ScheduleTimeParsingTask(schedule)
+
+        val updatedRows = scheduleRepository.applyParsingResultIfCurrent(
+            id = schedule.id,
+            parsingGeneration = task.parsingGeneration,
+            expectedStatus = ParsingTimeStatus.WAIT,
+            newStatus = ParsingTimeStatus.PARSED,
+            startDateTime = LocalDateTime.of(2026, 7, 24, 10, 0),
+            endDateTime = LocalDateTime.of(2026, 7, 24, 10, 0),
+            contentWithoutTime = "회의",
+        )
+        assertThat(updatedRows).isEqualTo(1)
+
+        // When: a metadata-only edit flushes the stale managed entity afterward
+        schedule.description = "변경한 설명"
+        schedule.visibility = Visibility.PRIVATE
+        em.flush()
+        em.clear()
+
+        // Then: dynamic update preserves the AI-owned parsing columns
+        val reloaded = scheduleRepository.findById(schedule.id).orElseThrow()
+        assertThat(reloaded.description).isEqualTo("변경한 설명")
+        assertThat(reloaded.visibility).isEqualTo(Visibility.PRIVATE)
+        assertThat(reloaded.parsingTimeStatus).isEqualTo(ParsingTimeStatus.PARSED)
+        assertThat(reloaded.contentWithoutTime).isEqualTo("회의")
+        assertThat(reloaded.startDateTime).isEqualTo(LocalDateTime.of(2026, 7, 24, 10, 0))
+        assertThat(reloaded.endDateTime).isEqualTo(LocalDateTime.of(2026, 7, 24, 10, 0))
+    }
 
     @Test
     fun `Find Schedules`() {

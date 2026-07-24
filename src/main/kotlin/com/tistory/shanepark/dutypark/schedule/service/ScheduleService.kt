@@ -14,7 +14,6 @@ import com.tistory.shanepark.dutypark.notification.event.ScheduleTaggedEvent
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSaveDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
-import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.schedule.timeparsing.service.ScheduleTimeParsingQueueManager
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -154,16 +153,19 @@ class ScheduleService(
         val schedule = scheduleRepository.findById(scheduleSaveDto.id).orElseThrow()
         schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
 
-        schedule.startDateTime = scheduleSaveDto.startDateTime
-        schedule.endDateTime = scheduleSaveDto.endDateTime
-        schedule.content = scheduleSaveDto.content
+        val parsingInputChanged = schedule.updateParsingInput(
+            content = scheduleSaveDto.content,
+            startDateTime = scheduleSaveDto.startDateTime,
+            endDateTime = scheduleSaveDto.endDateTime,
+        )
         schedule.description = scheduleSaveDto.description
         schedule.visibility = scheduleSaveDto.visibility
-        schedule.parsingTimeStatus = ParsingTimeStatus.WAIT
         scheduleSaveDto.tagFriendIds?.let { syncScheduleTags(schedule, it) }
 
         scheduleRepository.save(schedule)
-        scheduleTimeParsingQueueManager.addTask(schedule)
+        if (parsingInputChanged) {
+            scheduleTimeParsingQueueManager.addTask(schedule)
+        }
 
         val scheduleId = schedule.id.toString()
         val orderedIds = scheduleSaveDto.orderedAttachmentIds

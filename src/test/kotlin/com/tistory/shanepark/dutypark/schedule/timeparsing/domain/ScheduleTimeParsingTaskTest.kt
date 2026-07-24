@@ -6,20 +6,15 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.time.LocalDateTime
-import java.util.UUID
 
 class ScheduleTimeParsingTaskTest {
 
-    // ScheduleTimeParsingTask captures LocalDateTime.now() as requestDateTime
-    // So test dates must be relative to the actual current time
     private val fixedDateTime = LocalDateTime.of(2025, 1, 15, 12, 0, 0)
-    private val farFuture = LocalDateTime.of(2099, 12, 31, 23, 59, 59)
-    private val farPast = LocalDateTime.of(2000, 1, 1, 0, 0, 0)
 
     @Test
     fun `isExpired throws when schedule id mismatches`() {
         val schedule = scheduleWithMember()
-        val task = ScheduleTimeParsingTask(UUID.randomUUID())
+        val task = ScheduleTimeParsingTask(scheduleWithMember())
 
         assertThrows<IllegalArgumentException> {
             task.isExpired(schedule)
@@ -27,11 +22,40 @@ class ScheduleTimeParsingTaskTest {
     }
 
     @Test
-    fun `isExpired returns true when schedule updated after request`() {
+    fun `task expires when parsing input content changes`() {
         val schedule = scheduleWithMember()
-        val task = ScheduleTimeParsingTask(schedule.getId())
-        // Use far future date to ensure it's always after the task's requestDateTime
-        schedule.lastModifiedDate = farFuture
+        val task = ScheduleTimeParsingTask(schedule)
+        schedule.updateParsingInput(
+            content = "updated content",
+            startDateTime = schedule.startDateTime,
+            endDateTime = schedule.endDateTime,
+        )
+
+        val expired = task.isExpired(schedule)
+
+        assertThat(expired).isTrue
+        assertThat(schedule.parsingGeneration).isNotEqualTo(task.parsingGeneration)
+    }
+
+    @Test
+    fun `isExpired returns false when schedule unchanged`() {
+        val schedule = scheduleWithMember()
+        val task = ScheduleTimeParsingTask(schedule)
+
+        val expired = task.isExpired(schedule)
+
+        assertThat(expired).isFalse
+    }
+
+    @Test
+    fun `task expires when parsing input start time changes`() {
+        val schedule = scheduleWithMember()
+        val task = ScheduleTimeParsingTask(schedule)
+        schedule.updateParsingInput(
+            content = schedule.content,
+            startDateTime = schedule.startDateTime.plusHours(1),
+            endDateTime = schedule.endDateTime,
+        )
 
         val expired = task.isExpired(schedule)
 
@@ -39,11 +63,53 @@ class ScheduleTimeParsingTaskTest {
     }
 
     @Test
-    fun `isExpired returns false when schedule unchanged`() {
+    fun `task remains expired after parsing input changes away and back`() {
         val schedule = scheduleWithMember()
-        val task = ScheduleTimeParsingTask(schedule.getId())
-        // Use far past date to ensure it's always before the task's requestDateTime
-        schedule.lastModifiedDate = farPast
+        val task = ScheduleTimeParsingTask(schedule)
+        val originalContent = schedule.content
+        schedule.updateParsingInput(
+            content = "temporary content",
+            startDateTime = schedule.startDateTime,
+            endDateTime = schedule.endDateTime,
+        )
+        schedule.updateParsingInput(
+            content = originalContent,
+            startDateTime = schedule.startDateTime,
+            endDateTime = schedule.endDateTime,
+        )
+
+        val expired = task.isExpired(schedule)
+
+        assertThat(expired).isTrue
+    }
+
+    @Test
+    fun `each parsing input update creates a distinct generation`() {
+        val schedule = scheduleWithMember()
+        val initialGeneration = schedule.parsingGeneration
+
+        schedule.updateParsingInput(
+            content = "first update",
+            startDateTime = schedule.startDateTime,
+            endDateTime = schedule.endDateTime,
+        )
+        val firstGeneration = schedule.parsingGeneration
+        schedule.updateParsingInput(
+            content = "second update",
+            startDateTime = schedule.startDateTime,
+            endDateTime = schedule.endDateTime,
+        )
+
+        assertThat(firstGeneration).isNotEqualTo(initialGeneration)
+        assertThat(schedule.parsingGeneration).isNotIn(initialGeneration, firstGeneration)
+    }
+
+    @Test
+    fun `task remains current when only unrelated schedule fields change`() {
+        val schedule = scheduleWithMember()
+        val task = ScheduleTimeParsingTask(schedule)
+        schedule.description = "updated description"
+        schedule.lastModifiedDate = LocalDateTime.of(2099, 12, 31, 23, 59, 59)
 
         val expired = task.isExpired(schedule)
 
