@@ -39,6 +39,15 @@ export const enReleaseNotes = {
     ui: "UI"
   },
   entries: {
+    "pr-386": {
+      title: "Safer drag gestures and schedule time parsing",
+      summary: "Prevents drags and swipes from triggering unwanted clicks, and keeps later schedule edits from being overwritten by delayed AI time parsing.",
+      changes: [
+        "Avoid opening, closing, or navigating by accident after dragging or swiping calendars, schedules, todos, friends, footer tabs, or images.",
+        "Clear an old AI-derived title when you change a schedule's title, date, or time so the updated content appears immediately.",
+        "Ignore delayed or duplicate AI parsing results after a newer edit and recover parsing tasks safely across commits, retries, and shutdowns."
+      ]
+    },
     "pr-385": {
       title: "Todo board polish and web push upgrade",
       summary: "Reorder tagged todos on the kanban board, refine the todo detail view and notifications, and update the web push dependency stack.",

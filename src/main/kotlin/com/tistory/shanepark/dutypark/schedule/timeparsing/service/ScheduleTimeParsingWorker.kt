@@ -3,8 +3,10 @@ package com.tistory.shanepark.dutypark.schedule.timeparsing.service
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifier
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
+import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus
 import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus.*
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
+import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeIndicator
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingRequest
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingResponse
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingTask
@@ -23,20 +25,11 @@ class ScheduleTimeParsingWorker(
     private val slackNotifier: SlackNotifier,
 ) {
     private val log = logger()
-    private val timePattern = Regex("""\d+|한|두|세|네|다섯|여섯|일곱|여덟|아홉|열|열한|열두""")
+    fun run(task: ScheduleTimeParsingTask): Boolean {
+        val schedule = findCurrentSchedule(task) ?: return false
 
-    fun run(task: ScheduleTimeParsingTask) {
-        val scheduleOption = scheduleRepository.findById(task.scheduleId)
-        if (scheduleOption.isEmpty) {
-            return
-        }
-        val schedule = scheduleOption.get()
-        if (task.isExpired(schedule)) {
-            return
-        }
-
-        if (alreadyHaveTimeInfo(schedule)) return
-        if (noTimeRelatedText(schedule)) return
+        if (alreadyHaveTimeInfo(task, schedule)) return false
+        if (noTimeRelatedText(task, schedule)) return false
 
         val request = ScheduleTimeParsingRequest(
             date = LocalDate.of(
@@ -51,62 +44,90 @@ class ScheduleTimeParsingWorker(
         try {
             response = scheduleTimeParsingService.parseScheduleTime(request)
         } catch (e: Exception) {
+            if (e.isInterruption()) {
+                Thread.currentThread().interrupt()
+                log.info("AI parsing interrupted during shutdown: scheduleId={}", task.scheduleId)
+                return false
+            }
             log.error("AI parsing failed for schedule {}: {}", task.scheduleId, e.message, e)
-            schedule.parsingTimeStatus = FAILED
-            scheduleRepository.save(schedule)
-            notifyLlmError(
-                scheduleId = task.scheduleId.toString(),
-                content = request.content,
-                errorMessage = e.message,
-                rawResponse = null,
-                stackTrace = e.stackTraceToString()
-            )
-            return
+            if (updateStatusIfCurrent(task, schedule, FAILED)) {
+                notifyLlmError(
+                    scheduleId = task.scheduleId.toString(),
+                    content = request.content,
+                    errorMessage = e.message,
+                    rawResponse = null,
+                    stackTrace = e.stackTraceToString()
+                )
+            }
+            return true
         }
 
-        if (responseFail(response, schedule)) return
-        if (haveNoTimeInfo(response, schedule)) return
+        if (responseFail(task, response, schedule)) return true
+        if (haveNoTimeInfo(task, response, schedule)) return true
 
         try {
             val parsedStart = LocalDateTime.parse(response.startDateTime.toString())
             val parsedEnd = LocalDateTime.parse(response.endDateTime.toString())
-            schedule.parsingTimeStatus = PARSED
-            schedule.startDateTime = parsedStart
-            schedule.endDateTime = parsedEnd
-            schedule.contentWithoutTime = response.content ?: ""
-
-            // Do not use JPA dirty checking since it will be working on another thread.
-            scheduleRepository.save(schedule)
+            if (parsedStart.toLocalDate() != request.date ||
+                parsedEnd.toLocalDate() != request.date ||
+                parsedEnd.isBefore(parsedStart)
+            ) {
+                log.warn("Rejected out-of-range parsed dateTime: {}", response)
+                updateStatusIfCurrent(task, schedule, FAILED)
+                return true
+            }
+            applyParsingResultIfCurrent(
+                task = task,
+                schedule = schedule,
+                parsedStart = parsedStart,
+                parsedEnd = parsedEnd,
+                contentWithoutTime = response.content ?: "",
+            )
         } catch (e: DateTimeParseException) {
             log.warn("Failed to parse dateTime: {}", response)
-            schedule.parsingTimeStatus = FAILED
-            scheduleRepository.save(schedule)
+            updateStatusIfCurrent(task, schedule, FAILED)
         }
+        return true
+    }
+
+    private fun Throwable.isInterruption(): Boolean {
+        var current: Throwable? = this
+        while (current != null) {
+            if (current is InterruptedException) return true
+            current = current.cause
+        }
+        return false
+    }
+
+    private fun findCurrentSchedule(task: ScheduleTimeParsingTask): Schedule? {
+        val schedule = scheduleRepository.findById(task.scheduleId).orElse(null) ?: return null
+        if (task.isExpired(schedule) || schedule.parsingTimeStatus != WAIT) return null
+        return schedule
     }
 
     private fun haveNoTimeInfo(
+        task: ScheduleTimeParsingTask,
         response: ScheduleTimeParsingResponse,
         schedule: Schedule
     ): Boolean {
         if (response.hasTime) {
             return false
         }
-        schedule.parsingTimeStatus = NO_TIME_INFO
-        scheduleRepository.save(schedule)
+        updateStatusIfCurrent(task, schedule, NO_TIME_INFO)
         return true
     }
 
     private fun responseFail(
+        task: ScheduleTimeParsingTask,
         response: ScheduleTimeParsingResponse,
         schedule: Schedule
     ): Boolean {
         if (response.result) {
             return false
         }
-        schedule.parsingTimeStatus = FAILED
-        scheduleRepository.save(schedule)
+        val updated = updateStatusIfCurrent(task, schedule, FAILED)
 
-        if (response.errorMessage != null || response.rawResponse != null) {
+        if (updated && (response.errorMessage != null || response.rawResponse != null)) {
             notifyLlmError(
                 scheduleId = schedule.id.toString(),
                 content = schedule.content,
@@ -118,23 +139,63 @@ class ScheduleTimeParsingWorker(
         return true
     }
 
-    private fun alreadyHaveTimeInfo(schedule: Schedule): Boolean {
+    private fun alreadyHaveTimeInfo(task: ScheduleTimeParsingTask, schedule: Schedule): Boolean {
         if (schedule.hasTimeInfo() || schedule.startDateTime != schedule.endDateTime) {
-            schedule.parsingTimeStatus = ALREADY_HAVE_TIME_INFO
-            scheduleRepository.save(schedule)
+            updateStatusIfCurrent(task, schedule, ALREADY_HAVE_TIME_INFO)
             return true
         }
         return false
     }
 
-    private fun noTimeRelatedText(schedule: Schedule): Boolean {
-        if (timePattern.containsMatchIn(schedule.content)) {
+    private fun noTimeRelatedText(task: ScheduleTimeParsingTask, schedule: Schedule): Boolean {
+        if (ScheduleTimeIndicator.existsIn(schedule.content)) {
             return false
         }
 
-        schedule.parsingTimeStatus = NO_TIME_INFO
-        scheduleRepository.save(schedule)
+        updateStatusIfCurrent(task, schedule, NO_TIME_INFO)
         return true
+    }
+
+    private fun updateStatusIfCurrent(
+        task: ScheduleTimeParsingTask,
+        schedule: Schedule,
+        newStatus: ParsingTimeStatus,
+    ): Boolean {
+        val updated = scheduleRepository.updateParsingStatusIfCurrent(
+            id = task.scheduleId,
+            parsingGeneration = task.parsingGeneration,
+            expectedStatus = WAIT,
+            newStatus = newStatus,
+        ) == 1
+        if (updated) {
+            schedule.parsingTimeStatus = newStatus
+        }
+        return updated
+    }
+
+    private fun applyParsingResultIfCurrent(
+        task: ScheduleTimeParsingTask,
+        schedule: Schedule,
+        parsedStart: LocalDateTime,
+        parsedEnd: LocalDateTime,
+        contentWithoutTime: String,
+    ): Boolean {
+        val updated = scheduleRepository.applyParsingResultIfCurrent(
+            id = task.scheduleId,
+            parsingGeneration = task.parsingGeneration,
+            expectedStatus = WAIT,
+            newStatus = PARSED,
+            startDateTime = parsedStart,
+            endDateTime = parsedEnd,
+            contentWithoutTime = contentWithoutTime,
+        ) == 1
+        if (updated) {
+            schedule.parsingTimeStatus = PARSED
+            schedule.startDateTime = parsedStart
+            schedule.endDateTime = parsedEnd
+            schedule.contentWithoutTime = contentWithoutTime
+        }
+        return updated
     }
 
     private fun notifyLlmError(

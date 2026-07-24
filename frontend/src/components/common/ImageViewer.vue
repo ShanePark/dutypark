@@ -5,6 +5,7 @@ import { X, ChevronLeft, ChevronRight, Download } from 'lucide-vue-next'
 import { fetchAuthenticatedImage } from '@/api/attachment'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEscapeKey } from '@/composables/useEscapeKey'
+import { useDragClickGuard } from '@/composables/useDragClickGuard'
 
 interface ImageItem {
   id: string
@@ -23,6 +24,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 useBodyScrollLock(toRef(props, 'isOpen'))
 const { t } = useI18n()
+const dragClickGuard = useDragClickGuard({ resetDelay: 320 })
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -129,6 +131,8 @@ function handleTouchStart(e: TouchEvent) {
   if (!touch) return
   touchStartX.value = touch.clientX
   touchStartY.value = touch.clientY
+  touchEndX.value = touch.clientX
+  touchEndY.value = touch.clientY
   isSwiping.value = true
 }
 
@@ -140,15 +144,19 @@ function handleTouchMove(e: TouchEvent) {
   touchEndY.value = touch.clientY
 }
 
-function handleTouchEnd() {
+function handleTouchEnd(e: TouchEvent) {
   if (!isSwiping.value) return
   isSwiping.value = false
 
-  const deltaX = touchEndX.value - touchStartX.value
-  const deltaY = Math.abs(touchEndY.value - touchStartY.value)
+  const touch = e.changedTouches[0]
+  const endX = touch?.clientX ?? touchEndX.value
+  const endY = touch?.clientY ?? touchEndY.value
+  const deltaX = endX - touchStartX.value
+  const deltaY = Math.abs(endY - touchStartY.value)
 
   // Only handle horizontal swipes (ignore vertical scrolling)
   if (Math.abs(deltaX) > SWIPE_THRESHOLD && Math.abs(deltaX) > deltaY) {
+    dragClickGuard.suppressNextClick()
     if (deltaX > 0) {
       prevImage()
     } else {
@@ -179,6 +187,8 @@ onUnmounted(() => {
       v-if="isOpen && images.length > 0"
       class="fixed inset-0 z-[60] flex items-center justify-center bg-dp-overlay-dark/90"
       @mousedown="handleOverlayMousedown"
+      @pointerdown.capture="dragClickGuard.handlePointerDown"
+      @click.capture="dragClickGuard.handleClick"
       @click="handleOverlayClick"
       @touchstart="handleTouchStart"
       @touchmove="handleTouchMove"

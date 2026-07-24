@@ -11,6 +11,7 @@ import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSaveDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
+import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.schedule.timeparsing.service.ScheduleTimeParsingQueueManager
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -18,6 +19,9 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.EnumSource
 import org.mockito.kotlin.*
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.test.util.ReflectionTestUtils
@@ -178,6 +182,276 @@ class ScheduleServiceTest {
     }
 
     @Test
+    fun `update clears the title derived by a previous AI parsing`() {
+        // Given
+        val scheduleId = UUID.randomUUID()
+        val schedule = parsedSchedule(
+            id = scheduleId,
+            content = "꿈아띠 12~14시",
+            contentWithoutTime = "꿈아띠",
+            startDateTime = LocalDateTime.of(2026, 7, 24, 12, 0),
+            endDateTime = LocalDateTime.of(2026, 7, 24, 14, 0),
+        )
+        val scheduleSaveDto = updateDto(
+            id = scheduleId,
+            content = "꿈아띠 10~12시",
+            startDateTime = LocalDateTime.of(2026, 7, 25, 0, 0),
+            endDateTime = LocalDateTime.of(2026, 7, 25, 0, 0),
+        )
+        whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
+        val previousGeneration = schedule.parsingGeneration
+
+        // When
+        val updatedSchedule = scheduleService.updateSchedule(loginMember, scheduleSaveDto)
+
+        // Then
+        assertThat(updatedSchedule.content).isEqualTo("꿈아띠 10~12시")
+        assertThat(updatedSchedule.contentWithoutTime).isEmpty()
+        assertThat(updatedSchedule.content()).isEqualTo("꿈아띠 10~12시")
+        assertThat(updatedSchedule.startDateTime).isEqualTo(LocalDateTime.of(2026, 7, 25, 0, 0))
+        assertThat(updatedSchedule.endDateTime).isEqualTo(LocalDateTime.of(2026, 7, 25, 0, 0))
+        assertThat(updatedSchedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.WAIT)
+        assertThat(updatedSchedule.parsingGeneration).isNotEqualTo(previousGeneration)
+        verify(scheduleTimeParsingQueueManager).addTask(schedule)
+    }
+
+    @Test
+    fun `title-only update clears the previous AI title while preserving explicit times`() {
+        // Given
+        val scheduleId = UUID.randomUUID()
+        val startDateTime = LocalDateTime.of(2026, 7, 24, 12, 0)
+        val endDateTime = LocalDateTime.of(2026, 7, 24, 14, 0)
+        val schedule = parsedSchedule(
+            id = scheduleId,
+            content = "꿈아띠 12~14시",
+            contentWithoutTime = "꿈아띠",
+            startDateTime = startDateTime,
+            endDateTime = endDateTime,
+        )
+        val scheduleSaveDto = updateDto(
+            id = scheduleId,
+            content = "변경한 제목",
+            startDateTime = startDateTime,
+            endDateTime = endDateTime,
+        )
+        whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
+        val previousGeneration = schedule.parsingGeneration
+
+        // When
+        val updatedSchedule = scheduleService.updateSchedule(loginMember, scheduleSaveDto)
+
+        // Then
+        assertThat(updatedSchedule.content()).isEqualTo("변경한 제목")
+        assertThat(updatedSchedule.contentWithoutTime).isEmpty()
+        assertThat(updatedSchedule.startDateTime).isEqualTo(startDateTime)
+        assertThat(updatedSchedule.endDateTime).isEqualTo(endDateTime)
+        assertThat(updatedSchedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.WAIT)
+        assertThat(updatedSchedule.parsingGeneration).isNotEqualTo(previousGeneration)
+        verify(scheduleTimeParsingQueueManager).addTask(schedule)
+    }
+
+    @Test
+    fun `title-only update accepts a title equal to the hidden original content`() {
+        // Given: the client only sees the derived title, while the entity retains the original input
+        val scheduleId = UUID.randomUUID()
+        val startDateTime = LocalDateTime.of(2026, 7, 24, 12, 0)
+        val endDateTime = LocalDateTime.of(2026, 7, 24, 14, 0)
+        val schedule = parsedSchedule(
+            id = scheduleId,
+            content = "꿈아띠 12~14시",
+            contentWithoutTime = "꿈아띠",
+            startDateTime = startDateTime,
+            endDateTime = endDateTime,
+        )
+        val previousGeneration = schedule.parsingGeneration
+        val scheduleSaveDto = updateDto(
+            id = scheduleId,
+            content = "꿈아띠 12~14시",
+            startDateTime = startDateTime,
+            endDateTime = endDateTime,
+        )
+        whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
+
+        // When
+        val updatedSchedule = scheduleService.updateSchedule(loginMember, scheduleSaveDto)
+
+        // Then
+        assertThat(updatedSchedule.content).isEqualTo("꿈아띠 12~14시")
+        assertThat(updatedSchedule.contentWithoutTime).isEmpty()
+        assertThat(updatedSchedule.content()).isEqualTo("꿈아띠 12~14시")
+        assertThat(updatedSchedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.WAIT)
+        assertThat(updatedSchedule.parsingGeneration).isNotEqualTo(previousGeneration)
+        verify(scheduleTimeParsingQueueManager).addTask(schedule)
+    }
+
+    @Test
+    fun `date-only update treats the displayed title sent by the client as authoritative`() {
+        // Given
+        val scheduleId = UUID.randomUUID()
+        val schedule = parsedSchedule(
+            id = scheduleId,
+            content = "꿈아띠 12~14시",
+            contentWithoutTime = "꿈아띠",
+            startDateTime = LocalDateTime.of(2026, 7, 24, 12, 0),
+            endDateTime = LocalDateTime.of(2026, 7, 24, 14, 0),
+        )
+        val scheduleSaveDto = updateDto(
+            id = scheduleId,
+            content = "꿈아띠",
+            startDateTime = LocalDateTime.of(2026, 7, 26, 12, 0),
+            endDateTime = LocalDateTime.of(2026, 7, 26, 14, 0),
+        )
+        whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
+        val previousGeneration = schedule.parsingGeneration
+
+        // When
+        val updatedSchedule = scheduleService.updateSchedule(loginMember, scheduleSaveDto)
+
+        // Then
+        assertThat(updatedSchedule.content).isEqualTo("꿈아띠")
+        assertThat(updatedSchedule.contentWithoutTime).isEmpty()
+        assertThat(updatedSchedule.content()).isEqualTo("꿈아띠")
+        assertThat(updatedSchedule.startDateTime).isEqualTo(LocalDateTime.of(2026, 7, 26, 12, 0))
+        assertThat(updatedSchedule.endDateTime).isEqualTo(LocalDateTime.of(2026, 7, 26, 14, 0))
+        assertThat(updatedSchedule.parsingGeneration).isNotEqualTo(previousGeneration)
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "12, 0, 14, 0, 0, 0, 0, 0",
+        "0, 0, 0, 0, 12, 0, 14, 0",
+        "0, 0, 0, 0, 0, 0, 0, 1",
+    )
+    fun `time-only update clears the derived title and queues a new generation`(
+        oldStartHour: Int,
+        oldStartMinute: Int,
+        oldEndHour: Int,
+        oldEndMinute: Int,
+        newStartHour: Int,
+        newStartMinute: Int,
+        newEndHour: Int,
+        newEndMinute: Int,
+    ) {
+        // Given
+        val scheduleId = UUID.randomUUID()
+        val date = LocalDateTime.of(2026, 7, 24, 0, 0)
+        val schedule = parsedSchedule(
+            id = scheduleId,
+            content = "꿈아띠 12~14시",
+            contentWithoutTime = "꿈아띠",
+            startDateTime = date.withHour(oldStartHour).withMinute(oldStartMinute),
+            endDateTime = date.withHour(oldEndHour).withMinute(oldEndMinute),
+        )
+        val previousGeneration = schedule.parsingGeneration
+        val newStart = date.withHour(newStartHour).withMinute(newStartMinute)
+        val newEnd = date.withHour(newEndHour).withMinute(newEndMinute)
+        val scheduleSaveDto = updateDto(
+            id = scheduleId,
+            content = schedule.content(),
+            startDateTime = newStart,
+            endDateTime = newEnd,
+        )
+        whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
+
+        // When
+        val updatedSchedule = scheduleService.updateSchedule(loginMember, scheduleSaveDto)
+
+        // Then
+        assertThat(updatedSchedule.content).isEqualTo("꿈아띠")
+        assertThat(updatedSchedule.contentWithoutTime).isEmpty()
+        assertThat(updatedSchedule.startDateTime).isEqualTo(newStart)
+        assertThat(updatedSchedule.endDateTime).isEqualTo(newEnd)
+        assertThat(updatedSchedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.WAIT)
+        assertThat(updatedSchedule.parsingGeneration).isNotEqualTo(previousGeneration)
+        verify(scheduleTimeParsingQueueManager).addTask(schedule)
+    }
+
+    @ParameterizedTest
+    @EnumSource(ParsingTimeStatus::class)
+    fun `metadata-only update preserves the current parsing state and does not requeue`(
+        previousStatus: ParsingTimeStatus,
+    ) {
+        // Given
+        val scheduleId = UUID.randomUUID()
+        val startDateTime = LocalDateTime.of(2026, 7, 24, 12, 0)
+        val endDateTime = LocalDateTime.of(2026, 7, 24, 14, 0)
+        val schedule = parsedSchedule(
+            id = scheduleId,
+            content = "꿈아띠 12~14시",
+            contentWithoutTime = "꿈아띠",
+            startDateTime = startDateTime,
+            endDateTime = endDateTime,
+            parsingTimeStatus = previousStatus,
+        )
+        val scheduleSaveDto = ScheduleSaveDto(
+            id = scheduleId,
+            memberId = member.id!!,
+            content = schedule.content(),
+            description = "변경한 설명",
+            visibility = Visibility.PRIVATE,
+            startDateTime = startDateTime,
+            endDateTime = endDateTime,
+        )
+        whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
+        val previousGeneration = schedule.parsingGeneration
+
+        // When
+        val updatedSchedule = scheduleService.updateSchedule(loginMember, scheduleSaveDto)
+
+        // Then
+        assertThat(updatedSchedule.description).isEqualTo("변경한 설명")
+        assertThat(updatedSchedule.visibility).isEqualTo(Visibility.PRIVATE)
+        assertThat(updatedSchedule.content).isEqualTo("꿈아띠 12~14시")
+        assertThat(updatedSchedule.contentWithoutTime).isEqualTo("꿈아띠")
+        assertThat(updatedSchedule.content()).isEqualTo("꿈아띠")
+        assertThat(updatedSchedule.parsingTimeStatus).isEqualTo(previousStatus)
+        assertThat(updatedSchedule.parsingGeneration).isEqualTo(previousGeneration)
+        verify(scheduleTimeParsingQueueManager, never()).addTask(any())
+    }
+
+    @ParameterizedTest
+    @EnumSource(ParsingTimeStatus::class)
+    fun `parsing input update starts a new parsing generation from every previous status`(
+        previousStatus: ParsingTimeStatus,
+    ) {
+        // Given
+        val scheduleId = UUID.randomUUID()
+        val originalDateTime = LocalDateTime.of(2026, 7, 24, 0, 0)
+        val schedule = parsedSchedule(
+            id = scheduleId,
+            content = "이전 제목",
+            contentWithoutTime = "이전 표시 제목",
+            startDateTime = originalDateTime,
+            endDateTime = originalDateTime,
+            parsingTimeStatus = previousStatus,
+        )
+        val scheduleSaveDto = updateDto(
+            id = scheduleId,
+            content = "새 제목 10시",
+            startDateTime = originalDateTime.plusDays(1),
+            endDateTime = originalDateTime.plusDays(1),
+        )
+        whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
+        val previousGeneration = schedule.parsingGeneration
+
+        // When
+        val updatedSchedule = scheduleService.updateSchedule(loginMember, scheduleSaveDto)
+
+        // Then
+        assertThat(updatedSchedule.contentWithoutTime).isEmpty()
+        assertThat(updatedSchedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.WAIT)
+        assertThat(updatedSchedule.parsingGeneration).isNotEqualTo(previousGeneration)
+        verify(scheduleTimeParsingQueueManager).addTask(schedule)
+    }
+
+    @Test
     fun `can't update other member's schedule`() {
         // given
         val scheduleId = UUID.randomUUID()
@@ -206,6 +480,42 @@ class ScheduleServiceTest {
         assertThrows<AuthException> {
             scheduleService.updateSchedule(loginMember, scheduleSaveDto)
         }
+    }
+
+    private fun parsedSchedule(
+        id: UUID,
+        content: String,
+        contentWithoutTime: String,
+        startDateTime: LocalDateTime,
+        endDateTime: LocalDateTime,
+        parsingTimeStatus: ParsingTimeStatus = ParsingTimeStatus.PARSED,
+    ): Schedule {
+        return Schedule(
+            member = member,
+            content = content,
+            startDateTime = startDateTime,
+            endDateTime = endDateTime,
+            position = 0,
+            parsingTimeStatus = parsingTimeStatus,
+        ).also {
+            ReflectionTestUtils.setField(it, "id", id)
+            it.contentWithoutTime = contentWithoutTime
+        }
+    }
+
+    private fun updateDto(
+        id: UUID,
+        content: String,
+        startDateTime: LocalDateTime,
+        endDateTime: LocalDateTime,
+    ): ScheduleSaveDto {
+        return ScheduleSaveDto(
+            id = id,
+            memberId = member.id!!,
+            content = content,
+            startDateTime = startDateTime,
+            endDateTime = endDateTime,
+        )
     }
 
     @Test

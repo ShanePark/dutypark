@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.schedule.timeparsing.service
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingRequest
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingResponse
+import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeIndicator
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.model.ChatModel
 import org.springframework.stereotype.Service
@@ -16,14 +17,8 @@ class ScheduleTimeParsingService(
     private val chatClient = ChatClient.builder(chatModel).build()
     private val log = logger()
 
-    companion object {
-        private val TIME_INDICATOR_PATTERN = Regex(
-            """[0-9]|한|두|세|네|다섯|여섯|일곱|여덟|아홉|열|정오|자정"""
-        )
-    }
-
     fun parseScheduleTime(request: ScheduleTimeParsingRequest): ScheduleTimeParsingResponse {
-        val response = if (!hasAnyTimeIndicator(request.content)) {
+        val response = if (!ScheduleTimeIndicator.existsIn(request.content)) {
             ScheduleTimeParsingResponse(
                 result = true,
                 hasTime = false,
@@ -57,10 +52,6 @@ class ScheduleTimeParsingService(
         }
 
         return parseChatAnswer(chatAnswer)
-    }
-
-    private fun hasAnyTimeIndicator(content: String): Boolean {
-        return TIME_INDICATOR_PATTERN.containsMatchIn(content)
     }
 
     private fun parseChatAnswer(chatAnswer: String): ScheduleTimeParsingResponse {

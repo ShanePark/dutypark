@@ -13,6 +13,7 @@ import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
 import MemberTagChips from '@/components/common/MemberTagChips.vue'
 import VisibilityHintIcon from '@/components/common/VisibilityHintIcon.vue'
 import CopyTextButton from '@/components/common/CopyTextButton.vue'
+import { useDragClickGuard } from '@/composables/useDragClickGuard'
 import type { NormalizedAttachment } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { buildDisplayTagMembers } from '@/utils/tagMembers'
@@ -68,9 +69,9 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const { isDragging, startDrag, endDrag, cancelDrag, handlePointerDown, handleClick } = useDragClickGuard()
 
 const scheduleListRef = ref<HTMLElement | null>(null)
-const isDragging = ref(false)
 let sortableInstance: Sortable | null = null
 
 const hasDraggableSchedules = computed(() => {
@@ -95,11 +96,9 @@ function initSortable() {
     ghostClass: 'schedule-ghost',
     chosenClass: 'schedule-chosen',
     dragClass: 'schedule-dragging',
-    onStart: () => {
-      isDragging.value = true
-    },
+    onStart: startDrag,
     onEnd: () => {
-      isDragging.value = false
+      endDrag()
       const items = scheduleListRef.value?.querySelectorAll('.schedule-item:not(.schedule-tagged)')
       if (!items) return
       const ids = Array.from(items).map(el => el.getAttribute('data-schedule-id')).filter(Boolean) as string[]
@@ -114,6 +113,9 @@ function destroySortable() {
   if (sortableInstance) {
     sortableInstance.destroy()
     sortableInstance = null
+  }
+  if (isDragging.value) {
+    cancelDrag()
   }
 }
 
@@ -219,7 +221,12 @@ function handleTagClick(schedule: Schedule) {
       {{ t('duty.schedule.list.empty') }}
     </div>
 
-    <div ref="scheduleListRef" :class="['space-y-2', { 'is-dragging': isDragging }]">
+    <div
+      ref="scheduleListRef"
+      :class="['space-y-2', { 'is-dragging': isDragging }]"
+      @pointerdown.capture="handlePointerDown"
+      @click.capture="handleClick"
+    >
       <div
         v-for="schedule in schedules"
         :key="schedule.id"

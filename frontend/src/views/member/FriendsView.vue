@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { dashboardApi } from '@/api/dashboard'
 import { friendApi } from '@/api/member'
 import { useSwal } from '@/composables/useSwal'
+import { useDragClickGuard } from '@/composables/useDragClickGuard'
 import { useNotificationStore } from '@/stores/notification'
 import Sortable from 'sortablejs'
 import type { DashboardFriendInfo, MemberPreviewDto } from '@/types'
@@ -28,6 +29,7 @@ const router = useRouter()
 const notificationStore = useNotificationStore()
 const { t } = useI18n()
 const { showWarning, confirm, confirmDelete, toastSuccess } = useSwal()
+const dragClickGuard = useDragClickGuard()
 
 // Watch for notification-triggered refresh
 watch(() => notificationStore.friendsRefreshTrigger, (newValue) => {
@@ -50,7 +52,6 @@ const MENU_WIDTH = 176 // w-44
 let friendSortable: Sortable | null = null
 const friendListRef = ref<HTMLElement | null>(null)
 const friendSectionRef = ref<HTMLElement | null>(null)
-let isDragging = false
 
 // Search modal state
 const showSearchModal = ref(false)
@@ -307,7 +308,6 @@ function closeDropdown() {
 
 // Navigate to friend's duty
 function moveTo(memberId?: number | null) {
-  if (isDragging) return
   if (!memberId) return
   router.push(`/duty/${memberId}`)
 }
@@ -370,16 +370,11 @@ function goToPage(page: number) {
 // Sortable
 function initFriendSortable() {
   if (!friendListRef.value) {
-    if (friendSortable) {
-      friendSortable.destroy()
-      friendSortable = null
-    }
+    destroyFriendSortable()
     return
   }
 
-  if (friendSortable) {
-    friendSortable.destroy()
-  }
+  destroyFriendSortable()
 
   friendSortable = new Sortable(friendListRef.value, {
     animation: 150,
@@ -391,15 +386,13 @@ function initFriendSortable() {
     forceFallback: true,
     chosenClass: 'sortable-chosen',
     onStart: () => {
-      isDragging = true
+      dragClickGuard.startDrag()
       friendSectionRef.value?.classList.add('friend-section-sorting')
     },
     onEnd: () => {
+      dragClickGuard.endDrag()
       friendSectionRef.value?.classList.remove('friend-section-sorting')
       updateFriendsPin()
-      setTimeout(() => {
-        isDragging = false
-      }, 100)
     },
   })
 }
@@ -443,6 +436,9 @@ function destroyFriendSortable() {
   if (friendSortable) {
     friendSortable.destroy()
     friendSortable = null
+  }
+  if (dragClickGuard.isDragging.value) {
+    dragClickGuard.cancelDrag()
   }
 }
 
@@ -613,7 +609,13 @@ onUnmounted(() => {
             </button>
           </div>
 
-          <div v-else ref="friendListRef" class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+          <div
+            v-else
+            ref="friendListRef"
+            class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3"
+            @pointerdown.capture="dragClickGuard.handlePointerDown"
+            @click.capture="dragClickGuard.handleClick"
+          >
             <!-- Friend Cards -->
             <div
               v-for="friend in sortedFriends"

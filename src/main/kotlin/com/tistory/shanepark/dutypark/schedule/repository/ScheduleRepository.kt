@@ -7,7 +7,9 @@ import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
+import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 import java.util.*
 
@@ -162,5 +164,49 @@ interface ScheduleRepository : JpaRepository<Schedule, UUID> {
     ): List<Schedule>
 
     fun findAllByParsingTimeStatus(parsingTimeStatus: ParsingTimeStatus): List<Schedule>
+
+    @Modifying
+    @Transactional
+    @Query(
+        """
+        UPDATE Schedule s
+        SET s.parsingTimeStatus = :newStatus,
+            s.lastModifiedDate = CURRENT_TIMESTAMP
+        WHERE s.id = :id
+          AND s.parsingGeneration = :parsingGeneration
+          AND s.parsingTimeStatus = :expectedStatus
+        """
+    )
+    fun updateParsingStatusIfCurrent(
+        id: UUID,
+        parsingGeneration: UUID,
+        expectedStatus: ParsingTimeStatus,
+        newStatus: ParsingTimeStatus,
+    ): Int
+
+    @Modifying
+    @Transactional
+    @Query(
+        """
+        UPDATE Schedule s
+        SET s.parsingTimeStatus = :newStatus,
+            s.startDateTime = :startDateTime,
+            s.endDateTime = :endDateTime,
+            s.contentWithoutTime = :contentWithoutTime,
+            s.lastModifiedDate = CURRENT_TIMESTAMP
+        WHERE s.id = :id
+          AND s.parsingGeneration = :parsingGeneration
+          AND s.parsingTimeStatus = :expectedStatus
+        """
+    )
+    fun applyParsingResultIfCurrent(
+        id: UUID,
+        parsingGeneration: UUID,
+        expectedStatus: ParsingTimeStatus,
+        newStatus: ParsingTimeStatus,
+        startDateTime: LocalDateTime,
+        endDateTime: LocalDateTime,
+        contentWithoutTime: String,
+    ): Int
 
 }

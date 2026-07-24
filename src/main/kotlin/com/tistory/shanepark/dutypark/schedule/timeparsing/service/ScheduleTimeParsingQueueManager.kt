@@ -6,12 +6,16 @@ import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus.WA
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingTask
 import jakarta.annotation.PostConstruct
+import jakarta.annotation.PreDestroy
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
+import org.springframework.transaction.support.TransactionSynchronization
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -27,6 +31,7 @@ class ScheduleTimeParsingQueueManager(
     private val executorService = Executors.newSingleThreadExecutor()
     private val queue = ConcurrentLinkedQueue<ScheduleTimeParsingTask>()
     private val isRunning = AtomicBoolean(false)
+    private val isShuttingDown = AtomicBoolean(false)
 
     private val completedTasks: Queue<LocalDateTime> = ConcurrentLinkedQueue()
     private val completedDailyTasks: Queue<LocalDateTime> = ConcurrentLinkedQueue()
@@ -54,36 +59,80 @@ class ScheduleTimeParsingQueueManager(
     }
 
     fun addTask(schedule: Schedule) {
-        if (schedule.parsingTimeStatus != WAIT || !doTask) return
+        if (schedule.parsingTimeStatus != WAIT || !doTask || isShuttingDown.get()) return
 
-        queue.add(ScheduleTimeParsingTask(schedule.id))
+        val task = ScheduleTimeParsingTask(schedule)
+        if (TransactionSynchronizationManager.isSynchronizationActive() &&
+            TransactionSynchronizationManager.isActualTransactionActive()
+        ) {
+            TransactionSynchronizationManager.registerSynchronization(object : TransactionSynchronization {
+                override fun afterCommit() {
+                    enqueue(task)
+                }
+            })
+            return
+        }
+
+        enqueue(task)
+    }
+
+    private fun enqueue(task: ScheduleTimeParsingTask) {
+        if (isShuttingDown.get()) return
+        queue.add(task)
         startWorkIfNeeded()
     }
 
     private fun startWorkIfNeeded() {
-        if (queue.isEmpty() || !isRunning.compareAndSet(false, true)) return
+        if (isShuttingDown.get() || queue.isEmpty() || !isRunning.compareAndSet(false, true)) return
 
-        executorService.execute {
-            try {
-                // wait enough til schedule transaction is committed
-                TimeUnit.SECONDS.sleep(10)
-                run()
-            } finally {
-                isRunning.set(false)
+        try {
+            executorService.execute {
+                try {
+                    // Briefly batch newly queued tasks before starting the worker.
+                    TimeUnit.SECONDS.sleep(10)
+                    run()
+                } finally {
+                    isRunning.set(false)
+                    startWorkIfNeeded()
+                }
             }
+        } catch (e: RejectedExecutionException) {
+            isRunning.set(false)
+            if (!isShuttingDown.get()) throw e
         }
     }
 
     private fun run() {
-        while (queue.isNotEmpty()) {
-            while (shouldWait()) {
+        while (!isShuttingDown.get() && queue.isNotEmpty()) {
+            while (!isShuttingDown.get() && shouldWait()) {
                 log.info("Waiting for AI API rate limit (RPM/RPD check)")
                 TimeUnit.MINUTES.sleep(1)
             }
+            if (isShuttingDown.get()) return
 
             val task = queue.poll() ?: continue
-            worker.run(task)
-            recordCompletion()
+            try {
+                if (worker.run(task)) {
+                    recordCompletion()
+                }
+            } catch (e: Exception) {
+                log.error("Unexpected schedule time parsing failure: scheduleId={}", task.scheduleId, e)
+                // Count conservatively because the failure may have happened after the external AI request.
+                recordCompletion()
+                if (!isShuttingDown.get() && task.canRetryAfterUnexpectedFailure()) {
+                    queue.add(task)
+                }
+                return
+            }
+        }
+    }
+
+    @PreDestroy
+    fun shutdown() {
+        isShuttingDown.set(true)
+        executorService.shutdownNow()
+        if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
+            log.warn("Schedule time parsing executor did not stop within 5 seconds")
         }
     }
 
