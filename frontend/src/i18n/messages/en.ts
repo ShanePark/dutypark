@@ -280,6 +280,7 @@ export default {
       nextMonth: 'Next month',
       yearLabel: '{year}',
       thisMonth: 'This month ({date})',
+      goToThisMonth: 'This month',
     },
     swal: {
       error: 'Error',

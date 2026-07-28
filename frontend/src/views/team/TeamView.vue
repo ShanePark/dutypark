@@ -443,6 +443,7 @@ onMounted(() => {
           @prev-month="prevMonth"
           @next-month="nextMonth"
           @open-year-month-picker="isYearMonthPickerOpen = true"
+          @go-to-this-month="goToToday"
         />
 
         <!-- Right: Team manage button -->

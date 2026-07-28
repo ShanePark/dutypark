@@ -1548,6 +1548,7 @@ async function showExcelUploadModal() {
       @prev-month="prevMonth"
       @next-month="nextMonth"
       @open-year-month-picker="isYearMonthPickerOpen = true"
+      @go-to-this-month="goToToday"
       @search="handleSearch()"
       @open-search-modal="openSearchModal"
     />

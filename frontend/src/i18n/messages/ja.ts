@@ -287,6 +287,7 @@ export default {
       nextMonth: '翌月',
       yearLabel: '{year}年',
       thisMonth: '今月 ({date})',
+      goToThisMonth: '今月',
     },
     swal: {
       ...en.common.swal,
