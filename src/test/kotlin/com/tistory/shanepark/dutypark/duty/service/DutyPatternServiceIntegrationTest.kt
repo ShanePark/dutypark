@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.duty.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
+import com.tistory.shanepark.dutypark.common.time.AdjustableTestClock
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyPatternUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyPatternDayUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutySource
@@ -18,32 +19,27 @@ import com.tistory.shanepark.dutypark.holiday.service.HolidayService
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
-import java.time.Clock
 import java.time.DayOfWeek.FRIDAY
 import java.time.DayOfWeek.MONDAY
 import java.time.DayOfWeek.SUNDAY
 import java.time.DayOfWeek.WEDNESDAY
-import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
-import java.time.ZoneOffset
 
-/**
- * Pinned so "today" never lands inside a calendar view under test. A view starts on the Sunday on
- * or before the first of its month, so a real clock late in a month pulls days that precede today
- * into the next month's view. Patterns only apply from their effective date onward, so those days
- * are never materialized and the size assertions below would fail depending on the run date.
- */
-private val FIXED_NOW: Instant = Instant.parse("2026-03-02T01:00:00Z")
+private val SEOUL: ZoneId = ZoneId.of("Asia/Seoul")
+private val DEFAULT_TEST_DATE: LocalDate = LocalDate.of(2026, 3, 2)
 
-@Import(DutyPatternServiceIntegrationTest.FixedClockConfig::class)
+@Import(DutyPatternServiceIntegrationTest.TestClockConfig::class)
 class DutyPatternServiceIntegrationTest : DutyparkIntegrationTest() {
     @Autowired lateinit var dutyPatternService: DutyPatternService
     @Autowired lateinit var dutyResolver: DutyResolver
@@ -53,12 +49,17 @@ class DutyPatternServiceIntegrationTest : DutyparkIntegrationTest() {
     @Autowired lateinit var dutyTypeService: DutyTypeService
     @Autowired lateinit var holidayRepository: HolidayRepository
     @Autowired lateinit var holidayService: HolidayService
-    @Autowired lateinit var clock: Clock
+    @Autowired lateinit var clock: AdjustableTestClock
+
+    @BeforeEach
+    fun resetClock() {
+        clock.setDate(DEFAULT_TEST_DATE, SEOUL)
+    }
 
     @Test
-    fun `month lookup materializes every missing pattern date without overwriting a manual duty`() {
+    fun `fully covered month lookup materializes every missing pattern date without overwriting a manual duty`() {
         val (member, _) = moveMemberToSingleDutyTypeTeam()
-        val targetMonth = YearMonth.from(today()).plusMonths(1)
+        val targetMonth = firstCalendarMonthFullyCoveredByPattern()
         val manualDate = targetMonth.atDay(15)
         dutyPatternService.updateMine(member.id!!, DutyPatternUpdateDto(setOf(MONDAY), false))
         dutyService.update(
@@ -73,6 +74,7 @@ class DutyPatternServiceIntegrationTest : DutyparkIntegrationTest() {
         )
 
         val view = CalendarView(targetMonth.year, targetMonth.monthValue)
+        assertThat(view.startDate).isAfterOrEqualTo(today())
         val persisted = dutyRepository.findAllByMemberAndDutyDateBetween(member, view.startDate, view.endDate)
         assertThat(firstResult).hasSize(CalendarView.SIZE)
         assertThat(persisted).hasSize(CalendarView.SIZE)
@@ -90,8 +92,9 @@ class DutyPatternServiceIntegrationTest : DutyparkIntegrationTest() {
     @Test
     fun `partially populated calendar fills only missing dates and preserves manual work and off overrides`() {
         val (member, dutyType) = moveMemberToSingleDutyTypeTeam()
-        val targetMonth = YearMonth.from(today()).plusMonths(2)
+        val targetMonth = firstCalendarMonthFullyCoveredByPattern()
         val view = CalendarView(targetMonth.year, targetMonth.monthValue)
+        assertThat(view.startDate).isAfterOrEqualTo(today())
         val manualWorkDate = view.dates.first { it.dayOfWeek == WEDNESDAY }
         val manualOffDate = view.dates.first { it.dayOfWeek == MONDAY }
         val existingAutomaticDate = view.dates.first { it.dayOfWeek == FRIDAY }
@@ -157,6 +160,46 @@ class DutyPatternServiceIntegrationTest : DutyparkIntegrationTest() {
         assertThat(todayDuty.isOff).isFalse()
     }
 
+    @ParameterizedTest(name = "today={0}, viewStart={1}, persisted={2}")
+    @CsvSource(
+        "2026-07-24, 2026-07-26, 42",
+        "2026-07-26, 2026-07-26, 42",
+        "2026-07-27, 2026-07-26, 41",
+        "2026-07-28, 2026-07-26, 40",
+        "2026-10-26, 2026-10-25, 41",
+        "2026-12-28, 2026-12-27, 41",
+    )
+    fun `next month lookup materializes only dates on or after effective date`(
+        effectiveFromText: String,
+        expectedViewStartText: String,
+        expectedPersistedCount: Int,
+    ) {
+        val (member, _) = moveMemberToSingleDutyTypeTeam()
+        val effectiveFrom = LocalDate.parse(effectiveFromText)
+        val expectedViewStart = LocalDate.parse(expectedViewStartText)
+        clock.setDate(effectiveFrom, SEOUL)
+        val nextMonth = YearMonth.from(effectiveFrom).plusMonths(1)
+        val view = CalendarView(nextMonth.year, nextMonth.monthValue)
+        val preEffectiveDates = view.dates.filter { it.isBefore(effectiveFrom) }
+        assertThat(view.startDate).isEqualTo(expectedViewStart)
+        dutyPatternService.updateMine(member.id!!, DutyPatternUpdateDto(setOf(MONDAY), false))
+
+        val result = dutyService.getDuties(
+            member.id!!,
+            nextMonth.year,
+            nextMonth.monthValue,
+            loginMember(member),
+        )
+
+        val persisted = dutyRepository.findAllByMemberAndDutyDateBetween(member, view.startDate, view.endDate)
+        assertThat(result).hasSize(CalendarView.SIZE)
+        assertThat(persisted).hasSize(expectedPersistedCount)
+        assertThat(persisted.map { it.dutyDate })
+            .containsExactlyInAnyOrderElementsOf(view.dates.filterNot { it.isBefore(effectiveFrom) })
+        assertThat(result.filter { LocalDate.of(it.year, it.month, it.day) in preEffectiveDates })
+            .allMatch { it.source == DutySource.DEFAULT_OFF }
+    }
+
     @Test
     fun `calendar materialization covers leap day and remains idempotent`() {
         val (member, dutyType) = moveMemberToSingleDutyTypeTeam()
@@ -164,6 +207,7 @@ class DutyPatternServiceIntegrationTest : DutyparkIntegrationTest() {
             .first { it.isLeapYear && it.monthValue == 2 }
         val leapDay = leapMonth.atDay(29)
         val view = CalendarView(leapMonth.year, leapMonth.monthValue)
+        assertThat(view.startDate).isAfterOrEqualTo(today())
         dutyPatternService.updateMine(
             member.id!!,
             DutyPatternUpdateDto(setOf(leapDay.dayOfWeek, SUNDAY), false),
@@ -187,6 +231,7 @@ class DutyPatternServiceIntegrationTest : DutyparkIntegrationTest() {
         val december = generateSequence(YearMonth.from(today()).plusMonths(1)) { it.plusMonths(1) }
             .first { it.monthValue == 12 }
         val view = CalendarView(december.year, december.monthValue)
+        assertThat(view.startDate).isAfterOrEqualTo(today())
         assertThat(view.startDate.year).isEqualTo(december.year)
         assertThat(view.endDate.year).isEqualTo(december.year + 1)
         dutyPatternService.updateMine(member.id!!, DutyPatternUpdateDto(setOf(MONDAY, FRIDAY), false))
@@ -575,9 +620,9 @@ class DutyPatternServiceIntegrationTest : DutyparkIntegrationTest() {
     @Test
     fun `holiday off applies to adjacent month dates shown in the calendar padding`() {
         val (member, _) = moveMemberToSingleDutyTypeTeam()
-        val firstFuture = YearMonth.from(today()).plusMonths(1)
-        val targetMonth = if (firstFuture.monthValue == 12) firstFuture.plusMonths(1) else firstFuture
+        val targetMonth = firstCalendarMonthFullyCoveredByPattern()
         val view = CalendarView(targetMonth.year, targetMonth.monthValue)
+        assertThat(view.startDate).isAfterOrEqualTo(today())
         assertThat(YearMonth.from(view.startDate)).isNotEqualTo(targetMonth)
         assertThat(YearMonth.from(view.endDate)).isNotEqualTo(targetMonth)
         holidayService.resetHolidayInfo()
@@ -662,8 +707,9 @@ class DutyPatternServiceIntegrationTest : DutyparkIntegrationTest() {
     @Test
     fun `holiday reset invalidates only future automatic duties and allows rematerialization`() {
         val (member, dutyType) = moveMemberToSingleDutyTypeTeam()
-        val targetMonth = YearMonth.from(today()).plusMonths(1)
+        val targetMonth = firstCalendarMonthFullyCoveredByPattern()
         val view = CalendarView(targetMonth.year, targetMonth.monthValue)
+        assertThat(view.startDate).isAfterOrEqualTo(today())
         val manualDate = targetMonth.atDay(15)
         dutyPatternService.updateMine(member.id!!, DutyPatternUpdateDto(setOf(MONDAY), false))
         dutyService.getDuties(member.id!!, targetMonth.year, targetMonth.monthValue, loginMember(member))
@@ -761,17 +807,24 @@ class DutyPatternServiceIntegrationTest : DutyparkIntegrationTest() {
         return memberRepository.save(member) to dutyType
     }
 
-    private fun today(): LocalDate = LocalDate.now(clock.withZone(ZoneId.of("Asia/Seoul")))
+    private fun today(): LocalDate = LocalDate.now(clock.withZone(SEOUL))
+
+    private fun firstCalendarMonthFullyCoveredByPattern(): YearMonth {
+        val effectiveFrom = today()
+        return generateSequence(YearMonth.from(effectiveFrom).plusMonths(1)) { it.plusMonths(1) }
+            .first { month ->
+                val view = CalendarView(month.year, month.monthValue)
+                !view.startDate.isBefore(effectiveFrom)
+            }
+    }
 
     private fun daysOf(month: YearMonth): List<LocalDate> =
         (1..month.lengthOfMonth()).map(month::atDay)
 
     @TestConfiguration
-    class FixedClockConfig {
+    class TestClockConfig {
         @Bean
         @Primary
-        fun fixedClock(): Clock {
-            return Clock.fixed(FIXED_NOW, ZoneOffset.UTC)
-        }
+        fun adjustableTestClock(): AdjustableTestClock = AdjustableTestClock()
     }
 }

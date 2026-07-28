@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.duty.service
 
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
+import com.tistory.shanepark.dutypark.common.time.AdjustableTestClock
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyPatternUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeCreateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
@@ -13,6 +14,7 @@ import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.duty.repository.MemberDutyPatternRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.RepeatedTest
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -21,31 +23,22 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
 import org.springframework.transaction.support.TransactionTemplate
-import java.time.Clock
 import java.time.DayOfWeek.FRIDAY
 import java.time.DayOfWeek.MONDAY
-import java.time.Instant
+import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
-import java.time.ZoneOffset
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 private val SEOUL: ZoneId = ZoneId.of("Asia/Seoul")
-
-/**
- * Pinned so "today" never lands inside the calendar view under test. The view for the next month
- * starts on the Sunday on or before its first day, so a real clock late in a month pulls days that
- * precede today into the view. Patterns only apply from their effective date onward, so those days
- * are never materialized and the size assertions below would fail depending on the run date.
- */
-private val FIXED_NOW: Instant = Instant.parse("2026-03-02T01:00:00Z")
+private val CONCURRENCY_TEST_DATE: LocalDate = LocalDate.of(2026, 7, 28)
 
 @SpringBootTest
-@Import(DutyPatternConcurrencyIntegrationTest.FixedClockConfig::class)
+@Import(DutyPatternConcurrencyIntegrationTest.TestClockConfig::class)
 class DutyPatternConcurrencyIntegrationTest {
-    @Autowired lateinit var clock: Clock
+    @Autowired lateinit var clock: AdjustableTestClock
     @Autowired lateinit var dutyPatternService: DutyPatternService
     @Autowired lateinit var patternRepository: MemberDutyPatternRepository
     @Autowired lateinit var memberRepository: MemberRepository
@@ -55,6 +48,11 @@ class DutyPatternConcurrencyIntegrationTest {
     @Autowired lateinit var dutyService: DutyService
     @Autowired lateinit var dutyTypeService: DutyTypeService
     @Autowired lateinit var transactionTemplate: TransactionTemplate
+
+    @BeforeEach
+    fun resetClock() {
+        clock.setDate(CONCURRENCY_TEST_DATE, SEOUL)
+    }
 
     @RepeatedTest(3)
     fun `concurrent pattern updates leave exactly one active version`() {
@@ -115,7 +113,7 @@ class DutyPatternConcurrencyIntegrationTest {
             team.addMember(member)
             requireNotNull(memberRepository.saveAndFlush(member).id)
         }
-        val month = YearMonth.now(clock.withZone(SEOUL)).plusMonths(1)
+        val month = firstCalendarMonthFullyCoveredByPattern()
         try {
             dutyPatternService.updateMine(memberId, DutyPatternUpdateDto(setOf(MONDAY), false))
             val loginMember = LoginMember(memberId, name = "동시조회")
@@ -166,7 +164,7 @@ class DutyPatternConcurrencyIntegrationTest {
             requireNotNull(team.id) to requireNotNull(memberRepository.saveAndFlush(member).id)
         }
         val (teamId, memberId) = teamIdAndMemberId
-        val month = YearMonth.now(clock.withZone(SEOUL)).plusMonths(1)
+        val month = firstCalendarMonthFullyCoveredByPattern()
         try {
             dutyPatternService.updateMine(memberId, DutyPatternUpdateDto(setOf(MONDAY), false))
             val manualDate = month.atDay(15)
@@ -231,7 +229,7 @@ class DutyPatternConcurrencyIntegrationTest {
     @RepeatedTest(3)
     fun `pattern update racing with month lookup converges to the latest pattern without duplicates`() {
         val memberId = createMemberWithSingleDutyType("패턴변경경쟁")
-        val month = YearMonth.now(clock.withZone(SEOUL)).plusMonths(1)
+        val month = firstCalendarMonthFullyCoveredByPattern()
         try {
             dutyPatternService.updateMine(memberId, DutyPatternUpdateDto(setOf(MONDAY), false))
             val loginMember = LoginMember(memberId, name = "패턴변경경쟁")
@@ -266,7 +264,7 @@ class DutyPatternConcurrencyIntegrationTest {
     @RepeatedTest(3)
     fun `pattern deletion racing with month lookup leaves no future duties`() {
         val memberId = createMemberWithSingleDutyType("패턴삭제경쟁")
-        val month = YearMonth.now(clock.withZone(SEOUL)).plusMonths(1)
+        val month = firstCalendarMonthFullyCoveredByPattern()
         try {
             dutyPatternService.updateMine(memberId, DutyPatternUpdateDto(setOf(MONDAY), false))
             transactionTemplate.execute {
@@ -307,7 +305,7 @@ class DutyPatternConcurrencyIntegrationTest {
     @RepeatedTest(3)
     fun `hiding the sole duty type racing with lookup removes only automatic duties`() {
         val memberId = createMemberWithSingleDutyType("유형숨김경쟁")
-        val month = YearMonth.now(clock.withZone(SEOUL)).plusMonths(1)
+        val month = firstCalendarMonthFullyCoveredByPattern()
         try {
             dutyPatternService.updateMine(memberId, DutyPatternUpdateDto(setOf(MONDAY), false))
             val (dutyTypeId, manualDate) = transactionTemplate.execute {
@@ -346,7 +344,7 @@ class DutyPatternConcurrencyIntegrationTest {
     @RepeatedTest(3)
     fun `restoring the sole duty type racing with lookup resumes materialization without duplicates`() {
         val memberId = createMemberWithSingleDutyType("유형복원경쟁")
-        val month = YearMonth.now(clock.withZone(SEOUL)).plusMonths(1)
+        val month = firstCalendarMonthFullyCoveredByPattern()
         try {
             dutyPatternService.updateMine(memberId, DutyPatternUpdateDto(setOf(MONDAY), false))
             val dutyTypeId = transactionTemplate.execute {
@@ -398,7 +396,7 @@ class DutyPatternConcurrencyIntegrationTest {
                 requireNotNull(memberRepository.saveAndFlush(member).id)
             }
         }
-        val month = YearMonth.now(clock.withZone(SEOUL)).plusMonths(1)
+        val month = firstCalendarMonthFullyCoveredByPattern()
         try {
             memberIds.forEach {
                 dutyPatternService.updateMine(it, DutyPatternUpdateDto(setOf(MONDAY), false))
@@ -478,12 +476,19 @@ class DutyPatternConcurrencyIntegrationTest {
         }
     }
 
+    private fun firstCalendarMonthFullyCoveredByPattern(): YearMonth {
+        val effectiveFrom = LocalDate.now(clock.withZone(SEOUL))
+        return generateSequence(YearMonth.from(effectiveFrom).plusMonths(1)) { it.plusMonths(1) }
+            .first { month ->
+                val view = CalendarView(month.year, month.monthValue)
+                !view.startDate.isBefore(effectiveFrom)
+            }
+    }
+
     @TestConfiguration
-    class FixedClockConfig {
+    class TestClockConfig {
         @Bean
         @Primary
-        fun fixedClock(): Clock {
-            return Clock.fixed(FIXED_NOW, ZoneOffset.UTC)
-        }
+        fun adjustableTestClock(): AdjustableTestClock = AdjustableTestClock()
     }
 }
