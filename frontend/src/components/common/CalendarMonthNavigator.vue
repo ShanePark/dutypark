@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Undo2 } from 'lucide-vue-next'
 import { useDragClickGuard } from '@/composables/useDragClickGuard'
 
-defineProps<{
+const props = defineProps<{
   currentYear: number
   currentMonth: number
 }>()
@@ -12,7 +13,13 @@ const emit = defineEmits<{
   (e: 'prev-month'): void
   (e: 'next-month'): void
   (e: 'open-year-month-picker'): void
+  (e: 'go-to-this-month'): void
 }>()
+
+const isCurrentMonth = computed(() => {
+  const today = new Date()
+  return props.currentYear === today.getFullYear() && props.currentMonth === today.getMonth() + 1
+})
 
 const { t } = useI18n()
 const dragClickGuard = useDragClickGuard({ resetDelay: 250 })
@@ -99,19 +106,32 @@ function handleMonthButtonClick() {
     >
       <ChevronLeft class="h-5 w-5 sm:h-6 sm:w-6" />
     </button>
-    <button
-      type="button"
-      @click="handleMonthButtonClick"
-      @touchstart.passive="handleMonthTouchStart"
-      @touchmove.passive="handleMonthTouchMove"
-      @touchend="handleMonthTouchEnd"
-      @touchcancel="resetMonthTouch"
-      @pointerdown.capture="dragClickGuard.handlePointerDown"
-      @click.capture="dragClickGuard.handleClick"
-      class="calendar-nav-btn flex min-h-11 min-w-[5.5rem] touch-pan-y select-none items-center justify-center whitespace-nowrap rounded px-1 py-1 text-lg font-semibold cursor-pointer sm:min-w-[6.75rem] sm:px-3 sm:text-2xl"
-    >
-      {{ currentYear }}-{{ String(currentMonth).padStart(2, '0') }}
-    </button>
+    <span class="relative inline-flex">
+      <button
+        type="button"
+        @click="handleMonthButtonClick"
+        @touchstart.passive="handleMonthTouchStart"
+        @touchmove.passive="handleMonthTouchMove"
+        @touchend="handleMonthTouchEnd"
+        @touchcancel="resetMonthTouch"
+        @pointerdown.capture="dragClickGuard.handlePointerDown"
+        @click.capture="dragClickGuard.handleClick"
+        class="calendar-nav-btn flex min-h-11 min-w-[5.5rem] touch-pan-y select-none items-center justify-center whitespace-nowrap rounded px-1 py-1 text-lg font-semibold cursor-pointer sm:min-w-[6.75rem] sm:px-3 sm:text-2xl"
+      >
+        {{ currentYear }}-{{ String(currentMonth).padStart(2, '0') }}
+      </button>
+      <button
+        v-if="!isCurrentMonth"
+        type="button"
+        @click.stop="emit('go-to-this-month')"
+        :aria-label="t('common.calendar.goToThisMonth')"
+        class="this-month-bubble"
+      >
+        <Undo2 class="this-month-bubble-icon" />
+        <span>{{ t('common.calendar.goToThisMonth') }}</span>
+        <i class="this-month-bubble-tail" aria-hidden="true"></i>
+      </button>
+    </span>
     <button
       type="button"
       @click="emit('next-month')"

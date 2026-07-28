@@ -19,6 +19,7 @@ const emit = defineEmits<{
   (e: 'prev-month'): void
   (e: 'next-month'): void
   (e: 'open-year-month-picker'): void
+  (e: 'go-to-this-month'): void
   (e: 'search'): void
   (e: 'open-search-modal'): void
   (e: 'update:searchQuery', value: string): void
@@ -60,6 +61,7 @@ function handleSearchClick() {
       @prev-month="emit('prev-month')"
       @next-month="emit('next-month')"
       @open-year-month-picker="emit('open-year-month-picker')"
+      @go-to-this-month="emit('go-to-this-month')"
     />
 
     <!-- Right: Search -->

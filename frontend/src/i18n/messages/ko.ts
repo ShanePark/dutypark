@@ -280,6 +280,7 @@ export default {
       nextMonth: '다음 월',
       yearLabel: '{year}년',
       thisMonth: '이번달 ({date})',
+      goToThisMonth: '이번달',
     },
     swal: {
       error: '오류',
