@@ -1185,10 +1185,14 @@ html.dark {
     color: var(--dp-text-secondary);
 }
 
-.calendar-nav-btn:hover {
-    background-color: var(--dp-bg-hover);
-    color: var(--dp-text-primary);
-    transform: scale(1.05);
+/* Hover only on real pointers — on touch it sticks after a tap and the arrow
+   keeps looking pressed until something else is tapped */
+@media (hover: hover) and (pointer: fine) {
+    .calendar-nav-btn:hover {
+        background-color: var(--dp-bg-hover);
+        color: var(--dp-text-primary);
+        transform: scale(1.05);
+    }
 }
 
 .calendar-nav-btn:active {
@@ -1233,9 +1237,11 @@ html.dark {
     inset: -0.75rem -0.75rem -0.25rem;
 }
 
-.this-month-bubble:hover {
-    background-color: var(--dp-accent-hover);
-    box-shadow: 0 0.1875rem 0.625rem var(--dp-accent-ring);
+@media (hover: hover) and (pointer: fine) {
+    .this-month-bubble:hover {
+        background-color: var(--dp-accent-hover);
+        box-shadow: 0 0.1875rem 0.625rem var(--dp-accent-ring);
+    }
 }
 
 .this-month-bubble:active {
