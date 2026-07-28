@@ -39,6 +39,15 @@ export const enReleaseNotes = {
     ui: "UI"
   },
   entries: {
+    "pr-387": {
+      title: "Jump back to this month from the calendar",
+      summary: "A bubble button appears next to the year and month while you are viewing another month, so one tap brings you back to the current one.",
+      changes: [
+        "Show a button that returns to the current month whenever your calendar or a team calendar is on a month that does not contain today.",
+        "Hide the button while you are already on the current month so the layout stays unchanged.",
+        "Fix the previous and next month arrows looking pressed after you tapped them on a phone."
+      ]
+    },
     "pr-386": {
       title: "Safer drag gestures and schedule time parsing",
       summary: "Prevents drags and swipes from triggering unwanted clicks, and keeps later schedule edits from being overwritten by delayed AI time parsing.",

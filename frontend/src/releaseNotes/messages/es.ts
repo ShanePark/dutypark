@@ -39,6 +39,15 @@ export const esReleaseNotes = {
     ui: "Interfaz"
   },
   entries: {
+    "pr-387": {
+      title: "Vuelve a este mes desde el calendario",
+      summary: "Mientras miras otro mes aparece un botón tipo globo junto al año y el mes, así que un solo toque te devuelve al mes actual.",
+      changes: [
+        "Muestra un botón para volver al mes actual cuando tu calendario o el de un equipo está en un mes que no contiene el día de hoy.",
+        "Oculta el botón cuando ya estás en el mes actual para que la disposición no cambie.",
+        "Corrige las flechas de mes anterior y siguiente, que se quedaban con aspecto de pulsadas tras tocarlas en el móvil."
+      ]
+    },
     "pr-386": {
       title: "Gestos de arrastre y análisis horario más seguros",
       summary: "Evita clics no deseados después de arrastrar o deslizar y evita que un análisis horario tardío de la IA sobrescriba cambios posteriores de una agenda.",
