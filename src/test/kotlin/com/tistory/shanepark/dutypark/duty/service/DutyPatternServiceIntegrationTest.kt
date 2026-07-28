@@ -20,15 +20,30 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Import
+import org.springframework.context.annotation.Primary
 import java.time.Clock
 import java.time.DayOfWeek.FRIDAY
 import java.time.DayOfWeek.MONDAY
 import java.time.DayOfWeek.SUNDAY
 import java.time.DayOfWeek.WEDNESDAY
+import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
+import java.time.ZoneOffset
 
+/**
+ * Pinned so "today" never lands inside a calendar view under test. A view starts on the Sunday on
+ * or before the first of its month, so a real clock late in a month pulls days that precede today
+ * into the next month's view. Patterns only apply from their effective date onward, so those days
+ * are never materialized and the size assertions below would fail depending on the run date.
+ */
+private val FIXED_NOW: Instant = Instant.parse("2026-03-02T01:00:00Z")
+
+@Import(DutyPatternServiceIntegrationTest.FixedClockConfig::class)
 class DutyPatternServiceIntegrationTest : DutyparkIntegrationTest() {
     @Autowired lateinit var dutyPatternService: DutyPatternService
     @Autowired lateinit var dutyResolver: DutyResolver
@@ -750,4 +765,13 @@ class DutyPatternServiceIntegrationTest : DutyparkIntegrationTest() {
 
     private fun daysOf(month: YearMonth): List<LocalDate> =
         (1..month.lengthOfMonth()).map(month::atDay)
+
+    @TestConfiguration
+    class FixedClockConfig {
+        @Bean
+        @Primary
+        fun fixedClock(): Clock {
+            return Clock.fixed(FIXED_NOW, ZoneOffset.UTC)
+        }
+    }
 }
