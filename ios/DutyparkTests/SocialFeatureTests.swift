@@ -6,10 +6,10 @@ import XCTest
 final class SocialFeatureTests: XCTestCase {
     private let baseURL = URL(string: "https://dutypark.test/api/")!
 
-    func testPinnedOrderEditorStringsResolveInEveryLocale() throws {
+    func testInlinePinnedOrderStringsResolveInEveryLocale() throws {
         let keys = [
-            "social.action.done",
-            "social.action.editPinnedOrder",
+            "social.action.moveDown",
+            "social.action.moveUp",
             "social.hint.pinnedOrder",
             "social.section.pinnedOrder",
             "social.warning.reorderReload"
@@ -127,7 +127,7 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertEqual(repository.actions, ["accept:11", "cancel:22"])
     }
 
-    func testNativeListReorderSavesDraftOnlyOnceWhenConfirmed() async {
+    func testInlineReorderSavesDropOnlyOnce() async {
         let repository = SocialRepositorySpy()
         let viewModel = SocialViewModel(repository: repository)
         await viewModel.load()
@@ -144,7 +144,7 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertEqual(repository.actions.filter { $0.hasPrefix("order:") }.count, 1)
     }
 
-    func testFailedNativeListReorderKeepsOriginalOrderAndReportsFailure() async {
+    func testFailedInlineReorderRollsBackAndReportsFailure() async {
         let repository = SocialRepositorySpy(failPinnedOrder: true)
         let viewModel = SocialViewModel(repository: repository)
         await viewModel.load()
@@ -156,7 +156,7 @@ final class SocialFeatureTests: XCTestCase {
 
         XCTAssertFalse(didSave)
         XCTAssertEqual(viewModel.pinnedFriends.compactMap(\.member.id), originalOrder)
-        XCTAssertNil(viewModel.errorKey)
+        XCTAssertEqual(viewModel.errorKey, "social.error.reorder")
         XCTAssertFalse(viewModel.isReordering)
     }
 
@@ -193,7 +193,7 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertEqual(repository.actions.filter { $0.hasPrefix("order:") }.count, 1)
     }
 
-    func testNativeListReorderRejectsIDsOutsidePinnedFriends() async {
+    func testInlineReorderRejectsIDsOutsidePinnedFriends() async {
         let repository = SocialRepositorySpy()
         let viewModel = SocialViewModel(repository: repository)
         await viewModel.load()
@@ -203,6 +203,67 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertFalse(didSave)
         XCTAssertEqual(viewModel.errorKey, "social.error.reorder")
         XCTAssertFalse(repository.actions.contains(where: { $0.hasPrefix("order:") }))
+    }
+
+    func testInlineDragMovesCardAsSoonAsItOverlapsNextCard() {
+        let targets = pinnedTargets()
+
+        let reordered = PinnedFriendLiveOrder.reordered(
+            [31, 32, 33],
+            draggedID: 31,
+            previewFrame: CGRect(x: 0, y: 20, width: 300, height: 88),
+            targets: targets
+        )
+
+        XCTAssertEqual(reordered, [32, 31, 33])
+    }
+
+    func testInlineDragDoesNotMoveBeforeCardsOverlap() {
+        let reordered = PinnedFriendLiveOrder.reordered(
+            [31, 32, 33],
+            draggedID: 31,
+            previewFrame: CGRect(x: 0, y: 4, width: 300, height: 88),
+            targets: pinnedTargets()
+        )
+
+        XCTAssertEqual(reordered, [31, 32, 33])
+    }
+
+    func testInlineDragReturnsToOriginalOrderWhenPreviewLeavesOverlap() {
+        let original: [MemberID] = [31, 32, 33]
+        let targets = pinnedTargets()
+        let overlapped = PinnedFriendLiveOrder.reordered(
+            original,
+            draggedID: 31,
+            previewFrame: CGRect(x: 0, y: 20, width: 300, height: 88),
+            targets: targets
+        )
+        XCTAssertEqual(overlapped, [32, 31, 33])
+
+        let restored = PinnedFriendLiveOrder.reordered(
+            original,
+            draggedID: 31,
+            previewFrame: CGRect(x: 0, y: 4, width: 300, height: 88),
+            targets: targets
+        )
+
+        XCTAssertEqual(restored, original)
+    }
+
+    func testInlineDragCanMovePinnedCardUpMultiplePositions() {
+        let reordered = PinnedFriendLiveOrder.reordered(
+            [31, 32, 33],
+            draggedID: 33,
+            previewFrame: CGRect(x: 0, y: 0, width: 300, height: 88),
+            targets: pinnedTargets()
+        )
+
+        XCTAssertEqual(reordered, [33, 31, 32])
+    }
+
+    func testInlineDragUsesImmediateFortyFourPointHandle() {
+        XCTAssertEqual(SocialFriendDragLayout.handleSize, 44)
+        XCTAssertEqual(SocialFriendDragLayout.activationDistance, 2)
     }
 
     func testSuccessfulMutationsReportOnlyReceivedRequestCountEffects() async {
@@ -227,6 +288,14 @@ final class SocialFeatureTests: XCTestCase {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [SocialURLProtocolStub.self]
         return APIClient(baseURL: baseURL, session: URLSession(configuration: configuration))
+    }
+
+    private func pinnedTargets() -> [PinnedFriendDropTarget] {
+        [
+            PinnedFriendDropTarget(memberID: 31, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
+            PinnedFriendDropTarget(memberID: 32, frame: CGRect(x: 0, y: 96, width: 300, height: 88)),
+            PinnedFriendDropTarget(memberID: 33, frame: CGRect(x: 0, y: 192, width: 300, height: 88))
+        ]
     }
 
     nonisolated private static func response(

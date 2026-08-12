@@ -214,6 +214,7 @@ final class SocialViewModel: ObservableObject {
             try await repository.updatePinnedOrder(memberIDs)
         } catch {
             pinnedOrderIDs = previousOrderIDs
+            errorKey = "social.error.reorder"
             return false
         }
 
